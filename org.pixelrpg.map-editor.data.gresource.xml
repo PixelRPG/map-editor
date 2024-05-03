@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/pixelrpg/map-editor">
+    <file>client/index.html</file>
+    <file>client/style.css</file>
+  </gresource>
+</gresources>
