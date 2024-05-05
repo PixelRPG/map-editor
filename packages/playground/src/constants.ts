@@ -5,5 +5,5 @@ export const ROOT_DIR = Gio.File.new_for_uri(
   ).resolve_relative_path("../..");
 
 
-export const CLIENT_DIR = ROOT_DIR.resolve_relative_path("./client");
+export const CLIENT_DIR = ROOT_DIR.resolve_relative_path("../client/dist/");
 

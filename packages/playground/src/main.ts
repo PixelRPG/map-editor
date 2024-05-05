@@ -1,4 +1,5 @@
 import './global.d.ts';
+import '@girs/gjs/dom';
 import gjs from '@girs/gjs';
 import GLib from '@girs/glib-2.0';
 import GObject from '@girs/gobject-2.0';

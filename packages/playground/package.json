@@ -19,16 +19,17 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "devDependencies": {
-        "typescript": "^5.4.2",
-        "vite": "^5.1.6"
+        "typescript": "^5.4.5",
+        "vite": "^5.2.11"
     },
     "dependencies": {
-        "@girs/adw-1": "next",
-        "@girs/gio-2.0": "next",
-        "@girs/gjs": "next",
-        "@girs/glib-2.0": "next",
-        "@girs/gobject-2.0": "next",
-        "@girs/gtk-4.0": "next",
-        "@girs/webkit-6.0": "next"
+        "@girs/adw-1": "^1.5.0-4.0.0-beta.5",
+        "@girs/gio-2.0": "^2.80.0-4.0.0-beta.5",
+        "@girs/gjs": "^4.0.0-beta.5",
+        "@girs/glib-2.0": "^2.80.0-4.0.0-beta.5",
+        "@girs/gobject-2.0": "^2.80.0-4.0.0-beta.5",
+        "@girs/gtk-4.0": "^4.14.3-4.0.0-beta.5",
+        "@girs/javascriptcore-6.0": "^2.44.0-4.0.0-beta.5",
+        "@girs/webkit-6.0": "^2.44.0-4.0.0-beta.5"
     }
 }

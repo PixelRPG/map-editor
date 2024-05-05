@@ -1,3 +1,4 @@
-console.debug("Hello World")
-window.document.body.appendChild(document.createTextNode("Hello World from main.ts"))
+console.debug("Hello World");
 
+// TODO: Add types
+(window as any).webkit.messageHandlers.pixelrpg.postMessage('Hello from client');
