@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/pixelrpg/map-editor/client">
+    <file alias="index.html">../client/dist/index.html</file>
+    <file alias="style.css">../client/dist/style.css</file>
+    <file alias="client.esm.js">../client/dist/client.esm.js</file>
+  </gresource>
+</gresources>

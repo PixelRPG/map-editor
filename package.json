@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/map-editor",
+    "name": "pixelrpg",
     "version": "0.0.1",
     "description": "Experimental tile based map editor",
     "main": "index.js",
@@ -7,32 +7,17 @@
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build:app": "vite build",
-        "build:blueprints": "blueprint-compiler compile ui/window.blp --output ui/window.ui && blueprint-compiler compile ui/webview.blp --output ui/webview.ui",
-        "build:resources": "glib-compile-resources org.pixelrpg.map-editor.data.gresource.xml",
-        "build": "yarn build:resources && yarn build:blueprints && yarn build:app",
-        "start:app": "gjs -m dist/main.js",
-        "debug:app": "GTK_DEBUG=interactive gjs -m dist/main.js",
-        "start": "yarn build && yarn start:app",
-        "validate": "yarn validate:types && yarn validate:app",
-        "validate:types": "tsc --project tsconfig.types.json",
-        "validate:app": "tsc --noEmit",
-        "clear": "rm -rf dist"
+        "build": "yarn workspaces foreach -v -W run build",
+        "start": "yarn workspace @pixelrpg/map-editor run start",
+        "clear": "yarn workspaces foreach -v --parallel -W run clear"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
+    "packageManager": "yarn@4.2.1",
+    "workspaces": [
+        "packages/*"
+    ],
     "devDependencies": {
-        "typescript": "^5.4.2",
-        "vite": "^5.1.6"
-    },
-    "dependencies": {
-        "@girs/adw-1": "next",
-        "@girs/gio-2.0": "next",
-        "@girs/gjs": "next",
-        "@girs/glib-2.0": "next",
-        "@girs/gobject-2.0": "next",
-        "@girs/gtk-4.0": "next",
-        "@girs/webkit-6.0": "next"
-    },
-    "packageManager": "yarn@4.2.1"
+        "typescript": "^5.4.2"
+    }
 }

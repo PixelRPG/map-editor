@@ -1,0 +1,21 @@
+{
+    "name": "@pixelrpg/client",
+    "version": "0.0.1",
+    "description": "Client side of the map editor",
+    "main": "index.js",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "clear": "rm -rf dist",
+        "dev": "vite",
+        "build:vite": "vite build",
+        "build": "yarn build:vite"
+    },
+    "author": "Pascal Garber <pascal@artandcode.studio>",
+    "license": "MIT",
+    "devDependencies": {
+        "typescript": "^5.4.2",
+        "vite": "^5.1.6"
+    }
+}

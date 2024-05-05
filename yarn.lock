@@ -513,9 +513,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pixelrpg/map-editor@workspace:.":
+"@pixelrpg/client@workspace:packages/client":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/map-editor@workspace:."
+  resolution: "@pixelrpg/client@workspace:packages/client"
+  dependencies:
+    typescript: "npm:^5.4.2"
+    vite: "npm:^5.1.6"
+  languageName: unknown
+  linkType: soft
+
+"@pixelrpg/map-editor@workspace:packages/playground":
+  version: 0.0.0-use.local
+  resolution: "@pixelrpg/map-editor@workspace:packages/playground"
   dependencies:
     "@girs/adw-1": "npm:next"
     "@girs/gio-2.0": "npm:next"
@@ -1332,6 +1341,14 @@ __metadata:
   checksum: 10c0/20a5b249e331c14479d94ec6817a182fd7a5680debae82705747b2db7ec50009a5f6648d0621c561b0572703f84dbef0858abcbd5856d3c5511426afcb1961f7
   languageName: node
   linkType: hard
+
+"pixelrpg@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "pixelrpg@workspace:."
+  dependencies:
+    typescript: "npm:^5.4.2"
+  languageName: unknown
+  linkType: soft
 
 "postcss@npm:^8.4.38":
   version: 8.4.38

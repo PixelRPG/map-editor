@@ -12,6 +12,7 @@ import { ROOT_DIR } from "./constants";
 class Resource {
 
     client: Gio.Resource;
+    clientPath = '/org/pixelrpg/map-editor/client';
 
     constructor() {
         const path = ROOT_DIR.resolve_relative_path('./org.pixelrpg.map-editor.data.gresource').get_path()!;
@@ -25,11 +26,18 @@ class Resource {
     }
     
     get(path: string) {
+        console.log("get", path);
+        if(!path.startsWith(this.clientPath)) {
+            path = this.clientPath + path;
+        }
         return Gio.resources_lookup_data(path, Gio.ResourceLookupFlags.NONE);
     }
 
     stream(path: string) {
         console.log("open stream", path);
+        if(!path.startsWith(this.clientPath)) {
+            path = this.clientPath + path;
+        }
         return Gio.resources_open_stream(path, Gio.ResourceLookupFlags.NONE);
     }
 }

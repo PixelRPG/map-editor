@@ -129,6 +129,9 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# Vite
+vite.config.js.timestamp*
+
 # GNOME
 *.gresource
 *.ui
