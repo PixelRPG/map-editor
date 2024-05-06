@@ -16,3 +16,12 @@ Experimental tile based map editor
 1. Install dependencies: `yarn install`
 2. Build and run: `yarn start`
 
+### Troubleshooting
+
+I get the following error:
+
+```bash
+bwrap: setting up uid map: Permission denied
+```
+
+Solution: https://etbe.coker.com.au/2024/04/24/ubuntu-24-04-bubblewrap/
