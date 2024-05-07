@@ -497,6 +497,7 @@ __metadata:
     "@girs/gtk-4.0": "npm:^4.14.3-4.0.0-beta.5"
     "@girs/javascriptcore-6.0": "npm:^2.44.0-4.0.0-beta.5"
     "@girs/webkit-6.0": "npm:^2.44.0-4.0.0-beta.5"
+    mime: "npm:^4.0.3"
     typescript: "npm:^5.4.5"
     vite: "npm:^5.2.11"
   languageName: unknown
@@ -1114,6 +1115,15 @@ __metadata:
     promise-retry: "npm:^2.0.1"
     ssri: "npm:^10.0.0"
   checksum: 10c0/df5f4dbb6d98153b751bccf4dc4cc500de85a96a9331db9805596c46aa9f99d9555983954e6c1266d9f981ae37a9e4647f42b9a4bb5466f867f4012e582c9e7e
+  languageName: node
+  linkType: hard
+
+"mime@npm:^4.0.3":
+  version: 4.0.3
+  resolution: "mime@npm:4.0.3"
+  bin:
+    mime: bin/cli.js
+  checksum: 10c0/4be1d06813a581eb9634748919eadab9785857dcfe2af4acca8e4bc340b4b74ff7452c7d3cd76169d0f6b77d7f1ab3434bde8a72ca4291fd150b4205c756c36b
   languageName: node
   linkType: hard
 

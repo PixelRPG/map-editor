@@ -3,6 +3,7 @@
 import GObject from '@girs/gobject-2.0';
 import WebKit from '@girs/webkit-6.0';
 import JavaScriptCore from '@girs/javascriptcore-6.0';
+import mime from 'mime';
 
 import WindowTemplate from "../ui/webview.ui?raw";
 import { clientResource } from './resource.ts';
@@ -43,15 +44,8 @@ export const WebView = GObject.registerClass({
             console.error("Error opening stream", path);
             return;
           }
-          let content_type: string | null = null;
-          if (extension === "js") {
-            content_type = "text/javascript";
-          } else if (extension === "css") {
-            content_type = "text/css";
-          } else if (extension === "html") {
-            content_type = "text/html";
-          }
-          schemeRequest.finish(stream, -1, content_type);
+          const contentType = extension ? mime.getType(extension) : null;
+          schemeRequest.finish(stream, -1, contentType);
         });
 
         const user_content_manager = new WebKit.UserContentManager();
@@ -59,7 +53,6 @@ export const WebView = GObject.registerClass({
         // Allows to call this in client: window.webkit.messageHandlers.pixelrpg.postMessage('Hello from client');
         user_content_manager.register_script_message_handler("pixelrpg", null);
         user_content_manager.connect('script-message-received', (manager: WebKit.UserContentManager, message: JavaScriptCore.Value) => {
-          // const jscContext = message.get_context()
           console.log("Message from WebView: " + message.to_json(0));
 
           this.evaluate_javascript("console.log('Message from GJS!');", -1, null, null, null, (webView, result) => {
