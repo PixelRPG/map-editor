@@ -1,7 +1,7 @@
 {
-    "name": "@pixelrpg/client",
+    "name": "@pixelrpg/common",
     "version": "0.0.1",
-    "description": "Client side of the map editor",
+    "description": "Common package to share code between GJS and the WebVew",
     "main": "dist/main.js",
     "type": "module",
     "private": true,
@@ -9,8 +9,8 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
         "dev": "vite",
-        "build:vite": "vite build",
-        "build": "yarn build:vite"
+        "build:esbuild": "esbuild",
+        "build": "yarn build:esbuild"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",

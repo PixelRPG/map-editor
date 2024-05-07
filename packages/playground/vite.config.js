@@ -10,10 +10,7 @@ export default defineConfig({
       output: {
         entryFileNames: 'main.js',
       },
-      external: [
-        new RegExp('^gi:\/\/*', 'i'),
-        'system'
-      ],
-    }
-  }
-});
+      external: [new RegExp('^gi://*', 'i'), 'system'],
+    },
+  },
+})
