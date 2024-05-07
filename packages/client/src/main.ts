@@ -1,4 +1,11 @@
-console.debug("Hello World");
+import './global.d.ts';
 
-// TODO: Add types
-(window as any).webkit.messageHandlers.pixelrpg.postMessage('Hello from client');
+const handler = window.webkit.messageHandlers.pixelrpg;
+if (!handler) {
+    throw new Error("No handler found");
+}
+
+handler.postMessage({
+    type: "hello",
+    message: "Hello from client"
+});
