@@ -480,12 +480,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/client@workspace:packages/client"
   dependencies:
+    "@pixelrpg/common": "workspace:^"
+    "@pixelrpg/messages-webview": "workspace:^"
     typescript: "npm:^5.4.5"
     vite: "npm:^5.2.11"
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/common@workspace:packages/common":
+"@pixelrpg/common@workspace:^, @pixelrpg/common@workspace:packages/common":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/common@workspace:packages/common"
   dependencies:
@@ -506,7 +508,30 @@ __metadata:
     "@girs/gtk-4.0": "npm:^4.14.3-4.0.0-beta.5"
     "@girs/javascriptcore-6.0": "npm:^2.44.0-4.0.0-beta.5"
     "@girs/webkit-6.0": "npm:^2.44.0-4.0.0-beta.5"
+    "@pixelrpg/messages-gjs": "workspace:^"
     mime: "npm:^4.0.3"
+    typescript: "npm:^5.4.5"
+    vite: "npm:^5.2.11"
+  languageName: unknown
+  linkType: soft
+
+"@pixelrpg/messages-gjs@workspace:^, @pixelrpg/messages-gjs@workspace:packages/messages-gjs":
+  version: 0.0.0-use.local
+  resolution: "@pixelrpg/messages-gjs@workspace:packages/messages-gjs"
+  dependencies:
+    "@girs/javascriptcore-6.0": "npm:^2.44.0-4.0.0-beta.5"
+    "@girs/webkit-6.0": "npm:^2.44.0-4.0.0-beta.5"
+    "@pixelrpg/common": "workspace:^"
+    typescript: "npm:^5.4.5"
+    vite: "npm:^5.2.11"
+  languageName: unknown
+  linkType: soft
+
+"@pixelrpg/messages-webview@workspace:^, @pixelrpg/messages-webview@workspace:packages/messages-webview":
+  version: 0.0.0-use.local
+  resolution: "@pixelrpg/messages-webview@workspace:packages/messages-webview"
+  dependencies:
+    "@pixelrpg/common": "workspace:^"
     typescript: "npm:^5.4.5"
     vite: "npm:^5.2.11"
   languageName: unknown

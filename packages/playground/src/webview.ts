@@ -7,6 +7,7 @@ import mime from 'mime'
 
 import WindowTemplate from '../ui/webview.ui?raw'
 import { clientResource } from './resource.ts'
+import { MessagesService } from '@pixelrpg/messages-gjs'
 
 export const WebView = GObject.registerClass(
   {
@@ -15,6 +16,9 @@ export const WebView = GObject.registerClass(
     // InternalChildren: ['web_view'],
   },
   class WebView extends WebKit.WebView {
+
+    protected messagesService: MessagesService
+
     constructor(props: Partial<WebKit.WebView.ConstructorProps>) {
       const network_session = new WebKit.NetworkSession({})
 
@@ -50,34 +54,39 @@ export const WebView = GObject.registerClass(
         schemeRequest.finish(stream, -1, contentType)
       })
 
-      const user_content_manager = new WebKit.UserContentManager()
+      // const user_content_manager = new WebKit.UserContentManager()
 
-      // Allows to call this in client: window.webkit.messageHandlers.pixelrpg.postMessage('Hello from client');
-      user_content_manager.register_script_message_handler('pixelrpg', null)
-      user_content_manager.connect(
-        'script-message-received',
-        (manager: WebKit.UserContentManager, message: JavaScriptCore.Value) => {
-          console.log('Message from WebView: ' + message.to_json(0))
+      // // Allows to call this in client: window.webkit.messageHandlers.pixelrpg.postMessage('Hello from client');
+      // user_content_manager.register_script_message_handler('pixelrpg', null)
+      // user_content_manager.connect(
+      //   'script-message-received',
+      //   (manager: WebKit.UserContentManager, message: JavaScriptCore.Value) => {
+      //     console.log('Message from WebView: ' + message.to_json(0))
 
-          this.evaluate_javascript(
-            "console.log('Message from GJS!');",
-            -1,
-            null,
-            null,
-            null,
-            (webView, result) => {
-              this.evaluate_javascript_finish(result)
-            },
-          )
-        },
-      )
+      //     this.evaluate_javascript(
+      //       "console.log('Message from GJS!');",
+      //       -1,
+      //       null,
+      //       null,
+      //       null,
+      //       (webView, result) => {
+      //         this.evaluate_javascript_finish(result)
+      //       },
+      //     )
+      //   },
+      // )
 
       super({
         ...props,
         web_context,
         settings,
-        user_content_manager,
         network_session,
+      })
+
+      this.messagesService = new MessagesService(this, 'pixelrpg')
+      this.messagesService.onMessage((message) => {
+        console.log('Message from WebView:', message)
+        this.messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
       })
 
       this.load_uri('pixelrpg:///org/pixelrpg/map-editor/client/index.html')

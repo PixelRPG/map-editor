@@ -1,11 +1,14 @@
-import './global.d.ts'
+import { MessagesService } from '@pixelrpg/messages-webview'
 
-const handler = window.webkit.messageHandlers.pixelrpg
-if (!handler) {
-  throw new Error('No handler found')
-}
+const messagesService = new MessagesService('pixelrpg')
 
-handler.postMessage({
-  type: 'hello',
-  message: 'Hello from client',
+messagesService.send({
+  type: 'text',
+  data: 'Hello from the WebView',
 })
+
+
+messagesService.onMessage((message) => {
+  console.log('Message from GJS:', message)
+})
+

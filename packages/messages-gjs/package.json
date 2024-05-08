@@ -1,7 +1,7 @@
 {
-    "name": "@pixelrpg/common",
+    "name": "@pixelrpg/messages-gjs",
     "version": "0.0.1",
-    "description": "Common package to share code between GJS and the WebVew",
+    "description": "Messages from GJS to communicate with WebKit.WebView",
     "main": "src/index.ts",
     "type": "module",
     "private": true,
@@ -13,5 +13,10 @@
     "devDependencies": {
         "typescript": "^5.4.5",
         "vite": "^5.2.11"
+    },
+    "dependencies": {
+        "@girs/javascriptcore-6.0": "^2.44.0-4.0.0-beta.5",
+        "@girs/webkit-6.0": "^2.44.0-4.0.0-beta.5",
+        "@pixelrpg/common": "workspace:^"
     }
 }
