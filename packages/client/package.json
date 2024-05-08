@@ -8,18 +8,20 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
-        "dev": "vite",
-        "build:vite": "vite build",
-        "build": "yarn build:vite"
+        "serve": "yarn build:html && esbuilder --serve --outfile ./dist/main.js",
+        "build:esbuild": "esbuilder --outfile ./dist/main.js",
+        "build:html": "cp ./index.html ./dist/index.html",
+        "build": "yarn build:esbuild && yarn build:html"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "devDependencies": {
-        "typescript": "^5.4.5",
-        "vite": "^5.2.11"
+        "@pixelrpg/esbuild": "workspace:^",
+        "typescript": "^5.4.5"
     },
     "dependencies": {
         "@pixelrpg/common": "workspace:^",
-        "@pixelrpg/messages-webview": "workspace:^"
+        "@pixelrpg/messages-webview": "workspace:^",
+        "excalibur": "workspace:^"
     }
 }

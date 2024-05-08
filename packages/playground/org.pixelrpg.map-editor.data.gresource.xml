@@ -2,7 +2,9 @@
 <gresources>
   <gresource prefix="/org/pixelrpg/map-editor/client">
     <file alias="index.html">../client/dist/index.html</file>
-    <file alias="style.css">../client/dist/style.css</file>
-    <file alias="client.esm.js">../client/dist/client.esm.js</file>
+    <file alias="main.css">../client/dist/main.css</file>
+    <file alias="main.css.map">../client/dist/main.css.map</file>
+    <file alias="main.js">../client/dist/main.js</file>
+    <file alias="main.js.map">../client/dist/main.js.map</file>
   </gresource>
 </gresources>

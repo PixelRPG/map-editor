@@ -14,7 +14,7 @@
         "build": "yarn build:resources && yarn build:blueprints && yarn build:vite",
         "start:app": "gjs -m dist/main.js",
         "debug:app": "GTK_DEBUG=interactive gjs -m dist/main.js",
-        "start": "yarn build && yarn start:app"
+        "start": "yarn start:app"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",

@@ -8,12 +8,13 @@ import { EventDispatcher, BaseMessageService, Message } from '@pixelrpg/common'
 export class MessagesService implements BaseMessageService {
 
     events = new EventDispatcher()
-    handler: WebkitMessageHandler
+    handler?: WebkitMessageHandler
 
     constructor(private readonly messageHandlerName: string) {
-        const handler = window.webkit.messageHandlers[messageHandlerName];
+        const handler = window.webkit?.messageHandlers[messageHandlerName];
         if (!handler) {
-            throw new Error(`No WebKit message handler found for ${messageHandlerName}, this can be enabled for the WebView by GJS using UserContentManager.register_script_message_handler("${messageHandlerName}", null)`)
+            console.warn(`No WebKit message handler found for ${messageHandlerName}, this can be enabled for the WebView by GJS using UserContentManager.register_script_message_handler("${messageHandlerName}", null)`)
+            return;
         }
         // Used to make `window.webkit.messageHandlers.pixelrpg.receiveMessage(${JSON.stringify(message)});` available for GJS
         // This must be called in GJS using "evaluate_javascript(window.webkit.messageHandlers[messageHandlerName]?.receiveMessage(${JSON.stringify(message)});`)"
@@ -26,7 +27,7 @@ export class MessagesService implements BaseMessageService {
      * @param message The message to send
      */
     send(message: Message) {
-        this.handler.postMessage(message)
+        this.handler?.postMessage(message)
     }
 
     onMessage(callback: (message: Message) => void) {
