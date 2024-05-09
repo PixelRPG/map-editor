@@ -3,8 +3,11 @@
   <gresource prefix="/org/pixelrpg/map-editor/client">
     <file alias="index.html">../client/dist/index.html</file>
     <file alias="main.css">../client/dist/main.css</file>
-    <file alias="main.css.map">../client/dist/main.css.map</file>
+    <!-- <file alias="main.css.map">../client/dist/main.css.map</file> -->
     <file alias="main.js">../client/dist/main.js</file>
     <file alias="main.js.map">../client/dist/main.js.map</file>
+    <file alias="assets/maps/taba_town.tmx">../client/dist/assets/maps/taba_town.tmx</file>
+    <file alias="assets/tilesets/PastTheFuture_Grass_Sand_Snow.png">../client/dist/assets/tilesets/PastTheFuture_Grass_Sand_Snow.png</file>
+    <file alias="assets/tilesets/floorsandwalls.png">../client/dist/assets/tilesets/floorsandwalls.png</file>
   </gresource>
 </gresources>

@@ -25,11 +25,20 @@ class Resource {
     Gio.resources_register(resource)
   }
 
-  normalizePath(path: string) {
-    if (!path.startsWith(this.resourcePath)) {
-      path = this.resourcePath + path
+  normalizePath(path: string, base: string) {
+    let relative: string
+    let absolute: string
+    if (path.startsWith(base)) {
+      relative = path.substring(base.length)
+      absolute = path;
+    } else {
+      relative = path;
+      absolute = base + path;
     }
-    return path
+    return {
+      relative,
+      absolute,
+    }
   }
 
   /**
@@ -37,21 +46,14 @@ class Resource {
    * This is used to load the client files.
    */
   get(path: string) {
-    console.log('get', path)
-    if (!path.startsWith(this.resourcePath)) {
-      console.log(
-        'path not starting with resourcePath',
-        path,
-        this.resourcePath,
-      )
-      path = this.resourcePath + path
-    }
+    const { relative, absolute } = this.normalizePath(path, this.resourcePath)
+    console.log('get', absolute)
     try {
-      const data = this.resource.lookup_data(path, Gio.ResourceLookupFlags.NONE)
+      const data = this.resource.lookup_data(absolute, Gio.ResourceLookupFlags.NONE)
       return data
     } catch (error) {
       console.error('Error opening stream', error)
-      return this.getDirect(path)
+      return this.getDirect(relative)
     }
   }
 
@@ -60,12 +62,10 @@ class Resource {
    * This is used to load the client files.
    */
   getDirect(path: string) {
-    if (!path.startsWith(this.fallbackDirPath)) {
-      path = this.fallbackDirPath + '/' + path
-    }
-    console.log('get direct', path)
+    const { absolute } = this.normalizePath(path, this.fallbackDirPath)
+    console.log('get direct', absolute)
     try {
-      return Gio.File.new_for_path(path).load_contents(null)[1]
+      return Gio.File.new_for_path(absolute).load_contents(null)[1]
     } catch (error) {
       console.error('Error opening stream', error)
       return null
@@ -77,19 +77,11 @@ class Resource {
    * This is used to load the client files.
    */
   stream(path: string): Gio.InputStream | null {
+    const { relative, absolute } = this.normalizePath(path, this.resourcePath)
     console.log('open stream', path)
-    if (!path.startsWith(this.resourcePath)) {
-      console.log(
-        'path not starting with resourcePath',
-        path,
-        this.resourcePath,
-      )
-      path = this.resourcePath + path
-    }
-    const basename = path.split('/').pop()!
     try {
       const stream = this.resource.open_stream(
-        path,
+        absolute,
         Gio.ResourceLookupFlags.NONE,
       )
       console.log('stream', stream)
@@ -97,7 +89,7 @@ class Resource {
     } catch (error) {
       console.error('Error opening stream', error)
       console.log('trying direct')
-      return this.streamDirect(basename)
+      return this.streamDirect(relative)
     }
   }
 
@@ -106,11 +98,9 @@ class Resource {
    * This is used to load the client files.
    */
   streamDirect(path: string): Gio.FileInputStream | null {
-    if (!path.startsWith(this.fallbackDirPath)) {
-      path = this.fallbackDirPath + '/' + path
-    }
-    console.log('open stream direct', path)
-    const file = Gio.File.new_for_path(path)
+    const { absolute } = this.normalizePath(path, this.fallbackDirPath)
+    const file = Gio.File.new_for_path(absolute)
+    console.log('open stream direct', absolute)
     try {
       const stream = file.read(null)
       return stream

@@ -8,10 +8,10 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
-        "serve": "yarn build:html && esbuilder --serve --outfile ./dist/main.js",
+        "serve": "yarn build:assets && esbuilder --serve --outfile ./dist/main.js",
         "build:esbuild": "esbuilder --outfile ./dist/main.js",
-        "build:html": "cp ./index.html ./dist/index.html",
-        "build": "yarn build:esbuild && yarn build:html"
+        "build:assets": "mkdir -p ./dist && cp -r ./src/assets ./dist && cp ./index.html ./dist && cp ./main.css ./dist",
+        "build": "yarn build:assets && yarn build:esbuild"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
@@ -20,6 +20,8 @@
         "typescript": "^5.4.5"
     },
     "dependencies": {
+        "@excaliburjs/dev-tools": "^0.28.0",
+        "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/common": "workspace:^",
         "@pixelrpg/messages-webview": "workspace:^",
         "excalibur": "workspace:^"
