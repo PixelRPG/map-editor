@@ -8,8 +8,8 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
-        "serve": "yarn build:assets && esbuilder --serve --outfile ./dist/main.js",
-        "build:esbuild": "esbuilder --outfile ./dist/main.js",
+        "serve": "yarn build:assets && esbuilder --serve --outdir ./dist ",
+        "build:esbuild": "esbuilder --outdir ./dist",
         "build:assets": "mkdir -p ./dist && cp -r ./src/assets ./dist && cp ./index.html ./dist && cp ./main.css ./dist",
         "build": "yarn build:assets && yarn build:esbuild"
     },

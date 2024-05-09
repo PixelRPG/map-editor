@@ -16,9 +16,10 @@ messagesService.onMessage((message) => {
 })
 
 const game = new Engine({
-  width: 800,
-  height: 600,
   canvasElementId: 'editor-view',
+  displayMode: DisplayMode.FillScreen,
+  pixelArt: true,
+  suppressPlayButton: true,
 })
 
 const tiledMap = new TiledResource('./assets/maps/taba_town.tmx');
