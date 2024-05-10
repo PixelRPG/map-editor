@@ -1,4 +1,4 @@
-import { Engine, DisplayMode, Loader } from 'excalibur'
+import { Engine, DisplayMode, Loader, Color } from 'excalibur'
 // import { DevTool } from '@excaliburjs/dev-tools'
 import { TiledResource } from '@excaliburjs/plugin-tiled'
 import { MessagesService } from '@pixelrpg/messages-webview'
@@ -16,10 +16,11 @@ messagesService.onMessage((message) => {
 })
 
 const game = new Engine({
-  canvasElementId: 'editor-view',
+  canvasElementId: 'map-view',
   displayMode: DisplayMode.FillScreen,
   pixelArt: true,
-  suppressPlayButton: true,
+  suppressPlayButton: false,
+  backgroundColor: Color.Black,
 })
 
 const tiledMap = new TiledResource('./assets/maps/taba_town.tmx');

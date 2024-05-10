@@ -29,6 +29,8 @@ export const WebView = GObject.registerClass(
         enable_developer_extras: true,
         javascript_can_open_windows_automatically: true,
         allow_top_navigation_to_data_urls: false,
+        // allow_file_access_from_file_urls: true,
+        // allow_universal_access_from_file_urls: true,
       })
 
       settings.set_user_agent_with_application_details("PixelRPG", /*pkg.version*/ "0.0.1");

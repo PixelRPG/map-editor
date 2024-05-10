@@ -3263,9 +3263,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/map-editor@workspace:packages/playground":
+"@pixelrpg/map-editor@workspace:apps/map-editor":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/map-editor@workspace:packages/playground"
+  resolution: "@pixelrpg/map-editor@workspace:apps/map-editor"
   dependencies:
     "@girs/adw-1": "npm:^1.5.0-4.0.0-beta.5"
     "@girs/gio-2.0": "npm:^2.80.0-4.0.0-beta.5"
