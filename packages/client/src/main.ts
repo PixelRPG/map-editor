@@ -10,7 +10,6 @@ messagesService.send({
   data: 'Hello from the WebView',
 })
 
-
 messagesService.onMessage((message) => {
   console.log('Message from GJS:', message)
 })
@@ -19,12 +18,14 @@ const game = new Engine({
   canvasElementId: 'map-view',
   displayMode: DisplayMode.FillScreen,
   pixelArt: true,
-  suppressPlayButton: false,
+  suppressPlayButton: true,
+
   backgroundColor: Color.Black,
 })
 
 const tiledMap = new TiledResource('./assets/maps/taba_town.tmx');
 const loader = new Loader([tiledMap]);
+loader.backgroundColor = "#000000" // Black background color on play button
 
 await game.start(loader);
 // const devtool = new DevTool(game);
