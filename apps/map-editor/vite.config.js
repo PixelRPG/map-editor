@@ -12,5 +12,8 @@ export default defineConfig({
       },
       external: [new RegExp('^gi://*', 'i'), 'system'],
     },
+    esbuild: {
+      external: ['jsdom'],
+    },
   },
 })

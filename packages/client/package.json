@@ -8,22 +8,26 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
-        "serve": "yarn build:assets && esbuilder --serve --outdir ./dist ",
+        "preview": "yarn build && vite preview",
         "build:esbuild": "esbuilder --outdir ./dist",
-        "build:assets": "mkdir -p ./dist && cp -r ./src/assets ./dist && cp ./index.html ./dist && cp ./main.css ./dist",
-        "build": "yarn build:assets && yarn build:esbuild"
+        "build:vite": "vite build",
+        "build:assets": "mkdir -p ./dist && cp -r ./src/assets ./dist",
+        "build": "yarn build:assets && yarn build:vite"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "devDependencies": {
         "@pixelrpg/esbuild": "workspace:^",
-        "typescript": "^5.4.5"
+        "@rollup/pluginutils": "^5.1.0",
+        "typescript": "^5.4.5",
+        "vite": "^5.2.11"
     },
     "dependencies": {
         "@excaliburjs/dev-tools": "^0.28.0",
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/common": "workspace:^",
         "@pixelrpg/messages-webview": "workspace:^",
-        "excalibur": "workspace:^"
+        "excalibur": "workspace:^",
+        "vite-plugin-glsl": "^1.3.0"
     }
 }
