@@ -4,14 +4,14 @@ import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
 import mime from 'mime'
 
-import WindowTemplate from '../ui/webview.ui?raw'
-import { clientResource } from './resource.ts'
+import Template from './webview.ui?raw'
+import { clientResource } from '../resource.ts'
 import { MessagesService } from '@pixelrpg/messages-gjs'
 
 export const WebView = GObject.registerClass(
   {
     GTypeName: 'WebView',
-    Template: WindowTemplate,
+    Template,
   },
   class WebView extends WebKit.WebView {
 

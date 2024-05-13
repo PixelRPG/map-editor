@@ -9,7 +9,7 @@ import Gtk from '@girs/gtk-4.0'
 import WebKit from '@girs/webkit-6.0'
 import system from 'system'
 
-import { TestWindow } from './window.ts'
+import { ApplicationWindow } from './widgets/application-window.ts'
 
 const loop = GLib.MainLoop.new(null, false)
 
@@ -49,7 +49,7 @@ export const TestApplication = GObject.registerClass(
     vfunc_activate() {
       let { active_window } = this
 
-      if (!active_window) active_window = new TestWindow(this)
+      if (!active_window) active_window = new ApplicationWindow(this)
 
       active_window.present()
     }
