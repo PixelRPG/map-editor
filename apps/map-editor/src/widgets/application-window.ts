@@ -14,7 +14,6 @@ export const ApplicationWindow = GObject.registerClass(
   {
     GTypeName: 'ApplicationWindow',
     Template,
-    // InternalChildren: ['web_view'],
   },
   class ApplicationWindow extends Adw.ApplicationWindow {
     constructor(application: Adw.Application) {
