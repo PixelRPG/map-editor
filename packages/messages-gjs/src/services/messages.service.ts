@@ -1,21 +1,18 @@
 import type WebKit from '@girs/webkit-6.0'
 import type JavaScriptCore from '@girs/javascriptcore-6.0'
-import { EventDispatcher, BaseMessageService, Message } from '@pixelrpg/common'
+import { EventDispatcher, BaseMessageService, Message, EventListener } from '@pixelrpg/common'
 
 /**
  * Message service for inter process communication between GJS and WebViews.
  * This is implementation for the GJS side of the communication.
  */
-export class MessagesService implements BaseMessageService {
+export class MessagesService extends BaseMessageService {
 
     events = new EventDispatcher()
 
-    protected userContentManager: WebKit.UserContentManager
-
     constructor(private readonly webView: WebKit.WebView, private readonly messageHandlerName: string) {
-        this.userContentManager = webView.get_user_content_manager()
-        this.userContentManager.register_script_message_handler(messageHandlerName, null)
-        this.receive()
+        super()
+        this.initReceiver()
     }
 
     /**
@@ -24,7 +21,7 @@ export class MessagesService implements BaseMessageService {
      */
     send(message: Message) {
         this.webView.evaluate_javascript(
-            `window.webkit.messageHandlers.${this.messageHandlerName}.receiveMessage(${JSON.stringify(message)});`,
+            `window.messageReceivers.${this.messageHandlerName}.receive(${JSON.stringify(message)});`,
             -1,
             null,
             null,
@@ -35,30 +32,36 @@ export class MessagesService implements BaseMessageService {
         )
     }
 
-    onMessage(callback: (message: Message) => void) {
+    onMessage(callback: EventListener<Message>) {
         this.events.on(`${this.messageHandlerName}:message`, callback)
     }
 
-    onceMessage(callback: (message: Message) => void) {
+    onceMessage(callback: EventListener<Message>) {
         this.events.once(`${this.messageHandlerName}:message`, callback)
     }
 
-    offMessage(callback: (message: Message) => void) {
+    offMessage(callback: EventListener<Message>) {
         this.events.off(`${this.messageHandlerName}:message`, callback)
     }
 
-    /**
-     * Connects to the 'script-message-received' signal to receive messages from the webview
-     */
-    protected receive() {
-        this.userContentManager.connect(
+    protected initReceiver() {
+        const userContentManager = this.webView.get_user_content_manager()
+        userContentManager.register_script_message_handler(this.messageHandlerName, null)
+        // Connects to the 'script-message-received' signal to receive messages from the webview
+        userContentManager.connect(
             'script-message-received',
-            (manager: WebKit.UserContentManager, message: JavaScriptCore.Value) => {
-                const obj = JSON.parse(message.to_json(0))
-                this.events.dispatch(`${this.messageHandlerName}:message`, obj)
+            (userContentManager, message) => {
+                const parsedMessage = JSON.parse(message.to_json(0))
+                this.receive(parsedMessage)
             },
         )
+    }
 
+    /**
+     * Receives a message from the webview
+     */
+    protected receive(message: Message) {
+        this.events.dispatch(`${this.messageHandlerName}:message`, message)
     }
 }
 

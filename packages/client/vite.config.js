@@ -25,6 +25,7 @@ export default defineConfig({
     outDir: 'dist',
     cssCodeSplit: true,
     publicDir: 'dist',
+    minify: false,
     // lib: {
     //   entry: 'index.html',
     //   formats: ['esm'],

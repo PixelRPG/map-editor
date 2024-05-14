@@ -4,11 +4,12 @@ import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
 import Gtk from '@girs/gtk-4.0'
 
+import { MessagesService } from '@pixelrpg/messages-gjs'
 import mime from 'mime'
 
 import Template from './webview.ui?raw'
 import { clientResource } from '../resource.ts'
-import { MessagesService } from '@pixelrpg/messages-gjs'
+import { EventControllerInput } from '../event-controller-input.ts'
 
 export const WebView = GObject.registerClass(
   {
@@ -44,6 +45,11 @@ export const WebView = GObject.registerClass(
         network_session,
       })
 
+      this.onReady = this.onReady.bind(this)
+      this.onMouseMotion = this.onMouseMotion.bind(this)
+      this.onMouseLeave = this.onMouseLeave.bind(this)
+      this.onURISchemeRequest = this.onURISchemeRequest.bind(this)
+
       this.registerURIScheme('pixelrpg', this.onURISchemeRequest)
       this.messagesService = this.initMessagesService()
 
@@ -63,9 +69,10 @@ export const WebView = GObject.registerClass(
     }
 
     protected initMotionController() {
-      const motionEventController = new Gtk.EventControllerMotion()
+      const motionEventController = new EventControllerInput()
       motionEventController.connect('leave', this.onMouseLeave)
-      this.add_controller(motionEventController)
+      motionEventController.connect('motion', this.onMouseMotion)
+      motionEventController.addTo(this)
     }
 
     protected initPageLoadListener() {
@@ -79,19 +86,24 @@ export const WebView = GObject.registerClass(
       });
     }
 
-    protected onReady() {
-      console.log('First page view is finished')
-    }
-
-    protected onMouseLeave() {
-      console.log('Mouse has left the WebView');
-    }
-
-
     protected registerURIScheme(scheme: string, handler: (schemeRequest: WebKit.URISchemeRequest) => void) {
       const security_manager = this.web_context.get_security_manager()
       security_manager.register_uri_scheme_as_cors_enabled(scheme);
       this.web_context.register_uri_scheme(scheme, handler)
+    }
+
+    protected onReady() {
+      console.log('First page view is finished')
+    }
+
+    protected onMouseMotion(_source: InstanceType<typeof EventControllerInput>, x: number, y: number) {
+      console.log('Mouse has moved in the WebView', _source.isOutside, x, y);
+      this.messagesService.send({ type: 'event', data: { name: 'mouse-move', data: { x, y } } })
+    }
+
+    protected onMouseLeave() {
+      console.log('Mouse has left the WebView');
+      this.messagesService.send({ type: 'event', data: { name: 'mouse-leave', data: null } })
     }
 
     protected onURISchemeRequest(schemeRequest: WebKit.URISchemeRequest) {

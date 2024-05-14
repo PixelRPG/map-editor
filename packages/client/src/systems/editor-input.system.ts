@@ -40,6 +40,7 @@ export class EditorInputSystem extends System {
                 this.engine!.currentScene.camera.x -= deltaX;
                 this.engine!.currentScene.camera.y -= deltaY;
                 this.dragStartPos = { x: evt.screenPos.x, y: evt.screenPos.y };
+                console.debug('move', evt.screenPos.x, evt.screenPos.y)
             }
         });
 

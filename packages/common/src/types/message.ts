@@ -12,5 +12,13 @@ export interface ImageMessage {
     };
 }
 
-export type Message = TextMessage | ImageMessage
+export interface EventMessage<T = any> {
+    type: 'event';
+    data: {
+        name: string;
+        data: any;
+    };
+}
+
+export type Message = TextMessage | ImageMessage | EventMessage
 

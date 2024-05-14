@@ -5,6 +5,7 @@ export default defineConfig({
     assetsDir: '.',
     outDir: 'dist',
     target: 'firefox91',
+    minify: false,
     rollupOptions: {
       input: 'src/main.ts',
       output: {

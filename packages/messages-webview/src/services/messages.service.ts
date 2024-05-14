@@ -1,25 +1,18 @@
 import type { WebkitMessageHandler } from '../types/index.ts'
-import { EventDispatcher, BaseMessageService, Message } from '@pixelrpg/common'
+import { EventDispatcher, BaseMessageService, Message, EventListener } from '@pixelrpg/common'
 
 /**
  * Message service for inter process communication between GJS and WebViews.
  * This is implementation for the WebView side of the communication.
  */
-export class MessagesService implements BaseMessageService {
+export class MessagesService extends BaseMessageService {
 
     events = new EventDispatcher()
     handler?: WebkitMessageHandler
 
     constructor(private readonly messageHandlerName: string) {
-        const handler = window.webkit?.messageHandlers[messageHandlerName];
-        if (!handler) {
-            console.warn(`No WebKit message handler found for ${messageHandlerName}, this can be enabled for the WebView by GJS using UserContentManager.register_script_message_handler("${messageHandlerName}", null)`)
-            return;
-        }
-        // Used to make `window.webkit.messageHandlers.pixelrpg.receiveMessage(${JSON.stringify(message)});` available for GJS
-        // This must be called in GJS using "evaluate_javascript(window.webkit.messageHandlers[messageHandlerName]?.receiveMessage(${JSON.stringify(message)});`)"
-        handler.receiveMessage = this.receive.bind(this)
-        this.handler = handler
+        super()
+        this.initReceiver()
     }
 
     /**
@@ -30,16 +23,32 @@ export class MessagesService implements BaseMessageService {
         this.handler?.postMessage(message)
     }
 
-    onMessage(callback: (message: Message) => void) {
+    onMessage(callback: EventListener<Message>) {
         this.events.on(`${this.messageHandlerName}:message`, callback)
     }
 
-    onceMessage(callback: (message: Message) => void) {
+    onceMessage(callback: EventListener<Message>) {
         this.events.once(`${this.messageHandlerName}:message`, callback)
     }
 
-    offMessage(callback: (message: Message) => void) {
+    offMessage(callback: EventListener<Message>) {
         this.events.off(`${this.messageHandlerName}:message`, callback)
+    }
+
+    protected initReceiver() {
+        const handler = window.webkit?.messageHandlers[this.messageHandlerName];
+        if (!handler) {
+            console.warn(`No WebKit message handler found for ${this.messageHandlerName}, this can be enabled for the WebView by GJS using UserContentManager.register_script_message_handler("${this.messageHandlerName}", null)`)
+            return;
+        }
+        this.handler = handler;
+
+        // Used to make `window.messageReceivers.pixelrpg.receive(${JSON.stringify(message)});` available for GJS
+        // This must be called in GJS using "evaluate_javascript(...)"
+        (window as any).messageReceivers ||= {};
+        (window as any).messageReceivers[this.messageHandlerName] = { receive: this.receive.bind(this) }
+
+        console.log('Message handler initialized', handler)
     }
 
     /**

@@ -1,12 +1,16 @@
-import { Message } from "./message"
+import type { Message, EventListener } from "./index.ts"
 
-export interface BaseMessageService {
-    send(message: Message): void
+export abstract class BaseMessageService {
 
-    onMessage(callback: (message: Message) => void): void
+    abstract send(message: Message): void
 
-    onceMessage(callback: (message: Message) => void): void
+    abstract onMessage(callback: EventListener<Message>): void
 
-    offMessage(callback: (message: Message) => void): void
+    abstract onceMessage(callback: EventListener<Message>): void
+
+    abstract offMessage(callback: EventListener<Message>): void
+
+    protected abstract receive(message: Message): void
+    protected abstract initReceiver(): void
 }
 
