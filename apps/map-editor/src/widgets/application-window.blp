@@ -31,13 +31,9 @@ template $ApplicationWindow: Adw.ApplicationWindow {
         }
       }
 
-      content: Box {
-        orientation: vertical;
-
-        $WebView web_view {
-          vexpand: 'true';
-          hexpand: 'true';
-        }
+      content: $WebView web_view {
+        vexpand: 'true';
+        hexpand: 'true';
       };
     };
   };

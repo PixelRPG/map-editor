@@ -2,6 +2,8 @@
 
 import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
+import Gtk from '@girs/gtk-4.0'
+
 import mime from 'mime'
 
 import Template from './webview.ui?raw'
@@ -45,6 +47,9 @@ export const WebView = GObject.registerClass(
       this.registerURIScheme('pixelrpg', this.onURISchemeRequest)
       this.messagesService = this.initMessagesService()
 
+      this.initMotionController()
+      this.initPageLoadListener()
+
       this.load_uri('pixelrpg:///org/pixelrpg/map-editor/client/index.html')
     }
 
@@ -54,9 +59,34 @@ export const WebView = GObject.registerClass(
         console.log('Message from WebView:', message)
         messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
       })
-
       return messagesService
     }
+
+    protected initMotionController() {
+      const motionEventController = new Gtk.EventControllerMotion()
+      motionEventController.connect('leave', this.onMouseLeave)
+      this.add_controller(motionEventController)
+    }
+
+    protected initPageLoadListener() {
+      const signalId = this.connect('load-changed', (_source: this, loadEvent: WebKit.LoadEvent) => {
+        console.log('WebView load changed')
+        if (loadEvent === WebKit.LoadEvent.FINISHED) {
+          console.log('WebView load finished')
+          this.onReady()
+          this.disconnect(signalId);
+        }
+      });
+    }
+
+    protected onReady() {
+      console.log('First page view is finished')
+    }
+
+    protected onMouseLeave() {
+      console.log('Mouse has left the WebView');
+    }
+
 
     protected registerURIScheme(scheme: string, handler: (schemeRequest: WebKit.URISchemeRequest) => void) {
       const security_manager = this.web_context.get_security_manager()
