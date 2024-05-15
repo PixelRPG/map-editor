@@ -4,6 +4,9 @@ import { messagesService } from '../services/messages.service.ts'
 
 import type { EventDataMouseMove } from '@pixelrpg/common'
 
+/**
+ * We use this system to handle the input for the map editor.
+ */
 export class EditorInputSystem extends System {
     private isDown = false;
     private dragStartPos = { x: 0, y: 0 };
@@ -32,7 +35,7 @@ export class EditorInputSystem extends System {
             this.engine!.currentScene.camera.x -= deltaX;
             this.engine!.currentScene.camera.y -= deltaY;
             this.dragStartPos = { x: x, y: y };
-            console.debug('move', x, y)
+            // console.debug('move', x, y)
         }
     }
 

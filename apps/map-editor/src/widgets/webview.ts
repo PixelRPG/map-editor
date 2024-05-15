@@ -102,7 +102,7 @@ export const WebView = GObject.registerClass(
       // Round to 10th
       x = Math.round(x * 10) / 10
       y = Math.round(y * 10) / 10
-      console.log('Mouse has moved in the WebView', inputController.isOutside, x, y);
+      // console.log('Mouse has moved in the WebView', inputController.isOutside, x, y);
       this.messagesService.send({ type: 'event', data: { name: 'mouse-move', data: { x, y } } })
     }
 
