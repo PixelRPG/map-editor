@@ -1,5 +1,7 @@
 import Gio from '@girs/gio-2.0'
 
+export const APPLICATION_ID = 'org.pixelrpg.map-editor'
+
 export const ROOT_DIR = Gio.File.new_for_uri(
   import.meta.url,
 ).resolve_relative_path('../..')

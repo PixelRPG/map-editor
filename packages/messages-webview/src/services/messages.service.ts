@@ -1,5 +1,5 @@
 import type { WebkitMessageHandler } from '../types/index.ts'
-import { EventDispatcher, BaseMessageService, Message, EventListener } from '@pixelrpg/common'
+import { BaseMessageService, Message } from '@pixelrpg/common'
 
 /**
  * Message service for inter process communication between GJS and WebViews.
@@ -7,11 +7,10 @@ import { EventDispatcher, BaseMessageService, Message, EventListener } from '@pi
  */
 export class MessagesService extends BaseMessageService {
 
-    events = new EventDispatcher()
     handler?: WebkitMessageHandler
 
-    constructor(private readonly messageHandlerName: string) {
-        super()
+    constructor(messageHandlerName: string) {
+        super(messageHandlerName)
         this.initReceiver()
     }
 
@@ -21,18 +20,6 @@ export class MessagesService extends BaseMessageService {
      */
     send(message: Message) {
         this.handler?.postMessage(message)
-    }
-
-    onMessage(callback: EventListener<Message>) {
-        this.events.on(`${this.messageHandlerName}:message`, callback)
-    }
-
-    onceMessage(callback: EventListener<Message>) {
-        this.events.once(`${this.messageHandlerName}:message`, callback)
-    }
-
-    offMessage(callback: EventListener<Message>) {
-        this.events.off(`${this.messageHandlerName}:message`, callback)
     }
 
     protected initReceiver() {
@@ -49,14 +36,6 @@ export class MessagesService extends BaseMessageService {
         (window as any).messageReceivers[this.messageHandlerName] = { receive: this.receive.bind(this) }
 
         console.log('Message handler initialized', handler)
-    }
-
-    /**
-     * Receives a message from GJS
-     * @param message The message to receive
-     */
-    protected receive(message: Message) {
-        this.events.dispatch(`${this.messageHandlerName}:message`, message)
     }
 }
 

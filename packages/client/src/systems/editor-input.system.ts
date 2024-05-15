@@ -1,4 +1,8 @@
 import { Engine, System, World, Scene, SystemType } from "excalibur";
+import { settings } from '../settings.ts'
+import { messagesService } from '../services/messages.service.ts'
+
+import type { EventDataMouseMove } from '@pixelrpg/common'
 
 export class EditorInputSystem extends System {
     private isDown = false;
@@ -10,6 +14,9 @@ export class EditorInputSystem extends System {
 
     constructor() {
         super()
+        this.onPointerMove = this.onPointerMove.bind(this);
+        this.onPointerDown = this.onPointerDown.bind(this);
+        this.onPointerUp = this.onPointerUp.bind(this);
     }
 
     public update(delta: number) {
@@ -17,37 +24,57 @@ export class EditorInputSystem extends System {
 
     }
 
+    protected onPointerMove(x: number, y: number) {
+        if (this.isDown) {
+            const zoom = this.engine!.currentScene.camera.zoom;
+            const deltaX = (x - this.dragStartPos.x) / zoom;
+            const deltaY = (y - this.dragStartPos.y) / zoom;
+            this.engine!.currentScene.camera.x -= deltaX;
+            this.engine!.currentScene.camera.y -= deltaY;
+            this.dragStartPos = { x: x, y: y };
+            console.debug('move', x, y)
+        }
+    }
+
+    protected onPointerDown(x: number, y: number) {
+        this.isDown = true;
+        this.dragStartPos = { x, y };
+    }
+
+    protected onPointerUp() {
+        this.isDown = false;
+    }
+
     public initialize(world: World, scene: Scene) {
         this.engine = scene.engine;
         const pointer = this.engine.input.pointers.primary;
 
         pointer.on('down', (evt) => {
-            this.isDown = true;
-            this.dragStartPos = { x: evt.screenPos.x, y: evt.screenPos.y };
+            this.onPointerDown(evt.screenPos.x, evt.screenPos.y);
         });
 
-        pointer.on('up', (evt) => {
-            if (this.isDown) {
-                this.isDown = false;
-            }
-        });
+        pointer.on('up', this.onPointerUp);
 
-        pointer.on('move', (evt) => {
-            if (this.isDown) {
-                const zoom = this.engine!.currentScene.camera.zoom;
-                const deltaX = (evt.screenPos.x - this.dragStartPos.x) / zoom;
-                const deltaY = (evt.screenPos.y - this.dragStartPos.y) / zoom;
-                this.engine!.currentScene.camera.x -= deltaX;
-                this.engine!.currentScene.camera.y -= deltaY;
-                this.dragStartPos = { x: evt.screenPos.x, y: evt.screenPos.y };
-                console.debug('move', evt.screenPos.x, evt.screenPos.y)
-            }
-        });
+        if (settings.isBrowser) {
+            // Default browser behavior
+            pointer.on('move', (evt) => {
+                const x = evt.screenPos.x;
+                const y = evt.screenPos.y;
+                this.onPointerMove(x, y);
+            });
+        } else {
+            // We send the mouse events from GTK to the WebView so that drag scrolling also works beyond the WebView
+            messagesService.onEvent<EventDataMouseMove>('mouse-move', (message) => {
+                const x = message.data.data.x;
+                const y = message.data.data.y;
+                this.onPointerMove(x, y);
+            })
+
+            messagesService.onEvent<EventDataMouseMove>('mouse-leave', this.onPointerUp)
+        }
 
 
-        pointer.on('cancel', (evt) => {
-            this.isDown = false;
-        });
+        pointer.on('cancel', this.onPointerUp);
 
         pointer.on('wheel', (evt) => {
             const direction = evt.deltaY > 0 ? -1 : 1

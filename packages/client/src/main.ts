@@ -1,10 +1,9 @@
 import { Engine, DisplayMode, Loader, Color } from 'excalibur'
 // import { DevTool } from '@excaliburjs/dev-tools'
 import { TiledResource } from '@excaliburjs/plugin-tiled'
-import { MessagesService } from '@pixelrpg/messages-webview'
-import { EditorInputSystem } from './systems/editor-input.system'
 
-const messagesService = new MessagesService('pixelrpg')
+import { messagesService } from './services/messages.service.ts'
+import { EditorInputSystem } from './systems/editor-input.system.ts'
 
 messagesService.send({
   type: 'text',

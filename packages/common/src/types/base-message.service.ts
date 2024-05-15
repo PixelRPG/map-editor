@@ -1,16 +1,78 @@
-import type { Message, EventListener } from "./index.ts"
+import { EventDispatcher } from "../event-dispatcher"
+import type { Message, MessageEvent, MessageFile, MessageText, EventListener } from "./index.ts"
 
 export abstract class BaseMessageService {
 
+    events = new EventDispatcher()
+
+    constructor(protected readonly messageHandlerName: string) {
+
+    }
+
     abstract send(message: Message): void
 
-    abstract onMessage(callback: EventListener<Message>): void
+    on(eventName: string, callback: EventListener) {
+        this.events.on(`${this.messageHandlerName}:${eventName}`, callback)
+    }
 
-    abstract onceMessage(callback: EventListener<Message>): void
+    once(eventName: string, callback: EventListener) {
+        this.events.once(`${this.messageHandlerName}:${eventName}`, callback)
+    }
 
-    abstract offMessage(callback: EventListener<Message>): void
+    off(eventName: string, callback: EventListener) {
+        this.events.off(`${this.messageHandlerName}:${eventName}`, callback)
+    }
 
-    protected abstract receive(message: Message): void
+    // Text events
+
+    onMessage(callback: EventListener<MessageText>) {
+        this.on('text', callback)
+    }
+
+    onceMessage(callback: EventListener<MessageText>) {
+        this.once('text', callback)
+    }
+
+    offMessage(callback: EventListener<MessageText>) {
+        this.off('text', callback)
+    }
+
+    // File events
+
+    onFile(callback: EventListener<MessageFile>) {
+        this.on('file', callback)
+    }
+
+    onceFile(callback: EventListener<MessageFile>) {
+        this.once('file', callback)
+    }
+
+    offFile(callback: EventListener<MessageFile>) {
+        this.off('file', callback)
+    }
+
+    // Event events
+
+    onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>) {
+        this.on(`event:${subEventName}`, callback)
+    }
+
+    onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>) {
+        this.once(`event:${subEventName}`, callback)
+    }
+
+    offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>) {
+        this.off(`event:${subEventName}`, callback)
+    }
+
+    protected receive(message: Message) {
+        if (message.type === 'event') {
+            this.events.dispatch(`${this.messageHandlerName}:${message.type}:${message.data.name}`, message)
+        } else {
+            this.events.dispatch(`${this.messageHandlerName}:${message.type}`, message)
+        }
+    }
+
     protected abstract initReceiver(): void
 }
 

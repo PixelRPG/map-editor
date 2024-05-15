@@ -1,24 +1,6 @@
-export interface TextMessage {
-    type: 'text';
-    data: string;
-}
+import { MessageText, MessageFile, MessageEvent, MessageEventMouseEnter, MessageEventMouseLeave, MessageEventMouseMove } from './index.ts'
+import { } from './message-file.ts'
+import { } from './message-event.ts'
 
-// Just for example, can be removed later
-export interface ImageMessage {
-    type: 'image';
-    data: {
-        url: string;
-        alt: string;
-    };
-}
-
-export interface EventMessage<T = any> {
-    type: 'event';
-    data: {
-        name: string;
-        data: any;
-    };
-}
-
-export type Message = TextMessage | ImageMessage | EventMessage
+export type Message = MessageText | MessageFile | MessageEvent | MessageEventMouseEnter | MessageEventMouseLeave | MessageEventMouseMove
 
