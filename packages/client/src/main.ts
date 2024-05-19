@@ -1,6 +1,12 @@
 import { Engine, DisplayMode, Loader, Color } from 'excalibur'
 // import { DevTool } from '@excaliburjs/dev-tools'
-import { TiledResource } from '@excaliburjs/plugin-tiled'
+import {
+  TiledResource,
+  TileLayer,
+  IsoTileLayer,
+  ObjectLayer,
+  ImageLayer,
+} from '@excaliburjs/plugin-tiled'
 
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -23,13 +29,52 @@ const engine = new Engine({
   backgroundColor: Color.Black,
 })
 
-const tiledMap = new TiledResource('./assets/maps/taba_town.tmx');
-const loader = new Loader([tiledMap]);
-loader.backgroundColor = "#000000" // Black background color on play button
+const tileResource = new TiledResource('./assets/maps/taba_town.tmx')
+const loader = new Loader([tileResource])
+loader.backgroundColor = '#000000' // Black background color on play button
 
-engine.currentScene.world.add(EditorInputSystem);
+engine.currentScene.world.add(EditorInputSystem)
 
-await engine.start(loader);
+await engine.start(loader)
 // const devtool = new DevTool(engine);
-tiledMap.addToScene(engine.currentScene);
 
+for (const layer of tileResource.layers) {
+  if (layer instanceof TileLayer) {
+    for (const tile of layer.tilemap.tiles) {
+      // TODO: forward these events to the tile
+      // tile.on('pointerenter', () => {
+      //   console.log('Tile pointerenter', tile)
+      // })
+      // tile.on('pointerleave', () => {
+      //   console.log('Tile pointerleave', tile)
+      // })
+      tile.on('pointerdown', () => {
+        console.log('Tile pointerdown', tile)
+        for (const graphic of tile.getGraphics()) {
+          graphic.opacity = 0.5
+        }
+      })
+      tile.on('pointerup', () => {
+        console.log('Tile pointerup', tile)
+        for (const graphic of tile.getGraphics()) {
+          graphic.opacity = 1
+        }
+      })
+    }
+  }
+  if (layer instanceof IsoTileLayer) {
+    // layer.isometricMap
+  }
+  if (layer instanceof ObjectLayer) {
+    for (const entity of layer.entities) {
+      // const tx = entity.get(TransformComponent)
+    }
+  }
+  if (layer instanceof ImageLayer) {
+    if (layer.imageActor) {
+      // layer.imageActor
+    }
+  }
+}
+
+tileResource.addToScene(engine.currentScene)
