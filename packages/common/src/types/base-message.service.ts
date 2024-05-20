@@ -1,12 +1,17 @@
+// TODO: Move to package messages-common
+
 import { EventDispatcher } from "../event-dispatcher"
 import type { Message, MessageEvent, MessageFile, MessageText, EventListener } from "./index.ts"
+import { proxy } from 'valtio/vanilla'
 
-export abstract class BaseMessageService {
+export abstract class BaseMessageService<S extends object> {
 
     events = new EventDispatcher()
 
-    constructor(protected readonly messageHandlerName: string) {
+    state: S
 
+    constructor(protected readonly messageHandlerName: string, state: S) {
+        this.state = proxy(state)
     }
 
     abstract send(message: Message): void

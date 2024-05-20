@@ -3241,6 +3241,7 @@ __metadata:
   resolution: "@pixelrpg/common@workspace:packages/common"
   dependencies:
     typescript: "npm:^5.4.5"
+    valtio: "npm:^2.0.0-rc.0"
     vite: "npm:^5.2.11"
   languageName: unknown
   linkType: soft
@@ -3279,6 +3280,7 @@ __metadata:
     "@girs/gtk-4.0": "npm:^4.14.3-4.0.0-beta.5"
     "@girs/javascriptcore-6.0": "npm:^2.44.0-4.0.0-beta.5"
     "@girs/webkit-6.0": "npm:^2.44.0-4.0.0-beta.5"
+    "@pixelrpg/common": "workspace:^"
     "@pixelrpg/messages-gjs": "workspace:^"
     mime: "npm:^4.0.3"
     typescript: "npm:^5.4.5"
@@ -3294,6 +3296,7 @@ __metadata:
     "@girs/webkit-6.0": "npm:^2.44.0-4.0.0-beta.5"
     "@pixelrpg/common": "workspace:^"
     typescript: "npm:^5.4.5"
+    valtio: "npm:^2.0.0-rc.0"
     vite: "npm:^5.2.11"
   languageName: unknown
   linkType: soft
@@ -3304,6 +3307,7 @@ __metadata:
   dependencies:
     "@pixelrpg/common": "workspace:^"
     typescript: "npm:^5.4.5"
+    valtio: "npm:^2.0.0-rc.0"
     vite: "npm:^5.2.11"
   languageName: unknown
   linkType: soft
@@ -14121,6 +14125,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"proxy-compare@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "proxy-compare@npm:3.0.0"
+  checksum: 10c0/9740af3709496b16ba18ebc337df5ca4c103f345436a8c0ec2e09217b7a06e119c145bedfe7fc4ad50b77b30fa804efaa6a7fe147eafb61aaf7ef44e387710f5
+  languageName: node
+  linkType: hard
+
 "proxy-from-env@npm:1.1.0, proxy-from-env@npm:^1.0.0":
   version: 1.1.0
   resolution: "proxy-from-env@npm:1.1.0"
@@ -16979,6 +16990,23 @@ __metadata:
     spdx-correct: "npm:^3.0.0"
     spdx-expression-parse: "npm:^3.0.0"
   checksum: 10c0/7b91e455a8de9a0beaa9fe961e536b677da7f48c9a493edf4d4d4a87fd80a7a10267d438723364e432c2fcd00b5650b5378275cded362383ef570276e6312f4f
+  languageName: node
+  linkType: hard
+
+"valtio@npm:^2.0.0-rc.0":
+  version: 2.0.0-rc.0
+  resolution: "valtio@npm:2.0.0-rc.0"
+  dependencies:
+    proxy-compare: "npm:^3.0.0"
+  peerDependencies:
+    "@types/react": ">=18.0.0"
+    react: ">=18.0.0"
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    react:
+      optional: true
+  checksum: 10c0/f8d863285f5a379eccea2da8db0a140baf787b77446b3430cf78dd0eb9558783f204de3a84751fc7591afbba07ffe0735945e6024090aae8d7c6fa0ced2f00f0
   languageName: node
   linkType: hard
 

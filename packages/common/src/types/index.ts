@@ -10,3 +10,5 @@ export * from './message-event.ts'
 export * from './message-file.ts'
 export * from './message-text.ts'
 export * from './message.ts'
+export * from './state.ts'
+

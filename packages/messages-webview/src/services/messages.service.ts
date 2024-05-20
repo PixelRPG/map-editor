@@ -1,16 +1,23 @@
 import type { WebkitMessageHandler } from '../types/index.ts'
 import { BaseMessageService, Message } from '@pixelrpg/common'
+import { proxy, subscribe } from 'valtio/vanilla'
 
 /**
  * Message service for inter process communication between GJS and WebViews.
  * This is implementation for the WebView side of the communication.
  */
-export class MessagesService extends BaseMessageService {
+export class MessagesService<S extends object> extends BaseMessageService<S> {
 
     handler?: WebkitMessageHandler
 
-    constructor(messageHandlerName: string) {
-        super(messageHandlerName)
+    state: S
+
+    constructor(messageHandlerName: string, state: S) {
+        super(messageHandlerName, state)
+        this.state = proxy<S>(state)
+
+        subscribe(this.state, () => console.log('state has changed to', this.state))
+
         this.initReceiver()
     }
 

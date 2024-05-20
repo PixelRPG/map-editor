@@ -30,7 +30,23 @@ const engine = new Engine({
 })
 
 const tileResource = new TiledResource('./assets/maps/taba_town.tmx')
+
 const loader = new Loader([tileResource])
+
+loader.on('afterload', () => {
+  console.debug('tileResource afterload', tileResource)
+  for (const tileset of tileResource.tilesets) {
+    messagesService.state.tilesets.push({
+      name: tileset.name,
+      tileWidth: tileset.tileWidth,
+      tileHeight: tileset.tileHeight,
+      // columns: tileset.columns,
+      // rows: tileset.rows,
+      // tiles: tileset.tiles,
+    })
+  }
+})
+
 loader.backgroundColor = '#000000' // Black background color on play button
 
 engine.currentScene.world.add(EditorInputSystem)

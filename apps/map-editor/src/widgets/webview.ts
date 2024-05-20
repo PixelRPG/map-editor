@@ -11,6 +11,8 @@ import Template from './webview.ui?raw'
 import { clientResource } from '../resource.ts'
 import { EventControllerInput } from '../event-controller-input.ts'
 
+import type { State } from '@pixelrpg/common'
+
 export const WebView = GObject.registerClass(
   {
     GTypeName: 'WebView',
@@ -18,7 +20,7 @@ export const WebView = GObject.registerClass(
   },
   class WebView extends WebKit.WebView {
 
-    protected messagesService: MessagesService
+    protected messagesService: MessagesService<State>
 
     constructor(props: Partial<WebKit.WebView.ConstructorProps>) {
       const network_session = new WebKit.NetworkSession({})
@@ -61,7 +63,7 @@ export const WebView = GObject.registerClass(
     }
 
     protected initMessagesService() {
-      const messagesService = new MessagesService('pixelrpg', this)
+      const messagesService = new MessagesService<State>('pixelrpg', { tilesets: [] }, this)
       messagesService.onMessage((message) => {
         console.log('Message from WebView:', message)
         messagesService.send({ type: 'text', data: 'Hello back from GJS!' })

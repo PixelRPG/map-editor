@@ -1,15 +1,19 @@
 import type WebKit from '@girs/webkit-6.0'
 import type JavaScriptCore from '@girs/javascriptcore-6.0'
 import { BaseMessageService, Message } from '@pixelrpg/common'
+import { proxy } from 'valtio/vanilla'
 
 /**
  * Message service for inter process communication between GJS and WebViews.
  * This is the implementation for the GJS side of the communication.
  */
-export class MessagesService extends BaseMessageService {
+export class MessagesService<S extends object> extends BaseMessageService<S> {
 
-    constructor(messageHandlerName: string, protected readonly webView: WebKit.WebView) {
-        super(messageHandlerName)
+    state: S
+
+    constructor(messageHandlerName: string, state: S, protected readonly webView: WebKit.WebView) {
+        super(messageHandlerName, state)
+        this.state = proxy(state)
         this.initReceiver()
     }
 
