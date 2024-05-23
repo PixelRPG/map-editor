@@ -1,4 +1,4 @@
-import type { DataTile, DataVector } from "./index.ts";
+import type { DataTile, DataVector, DataSpriteSheet } from "./index.ts";
 import type { Tileset } from "@excaliburjs/plugin-tiled"
 
 export interface DataTileset {
@@ -14,5 +14,6 @@ export interface DataTileset {
     objectalignment: Tileset['objectalignment'];
     orientation: Tileset['orientation'];
     properties: Tileset['properties'];
+    spritesheet: DataSpriteSheet;
 }
 

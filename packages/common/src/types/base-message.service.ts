@@ -22,13 +22,14 @@ export abstract class BaseMessageService<S extends object> {
         })
     }
 
-    protected onStateChange(ops: StateChangeOperation[]) {
+    protected onStateChange(_ops: StateChangeOperation[]) {
         const snap = snapshot(this.state);
         console.log('state has changed to', snap)
         const message: MessageEventStateChanged = {
             type: 'event', data: {
                 name: 'state-changed', data: {
                     state: snap,
+                    // TODO: Fix `DataCloneError: The object can not be cloned` error
                     // ops
                 }
             }

@@ -1,5 +1,6 @@
 import { tilesToDataTiles } from "./title.ts";
 import { vectorToDataVector } from "./vector.ts";
+import { spriteSheetToDataSpriteSheet } from "./sprite-sheet.ts";
 
 import type { DataTileset } from "@pixelrpg/common";
 import type { Tileset } from "@excaliburjs/plugin-tiled";
@@ -16,6 +17,7 @@ export const tilesetToDataTileset = async (tileset: Tileset): Promise<DataTilese
         properties: tileset.properties,
         tileCount: tileset.tileCount,
         tiles: await tilesToDataTiles(tileset.tiles),
+        spritesheet: await spriteSheetToDataSpriteSheet(tileset.spritesheet),
     }
     return data;
 }
