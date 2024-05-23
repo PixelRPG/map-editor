@@ -10,14 +10,8 @@ export class MessagesService<S extends object> extends BaseMessageService<S> {
 
     handler?: WebkitMessageHandler
 
-    state: S
-
     constructor(messageHandlerName: string, state: S) {
         super(messageHandlerName, state)
-        this.state = proxy<S>(state)
-
-        subscribe(this.state, () => console.log('state has changed to', this.state))
-
         this.initReceiver()
     }
 
@@ -25,8 +19,15 @@ export class MessagesService<S extends object> extends BaseMessageService<S> {
      * Sends a message to GJS
      * @param message The message to send
      */
-    send(message: Message) {
-        this.handler?.postMessage(message)
+    async send(message: Message) {
+        try {
+            const testClone = structuredClone(message);
+            console.log('Sending message', testClone)
+            this.handler?.postMessage(testClone)
+        } catch (error) {
+            console.error('Error sending message', error, message)
+        }
+
     }
 
     protected initReceiver() {

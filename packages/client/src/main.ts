@@ -8,6 +8,8 @@ import {
   ImageLayer,
 } from '@excaliburjs/plugin-tiled'
 
+import { tilesetsToDataTilesets } from './utils/tileset.ts'
+
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 
@@ -33,18 +35,9 @@ const tileResource = new TiledResource('./assets/maps/taba_town.tmx')
 
 const loader = new Loader([tileResource])
 
-loader.on('afterload', () => {
+loader.on('afterload', async () => {
   console.debug('tileResource afterload', tileResource)
-  for (const tileset of tileResource.tilesets) {
-    messagesService.state.tilesets.push({
-      name: tileset.name,
-      tileWidth: tileset.tileWidth,
-      tileHeight: tileset.tileHeight,
-      // columns: tileset.columns,
-      // rows: tileset.rows,
-      // tiles: tileset.tiles,
-    })
-  }
+  messagesService.state.tilesets = await tilesetsToDataTilesets(tileResource.tilesets)
 })
 
 loader.backgroundColor = '#000000' // Black background color on play button

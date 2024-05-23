@@ -21,17 +21,29 @@ export class MessagesService<S extends object> extends BaseMessageService<S> {
      * Sends a message to the webview
      * @param message The message to send
      */
-    send(message: Message) {
-        this.webView.evaluate_javascript(
-            `window.messageReceivers.${this.messageHandlerName}.receive(${JSON.stringify(message)});`,
-            -1,
-            null,
-            null,
-            null,
-            (webView, result) => {
-                webView?.evaluate_javascript_finish(result)
-            },
-        )
+    async send(message: Message) {
+        return new Promise((resolve, reject) => {
+            try {
+                this.webView.evaluate_javascript(
+                    `window.messageReceivers.${this.messageHandlerName}.receive(${JSON.stringify(message)});`,
+                    -1,
+                    null,
+                    null,
+                    null,
+                    (webView, result) => {
+                        try {
+                            webView?.evaluate_javascript_finish(result)
+                            resolve(result)
+                        } catch (error) {
+                            reject(error)
+                        }
+                    },
+                )
+            } catch (error) {
+                reject(error)
+            }
+        })
+
     }
 
     protected initReceiver() {

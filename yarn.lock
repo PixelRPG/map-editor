@@ -3240,9 +3240,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/common@workspace:packages/common"
   dependencies:
+    "@excaliburjs/plugin-tiled": "workspace:^"
+    excalibur: "workspace:^"
     typescript: "npm:^5.4.5"
     valtio: "npm:^2.0.0-rc.0"
-    vite: "npm:^5.2.11"
+  peerDependencies:
+    "@excaliburjs/plugin-tiled": "workspace:^"
+    excalibur: "workspace:^"
   languageName: unknown
   linkType: soft
 

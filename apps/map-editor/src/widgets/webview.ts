@@ -68,6 +68,9 @@ export const WebView = GObject.registerClass(
         console.log('Message from WebView:', message)
         messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
       })
+      messagesService.onEvent('state-changed', (message) => {
+        console.log('Event from WebView:', message)
+      })
       return messagesService
     }
 

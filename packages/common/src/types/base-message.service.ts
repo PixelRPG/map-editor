@@ -1,8 +1,10 @@
 // TODO: Move to package messages-common
 
 import { EventDispatcher } from "../event-dispatcher"
-import type { Message, MessageEvent, MessageFile, MessageText, EventListener } from "./index.ts"
-import { proxy } from 'valtio/vanilla'
+import { proxy, subscribe, snapshot } from 'valtio/vanilla'
+
+import type { Message, MessageEvent, MessageFile, MessageText, EventListener, StateChangeOperation, MessageEventStateChanged, EventDataStateChanged } from "./index.ts"
+
 
 export abstract class BaseMessageService<S extends object> {
 
@@ -11,20 +13,40 @@ export abstract class BaseMessageService<S extends object> {
     state: S
 
     constructor(protected readonly messageHandlerName: string, state: S) {
-        this.state = proxy(state)
+        this.state = proxy<S>(state)
+        this.onStateChange = this.onStateChange.bind(this)
+        subscribe(this.state, this.onStateChange)
+        this.onEvent('state-changed', (message) => {
+            console.log('state-changed:', message)
+            this.state = message.data.data.state
+        })
+    }
+
+    protected onStateChange(ops: StateChangeOperation[]) {
+        const snap = snapshot(this.state);
+        console.log('state has changed to', snap)
+        const message: MessageEventStateChanged = {
+            type: 'event', data: {
+                name: 'state-changed', data: {
+                    state: snap,
+                    // ops
+                }
+            }
+        }
+        this.send(message)
     }
 
     abstract send(message: Message): void
 
-    on(eventName: string, callback: EventListener) {
+    on<T = any>(eventName: string, callback: EventListener<T>) {
         this.events.on(`${this.messageHandlerName}:${eventName}`, callback)
     }
 
-    once(eventName: string, callback: EventListener) {
+    once<T = any>(eventName: string, callback: EventListener<T>) {
         this.events.once(`${this.messageHandlerName}:${eventName}`, callback)
     }
 
-    off(eventName: string, callback: EventListener) {
+    off<T = any>(eventName: string, callback: EventListener<T>) {
         this.events.off(`${this.messageHandlerName}:${eventName}`, callback)
     }
 
@@ -58,15 +80,18 @@ export abstract class BaseMessageService<S extends object> {
 
     // Event events
 
-    onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>) {
+    onEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged>>): void
+    onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.on(`event:${subEventName}`, callback)
     }
 
-    onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>) {
+    onceEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged>>): void
+    onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.once(`event:${subEventName}`, callback)
     }
 
-    offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>) {
+    offEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged>>): void
+    offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.off(`event:${subEventName}`, callback)
     }
 

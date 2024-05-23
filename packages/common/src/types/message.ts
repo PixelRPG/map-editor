@@ -1,6 +1,4 @@
-import { MessageText, MessageFile, MessageEvent, MessageEventMouseEnter, MessageEventMouseLeave, MessageEventMouseMove } from './index.ts'
-import { } from './message-file.ts'
-import { } from './message-event.ts'
+import { MessageText, MessageFile, MessageEvent, MessageEventMouseEnter, MessageEventMouseLeave, MessageEventMouseMove, MessageEventStateChanged } from './index.ts'
 
-export type Message = MessageText | MessageFile | MessageEvent | MessageEventMouseEnter | MessageEventMouseLeave | MessageEventMouseMove
+export type Message = MessageText | MessageFile | MessageEvent | MessageEventMouseEnter | MessageEventMouseLeave | MessageEventMouseMove | MessageEventStateChanged
 
