@@ -10,10 +10,6 @@
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
-    "devDependencies": {
-        "typescript": "^5.4.5",
-        "vite": "^5.2.11"
-    },
     "dependencies": {
         "@pixelrpg/common": "workspace:^",
         "valtio": "^2.0.0-rc.0"

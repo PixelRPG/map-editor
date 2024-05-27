@@ -6,7 +6,7 @@ import system from 'system'
 
 import { Application } from './application.ts'
 
-const loop = GLib.MainLoop.new(null, false)
+// const loop = GLib.MainLoop.new(null, false)
 
 export function main(argv: string[]) {
   const application = new Application()

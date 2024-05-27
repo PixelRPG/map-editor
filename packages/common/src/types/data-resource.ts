@@ -1,7 +1,10 @@
+/**
+ * A data resource is a resource file.
+ * To keep the size of the JSON to be transferred small,
+ * this is only a reference to the file and does not contain the file itself.
+ */
 export interface DataResource {
-    format: "base64"
     mimeType: string
-    /** base64 encoded data */
-    data: string
+    path: string
 }
 

@@ -3299,9 +3299,7 @@ __metadata:
     "@girs/javascriptcore-6.0": "npm:^2.44.0-4.0.0-beta.5"
     "@girs/webkit-6.0": "npm:^2.44.0-4.0.0-beta.5"
     "@pixelrpg/common": "workspace:^"
-    typescript: "npm:^5.4.5"
     valtio: "npm:^2.0.0-rc.0"
-    vite: "npm:^5.2.11"
   languageName: unknown
   linkType: soft
 
@@ -3310,9 +3308,7 @@ __metadata:
   resolution: "@pixelrpg/messages-webview@workspace:packages/messages-webview"
   dependencies:
     "@pixelrpg/common": "workspace:^"
-    typescript: "npm:^5.4.5"
     valtio: "npm:^2.0.0-rc.0"
-    vite: "npm:^5.2.11"
   languageName: unknown
   linkType: soft
 

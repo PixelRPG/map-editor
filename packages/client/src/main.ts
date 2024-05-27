@@ -8,7 +8,8 @@ import {
   ImageLayer,
 } from '@excaliburjs/plugin-tiled'
 
-import { tilesetsToDataTilesets } from './utils/tileset.ts'
+import { TilesetParser } from './parser/tileset.parser.ts'
+import { ResourceParser } from './parser/resource.parser.ts'
 
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -37,7 +38,14 @@ const loader = new Loader([tileResource])
 
 loader.on('afterload', async () => {
   console.debug('tileResource afterload', tileResource)
-  messagesService.state.tilesets = await tilesetsToDataTilesets(tileResource.tilesets)
+  const resourceParser = new ResourceParser({
+    basePath: window.location.origin,
+  })
+  messagesService.state.tilesets = await new TilesetParser({
+    resourceParser,
+  }).parseAll(tileResource.tilesets)
+
+  messagesService.state.resources = resourceParser.resources
 })
 
 loader.backgroundColor = '#000000' // Black background color on play button

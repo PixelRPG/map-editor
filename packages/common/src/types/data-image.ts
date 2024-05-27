@@ -1,9 +1,13 @@
-import type { DataResource } from "./index.ts";
 import type { ImageSource } from "excalibur";
 
 export interface DataImage {
-    resource: DataResource;
-    path: ImageSource['path'];
+    /**
+     * The path to the resource
+     */
+    resourcePath: string;
+    /**
+     * The path to the image
+     */
     width: ImageSource['width'];
     height: ImageSource['height'];
 }
