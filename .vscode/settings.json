@@ -10,5 +10,9 @@
   "editor.formatOnSave": true,
   "[xml]": {
     "editor.formatOnSave": false
-  }
+  },
+  "cSpell.words": [
+    "girs",
+    "gtype"
+  ]
 }

@@ -6,7 +6,7 @@ import system from 'system'
 
 import { Application } from './application.ts'
 
-// const loop = GLib.MainLoop.new(null, false)
+const loop = GLib.MainLoop.new(null, false)
 
 export function main(argv: string[]) {
   const application = new Application()
@@ -19,4 +19,4 @@ const exit_code = await main(
 log('exit_code: ' + exit_code)
 system.exit(exit_code)
 
-// await loop.runAsync()
+await loop.runAsync()

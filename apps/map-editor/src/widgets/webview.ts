@@ -20,7 +20,11 @@ export const WebView = GObject.registerClass(
   },
   class WebView extends WebKit.WebView {
 
-    protected messagesService: MessagesService<State>
+    protected _messagesService: MessagesService<State>
+
+    get messagesService() {
+      return this._messagesService
+    }
 
     constructor(props: Partial<WebKit.WebView.ConstructorProps>) {
       const network_session = new WebKit.NetworkSession({})
@@ -54,7 +58,7 @@ export const WebView = GObject.registerClass(
       this.onURISchemeRequest = this.onURISchemeRequest.bind(this)
 
       this.registerURIScheme('pixelrpg', this.onURISchemeRequest)
-      this.messagesService = this.initMessagesService()
+      this._messagesService = this.initMessagesService()
 
       this.initInputController()
       this.initPageLoadListener()
@@ -63,14 +67,7 @@ export const WebView = GObject.registerClass(
     }
 
     protected initMessagesService() {
-      const messagesService = new MessagesService<State>('pixelrpg', { tilesets: [] }, this)
-      messagesService.onMessage((message) => {
-        console.log('Message from WebView:', message)
-        messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
-      })
-      messagesService.onEvent('state-changed', (message) => {
-        console.log('Event from WebView:', message)
-      })
+      const messagesService = new MessagesService<State>('pixelrpg', { tilesets: [], resources: [] }, this)
       return messagesService
     }
 
@@ -108,17 +105,17 @@ export const WebView = GObject.registerClass(
       x = Math.round(x * 10) / 10
       y = Math.round(y * 10) / 10
       // console.log('Mouse has moved in the WebView', inputController.isOutside, x, y);
-      this.messagesService.send({ type: 'event', data: { name: 'mouse-move', data: { x, y } } })
+      this._messagesService.send({ type: 'event', data: { name: 'mouse-move', data: { x, y } } })
     }
 
     protected onMouseLeave() {
       console.log('Mouse has left the WebView');
-      this.messagesService.send({ type: 'event', data: { name: 'mouse-leave', data: null } })
+      this._messagesService.send({ type: 'event', data: { name: 'mouse-leave', data: null } })
     }
 
     protected onMouseEnter() {
       console.log('Mouse has entered the WebView');
-      this.messagesService.send({ type: 'event', data: { name: 'mouse-enter', data: null } })
+      this._messagesService.send({ type: 'event', data: { name: 'mouse-enter', data: null } })
     }
 
     protected onURISchemeRequest(schemeRequest: WebKit.URISchemeRequest) {

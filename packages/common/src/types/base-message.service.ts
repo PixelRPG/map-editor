@@ -1,7 +1,7 @@
 // TODO: Move to package messages-common
 
 import { EventDispatcher } from "../event-dispatcher"
-import { proxy, subscribe, snapshot } from 'valtio/vanilla'
+import { proxy, subscribe, snapshot, ref } from 'valtio/vanilla'
 
 import type { Message, MessageEvent, MessageFile, MessageText, EventListener, StateChangeOperation, MessageEventStateChanged, EventDataStateChanged } from "./index.ts"
 
@@ -17,18 +17,18 @@ export abstract class BaseMessageService<S extends object> {
         this.onStateChange = this.onStateChange.bind(this)
         subscribe(this.state, this.onStateChange)
         this.onEvent('state-changed', (message) => {
-            console.log('state-changed:', message)
+            // console.log('state-changed:', message)
             this.state = message.data.data.state
         })
     }
 
     protected onStateChange(_ops: StateChangeOperation[]) {
-        const snap = snapshot(this.state);
-        console.log('state has changed to', snap)
-        const message: MessageEventStateChanged = {
+        // const snap = snapshot(this.state);
+        console.log('state has changed to', this.state)
+        const message: MessageEventStateChanged<S> = {
             type: 'event', data: {
                 name: 'state-changed', data: {
-                    state: snap,
+                    state: this.state,
                     // TODO: Fix `DataCloneError: The object can not be cloned` error
                     // ops
                 }
@@ -81,17 +81,17 @@ export abstract class BaseMessageService<S extends object> {
 
     // Event events
 
-    onEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged>>): void
+    onEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
     onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.on(`event:${subEventName}`, callback)
     }
 
-    onceEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged>>): void
+    onceEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
     onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.once(`event:${subEventName}`, callback)
     }
 
-    offEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged>>): void
+    offEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
     offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.off(`event:${subEventName}`, callback)
     }
