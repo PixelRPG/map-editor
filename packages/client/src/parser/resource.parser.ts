@@ -33,7 +33,7 @@ export class ResourceParser {
             const data: DataResource = {
                 path,
                 // All canvas images are png
-                mimeType: "image/png",
+                mimeType: path.endsWith(".png") ? "image/png" : "unknown",
             }
             this._resources[path] = data
             return data

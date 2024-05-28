@@ -2,10 +2,9 @@ import GObject from '@girs/gobject-2.0'
 import Gio from '@girs/gio-2.0'
 import Adw from '@girs/adw-1'
 
-import { ApplicationWindow } from './widgets/application-window.ts'
-import { PreferencesDialog } from './widgets/preferences-dialog.ts'
-import { APPLICATION_ID } from './constants.ts'
-
+import { ApplicationWindow } from './application-window.ts'
+import { PreferencesDialog } from './preferences-dialog.ts'
+import { APPLICATION_ID } from '../constants.ts'
 
 export const Application = GObject.registerClass(
     class Application extends Adw.Application {

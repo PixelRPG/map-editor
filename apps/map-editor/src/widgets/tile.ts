@@ -6,33 +6,35 @@ import { DataTile } from '@pixelrpg/common'
 
 // import Template from './tile.ui?raw'
 
+interface _Tile {
+  /** Id of the tile */
+  _id: DataTile['id']
+  /** Class of the tile */
+  _class: DataTile['class']
+  /** Graphic for the tile */
+  _graphic: GdkPixbuf.Pixbuf
+}
+
+class _Tile extends GObject.Object {
+
+  constructor(data: DataTile) {
+    super()
+    this._id = data.id
+    this._class = data.class
+    // this._graphic = data.graphic
+  }
+}
+
 export const Tile = GObject.registerClass(
   {
     GTypeName: 'Tile',
     // Template,
     Properties: {
-      // TODO: Some parameters should be optional
-      id: GObject.ParamSpec.int64('id', 'Id', 'Id of the tile', GObject.ParamFlags.READWRITE, 0, Number.MAX_SAFE_INTEGER, 0),
-      // class: GObject.ParamSpec.string('class', 'Class', 'Class of the tile', GObject.ParamFlags.READWRITE, ''),
-      // TODO fix type of flags parameter in ts-for-gir
-      // graphic: GObject.ParamSpec.object('graphic', 'Graphic', 'Graphic for the tile', GObject.ParamFlags.READWRITE as any, GdkPixbuf.Pixbuf),
+      id: GObject.ParamSpec.int64('id', 'Id', 'Id of the tile', GObject.ParamFlags.READWRITE, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, 0),
+      class: GObject.ParamSpec.string('class', 'Class', 'Class of the tile', GObject.ParamFlags.READWRITE, ''),
+      // TODO(ts-for-gir): fix type of flags parameter
+      graphic: GObject.ParamSpec.object('graphic', 'Graphic', 'Graphic for the tile', GObject.ParamFlags.READWRITE as any, GdkPixbuf.Pixbuf),
     }
   },
-  class Tile extends GObject.Object {
-
-    // class: string
-    // graphic: GdkPixbuf.Pixbuf
-    get id() {
-      return this.get_property('id')
-    }
-
-    set id(value: number) {
-      this.set_property('id', value)
-    }
-
-    constructor(data: DataTile) {
-      super()
-      this.id = data.id
-    }
-  },
+  _Tile
 )

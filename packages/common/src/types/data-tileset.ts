@@ -9,11 +9,10 @@ export interface DataTileset {
     tileWidth: Tileset['tileWidth'];
     tileHeight: Tileset['tileHeight'];
     tileOffset: DataVector;
-    // spritesheet!: Tileset['spritesheet'];
+    spritesheet: DataSpriteSheet;
     tiles: DataTile[];
     objectalignment: Tileset['objectalignment'];
     orientation: Tileset['orientation'];
     properties: Tileset['properties'];
-    spritesheet: DataSpriteSheet;
 }
 

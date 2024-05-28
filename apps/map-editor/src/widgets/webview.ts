@@ -8,7 +8,7 @@ import { MessagesService } from '@pixelrpg/messages-gjs'
 import mime from 'mime'
 
 import Template from './webview.ui?raw'
-import { clientResource } from '../resource.ts'
+import { clientResourceManager } from '../managers/client-resource.manager.ts'
 import { EventControllerInput } from '../event-controller-input.ts'
 
 import type { State } from '@pixelrpg/common'
@@ -124,7 +124,7 @@ export const WebView = GObject.registerClass(
       const path = schemeRequest.get_path()
       const extension = path.split('.').pop()
 
-      const stream = clientResource.stream(path)
+      const stream = clientResourceManager.stream(path)
       if (!stream) {
         console.error('Error opening stream', path)
         return

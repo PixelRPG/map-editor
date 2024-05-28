@@ -4,7 +4,7 @@
  * this is only a reference to the file and does not contain the file itself.
  */
 export interface DataResource {
-    mimeType: string
+    mimeType: 'image/png' | 'unknown'
     path: string
 }
 

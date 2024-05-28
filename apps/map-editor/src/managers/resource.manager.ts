@@ -1,11 +1,12 @@
 import Gio from '@girs/gio-2.0'
 
-import { ROOT_DIR, CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from './constants'
+import { ROOT_DIR } from '../constants.ts'
 
+// TODO(ts-for-gir): Fix promise type
 // Gio._promisify(Gio.File.prototype, "load_contents_async", "load_contents_finish");
 
-class Resource {
-  resource: Gio.Resource
+export class ResourceManager {
+  gioResource: Gio.Resource
 
   constructor(
     resourceFilePath: string,
@@ -13,8 +14,8 @@ class Resource {
     readonly fallbackDirPath: string,
   ) {
     const path = ROOT_DIR.resolve_relative_path(resourceFilePath).get_path()!
-    this.resource = Gio.Resource.load(path)
-    this.register(this.resource)
+    this.gioResource = Gio.Resource.load(path)
+    this.register(this.gioResource)
   }
 
   /**
@@ -49,10 +50,10 @@ class Resource {
     const { relative, absolute } = this.normalizePath(path, this.resourcePath)
     console.log('get', absolute)
     try {
-      const data = this.resource.lookup_data(absolute, Gio.ResourceLookupFlags.NONE)
+      const data = this.gioResource.lookup_data(absolute, Gio.ResourceLookupFlags.NONE)
       return data
     } catch (error) {
-      console.error('Error opening stream', error)
+      console.warn('Error opening stream', error)
       return this.getDirect(relative)
     }
   }
@@ -65,7 +66,7 @@ class Resource {
     const { absolute } = this.normalizePath(path, this.fallbackDirPath)
     console.log('get direct', absolute)
     try {
-      return Gio.File.new_for_path(absolute).load_contents(null)[1]
+      return Gio.File.new_for_path(absolute).load_bytes(null)[0]
     } catch (error) {
       console.error('Error opening stream', error)
       return null
@@ -80,14 +81,14 @@ class Resource {
     const { relative, absolute } = this.normalizePath(path, this.resourcePath)
     console.log('open stream', path)
     try {
-      const stream = this.resource.open_stream(
+      const stream = this.gioResource.open_stream(
         absolute,
         Gio.ResourceLookupFlags.NONE,
       )
       console.log('stream', stream)
       return stream
     } catch (error) {
-      console.error('Error opening stream', error)
+      console.warn('Error opening stream', error)
       console.log('trying direct')
       return this.streamDirect(relative)
     }
@@ -110,9 +111,3 @@ class Resource {
     }
   }
 }
-
-export const clientResource = new Resource(
-  './org.pixelrpg.map-editor.data.gresource',
-  CLIENT_RESOURCE_PATH,
-  CLIENT_DIR_PATH.get_path()!,
-)

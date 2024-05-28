@@ -4,7 +4,7 @@ import '@girs/gjs'
 import GLib from '@girs/glib-2.0'
 import system from 'system'
 
-import { Application } from './application.ts'
+import { Application } from './widgets/application.ts'
 
 const loop = GLib.MainLoop.new(null, false)
 
