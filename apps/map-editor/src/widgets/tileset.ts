@@ -26,10 +26,25 @@ export const Tileset = GObject.registerClass(
         for (let x = 0; x < data.spritesheet.columns; x++) {
           const index = y * data.spritesheet.columns + x
           const sprite = data.spritesheet.sprites[index]
+          const imageResource = imageResources.find(({ path }) => path === sprite.image.resourcePath)
+          if (!imageResource) {
+            console.error('Image resource not found', sprite.image.resourcePath)
+            continue
+          }
           // Calculate the sprite slice for each sprite
           const posX = x * sprite.width
           const posY = y * sprite.height
-          const spriteImage = imageResources[0].pixbuf.new_subpixbuf(posX, posY, sprite.width, sprite.height)
+          console.log({
+            posX,
+            posY,
+            width: sprite.width,
+            height: sprite.height,
+            imageWidth: sprite.image.width,
+            imageHeight: sprite.image.height,
+            pixbufWidth: imageResource.pixbuf.width,
+            pixbufHeight: imageResource.pixbuf.height,
+          })
+          const spriteImage = imageResource.pixbuf.new_subpixbuf(posX, posY, sprite.width, sprite.height)
           // res.push({
           //   ...sprite,
           //   image: spriteImage

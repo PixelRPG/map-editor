@@ -50,11 +50,15 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
 
     for (const resource of resources) {
       if (resource.mimeType === 'image/png') {
-        // const image = clientResourceManager.get(resource.path)
+        const pixbuf = clientResourceManager.getPixbuf(resource.path)
+        if (!pixbuf) {
+          console.error('Failed to get pixbuf for resource:', resource.path)
+          continue
+        }
         imageResources.push({
           ...resource,
           mimeType: 'image/png',
-          pixbuf: GdkPixbuf.Pixbuf.new_from_file(resource.path)
+          pixbuf,
         })
       } else {
         console.log('Unsupported resource type:', resource.mimeType)

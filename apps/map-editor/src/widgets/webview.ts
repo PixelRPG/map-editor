@@ -2,7 +2,6 @@
 
 import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
-import Gtk from '@girs/gtk-4.0'
 
 import { MessagesService } from '@pixelrpg/messages-gjs'
 import mime from 'mime'
@@ -10,6 +9,7 @@ import mime from 'mime'
 import Template from './webview.ui?raw'
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 import { EventControllerInput } from '../event-controller-input.ts'
+import { INTERNAL_PROTOCOL } from '../constants.ts'
 
 import type { State } from '@pixelrpg/common'
 
@@ -55,19 +55,19 @@ export const WebView = GObject.registerClass(
       this.onMouseMotion = this.onMouseMotion.bind(this)
       this.onMouseLeave = this.onMouseLeave.bind(this)
       this.onMouseEnter = this.onMouseEnter.bind(this)
-      this.onURISchemeRequest = this.onURISchemeRequest.bind(this)
+      this.onInternalRequest = this.onInternalRequest.bind(this)
 
-      this.registerURIScheme('pixelrpg', this.onURISchemeRequest)
+      this.registerURIScheme(INTERNAL_PROTOCOL, this.onInternalRequest)
       this._messagesService = this.initMessagesService()
 
       this.initInputController()
       this.initPageLoadListener()
 
-      this.load_uri('pixelrpg:///org/pixelrpg/map-editor/client/index.html')
+      this.load_uri(`${INTERNAL_PROTOCOL}:///org/pixelrpg/map-editor/client/index.html`)
     }
 
     protected initMessagesService() {
-      const messagesService = new MessagesService<State>('pixelrpg', { tilesets: [], resources: [] }, this)
+      const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { tilesets: [], resources: [] }, this)
       return messagesService
     }
 
@@ -118,7 +118,7 @@ export const WebView = GObject.registerClass(
       this._messagesService.send({ type: 'event', data: { name: 'mouse-enter', data: null } })
     }
 
-    protected onURISchemeRequest(schemeRequest: WebKit.URISchemeRequest) {
+    protected onInternalRequest(schemeRequest: WebKit.URISchemeRequest) {
       // const uri = schemeRequest.get_uri()
 
       const path = schemeRequest.get_path()

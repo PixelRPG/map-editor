@@ -1,6 +1,7 @@
 import Gio from '@girs/gio-2.0'
+import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 
-import { ROOT_DIR } from '../constants.ts'
+import { ROOT_DIR, INTERNAL_PROTOCOL } from '../constants.ts'
 
 // TODO(ts-for-gir): Fix promise type
 // Gio._promisify(Gio.File.prototype, "load_contents_async", "load_contents_finish");
@@ -12,6 +13,7 @@ export class ResourceManager {
     resourceFilePath: string,
     readonly resourcePath: string,
     readonly fallbackDirPath: string,
+    readonly allowedProtocols: string[] = ['file', INTERNAL_PROTOCOL],
   ) {
     const path = ROOT_DIR.resolve_relative_path(resourceFilePath).get_path()!
     this.gioResource = Gio.Resource.load(path)
@@ -29,6 +31,11 @@ export class ResourceManager {
   normalizePath(path: string, base: string) {
     let relative: string
     let absolute: string
+
+    if (path.startsWith(INTERNAL_PROTOCOL + '://')) {
+      path = path.substring(INTERNAL_PROTOCOL.length + 3)
+    }
+
     if (path.startsWith(base)) {
       relative = path.substring(base.length)
       absolute = path;
@@ -67,6 +74,18 @@ export class ResourceManager {
     console.log('get direct', absolute)
     try {
       return Gio.File.new_for_path(absolute).load_bytes(null)[0]
+    } catch (error) {
+      console.error('Error opening stream', error)
+      return null
+    }
+  }
+
+  getPixbuf(path: string) {
+    const { absolute } = this.normalizePath(path, this.fallbackDirPath)
+    console.log('get pixbuf', absolute)
+    try {
+      // TODO: Use `this.get` to get the bytes from the pre-cached resource
+      return GdkPixbuf.Pixbuf.new_from_file(absolute)
     } catch (error) {
       console.error('Error opening stream', error)
       return null
