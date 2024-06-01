@@ -6,7 +6,9 @@ import Gtk from '@girs/gtk-4.0'
 
 import { WebView } from './webview.ts'
 import { Sidebar } from './sidebar.ts'
-import { Tileset } from './tileset.ts'
+import { TilesetWidget } from './tileset.widget.ts'
+
+import { Tileset } from '../objects/tileset.ts'
 
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
@@ -31,9 +33,10 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
     this._webView?.messagesService.onEvent('state-changed', (event) => {
 
       const imageResources = this.parseImageResources(event.data.data.state.resources)
+      const tileset = new Tileset(event.data.data.state.tilesets[0], imageResources)
 
       // TODO: Continue here
-      new Tileset(event.data.data.state.tilesets[0], imageResources)
+      new TilesetWidget(tileset)
 
       this._sidebar?.setContent(new Adw.StatusPage({ title: 'State changed' }))
     })

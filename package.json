@@ -13,7 +13,8 @@
         "start": "yarn build:client && yarn build:map-editor && yarn workspace @pixelrpg/map-editor run start",
         "clear": "yarn workspaces foreach -v --parallel -W run clear",
         "format": "yarn prettier --write .",
-        "prettier": "node .yarn/sdks/prettier/index.cjs"
+        "prettier": "node .yarn/sdks/prettier/index.cjs",
+        "git:merge-upstream": "yarn workspaces foreach -v --parallel -A run git:merge-upstream"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",

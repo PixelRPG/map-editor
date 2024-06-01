@@ -15,6 +15,7 @@
     "accels",
     "girs",
     "gtype",
-    "Pixbuf"
+    "Pixbuf",
+    "Tileset"
   ]
 }

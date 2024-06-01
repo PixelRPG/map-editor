@@ -34,6 +34,7 @@ export class TilesetParser {
                 resourceParser: this.resourceParser,
             }).parse(tileset.spritesheet),
         }
+        console.debug("Parse tileset", tileset)
         return data;
     }
     public async parseAll(tilesets: Tileset[]): Promise<DataTileset[]> {

@@ -1,6 +1,7 @@
 import type { DataVector } from "./index.ts";
 import type { Graphic } from "excalibur"
 
+// TODO: check which properties are not used / needed
 export interface DataGraphic {
     id: Graphic['id'];
     width: Graphic['width'];
