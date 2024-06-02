@@ -38,16 +38,16 @@ class _SpriteSheet extends GObject.Object {
         // Calculate the sprite slice for each sprite
         const posX = x * spriteData.width
         const posY = y * spriteData.height
-        console.log({
-          posX,
-          posY,
-          width: spriteData.width,
-          height: spriteData.height,
-          imageWidth: spriteData.image.width,
-          imageHeight: spriteData.image.height,
-          pixbufWidth: imageResource.pixbuf.width,
-          pixbufHeight: imageResource.pixbuf.height,
-        })
+        // console.log({
+        //   posX,
+        //   posY,
+        //   width: spriteData.width,
+        //   height: spriteData.height,
+        //   imageWidth: spriteData.image.width,
+        //   imageHeight: spriteData.image.height,
+        //   pixbufWidth: imageResource.pixbuf.width,
+        //   pixbufHeight: imageResource.pixbuf.height,
+        // })
 
         const spritePixbuf = imageResource.pixbuf.new_subpixbuf(posX, posY, spriteData.width, spriteData.height)
         const sprite = new Sprite(spriteData, spritePixbuf)

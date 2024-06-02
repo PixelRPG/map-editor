@@ -3,7 +3,6 @@ import Gtk from '@girs/gtk-4.0'
 import Object from '@girs/gobject-2.0'
 
 import { Tileset } from '../g-objects/tileset.ts'
-import { Sprite } from '../g-objects/sprite.ts'
 import { SpriteWidget } from './sprite.widget.ts'
 
 import Template from './tileset.widget.ui?raw'

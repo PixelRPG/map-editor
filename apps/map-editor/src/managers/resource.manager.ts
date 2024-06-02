@@ -55,12 +55,11 @@ export class ResourceManager {
    */
   get(path: string) {
     const { relative, absolute } = this.normalizePath(path, this.resourcePath)
-    console.log('get', absolute)
     try {
       const data = this.gioResource.lookup_data(absolute, Gio.ResourceLookupFlags.NONE)
       return data
     } catch (error) {
-      console.warn('Error opening stream', error)
+      console.warn('Error opening stream, try to load from file system..', error)
       return this.getDirect(relative)
     }
   }
@@ -71,7 +70,6 @@ export class ResourceManager {
    */
   getDirect(path: string) {
     const { absolute } = this.normalizePath(path, this.fallbackDirPath)
-    console.log('get direct', absolute)
     try {
       return Gio.File.new_for_path(absolute).load_bytes(null)[0]
     } catch (error) {
@@ -82,7 +80,6 @@ export class ResourceManager {
 
   getPixbuf(path: string) {
     const { absolute } = this.normalizePath(path, this.fallbackDirPath)
-    console.log('get pixbuf', absolute)
     try {
       // TODO: Use `this.get` to get the bytes from the pre-cached resource
       const pixbuf = GdkPixbuf.Pixbuf.new_from_file(absolute)
@@ -99,17 +96,14 @@ export class ResourceManager {
    */
   stream(path: string): Gio.InputStream | null {
     const { relative, absolute } = this.normalizePath(path, this.resourcePath)
-    console.log('open stream', path)
     try {
       const stream = this.gioResource.open_stream(
         absolute,
         Gio.ResourceLookupFlags.NONE,
       )
-      console.log('stream', stream)
       return stream
     } catch (error) {
-      console.warn('Error opening stream', error)
-      console.log('trying direct')
+      console.warn('Error opening stream, try to load from file system..', error)
       return this.streamDirect(relative)
     }
   }
@@ -121,7 +115,6 @@ export class ResourceManager {
   streamDirect(path: string): Gio.FileInputStream | null {
     const { absolute } = this.normalizePath(path, this.fallbackDirPath)
     const file = Gio.File.new_for_path(absolute)
-    console.log('open stream direct', absolute)
     try {
       const stream = file.read(null)
       return stream

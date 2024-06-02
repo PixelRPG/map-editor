@@ -1,10 +1,14 @@
 import GObject from '@girs/gobject-2.0'
 import Gio from '@girs/gio-2.0'
+import Gdk from '@girs/gdk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import { ApplicationWindow } from './application-window.ts'
-import { PreferencesDialog } from './preferences-dialog.ts'
-import { APPLICATION_ID } from '../constants.ts'
+import { ApplicationWindow } from './widgets/application-window.ts'
+import { PreferencesDialog } from './widgets/preferences-dialog.ts'
+import { APPLICATION_ID } from './constants.ts'
+
+import mainStyle from './main.scss?raw'
 
 export const Application = GObject.registerClass(
     class Application extends Adw.Application {
@@ -13,7 +17,31 @@ export const Application = GObject.registerClass(
                 applicationId: APPLICATION_ID,
                 flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
             })
+
             this.initActions()
+        }
+
+        vfunc_startup(): void {
+            super.vfunc_startup();
+            this.initStyles()
+        }
+
+        /** Load the stylesheet in a CssProvider and add it to the Gtk.StyleContext */
+        protected initStyles() {
+            const provider = new Gtk.CssProvider();
+            provider.load_from_string(mainStyle);
+            const display = Gdk.Display.get_default()
+
+            if (!display) {
+                console.error('No display found')
+                return
+            }
+
+            Gtk.StyleContext.add_provider_for_display(
+                display,
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            );
         }
 
         initActions() {

@@ -3,10 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Object from '@girs/gobject-2.0'
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
-import { DataSprite, DataResource } from '@pixelrpg/common'
 import { Sprite } from '../g-objects/sprite.ts'
-
-import type { ImageResource } from '../types/image-resource.ts'
 
 import Template from './sprite.widget.ui?raw'
 
@@ -14,7 +11,7 @@ interface _SpriteWidget {
   // Properties
   _sprite: InstanceType<typeof Sprite>
 
-  // Widgets
+  // Child Widgets
   _image: Gtk.Image
 }
 
@@ -27,8 +24,6 @@ class _SpriteWidget extends Adw.Bin {
     const height = spriteObject.height * scaleFactor;
     const pixbufScaled = spriteObject._image.pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.NEAREST);
     this._image.set_from_pixbuf(pixbufScaled);
-    // const image = Gtk.Image.new_from_pixbuf(pixbufScaled);
-    // this.child = image;
     this.width_request = width;
     this.height_request = height;
   }

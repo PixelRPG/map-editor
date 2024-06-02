@@ -9,18 +9,22 @@ import Template from './sidebar.ui?raw'
 GObject.type_ensure(SidebarContent.$gtype)
 
 interface _Sidebar {
+  // Child widgets
+  /** The content widget of the sidebar */
   _sidebarContent: InstanceType<typeof SidebarContent>
 }
 
 class _Sidebar extends Adw.Bin {
 
-  setContent(content: Gtk.Widget) {
-    console.log('Setting content')
-    this._sidebarContent.set_child(content)
+  /**
+   * Set the content widget of the sidebar
+   * @param content The content widget to set
+   */
+  setContent(contentWidget: Gtk.Widget) {
+    this._sidebarContent.set_child(contentWidget)
   }
 
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
-    // params.orientation = Gtk.Orientation.VERTICAL
     super(params)
   }
 }

@@ -10,5 +10,7 @@ export const CLIENT_DIR_PATH = ROOT_DIR.resolve_relative_path('../../packages/cl
 
 export const CLIENT_RESOURCE_PATH = '/org/pixelrpg/map-editor/client'
 
-/** Used for internal communication between the WebView and the main GJS process. */
+/** 
+ * Custom protocol `pixelrpg://` used for internal communication between the WebView and the main GJS process.
+ */
 export const INTERNAL_PROTOCOL = 'pixelrpg'

@@ -13,7 +13,7 @@ import { Tileset } from '../g-objects/tileset.ts'
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageResource } from '../types/image-resource.ts'
-import type { DataResource } from '@pixelrpg/common'
+import type { DataResource, MessageEvent, EventDataStateChanged, State, MessageText } from '@pixelrpg/common'
 
 import Template from './application-window.ui?raw'
 
@@ -22,6 +22,7 @@ GObject.type_ensure(WebView.$gtype)
 GObject.type_ensure(Sidebar.$gtype)
 
 interface _ApplicationWindow {
+  // Child widgets
   _sidebar: InstanceType<typeof Sidebar> | undefined
   _webView: InstanceType<typeof WebView> | undefined
 }
@@ -29,29 +30,34 @@ interface _ApplicationWindow {
 class _ApplicationWindow extends Adw.ApplicationWindow {
   constructor(application: Adw.Application) {
     super({ application })
+    this.onWebViewStateChanged = this.onWebViewStateChanged.bind(this)
+    this.onWebViewMessage = this.onWebViewMessage.bind(this)
 
-    this._webView?.messagesService.onEvent('state-changed', (event) => {
-      console.log('State changed:', event)
-      const state = this._webView?.messagesService.state
+    this._webView?.messagesService.onEvent('state-changed', this.onWebViewStateChanged)
 
-      if (!state?.resources.length || !state?.tilesets.length) {
-        console.log('No resources or tilesets in state')
-        return
-      }
+    this._webView?.messagesService.onMessage(this.onWebViewMessage)
+  }
 
-      const imageResources = this.parseImageResources(state.resources)
-      const tileset = new Tileset(state.tilesets[0], imageResources)
+  protected onWebViewMessage(message: MessageText) {
+    console.log('Message from WebView:', message)
+    this._webView?.messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
+  }
 
-      // TODO: Continue here
-      const tilesetWidget = new TilesetWidget(tileset)
+  protected onWebViewStateChanged(event: MessageEvent<EventDataStateChanged<State>>) {
+    const state = this._webView?.messagesService.state
 
-      this._sidebar?.setContent(tilesetWidget)
-    })
+    if (!state?.resources.length || !state?.tilesets.length) {
+      console.log('No resources or tilesets in state')
+      return
+    }
 
-    this._webView?.messagesService.onMessage((message) => {
-      console.log('Message from WebView:', message)
-      this._webView?.messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
-    })
+    const imageResources = this.parseImageResources(state.resources)
+    const tileset = new Tileset(state.tilesets[0], imageResources)
+
+    // TODO: Continue here
+    const tilesetWidget = new TilesetWidget(tileset)
+
+    this._sidebar?.setContent(tilesetWidget)
   }
 
   // TODO: Move to a parser?
@@ -71,7 +77,7 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
           pixbuf,
         })
       } else {
-        console.log('Unsupported resource type:', resource.mimeType)
+        console.warn('Unsupported resource type:', resource.mimeType)
       }
     }
 

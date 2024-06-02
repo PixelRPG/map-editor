@@ -20,7 +20,7 @@ export abstract class BaseMessageService<S extends object> {
         this._stateProxy = new Proxy(state, {
             set: ((target: S, property: keyof S, newValue: S[keyof S]): boolean => {
                 const oldValue = target[property];
-                console.log('comparing property ' + property.toString() + ':', oldValue, newValue)
+                // console.log('comparing property ' + property.toString() + ':', oldValue, newValue)
                 if (!isEqual(oldValue, newValue)) {
                     target[property] = newValue;
                     this.onStateChange(target, property, newValue, oldValue);
