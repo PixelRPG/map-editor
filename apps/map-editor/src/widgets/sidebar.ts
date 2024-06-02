@@ -1,4 +1,5 @@
 import GObject from '@girs/gobject-2.0'
+import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
 import { SidebarContent } from './sidebar-content.ts'
@@ -13,7 +14,8 @@ interface _Sidebar {
 
 class _Sidebar extends Adw.Bin {
 
-  setContent(content: Adw.StatusPage) {
+  setContent(content: Gtk.Widget) {
+    console.log('Setting content')
     this._sidebarContent.set_child(content)
   }
 

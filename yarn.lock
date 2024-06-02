@@ -3241,9 +3241,10 @@ __metadata:
   resolution: "@pixelrpg/common@workspace:packages/common"
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
+    "@types/lodash": "npm:^4"
     excalibur: "workspace:^"
+    lodash: "npm:^4.17.21"
     typescript: "npm:^5.4.5"
-    valtio: "npm:^2.0.0-rc.0"
   peerDependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
     excalibur: "workspace:^"
@@ -5253,6 +5254,13 @@ __metadata:
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
   checksum: 10c0/a996a745e6c5d60292f36731dd41341339d4eeed8180bb09226e5c8d23759067692b1d88e5d91d72ee83dfc00d3aca8e7bd43ea120516c17922cbcb7c3e252db
+  languageName: node
+  linkType: hard
+
+"@types/lodash@npm:^4":
+  version: 4.17.4
+  resolution: "@types/lodash@npm:4.17.4"
+  checksum: 10c0/0124c64cb9fe7a0f78b6777955abd05ef0d97844d49118652eae45f8fa57bfb7f5a7a9bccc0b5a84c0a6dc09631042e4590cb665acb9d58dfd5e6543c75341ec
   languageName: node
   linkType: hard
 

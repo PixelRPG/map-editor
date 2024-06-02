@@ -1,36 +1,50 @@
-// TODO: Move to package messages-common
+// TODO: Move to services/
 
-import { EventDispatcher } from "../event-dispatcher"
-import { proxy, subscribe, snapshot, ref } from 'valtio/vanilla'
+import { EventDispatcher } from "../event-dispatcher.ts"
+import { isEqual } from "lodash"
 
-import type { Message, MessageEvent, MessageFile, MessageText, EventListener, StateChangeOperation, MessageEventStateChanged, EventDataStateChanged } from "./index.ts"
-
+import type { Message, MessageEvent, MessageFile, MessageText, EventListener, MessageEventStateChanged, EventDataStateChanged } from "./index.ts"
 
 export abstract class BaseMessageService<S extends object> {
 
     events = new EventDispatcher()
 
-    state: S
+    protected _stateProxy: S;
+
+    get state() {
+        return this._stateProxy
+    }
 
     constructor(protected readonly messageHandlerName: string, state: S) {
-        this.state = proxy<S>(state)
         this.onStateChange = this.onStateChange.bind(this)
-        subscribe(this.state, this.onStateChange)
+        this._stateProxy = new Proxy(state, {
+            set: ((target: S, property: keyof S, newValue: S[keyof S]): boolean => {
+                const oldValue = target[property];
+                console.log('comparing property ' + property.toString() + ':', oldValue, newValue)
+                if (!isEqual(oldValue, newValue)) {
+                    target[property] = newValue;
+                    this.onStateChange(target, property, newValue, oldValue);
+                }
+                return true;
+            }) as (target: S, property: string, newValue: any) => boolean
+        });
         this.onEvent('state-changed', (message) => {
-            // console.log('state-changed:', message)
-            this.state = message.data.data.state
+            const data = message.data.data
+            const oldValue = this.state[data.property];
+            const newValue = data.value;
+            if (!isEqual(oldValue, newValue)) {
+                this.state[data.property] = newValue
+            }
         })
     }
 
-    protected onStateChange(_ops: StateChangeOperation[]) {
-        // const snap = snapshot(this.state);
-        console.log('state has changed to', this.state)
+    // TODO: Send changes instead of sending the whole state
+    protected onStateChange(state: S, property: keyof S, newValue: any, oldValue: any) {
         const message: MessageEventStateChanged<S> = {
             type: 'event', data: {
                 name: 'state-changed', data: {
-                    state: this.state,
-                    // TODO: Fix `DataCloneError: The object can not be cloned` error
-                    // ops
+                    property: property,
+                    value: newValue,
                 }
             }
         }

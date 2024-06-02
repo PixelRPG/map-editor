@@ -4,9 +4,9 @@ import Gtk from '@girs/gtk-4.0'
 import Gio from '@girs/gio-2.0'
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import { DataTileset, DataTile, DataSpriteSheet, DataVector } from '@pixelrpg/common'
-import { Tile } from '../objects/tile.ts'
-import { Sprite } from '../objects/sprite.ts'
-import { SpriteSheet } from '../objects/sprite-sheet.ts'
+import { Tile } from './tile.ts'
+import { Sprite } from './sprite.ts'
+import { SpriteSheet } from './sprite-sheet.ts'
 
 import type { ImageResource } from '../types/image-resource.ts'
 
@@ -22,8 +22,8 @@ class _Tileset extends GObject.Object {
   tileCount: DataTileset['tileCount'];
   tileWidth: DataTileset['tileWidth'];
   tileHeight: DataTileset['tileHeight'];
-  tileOffset: DataVector;
-  objectalignment: DataTileset['objectalignment'];
+  tileOffset: DataTileset['tileOffset'];
+  objectAlignment: DataTileset['objectAlignment'];
   orientation: DataTileset['orientation'];
   properties: DataTileset['properties'];
 
@@ -36,11 +36,11 @@ class _Tileset extends GObject.Object {
     this.tileWidth = tilesetData.tileWidth;
     this.tileHeight = tilesetData.tileHeight;
     this.tileOffset = tilesetData.tileOffset;
-    this.objectalignment = tilesetData.objectalignment;
+    this.objectAlignment = tilesetData.objectAlignment;
     this.orientation = tilesetData.orientation;
     this.properties = tilesetData.properties;
 
-    this._spriteSheet = new SpriteSheet(tilesetData.spritesheet, imageResources)
+    this._spriteSheet = new SpriteSheet(tilesetData.spriteSheet, imageResources)
     this._tiles = tilesetData.tiles.map((tileData) => new Tile(tileData, null))
   }
 }

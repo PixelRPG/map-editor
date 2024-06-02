@@ -20,11 +20,11 @@ class _Tile extends GObject.Object {
   /** Class of the tile */
   class: DataTile['class']
 
-  constructor(tileData: DataTile, sprite: InstanceType<typeof Graphic> | null) {
+  constructor(tileData: DataTile, graphic: InstanceType<typeof Graphic> | null) {
     super()
     this.id = tileData.id
     this.class = tileData.class
-    this._graphic = sprite || null
+    this._graphic = graphic || null
   }
 }
 

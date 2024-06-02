@@ -24,13 +24,12 @@ class _SpriteSheet extends GObject.Object {
     this._sprites = this.createSprites(spriteSheetData, imageResources)
   }
 
-  protected createSprites(spriteSheetdata: DataSpriteSheet, imageResources: ImageResource[]): InstanceType<typeof Sprite>[] {
+  protected createSprites(spriteSheetData: DataSpriteSheet, imageResources: ImageResource[]): InstanceType<typeof Sprite>[] {
     const sprites: InstanceType<typeof Sprite>[] = []
-    // TODO: Move this to SpriteSheet
-    for (let y = 0; y < spriteSheetdata.rows; y++) {
-      for (let x = 0; x < spriteSheetdata.columns; x++) {
-        const index = y * spriteSheetdata.columns + x
-        const spriteData = spriteSheetdata.sprites[index]
+    for (let y = 0; y < spriteSheetData.rows; y++) {
+      for (let x = 0; x < spriteSheetData.columns; x++) {
+        const index = y * spriteSheetData.columns + x
+        const spriteData = spriteSheetData.sprites[index]
         const imageResource = imageResources.find(({ path }) => path === spriteData.image.resourcePath)
         if (!imageResource) {
           console.error('Image resource not found', spriteData.image.resourcePath)

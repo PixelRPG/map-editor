@@ -1,11 +1,9 @@
-import type { StateChangeOperation } from "./index.ts"
-import type { Snapshot } from 'valtio/vanilla'
-
-export interface EventDataStateChanged<T = any> {
+export interface EventDataStateChanged<S = any> {
     name: 'state-changed';
     data: {
-        // state: Snapshot<T>;
-        state: T;
+        // state: S;
+        property: keyof S;
+        value: S[keyof S];
         // TODO: Fix `DataCloneError: The object can not be cloned` error
         // ops: StateChangeOperation[];
     };

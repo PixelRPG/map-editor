@@ -9,7 +9,7 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
         "build:vite": "vite build",
-        "build:blueprints": "blueprint-compiler compile src/widgets/application-window.blp --output src/widgets/application-window.ui && blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/sidebar.blp --output src/widgets/sidebar.ui && blueprint-compiler compile src/widgets/preferences-dialog.blp --output src/widgets/preferences-dialog.ui",
+        "build:blueprints": "blueprint-compiler compile src/widgets/application-window.blp --output src/widgets/application-window.ui && blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/sidebar.blp --output src/widgets/sidebar.ui && blueprint-compiler compile src/widgets/preferences-dialog.blp --output src/widgets/preferences-dialog.ui && blueprint-compiler compile src/widgets/tileset.widget.blp --output src/widgets/tileset.widget.ui",
         "build:resources": "glib-compile-resources org.pixelrpg.map-editor.data.gresource.xml",
         "build": "yarn build:resources && yarn build:blueprints && yarn build:vite",
         "start:app": "gjs -m dist/main.js",

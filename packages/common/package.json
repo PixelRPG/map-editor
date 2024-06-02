@@ -12,11 +12,12 @@
     "license": "MIT",
     "devDependencies": {
         "@excaliburjs/plugin-tiled": "workspace:^",
+        "@types/lodash": "^4",
         "excalibur": "workspace:^",
         "typescript": "^5.4.5"
     },
     "dependencies": {
-        "valtio": "^2.0.0-rc.0"
+        "lodash": "^4.17.21"
     },
     "peerDependencies": {
         "@excaliburjs/plugin-tiled": "workspace:^",
