@@ -35,6 +35,7 @@
         "@girs/webkit-6.0": "^2.44.0-4.0.0-beta.5",
         "@pixelrpg/common": "workspace:^",
         "@pixelrpg/messages-gjs": "workspace:^",
+        "lightningcss": "^1.25.1",
         "mime": "^4.0.3"
     }
 }

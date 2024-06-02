@@ -8,7 +8,7 @@ import { ApplicationWindow } from './widgets/application-window.ts'
 import { PreferencesDialog } from './widgets/preferences-dialog.ts'
 import { APPLICATION_ID } from './constants.ts'
 
-import mainStyle from './main.scss?raw'
+import mainStyle from './main.css?inline'
 
 export const Application = GObject.registerClass(
     class Application extends Adw.Application {
@@ -17,12 +17,12 @@ export const Application = GObject.registerClass(
                 applicationId: APPLICATION_ID,
                 flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
             })
-
+            this.onStartup = this.onStartup.bind(this)
+            this.connect('startup', this.onStartup)
             this.initActions()
         }
 
-        vfunc_startup(): void {
-            super.vfunc_startup();
+        protected onStartup(): void {
             this.initStyles()
         }
 

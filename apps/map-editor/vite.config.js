@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  css: {
+    transformer: 'lightningcss',
+  },
   build: {
     assetsDir: '.',
     outDir: 'dist',
@@ -16,5 +19,6 @@ export default defineConfig({
     esbuild: {
       external: ['jsdom', 'react'],
     },
+    cssMinify: 'lightningcss',
   },
 })

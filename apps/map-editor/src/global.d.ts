@@ -1,6 +1,6 @@
 /**
  * Type definition for asset content files
- * @see https://vitejs.dev/guide/assets.html#importing-asset-as-string
+ * @see https://vitejs.dev/guide/assets.html#impgitorting-asset-as-string
  */
 declare module '*?raw' {
   const textContent: string
@@ -14,4 +14,13 @@ declare module '*?raw' {
 declare module '*?url' {
   const url: string
   export default url
+}
+
+/**
+ * Type definition for inline style strings
+ * @see https://vitejs.dev/guide/assets.html#inline-assets
+ */
+declare module '*.css?inline' {
+  const style: string
+  export default style
 }
