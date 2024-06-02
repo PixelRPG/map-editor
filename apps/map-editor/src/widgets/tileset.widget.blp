@@ -1,3 +1,15 @@
 using Gtk 4.0;
 
-template $TilesetWidget: FlowBox {}
+template $TilesetWidget: ScrolledWindow {
+    FlowBox flowBox {
+        max-children-per-line: 20;
+        min-children-per-line: 1;
+        row-spacing: 0;
+        column-spacing: 0;
+        orientation: horizontal;
+        selection-mode: single;
+        // css-name: "tileset-widget";
+        hexpand: true;
+        vexpand: true;
+    }
+}

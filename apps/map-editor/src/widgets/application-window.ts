@@ -8,7 +8,7 @@ import { WebView } from './webview.ts'
 import { Sidebar } from './sidebar.ts'
 import { TilesetWidget } from './tileset.widget.ts'
 
-import { Tileset } from '../models/tileset.ts'
+import { Tileset } from '../g-objects/tileset.ts'
 
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
@@ -32,14 +32,20 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
 
     this._webView?.messagesService.onEvent('state-changed', (event) => {
       console.log('State changed:', event)
+      const state = this._webView?.messagesService.state
 
-      // const imageResources = this.parseImageResources(event.data.data.state.resources)
-      // const tileset = new Tileset(event.data.data.state.tilesets[0], imageResources)
+      if (!state?.resources.length || !state?.tilesets.length) {
+        console.log('No resources or tilesets in state')
+        return
+      }
 
-      // // TODO: Continue here
-      // const tilesetWidget = new TilesetWidget(tileset)
+      const imageResources = this.parseImageResources(state.resources)
+      const tileset = new Tileset(state.tilesets[0], imageResources)
 
-      this._sidebar?.setContent(new Adw.StatusPage({ title: 'State changed' }))
+      // TODO: Continue here
+      const tilesetWidget = new TilesetWidget(tileset)
+
+      this._sidebar?.setContent(tilesetWidget)
     })
 
     this._webView?.messagesService.onMessage((message) => {

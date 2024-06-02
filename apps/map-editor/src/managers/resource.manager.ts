@@ -85,7 +85,8 @@ export class ResourceManager {
     console.log('get pixbuf', absolute)
     try {
       // TODO: Use `this.get` to get the bytes from the pre-cached resource
-      return GdkPixbuf.Pixbuf.new_from_file(absolute)
+      const pixbuf = GdkPixbuf.Pixbuf.new_from_file(absolute)
+      return pixbuf
     } catch (error) {
       console.error('Error opening stream', error)
       return null

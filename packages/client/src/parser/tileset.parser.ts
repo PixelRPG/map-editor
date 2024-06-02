@@ -24,13 +24,13 @@ export class TilesetParser {
             firstGid: tileset.firstGid,
             orientation: tileset.orientation,
             tileOffset: await new VectorParser().parse(tileset.tileOffset),
-            objectalignment: tileset.objectalignment,
+            objectAlignment: tileset.objectalignment,
             properties: tileset.properties,
             tileCount: tileset.tileCount,
             tiles: await new TileParser({
                 resourceParser: this.resourceParser,
             }).parseAll(tileset.tiles),
-            spritesheet: await new SpriteSheetParser({
+            spriteSheet: await new SpriteSheetParser({
                 resourceParser: this.resourceParser,
             }).parse(tileset.spritesheet),
         }

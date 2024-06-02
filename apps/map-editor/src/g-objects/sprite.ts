@@ -14,7 +14,6 @@ interface _Sprite {
 }
 
 class _Sprite extends Graphic {
-
   constructor(dataSprite: DataSprite, spritePixbuf: GdkPixbuf.Pixbuf) {
     super(dataSprite)
     this._image = new Image(dataSprite.image, spritePixbuf)
