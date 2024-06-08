@@ -57,7 +57,7 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
     // TODO: Continue here
     const tilesetWidget = new TilesetWidget(tileset)
 
-    this._sidebar?.setContent(tilesetWidget)
+    this._sidebar?.setTileset(tilesetWidget)
   }
 
   // TODO: Move to a parser?

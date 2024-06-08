@@ -17,6 +17,7 @@
     "gtype",
     "objectalignment",
     "Pixbuf",
-    "Tileset"
+    "Tileset",
+    "Tilesets"
   ]
 }

@@ -1,0 +1,25 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SidebarPageLayer: Adw.Bin {
+  Adw.StatusPage {
+    title: 'Layer';
+    icon-name: 'star-filled-rounded-symbolic';
+
+    child: Box {
+      orientation: vertical;
+      valign: center;
+
+      LinkButton {
+        label: _("API Reference");
+        uri: "https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1.5/class.ViewSwitcher.html";
+      }
+
+      LinkButton {
+        label: _("Human Interface Guidelines");
+        uri: "https://developer.gnome.org/hig/patterns/nav/view-switchers.html";
+      }
+    };
+  }
+}
+

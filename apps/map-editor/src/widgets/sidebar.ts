@@ -2,16 +2,19 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import { SidebarContent } from './sidebar-content.ts'
+import { SidebarPageTilesets } from './sidebar-page-tilesets.ts'
+import { SidebarPageLayer } from './sidebar-page-layer.ts'
+import { TilesetWidget } from './tileset.widget.ts'
 
 import Template from './sidebar.ui?raw'
 
-GObject.type_ensure(SidebarContent.$gtype)
+GObject.type_ensure(SidebarPageTilesets.$gtype)
+GObject.type_ensure(SidebarPageLayer.$gtype)
 
 interface _Sidebar {
   // Child widgets
-  /** The content widget of the sidebar */
-  _sidebarContent: InstanceType<typeof SidebarContent>
+  _pageTilesets: InstanceType<typeof SidebarPageTilesets>
+  _pageLayer: InstanceType<typeof SidebarPageLayer>
 }
 
 class _Sidebar extends Adw.Bin {
@@ -20,8 +23,8 @@ class _Sidebar extends Adw.Bin {
    * Set the content widget of the sidebar
    * @param content The content widget to set
    */
-  setContent(contentWidget: Gtk.Widget) {
-    this._sidebarContent.set_child(contentWidget)
+  setTileset(tileset: InstanceType<typeof TilesetWidget>) {
+    this._pageTilesets.set_child(tileset)
   }
 
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
@@ -33,7 +36,7 @@ export const Sidebar = GObject.registerClass(
   {
     GTypeName: 'Sidebar',
     Template,
-    InternalChildren: ['sidebarContent']
+    InternalChildren: ['pageTilesets', 'pageLayer']
   },
   _Sidebar
 )
