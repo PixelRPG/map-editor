@@ -1,11 +1,10 @@
 export interface EventDataStateChanged<S = any> {
     name: 'state-changed';
     data: {
-        // state: S;
+        /** The property that has been changed */
         property: keyof S;
+        /** The value of the property */
         value: S[keyof S];
-        // TODO: Fix `DataCloneError: The object can not be cloned` error
-        // ops: StateChangeOperation[];
     };
 };
 

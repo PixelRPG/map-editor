@@ -46,18 +46,35 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
   protected onWebViewStateChanged(event: MessageEvent<EventDataStateChanged<State>>) {
     const state = this._webView?.messagesService.state
 
-    if (!state?.resources.length || !state?.tilesets.length) {
-      console.log('No resources or tilesets in state')
-      return
+    console.log('onWebViewStateChanged Property:', event.data.data.property)
+
+    switch (event.data.data.property) {
+      case "resources":
+      case "tilesets":
+        if (!state?.resources.length || !state?.tilesets.length) {
+          console.log('No resources or tilesets in state')
+          return
+        }
+
+        const imageResources = this.parseImageResources(state.resources)
+        const tileset = new Tileset(state.tilesets[0], imageResources)
+
+        const tilesetWidget = new TilesetWidget(tileset)
+        this._sidebar?.setTileset(tilesetWidget)
+        break;
+
+      case "map":
+        console.log('onWebViewStateChanged Map:', event.data.data.value)
+        break;
+      case "layers":
+        console.log('onWebViewStateChanged Layers:', event.data.data.value)
+        break;
+
+      default:
+        break;
     }
 
-    const imageResources = this.parseImageResources(state.resources)
-    const tileset = new Tileset(state.tilesets[0], imageResources)
 
-    // TODO: Continue here
-    const tilesetWidget = new TilesetWidget(tileset)
-
-    this._sidebar?.setTileset(tilesetWidget)
   }
 
   // TODO: Move to a parser?

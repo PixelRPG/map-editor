@@ -48,8 +48,6 @@ loader.on('afterload', async () => {
     basePath: window.location.origin,
   })
 
-  messagesService.state.resources = resourceParser.resources
-
   // TODO: ALso use `tiledResource.map.tilesets`?
   messagesService.state.tilesets = await new TilesetParser({
     resourceParser,
@@ -62,6 +60,9 @@ loader.on('afterload', async () => {
   messagesService.state.layers = await new LayerParser({
     resourceParser,
   }).parseAll(tiledResource.layers as Layer[])
+
+  // Use this at the end, after all parsing is done because they set the resources
+  messagesService.state.resources = resourceParser.resources
 
 })
 
