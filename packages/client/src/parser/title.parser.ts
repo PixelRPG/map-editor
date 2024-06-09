@@ -17,6 +17,7 @@ export class TileParser {
 
     public async parse(tile: Tile): Promise<DataTile> {
         const data: DataTile = {
+            id: tile.id,
             animation: tile.animation,
             properties: tile.properties,
             class: tile.class,

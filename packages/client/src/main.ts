@@ -10,19 +10,25 @@ import {
 
 import { TilesetParser } from './parser/tileset.parser.ts'
 import { ResourceParser } from './parser/resource.parser.ts'
-
+import { MapParser } from './parser/map.parser.ts'
+import { LayerParser } from './parser/layer.parser.ts'
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 
+import type { Layer } from '@pixelrpg/common'
+
+// Send a message to GJS
 messagesService.send({
   type: 'text',
   data: 'Hello from the WebView',
 })
 
+// Receive a message from GJS
 messagesService.onMessage((message) => {
   console.log('Message from GJS:', message)
 })
 
+// Create the Excalibur engine
 const engine = new Engine({
   canvasElementId: 'map-view',
   displayMode: DisplayMode.FillScreen,
@@ -32,20 +38,31 @@ const engine = new Engine({
   backgroundColor: Color.Black,
 })
 
-const tileResource = new TiledResource('./assets/maps/taba_town.tmx')
+const tiledResource = new TiledResource('./assets/maps/taba_town.tmx')
 
-const loader = new Loader([tileResource])
+const loader = new Loader([tiledResource])
 
 loader.on('afterload', async () => {
-  console.debug('tileResource afterload', tileResource)
+  console.debug('tiledResource afterload', tiledResource)
   const resourceParser = new ResourceParser({
     basePath: window.location.origin,
   })
-  messagesService.state.tilesets = await new TilesetParser({
-    resourceParser,
-  }).parseAll(tileResource.tilesets)
 
   messagesService.state.resources = resourceParser.resources
+
+  // TODO: ALso use `tiledResource.map.tilesets`?
+  messagesService.state.tilesets = await new TilesetParser({
+    resourceParser,
+  }).parseAll(tiledResource.tilesets)
+
+  messagesService.state.map = await new MapParser({
+    resourceParser,
+  }).parse(tiledResource.map)
+
+  messagesService.state.layers = await new LayerParser({
+    resourceParser,
+  }).parseAll(tiledResource.layers as Layer[])
+
 })
 
 loader.backgroundColor = '#000000' // Black background color on play button
@@ -55,7 +72,7 @@ engine.currentScene.world.add(EditorInputSystem)
 await engine.start(loader)
 // const devtool = new DevTool(engine);
 
-for (const layer of tileResource.layers) {
+for (const layer of tiledResource.layers) {
   if (layer instanceof TileLayer) {
     for (const tile of layer.tilemap.tiles) {
       // TODO: forward these events to the tile
@@ -94,4 +111,4 @@ for (const layer of tileResource.layers) {
   }
 }
 
-tileResource.addToScene(engine.currentScene)
+tiledResource.addToScene(engine.currentScene)

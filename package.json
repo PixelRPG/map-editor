@@ -10,6 +10,7 @@
         "build:all": "yarn workspaces foreach -v -W -t run build",
         "build:client": "yarn workspace @pixelrpg/client run build",
         "build:map-editor": "yarn workspace @pixelrpg/map-editor run build",
+        "preview:client": "yarn workspace @pixelrpg/client run preview",
         "start": "yarn build:client && yarn build:map-editor && yarn workspace @pixelrpg/map-editor run start",
         "clear": "yarn workspaces foreach -v --parallel -W run clear",
         "format": "yarn prettier --write .",
