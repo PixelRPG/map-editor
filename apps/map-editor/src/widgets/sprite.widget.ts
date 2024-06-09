@@ -20,9 +20,9 @@ class _SpriteWidget extends Adw.Bin {
     super({})
     this._sprite = spriteObject;
     const scaleFactor = 2;
-    const width = spriteObject.width * scaleFactor;
-    const height = spriteObject.height * scaleFactor;
-    const pixbufScaled = spriteObject._image.pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.NEAREST);
+    const width = this._sprite.width * scaleFactor;
+    const height = this._sprite.height * scaleFactor;
+    const pixbufScaled = this._sprite._image.pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.NEAREST);
     this._image.set_from_pixbuf(pixbufScaled);
     this.width_request = width;
     this.height_request = height;

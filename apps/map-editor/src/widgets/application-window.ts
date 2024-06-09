@@ -7,8 +7,10 @@ import Gtk from '@girs/gtk-4.0'
 import { WebView } from './webview.ts'
 import { Sidebar } from './sidebar.ts'
 import { TilesetWidget } from './tileset.widget.ts'
+import { LayersWidget } from './layers.widget.ts'
 
 import { Tileset } from '../g-objects/tileset.ts'
+import { Layer } from '../g-objects/layer.ts'
 
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
@@ -46,6 +48,11 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
   protected onWebViewStateChanged(event: MessageEvent<EventDataStateChanged<State>>) {
     const state = this._webView?.messagesService.state
 
+    if (!state) {
+      console.error('No state in event')
+      return
+    }
+
     console.log('onWebViewStateChanged Property:', event.data.data.property)
 
     switch (event.data.data.property) {
@@ -68,6 +75,9 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
         break;
       case "layers":
         console.log('onWebViewStateChanged Layers:', event.data.data.value)
+        const layers = state.layers.map((layer) => new Layer(layer))
+        const layersWidget = new LayersWidget(layers)
+        this._sidebar?.setLayers(layersWidget)
         break;
 
       default:

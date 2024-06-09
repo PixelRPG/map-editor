@@ -1,12 +1,6 @@
 import GObject from '@girs/gobject-2.0'
-import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import { Graphic } from './graphic.ts'
-import type { ImageResource } from '../types/image-resource.ts'
 import type { DataTile } from '@pixelrpg/common'
-
-// import Template from './tile.ui?raw'
 
 interface _Tile {
   /** Graphic for the tile, in Excalibur this is mostly undefined. Instead the image is associated with the `id` of the tile. */
