@@ -4,10 +4,11 @@ using Adw 1;
 template $LayersWidget: Adw.Bin {
     name: "layers-widget";
     ListBox listBox {
-        selection-mode: none;
+        selection-mode: single;
+        valign: start;
 
-        styles [
-          "boxed-list"
-        ]
+        // styles [
+        //   "boxed-list"
+        // ]
     }
 }

@@ -3,7 +3,7 @@ import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
 import { Layer } from '../g-objects/layer.ts'
-// import { LayerWidget } from './layer.widget.ts'
+import { LayerRowWidget } from './layer-row.widget.ts'
 
 import Template from './layers.widget.ui?raw'
 
@@ -22,11 +22,7 @@ class _LayersWidget extends Adw.Bin {
     this._layers = layersObject;
 
     for (const layer of this._layers) {
-      // TODO: LayerWidget?
-      const actionRow = new Adw.ActionRow({
-        title: layer.name,
-        subtitle: layer.class || '',
-      });
+      const actionRow = new LayerRowWidget(layer);
       this._listBox.append(actionRow);
     }
 
@@ -34,12 +30,13 @@ class _LayersWidget extends Adw.Bin {
     this._listBox.connect("row-selected", this.onRowSelected);
   }
 
-  onRowActivated(box: Gtk.ListBox, row: Adw.ActionRow) {
-    console.log("Activated layer:", row);
+  onRowActivated(box: Gtk.ListBox, row: InstanceType<typeof LayerRowWidget>) {
+    console.log("[LayersWidget] Activated layer:", row._layer);
   }
 
-  onRowSelected(box: Gtk.ListBox, row: Adw.ActionRow) {
-    console.log("Selected layer:", row);
+  onRowSelected(box: Gtk.ListBox, row: InstanceType<typeof LayerRowWidget>) {
+    console.log("[LayersWidget] Selected layer:", row._layer);
+    row.activate();
   }
 }
 
