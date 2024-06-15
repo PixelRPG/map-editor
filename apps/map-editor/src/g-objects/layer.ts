@@ -7,6 +7,7 @@ interface _Layer {
 
 class _Layer extends GObject.Object {
 
+  type: DataLayer['type']
   class: DataLayer['class']
   name: DataLayer['name']
   order: DataLayer['order']
@@ -14,6 +15,7 @@ class _Layer extends GObject.Object {
 
   constructor(tileData: DataLayer) {
     super()
+    this.type = tileData.type
     this.class = tileData.class
     this.name = tileData.name
     this.order = tileData.order

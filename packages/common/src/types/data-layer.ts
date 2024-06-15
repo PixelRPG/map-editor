@@ -1,4 +1,4 @@
-import type { Layer } from "./index.ts";
+import type { Layer, LayerType } from "./index.ts";
 
 
 
@@ -14,8 +14,10 @@ export interface DataLayer {
     /**
      * Class name from Tiled
      */
-    class?: Layer['class'];
+    class: Layer['class'];
 
     properties: Layer['properties'];
+
+    type: LayerType;
 }
 
