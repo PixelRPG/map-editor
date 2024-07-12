@@ -13,8 +13,14 @@ Experimental tile based map editor
 
 ### Building
 
-1. Install dependencies: `yarn install`
-2. Build and run: `yarn start`
+```
+npm install -g yarn@latest
+git clone --recurse-submodules https://github.com/PixelRPG/map-editor.git
+cd map-editor
+yarn install
+yarn build:all
+yarn start
+```
 
 ### Troubleshooting
 

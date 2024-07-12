@@ -1,4 +1,7 @@
-// Just for example, can be removed later
+/**
+ * Just an example how files could be handled in messages.
+ * Currently not used.
+ */
 export interface MessageFile {
     type: 'file';
     data: {
