@@ -11,7 +11,6 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "dependencies": {
-        "@pixelrpg/common": "workspace:^",
-        "valtio": "^2.0.0-rc.0"
+        "@pixelrpg/common": "workspace:^"
     }
 }
