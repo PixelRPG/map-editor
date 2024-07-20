@@ -1,8 +1,5 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import Gdk from '@girs/gdk-4.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
-import Gtk from '@girs/gtk-4.0'
 
 import { WebView } from './webview.ts'
 import { Sidebar } from './sidebar.ts'

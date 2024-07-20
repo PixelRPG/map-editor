@@ -7,6 +7,7 @@
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "yarn build:all",
         "build:all": "yarn workspaces foreach -v -W -t run build",
         "build:client": "yarn workspace @pixelrpg/client run build",
         "build:map-editor": "yarn workspace @pixelrpg/map-editor run build",

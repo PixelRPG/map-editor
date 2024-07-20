@@ -11,8 +11,8 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "dependencies": {
-        "@girs/javascriptcore-6.0": "^2.44.2-4.0.0-beta.6",
-        "@girs/webkit-6.0": "^2.44.2-4.0.0-beta.6",
+        "@girs/javascriptcore-6.0": "^2.44.2-4.0.0-beta.7",
+        "@girs/webkit-6.0": "^2.44.2-4.0.0-beta.7",
         "@pixelrpg/common": "workspace:^"
     }
 }
