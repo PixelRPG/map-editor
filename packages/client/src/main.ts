@@ -35,8 +35,6 @@ const engine = new Engine({
   pixelArt: true,
   suppressPlayButton: true,
   backgroundColor: Color.Black,
-  // Temporary disable garbage collection to avoid black screen on webkit
-  garbageCollection: false,
 })
 
 const tiledResource = new TiledResource('./assets/maps/taba_town.tmx')
