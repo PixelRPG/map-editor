@@ -3221,6 +3221,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@excaliburjs/plugin-ldtk@npm:0.29.5":
+  version: 0.29.5
+  resolution: "@excaliburjs/plugin-ldtk@npm:0.29.5"
+  dependencies:
+    compare-versions: "npm:6.1.0"
+    zod: "npm:3.22.4"
+  peerDependencies:
+    excalibur: ~0.29.0
+  checksum: 10c0/a1a3d63fa63859bd2cc2fd6473ddf3964d88a32476647042cfaa2331462da7febe4472830a9a30e2807a865ed2a537a39a1ede12fd9b291ab18fe79f37ac8ee1
+  languageName: node
+  linkType: hard
+
 "@excaliburjs/plugin-tiled@workspace:^, @excaliburjs/plugin-tiled@workspace:packages/excalibur-tiled":
   version: 0.0.0-use.local
   resolution: "@excaliburjs/plugin-tiled@workspace:packages/excalibur-tiled"
@@ -4397,6 +4409,7 @@ __metadata:
   resolution: "@pixelrpg/client@workspace:packages/client"
   dependencies:
     "@excaliburjs/dev-tools": "npm:^0.28.0"
+    "@excaliburjs/plugin-ldtk": "npm:0.29.5"
     "@excaliburjs/plugin-tiled": "workspace:^"
     "@pixelrpg/common": "workspace:^"
     "@pixelrpg/esbuild": "workspace:^"
@@ -19316,6 +19329,13 @@ __metadata:
   version: 1.0.0
   resolution: "yocto-queue@npm:1.0.0"
   checksum: 10c0/856117aa15cf5103d2a2fb173f0ab4acb12b4b4d0ed3ab249fdbbf612e55d1cadfd27a6110940e24746fb0a78cf640b522cc8bca76f30a3b00b66e90cf82abe0
+  languageName: node
+  linkType: hard
+
+"zod@npm:3.22.4":
+  version: 3.22.4
+  resolution: "zod@npm:3.22.4"
+  checksum: 10c0/7578ab283dac0eee66a0ad0fc4a7f28c43e6745aadb3a529f59a4b851aa10872b3890398b3160f257f4b6817b4ce643debdda4fb21a2c040adda7862cab0a587
   languageName: node
   linkType: hard
 

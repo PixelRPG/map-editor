@@ -37,7 +37,7 @@ export default defineConfig({
     sourcemap: true,
     emptyOutDir: false,
     target: 'esnext',
-    assetsInclude: ['**/*.tmx'],
+    //assetsInclude: ['**/*.tmx'],
     rollupOptions: {
       plugins: [cssAsRaw()],
     },

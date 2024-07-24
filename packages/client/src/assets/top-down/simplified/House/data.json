@@ -1,0 +1,68 @@
+{
+	"identifier": "House",
+	"uniqueIdentifer": "bc0f7ad0-b0a0-11ee-9c50-2597384ac3cd",
+	"x": 336,
+	"y": -256,
+	"width": 256,
+	"height": 256,
+	"bgColor": "#696A79",
+	"neighbourLevels": [
+		{
+			"levelIid": "471aa8b0-b0a0-11ee-83ad-197e8057ca90",
+			"dir": "s"
+		}
+	],
+	"customFields" : {},
+	"layers": [
+		"Background.png",
+		"Foreground.png"
+	],
+	"entities": {
+		"Sword": [
+			{
+				"id": "Sword",
+				"iid": "1aa46e70-b0a0-11ee-9c50-712775d86446",
+				"layer": "Objects",
+				"x": 128,
+				"y": 128,
+				"width": 16,
+				"height": 16,
+				"color": 14984818,
+				"customFields": {
+					"attack": 50
+				}
+			}
+		],
+		"PlayerStart": [
+			{
+				"id": "PlayerStart",
+				"iid": "1e7e7450-b0a0-11ee-9c50-7d2d54e12fb8",
+				"layer": "Objects",
+				"x": 112,
+				"y": 224,
+				"width": 16,
+				"height": 16,
+				"color": 12463919,
+				"customFields": {
+					"Health": 100,
+					"Attack": 25
+				}
+			}
+		],
+		"Door": [
+			{
+				"id": "Door",
+				"iid": "c5bc40f0-b0a0-11ee-9c50-d9161829661d",
+				"layer": "Objects",
+				"x": 112,
+				"y": 240,
+				"width": 16,
+				"height": 16,
+				"color": 7552569,
+				"customFields": {
+					"scene": "overworld"
+				}
+			}
+		]
+	}
+}

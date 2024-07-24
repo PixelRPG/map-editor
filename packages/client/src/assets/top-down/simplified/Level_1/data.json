@@ -1,0 +1,103 @@
+{
+	"identifier": "Level_1",
+	"uniqueIdentifer": "471aa8b0-b0a0-11ee-83ad-197e8057ca90",
+	"x": 256,
+	"y": 0,
+	"width": 256,
+	"height": 256,
+	"bgColor": "#696A79",
+	"neighbourLevels": [
+		{
+			"levelIid": "db4d09b0-6280-11ee-bc44-1b84534fe012",
+			"dir": "w"
+		},
+		{
+			"levelIid": "bc0f7ad0-b0a0-11ee-9c50-2597384ac3cd",
+			"dir": "n"
+		}
+	],
+	"customFields" : {},
+	"layers": [
+		"Background.png",
+		"Foreground.png"
+	],
+	"entities": {
+		"Potion": [
+			{
+				"id": "Potion",
+				"iid": "7a775d10-b0a0-11ee-83ad-695661b79578",
+				"layer": "Objects",
+				"x": 64,
+				"y": 160,
+				"width": 16,
+				"height": 16,
+				"color": 14120515,
+				"customFields" : {}
+			},
+			{
+				"id": "Potion",
+				"iid": "7b21cde0-b0a0-11ee-83ad-e9253139d30b",
+				"layer": "Objects",
+				"x": 96,
+				"y": 96,
+				"width": 16,
+				"height": 16,
+				"color": 14120515,
+				"customFields" : {}
+			},
+			{
+				"id": "Potion",
+				"iid": "7b9d6680-b0a0-11ee-83ad-df3978610342",
+				"layer": "Objects",
+				"x": 144,
+				"y": 208,
+				"width": 16,
+				"height": 16,
+				"color": 14120515,
+				"customFields" : {}
+			},
+			{
+				"id": "Potion",
+				"iid": "7c364b20-b0a0-11ee-83ad-c792b327cf7c",
+				"layer": "Objects",
+				"x": 208,
+				"y": 112,
+				"width": 16,
+				"height": 16,
+				"color": 14120515,
+				"customFields" : {}
+			}
+		],
+		"Door": [
+			{
+				"id": "Door",
+				"iid": "a9b65de0-b0a0-11ee-9c50-c3bafa55d925",
+				"layer": "Objects",
+				"x": 176,
+				"y": 64,
+				"width": 16,
+				"height": 16,
+				"color": 7552569,
+				"customFields": {
+					"scene": "house"
+				}
+			}
+		],
+		"PlayerStart": [
+			{
+				"id": "PlayerStart",
+				"iid": "889ccc60-b0a0-11ee-9c50-fb8c75d80a06",
+				"layer": "Objects",
+				"x": 176,
+				"y": 96,
+				"width": 16,
+				"height": 16,
+				"color": 12463919,
+				"customFields": {
+					"Health": 100,
+					"Attack": 25
+				}
+			}
+		]
+	}
+}

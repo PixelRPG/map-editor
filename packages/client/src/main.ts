@@ -1,3 +1,4 @@
+import './files.d.ts'
 import { Engine, DisplayMode, Loader, Color } from 'excalibur'
 // import { DevTool } from '@excaliburjs/dev-tools'
 import {
@@ -30,7 +31,6 @@ messagesService.onMessage((message) => {
 
 // Create the Excalibur engine
 const engine = new Engine({
-  canvasElementId: 'map-view',
   displayMode: DisplayMode.FillScreen,
   pixelArt: true,
   suppressPlayButton: true,

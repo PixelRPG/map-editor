@@ -24,6 +24,7 @@
     },
     "dependencies": {
         "@excaliburjs/dev-tools": "^0.28.0",
+        "@excaliburjs/plugin-ldtk": "0.29.5",
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/common": "workspace:^",
         "@pixelrpg/messages-webview": "workspace:^",
