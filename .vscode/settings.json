@@ -20,5 +20,6 @@
     "Pixbuf",
     "Tileset",
     "Tilesets"
-  ]
+  ],
+  "deno.enable": false
 }
