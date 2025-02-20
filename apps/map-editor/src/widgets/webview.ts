@@ -67,7 +67,7 @@ export const WebView = GObject.registerClass(
     }
 
     protected initMessagesService() {
-      const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { tilesets: [], resources: [] }, this)
+      const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { tilesets: [], resources: [], layers: [] }, this)
       return messagesService
     }
 

@@ -6,7 +6,7 @@ import type { DataLayer } from "./data-layer.ts"
 export interface State {
     tilesets: DataTileset[];
     resources: DataResource[];
-    map: DataMap;
+    map?: DataMap;
     layers: DataLayer[];
 }
 

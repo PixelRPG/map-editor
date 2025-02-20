@@ -66,14 +66,14 @@ export class EditorInputSystem extends System {
                 this.onPointerMove(x, y);
             });
         } else {
-            // We send the mouse events from GTK to the WebView so that drag scrolling also works beyond the WebView
-            messagesService.onEvent<EventDataMouseMove>('mouse-move', (message) => {
+            // We send the mouse events from GTK to the WebView so that drag scrolling also works outside the WebView
+            messagesService.onEvent('mouse-move', (message) => {
                 const x = message.data.data.x;
                 const y = message.data.data.y;
                 this.onPointerMove(x, y);
             })
 
-            messagesService.onEvent<EventDataMouseMove>('mouse-leave', this.onPointerUp)
+            messagesService.onEvent('mouse-leave', this.onPointerUp)
         }
 
 

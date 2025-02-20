@@ -3,7 +3,7 @@
 import { EventDispatcher } from "../event-dispatcher.ts"
 import { isEqual } from "lodash"
 
-import type { Message, MessageEvent, MessageFile, MessageText, EventListener, MessageEventStateChanged, EventDataStateChanged } from "./index.ts"
+import type { Message, MessageEvent, MessageFile, MessageText, EventListener, MessageEventStateChanged, EventDataStateChanged, EventDataMouseMove } from "./index.ts"
 
 export abstract class BaseMessageService<S extends object> {
 
@@ -96,16 +96,22 @@ export abstract class BaseMessageService<S extends object> {
     // Event events
 
     onEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
+    onEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
+    onEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
     onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.on(`event:${subEventName}`, callback)
     }
 
     onceEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
+    onceEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
+    onceEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
     onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.once(`event:${subEventName}`, callback)
     }
 
     offEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
+    offEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
+    offEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
     offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.off(`event:${subEventName}`, callback)
     }
