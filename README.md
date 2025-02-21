@@ -1,33 +1,51 @@
-# map-editor
-Experimental tile based map editor
+# PixelRPG Map Editor
+
+An experimental tile-based map editor built with Excalibur.js, GTK/Adwaita, and GJS.
+
+## Project Structure
+
+- `apps/map-editor`: Desktop application built with GTK/Adwaita and GJS
+- `packages/client`: Game rendering and map view built with Excalibur.js
+- `packages/messages-gjs`: Message service implementation for GJS runtime
+- `packages/messages-webview`: Message service implementation for WebView runtime
+- `packages/common`: Shared code between GJS and WebView
 
 ## Development
 
-### Dependencies
+### Prerequisites
 
 - [gjs](https://gjs.guide/)
-- [node.js](https://nodejs.org/en/)
-- [yarn](https://yarnpkg.com/getting-started/install)
-- [blueprint-compiler](https://jwestman.pages.gitlab.gnome.org/blueprint-compiler/)
-- [glib-compile-resources](https://docs.gtk.org/gio/struct.Resource.html)
+- Node.js
+- Yarn
 
-### Building
 
-```
-npm install -g yarn@latest
-git clone --recurse-submodules https://github.com/PixelRPG/map-editor.git
-cd map-editor
+### Setup
+
+```bash
 yarn install
-yarn build:all
-yarn start
 ```
 
-### Troubleshooting
+### Development Commands
 
-I get the following error:
+```bash
+# Start the desktop application
+yarn workspace @pixelrpg/map-editor start
 
+# Build the client
+yarn workspace @pixelrpg/client build
+
+# Preview the client
+yarn workspace @pixelrpg/client preview
+```
+
+## Known Issues
+
+If you encounter this error:
 ```bash
 bwrap: setting up uid map: Permission denied
 ```
+See solution here: https://etbe.coker.com.au/2024/04/24/ubuntu-24-04-bubblewrap/
 
-Solution: https://etbe.coker.com.au/2024/04/24/ubuntu-24-04-bubblewrap/
+## License
+
+MIT
