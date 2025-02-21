@@ -20,6 +20,10 @@ function cssAsRaw() {
 
 export default defineConfig({
   plugins: [glsl()],
+  define: {
+    'process.env.__EX_VERSION': JSON.stringify('0.0.1-custom'),
+    'process.env.NODE_ENV': JSON.stringify('development')
+  },
   // logLevel: 'info',
   build: {
     outDir: 'dist',

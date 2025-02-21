@@ -26,7 +26,6 @@
     ],
     "resolutions": {
         "excalibur": "workspace:^",
-        "@excaliburjs/plugin-aseprite": "workspace:^",
         "@excaliburjs/plugin-tiled": "workspace:^"
     },
     "devDependencies": {

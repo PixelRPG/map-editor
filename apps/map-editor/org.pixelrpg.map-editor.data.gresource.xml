@@ -2,12 +2,10 @@
 <gresources>
   <gresource prefix="/org/pixelrpg/map-editor/client">
     <file alias="index.html">../../packages/client/dist/index.html</file>
-    <!-- <file alias="main.css">../../packages/client/dist/main.css</file>
-    <file alias="main.css.map">../../packages/client/dist/main.css.map</file>
-    <file alias="main.js">../../packages/client/dist/main.js</file>
-    <file alias="main.js.map">../../packages/client/dist/main.js.map</file> -->
-    <file alias="assets/maps/taba_town.tmx">../../packages/client/dist/assets/maps/taba_town.tmx</file>
-    <file alias="assets/tilesets/PastTheFuture_Grass_Sand_Snow.png">../../packages/client/dist/assets/tilesets/PastTheFuture_Grass_Sand_Snow.png</file>
-    <file alias="assets/tilesets/floorsandwalls.png">../../packages/client/dist/assets/tilesets/floorsandwalls.png</file>
+    <file alias="assets/maps/kokiri-forest.tmx">../../packages/client/dist/assets/maps/kokiri-forest.tmx</file>
+    <file alias="assets/tilesets/lokiri-forest.tsx">../../packages/client/dist/assets/tilesets/lokiri-forest.tsx</file>
+    <file alias="assets/tilesets/lokiri-forest.png">../../packages/client/dist/assets/tilesets/lokiri-forest.png</file>
+    <file alias="assets/tilesets/water.tsx">../../packages/client/dist/assets/tilesets/water.tsx</file>
+    <file alias="assets/tilesets/water.png">../../packages/client/dist/assets/tilesets/water.png</file>
   </gresource>
 </gresources>

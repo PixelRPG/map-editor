@@ -1,7 +1,4 @@
-import { SpriteParser } from "./sprite.parser.ts";
-
 import type { ResourceParser } from "./resource.parser.ts";
-import type { Sprite } from "excalibur";
 import type { TiledMap } from "@excaliburjs/plugin-tiled"
 import type { DataMap } from "@pixelrpg/common";
 

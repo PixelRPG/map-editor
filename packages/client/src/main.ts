@@ -3,9 +3,9 @@ import { Engine, DisplayMode, Loader, Color } from 'excalibur'
 import {
   TiledResource,
   TileLayer,
-  IsoTileLayer,
-  ObjectLayer,
-  ImageLayer,
+  // IsoTileLayer,
+  // ObjectLayer,
+  // ImageLayer,
 } from '@excaliburjs/plugin-tiled'
 
 import { TilesetParser } from './parser/tileset.parser.ts'
@@ -37,7 +37,7 @@ const engine = new Engine({
   backgroundColor: Color.Black,
 })
 
-const tiledResource = new TiledResource('./assets/maps/taba_town.tmx')
+const tiledResource = new TiledResource('./assets/maps/kokiri-forest.tmx')
 
 const loader = new Loader([tiledResource])
 
@@ -96,19 +96,19 @@ for (const layer of tiledResource.layers) {
       })
     }
   }
-  if (layer instanceof IsoTileLayer) {
-    // layer.isometricMap
-  }
-  if (layer instanceof ObjectLayer) {
-    for (const entity of layer.entities) {
-      // const tx = entity.get(TransformComponent)
-    }
-  }
-  if (layer instanceof ImageLayer) {
-    if (layer.imageActor) {
-      // layer.imageActor
-    }
-  }
+  // if (layer instanceof IsoTileLayer) {
+  //   layer.isometricMap
+  // }
+  // if (layer instanceof ObjectLayer) {
+  //   for (const entity of layer.entities) {
+  //     const tx = entity.get(TransformComponent)
+  //   }
+  // }
+  // if (layer instanceof ImageLayer) {
+  //   if (layer.imageActor) {
+  //     layer.imageActor
+  //   }
+  // }
 }
 
 tiledResource.addToScene(engine.currentScene)

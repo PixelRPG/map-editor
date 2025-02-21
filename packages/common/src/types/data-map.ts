@@ -1,4 +1,4 @@
-import type { DataTile, DataVector, DataSpriteSheet } from "./index.ts";
+// import type { DataTile, DataVector, DataSpriteSheet } from "./index.ts";
 import type { TiledMap } from "@excaliburjs/plugin-tiled"
 
 export interface DataMap {

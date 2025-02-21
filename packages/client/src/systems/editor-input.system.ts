@@ -2,8 +2,6 @@ import { Engine, System, World, Scene, SystemType } from "excalibur";
 import { settings } from '../settings.ts'
 import { messagesService } from '../services/messages.service.ts'
 
-import type { EventDataMouseMove } from '@pixelrpg/common'
-
 /**
  * We use this system to handle the input for the map editor.
  */
