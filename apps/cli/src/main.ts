@@ -1,5 +1,10 @@
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
+import { JSDOM } from 'jsdom'
+
+// Make DOMParser globally available for Excalibur
+const dom = new JSDOM()
+global.DOMParser = dom.window.DOMParser
 
 // Import all commands
 import { convertCommand } from './commands/convert.js'

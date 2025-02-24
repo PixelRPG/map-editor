@@ -9,5 +9,10 @@ await esbuild.build({
     target: 'node22',
     banner: {
         js: '#!/usr/bin/env node',
-    }
+    },
+    loader: {
+        '.glsl': 'text',
+        '.png': 'dataurl'
+    },
+    external: ['jsdom']
 }) 
