@@ -1,47 +1,7 @@
 import { promises as fs } from 'fs'
-import { XMLParser } from 'fast-xml-parser'
 import { TileSetData, TileDataTileSet, MapData, LayerData } from '@pixelrpg/map-format'
 import { TiledParser, TiledMap, TiledTileLayer, TiledObjectLayer, TiledImageLayer, isTiledTilesetExternal, TiledObject } from '@excaliburjs/plugin-tiled'
 import path from 'path'
-
-interface TiledTileset {
-    tileset: {
-        '@_version': string
-        '@_tiledversion': string
-        '@_name': string
-        '@_tilewidth': number
-        '@_tileheight': number
-        '@_tilecount': number
-        '@_columns': number
-        image: {
-            '@_source': string
-            '@_width': number
-            '@_height': number
-        }
-        tile?: {
-            '@_id': string
-            animation?: {
-                frame: Array<{
-                    '@_tileid': string
-                    '@_duration': string
-                }> | {
-                    '@_tileid': string
-                    '@_duration': string
-                }
-            }
-        }[]
-    }
-}
-
-interface PixelRPGTileset {
-    name: string
-    image: string
-    tileWidth: number
-    tileHeight: number
-    tileCount: number
-    columns: number
-    animations: Record<string, Array<{ tileId: number, duration: number }>>
-}
 
 export async function convertTiledToPixelRPG(input: string, output: string | null) {
     try {
@@ -72,59 +32,41 @@ export async function convertTiledToPixelRPG(input: string, output: string | nul
 }
 
 async function convertTileset(content: string): Promise<TileSetData> {
-    const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: '@_'
-    })
+    const parser = new TiledParser()
+    const tiledTileset = parser.parseExternalTileset(content, false)
 
-    const tiled = parser.parse(content) as TiledTileset
-    const { tileset } = tiled
-
-    // Create tiles array only for tiles with special properties
+    // Convert only tiles that have special properties (animations)
     const tiles: TileDataTileSet[] = []
 
-    // Only process tiles that have special properties
-    if (tileset.tile) {
-        const tiledTiles = Array.isArray(tileset.tile) ? tileset.tile : [tileset.tile]
-
-        for (const tile of tiledTiles) {
-            const tileId = parseInt(tile['@_id'])
-            const tileData: TileDataTileSet = {
-                id: tileId,
-                col: tileId % tileset['@_columns'],
-                row: Math.floor(tileId / tileset['@_columns'])
-            }
-
-            // Add animation if it exists
+    if (tiledTileset.tiles) {
+        for (const tile of tiledTileset.tiles) {
             if (tile.animation) {
-                const frames = Array.isArray(tile.animation.frame)
-                    ? tile.animation.frame
-                    : [tile.animation.frame]
-
-                tileData.animation = {
-                    frames: frames.map(frame => ({
-                        tileId: parseInt(frame['@_tileid']),
-                        duration: parseInt(frame['@_duration'])
-                    })),
-                    strategy: 'loop' // Default strategy in Tiled
-                }
-            }
-
-            // Only add tile if it has special properties
-            if (tile.animation) {
-                tiles.push(tileData)
+                tiles.push({
+                    id: tile.id,
+                    col: tile.id % tiledTileset.columns,
+                    row: Math.floor(tile.id / tiledTileset.columns),
+                    animation: {
+                        frames: tile.animation.map(frame => ({
+                            tileId: frame.tileid,
+                            duration: frame.duration
+                        })),
+                        strategy: 'loop' // Default in Tiled
+                    }
+                })
             }
         }
     }
 
     return {
-        id: tileset['@_name'].toLowerCase().replace(/\s+/g, '_'),
-        name: tileset['@_name'],
-        image: tileset.image['@_source'],
-        tileWidth: tileset['@_tilewidth'],
-        tileHeight: tileset['@_tileheight'],
-        columns: tileset['@_columns'],
-        rows: Math.ceil(tileset['@_tilecount'] / tileset['@_columns']),
+        id: tiledTileset.name.toLowerCase().replace(/\s+/g, '_'),
+        name: tiledTileset.name,
+        image: tiledTileset.image ?? '',
+        tileWidth: tiledTileset.tilewidth,
+        tileHeight: tiledTileset.tileheight,
+        columns: tiledTileset.columns,
+        rows: Math.ceil(tiledTileset.tilecount / tiledTileset.columns),
+        margin: tiledTileset.margin,
+        spacing: tiledTileset.spacing,
         tiles
     }
 }
