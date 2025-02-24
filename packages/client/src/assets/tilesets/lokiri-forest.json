@@ -1,0 +1,33 @@
+{
+  "id": "oot2d_kokiri_forest",
+  "name": "OoT2D Kokiri Forest",
+  "image": "lokiri-forest.png",
+  "tileWidth": "16",
+  "tileHeight": "16",
+  "columns": "32",
+  "rows": 32,
+  "tiles": [
+    {
+      "id": 942,
+      "col": 14,
+      "row": 29,
+      "animation": {
+        "frames": [
+          {
+            "tileId": 940,
+            "duration": 200
+          },
+          {
+            "tileId": 941,
+            "duration": 200
+          },
+          {
+            "tileId": 942,
+            "duration": 200
+          }
+        ],
+        "strategy": "loop"
+      }
+    }
+  ]
+}

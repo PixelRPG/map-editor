@@ -1,4 +1,4 @@
-import { TileDataTileSet } from "./TileData";
+import { TileDataTileSet } from "./TileData.js";
 
 /**
  * Represents a tileset that can be used in a map

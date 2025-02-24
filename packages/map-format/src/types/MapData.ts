@@ -1,5 +1,5 @@
-import { LayerData } from "./LayerData";
-import { TileSetData } from "./TileSetData";
+import { LayerData } from "./LayerData.js";
+import { TileSetData } from "./TileSetData.js";
 
 /**
  * Represents the core data structure for a tile-based map

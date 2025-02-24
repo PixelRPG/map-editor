@@ -1,0 +1,187 @@
+{
+    "id": "oot2d_water",
+    "name": "OoT2D Water",
+    "image": "water.png",
+    "tileWidth": "16",
+    "tileHeight": "16",
+    "columns": "6",
+    "rows": 5,
+    "tiles": [
+        {
+            "id": 0,
+            "col": 0,
+            "row": 0,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 0,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 1,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 2,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 3,
+            "col": 3,
+            "row": 0,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 3,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 4,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 5,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 6,
+            "col": 0,
+            "row": 1,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 6,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 7,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 8,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 9,
+            "col": 3,
+            "row": 1,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 9,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 10,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 11,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 12,
+            "col": 0,
+            "row": 2,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 12,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 13,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 14,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 15,
+            "col": 3,
+            "row": 2,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 15,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 16,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 17,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 18,
+            "col": 0,
+            "row": 3,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 18,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 19,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 20,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        },
+        {
+            "id": 21,
+            "col": 3,
+            "row": 3,
+            "animation": {
+                "frames": [
+                    {
+                        "tileId": 21,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 22,
+                        "duration": 200
+                    },
+                    {
+                        "tileId": 23,
+                        "duration": 200
+                    }
+                ],
+                "strategy": "loop"
+            }
+        }
+    ]
+}

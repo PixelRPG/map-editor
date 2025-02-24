@@ -1,4 +1,4 @@
-import { TileSetData } from '../types';
+import { TileSetData } from '../types/index.js';
 import { Sprite, ImageSource, SpriteSheet, Animation, AnimationStrategy } from 'excalibur';
 
 export class TileSetFormat {

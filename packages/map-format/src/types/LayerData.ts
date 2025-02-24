@@ -1,5 +1,5 @@
-import type { TileDataMap } from "./TileData";
-import type { ObjectData } from "./ObjectData";
+import type { TileDataMap } from "./TileData.js";
+import type { ObjectData } from "./ObjectData.js";
 /**
  * Represents a single layer within a tile map
  * Layers can contain either tiles or objects
