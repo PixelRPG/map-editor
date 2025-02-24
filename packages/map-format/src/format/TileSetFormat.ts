@@ -1,5 +1,5 @@
 import { TileSetData } from '../types';
-import { Sprite, ImageSource, SpriteSheet } from 'excalibur';
+import { Sprite, ImageSource, SpriteSheet, Animation, AnimationStrategy } from 'excalibur';
 
 export class TileSetFormat {
     /**
@@ -46,7 +46,8 @@ export class TileSetFormat {
      */
     static toExcalibur(data: TileSetData): {
         spriteSheet: SpriteSheet,
-        sprites: Record<number, Sprite>
+        sprites: Record<number, Sprite>,
+        animations: Record<number, Animation>
     } {
         // 1. Create ImageSource
         const imageSource = new ImageSource(data.image);
@@ -77,6 +78,22 @@ export class TileSetFormat {
             }
         });
 
-        return { spriteSheet, sprites };
+        const animations: Record<number, Animation> = {};
+
+        data.tiles.forEach(tile => {
+            if (tile.animation) {
+                const frames = tile.animation.frames.map(frame => ({
+                    graphic: sprites[frame.tileId],
+                    duration: frame.duration
+                }));
+
+                animations[tile.id] = new Animation({
+                    frames,
+                    strategy: (tile.animation.strategy || 'loop') as AnimationStrategy
+                });
+            }
+        });
+
+        return { spriteSheet, sprites, animations };
     }
 } 

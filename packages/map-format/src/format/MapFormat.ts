@@ -1,5 +1,5 @@
 import { TileMap, Vector } from 'excalibur';
-import { MapData, LayerData, TileDataMap, TileSetData } from '../types';
+import { MapData, LayerData, TileDataMap } from '../types';
 
 export class MapFormat {
     /**
