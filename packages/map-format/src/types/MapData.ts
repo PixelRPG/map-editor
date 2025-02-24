@@ -1,4 +1,5 @@
 import { LayerData } from "./LayerData";
+import { TileSetData } from "./TileSetData";
 
 /**
  * Represents the core data structure for a tile-based map
@@ -9,6 +10,11 @@ export interface MapData {
      * Optional name of the tile map
      */
     name?: string;
+
+    /**
+     * Array of tile sets that are referenced in the map
+     */
+    tileSets: TileSetData[];
 
     /**
      * Optional position of the tile map in world coordinates

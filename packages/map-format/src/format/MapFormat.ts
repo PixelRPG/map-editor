@@ -1,5 +1,5 @@
 import { TileMap, Vector } from 'excalibur';
-import { MapData, LayerData, TileData } from '../types';
+import { MapData, LayerData, TileDataMap, TileSetData } from '../types';
 
 export class MapFormat {
     /**
@@ -24,7 +24,7 @@ export class MapFormat {
     /**
      * Converts map data to Excalibur TileMap
      */
-    static toTileMap(data: MapData): TileMap {
+    static toExcalibur(data: MapData): TileMap {
         this.validate(data);
 
         const tileMap = new TileMap({
@@ -54,44 +54,12 @@ export class MapFormat {
         return tileMap;
     }
 
-    /**
-     * Converts Excalibur TileMap to map data
-     */
-    static fromTileMap(tileMap: TileMap): MapData {
-        return {
-            version: '1.0',
-            name: tileMap.name,
-            pos: tileMap.pos ? { x: tileMap.pos.x, y: tileMap.pos.y } : undefined,
-            tileWidth: tileMap.tileWidth,
-            tileHeight: tileMap.tileHeight,
-            columns: tileMap.columns,
-            rows: tileMap.rows,
-            renderFromTopOfGraphic: tileMap.renderFromTopOfGraphic,
-            layers: [
-                {
-                    id: 'base',
-                    name: 'Base Layer',
-                    type: 'tile',
-                    visible: true,
-                    tiles: this.extractTiles(tileMap)
-                }
-            ]
-        };
-    }
-
     private static processTileLayer(tileMap: TileMap, layer: LayerData) {
-        layer.tiles?.forEach(tileData => {
+        layer.tiles?.forEach((tileData: TileDataMap) => {
             const tile = tileMap.getTile(tileData.x, tileData.y);
             if (tile) {
                 // Set basic tile properties
                 tile.solid = tileData.solid ?? false;
-
-                // Add graphics if specified
-                tileData.graphics?.forEach(graphicRef => {
-                    // Here you would need to resolve the graphic reference
-                    // to an actual Excalibur Graphic instance
-                    // tile.addGraphic(resolveGraphic(graphicRef));
-                });
 
                 // Set custom properties
                 if (tileData.properties) {
@@ -104,7 +72,6 @@ export class MapFormat {
                 tileData.colliders?.forEach(collider => {
                     // Here you would need to create the appropriate Excalibur collider
                     // based on the collider type and parameters
-                    // tile.addCollider(createCollider(collider));
                 });
             }
         });
@@ -119,48 +86,6 @@ export class MapFormat {
             // - Spawn points
             // - Custom game objects
         });
-    }
-
-    private static extractTiles(tileMap: TileMap): TileData[] {
-        const tiles: TileData[] = [];
-
-        for (let x = 0; x < tileMap.columns; x++) {
-            for (let y = 0; y < tileMap.rows; y++) {
-                const tile = tileMap.getTile(x, y);
-                if (tile) {
-                    // Extract basic tile data
-                    const tileData: TileData = {
-                        x: tile.x,
-                        y: tile.y,
-                        solid: tile.solid
-                    };
-
-                    // Extract graphics
-                    const graphics = tile.getGraphics();
-                    if (graphics.length > 0) {
-                        tileData.graphics = graphics.map(g => g.id.toString());
-                    }
-
-                    // Extract custom properties
-                    if (tile.data.size > 0) {
-                        tileData.properties = Object.fromEntries(tile.data.entries());
-                    }
-
-                    // Extract colliders
-                    const colliders = tile.getColliders();
-                    if (colliders.length > 0) {
-                        tileData.colliders = colliders.map(c => ({
-                            type: c.constructor.name,
-                            // Additional collider properties would be extracted here
-                        }));
-                    }
-
-                    tiles.push(tileData);
-                }
-            }
-        }
-
-        return tiles;
     }
 
     /**

@@ -1,8 +1,50 @@
 /**
- * Represents a single tile within a tile layer
- * Compatible with Excalibur.js Tile system
+ * Base interface for common tile properties
  */
-export interface TileData {
+interface TileDataBase {
+    /**
+     * Whether this tile blocks movement/collisions
+     */
+    solid?: boolean;
+
+    /**
+     * Custom properties for the tile
+     */
+    properties?: Record<string, any>;
+
+    /**
+     * Optional collision shapes for this tile
+     */
+    colliders?: {
+        type: string;
+        offset?: { x: number, y: number };
+    }[];
+}
+
+/**
+ * Represents a tile definition in a tileset
+ */
+export interface TileDataTileSet extends TileDataBase {
+    /**
+     * Unique identifier for this tile within the tileset
+     */
+    id: number;
+
+    /**
+     * Column position in the tileset sprite sheet
+     */
+    col: number;
+
+    /**
+     * Row position in the tileset sprite sheet
+     */
+    row: number;
+}
+
+/**
+ * Represents a tile instance placed in a map
+ */
+export interface TileDataMap extends TileDataBase {
     /**
      * X coordinate of the tile in tile units (not pixels)
      */
@@ -14,36 +56,12 @@ export interface TileData {
     y: number;
 
     /**
-     * Whether this tile blocks movement/collisions
-     * Used by Excalibur's built-in collision system
+     * Reference to tileset
      */
-    solid?: boolean;
+    tileSetId: string;
 
     /**
-     * Array of graphic/sprite references to be rendered for this tile
-     * Multiple graphics will be rendered in array order
+     * Reference to the tile definition in the tileset
      */
-    graphics?: string[];
-
-    /**
-     * Custom properties for the tile
-     * Can be used to store gameplay-specific data
-     */
-    properties?: Record<string, any>;
-
-    /**
-     * Optional collision shapes for this tile
-     * Allows for more complex collision than the default solid rectangle
-     */
-    colliders?: {
-        /**
-         * Type of collider shape
-         */
-        type: string;
-
-        /**
-         * Optional offset from tile position
-         */
-        offset?: { x: number, y: number };
-    }[];
+    tileId: number;
 }

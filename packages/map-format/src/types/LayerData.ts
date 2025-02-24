@@ -1,4 +1,4 @@
-import type { TileData } from "./TileData";
+import type { TileDataMap } from "./TileData";
 import type { ObjectData } from "./ObjectData";
 /**
  * Represents a single layer within a tile map
@@ -30,7 +30,7 @@ export interface LayerData {
     /**
      * Array of tiles in this layer (only for type='tile')
      */
-    tiles?: TileData[];
+    tiles?: TileDataMap[];
 
     /**
      * Array of objects in this layer (only for type='object')
