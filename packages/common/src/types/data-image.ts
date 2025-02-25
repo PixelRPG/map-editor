@@ -1,5 +1,3 @@
-import type { ImageSource } from "excalibur";
-
 export interface DataImage {
     /**
      * The path to the resource
@@ -8,7 +6,7 @@ export interface DataImage {
     /**
      * The path to the image
      */
-    width: ImageSource['width'];
-    height: ImageSource['height'];
+    width: number;
+    height: number;
 }
 
