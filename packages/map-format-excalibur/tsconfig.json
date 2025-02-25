@@ -6,7 +6,7 @@
       "moduleResolution": "Bundler",
       "target": "ESNext",
       "outDir": "./dist",
-      "lib": ["dom", "dom.iterable", "es5", "es2018"],
+      "lib": ["dom", "dom.iterable", "es5", "ESNext"],
       "noEmit": true,
       "allowImportingTsExtensions": true,
     },
