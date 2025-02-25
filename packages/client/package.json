@@ -2,7 +2,7 @@
     "name": "@pixelrpg/client",
     "version": "0.0.1",
     "description": "Client side of the map editor",
-    "main": "dist/main.js",
+    "main": "dist/index.html",
     "type": "module",
     "private": true,
     "scripts": {

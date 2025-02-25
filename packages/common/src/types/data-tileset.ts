@@ -1,18 +1,17 @@
 import type { DataTile, DataVector, DataSpriteSheet } from "./index.ts";
-import type { Tileset } from "@excaliburjs/plugin-tiled"
 
 export interface DataTileset {
-    name: Tileset['name'];
-    class?: Tileset['class'];
-    firstGid: Tileset['firstGid'];
-    tileCount: Tileset['tileCount'];
-    tileWidth: Tileset['tileWidth'];
-    tileHeight: Tileset['tileHeight'];
+    name: string;
+    class?: string;
+    firstGid: number;
+    tileCount: number;
+    tileWidth: number;
+    tileHeight: number;
     tileOffset: DataVector;
     spriteSheet: DataSpriteSheet;
     tiles: DataTile[];
-    objectAlignment: Tileset['objectalignment'];
-    orientation: Tileset['orientation'];
-    properties: Tileset['properties'];
+    objectAlignment: string;
+    orientation: string;
+    properties: Record<string, any>;
 }
 

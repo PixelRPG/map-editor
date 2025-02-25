@@ -1,4 +1,3 @@
-export * from './base-message.service.ts'
 export * from './data-graphic.ts'
 export * from './data-image.ts'
 export * from './data-layer.ts'

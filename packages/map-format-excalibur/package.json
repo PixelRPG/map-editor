@@ -1,0 +1,17 @@
+{
+    "name": "@pixelrpg/map-format-excalibur",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "src/index.ts",
+    "scripts": {
+        "check": "tsc"
+    },
+    "dependencies": {
+        "@pixelrpg/map-format-core": "workspace:*",
+        "excalibur": "^0.28.1"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.19",
+        "typescript": "^5.3.3"
+    }
+}

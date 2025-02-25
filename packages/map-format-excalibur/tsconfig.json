@@ -1,0 +1,15 @@
+{
+    "extends": "../excalibur/tsconfig.json",
+    "compilerOptions": {
+      // Modern ESM output
+      "module": "ESNext",
+      "moduleResolution": "Bundler",
+      "target": "ESNext",
+      "outDir": "./dist",
+      "lib": ["dom", "dom.iterable", "es5", "ESNext"],
+      "noEmit": true,
+      "allowImportingTsExtensions": true,
+    },
+    "include": ["env.d.ts", "src/**/*"],
+    "exclude": ["node_modules", "dist"]
+  } 

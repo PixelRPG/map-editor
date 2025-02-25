@@ -1,20 +1,17 @@
 {
-  "compilerOptions": {   
-    "lib": ["ESNext", "DOM"],
-    "types": [],
-    "target": "ESNext",
+  "extends": "../excalibur/tsconfig.json",
+  "compilerOptions": {
+    // Modern ESM output
     "module": "ESNext",
-    "moduleResolution": "bundler",
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "outDir": "./dist",
+    "lib": ["dom", "dom.iterable", "es5", "ESNext"],
     "noEmit": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "types": []
   },
-  "files": [
-    "src/main.ts",
-  ]
-}
+  "include": ["env.d.ts", "src/main.ts"],
+  "exclude": ["node_modules", "dist"]
+} 
