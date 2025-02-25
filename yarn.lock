@@ -3402,7 +3402,6 @@ __metadata:
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
     "@pixelrpg/common": "workspace:^"
-    "@pixelrpg/map-format-core": "workspace:^"
     "@pixelrpg/map-format-excalibur": "workspace:^"
     "@types/jsdom": "npm:^21.1.7"
     "@types/node": "npm:^22.13.5"
@@ -3489,7 +3488,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/map-format-core@workspace:*, @pixelrpg/map-format-core@workspace:^, @pixelrpg/map-format-core@workspace:packages/map-format-core":
+"@pixelrpg/map-format-core@workspace:*, @pixelrpg/map-format-core@workspace:packages/map-format-core":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/map-format-core@workspace:packages/map-format-core"
   dependencies:
