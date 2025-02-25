@@ -1,46 +1,7 @@
-import { TileSetData } from '../types/index.js';
 import { Sprite, ImageSource, SpriteSheet, Animation, AnimationStrategy } from 'excalibur';
+import { TileSetFormat, TileSetData, TileDataTileSet } from '@pixelrpg/map-format-core';
 
-export class TileSetFormat {
-    /**
-     * Validates tileset data structure
-     */
-    static validate(data: TileSetData): boolean {
-        if (!data.id) {
-            throw new Error('Tileset ID is required');
-        }
-        if (!data.image) {
-            throw new Error('Tileset image path is required');
-        }
-        if (!data.tileWidth || !data.tileHeight) {
-            throw new Error('Tile dimensions are required');
-        }
-        if (!data.columns || !data.rows) {
-            throw new Error('Tileset dimensions are required');
-        }
-        if (!Array.isArray(data.tiles)) {
-            throw new Error('Tiles must be an array');
-        }
-        return true;
-    }
-
-    /**
-     * Serializes tileset data to JSON string
-     */
-    static serialize(data: TileSetData): string {
-        this.validate(data);
-        return JSON.stringify(data, null, 2);
-    }
-
-    /**
-     * Deserializes JSON string to tileset data
-     */
-    static deserialize(json: string): TileSetData {
-        const data = JSON.parse(json) as TileSetData;
-        this.validate(data);
-        return data;
-    }
-
+export class ExcaliburTileSetFormat extends TileSetFormat {
     /**
      * Converts tileset data to Excalibur SpriteSheet
      */
@@ -49,6 +10,8 @@ export class TileSetFormat {
         sprites: Record<number, Sprite>,
         animations: Record<number, Animation>
     } {
+        TileSetFormat.validate(data);
+
         // 1. Create ImageSource
         const imageSource = new ImageSource(data.image);
 
@@ -71,7 +34,7 @@ export class TileSetFormat {
 
         // 3. Create sprite lookup for each defined tile
         const sprites: Record<number, Sprite> = {};
-        data.tiles.forEach(tile => {
+        data.tiles.forEach((tile: TileDataTileSet) => {
             const sprite = spriteSheet.getSprite(tile.col, tile.row);
             if (sprite) {
                 sprites[tile.id] = sprite;
@@ -80,9 +43,9 @@ export class TileSetFormat {
 
         const animations: Record<number, Animation> = {};
 
-        data.tiles.forEach(tile => {
+        data.tiles.forEach((tile: TileDataTileSet) => {
             if (tile.animation) {
-                const frames = tile.animation.frames.map(frame => ({
+                const frames = tile.animation.frames.map((frame: { tileId: number, duration: number }) => ({
                     graphic: sprites[frame.tileId],
                     duration: frame.duration
                 }));

@@ -1,31 +1,12 @@
 import { TileMap, Vector } from 'excalibur';
-import { MapData, LayerData, TileDataMap } from '../types/index.js';
+import { MapFormat, MapData, LayerData, TileDataMap } from '@pixelrpg/map-format-core';
 
-export class MapFormat {
-    /**
-     * Validates map data structure
-     */
-    static validate(data: MapData): boolean {
-        if (!data.version) {
-            throw new Error('Map version is required');
-        }
-        if (!data.tileWidth || !data.tileHeight) {
-            throw new Error('Tile dimensions are required');
-        }
-        if (!data.columns || !data.rows) {
-            throw new Error('Map dimensions (columns/rows) are required');
-        }
-        if (!Array.isArray(data.layers)) {
-            throw new Error('Layers must be an array');
-        }
-        return true;
-    }
-
+export class ExcaliburMapFormat extends MapFormat {
     /**
      * Converts map data to Excalibur TileMap
      */
     static toExcalibur(data: MapData): TileMap {
-        this.validate(data);
+        MapFormat.validate(data);
 
         const tileMap = new TileMap({
             name: data.name,
@@ -39,22 +20,22 @@ export class MapFormat {
 
         // Process tile layers in order (bottom to top)
         data.layers
-            .filter(layer => layer.type === 'tile' && layer.visible)
-            .forEach(layer => {
+            .filter((layer: LayerData) => layer.type === 'tile' && layer.visible)
+            .forEach((layer: LayerData) => {
                 this.processTileLayer(tileMap, layer);
             });
 
         // Process object layers after tiles
         data.layers
-            .filter(layer => layer.type === 'object' && layer.visible)
-            .forEach(layer => {
+            .filter((layer: LayerData) => layer.type === 'object' && layer.visible)
+            .forEach((layer: LayerData) => {
                 this.processObjectLayer(tileMap, layer);
             });
 
         return tileMap;
     }
 
-    private static processTileLayer(tileMap: TileMap, layer: LayerData) {
+    private static processTileLayer(tileMap: TileMap, layer: LayerData): void {
         layer.tiles?.forEach((tileData: TileDataMap) => {
             const tile = tileMap.getTile(tileData.x, tileData.y);
             if (tile) {
@@ -69,7 +50,7 @@ export class MapFormat {
                 }
 
                 // Add colliders if specified
-                tileData.colliders?.forEach(collider => {
+                tileData.colliders?.forEach((collider: any) => {
                     // Here you would need to create the appropriate Excalibur collider
                     // based on the collider type and parameters
                 });
@@ -77,8 +58,8 @@ export class MapFormat {
         });
     }
 
-    private static processObjectLayer(tileMap: TileMap, layer: LayerData) {
-        layer.objects?.forEach(objData => {
+    private static processObjectLayer(tileMap: TileMap, layer: LayerData): void {
+        layer.objects?.forEach((objData: any) => {
             // Convert object data to Excalibur entities/components
             // This could include:
             // - Collision areas
@@ -87,21 +68,4 @@ export class MapFormat {
             // - Custom game objects
         });
     }
-
-    /**
-     * Serializes map data to JSON string
-     */
-    static serialize(data: MapData): string {
-        this.validate(data);
-        return JSON.stringify(data, null, 2);
-    }
-
-    /**
-     * Deserializes JSON string to map data
-     */
-    static deserialize(json: string): MapData {
-        const data = JSON.parse(json) as MapData;
-        this.validate(data);
-        return data;
-    }
-}
+} 
