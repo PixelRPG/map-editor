@@ -10,7 +10,8 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "types": []
+    "types": [],
+    "noUnusedLocals": false, // Temporary for @excaliburjs-plugin-tiled
   },
   "include": ["env.d.ts", "src/main.ts"],
   "exclude": ["node_modules", "dist"]
