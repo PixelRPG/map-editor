@@ -1,7 +1,7 @@
 {
     "name": "@pixelrpg/client",
     "version": "0.0.1",
-    "description": "Client side of the map editor",
+    "description": "Browser side browser part of the map editor",
     "main": "dist/index.html",
     "type": "module",
     "private": true,
@@ -27,6 +27,8 @@
         "@excaliburjs/dev-tools": "^0.28.0",
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/common": "workspace:^",
+        "@pixelrpg/map-format-core": "workspace:^",
+        "@pixelrpg/map-format-excalibur": "workspace:^",
         "@pixelrpg/messages-webview": "workspace:^",
         "excalibur": "workspace:^",
         "vite-plugin-glsl": "^1.3.1"

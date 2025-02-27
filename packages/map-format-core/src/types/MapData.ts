@@ -1,5 +1,6 @@
 import { LayerData } from "./LayerData.ts";
 import { TileSetData } from "./TileSetData.ts";
+import { TileSetReference } from "./TileSetReference.ts";
 
 /**
  * Represents the core data structure for a tile-based map
@@ -13,8 +14,9 @@ export interface MapData {
 
     /**
      * Array of tile sets that are referenced in the map
+     * Can be either inline TileSetData objects or references to external files
      */
-    tileSets: TileSetData[];
+    tileSets: (TileSetData | TileSetReference)[];
 
     /**
      * Optional position of the tile map in world coordinates

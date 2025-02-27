@@ -1,7 +1,14 @@
 import { TileMap, Vector } from 'excalibur';
-import { MapFormat, MapData, LayerData, TileDataMap } from '@pixelrpg/map-format-core';
+import { MapFormat, MapData, LayerData, TileDataMap, TileSetData, TileSetReference } from '@pixelrpg/map-format-core';
 
 export class ExcaliburMapFormat extends MapFormat {
+    /**
+     * Checks if a tileset entry is a reference to an external file
+     */
+    static isTileSetReference(tileSet: TileSetData | TileSetReference): tileSet is TileSetReference {
+        return 'path' in tileSet && tileSet.type === 'tileset';
+    }
+
     /**
      * Converts map data to Excalibur TileMap
      */
