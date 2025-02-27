@@ -1,6 +1,6 @@
 import type { Arguments } from 'yargs'
-import type { Command } from '../types/command.js'
-import { convertTiledToPixelRPG } from '../actions/convert.js'
+import type { Command } from '../types/command.ts'
+import { convertTiledToPixelRPG } from '../actions/convert.ts'
 
 interface ConvertArgs extends Arguments {
     input: string

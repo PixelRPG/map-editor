@@ -5,10 +5,4 @@ export interface MapResourceOptions {
      * Default false.
      */
     headless?: boolean;
-
-    /**
-     * Base path for loading external resources like tilesets
-     * Default is empty string
-     */
-    basePath?: string;
 }

@@ -11,7 +11,7 @@
     "scripts": {
         "build": "node esbuild.js",
         "start": "node dist/main.js",
-        "dev": "tsx src/main.ts"
+        "dev": "node --experimental-specifier-resolution=bundler --experimental-strip-types src/main.ts"
     },
     "dependencies": {
         "@excaliburjs/plugin-tiled": "workspace:^",

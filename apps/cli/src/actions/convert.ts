@@ -1,9 +1,10 @@
 import { promises as fs } from 'fs'
-import { TileSetData, TileDataTileSet, MapData, LayerData } from '@pixelrpg/map-format-excalibur'
+import { TileSetData, TileDataTileSet, MapData, LayerData, TileSetReference } from '@pixelrpg/map-format-excalibur'
 import { TiledParser, TiledMap, TiledTileLayer, TiledObjectLayer, TiledImageLayer, isTiledTilesetExternal, TiledObject } from '@excaliburjs/plugin-tiled'
 import path from 'path'
 
 export async function convertTiledToPixelRPG(input: string, output: string | null) {
+    console.log('=== USING UPDATED CONVERTER WITH TILESET REFERENCES ===')
     try {
         // Read input file
         const inputContent = await fs.readFile(input, 'utf-8')
@@ -20,6 +21,9 @@ export async function convertTiledToPixelRPG(input: string, output: string | nul
             // Convert map
             const result = await convertMap(inputContent, input)
             await fs.writeFile(outputPath, JSON.stringify(result, null, 2))
+
+            // Also convert and save all referenced tilesets
+            await convertReferencedTilesets(inputContent, input)
         } else {
             throw new Error('Unsupported input file type')
         }
@@ -35,24 +39,31 @@ async function convertTileset(content: string): Promise<TileSetData> {
     const parser = new TiledParser()
     const tiledTileset = parser.parseExternalTileset(content, false)
 
-    // Convert only tiles that have special properties (animations)
+    // Convert all tiles, not just those with animations
     const tiles: TileDataTileSet[] = []
 
+    // Create entries for all tiles in the tileset
+    for (let id = 0; id < tiledTileset.tilecount; id++) {
+        tiles.push({
+            id,
+            col: id % tiledTileset.columns,
+            row: Math.floor(id / tiledTileset.columns)
+        })
+    }
+
+    // Add animation data for tiles that have it
     if (tiledTileset.tiles) {
         for (const tile of tiledTileset.tiles) {
-            if (tile.animation) {
-                tiles.push({
-                    id: tile.id,
-                    col: tile.id % tiledTileset.columns,
-                    row: Math.floor(tile.id / tiledTileset.columns),
-                    animation: {
-                        frames: tile.animation.map(frame => ({
-                            tileId: frame.tileid,
-                            duration: frame.duration
-                        })),
-                        strategy: 'loop' // Default in Tiled
-                    }
-                })
+            const existingTile = tiles.find(t => t.id === tile.id)
+
+            if (existingTile && tile.animation) {
+                existingTile.animation = {
+                    frames: tile.animation.map(frame => ({
+                        tileId: frame.tileid,
+                        duration: frame.duration
+                    })),
+                    strategy: 'loop' // Default in Tiled
+                }
             }
         }
     }
@@ -71,35 +82,114 @@ async function convertTileset(content: string): Promise<TileSetData> {
     }
 }
 
+// Helper function to convert and save all referenced tilesets
+async function convertReferencedTilesets(content: string, input: string): Promise<void> {
+    const parser = new TiledParser()
+    const tiledMap = parser.parse(content)
+
+    for (const tileset of tiledMap.tilesets) {
+        if (isTiledTilesetExternal(tileset)) {
+            // Load external tileset
+            const tsxPath = path.resolve(path.dirname(input), tileset.source)
+            console.log(`Loading external tileset from: ${tsxPath}`)
+
+            const tsxContent = await fs.readFile(tsxPath, 'utf-8')
+
+            // Convert external tileset
+            const tileSetData = await convertTileset(tsxContent)
+
+            // Determine output path for the tileset
+            const tilesetOutputPath = tsxPath.replace(/\.tsx$/, '.json')
+
+            // Save the tileset
+            await fs.writeFile(tilesetOutputPath, JSON.stringify(tileSetData, null, 2))
+            console.log(`Saved tileset to: ${tilesetOutputPath}`)
+        }
+    }
+}
+
 async function convertMap(content: string, input: string): Promise<MapData> {
     const parser = new TiledParser()
     const tiledMap = parser.parse(content)
+
+    console.log(`Converting map: ${path.basename(input)}`)
+    console.log(`Map is infinite: ${tiledMap.infinite}`)
+    console.log(`Map dimensions: ${tiledMap.width}x${tiledMap.height}`)
+    console.log(`Tile dimensions: ${tiledMap.tilewidth}x${tiledMap.tileheight}`)
+    console.log(`Layers: ${tiledMap.layers.length}`)
+    console.log(`Tilesets: ${tiledMap.tilesets.length}`)
 
     // Convert layers
     const layers: LayerData[] = []
     for (const layer of tiledMap.layers) {
         if (layer.type === 'tilelayer') {
             const tileLayer = layer as TiledTileLayer
-            const tileData = Array.isArray(tileLayer.data) ? tileLayer.data : []
 
-            // Convert flat tile data array to TileDataMap array
-            const tiles = tileData.map((tileId: number, index: number) => {
-                if (tileId === 0) return null // Skip empty tiles
-                return {
-                    x: index % tiledMap.width,
-                    y: Math.floor(index / tiledMap.width),
-                    tileId: tileId - 1, // Tiled uses 1-based indices, we use 0-based
-                    tileSetId: findTilesetIdForTileId(tileId, tiledMap.tilesets)
+            // Handle infinite maps with chunks
+            if (tiledMap.infinite && 'chunks' in tileLayer) {
+                console.log(`Processing infinite layer: ${tileLayer.name} with ${tileLayer.chunks.length} chunks`)
+
+                const tiles = []
+
+                // Process each chunk
+                for (const chunk of tileLayer.chunks) {
+                    console.log(`Processing chunk at (${chunk.x}, ${chunk.y}) with dimensions ${chunk.width}x${chunk.height}`)
+
+                    const chunkData = Array.isArray(chunk.data) ? chunk.data : []
+
+                    // Convert chunk data to tile objects
+                    for (let i = 0; i < chunkData.length; i++) {
+                        const tileId = chunkData[i]
+                        if (tileId === 0) continue // Skip empty tiles
+
+                        // Calculate position within the chunk
+                        const localX = i % chunk.width
+                        const localY = Math.floor(i / chunk.width)
+
+                        // Calculate global position
+                        const x = chunk.x + localX
+                        const y = chunk.y + localY
+
+                        tiles.push({
+                            x,
+                            y,
+                            tileId: tileId - 1, // Tiled uses 1-based indices, we use 0-based
+                            tileSetId: findTilesetIdForTileId(tileId, tiledMap.tilesets)
+                        })
+                    }
                 }
-            }).filter((tile: { x: number, y: number, tileId: number, tileSetId: string } | null): tile is { x: number, y: number, tileId: number, tileSetId: string } => tile !== null)
 
-            layers.push({
-                id: `layer_${tileLayer.id}`,
-                name: tileLayer.name,
-                type: 'tile',
-                visible: tileLayer.visible,
-                tiles
-            })
+                layers.push({
+                    id: `layer_${tileLayer.id}`,
+                    name: tileLayer.name,
+                    type: 'tile',
+                    visible: tileLayer.visible,
+                    tiles
+                })
+            } else {
+                // Handle regular non-infinite layers
+                const tileData = Array.isArray(tileLayer.data) ? tileLayer.data : []
+                console.log(`Processing regular layer: ${tileLayer.name} with ${tileData.length} tiles`)
+
+                // Convert flat tile data array to TileDataMap array
+                const tiles = tileData.map((tileId: number, index: number) => {
+                    if (tileId === 0) return null // Skip empty tiles
+                    return {
+                        x: index % tiledMap.width,
+                        y: Math.floor(index / tiledMap.width),
+                        tileId: tileId - 1, // Tiled uses 1-based indices, we use 0-based
+                        tileSetId: findTilesetIdForTileId(tileId, tiledMap.tilesets)
+                    }
+                }).filter((tile: { x: number, y: number, tileId: number, tileSetId: string } | null): tile is { x: number, y: number, tileId: number, tileSetId: string } => tile !== null)
+
+                layers.push({
+                    id: `layer_${tileLayer.id}`,
+                    name: tileLayer.name,
+                    type: 'tile',
+                    visible: tileLayer.visible,
+                    tiles
+                })
+            }
         } else if (layer.type === 'objectgroup') {
             const objectLayer = layer as TiledObjectLayer
             layers.push({
@@ -121,19 +211,29 @@ async function convertMap(content: string, input: string): Promise<MapData> {
         }
     }
 
-    // Load and convert external tilesets
-    const tileSets: TileSetData[] = []
+    // Create tileset references instead of embedding them
+    const tileSetReferences: TileSetReference[] = []
     for (const tileset of tiledMap.tilesets) {
         if (isTiledTilesetExternal(tileset)) {
-            // Load external tileset
-            const tsxPath = path.resolve(path.dirname(input), tileset.source)
-            const tsxContent = await fs.readFile(tsxPath, 'utf-8')
-            const externalTileset = parser.parseExternalTileset(tsxContent)
+            // Get the tileset name from the source
+            const tilesetName = path.basename(tileset.source, '.tsx')
+            const tilesetId = tilesetName.toLowerCase().replace(/\s+/g, '_')
 
-            // Convert external tileset
-            const tileSetData = await convertTileset(tsxContent)
-            tileSetData.id = externalTileset.name.toLowerCase().replace(/\s+/g, '_')
-            tileSets.push(tileSetData)
+            // Create a relative path to the JSON tileset
+            const relativePath = path.relative(
+                path.dirname(input),
+                path.join(path.dirname(path.resolve(path.dirname(input), tileset.source)), `${tilesetName}.json`)
+            )
+
+            // Create a reference to the tileset
+            tileSetReferences.push({
+                id: tilesetId,
+                path: relativePath,
+                type: 'tileset',
+                firstGid: tileset.firstgid
+            })
+
+            console.log(`Created reference to tileset: ${tilesetId} at ${relativePath}`)
         }
     }
 
@@ -144,7 +244,7 @@ async function convertMap(content: string, input: string): Promise<MapData> {
         tileHeight: tiledMap.tileheight,
         columns: tiledMap.width,
         rows: tiledMap.height,
-        tileSets,
+        tileSets: tileSetReferences,
         layers,
         properties: convertProperties(tiledMap.properties)
     }

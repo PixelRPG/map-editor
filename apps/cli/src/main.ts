@@ -7,7 +7,7 @@ const dom = new JSDOM()
 global.DOMParser = dom.window.DOMParser
 
 // Import all commands
-import { convertCommand } from './commands/convert.js'
+import { convertCommand } from './commands/convert.ts'
 
 yargs(hideBin(process.argv))
     .scriptName('pixelrpg')

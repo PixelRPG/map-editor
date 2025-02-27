@@ -1,4 +1,4 @@
-import { Engine, DisplayMode, Loader, Color } from 'excalibur'
+import { Engine, DisplayMode, Loader, Color, Logger } from 'excalibur'
 // import { DevTool } from '@excaliburjs/dev-tools'
 import {
   TileLayer,
@@ -11,7 +11,12 @@ import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 
 import { MapResource } from '@pixelrpg/map-format-excalibur'
-import { MapData } from '@pixelrpg/map-format-core'
+
+// Set up logging
+const logger = Logger.getInstance();
+// Enable debug logging in the browser console
+console.debug = console.log; // Ensure debug messages are visible
+logger.info('Starting map editor application');
 
 // TODO: Use serialisation from @pixelrpg/map-format-excalibur
 // import { TilesetParser } from './parser/tileset.parser.ts'
@@ -39,46 +44,68 @@ const engine = new Engine({
   backgroundColor: Color.Black,
 })
 
-// Load and parse the map data
-const response = await fetch('./assets/maps/kokiri-forest.json')
-const mapData = await response.json() as MapData
-console.log('mapData', mapData)
+// Define the path to the map file
+// Use absolute path from the server root to avoid path resolution issues
+const mapPath = 'assets/maps/kokiri-forest.json';
+logger.info(`Creating MapResource with path: ${mapPath}`);
+const mapResource = new MapResource(mapPath);
 
-// Create our custom map resource with basePath for loading external tilesets
-const mapResource = new MapResource(mapData, {
-  basePath: './' // Base path for loading external resources
-})
+const loader = new Loader([mapResource]);
 
-const loader = new Loader([mapResource])
+loader.on('progress', (event) => {
+  // Cast event to any to access the progress property
+  const loadEvent = event as any;
+  if (loadEvent && typeof loadEvent.progress === 'number') {
+    logger.debug(`Loading progress: ${Math.round(loadEvent.progress * 100)}%`);
+  }
+});
+
+loader.on('error', (error) => {
+  logger.error('Loader error:', error);
+});
+
+loader.on('complete', () => {
+  logger.info('Loading complete');
+});
 
 loader.on('afterload', async () => {
-  console.debug('mapResource afterload', mapResource)
+  logger.info('MapResource loaded successfully');
+
+  // Debug the map resource
+  mapResource.debugInfo();
 })
 
 loader.backgroundColor = '#000000' // Black background color on play button
 
 engine.currentScene.world.add(EditorInputSystem)
 
+logger.info('Starting engine');
 await engine.start(loader)
 // const devtool = new DevTool(engine);
 
 // Get the TileMap from our resource
 const tileMap = mapResource.data;
 if (tileMap) {
+  logger.info(`TileMap loaded with ${tileMap.tiles.length} tiles`);
+
+  // Add click handlers to tiles
   for (const tile of tileMap.tiles) {
     tile.on('pointerdown', () => {
-      console.log('Tile pointerdown', tile)
+      logger.info(`Tile clicked at (${tile.x}, ${tile.y})`);
       for (const graphic of tile.getGraphics()) {
-        graphic.opacity = 0.5
+        graphic.opacity = 0.5;
       }
-    })
+    });
+
     tile.on('pointerup', () => {
-      console.log('Tile pointerup', tile)
+      logger.info(`Tile released at (${tile.x}, ${tile.y})`);
       for (const graphic of tile.getGraphics()) {
-        graphic.opacity = 1
+        graphic.opacity = 1;
       }
-    })
+    });
   }
 }
 
-mapResource.addToScene(engine.currentScene)
+// Add the map to the scene
+mapResource.addToScene(engine.currentScene);
+logger.info('Map added to scene');
