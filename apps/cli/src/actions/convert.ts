@@ -119,9 +119,31 @@ async function convertMap(content: string, input: string): Promise<MapData> {
     console.log(`Layers: ${tiledMap.layers.length}`)
     console.log(`Tilesets: ${tiledMap.tilesets.length}`)
 
+    // Calculate the actual bounds of the map for infinite maps
+    let minX = 0, minY = 0, maxX = tiledMap.width, maxY = tiledMap.height;
+
+    // For infinite maps, we need to calculate the actual bounds by examining all chunks
+    if (tiledMap.infinite) {
+        for (const layer of tiledMap.layers) {
+            if (layer.type === 'tilelayer') {
+                const tileLayer = layer as TiledTileLayer;
+                if ('chunks' in tileLayer && tileLayer.chunks) {
+                    for (const chunk of tileLayer.chunks) {
+                        minX = Math.min(minX, chunk.x);
+                        minY = Math.min(minY, chunk.y);
+                        maxX = Math.max(maxX, chunk.x + chunk.width);
+                        maxY = Math.max(maxY, chunk.y + chunk.height);
+                    }
+                }
+            }
+        }
+        console.log(`Calculated map bounds: (${minX}, ${minY}) to (${maxX}, ${maxY})`);
+    }
+
     // Convert layers
     const layers: LayerData[] = []
-    for (const layer of tiledMap.layers) {
+    for (let layerIndex = 0; layerIndex < tiledMap.layers.length; layerIndex++) {
+        const layer = tiledMap.layers[layerIndex];
         if (layer.type === 'tilelayer') {
             const tileLayer = layer as TiledTileLayer
 
@@ -150,9 +172,13 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                         const x = chunk.x + localX
                         const y = chunk.y + localY
 
+                        // Adjust coordinates to be non-negative for Excalibur
+                        const adjustedX = x - minX
+                        const adjustedY = y - minY
+
                         tiles.push({
-                            x,
-                            y,
+                            x: adjustedX,
+                            y: adjustedY,
                             tileId: tileId - 1, // Tiled uses 1-based indices, we use 0-based
                             tileSetId: findTilesetIdForTileId(tileId, tiledMap.tilesets)
                         })
@@ -164,7 +190,11 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                     name: tileLayer.name,
                     type: 'tile',
                     visible: tileLayer.visible,
-                    tiles
+                    tiles,
+                    properties: {
+                        ...convertProperties(tileLayer.properties),
+                        z: layerIndex // Add z-index based on layer order
+                    }
                 })
             } else {
                 // Handle regular non-infinite layers
@@ -187,7 +217,11 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                     name: tileLayer.name,
                     type: 'tile',
                     visible: tileLayer.visible,
-                    tiles
+                    tiles,
+                    properties: {
+                        ...convertProperties(tileLayer.properties),
+                        z: layerIndex // Add z-index based on layer order
+                    }
                 })
             }
         } else if (layer.type === 'objectgroup') {
@@ -206,7 +240,11 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                     width: obj.width ?? 0,
                     height: obj.height ?? 0,
                     properties: convertProperties(obj.properties)
-                }))
+                })),
+                properties: {
+                    ...convertProperties(objectLayer.properties),
+                    z: layerIndex // Add z-index based on layer order
+                }
             })
         }
     }
@@ -237,16 +275,25 @@ async function convertMap(content: string, input: string): Promise<MapData> {
         }
     }
 
+    // For infinite maps, adjust the map dimensions to include all chunks
+    const mapWidth = tiledMap.infinite ? (maxX - minX) : tiledMap.width;
+    const mapHeight = tiledMap.infinite ? (maxY - minY) : tiledMap.height;
+
     return {
         name: path.basename(input, path.extname(input)),
         version: '1.0.0',
         tileWidth: tiledMap.tilewidth,
         tileHeight: tiledMap.tileheight,
-        columns: tiledMap.width,
-        rows: tiledMap.height,
+        columns: mapWidth,
+        rows: mapHeight,
         tileSets: tileSetReferences,
         layers,
-        properties: convertProperties(tiledMap.properties)
+        properties: {
+            ...convertProperties(tiledMap.properties),
+            infinite: tiledMap.infinite,
+            originalMinX: minX,
+            originalMinY: minY
+        }
     }
 }
 

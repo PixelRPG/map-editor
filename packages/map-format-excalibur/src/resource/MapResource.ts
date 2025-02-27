@@ -17,7 +17,7 @@ export class MapResource implements Loadable<TileMap> {
 
     // Store tile data for easy access
     private tileMap!: TileMap;
-    private tileToSpriteMap: Map<Tile, { tileSetId: string, tileId: number }> = new Map();
+    private tileToSpriteMap: Map<Tile, { tileSetId: string, tileId: number, zIndex?: number }> = new Map();
 
     // Logger for debugging
     private logger = Logger.getInstance();
@@ -111,21 +111,32 @@ export class MapResource implements Loadable<TileMap> {
     private processLayers(tileMap: TileMap, data: MapData): void {
         this.logger.debug(`Processing ${data.layers.length} layers`);
 
+        // Sort layers by z-index if available
+        const sortedLayers = [...data.layers].sort((a, b) => {
+            const zIndexA = a.properties?.['z'] ?? 0;
+            const zIndexB = b.properties?.['z'] ?? 0;
+            return zIndexA - zIndexB;
+        });
+
+        this.logger.debug(`Layers sorted by z-index: ${sortedLayers.map(l => `${l.name}(z:${l.properties?.['z'] ?? 0})`).join(', ')}`);
+
         // Process tile layers in order (bottom to top)
-        const tileLayers = data.layers.filter((layer: LayerData) => layer.type === 'tile' && layer.visible);
+        const tileLayers = sortedLayers.filter((layer: LayerData) => layer.type === 'tile' && layer.visible);
         this.logger.debug(`Processing ${tileLayers.length} tile layers`);
 
         tileLayers.forEach((layer: LayerData, index: number) => {
-            this.logger.debug(`Processing tile layer ${index + 1}/${tileLayers.length}: ${layer.name || 'unnamed'}`);
-            this.processTileLayer(tileMap, layer);
+            const layerZIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : index;
+            this.logger.debug(`Processing tile layer ${index + 1}/${tileLayers.length}: ${layer.name || 'unnamed'} (z-index: ${layerZIndex})`);
+            this.processTileLayer(tileMap, layer, layerZIndex);
         });
 
         // Process object layers after tiles
-        const objectLayers = data.layers.filter((layer: LayerData) => layer.type === 'object' && layer.visible);
+        const objectLayers = sortedLayers.filter((layer: LayerData) => layer.type === 'object' && layer.visible);
         this.logger.debug(`Processing ${objectLayers.length} object layers`);
 
         objectLayers.forEach((layer: LayerData, index: number) => {
-            this.logger.debug(`Processing object layer ${index + 1}/${objectLayers.length}: ${layer.name || 'unnamed'}`);
+            const layerZIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : index;
+            this.logger.debug(`Processing object layer ${index + 1}/${objectLayers.length}: ${layer.name || 'unnamed'} (z-index: ${layerZIndex})`);
             this.processObjectLayer(tileMap, layer);
         });
     }
@@ -133,13 +144,13 @@ export class MapResource implements Loadable<TileMap> {
     /**
      * Process a single tile layer
      */
-    private processTileLayer(tileMap: TileMap, layer: LayerData): void {
+    private processTileLayer(tileMap: TileMap, layer: LayerData, zIndex: number = 0): void {
         if (!layer.tiles || layer.tiles.length === 0) {
             this.logger.debug(`Layer ${layer.name || 'unnamed'} has no tiles`);
             return;
         }
 
-        this.logger.debug(`Processing ${layer.tiles.length} tiles in layer ${layer.name || 'unnamed'}`);
+        this.logger.debug(`Processing ${layer.tiles.length} tiles in layer ${layer.name || 'unnamed'} with z-index ${zIndex}`);
 
         let tilesProcessed = 0;
         let tilesWithGraphics = 0;
@@ -153,6 +164,9 @@ export class MapResource implements Loadable<TileMap> {
                 // Set basic tile properties
                 tile.solid = tileData.solid ?? false;
 
+                // Set z-index for the tile
+                tile.data.set('z-index', zIndex);
+
                 // Set custom properties
                 if (tileData.properties) {
                     Object.entries(tileData.properties).forEach(([key, value]) => {
@@ -165,7 +179,8 @@ export class MapResource implements Loadable<TileMap> {
                     this.logger.debug(`Mapping tile at (${tileData.x}, ${tileData.y}) to tileId ${tileData.tileId} from tileSet ${tileData.tileSetId}`);
                     this.tileToSpriteMap.set(tile, {
                         tileSetId: tileData.tileSetId,
-                        tileId: tileData.tileId
+                        tileId: tileData.tileId,
+                        zIndex: zIndex
                     });
                     tilesWithGraphics++;
                 } else {
@@ -222,11 +237,16 @@ export class MapResource implements Loadable<TileMap> {
         this.logger.debug(`First few tile references: ${JSON.stringify(firstFewTileRefs.map(([tile, ref]) => ({
             position: { x: tile.x, y: tile.y },
             tileSetId: ref.tileSetId,
-            tileId: ref.tileId
+            tileId: ref.tileId,
+            zIndex: ref.zIndex
         })))}`);
 
-        for (const [tile, { tileSetId, tileId }] of this.tileToSpriteMap.entries()) {
-            this.logger.debug(`Processing tile at (${tile.x}, ${tile.y}) with tileId ${tileId} from tileSet ${tileSetId}`);
+        // Sort the tile references by z-index to ensure proper layering
+        const sortedTileRefs = Array.from(this.tileToSpriteMap.entries())
+            .sort(([, refA], [, refB]) => (refA.zIndex ?? 0) - (refB.zIndex ?? 0));
+
+        for (const [tile, { tileSetId, tileId, zIndex }] of sortedTileRefs) {
+            this.logger.debug(`Processing tile at (${tile.x}, ${tile.y}) with tileId ${tileId} from tileSet ${tileSetId}, z-index: ${zIndex ?? 0}`);
 
             const tileSetResource = this.tileSetResources.get(tileSetId);
 
@@ -244,17 +264,23 @@ export class MapResource implements Loadable<TileMap> {
             // Check if this tile has an animation
             if (tileSetResource.animations[tileId]) {
                 const animation = tileSetResource.animations[tileId];
-                tile.addGraphic(animation);
+                const graphic = tile.addGraphic(animation);
+                if (graphic && zIndex !== undefined) {
+                    graphic.z = zIndex;
+                }
                 animationCount++;
                 successCount++;
-                this.logger.debug(`Added animation for tileId ${tileId} from tileSet ${tileSetId}`);
+                this.logger.debug(`Added animation for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
             }
             // Otherwise use a static sprite
             else if (tileSetResource.sprites[tileId]) {
                 const sprite = tileSetResource.sprites[tileId];
-                tile.addGraphic(sprite);
+                const graphic = tile.addGraphic(sprite);
+                if (graphic && zIndex !== undefined) {
+                    graphic.z = zIndex;
+                }
                 successCount++;
-                this.logger.debug(`Added sprite for tileId ${tileId} from tileSet ${tileSetId}`);
+                this.logger.debug(`Added sprite for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
             } else {
                 this.logger.warn(`Sprite not found for tileId ${tileId} in tileSet ${tileSetId}`);
                 missingTileIdCount++;
