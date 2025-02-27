@@ -18,9 +18,10 @@ export interface ObjectData {
      * - 'collider': Collision shape
      * - 'trigger': Trigger area
      * - 'spawn': Spawn point
+     * - 'tile': Visual tile object that renders as a tile
      * - 'custom': Custom game object
      */
-    type: 'collider' | 'trigger' | 'spawn' | 'custom';
+    type: 'collider' | 'trigger' | 'spawn' | 'tile' | 'custom';
 
     /**
      * X position in world coordinates (pixels)
@@ -74,4 +75,16 @@ export interface ObjectData {
          */
         params?: Record<string, any>;
     };
+
+    /**
+     * Tile ID for rendering
+     * Only used when type='tile'
+     */
+    tileId?: number;
+
+    /**
+     * Tileset ID for rendering
+     * Only used when type='tile'
+     */
+    tileSetId?: string;
 } 

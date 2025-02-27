@@ -238,16 +238,37 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                 name: objectLayer.name,
                 type: 'object',
                 visible: objectLayer.visible,
-                objects: objectLayer.objects.map((obj: TiledObject) => ({
-                    id: (obj.id ?? 0).toString(),
-                    name: obj.name ?? '',
-                    type: mapTiledTypeToObjectType(obj.type ?? ''),
-                    x: obj.x ?? 0,
-                    y: obj.y ?? 0,
-                    width: obj.width ?? 0,
-                    height: obj.height ?? 0,
-                    properties: convertProperties(obj.properties)
-                })),
+                objects: objectLayer.objects.map((obj: TiledObject) => {
+                    // Base object properties
+                    const baseObject = {
+                        id: (obj.id ?? 0).toString(),
+                        name: obj.name ?? '',
+                        type: mapTiledTypeToObjectType(obj.type ?? ''),
+                        x: obj.x ?? 0,
+                        y: obj.y ?? 0,
+                        width: obj.width ?? 0,
+                        height: obj.height ?? 0,
+                        properties: convertProperties(obj.properties)
+                    };
+
+                    // If this is a tile object (has a gid), add tile information
+                    if (obj.gid !== undefined) {
+                        // Calculate the local tile ID within the tileset
+                        const localTileId = calculateLocalTileId(obj.gid, tiledMap.tilesets);
+                        const tileSetId = findTilesetIdForTileId(obj.gid, tiledMap.tilesets);
+
+                        return {
+                            ...baseObject,
+                            // Set type to 'tile' for tile objects
+                            type: 'tile',
+                            // Add tile information for rendering
+                            tileId: localTileId,
+                            tileSetId: tileSetId
+                        };
+                    }
+
+                    return baseObject;
+                }),
                 properties: {
                     ...convertProperties(objectLayer.properties),
                     z: layerIndex // Add z-index based on layer order
@@ -362,7 +383,7 @@ function convertProperties(properties?: { name: string, type: string, value: any
 }
 
 // Add type mapping function
-function mapTiledTypeToObjectType(tiledType: string): 'collider' | 'trigger' | 'spawn' | 'custom' {
+function mapTiledTypeToObjectType(tiledType: string): 'collider' | 'trigger' | 'spawn' | 'tile' | 'custom' {
     switch (tiledType?.toLowerCase()) {
         case 'collider':
             return 'collider'
@@ -370,6 +391,8 @@ function mapTiledTypeToObjectType(tiledType: string): 'collider' | 'trigger' | '
             return 'trigger'
         case 'spawn':
             return 'spawn'
+        case 'tile':
+            return 'tile'
         default:
             return 'custom'
     }

@@ -439,15 +439,77 @@ export class MapResource implements Loadable<TileMap> {
 
         this.logger.debug(`Processing ${layer.objects.length} objects in layer ${layer.name || 'unnamed'}`);
 
+        let tileObjectsCount = 0;
+        let regularObjectsCount = 0;
+
+        // Get map properties to adjust coordinates for infinite maps
+        const originalMinX = this.mapData.properties?.originalMinX ?? 0;
+        const originalMinY = this.mapData.properties?.originalMinY ?? 0;
+        const isInfinite = this.mapData.properties?.infinite ?? false;
+
+        this.logger.debug(`Map properties: originalMinX=${originalMinX}, originalMinY=${originalMinY}, isInfinite=${isInfinite}`);
+
         layer.objects.forEach((objData: any) => {
-            this.logger.debug(`Processing object: ${JSON.stringify(objData)}`);
-            // Convert object data to Excalibur entities/components
-            // This could include:
-            // - Collision areas
-            // - Trigger zones
-            // - Spawn points
-            // - Custom game objects
+            // Check if this is a tile object (has type 'tile' and tileId and tileSetId)
+            if (objData.type === 'tile' && objData.tileId !== undefined && objData.tileSetId) {
+                tileObjectsCount++;
+                this.logger.debug(`Processing tile object: id=${objData.id}, tileId=${objData.tileId}, tileSetId=${objData.tileSetId}`);
+
+                // Create a tile at the object's position
+                // Note: In Tiled, object coordinates refer to the bottom-left corner of the object,
+                // but in our system we use the top-left corner, so we need to adjust the y-coordinate
+                const adjustedY = objData.y - objData.height;
+
+                // Convert object position to tile coordinates
+                let tileX = Math.floor(objData.x / this.mapData.tileWidth);
+                let tileY = Math.floor(adjustedY / this.mapData.tileHeight);
+
+                // For infinite maps, adjust coordinates to be non-negative
+                if (isInfinite) {
+                    // Adjust coordinates based on the original map bounds
+                    tileX = tileX - originalMinX;
+                    tileY = tileY - originalMinY;
+                    this.logger.debug(`Adjusted tile object position from (${Math.floor(objData.x / this.mapData.tileWidth)}, ${Math.floor(adjustedY / this.mapData.tileHeight)}) to (${tileX}, ${tileY})`);
+                }
+
+                // Check if the position is within the map bounds
+                if (tileX >= 0 && tileX < tileMap.columns && tileY >= 0 && tileY < tileMap.rows) {
+                    const tile = tileMap.getTile(tileX, tileY);
+
+                    if (tile) {
+                        // Store the object data in the tile for interaction
+                        tile.data.set('object', objData);
+
+                        // Get existing references or create a new array
+                        const existingRefs = this.tileToSpriteMap.get(tile) || [];
+
+                        // Add the new reference with a higher z-index to ensure it renders above regular tiles
+                        const zIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : 0;
+                        existingRefs.push({
+                            tileSetId: objData.tileSetId,
+                            tileId: objData.tileId,
+                            zIndex: zIndex
+                        });
+
+                        // Store the updated array
+                        this.tileToSpriteMap.set(tile, existingRefs);
+
+                        this.logger.debug(`Added tile object at (${tileX}, ${tileY}) with tileId ${objData.tileId} from tileSet ${objData.tileSetId}`);
+                    } else {
+                        this.logger.warn(`Could not get tile at position (${tileX}, ${tileY}) for tile object`);
+                    }
+                } else {
+                    this.logger.warn(`Tile object position (${tileX}, ${tileY}) is outside map bounds`);
+                }
+            } else {
+                regularObjectsCount++;
+                this.logger.debug(`Processing regular object: ${JSON.stringify(objData)}`);
+                // Handle regular non-tile objects (collision areas, trigger zones, etc.)
+                // This would involve creating appropriate Excalibur entities/components
+            }
         });
+
+        this.logger.debug(`Processed ${tileObjectsCount} tile objects and ${regularObjectsCount} regular objects in layer ${layer.name || 'unnamed'}`);
     }
 
     /**

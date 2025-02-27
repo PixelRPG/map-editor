@@ -99250,1595 +99250,1949 @@
         {
           "id": "17",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -416,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "18",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "19",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -384,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "20",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -368,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "21",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -352,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "22",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -352,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "23",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -336,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "24",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -336,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "25",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -320,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "26",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -352,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "27",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -368,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "28",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -368,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "29",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -384,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "30",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -384,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "31",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "32",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "33",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -416,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "34",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -416,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "35",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -432,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "36",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -448,
           "y": 160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "37",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -432,
           "y": 144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "38",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "39",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "40",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "41",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "42",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "43",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "44",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -672,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "45",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "46",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "47",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -624,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "48",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -608,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "53",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "54",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -672,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "55",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -688,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "56",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -688,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "57",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -704,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "58",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -704,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "59",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -720,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "60",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -720,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "61",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -720,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "62",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -720,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "63",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -704,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "64",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 80,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "65",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "66",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "67",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "68",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "69",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -640,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "70",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -656,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "71",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -672,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "72",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -688,
           "y": 128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "73",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -688,
           "y": 112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "74",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -672,
           "y": 112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "75",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": -176,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "76",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "77",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -416,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "78",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -208,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "79",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -192,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "80",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -176,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "81",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -160,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "82",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "83",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "84",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -160,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "85",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "86",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -128,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "87",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -128,
           "y": -256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "88",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": -256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "89",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "90",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "91",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -128,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "92",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -128,
           "y": -304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "93",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -128,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "94",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": -256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "95",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -160,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "96",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -176,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "97",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -192,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "98",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -208,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "99",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "100",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "101",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -144,
           "y": 448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "102",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -128,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "103",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 0,
           "y": 192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "104",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 16,
           "y": 192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "105",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -32,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "106",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -48,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "107",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -64,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "108",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -80,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "109",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -96,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "110",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "111",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": -480,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "112",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -176,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "113",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -192,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "114",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -192,
           "y": -496,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "115",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -208,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "116",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -192,
           "y": -528,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "117",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -208,
           "y": -528,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "118",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -224,
           "y": -528,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "119",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -224,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "120",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -240,
           "y": -528,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "121",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -240,
           "y": -544,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "122",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": -544,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "123",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": -560,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "124",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -32,
           "y": 448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "125",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -48,
           "y": 448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "126",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 352,
           "y": 480,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "127",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 368,
           "y": 464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "128",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 384,
           "y": 448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "129",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 400,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "130",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 416,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "131",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 432,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "132",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 448,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "133",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 448,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "134",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 464,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "135",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 464,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "136",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 480,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "137",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1072,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "138",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1088,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "139",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1088,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "140",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1104,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "141",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1104,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "142",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1120,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "143",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1136,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "144",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1136,
           "y": -304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "145",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1120,
           "y": -304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "146",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1120,
           "y": -320,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "147",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "148",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "149",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "150",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "151",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "152",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "153",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "154",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "155",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "156",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "157",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "158",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "159",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -368,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "160",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -368,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "161",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -368,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "162",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "163",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -352,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "164",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -336,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "165",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -320,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "166",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "167",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "168",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "169",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "170",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "171",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "172",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "173",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "174",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "175",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "176",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "177",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "178",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "179",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "236",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 880,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "237",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 864,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "238",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": 864,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "239",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -288,
           "y": 864,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "240",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -288,
           "y": 848,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "241",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 848,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "242",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": 848,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "243",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": 832,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "244",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -288,
           "y": 832,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "245",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 832,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "246",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 816,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "247",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": 816,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "248",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -288,
           "y": 816,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "249",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 800,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "250",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": 800,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "251",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -288,
           "y": 800,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "252",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": 784,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "312",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -336,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 339,
+          "tileSetId": "lokiri-forest"
         }
       ],
       "properties": {
@@ -100854,767 +101208,937 @@
         {
           "id": "180",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "181",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "182",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -176,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "183",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "184",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "185",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "186",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1024,
           "y": -112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "187",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1040,
           "y": -112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "188",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1040,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "189",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1056,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "190",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1056,
           "y": -112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "191",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1056,
           "y": -96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "192",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -80,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "193",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "194",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "195",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "196",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "197",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "198",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "199",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "200",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "201",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "202",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -112,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "203",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "204",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -144,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "205",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "206",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "207",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -176,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "208",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -176,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "209",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "210",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "211",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "212",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "213",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 176,
           "y": -48,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "214",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 320,
           "y": 240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "215",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 304,
           "y": 256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "216",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 288,
           "y": 240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "217",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 272,
           "y": 256,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "218",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 272,
           "y": 464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "219",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 256,
           "y": 464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "220",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 256,
           "y": 448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "221",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -384,
           "y": 336,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "222",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": 336,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "223",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -416,
           "y": 320,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "224",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -448,
           "y": 336,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "225",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -320,
           "y": 336,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "226",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -320,
           "y": 304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "227",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -672,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "228",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -688,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "229",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -688,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "230",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -592,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "231",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -576,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "232",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -368,
           "y": 912,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "233",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": 1120,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "234",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -96,
           "y": 1120,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "235",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -80,
           "y": 1120,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "253",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -528,
           "y": 720,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "254",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -224,
           "y": -432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "255",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -224,
           "y": -416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "257",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -224,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "258",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -240,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "259",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -256,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "273",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 128,
           "y": 272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "274",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 128,
           "y": 288,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "275",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "276",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "277",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "278",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "279",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -448,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "280",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "281",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -464,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "282",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1536,
           "y": -480,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "283",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -480,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "284",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1520,
           "y": -496,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "285",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -496,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "286",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1504,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "287",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1488,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "288",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 1472,
           "y": -512,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "300",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -480,
           "y": 304,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "301",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -512,
           "y": 320,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "302",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -528,
           "y": 336,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "308",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -560,
           "y": -32,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "309",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -560,
           "y": -16,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "310",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -576,
           "y": -16,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "311",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -592,
           "y": -16,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 372,
+          "tileSetId": "lokiri-forest"
         }
       ],
       "properties": {
@@ -101630,146 +102154,178 @@
         {
           "id": "260",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -480,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "261",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -304,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "262",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -320,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "263",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -304,
           "y": -96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "264",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": -80,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "265",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -240,
           "y": -96,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "266",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "267",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -272,
           "y": -176,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "268",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -240,
           "y": -160,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "269",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -224,
           "y": -128,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "270",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -336,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "271",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 160,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "272",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 112,
           "y": 272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "305",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -528,
           "y": 400,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "306",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -528,
           "y": 384,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "307",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -736,
           "y": 224,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 371,
+          "tileSetId": "lokiri-forest"
         }
       ],
       "properties": {
@@ -101785,119 +102341,145 @@
         {
           "id": "289",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 544,
           "y": -80,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "290",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 160,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "291",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 256,
           "y": -208,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "292",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 400,
           "y": 272,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "293",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -112,
           "y": 416,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "294",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": -192,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "295",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": 224,
           "y": 320,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "296",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -400,
           "y": 432,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "297",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -672,
           "y": 320,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "298",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -720,
           "y": -48,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "299",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -464,
           "y": -560,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "303",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -528,
           "y": 240,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         },
         {
           "id": "304",
           "name": "",
-          "type": "custom",
+          "type": "tile",
           "x": -64,
           "y": 1056,
           "width": 16,
-          "height": 16
+          "height": 16,
+          "tileId": 402,
+          "tileSetId": "lokiri-forest"
         }
       ],
       "properties": {
