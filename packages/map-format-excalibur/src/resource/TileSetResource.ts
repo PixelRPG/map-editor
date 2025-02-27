@@ -1,4 +1,4 @@
-import { ImageSource, Loadable, Sprite, Animation, SpriteSheet, AnimationStrategy, Logger } from 'excalibur';
+import { ImageSource, Loadable, Sprite, Animation, SpriteSheet, AnimationStrategy, Logger, ImageFiltering, ImageWrapping } from 'excalibur';
 import { TileSetData, TileSetFormat, TileDataTileSet } from '@pixelrpg/map-format-core';
 import { TileSetResourceOptions } from '../types/TileSetResourceOptions';
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
@@ -162,8 +162,13 @@ export class TileSetResource implements Loadable<TileSetData> {
             throw new Error('Invalid image path: path is empty');
         }
 
-        // Create the image source
-        const imageLoader = new ImageSource(imagePath);
+        // Create the image source with transparency settings
+        const imageLoader = new ImageSource(imagePath, {
+            // Set filtering to preserve pixel art quality
+            filtering: ImageFiltering.Pixel,
+            // Ensure proper wrapping
+            wrapping: ImageWrapping.Clamp
+        });
 
         try {
             // Log image loading start

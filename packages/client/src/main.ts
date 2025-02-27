@@ -41,7 +41,8 @@ const engine = new Engine({
   displayMode: DisplayMode.FillScreen,
   pixelArt: true,
   suppressPlayButton: true,
-  backgroundColor: Color.Black,
+  backgroundColor: Color.Transparent,
+  enableCanvasTransparency: true,
 })
 
 // Define the path to the map file

@@ -16,7 +16,7 @@ export interface FileReference {
     /**
      * The type of the referenced file
      */
-    type: 'tileset' | 'image' | 'audio' | 'data' | string;
+    type: 'tileset' | 'image' | 'audio' | 'data';
 
     /**
      * Optional version of the referenced file

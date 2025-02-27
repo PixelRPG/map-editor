@@ -17,7 +17,7 @@ export class MapResource implements Loadable<TileMap> {
 
     // Store tile data for easy access
     private tileMap!: TileMap;
-    private tileToSpriteMap: Map<Tile, { tileSetId: string, tileId: number, zIndex?: number }> = new Map();
+    private tileToSpriteMap: Map<Tile, Array<{ tileSetId: string, tileId: number, zIndex?: number }>> = new Map();
 
     // Logger for debugging
     private logger = Logger.getInstance();
@@ -127,7 +127,15 @@ export class MapResource implements Loadable<TileMap> {
         tileLayers.forEach((layer: LayerData, index: number) => {
             const layerZIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : index;
             this.logger.debug(`Processing tile layer ${index + 1}/${tileLayers.length}: ${layer.name || 'unnamed'} (z-index: ${layerZIndex})`);
+
+            // Process the layer
             this.processTileLayer(tileMap, layer, layerZIndex);
+
+            // Set the z-index on the TileMap for proper rendering order
+            if (layerZIndex !== undefined) {
+                // Store the z-index in the tile map's data for reference
+                tileMap.data.set('z-index', layerZIndex);
+            }
         });
 
         // Process object layers after tiles
@@ -177,11 +185,20 @@ export class MapResource implements Loadable<TileMap> {
                 // Store the tile reference for later graphic assignment
                 if (tileData.tileId !== undefined && tileData.tileSetId) {
                     this.logger.debug(`Mapping tile at (${tileData.x}, ${tileData.y}) to tileId ${tileData.tileId} from tileSet ${tileData.tileSetId}`);
-                    this.tileToSpriteMap.set(tile, {
+
+                    // Get existing references or create a new array
+                    const existingRefs = this.tileToSpriteMap.get(tile) || [];
+
+                    // Add the new reference
+                    existingRefs.push({
                         tileSetId: tileData.tileSetId,
                         tileId: tileData.tileId,
                         zIndex: zIndex
                     });
+
+                    // Store the updated array
+                    this.tileToSpriteMap.set(tile, existingRefs);
+
                     tilesWithGraphics++;
                 } else {
                     tilesWithoutGraphics++;
@@ -232,59 +249,60 @@ export class MapResource implements Loadable<TileMap> {
         // Log available tilesets for debugging
         this.logger.debug(`Available tilesets: ${Array.from(this.tileSetResources.keys()).join(', ')}`);
 
-        // Log the first few tile references for debugging
-        const firstFewTileRefs = Array.from(this.tileToSpriteMap.entries()).slice(0, 5);
-        this.logger.debug(`First few tile references: ${JSON.stringify(firstFewTileRefs.map(([tile, ref]) => ({
-            position: { x: tile.x, y: tile.y },
-            tileSetId: ref.tileSetId,
-            tileId: ref.tileId,
-            zIndex: ref.zIndex
-        })))}`);
+        // Process each tile
+        for (const [tile, tileRefs] of this.tileToSpriteMap.entries()) {
+            // Sort the references by z-index to ensure proper layering (lowest z-index first)
+            const sortedRefs = [...tileRefs].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
 
-        // Sort the tile references by z-index to ensure proper layering
-        const sortedTileRefs = Array.from(this.tileToSpriteMap.entries())
-            .sort(([, refA], [, refB]) => (refA.zIndex ?? 0) - (refB.zIndex ?? 0));
+            this.logger.debug(`Processing tile at (${tile.x}, ${tile.y}) with ${sortedRefs.length} graphics references`);
 
-        for (const [tile, { tileSetId, tileId, zIndex }] of sortedTileRefs) {
-            this.logger.debug(`Processing tile at (${tile.x}, ${tile.y}) with tileId ${tileId} from tileSet ${tileSetId}, z-index: ${zIndex ?? 0}`);
+            // Clear any existing graphics on the tile
+            tile.clearGraphics();
 
-            const tileSetResource = this.tileSetResources.get(tileSetId);
+            // Apply each graphic in order
+            for (const { tileSetId, tileId, zIndex } of sortedRefs) {
+                this.logger.debug(`Applying graphic: tileId ${tileId} from tileSet ${tileSetId}, z-index: ${zIndex ?? 0}`);
 
-            if (!tileSetResource) {
-                this.logger.warn(`TileSet resource not found for tileSetId ${tileSetId}`);
-                missingTileSetCount++;
-                failCount++;
-                continue;
-            }
+                const tileSetResource = this.tileSetResources.get(tileSetId);
 
-            // Log available sprites and animations in this tileset
-            this.logger.debug(`TileSet ${tileSetId} has ${Object.keys(tileSetResource.sprites).length} sprites and ${Object.keys(tileSetResource.animations).length} animations`);
-            this.logger.debug(`Available sprite IDs: ${Object.keys(tileSetResource.sprites).slice(0, 10).join(', ')}${Object.keys(tileSetResource.sprites).length > 10 ? '...' : ''}`);
-
-            // Check if this tile has an animation
-            if (tileSetResource.animations[tileId]) {
-                const animation = tileSetResource.animations[tileId];
-                const graphic = tile.addGraphic(animation);
-                if (graphic && zIndex !== undefined) {
-                    graphic.z = zIndex;
+                if (!tileSetResource) {
+                    this.logger.warn(`TileSet resource not found for tileSetId ${tileSetId}`);
+                    missingTileSetCount++;
+                    failCount++;
+                    continue;
                 }
-                animationCount++;
-                successCount++;
-                this.logger.debug(`Added animation for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
-            }
-            // Otherwise use a static sprite
-            else if (tileSetResource.sprites[tileId]) {
-                const sprite = tileSetResource.sprites[tileId];
-                const graphic = tile.addGraphic(sprite);
-                if (graphic && zIndex !== undefined) {
-                    graphic.z = zIndex;
+
+                // Check if this tile has an animation
+                if (tileSetResource.animations[tileId]) {
+                    const animation = tileSetResource.animations[tileId];
+                    tile.addGraphic(animation);
+
+                    // Store z-index in the tile's data property
+                    if (zIndex !== undefined) {
+                        tile.data.set('z-index', zIndex);
+                    }
+
+                    animationCount++;
+                    successCount++;
+                    this.logger.debug(`Added animation for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
                 }
-                successCount++;
-                this.logger.debug(`Added sprite for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
-            } else {
-                this.logger.warn(`Sprite not found for tileId ${tileId} in tileSet ${tileSetId}`);
-                missingTileIdCount++;
-                failCount++;
+                // Otherwise use a static sprite
+                else if (tileSetResource.sprites[tileId]) {
+                    const sprite = tileSetResource.sprites[tileId];
+                    tile.addGraphic(sprite);
+
+                    // Store z-index in the tile's data property
+                    if (zIndex !== undefined) {
+                        tile.data.set('z-index', zIndex);
+                    }
+
+                    successCount++;
+                    this.logger.debug(`Added sprite for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
+                } else {
+                    this.logger.warn(`Sprite not found for tileId ${tileId} in tileSet ${tileSetId}`);
+                    missingTileIdCount++;
+                    failCount++;
+                }
             }
         }
 

@@ -36,4 +36,9 @@ export interface LayerData {
      * Array of objects in this layer (only for type='object')
      */
     objects?: ObjectData[];
+
+    /**
+     * Optional custom properties for the layer
+     */
+    properties?: Record<string, any>;
 }
