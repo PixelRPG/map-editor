@@ -161,8 +161,8 @@ async function convertMap(content: string, input: string): Promise<MapData> {
 
                     // Convert chunk data to tile objects
                     for (let i = 0; i < chunkData.length; i++) {
-                        const tileId = chunkData[i]
-                        if (tileId === 0) continue // Skip empty tiles
+                        const globalTileId = chunkData[i]
+                        if (globalTileId === 0) continue // Skip empty tiles
 
                         // Calculate position within the chunk
                         const localX = i % chunk.width
@@ -176,11 +176,14 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                         const adjustedX = x - minX
                         const adjustedY = y - minY
 
+                        // Calculate the local tile ID within the tileset
+                        const localTileId = calculateLocalTileId(globalTileId, tiledMap.tilesets)
+
                         tiles.push({
                             x: adjustedX,
                             y: adjustedY,
-                            tileId: tileId - 1, // Tiled uses 1-based indices, we use 0-based
-                            tileSetId: findTilesetIdForTileId(tileId, tiledMap.tilesets)
+                            tileId: localTileId, // Use the local tile ID
+                            tileSetId: findTilesetIdForTileId(globalTileId, tiledMap.tilesets)
                         })
                     }
                 }
@@ -202,13 +205,17 @@ async function convertMap(content: string, input: string): Promise<MapData> {
                 console.log(`Processing regular layer: ${tileLayer.name} with ${tileData.length} tiles`)
 
                 // Convert flat tile data array to TileDataMap array
-                const tiles = tileData.map((tileId: number, index: number) => {
-                    if (tileId === 0) return null // Skip empty tiles
+                const tiles = tileData.map((globalTileId: number, index: number) => {
+                    if (globalTileId === 0) return null // Skip empty tiles
+
+                    // Calculate the local tile ID within the tileset
+                    const localTileId = calculateLocalTileId(globalTileId, tiledMap.tilesets)
+
                     return {
                         x: index % tiledMap.width,
                         y: Math.floor(index / tiledMap.width),
-                        tileId: tileId - 1, // Tiled uses 1-based indices, we use 0-based
-                        tileSetId: findTilesetIdForTileId(tileId, tiledMap.tilesets)
+                        tileId: localTileId, // Use the local tile ID
+                        tileSetId: findTilesetIdForTileId(globalTileId, tiledMap.tilesets)
                     }
                 }).filter((tile: { x: number, y: number, tileId: number, tileSetId: string } | null): tile is { x: number, y: number, tileId: number, tileSetId: string } => tile !== null)
 
@@ -318,6 +325,30 @@ function findTilesetIdForTileId(globalTileId: number, tilesets: TiledMap['tilese
     // Convert tileset source path to tileset ID
     const tilesetName = path.basename(targetTileset.source, '.tsx')
     return tilesetName.toLowerCase().replace(/\s+/g, '_')
+}
+
+// Add a function to calculate the local tile ID within a tileset
+function calculateLocalTileId(globalTileId: number, tilesets: TiledMap['tilesets']): number {
+    // Find the tileset that contains this tile ID
+    let targetTileset = tilesets[0]
+    for (const tileset of tilesets) {
+        const firstGid = 'firstgid' in tileset ? tileset.firstgid ?? 0 : 0
+        const targetFirstGid = targetTileset && 'firstgid' in targetTileset ? targetTileset.firstgid ?? 0 : 0
+
+        if ('firstgid' in tileset && firstGid <= globalTileId) {
+            if (!targetTileset || !('firstgid' in targetTileset) || firstGid > targetFirstGid) {
+                targetTileset = tileset
+            }
+        }
+    }
+
+    if (!targetTileset || !('firstgid' in targetTileset)) {
+        throw new Error(`Could not find tileset for tile ID ${globalTileId}`)
+    }
+
+    // Calculate the local tile ID by subtracting the firstGid
+    const firstGid = targetTileset.firstgid ?? 0;
+    return globalTileId - firstGid;
 }
 
 function convertProperties(properties?: { name: string, type: string, value: any }[]): Record<string, any> | undefined {

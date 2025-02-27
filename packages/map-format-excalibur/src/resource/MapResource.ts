@@ -19,6 +19,10 @@ export class MapResource implements Loadable<TileMap> {
     private tileMap!: TileMap;
     private tileToSpriteMap: Map<Tile, Array<{ tileSetId: string, tileId: number, zIndex?: number }>> = new Map();
 
+    // Store firstGid to tileSetId mapping for quick lookup
+    private firstGidToTileSetId: Map<number, string> = new Map();
+    private sortedFirstGids: number[] = [];
+
     // Logger for debugging
     private logger = Logger.getInstance();
 
@@ -36,6 +40,62 @@ export class MapResource implements Loadable<TileMap> {
         return 'path' in tileSet && tileSet.type === 'tileset';
     }
 
+    /**
+     * Initializes the firstGid to tileSetId mapping for quick lookup
+     */
+    private initializeTileSetMapping(): void {
+        this.logger.debug('Initializing tileset mapping...');
+
+        // Get the tileset references from the map data
+        const tileSetRefs = this.mapData.tileSets.filter(this.isTileSetReference);
+
+        // Create a map of firstGid to tileSetId for quick lookup
+        for (const tileSetRef of tileSetRefs) {
+            if (tileSetRef.firstGid !== undefined) {
+                this.firstGidToTileSetId.set(tileSetRef.firstGid, tileSetRef.id);
+                this.logger.debug(`Mapped firstGid ${tileSetRef.firstGid} to tileSetId ${tileSetRef.id}`);
+            }
+        }
+
+        // Sort firstGids in descending order for proper tileset identification
+        this.sortedFirstGids = Array.from(this.firstGidToTileSetId.keys()).sort((a, b) => b - a);
+
+        this.logger.debug(`TileSet firstGids (sorted): ${this.sortedFirstGids.join(', ')}`);
+    }
+
+    /**
+     * Calculates the local tile ID from a global tile ID by finding the correct tileset
+     * and subtracting the firstGid
+     * 
+     * @param globalTileId The global tile ID from the map data
+     * @returns An object containing the local tile ID and the tileset ID, or undefined if not found
+     */
+    private calculateLocalTileId(globalTileId: number): { localTileId: number, tileSetId: string } | undefined {
+        // Skip empty tiles
+        if (globalTileId === 0 || globalTileId === undefined) {
+            return undefined;
+        }
+
+        // Find the correct tileset for this tile ID based on the firstGid
+        for (const firstGid of this.sortedFirstGids) {
+            if (globalTileId >= firstGid) {
+                const tileSetId = this.firstGidToTileSetId.get(firstGid);
+                if (tileSetId) {
+                    // Calculate the local tile ID by subtracting the firstGid
+                    const localTileId = globalTileId - firstGid;
+                    this.logger.debug(`Global tile ID ${globalTileId} belongs to tileset ${tileSetId} with local ID ${localTileId} (firstGid: ${firstGid})`);
+                    return { localTileId, tileSetId };
+                }
+            }
+        }
+
+        this.logger.warn(`Could not find tileset for global tile ID ${globalTileId}`);
+        return undefined;
+    }
+
+    /**
+     * Loads the image for the tileset
+     */
     private async loadExternalTileSets(): Promise<void> {
         this.logger.debug(`Loading external tilesets...`);
 
@@ -46,6 +106,11 @@ export class MapResource implements Loadable<TileMap> {
             this.logger.warn('No external tilesets found in map data');
             return;
         }
+
+        // Log all tileset references for debugging
+        tileSetRefs.forEach((ref, index) => {
+            this.logger.debug(`Tileset reference ${index + 1}/${tileSetRefs.length}: id=${ref.id}, path=${ref.path}, firstGid=${ref.firstGid}`);
+        });
 
         const externalTileSetLoads = tileSetRefs.map(async (tileSetRef: TileSetReference) => {
             try {
@@ -72,6 +137,14 @@ export class MapResource implements Loadable<TileMap> {
                     this.logger.debug(`First few sprite IDs: ${spriteIds.join(', ')}`);
                 } else {
                     this.logger.warn(`No sprites found in tileset ${tileSetRef.id}`);
+                }
+
+                // Log the range of sprite IDs
+                if (Object.keys(resource.sprites).length > 0) {
+                    const allIds = Object.keys(resource.sprites).map(id => parseInt(id));
+                    const minId = Math.min(...allIds);
+                    const maxId = Math.max(...allIds);
+                    this.logger.debug(`Sprite ID range for tileset ${tileSetRef.id}: ${minId} to ${maxId}`);
                 }
 
                 return resource;
@@ -183,31 +256,55 @@ export class MapResource implements Loadable<TileMap> {
                 }
 
                 // Store the tile reference for later graphic assignment
-                if (tileData.tileId !== undefined && tileData.tileSetId) {
-                    this.logger.debug(`Mapping tile at (${tileData.x}, ${tileData.y}) to tileId ${tileData.tileId} from tileSet ${tileData.tileSetId}`);
+                if (tileData.tileId !== undefined) {
+                    // If tileSetId is provided directly in the tile data, use it
+                    if (tileData.tileSetId) {
+                        this.logger.debug(`Mapping tile at (${tileData.x}, ${tileData.y}) to tileId ${tileData.tileId} from tileSet ${tileData.tileSetId}`);
 
-                    // Get existing references or create a new array
-                    const existingRefs = this.tileToSpriteMap.get(tile) || [];
+                        // Get existing references or create a new array
+                        const existingRefs = this.tileToSpriteMap.get(tile) || [];
 
-                    // Add the new reference
-                    existingRefs.push({
-                        tileSetId: tileData.tileSetId,
-                        tileId: tileData.tileId,
-                        zIndex: zIndex
-                    });
+                        // Add the new reference
+                        existingRefs.push({
+                            tileSetId: tileData.tileSetId,
+                            tileId: tileData.tileId,
+                            zIndex: zIndex
+                        });
 
-                    // Store the updated array
-                    this.tileToSpriteMap.set(tile, existingRefs);
+                        // Store the updated array
+                        this.tileToSpriteMap.set(tile, existingRefs);
 
-                    tilesWithGraphics++;
+                        tilesWithGraphics++;
+                    }
+                    // If no tileSetId is provided but we have a global tile ID, calculate the local tile ID
+                    else {
+                        const tileInfo = this.calculateLocalTileId(tileData.tileId);
+
+                        if (tileInfo) {
+                            this.logger.debug(`Mapping tile at (${tileData.x}, ${tileData.y}) to local tileId ${tileInfo.localTileId} from tileSet ${tileInfo.tileSetId}`);
+
+                            // Get existing references or create a new array
+                            const existingRefs = this.tileToSpriteMap.get(tile) || [];
+
+                            // Add the new reference
+                            existingRefs.push({
+                                tileSetId: tileInfo.tileSetId,
+                                tileId: tileInfo.localTileId,
+                                zIndex: zIndex
+                            });
+
+                            // Store the updated array
+                            this.tileToSpriteMap.set(tile, existingRefs);
+
+                            tilesWithGraphics++;
+                        } else {
+                            tilesWithoutGraphics++;
+                            this.logger.debug(`Could not find tileset for tile ID ${tileData.tileId} at (${tileData.x}, ${tileData.y})`);
+                        }
+                    }
                 } else {
                     tilesWithoutGraphics++;
-                    if (tileData.tileId === undefined) {
-                        this.logger.debug(`Tile at (${tileData.x}, ${tileData.y}) has no tileId`);
-                    }
-                    if (!tileData.tileSetId) {
-                        this.logger.debug(`Tile at (${tileData.x}, ${tileData.y}) has no tileSetId`);
-                    }
+                    this.logger.debug(`Tile at (${tileData.x}, ${tileData.y}) has no tileId`);
                 }
 
                 // Add colliders if specified
@@ -248,6 +345,14 @@ export class MapResource implements Loadable<TileMap> {
 
         // Log available tilesets for debugging
         this.logger.debug(`Available tilesets: ${Array.from(this.tileSetResources.keys()).join(', ')}`);
+
+        // For each tileset, log the available sprite IDs
+        for (const [tileSetId, tileSetResource] of this.tileSetResources.entries()) {
+            const spriteIds = Object.keys(tileSetResource.sprites);
+            this.logger.debug(`Tileset ${tileSetId} has ${spriteIds.length} sprites with IDs: ${spriteIds.length > 20 ?
+                `${spriteIds.slice(0, 10).join(', ')}... (and ${spriteIds.length - 10} more)` :
+                spriteIds.join(', ')}`);
+        }
 
         // Process each tile
         for (const [tile, tileRefs] of this.tileToSpriteMap.entries()) {
@@ -300,6 +405,15 @@ export class MapResource implements Loadable<TileMap> {
                     this.logger.debug(`Added sprite for tileId ${tileId} from tileSet ${tileSetId} with z-index ${zIndex ?? 0}`);
                 } else {
                     this.logger.warn(`Sprite not found for tileId ${tileId} in tileSet ${tileSetId}`);
+                    // Log available sprite IDs for this tileset to help diagnose the issue
+                    const availableSpriteIds = Object.keys(tileSetResource.sprites);
+                    if (availableSpriteIds.length > 0) {
+                        const minId = Math.min(...availableSpriteIds.map(id => parseInt(id)));
+                        const maxId = Math.max(...availableSpriteIds.map(id => parseInt(id)));
+                        this.logger.debug(`Available sprite IDs for tileset ${tileSetId} range from ${minId} to ${maxId}`);
+                    } else {
+                        this.logger.debug(`No sprites available in tileset ${tileSetId}`);
+                    }
                     missingTileIdCount++;
                     failCount++;
                 }
@@ -336,81 +450,42 @@ export class MapResource implements Loadable<TileMap> {
         });
     }
 
+    /**
+     * Load the map resource
+     */
     async load(): Promise<TileMap> {
         try {
-            // Fetch the map data from the provided path
-            const fullPath = joinPaths(this.basePath, this.filename);
-            this.logger.debug(`Loading map from: ${fullPath}`);
+            this.logger.debug(`Loading map resource: ${this.filename}`);
 
-            const response = await fetch(fullPath);
+            // Load the map data
+            const mapDataPath = joinPaths(this.basePath, this.filename);
+            const response = await fetch(mapDataPath);
             if (!response.ok) {
-                throw new Error(`Failed to load map from ${fullPath}: ${response.statusText}`);
+                throw new Error(`Failed to load map data: ${response.statusText}`);
             }
 
-            this.mapData = await response.json() as MapData;
-            this.logger.debug(`Loaded map data: ${JSON.stringify({
-                name: this.mapData.name,
-                tileWidth: this.mapData.tileWidth,
-                tileHeight: this.mapData.tileHeight,
-                columns: this.mapData.columns,
-                rows: this.mapData.rows,
-                layerCount: this.mapData.layers.length,
-                tileSetCount: this.mapData.tileSets.length
-            })}`);
+            this.mapData = await response.json();
+            this.logger.debug(`Map data loaded: ${this.mapData.name}, ${this.mapData.columns}x${this.mapData.rows}`);
 
-            // Log the first few layers for debugging
-            const firstFewLayers = this.mapData.layers.slice(0, 3);
-            this.logger.debug(`First few layers: ${JSON.stringify(firstFewLayers.map(layer => ({
-                id: layer.id,
-                name: layer.name,
-                type: layer.type,
-                visible: layer.visible,
-                tileCount: layer.tiles?.length || 0
-            })))}`);
-
-            // Create the TileMap structure
+            // Create the tile map
             this.tileMap = this.createTileMap(this.mapData);
-            this.logger.debug(`Created TileMap with ${this.tileMap.tiles.length} tiles`);
+            this.data = this.tileMap;
 
-            // Process all layers to set up tile properties and references
-            this.processLayers(this.tileMap, this.mapData);
-            this.logger.debug(`Processed layers, collected ${this.tileToSpriteMap.size} tile references`);
+            // Initialize the tileset mapping
+            this.initializeTileSetMapping();
 
-            if (this.tileToSpriteMap.size === 0) {
-                this.logger.warn('No tile references collected from layers. Check if your map data contains valid tile references.');
-            }
-
-            // Load any external tilesets
+            // Load external tilesets
             await this.loadExternalTileSets();
-            this.logger.debug(`Loaded ${this.tileSetResources.size} external tilesets`);
 
-            if (this.tileSetResources.size === 0) {
-                this.logger.warn('No tilesets were loaded. Check if your map data contains valid tileset references.');
-            }
+            // Process layers
+            this.processLayers(this.tileMap, this.mapData);
 
-            // Apply graphics to tiles now that all tilesets are loaded
+            // Apply graphics to tiles
             this.applyTileGraphics();
 
-            // Verify that tiles have graphics
-            let tilesWithGraphics = 0;
-            for (const tile of this.tileMap.tiles) {
-                if (tile.getGraphics().length > 0) {
-                    tilesWithGraphics++;
-                }
-            }
-            this.logger.debug(`Tiles with graphics after processing: ${tilesWithGraphics}/${this.tileMap.tiles.length}`);
-
-            if (tilesWithGraphics === 0) {
-                this.logger.warn('No tiles have graphics after processing. Check your tileset and map data.');
-            }
-
-            // Store the result
-            this.data = this.tileMap;
-            this.logger.debug(`Map loading complete`);
-
-            return this.data;
+            return this.tileMap;
         } catch (e) {
-            this.logger.error(`Could not load map: ${e}`);
+            this.logger.error('Error loading map resource:', e);
             throw e;
         }
     }

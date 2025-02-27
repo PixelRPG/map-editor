@@ -64,6 +64,18 @@ export class TileSetResource implements Loadable<TileSetData> {
             } : undefined
         });
 
+        // Ensure all sprites in the sheet have proper transparency settings
+        for (let row = 0; row < data.rows; row++) {
+            for (let col = 0; col < data.columns; col++) {
+                const sprite = spriteSheet.getSprite(col, row);
+                if (sprite) {
+                    // Make sure the sprite preserves transparency
+                    sprite.destSize.width = data.tileWidth;
+                    sprite.destSize.height = data.tileHeight;
+                }
+            }
+        }
+
         this.logger.debug(`SpriteSheet created successfully`);
         return spriteSheet;
     }

@@ -8,7 +8,7 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
-        "preview": "yarn clear && yarn build && vite preview",
+        "start": "yarn clear && yarn build && vite preview",
         "build:esbuild": "esbuilder --outdir ./dist",
         "build:vite": "vite build",
         "build:assets": "mkdir -p ./dist && cp -r ./src/assets ./dist",
