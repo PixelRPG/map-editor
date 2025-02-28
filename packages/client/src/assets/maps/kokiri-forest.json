@@ -8,13 +8,13 @@
   "spriteSets": [
     {
       "id": "lokiri-forest",
-      "path": "../tilesets/lokiri-forest.json",
+      "path": "../spritesets/lokiri-forest.json",
       "type": "spriteset",
       "firstGid": 1
     },
     {
       "id": "water",
-      "path": "../tilesets/water.json",
+      "path": "../spritesets/water.json",
       "type": "spriteset",
       "firstGid": 1025
     }
