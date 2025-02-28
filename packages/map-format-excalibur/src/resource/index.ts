@@ -1,2 +1,2 @@
-export * from './MapResource';
-export * from './TileSetResource';
+export * from './MapResource.ts';
+export * from './SpriteSetResource.ts';

@@ -1,6 +1,6 @@
 /**
  * Represents a reference to an external file
- * Used for referencing external resources like tilesets, images, etc.
+ * Used for referencing external resources like sprite sets, images, etc.
  */
 export interface FileReference {
     /**
@@ -16,7 +16,7 @@ export interface FileReference {
     /**
      * The type of the referenced file
      */
-    type: 'tileset' | 'image' | 'audio' | 'data';
+    type: 'spriteset' | 'tileset' | 'image' | 'audio' | 'data';
 
     /**
      * Optional version of the referenced file

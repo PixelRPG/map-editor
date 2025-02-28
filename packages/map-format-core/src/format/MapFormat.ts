@@ -1,4 +1,4 @@
-import { MapData } from '../types/index.ts';
+import { MapData } from '../types/MapData';
 
 export class MapFormat {
     /**
@@ -17,6 +17,12 @@ export class MapFormat {
         if (!Array.isArray(data.layers)) {
             throw new Error('Layers must be an array');
         }
+
+        // Check for either spriteSets
+        if (!data.spriteSets) {
+            throw new Error('Map must have either spriteSets or tileSets defined');
+        }
+
         return true;
     }
 

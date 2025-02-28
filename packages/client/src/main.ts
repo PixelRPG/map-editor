@@ -93,6 +93,7 @@ if (tileMap) {
   for (const tile of tileMap.tiles) {
     tile.on('pointerdown', () => {
       logger.info(`Tile clicked at (${tile.x}, ${tile.y})`);
+
       for (const graphic of tile.getGraphics()) {
         graphic.opacity = 0.5;
       }

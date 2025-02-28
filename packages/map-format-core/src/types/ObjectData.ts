@@ -1,3 +1,5 @@
+import { ColliderShape, Properties } from "./SpriteData";
+
 /**
  * Represents a game object within an object layer
  * Used for non-tile entities like triggers, spawners, or custom game objects
@@ -18,10 +20,10 @@ export interface ObjectData {
      * - 'collider': Collision shape
      * - 'trigger': Trigger area
      * - 'spawn': Spawn point
-     * - 'tile': Visual tile object that renders as a tile
+     * - 'sprite': Visual sprite object that renders as a sprite
      * - 'custom': Custom game object
      */
-    type: 'collider' | 'trigger' | 'spawn' | 'tile' | 'custom';
+    type: 'collider' | 'trigger' | 'spawn' | 'sprite' | 'custom';
 
     /**
      * X position in world coordinates (pixels)
@@ -55,36 +57,52 @@ export interface ObjectData {
     rotation?: number;
 
     /**
+     * Optional z-index for layering
+     */
+    zIndex?: number;
+
+    /**
+     * Optional scale factor
+     */
+    scale?: { x: number, y: number };
+
+    /**
      * Custom properties for the object
      * Can be used to store object-specific configuration
      */
-    properties?: Record<string, any>;
+    properties?: Properties;
 
     /**
      * Optional collision shape configuration
-     * Only used when type='collider'
+     * Only used when type='collider' or 'trigger'
      */
-    collider?: {
-        /**
-         * Type of collision shape
-         */
-        type: 'box' | 'circle' | 'polygon';
-
-        /**
-         * Shape-specific parameters
-         */
-        params?: Record<string, any>;
-    };
+    collider?: ColliderShape;
 
     /**
-     * Tile ID for rendering
-     * Only used when type='tile'
+     * Sprite ID for rendering
+     * Only used when type='sprite'
+     */
+    spriteId?: number;
+
+    /**
+     * Sprite set ID for rendering
+     * Only used when type='sprite'
+     */
+    spriteSetId?: string;
+
+    /**
+     * Optional animation ID for animated sprites
+     * Only used when type='sprite'
+     */
+    animationId?: string;
+
+    /**
+     * @deprecated Use spriteId instead
      */
     tileId?: number;
 
     /**
-     * Tileset ID for rendering
-     * Only used when type='tile'
+     * @deprecated Use spriteSetId instead
      */
     tileSetId?: string;
 } 

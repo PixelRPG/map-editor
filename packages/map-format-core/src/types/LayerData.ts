@@ -1,5 +1,5 @@
-import type { TileDataMap } from "./TileData.ts";
-import type { ObjectData } from "./ObjectData.ts";
+import { Properties, SpriteDataMap } from "./SpriteData";
+import type { ObjectData } from "./ObjectData";
 /**
  * Represents a single layer within a tile map
  * Layers can contain either tiles or objects
@@ -28,9 +28,19 @@ export interface LayerData {
     visible: boolean;
 
     /**
-     * Array of tiles in this layer (only for type='tile')
+     * Optional opacity value (0-1)
      */
-    tiles?: TileDataMap[];
+    opacity?: number;
+
+    /**
+     * Optional z-index for layer ordering
+     */
+    zIndex?: number;
+
+    /**
+     * Array of sprites in this layer (only for type='tile')
+     */
+    sprites?: SpriteDataMap[];
 
     /**
      * Array of objects in this layer (only for type='object')
@@ -40,5 +50,5 @@ export interface LayerData {
     /**
      * Optional custom properties for the layer
      */
-    properties?: Record<string, any>;
+    properties?: Properties;
 }

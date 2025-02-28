@@ -1,6 +1,7 @@
-import { LayerData } from "./LayerData.ts";
-import { TileSetData } from "./TileSetData.ts";
-import { TileSetReference } from "./TileSetReference.ts";
+import { LayerData } from "./LayerData";
+import { Properties } from "./SpriteData";
+import { SpriteSetData } from "./SpriteSetData";
+import { SpriteSetReference } from "./SpriteSetReference";
 
 /**
  * Represents the core data structure for a tile-based map
@@ -13,10 +14,10 @@ export interface MapData {
     name?: string;
 
     /**
-     * Array of tile sets that are referenced in the map
-     * Can be either inline TileSetData objects or references to external files
+     * Array of sprite sets that are referenced in the map
+     * Can be either inline SpriteSetData objects or references to external files
      */
-    tileSets: (TileSetData | TileSetReference)[];
+    spriteSets?: (SpriteSetData | SpriteSetReference)[];
 
     /**
      * Optional position of the tile map in world coordinates
@@ -67,11 +68,40 @@ export interface MapData {
     /**
      * Optional custom properties for the map
      */
-    properties?: Record<string, any>;
+    properties?: Properties;
 
     /**
      * Optional meshing lookbehind configuration
      * @see TileMapOptions.meshingLookBehind in Excalibur
      */
     meshingLookBehind?: number;
+
+    /**
+     * Optional editor-specific data
+     */
+    editorData?: {
+        /**
+         * Grid settings for the editor
+         */
+        grid?: {
+            visible: boolean;
+            color?: string;
+            opacity?: number;
+            size?: number;
+        };
+
+        /**
+         * Camera settings for the editor
+         */
+        camera?: {
+            x: number;
+            y: number;
+            zoom: number;
+        };
+
+        /**
+         * Custom editor properties
+         */
+        properties?: Properties;
+    };
 }

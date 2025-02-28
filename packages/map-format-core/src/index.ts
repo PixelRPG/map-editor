@@ -1,2 +1,2 @@
-export * from './format/index.ts';
-export * from './types/index.ts';
+export * from './format/index';
+export * from './types/index';
