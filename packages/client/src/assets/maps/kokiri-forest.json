@@ -54,19 +54,22 @@
           "x": 61,
           "y": 28,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 62,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 63,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 60,
@@ -78,7 +81,8 @@
           "x": 61,
           "y": 29,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -102,7 +106,8 @@
           "x": 61,
           "y": 30,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -126,7 +131,8 @@
           "x": 61,
           "y": 31,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -192,49 +198,57 @@
           "x": 64,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 65,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 66,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 67,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 68,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 69,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 70,
           "y": 28,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 71,
           "y": 28,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 72,
@@ -288,7 +302,8 @@
           "x": 71,
           "y": 29,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 72,
@@ -342,7 +357,8 @@
           "x": 71,
           "y": 30,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 72,
@@ -396,7 +412,8 @@
           "x": 71,
           "y": 31,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 72,
@@ -450,7 +467,8 @@
           "x": 61,
           "y": 32,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -474,7 +492,8 @@
           "x": 61,
           "y": 33,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -498,7 +517,8 @@
           "x": 61,
           "y": 34,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -522,7 +542,8 @@
           "x": 61,
           "y": 35,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -546,7 +567,8 @@
           "x": 61,
           "y": 36,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -570,7 +592,8 @@
           "x": 61,
           "y": 37,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -594,7 +617,8 @@
           "x": 61,
           "y": 38,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 62,
@@ -618,19 +642,22 @@
           "x": 61,
           "y": 39,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 62,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 63,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 60,
@@ -702,7 +729,8 @@
           "x": 71,
           "y": 32,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 72,
@@ -756,7 +784,8 @@
           "x": 71,
           "y": 33,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 72,
@@ -816,7 +845,8 @@
           "x": 72,
           "y": 34,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 73,
@@ -876,7 +906,8 @@
           "x": 72,
           "y": 35,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 73,
@@ -936,7 +967,8 @@
           "x": 72,
           "y": 36,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 73,
@@ -996,7 +1028,8 @@
           "x": 72,
           "y": 37,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 73,
@@ -1056,7 +1089,8 @@
           "x": 72,
           "y": 38,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 73,
@@ -1068,43 +1102,50 @@
           "x": 64,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 65,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 66,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 67,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 68,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 69,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 70,
           "y": 39,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 71,
@@ -1116,7 +1157,8 @@
           "x": 72,
           "y": 39,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 73,
@@ -1170,19 +1212,22 @@
           "x": 71,
           "y": 40,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 72,
           "y": 40,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 73,
           "y": 40,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 74,
@@ -1284,25 +1329,29 @@
           "x": 89,
           "y": 32,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 90,
           "y": 32,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 91,
           "y": 32,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 92,
           "y": 32,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 93,
@@ -1320,25 +1369,29 @@
           "x": 89,
           "y": 33,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 90,
           "y": 33,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 91,
           "y": 33,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 92,
           "y": 33,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 93,
@@ -1500,31 +1553,36 @@
           "x": 88,
           "y": 38,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 89,
           "y": 38,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 90,
           "y": 38,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 91,
           "y": 38,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 92,
           "y": 38,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 93,
@@ -1542,7 +1600,8 @@
           "x": 87,
           "y": 39,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 88,
@@ -1578,7 +1637,8 @@
           "x": 93,
           "y": 39,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 94,
@@ -1626,7 +1686,8 @@
           "x": 86,
           "y": 40,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 87,
@@ -1674,7 +1735,8 @@
           "x": 94,
           "y": 40,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 95,
@@ -1692,31 +1754,36 @@
           "x": 81,
           "y": 41,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 82,
           "y": 41,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 83,
           "y": 41,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 84,
           "y": 41,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 85,
           "y": 41,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 86,
@@ -1776,7 +1843,8 @@
           "x": 95,
           "y": 41,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 81,
@@ -1788,7 +1856,8 @@
           "x": 82,
           "y": 42,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 83,
@@ -1818,13 +1887,15 @@
           "x": 87,
           "y": 42,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 88,
           "y": 42,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 89,
@@ -1866,7 +1937,8 @@
           "x": 95,
           "y": 42,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 82,
@@ -1878,7 +1950,8 @@
           "x": 83,
           "y": 43,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 84,
@@ -1896,7 +1969,8 @@
           "x": 86,
           "y": 43,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 87,
@@ -1914,7 +1988,8 @@
           "x": 89,
           "y": 43,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 90,
@@ -1950,7 +2025,8 @@
           "x": 95,
           "y": 43,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 82,
@@ -1962,19 +2038,22 @@
           "x": 83,
           "y": 44,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 84,
           "y": 44,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 85,
           "y": 44,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 86,
@@ -2004,7 +2083,8 @@
           "x": 90,
           "y": 44,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 91,
@@ -2034,7 +2114,8 @@
           "x": 95,
           "y": 44,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 83,
@@ -2088,7 +2169,8 @@
           "x": 91,
           "y": 45,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 92,
@@ -2106,7 +2188,8 @@
           "x": 94,
           "y": 45,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 95,
@@ -2172,7 +2255,8 @@
           "x": 92,
           "y": 46,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 93,
@@ -2184,7 +2268,8 @@
           "x": 94,
           "y": 46,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 95,
@@ -2202,13 +2287,15 @@
           "x": 83,
           "y": 47,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 84,
           "y": 47,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 85,
@@ -2256,7 +2343,8 @@
           "x": 92,
           "y": 47,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 93,
@@ -2274,7 +2362,8 @@
           "x": 95,
           "y": 47,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 96,
@@ -2316,13 +2405,15 @@
           "x": 83,
           "y": 48,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 84,
           "y": 48,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 85,
@@ -2370,7 +2461,8 @@
           "x": 92,
           "y": 48,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 93,
@@ -2400,13 +2492,15 @@
           "x": 83,
           "y": 49,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 84,
           "y": 49,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 85,
@@ -2454,7 +2548,8 @@
           "x": 92,
           "y": 49,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 93,
@@ -2484,7 +2579,8 @@
           "x": 83,
           "y": 50,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 84,
@@ -2496,7 +2592,8 @@
           "x": 85,
           "y": 50,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 86,
@@ -2532,7 +2629,8 @@
           "x": 91,
           "y": 50,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 92,
@@ -2568,7 +2666,8 @@
           "x": 83,
           "y": 51,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 84,
@@ -2586,7 +2685,8 @@
           "x": 86,
           "y": 51,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 87,
@@ -2610,7 +2710,8 @@
           "x": 90,
           "y": 51,
           "spriteId": 15,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_left"
         },
         {
           "x": 91,
@@ -2652,7 +2753,8 @@
           "x": 84,
           "y": 52,
           "spriteId": 9,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_left"
         },
         {
           "x": 85,
@@ -2670,31 +2772,36 @@
           "x": 87,
           "y": 52,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 88,
           "y": 52,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 89,
           "y": 52,
           "spriteId": 6,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_middle_top"
         },
         {
           "x": 90,
           "y": 52,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 91,
           "y": 52,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 92,
@@ -2730,37 +2837,43 @@
           "x": 84,
           "y": 53,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 85,
           "y": 53,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 86,
           "y": 53,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 87,
           "y": 53,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 88,
           "y": 53,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 89,
           "y": 53,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 90,
@@ -2778,25 +2891,29 @@
           "x": 92,
           "y": 53,
           "spriteId": 18,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_left"
         },
         {
           "x": 93,
           "y": 53,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 94,
           "y": 53,
           "spriteId": 0,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_middle"
         },
         {
           "x": 95,
           "y": 53,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 83,
@@ -2868,7 +2985,8 @@
           "x": 96,
           "y": 48,
           "spriteId": 12,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_top_right"
         },
         {
           "x": 97,
@@ -2880,7 +2998,8 @@
           "x": 96,
           "y": 49,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 97,
@@ -2892,7 +3011,8 @@
           "x": 96,
           "y": 50,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 97,
@@ -2904,7 +3024,8 @@
           "x": 96,
           "y": 51,
           "spriteId": 3,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_right_middle"
         },
         {
           "x": 97,
@@ -2916,7 +3037,8 @@
           "x": 96,
           "y": 52,
           "spriteId": 21,
-          "spriteSetId": "water"
+          "spriteSetId": "water",
+          "animationId": "water_bottom_right"
         },
         {
           "x": 97,

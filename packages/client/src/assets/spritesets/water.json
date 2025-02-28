@@ -168,8 +168,8 @@
   ],
   "animations": [
     {
-      "id": "water_top_left",
-      "name": "Water Animation Top Left",
+      "id": "water_bottom_middle",
+      "name": "Water Animation Bottom Middle",
       "frames": [
         {
           "spriteId": 0,
@@ -187,8 +187,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_top_right",
-      "name": "Water Animation Top Right",
+      "id": "water_right_middle",
+      "name": "Water Animation Right Middle",
       "frames": [
         {
           "spriteId": 3,
@@ -206,8 +206,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_middle_left",
-      "name": "Water Animation Middle Left",
+      "id": "water_middle_top",
+      "name": "Water Animation Middle Top",
       "frames": [
         {
           "spriteId": 6,
@@ -225,8 +225,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_middle_right",
-      "name": "Water Animation Middle Right",
+      "id": "water_middle_left",
+      "name": "Water Animation Middle Left",
       "frames": [
         {
           "spriteId": 9,
@@ -244,8 +244,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_bottom_left",
-      "name": "Water Animation Bottom Left",
+      "id": "water_top_right",
+      "name": "Water Animation Top Right",
       "frames": [
         {
           "spriteId": 12,
@@ -263,8 +263,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_bottom_right",
-      "name": "Water Animation Bottom Right",
+      "id": "water_top_left",
+      "name": "Water Animation Top Left",
       "frames": [
         {
           "spriteId": 15,
@@ -282,8 +282,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_shore_left",
-      "name": "Water Animation Shore Left",
+      "id": "water_bottom_left",
+      "name": "Water Animation Bottom Left",
       "frames": [
         {
           "spriteId": 18,
@@ -301,8 +301,8 @@
       "strategy": "loop"
     },
     {
-      "id": "water_shore_right",
-      "name": "Water Animation Shore Right",
+      "id": "water_bottom_right",
+      "name": "Water Animation Bottom Right",
       "frames": [
         {
           "spriteId": 21,
