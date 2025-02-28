@@ -169,25 +169,11 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
 
         if (data.animations && data.animations.length > 0) {
             data.animations.forEach((animation: AnimationData) => {
-                // Filter out frames with missing sprites
-                const validFrames = animation.frames.filter(frame => {
-                    const hasSprite = !!sprites[frame.spriteId];
-                    if (!hasSprite) {
-                        this.logger.warn(`Animation ${animation.id} frame references missing sprite: spriteId ${frame.spriteId}`);
-                    }
-                    return hasSprite;
-                });
-
-                if (validFrames.length === 0) {
-                    this.logger.warn(`Animation ${animation.id} has no valid frames after filtering`);
-                    return;
-                }
-
                 // Create animation frames with proper cloning of sprites to avoid reference issues
-                const frames = validFrames.map(frame => {
+                const frames = animation.frames.map(frame => {
                     const sprite = sprites[frame.spriteId];
                     // Create a clone of the sprite to ensure each frame has its own instance
-                    const spriteClone = this.cloneSprite(sprite, data);
+                    const spriteClone = sprite.clone();
 
                     return {
                         graphic: spriteClone,
@@ -210,38 +196,6 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
 
         this.logger.info(`Created ${Object.keys(animations).length} animations`);
         return animations;
-    }
-
-    /**
-     * Creates a clone of a sprite with the same properties
-     */
-    private cloneSprite(sprite: Sprite, data: SpriteSetData): Sprite {
-        // Get the sprite dimensions from the first image source
-        let spriteWidth = 16;
-        let spriteHeight = 16;
-
-        if (data.images && data.images.length > 0) {
-            const imageData = data.images[0];
-            spriteWidth = imageData.spriteWidth;
-            spriteHeight = imageData.spriteHeight;
-        }
-
-        // Create a new sprite with the same texture
-        const clonedSprite = new Sprite({
-            image: sprite.image,
-            sourceView: {
-                x: sprite.sourceView.x,
-                y: sprite.sourceView.y,
-                width: sprite.sourceView.width,
-                height: sprite.sourceView.height
-            },
-            destSize: {
-                width: spriteWidth,
-                height: spriteHeight
-            }
-        });
-
-        return clonedSprite;
     }
 
     /**

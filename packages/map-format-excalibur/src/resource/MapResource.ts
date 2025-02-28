@@ -1,7 +1,7 @@
 import { Loadable, Scene, TileMap, Vector, Tile, Logger } from 'excalibur';
 import { MapData, SpriteSetData, SpriteSetReference, LayerData, SpriteDataMap, MapFormat } from '@pixelrpg/map-format-core';
-import { SpriteSetResource } from './SpriteSetResource';
-import { MapResourceOptions } from '../types/MapResourceOptions';
+import { SpriteSetResource } from './SpriteSetResource.ts';
+import { MapResourceOptions } from '../types/MapResourceOptions.ts';
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
 
 /**
