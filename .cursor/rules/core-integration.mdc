@@ -1,0 +1,41 @@
+---
+description: Core data structures
+globs: packages/*-core/**/*.ts
+---
+# Core Package Architecture
+
+The core packages (with `-core` suffix) provide runtime-independent foundations for our systems. These packages are designed to be used across different runtime environments without modification, serving as the shared foundation for various implementations.
+
+## Core Package Responsibilities
+- Define fundamental data structures and interfaces
+- Provide validation logic for data formats
+- Implement serialization/deserialization utilities
+- Maintain runtime-agnostic implementations (no dependencies on specific platforms)
+- Focus on data representation, not rendering or interaction
+- Establish common utilities and helper functions
+
+## Integration with Runtime-Specific Packages
+Core packages are complemented by runtime-specific implementations:
+- `-excalibur` suffix: Integration with Excalibur.js game engine
+- `-gjs` suffix: Integration with GNOME's JavaScript runtime (GJS)
+- `-web` suffix: General browser/web implementation
+- Other suffixes may be added for additional runtime targets
+
+These specialized packages depend on the core packages and provide:
+- Runtime-specific resource loaders
+- Conversion from core data structures to runtime-specific objects
+- Rendering and interaction implementations
+- Additional utilities specific to each runtime environment
+- Platform-specific optimizations
+
+## Development Guidelines
+When working with core packages:
+- Maintain strict runtime independence
+- Ensure comprehensive validation of all data structures
+- Use explicit TypeScript interfaces with thorough JSDoc documentation
+- Avoid dependencies that would tie the core to specific runtimes
+- Design with extensibility in mind for future runtime integrations
+- Keep APIs consistent across different core packages
+- Minimize external dependencies to reduce potential conflicts
+
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.
