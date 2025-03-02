@@ -1,4 +1,4 @@
-# @pixelrpg/client
+# @pixelrpg/engine-excalibur
 
 Game rendering and map view component built with Excalibur.js.
 

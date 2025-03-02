@@ -5,7 +5,7 @@ An experimental tile-based map editor built with Excalibur.js, GTK/Adwaita, and 
 ## Project Structure
 
 - `apps/map-editor`: Desktop application built with GTK/Adwaita and GJS
-- `packages/client`: Game rendering and map view built with Excalibur.js
+- `packages/engine-excalibur`: Game rendering and map view built with Excalibur.js
 - `packages/messages-gjs`: Message service implementation for GJS runtime
 - `packages/messages-webview`: Message service implementation for WebView runtime
 - `packages/common`: Shared code between GJS and WebView
@@ -32,10 +32,10 @@ yarn install
 yarn workspace @pixelrpg/map-editor start
 
 # Build the client
-yarn workspace @pixelrpg/client build
+yarn workspace @pixelrpg/engine-excalibur build
 
 # Preview the client
-yarn workspace @pixelrpg/client preview
+yarn workspace @pixelrpg/engine-excalibur preview
 ```
 
 ## Known Issues

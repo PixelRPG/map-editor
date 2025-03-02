@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/client",
+    "name": "@pixelrpg/engine-excalibur",
     "version": "0.0.1",
     "description": "Browser side browser part of the map editor",
     "main": "dist/index.html",

@@ -3416,9 +3416,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/client@workspace:packages/client":
+"@pixelrpg/common@workspace:^, @pixelrpg/common@workspace:packages/common":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/client@workspace:packages/client"
+  resolution: "@pixelrpg/common@workspace:packages/common"
+  dependencies:
+    "@excaliburjs/plugin-tiled": "workspace:^"
+    "@types/lodash": "npm:^4.17.15"
+    excalibur: "workspace:^"
+    typescript: "npm:^5.7.3"
+  languageName: unknown
+  linkType: soft
+
+"@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur":
+  version: 0.0.0-use.local
+  resolution: "@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur"
   dependencies:
     "@excaliburjs/dev-tools": "npm:^0.28.0"
     "@excaliburjs/plugin-tiled": "workspace:^"
@@ -3432,17 +3443,6 @@ __metadata:
     typescript: "npm:^5.7.3"
     vite: "npm:^6.1.1"
     vite-plugin-glsl: "npm:^1.3.1"
-  languageName: unknown
-  linkType: soft
-
-"@pixelrpg/common@workspace:^, @pixelrpg/common@workspace:packages/common":
-  version: 0.0.0-use.local
-  resolution: "@pixelrpg/common@workspace:packages/common"
-  dependencies:
-    "@excaliburjs/plugin-tiled": "workspace:^"
-    "@types/lodash": "npm:^4.17.15"
-    excalibur: "workspace:^"
-    typescript: "npm:^5.7.3"
   languageName: unknown
   linkType: soft
 

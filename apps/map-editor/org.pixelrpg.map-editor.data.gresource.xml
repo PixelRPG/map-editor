@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/org/pixelrpg/map-editor/client">
-    <file alias="index.html">../../packages/client/dist/index.html</file>
-    <file alias="assets/maps/kokiri-forest.tmx">../../packages/client/dist/assets/maps/kokiri-forest.tmx</file>
-    <file alias="assets/tilesets/lokiri-forest.tsx">../../packages/client/dist/assets/tilesets/lokiri-forest.tsx</file>
-    <file alias="assets/tilesets/lokiri-forest.png">../../packages/client/dist/assets/tilesets/lokiri-forest.png</file>
-    <file alias="assets/tilesets/water.tsx">../../packages/client/dist/assets/tilesets/water.tsx</file>
-    <file alias="assets/tilesets/water.png">../../packages/client/dist/assets/tilesets/water.png</file>
+  <gresource prefix="/org/pixelrpg/map-editor/engine-excalibur">
+    <file alias="index.html">../../packages/engine-excalibur/dist/index.html</file>
+    <file alias="assets/maps/kokiri-forest.json">../../packages/engine-excalibur/dist/assets/maps/kokiri-forest.json</file>
+    <file alias="assets/spritesets/lokiri-forest.json">../../packages/engine-excalibur/dist/assets/spritesets/lokiri-forest.json</file>
+    <file alias="assets/spritesets/lokiri-forest.png">../../packages/engine-excalibur/dist/assets/spritesets/lokiri-forest.png</file>
+    <file alias="assets/spritesets/water.json">../../packages/engine-excalibur/dist/assets/spritesets/water.json</file>
+    <file alias="assets/spritesets/water.png">../../packages/engine-excalibur/dist/assets/spritesets/water.png</file>
   </gresource>
 </gresources>
