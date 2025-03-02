@@ -1,4 +1,5 @@
 import { MapData } from '../types/MapData';
+import { SpriteSetReference } from '../types/SpriteSetReference';
 
 export class MapFormat {
     /**
@@ -18,10 +19,17 @@ export class MapFormat {
             throw new Error('Layers must be an array');
         }
 
-        // Check for either spriteSets
-        if (!data.spriteSets) {
-            throw new Error('Map must have either spriteSets or tileSets defined');
+        // Check that sprite sets are defined
+        if (!data.spriteSets || !Array.isArray(data.spriteSets) || data.spriteSets.length === 0) {
+            throw new Error('Map must have sprite sets defined');
         }
+
+        // Validate sprite set references
+        data.spriteSets.forEach(spriteSet => {
+            if (!spriteSet.id || !spriteSet.path || spriteSet.type !== 'spriteset') {
+                throw new Error('Invalid sprite set reference');
+            }
+        });
 
         return true;
     }

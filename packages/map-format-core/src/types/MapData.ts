@@ -1,6 +1,5 @@
 import { LayerData } from "./LayerData";
 import { Properties } from "./SpriteData";
-import { SpriteSetData } from "./SpriteSetData";
 import { SpriteSetReference } from "./SpriteSetReference";
 
 /**
@@ -15,9 +14,9 @@ export interface MapData {
 
     /**
      * Array of sprite sets that are referenced in the map
-     * Can be either inline SpriteSetData objects or references to external files
+     * Only references to external sprite set files are supported
      */
-    spriteSets?: (SpriteSetData | SpriteSetReference)[];
+    spriteSets?: SpriteSetReference[];
 
     /**
      * Optional position of the tile map in world coordinates

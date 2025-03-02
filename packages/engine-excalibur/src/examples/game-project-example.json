@@ -1,0 +1,79 @@
+{
+  "version": "1.0.0",
+  "id": "pixel-rpg",
+  "name": "Pixel RPG Adventure",
+  "startup": {
+    "initialMapId": "kokiri-forest",
+    "initialX": 160,
+    "initialY": 160,
+    "initialDirection": "down"
+  },
+  "maps": [
+    {
+      "id": "kokiri-forest",
+      "name": "Kokiri Forest",
+      "path": "./maps/kokiri-forest.json",
+      "type": "data",
+      "category": "overworld"
+    },
+    {
+      "id": "simple-map",
+      "name": "Simple Test Map",
+      "path": "./maps/simple-map.json",
+      "type": "data",
+      "category": "test"
+    }
+  ],
+  "mapCategories": [
+    {
+      "id": "overworld",
+      "name": "Overworld Maps"
+    },
+    {
+      "id": "test",
+      "name": "Test Maps"
+    }
+  ],
+  "spriteSets": [
+    {
+      "id": "lokiri-forest",
+      "name": "Lokiri Forest Tileset",
+      "path": "./spritesets/lokiri-forest.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "water",
+      "name": "Water Tileset",
+      "path": "./spritesets/water.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "terrain",
+      "name": "Basic Terrain",
+      "path": "./spritesets/terrain.json",
+      "type": "spriteset",
+      "category": "environments"
+    }
+  ],
+  "properties": {
+    "gameTitle": "Pixel RPG Adventure",
+    "author": "PixelRPG Team",
+    "version": "0.1.0",
+    "description": "A 2D pixel art RPG with custom map format",
+    "defaultTileSize": 16
+  },
+  "editorData": {
+    "author": "PixelRPG Team",
+    "description": "A demonstration project using our custom map format",
+    "version": "0.1.0",
+    "lastModified": "2023-08-07T12:00:00Z",
+    "properties": {
+      "defaultZoomLevel": 2,
+      "gridColor": "#1a1a1a",
+      "gridOpacity": 0.4,
+      "showGrid": true
+    }
+  }
+} 

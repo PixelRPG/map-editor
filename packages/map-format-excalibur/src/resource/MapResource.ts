@@ -1,5 +1,5 @@
 import { Loadable, Scene, TileMap, Vector, Tile, Logger } from 'excalibur';
-import { MapData, SpriteSetData, SpriteSetReference, LayerData, SpriteDataMap, MapFormat } from '@pixelrpg/map-format-core';
+import { MapData, SpriteSetReference, LayerData, MapFormat, ObjectData, SpriteDataMap } from '@pixelrpg/map-format-core';
 import { SpriteSetResource } from './SpriteSetResource.ts';
 import { MapResourceOptions } from '../types/MapResourceOptions.ts';
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
@@ -19,10 +19,6 @@ export class MapResource implements Loadable<TileMap> {
     private tileMap!: TileMap;
     private tileToSpriteMap: Map<Tile, Array<{ spriteSetId: string, spriteId: number, animationId?: string, zIndex?: number }>> = new Map();
 
-    // Store firstGid to spriteSetId mapping for quick lookup
-    private firstGidToSpriteSetId: Map<number, string> = new Map();
-    private sortedFirstGids: number[] = [];
-
     // Logger for debugging
     private logger = Logger.getInstance();
 
@@ -38,93 +34,34 @@ export class MapResource implements Loadable<TileMap> {
     }
 
     /**
-     * Checks if a spriteset entry is a reference to an external file
+     * Loads the sprite sets referenced in the map
      */
-    private isSpriteSetReference(tileSet: SpriteSetData | SpriteSetReference): tileSet is SpriteSetReference {
-        return 'path' in tileSet && tileSet.type === 'spriteset';
-    }
-
-    /**
-     * Initializes the firstGid to spriteSetId mapping for quick lookup
-     */
-    private initializeSpriteSetMapping(): void {
-        // Get the tileset references from the map data
-        const spriteSetRefs = this._mapData.spriteSets.filter(this.isSpriteSetReference);
-
-        // Create a map of firstGid to spriteSetId for quick lookup
-        for (const tileSetRef of spriteSetRefs) {
-            if (tileSetRef.firstGid !== undefined) {
-                this.firstGidToSpriteSetId.set(tileSetRef.firstGid, tileSetRef.id);
-            }
-        }
-
-        // Sort firstGids in descending order for proper tileset identification
-        this.sortedFirstGids = Array.from(this.firstGidToSpriteSetId.keys()).sort((a, b) => b - a);
-    }
-
-    /**
-     * Calculates the local tile ID from a global tile ID by finding the correct tileset
-     * and subtracting the firstGid
-     * 
-     * @param globalTileId The global tile ID from the map data
-     * @returns An object containing the local tile ID and the tileset ID, or undefined if not found
-     */
-    private calculateLocalTileId(globalTileId: number): { localTileId: number, spriteSetId: string } | undefined {
-        // Skip empty tiles
-        if (globalTileId === 0 || globalTileId === undefined) {
-            return undefined;
-        }
-
-        // Find the correct tileset for this tile ID based on the firstGid
-        for (const firstGid of this.sortedFirstGids) {
-            if (globalTileId >= firstGid) {
-                const spriteSetId = this.firstGidToSpriteSetId.get(firstGid);
-                if (spriteSetId) {
-                    // Calculate the local tile ID by subtracting the firstGid
-                    const localTileId = globalTileId - firstGid;
-                    return { localTileId, spriteSetId };
-                }
-            }
-        }
-
-        this.logger.warn(`Could not find tileset for global tile ID ${globalTileId}`);
-        return undefined;
-    }
-
-    /**
-     * Loads the image for the tileset
-     */
-    private async loadExternalSpriteSets(): Promise<void> {
-        const spriteSetRefs = this._mapData.spriteSets.filter(this.isSpriteSetReference);
+    private async loadSpriteSets(): Promise<void> {
+        const spriteSetRefs = this._mapData.spriteSets || [];
 
         if (spriteSetRefs.length === 0) {
-            this.logger.warn('No external tilesets found in map data');
+            this.logger.warn('No sprite sets found in map data');
             return;
         }
 
-        const externalSpriteSetLoads = spriteSetRefs.map(async (tileSetRef: SpriteSetReference) => {
+        // Load each sprite set
+        for (const spriteSetRef of spriteSetRefs) {
             try {
-                // Join the base path with the tileset path
-                const tileSetFullPath = joinPaths(this.basePath, tileSetRef.path);
-
-                // Create a resource for the tileset
-                const resource = new SpriteSetResource(tileSetFullPath, {
+                const fullPath = joinPaths(this.basePath, spriteSetRef.path);
+                const resource = new SpriteSetResource(fullPath, {
                     headless: this.headless
                 });
-
-                this.tileSetResources.set(tileSetRef.id, resource);
-
-                // Load the resource
                 await resource.load();
 
-                return resource;
-            } catch (e) {
-                this.logger.error(`Error loading external tileset ${tileSetRef.path}:`, e);
-                throw e;
+                this.tileSetResources.set(spriteSetRef.id, resource);
+                this.logger.debug(`Loaded sprite set: ${spriteSetRef.id} from ${fullPath}`);
+            } catch (error) {
+                this.logger.error(`Failed to load sprite set ${spriteSetRef.id}: ${error}`);
+                throw error;
             }
-        });
+        }
 
-        await Promise.all(externalSpriteSetLoads);
+        this.logger.debug(`Loaded ${this.tileSetResources.size} sprite sets`);
     }
 
     /**
@@ -158,231 +95,132 @@ export class MapResource implements Loadable<TileMap> {
         });
 
         // Process tile layers in order (bottom to top)
-        const tileLayers = sortedLayers.filter((layer: LayerData) => layer.type === 'tile' && layer.visible);
+        const tileLayers = sortedLayers.filter(layer => layer.type === 'tile' && layer.visible);
+        tileLayers.forEach(layer => this.processTileLayer(tileMap, layer));
 
-        tileLayers.forEach((layer: LayerData, index: number) => {
-            const layerZIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : index;
-
-            // Process the layer
-            this.processTileLayer(tileMap, layer, layerZIndex);
-
-            // Set the z-index on the TileMap for proper rendering order
-            if (layerZIndex !== undefined) {
-                // Store the z-index in the tile map's data for reference
-                tileMap.data.set('z-index', layerZIndex);
-            }
-        });
-
-        // Process object layers after tiles
-        const objectLayers = sortedLayers.filter((layer: LayerData) => layer.type === 'object' && layer.visible);
-
-        objectLayers.forEach((layer: LayerData, index: number) => {
-            this.processObjectLayer(tileMap, layer);
-        });
+        // Process object layers
+        const objectLayers = sortedLayers.filter(layer => layer.type === 'object' && layer.visible);
+        objectLayers.forEach(layer => this.processObjectLayer(tileMap, layer));
     }
 
     /**
      * Process a single tile layer
      */
-    private processTileLayer(tileMap: TileMap, layer: LayerData, zIndex: number = 0): void {
-        if (!layer.sprites || layer.sprites.length === 0) {
+    private processTileLayer(tileMap: TileMap, layer: LayerData): void {
+        if (!layer.sprites || !Array.isArray(layer.sprites) || layer.sprites.length === 0) {
+            this.logger.warn(`Skipping layer ${layer.name}: No sprites found`);
             return;
         }
 
-        layer.sprites.forEach((spriteData: SpriteDataMap) => {
+        // Get the layer z-index from properties (default to 0)
+        const layerZIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : 0;
+
+        // Process each sprite in the layer
+        for (const spriteData of layer.sprites) {
+            // Skip if outside map bounds
+            if (spriteData.x < 0 || spriteData.x >= tileMap.columns ||
+                spriteData.y < 0 || spriteData.y >= tileMap.rows) {
+                continue;
+            }
+
+            // Skip if no sprite ID or sprite set ID
+            if (spriteData.spriteId === undefined || !spriteData.spriteSetId) {
+                continue;
+            }
+
+            // Get the tile and set up the reference
             const tile = tileMap.getTile(spriteData.x, spriteData.y);
             if (tile) {
-                // Set basic tile properties
-                tile.solid = spriteData.solid ?? false;
-
-                // Set z-index for the tile
-                tile.data.set('z-index', zIndex);
-
-                // Set custom properties
+                // Apply any custom properties to the tile
                 if (spriteData.properties) {
                     Object.entries(spriteData.properties).forEach(([key, value]) => {
                         tile.data.set(key, value);
                     });
                 }
 
-                // Store the tile reference for later graphic assignment
-                if (spriteData.spriteId !== undefined) {
-                    // If spriteSetId is provided directly in the tile data, use it
-                    if (spriteData.spriteSetId) {
-                        // Get existing references or create a new array
-                        const existingRefs = this.tileToSpriteMap.get(tile) || [];
-
-                        // Add the new reference
-                        existingRefs.push({
-                            spriteSetId: spriteData.spriteSetId,
-                            spriteId: spriteData.spriteId,
-                            animationId: spriteData.animationId,
-                            zIndex: zIndex
-                        });
-
-                        // Store the updated array
-                        this.tileToSpriteMap.set(tile, existingRefs);
-                    }
-                    // If no spriteSetId is provided but we have a global tile ID, calculate the local tile ID
-                    else {
-                        const tileInfo = this.calculateLocalTileId(spriteData.spriteId);
-
-                        if (tileInfo) {
-                            // Get existing references or create a new array
-                            const existingRefs = this.tileToSpriteMap.get(tile) || [];
-
-                            // Add the new reference
-                            existingRefs.push({
-                                spriteSetId: tileInfo.spriteSetId,
-                                spriteId: tileInfo.localTileId,
-                                animationId: spriteData.animationId,
-                                zIndex: zIndex
-                            });
-
-                            // Store the updated array
-                            this.tileToSpriteMap.set(tile, existingRefs);
-                        }
-                    }
+                // Set solid property if defined
+                if (spriteData.solid !== undefined) {
+                    tile.solid = spriteData.solid;
                 }
 
-                // Add colliders if specified
-                if (spriteData.colliders && spriteData.colliders.length > 0) {
-                    // Here you would need to create the appropriate Excalibur collider
-                    // based on the collider type and parameters
-                }
+                // Store the sprite reference for rendering
+                const existingRefs = this.tileToSpriteMap.get(tile) || [];
+                existingRefs.push({
+                    spriteSetId: spriteData.spriteSetId,
+                    spriteId: spriteData.spriteId,
+                    animationId: spriteData.animationId,
+                    zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex
+                });
+                this.tileToSpriteMap.set(tile, existingRefs);
             }
-        });
+        }
     }
 
     /**
-     * Apply graphics to tiles based on the loaded tilesets
+     * Process a single object layer
      */
-    private applyTileGraphics(): void {
-        if (this.tileToSpriteMap.size === 0) {
-            this.logger.warn('No tile references found to apply graphics to');
-            return;
-        }
-
-        if (this.tileSetResources.size === 0) {
-            this.logger.warn('No tileset resources loaded to get graphics from');
-            return;
-        }
-
-        // Process each tile
-        for (const [tile, tileRefs] of this.tileToSpriteMap.entries()) {
-            // Sort the references by z-index to ensure proper layering (lowest z-index first)
-            const sortedRefs = [...tileRefs].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
-
-            // Clear any existing graphics on the tile
-            tile.clearGraphics();
-
-            // Apply each graphic in order
-            for (const { spriteSetId, spriteId, animationId, zIndex } of sortedRefs) {
-                const tileSetResource = this.tileSetResources.get(spriteSetId);
-
-                if (!tileSetResource) {
-                    this.logger.warn(`No tileset resource found for ID: ${spriteSetId}`);
-                    continue;
-                }
-
-                // Check if this tile has an animation ID
-                if (animationId && tileSetResource.animations[animationId]) {
-                    const animation = tileSetResource.animations[animationId];
-                    this.logger.debug(`Applying animation ${animationId} to tile at (${tile.x}, ${tile.y})`);
-
-                    // Make sure the animation is properly initialized
-                    animation.reset();
-
-                    // Add the animation to the tile
-                    tile.addGraphic(animation);
-
-                    // Store z-index in the tile's data property
-                    if (zIndex !== undefined) {
-                        tile.data.set('z-index', zIndex);
-                    }
-
-                    // Store animation ID in the tile's data for reference
-                    tile.data.set('animationId', animationId);
-                }
-                // Otherwise use a static sprite
-                else if (tileSetResource.sprites[spriteId]) {
-                    const sprite = tileSetResource.sprites[spriteId];
-
-                    // If we have an animationId but couldn't find the animation, log a warning
-                    if (animationId) {
-                        this.logger.warn(`Animation ${animationId} not found in tileset ${spriteSetId}, using static sprite ${spriteId} instead`);
-                    }
-
-                    tile.addGraphic(sprite);
-
-                    // Store z-index in the tile's data property
-                    if (zIndex !== undefined) {
-                        tile.data.set('z-index', zIndex);
-                    }
-                } else {
-                    this.logger.warn(`No sprite found for ID ${spriteId} in tileset ${spriteSetId}`);
-                }
-            }
-        }
-
-        this.logger.info(`Applied graphics to ${this.tileToSpriteMap.size} tiles`);
-    }
-
     private processObjectLayer(tileMap: TileMap, layer: LayerData): void {
-        if (!layer.objects || layer.objects.length === 0) {
+        if (!layer.objects || !Array.isArray(layer.objects) || layer.objects.length === 0) {
             return;
         }
 
-        // Get map properties to adjust coordinates for infinite maps
-        const originalMinX = this._mapData.properties?.originalMinX ?? 0;
-        const originalMinY = this._mapData.properties?.originalMinY ?? 0;
-        const isInfinite = this._mapData.properties?.infinite ?? false;
+        // Get the layer z-index from properties (default to 0)
+        const layerZIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : 0;
 
-        layer.objects.forEach((objData: any) => {
-            // Check if this is a tile object (has type 'sprite' and spriteId and spriteSetId)
-            if (objData.type === 'sprite' && objData.spriteId !== undefined && objData.spriteSetId) {
-                // Create a tile at the object's position
-                // Note: In Tiled, object coordinates refer to the bottom-left corner of the object,
-                // but in our system we use the top-left corner, so we need to adjust the y-coordinate
-                const adjustedY = objData.y - objData.height;
-
-                // Convert object position to tile coordinates
-                let tileX = Math.floor(objData.x / this.mapData.tileWidth);
-                let tileY = Math.floor(adjustedY / this.mapData.tileHeight);
-
-                // For infinite maps, adjust coordinates to be non-negative
-                if (isInfinite) {
-                    // Adjust coordinates based on the original map bounds
-                    tileX = tileX - Number(originalMinX);
-                    tileY = tileY - Number(originalMinY);
-                }
-
-                // Check if the position is within the map bounds
-                if (tileX >= 0 && tileX < tileMap.columns && tileY >= 0 && tileY < tileMap.rows) {
-                    const tile = tileMap.getTile(tileX, tileY);
-
-                    if (tile) {
-                        // Store the object data in the tile for interaction
-                        tile.data.set('object', objData);
-
-                        // Get existing references or create a new array
-                        const existingRefs = this.tileToSpriteMap.get(tile) || [];
-
-                        // Add the new reference with a higher z-index to ensure it renders above regular tiles
-                        const zIndex = layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : 0;
-                        existingRefs.push({
-                            spriteSetId: objData.spriteSetId,
-                            spriteId: objData.spriteId,
-                            animationId: objData.animationId,
-                            zIndex: zIndex
-                        });
-
-                        // Store the updated array
-                        this.tileToSpriteMap.set(tile, existingRefs);
-                    }
-                }
+        // Process each object in the layer
+        for (const obj of layer.objects) {
+            // Skip objects that aren't sprites
+            if (obj.type !== 'sprite' || obj.spriteId === undefined || !obj.spriteSetId) {
+                continue;
             }
-        });
+
+            // Calculate tile position in the grid
+            const tileX = Math.floor(obj.x / tileMap.tileWidth);
+            const tileY = Math.floor(obj.y / tileMap.tileHeight);
+
+            // Skip if outside map bounds
+            if (tileX < 0 || tileX >= tileMap.columns || tileY < 0 || tileY >= tileMap.rows) {
+                continue;
+            }
+
+            // Create object data
+            const objData = {
+                id: obj.id,
+                name: obj.name,
+                type: obj.type,
+                x: obj.x,
+                y: obj.y,
+                width: obj.width,
+                height: obj.height,
+                properties: obj.properties,
+                spriteId: obj.spriteId,
+                spriteSetId: obj.spriteSetId,
+                animationId: obj.animationId
+            };
+
+            // Get the tile at this position
+            const tile = tileMap.getTile(tileX, tileY);
+
+            if (tile) {
+                // Store the object data in the tile for interaction
+                tile.data.set('object', objData);
+
+                // Get existing references or create a new array
+                const existingRefs = this.tileToSpriteMap.get(tile) || [];
+
+                // Add the new reference with a z-index to ensure proper layering
+                const zIndex = obj.zIndex !== undefined ? obj.zIndex : layerZIndex;
+                existingRefs.push({
+                    spriteSetId: obj.spriteSetId,
+                    spriteId: obj.spriteId,
+                    animationId: obj.animationId,
+                    zIndex: zIndex
+                });
+
+                // Store the updated array
+                this.tileToSpriteMap.set(tile, existingRefs);
+            }
+        }
     }
 
     /**
@@ -403,60 +241,84 @@ export class MapResource implements Loadable<TileMap> {
             this.tileMap = this.createTileMap(this._mapData);
             this.data = this.tileMap;
 
-            // Initialize the tileset mapping
-            this.initializeSpriteSetMapping();
-
-            // Load external tilesets
-            await this.loadExternalSpriteSets();
+            // Load sprite sets
+            await this.loadSpriteSets();
 
             // Process layers
             this.processLayers(this.tileMap, this._mapData);
 
-            // Apply graphics to tiles
-            this.applyTileGraphics();
-
             return this.tileMap;
-        } catch (e) {
-            this.logger.error('Error loading map resource:', e);
-            throw e;
+        } catch (error) {
+            this.logger.error(`Failed to load map: ${error}`);
+            throw error;
         }
     }
 
-    isLoaded(): boolean {
-        return !!this.data;
+    /**
+     * Apply sprites to tiles based on the stored references
+     */
+    private applySpritesToTiles(): void {
+        this.tileToSpriteMap.forEach((refs, tile) => {
+            // Sort by z-index
+            const sortedRefs = [...refs].sort((a, b) => {
+                const aZ = a.zIndex ?? 0;
+                const bZ = b.zIndex ?? 0;
+                return aZ - bZ;
+            });
+
+            // Apply the bottom-most sprite to the tile
+            if (sortedRefs.length > 0) {
+                const bottomRef = sortedRefs[0];
+                const spriteSet = this.tileSetResources.get(bottomRef.spriteSetId);
+
+                if (spriteSet) {
+                    if (bottomRef.animationId && spriteSet.animations[bottomRef.animationId]) {
+                        // If an animation is specified, use that
+                        tile.addGraphic(spriteSet.animations[bottomRef.animationId].clone());
+                    } else if (spriteSet.sprites[bottomRef.spriteId]) {
+                        // Otherwise use the static sprite
+                        tile.addGraphic(spriteSet.sprites[bottomRef.spriteId].clone());
+                    }
+                }
+
+                // Apply any additional sprites with higher z-indexes as overlays
+                for (let i = 1; i < sortedRefs.length; i++) {
+                    const ref = sortedRefs[i];
+                    const spriteSet = this.tileSetResources.get(ref.spriteSetId);
+
+                    if (spriteSet) {
+                        if (ref.animationId && spriteSet.animations[ref.animationId]) {
+                            // If an animation is specified, use that
+                            tile.addGraphic(spriteSet.animations[ref.animationId].clone());
+                        } else if (spriteSet.sprites[ref.spriteId]) {
+                            // Otherwise use the static sprite
+                            tile.addGraphic(spriteSet.sprites[ref.spriteId].clone());
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /**
-     * Adds the loaded map to an Excalibur scene
+     * Add the loaded map to a scene
      */
     addToScene(scene: Scene): void {
-        if (!this.isLoaded()) {
-            this.logger.warn('Map is not loaded! Nothing will be added to the scene.');
-            return;
+        if (!this.tileMap) {
+            throw new Error('Map resource not loaded');
         }
 
-        // Add the tilemap to the scene
-        scene.add(this.data);
+        // Apply sprites to tiles based on the stored references
+        this.applySpritesToTiles();
+
+        // Add the map to the scene
+        scene.add(this.tileMap);
     }
 
     /**
-     * Debug method to log the state of the map resource
+     * Check if the resource is loaded
      */
-    debugInfo(): void {
-        this.logger.info(`MapResource Debug Info:
-            - Loaded: ${this.isLoaded()}
-            - Base Path: ${this.basePath}
-            - Filename: ${this.filename}
-            - SpriteSets: ${this.tileSetResources.size}
-            - Tile References: ${this.tileToSpriteMap.size}
-        `);
-
-        if (this.data) {
-            this.logger.info(`TileMap Info:
-                - Dimensions: ${this.data.columns}x${this.data.rows}
-                - Tile Size: ${this.data.tileWidth}x${this.data.tileHeight}
-                - Tile Count: ${this.data.tiles.length}
-            `);
-        }
+    isLoaded(): boolean {
+        return !!this.data;
     }
 } 

@@ -1,2 +1,3 @@
-export * from './MapResource.ts';
-export * from './SpriteSetResource.ts';
+export * from './MapResource';
+export * from './SpriteSetResource';
+export * from './GameProjectResource';

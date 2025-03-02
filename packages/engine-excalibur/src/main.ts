@@ -10,7 +10,7 @@ import {
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 
-import { MapResource } from '@pixelrpg/map-format-excalibur'
+import { GameProjectResource } from '@pixelrpg/map-format-excalibur'
 
 // Set up logging
 const logger = Logger.getInstance();
@@ -45,13 +45,16 @@ const engine = new Engine({
   enableCanvasTransparency: true,
 })
 
-// Define the path to the map file
+// Define the path to the game project file
 // Use absolute path from the server root to avoid path resolution issues
-const mapPath = 'assets/maps/kokiri-forest.json';
-logger.info(`Creating MapResource with path: ${mapPath}`);
-const mapResource = new MapResource(mapPath);
+const projectPath = 'assets/game-project.json';
+logger.info(`Creating GameProjectResource with path: ${projectPath}`);
+const gameProjectResource = new GameProjectResource(projectPath, {
+  preloadAllSpriteSets: true,  // Load all sprite sets
+  preloadAllMaps: false,       // Only load the initial map
+});
 
-const loader = new Loader([mapResource]);
+const loader = new Loader([gameProjectResource]);
 
 loader.on('progress', (event) => {
   // Cast event to any to access the progress property
@@ -70,10 +73,10 @@ loader.on('complete', () => {
 });
 
 loader.on('afterload', async () => {
-  logger.info('MapResource loaded successfully');
+  logger.info('GameProjectResource loaded successfully');
 
-  // Debug the map resource
-  mapResource.debugInfo();
+  // Debug the game project
+  gameProjectResource.debugInfo();
 })
 
 loader.backgroundColor = '#000000' // Black background color on play button
@@ -84,9 +87,10 @@ logger.info('Starting engine');
 await engine.start(loader)
 // const devtool = new DevTool(engine);
 
-// Get the TileMap from our resource
-const tileMap = mapResource.data;
-if (tileMap) {
+// Get the active map from our game project resource
+const activeMap = gameProjectResource.activeMap;
+if (activeMap && activeMap.data) {
+  const tileMap = activeMap.data;
   logger.info(`TileMap loaded with ${tileMap.tiles.length} tiles`);
 
   // Add click handlers to tiles
@@ -108,6 +112,30 @@ if (tileMap) {
   }
 }
 
-// Add the map to the scene
-mapResource.addToScene(engine.currentScene);
-logger.info('Map added to scene');
+// Add the active map to the scene
+if (gameProjectResource.activeMap) {
+  gameProjectResource.addToScene(engine.currentScene);
+  logger.info(`Map ${gameProjectResource.activeMap.mapData.name} added to scene`);
+}
+
+// Example of how to change maps
+/* 
+async function changeMap(mapId: string) {
+  try {
+    await gameProjectResource.changeMap(mapId);
+    
+    // Clear the current scene
+    engine.currentScene.entities.forEach(entity => {
+      if (entity !== engine.currentScene.camera) {
+        engine.currentScene.remove(entity);
+      }
+    });
+    
+    // Add the new map to the scene
+    gameProjectResource.addToScene(engine.currentScene);
+    logger.info(`Changed to map: ${mapId}`);
+  } catch (error) {
+    logger.error(`Failed to change map: ${error}`);
+  }
+}
+*/
