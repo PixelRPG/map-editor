@@ -1,0 +1,331 @@
+{
+  "version": "1.0.0",
+  "id": "oot2d_water",
+  "name": "OoT2D Water",
+  "images": [
+    {
+      "id": "main",
+      "path": "water.png",
+      "spriteWidth": 16,
+      "spriteHeight": 16,
+      "columns": 6,
+      "rows": 5,
+      "margin": 0,
+      "spacing": 0
+    }
+  ],
+  "sprites": [
+    {
+      "id": 0,
+      "col": 0,
+      "row": 0
+    },
+    {
+      "id": 1,
+      "col": 1,
+      "row": 0
+    },
+    {
+      "id": 2,
+      "col": 2,
+      "row": 0
+    },
+    {
+      "id": 3,
+      "col": 3,
+      "row": 0
+    },
+    {
+      "id": 4,
+      "col": 4,
+      "row": 0
+    },
+    {
+      "id": 5,
+      "col": 5,
+      "row": 0
+    },
+    {
+      "id": 6,
+      "col": 0,
+      "row": 1
+    },
+    {
+      "id": 7,
+      "col": 1,
+      "row": 1
+    },
+    {
+      "id": 8,
+      "col": 2,
+      "row": 1
+    },
+    {
+      "id": 9,
+      "col": 3,
+      "row": 1
+    },
+    {
+      "id": 10,
+      "col": 4,
+      "row": 1
+    },
+    {
+      "id": 11,
+      "col": 5,
+      "row": 1
+    },
+    {
+      "id": 12,
+      "col": 0,
+      "row": 2
+    },
+    {
+      "id": 13,
+      "col": 1,
+      "row": 2
+    },
+    {
+      "id": 14,
+      "col": 2,
+      "row": 2
+    },
+    {
+      "id": 15,
+      "col": 3,
+      "row": 2
+    },
+    {
+      "id": 16,
+      "col": 4,
+      "row": 2
+    },
+    {
+      "id": 17,
+      "col": 5,
+      "row": 2
+    },
+    {
+      "id": 18,
+      "col": 0,
+      "row": 3
+    },
+    {
+      "id": 19,
+      "col": 1,
+      "row": 3
+    },
+    {
+      "id": 20,
+      "col": 2,
+      "row": 3
+    },
+    {
+      "id": 21,
+      "col": 3,
+      "row": 3
+    },
+    {
+      "id": 22,
+      "col": 4,
+      "row": 3
+    },
+    {
+      "id": 23,
+      "col": 5,
+      "row": 3
+    },
+    {
+      "id": 24,
+      "col": 0,
+      "row": 4
+    },
+    {
+      "id": 25,
+      "col": 1,
+      "row": 4
+    },
+    {
+      "id": 26,
+      "col": 2,
+      "row": 4
+    },
+    {
+      "id": 27,
+      "col": 3,
+      "row": 4
+    },
+    {
+      "id": 28,
+      "col": 4,
+      "row": 4
+    },
+    {
+      "id": 29,
+      "col": 5,
+      "row": 4
+    }
+  ],
+  "animations": [
+    {
+      "id": "water_bottom_middle",
+      "name": "Water Animation Bottom Middle",
+      "frames": [
+        {
+          "spriteId": 0,
+          "duration": 200
+        },
+        {
+          "spriteId": 1,
+          "duration": 200
+        },
+        {
+          "spriteId": 2,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_right_middle",
+      "name": "Water Animation Right Middle",
+      "frames": [
+        {
+          "spriteId": 3,
+          "duration": 200
+        },
+        {
+          "spriteId": 4,
+          "duration": 200
+        },
+        {
+          "spriteId": 5,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_middle_top",
+      "name": "Water Animation Middle Top",
+      "frames": [
+        {
+          "spriteId": 6,
+          "duration": 200
+        },
+        {
+          "spriteId": 7,
+          "duration": 200
+        },
+        {
+          "spriteId": 8,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_middle_left",
+      "name": "Water Animation Middle Left",
+      "frames": [
+        {
+          "spriteId": 9,
+          "duration": 200
+        },
+        {
+          "spriteId": 10,
+          "duration": 200
+        },
+        {
+          "spriteId": 11,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_top_right",
+      "name": "Water Animation Top Right",
+      "frames": [
+        {
+          "spriteId": 12,
+          "duration": 200
+        },
+        {
+          "spriteId": 13,
+          "duration": 200
+        },
+        {
+          "spriteId": 14,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_top_left",
+      "name": "Water Animation Top Left",
+      "frames": [
+        {
+          "spriteId": 15,
+          "duration": 200
+        },
+        {
+          "spriteId": 16,
+          "duration": 200
+        },
+        {
+          "spriteId": 17,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_bottom_left",
+      "name": "Water Animation Bottom Left",
+      "frames": [
+        {
+          "spriteId": 18,
+          "duration": 200
+        },
+        {
+          "spriteId": 19,
+          "duration": 200
+        },
+        {
+          "spriteId": 20,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    },
+    {
+      "id": "water_bottom_right",
+      "name": "Water Animation Bottom Right",
+      "frames": [
+        {
+          "spriteId": 21,
+          "duration": 200
+        },
+        {
+          "spriteId": 22,
+          "duration": 200
+        },
+        {
+          "spriteId": 23,
+          "duration": 200
+        }
+      ],
+      "strategy": "loop"
+    }
+  ],
+  "editorData": {
+    "description": "Water tileset with animations from Ocarina of Time 2D",
+    "tags": [
+      "zelda",
+      "water",
+      "animation"
+    ]
+  }
+}

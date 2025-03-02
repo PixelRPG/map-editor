@@ -1,0 +1,38 @@
+---
+description: Integration with Excalibur.js game engine
+globs: packages/*-excalibur/**/*.ts
+---
+# Excalibur.js Integration
+
+The `-excalibur` suffix packages implement integration with the Excalibur.js game engine. These packages follow our runtime-specific implementation pattern and complement the core packages.
+
+## Package Responsibilities
+- Implement Excalibur.js-specific resource loaders
+- Convert core data structures to Excalibur.js objects (TileMap, Sprites, etc.)
+- Handle animation and rendering concerns
+- Provide utilities for working with data in Excalibur.js games
+- Depend on corresponding `-core` packages for data structures
+
+## Implementation Patterns
+- Create Resource classes that implement Excalibur's `Loadable` interface
+- Convert core data models to Excalibur's rendering primitives
+- Implement proper handling of Excalibur-specific features (layers, z-indexing, etc.)
+- Ensure efficient asset loading and management
+- Provide helper methods for common game development tasks
+
+## Development Guidelines
+When implementing Excalibur.js integration:
+- Maintain clean separation between core logic and engine-specific code
+- Follow Excalibur.js best practices and patterns
+- Ensure proper resource cleanup to prevent memory leaks
+- Optimize for performance in game rendering scenarios
+- Provide comprehensive examples and documentation
+- Test with various Excalibur.js versions for compatibility
+
+## Relationship to Core Packages
+- Each `-excalibur` package should have a corresponding `-core` package
+- Core data structures are consumed but never modified
+- Engine-specific extensions should be kept in the `-excalibur` package
+- Avoid circular dependencies between packages
+
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

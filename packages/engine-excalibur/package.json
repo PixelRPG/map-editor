@@ -1,14 +1,14 @@
 {
-    "name": "@pixelrpg/client",
+    "name": "@pixelrpg/engine-excalibur",
     "version": "0.0.1",
-    "description": "Client side of the map editor",
-    "main": "dist/main.js",
+    "description": "Excalibur engine for the pixelrpg project",
+    "main": "dist/index.html",
     "type": "module",
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
-        "preview": "yarn clear && yarn build && vite preview",
+        "start": "yarn clear && yarn build && vite preview",
         "build:esbuild": "esbuilder --outdir ./dist",
         "build:vite": "vite build",
         "build:assets": "mkdir -p ./dist && cp -r ./src/assets ./dist",
@@ -27,6 +27,8 @@
         "@excaliburjs/dev-tools": "^0.28.0",
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/common": "workspace:^",
+        "@pixelrpg/map-format-core": "workspace:^",
+        "@pixelrpg/map-format-excalibur": "workspace:^",
         "@pixelrpg/messages-webview": "workspace:^",
         "excalibur": "workspace:^",
         "vite-plugin-glsl": "^1.3.1"

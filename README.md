@@ -32,10 +32,10 @@ yarn install
 yarn workspace @pixelrpg/map-editor start
 
 # Build the client
-yarn workspace @pixelrpg/client build
+yarn workspace @pixelrpg/engine-excalibur build
 
 # Preview the client
-yarn workspace @pixelrpg/client preview
+yarn workspace @pixelrpg/engine-excalibur start
 ```
 
 ## Known Issues

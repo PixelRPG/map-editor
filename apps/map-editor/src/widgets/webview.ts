@@ -63,7 +63,7 @@ export const WebView = GObject.registerClass(
       this.initInputController()
       this.initPageLoadListener()
 
-      this.load_uri(`${INTERNAL_PROTOCOL}:///org/pixelrpg/map-editor/client/index.html`)
+      this.load_uri(`${INTERNAL_PROTOCOL}:///org/pixelrpg/map-editor/engine-excalibur/index.html`)
     }
 
     protected initMessagesService() {

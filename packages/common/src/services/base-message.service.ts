@@ -1,9 +1,9 @@
 // TODO: Move to services/
 
 import { EventDispatcher } from "../event-dispatcher.ts"
-import { isEqual } from "lodash"
+import { isEqual } from "../utils/objects.ts"
 
-import type { Message, MessageEvent, MessageFile, MessageText, EventListener, MessageEventStateChanged, EventDataStateChanged, EventDataMouseMove } from "./index.ts"
+import type { Message, MessageEvent, MessageFile, MessageText, EventListener, MessageEventStateChanged, EventDataStateChanged, EventDataMouseMove } from "../types/index.ts"
 
 export abstract class BaseMessageService<S extends object> {
 

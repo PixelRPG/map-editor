@@ -1,0 +1,41 @@
+---
+description: GJS Integration
+globs: packages/*-gjs/**/*.ts
+---
+# GJS Integration
+
+The `-gjs` suffix packages implement integration with GNOME's JavaScript runtime (GJS). These packages follow our runtime-specific implementation pattern and complement the core packages.
+
+## Package Responsibilities
+- Implement GJS-specific resource loaders
+- Convert core data structures to GJS/GTK objects for rendering
+- Handle animation and rendering concerns in GNOME applications
+- Provide utilities for working with data in GJS-based applications
+- Depend on corresponding `-core` packages for data structures
+
+## GJS Background
+GJS is GNOME's JavaScript runtime that allows creating GNOME applications using JavaScript. The GJS Guide provides best practices and documentation for developing with GJS. This integration follows the coding standards and patterns recommended by the GJS Guide.
+
+## Implementation Patterns
+- Use ts-for-gir generated TypeScript definitions for native GObject bindings
+- Implement GJS-specific resource loading mechanisms using GIO/GFile APIs
+- Create appropriate rendering components using GTK/Clutter
+- Adapt animation systems to work with GJS's event loop
+- Provide helper methods for common GNOME application tasks
+
+## Development Guidelines
+When implementing GJS integration:
+- Maintain clean separation between core logic and GJS-specific code
+- Follow GJS coding conventions and best practices
+- Consider memory management specific to GJS/GObject
+- Optimize for performance in desktop application scenarios
+- Provide comprehensive examples and documentation
+- Test with various GNOME platform versions for compatibility
+
+## Relationship to Core Packages
+- Each `-gjs` package should have a corresponding `-core` package
+- Core data structures are consumed but never modified
+- GJS-specific extensions should be kept in the `-gjs` package
+- Avoid circular dependencies between packages
+
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

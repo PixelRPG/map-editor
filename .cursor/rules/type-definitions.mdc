@@ -1,0 +1,26 @@
+---
+description: Type definitions for the map format
+globs: **/types/*.ts
+---
+# Type Definitions
+
+Type definitions are critical for our map format:
+- Use explicit interfaces for all data structures
+- Provide comprehensive JSDoc comments
+- Use strict typing to catch errors at compile time
+- Breaking changes are allowed when making changes
+
+Key type definitions:
+- MapData: The core map structure
+- LayerData: Layer information within a map
+- SpriteSetData: Sprite set information
+- SpriteData: Individual sprite information
+- AnimationData: Animation definitions
+- ColliderShape: Collision shape definitions
+
+When modifying types:
+- Update validation logic in corresponding format classes
+- Consider the impact on both core and engine-specific implementations
+- Add appropriate JSDoc comments for all public interfaces
+
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

@@ -1,0 +1,27 @@
+---
+description: General code quality standards for the project
+globs: **/*.ts
+---
+# Code Quality Standards
+
+Maintain high code quality standards across all packages:
+
+TypeScript Usage:
+- Use explicit types for all public interfaces
+- Avoid `any` type when possible
+- Use interfaces for object shapes and types for unions/primitives
+- Document all public interfaces with JSDoc comments
+
+File Organization:
+- Group related types in logical files
+- Use index files to re-export public APIs
+- Keep implementation details private when possible
+- Maintain consistent file naming conventions
+
+Error Handling:
+- Validate input data thoroughly
+- Provide meaningful error messages
+- Use proper error types for different failure scenarios
+- Log warnings for non-critical issues
+
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.
