@@ -1,0 +1,19 @@
+{
+    "name": "@pixelrpg/data-gjs",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "src/index.ts",
+    "scripts": {
+        "check": "tsc"
+    },
+    "dependencies": {
+        "@pixelrpg/data-core": "workspace:^"
+    },
+    "devDependencies": {
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.21",
+        "@girs/gio-2.0": "^2.83.3-4.0.0-beta.21",
+        "@girs/glib-2.0": "^2.83.3-4.0.0-beta.21",
+        "@girs/pango-1.0": "^1.56.0-4.0.0-beta.21",
+        "typescript": "^5.8.2"
+    }
+}
