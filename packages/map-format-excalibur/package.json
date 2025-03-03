@@ -8,10 +8,10 @@
     },
     "dependencies": {
         "@pixelrpg/map-format-core": "workspace:*",
-        "excalibur": "^0.28.1"
+        "excalibur": "workspace:^"
     },
     "devDependencies": {
-        "@types/node": "^20.11.19",
-        "typescript": "^5.3.3"
+        "@types/node": "^22.13.8",
+        "typescript": "^5.8.2"
     }
 }

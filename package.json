@@ -9,7 +9,7 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "yarn workspaces foreach -v -W -t run build",
         "check": "yarn workspaces foreach -v -W -t run check",
-        "preview:client": "yarn workspace @pixelrpg/engine-excalibur run preview",
+        "preview": "yarn workspace @pixelrpg/engine-excalibur run preview",
         "start": "yarn build:client && yarn build:map-editor && yarn workspace @pixelrpg/map-editor run start",
         "clear": "yarn workspaces foreach -v --parallel -W run clear",
         "format": "yarn prettier --write .",
@@ -18,7 +18,7 @@
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
-    "packageManager": "yarn@4.6.0",
+    "packageManager": "yarn@4.7.0",
     "workspaces": [
         "packages/*",
         "apps/*"
@@ -29,6 +29,6 @@
     },
     "devDependencies": {
         "prettier": "^3.5.1",
-        "typescript": "^5.7.3"
+        "typescript": "^5.8.2"
     }
 }
