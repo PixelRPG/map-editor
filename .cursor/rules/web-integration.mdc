@@ -1,48 +1,72 @@
 ---
 description: Integration with web browsers and standard web technologies
-globs: packages/*-web/**/*.ts
+globs: packages/*-web/**/*.ts, packages/*-web/**/*.tsx, apps/*-web/**/*.ts, apps/*-web/**/*.tsx
 ---
 # Web Integration
 
-The `-web` suffix packages implement integration with standard web technologies and browsers. These packages follow our runtime-specific implementation pattern and complement the core packages, providing browser-based implementations that are independent of specific game engines like Excalibur.
+The `-web` suffix in packages and apps indicates integration with web browser technologies. This includes both library packages (`packages/*-web`) that provide web-specific implementations and end-user applications (`apps/*-web`) that run in web browsers.
 
 ## Package Responsibilities
-- Implement web-specific resource loaders using Fetch API and other web standards
-- Convert core data structures to DOM/Canvas/WebGL objects for rendering
-- Handle animation and rendering concerns in browser environments
-- Provide utilities for working with data in web applications
-- Depend on corresponding `-core` packages for data structures
 
-## Web Technologies Background
-Web integration leverages standard browser technologies like Canvas, WebGL, and the DOM. This approach allows for lightweight implementations that don't require external game engines while still providing powerful rendering capabilities. The integration follows modern web development best practices and standards.
+Web library packages (`packages/*-web`) should:
+- Implement web-specific resource loaders
+- Convert core data structures to DOM/Canvas/WebGL objects
+- Provide browser-friendly APIs for data structures
+- Handle animation and rendering concerns in web applications
+- Depend on corresponding `-core` packages for data structures
+- Focus on reusable components and services
+
+## Application Responsibilities
+
+Web applications (`apps/*-web`) should:
+- Implement full user-facing applications using web technologies
+- Follow modern web application architecture patterns
+- Utilize the libraries from `packages/*-web` and potentially `packages/*-excalibur`
+- Provide complete browser-based experiences
+- Handle proper resource management and application lifecycle
 
 ## Implementation Patterns
-- Use standard browser APIs (Canvas 2D, WebGL, DOM) for rendering
-- Implement efficient resource loading with the Fetch API and asset management
-- Create appropriate rendering components using requestAnimationFrame
-- Develop responsive layouts that work across different screen sizes
-- Provide helper methods for common web application tasks
-- Support both module and script tag inclusion patterns
+
+### For Libraries
+- Create browser-compatible implementations using standard Web APIs
+- Use appropriate web rendering technologies (Canvas, WebGL, DOM)
+- Implement resource loading with fetch API or XML/HTTP requests
+- Provide frame-based animations using requestAnimationFrame
+- Handle browser-specific considerations and fallbacks
+
+### For Applications
+- Structure as modern web applications (SPA, PWA, etc.)
+- Use appropriate bundlers (Webpack, Vite, Parcel, etc.)
+- Follow responsive design principles
+- Implement progressive enhancement where possible
+- Consider offline capabilities with Service Workers
+- Use TypeScript for type safety
+
+## Web-Specific Considerations
+
+- Browser compatibility requirements
+- Mobile vs. desktop web experiences
+- Touch input handling
+- Performance optimization for web contexts
+- Asset loading and caching strategies
+- Network requirements and handling
 
 ## Development Guidelines
+
 When implementing web integration:
-- Maintain clean separation between core logic and web-specific code
 - Follow modern JavaScript/TypeScript best practices
-- Ensure cross-browser compatibility
-- Optimize for performance in browser environments
-- Provide comprehensive examples and documentation
-- Test with various browsers and devices for compatibility
-- Consider progressive enhancement for broader compatibility
+- Ensure cross-browser compatibility (where required)
+- Optimize asset loading for web delivery
+- Consider progressive web app capabilities
+- Document browser requirements
+- Implement responsive design principles
+- Use appropriate frameworks based on project needs
 
 ## Relationship to Core Packages
+
 - Each `-web` package should have a corresponding `-core` package
 - Core data structures are consumed but never modified
-- Web-specific extensions should be kept in the `-web` package
+- Web-specific extensions should be kept in the `-web` packages
 - Avoid circular dependencies between packages
 
-## Differences from Excalibur Integration
-- Focuses on standard web technologies rather than game engine specifics
-- Lighter weight for applications that don't need a full game engine
-- More suitable for data visualization, simple interactions, or embedded components
-- Can be used alongside other web frameworks (React, Vue, etc.)
-- Provides more direct control over rendering and browser integration
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

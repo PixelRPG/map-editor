@@ -1,0 +1,83 @@
+---
+description: Architecture standards for end-user applications
+globs: apps/**/*.ts, apps/**/*.tsx, apps/**/*.js, apps/**/*.jsx
+---
+# End-User Application Architecture
+
+The `apps/` directory contains end-user applications that utilize the libraries from the `packages/` directory. These applications are the final products that users interact with, in contrast to packages which function as libraries.
+
+## Application Types
+
+Applications are organized by platform with consistent naming patterns:
+
+- **`apps/*-gjs`**: GNOME JavaScript applications for Linux desktop
+- **`apps/*-android`**: Android mobile applications
+- **`apps/*-ios`**: iOS mobile applications
+- **`apps/*-web`**: Web browser applications
+- **`apps/cli`**: Command-line interface tools
+
+## App Structure Standards
+
+Each application should follow these structural patterns:
+
+- **Source Organization**:
+  - `src/`: Main application source code
+  - `assets/`: Static assets (images, fonts, etc.)
+  - `public/` or `resources/`: Public files for web/deployment
+  - `tests/`: Application tests
+  
+- **Entry Points**:
+  - Follow platform conventions for main entry point
+  - Document startup procedures in README.md
+  - Include clear initialization sequence
+
+- **Configuration**:
+  - Store configuration in appropriate platform-specific manner
+  - For cross-platform settings, maintain consistency in structure
+
+## Package Integration
+
+- Use the workspace dependencies for referencing packages
+- Import core packages for data structures
+- Import platform-specific packages for rendering and platform integration
+- Follow the dependency pattern:
+  ```typescript
+  // Core data structures
+  import { GameProjectData } from '@pixelrpg/data-core';
+  
+  // Platform-specific implementation
+  import { GameProjectResource } from '@pixelrpg/data-excalibur'; // For web
+  import { GameProjectResource } from '@pixelrpg/data-gjs'; // For GNOME
+  ```
+
+## Platform-Specific Guidelines
+
+### GJS Applications
+- Follow GNOME Human Interface Guidelines
+- Use GJS conventions for GTK integration
+- Properly handle resource loading and paths
+
+### Web Applications
+- Implement responsive design
+- Support modern browsers
+- Use appropriate bundlers (Webpack, Vite, etc.)
+
+### Mobile Applications
+- Follow platform design guidelines (Material for Android, HIG for iOS)
+- Implement proper lifecycle management
+- Handle offline capabilities appropriately
+
+## Development Workflow
+
+- Each app type should have its own build and testing pipeline
+- Share common configuration where possible
+- Document platform-specific setup requirements
+- Include clear instructions for development environment setup
+
+## Deployment
+
+- Document release procedures for each platform
+- Store platform-specific deployment scripts in the app directory
+- Maintain consistent versioning across platforms for the same application
+
+These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.
