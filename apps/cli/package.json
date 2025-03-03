@@ -16,7 +16,7 @@
     "dependencies": {
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/common": "workspace:^",
-        "@pixelrpg/map-format-excalibur": "workspace:^",
+        "@pixelrpg/data-excalibur": "workspace:^",
         "esbuild": "^0.25.0",
         "fast-xml-parser": "^5.0.8",
         "jsdom": "^26.0.0",

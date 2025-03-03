@@ -10,7 +10,7 @@ import {
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 
-import { GameProjectResource } from '@pixelrpg/map-format-excalibur'
+import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
 // Set up logging
 const logger = Logger.getInstance();
@@ -18,7 +18,7 @@ const logger = Logger.getInstance();
 console.debug = console.log; // Ensure debug messages are visible
 logger.info('Starting map editor application');
 
-// TODO: Use serialisation from @pixelrpg/map-format-excalibur
+// TODO: Use serialisation from @pixelrpg/data-excalibur
 // import { TilesetParser } from './parser/tileset.parser.ts'
 // import { ResourceParser } from './parser/resource.parser.ts'
 // import { MapParser } from './parser/map.parser.ts'

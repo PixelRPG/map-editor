@@ -1,4 +1,4 @@
-export * from '@pixelrpg/map-format-core';
+export * from '@pixelrpg/data-core';
 export * from './resource';
 export * from './types';
 export * from './utils';

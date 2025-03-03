@@ -3227,7 +3227,7 @@ __metadata:
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
     "@pixelrpg/common": "workspace:^"
-    "@pixelrpg/map-format-excalibur": "workspace:^"
+    "@pixelrpg/data-excalibur": "workspace:^"
     "@types/jsdom": "npm:^21.1.7"
     "@types/node": "npm:^22.13.8"
     "@types/yargs": "npm:^17.0.33"
@@ -3252,6 +3252,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pixelrpg/data-core@workspace:*, @pixelrpg/data-core@workspace:^, @pixelrpg/data-core@workspace:packages/data-core":
+  version: 0.0.0-use.local
+  resolution: "@pixelrpg/data-core@workspace:packages/data-core"
+  dependencies:
+    "@types/node": "npm:^22.13.8"
+    excalibur: "workspace:^"
+    typescript: "npm:^5.8.2"
+  languageName: unknown
+  linkType: soft
+
+"@pixelrpg/data-excalibur@workspace:^, @pixelrpg/data-excalibur@workspace:packages/data-excalibur":
+  version: 0.0.0-use.local
+  resolution: "@pixelrpg/data-excalibur@workspace:packages/data-excalibur"
+  dependencies:
+    "@pixelrpg/data-core": "workspace:*"
+    "@types/node": "npm:^22.13.8"
+    excalibur: "workspace:^"
+    typescript: "npm:^5.8.2"
+  languageName: unknown
+  linkType: soft
+
 "@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur"
@@ -3259,9 +3280,9 @@ __metadata:
     "@excaliburjs/dev-tools": "npm:^0.28.0"
     "@excaliburjs/plugin-tiled": "workspace:^"
     "@pixelrpg/common": "workspace:^"
+    "@pixelrpg/data-core": "workspace:^"
+    "@pixelrpg/data-excalibur": "workspace:^"
     "@pixelrpg/esbuild": "workspace:^"
-    "@pixelrpg/map-format-core": "workspace:^"
-    "@pixelrpg/map-format-excalibur": "workspace:^"
     "@pixelrpg/messages-webview": "workspace:^"
     "@rollup/pluginutils": "npm:^5.1.4"
     excalibur: "workspace:^"
@@ -3312,27 +3333,6 @@ __metadata:
     mime: "npm:^4.0.6"
     typescript: "npm:^5.8.2"
     vite: "npm:^6.2.0"
-  languageName: unknown
-  linkType: soft
-
-"@pixelrpg/map-format-core@workspace:*, @pixelrpg/map-format-core@workspace:^, @pixelrpg/map-format-core@workspace:packages/map-format-core":
-  version: 0.0.0-use.local
-  resolution: "@pixelrpg/map-format-core@workspace:packages/map-format-core"
-  dependencies:
-    "@types/node": "npm:^22.13.8"
-    excalibur: "workspace:^"
-    typescript: "npm:^5.8.2"
-  languageName: unknown
-  linkType: soft
-
-"@pixelrpg/map-format-excalibur@workspace:^, @pixelrpg/map-format-excalibur@workspace:packages/map-format-excalibur":
-  version: 0.0.0-use.local
-  resolution: "@pixelrpg/map-format-excalibur@workspace:packages/map-format-excalibur"
-  dependencies:
-    "@pixelrpg/map-format-core": "workspace:*"
-    "@types/node": "npm:^22.13.8"
-    excalibur: "workspace:^"
-    typescript: "npm:^5.8.2"
   languageName: unknown
   linkType: soft
 

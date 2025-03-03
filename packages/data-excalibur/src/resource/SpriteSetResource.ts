@@ -1,5 +1,5 @@
 import { ImageSource, Loadable, Sprite, Animation, SpriteSheet, AnimationStrategy, Logger, ImageFiltering, ImageWrapping } from 'excalibur';
-import { SpriteSetData, SpriteDataSet, AnimationData, SpriteSetFormat } from '@pixelrpg/map-format-core';
+import { SpriteSetData, SpriteDataSet, AnimationData, SpriteSetFormat } from '@pixelrpg/data-core';
 import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions';
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
 

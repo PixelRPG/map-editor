@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/map-format-excalibur",
+    "name": "@pixelrpg/data-excalibur",
     "version": "0.1.0",
     "type": "module",
     "main": "src/index.ts",
@@ -7,7 +7,7 @@
         "check": "tsc"
     },
     "dependencies": {
-        "@pixelrpg/map-format-core": "workspace:*",
+        "@pixelrpg/data-core": "workspace:*",
         "excalibur": "workspace:^"
     },
     "devDependencies": {
