@@ -3283,7 +3283,7 @@ __metadata:
     "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-excalibur": "workspace:^"
     "@pixelrpg/esbuild": "workspace:^"
-    "@pixelrpg/messages-webview": "workspace:^"
+    "@pixelrpg/messages-web": "workspace:^"
     "@rollup/pluginutils": "npm:^5.1.4"
     excalibur: "workspace:^"
     typescript: "npm:^5.8.2"
@@ -3346,9 +3346,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/messages-webview@workspace:^, @pixelrpg/messages-webview@workspace:packages/messages-webview":
+"@pixelrpg/messages-web@workspace:^, @pixelrpg/messages-web@workspace:packages/messages-web":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/messages-webview@workspace:packages/messages-webview"
+  resolution: "@pixelrpg/messages-web@workspace:packages/messages-web"
   dependencies:
     "@pixelrpg/common": "workspace:^"
   languageName: unknown

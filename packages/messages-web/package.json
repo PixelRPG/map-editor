@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/messages-webview",
+    "name": "@pixelrpg/messages-web",
     "version": "0.0.1",
     "description": "Messages from WebKit.WebView to communicate with GJS",
     "main": "src/index.ts",

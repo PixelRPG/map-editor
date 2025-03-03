@@ -30,7 +30,7 @@
         "@pixelrpg/common": "workspace:^",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
-        "@pixelrpg/messages-webview": "workspace:^",
+        "@pixelrpg/messages-web": "workspace:^",
         "excalibur": "workspace:^",
         "vite-plugin-glsl": "^1.3.3"
     }

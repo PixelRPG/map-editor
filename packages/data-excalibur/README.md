@@ -108,7 +108,3 @@ When contributing to this package:
 
 - **@pixelrpg/data-core**: Core data structures and type definitions
 - **excaliburjs/excalibur**: The Excalibur game engine
-
-## License
-
-[MIT](LICENSE)

@@ -1,6 +1,6 @@
-# @pixelrpg/messages-webview
+# @pixelrpg/messages-web
 
-Message service implementation for WebView runtime to communicate with GJS.
+Message service implementation for WebKit WebView runtime to communicate with GJS.
 
 ## Features
 
@@ -11,7 +11,7 @@ Message service implementation for WebView runtime to communicate with GJS.
 ## Usage
 
 ```typescript
-import { MessagesService } from '@pixelrpg/messages-webview'
+import { MessagesService } from '@pixelrpg/messages-web'
 
 const messagesService = new MessagesService('handlerName', initialState)
 ```
