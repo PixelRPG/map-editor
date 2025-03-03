@@ -1,0 +1,68 @@
+---
+description: Messaging System
+globs: packages/messages-*/**/*.ts
+---
+ # Messaging System
+
+The messaging system provides bidirectional communication between GJS and WebKit environments in our RPG Maker application. This is implemented through two complementary packages: `@pixelrpg/messages-gjs` and `@pixelrpg/messages-web`.
+
+## Architecture Overview
+
+- The native RPG Maker GUI is built with GTK + Adwaita + GJS
+- Game rendering and preview use Excalibur.js running in a WebKit widget
+- Bidirectional messaging enables synchronization between these environments
+
+## Package Responsibilities
+
+### `@pixelrpg/messages-gjs`
+- Provides messaging capabilities from the GJS side
+- Registers WebKit message handlers for receiving messages from web context
+- Sends messages to web context using JavaScript evaluation
+- Maintains type-safe message passing through TypeScript interfaces
+- Handles proper resource lifecycle in GJS environment
+
+### `@pixelrpg/messages-web`
+- Provides messaging capabilities from the web/WebKit side
+- Connects to WebKit message handlers registered by GJS
+- Exposes JavaScript functions that GJS can call from outside
+- Maintains type-safe message passing through TypeScript interfaces
+- Handles browser-specific messaging concerns
+
+## Implementation Details
+
+### Message Flow: GJS to Web
+1. GJS calls `evaluate_javascript()` on the WebKit WebView
+2. Web context exposes functions through `window.messageReceivers`
+3. Messages are serialized/deserialized using JSON
+4. Event listeners in web context respond to incoming messages
+
+### Message Flow: Web to GJS
+1. Web context uses WebKit message handlers via `window.webkit.messageHandlers`
+2. GJS connects to 'script-message-received' signal on UserContentManager
+3. Messages are serialized/deserialized using JSON
+4. Event listeners in GJS respond to incoming messages
+
+## Use Cases
+
+- Synchronize game state between editor and preview
+- Send commands from GUI to game engine
+- Report game events back to the editor
+- Transfer asset and map data between environments
+- Control rendering and camera from GTK UI
+
+## Development Guidelines
+
+When working with the messaging system:
+- Maintain consistent message formats between GJS and web
+- Document all message types with TypeScript interfaces
+- Handle errors and edge cases in both directions
+- Consider performance implications of frequent messaging
+- Implement appropriate throttling for high-frequency updates
+- Avoid circular message patterns that could cause infinite loops
+
+## Debugging
+
+- Both sides include comprehensive logging of message activity
+- Messages can be inspected in browser console (web side)
+- GJS logs can be monitored for message handling (GJS side)
+- Use the state property to maintain shared state for debugging

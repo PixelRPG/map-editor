@@ -42,6 +42,16 @@ Web applications (`apps/*-web`) should:
 - Consider offline capabilities with Service Workers
 - Use TypeScript for type safety
 
+## WebKit Integration with GJS
+
+For the RPG Maker application:
+- Excalibur.js game engine runs in a WebKit context embedded in GTK
+- Map rendering and game preview occur within the WebKit environment
+- Communication between web context and GJS is handled through message passing
+- `@pixelrpg/messages-web` package provides the web side of this communication
+- Communication uses WebKit's message handler system for bidirectional messaging
+- Game data structures from `-core` packages are converted to Excalibur.js entities
+
 ## Web-Specific Considerations
 
 - Browser compatibility requirements
@@ -68,5 +78,3 @@ When implementing web integration:
 - Core data structures are consumed but never modified
 - Web-specific extensions should be kept in the `-web` packages
 - Avoid circular dependencies between packages
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

@@ -6,6 +6,8 @@ Core data structures and type definitions for the PixelRPG project, platform-ind
 
 This package provides the foundation for all data formats used in the PixelRPG project. It contains runtime-agnostic implementations of data structures, interfaces, and utilities that can be used across different environments and rendering engines.
 
+As part of the RPG Maker application architecture, this package defines the core data formats that are shared between the GTK-based editor (GJS) and the Excalibur.js-based game engine (WebKit).
+
 ## Key Features
 
 - **Type Definitions**: Comprehensive TypeScript interfaces for all data structures
@@ -58,6 +60,16 @@ if (isValid) {
 }
 ```
 
+## Role in RPG Maker Architecture
+
+In the RPG Maker application:
+- Defines the data structures used by both the editor and game engine
+- Provides a shared contract between different runtime environments
+- Enables consistent validation and serialization across the application
+- Serves as the foundation for runtime-specific implementations
+
+The data defined here is passed between the GJS editor interface and the WebKit-embedded Excalibur.js renderer using the messaging system implemented in `@pixelrpg/messages-gjs` and `@pixelrpg/messages-web`.
+
 ## Development
 
 ### Building the Package
@@ -83,5 +95,6 @@ When contributing to this package:
 
 ## Related Packages
 
-- **@pixelrpg/data-excalibur**: Excalibur.js-specific implementation
+- **@pixelrpg/data-excalibur**: Excalibur.js-specific implementation that renders this data
 - **@pixelrpg/data-gjs**: GNOME JavaScript runtime implementation
+- **@pixelrpg/messages-gjs** and **@pixelrpg/messages-web**: Communication system for transferring this data

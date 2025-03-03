@@ -1,17 +1,24 @@
 import { Loadable, Scene, TileMap, Vector, Tile, Logger } from 'excalibur';
-import { MapData, LayerData, MapFormat } from '@pixelrpg/data-core';
+import {
+    MapData,
+    LayerData,
+    MapFormat,
+    ResourceProvider,
+    MapResourceOptions
+} from '@pixelrpg/data-core';
 import { SpriteSetResource } from './SpriteSetResource.ts';
-import { MapResourceOptions } from '../types/MapResourceOptions.ts';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils/index.ts';
+import { extractDirectoryPath, getFilename, joinPaths } from '@pixelrpg/data-core';
+import { fileUtils } from '../utils';
 
 /**
  * Resource class for loading custom Map format into Excalibur
  */
-export class MapResource implements Loadable<TileMap> {
+export class MapResource implements Loadable<TileMap>, ResourceProvider<MapData, TileMap> {
     data!: TileMap;
     private readonly headless: boolean = false;
     private readonly basePath: string = '';
     private readonly filename: string = '';
+
     private tileSetResources: Map<string, SpriteSetResource> = new Map();
     private _mapData!: MapData;
 
@@ -26,11 +33,42 @@ export class MapResource implements Loadable<TileMap> {
         return this._mapData;
     }
 
-    constructor(path: string, options?: MapResourceOptions) {
+    constructor(private readonly path: string, options?: MapResourceOptions) {
         this.headless = options?.headless ?? this.headless;
         this.basePath = extractDirectoryPath(path);
         this.filename = getFilename(path);
         this.logger.debug(`MapResource created with path: ${path}`);
+    }
+
+    /**
+     * Static factory method to create a MapResource from a file
+     * @param path Path to the map file
+     * @param options Options for the map resource
+     * @returns Promise resolving to a MapResource
+     */
+    static async fromFile(path: string, options?: MapResourceOptions): Promise<MapResource> {
+        return new MapResource(path, options);
+    }
+
+    /**
+     * Static factory method to create a MapResource from data
+     * @param data The map data
+     * @param options Options for the map resource
+     * @returns Promise resolving to a MapResource
+     */
+    static async fromData(data: MapData, options?: MapResourceOptions): Promise<MapResource> {
+        // Create a resource with a dummy path
+        const dummyPath = 'memory://map.json';
+        const resource = new MapResource(dummyPath, {
+            ...options,
+            headless: true // Use headless mode for memory-based resources
+        });
+
+        // Set the map data directly
+        resource._mapData = data;
+        resource._isLoaded = true;
+
+        return resource;
     }
 
     /**
@@ -48,20 +86,12 @@ export class MapResource implements Loadable<TileMap> {
         for (const spriteSetRef of spriteSetRefs) {
             try {
                 const fullPath = joinPaths(this.basePath, spriteSetRef.path);
-                const resource = new SpriteSetResource(fullPath, {
-                    headless: this.headless
-                });
-                await resource.load();
-
-                this.tileSetResources.set(spriteSetRef.id, resource);
-                this.logger.debug(`Loaded sprite set: ${spriteSetRef.id} from ${fullPath}`);
+                const spriteSetResource = await SpriteSetResource.fromFile(fullPath, { headless: this.headless });
+                this.tileSetResources.set(spriteSetRef.id, spriteSetResource);
             } catch (error) {
-                this.logger.error(`Failed to load sprite set ${spriteSetRef.id}: ${error}`);
-                throw error;
+                this.logger.error(`Failed to load sprite set: ${spriteSetRef.path}`, error);
             }
         }
-
-        this.logger.debug(`Loaded ${this.tileSetResources.size} sprite sets`);
     }
 
     /**
@@ -224,34 +254,46 @@ export class MapResource implements Loadable<TileMap> {
     }
 
     /**
-     * Load the map resource
+     * Load the map resource for Excalibur (implements Loadable interface)
      */
     async load(): Promise<TileMap> {
         try {
-            // Load the map data
-            const mapDataPath = joinPaths(this.basePath, this.filename);
-            const response = await fetch(mapDataPath);
-            if (!response.ok) {
-                throw new Error(`Failed to load map data: ${response.statusText}`);
+            if (this._isLoaded && this.tileMap) {
+                return this.tileMap;
             }
 
-            this._mapData = await response.json();
+            // Load map data from file if not already loaded
+            if (!this._mapData) {
+                // Use the fileUtils to load the JSON file
+                this._mapData = await fileUtils.loadJsonFile<MapData>(this.path);
 
-            // Create the tile map
-            this.tileMap = this.createTileMap(this._mapData);
-            this.data = this.tileMap;
+                // Validate the map data
+                if (!MapFormat.validate(this._mapData)) {
+                    throw new Error('Invalid map data format');
+                }
+            }
 
             // Load sprite sets
             await this.loadSpriteSets();
 
-            // Process layers
-            this.processLayers(this.tileMap, this._mapData);
+            // Create the tile map
+            this.tileMap = this.createTileMap(this._mapData);
 
+            this._isLoaded = true;
             return this.tileMap;
         } catch (error) {
-            this.logger.error(`Failed to load map: ${error}`);
+            this.logger.error('Error loading map:', error);
             throw error;
         }
+    }
+
+    /**
+     * Load implementation for ResourceProvider interface
+     * Acts as an adapter between Excalibur's Loadable and our ResourceProvider
+     */
+    async loadResource(): Promise<MapData> {
+        await this.load();
+        return this._mapData;
     }
 
     /**
@@ -319,6 +361,35 @@ export class MapResource implements Loadable<TileMap> {
      * Check if the resource is loaded
      */
     isLoaded(): boolean {
-        return !!this.data;
+        return this._isLoaded;
     }
+
+    /**
+     * Implements ResourceProvider.getData() - returns the map data
+     */
+    getData(): MapData {
+        return this._mapData;
+    }
+
+    /**
+     * Save the map data to a file
+     * @param path Optional path to save to (defaults to the original path)
+     */
+    async saveToFile(path?: string): Promise<boolean> {
+        const savePath = path || this.path;
+        if (!savePath) {
+            throw new Error('No file path specified for saving map');
+        }
+
+        try {
+            const result = await fileUtils.saveJsonFile(savePath, this._mapData);
+            return result.success;
+        } catch (error) {
+            console.error('Error saving map data:', error);
+            return false;
+        }
+    }
+
+    // Add private _isLoaded property
+    private _isLoaded: boolean = false;
 } 

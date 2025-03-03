@@ -57,6 +57,15 @@ When implementing GJS integration:
 - Consider performance implications of GJS runtime
 - Use appropriate GJS versions and features based on target GNOME versions
 
+## WebKit Integration
+
+For the RPG Maker application:
+- GTK WebKit widget is used to embed browser-based game engine components
+- Rendering of game maps occurs in the WebKit context
+- Communication between GJS and WebKit is handled via specialized message services
+- Use `@pixelrpg/messages-gjs` for the GJS side of communication
+- The GJS application can control and interact with Excalibur.js running in WebKit
+
 ## Relationship to Core Packages
 
 - Each `-gjs` package should have a corresponding `-core` package

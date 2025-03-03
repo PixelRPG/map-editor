@@ -95,14 +95,4 @@ export interface ObjectData {
      * Only used when type='sprite'
      */
     animationId?: string;
-
-    /**
-     * @deprecated Use spriteId instead
-     */
-    tileId?: number;
-
-    /**
-     * @deprecated Use spriteSetId instead
-     */
-    tileSetId?: string;
 } 

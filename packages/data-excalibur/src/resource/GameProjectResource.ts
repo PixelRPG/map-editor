@@ -1,14 +1,18 @@
 import { Loadable, Logger, Scene } from 'excalibur';
-import { GameProjectData, GameProjectFormat } from '@pixelrpg/data-core';
-import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions';
+import {
+    GameProjectData,
+    GameProjectFormat,
+    ResourceProvider,
+    GameProjectResourceOptions
+} from '@pixelrpg/data-core';
 import { MapResource } from './MapResource';
 import { SpriteSetResource } from './SpriteSetResource';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
+import { extractDirectoryPath, getFilename, joinPaths } from '@pixelrpg/data-core';
 
 /**
  * Resource class for loading a complete game project into Excalibur
  */
-export class GameProjectResource implements Loadable<GameProjectData> {
+export class GameProjectResource implements Loadable<GameProjectData>, ResourceProvider<GameProjectData> {
     /**
      * The loaded game project data
      */
@@ -29,7 +33,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      */
     private mapResources: Map<string, MapResource> = new Map();
     private spriteSetResources: Map<string, SpriteSetResource> = new Map();
-    private gameProjectData!: GameProjectData;
+    private _gameProjectData!: GameProjectData;
 
     /**
      * Flag to indicate if the resource is loaded
@@ -45,6 +49,39 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      * Logger for debugging
      */
     private logger = Logger.getInstance();
+
+    /**
+     * Static factory method to create a GameProjectResource from a file
+     * @param path Path to the game project file
+     * @param options Options for the game project resource
+     * @returns Promise resolving to a GameProjectResource
+     */
+    static async fromFile(path: string, options?: GameProjectResourceOptions): Promise<GameProjectResource> {
+        const resource = new GameProjectResource(path, options);
+        await resource.load();
+        return resource;
+    }
+
+    /**
+     * Static factory method to create a GameProjectResource from data
+     * @param data The game project data
+     * @param options Options for the game project resource
+     * @returns Promise resolving to a GameProjectResource
+     */
+    static async fromData(data: GameProjectData, options?: GameProjectResourceOptions): Promise<GameProjectResource> {
+        // Create a resource with a dummy path
+        const dummyPath = 'memory://game-project.json';
+        const resource = new GameProjectResource(dummyPath, {
+            ...options,
+            headless: true // Use headless mode for memory-based resources
+        });
+
+        // Set the game project data directly
+        resource._gameProjectData = data;
+        resource._isLoaded = true;
+
+        return resource;
+    }
 
     /**
      * Get the currently active map
@@ -83,13 +120,11 @@ export class GameProjectResource implements Loadable<GameProjectData> {
 
     constructor(path: string, options?: GameProjectResourceOptions) {
         this.headless = options?.headless ?? this.headless;
-        this.basePath = options?.basePath ?? extractDirectoryPath(path);
-        this.filename = getFilename(path);
         this.preloadAllMaps = options?.preloadAllMaps ?? this.preloadAllMaps;
         this.preloadAllSpriteSets = options?.preloadAllSpriteSets ?? this.preloadAllSpriteSets;
         this.customInitialMapId = options?.initialMapId;
-
-        this.logger.debug(`GameProjectResource created with path: ${path}`);
+        this.basePath = extractDirectoryPath(path);
+        this.filename = getFilename(path);
     }
 
     /**
@@ -117,13 +152,13 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      * Loads all sprite sets in the game project
      */
     private async loadSpriteSets(): Promise<void> {
-        if (!this.gameProjectData.spriteSets || this.gameProjectData.spriteSets.length === 0) {
+        if (!this._gameProjectData.spriteSets || this._gameProjectData.spriteSets.length === 0) {
             this.logger.warn('No sprite sets found in game project');
             return;
         }
 
         // Process each sprite set
-        for (const spriteSet of this.gameProjectData.spriteSets) {
+        for (const spriteSet of this._gameProjectData.spriteSets) {
             try {
                 // Handle external sprite set reference
                 const fullPath = joinPaths(this.basePath, spriteSet.path);
@@ -147,7 +182,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      * Loads a single map by ID
      */
     private async loadMap(mapId: string): Promise<MapResource> {
-        const mapEntry = this.gameProjectData.maps.find(map => map.id === mapId);
+        const mapEntry = this._gameProjectData.maps.find(map => map.id === mapId);
         if (!mapEntry) {
             throw new Error(`Map with ID ${mapId} not found in game project`);
         }
@@ -188,50 +223,79 @@ export class GameProjectResource implements Loadable<GameProjectData> {
     }
 
     /**
-     * Loads the game project
+     * Load the game project data
      */
     async load(): Promise<GameProjectData> {
         try {
-            // Load the game project data
-            const fullPath = joinPaths(this.basePath, this.filename);
-            this.gameProjectData = await this.loadGameProjectData(fullPath);
-            this.data = this.gameProjectData;
+            if (this._isLoaded) {
+                return this._gameProjectData;
+            }
 
-            // Determine initial map ID
-            const initialMapId = this.customInitialMapId || this.gameProjectData.startup.initialMapId;
+            // Load game project data from file if not already loaded
+            if (!this._gameProjectData) {
+                this._gameProjectData = await this.loadGameProjectData(joinPaths(this.basePath, this.filename));
+            }
 
-            // Load sprite sets if configured to preload
+            // Load sprite sets if configured to do so
             if (this.preloadAllSpriteSets) {
                 await this.loadSpriteSets();
             }
 
-            // Load the initial map
-            await this.changeMap(initialMapId);
+            // Load initial map
+            const initialMapId = this.customInitialMapId || this._gameProjectData.startup?.initialMapId;
+            if (initialMapId) {
+                try {
+                    const initialMap = await this.loadMap(initialMapId);
+                    this._activeMapId = initialMapId;
+                } catch (error) {
+                    this.logger.error(`Failed to load initial map: ${initialMapId}`, error);
+                }
+            }
 
-            // Load all maps if configured to preload
+            // Load all maps if configured to do so
             if (this.preloadAllMaps) {
-                for (const map of this.gameProjectData.maps) {
-                    if (map.id !== initialMapId) {
-                        await this.loadMap(map.id);
+                for (const mapRef of this._gameProjectData.maps || []) {
+                    try {
+                        await this.loadMap(mapRef.id);
+                    } catch (error) {
+                        this.logger.error(`Failed to preload map: ${mapRef.id}`, error);
                     }
                 }
             }
 
+            // Set the data property for Excalibur compatibility
+            this.data = this._gameProjectData;
             this._isLoaded = true;
-            this.logger.info(`Game project "${this.gameProjectData.name}" loaded successfully`);
 
-            return this.gameProjectData;
+            return this._gameProjectData;
         } catch (error) {
-            this.logger.error(`Failed to load game project: ${error}`);
+            this.logger.error('Error loading game project:', error);
             throw error;
         }
     }
 
     /**
-     * Checks if the resource is loaded
+     * Whether the resource is loaded
      */
     isLoaded(): boolean {
         return this._isLoaded;
+    }
+
+    /**
+     * Get the resource data
+     */
+    getData(): GameProjectData {
+        return this._gameProjectData;
+    }
+
+    /**
+     * Save the game project data to a file
+     * @param path Optional path to save to (defaults to the original path)
+     */
+    async saveToFile(path?: string): Promise<boolean> {
+        // Implementation would depend on the platform
+        console.warn('saveToFile not implemented for Excalibur GameProjectResource');
+        return false;
     }
 
     /**
@@ -268,10 +332,10 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      */
     debugInfo(): void {
         this.logger.debug('====== Game Project Debug Info ======');
-        this.logger.debug(`Project: ${this.gameProjectData.name} (ID: ${this.gameProjectData.id})`);
-        this.logger.debug(`Version: ${this.gameProjectData.version}`);
-        this.logger.debug(`Maps: ${this.mapResources.size}/${this.gameProjectData.maps.length} loaded`);
-        this.logger.debug(`Sprite Sets: ${this.spriteSetResources.size}/${this.gameProjectData.spriteSets.length} loaded`);
+        this.logger.debug(`Project: ${this._gameProjectData.name} (ID: ${this._gameProjectData.id})`);
+        this.logger.debug(`Version: ${this._gameProjectData.version}`);
+        this.logger.debug(`Maps: ${this.mapResources.size}/${this._gameProjectData.maps.length} loaded`);
+        this.logger.debug(`Sprite Sets: ${this.spriteSetResources.size}/${this._gameProjectData.spriteSets.length} loaded`);
         this.logger.debug(`Active Map: ${this._activeMapId}`);
         this.logger.debug('======================================');
     }

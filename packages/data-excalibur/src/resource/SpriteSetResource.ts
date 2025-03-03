@@ -1,12 +1,19 @@
 import { ImageSource, Loadable, Sprite, Animation, SpriteSheet, AnimationStrategy, Logger, ImageFiltering, ImageWrapping } from 'excalibur';
-import { SpriteSetData, SpriteDataSet, AnimationData, SpriteSetFormat } from '@pixelrpg/data-core';
-import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
+import {
+    SpriteSetData,
+    SpriteDataSet,
+    AnimationData,
+    SpriteSetFormat,
+    ResourceProvider,
+    SpriteSetResourceOptions
+} from '@pixelrpg/data-core';
+import { extractDirectoryPath, getFilename, joinPaths } from '@pixelrpg/data-core';
+import { loadJsonFile } from '../utils/fileUtils';
 
 /**
  * Resource class for loading custom SpriteSet format into Excalibur
  */
-export class SpriteSetResource implements Loadable<SpriteSetData> {
+export class SpriteSetResource implements Loadable<SpriteSetData>, ResourceProvider<SpriteSetData> {
     /**
      * The loaded sprite set data
      */
@@ -23,7 +30,8 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
      * Resource data
      */
     private imageLoaders: Map<string, ImageSource> = new Map();
-    private spriteSetData!: SpriteSetData;
+    private _spriteSetData!: SpriteSetData;
+    private _isLoaded: boolean = false;
 
     /**
      * Processed sprite data
@@ -35,10 +43,43 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
     // Logger for debugging
     private logger = Logger.getInstance();
 
-    constructor(path: string, options?: SpriteSetResourceOptions) {
+    constructor(private readonly path: string, options?: SpriteSetResourceOptions) {
         this.headless = options?.headless ?? this.headless;
         this.basePath = extractDirectoryPath(path);
         this.filename = getFilename(path);
+    }
+
+    /**
+     * Static factory method to create a SpriteSetResource from a file
+     * @param path Path to the sprite set file
+     * @param options Options for the sprite set resource
+     * @returns Promise resolving to a SpriteSetResource
+     */
+    static async fromFile(path: string, options?: SpriteSetResourceOptions): Promise<SpriteSetResource> {
+        const resource = new SpriteSetResource(path, options);
+        await resource.load();
+        return resource;
+    }
+
+    /**
+     * Static factory method to create a SpriteSetResource from data
+     * @param data The sprite set data
+     * @param options Options for the sprite set resource
+     * @returns Promise resolving to a SpriteSetResource
+     */
+    static async fromData(data: SpriteSetData, options?: SpriteSetResourceOptions): Promise<SpriteSetResource> {
+        // Create a resource with a dummy path
+        const dummyPath = 'memory://sprite-set.json';
+        const resource = new SpriteSetResource(dummyPath, {
+            ...options,
+            headless: true // Use headless mode for memory-based resources
+        });
+
+        // Set the sprite set data directly
+        resource._spriteSetData = data;
+        resource._isLoaded = true;
+
+        return resource;
     }
 
     /**
@@ -256,74 +297,78 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
         }
     }
 
+    /**
+     * Load the sprite set data
+     */
     async load(): Promise<SpriteSetData> {
         try {
-            // 1. Fetch the sprite set data from the provided path
-            const fullPath = joinPaths(this.basePath, this.filename);
-            this.logger.debug(`Loading sprite set from: ${fullPath}`);
-
-            const response = await fetch(fullPath);
-            if (!response.ok) {
-                throw new Error(`Failed to load sprite set from ${fullPath}: ${response.statusText}`);
+            if (this._isLoaded) {
+                return this._spriteSetData;
             }
 
-            // 2. Parse the sprite set data
-            this.spriteSetData = await response.json() as SpriteSetData;
-            this.logger.debug(`Loaded sprite set: ${this.spriteSetData.name} (${this.spriteSetData.id})`);
-
-            // Validate the sprite set data
-            SpriteSetFormat.validate(this.spriteSetData);
-
-            // 3. In headless mode, we skip loading the actual images
-            if (!this.headless) {
+            // Load sprite set data from file if not already loaded
+            if (!this._spriteSetData) {
                 try {
-                    // Load all images
-                    this.imageLoaders = await this.loadImages(this.spriteSetData);
-                    this.logger.debug(`Loaded ${this.imageLoaders.size} images`);
+                    // Use the loadJsonFile utility instead of fetch
+                    this._spriteSetData = await loadJsonFile<SpriteSetData>(this.path);
 
-                    // Create spritesheets for each image
-                    for (const [imageId, imageLoader] of this.imageLoaders.entries()) {
-                        const spriteSheet = this.createSpriteSheet(imageLoader, imageId, this.spriteSetData);
-                        this.spriteSheets.set(imageId, spriteSheet);
-                    }
-                    this.logger.debug(`Created ${this.spriteSheets.size} spritesheets`);
-
-                    // Create sprites from the spritesheets
-                    this.sprites = this.createSprites(this.spriteSetData);
-                    this.logger.debug(`Created ${Object.keys(this.sprites).length} sprites`);
-
-                    if (Object.keys(this.sprites).length === 0) {
-                        this.logger.warn(`No sprites were created for sprite set ${this.spriteSetData.name}`);
-                    }
-
-                    // Create animations from the sprites
-                    this.animations = this.createAnimations(this.sprites, this.spriteSetData);
-                    this.logger.debug(`Created ${Object.keys(this.animations).length} animations`);
-
-                    // Initialize all animations
-                    for (const [animId, animation] of Object.entries(this.animations)) {
-                        animation.reset();
-                        this.logger.debug(`Initialized animation: ${animId}`);
+                    // Validate the sprite set data
+                    if (!SpriteSetFormat.validate(this._spriteSetData)) {
+                        throw new Error('Invalid sprite set data format');
                     }
                 } catch (error) {
-                    this.logger.error(`Error processing sprite set graphics: ${error}`);
-                    // Continue without graphics in case of error
-                    this.sprites = {};
-                    this.animations = {};
+                    this.logger.error(`Failed to load sprite set data from ${this.path}:`, error);
+                    throw error;
                 }
             }
 
-            // Store the result
-            this.data = this.spriteSetData;
+            // Load images
+            const imageLoaders = await this.loadImages(this._spriteSetData);
+            this.imageLoaders = imageLoaders;
 
-            return this.data;
-        } catch (e) {
-            this.logger.error(`Could not load sprite set: ${e}`);
-            throw e;
+            // Create spritesheets from the loaded images
+            this.spriteSheets.clear();
+            for (const [imageId, imageSource] of this.imageLoaders.entries()) {
+                const spriteSheet = this.createSpriteSheet(imageSource, imageId, this._spriteSetData);
+                this.spriteSheets.set(imageId, spriteSheet);
+            }
+
+            // Create sprites and animations
+            this.sprites = this.createSprites(this._spriteSetData);
+            this.animations = this.createAnimations(this.sprites, this._spriteSetData);
+
+            // Set the data property for Excalibur compatibility
+            this.data = this._spriteSetData;
+            this._isLoaded = true;
+
+            return this._spriteSetData;
+        } catch (error) {
+            this.logger.error('Error loading sprite set:', error);
+            throw error;
         }
     }
 
+    /**
+     * Whether the resource is loaded
+     */
     isLoaded(): boolean {
-        return !!this.data;
+        return this._isLoaded;
+    }
+
+    /**
+     * Get the resource data
+     */
+    getData(): SpriteSetData {
+        return this._spriteSetData;
+    }
+
+    /**
+     * Save the sprite set data to a file
+     * @param path Optional path to save to (defaults to the original path)
+     */
+    async saveToFile(path?: string): Promise<boolean> {
+        // Implementation would depend on the platform
+        console.warn('saveToFile not implemented for Excalibur SpriteSetResource');
+        return false;
     }
 } 

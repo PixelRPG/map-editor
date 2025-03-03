@@ -6,6 +6,8 @@ Excalibur.js-specific implementation of the PixelRPG data structures and resourc
 
 This package provides the integration layer between the core PixelRPG data structures and the [Excalibur.js](https://excaliburjs.com/) game engine. It allows seamless loading and rendering of PixelRPG game projects, maps, and sprite sets in Excalibur-based games.
 
+As part of the RPG Maker application architecture, this package handles the rendering of game maps and assets within the WebKit environment embedded in the GTK-based editor.
+
 ## Key Features
 
 - **Resource Loaders**: Implements Excalibur's `Loadable` interface for all data types
@@ -74,6 +76,17 @@ game.start(loader).then(() => {
 });
 ```
 
+## Role in RPG Maker Architecture
+
+In the RPG Maker application:
+- Powers the map rendering and game preview within a WebKit WebView
+- Receives data from the GTK-based editor via the messaging system
+- Renders maps and sprites created in the editor for real-time preview
+- Provides runtime functionality for testing game mechanics
+- Works in conjunction with the GJS editor but runs in a different context
+
+The communication between the Excalibur.js renderer and the GJS editor is facilitated by the messaging system implemented in `@pixelrpg/messages-web` and `@pixelrpg/messages-gjs`.
+
 ## Development
 
 ### Building the Package
@@ -100,6 +113,7 @@ When contributing to this package:
 ## Relationship to Core Packages
 
 - **@pixelrpg/data-core**: Provides the data structures that this package implements for Excalibur
+- **@pixelrpg/messages-web**: Enables communication with the GJS editor
 - Core data structures are consumed but never modified
 - Engine-specific extensions are kept in this package
 - Circular dependencies between packages are avoided
