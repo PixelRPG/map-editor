@@ -3252,7 +3252,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/data-core@workspace:*, @pixelrpg/data-core@workspace:^, @pixelrpg/data-core@workspace:packages/data-core":
+"@pixelrpg/data-core@workspace:^, @pixelrpg/data-core@workspace:packages/data-core":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/data-core@workspace:packages/data-core"
   dependencies:
@@ -3266,7 +3266,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/data-excalibur@workspace:packages/data-excalibur"
   dependencies:
-    "@pixelrpg/data-core": "workspace:*"
+    "@pixelrpg/data-core": "workspace:^"
     "@types/node": "npm:^22.13.8"
     excalibur: "workspace:^"
     typescript: "npm:^5.8.2"
@@ -3313,9 +3313,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/map-editor@workspace:apps/map-editor":
+"@pixelrpg/maker-gjs@workspace:apps/maker-gjs":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/map-editor@workspace:apps/map-editor"
+  resolution: "@pixelrpg/maker-gjs@workspace:apps/maker-gjs"
   dependencies:
     "@girs/adw-1": "npm:^1.7.0-4.0.0-beta.21"
     "@girs/gdk-4.0": "npm:^4.0.0-4.0.0-beta.21"

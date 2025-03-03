@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/org/pixelrpg/map-editor/engine-excalibur">
+  <gresource prefix="/org/pixelrpg/maker/engine-excalibur">
     <file alias="index.html">../../packages/engine-excalibur/dist/index.html</file>
     <file alias="assets/maps/kokiri-forest.json">../../packages/engine-excalibur/dist/assets/maps/kokiri-forest.json</file>
     <file alias="assets/spritesets/lokiri-forest.json">../../packages/engine-excalibur/dist/assets/spritesets/lokiri-forest.json</file>

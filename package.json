@@ -10,7 +10,7 @@
         "build": "yarn workspaces foreach -v -W -t run build",
         "check": "yarn workspaces foreach -v -W -t run check",
         "preview": "yarn workspace @pixelrpg/engine-excalibur run preview",
-        "start": "yarn build:client && yarn build:map-editor && yarn workspace @pixelrpg/map-editor run start",
+        "start": "yarn build:client && yarn build:maker && yarn workspace @pixelrpg/maker-gjs run start",
         "clear": "yarn workspaces foreach -v --parallel -W run clear",
         "format": "yarn prettier --write .",
         "prettier": "node .yarn/sdks/prettier/index.cjs",

@@ -7,7 +7,7 @@
         "check": "tsc"
     },
     "dependencies": {
-        "@pixelrpg/data-core": "workspace:*",
+        "@pixelrpg/data-core": "workspace:^",
         "excalibur": "workspace:^"
     },
     "devDependencies": {

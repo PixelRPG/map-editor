@@ -1,0 +1,61 @@
+---
+description: Package management standards for the project
+globs: package.json, **/package.json, *.md, **/*.md
+---
+# Package Management Standards
+
+This project uses the latest version of Yarn as its package manager.
+
+## Yarn Usage
+
+- Use Yarn for all package management operations
+- Do not mix package managers (no npm or pnpm commands)
+- Always use Yarn v3+ (Berry) features when available
+- Include yarn.lock in version control
+
+## Command Standards
+
+Always use consistent yarn commands in documentation and scripts:
+
+```bash
+# Installing dependencies
+yarn install
+
+# Adding dependencies
+yarn add <package>
+yarn add -D <package>  # dev dependency
+
+# Removing dependencies
+yarn remove <package>
+
+# Running scripts
+yarn <script-name>
+
+# Building
+yarn build
+
+# Testing
+yarn test
+
+# Workspace commands
+yarn workspace <workspace-name> <command>
+```
+
+## Workspace Configuration
+
+- Use Yarn workspaces for monorepo management
+- Define workspaces in the root package.json
+- Maintain consistent versioning across packages
+- Use workspace protocols for internal dependencies:
+  
+```json
+"dependencies": {
+    "@pixelrpg/data-core": "workspace:^"
+}
+```
+
+## Documentation Standards
+
+- All README files and documentation should reference yarn commands only
+- Update examples to use yarn when modifying documentation
+- Ensure CI/CD pipelines use yarn consistently
