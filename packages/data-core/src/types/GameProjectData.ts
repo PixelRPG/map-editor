@@ -1,4 +1,3 @@
-import { MapData } from "./MapData";
 import { Properties } from "./SpriteData";
 import { MapReference } from "./MapReference";
 import { GameStartupConfig } from "./GameStartupConfig";

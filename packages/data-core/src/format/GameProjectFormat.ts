@@ -1,5 +1,4 @@
-import { GameProjectData, MapCategory, GameSpriteSetReference } from '../types';
-import { MapReference } from '../types/MapReference';
+import { GameProjectData } from '../types';
 
 export class GameProjectFormat {
     /**

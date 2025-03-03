@@ -1,5 +1,4 @@
 import { MapData } from '../types/MapData';
-import { SpriteSetReference } from '../types/SpriteSetReference';
 
 export class MapFormat {
     /**

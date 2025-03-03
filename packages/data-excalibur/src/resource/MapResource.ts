@@ -1,8 +1,8 @@
 import { Loadable, Scene, TileMap, Vector, Tile, Logger } from 'excalibur';
-import { MapData, SpriteSetReference, LayerData, MapFormat, ObjectData, SpriteDataMap } from '@pixelrpg/data-core';
+import { MapData, LayerData, MapFormat } from '@pixelrpg/data-core';
 import { SpriteSetResource } from './SpriteSetResource.ts';
 import { MapResourceOptions } from '../types/MapResourceOptions.ts';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
+import { extractDirectoryPath, getFilename, joinPaths } from '../utils/index.ts';
 
 /**
  * Resource class for loading custom Map format into Excalibur

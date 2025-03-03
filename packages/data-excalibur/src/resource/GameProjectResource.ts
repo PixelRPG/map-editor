@@ -1,5 +1,5 @@
 import { Loadable, Logger, Scene } from 'excalibur';
-import { GameProjectData, GameProjectFormat, GameSpriteSetReference, MapReference } from '@pixelrpg/data-core';
+import { GameProjectData, GameProjectFormat } from '@pixelrpg/data-core';
 import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions';
 import { MapResource } from './MapResource';
 import { SpriteSetResource } from './SpriteSetResource';
