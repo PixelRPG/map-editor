@@ -1,0 +1,46 @@
+---
+description: CLI Implementation
+globs: apps/cli/**/*.ts
+---
+# CLI Implementation
+
+The CLI application provides development tools and utilities for working with our map format and game projects.
+
+## CLI Architecture
+- Located in `apps/cli/` directory
+- Structured with commands, actions, and types
+- Uses yargs for command-line argument parsing
+- ESM module structure with TypeScript
+
+## Command Structure
+- Commands are defined in `src/commands/` directory
+- Each command has a dedicated file exporting a Command object
+- Commands are registered in `main.ts` 
+- Follow the existing pattern for adding new commands:
+  ```typescript
+  export const myCommand: Command<MyArgs> = {
+      command: 'command-name <required> [optional]',
+      describe: 'Description of the command',
+      builder: (yargs) => { /* argument definitions */ },
+      handler: async (argv) => { /* command implementation */ }
+  }
+  ```
+
+## Action Implementation
+- Core functionality is implemented in `src/actions/` directory
+- Actions are imported by commands but can be reused
+- Keep actions focused on single responsibilities
+- Use asynchronous functions where appropriate
+- Provide detailed logging for operation status
+
+## Development Guidelines
+- Follow the project's TypeScript standards
+- Provide helpful error messages and proper error handling
+- Include detailed command descriptions and help text
+- Test commands with various input scenarios
+- Document command usage in README files
+
+## Utilities
+- Format conversion tools
+- Asset management helpers
+- Validation utilities

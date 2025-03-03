@@ -17,10 +17,11 @@ Key type definitions:
 - SpriteData: Individual sprite information
 - AnimationData: Animation definitions
 - ColliderShape: Collision shape definitions
+- GameProjectData: Project configuration that references maps and sprite sets
+- ObjectData: Game objects with position, size, and properties
 
 When modifying types:
 - Update validation logic in corresponding format classes
 - Consider the impact on both core and engine-specific implementations
 - Add appropriate JSDoc comments for all public interfaces
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.
+- Ensure proper handling of coordinate systems in all object positioning code

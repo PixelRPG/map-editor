@@ -20,6 +20,21 @@ The `-excalibur` suffix packages implement integration with the Excalibur.js gam
 - Ensure efficient asset loading and management
 - Provide helper methods for common game development tasks
 
+## Resource Hierarchy
+- GameProjectResource is the top-level resource that:
+  - Manages MapResources and SpriteSetResources
+  - Handles initial game loading and map switching
+  - Controls preloading options for maps and sprite sets
+  - Provides access to all game assets via ID-based lookup
+- MapResource loads and renders individual maps
+- SpriteSetResource loads and manages sprites and animations
+
+## Coordinate System
+- Excalibur.js uses a top-left origin coordinate system
+- All object positions must be converted from center-based to top-left origin when:
+  - Importing from other tools that use center-based coordinates
+  - Integrating with external data sources
+
 ## Development Guidelines
 When implementing Excalibur.js integration:
 - Maintain clean separation between core logic and engine-specific code

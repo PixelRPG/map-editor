@@ -46,5 +46,3 @@ When implementing web integration:
 - More suitable for data visualization, simple interactions, or embedded components
 - Can be used alongside other web frameworks (React, Vue, etc.)
 - Provides more direct control over rendering and browser integration
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

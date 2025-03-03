@@ -37,5 +37,3 @@ When implementing GJS integration:
 - Core data structures are consumed but never modified
 - GJS-specific extensions should be kept in the `-gjs` package
 - Avoid circular dependencies between packages
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

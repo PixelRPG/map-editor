@@ -37,5 +37,3 @@ When working with core packages:
 - Design with extensibility in mind for future runtime integrations
 - Keep APIs consistent across different core packages
 - Minimize external dependencies to reduce potential conflicts
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.

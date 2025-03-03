@@ -23,5 +23,3 @@ Error Handling:
 - Provide meaningful error messages
 - Use proper error types for different failure scenarios
 - Log warnings for non-critical issues
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.
