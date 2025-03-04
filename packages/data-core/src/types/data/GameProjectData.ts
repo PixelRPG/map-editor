@@ -1,8 +1,8 @@
 import { Properties } from "./SpriteData";
-import { MapReference } from "./MapReference";
-import { GameStartupConfig } from "./GameStartupConfig";
-import { MapCategory } from "./MapCategory";
-import { GameSpriteSetReference } from "./GameSpriteSetReference";
+import { MapReference } from "../reference/MapReference";
+import { GameStartupConfig } from "../GameStartupConfig";
+import { MapCategory } from "../MapCategory";
+import { GameSpriteSetReference } from "../reference/GameSpriteSetReference";
 import { GameProjectEditorData } from "./EditorData";
 
 /**

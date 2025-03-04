@@ -1,7 +1,8 @@
 import { ImageSource, Loadable, Sprite, Animation, SpriteSheet, AnimationStrategy, Logger, ImageFiltering, ImageWrapping } from 'excalibur';
 import { SpriteSetData, SpriteDataSet, AnimationData, SpriteSetFormat } from '@pixelrpg/data-core';
-import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
+import { extractDirectoryPath, getFilename, joinPaths } from '@pixelrpg/data-core';
+import { loadTextFile } from '../utils';
+import type { SpriteSetResourceOptions } from '../types'
 
 /**
  * Resource class for loading custom SpriteSet format into Excalibur
@@ -258,68 +259,29 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
 
     async load(): Promise<SpriteSetData> {
         try {
-            // 1. Fetch the sprite set data from the provided path
-            const fullPath = joinPaths(this.basePath, this.filename);
-            this.logger.debug(`Loading sprite set from: ${fullPath}`);
-
-            const response = await fetch(fullPath);
-            if (!response.ok) {
-                throw new Error(`Failed to load sprite set from ${fullPath}: ${response.statusText}`);
-            }
-
-            // 2. Parse the sprite set data
-            this.spriteSetData = await response.json() as SpriteSetData;
-            this.logger.debug(`Loaded sprite set: ${this.spriteSetData.name} (${this.spriteSetData.id})`);
-
-            // Validate the sprite set data
-            SpriteSetFormat.validate(this.spriteSetData);
-
-            // 3. In headless mode, we skip loading the actual images
-            if (!this.headless) {
-                try {
-                    // Load all images
-                    this.imageLoaders = await this.loadImages(this.spriteSetData);
-                    this.logger.debug(`Loaded ${this.imageLoaders.size} images`);
-
-                    // Create spritesheets for each image
-                    for (const [imageId, imageLoader] of this.imageLoaders.entries()) {
-                        const spriteSheet = this.createSpriteSheet(imageLoader, imageId, this.spriteSetData);
-                        this.spriteSheets.set(imageId, spriteSheet);
-                    }
-                    this.logger.debug(`Created ${this.spriteSheets.size} spritesheets`);
-
-                    // Create sprites from the spritesheets
-                    this.sprites = this.createSprites(this.spriteSetData);
-                    this.logger.debug(`Created ${Object.keys(this.sprites).length} sprites`);
-
-                    if (Object.keys(this.sprites).length === 0) {
-                        this.logger.warn(`No sprites were created for sprite set ${this.spriteSetData.name}`);
-                    }
-
-                    // Create animations from the sprites
-                    this.animations = this.createAnimations(this.sprites, this.spriteSetData);
-                    this.logger.debug(`Created ${Object.keys(this.animations).length} animations`);
-
-                    // Initialize all animations
-                    for (const [animId, animation] of Object.entries(this.animations)) {
-                        animation.reset();
-                        this.logger.debug(`Initialized animation: ${animId}`);
-                    }
-                } catch (error) {
-                    this.logger.error(`Error processing sprite set graphics: ${error}`);
-                    // Continue without graphics in case of error
-                    this.sprites = {};
-                    this.animations = {};
-                }
-            }
-
-            // Store the result
+            // Load the sprite set data
+            const spriteSetPath = joinPaths(this.basePath, this.filename);
+            const spriteSetText = await loadTextFile(spriteSetPath);
+            this.spriteSetData = SpriteSetFormat.deserialize(spriteSetText);
             this.data = this.spriteSetData;
 
-            return this.data;
-        } catch (e) {
-            this.logger.error(`Could not load sprite set: ${e}`);
-            throw e;
+            // Load all images
+            this.imageLoaders = await this.loadImages(this.spriteSetData);
+
+            // Create sprite sheets
+            for (const [imageId, imageSource] of this.imageLoaders) {
+                const spriteSheet = this.createSpriteSheet(imageSource, imageId, this.spriteSetData);
+                this.spriteSheets.set(imageId, spriteSheet);
+            }
+
+            // Create sprites and animations
+            this.sprites = this.createSprites(this.spriteSetData);
+            this.animations = this.createAnimations(this.sprites, this.spriteSetData);
+
+            return this.spriteSetData;
+        } catch (error) {
+            this.logger.error(`Failed to load sprite set: ${error}`);
+            throw error;
         }
     }
 

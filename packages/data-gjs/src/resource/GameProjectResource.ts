@@ -4,6 +4,8 @@ import { GameProjectData, MapData, SpriteSetData } from '@pixelrpg/data-core';
 import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions';
 import { MapResource } from './MapResource';
 import { SpriteSetResource } from './SpriteSetResource';
+import { loadTextFile } from '../utils';
+import { GameProjectFormat } from '@pixelrpg/data-core';
 
 /**
  * GJS implementation of a game project resource loader
@@ -23,8 +25,8 @@ export class GameProjectResource {
      * Create a new GameProjectResource
      * @param options Options for loading the game project
      */
-    constructor(options: GameProjectResourceOptions) {
-        this._path = options.path;
+    constructor(path: string, options: GameProjectResourceOptions) {
+        this._path = path;
 
         if (options.baseDir) {
             if (typeof options.baseDir === 'string') {
@@ -54,36 +56,12 @@ export class GameProjectResource {
         }
 
         try {
-            let file: Gio.File;
-
-            if (this._useGResource) {
-                // Load from GResource
-                const resourcePath = `${this._resourcePrefix}/${this._path}`;
-                file = Gio.File.new_for_uri(`resource://${resourcePath}`);
-            } else {
-                // Load from filesystem
-                file = Gio.File.new_for_path(this._path);
-            }
-
-            const [success, contents] = await new Promise<[boolean, Uint8Array]>((resolve) => {
-                file.load_contents_async(null, (_, result) => {
-                    try {
-                        const [success, contents] = file.load_contents_finish(result);
-                        resolve([success, contents]);
-                    } catch (error) {
-                        console.error(`Error loading game project file: ${error}`);
-                        resolve([false, new Uint8Array()]);
-                    }
-                });
-            });
-
-            if (!success) {
-                throw new Error(`Failed to load game project file: ${this._path}`);
-            }
-
-            const decoder = new TextDecoder('utf-8');
-            const jsonString = decoder.decode(contents);
-            this._data = JSON.parse(jsonString) as GameProjectData;
+            const projectText = await loadTextFile(
+                this._path,
+                this._useGResource,
+                this._resourcePrefix
+            );
+            this._data = GameProjectFormat.deserialize(projectText);
 
             // Preload resources if requested
             if (this._preloadResources) {
@@ -111,7 +89,7 @@ export class GameProjectResource {
         if (this._data.maps) {
             for (const mapRef of this._data.maps) {
                 const mapPath = this.resolvePath(mapRef.path);
-                const mapResource = new MapResource({ path: mapPath });
+                const mapResource = new MapResource(mapPath);
                 this._maps.set(mapRef.id, mapResource);
                 loadPromises.push(mapResource.load());
             }
@@ -121,7 +99,7 @@ export class GameProjectResource {
         if (this._data.spriteSets) {
             for (const spriteSetRef of this._data.spriteSets) {
                 const spriteSetPath = this.resolvePath(spriteSetRef.path);
-                const spriteSetResource = new SpriteSetResource({ path: spriteSetPath });
+                const spriteSetResource = new SpriteSetResource(spriteSetPath);
                 this._spriteSets.set(spriteSetRef.id, spriteSetResource);
                 loadPromises.push(spriteSetResource.load());
             }
@@ -174,7 +152,7 @@ export class GameProjectResource {
 
         // Load the map
         const mapPath = this.resolvePath(mapRef.path);
-        const mapResource = new MapResource({ path: mapPath });
+        const mapResource = new MapResource(mapPath);
         this._maps.set(id, mapResource);
 
         return await mapResource.load();
@@ -207,7 +185,7 @@ export class GameProjectResource {
 
         // Load the sprite set
         const spriteSetPath = this.resolvePath(spriteSetRef.path);
-        const spriteSetResource = new SpriteSetResource({ path: spriteSetPath });
+        const spriteSetResource = new SpriteSetResource(spriteSetPath);
         this._spriteSets.set(id, spriteSetResource);
 
         return await spriteSetResource.load();

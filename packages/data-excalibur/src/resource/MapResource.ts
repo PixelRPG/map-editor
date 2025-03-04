@@ -1,8 +1,9 @@
 import { Loadable, Scene, TileMap, Vector, Tile, Logger } from 'excalibur';
 import { MapData, LayerData, MapFormat } from '@pixelrpg/data-core';
 import { SpriteSetResource } from './SpriteSetResource.ts';
-import { MapResourceOptions } from '../types/MapResourceOptions.ts';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils/index.ts';
+import { extractDirectoryPath, getFilename, joinPaths } from '@pixelrpg/data-core';
+import { loadTextFile } from '../utils';
+import type { MapResourceOptions } from '../types'
 
 /**
  * Resource class for loading custom Map format into Excalibur
@@ -230,12 +231,8 @@ export class MapResource implements Loadable<TileMap> {
         try {
             // Load the map data
             const mapDataPath = joinPaths(this.basePath, this.filename);
-            const response = await fetch(mapDataPath);
-            if (!response.ok) {
-                throw new Error(`Failed to load map data: ${response.statusText}`);
-            }
-
-            this._mapData = await response.json();
+            const mapDataText = await loadTextFile(mapDataPath);
+            this._mapData = MapFormat.deserialize(mapDataText);
 
             // Create the tile map
             this.tileMap = this.createTileMap(this._mapData);

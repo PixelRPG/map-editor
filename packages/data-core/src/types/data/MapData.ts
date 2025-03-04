@@ -1,6 +1,6 @@
 import { LayerData } from "./LayerData";
 import { Properties } from "./SpriteData";
-import { SpriteSetReference } from "./SpriteSetReference";
+import { SpriteSetReference } from "../reference/SpriteSetReference";
 
 /**
  * Represents the core data structure for a tile-based map

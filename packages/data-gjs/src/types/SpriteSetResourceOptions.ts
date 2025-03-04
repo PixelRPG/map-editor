@@ -1,14 +1,8 @@
+import { ResourceOptions } from './ResourceOptions';
+
 /**
  * Options for loading a sprite set resource in GJS
  */
-export interface SpriteSetResourceOptions {
-    /**
-     * Path to the sprite set file
-     */
-    path: string;
-
-    /**
-     * Optional scale factor for the sprite set
-     */
+export interface SpriteSetResourceOptions extends ResourceOptions {
     scale?: number;
 } 

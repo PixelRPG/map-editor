@@ -1,4 +1,4 @@
-import { GameProjectData } from '../types';
+import type { GameProjectData } from '../types';
 
 export class GameProjectFormat {
     /**

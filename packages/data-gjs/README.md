@@ -102,17 +102,13 @@ const mapJson = resourceHelper.loadTextFile('/org/pixelrpg/game/maps/map1.json')
 ### File Utilities
 
 ```typescript
-import { loadTextFile, saveTextFile, getUserConfigDir } from '@pixelrpg/data-gjs';
+import { loadTextFile, saveTextFile } from '@pixelrpg/data-gjs';
 
 // Load a text file
 const content = await loadTextFile('/path/to/file.json');
 
 // Save a text file
 await saveTextFile('/path/to/output.json', '{"name": "Test"}');
-
-// Get user config directory
-const configDir = getUserConfigDir('my-game');
-console.log(`Config directory: ${configDir}`);
 ```
 
 ## GJS Application Integration

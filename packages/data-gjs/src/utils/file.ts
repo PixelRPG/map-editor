@@ -46,6 +46,11 @@ export async function loadTextFile(
     return decoder.decode(contents);
 }
 
+export async function loadJsonFile<T>(path: string, useGResource = false, resourcePrefix = '/org/pixelrpg/game'): Promise<T> {
+    const content = await loadTextFile(path, useGResource, resourcePrefix);
+    return JSON.parse(content) as T;
+}
+
 /**
  * Save a text file to the filesystem
  * @param path Path to save the file
@@ -77,44 +82,7 @@ export async function saveTextFile(path: string, content: string): Promise<void>
     });
 }
 
-/**
- * Get the user's config directory for the application
- * @param appName Application name
- * @returns Path to the config directory
- */
-export function getUserConfigDir(appName: string): string {
-    const configDir = GLib.build_filenamev([GLib.get_user_config_dir(), appName]);
-
-    // Create the directory if it doesn't exist
-    const dir = Gio.File.new_for_path(configDir);
-    if (!dir.query_exists(null)) {
-        try {
-            dir.make_directory_with_parents(null);
-        } catch (error) {
-            console.error(`Error creating config directory: ${error}`);
-        }
-    }
-
-    return configDir;
+export async function saveJsonFile<T>(path: string, data: T): Promise<void> {
+    const content = JSON.stringify(data, null, 2);
+    await saveTextFile(path, content);
 }
-
-/**
- * Get the user's data directory for the application
- * @param appName Application name
- * @returns Path to the data directory
- */
-export function getUserDataDir(appName: string): string {
-    const dataDir = GLib.build_filenamev([GLib.get_user_data_dir(), appName]);
-
-    // Create the directory if it doesn't exist
-    const dir = Gio.File.new_for_path(dataDir);
-    if (!dir.query_exists(null)) {
-        try {
-            dir.make_directory_with_parents(null);
-        } catch (error) {
-            console.error(`Error creating data directory: ${error}`);
-        }
-    }
-
-    return dataDir;
-} 

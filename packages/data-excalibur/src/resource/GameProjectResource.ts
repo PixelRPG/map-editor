@@ -1,9 +1,10 @@
-import { Loadable, Logger, Scene } from 'excalibur';
-import { GameProjectData, GameProjectFormat } from '@pixelrpg/data-core';
-import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions';
+import { Logger, Scene } from 'excalibur';
+import { GameProjectData, GameProjectFormat, Loadable } from '@pixelrpg/data-core';
 import { MapResource } from './MapResource';
 import { SpriteSetResource } from './SpriteSetResource';
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils';
+import { extractDirectoryPath, getFilename, joinPaths } from '@pixelrpg/data-core';
+import { loadTextFile } from '../utils';
+import type { GameProjectResourceOptions } from '../types'
 
 /**
  * Resource class for loading a complete game project into Excalibur
@@ -18,7 +19,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      * Configuration options
      */
     private readonly headless: boolean = false;
-    private readonly basePath: string = '';
+    private readonly baseDir: string = '';
     private readonly filename: string = '';
     private readonly preloadAllMaps: boolean = false;
     private readonly preloadAllSpriteSets: boolean = true;
@@ -83,7 +84,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
 
     constructor(path: string, options?: GameProjectResourceOptions) {
         this.headless = options?.headless ?? this.headless;
-        this.basePath = options?.basePath ?? extractDirectoryPath(path);
+        this.baseDir = options?.baseDir ?? extractDirectoryPath(path);
         this.filename = getFilename(path);
         this.preloadAllMaps = options?.preloadAllMaps ?? this.preloadAllMaps;
         this.preloadAllSpriteSets = options?.preloadAllSpriteSets ?? this.preloadAllSpriteSets;
@@ -97,12 +98,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
      */
     private async loadGameProjectData(path: string): Promise<GameProjectData> {
         try {
-            const response = await fetch(path);
-            if (!response.ok) {
-                throw new Error(`Failed to load game project data from ${path}: ${response.statusText}`);
-            }
-
-            const json = await response.text();
+            const json = await loadTextFile(path);
             const data = GameProjectFormat.deserialize(json);
 
             this.logger.debug(`Loaded game project: ${data.name} (ID: ${data.id})`);
@@ -126,7 +122,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
         for (const spriteSet of this.gameProjectData.spriteSets) {
             try {
                 // Handle external sprite set reference
-                const fullPath = joinPaths(this.basePath, spriteSet.path);
+                const fullPath = joinPaths(this.baseDir, spriteSet.path);
                 const resource = new SpriteSetResource(fullPath, {
                     headless: this.headless
                 });
@@ -154,7 +150,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
 
         try {
             // Handle external map reference
-            const fullPath = joinPaths(this.basePath, mapEntry.path);
+            const fullPath = joinPaths(this.baseDir, mapEntry.path);
             const resource = new MapResource(fullPath, {
                 headless: this.headless
             });
@@ -193,7 +189,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
     async load(): Promise<GameProjectData> {
         try {
             // Load the game project data
-            const fullPath = joinPaths(this.basePath, this.filename);
+            const fullPath = joinPaths(this.baseDir, this.filename);
             this.gameProjectData = await this.loadGameProjectData(fullPath);
             this.data = this.gameProjectData;
 

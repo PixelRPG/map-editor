@@ -1,16 +1,13 @@
+import { ResourceOptions } from '@pixelrpg/data-core';
+
 /**
  * Options for the GameProjectResource
  */
-export interface GameProjectResourceOptions {
+export interface GameProjectResourceOptions extends ResourceOptions {
     /**
      * Whether to run in headless mode (no graphics)
      */
     headless?: boolean;
-
-    /**
-     * Base path override for resolving relative paths
-     */
-    basePath?: string;
 
     /**
      * Whether to load all maps immediately (default: false)

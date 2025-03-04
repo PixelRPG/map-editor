@@ -1,4 +1,4 @@
-import { MapData } from '../types/MapData';
+import type { MapData } from '../types';
 
 export class MapFormat {
     /**

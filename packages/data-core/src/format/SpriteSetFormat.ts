@@ -1,4 +1,4 @@
-import { SpriteSetData } from '../types/SpriteSetData';
+import type { SpriteSetData } from '../types';
 
 export class SpriteSetFormat {
     /**

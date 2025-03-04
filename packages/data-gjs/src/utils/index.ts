@@ -1,2 +1,1 @@
-export * from './resourceLoader';
-export * from './gresourceHelper'; 
+export * from './file';
