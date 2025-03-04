@@ -1,6 +1,6 @@
 import type WebKit from '@girs/webkit-6.0'
 import type JavaScriptCore from '@girs/javascriptcore-6.0'
-import { BaseMessageService, Message } from '@pixelrpg/common'
+import { BaseMessageService, Message } from '@pixelrpg/messages-core'
 
 /**
  * Message service for inter process communication between GJS and WebViews.

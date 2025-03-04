@@ -13,6 +13,6 @@
     "dependencies": {
         "@girs/javascriptcore-6.0": "^2.47.3-4.0.0-beta.21",
         "@girs/webkit-6.0": "^2.47.3-4.0.0-beta.21",
-        "@pixelrpg/common": "workspace:^"
+        "@pixelrpg/messages-core": "workspace:^"
     }
 }

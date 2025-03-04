@@ -35,7 +35,9 @@
         "@girs/gtk-4.0": "^4.17.5-4.0.0-beta.21",
         "@girs/javascriptcore-6.0": "^2.47.3-4.0.0-beta.21",
         "@girs/webkit-6.0": "^2.47.3-4.0.0-beta.21",
-        "@pixelrpg/common": "workspace:^",
+        "@pixelrpg/data-core": "workspace:^",
+        "@pixelrpg/data-gjs": "workspace:^",
+        "@pixelrpg/messages-core": "workspace:^",
         "@pixelrpg/messages-gjs": "workspace:^",
         "mime": "^4.0.6"
     }

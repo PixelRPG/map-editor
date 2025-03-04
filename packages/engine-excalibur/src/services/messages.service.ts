@@ -1,5 +1,5 @@
 import { MessagesService } from '@pixelrpg/messages-web'
-import type { State } from '@pixelrpg/common'
+import type { State } from '@pixelrpg/messages-core'
 
 export const messagesService = new MessagesService<State>('pixelrpg', {
     tilesets: [], resources: [], layers: []

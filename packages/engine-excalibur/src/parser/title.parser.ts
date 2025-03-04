@@ -3,7 +3,7 @@ import { SpriteParser } from "./sprite.parser.ts";
 import type { ResourceParser } from "./resource.parser.ts";
 import type { Sprite } from "excalibur";
 import type { Tile } from "@excaliburjs/plugin-tiled"
-import type { DataTile } from "@pixelrpg/common";
+import type { DataTile } from "@pixelrpg/messages-core";
 
 export class TileParser {
 

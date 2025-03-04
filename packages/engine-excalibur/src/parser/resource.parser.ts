@@ -1,6 +1,6 @@
 import { ImageSource } from "excalibur";
 import { normalizeUrl } from "../utils/url.ts";
-import type { DataResource } from "@pixelrpg/common";
+import type { DataResource } from "@pixelrpg/messages-core";
 
 export class ResourceParser {
 

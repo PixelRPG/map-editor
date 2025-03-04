@@ -1,3 +1,4 @@
+/** @deprecated */
 export interface DataImage {
     /**
      * The path to the resource

@@ -2,6 +2,7 @@ import type { Layer, LayerType } from "./index.ts";
 
 
 
+/** @deprecated */
 export interface DataLayer {
     /**
      * Name from Tiled

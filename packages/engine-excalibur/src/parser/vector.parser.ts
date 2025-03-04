@@ -1,5 +1,5 @@
 import type { Vector } from "excalibur";
-import type { DataVector } from "@pixelrpg/common";
+import type { DataVector } from "@pixelrpg/messages-core";
 
 export class VectorParser {
     public async parse(vector: Vector): Promise<DataVector> {

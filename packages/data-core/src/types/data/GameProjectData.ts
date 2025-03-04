@@ -3,7 +3,7 @@ import { MapReference } from "../reference/MapReference";
 import { GameStartupConfig } from "../GameStartupConfig";
 import { MapCategory } from "../MapCategory";
 import { GameSpriteSetReference } from "../reference/GameSpriteSetReference";
-import { GameProjectEditorData } from "./EditorData";
+import { GameProjectEditorMetadata } from "./EditorMetadata";
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -54,5 +54,5 @@ export interface GameProjectData {
     /**
      * Optional editor-specific data
      */
-    editorData?: GameProjectEditorData;
+    editorData?: GameProjectEditorMetadata;
 } 

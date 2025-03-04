@@ -1,7 +1,7 @@
 import { GraphicParser } from "./graphic.parser.ts";
 
 import type { ResourceParser } from "./resource.parser.ts";
-import type { DataSprite } from "@pixelrpg/common";
+import type { DataSprite } from "@pixelrpg/messages-core";
 import type { Sprite } from "excalibur";
 
 export class SpriteParser {

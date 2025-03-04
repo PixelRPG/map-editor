@@ -1,4 +1,4 @@
-export interface DataVector {
+export interface Vector {
     x: number
     y: number
 }

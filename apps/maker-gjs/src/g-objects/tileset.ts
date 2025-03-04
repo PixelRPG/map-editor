@@ -1,14 +1,10 @@
 import GObject from '@girs/gobject-2.0'
-import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import Gio from '@girs/gio-2.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
-import { DataTileset, DataTile, DataSpriteSheet, DataVector } from '@pixelrpg/common'
+import { DataTileset } from '@pixelrpg/messages-core'
 import { Tile } from './tile.ts'
-import { Sprite } from './sprite.ts'
 import { SpriteSheet } from './sprite-sheet.ts'
 
 import type { ImageResource } from '../types/image-resource.ts'
+import { Properties } from '@pixelrpg/data-core'
 
 export interface Tileset {
   _spriteSheet: InstanceType<typeof SpriteSheet>;
@@ -23,16 +19,16 @@ export class Tileset extends GObject.Object {
     }, this);
   }
 
-  name: DataTileset['name'];
-  class?: DataTileset['class'];
-  firstGid: DataTileset['firstGid'];
-  tileCount: DataTileset['tileCount'];
-  tileWidth: DataTileset['tileWidth'];
-  tileHeight: DataTileset['tileHeight'];
-  tileOffset: DataTileset['tileOffset'];
-  objectAlignment: DataTileset['objectAlignment'];
-  orientation: DataTileset['orientation'];
-  properties: DataTileset['properties'];
+  name: string
+  class?: string;
+  firstGid: number;
+  tileCount: number;
+  tileWidth: number;
+  tileHeight: number;
+  tileOffset: { x: number, y: number };
+  objectAlignment: string;
+  orientation: string;
+  properties: Properties;
 
   constructor(tilesetData: DataTileset, imageResources: ImageResource[]) {
     super()
@@ -47,7 +43,7 @@ export class Tileset extends GObject.Object {
     this.orientation = tilesetData.orientation;
     this.properties = tilesetData.properties;
 
-    this._spriteSheet = new SpriteSheet(tilesetData.spriteSheet, imageResources)
-    this._tiles = tilesetData.tiles.map((tileData) => new Tile(tileData, null))
+    // this._spriteSheet = new SpriteSheet(tilesetData.spriteSheet, imageResources)
+    this._tiles = tilesetData.tiles.map((tileData) => new Tile(tileData))
   }
 }

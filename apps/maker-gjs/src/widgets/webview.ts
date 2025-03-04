@@ -11,7 +11,7 @@ import { clientResourceManager } from '../managers/client-resource.manager.ts'
 import { EventControllerInput } from '../event-controller-input.ts'
 import { INTERNAL_PROTOCOL } from '../constants.ts'
 
-import type { State } from '@pixelrpg/common'
+import type { State } from '@pixelrpg/messages-core'
 
 export class WebView extends WebKit.WebView {
 

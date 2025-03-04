@@ -1,5 +1,5 @@
-import { Properties, SpriteDataMap } from "./SpriteData";
-import type { ObjectData } from "./ObjectData";
+import type { Properties, SpriteDataMap, ObjectData } from "./index";
+
 /**
  * Represents a single layer within a tile map
  * Layers can contain either tiles or objects

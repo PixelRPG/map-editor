@@ -1,9 +1,9 @@
-import { Properties } from "./SpriteData";
+import type { Properties } from "./index";
 
 /**
  * Editor-specific metadata for game projects
  */
-export interface GameProjectEditorData {
+export interface GameProjectEditorMetadata {
     /**
      * Project author information
      */

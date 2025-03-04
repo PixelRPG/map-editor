@@ -1,5 +1,5 @@
 import { VectorParser } from "./vector.parser.ts";
-import type { DataGraphic } from "@pixelrpg/common";
+import type { DataGraphic } from "@pixelrpg/messages-core";
 import type { Graphic } from "excalibur";
 
 export class GraphicParser {

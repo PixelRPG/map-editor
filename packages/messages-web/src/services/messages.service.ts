@@ -1,5 +1,5 @@
 import type { WebkitMessageHandler } from '../types/index.ts'
-import { BaseMessageService, Message } from '@pixelrpg/common'
+import { BaseMessageService, Message } from '@pixelrpg/messages-core'
 
 /**
  * Message service for inter process communication between GJS and WebViews.

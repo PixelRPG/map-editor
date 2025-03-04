@@ -12,7 +12,7 @@ import { Layer } from '../g-objects/layer.ts'
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageResource } from '../types/image-resource.ts'
-import type { DataResource, MessageEvent, EventDataStateChanged, State, MessageText } from '@pixelrpg/common'
+import type { DataResource, MessageEvent, EventDataStateChanged, State, MessageText } from '@pixelrpg/messages-core'
 
 import Template from './application-window.ui?raw'
 
@@ -81,7 +81,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         break;
       case "layers":
         console.log('onWebViewStateChanged Layers:', event.data.data.value)
-        const layers = state.layers.map((layer) => new Layer(layer))
+        const layers = state.layers.map((layer) => new Layer(layer.name))
         const layersWidget = new LayersWidget(layers)
         this._sidebar?.setLayers(layersWidget)
         break;

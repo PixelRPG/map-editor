@@ -1,4 +1,4 @@
-import { ColliderShape, Properties } from "./SpriteData";
+import type { ColliderShape, Properties } from "./index";
 
 /**
  * Represents a game object within an object layer
@@ -95,14 +95,4 @@ export interface ObjectData {
      * Only used when type='sprite'
      */
     animationId?: string;
-
-    /**
-     * @deprecated Use spriteId instead
-     */
-    tileId?: number;
-
-    /**
-     * @deprecated Use spriteSetId instead
-     */
-    tileSetId?: string;
 } 

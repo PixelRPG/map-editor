@@ -1,6 +1,6 @@
 import type { ResourceParser } from "./resource.parser.ts";
 import type { TiledMap } from "@excaliburjs/plugin-tiled"
-import type { DataMap } from "@pixelrpg/common";
+import type { DataMap } from "@pixelrpg/messages-core";
 
 export class MapParser {
 

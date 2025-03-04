@@ -1,5 +1,6 @@
 import type { DataSprite } from "./index.ts";
 
+/** @deprecated */
 export interface DataTile {
     id: number;
     class?: string;

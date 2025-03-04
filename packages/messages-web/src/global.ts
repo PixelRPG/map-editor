@@ -1,5 +1,5 @@
 import type { CustomMessageHandler } from './types/index.ts'
-import type { Message } from '@pixelrpg/common'
+import type { Message } from '@pixelrpg/messages-core'
 
 declare global {
   interface Window {

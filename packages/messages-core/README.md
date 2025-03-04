@@ -1,4 +1,4 @@
-# @pixelrpg/common
+# @pixelrpg/messages-core
 
 Shared code between GJS and WebView runtimes.
 
@@ -11,5 +11,5 @@ Shared code between GJS and WebView runtimes.
 ## Usage
 
 ```typescript
-import { BaseMessageService, DataResource } from '@pixelrpg/common'
+import { BaseMessageService, DataResource } from '@pixelrpg/messages-core'
 ```

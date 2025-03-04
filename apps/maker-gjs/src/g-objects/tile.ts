@@ -1,34 +1,18 @@
 import GObject from '@girs/gobject-2.0'
-import { Graphic } from './graphic.ts'
-import type { DataTile } from '@pixelrpg/common'
-
-export interface Tile {
-  /** Graphic for the tile, in Excalibur this is mostly undefined. Instead the image is associated with the `id` of the tile. */
-  _graphic: InstanceType<typeof Graphic> | null
-}
 
 export class Tile extends GObject.Object {
 
   static {
     GObject.registerClass({
       GTypeName: 'Tile',
-      // Template,
-      Properties: {
-        // TODO(ts-for-gir): fix type of flags parameter
-        graphic: GObject.ParamSpec.object('graphic', 'Graphic', 'Graphic for the tile', GObject.ParamFlags.READWRITE as any, Graphic),
-      }
     }, this);
   }
 
   /** Id of the tile */
-  id: DataTile['id']
-  /** Class of the tile */
-  class: DataTile['class']
+  id: number
 
-  constructor(tileData: DataTile, graphic: InstanceType<typeof Graphic> | null) {
+  constructor(tileData: { id: number }) {
     super()
     this.id = tileData.id
-    this.class = tileData.class
-    this._graphic = graphic || null
   }
 }

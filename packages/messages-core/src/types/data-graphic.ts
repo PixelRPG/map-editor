@@ -1,15 +1,15 @@
-import type { DataVector } from "./index.ts";
+// import type { Vector } from "./index.ts";
 
-// TODO: check which properties are not used / needed
+/** @deprecated */
 export interface DataGraphic {
     id: number;
     width: number;
     height: number;
     opacity: number;
     rotation: number;
-    scale: DataVector;
+    // scale: Vector;
     flipHorizontal: boolean;
     flipVertical: boolean;
-    origin: DataVector | null;
+    // origin: Vector | null;
 }
 

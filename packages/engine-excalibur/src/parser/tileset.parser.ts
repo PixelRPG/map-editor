@@ -3,7 +3,7 @@ import { VectorParser } from "./vector.parser.ts";
 import { SpriteSheetParser } from "./sprite-sheet.parser.ts";
 
 import type { ResourceParser } from "./resource.parser.ts";
-import type { DataTileset } from "@pixelrpg/common";
+import type { DataTileset } from "@pixelrpg/messages-core";
 import type { Tileset } from "@excaliburjs/plugin-tiled";
 
 export class TilesetParser {

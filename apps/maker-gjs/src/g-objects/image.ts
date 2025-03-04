@@ -1,15 +1,9 @@
 import GObject from '@girs/gobject-2.0'
-import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
+
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 
-import type { DataImage } from '@pixelrpg/common'
-import type { ImageResource } from '../types/image-resource.ts'
-
-// import Template from './image.ui?raw'
-
 export interface Image {
-  pixbuf: GdkPixbuf.Pixbuf
+  _pixbuf: GdkPixbuf.Pixbuf
 }
 
 export class Image extends GObject.Object {
@@ -25,8 +19,8 @@ export class Image extends GObject.Object {
     }, this);
   }
 
-  constructor(data: DataImage, pixbuf: GdkPixbuf.Pixbuf) {
+  constructor(pixbuf: GdkPixbuf.Pixbuf) {
     super()
-    this.pixbuf = pixbuf
+    this._pixbuf = pixbuf
   }
 }

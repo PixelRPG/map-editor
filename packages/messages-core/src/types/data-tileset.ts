@@ -1,5 +1,6 @@
 import type { DataTile, DataVector, DataSpriteSheet } from "./index.ts";
 
+/** @deprecated */
 export interface DataTileset {
     name: string;
     class?: string;

@@ -1,5 +1,5 @@
 import type { ResourceParser } from "./resource.parser.ts";
-import type { DataLayer, Layer } from "@pixelrpg/common";
+import type { DataLayer, Layer } from "@pixelrpg/messages-core";
 import type { TileLayer, IsoTileLayer, ImageLayer, ObjectLayer } from "@excaliburjs/plugin-tiled"
 
 export class LayerParser {

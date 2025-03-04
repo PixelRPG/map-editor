@@ -11,6 +11,6 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "dependencies": {
-        "@pixelrpg/common": "workspace:^"
+        "@pixelrpg/messages-core": "workspace:^"
     }
 }
