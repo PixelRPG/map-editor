@@ -9,7 +9,7 @@ import Template from './layers.widget.ui?raw'
 
 export interface LayersWidget {
   // Properties
-  _layers: InstanceType<typeof Layer>[]
+  _layers: Layer[]
 
   // Widgets
   _listBox: Gtk.ListBox
@@ -23,12 +23,12 @@ export class LayersWidget extends Adw.Bin {
       Template,
       InternalChildren: ['listBox'],
       Properties: {
-        layers: GObject.ParamSpec.jsobject<InstanceType<typeof Layer>[]>('layers', 'Layers', 'Layers', GObject.ParamFlags.READWRITE),
+        layers: GObject.ParamSpec.jsobject<Layer[]>('layers', 'Layers', 'Layers', GObject.ParamFlags.READWRITE),
       },
     }, this);
   }
 
-  constructor(layersObject: InstanceType<typeof Layer>[]) {
+  constructor(layersObject: Layer[]) {
 
     super({})
     this._layers = layersObject;
@@ -42,11 +42,11 @@ export class LayersWidget extends Adw.Bin {
     this._listBox.connect("row-selected", this.onRowSelected);
   }
 
-  onRowActivated(box: Gtk.ListBox, row: InstanceType<typeof LayerRowWidget>) {
+  onRowActivated(box: Gtk.ListBox, row: LayerRowWidget) {
     console.log("[LayersWidget] Activated layer:", row._layer);
   }
 
-  onRowSelected(box: Gtk.ListBox, row: InstanceType<typeof LayerRowWidget>) {
+  onRowSelected(box: Gtk.ListBox, row: LayerRowWidget) {
     console.log("[LayersWidget] Selected layer:", row._layer);
     row.activate();
   }

@@ -1,4 +1,6 @@
-import type { DataTile, DataVector, DataSpriteSheet } from "./index.ts";
+import type { DataTile, DataSpriteSheet } from "./index.ts";
+import type { Vector } from "../index.ts";
+import type { SpriteSetData } from "../index.ts";
 
 /** @deprecated */
 export interface DataTileset {
@@ -8,8 +10,8 @@ export interface DataTileset {
     tileCount: number;
     tileWidth: number;
     tileHeight: number;
-    tileOffset: DataVector;
-    spriteSheet: DataSpriteSheet;
+    tileOffset: Vector;
+    spriteSheet: SpriteSetData;
     tiles: DataTile[];
     objectAlignment: string;
     orientation: string;

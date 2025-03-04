@@ -9,7 +9,7 @@ import Template from './layer-row.widget.ui?raw'
 
 export interface LayerRowWidget {
   // Properties
-  _layer: InstanceType<typeof Layer>
+  _layer: Layer
 }
 
 export class LayerRowWidget extends Adw.ActionRow {
@@ -27,11 +27,11 @@ export class LayerRowWidget extends Adw.ActionRow {
     )
   }
 
-  constructor(layerObject: InstanceType<typeof Layer>) {
+  constructor(layerObject: Layer) {
 
     super({
       title: layerObject.name,
-      subtitle: layerObject.class || '',
+      subtitle: layerObject.type || '',
     })
     this._layer = layerObject
 

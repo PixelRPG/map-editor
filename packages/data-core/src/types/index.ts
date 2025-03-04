@@ -1,3 +1,4 @@
+export * from './deprecated';
 export * from './data';
 export * from './reference';
 export * from './Loadable';

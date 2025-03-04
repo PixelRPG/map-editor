@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 
-import { TilesetWidget } from './tileset.widget'
+import { SpriteSheetWidget } from './sprite-sheet.widget'
 
 import Template from './sidebar-page-tilesets.ui?raw'
 
@@ -23,7 +23,7 @@ export class SidebarPageTilesets extends Adw.Bin {
     super(params)
   }
 
-  set_child(child: InstanceType<typeof TilesetWidget>) {
+  set_child(child: SpriteSheetWidget) {
     return super.set_child(child);
   }
 }

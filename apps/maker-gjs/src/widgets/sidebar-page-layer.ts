@@ -24,7 +24,7 @@ export class SidebarPageLayer extends Adw.Bin {
     super(params)
   }
 
-  set_child(child: InstanceType<typeof LayersWidget>) {
+  set_child(child: LayersWidget) {
     super.set_child(child);
   }
 }

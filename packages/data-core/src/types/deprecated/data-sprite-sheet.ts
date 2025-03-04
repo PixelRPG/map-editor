@@ -1,4 +1,4 @@
-import type { DataSprite } from "./index.ts";
+import type { DataSprite } from "./data-sprite.ts";
 
 /** @deprecated */
 export interface DataSpriteSheet {

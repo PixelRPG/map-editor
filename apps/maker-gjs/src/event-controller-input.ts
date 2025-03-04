@@ -70,7 +70,7 @@ export class EventControllerInput extends Gtk.EventControllerMotion {
         widget.add_controller(this.click)
     }
 
-    protected onMouseMotion(_source: InstanceType<typeof EventControllerInput>, x: number, y: number) {
+    protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
 
     }
 

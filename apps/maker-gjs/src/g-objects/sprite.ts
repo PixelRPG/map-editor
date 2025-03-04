@@ -5,7 +5,7 @@ import { Image } from './image.ts'
 // import Template from './sprite.ui?raw'
 
 export interface Sprite {
-  _image: InstanceType<typeof Image>
+  _image: Image
 }
 
 export class Sprite extends GObject.Object {
@@ -19,6 +19,14 @@ export class Sprite extends GObject.Object {
         image: GObject.ParamSpec.object('image', 'Image', 'Image for the sprite', GObject.ParamFlags.READWRITE as any, Image),
       }
     }, this);
+  }
+
+  get width() {
+    return this._image._pixbuf.get_width()
+  }
+
+  get height() {
+    return this._image._pixbuf.get_height()
   }
 
   constructor(spritePixbuf: GdkPixbuf.Pixbuf) {

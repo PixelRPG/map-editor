@@ -10,9 +10,11 @@ export class Layer extends GObject.Object {
   }
 
   name: string
+  type: string
 
-  constructor(layerData: { name: string }) {
+  constructor(layerData: { name: string, type: string }) {
     super()
     this.name = layerData.name
+    this.type = layerData.type
   }
 }

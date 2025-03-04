@@ -6,7 +6,7 @@ import type { ImageResource } from '../types/image-resource.ts'
 // import Template from './spriteSheet.ui?raw'
 
 export interface SpriteSheet {
-  _sprites: InstanceType<typeof Sprite>[];
+  _sprites: Sprite[];
 }
 
 export class SpriteSheet extends GObject.Object {
@@ -17,7 +17,7 @@ export class SpriteSheet extends GObject.Object {
       // Template,
       Properties: {
         // TODO: jsobject?
-        sprites: GObject.ParamSpec.jsobject<InstanceType<typeof Sprite>[]>('sprites', 'Sprites', 'Sprites of the spriteSheet', GObject.ParamFlags.READWRITE),
+        sprites: GObject.ParamSpec.jsobject<Sprite[]>('sprites', 'Sprites', 'Sprites of the spriteSheet', GObject.ParamFlags.READWRITE),
       }
     }, this);
   }
@@ -32,8 +32,8 @@ export class SpriteSheet extends GObject.Object {
     this._sprites = this.createSprites(spriteSheetData, imageResources, spriteSheetData.rows, spriteSheetData.columns)
   }
 
-  protected createSprites(spriteSheetData: SpriteSetData, imageResources: ImageResource[], rows: number, columns: number): InstanceType<typeof Sprite>[] {
-    const sprites: InstanceType<typeof Sprite>[] = []
+  protected createSprites(spriteSheetData: SpriteSetData, imageResources: ImageResource[], rows: number, columns: number): Sprite[] {
+    const sprites: Sprite[] = []
     for (let y = 0; y < spriteSheetData.rows; y++) {
       for (let x = 0; x < spriteSheetData.columns; x++) {
         const index = y * spriteSheetData.columns + x

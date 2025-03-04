@@ -1,5 +1,5 @@
 import GObject from '@girs/gobject-2.0'
-import { DataTileset } from '@pixelrpg/messages-core'
+import { DataTileset } from '@pixelrpg/data-core'
 import { Tile } from './tile.ts'
 import { SpriteSheet } from './sprite-sheet.ts'
 
@@ -7,8 +7,8 @@ import type { ImageResource } from '../types/image-resource.ts'
 import { Properties } from '@pixelrpg/data-core'
 
 export interface Tileset {
-  _spriteSheet: InstanceType<typeof SpriteSheet>;
-  _tiles: InstanceType<typeof Tile>[];
+  _spriteSheet: SpriteSheet;
+  _tiles: Tile[];
 }
 
 export class Tileset extends GObject.Object {
@@ -43,7 +43,7 @@ export class Tileset extends GObject.Object {
     this.orientation = tilesetData.orientation;
     this.properties = tilesetData.properties;
 
-    // this._spriteSheet = new SpriteSheet(tilesetData.spriteSheet, imageResources)
+    this._spriteSheet = new SpriteSheet(tilesetData.spriteSheet, imageResources)
     this._tiles = tilesetData.tiles.map((tileData) => new Tile(tileData))
   }
 }

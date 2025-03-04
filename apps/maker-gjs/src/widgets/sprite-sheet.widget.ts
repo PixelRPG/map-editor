@@ -2,37 +2,37 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Object from '@girs/gobject-2.0'
 
-import { Tileset } from '../g-objects/tileset.ts'
 import { SpriteWidget } from './sprite.widget.ts'
 
-import Template from './tileset.widget.ui?raw'
+import Template from './sprite-sheet.widget.ui?raw'
+import { SpriteSheet } from '../g-objects/sprite-sheet.ts'
 
-export interface TilesetWidget {
+export interface SpriteSheetWidget {
   // Properties
-  _tileset: InstanceType<typeof Tileset>
+  _spriteSheet: SpriteSheet
 
   // Widgets
   _flowBox: Gtk.FlowBox
 }
 
-export class TilesetWidget extends Gtk.ScrolledWindow {
+export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   static {
     GObject.registerClass({
-      GTypeName: 'TilesetWidget',
+      GTypeName: 'SpriteSheetWidget',
       Template,
       InternalChildren: ['flowBox'],
       Properties: {
-        tileset: Object.ParamSpec.object('tileset', 'Tileset', 'Tileset', GObject.ParamFlags.READWRITE as any, Tileset),
+        spriteSheet: Object.ParamSpec.object('spriteSheet', 'SpriteSheet', 'SpriteSheet', GObject.ParamFlags.READWRITE as any, SpriteSheet),
       },
     }, this);
   }
-  constructor(tilesetObject: InstanceType<typeof Tileset>) {
+  constructor(spriteSheetObject: SpriteSheet) {
 
     super({})
-    this._tileset = tilesetObject;
+    this._spriteSheet = spriteSheetObject;
     this.onSelected = this.onSelected.bind(this);
 
-    for (const sprite of tilesetObject._spriteSheet._sprites) {
+    for (const sprite of spriteSheetObject._sprites) {
       const spriteWidget = new SpriteWidget(sprite);
       this._flowBox.append(spriteWidget);
     }
@@ -41,7 +41,7 @@ export class TilesetWidget extends Gtk.ScrolledWindow {
   }
 
   onSelected(parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
-    const spriteWidget = flowBoxChild.child as InstanceType<typeof SpriteWidget>;
+    const spriteWidget = flowBoxChild.child as SpriteWidget;
     const _sprite = spriteWidget._sprite;
     console.log("Selected sprite:", _sprite);
   }

@@ -1,4 +1,4 @@
-import type { Layer, LayerType } from "./index.ts";
+import type { Layer, LayerType } from "/home/jumplink/Projekte/pixel-rpg/map-editor/packages/messages-core/src/types/index.ts";
 
 
 

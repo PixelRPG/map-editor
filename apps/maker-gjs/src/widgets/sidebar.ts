@@ -4,7 +4,7 @@ import Adw from '@girs/adw-1'
 
 import { SidebarPageTilesets } from './sidebar-page-tilesets.ts'
 import { SidebarPageLayer } from './sidebar-page-layer.ts'
-import { TilesetWidget } from './tileset.widget.ts'
+import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
 
 import Template from './sidebar.ui?raw'
@@ -14,8 +14,8 @@ GObject.type_ensure(SidebarPageLayer.$gtype)
 
 export interface Sidebar {
   // Child widgets
-  _pageTilesets: InstanceType<typeof SidebarPageTilesets>
-  _pageLayer: InstanceType<typeof SidebarPageLayer>
+  _pageTilesets: SidebarPageTilesets
+  _pageLayer: SidebarPageLayer
 }
 
 export class Sidebar extends Adw.Bin {
@@ -36,11 +36,11 @@ export class Sidebar extends Adw.Bin {
    * Set the content widget of the sidebar
    * @param content The content widget to set
    */
-  setTileset(tileset: InstanceType<typeof TilesetWidget>) {
+  setSpriteSheet(tileset: SpriteSheetWidget) {
     this._pageTilesets.set_child(tileset)
   }
 
-  setLayers(layers: InstanceType<typeof LayersWidget>) {
+  setLayers(layers: LayersWidget) {
     this._pageLayer.set_child(layers)
   }
 }

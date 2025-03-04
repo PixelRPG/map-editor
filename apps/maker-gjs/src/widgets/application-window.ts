@@ -3,16 +3,17 @@ import Adw from '@girs/adw-1'
 
 import { WebView } from './webview.ts'
 import { Sidebar } from './sidebar.ts'
-import { TilesetWidget } from './tileset.widget.ts'
+import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
 
-import { Tileset } from '../g-objects/tileset.ts'
+import { SpriteSheet } from '../g-objects/sprite-sheet.ts'
 import { Layer } from '../g-objects/layer.ts'
 
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageResource } from '../types/image-resource.ts'
-import type { DataResource, MessageEvent, EventDataStateChanged, State, MessageText } from '@pixelrpg/messages-core'
+import type { DataResource, State } from '@pixelrpg/data-core'
+import type { MessageEvent, EventDataStateChanged, MessageText } from '@pixelrpg/messages-core'
 
 import Template from './application-window.ui?raw'
 
@@ -22,8 +23,8 @@ GObject.type_ensure(Sidebar.$gtype)
 
 export interface ApplicationWindow {
   // Child widgets
-  _sidebar: InstanceType<typeof Sidebar> | undefined
-  _webView: InstanceType<typeof WebView> | undefined
+  _sidebar: Sidebar | undefined
+  _webView: WebView | undefined
 }
 
 export class ApplicationWindow extends Adw.ApplicationWindow {
@@ -63,17 +64,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     switch (event.data.data.property) {
       case "resources":
-      case "tilesets":
-        if (!state?.resources.length || !state?.tilesets.length) {
-          console.log('No resources or tilesets in state')
+      case "spriteSheets":
+        if (!state?.resources.length || !state?.spriteSheets.length) {
+          console.log('No resources or spriteSheets in state')
           return
         }
 
         const imageResources = this.parseImageResources(state.resources)
-        const tileset = new Tileset(state.tilesets[0], imageResources)
+        const spriteSheet = new SpriteSheet(state.spriteSheets[0], imageResources)
 
-        const tilesetWidget = new TilesetWidget(tileset)
-        this._sidebar?.setTileset(tilesetWidget)
+        const spriteSheetWidget = new SpriteSheetWidget(spriteSheet)
+        this._sidebar?.setSpriteSheet(spriteSheetWidget)
         break;
 
       case "map":

@@ -11,7 +11,7 @@ import { clientResourceManager } from '../managers/client-resource.manager.ts'
 import { EventControllerInput } from '../event-controller-input.ts'
 import { INTERNAL_PROTOCOL } from '../constants.ts'
 
-import type { State } from '@pixelrpg/messages-core'
+import type { State } from '@pixelrpg/data-core'
 
 export class WebView extends WebKit.WebView {
 
@@ -69,7 +69,7 @@ export class WebView extends WebKit.WebView {
   }
 
   protected initMessagesService() {
-    const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { tilesets: [], resources: [], layers: [] }, this)
+    const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { spriteSheets: [], resources: [], layers: [] }, this)
     return messagesService
   }
 
@@ -102,7 +102,7 @@ export class WebView extends WebKit.WebView {
     console.log('First page view is finished')
   }
 
-  protected onMouseMotion(inputController: InstanceType<typeof EventControllerInput>, x: number, y: number) {
+  protected onMouseMotion(inputController: EventControllerInput, x: number, y: number) {
     // Round to 10th
     x = Math.round(x * 10) / 10
     y = Math.round(y * 10) / 10
