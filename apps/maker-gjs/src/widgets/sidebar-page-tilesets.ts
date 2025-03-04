@@ -5,11 +5,20 @@ import { TilesetWidget } from './tileset.widget'
 
 import Template from './sidebar-page-tilesets.ui?raw'
 
-interface _SidebarPageTilesets {
+export interface SidebarPageTilesets {
   // Child widgets
 }
 
-class _SidebarPageTilesets extends Adw.Bin {
+export class SidebarPageTilesets extends Adw.Bin {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'SidebarPageTilesets',
+      Template,
+      InternalChildren: []
+    }, this);
+  }
+
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
     super(params)
   }
@@ -18,12 +27,3 @@ class _SidebarPageTilesets extends Adw.Bin {
     return super.set_child(child);
   }
 }
-
-export const SidebarPageTilesets = GObject.registerClass(
-  {
-    GTypeName: 'SidebarPageTilesets',
-    Template,
-    InternalChildren: []
-  },
-  _SidebarPageTilesets
-)

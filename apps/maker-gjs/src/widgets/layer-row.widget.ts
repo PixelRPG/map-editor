@@ -7,12 +7,26 @@ import { Layer } from '../g-objects/layer.ts'
 
 import Template from './layer-row.widget.ui?raw'
 
-interface _LayerRowWidget {
+export interface LayerRowWidget {
   // Properties
   _layer: InstanceType<typeof Layer>
 }
 
-class _LayerRowWidget extends Adw.ActionRow {
+export class LayerRowWidget extends Adw.ActionRow {
+
+  static {
+    GObject.registerClass(
+      {
+        GTypeName: 'LayerRowWidget',
+        Template,
+        Properties: {
+          layer: GObject.ParamSpec.object('layer', 'Layer', 'Layer for the row', GObject.ParamFlags.READWRITE as any, Layer),
+        },
+      },
+      this
+    )
+  }
+
   constructor(layerObject: InstanceType<typeof Layer>) {
 
     super({
@@ -30,13 +44,3 @@ class _LayerRowWidget extends Adw.ActionRow {
   }
 }
 
-export const LayerRowWidget = GObject.registerClass(
-  {
-    GTypeName: 'LayerRowWidget',
-    Template,
-    Properties: {
-      layer: GObject.ParamSpec.object('layer', 'Layer', 'Layer for the row', GObject.ParamFlags.READWRITE as any, Layer),
-    },
-  },
-  _LayerRowWidget
-)

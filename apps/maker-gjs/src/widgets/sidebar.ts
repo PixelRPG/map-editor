@@ -12,13 +12,25 @@ import Template from './sidebar.ui?raw'
 GObject.type_ensure(SidebarPageTilesets.$gtype)
 GObject.type_ensure(SidebarPageLayer.$gtype)
 
-interface _Sidebar {
+export interface Sidebar {
   // Child widgets
   _pageTilesets: InstanceType<typeof SidebarPageTilesets>
   _pageLayer: InstanceType<typeof SidebarPageLayer>
 }
 
-class _Sidebar extends Adw.Bin {
+export class Sidebar extends Adw.Bin {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'Sidebar',
+      Template,
+      InternalChildren: ['pageTilesets', 'pageLayer']
+    }, this);
+  }
+
+  constructor(params: Partial<Adw.Bin.ConstructorProps>) {
+    super(params)
+  }
 
   /**
    * Set the content widget of the sidebar
@@ -31,17 +43,4 @@ class _Sidebar extends Adw.Bin {
   setLayers(layers: InstanceType<typeof LayersWidget>) {
     this._pageLayer.set_child(layers)
   }
-
-  constructor(params: Partial<Adw.Bin.ConstructorProps>) {
-    super(params)
-  }
 }
-
-export const Sidebar = GObject.registerClass(
-  {
-    GTypeName: 'Sidebar',
-    Template,
-    InternalChildren: ['pageTilesets', 'pageLayer']
-  },
-  _Sidebar
-)

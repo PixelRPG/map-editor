@@ -10,12 +10,19 @@ import { SpriteSheet } from './sprite-sheet.ts'
 
 import type { ImageResource } from '../types/image-resource.ts'
 
-interface _Tileset {
+export interface Tileset {
   _spriteSheet: InstanceType<typeof SpriteSheet>;
   _tiles: InstanceType<typeof Tile>[];
 }
 
-class _Tileset extends GObject.Object {
+export class Tileset extends GObject.Object {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'Tileset',
+    }, this);
+  }
+
   name: DataTileset['name'];
   class?: DataTileset['class'];
   firstGid: DataTileset['firstGid'];
@@ -44,10 +51,3 @@ class _Tileset extends GObject.Object {
     this._tiles = tilesetData.tiles.map((tileData) => new Tile(tileData, null))
   }
 }
-
-export const Tileset = GObject.registerClass(
-  {
-    GTypeName: 'Tileset',
-  },
-  _Tileset
-)

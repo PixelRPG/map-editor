@@ -1,18 +1,26 @@
 import GObject from '@girs/gobject-2.0'
-import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import { Sprite } from './sprite.ts'
 import type { DataSpriteSheet, DataSprite } from '@pixelrpg/common'
 import type { ImageResource } from '../types/image-resource.ts'
 
 // import Template from './spriteSheet.ui?raw'
 
-interface _SpriteSheet {
+export interface SpriteSheet {
   _sprites: InstanceType<typeof Sprite>[];
 }
 
-class _SpriteSheet extends GObject.Object {
+export class SpriteSheet extends GObject.Object {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'SpriteSheet',
+      // Template,
+      Properties: {
+        // TODO: jsobject?
+        sprites: GObject.ParamSpec.jsobject<InstanceType<typeof Sprite>[]>('sprites', 'Sprites', 'Sprites of the spriteSheet', GObject.ParamFlags.READWRITE),
+      }
+    }, this);
+  }
 
   rows: DataSpriteSheet['rows'];
   columns: DataSpriteSheet['columns'];
@@ -59,15 +67,3 @@ class _SpriteSheet extends GObject.Object {
     return sprites
   }
 }
-
-export const SpriteSheet = GObject.registerClass(
-  {
-    GTypeName: 'SpriteSheet',
-    // Template,
-    Properties: {
-      // TODO: jsobject?
-      sprites: GObject.ParamSpec.jsobject<InstanceType<typeof Sprite>[]>('sprites', 'Sprites', 'Sprites of the spriteSheet', GObject.ParamFlags.READWRITE),
-    }
-  },
-  _SpriteSheet
-)

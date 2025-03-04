@@ -20,13 +20,22 @@ import Template from './application-window.ui?raw'
 GObject.type_ensure(WebView.$gtype)
 GObject.type_ensure(Sidebar.$gtype)
 
-interface _ApplicationWindow {
+export interface ApplicationWindow {
   // Child widgets
   _sidebar: InstanceType<typeof Sidebar> | undefined
   _webView: InstanceType<typeof WebView> | undefined
 }
 
-class _ApplicationWindow extends Adw.ApplicationWindow {
+export class ApplicationWindow extends Adw.ApplicationWindow {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'ApplicationWindow',
+      Template,
+      InternalChildren: ['sidebar', 'webView'],
+    }, this);
+  }
+
   constructor(application: Adw.Application) {
     super({ application })
     this.onWebViewStateChanged = this.onWebViewStateChanged.bind(this)
@@ -108,12 +117,3 @@ class _ApplicationWindow extends Adw.ApplicationWindow {
     return imageResources
   }
 }
-
-export const ApplicationWindow = GObject.registerClass(
-  {
-    GTypeName: 'ApplicationWindow',
-    Template,
-    InternalChildren: ['sidebar', 'webView'],
-  },
-  _ApplicationWindow
-)

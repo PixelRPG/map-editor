@@ -6,11 +6,20 @@ import { LayersWidget } from './layers.widget.ts'
 
 import Template from './sidebar-page-layer.ui?raw'
 
-interface _SidebarPageLayer {
+export interface SidebarPageLayer {
   // Child widgets
 }
 
-class _SidebarPageLayer extends Adw.Bin {
+export class SidebarPageLayer extends Adw.Bin {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'SidebarPageLayer',
+      Template,
+      InternalChildren: []
+    }, this);
+  }
+
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
     super(params)
   }
@@ -19,12 +28,3 @@ class _SidebarPageLayer extends Adw.Bin {
     super.set_child(child);
   }
 }
-
-export const SidebarPageLayer = GObject.registerClass(
-  {
-    GTypeName: 'SidebarPageLayer',
-    Template,
-    InternalChildren: []
-  },
-  _SidebarPageLayer
-)

@@ -7,7 +7,7 @@ import { LayerRowWidget } from './layer-row.widget.ts'
 
 import Template from './layers.widget.ui?raw'
 
-interface _LayersWidget {
+export interface LayersWidget {
   // Properties
   _layers: InstanceType<typeof Layer>[]
 
@@ -15,7 +15,19 @@ interface _LayersWidget {
   _listBox: Gtk.ListBox
 }
 
-class _LayersWidget extends Adw.Bin {
+export class LayersWidget extends Adw.Bin {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'LayersWidget',
+      Template,
+      InternalChildren: ['listBox'],
+      Properties: {
+        layers: GObject.ParamSpec.jsobject<InstanceType<typeof Layer>[]>('layers', 'Layers', 'Layers', GObject.ParamFlags.READWRITE),
+      },
+    }, this);
+  }
+
   constructor(layersObject: InstanceType<typeof Layer>[]) {
 
     super({})
@@ -39,15 +51,3 @@ class _LayersWidget extends Adw.Bin {
     row.activate();
   }
 }
-
-export const LayersWidget = GObject.registerClass(
-  {
-    GTypeName: 'LayersWidget',
-    Template,
-    InternalChildren: ['listBox'],
-    Properties: {
-      layers: GObject.ParamSpec.jsobject<InstanceType<typeof Layer>[]>('layers', 'Layers', 'Layers', GObject.ParamFlags.READWRITE),
-    },
-  },
-  _LayersWidget
-)

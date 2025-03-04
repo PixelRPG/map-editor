@@ -7,7 +7,7 @@ import { SpriteWidget } from './sprite.widget.ts'
 
 import Template from './tileset.widget.ui?raw'
 
-interface _TilesetWidget {
+export interface TilesetWidget {
   // Properties
   _tileset: InstanceType<typeof Tileset>
 
@@ -15,7 +15,17 @@ interface _TilesetWidget {
   _flowBox: Gtk.FlowBox
 }
 
-class _TilesetWidget extends Gtk.ScrolledWindow {
+export class TilesetWidget extends Gtk.ScrolledWindow {
+  static {
+    GObject.registerClass({
+      GTypeName: 'TilesetWidget',
+      Template,
+      InternalChildren: ['flowBox'],
+      Properties: {
+        tileset: Object.ParamSpec.object('tileset', 'Tileset', 'Tileset', GObject.ParamFlags.READWRITE as any, Tileset),
+      },
+    }, this);
+  }
   constructor(tilesetObject: InstanceType<typeof Tileset>) {
 
     super({})
@@ -36,15 +46,3 @@ class _TilesetWidget extends Gtk.ScrolledWindow {
     console.log("Selected sprite:", _sprite);
   }
 }
-
-export const TilesetWidget = GObject.registerClass(
-  {
-    GTypeName: 'TilesetWidget',
-    Template,
-    InternalChildren: ['flowBox'],
-    Properties: {
-      tileset: Object.ParamSpec.object('tileset', 'Tileset', 'Tileset', GObject.ParamFlags.READWRITE as any, Tileset),
-    },
-  },
-  _TilesetWidget
-)

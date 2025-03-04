@@ -1,16 +1,19 @@
 import GObject from '@girs/gobject-2.0'
-import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import type { DataGraphic } from '@pixelrpg/common'
 
 // import Template from './graphic.ui?raw'
 
-interface _Graphic {
+export interface Graphic {
   // Add GObject properties here
 }
 
-class _Graphic extends GObject.Object implements DataGraphic {
+export class Graphic extends GObject.Object implements DataGraphic {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'Graphic',
+    }, this);
+  }
 
   // TODO: check which properties are not used / needed
   id: DataGraphic['id']
@@ -36,14 +39,3 @@ class _Graphic extends GObject.Object implements DataGraphic {
     this.origin = dataGraphic.origin
   }
 }
-
-export const Graphic = GObject.registerClass(
-  {
-    GTypeName: 'Graphic',
-    // Template,
-    Properties: {
-      // Add GObject properties here
-    }
-  },
-  _Graphic
-)

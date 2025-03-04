@@ -9,25 +9,25 @@ import type { DataSprite } from '@pixelrpg/common'
 
 // import Template from './sprite.ui?raw'
 
-interface _Sprite {
+export interface Sprite {
   _image: InstanceType<typeof Image>
 }
 
-class _Sprite extends Graphic {
+export class Sprite extends Graphic {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'Sprite',
+      // Template,
+      Properties: {
+        // TODO(ts-for-gir): fix type of flags parameter
+        image: GObject.ParamSpec.object('image', 'Image', 'Image for the sprite', GObject.ParamFlags.READWRITE as any, Image),
+      }
+    }, this);
+  }
+
   constructor(dataSprite: DataSprite, spritePixbuf: GdkPixbuf.Pixbuf) {
     super(dataSprite)
     this._image = new Image(dataSprite.image, spritePixbuf)
   }
 }
-
-export const Sprite = GObject.registerClass(
-  {
-    GTypeName: 'Sprite',
-    // Template,
-    Properties: {
-      // TODO(ts-for-gir): fix type of flags parameter
-      image: GObject.ParamSpec.object('image', 'Image', 'Image for the sprite', GObject.ParamFlags.READWRITE as any, Image),
-    }
-  },
-  _Sprite
-)

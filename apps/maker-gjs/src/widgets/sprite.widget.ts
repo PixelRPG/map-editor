@@ -7,7 +7,7 @@ import { Sprite } from '../g-objects/sprite.ts'
 
 import Template from './sprite.widget.ui?raw'
 
-interface _SpriteWidget {
+export interface SpriteWidget {
   // Properties
   _sprite: InstanceType<typeof Sprite>
 
@@ -15,7 +15,19 @@ interface _SpriteWidget {
   _image: Gtk.Image
 }
 
-class _SpriteWidget extends Adw.Bin {
+export class SpriteWidget extends Adw.Bin {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'SpriteWidget',
+      Template,
+      InternalChildren: ['image'],
+      Properties: {
+        sprite: Object.ParamSpec.object('sprite', 'Sprite', 'Sprite', GObject.ParamFlags.READWRITE as any, Sprite),
+      },
+    }, this);
+  }
+
   constructor(public readonly spriteObject: InstanceType<typeof Sprite>) {
     super({})
     this._sprite = spriteObject;
@@ -28,15 +40,3 @@ class _SpriteWidget extends Adw.Bin {
     this.height_request = height;
   }
 }
-
-export const SpriteWidget = GObject.registerClass(
-  {
-    GTypeName: 'SpriteWidget',
-    Template,
-    InternalChildren: ['image'],
-    Properties: {
-      sprite: Object.ParamSpec.object('sprite', 'Sprite', 'Sprite', GObject.ParamFlags.READWRITE as any, Sprite),
-    },
-  },
-  _SpriteWidget
-)

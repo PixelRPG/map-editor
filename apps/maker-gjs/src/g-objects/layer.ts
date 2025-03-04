@@ -1,11 +1,18 @@
 import GObject from '@girs/gobject-2.0'
 import type { DataLayer } from '@pixelrpg/common'
 
-interface _Layer {
+export interface Layer {
 
 }
 
-class _Layer extends GObject.Object {
+export class Layer extends GObject.Object {
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'Layer',
+      Properties: {}
+    }, this);
+  }
 
   type: DataLayer['type']
   class: DataLayer['class']
@@ -22,11 +29,3 @@ class _Layer extends GObject.Object {
     this.properties = tileData.properties
   }
 }
-
-export const Layer = GObject.registerClass(
-  {
-    GTypeName: 'Layer',
-    Properties: {}
-  },
-  _Layer
-)
