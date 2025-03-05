@@ -1,24 +1,22 @@
-import type { Layer, LayerType } from "/home/jumplink/Projekte/pixel-rpg/map-editor/packages/messages-core/src/types/index.ts";
-
-
+import { Properties } from "../data/Properties";
 
 /** @deprecated */
 export interface DataLayer {
     /**
      * Name from Tiled
      */
-    name: Layer['name'];
+    name: string;
     /**
      * Original ordering from Tiled
      */
-    order: Layer['order'];
+    order: number;
     /**
      * Class name from Tiled
      */
-    class: Layer['class'];
+    class: string;
 
-    properties: Layer['properties'];
+    properties: Properties;
 
-    type: LayerType;
+    type: string;
 }
 

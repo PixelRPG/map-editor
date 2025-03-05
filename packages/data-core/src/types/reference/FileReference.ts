@@ -1,3 +1,5 @@
+import type { Properties } from '../data/index';
+
 /**
  * Represents a reference to an external file
  * Used for referencing external resources like sprite sets, images, etc.
@@ -16,7 +18,7 @@ export interface FileReference {
     /**
      * The type of the referenced file
      */
-    type: 'spriteset' | 'tileset' | 'image' | 'audio' | 'data';
+    type: 'spriteset' | 'tileset' | 'image' | 'audio' | 'map';
 
     /**
      * Optional version of the referenced file
@@ -26,5 +28,5 @@ export interface FileReference {
     /**
      * Optional custom properties
      */
-    properties?: Record<string, any>;
+    properties?: Properties;
 } 

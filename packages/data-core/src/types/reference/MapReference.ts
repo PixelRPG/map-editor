@@ -20,7 +20,7 @@ export interface MapReference extends FileReference {
     category?: string;
 
     /**
-     * The type is always 'data' for map references
+     * The type is always 'map' for map references
      */
-    type: 'data';
+    type: 'map';
 } 

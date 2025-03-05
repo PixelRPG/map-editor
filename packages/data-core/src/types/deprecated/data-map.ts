@@ -1,3 +1,5 @@
+import type { Properties } from '../data/index';
+
 /** @deprecated */
 export interface DataMap {
     height: number;
@@ -10,7 +12,7 @@ export interface DataMap {
     nextlayerid: number;
     nextobjectid: number;
     orientation: string;
-    properties: Record<string, any>;
+    properties: Properties;
     class: string;
     // layers: DataLayer[];
 }

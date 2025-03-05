@@ -15,6 +15,7 @@
     },
     "dependencies": {
         "@excaliburjs/plugin-tiled": "workspace:^",
+        "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
         "@pixelrpg/messages-core": "workspace:^",
         "esbuild": "^0.25.0",

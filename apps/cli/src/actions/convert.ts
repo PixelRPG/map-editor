@@ -1,4 +1,5 @@
 import { promises as fs } from 'fs'
+import { Properties } from '@pixelrpg/data-core'
 import { TileSetData, TileDataTileSet, MapData, LayerData, TileSetReference } from '@pixelrpg/data-excalibur'
 import { TiledParser, TiledMap, TiledTileLayer, TiledObjectLayer, TiledImageLayer, isTiledTilesetExternal, TiledObject } from '@excaliburjs/plugin-tiled'
 import path from 'path'
@@ -372,10 +373,10 @@ function calculateLocalTileId(globalTileId: number, tilesets: TiledMap['tilesets
     return globalTileId - firstGid;
 }
 
-function convertProperties(properties?: { name: string, type: string, value: any }[]): Record<string, any> | undefined {
+function convertProperties(properties?: { name: string, type: string, value: any }[]): Properties | undefined {
     if (!properties) return undefined
 
-    const result: Record<string, any> = {}
+    const result: Properties = {}
     for (const prop of properties) {
         result[prop.name] = prop.value
     }

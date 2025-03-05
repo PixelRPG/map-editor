@@ -3226,6 +3226,7 @@ __metadata:
   resolution: "@pixelrpg/cli@workspace:apps/cli"
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
+    "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-excalibur": "workspace:^"
     "@pixelrpg/messages-core": "workspace:^"
     "@types/jsdom": "npm:^21.1.7"

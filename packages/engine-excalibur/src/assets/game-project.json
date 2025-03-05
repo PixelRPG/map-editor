@@ -13,7 +13,7 @@
       "id": "kokiri-forest",
       "name": "Kokiri Forest",
       "path": "./maps/kokiri-forest.json",
-      "type": "data",
+      "type": "map",
       "category": "overworld"
     }
   ],

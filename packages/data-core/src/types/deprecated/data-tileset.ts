@@ -1,6 +1,7 @@
 import type { DataTile } from "./index.ts";
 import type { Vector } from "../index.ts";
 import type { SpriteSetData } from "../index.ts";
+import type { Properties } from '../data/index';
 
 /** @deprecated */
 export interface DataTileset {
@@ -15,6 +16,6 @@ export interface DataTileset {
     tiles: DataTile[];
     objectAlignment: string;
     orientation: string;
-    properties: Record<string, any>;
+    properties: Properties;
 }
 

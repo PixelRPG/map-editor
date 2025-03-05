@@ -82,7 +82,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         break;
       case "layers":
         console.log('onWebViewStateChanged Layers:', event.data.data.value)
-        const layers = state.layers.map((layer) => new Layer(layer.name))
+        const layers = state.layers.map((layer) => new Layer({ name: layer.name, type: layer.type }))
         const layersWidget = new LayersWidget(layers)
         this._sidebar?.setLayers(layersWidget)
         break;

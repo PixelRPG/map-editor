@@ -26,7 +26,7 @@ export class GameProjectFormat {
 
         // Ensure all map references have the required properties
         data.maps.forEach(map => {
-            if (!map.id || !map.path || map.type !== 'data') {
+            if (!map.id || !map.path || map.type !== 'map') {
                 throw new Error('Invalid map reference');
             }
         });
