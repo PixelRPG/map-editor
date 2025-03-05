@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import { Sprite } from './sprite.ts'
-import type { SpriteSetData } from '@pixelrpg/data-core'
-import type { ImageResource } from '../types/image-resource.ts'
+import type { ImageReference, SpriteSetData } from '@pixelrpg/data-core'
+import type { ImageResource } from '@pixelrpg/data-gjs'
 
 // import Template from './spriteSheet.ui?raw'
 
@@ -25,20 +25,19 @@ export class SpriteSheet extends GObject.Object {
   rows: number
   columns: number
 
-  constructor(spriteSheetData: SpriteSetData, imageResources: ImageResource[]) {
+  constructor(spriteSheetData: SpriteSetData, imageResource: ImageResource) {
     super()
     this.rows = spriteSheetData.rows
     this.columns = spriteSheetData.columns
-    this._sprites = this.createSprites(spriteSheetData, imageResources, spriteSheetData.rows, spriteSheetData.columns)
+    this._sprites = this.createSprites(spriteSheetData, imageResource, spriteSheetData.rows, spriteSheetData.columns)
   }
 
-  protected createSprites(spriteSheetData: SpriteSetData, imageResources: ImageResource[], rows: number, columns: number): Sprite[] {
+  protected createSprites(spriteSheetData: SpriteSetData, imageResource: ImageResource, rows: number, columns: number): Sprite[] {
     const sprites: Sprite[] = []
     for (let y = 0; y < spriteSheetData.rows; y++) {
       for (let x = 0; x < spriteSheetData.columns; x++) {
         const index = y * spriteSheetData.columns + x
         const spriteData = spriteSheetData.sprites[index]
-        const imageResource = imageResources.find(({ path }) => path === spriteSheetData.image?.path)
         if (!imageResource) {
           console.error('Image resource not found', spriteSheetData.image?.path)
           continue

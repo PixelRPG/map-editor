@@ -11,8 +11,9 @@ import { Layer } from '../g-objects/layer.ts'
 
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
-import type { ImageResource } from '../types/image-resource.ts'
-import type { DataResource, State } from '@pixelrpg/data-core'
+import type { ImageReference } from '@pixelrpg/data-core'
+import type { ImageResource } from '@pixelrpg/data-gjs'
+import type { State } from '@pixelrpg/data-core'
 import type { MessageEvent, EventDataStateChanged, MessageText } from '@pixelrpg/messages-core'
 
 import Template from './application-window.ui?raw'
@@ -63,15 +64,24 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     console.log('onWebViewStateChanged Property:', event.data.data.property)
 
     switch (event.data.data.property) {
-      case "resources":
       case "spriteSheets":
-        if (!state?.resources.length || !state?.spriteSheets.length) {
+        if (!state?.spriteSheets.length) {
           console.log('No resources or spriteSheets in state')
           return
         }
 
-        const imageResources = this.parseImageResources(state.resources)
-        const spriteSheet = new SpriteSheet(state.spriteSheets[0], imageResources)
+        if (!state.spriteSheets[0].image) {
+          console.error('No image in spriteSheet')
+          return
+        }
+
+        const imageResource = this.parseImageResource(state.spriteSheets[0].image)
+        if (!imageResource) {
+          console.error('Failed to parse image resource')
+          return
+        }
+
+        const spriteSheet = new SpriteSheet(state.spriteSheets[0], imageResource)
 
         const spriteSheetWidget = new SpriteSheetWidget(spriteSheet)
         this._sidebar?.setSpriteSheet(spriteSheetWidget)
@@ -95,26 +105,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   // TODO: Move to a parser?
-  parseImageResources(resources: DataResource[]) {
-    const imageResources: ImageResource[] = []
+  parseImageResource(resource: ImageReference): ImageResource | null {
 
-    for (const resource of resources) {
-      if (resource.mimeType === 'image/png') {
-        const pixbuf = clientResourceManager.getPixbuf(resource.path)
-        if (!pixbuf) {
-          console.error('Failed to get pixbuf for resource:', resource.path)
-          continue
-        }
-        imageResources.push({
-          ...resource,
-          mimeType: 'image/png',
-          pixbuf,
-        })
-      } else {
-        console.warn('Unsupported resource type:', resource.mimeType)
-      }
+    const pixbuf = clientResourceManager.getPixbuf(resource.path)
+    if (!pixbuf) {
+      console.error('Failed to get pixbuf for resource:', resource.path)
+      return null
     }
-
-    return imageResources
+    const imageResource: ImageResource = {
+      path: resource.path,
+      mimeType: 'image/png',
+      pixbuf,
+    }
+    return imageResource
   }
 }

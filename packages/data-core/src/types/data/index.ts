@@ -5,7 +5,6 @@ export * from './ColliderShape';
 export * from './EditorMetadata';
 export * from './GameProjectData';
 export * from './GameProjectEditorMetadata';
-export * from './ImageSource';
 export * from './LayerData';
 export * from './MapData';
 export * from './ObjectData';

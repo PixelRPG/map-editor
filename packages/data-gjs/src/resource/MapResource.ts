@@ -1,6 +1,6 @@
 import GLib from '@girs/glib-2.0';
 import Gio from '@girs/gio-2.0';
-import { MapData } from '@pixelrpg/data-core';
+import { MapData, Loadable } from '@pixelrpg/data-core';
 import { MapResourceOptions } from '../types/MapResourceOptions';
 import { loadTextFile } from '../utils';
 import { MapFormat } from '@pixelrpg/data-core';
@@ -8,7 +8,7 @@ import { MapFormat } from '@pixelrpg/data-core';
 /**
  * GJS implementation of a map resource loader
  */
-export class MapResource {
+export class MapResource implements Loadable<MapData> {
     private _data: MapData | null = null;
     private _path: string;
     private _useGResource: boolean;
@@ -51,7 +51,11 @@ export class MapResource {
     /**
      * Get the loaded map data
      */
-    get data(): MapData | null {
+    get data(): MapData {
+        if (!this._data) {
+            throw new Error('Map data not loaded');
+        }
+
         return this._data;
     }
 
@@ -60,5 +64,13 @@ export class MapResource {
      */
     get path(): string {
         return this._path;
+    }
+
+    /**
+     * Check if the resource is loaded
+     * @returns True if the resource is loaded
+     */
+    isLoaded(): boolean {
+        return this._data !== null;
     }
 } 

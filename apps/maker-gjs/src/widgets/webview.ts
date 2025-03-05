@@ -69,7 +69,7 @@ export class WebView extends WebKit.WebView {
   }
 
   protected initMessagesService() {
-    const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { spriteSheets: [], resources: [], layers: [] }, this)
+    const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { spriteSheets: [], layers: [] }, this)
     return messagesService
   }
 

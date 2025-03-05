@@ -3,12 +3,12 @@ import GdkPixbuf from '@girs/gdkpixbuf-2.0';
 import { SpriteSetData } from '@pixelrpg/data-core';
 import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions';
 import { loadTextFile } from '../utils';
-import { SpriteSetFormat } from '@pixelrpg/data-core';
+import { SpriteSetFormat, Loadable } from '@pixelrpg/data-core';
 
 /**
  * GJS implementation of a sprite set resource loader
  */
-export class SpriteSetResource {
+export class SpriteSetResource implements Loadable<SpriteSetData> {
     private _data: SpriteSetData | null = null;
     private _path: string;
     private _scale: number;
@@ -81,7 +81,10 @@ export class SpriteSetResource {
     /**
      * Get the loaded sprite set data
      */
-    get data(): SpriteSetData | null {
+    get data(): SpriteSetData {
+        if (!this._data) {
+            throw new Error('Sprite set data not loaded');
+        }
         return this._data;
     }
 
@@ -97,5 +100,13 @@ export class SpriteSetResource {
      */
     get pixbuf(): GdkPixbuf.Pixbuf | null {
         return this._pixbuf;
+    }
+
+    /**
+     * Check if the resource is loaded
+     * @returns True if the resource is loaded
+     */
+    isLoaded(): boolean {
+        return this._data !== null;
     }
 } 

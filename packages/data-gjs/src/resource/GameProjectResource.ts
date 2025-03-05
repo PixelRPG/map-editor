@@ -1,6 +1,6 @@
 import Gio from '@girs/gio-2.0';
 import GLib from '@girs/glib-2.0';
-import { GameProjectData, MapData, SpriteSetData } from '@pixelrpg/data-core';
+import { GameProjectData, MapData, SpriteSetData, Loadable } from '@pixelrpg/data-core';
 import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions';
 import { MapResource } from './MapResource';
 import { SpriteSetResource } from './SpriteSetResource';
@@ -10,7 +10,7 @@ import { GameProjectFormat } from '@pixelrpg/data-core';
 /**
  * GJS implementation of a game project resource loader
  */
-export class GameProjectResource {
+export class GameProjectResource implements Loadable<GameProjectData> {
     private _data: GameProjectData | null = null;
     private _path: string;
     private _baseDir: Gio.File;
@@ -194,7 +194,11 @@ export class GameProjectResource {
     /**
      * Get the loaded game project data
      */
-    get data(): GameProjectData | null {
+    get data(): GameProjectData {
+        if (!this._data) {
+            throw new Error('Game project data not loaded');
+        }
+
         return this._data;
     }
 
@@ -203,5 +207,13 @@ export class GameProjectResource {
      */
     get path(): string {
         return this._path;
+    }
+
+    /**
+     * Check if the resource is loaded
+     * @returns True if the resource is loaded
+     */
+    isLoaded(): boolean {
+        return this._data !== null;
     }
 } 
