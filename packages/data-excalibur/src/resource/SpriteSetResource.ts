@@ -53,22 +53,22 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
         let tileHeight = 0;
         let spacing = undefined;
 
-        // Check if we're using the images array
-        if (data.images && data.images.length > 0) {
-            const imageData = data.images.find(img => img.id === imageId);
-            if (imageData) {
-                rows = imageData.rows;
-                columns = imageData.columns;
-                tileWidth = imageData.spriteWidth;
-                tileHeight = imageData.spriteHeight;
-                spacing = imageData.spacing ? {
+        // Check if we're using the new images array
+        if (data.image) {
+            if (data.image) {
+                rows = data.image.rows;
+                columns = data.image.columns;
+                tileWidth = data.image.spriteWidth;
+                tileHeight = data.image.spriteHeight;
+                spacing = data.image.spacing ? {
                     margin: {
-                        x: imageData.spacing,
-                        y: imageData.spacing
+                        x: data.image.spacing,
+                        y: data.image.spacing
                     }
                 } : undefined;
             }
         }
+        // Otherwise use the legacy fields
         else {
             this.logger.warn('SpriteSet has no images defined');
         }
@@ -118,14 +118,14 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
                 let imageId = 'default';
 
                 // If using the new format with multiple images
-                if (data.images && data.images.length > 0) {
+                if (data.image) {
                     // Check if the sprite has an imageId property
                     const spriteImageId = sprite.properties?.['imageId'] as string;
                     if (spriteImageId && this.spriteSheets.has(spriteImageId)) {
                         imageId = spriteImageId;
                     } else {
                         // Default to the first image
-                        imageId = data.images[0].id;
+                        imageId = data.image.id;
                     }
                 }
 
@@ -219,20 +219,19 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
     private async loadImages(data: SpriteSetData): Promise<Map<string, ImageSource>> {
         const imageLoaders = new Map<string, ImageSource>();
 
-        // If using the images array
-        if (data.images && data.images.length > 0) {
-            for (const imageData of data.images) {
-                const imagePath = joinPaths(this.basePath, imageData.path);
-                try {
-                    const imageLoader = await this.loadImage(imagePath);
-                    imageLoaders.set(imageData.id, imageLoader);
-                } catch (error) {
-                    this.logger.error(`Failed to load image ${imageData.id} from: ${imagePath}`, error);
-                }
+        if (data.image) {
+
+            const imagePath = joinPaths(this.basePath, data.image.path);
+            try {
+                const imageLoader = await this.loadImage(imagePath);
+                imageLoaders.set(data.image.id, imageLoader);
+            } catch (error) {
+                this.logger.error(`Failed to load image ${data.image.id} from: ${imagePath}`, error);
             }
+
         }
         else {
-            this.logger.warn('SpriteSet has no images defined');
+            this.logger.warn('SpriteSet has no image defined');
         }
 
         return imageLoaders;
