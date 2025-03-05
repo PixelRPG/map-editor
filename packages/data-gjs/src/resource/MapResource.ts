@@ -1,5 +1,3 @@
-import GLib from '@girs/glib-2.0';
-import Gio from '@girs/gio-2.0';
 import { MapData, Loadable } from '@pixelrpg/data-core';
 import { MapResourceOptions } from '../types/MapResourceOptions';
 import { loadTextFile } from '../utils';

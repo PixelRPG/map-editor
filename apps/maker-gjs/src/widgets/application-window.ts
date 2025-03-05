@@ -12,7 +12,7 @@ import { Layer } from '../g-objects/layer.ts'
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
-import type { ImageResource } from '@pixelrpg/data-gjs'
+import { ImageResource } from '@pixelrpg/data-gjs'
 import type { State } from '@pixelrpg/data-core'
 import type { MessageEvent, EventDataStateChanged, MessageText } from '@pixelrpg/messages-core'
 
@@ -112,11 +112,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       console.error('Failed to get pixbuf for resource:', resource.path)
       return null
     }
-    const imageResource: ImageResource = {
-      path: resource.path,
-      mimeType: 'image/png',
-      pixbuf,
-    }
+    const imageResource = ImageResource.fromPixbuf(pixbuf)
     return imageResource
   }
 }

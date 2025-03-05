@@ -3,6 +3,7 @@ import { Sprite } from './sprite.ts'
 import type { SpriteSetData } from '@pixelrpg/data-core'
 import type { ImageResource } from '@pixelrpg/data-gjs'
 
+// TODO: Merge into packages/data-gjs/src/resource/SpriteSetResource.ts
 export class SpriteSheet extends GObject.Object {
 
   declare _sprites: Sprite[]
@@ -33,7 +34,6 @@ export class SpriteSheet extends GObject.Object {
     for (let y = 0; y < spriteSheetData.rows; y++) {
       for (let x = 0; x < spriteSheetData.columns; x++) {
         const index = y * spriteSheetData.columns + x
-        const spriteData = spriteSheetData.sprites[index]
         if (!imageResource) {
           console.error('Image resource not found', spriteSheetData.image?.path)
           continue
@@ -52,7 +52,7 @@ export class SpriteSheet extends GObject.Object {
         //   pixbufHeight: imageResource.pixbuf.height,
         // })
 
-        const spritePixbuf = imageResource.pixbuf.new_subpixbuf(posX, posY, rows, columns)
+        const spritePixbuf = imageResource.data.new_subpixbuf(posX, posY, rows, columns)
         const sprite = new Sprite(spritePixbuf)
 
         sprites.push(sprite);
