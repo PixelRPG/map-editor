@@ -1,15 +1,11 @@
 import GObject from '@girs/gobject-2.0'
 import { Sprite } from './sprite.ts'
-import type { ImageReference, SpriteSetData } from '@pixelrpg/data-core'
+import type { SpriteSetData } from '@pixelrpg/data-core'
 import type { ImageResource } from '@pixelrpg/data-gjs'
 
-// import Template from './spriteSheet.ui?raw'
-
-export interface SpriteSheet {
-  _sprites: Sprite[];
-}
-
 export class SpriteSheet extends GObject.Object {
+
+  declare _sprites: Sprite[]
 
   static {
     GObject.registerClass({

@@ -1,7 +1,7 @@
 using Gtk 4.0;
 
-template $TilesetWidget: ScrolledWindow {
-    name: "tileset-widget";
+template $SpriteSheetWidget: ScrolledWindow {
+    name: "sprite-sheet-widget";
     FlowBox flowBox {
         max-children-per-line: 20;
         min-children-per-line: 1;
@@ -9,7 +9,7 @@ template $TilesetWidget: ScrolledWindow {
         column-spacing: 0;
         orientation: horizontal;
         selection-mode: single;
-        // css-name: "tileset-widget";
+        // css-name: "sprite-sheet-widget";
         hexpand: true;
         vexpand: true;
     }

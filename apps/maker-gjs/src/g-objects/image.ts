@@ -1,12 +1,9 @@
 import GObject from '@girs/gobject-2.0'
-
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 
-export interface Image {
-  _pixbuf: GdkPixbuf.Pixbuf
-}
-
 export class Image extends GObject.Object {
+
+  declare _pixbuf: GdkPixbuf.Pixbuf
 
   static {
     GObject.registerClass({

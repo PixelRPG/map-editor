@@ -2,13 +2,9 @@ import GObject from '@girs/gobject-2.0'
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import { Image } from './image.ts'
 
-// import Template from './sprite.ui?raw'
-
-export interface Sprite {
-  _image: Image
-}
-
 export class Sprite extends GObject.Object {
+
+  declare _image: Image
 
   static {
     GObject.registerClass({
