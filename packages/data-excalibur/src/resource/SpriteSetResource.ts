@@ -53,8 +53,8 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
         let tileHeight = 0;
         let spacing = undefined;
 
-        // Check if we're using the new images array
-        if (data.images) {
+        // Check if we're using the images array
+        if (data.images && data.images.length > 0) {
             const imageData = data.images.find(img => img.id === imageId);
             if (imageData) {
                 rows = imageData.rows;
@@ -69,7 +69,6 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
                 } : undefined;
             }
         }
-        // Otherwise use the legacy fields
         else {
             this.logger.warn('SpriteSet has no images defined');
         }
@@ -171,27 +170,42 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
         if (data.animations && data.animations.length > 0) {
             data.animations.forEach((animation: AnimationData) => {
                 // Create animation frames with proper cloning of sprites to avoid reference issues
-                const frames = animation.frames.map(frame => {
-                    const sprite = sprites[frame.spriteId];
-                    // Create a clone of the sprite to ensure each frame has its own instance
-                    const spriteClone = sprite.clone();
+                const frames = animation.frames
+                    .filter(frame => {
+                        // Filter out frames with missing sprites
+                        const sprite = sprites[frame.spriteId];
+                        if (!sprite) {
+                            this.logger.warn(`Animation ${animation.id} references missing sprite ID ${frame.spriteId}`);
+                            return false;
+                        }
+                        return true;
+                    })
+                    .map(frame => {
+                        const sprite = sprites[frame.spriteId];
+                        // Create a clone of the sprite to ensure each frame has its own instance
+                        const spriteClone = sprite.clone();
 
-                    return {
-                        graphic: spriteClone,
-                        duration: frame.duration
-                    };
-                });
+                        return {
+                            graphic: spriteClone,
+                            duration: frame.duration
+                        };
+                    });
 
-                this.logger.debug(`Creating animation ${animation.id} with ${frames.length} frames`);
+                // Only create animation if it has frames
+                if (frames.length > 0) {
+                    this.logger.debug(`Creating animation ${animation.id} with ${frames.length} frames`);
 
-                // Create the animation with the frames
-                animations[animation.id] = new Animation({
-                    frames,
-                    strategy: animation.strategy as AnimationStrategy
-                });
+                    // Create the animation with the frames
+                    animations[animation.id] = new Animation({
+                        frames,
+                        strategy: animation.strategy as AnimationStrategy
+                    });
 
-                // Log the created animation for debugging
-                this.logger.debug(`Animation ${animation.id} created with strategy ${animation.strategy}`);
+                    // Log the created animation for debugging
+                    this.logger.debug(`Animation ${animation.id} created with strategy ${animation.strategy}`);
+                } else {
+                    this.logger.warn(`Animation ${animation.id} has no valid frames and will be skipped`);
+                }
             });
         }
 
@@ -205,7 +219,7 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
     private async loadImages(data: SpriteSetData): Promise<Map<string, ImageSource>> {
         const imageLoaders = new Map<string, ImageSource>();
 
-        // If using the new images array
+        // If using the images array
         if (data.images && data.images.length > 0) {
             for (const imageData of data.images) {
                 const imagePath = joinPaths(this.basePath, imageData.path);

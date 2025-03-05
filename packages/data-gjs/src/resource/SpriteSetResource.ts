@@ -46,8 +46,8 @@ export class SpriteSetResource {
             this._data = SpriteSetFormat.deserialize(spriteSetText);
 
             // Now load the image if it exists
-            if (this._data.images?.length) {
-                const imagePath = this._data.images[0].path;
+            if (this._data.image) {
+                const imagePath = this._data.image.path;
                 // If the image path is relative, resolve it relative to the JSON file
                 const absoluteImagePath = imagePath.startsWith('/')
                     ? imagePath

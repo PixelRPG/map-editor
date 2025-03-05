@@ -1,11 +1,4 @@
 import { Engine, DisplayMode, Loader, Color, Logger } from 'excalibur'
-// import { DevTool } from '@excaliburjs/dev-tools'
-import {
-  TileLayer,
-  // IsoTileLayer,
-  // ObjectLayer,
-  // ImageLayer,
-} from '@excaliburjs/plugin-tiled'
 
 import { messagesService } from './services/messages.service.ts'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -17,12 +10,6 @@ const logger = Logger.getInstance();
 // Enable debug logging in the browser console
 console.debug = console.log; // Ensure debug messages are visible
 logger.info('Starting map editor application');
-
-// TODO: Use serialisation from @pixelrpg/data-excalibur
-// import { TilesetParser } from './parser/tileset.parser.ts'
-// import { ResourceParser } from './parser/resource.parser.ts'
-// import { MapParser } from './parser/map.parser.ts'
-// import { LayerParser } from './parser/layer.parser.ts'
 
 // Send a message to GJS
 messagesService.send({
@@ -118,24 +105,3 @@ if (gameProjectResource.activeMap) {
   logger.info(`Map ${gameProjectResource.activeMap.mapData.name} added to scene`);
 }
 
-// Example of how to change maps
-/* 
-async function changeMap(mapId: string) {
-  try {
-    await gameProjectResource.changeMap(mapId);
-    
-    // Clear the current scene
-    engine.currentScene.entities.forEach(entity => {
-      if (entity !== engine.currentScene.camera) {
-        engine.currentScene.remove(entity);
-      }
-    });
-    
-    // Add the new map to the scene
-    gameProjectResource.addToScene(engine.currentScene);
-    logger.info(`Changed to map: ${mapId}`);
-  } catch (error) {
-    logger.error(`Failed to change map: ${error}`);
-  }
-}
-*/

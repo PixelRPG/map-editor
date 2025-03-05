@@ -1,0 +1,65 @@
+---
+description: Format Implementation
+globs: packages/data-*/**/*.ts
+---
+ # PixelRPG Data Format
+
+This rule applies to our custom data format implementation across the three data packages:
+- `@pixelrpg/data-core`: Core data structures and type definitions (platform-independent)
+- `@pixelrpg/data-excalibur`: Excalibur.js-specific implementation
+- `@pixelrpg/data-gjs`: GNOME JavaScript (GJS) runtime implementation
+
+## Data Format Architecture
+
+Our project implements a custom data format for game assets with a clear separation of concerns:
+
+1. **Core Package (`data-core`)**: 
+   - Defines all data structures and interfaces
+   - Provides validation logic
+   - Implements serialization utilities
+   - Maintains platform independence
+
+2. **Runtime-Specific Implementations**:
+   - `data-excalibur`: Implements Excalibur.js integration
+   - `data-gjs`: Implements GJS/GNOME platform integration
+   - Each implementation consumes core data structures but never modifies them
+   - Runtime-specific extensions are kept in their respective packages
+
+## Data Structures
+
+The format defines several key data structures:
+- `GameProjectData`: Project configuration referencing maps and sprite sets
+- `MapData`: Core map structure for game worlds
+- `LayerData`: Layer information within maps
+- `SpriteSetData`: Sprite set definitions with metadata
+- `SpriteData`: Individual sprite information
+- `AnimationData`: Animation definitions and frame sequences
+
+## Format Evolution Policy
+
+**IMPORTANT**: The data format is in early development and does NOT maintain backward compatibility.
+
+When the format changes:
+- JSON files implementing our format should be updated to match the new format
+- No backward compatibility guarantees are provided at this stage
+- Implementation code should focus on the current format rather than supporting legacy formats
+- Format changes should be documented in commit messages
+
+This approach allows us to iterate quickly on the format design without the overhead of maintaining compatibility layers. As the project matures, we may establish a more formal versioning and compatibility policy.
+
+## Resource Loading Pattern
+
+All implementations follow a consistent resource loading pattern:
+- Resources implement appropriate loading interfaces for their runtime
+- Resources handle file I/O according to platform conventions
+- Resources validate loaded data using the core format validators
+- Resources convert core data to runtime-specific objects as needed
+
+## Development Guidelines
+
+When working with the data format:
+1. Make format changes in the core package first
+2. Update all JSON files that use the format
+3. Update the runtime-specific implementations
+4. Add appropriate validation for new or changed fields
+5. Document format changes clearly

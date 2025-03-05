@@ -2,18 +2,16 @@
   "version": "1.0.0",
   "id": "oot2d_water",
   "name": "OoT2D Water",
-  "images": [
-    {
-      "id": "main",
-      "path": "water.png",
-      "spriteWidth": 16,
-      "spriteHeight": 16,
-      "columns": 6,
-      "rows": 5,
-      "margin": 0,
-      "spacing": 0
-    }
-  ],
+  "image": {
+    "id": "main",
+    "path": "water.png",
+    "spriteWidth": 16,
+    "spriteHeight": 16,
+    "columns": 6,
+    "rows": 5,
+    "margin": 0,
+    "spacing": 0
+  },
   "sprites": [
     {
       "id": 0,

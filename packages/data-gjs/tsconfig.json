@@ -7,7 +7,9 @@
         "strict": true,
         "skipLibCheck": true,
         "declaration": true,
-        "outDir": "dist"
+        "outDir": "dist",
+        "noEmit": true,
+        "allowImportingTsExtensions": true
     },
     "include": ["src/**/*", "env.d.ts"]
 } 

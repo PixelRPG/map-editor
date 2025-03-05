@@ -1,4 +1,4 @@
-import type { DataTile, DataSpriteSheet } from "./index.ts";
+import type { DataTile } from "./index.ts";
 import type { Vector } from "../index.ts";
 import type { SpriteSetData } from "../index.ts";
 

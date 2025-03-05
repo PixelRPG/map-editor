@@ -10,20 +10,18 @@ export class SpriteSetFormat {
         }
 
         // If using images array, validate each image
-        if (data.images && data.images.length > 0) {
-            for (const img of data.images) {
-                if (!img.id) {
-                    throw new Error('Each image source must have an ID');
-                }
-                if (!img.path) {
-                    throw new Error('Each image source must have a path');
-                }
-                if (!img.spriteWidth || !img.spriteHeight) {
-                    throw new Error('Each image source must specify sprite dimensions');
-                }
-                if (!img.columns || !img.rows) {
-                    throw new Error('Each image source must specify grid dimensions');
-                }
+        if (data.image) {
+            if (!data.image.id) {
+                throw new Error('Each image source must have an ID');
+            }
+            if (!data.image.path) {
+                throw new Error('Each image source must have a path');
+            }
+            if (!data.image.spriteWidth || !data.image.spriteHeight) {
+                throw new Error('Each image source must specify sprite dimensions');
+            }
+            if (!data.image.columns || !data.image.rows) {
+                throw new Error('Each image source must specify grid dimensions');
             }
         }
 

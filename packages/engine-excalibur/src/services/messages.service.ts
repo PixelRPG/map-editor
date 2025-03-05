@@ -1,7 +1,7 @@
 import { MessagesService } from '@pixelrpg/messages-web'
-import type { State } from '@pixelrpg/messages-core'
+import type { State } from '@pixelrpg/data-core'
 
 export const messagesService = new MessagesService<State>('pixelrpg', {
-    tilesets: [], resources: [], layers: []
+    spriteSheets: [], resources: [], map: undefined, layers: []
 })
 

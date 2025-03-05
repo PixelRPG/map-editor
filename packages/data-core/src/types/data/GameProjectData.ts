@@ -1,9 +1,7 @@
-import { Properties } from "./SpriteData";
-import { MapReference } from "../reference/MapReference";
-import { GameStartupConfig } from "../GameStartupConfig";
-import { MapCategory } from "../MapCategory";
-import { GameSpriteSetReference } from "../reference/GameSpriteSetReference";
-import { GameProjectEditorMetadata } from "./EditorMetadata";
+import type { Properties, GameProjectEditorMetadata } from "./index";
+import type { MapReference, GameSpriteSetReference } from "../reference/index";
+import type { GameStartupConfig } from "../GameStartupConfig";
+import type { MapCategory } from "../MapCategory";
 
 /**
  * Represents a complete game project containing maps and sprite sets
