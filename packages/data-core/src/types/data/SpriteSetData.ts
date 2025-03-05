@@ -1,5 +1,5 @@
-import type { AnimationData, EditorMetadata, ImageSource, Properties, SpriteDataSet } from "./index";
-
+import type { AnimationData, EditorMetadata, Properties, SpriteDataSet } from "./index";
+import type { ImageReference } from "../reference/index";
 /**
  * Represents a sprite set that can be used in a map
  * Compatible with Excalibur.js graphics system
@@ -23,7 +23,27 @@ export interface SpriteSetData {
     /**
      * Multiple image sources for the sprite set
      */
-    image?: ImageSource;
+    image?: ImageReference;
+
+    /**
+     * Width of an individual sprite in pixels
+     */
+    spriteWidth: number;
+
+    /**
+     * Height of an individual sprite in pixels
+     */
+    spriteHeight: number;
+
+    /**
+     * Optional margin around sprites in pixels
+     */
+    margin?: number;
+
+    /**
+     * Optional spacing between sprites in pixels
+     */
+    spacing?: number;
 
     /**
      * Array of sprite definitions in this sprite set

@@ -17,10 +17,10 @@ export class SpriteSetFormat {
             if (!data.image.path) {
                 throw new Error('Each image source must have a path');
             }
-            if (!data.image.spriteWidth || !data.image.spriteHeight) {
+            if (!data.spriteWidth || !data.spriteHeight) {
                 throw new Error('Each image source must specify sprite dimensions');
             }
-            if (!data.image.columns || !data.image.rows) {
+            if (!data.columns || !data.rows) {
                 throw new Error('Each image source must specify grid dimensions');
             }
         }

@@ -5,13 +5,14 @@
   "image": {
     "id": "main",
     "path": "lokiri-forest.png",
-    "spriteWidth": 16,
-    "spriteHeight": 16,
-    "columns": 32,
-    "rows": 32,
-    "margin": 0,
-    "spacing": 0
+    "type": "image"
   },
+  "spriteWidth": 16,
+  "spriteHeight": 16,
+  "columns": 32,
+  "rows": 32,
+  "margin": 0,
+  "spacing": 0,
   "sprites": [
     {
       "id": 0,

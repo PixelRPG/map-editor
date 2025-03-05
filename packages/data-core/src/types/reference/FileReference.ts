@@ -18,7 +18,7 @@ export interface FileReference {
     /**
      * The type of the referenced file
      */
-    type: 'spriteset' | 'tileset' | 'image' | 'audio' | 'map';
+    type: 'spriteset' | 'image' | 'audio' | 'map';
 
     /**
      * Optional version of the referenced file

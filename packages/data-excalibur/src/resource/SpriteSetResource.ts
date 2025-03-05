@@ -56,14 +56,14 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
         // Check if we're using the new images array
         if (data.image) {
             if (data.image) {
-                rows = data.image.rows;
-                columns = data.image.columns;
-                tileWidth = data.image.spriteWidth;
-                tileHeight = data.image.spriteHeight;
-                spacing = data.image.spacing ? {
+                rows = data.rows;
+                columns = data.columns;
+                tileWidth = data.spriteWidth;
+                tileHeight = data.spriteHeight;
+                spacing = data.spacing ? {
                     margin: {
-                        x: data.image.spacing,
-                        y: data.image.spacing
+                        x: data.spacing,
+                        y: data.spacing
                     }
                 } : undefined;
             }

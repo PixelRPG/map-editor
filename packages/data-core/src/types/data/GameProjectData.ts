@@ -1,5 +1,5 @@
 import type { Properties, GameProjectEditorMetadata } from "./index";
-import type { MapReference, GameSpriteSetReference } from "../reference/index";
+import type { MapReference, SpriteSetReference } from "../reference/index";
 import type { GameStartupConfig } from "../GameStartupConfig";
 import type { MapCategory } from "../MapCategory";
 
@@ -42,7 +42,7 @@ export interface GameProjectData {
      * Sprite sets included in the project
      * Only references to external sprite set files are supported
      */
-    spriteSets: GameSpriteSetReference[];
+    spriteSets: SpriteSetReference[];
 
     /**
      * Optional game-wide properties

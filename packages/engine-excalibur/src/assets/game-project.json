@@ -26,14 +26,12 @@
   "spriteSets": [
     {
       "id": "lokiri-forest",
-      "name": "Lokiri Forest Tileset",
       "path": "./spritesets/lokiri-forest.json",
       "type": "spriteset",
       "category": "environments"
     },
     {
       "id": "water",
-      "name": "Water Tileset",
       "path": "./spritesets/water.json",
       "type": "spriteset",
       "category": "environments"
