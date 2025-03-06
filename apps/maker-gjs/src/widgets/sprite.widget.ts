@@ -7,15 +7,13 @@ import { Sprite } from '../g-objects/sprite.ts'
 
 import Template from './sprite.widget.ui?raw'
 
-export interface SpriteWidget {
-  // Properties
-  _sprite: Sprite
-
-  // Child Widgets
-  _image: Gtk.Image
-}
-
 export class SpriteWidget extends Adw.Bin {
+
+  // GObject properties
+  declare _sprite: Sprite
+
+  // GObject internal children
+  declare _image: Gtk.Image
 
   static {
     GObject.registerClass({

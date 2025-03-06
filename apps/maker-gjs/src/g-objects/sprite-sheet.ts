@@ -6,6 +6,7 @@ import type { ImageResource } from '@pixelrpg/data-gjs'
 // TODO: Merge into packages/data-gjs/src/resource/SpriteSetResource.ts
 export class SpriteSheet extends GObject.Object {
 
+  // GObject properties
   declare _sprites: Sprite[]
 
   static {

@@ -12,13 +12,11 @@ import Template from './sidebar.ui?raw'
 GObject.type_ensure(SidebarPageTilesets.$gtype)
 GObject.type_ensure(SidebarPageLayer.$gtype)
 
-export interface Sidebar {
-  // Child widgets
-  _pageTilesets: SidebarPageTilesets
-  _pageLayer: SidebarPageLayer
-}
-
 export class Sidebar extends Adw.Bin {
+
+  // GObject internal children
+  declare _pageTilesets: SidebarPageTilesets
+  declare _pageLayer: SidebarPageLayer
 
   static {
     GObject.registerClass({

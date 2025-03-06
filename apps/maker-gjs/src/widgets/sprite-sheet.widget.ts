@@ -7,15 +7,14 @@ import { SpriteWidget } from './sprite.widget.ts'
 import Template from './sprite-sheet.widget.ui?raw'
 import { SpriteSheet } from '../g-objects/sprite-sheet.ts'
 
-export interface SpriteSheetWidget {
-  // Properties
-  _spriteSheet: SpriteSheet
-
-  // Widgets
-  _flowBox: Gtk.FlowBox
-}
-
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
+
+  // GObject properties
+  declare _spriteSheet: SpriteSheet
+
+  // GObject internal children
+  declare _flowBox: Gtk.FlowBox
+
   static {
     GObject.registerClass({
       GTypeName: 'SpriteSheetWidget',

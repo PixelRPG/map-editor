@@ -5,10 +5,6 @@ import { SpriteSheetWidget } from './sprite-sheet.widget'
 
 import Template from './sidebar-page-tilesets.ui?raw'
 
-export interface SidebarPageTilesets {
-  // Child widgets
-}
-
 export class SidebarPageTilesets extends Adw.Bin {
 
   static {

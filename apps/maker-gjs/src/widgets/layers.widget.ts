@@ -7,15 +7,13 @@ import { LayerRowWidget } from './layer-row.widget.ts'
 
 import Template from './layers.widget.ui?raw'
 
-export interface LayersWidget {
-  // Properties
-  _layers: Layer[]
-
-  // Widgets
-  _listBox: Gtk.ListBox
-}
-
 export class LayersWidget extends Adw.Bin {
+
+  // GObject properties
+  declare _layers: Layer[]
+
+  // GObject internal children
+  declare _listBox: Gtk.ListBox
 
   static {
     GObject.registerClass({

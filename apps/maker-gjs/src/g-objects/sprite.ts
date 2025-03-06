@@ -5,6 +5,7 @@ import { ImageResource } from '@pixelrpg/data-gjs'
 // TODO: Move to packages/data-gjs
 export class Sprite extends GObject.Object {
 
+  // GObject properties
   declare _image: ImageResource
 
   static {

@@ -7,12 +7,10 @@ import { Layer } from '../g-objects/layer.ts'
 
 import Template from './layer-row.widget.ui?raw'
 
-export interface LayerRowWidget {
-  // Properties
-  _layer: Layer
-}
-
 export class LayerRowWidget extends Adw.ActionRow {
+
+  // GObject properties
+  declare _layer: Layer
 
   static {
     GObject.registerClass(

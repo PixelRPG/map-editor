@@ -12,32 +12,27 @@ template $ApplicationWindow: Adw.ApplicationWindow {
     condition ("max-width: 400sp")
 
     setters {
-      splitView.collapsed: true;
-      showSidebarButton.visible: true;
+      // splitView.collapsed: true;
+      // showSidebarButton.visible: true;
     }
   }
 
-  content: Adw.OverlaySplitView splitView {
-    show-sidebar: bind showSidebarButton.active;
+  content: Adw.ToastOverlay toastOverlay {
+    child: Adw.ViewStack stack {
+      vexpand: true;
+      hexpand: true;
 
-    sidebar: $Sidebar sidebar {};
-
-    content: Adw.ToolbarView {
-      [top]
-      Adw.HeaderBar header_bar {
-        [start]
-        ToggleButton showSidebarButton {
-          visible: false;
-          icon-name: "sidebar-show-symbolic";
-          tooltip-text: _("Open map");
-          active: bind splitView.show-sidebar;
-        }
+      Adw.ViewStackPage {
+        name: "welcome-view";
+        title: _("Welcome");
+        child: $WelcomeView welcomeView {};
       }
 
-      content: $WebView webView {
-        vexpand: 'true';
-        hexpand: 'true';
-      };
+      Adw.ViewStackPage {
+        name: "project-view";
+        title: _("Project");
+        child: $ProjectView projectView {};
+      }
     };
   };
 }

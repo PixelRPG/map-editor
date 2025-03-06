@@ -19,10 +19,10 @@ export default defineConfig({
       output: {
         entryFileNames: 'main.js',
       },
-      external: [new RegExp('^gi://*', 'i'), 'system'],
+      external: [new RegExp('^gi://*', 'i'), 'system', 'gettext', 'jsdom', 'react'],
     },
     esbuild: {
-      external: ['jsdom', 'react'],
+      external: [new RegExp('^gi://*', 'i'), 'system', 'gettext', 'jsdom', 'react'],
     },
     cssMinify: 'lightningcss',
   },

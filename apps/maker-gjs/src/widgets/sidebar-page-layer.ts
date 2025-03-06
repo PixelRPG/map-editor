@@ -6,10 +6,6 @@ import { LayersWidget } from './layers.widget.ts'
 
 import Template from './sidebar-page-layer.ui?raw'
 
-export interface SidebarPageLayer {
-  // Child widgets
-}
-
 export class SidebarPageLayer extends Adw.Bin {
 
   static {
