@@ -6,10 +6,10 @@ import { BaseMessageService, Message } from '@pixelrpg/messages-core'
  * Message service for inter process communication between GJS and WebViews.
  * This is the implementation for the GJS side of the communication.
  */
-export class MessagesService<S extends object> extends BaseMessageService<S> {
+export class MessagesService extends BaseMessageService {
 
-    constructor(messageHandlerName: string, state: S, protected readonly webView: WebKit.WebView) {
-        super(messageHandlerName, state)
+    constructor(messageHandlerName: string, protected readonly webView: WebKit.WebView) {
+        super(messageHandlerName)
         this.initReceiver()
     }
 

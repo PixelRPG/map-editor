@@ -10,9 +10,6 @@ import Template from './webview.ui?raw'
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 import { EventControllerInput } from '../event-controller-input.ts'
 import { INTERNAL_PROTOCOL } from '../constants.ts'
-
-import type { State } from '@pixelrpg/data-core'
-
 export class WebView extends WebKit.WebView {
 
   static {
@@ -22,7 +19,7 @@ export class WebView extends WebKit.WebView {
     }, this);
   }
 
-  protected _messagesService: MessagesService<State>
+  protected _messagesService: MessagesService
 
   get messagesService() {
     return this._messagesService
@@ -69,7 +66,7 @@ export class WebView extends WebKit.WebView {
   }
 
   protected initMessagesService() {
-    const messagesService = new MessagesService<State>(INTERNAL_PROTOCOL, { spriteSheets: [], layers: [] }, this)
+    const messagesService = new MessagesService(INTERNAL_PROTOCOL, this)
     return messagesService
   }
 

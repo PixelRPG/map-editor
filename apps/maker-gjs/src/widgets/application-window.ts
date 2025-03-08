@@ -17,8 +17,7 @@ import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
-import type { State } from '@pixelrpg/data-core'
-import type { MessageEvent, EventDataStateChanged, MessageText } from '@pixelrpg/messages-core'
+import type { MessageText } from '@pixelrpg/messages-core'
 
 import Template from './application-window.ui?raw'
 
@@ -46,7 +45,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   constructor(application: Adw.Application) {
     super({ application })
-    this.onWebViewStateChanged = this.onWebViewStateChanged.bind(this)
     this.onWebViewMessage = this.onWebViewMessage.bind(this)
     this.onCreateProject = this.onCreateProject.bind(this)
     this.onOpenProject = this.onOpenProject.bind(this)
@@ -58,7 +56,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // Connect webview signals if project view is active
     const webView = this._projectView?.webView
     if (webView) {
-      webView.messagesService.onEvent('state-changed', this.onWebViewStateChanged)
       webView.messagesService.onMessage(this.onWebViewMessage)
     }
   }
@@ -66,56 +63,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   protected onWebViewMessage(message: MessageText) {
     console.log('Message from WebView:', message)
     this._projectView?.webView?.messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
-  }
-
-  protected onWebViewStateChanged(event: MessageEvent<EventDataStateChanged<State>>) {
-    const webView = this._projectView?.webView
-    const state = webView?.messagesService.state
-
-    if (!state) {
-      console.error('No state in event')
-      return
-    }
-
-    console.log('onWebViewStateChanged Property:', event.data.data.property)
-
-    switch (event.data.data.property) {
-      case "spriteSheets":
-        if (!state?.spriteSheets.length) {
-          console.log('No resources or spriteSheets in state')
-          return
-        }
-
-        if (!state.spriteSheets[0].image) {
-          console.error('No image in spriteSheet')
-          return
-        }
-
-        const imageResource = this.parseImageResource(state.spriteSheets[0].image)
-        if (!imageResource) {
-          console.error('Failed to parse image resource')
-          return
-        }
-
-        const spriteSheet = new SpriteSheet(state.spriteSheets[0], imageResource)
-
-        const spriteSheetWidget = new SpriteSheetWidget(spriteSheet)
-        this._projectView?.sidebar?.setSpriteSheet(spriteSheetWidget)
-        break;
-
-      case "map":
-        console.log('onWebViewStateChanged Map:', event.data.data.value)
-        break;
-      case "layers":
-        console.log('onWebViewStateChanged Layers:', event.data.data.value)
-        const layers = state.layers.map((layer) => new Layer({ name: layer.name, type: layer.type }))
-        const layersWidget = new LayersWidget(layers)
-        this._projectView?.sidebar?.setLayers(layersWidget)
-        break;
-
-      default:
-        break;
-    }
   }
 
   protected onCreateProject() {
@@ -163,6 +110,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       modal: true,
       action: Gtk.FileChooserAction.OPEN,
     })
+
+    // Add filter for JSON files
+    const filter = new Gtk.FileFilter()
+    filter.set_name("PixelRPG Project files")
+    filter.add_pattern("*.json")
+    dialog.add_filter(filter)
+
+    // Set the filter as default
+    dialog.set_filter(filter)
 
     dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Open"), Gtk.ResponseType.ACCEPT)

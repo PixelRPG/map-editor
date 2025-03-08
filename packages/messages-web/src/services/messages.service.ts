@@ -5,12 +5,12 @@ import { BaseMessageService, Message } from '@pixelrpg/messages-core'
  * Message service for inter process communication between GJS and WebViews.
  * This is implementation for the WebView side of the communication.
  */
-export class MessagesService<S extends object> extends BaseMessageService<S> {
+export class MessagesService extends BaseMessageService {
 
     handler?: WebkitMessageHandler
 
-    constructor(messageHandlerName: string, state: S) {
-        super(messageHandlerName, state)
+    constructor(messageHandlerName: string) {
+        super(messageHandlerName)
         this.initReceiver()
     }
 
@@ -39,8 +39,8 @@ export class MessagesService<S extends object> extends BaseMessageService<S> {
 
         // Used to make `window.messageReceivers.pixelrpg.receive(${JSON.stringify(message)});` available for GJS
         // This must be called in GJS using "evaluate_javascript(...)"
-        (window as any).messageReceivers ||= {};
-        (window as any).messageReceivers[this.messageHandlerName] = { receive: this.receive.bind(this) }
+        window.messageReceivers ||= {};
+        window.messageReceivers[this.messageHandlerName] = { receiveMessage: this.receive.bind(this) }
 
         console.log('Message handler initialized', handler)
     }

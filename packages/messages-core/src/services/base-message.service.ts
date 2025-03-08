@@ -1,54 +1,15 @@
 // TODO: Move to services/
 
 import { EventDispatcher } from "../event-dispatcher.ts"
-import { isEqual } from "../utils/objects.ts"
 
-import type { Message, MessageEvent, MessageFile, MessageText, EventListener, MessageEventStateChanged, EventDataStateChanged, EventDataMouseMove } from "../types/index.ts"
+import type { Message, MessageEvent, MessageFile, MessageText, EventListener, EventDataMouseMove } from "../types/index.ts"
 
-export abstract class BaseMessageService<S extends object> {
+export abstract class BaseMessageService {
 
     events = new EventDispatcher()
 
-    protected _stateProxy: S;
+    constructor(protected readonly messageHandlerName: string) {
 
-    get state() {
-        return this._stateProxy
-    }
-
-    constructor(protected readonly messageHandlerName: string, state: S) {
-        this.onStateChange = this.onStateChange.bind(this)
-        this._stateProxy = new Proxy(state, {
-            set: ((target: S, property: keyof S, newValue: S[keyof S]): boolean => {
-                const oldValue = target[property];
-                // console.log('comparing property ' + property.toString() + ':', oldValue, newValue)
-                if (!isEqual(oldValue, newValue)) {
-                    target[property] = newValue;
-                    this.onStateChange(target, property, newValue, oldValue);
-                }
-                return true;
-            }) as (target: S, property: string, newValue: any) => boolean
-        });
-        this.onEvent('state-changed', (message) => {
-            const data = message.data.data
-            const oldValue = this.state[data.property];
-            const newValue = data.value;
-            if (!isEqual(oldValue, newValue)) {
-                this.state[data.property] = newValue
-            }
-        })
-    }
-
-    // TODO: Send changes instead of sending the whole state
-    protected onStateChange(state: S, property: keyof S, newValue: any, oldValue: any) {
-        const message: MessageEventStateChanged<S> = {
-            type: 'event', data: {
-                name: 'state-changed', data: {
-                    property: property,
-                    value: newValue,
-                }
-            }
-        }
-        this.send(message)
     }
 
     abstract send(message: Message): void
@@ -95,21 +56,18 @@ export abstract class BaseMessageService<S extends object> {
 
     // Event events
 
-    onEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
     onEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
     onEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
     onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.on(`event:${subEventName}`, callback)
     }
 
-    onceEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
     onceEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
     onceEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
     onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
         this.once(`event:${subEventName}`, callback)
     }
 
-    offEvent(eventName: 'state-changed', callback: EventListener<MessageEvent<EventDataStateChanged<S>>>): void
     offEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
     offEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
     offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
