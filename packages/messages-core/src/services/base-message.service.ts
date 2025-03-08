@@ -1,87 +1,100 @@
 // TODO: Move to services/
 
 import { EventDispatcher } from "../event-dispatcher.ts"
+import type { Message, EventListener, MessageGeneric } from "../types/index.ts"
 
-import type { Message, MessageEvent, MessageFile, MessageText, EventListener, EventDataMouseMove } from "../types/index.ts"
-
+/**
+ * Base message service for handling communication between components
+ */
 export abstract class BaseMessageService {
-
+    /**
+     * Event dispatcher for handling message events
+     */
     events = new EventDispatcher()
 
-    constructor(protected readonly messageHandlerName: string) {
+    /**
+     * Create a new base message service
+     * @param messageHandlerName Name of the message handler
+     */
+    constructor(protected readonly messageHandlerName: string) { }
 
-    }
-
+    /**
+     * Send a message
+     * @param message Message to send
+     */
     abstract send(message: Message): void
 
+    /**
+     * Register a listener for a specific event
+     * @param eventName Name of the event
+     * @param callback Callback function
+     */
     on<T = any>(eventName: string, callback: EventListener<T>) {
         this.events.on(`${this.messageHandlerName}:${eventName}`, callback)
     }
 
+    /**
+     * Register a listener for a specific event that will be called only once
+     * @param eventName Name of the event
+     * @param callback Callback function
+     */
     once<T = any>(eventName: string, callback: EventListener<T>) {
         this.events.once(`${this.messageHandlerName}:${eventName}`, callback)
     }
 
+    /**
+     * Remove a listener for a specific event
+     * @param eventName Name of the event
+     * @param callback Callback function
+     */
     off<T = any>(eventName: string, callback: EventListener<T>) {
         this.events.off(`${this.messageHandlerName}:${eventName}`, callback)
     }
 
-    // Text events
-
-    onMessage(callback: EventListener<MessageText>) {
-        this.on('text', callback)
+    /**
+     * Register a listener for a generic message
+     * @param messageType Type of the message
+     * @param callback Callback function
+     */
+    onGenericMessage<T = any>(messageType: string, callback: EventListener<MessageGeneric<string, T>>) {
+        this.on(messageType, callback)
     }
 
-    onceMessage(callback: EventListener<MessageText>) {
-        this.once('text', callback)
+    /**
+     * Register a listener for a generic message that will be called only once
+     * @param messageType Type of the message
+     * @param callback Callback function
+     */
+    onceGenericMessage<T = any>(messageType: string, callback: EventListener<MessageGeneric<string, T>>) {
+        this.once(messageType, callback)
     }
 
-    offMessage(callback: EventListener<MessageText>) {
-        this.off('text', callback)
+    /**
+     * Remove a listener for a generic message
+     * @param messageType Type of the message
+     * @param callback Callback function
+     */
+    offGenericMessage<T = any>(messageType: string, callback: EventListener<MessageGeneric<string, T>>) {
+        this.off(messageType, callback)
     }
 
-    // File events
-
-    onFile(callback: EventListener<MessageFile>) {
-        this.on('file', callback)
-    }
-
-    onceFile(callback: EventListener<MessageFile>) {
-        this.once('file', callback)
-    }
-
-    offFile(callback: EventListener<MessageFile>) {
-        this.off('file', callback)
-    }
-
-    // Event events
-
-    onEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
-    onEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
-    onEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
-        this.on(`event:${subEventName}`, callback)
-    }
-
-    onceEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
-    onceEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
-    onceEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
-        this.once(`event:${subEventName}`, callback)
-    }
-
-    offEvent(eventName: 'mouse-move', callback: EventListener<MessageEvent<EventDataMouseMove>>): void
-    offEvent(eventName: 'mouse-leave', callback: EventListener<MessageEvent<null>>): void
-    offEvent<T = any>(subEventName: string, callback: EventListener<MessageEvent<T>>): void {
-        this.off(`event:${subEventName}`, callback)
-    }
-
+    /**
+     * Receive a message and dispatch it to the appropriate listeners
+     * @param message Message to receive
+     */
     protected receive(message: Message) {
-        if (message.type === 'event') {
+        // For event messages with a name property in data
+        if (message.type === 'event' && message.data && typeof message.data === 'object' && 'name' in message.data) {
             this.events.dispatch(`${this.messageHandlerName}:${message.type}:${message.data.name}`, message)
         } else {
+            // For all other message types
             this.events.dispatch(`${this.messageHandlerName}:${message.type}`, message)
         }
     }
 
+    /**
+     * Initialize the receiver
+     */
     protected abstract initReceiver(): void
 }
 

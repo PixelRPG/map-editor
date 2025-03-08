@@ -1,17 +1,19 @@
 ---
 description: Integration with Excalibur.js game engine
 globs: packages/*-excalibur/**/*.ts
+alwaysApply: false
 ---
 # Excalibur.js Integration
 
-The `-excalibur` suffix packages (like `@pixelrpg/data-excalibur`) implement integration with the Excalibur.js game engine. These packages follow our runtime-specific implementation pattern and complement the core packages.
+The `-excalibur` suffix packages (like `@pixelrpg/data-excalibur` and `@pixelrpg/engine-excalibur`) implement integration with the Excalibur.js game engine. These packages follow our runtime-specific implementation pattern and complement the core packages.
 
 ## Package Responsibilities
 - Implement Excalibur.js-specific resource loaders
 - Convert core data structures to Excalibur.js objects (TileMap, Sprites, etc.)
 - Handle animation and rendering concerns
 - Provide utilities for working with data in Excalibur.js games
-- Depend on corresponding `-core` packages for data structures
+- Implement engine functionality using Excalibur.js
+- Depend on corresponding `-core` packages for data structures and interfaces
 
 ## Implementation Patterns
 - Create Resource classes that implement Excalibur's `Loadable` interface
@@ -19,6 +21,7 @@ The `-excalibur` suffix packages (like `@pixelrpg/data-excalibur`) implement int
 - Implement proper handling of Excalibur-specific features (layers, z-indexing, etc.)
 - Ensure efficient asset loading and management
 - Provide helper methods for common game development tasks
+- Use Excalibur's systems and components for game functionality
 
 ## Resource Hierarchy
 - GameProjectResource is the top-level resource that:
@@ -28,6 +31,13 @@ The `-excalibur` suffix packages (like `@pixelrpg/data-excalibur`) implement int
   - Provides access to all game assets via ID-based lookup
 - MapResource loads and renders individual maps
 - SpriteSetResource loads and manages sprites and animations
+
+## Engine Implementation
+- ExcaliburEngine implements the EngineInterface from engine-core
+- Uses Excalibur's Engine class for rendering and game loop
+- Provides systems for input handling and game mechanics
+- Manages the lifecycle of the game (start, stop, pause, resume)
+- Handles message passing between components
 
 ## Coordinate System
 - Excalibur.js uses a top-left origin coordinate system
@@ -43,10 +53,11 @@ When implementing Excalibur.js integration:
 - Optimize for performance in game rendering scenarios
 - Provide comprehensive examples and documentation
 - Test with various Excalibur.js versions for compatibility
+- Use proper type definitions to ensure type safety
 
 ## Relationship to Core Packages
-- Each `-excalibur` package should have a corresponding `-core` package (e.g., `@pixelrpg/data-excalibur` depends on `@pixelrpg/data-core`)
-- Core data structures are consumed but never modified
+- Each `-excalibur` package should have a corresponding `-core` package (e.g., `@pixelrpg/data-excalibur` depends on `@pixelrpg/data-core`, `@pixelrpg/engine-excalibur` depends on `@pixelrpg/engine-core`)
+- Core data structures and interfaces are consumed but never modified
 - Engine-specific extensions should be kept in the `-excalibur` package
 - Avoid circular dependencies between packages
 

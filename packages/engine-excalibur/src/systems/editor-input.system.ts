@@ -1,9 +1,16 @@
 import { Engine, System, World, Scene, SystemType } from "excalibur";
-import { settings } from '../settings.ts'
 import { messagesService } from '../services/messages.service.ts'
+import { InputEventType, EngineMessageEventInput } from '@pixelrpg/engine-core'
+
+// Define a custom interface for Excalibur wheel events
+interface ExcaliburWheelEvent {
+    worldPos?: { x: number, y: number };
+    screenPos?: { x: number, y: number };
+    deltaY: number;
+}
 
 /**
- * We use this system to handle the input for the map editor.
+ * System to handle input for the map editor
  */
 export class EditorInputSystem extends System {
     private isDown = false;
@@ -11,7 +18,7 @@ export class EditorInputSystem extends System {
 
     public systemType = SystemType.Update
 
-    engine?: Engine;
+    private engine?: Engine;
 
     constructor() {
         super()
@@ -21,75 +28,133 @@ export class EditorInputSystem extends System {
     }
 
     public update(delta: number) {
-        // this.engine!.input.pointers.primary.lastWorldPos
-
+        // Update logic can be added here if needed
     }
 
     protected onPointerMove(x: number, y: number) {
         if (this.isDown) {
-            const zoom = this.engine!.currentScene.camera.zoom;
-            const deltaX = (x - this.dragStartPos.x) / zoom;
-            const deltaY = (y - this.dragStartPos.y) / zoom;
-            this.engine!.currentScene.camera.x -= deltaX;
-            this.engine!.currentScene.camera.y -= deltaY;
-            this.dragStartPos = { x: x, y: y };
-            // console.debug('move', x, y)
+            // Handle dragging
+            const dx = x - this.dragStartPos.x;
+            const dy = y - this.dragStartPos.y;
+
+            // Send drag event to GJS
+            messagesService.send({
+                type: 'event',
+                data: {
+                    name: 'input-event',
+                    data: {
+                        type: InputEventType.MOUSE_MOVE,
+                        data: {
+                            position: { x, y },
+                            dragDelta: { x: dx, y: dy }
+                        }
+                    }
+                }
+            });
+        } else {
+            // Send move event to GJS
+            messagesService.send({
+                type: 'event',
+                data: {
+                    name: 'input-event',
+                    data: {
+                        type: InputEventType.MOUSE_MOVE,
+                        data: {
+                            position: { x, y }
+                        }
+                    }
+                }
+            });
         }
     }
 
     protected onPointerDown(x: number, y: number) {
         this.isDown = true;
         this.dragStartPos = { x, y };
+
+        // Send down event to GJS
+        messagesService.send({
+            type: 'event',
+            data: {
+                name: 'input-event',
+                data: {
+                    type: InputEventType.MOUSE_DOWN,
+                    data: {
+                        position: { x, y },
+                        button: 0 // Left button
+                    }
+                }
+            }
+        });
     }
 
     protected onPointerUp() {
         this.isDown = false;
+
+        // Send up event to GJS
+        messagesService.send({
+            type: 'event',
+            data: {
+                name: 'input-event',
+                data: {
+                    type: InputEventType.MOUSE_UP,
+                    data: {
+                        position: this.dragStartPos,
+                        button: 0 // Left button
+                    }
+                }
+            }
+        });
     }
 
     public initialize(world: World, scene: Scene) {
-        this.engine = scene.engine;
-        const pointer = this.engine.input.pointers.primary;
+        super.initialize(world, scene);
 
-        pointer.on('down', (evt) => {
-            this.onPointerDown(evt.screenPos.x, evt.screenPos.y);
+        this.engine = scene.engine;
+
+        // Add event listeners
+        this.engine.input.pointers.primary.on('move', (event) => {
+            this.onPointerMove(event.worldPos.x, event.worldPos.y);
         });
 
-        pointer.on('up', this.onPointerUp);
+        this.engine.input.pointers.primary.on('down', (event) => {
+            this.onPointerDown(event.worldPos.x, event.worldPos.y);
+        });
 
-        if (settings.isBrowser) {
-            // Default browser behavior
-            pointer.on('move', (evt) => {
-                const x = evt.screenPos.x;
-                const y = evt.screenPos.y;
-                this.onPointerMove(x, y);
+        this.engine.input.pointers.primary.on('up', () => {
+            this.onPointerUp();
+        });
+
+        this.engine.input.pointers.primary.on('cancel', () => {
+            this.onPointerUp();
+        });
+
+        // Handle wheel events - Excalibur's wheel event has a custom structure
+        this.engine.input.pointers.primary.on('wheel', (event) => {
+            // Cast to our custom interface to access the properties
+            const wheelEvent = event as unknown as ExcaliburWheelEvent;
+
+            // Extract position from worldPos or screenPos, or default to 0,0
+            const position = wheelEvent.worldPos ?
+                { x: wheelEvent.worldPos.x, y: wheelEvent.worldPos.y } :
+                wheelEvent.screenPos ?
+                    { x: wheelEvent.screenPos.x, y: wheelEvent.screenPos.y } :
+                    { x: 0, y: 0 };
+
+            // Send wheel event to GJS
+            messagesService.send({
+                type: 'event',
+                data: {
+                    name: 'input-event',
+                    data: {
+                        type: 'wheel',
+                        data: {
+                            position,
+                            deltaY: wheelEvent.deltaY
+                        }
+                    }
+                }
             });
-        } else {
-            // We send the mouse events from GTK to the WebView so that drag scrolling also works outside the WebView
-            messagesService.onEvent('mouse-move', (message) => {
-                const x = message.data.data.x;
-                const y = message.data.data.y;
-                this.onPointerMove(x, y);
-            })
-
-            messagesService.onEvent('mouse-leave', this.onPointerUp)
-        }
-
-
-        pointer.on('cancel', this.onPointerUp);
-
-        pointer.on('wheel', (evt) => {
-            const direction = evt.deltaY > 0 ? -1 : 1
-            let zoom = this.engine!.currentScene.camera.zoom;
-            zoom += direction * 0.2;
-            if (zoom <= 0.1) {
-                zoom = 0.1;
-            }
-
-            // Round zoom to one decimal place
-            zoom = Math.round(zoom * 10) / 10;
-
-            this.engine!.currentScene.camera.zoom = zoom;
-            console.debug('wheel zoom to', this.engine!.currentScene.camera.zoom)
         });
     }
 }

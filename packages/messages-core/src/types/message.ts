@@ -1,4 +1,7 @@
-import type { MessageText, MessageFile, MessageEvent, MessageEventMouseEnter, MessageEventMouseLeave, MessageEventMouseMove } from './index.ts'
+import type { MessageGeneric } from './index.ts'
 
-export type Message = MessageText | MessageFile | MessageEvent | MessageEventMouseEnter | MessageEventMouseLeave | MessageEventMouseMove
+/**
+ * Generic message type that can be extended by specific implementations
+ */
+export type Message = MessageGeneric;
 

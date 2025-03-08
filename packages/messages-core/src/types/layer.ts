@@ -1,1 +1,0 @@
-export type Layer = any; // TODO: Add types for layers

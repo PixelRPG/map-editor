@@ -29,6 +29,7 @@
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
+        "@pixelrpg/engine-core": "workspace:^",
         "@pixelrpg/messages-core": "workspace:^",
         "@pixelrpg/messages-web": "workspace:^",
         "excalibur": "workspace:^",

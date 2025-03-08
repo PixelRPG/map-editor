@@ -1,0 +1,62 @@
+---
+description: Engine core functionality and interfaces
+globs: packages/engine-core/**/*.ts
+alwaysApply: false
+---
+# Engine Core Architecture
+
+The `engine-core` package provides the foundation for game engine functionality across different runtime environments. It defines interfaces, types, and base implementations that are used by platform-specific engine implementations.
+
+## Package Responsibilities
+- Define engine interfaces and abstract classes
+- Establish message types for communication between engine components
+- Provide event handling mechanisms
+- Define input event types and structures
+- Establish engine lifecycle states and transitions
+- Implement runtime-agnostic utility functions
+
+## Message System Architecture
+The engine uses a unified message system for communication:
+
+- **Message Types**: All messages follow a consistent type structure defined in `messages.types.ts`
+- **Message Categories**:
+  - `EngineMessageType.LOAD_PROJECT`: For loading game projects
+  - `EngineMessageType.LOAD_MAP`: For loading and changing maps
+  - `EngineMessageType.ENGINE_EVENT`: For engine state changes and notifications
+  - `EngineMessageType.INPUT_EVENT`: For user input events
+  - `EngineMessageType.COMMAND`: For engine control commands
+
+- **Command Types**:
+  - `EngineCommandType.START`: Start the engine
+  - `EngineCommandType.STOP`: Stop the engine
+  - `EngineCommandType.PAUSE`: Pause the engine
+  - `EngineCommandType.RESUME`: Resume the engine
+
+## Engine Lifecycle
+The engine follows a defined lifecycle with these states:
+- `INITIALIZING`: Engine is being set up
+- `READY`: Engine is ready but not running
+- `RUNNING`: Engine is actively running
+- `PAUSED`: Engine is paused
+- `ERROR`: Engine encountered an error
+- `STOPPED`: Engine has been stopped
+
+## Integration with Runtime-Specific Implementations
+- Runtime-specific packages extend the core interfaces
+- Platform implementations handle rendering, input, and resource management
+- Core interfaces ensure consistent behavior across platforms
+
+## Development Guidelines
+When working with the engine core:
+- Maintain strict runtime independence
+- Use explicit TypeScript interfaces with thorough documentation
+- Avoid dependencies on specific rendering engines
+- Design with extensibility in mind
+- Keep message types consistent and well-defined
+- Ensure proper error handling and state management
+- Use type safety to prevent runtime errors
+
+## Relationship to Other Packages
+- `engine-core` depends on `messages-core` for basic message structures
+- Runtime-specific engine packages (like `engine-excalibur` and `engine-gjs`) implement the interfaces defined in `engine-core`
+- Applications use the appropriate runtime-specific engine implementation

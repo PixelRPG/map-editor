@@ -17,7 +17,7 @@ import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
-import type { MessageText } from '@pixelrpg/messages-core'
+import { MessageGeneric } from '@pixelrpg/messages-core'
 
 import Template from './application-window.ui?raw'
 
@@ -56,11 +56,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // Connect webview signals if project view is active
     const webView = this._projectView?.webView
     if (webView) {
-      webView.messagesService.onMessage(this.onWebViewMessage)
+      webView.messagesService.onGenericMessage('text', this.onWebViewMessage)
     }
   }
 
-  protected onWebViewMessage(message: MessageText) {
+  // TODO: Use right type
+  protected onWebViewMessage(message: MessageGeneric<string, any>) {
     console.log('Message from WebView:', message)
     this._projectView?.webView?.messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
   }
