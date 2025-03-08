@@ -1,5 +1,6 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import Gtk from '@girs/gtk-4.0'
 
 import { WebView } from './webview.ts'
 import { Sidebar } from './sidebar.ts'
@@ -12,7 +13,7 @@ export class ProjectView extends Adw.Bin {
     declare _sidebar: Sidebar | undefined
     declare _webView: WebView | undefined
     declare _splitView: Adw.OverlaySplitView | undefined
-    declare _showSidebarButton: Adw.SplitButton | undefined
+    declare _showSidebarButton: Gtk.ToggleButton | undefined
 
     static {
         GObject.registerClass({

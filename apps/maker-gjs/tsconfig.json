@@ -16,4 +16,7 @@
   "files": [
     "src/main.ts",
   ],
+  "include": [
+    "src/env.d.ts"
+  ]
 }

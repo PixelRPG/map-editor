@@ -2,30 +2,38 @@ using Gtk 4.0;
 using Adw 1;
 
 template $WelcomeView: Adw.Bin {
-  Adw.StatusPage {
-    title: _("Welcome to PixelRPG Maker");
-    description: _("Create or open a project to get started");
-    icon-name: "applications-games-symbolic";
-    vexpand: true;
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
 
-    Box {
-      orientation: vertical;
-      spacing: 12;
-      halign: center;
-      margin-top: 24;
-
-      Button createButton {
-        label: _("Create New Project");
-        halign: center;
-        margin-bottom: 12;
-        styles ["suggested-action", "pill"]
-      }
-
-      Button openButton {
-        label: _("Open Project");
-        halign: center;
-        styles ["pill"]
-      }
     }
+
+    content: Adw.StatusPage {
+      title: _("Welcome to PixelRPG Maker");
+      description: _("Create or open a project to get started");
+      icon-name: "applications-games-symbolic";
+      vexpand: true;
+
+      Box {
+        orientation: vertical;
+        spacing: 12;
+        halign: center;
+        margin-top: 24;
+
+        Button createButton {
+          label: _("Create New Project");
+          halign: center;
+          margin-bottom: 12;
+          styles ["suggested-action", "pill"]
+        }
+
+        Button openButton {
+          label: _("Open Project");
+          halign: center;
+          styles ["pill"]
+        }
+      }
+    };
   }
 } 
