@@ -9,6 +9,7 @@ import mime from 'mime'
 
 import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
+import { EngineMessageType } from '@pixelrpg/engine-core'
 
 /**
  * WebView component for rendering the Excalibur.js engine
@@ -63,7 +64,7 @@ export class WebView extends WebKit.WebView {
             ...props,
             web_context,
             settings,
-            network_session,
+            network_session
         })
 
         this.onReady = this.onReady.bind(this)
@@ -78,7 +79,7 @@ export class WebView extends WebKit.WebView {
         this.initInputController()
         this.initPageLoadListener()
 
-        this.load_uri(`${INTERNAL_PROTOCOL}:///org/pixelrpg/maker/engine-excalibur/index.html`)
+        this.load_uri(`${INTERNAL_PROTOCOL}:///index.html`)
     }
 
     /**
@@ -142,8 +143,20 @@ export class WebView extends WebKit.WebView {
         // Round to 10th
         x = Math.round(x * 10) / 10
         y = Math.round(y * 10) / 10
-        // console.log('Mouse has moved in the WebView', inputController.isOutside, x, y);
-        this._messagesService.send({ type: 'event', data: { name: 'mouse-move', data: { x, y } } })
+
+        // Send mouse move event
+        this._messagesService.send({
+            type: 'event',
+            data: {
+                name: EngineMessageType.INPUT_EVENT,
+                data: {
+                    type: 'mouse-move',
+                    data: {
+                        position: { x, y }
+                    }
+                }
+            }
+        })
     }
 
     /**
@@ -151,7 +164,18 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseLeave() {
         console.log('Mouse has left the WebView');
-        this._messagesService.send({ type: 'event', data: { name: 'mouse-leave', data: null } })
+
+        // Send mouse leave event
+        this._messagesService.send({
+            type: 'event',
+            data: {
+                name: EngineMessageType.INPUT_EVENT,
+                data: {
+                    type: 'mouse-leave',
+                    data: null
+                }
+            }
+        })
     }
 
     /**
@@ -159,7 +183,18 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseEnter() {
         console.log('Mouse has entered the WebView');
-        this._messagesService.send({ type: 'event', data: { name: 'mouse-enter', data: null } })
+
+        // Send mouse enter event
+        this._messagesService.send({
+            type: 'event',
+            data: {
+                name: EngineMessageType.INPUT_EVENT,
+                data: {
+                    type: 'mouse-enter',
+                    data: null
+                }
+            }
+        })
     }
 
     /**
@@ -168,6 +203,8 @@ export class WebView extends WebKit.WebView {
      */
     protected onInternalRequest(schemeRequest: WebKit.URISchemeRequest) {
         const path = schemeRequest.get_path()
+        console.log(`Handling internal request for: ${path}`)
+
         const extension = path.split('.').pop()
 
         const stream = this.resourceManager.stream(path)

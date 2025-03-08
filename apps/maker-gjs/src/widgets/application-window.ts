@@ -3,10 +3,12 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
-import { WebView } from './webview.ts'
+import { WebView } from '@pixelrpg/engine-gjs'
+import { EngineView } from './engine-view.ts'
 import { Sidebar } from './sidebar.ts'
 import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
+
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
@@ -24,6 +26,7 @@ import Template from './application-window.ui?raw'
 // Ensure widgets are loaded and can be used in the XML
 GObject.type_ensure(WebView.$gtype)
 GObject.type_ensure(Sidebar.$gtype)
+GObject.type_ensure(EngineView.$gtype)
 GObject.type_ensure(WelcomeView.$gtype)
 GObject.type_ensure(ProjectView.$gtype)
 
@@ -45,7 +48,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   constructor(application: Adw.Application) {
     super({ application })
-    this.onWebViewMessage = this.onWebViewMessage.bind(this)
+    this.onEngineMessage = this.onEngineMessage.bind(this)
     this.onCreateProject = this.onCreateProject.bind(this)
     this.onOpenProject = this.onOpenProject.bind(this)
 
@@ -53,17 +56,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._welcomeView?.connect('create-project', this.onCreateProject)
     this._welcomeView?.connect('open-project', this.onOpenProject)
 
-    // Connect webview signals if project view is active
-    const webView = this._projectView?.webView
-    if (webView) {
-      webView.messagesService.onGenericMessage('text', this.onWebViewMessage)
+    // Connect engine signals if project view is active
+    const engineView = this._projectView?.engineView
+    if (engineView) {
+      engineView.connect('message-received', (_source, message) => {
+        this.onEngineMessage(JSON.parse(message))
+      })
     }
   }
 
-  // TODO: Use right type
-  protected onWebViewMessage(message: MessageGeneric<string, any>) {
-    console.log('Message from WebView:', message)
-    this._projectView?.webView?.messagesService.send({ type: 'text', data: 'Hello back from GJS!' })
+  protected onEngineMessage(message: MessageGeneric<'text'>) {
+    console.log('Message from Engine:', message)
+    this._projectView?.engineView?.sendMessage({ type: 'text', data: 'Hello back from GJS!' })
   }
 
   protected onCreateProject() {
@@ -104,25 +108,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   protected onOpenProject() {
-    // Show dialog to open an existing project
     const dialog = new Gtk.FileChooserDialog({
       title: _("Open Project"),
+      action: Gtk.FileChooserAction.OPEN,
       transient_for: this,
       modal: true,
-      action: Gtk.FileChooserAction.OPEN,
     })
-
-    // Add filter for JSON files
-    const filter = new Gtk.FileFilter()
-    filter.set_name("PixelRPG Project files")
-    filter.add_pattern("*.json")
-    dialog.add_filter(filter)
-
-    // Set the filter as default
-    dialog.set_filter(filter)
 
     dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Open"), Gtk.ResponseType.ACCEPT)
+
+    const filter = new Gtk.FileFilter()
+    filter.set_name(_("PixelRPG Project Files"))
+    filter.add_pattern("*.json")
+    dialog.add_filter(filter)
 
     dialog.connect('response', (dialog, response) => {
       if (response === Gtk.ResponseType.ACCEPT) {
@@ -139,24 +138,23 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   protected createNewProject(name: string) {
     console.log('Creating new project:', name)
-
-    // Switch to project view
-    this._stack?.set_visible_child_name('project-view')
-
-    // Show toast notification
-    this.showToast(`Project "${name}" created`)
+    // TODO: Implement project creation
+    this._stack?.set_visible_child(this._projectView!)
   }
 
   protected openProject(path: string | null) {
-    if (!path) return
+    if (!path) {
+      this.showToast(_("Invalid project path"))
+      return
+    }
 
     console.log('Opening project:', path)
 
     // Switch to project view
-    this._stack?.set_visible_child_name('project-view')
+    this._stack?.set_visible_child(this._projectView!)
 
-    // Show toast notification
-    this.showToast(`Project opened: ${path}`)
+    // Load the project in the engine
+    this._projectView?.engineView?.loadProject(path)
   }
 
   protected showToast(message: string) {
@@ -167,14 +165,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._toastOverlay?.add_toast(toast)
   }
 
-  // TODO: Move to a parser?
   parseImageResource(resource: ImageReference): ImageResource | null {
-    const pixbuf = clientResourceManager.getPixbuf(resource.path)
-    if (!pixbuf) {
-      console.error('Failed to get pixbuf for resource:', resource.path)
+    if (!resource.path) {
       return null
     }
-    const imageResource = ImageResource.fromPixbuf(pixbuf)
-    return imageResource
+
+    return new ImageResource(resource.path)
   }
 }

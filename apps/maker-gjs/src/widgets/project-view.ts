@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
-import { WebView } from './webview.ts'
+import { EngineView } from './engine-view.ts'
 import { Sidebar } from './sidebar.ts'
 
 import Template from './project-view.ui?raw'
@@ -11,7 +11,7 @@ export class ProjectView extends Adw.Bin {
 
     // GObject internal children
     declare _sidebar: Sidebar | undefined
-    declare _webView: WebView | undefined
+    declare _engineView: EngineView | undefined
     declare _splitView: Adw.OverlaySplitView | undefined
     declare _showSidebarButton: Gtk.ToggleButton | undefined
 
@@ -19,18 +19,29 @@ export class ProjectView extends Adw.Bin {
         GObject.registerClass({
             GTypeName: 'ProjectView',
             Template,
-            InternalChildren: ['sidebar', 'webView', 'splitView', 'showSidebarButton'],
+            InternalChildren: ['sidebar', 'engineView', 'splitView', 'showSidebarButton'],
         }, this);
     }
 
     constructor() {
         super()
+
+        // Connect to the message-received signal from the EngineView
+        this._engineView?.connect('message-received', (_source: EngineView, message: string) => {
+            console.log('Message received from engine:', message)
+        })
     }
 
-    get webView(): WebView | undefined {
-        return this._webView
+    /**
+     * Get the engine view
+     */
+    get engineView(): EngineView | undefined {
+        return this._engineView
     }
 
+    /**
+     * Get the sidebar
+     */
     get sidebar(): Sidebar | undefined {
         return this._sidebar
     }

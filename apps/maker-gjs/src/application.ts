@@ -4,8 +4,7 @@ import Gdk from '@girs/gdk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import { ApplicationWindow } from './widgets/application-window.ts'
-import { PreferencesDialog } from './widgets/preferences-dialog.ts'
+import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 import { APPLICATION_ID } from './constants.ts'
 
 import mainStyle from './main.css?inline'

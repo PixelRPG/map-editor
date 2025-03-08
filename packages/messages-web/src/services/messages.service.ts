@@ -40,7 +40,7 @@ export class MessagesService extends BaseMessageService {
         // Used to make `window.messageReceivers.pixelrpg.receive(${JSON.stringify(message)});` available for GJS
         // This must be called in GJS using "evaluate_javascript(...)"
         window.messageReceivers ||= {};
-        window.messageReceivers[this.messageHandlerName] = { receiveMessage: this.receive.bind(this) }
+        window.messageReceivers[this.messageHandlerName] = { receive: this.receive.bind(this) }
 
         console.log('Message handler initialized', handler)
     }

@@ -13,3 +13,4 @@ const engine = new ExcaliburEngine('map-view');
 await engine.initialize();
 
 // The engine will handle messages from GJS to load projects and maps
+engine.loadProject('./assets/game-project.json')

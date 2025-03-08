@@ -84,12 +84,13 @@ export abstract class BaseMessageService {
      */
     protected receive(message: Message) {
         // For event messages with a name property in data
-        if (message.type === 'event' && message.data && typeof message.data === 'object' && 'name' in message.data) {
-            this.events.dispatch(`${this.messageHandlerName}:${message.type}:${message.data.name}`, message)
-        } else {
-            // For all other message types
-            this.events.dispatch(`${this.messageHandlerName}:${message.type}`, message)
-        }
+        // if (message.type === 'event' && message.data && typeof message.data === 'object' && 'name' in message.data) {
+        //     this.events.dispatch(`${this.messageHandlerName}:${message.type}:${message.data.name}`, message)
+        // } else {
+        //     // For all other message types
+        //     this.events.dispatch(`${this.messageHandlerName}:${message.type}`, message)
+        // }
+        this.events.dispatch(`${this.messageHandlerName}:${message.type}`, message)
     }
 
     /**

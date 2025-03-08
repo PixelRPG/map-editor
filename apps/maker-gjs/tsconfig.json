@@ -17,6 +17,8 @@
     "src/main.ts",
   ],
   "include": [
-    "src/env.d.ts"
+    "src/env.d.ts",
+    "@girs/gjs",
+    "@girs/gjs/dom"
   ]
 }

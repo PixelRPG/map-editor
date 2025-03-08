@@ -1,15 +1,15 @@
 {
     "name": "@pixelrpg/maker-gjs",
     "version": "0.0.1",
-    "description": "Experimental tile based map editor",
-    "main": "index.js",
+    "description": "PixelRPG Maker for GNOME",
+    "main": "src/main.ts",
     "type": "module",
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist",
         "build:vite": "vite build",
-        "build:blueprints": "blueprint-compiler compile src/widgets/application-window.blp --output src/widgets/application-window.ui && blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/sidebar.blp --output src/widgets/sidebar.ui && blueprint-compiler compile src/widgets/preferences-dialog.blp --output src/widgets/preferences-dialog.ui && blueprint-compiler compile src/widgets/sprite-sheet.widget.blp --output src/widgets/sprite-sheet.widget.ui && blueprint-compiler compile src/widgets/sprite.widget.blp --output src/widgets/sprite.widget.ui && blueprint-compiler compile src/widgets/sidebar-page-tilesets.blp --output src/widgets/sidebar-page-tilesets.ui && blueprint-compiler compile src/widgets/sidebar-page-layer.blp --output src/widgets/sidebar-page-layer.ui && blueprint-compiler compile src/widgets/layers.widget.blp --output src/widgets/layers.widget.ui && blueprint-compiler compile src/widgets/layer-row.widget.blp --output src/widgets/layer-row.widget.ui && blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/sidebar.blp --output src/widgets/sidebar.ui && blueprint-compiler compile src/widgets/preferences-dialog.blp --output src/widgets/preferences-dialog.ui && blueprint-compiler compile src/widgets/sprite-sheet.widget.blp --output src/widgets/sprite-sheet.widget.ui && blueprint-compiler compile src/widgets/sprite.widget.blp --output src/widgets/sprite.widget.ui && blueprint-compiler compile src/widgets/sidebar-page-tilesets.blp --output src/widgets/sidebar-page-tilesets.ui && blueprint-compiler compile src/widgets/sidebar-page-layer.blp --output src/widgets/sidebar-page-layer.ui && blueprint-compiler compile src/widgets/layers.widget.blp --output src/widgets/layers.widget.ui && blueprint-compiler compile src/widgets/project-view.blp --output src/widgets/project-view.ui && blueprint-compiler compile src/widgets/welcome-view.blp --output src/widgets/welcome-view.ui",
+        "build:blueprints": "blueprint-compiler compile src/widgets/application-window.blp --output src/widgets/application-window.ui && blueprint-compiler compile src/widgets/engine-view.blp --output src/widgets/engine-view.ui && blueprint-compiler compile src/widgets/sidebar.blp --output src/widgets/sidebar.ui && blueprint-compiler compile src/widgets/preferences-dialog.blp --output src/widgets/preferences-dialog.ui && blueprint-compiler compile src/widgets/sprite-sheet.widget.blp --output src/widgets/sprite-sheet.widget.ui && blueprint-compiler compile src/widgets/sprite.widget.blp --output src/widgets/sprite.widget.ui && blueprint-compiler compile src/widgets/sidebar-page-tilesets.blp --output src/widgets/sidebar-page-tilesets.ui && blueprint-compiler compile src/widgets/sidebar-page-layer.blp --output src/widgets/sidebar-page-layer.ui && blueprint-compiler compile src/widgets/layers.widget.blp --output src/widgets/layers.widget.ui && blueprint-compiler compile src/widgets/layer-row.widget.blp --output src/widgets/layer-row.widget.ui && blueprint-compiler compile src/widgets/sidebar.blp --output src/widgets/sidebar.ui && blueprint-compiler compile src/widgets/preferences-dialog.blp --output src/widgets/preferences-dialog.ui && blueprint-compiler compile src/widgets/sprite-sheet.widget.blp --output src/widgets/sprite-sheet.widget.ui && blueprint-compiler compile src/widgets/sprite.widget.blp --output src/widgets/sprite.widget.ui && blueprint-compiler compile src/widgets/sidebar-page-tilesets.blp --output src/widgets/sidebar-page-tilesets.ui && blueprint-compiler compile src/widgets/sidebar-page-layer.blp --output src/widgets/sidebar-page-layer.ui && blueprint-compiler compile src/widgets/layers.widget.blp --output src/widgets/layers.widget.ui && blueprint-compiler compile src/widgets/project-view.blp --output src/widgets/project-view.ui && blueprint-compiler compile src/widgets/welcome-view.blp --output src/widgets/welcome-view.ui",
         "build:resources": "glib-compile-resources org.pixelrpg.maker.data.gresource.xml",
         "build": "yarn build:resources && yarn build:blueprints && yarn build:vite",
         "check": "tsc",
@@ -17,8 +17,14 @@
         "debug:app": "GTK_DEBUG=interactive gjs -m dist/main.js",
         "start": "yarn build:resources && yarn start:app"
     },
+    "keywords": [
+        "pixelrpg",
+        "maker",
+        "gnome",
+        "gjs"
+    ],
     "author": "Pascal Garber <pascal@artandcode.studio>",
-    "license": "MIT",
+    "license": "GPL-3.0",
     "devDependencies": {
         "lightningcss": "^1.29.1",
         "typescript": "^5.8.2",
@@ -37,6 +43,7 @@
         "@girs/webkit-6.0": "^2.47.3-4.0.0-beta.21",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-gjs": "workspace:^",
+        "@pixelrpg/engine-gjs": "workspace:^",
         "@pixelrpg/messages-core": "workspace:^",
         "@pixelrpg/messages-gjs": "workspace:^",
         "mime": "^4.0.6"

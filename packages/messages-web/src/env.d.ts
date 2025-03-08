@@ -12,7 +12,7 @@ declare global {
     messageReceivers?: {
       [handlerName: string]: {
         /** Custom method to receive messages from GJS */
-        receiveMessage(message: Message): void
+        receive(message: Message): void
       }
     }
   }

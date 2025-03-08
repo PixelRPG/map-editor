@@ -12,6 +12,9 @@ declare global {
             env: ProcessEnv;
         }
     }
+    interface Window {
+        webkit: any | undefined; // TODO
+    }
     declare const process: NodeJS.Process;
     declare const require: (path: string) => any;
 }

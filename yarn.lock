@@ -3307,7 +3307,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/engine-gjs@workspace:packages/engine-gjs":
+"@pixelrpg/engine-gjs@workspace:^, @pixelrpg/engine-gjs@workspace:packages/engine-gjs":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/engine-gjs@workspace:packages/engine-gjs"
   dependencies:
@@ -3365,6 +3365,7 @@ __metadata:
     "@girs/webkit-6.0": "npm:^2.47.3-4.0.0-beta.21"
     "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-gjs": "workspace:^"
+    "@pixelrpg/engine-gjs": "workspace:^"
     "@pixelrpg/messages-core": "workspace:^"
     "@pixelrpg/messages-gjs": "workspace:^"
     lightningcss: "npm:^1.29.1"

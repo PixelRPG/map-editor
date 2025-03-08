@@ -1,10 +1,8 @@
 import '@girs/gjs/dom'
 import '@girs/gjs'
-// import GLib from '@girs/glib-2.0'
 import system from 'system'
 
 import { Application } from './application.ts'
-
 export function main(argv: string[]) {
   const application = new Application()
   return application.runAsync(argv)

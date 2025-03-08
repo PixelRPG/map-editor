@@ -1,5 +1,4 @@
 {
-  "extends": "../excalibur/tsconfig.json",
   "compilerOptions": {
     // Modern ESM output
     "module": "ESNext",

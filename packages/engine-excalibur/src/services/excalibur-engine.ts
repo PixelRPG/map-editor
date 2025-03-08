@@ -9,7 +9,8 @@ import {
     ProjectLoadOptions,
     InputEventType,
     EngineMessageEventEngine,
-    EngineMessageEventInput
+    EngineMessageEventInput,
+    EngineMessageType
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
@@ -80,6 +81,7 @@ export class ExcaliburEngine implements EngineInterface {
             suppressPlayButton: true,
             backgroundColor: Color.Transparent,
             enableCanvasTransparency: true,
+            enableCanvasContextMenu: true, // Enable the right click context menu for debugging
         })
 
         // Add the editor input system
@@ -280,9 +282,10 @@ export class ExcaliburEngine implements EngineInterface {
      */
     private setupMessageHandlers(): void {
         // Handle input events
-        messagesService.onGenericMessage('event', (message) => {
+        messagesService.on('event', (message) => {
+            console.debug('[ExcaliburEngine] on event', message)
             if (message.data && typeof message.data === 'object' && 'name' in message.data) {
-                if (message.data.name === 'input-event') {
+                if (message.data.name === EngineMessageType.INPUT_EVENT) {
                     const eventData = message.data.data;
                     if (eventData && eventData.type) {
                         // Handle input events from GJS
@@ -293,17 +296,17 @@ export class ExcaliburEngine implements EngineInterface {
         });
 
         // Listen for load project messages
-        messagesService.onGenericMessage('load-project', (message) => {
+        messagesService.on('load-project', (message) => {
             this.loadProject(message.projectPath, message.options);
         });
 
         // Listen for load map messages
-        messagesService.onGenericMessage('load-map', (message) => {
+        messagesService.on('load-map', (message) => {
             this.loadMap(message.mapId);
         });
 
         // Listen for command messages
-        messagesService.onGenericMessage('command', (message) => {
+        messagesService.on('command', (message) => {
             switch (message.command) {
                 case 'start':
                     this.start();

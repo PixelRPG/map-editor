@@ -1,7 +1,6 @@
 ---
 description: Core data structures
 globs: packages/*-core/**/*.ts
-alwaysApply: false
 ---
 # Core Package Architecture
 

@@ -9,7 +9,8 @@ import {
     InputEventType,
     EngineMessageEventEngine,
     EngineMessageEventInput,
-    EngineMessageEvent
+    EngineMessageEvent,
+    EngineMessageType,
 } from '@pixelrpg/engine-core'
 import { MessagesService } from '@pixelrpg/messages-gjs'
 
@@ -43,9 +44,13 @@ export class GjsEngine implements EngineInterface {
     /**
      * Create a new GJS engine
      * @param resourcePaths Paths to search for resources
+     * @param gresourcePath Optional path prefix for GResource lookups
      */
-    constructor(resourcePaths: string[] = []) {
-        this.resourceManager = new ResourceManager(resourcePaths)
+    constructor(
+        resourcePaths: string[] = [],
+        private gresourcePath: string = '/org/pixelrpg/maker/engine-excalibur'
+    ) {
+        this.resourceManager = new ResourceManager(resourcePaths, gresourcePath)
     }
 
     /**
@@ -54,13 +59,24 @@ export class GjsEngine implements EngineInterface {
     async initialize(): Promise<void> {
         this.setStatus(EngineStatus.INITIALIZING)
 
-        // Create the WebView
-        this.webView = new WebView({}, this.resourceManager)
+        try {
+            console.log("Initializing GjsEngine");
 
-        // Set up message handlers
-        this.setupMessageHandlers()
+            // Create the WebView with explicit size and visibility properties
+            this.webView = new WebView({}, this.resourceManager);
 
-        this.setStatus(EngineStatus.READY)
+            console.log("WebView created in GjsEngine");
+
+            // Set up message handlers
+            this.setupMessageHandlers()
+
+            this.setStatus(EngineStatus.READY)
+            console.log("GjsEngine initialized successfully");
+        } catch (error) {
+            console.error('Failed to initialize engine:', error)
+            this.setStatus(EngineStatus.ERROR)
+            throw error
+        }
     }
 
     /**
@@ -79,7 +95,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'load-project',
+                name: EngineMessageType.LOAD_PROJECT,
                 data: {
                     projectPath,
                     options
@@ -103,7 +119,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'load-map',
+                name: EngineMessageType.LOAD_MAP,
                 data: {
                     mapId
                 }
@@ -123,7 +139,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'command',
+                name: EngineMessageType.COMMAND,
                 data: {
                     command: 'start'
                 }
@@ -145,7 +161,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'command',
+                name: EngineMessageType.COMMAND,
                 data: {
                     command: 'stop'
                 }
@@ -165,7 +181,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'command',
+                name: EngineMessageType.COMMAND,
                 data: {
                     command: 'pause'
                 }
@@ -185,7 +201,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'command',
+                name: EngineMessageType.COMMAND,
                 data: {
                     command: 'resume'
                 }
@@ -206,7 +222,7 @@ export class GjsEngine implements EngineInterface {
         this.webView.messagesService.send({
             type: 'event',
             data: {
-                name: 'input-event',
+                name: EngineMessageType.INPUT_EVENT,
                 data: event
             }
         })
@@ -229,7 +245,7 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Use onGenericMessage to handle engine events
-        this.webView.messagesService.onGenericMessage('event', (message) => {
+        this.webView.messagesService.on('event', (message) => {
             // Check if this is an engine event
             if (message.data && typeof message.data === 'object' && 'name' in message.data) {
                 const eventData = message.data as EngineMessageEvent['data'];

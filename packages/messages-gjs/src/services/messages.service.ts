@@ -36,6 +36,7 @@ export class MessagesService extends BaseMessageService {
                     },
                 )
             } catch (error) {
+                console.error('Error sending message to webview', error)
                 reject(error)
             }
         })

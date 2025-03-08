@@ -1,13 +1,15 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $ProjectView: Adw.Bin {
+template $ProjectView : Adw.Bin {
   Adw.OverlaySplitView splitView {
     show-sidebar: bind showSidebarButton.active;
 
-    sidebar: $Sidebar sidebar {};
+    [sidebar]
+    $Sidebar sidebar {}
 
-    content: Adw.ToolbarView {
+    [content]
+    Adw.ToolbarView {
       [top]
       Adw.HeaderBar header_bar {
         [start]
@@ -19,10 +21,11 @@ template $ProjectView: Adw.Bin {
         }
       }
 
-      content: $WebView webView {
-        vexpand: 'true';
-        hexpand: 'true';
+      content: $EngineView engineView {
+        vexpand: true;
+        hexpand: true;
+        visible: true;
       };
-    };
+    }
   }
 } 
