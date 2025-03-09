@@ -1,0 +1,43 @@
+---
+description: Guidelines for GJS packages (engine-gjs, data-gjs, messages-gjs)
+globs: packages/*-gjs/**/*.ts, apps/maker-gjs/**/*.ts
+alwaysApply: false
+---
+# GJS Packages
+
+GJS packages (`*-gjs`) implement core interfaces for the GNOME JavaScript (GJS) runtime environment, enabling desktop-based applications with GTK.
+
+## Package Responsibilities
+- Implement interfaces defined in corresponding core packages
+- Provide GTK-friendly APIs and components
+- Handle GNOME-specific UI patterns and integrations
+- Bridge between core interfaces and GJS/GTK functionality
+- Focus on desktop application integration
+
+## Implementation Patterns
+- Use GObject-style classes with proper inheritance
+- Follow GNOME naming conventions and patterns
+- Handle GJS-specific memory management concerns
+- Use GTK modern patterns (like composite templates)
+- Properly integrate with GObject-introspection
+
+## UI Components
+- Create reusable GTK widgets and components
+- Follow GNOME Human Interface Guidelines
+- Implement responsive layouts
+- Handle proper resource management
+- Support accessibility features
+
+## Integration with Core Packages
+- Implement core interfaces faithfully
+- Translate between core types and GJS/GTK types
+- Handle platform-specific edge cases
+- Provide GJS-specific extensions where needed
+- Maintain type safety in interface implementations
+
+## Message Handling
+- Implement the message system defined in core packages
+- Translate between engine messages and GTK/GJS events
+- Handle input events from GTK and forward to appropriate handlers
+- Use message passing for communication between components
+- Ensure type safety in message handling

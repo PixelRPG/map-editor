@@ -1,61 +1,28 @@
 ---
 description: Package management standards for the project
-globs: package.json, **/package.json, *.md, **/*.md
+globs: package.json, **/package.json
+alwaysApply: false
 ---
-# Package Management Standards
+# Package Management
 
-This project uses the latest version of Yarn as its package manager.
+This project uses Yarn workspaces for package management, with a monorepo structure.
 
-## Yarn Usage
+## Workspace Structure
+- Root workspace in the project root
+- Packages in `packages/` directory
+- Applications in `apps/` directory
+- Each package and app has its own `package.json`
 
-- Use Yarn for all package management operations
-- Do not mix package managers (no npm or pnpm commands)
-- Always use Yarn v3+ (Berry) features when available
-- Include yarn.lock in version control
+## Dependencies
+- Use workspace references for internal dependencies
+- Specify exact versions for external dependencies
+- Document dependency purposes in package.json
+- Keep dependencies up to date
+- Minimize external dependencies
 
-## Command Standards
-
-Always use consistent yarn commands in documentation and scripts:
-
-```bash
-# Installing dependencies
-yarn install
-
-# Adding dependencies
-yarn add <package>
-yarn add -D <package>  # dev dependency
-
-# Removing dependencies
-yarn remove <package>
-
-# Running scripts
-yarn <script-name>
-
-# Building
-yarn build
-
-# Testing
-yarn test
-
-# Workspace commands
-yarn workspace <workspace-name> <command>
-```
-
-## Workspace Configuration
-
-- Use Yarn workspaces for monorepo management
-- Define workspaces in the root package.json
-- Maintain consistent versioning across packages
-- Use workspace protocols for internal dependencies:
-  
-```json
-"dependencies": {
-    "@pixelrpg/data-core": "workspace:^"
-}
-```
-
-## Documentation Standards
-
-- All README files and documentation should reference yarn commands only
-- Update examples to use yarn when modifying documentation
-- Ensure CI/CD pipelines use yarn consistently
+## Scripts
+- Implement consistent script names across packages
+- Include build, test, and lint scripts
+- Use workspace-level scripts for project-wide operations
+- Document script usage in README files
+- Ensure scripts work cross-platform

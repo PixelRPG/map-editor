@@ -1,0 +1,50 @@
+---
+description: Guidelines for Excalibur packages (engine-excalibur, data-excalibur)
+globs: packages/*-excalibur/**/*.ts, packages/excalibur*/**/*.ts
+alwaysApply: false
+---
+# Excalibur Packages
+
+Excalibur packages (`*-excalibur`) implement core interfaces for web browsers using the Excalibur.js game engine, enabling web-based game rendering and interaction.
+
+## Package Responsibilities
+- Implement interfaces defined in corresponding core packages
+- Provide web-friendly APIs and components
+- Handle browser-specific patterns and integrations
+- Bridge between core interfaces and Excalibur.js functionality
+- Focus on web application integration
+
+## Implementation Patterns
+- Use Excalibur.js entities, components, and systems
+- Follow web development best practices
+- Handle browser-specific concerns (like event handling)
+- Use modern JavaScript/TypeScript patterns
+- Properly integrate with the DOM and browser APIs
+
+## Game Components
+- Create reusable game entities and components
+- Implement proper rendering and animation
+- Handle input events and user interaction
+- Manage game resources and assets
+- Support responsive layouts and different screen sizes
+
+## Integration with Core Packages
+- Implement core interfaces faithfully
+- Translate between core types and Excalibur.js types
+- Handle platform-specific edge cases
+- Provide web-specific extensions where needed
+- Maintain type safety in interface implementations
+
+## Message Handling
+- Implement the message system defined in core packages
+- Translate between engine messages and browser events
+- Handle input events from the browser and forward to appropriate handlers
+- Use message passing for communication between components
+- Ensure type safety in message handling
+
+## Performance Considerations
+- Optimize rendering for browser environments
+- Minimize DOM operations and reflows
+- Use appropriate data structures for game state
+- Implement efficient collision detection
+- Handle resource loading and caching effectively
