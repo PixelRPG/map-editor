@@ -7,15 +7,18 @@ import {
     InputEvent,
     ProjectLoadOptions,
     InputEventType,
-    createEngineMessages,
-    parseEngineMessages,
+    engineMessagesService,
+    engineMessageParserService,
     EngineCommandType,
-    EngineTypeGuards
+    EngineError,
+    errorService,
+    engineTypeGuardsService
 } from '@pixelrpg/engine-core'
 import { MessagesService } from '@pixelrpg/messages-gjs'
 
 import { WebView } from '../widgets/webview.ts'
 import { ResourceManager } from './resource-manager.ts'
+
 
 /**
  * GJS implementation of the game engine
@@ -37,192 +40,239 @@ export class GjsEngine implements EngineInterface {
     private webView: WebView | null = null
 
     /**
-     * Resource manager for handling internal resources
+     * Resource manager for loading game assets
      */
     private resourceManager: ResourceManager
 
     /**
      * Create a new GJS engine
      * @param resourcePaths Paths to search for resources
-     * @param gresourcePath Optional path prefix for GResource lookups
+     * @param gresourcePath Path to the GResource file
      */
     constructor(
         resourcePaths: string[] = [],
         private gresourcePath: string = '/org/pixelrpg/maker/engine-excalibur'
     ) {
-        this.resourceManager = new ResourceManager(resourcePaths, gresourcePath)
+        this.resourceManager = new ResourceManager(resourcePaths);
     }
 
     /**
      * Initialize the engine
      */
-    async initialize(): Promise<void> {
-        this.setStatus(EngineStatus.INITIALIZING)
-
+    public async initialize(): Promise<void> {
         try {
-            console.log("Initializing GjsEngine");
+            this.setStatus(EngineStatus.INITIALIZING);
 
-            // Create the WebView with explicit size and visibility properties
+            // Create a new WebView
             this.webView = new WebView({}, this.resourceManager);
 
-            console.log("WebView created in GjsEngine");
-
             // Set up message handlers
-            this.setupMessageHandlers()
+            this.setupMessageHandlers();
 
-            this.setStatus(EngineStatus.READY)
-            console.log("GjsEngine initialized successfully");
+            this.setStatus(EngineStatus.READY);
         } catch (error) {
-            console.error('Failed to initialize engine:', error)
-            this.setStatus(EngineStatus.ERROR)
-            throw error
+            console.error('Failed to initialize engine:', error);
+            this.setStatus(EngineStatus.ERROR);
+            throw errorService.createInitializationError('Failed to initialize GJS engine', error instanceof Error ? error : undefined);
         }
     }
 
     /**
-     * Load a game project
-     * @param projectPath Path to the game project file
-     * @param options Options for loading the project
+     * Load a project
      */
-    async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
-        if (!this.webView) {
-            throw new Error('Engine not initialized')
+    public async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
+        if (this.status === EngineStatus.INITIALIZING) {
+            throw errorService.createRuntimeError('Engine not initialized');
         }
 
-        this.setStatus(EngineStatus.LOADING)
+        if (!projectPath || projectPath.trim() === '') {
+            throw errorService.createValidationError('Invalid project path');
+        }
 
-        // Send a message to the WebView to load the project
-        this.webView.messagesService.send(
-            createEngineMessages.loadProject(projectPath, options)
-        );
-
-        // The status will be updated when we receive a response from the WebView
+        try {
+            // Send a message to the WebView to load the project
+            if (this.webView) {
+                this.webView.messagesService.send(
+                    engineMessagesService.loadProject(projectPath, options)
+                );
+            }
+        } catch (error) {
+            throw errorService.createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
+        }
     }
 
     /**
-     * Load a specific map
-     * @param mapId ID of the map to load
+     * Load a map
      */
-    async loadMap(mapId: string): Promise<void> {
-        if (!this.webView) {
-            throw new Error('Engine not initialized')
+    public async loadMap(mapId: string): Promise<void> {
+        if (this.status === EngineStatus.INITIALIZING) {
+            throw errorService.createRuntimeError('Engine not initialized');
         }
 
-        // Send a message to the WebView to load the map
-        this.webView.messagesService.send(
-            createEngineMessages.loadMap(mapId)
-        );
+        if (!mapId || mapId.trim() === '') {
+            throw errorService.createValidationError('Invalid map ID');
+        }
+
+        try {
+            // Send a message to the WebView to load the map
+            if (this.webView) {
+                this.webView.messagesService.send(
+                    engineMessagesService.loadMap(mapId)
+                );
+            }
+        } catch (error) {
+            throw errorService.createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
+        }
     }
 
     /**
      * Start the engine
      */
-    async start(): Promise<void> {
-        if (!this.webView) {
-            throw new Error('Engine not initialized')
+    public async start(): Promise<void> {
+        if (this.status === EngineStatus.INITIALIZING) {
+            throw errorService.createRuntimeError('Engine not initialized');
         }
 
-        // Send a command to the WebView to start the engine
-        this.webView.messagesService.send(
-            createEngineMessages.command(EngineCommandType.START)
-        );
+        try {
+            // Send a command to the WebView to start the engine
+            if (this.webView) {
+                this.webView.messagesService.send(
+                    engineMessagesService.command(EngineCommandType.START)
+                );
+            }
 
-        this.setStatus(EngineStatus.RUNNING)
+            this.setStatus(EngineStatus.RUNNING);
+        } catch (error) {
+            throw errorService.createRuntimeError('Failed to start engine', error instanceof Error ? error : undefined);
+        }
     }
 
     /**
      * Stop the engine
      */
-    async stop(): Promise<void> {
-        if (!this.webView) {
-            throw new Error('Engine not initialized')
+    public async stop(): Promise<void> {
+        if (this.status === EngineStatus.INITIALIZING) {
+            throw errorService.createRuntimeError('Engine not initialized');
         }
 
-        // Send a command to the WebView to stop the engine
-        this.webView.messagesService.send(
-            createEngineMessages.command(EngineCommandType.STOP)
-        );
+        try {
+            // Send a command to the WebView to stop the engine
+            if (this.webView) {
+                this.webView.messagesService.send(
+                    engineMessagesService.command(EngineCommandType.STOP)
+                );
+            }
+        } catch (error) {
+            throw errorService.createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
+        }
     }
 
     /**
      * Pause the engine
      */
-    pause(): void {
-        if (!this.webView) {
-            throw new Error('Engine not initialized')
+    public async pause(): Promise<void> {
+        if (this.status === EngineStatus.INITIALIZING) {
+            throw errorService.createRuntimeError('Engine not initialized');
         }
 
-        // Send a command to the WebView to pause the engine
-        this.webView.messagesService.send(
-            createEngineMessages.command(EngineCommandType.PAUSE)
-        );
+        try {
+            // Send a command to the WebView to pause the engine
+            if (this.webView) {
+                this.webView.messagesService.send(
+                    engineMessagesService.command(EngineCommandType.PAUSE)
+                );
+            }
+        } catch (error) {
+            throw errorService.createRuntimeError('Failed to pause engine', error instanceof Error ? error : undefined);
+        }
     }
 
     /**
      * Resume the engine
      */
-    resume(): void {
-        if (!this.webView) {
-            throw new Error('Engine not initialized')
+    public async resume(): Promise<void> {
+        if (this.status === EngineStatus.INITIALIZING) {
+            throw errorService.createRuntimeError('Engine not initialized');
         }
 
-        // Send a command to the WebView to resume the engine
-        this.webView.messagesService.send(
-            createEngineMessages.command(EngineCommandType.RESUME)
-        );
+        try {
+            // Send a command to the WebView to resume the engine
+            if (this.webView) {
+                this.webView.messagesService.send(
+                    engineMessagesService.command(EngineCommandType.RESUME)
+                );
+            }
+        } catch (error) {
+            throw errorService.createRuntimeError('Failed to resume engine', error instanceof Error ? error : undefined);
+        }
     }
 
     /**
      * Handle input events
      * @param event Input event
      */
-    handleInput(event: InputEvent): void {
+    public handleInput(event: InputEvent): void {
         if (!this.webView) {
-            return
+            return;
         }
 
-        // Send the input event to the WebView
-        this.webView.messagesService.send(
-            createEngineMessages.inputEvent(event)
-        );
+        if (!event || !event.type || !Object.values(InputEventType).includes(event.type)) {
+            console.warn('Invalid input event:', event);
+            return;
+        }
+
+        try {
+            // Send the input event to the WebView
+            this.webView.messagesService.send(
+                engineMessagesService.inputEvent(event)
+            );
+        } catch (error) {
+            console.error('Failed to handle input event:', errorService.formatError(error instanceof Error ? error : new Error(String(error))));
+        }
     }
 
     /**
-     * Get the WebView widget
-     * @returns The WebView widget
+     * Get the WebView
      */
     getWebView(): WebView | null {
-        return this.webView
+        return this.webView;
     }
 
     /**
-     * Set up message handlers for communication with the WebView
+     * Set up message handlers for the WebView
      */
     private setupMessageHandlers(): void {
         if (!this.webView) {
-            return
+            return;
         }
 
         // Use onGenericMessage to handle engine events
         this.webView.messagesService.on('event', (message) => {
-            if (parseEngineMessages.isEngineEventMessage(message)) {
-                const engineEventData = parseEngineMessages.getEventData(message);
+            try {
+                if (engineMessageParserService.isEngineEventMessage(message)) {
+                    const engineEventData = engineMessageParserService.getEventData(message);
 
-                if (engineEventData && 'type' in engineEventData) {
-                    const engineEvent: EngineEvent = {
-                        type: engineEventData.type,
-                        data: engineEventData.data
-                    };
+                    if (engineEventData && typeof engineEventData === 'object' && 'type' in engineEventData) {
+                        const engineEvent: EngineEvent = {
+                            type: engineEventData.type,
+                            data: engineEventData.data
+                        };
 
-                    // Update the engine status if needed
-                    if (EngineTypeGuards.isStatusChangedEvent(engineEvent)) {
-                        // We know data is defined and is EngineStatus because of the type guard
-                        this.status = engineEvent.data!;
+                        // Update the engine status if needed
+                        if (engineTypeGuardsService.isStatusChangedEvent(engineEvent)) {
+                            this.status = engineEvent.data as EngineStatus;
+                        }
+
+                        // Dispatch the event
+                        if (Object.values(EngineEventType).includes(engineEvent.type)) {
+                            this.events.dispatch(engineEvent.type, engineEvent);
+                        } else {
+                            console.warn(`Unknown engine event type: ${engineEvent.type}`);
+                        }
                     }
-
-                    // Dispatch the event
-                    this.events.dispatch(engineEvent.type, engineEvent);
                 }
+            } catch (error) {
+                console.error('Error handling message:', errorService.formatError(error instanceof Error ? error : new Error(String(error))));
             }
         });
     }
@@ -232,13 +282,19 @@ export class GjsEngine implements EngineInterface {
      * @param status New engine status
      */
     private setStatus(status: EngineStatus): void {
-        this.status = status
-
-        const event: EngineEvent<EngineEventType.STATUS_CHANGED> = {
-            type: EngineEventType.STATUS_CHANGED,
-            data: status
+        if (!Object.values(EngineStatus).includes(status)) {
+            console.warn(`Invalid engine status: ${status}`);
+            return;
         }
 
-        this.events.dispatch(event.type, event)
+        this.status = status;
+
+        // Dispatch a status changed event
+        const statusEvent: EngineEvent<EngineEventType.STATUS_CHANGED> = {
+            type: EngineEventType.STATUS_CHANGED,
+            data: status
+        };
+
+        this.events.dispatch(EngineEventType.STATUS_CHANGED, statusEvent);
     }
 } 

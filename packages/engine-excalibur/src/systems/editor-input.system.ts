@@ -3,10 +3,10 @@ import { messagesService } from '../services/messages.service.ts'
 import {
     InputEventType,
     EngineMessageType,
-    createEngineMessages,
-    createInputEvents,
-    parseEngineMessages,
-    EngineTypeGuards
+    engineMessagesService,
+    engineInputEventsService,
+    engineMessageParserService,
+    engineTypeGuardsService
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
 
@@ -48,13 +48,13 @@ export class EditorInputSystem extends System {
             this.dragStartPos = { x, y };
 
             // Send move event to GJS
-            messagesService.send(createEngineMessages.inputEvent(
-                createInputEvents.mouseMove({ x, y }, { x: deltaX, y: deltaY })
+            messagesService.send(engineMessagesService.inputEvent(
+                engineInputEventsService.mouseMove({ x, y }, { x: deltaX, y: deltaY })
             ));
         } else {
             // Send move event to GJS without drag info
-            messagesService.send(createEngineMessages.inputEvent(
-                createInputEvents.mouseMove({ x, y })
+            messagesService.send(engineMessagesService.inputEvent(
+                engineInputEventsService.mouseMove({ x, y })
             ));
         }
     }
@@ -69,8 +69,8 @@ export class EditorInputSystem extends System {
         this.dragStartPos = { x, y };
 
         // Send down event to GJS
-        messagesService.send(createEngineMessages.inputEvent(
-            createInputEvents.mouseDown({ x, y }, 0) // Left button
+        messagesService.send(engineMessagesService.inputEvent(
+            engineInputEventsService.mouseDown({ x, y }, 0) // Left button
         ));
     }
 
@@ -81,8 +81,8 @@ export class EditorInputSystem extends System {
         this.isDown = false;
 
         // Send up event to GJS
-        messagesService.send(createEngineMessages.inputEvent(
-            createInputEvents.mouseUp(this.dragStartPos, 0) // Left button
+        messagesService.send(engineMessagesService.inputEvent(
+            engineInputEventsService.mouseUp(this.dragStartPos, 0) // Left button
         ));
     }
 
@@ -140,23 +140,23 @@ export class EditorInputSystem extends System {
             messagesService.on('event', (message) => {
                 console.log('[EditorInputSystem] Received message', JSON.stringify(message))
 
-                if (parseEngineMessages.isInputEventMessage(message)) {
-                    const inputEvent = parseEngineMessages.getEventData(message);
+                if (engineMessageParserService.isInputEventMessage(message)) {
+                    const inputEvent = engineMessageParserService.getEventData(message);
                     console.log('Received input event', inputEvent);
 
-                    if (EngineTypeGuards.isMouseMoveEvent(inputEvent) && inputEvent.data) {
+                    if (engineTypeGuardsService.isMouseMoveEvent(inputEvent) && inputEvent.data) {
                         this.onPointerMove(
                             inputEvent.data.position.x,
                             inputEvent.data.position.y
                         );
-                    } else if (EngineTypeGuards.isMouseDownEvent(inputEvent) && inputEvent.data) {
+                    } else if (engineTypeGuardsService.isMouseDownEvent(inputEvent) && inputEvent.data) {
                         this.onPointerDown(
                             inputEvent.data.position.x,
                             inputEvent.data.position.y
                         );
-                    } else if (EngineTypeGuards.isMouseUpEvent(inputEvent)) {
+                    } else if (engineTypeGuardsService.isMouseUpEvent(inputEvent)) {
                         this.onPointerUp();
-                    } else if (EngineTypeGuards.isMouseLeaveEvent(inputEvent)) {
+                    } else if (engineTypeGuardsService.isMouseLeaveEvent(inputEvent)) {
                         // For mouse leave, we just need to call onPointerUp to cancel any drag operation
                         this.onPointerUp();
                     }
@@ -173,8 +173,8 @@ export class EditorInputSystem extends System {
             this.onWheel(wheelEvent.deltaY, position);
 
             // Send wheel event to GJS
-            messagesService.send(createEngineMessages.inputEvent(
-                createInputEvents.wheel(position, wheelEvent.deltaY)
+            messagesService.send(engineMessagesService.inputEvent(
+                engineInputEventsService.wheel(position, wheelEvent.deltaY)
             ));
         });
     }

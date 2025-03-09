@@ -8,7 +8,7 @@ import {
     InputEvent,
     ProjectLoadOptions,
     InputEventType,
-    createEngineMessages,
+    engineMessagesService,
     EngineMessageType
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
@@ -302,7 +302,7 @@ export class ExcaliburEngine implements EngineInterface {
 
         // Send a message to GJS
         messagesService.send(
-            createEngineMessages.engineEvent(event)
+            engineMessagesService.engineEvent(event)
         )
     }
 } 

@@ -2,29 +2,9 @@ import { Message } from '@pixelrpg/messages-core';
 import {
     EngineEvent,
     InputEvent,
-    ProjectLoadOptions,
+    ProjectLoadOptions
 } from './index.ts';
-
-/**
- * Types of messages that can be sent between engine implementations
- */
-export enum EngineMessageType {
-    LOAD_PROJECT = 'load-project',
-    LOAD_MAP = 'load-map',
-    ENGINE_EVENT = 'engine-event',
-    INPUT_EVENT = 'input-event',
-    COMMAND = 'command',
-}
-
-/**
- * Command types that can be sent to the engine
- */
-export enum EngineCommandType {
-    START = 'start',
-    STOP = 'stop',
-    PAUSE = 'pause',
-    RESUME = 'resume',
-}
+import { EngineMessageType, EngineCommandType } from './message-types.ts';
 
 /**
  * Message text type for engine-specific text messages
@@ -89,4 +69,4 @@ export type EngineMessage =
     | EngineMessageEventInput
     | EngineMessageCommand
     | EngineMessageLoadProject
-    | EngineMessageLoadMap; 
+    | EngineMessageLoadMap;

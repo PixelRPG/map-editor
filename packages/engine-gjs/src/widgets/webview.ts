@@ -11,8 +11,8 @@ import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
 import {
     InputEventType,
-    createEngineMessages,
-    createInputEvents,
+    engineMessagesService,
+    engineInputEventsService,
     type EngineMessage
 } from '@pixelrpg/engine-core'
 
@@ -150,8 +150,8 @@ export class WebView extends WebKit.WebView {
         y = Math.round(y * 10) / 10
 
         // Send mouse move event
-        this._messagesService.send(createEngineMessages.inputEvent(
-            createInputEvents.mouseMove({ x, y })
+        this._messagesService.send(engineMessagesService.inputEvent(
+            engineInputEventsService.mouseMove({ x, y })
         ));
     }
 
@@ -163,8 +163,8 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has left the WebView');
 
         // Send mouse leave event with no position data
-        this._messagesService.send(createEngineMessages.inputEvent(
-            createInputEvents.mouseLeave()
+        this._messagesService.send(engineMessagesService.inputEvent(
+            engineInputEventsService.mouseLeave()
         ));
     }
 
@@ -178,8 +178,8 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has entered the WebView');
 
         // Send mouse enter event
-        this._messagesService.send(createEngineMessages.inputEvent(
-            createInputEvents.mouseEnter({ x, y })
+        this._messagesService.send(engineMessagesService.inputEvent(
+            engineInputEventsService.mouseEnter({ x, y })
         ));
     }
 
