@@ -16,10 +16,14 @@ import {
     type EngineMessage
 } from '@pixelrpg/engine-core'
 
+import { ResourceManager } from '../services/resource-manager.ts'
+
 /**
  * WebView component for rendering the Excalibur.js engine
  */
 export class WebView extends WebKit.WebView {
+
+    private resourceManager: ResourceManager = new ResourceManager()
 
     static {
         GObject.registerClass({
@@ -43,10 +47,7 @@ export class WebView extends WebKit.WebView {
      * @param resourceManager Resource manager for handling internal requests
      */
     constructor(
-        props: Partial<WebKit.WebView.ConstructorProps>,
-        private resourceManager: {
-            stream: (path: string) => Gio.InputStream | null
-        }
+        props: Partial<WebKit.WebView.ConstructorProps>
     ) {
         const network_session = new WebKit.NetworkSession({})
 

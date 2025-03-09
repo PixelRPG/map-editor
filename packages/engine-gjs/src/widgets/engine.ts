@@ -20,7 +20,6 @@ import {
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
 import { WebView } from './webview.ts'
-import { ResourceManager } from '../services/resource-manager.ts'
 import Template from './engine.ui?raw'
 
 /**
@@ -48,11 +47,6 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
     public events = new EventDispatcher<EngineEvent>()
 
     /**
-     * WebView for rendering the game
-     */
-    private webView!: WebView
-
-    /**
      * Resource paths for the engine
      */
     private resourcePaths: string[] = [CLIENT_DIR_PATH.get_path()!]
@@ -63,11 +57,9 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
     private gresourcePath: string = CLIENT_RESOURCE_PATH
 
     /**
-     * Resource manager for loading game assets
+     * WebView for rendering the game
      */
-    private resourceManager: ResourceManager = new ResourceManager(this.resourcePaths, this.gresourcePath);
-
-
+    private webView: WebView = new WebView({});
 
     /**
      * Create a new GJS engine
@@ -75,61 +67,18 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
     constructor() {
         super();
 
-        // Initialize the engine
-        this.initialize().catch(error => {
-            console.error('Failed to initialize engine:', error);
-        });
-    }
-
-    /**
-     * Set resource paths for the engine
-     * @param resourcePaths Paths to search for resources
-     */
-    public setResourcePaths(resourcePaths: string[]): void {
-        this.resourcePaths = Array.isArray(resourcePaths) ? resourcePaths : [];
-
-        if (this.resourceManager) {
-            // Update existing resource manager
-            for (const path of this.resourcePaths) {
-                this.resourceManager.addPath(path);
-            }
-        }
-    }
-
-    /**
-     * Set GResource path for the engine
-     * @param gresourcePath Path to the GResource file
-     */
-    public setGResourcePath(gresourcePath: string): void {
-        this.gresourcePath = gresourcePath;
-
-        if (this.resourceManager) {
-            this.resourceManager.setGResourcePath(gresourcePath);
-        }
-    }
-
-    /**
-     * Initialize the engine
-     */
-    public async initialize(): Promise<void> {
         try {
             this.setStatus(EngineStatus.INITIALIZING);
-
-            // Create the resource manager
-            this.resourceManager = new ResourceManager(this.resourcePaths, this.gresourcePath);
-
-            // Create the WebView
-            this.webView = new WebView({}, this.resourceManager);
 
             // Add the WebView to this container
             this.set_child(this.webView);
 
-            // Ensure the WebView is shown
-            this.webView.show();
-            this.show();
-
             // Set up message handlers
             this.setupMessageHandlers();
+
+            // Ensure the WebView is shown
+            this.show();
+            this.webView.show();
 
             this.setStatus(EngineStatus.READY);
         } catch (error) {
@@ -137,6 +86,13 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
             this.setStatus(EngineStatus.ERROR);
             throw errorService.createInitializationError('Failed to initialize GJS engine', error instanceof Error ? error : undefined);
         }
+    }
+
+    /**
+     * Initialize the engine
+     */
+    public async initialize(): Promise<void> {
+        this.webView.reload();
     }
 
     /**

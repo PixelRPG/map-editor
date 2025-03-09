@@ -8,18 +8,18 @@ Previously, you would use the GjsEngine class with a separate EngineView wrapper
 
 ```typescript
 // Create the EngineView component
-const engineView = new EngineView();
+const gjsEngine = new EngineView();
 
 // Get the engine from the view
-const engine = engineView.getEngine();
+const engine = gjsEngine.getEngine();
 
 // Add the view to your UI
-myContainer.append(engineView);
+myContainer.append(gjsEngine);
 
 // Use the engine through the view
-await engineView.loadProject('/path/to/project.json');
-await engineView.loadMap('map1');
-await engineView.start();
+await gjsEngine.loadProject('/path/to/project.json');
+await gjsEngine.loadMap('map1');
+await gjsEngine.start();
 ```
 
 ## New Pattern
@@ -61,8 +61,8 @@ engine.connect('message-received', (_source, message) => {
 2. Replace instantiation:
    ```typescript
    // Old
-   const engineView = new EngineView();
-   const engine = engineView.getEngine();
+   const gjsEngine = new EngineView();
+   const engine = gjsEngine.getEngine();
    
    // New
    const engine = new GjsEngine();
@@ -72,7 +72,7 @@ engine.connect('message-received', (_source, message) => {
 3. Replace UI integration:
    ```typescript
    // Old
-   myContainer.append(engineView);
+   myContainer.append(gjsEngine);
    
    // New
    myContainer.append(engine);
@@ -81,9 +81,9 @@ engine.connect('message-received', (_source, message) => {
 4. Replace method calls:
    ```typescript
    // Old
-   await engineView.loadProject('/path/to/project.json');
-   await engineView.loadMap('map1');
-   await engineView.start();
+   await gjsEngine.loadProject('/path/to/project.json');
+   await gjsEngine.loadMap('map1');
+   await gjsEngine.start();
    
    // New
    await engine.loadProject('/path/to/project.json');
@@ -94,7 +94,7 @@ engine.connect('message-received', (_source, message) => {
 5. Update message handling:
    ```typescript
    // Old
-   engineView.connect('message-received', (_source, message) => {
+   gjsEngine.connect('message-received', (_source, message) => {
      console.log('Message from engine:', message);
    });
    

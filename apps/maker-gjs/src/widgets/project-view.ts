@@ -11,7 +11,7 @@ export class ProjectView extends Adw.Bin {
 
     // GObject internal children
     declare _sidebar: Sidebar | undefined
-    declare _engineView: GjsEngine | undefined
+    declare _gjsEngine: GjsEngine | undefined
     declare _splitView: Adw.OverlaySplitView | undefined
     declare _showSidebarButton: Gtk.ToggleButton | undefined
 
@@ -27,7 +27,7 @@ export class ProjectView extends Adw.Bin {
         super()
 
         // Connect to the message-received signal from the EngineView
-        this._engineView?.connect('message-received', (_source: GjsEngine, message: string) => {
+        this._gjsEngine?.connect('message-received', (_source: GjsEngine, message: string) => {
             console.log('Message received from engine:', message)
         })
     }
@@ -36,7 +36,7 @@ export class ProjectView extends Adw.Bin {
      * Get the engine view
      */
     get gjsEngine(): GjsEngine | undefined {
-        return this._engineView
+        return this._gjsEngine
     }
 
     /**

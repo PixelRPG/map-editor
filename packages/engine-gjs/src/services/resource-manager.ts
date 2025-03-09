@@ -1,5 +1,6 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
+import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
 /**
  * Resource manager for handling internal resources
@@ -11,7 +12,7 @@ export class ResourceManager {
      * @param gresourcePath Optional path prefix for GResource lookups
      */
     constructor(
-        private resourcePaths: string[] = [],
+        private resourcePaths: string[] = [CLIENT_DIR_PATH.get_path()!, CLIENT_RESOURCE_PATH],
         private gresourcePath: string = '/org/pixelrpg/maker/engine-excalibur'
     ) { }
 

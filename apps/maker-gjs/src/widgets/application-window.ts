@@ -14,7 +14,6 @@ import { ProjectView } from './project-view.ts'
 import { SpriteSheet } from '../g-objects/sprite-sheet.ts'
 import { Layer } from '../g-objects/layer.ts'
 
-import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
