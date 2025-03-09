@@ -1,0 +1,62 @@
+---
+description: General guidelines for the project
+globs: **/*
+alwaysApply: false
+---
+# General Guidelines
+
+## Code Organization
+- Separate concerns into logical modules
+- Keep related functionality together
+- Use consistent file and directory naming
+- Follow the established project structure
+- Document architectural decisions
+
+## Type Safety
+- Use TypeScript's type system to its fullest
+- Avoid using `any` type - use `unknown` with proper type guards
+- Create type guards for runtime type checking
+- Use generics for better type inference
+- Ensure proper nullability handling
+
+## Message Passing
+- Use the established message passing system for communication
+- Create properly typed messages using helper functions
+- Use enum values instead of string literals for message types
+- Handle message parsing with appropriate type guards
+- Document message flow between components
+
+## Error Handling
+- Validate input data thoroughly
+- Provide meaningful error messages
+- Use proper error types for different failure scenarios
+- Log warnings for non-critical issues
+- Handle edge cases explicitly
+
+## Documentation
+- Document all public interfaces and types
+- Include JSDoc comments for functions and methods
+- Document architectural decisions
+- Keep documentation up-to-date with code changes
+- Provide examples for complex functionality
+
+## Testing
+- Write tests for critical functionality
+- Test edge cases and error conditions
+- Use TypeScript in test files for better type checking
+- Mock dependencies for isolated testing
+- Test type guards with various input scenarios
+
+## Performance
+- Consider performance implications of design decisions
+- Optimize critical paths
+- Minimize unnecessary object creation
+- Use appropriate data structures for the task
+- Document performance considerations
+
+## Cross-Platform Compatibility
+- Maintain runtime independence in core packages
+- Handle platform-specific concerns in appropriate packages
+- Test on all supported platforms
+- Document platform-specific requirements
+- Use feature detection instead of platform detection when possible

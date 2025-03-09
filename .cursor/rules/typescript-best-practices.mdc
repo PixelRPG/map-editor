@@ -1,0 +1,63 @@
+---
+description: TypeScript best practices for the project
+globs: **/*.ts, **/*.tsx
+alwaysApply: false
+---
+# TypeScript Best Practices
+
+## Type Safety
+- Avoid using `any` type - use `unknown` with proper type guards instead
+- Create type guards with `is` syntax for runtime type checking
+- Use generics for better type inference
+- Use discriminated unions with explicit type properties
+- Ensure proper nullability handling in interfaces
+- Use mapped types to ensure type safety
+
+## Type Guards
+- Create type guards for all complex types
+- Include null/undefined checks in type guards
+- Use the `is` syntax to inform TypeScript about type narrowing
+- Place type guards in dedicated utility files
+- Test type guards with various input scenarios
+
+## Generics
+- Use generics for related type families
+- Create mapping interfaces for type relationships
+- Use generic constraints to limit type parameters
+- Provide default type parameters when appropriate
+- Use generic helper functions for better type inference
+
+## Enums
+- Use enums for fixed sets of values
+- Prefer enum values over string literals in code
+- Document enum values with JSDoc comments
+- Use consistent naming for enum values
+- Use string enums for better serialization
+
+## Interfaces vs. Types
+- Use interfaces for object shapes
+- Use types for unions, intersections, and mapped types
+- Extend interfaces for inheritance
+- Use consistent naming patterns
+- Document interfaces and types with JSDoc comments
+
+## Nullability
+- Be explicit about nullability in type definitions
+- Handle null/undefined values explicitly
+- Use optional chaining and nullish coalescing operators
+- Check for null/undefined before operations
+- Document nullability in JSDoc comments
+
+## Error Handling
+- Use proper error types for different failure scenarios
+- Provide meaningful error messages
+- Include appropriate type checking before operations
+- Handle edge cases explicitly
+- Use try/catch blocks for error-prone operations
+
+## Documentation
+- Document all public interfaces and types with JSDoc comments
+- Include parameter descriptions in function documentation
+- Document return values and thrown exceptions
+- Use `@example` tags to provide usage examples
+- Document nullability and optional parameters

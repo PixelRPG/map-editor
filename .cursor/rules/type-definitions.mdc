@@ -1,16 +1,36 @@
 ---
 description: Type definitions for the game data structures
-globs: **/types/*.ts
+globs: **/types/*.ts, **/utils/type-guards.ts
+alwaysApply: false
 ---
 # Type Definitions
 
-Type definitions are critical for our data formats:
+## Core Principles
 - Use explicit interfaces for all data structures
 - Provide comprehensive JSDoc comments
 - Use strict typing to catch errors at compile time
 - Breaking changes are allowed when making changes
+- Avoid using `any` type - use `unknown` with proper type guards instead
 
-Key type definitions:
+## Type Organization
+- Organize types in thematic files (e.g., engine-events.ts, input-events.ts)
+- Use index.ts to re-export all types for easy importing
+- Keep type definitions separate from implementation code
+- Move type guards to dedicated utility files (e.g., utils/type-guards.ts)
+
+## Generic Type Patterns
+- Use generics for related type families (e.g., `EngineEvent<T extends EngineEventType>`)
+- Create mapping interfaces for type relationships (e.g., `EngineEventDataMap`)
+- Use mapped types to ensure type safety (e.g., `data: InputEventDataMap[T]`)
+- Define union types only when necessary, prefer mapped types
+
+## Type Safety Practices
+- Create type guards with `is` syntax for runtime type checking
+- Include null/undefined checks in type guards
+- Use discriminated unions with explicit type properties
+- Ensure proper nullability handling in interfaces
+
+## Key Type Definitions
 - MapData: The core map structure
 - LayerData: Layer information within a map
 - SpriteSetData: Sprite set information
@@ -19,11 +39,12 @@ Key type definitions:
 - ColliderShape: Collision shape definitions
 - GameProjectData: Project configuration that references maps and sprite sets
 - ObjectData: Game objects with position, size, and properties
+- EngineEvent: Events related to engine state changes
+- InputEvent: User input events with appropriate data
 
-When modifying types:
+## When Modifying Types
 - Update validation logic in corresponding format classes
 - Consider the impact on both core and engine-specific implementations
 - Add appropriate JSDoc comments for all public interfaces
 - Ensure proper handling of coordinate systems in all object positioning code
-
-These rules should be continuously updated as the project evolves. When I provide new information about project goals or implementation details, suggest updates to these rules.
+- Update type guards when changing type definitions

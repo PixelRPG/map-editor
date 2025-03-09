@@ -6,7 +6,7 @@ import { BaseMessageService, Message } from '@pixelrpg/messages-core'
  * Message service for inter process communication between GJS and WebViews.
  * This is the implementation for the GJS side of the communication.
  */
-export class MessagesService extends BaseMessageService {
+export class MessagesService<T extends Message> extends BaseMessageService<T> {
 
     constructor(messageHandlerName: string, protected readonly webView: WebKit.WebView) {
         super(messageHandlerName)
@@ -17,7 +17,7 @@ export class MessagesService extends BaseMessageService {
      * Sends a message to the webview
      * @param message The message to send
      */
-    async send(message: Message) {
+    async send(message: T) {
         return new Promise((resolve, reject) => {
             try {
                 this.webView.evaluate_javascript(

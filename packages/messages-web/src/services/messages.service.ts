@@ -5,7 +5,7 @@ import { BaseMessageService, Message } from '@pixelrpg/messages-core'
  * Message service for inter process communication between GJS and WebViews.
  * This is implementation for the WebView side of the communication.
  */
-export class MessagesService extends BaseMessageService {
+export class MessagesService<T extends Message> extends BaseMessageService<T> {
 
     handler?: WebkitMessageHandler
 
@@ -18,7 +18,7 @@ export class MessagesService extends BaseMessageService {
      * Sends a message to GJS
      * @param message The message to send
      */
-    async send(message: Message) {
+    async send(message: T) {
         try {
             const testClone = structuredClone(message);
             console.log('Sending message', testClone)

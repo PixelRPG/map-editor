@@ -1,14 +1,14 @@
 import { Engine, System, World, Scene, SystemType } from "excalibur";
 import { messagesService } from '../services/messages.service.ts'
-import { InputEventType, EngineMessageEventInput, EngineMessageType } from '@pixelrpg/engine-core'
+import {
+    InputEventType,
+    EngineMessageType,
+    createEngineMessages,
+    createInputEvents,
+    parseEngineMessages,
+    EngineTypeGuards
+} from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
-
-// Define a custom interface for Excalibur wheel events
-interface ExcaliburWheelEvent {
-    worldPos?: { x: number, y: number };
-    screenPos?: { x: number, y: number };
-    deltaY: number;
-}
 
 /**
  * System to handle input for the map editor
@@ -48,33 +48,14 @@ export class EditorInputSystem extends System {
             this.dragStartPos = { x, y };
 
             // Send move event to GJS
-            // messagesService.send({
-            //     type: 'event',
-            //     data: {
-            //         name: EngineMessageType.INPUT_EVENT,
-            //         data: {
-            //             type: InputEventType.MOUSE_MOVE,
-            //             data: {
-            //                 position: { x, y },
-            //                 dragDelta: { x: deltaX, y: deltaY }
-            //             }
-            //         }
-            //     }
-            // });
+            messagesService.send(createEngineMessages.inputEvent(
+                createInputEvents.mouseMove({ x, y }, { x: deltaX, y: deltaY })
+            ));
         } else {
             // Send move event to GJS without drag info
-            // messagesService.send({
-            //     type: 'event',
-            //     data: {
-            //         name: EngineMessageType.INPUT_EVENT,
-            //         data: {
-            //             type: InputEventType.MOUSE_MOVE,
-            //             data: {
-            //                 position: { x, y }
-            //             }
-            //         }
-            //     }
-            // });
+            messagesService.send(createEngineMessages.inputEvent(
+                createInputEvents.mouseMove({ x, y })
+            ));
         }
     }
 
@@ -88,19 +69,9 @@ export class EditorInputSystem extends System {
         this.dragStartPos = { x, y };
 
         // Send down event to GJS
-        // messagesService.send({
-        //     type: 'event',
-        //     data: {
-        //         name: EngineMessageType.INPUT_EVENT,
-        //         data: {
-        //             type: InputEventType.MOUSE_DOWN,
-        //             data: {
-        //                 position: { x, y },
-        //                 button: 0 // Left button
-        //             }
-        //         }
-        //     }
-        // });
+        messagesService.send(createEngineMessages.inputEvent(
+            createInputEvents.mouseDown({ x, y }, 0) // Left button
+        ));
     }
 
     /**
@@ -110,19 +81,9 @@ export class EditorInputSystem extends System {
         this.isDown = false;
 
         // Send up event to GJS
-        // messagesService.send({
-        //     type: 'event',
-        //     data: {
-        //         name: EngineMessageType.INPUT_EVENT,
-        //         data: {
-        //             type: InputEventType.MOUSE_UP,
-        //             data: {
-        //                 position: this.dragStartPos,
-        //                 button: 0 // Left button
-        //             }
-        //         }
-        //     }
-        // });
+        messagesService.send(createEngineMessages.inputEvent(
+            createInputEvents.mouseUp(this.dragStartPos, 0) // Left button
+        ));
     }
 
     /**
@@ -169,7 +130,7 @@ export class EditorInputSystem extends System {
             this.onPointerUp();
         });
 
-        if (settings.isBrowser) {
+        if (!settings.isWebKitView) {
             // Default browser behavior
             pointer.on('move', (event) => {
                 this.onPointerMove(event.screenPos.x, event.screenPos.y);
@@ -178,70 +139,43 @@ export class EditorInputSystem extends System {
             // We receive mouse events from GTK via the message service to get drag scrolling also works outside the WebView
             messagesService.on('event', (message) => {
                 console.log('[EditorInputSystem] Received message', JSON.stringify(message))
-                if (message.data && typeof message.data === 'object' && 'name' in message.data) {
-                    const eventData = message.data as any;
 
-                    if (eventData.name === EngineMessageType.INPUT_EVENT && eventData.data) {
-                        console.log('Received input event', eventData.data)
-                        const inputEvent = eventData.data;
+                if (parseEngineMessages.isInputEventMessage(message)) {
+                    const inputEvent = parseEngineMessages.getEventData(message);
+                    console.log('Received input event', inputEvent);
 
-                        switch (inputEvent.type) {
-                            case InputEventType.MOUSE_MOVE:
-                                if (inputEvent.data && inputEvent.data.position) {
-                                    this.onPointerMove(
-                                        inputEvent.data.position.x,
-                                        inputEvent.data.position.y
-                                    );
-                                }
-                                break;
-
-                            case InputEventType.MOUSE_DOWN:
-                                if (inputEvent.data && inputEvent.data.position) {
-                                    this.onPointerDown(
-                                        inputEvent.data.position.x,
-                                        inputEvent.data.position.y
-                                    );
-                                }
-                                break;
-
-                            case InputEventType.MOUSE_UP:
-                                this.onPointerUp();
-                                break;
-
-                            case InputEventType.MOUSE_LEAVE:
-                                this.onPointerUp();
-                                break;
-                        }
+                    if (EngineTypeGuards.isMouseMoveEvent(inputEvent) && inputEvent.data) {
+                        this.onPointerMove(
+                            inputEvent.data.position.x,
+                            inputEvent.data.position.y
+                        );
+                    } else if (EngineTypeGuards.isMouseDownEvent(inputEvent) && inputEvent.data) {
+                        this.onPointerDown(
+                            inputEvent.data.position.x,
+                            inputEvent.data.position.y
+                        );
+                    } else if (EngineTypeGuards.isMouseUpEvent(inputEvent)) {
+                        this.onPointerUp();
+                    } else if (EngineTypeGuards.isMouseLeaveEvent(inputEvent)) {
+                        // For mouse leave, we just need to call onPointerUp to cancel any drag operation
+                        this.onPointerUp();
                     }
                 }
             });
         }
 
         // Handle wheel events for zooming
-        pointer.on('wheel', (event) => {
-            // Cast to our custom interface to access the properties
-            const wheelEvent = event as unknown as ExcaliburWheelEvent;
-
+        pointer.on('wheel', (wheelEvent) => {
             // Extract position from worldPos or screenPos, or default to 0,0
-            const position = wheelEvent.screenPos || wheelEvent.worldPos || { x: 0, y: 0 };
+            const position = { x: wheelEvent.x || 0, y: wheelEvent.y || 0 }
 
             // Handle zooming
             this.onWheel(wheelEvent.deltaY, position);
 
             // Send wheel event to GJS
-            // messagesService.send({
-            //     type: 'event',
-            //     data: {
-            //         name: EngineMessageType.INPUT_EVENT,
-            //         data: {
-            //             type: 'wheel',
-            //             data: {
-            //                 position,
-            //                 deltaY: wheelEvent.deltaY
-            //             }
-            //         }
-            //     }
-            // });
+            messagesService.send(createEngineMessages.inputEvent(
+                createInputEvents.wheel(position, wheelEvent.deltaY)
+            ));
         });
     }
 }

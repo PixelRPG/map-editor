@@ -9,7 +9,12 @@ import mime from 'mime'
 
 import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
-import { EngineMessageType } from '@pixelrpg/engine-core'
+import {
+    InputEventType,
+    createEngineMessages,
+    createInputEvents,
+    type EngineMessage
+} from '@pixelrpg/engine-core'
 
 /**
  * WebView component for rendering the Excalibur.js engine
@@ -23,7 +28,7 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _messagesService: MessagesService
+    protected _messagesService: MessagesService<EngineMessage>
 
     /**
      * Get the messages service for communication with the WebView
@@ -86,7 +91,7 @@ export class WebView extends WebKit.WebView {
      * Initialize the messages service for communication with the WebView
      */
     protected initMessagesService() {
-        const messagesService = new MessagesService(INTERNAL_PROTOCOL, this)
+        const messagesService = new MessagesService<EngineMessage>(INTERNAL_PROTOCOL, this)
         return messagesService
     }
 
@@ -135,66 +140,47 @@ export class WebView extends WebKit.WebView {
 
     /**
      * Called when the mouse moves in the WebView
-     * @param inputController The input controller
+     * @param _source The event source
      * @param x The x coordinate
      * @param y The y coordinate
      */
-    protected onMouseMotion(inputController: EventControllerInput, x: number, y: number) {
+    protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
         // Round to 10th
         x = Math.round(x * 10) / 10
         y = Math.round(y * 10) / 10
 
         // Send mouse move event
-        this._messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.INPUT_EVENT,
-                data: {
-                    type: 'mouse-move',
-                    data: {
-                        position: { x, y }
-                    }
-                }
-            }
-        })
+        this._messagesService.send(createEngineMessages.inputEvent(
+            createInputEvents.mouseMove({ x, y })
+        ));
     }
 
     /**
      * Called when the mouse leaves the WebView
+     * @param _source The event source
      */
-    protected onMouseLeave() {
+    protected onMouseLeave(_source: EventControllerInput) {
         console.log('Mouse has left the WebView');
 
-        // Send mouse leave event
-        this._messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.INPUT_EVENT,
-                data: {
-                    type: 'mouse-leave',
-                    data: null
-                }
-            }
-        })
+        // Send mouse leave event with no position data
+        this._messagesService.send(createEngineMessages.inputEvent(
+            createInputEvents.mouseLeave()
+        ));
     }
 
     /**
      * Called when the mouse enters the WebView
+     * @param _source The event source
+     * @param x The x coordinate
+     * @param y The y coordinate
      */
-    protected onMouseEnter() {
+    protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
         console.log('Mouse has entered the WebView');
 
         // Send mouse enter event
-        this._messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.INPUT_EVENT,
-                data: {
-                    type: 'mouse-enter',
-                    data: null
-                }
-            }
-        })
+        this._messagesService.send(createEngineMessages.inputEvent(
+            createInputEvents.mouseEnter({ x, y })
+        ));
     }
 
     /**

@@ -1,4 +1,4 @@
-import { EventDispatcher, MessageGeneric } from '@pixelrpg/messages-core'
+import { EventDispatcher } from '@pixelrpg/messages-core'
 import {
     EngineInterface,
     EngineEvent,
@@ -7,10 +7,10 @@ import {
     InputEvent,
     ProjectLoadOptions,
     InputEventType,
-    EngineMessageEventEngine,
-    EngineMessageEventInput,
-    EngineMessageEvent,
-    EngineMessageType,
+    createEngineMessages,
+    parseEngineMessages,
+    EngineCommandType,
+    EngineTypeGuards
 } from '@pixelrpg/engine-core'
 import { MessagesService } from '@pixelrpg/messages-gjs'
 
@@ -92,16 +92,9 @@ export class GjsEngine implements EngineInterface {
         this.setStatus(EngineStatus.LOADING)
 
         // Send a message to the WebView to load the project
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.LOAD_PROJECT,
-                data: {
-                    projectPath,
-                    options
-                }
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.loadProject(projectPath, options)
+        );
 
         // The status will be updated when we receive a response from the WebView
     }
@@ -116,15 +109,9 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Send a message to the WebView to load the map
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.LOAD_MAP,
-                data: {
-                    mapId
-                }
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.loadMap(mapId)
+        );
     }
 
     /**
@@ -136,15 +123,9 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Send a command to the WebView to start the engine
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.COMMAND,
-                data: {
-                    command: 'start'
-                }
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.command(EngineCommandType.START)
+        );
 
         this.setStatus(EngineStatus.RUNNING)
     }
@@ -158,15 +139,9 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Send a command to the WebView to stop the engine
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.COMMAND,
-                data: {
-                    command: 'stop'
-                }
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.command(EngineCommandType.STOP)
+        );
     }
 
     /**
@@ -178,15 +153,9 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Send a command to the WebView to pause the engine
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.COMMAND,
-                data: {
-                    command: 'pause'
-                }
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.command(EngineCommandType.PAUSE)
+        );
     }
 
     /**
@@ -198,15 +167,9 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Send a command to the WebView to resume the engine
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.COMMAND,
-                data: {
-                    command: 'resume'
-                }
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.command(EngineCommandType.RESUME)
+        );
     }
 
     /**
@@ -219,13 +182,9 @@ export class GjsEngine implements EngineInterface {
         }
 
         // Send the input event to the WebView
-        this.webView.messagesService.send({
-            type: 'event',
-            data: {
-                name: EngineMessageType.INPUT_EVENT,
-                data: event
-            }
-        })
+        this.webView.messagesService.send(
+            createEngineMessages.inputEvent(event)
+        );
     }
 
     /**
@@ -246,83 +205,40 @@ export class GjsEngine implements EngineInterface {
 
         // Use onGenericMessage to handle engine events
         this.webView.messagesService.on('event', (message) => {
-            // Check if this is an engine event
-            if (message.data && typeof message.data === 'object' && 'name' in message.data) {
-                const eventData = message.data as EngineMessageEvent['data'];
+            if (parseEngineMessages.isEngineEventMessage(message)) {
+                const engineEventData = parseEngineMessages.getEventData(message);
 
-                if (eventData.name === 'engine-event' && eventData.data) {
-                    const engineEventData = eventData.data as EngineEvent;
+                if (engineEventData && 'type' in engineEventData) {
+                    const engineEvent: EngineEvent = {
+                        type: engineEventData.type,
+                        data: engineEventData.data
+                    };
 
-                    if (engineEventData.type) {
-                        const engineEvent: EngineEvent = {
-                            type: engineEventData.type,
-                            data: engineEventData.data
-                        };
-
-                        // Update the engine status if needed
-                        if (engineEvent.type === EngineEventType.STATUS_CHANGED && engineEvent.data) {
-                            this.status = engineEvent.data as EngineStatus;
-                        }
-
-                        // Dispatch the event
-                        this.events.dispatch(engineEvent.type, engineEvent);
+                    // Update the engine status if needed
+                    if (EngineTypeGuards.isStatusChangedEvent(engineEvent)) {
+                        // We know data is defined and is EngineStatus because of the type guard
+                        this.status = engineEvent.data!;
                     }
+
+                    // Dispatch the event
+                    this.events.dispatch(engineEvent.type, engineEvent);
                 }
             }
         });
     }
 
     /**
-     * Set the engine status and dispatch an event
-     * @param status The new status
+     * Set the engine status and dispatch a status changed event
+     * @param status New engine status
      */
     private setStatus(status: EngineStatus): void {
         this.status = status
 
-        this.events.dispatch(EngineEventType.STATUS_CHANGED, {
+        const event: EngineEvent<EngineEventType.STATUS_CHANGED> = {
             type: EngineEventType.STATUS_CHANGED,
             data: status
-        })
-    }
-
-    /**
-     * Convert a mouse event from the WebView to an input event
-     * @param name The event name
-     * @param data The event data
-     * @returns An input event
-     */
-    private convertMouseEvent(name: string, data: Record<string, unknown>): InputEvent | null {
-        let type: InputEventType | null = null
-
-        switch (name) {
-            case 'mouse-move':
-                type = InputEventType.MOUSE_MOVE
-                break
-            case 'mouse-down':
-                type = InputEventType.MOUSE_DOWN
-                break
-            case 'mouse-up':
-                type = InputEventType.MOUSE_UP
-                break
-            case 'mouse-enter':
-                type = InputEventType.MOUSE_ENTER
-                break
-            case 'mouse-leave':
-                type = InputEventType.MOUSE_LEAVE
-                break
-            default:
-                return null
         }
 
-        return {
-            type,
-            data: {
-                position: {
-                    x: typeof data.x === 'number' ? data.x : 0,
-                    y: typeof data.y === 'number' ? data.y : 0
-                },
-                button: typeof data.button === 'number' ? data.button : undefined
-            }
-        }
+        this.events.dispatch(event.type, event)
     }
 } 

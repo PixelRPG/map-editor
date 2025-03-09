@@ -7,6 +7,11 @@ import type { SpriteSetReference } from "../reference/index";
  */
 export interface MapData {
     /**
+     * Unique identifier for the map
+     */
+    id: string;
+
+    /**
      * Optional name of the tile map
      */
     name?: string;

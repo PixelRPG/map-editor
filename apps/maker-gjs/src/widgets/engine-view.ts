@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
 import { GjsEngine, ResourceManager } from '@pixelrpg/engine-gjs'
-import { MessageGeneric } from '@pixelrpg/messages-core'
+import { EngineMessage } from '@pixelrpg/engine-core'
 
 import { clientResourceManager } from '../managers/client-resource.manager.ts'
 import { CLIENT_DIR_PATH } from '../constants.ts'

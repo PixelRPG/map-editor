@@ -3365,6 +3365,7 @@ __metadata:
     "@girs/webkit-6.0": "npm:^2.47.3-4.0.0-beta.21"
     "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-gjs": "workspace:^"
+    "@pixelrpg/engine-core": "workspace:^"
     "@pixelrpg/engine-gjs": "workspace:^"
     "@pixelrpg/messages-core": "workspace:^"
     "@pixelrpg/messages-gjs": "workspace:^"

@@ -1,0 +1,50 @@
+---
+description: Code structure and organization standards
+globs: **/*.ts, **/*.tsx
+alwaysApply: false
+---
+# Code Structure and Organization
+
+## File Organization
+- Separate types from implementation code
+  - Types go in `types/` directory
+  - Implementation code goes in appropriate directories based on functionality
+- Group related functionality in logical directories
+- Use index.ts files to re-export public APIs
+- Keep implementation details private when possible
+
+## Type vs. Implementation Separation
+- Type definitions should be in dedicated files in the `types/` directory
+- Type guards should be in `utils/type-guards.ts`
+- Helper functions should be in appropriate utility files (e.g., `utils/messages.utils.ts`)
+- No implementation code in type definition files
+
+## Naming Conventions
+- Use descriptive, specific file names (e.g., `engine-events.ts` instead of `events.ts`)
+- Name interfaces and types according to their purpose
+- Use consistent naming patterns across the codebase
+- Suffix interfaces with their category (e.g., `MouseEventData`, `WheelEventData`)
+
+## Import/Export Patterns
+- Export types from index.ts files for easy importing
+- Import from package roots rather than deep imports when possible
+- Use named imports/exports rather than default exports
+- Group imports by source (external libraries, internal packages, local files)
+
+## Enum Usage
+- Use enums for fixed sets of values (e.g., event types, command types)
+- Prefer enum values over string literals in code
+- Document enum values with JSDoc comments
+- Use consistent naming for enum values
+
+## Helper Functions
+- Create helper functions for common operations
+- Place helper functions in appropriate utility files
+- Use generics in helper functions for better type inference
+- Document helper functions with JSDoc comments
+
+## Error Handling
+- Use proper error types for different failure scenarios
+- Provide meaningful error messages
+- Include appropriate type checking before operations
+- Handle edge cases explicitly

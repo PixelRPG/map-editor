@@ -15,6 +15,17 @@ The `engine-core` package provides the foundation for game engine functionality 
 - Establish engine lifecycle states and transitions
 - Implement runtime-agnostic utility functions
 
+## Type Organization
+- Organize types in thematic files:
+  - `engine-events.ts`: Engine status and event types
+  - `input-events.ts`: Input event types and data structures
+  - `project-options.ts`: Project loading options
+  - `message-types.ts`: Message type enums
+  - `messages.types.ts`: Message structures
+- Use generics and mapped types for related type families
+- Keep type guards in `utils/type-guards.ts`
+- Keep helper functions in appropriate utility files (e.g., `utils/messages.utils.ts`)
+
 ## Message System Architecture
 The engine uses a unified message system for communication:
 
@@ -41,6 +52,13 @@ The engine follows a defined lifecycle with these states:
 - `ERROR`: Engine encountered an error
 - `STOPPED`: Engine has been stopped
 
+## Helper Functions
+- Create helper functions for common operations
+- Use generics in helper functions for better type inference
+- Provide functions for creating properly typed messages
+- Provide functions for parsing and validating messages
+- Include type guards for runtime type checking
+
 ## Integration with Runtime-Specific Implementations
 - Runtime-specific packages extend the core interfaces
 - Platform implementations handle rendering, input, and resource management
@@ -55,6 +73,7 @@ When working with the engine core:
 - Keep message types consistent and well-defined
 - Ensure proper error handling and state management
 - Use type safety to prevent runtime errors
+- Avoid using `any` type - use `unknown` with proper type guards instead
 
 ## Relationship to Other Packages
 - `engine-core` depends on `messages-core` for basic message structures

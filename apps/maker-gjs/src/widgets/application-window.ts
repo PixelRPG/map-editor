@@ -19,7 +19,7 @@ import { clientResourceManager } from '../managers/client-resource.manager.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
-import { MessageGeneric } from '@pixelrpg/messages-core'
+import { EngineMessageText } from '@pixelrpg/engine-core'
 
 import Template from './application-window.ui?raw'
 
@@ -65,7 +65,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     }
   }
 
-  protected onEngineMessage(message: MessageGeneric<'text'>) {
+  protected onEngineMessage(message: EngineMessageText) {
     console.log('Message from Engine:', message)
     this._projectView?.engineView?.sendMessage({ type: 'text', data: 'Hello back from GJS!' })
   }

@@ -8,8 +8,7 @@ import {
     InputEvent,
     ProjectLoadOptions,
     InputEventType,
-    EngineMessageEventEngine,
-    EngineMessageEventInput,
+    createEngineMessages,
     EngineMessageType
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
@@ -132,7 +131,7 @@ export class ExcaliburEngine implements EngineInterface {
 
             this.events.dispatch(EngineEventType.ERROR, {
                 type: EngineEventType.ERROR,
-                data: error
+                data: { message: 'Loader error', error: error instanceof Error ? error : new Error(String(error)) }
             })
         })
 
@@ -153,7 +152,7 @@ export class ExcaliburEngine implements EngineInterface {
 
                 this.events.dispatch(EngineEventType.MAP_LOADED, {
                     type: EngineEventType.MAP_LOADED,
-                    data: this.gameProjectResource.activeMap.mapData
+                    data: { mapId: this.gameProjectResource.activeMap.mapData.id }
                 })
             }
 
@@ -163,7 +162,7 @@ export class ExcaliburEngine implements EngineInterface {
 
             this.events.dispatch(EngineEventType.PROJECT_LOADED, {
                 type: EngineEventType.PROJECT_LOADED,
-                data: projectData
+                data: { projectId: projectData.id || 'unknown' }
             })
 
             this.setStatus(EngineStatus.READY)
@@ -210,7 +209,7 @@ export class ExcaliburEngine implements EngineInterface {
 
             this.events.dispatch(EngineEventType.MAP_LOADED, {
                 type: EngineEventType.MAP_LOADED,
-                data: this.gameProjectResource.activeMap.mapData
+                data: { mapId: this.gameProjectResource.activeMap.mapData.id }
             })
         }
     }
@@ -248,9 +247,9 @@ export class ExcaliburEngine implements EngineInterface {
 
         // Use the clock to pause the engine if available
         const engineWithClock = this.engine as ExcaliburEngineType
-        engineWithClock.clock.pause()
-
-        this.setStatus(EngineStatus.READY)
+        if (engineWithClock.clock && typeof engineWithClock.clock.pause === 'function') {
+            engineWithClock.clock.pause()
+        }
     }
 
     /**
@@ -261,91 +260,49 @@ export class ExcaliburEngine implements EngineInterface {
             throw new Error('Engine not initialized')
         }
 
-        // Use the clock to resume the engine if available
+        // Use the clock to unpause the engine if available
         const engineWithClock = this.engine as ExcaliburEngineType
-        engineWithClock.clock.unpause()
-
-        this.setStatus(EngineStatus.RUNNING)
+        if (engineWithClock.clock && typeof engineWithClock.clock.unpause === 'function') {
+            engineWithClock.clock.unpause()
+        }
     }
 
     /**
      * Handle input events
-     * @param event Input event
      */
     handleInput(event: InputEvent): void {
-        // Input events are handled by the EditorInputSystem
-        // This method is here to satisfy the EngineInterface
+        // Not implemented for Excalibur engine
+        // Input is handled by the EditorInputSystem
     }
 
     /**
      * Set up message handlers for communication with GJS
      */
     private setupMessageHandlers(): void {
-        // Handle input events
+        // Listen for messages from GJS
         messagesService.on('event', (message) => {
-            console.debug('[ExcaliburEngine] on event', message)
-            if (message.data && typeof message.data === 'object' && 'name' in message.data) {
-                if (message.data.name === EngineMessageType.INPUT_EVENT) {
-                    const eventData = message.data.data;
-                    if (eventData && eventData.type) {
-                        // Handle input events from GJS
-                        this.logger.info('Input event from GJS:', eventData);
-                    }
-                }
-            }
-        });
-
-        // Listen for load project messages
-        messagesService.on('load-project', (message) => {
-            this.loadProject(message.projectPath, message.options);
-        });
-
-        // Listen for load map messages
-        messagesService.on('load-map', (message) => {
-            this.loadMap(message.mapId);
-        });
-
-        // Listen for command messages
-        messagesService.on('command', (message) => {
-            switch (message.command) {
-                case 'start':
-                    this.start();
-                    break;
-                case 'stop':
-                    this.stop();
-                    break;
-                case 'pause':
-                    this.pause();
-                    break;
-                case 'resume':
-                    this.resume();
-                    break;
-            }
-        });
+            // Handle messages from GJS
+            console.log('Received message from GJS:', message)
+        })
     }
 
     /**
-     * Set the engine status and dispatch an event
-     * @param status The new status
+     * Set the engine status and dispatch a status changed event
+     * @param status New engine status
      */
     private setStatus(status: EngineStatus): void {
         this.status = status
 
-        this.events.dispatch(EngineEventType.STATUS_CHANGED, {
+        const event: EngineEvent<EngineEventType.STATUS_CHANGED> = {
             type: EngineEventType.STATUS_CHANGED,
             data: status
-        })
+        }
 
-        // Send the status to GJS
-        messagesService.send({
-            type: 'event',
-            data: {
-                name: 'engine-event',
-                data: {
-                    type: EngineEventType.STATUS_CHANGED,
-                    data: status
-                }
-            }
-        })
+        this.events.dispatch(event.type, event)
+
+        // Send a message to GJS
+        messagesService.send(
+            createEngineMessages.engineEvent(event)
+        )
     }
 } 
