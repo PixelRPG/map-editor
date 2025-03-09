@@ -3,8 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
-import { WebView } from '@pixelrpg/engine-gjs'
-import { EngineView } from './engine-view.ts'
+import { GjsEngine, WebView } from '@pixelrpg/engine-gjs'
 import { Sidebar } from './sidebar.ts'
 import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
@@ -26,7 +25,7 @@ import Template from './application-window.ui?raw'
 // Ensure widgets are loaded and can be used in the XML
 GObject.type_ensure(WebView.$gtype)
 GObject.type_ensure(Sidebar.$gtype)
-GObject.type_ensure(EngineView.$gtype)
+GObject.type_ensure(GjsEngine.$gtype)
 GObject.type_ensure(WelcomeView.$gtype)
 GObject.type_ensure(ProjectView.$gtype)
 
@@ -57,9 +56,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._welcomeView?.connect('open-project', this.onOpenProject)
 
     // Connect engine signals if project view is active
-    const engineView = this._projectView?.engineView
-    if (engineView) {
-      engineView.connect('message-received', (_source, message) => {
+    const gjsEngine = this._projectView?.gjsEngine
+    if (gjsEngine) {
+      gjsEngine.connect('message-received', (_source, message) => {
         this.onEngineMessage(JSON.parse(message))
       })
     }
@@ -67,7 +66,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   protected onEngineMessage(message: EngineMessageText) {
     console.log('Message from Engine:', message)
-    this._projectView?.engineView?.sendMessage({ type: 'text', data: 'Hello back from GJS!' })
+    this._projectView?.gjsEngine?.sendMessage({ type: 'text', data: 'Hello back from GJS!' })
   }
 
   protected onCreateProject() {
@@ -154,7 +153,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._stack?.set_visible_child(this._projectView!)
 
     // Load the project in the engine
-    this._projectView?.engineView?.loadProject(path)
+    this._projectView?.gjsEngine?.loadProject(path)
   }
 
   protected showToast(message: string) {

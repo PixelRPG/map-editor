@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
-import { EngineView } from './engine-view.ts'
+import { GjsEngine } from '@pixelrpg/engine-gjs'
 import { Sidebar } from './sidebar.ts'
 
 import Template from './project-view.ui?raw'
@@ -11,7 +11,7 @@ export class ProjectView extends Adw.Bin {
 
     // GObject internal children
     declare _sidebar: Sidebar | undefined
-    declare _engineView: EngineView | undefined
+    declare _engineView: GjsEngine | undefined
     declare _splitView: Adw.OverlaySplitView | undefined
     declare _showSidebarButton: Gtk.ToggleButton | undefined
 
@@ -19,7 +19,7 @@ export class ProjectView extends Adw.Bin {
         GObject.registerClass({
             GTypeName: 'ProjectView',
             Template,
-            InternalChildren: ['sidebar', 'engineView', 'splitView', 'showSidebarButton'],
+            InternalChildren: ['sidebar', 'gjsEngine', 'splitView', 'showSidebarButton'],
         }, this);
     }
 
@@ -27,7 +27,7 @@ export class ProjectView extends Adw.Bin {
         super()
 
         // Connect to the message-received signal from the EngineView
-        this._engineView?.connect('message-received', (_source: EngineView, message: string) => {
+        this._engineView?.connect('message-received', (_source: GjsEngine, message: string) => {
             console.log('Message received from engine:', message)
         })
     }
@@ -35,7 +35,7 @@ export class ProjectView extends Adw.Bin {
     /**
      * Get the engine view
      */
-    get engineView(): EngineView | undefined {
+    get gjsEngine(): GjsEngine | undefined {
         return this._engineView
     }
 

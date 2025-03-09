@@ -1,7 +1,6 @@
 import GObject from '@girs/gobject-2.0'
 
 import { ApplicationWindow } from './application-window.ts'
-import { EngineView } from './engine-view.ts'
 import { LayerRowWidget } from './layer-row.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
 import { PreferencesDialog } from './preferences-dialog.ts'
@@ -27,4 +26,4 @@ import { WelcomeView } from './welcome-view.ts'
 // GObject.type_ensure(SpriteWidget.$gtype)
 // GObject.type_ensure(WelcomeView.$gtype)
 
-export { ApplicationWindow, EngineView, LayerRowWidget, LayersWidget, PreferencesDialog, ProjectView, SidebarPageLayer, SidebarPageTilesets, Sidebar, SpriteSheetWidget, SpriteWidget, WelcomeView }
+export { ApplicationWindow, LayerRowWidget, LayersWidget, PreferencesDialog, ProjectView, SidebarPageLayer, SidebarPageTilesets, Sidebar, SpriteSheetWidget, SpriteWidget, WelcomeView }

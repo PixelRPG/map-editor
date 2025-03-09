@@ -61,9 +61,6 @@ export class ExcaliburEngine implements EngineInterface {
         // Enable debug logging in the browser console
         console.debug = console.log
         this.logger.info('Creating ExcaliburEngine')
-
-        // Set up message handlers
-        this.setupMessageHandlers()
     }
 
     /**
@@ -273,17 +270,6 @@ export class ExcaliburEngine implements EngineInterface {
     handleInput(event: InputEvent): void {
         // Not implemented for Excalibur engine
         // Input is handled by the EditorInputSystem
-    }
-
-    /**
-     * Set up message handlers for communication with GJS
-     */
-    private setupMessageHandlers(): void {
-        // Listen for messages from GJS
-        messagesService.on('event', (message) => {
-            // Handle messages from GJS
-            console.log('Received message from GJS:', message)
-        })
     }
 
     /**

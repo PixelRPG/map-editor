@@ -138,11 +138,8 @@ export class EditorInputSystem extends System {
         } else {
             // We receive mouse events from GTK via the message service to get drag scrolling also works outside the WebView
             messagesService.on('event', (message) => {
-                console.log('[EditorInputSystem] Received message', JSON.stringify(message))
-
                 if (engineMessageParserService.isInputEventMessage(message)) {
                     const inputEvent = engineMessageParserService.getEventData(message);
-                    console.log('Received input event', inputEvent);
 
                     if (engineTypeGuardsService.isMouseMoveEvent(inputEvent) && inputEvent.data) {
                         this.onPointerMove(

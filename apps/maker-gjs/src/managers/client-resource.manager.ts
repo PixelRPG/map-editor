@@ -1,5 +1,5 @@
 import { ResourceManager } from './resource.manager.ts'
-import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../constants.ts'
+import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '@pixelrpg/engine-gjs'
 
 export const clientResourceManager = new ResourceManager(
     './org.pixelrpg.maker.data.gresource',

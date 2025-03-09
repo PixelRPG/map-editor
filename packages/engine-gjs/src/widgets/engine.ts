@@ -1,3 +1,6 @@
+import GObject from '@girs/gobject-2.0'
+import Adw from '@girs/adw-1'
+import Gtk from '@girs/gtk-4.0'
 import { EventDispatcher } from '@pixelrpg/messages-core'
 import {
     EngineInterface,
@@ -14,16 +17,26 @@ import {
     errorService,
     engineTypeGuardsService
 } from '@pixelrpg/engine-core'
-import { MessagesService } from '@pixelrpg/messages-gjs'
+import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
-import { WebView } from '../widgets/webview.ts'
-import { ResourceManager } from './resource-manager.ts'
-
+import { WebView } from './webview.ts'
+import { ResourceManager } from '../services/resource-manager.ts'
+import Template from './engine.ui?raw'
 
 /**
- * GJS implementation of the game engine
+ * GJS implementation of the game engine as a GObject widget
  */
-export class GjsEngine implements EngineInterface {
+export class GjsEngine extends Adw.Bin implements EngineInterface {
+    static {
+        GObject.registerClass({
+            GTypeName: 'GjsEngine',
+            Template,
+            Signals: {
+                'message-received': { param_types: [GObject.TYPE_STRING] },
+            },
+        }, this);
+    }
+
     /**
      * Current status of the engine
      */
@@ -37,23 +50,62 @@ export class GjsEngine implements EngineInterface {
     /**
      * WebView for rendering the game
      */
-    private webView: WebView | null = null
+    private webView!: WebView
+
+    /**
+     * Resource paths for the engine
+     */
+    private resourcePaths: string[] = [CLIENT_DIR_PATH.get_path()!]
+
+    /**
+     * GResource path for the engine
+     */
+    private gresourcePath: string = CLIENT_RESOURCE_PATH
 
     /**
      * Resource manager for loading game assets
      */
-    private resourceManager: ResourceManager
+    private resourceManager: ResourceManager = new ResourceManager(this.resourcePaths, this.gresourcePath);
+
+
 
     /**
      * Create a new GJS engine
+     */
+    constructor() {
+        super();
+
+        // Initialize the engine
+        this.initialize().catch(error => {
+            console.error('Failed to initialize engine:', error);
+        });
+    }
+
+    /**
+     * Set resource paths for the engine
      * @param resourcePaths Paths to search for resources
+     */
+    public setResourcePaths(resourcePaths: string[]): void {
+        this.resourcePaths = Array.isArray(resourcePaths) ? resourcePaths : [];
+
+        if (this.resourceManager) {
+            // Update existing resource manager
+            for (const path of this.resourcePaths) {
+                this.resourceManager.addPath(path);
+            }
+        }
+    }
+
+    /**
+     * Set GResource path for the engine
      * @param gresourcePath Path to the GResource file
      */
-    constructor(
-        resourcePaths: string[] = [],
-        private gresourcePath: string = '/org/pixelrpg/maker/engine-excalibur'
-    ) {
-        this.resourceManager = new ResourceManager(resourcePaths);
+    public setGResourcePath(gresourcePath: string): void {
+        this.gresourcePath = gresourcePath;
+
+        if (this.resourceManager) {
+            this.resourceManager.setGResourcePath(gresourcePath);
+        }
     }
 
     /**
@@ -63,8 +115,18 @@ export class GjsEngine implements EngineInterface {
         try {
             this.setStatus(EngineStatus.INITIALIZING);
 
-            // Create a new WebView
+            // Create the resource manager
+            this.resourceManager = new ResourceManager(this.resourcePaths, this.gresourcePath);
+
+            // Create the WebView
             this.webView = new WebView({}, this.resourceManager);
+
+            // Add the WebView to this container
+            this.set_child(this.webView);
+
+            // Ensure the WebView is shown
+            this.webView.show();
+            this.show();
 
             // Set up message handlers
             this.setupMessageHandlers();
@@ -91,11 +153,9 @@ export class GjsEngine implements EngineInterface {
 
         try {
             // Send a message to the WebView to load the project
-            if (this.webView) {
-                this.webView.messagesService.send(
-                    engineMessagesService.loadProject(projectPath, options)
-                );
-            }
+            this.webView.messagesService.send(
+                engineMessagesService.loadProject(projectPath, options)
+            );
         } catch (error) {
             throw errorService.createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
         }
@@ -115,11 +175,9 @@ export class GjsEngine implements EngineInterface {
 
         try {
             // Send a message to the WebView to load the map
-            if (this.webView) {
-                this.webView.messagesService.send(
-                    engineMessagesService.loadMap(mapId)
-                );
-            }
+            this.webView.messagesService.send(
+                engineMessagesService.loadMap(mapId)
+            );
         } catch (error) {
             throw errorService.createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
         }
@@ -135,11 +193,9 @@ export class GjsEngine implements EngineInterface {
 
         try {
             // Send a command to the WebView to start the engine
-            if (this.webView) {
-                this.webView.messagesService.send(
-                    engineMessagesService.command(EngineCommandType.START)
-                );
-            }
+            this.webView.messagesService.send(
+                engineMessagesService.command(EngineCommandType.START)
+            );
 
             this.setStatus(EngineStatus.RUNNING);
         } catch (error) {
@@ -157,11 +213,9 @@ export class GjsEngine implements EngineInterface {
 
         try {
             // Send a command to the WebView to stop the engine
-            if (this.webView) {
-                this.webView.messagesService.send(
-                    engineMessagesService.command(EngineCommandType.STOP)
-                );
-            }
+            this.webView.messagesService.send(
+                engineMessagesService.command(EngineCommandType.STOP)
+            );
         } catch (error) {
             throw errorService.createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
         }
@@ -177,11 +231,9 @@ export class GjsEngine implements EngineInterface {
 
         try {
             // Send a command to the WebView to pause the engine
-            if (this.webView) {
-                this.webView.messagesService.send(
-                    engineMessagesService.command(EngineCommandType.PAUSE)
-                );
-            }
+            this.webView.messagesService.send(
+                engineMessagesService.command(EngineCommandType.PAUSE)
+            );
         } catch (error) {
             throw errorService.createRuntimeError('Failed to pause engine', error instanceof Error ? error : undefined);
         }
@@ -197,11 +249,9 @@ export class GjsEngine implements EngineInterface {
 
         try {
             // Send a command to the WebView to resume the engine
-            if (this.webView) {
-                this.webView.messagesService.send(
-                    engineMessagesService.command(EngineCommandType.RESUME)
-                );
-            }
+            this.webView.messagesService.send(
+                engineMessagesService.command(EngineCommandType.RESUME)
+            );
         } catch (error) {
             throw errorService.createRuntimeError('Failed to resume engine', error instanceof Error ? error : undefined);
         }
@@ -212,10 +262,6 @@ export class GjsEngine implements EngineInterface {
      * @param event Input event
      */
     public handleInput(event: InputEvent): void {
-        if (!this.webView) {
-            return;
-        }
-
         if (!event || !event.type || !Object.values(InputEventType).includes(event.type)) {
             console.warn('Invalid input event:', event);
             return;
@@ -232,19 +278,24 @@ export class GjsEngine implements EngineInterface {
     }
 
     /**
-     * Get the WebView
+     * Send a message to the engine
+     * @param message The message to send
      */
-    getWebView(): WebView | null {
-        return this.webView;
+    public sendMessage(message: any) {
+        this.webView.messagesService.send(message);
     }
 
     /**
      * Set up message handlers for the WebView
      */
     private setupMessageHandlers(): void {
-        if (!this.webView) {
-            return;
-        }
+        // Handle text messages from the WebView
+        this.webView.messagesService.on('text', (message) => {
+            console.log('Message from WebView:', message);
+
+            // Emit a signal that can be caught by the application
+            this.emit('message-received', JSON.stringify(message));
+        });
 
         // Use onGenericMessage to handle engine events
         this.webView.messagesService.on('event', (message) => {

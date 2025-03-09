@@ -7,10 +7,11 @@
     "scripts": {
         "check": "tsc",
         "watch": "tsc -w",
-        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui",
+        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui",
         "build": "yarn build:blueprints"
     },
     "dependencies": {
+        "@girs/adw-1": "^1.7.0-4.0.0-beta.21",
         "@girs/gio-2.0": "^2.83.3-4.0.0-beta.21",
         "@girs/gjs": "^4.0.0-beta.21",
         "@girs/glib-2.0": "^2.83.3-4.0.0-beta.21",

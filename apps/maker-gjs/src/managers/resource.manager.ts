@@ -1,7 +1,7 @@
 import Gio from '@girs/gio-2.0'
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 
-import { ROOT_DIR, INTERNAL_PROTOCOL } from '../constants.ts'
+import { ROOT_DIR, INTERNAL_PROTOCOL } from '@pixelrpg/engine-gjs'
 
 // TODO(ts-for-gir): Fix promise type
 // Gio._promisify(Gio.File.prototype, "load_contents_async", "load_contents_finish");
