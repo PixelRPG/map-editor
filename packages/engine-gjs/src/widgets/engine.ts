@@ -73,6 +73,10 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
             // Add the WebView to this container
             this.set_child(this.webView);
 
+            // Initialize resource paths
+            this.webView.setResourcePaths(this.resourcePaths);
+            this.webView.setGResourcePath(this.gresourcePath);
+
             // Set up message handlers
             this.setupMessageHandlers();
 
@@ -303,5 +307,34 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
         };
 
         this.events.dispatch(EngineEventType.STATUS_CHANGED, statusEvent);
+    }
+
+    /**
+     * Set resource paths for the engine
+     * @param resourcePaths Array of resource paths
+     */
+    public setResourcePaths(resourcePaths: string[]): void {
+        this.resourcePaths = resourcePaths;
+        this.webView.setResourcePaths(resourcePaths);
+    }
+
+    /**
+     * Set the GResource path for the engine
+     * @param gresourcePath GResource path
+     */
+    public setGResourcePath(gresourcePath: string): void {
+        this.gresourcePath = gresourcePath;
+        this.webView.setGResourcePath(gresourcePath);
+    }
+
+    /**
+     * Add a resource path to the engine
+     * @param path Resource path to add
+     */
+    public addResourcePath(path: string): void {
+        if (!this.resourcePaths.includes(path)) {
+            this.resourcePaths.push(path);
+            this.webView.addResourcePath(path);
+        }
     }
 } 

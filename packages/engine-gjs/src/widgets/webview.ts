@@ -42,6 +42,34 @@ export class WebView extends WebKit.WebView {
     }
 
     /**
+     * Set resource paths for the resource manager
+     * @param paths Array of resource paths
+     */
+    setResourcePaths(paths: string[]) {
+        // Create a new resource manager with the updated paths
+        this.resourceManager = new ResourceManager(paths, this.resourceManager.gresourcePath)
+        console.log('Resource paths updated:', paths)
+    }
+
+    /**
+     * Add a resource path to the resource manager
+     * @param path Resource path to add
+     */
+    addResourcePath(path: string) {
+        this.resourceManager.addPath(path)
+        console.log('Resource path added:', path)
+    }
+
+    /**
+     * Set the GResource path for the resource manager
+     * @param path GResource path
+     */
+    setGResourcePath(path: string) {
+        this.resourceManager.setGResourcePath(path)
+        console.log('GResource path updated:', path)
+    }
+
+    /**
      * Create a new WebView instance
      * @param props Constructor properties
      * @param resourceManager Resource manager for handling internal requests
@@ -197,6 +225,10 @@ export class WebView extends WebKit.WebView {
         const stream = this.resourceManager.stream(path)
         if (!stream) {
             console.error('Error opening stream', path)
+            schemeRequest.finish_error(new Gio.IOErrorEnum({
+                code: Gio.IOErrorEnum.NOT_FOUND,
+                message: `Resource not found: ${path}`
+            }))
             return
         }
         const contentType = extension ? mime.getType(extension) : null

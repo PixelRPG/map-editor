@@ -14,7 +14,7 @@ const engine = new ExcaliburEngine('map-view');
 await engine.initialize();
 
 // If this is in preview mode, load the project for demo purposes
-// if (!settings.isWebKitView) {
-// The engine will handle messages from GJS to load projects and maps
-engine.loadProject('./assets/game-project.json')
-// }
+if (!settings.isWebKitView) {
+    // The engine will handle messages from GJS to load projects and maps
+    engine.loadProject('./assets/game-project.json')
+}
