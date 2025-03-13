@@ -1,4 +1,4 @@
-import { EngineErrorType } from '../types/errors.ts';
+import { EngineErrorType } from '../types/engine-error-type';
 
 /**
  * Engine-specific error class

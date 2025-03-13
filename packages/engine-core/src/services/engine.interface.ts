@@ -1,5 +1,5 @@
 import { EventDispatcher } from '@pixelrpg/messages-core';
-import { EngineEvent, EngineStatus, InputEvent, ProjectLoadOptions } from '../types/index.ts';
+import { EngineEvent, EngineStatus, InputEvent, ProjectLoadOptions } from '../types/index';
 
 /**
  * Interface for the game engine

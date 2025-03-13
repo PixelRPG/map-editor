@@ -12,7 +12,7 @@ import {
     EngineStatus,
     InputEventType,
     InputEvent,
-} from '../types/index.ts';
+} from '../types/index';
 
 
 /**

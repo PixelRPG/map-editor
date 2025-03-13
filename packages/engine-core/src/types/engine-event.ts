@@ -1,23 +1,5 @@
-/**
- * Status of the engine
- */
-export enum EngineStatus {
-    INITIALIZING = 'initializing',
-    READY = 'ready',
-    LOADING = 'loading',
-    RUNNING = 'running',
-    ERROR = 'error',
-}
-
-/**
- * Engine event types
- */
-export enum EngineEventType {
-    STATUS_CHANGED = 'status-changed',
-    PROJECT_LOADED = 'project-loaded',
-    MAP_LOADED = 'map-loaded',
-    ERROR = 'error',
-}
+import { EngineEventType } from './engine-event-type';
+import { EngineStatus } from './engine-status';
 
 /**
  * Type mapping for event data based on event type

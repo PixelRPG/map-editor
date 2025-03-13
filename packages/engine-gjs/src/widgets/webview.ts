@@ -11,7 +11,6 @@ import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
 import {
     engineInputEventsService,
-    type EngineMessage,
     EngineMessageType
 } from '@pixelrpg/engine-core'
 

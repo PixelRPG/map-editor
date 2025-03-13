@@ -1,7 +1,7 @@
 import {
     InputEvent,
     InputEventType,
-} from '../types/index.ts';
+} from '../types/index';
 import { createValidationError } from '../utils/index.ts';
 
 /**

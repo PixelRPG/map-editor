@@ -1,4 +1,4 @@
-import { EngineErrorType } from '../types/errors.ts';
+import { EngineErrorType } from '../types/engine-error-type.ts';
 import { EngineError } from '../errors/engine-error.ts';
 
 /**
