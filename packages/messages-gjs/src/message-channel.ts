@@ -1,17 +1,17 @@
 import type JavaScriptCore from '@girs/javascriptcore-6.0'
-import type { } from '@pixelrpg/messages-core/src/types/message-event.ts'
 import Gio from '@girs/gio-2.0'
 import WebKit from '@girs/webkit-6.0'
 
-import { WebKitMessageChannel, MessageEvent, createMessageData } from '@pixelrpg/messages-core'
+import { MessageChannel as BaseMessageChannel, MessageEvent, createMessageData } from '@pixelrpg/messages-core'
 
+// Promisify the evaluate_javascript method
 Gio._promisify(WebKit.WebView.prototype, 'evaluate_javascript')
 
 /**
  * GJS implementation of the WebKit message channel.
  * Handles communication between GJS and WebViews using standard WebKit APIs.
  */
-export class MessageChannel<T = string> extends WebKitMessageChannel<T> {
+export class MessageChannel<T = string> extends BaseMessageChannel<T> {
 
     protected readonlywebView: WebKit.WebView | null = null
 
@@ -95,13 +95,6 @@ export class MessageChannel<T = string> extends WebKitMessageChannel<T> {
                 }
             },
         )
-    }
-
-    /**
-     * Check if WebKit is available - always true in GJS implementation
-     */
-    protected isWebKitAvailable(): boolean {
-        return true;
     }
 }
 

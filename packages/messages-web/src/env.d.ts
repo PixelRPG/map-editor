@@ -1,4 +1,5 @@
-import { MessageData, WebKitMessageHandler } from '@pixelrpg/messages-core'
+import { WebKitMessageHandler } from './types/index.ts'
+
 declare global {
   interface Window {
     /**
@@ -9,25 +10,7 @@ declare global {
       messageHandlers: {
         [handlerName: string]: WebKitMessageHandler | undefined
       }
-      // Custom message receiver for backward compatibility with GJS
-      messageReceivers?: {
-        [handlerName: string]: {
-          receive(message: MessageData<string, any>): void
-        }
-      }
     }
-
-    /**
-     * Legacy message receiver for backward compatibility
-     * This is used to maintain compatibility with older GJS implementations
-     * that call directly into the web context
-     */
-    // messageReceivers?: {
-    //   [handlerName: string]: {
-    //     /** Method to receive messages from GJS */
-    //     receive(message: { type: string, data: any }): void
-    //   }
-    // }
   }
 }
 

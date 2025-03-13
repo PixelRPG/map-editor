@@ -1,25 +1,25 @@
-import type { WebKitMessageHandler } from "../types/index.ts";
+import { MessageChannel as CoreMessageChannel, MessageEvent, MessageData, createMessageData } from '@pixelrpg/messages-core'
+import { WebKitMessageHandler } from './types/webkit-message-handler';
 
-import { MessageChannel } from "./message-channel.ts";
-import { createMessageData } from "../utils/message.ts";
 
 /**
- * WebKit message channel implementation
- * This provides a standard-compliant way to communicate between
- * WebKit WebViews and native code (GJS in our case)
+ * Combined WebKit and Window message implementation for web context.
+ * This implementation tries WebKit message handlers first (for native communication),
+ * then falls back to standard Window message API.
  */
-export abstract class WebKitMessageChannel<T = string> extends MessageChannel<T> {
+export class MessageChannel<T = string> extends CoreMessageChannel<T> {
     /**
      * Reference to the WebKit message handler, if available
      */
     protected webKitHandler: WebKitMessageHandler | null = null;
 
     /**
-     * Constructor that takes a channel name identifier
+     * Create a new WebView message channel
      * @param channelName Name of the message channel
      */
     constructor(channelName: string) {
-        super(channelName);
+        super(channelName)
+        this.initializeChannel()
     }
 
     /**
@@ -42,9 +42,16 @@ export abstract class WebKitMessageChannel<T = string> extends MessageChannel<T>
     }
 
     /**
-     * Method to check if WebKit messaging is available in this environment
+     * Initialize both WebKit and Window message channels
      */
-    protected abstract isWebKitAvailable(): boolean;
+    protected initializeChannel(): void {
+        console.log('Initializing WebKit message channel', this.channelName)
+
+        // Set up window message listener for receiving messages
+        window.addEventListener('message', (event) => {
+            this.handleMessageEvent(event as unknown as MessageEvent<MessageData<T>>);
+        });
+    }
 
     /**
      * Method to check if message handler is registered
@@ -52,4 +59,6 @@ export abstract class WebKitMessageChannel<T = string> extends MessageChannel<T>
     protected isHandlerRegistered(): boolean {
         return this.webKitHandler !== null;
     }
-} 
+}
+
+

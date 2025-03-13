@@ -73,10 +73,6 @@ class EditorChannel extends WebKitMessageChannel<EditorMessageTypes> {
     this.webKitHandler = webView;
   }
   
-  protected isWebKitAvailable() {
-    return true;
-  }
-  
   // Add convenience methods for common operations
   openDocument(id: string, path: string): Promise<void> {
     return this.postMessage('document:open', { id, path });
