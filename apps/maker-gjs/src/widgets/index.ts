@@ -13,9 +13,7 @@ import { SpriteWidget } from './sprite.widget.ts'
 import { WelcomeView } from './welcome-view.ts'
 
 // Ensure widgets are loaded and can be used in the XML
-// GObject.type_ensure(ApplicationWindow.$gtype)
-// GObject.type_ensure(EngineView.$gtype)
-// GObject.type_ensure(LayerRowWidget.$gtype)
+
 // GObject.type_ensure(LayersWidget.$gtype)
 // GObject.type_ensure(PreferencesDialog.$gtype)
 // GObject.type_ensure(ProjectView.$gtype)

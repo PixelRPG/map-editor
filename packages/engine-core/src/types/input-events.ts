@@ -7,10 +7,26 @@ export interface Position {
 }
 
 /**
- * Base mouse event data
+ * Input event types
+ */
+export enum InputEventType {
+    MOUSE_MOVE = 'mouse-move',
+    MOUSE_DOWN = 'mouse-down',
+    MOUSE_UP = 'mouse-up',
+    MOUSE_ENTER = 'mouse-enter',
+    MOUSE_LEAVE = 'mouse-leave',
+    MOUSE_CLICK = 'mouse-click',
+    KEY_DOWN = 'key-down',
+    KEY_UP = 'key-up',
+    WHEEL = 'wheel',
+}
+
+/**
+ * Base mouse event data with x/y coordinates
  */
 export interface MouseEventData {
-    position: Position;
+    x: number;
+    y: number;
     button?: number;
 }
 
@@ -18,7 +34,8 @@ export interface MouseEventData {
  * Mouse move event data with optional drag information
  */
 export interface MouseMoveEventData extends MouseEventData {
-    dragDelta?: Position;
+    deltaX?: number;
+    deltaY?: number;
 }
 
 /**
@@ -29,15 +46,15 @@ export interface WheelEventData extends MouseEventData {
 }
 
 /**
- * Input event types
+ * Key event data
  */
-export enum InputEventType {
-    MOUSE_MOVE = 'mouse-move',
-    MOUSE_DOWN = 'mouse-down',
-    MOUSE_UP = 'mouse-up',
-    MOUSE_ENTER = 'mouse-enter',
-    MOUSE_LEAVE = 'mouse-leave',
-    WHEEL = 'wheel',
+export interface KeyEventData {
+    key: string;
+    code: string;
+    altKey?: boolean;
+    ctrlKey?: boolean;
+    shiftKey?: boolean;
+    metaKey?: boolean;
 }
 
 /**
@@ -48,6 +65,9 @@ export interface InputEventDataMap {
     [InputEventType.MOUSE_DOWN]: MouseEventData;
     [InputEventType.MOUSE_UP]: MouseEventData;
     [InputEventType.MOUSE_ENTER]: MouseEventData;
+    [InputEventType.MOUSE_CLICK]: MouseEventData;
+    [InputEventType.KEY_DOWN]: KeyEventData;
+    [InputEventType.KEY_UP]: KeyEventData;
     [InputEventType.WHEEL]: WheelEventData;
     [InputEventType.MOUSE_LEAVE]: null;
 }

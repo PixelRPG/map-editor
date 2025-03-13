@@ -1,5 +1,6 @@
 import { Engine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
-import { EventDispatcher } from '@pixelrpg/messages-core'
+import { EventDispatcher, MessageEvent } from '@pixelrpg/messages-core'
+import { MessageChannel } from '@pixelrpg/messages-web'
 import {
     EngineInterface,
     EngineEvent,
@@ -7,15 +8,18 @@ import {
     EngineStatus,
     InputEvent,
     ProjectLoadOptions,
-    InputEventType,
-    engineMessagesService,
     EngineMessageType,
     EngineCommandType,
-    EngineMessageParserService
+    engineMessageParserService,
+    EngineMessage,
+    EngineMessageEventInput,
+    EngineMessageLoadProject,
+    EngineMessageLoadMap,
+    EngineMessageCommand,
+    EngineMessageEventEngine,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
-import { messagesService } from './messages.service.ts'
 import { EditorInputSystem } from '../systems/editor-input.system.ts'
 
 // Define a type for the Excalibur engine with the methods we need
@@ -56,14 +60,11 @@ export class ExcaliburEngine implements EngineInterface {
     private logger = Logger.getInstance()
 
     /**
-     * Message parser service
-     */
-    private messageParser = new EngineMessageParserService()
-
-    /**
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
+    private messages = new MessageChannel<EngineMessageType>(this.messageHandlerName)
+
 
     /**
      * Create a new Excalibur engine
@@ -99,12 +100,6 @@ export class ExcaliburEngine implements EngineInterface {
         this.engine.currentScene.world.add(EditorInputSystem)
 
         this.setStatus(EngineStatus.READY)
-
-        // Send a message to GJS
-        messagesService.send({
-            type: 'text',
-            data: 'Excalibur engine initialized',
-        })
     }
 
     /**
@@ -119,7 +114,7 @@ export class ExcaliburEngine implements EngineInterface {
 
         this.setStatus(EngineStatus.LOADING)
 
-        this.logger.info(`Loading project: ${projectPath}`)
+        this.logger.info(`[ExcaliburEngine] Loading project: ${projectPath}`)
 
         // Create the game project resource
         this.gameProjectResource = new GameProjectResource(projectPath, {
@@ -293,104 +288,107 @@ export class ExcaliburEngine implements EngineInterface {
     private setupMessageHandlers(): void {
         this.logger.info('Setting up message handlers')
 
-        // Listen for load project messages
-        messagesService.on(EngineMessageType.LOAD_PROJECT, (message) => {
-            this.logger.debug('Received load project message:', message)
+        // Use a single onmessage handler for all message types
+        this.messages.onmessage = (event: MessageEvent) => {
+            const message = event.data;
 
             try {
-                if (this.messageParser.isLoadProjectMessage(message)) {
-                    const { projectPath, options } = message.data
-                    this.loadProject(projectPath, options).catch(error => {
-                        this.logger.error('Error loading project:', error)
-                    })
-                }
-            } catch (error) {
-                this.logger.error('Error handling load project message:', error)
-            }
-        })
-
-        // Listen for load map messages
-        messagesService.on(EngineMessageType.LOAD_MAP, (message) => {
-            this.logger.debug('Received load map message:', message)
-
-            try {
-                if (this.messageParser.isLoadMapMessage(message)) {
-                    const { mapId } = message.data
-                    this.loadMap(mapId).catch(error => {
-                        this.logger.error('Error loading map:', error)
-                    })
-                }
-            } catch (error) {
-                this.logger.error('Error handling load map message:', error)
-            }
-        })
-
-        // Listen for command messages
-        messagesService.on(EngineMessageType.COMMAND, (message) => {
-            this.logger.debug('Received command message:', message)
-
-            try {
-                if (this.messageParser.isCommandMessage(message)) {
-                    const { command } = message.data
-
-                    switch (command) {
-                        case EngineCommandType.START:
-                            this.start().catch(error => {
-                                this.logger.error('Error starting engine:', error)
-                            })
-                            break
-
-                        case EngineCommandType.STOP:
-                            this.stop().catch(error => {
-                                this.logger.error('Error stopping engine:', error)
-                            })
-                            break
-
-                        case EngineCommandType.PAUSE:
-                            this.pause()
-                            break
-
-                        case EngineCommandType.RESUME:
-                            this.resume()
-                            break
-
-                        default:
-                            this.logger.warn(`Unknown command: ${command}`)
+                if (engineMessageParserService.isEngineMessage(message)) {
+                    console.debug('Engine message received:', message);
+                    if (engineMessageParserService.isEngineEventMessage(message)) {
+                        console.debug('Engine event message received:', message);
+                        this.handleEngineEventMessage(message);
+                    } else if (engineMessageParserService.isLoadProjectMessage(message)) {
+                        console.debug('Load project message received:', message);
+                        this.handleLoadProjectMessage(message);
+                    } else if (engineMessageParserService.isLoadMapMessage(message)) {
+                        console.debug('Load map message received:', message);
+                        this.handleLoadMapMessage(message);
+                    } else if (engineMessageParserService.isCommandMessage(message)) {
+                        console.debug('Command message received:', message);
+                        this.handleCommandMessage(message);
+                    } else if (engineMessageParserService.isInputEventMessage(message)) {
+                        // console.debug('Input event message received:', message);
+                        this.handleInputEventMessage(message);
                     }
                 }
             } catch (error) {
-                this.logger.error('Error handling command message:', error)
+                this.logger.error(`Error handling message of type ${message.messageType}:`, error);
             }
-        })
+        }
+    }
 
-        // Listen for input event messages
-        messagesService.on(EngineMessageType.INPUT_EVENT, (message) => {
-            this.logger.debug('Received input event message:', message)
+    /**
+     * Handle load project message
+     * @param data The load project message data
+     */
+    private handleLoadProjectMessage(data: EngineMessageLoadProject): void {
+        const { projectPath, options } = data.payload;
+        this.loadProject(projectPath, options).catch(error => {
+            this.logger.error('Error loading project:', error);
+        });
+    }
 
-            try {
-                if (this.messageParser.isInputEventMessage(message)) {
-                    const inputEvent = message.data.data
-                    this.handleInput(inputEvent)
-                }
-            } catch (error) {
-                this.logger.error('Error handling input event message:', error)
-            }
-        })
+    /**
+     * Handle load map message
+     * @param data The load map message data
+     */
+    private handleLoadMapMessage(data: EngineMessageLoadMap): void {
+        const { mapId } = data.payload;
+        this.loadMap(mapId).catch(error => {
+            this.logger.error('Error loading map:', error);
+        });
+    }
 
-        // Listen for engine event messages
-        messagesService.on(EngineMessageType.ENGINE_EVENT, (message) => {
-            this.logger.debug('Received engine event message:', message)
+    /**
+     * Handle command message
+     * @param data The command message data
+     */
+    private handleCommandMessage(data: EngineMessageCommand): void {
+        const { command } = data.payload;
 
-            try {
-                if (this.messageParser.isEngineEventMessage(message)) {
-                    // Handle engine events if needed
-                    // Currently, we just log them
-                    this.logger.info('Engine event received:', message.data.data)
-                }
-            } catch (error) {
-                this.logger.error('Error handling engine event message:', error)
-            }
-        })
+        switch (command) {
+            case EngineCommandType.START:
+                this.start().catch(error => {
+                    this.logger.error('Error starting engine:', error);
+                });
+                break;
+
+            case EngineCommandType.STOP:
+                this.stop().catch(error => {
+                    this.logger.error('Error stopping engine:', error);
+                });
+                break;
+
+            case EngineCommandType.PAUSE:
+                this.pause();
+                break;
+
+            case EngineCommandType.RESUME:
+                this.resume();
+                break;
+
+            default:
+                this.logger.warn(`Unknown command: ${command}`);
+        }
+    }
+
+    /**
+     * Handle input event message
+     * @param data The input event message data
+     */
+    private handleInputEventMessage(data: EngineMessageEventInput): void {
+        this.handleInput(data.payload);
+    }
+
+    /**
+     * Handle engine event message
+     * @param data The engine event message data
+     */
+    private handleEngineEventMessage(data: EngineMessageEventEngine): void {
+        // Handle engine events if needed
+        // Currently, we just log them
+        this.logger.info('Engine event received:', data);
     }
 
     /**
@@ -398,18 +396,26 @@ export class ExcaliburEngine implements EngineInterface {
      * @param status New engine status
      */
     private setStatus(status: EngineStatus): void {
-        this.status = status
+        if (this.status !== status) {
+            this.logger.info(`Engine status changed from ${this.status} to ${status}`)
 
-        const event: EngineEvent<EngineEventType.STATUS_CHANGED> = {
-            type: EngineEventType.STATUS_CHANGED,
-            data: status
+            // Update the status
+            this.status = status
+
+            // Create an event
+            const event: EngineEvent = {
+                type: EngineEventType.STATUS_CHANGED,
+                data: status
+            }
+
+            // Dispatch the event locally
+            this.events.dispatch(event.type, event)
+
+            // Send the event to GJS
+            this.messages.postMessage(
+                EngineMessageType.ENGINE_EVENT,
+                event
+            )
         }
-
-        this.events.dispatch(event.type, event)
-
-        // Send a message to GJS
-        messagesService.send(
-            engineMessagesService.engineEvent(event)
-        )
     }
 } 

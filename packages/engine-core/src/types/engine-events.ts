@@ -40,4 +40,9 @@ export type EngineEventData = EngineEventDataMap[EngineEventType];
 export interface EngineEvent<T extends EngineEventType = EngineEventType> {
     type: T;
     data?: EngineEventDataMap[T];
-} 
+}
+
+/**
+ * Event handler function type for engine events
+ */
+export type EngineEventHandler = (event: EngineEvent) => void; 

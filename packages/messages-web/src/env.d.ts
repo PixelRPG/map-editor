@@ -1,20 +1,35 @@
-import type { CustomMessageHandler } from './types/index.ts'
-import type { Message } from '@pixelrpg/messages-core'
-
+import { MessageData, WebKitMessageHandler } from '@pixelrpg/messages-core'
 declare global {
   interface Window {
+    /**
+     * Standard WebKit interface for message handling
+     * This follows the WebKit WKScriptMessageHandler standard
+     */
     webkit?: {
       messageHandlers: {
-        [handlerName: string]: CustomMessageHandler | undefined
+        [handlerName: string]: WebKitMessageHandler | undefined
+      }
+      // Custom message receiver for backward compatibility with GJS
+      messageReceivers?: {
+        [handlerName: string]: {
+          receive(message: MessageData<string, any>): void
+        }
       }
     }
 
-    messageReceivers?: {
-      [handlerName: string]: {
-        /** Custom method to receive messages from GJS */
-        receive(message: Message): void
-      }
-    }
+    /**
+     * Legacy message receiver for backward compatibility
+     * This is used to maintain compatibility with older GJS implementations
+     * that call directly into the web context
+     */
+    // messageReceivers?: {
+    //   [handlerName: string]: {
+    //     /** Method to receive messages from GJS */
+    //     receive(message: { type: string, data: any }): void
+    //   }
+    // }
   }
 }
+
+export { };
 

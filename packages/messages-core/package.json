@@ -12,9 +12,6 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "devDependencies": {
-        "@excaliburjs/plugin-tiled": "workspace:^",
-        "@types/lodash": "^4.17.15",
-        "excalibur": "workspace:^",
         "typescript": "^5.8.2"
     }
 }

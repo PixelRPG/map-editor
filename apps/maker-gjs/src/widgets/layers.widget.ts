@@ -49,3 +49,5 @@ export class LayersWidget extends Adw.Bin {
     row.activate();
   }
 }
+
+GObject.type_ensure(LayersWidget.$gtype)

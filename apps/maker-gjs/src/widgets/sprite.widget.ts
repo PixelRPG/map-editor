@@ -38,3 +38,5 @@ export class SpriteWidget extends Adw.Bin {
     this.height_request = height;
   }
 }
+
+GObject.type_ensure(SpriteWidget.$gtype)

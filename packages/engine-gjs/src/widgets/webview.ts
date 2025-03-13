@@ -4,16 +4,15 @@ import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
 import Gio from '@girs/gio-2.0'
 
-import { MessagesService } from '@pixelrpg/messages-gjs'
+import { MessageChannel } from '@pixelrpg/messages-gjs'
 import mime from 'mime'
 
 import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
 import {
-    InputEventType,
-    engineMessagesService,
     engineInputEventsService,
-    type EngineMessage
+    type EngineMessage,
+    EngineMessageType
 } from '@pixelrpg/engine-core'
 
 import { ResourceManager } from '../services/resource-manager.ts'
@@ -29,10 +28,13 @@ export class WebView extends WebKit.WebView {
         GObject.registerClass({
             GTypeName: 'WebView',
             Template,
+            Signals: {
+                'ready': {}
+            }
         }, this);
     }
 
-    protected _messagesService: MessagesService<EngineMessage>
+    protected _messagesService?: MessageChannel<string>
 
     /**
      * Get the messages service for communication with the WebView
@@ -77,6 +79,7 @@ export class WebView extends WebKit.WebView {
     constructor(
         props: Partial<WebKit.WebView.ConstructorProps>
     ) {
+        console.log('Creating WebView')
         const network_session = new WebKit.NetworkSession({})
 
         const web_context = new WebKit.WebContext()
@@ -108,19 +111,26 @@ export class WebView extends WebKit.WebView {
         this.onInternalRequest = this.onInternalRequest.bind(this)
 
         this.registerURIScheme(INTERNAL_PROTOCOL, this.onInternalRequest)
-        this._messagesService = this.initMessagesService()
 
-        this.initInputController()
-        this.initPageLoadListener()
+        console.log('Initializing WebView')
 
-        this.load_uri(`${INTERNAL_PROTOCOL}:///index.html`)
+        this.connect('realize', () => {
+            console.log('WebView realized')
+            this._messagesService = this.initMessagesService()
+
+            this.initInputController()
+            this.initPageLoadListener()
+
+            this.load_uri(`${INTERNAL_PROTOCOL}:///index.html`)
+        })
     }
 
     /**
      * Initialize the messages service for communication with the WebView
      */
     protected initMessagesService() {
-        const messagesService = new MessagesService<EngineMessage>(INTERNAL_PROTOCOL, this)
+        console.log('Initializing MessagesService, webView:', this)
+        const messagesService = new MessageChannel<string>(INTERNAL_PROTOCOL, this)
         return messagesService
     }
 
@@ -165,6 +175,7 @@ export class WebView extends WebKit.WebView {
      */
     protected onReady() {
         console.log('First page view is finished')
+        this.emit('ready')
     }
 
     /**
@@ -174,14 +185,20 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
+        if (!this._messagesService) {
+            console.error('Messages service is not initialized')
+            return
+        }
+
         // Round to 10th
         x = Math.round(x * 10) / 10
         y = Math.round(y * 10) / 10
 
         // Send mouse move event
-        this._messagesService.send(engineMessagesService.inputEvent(
+        this._messagesService.postMessage(
+            EngineMessageType.INPUT_EVENT,
             engineInputEventsService.mouseMove({ x, y })
-        ));
+        );
     }
 
     /**
@@ -189,12 +206,18 @@ export class WebView extends WebKit.WebView {
      * @param _source The event source
      */
     protected onMouseLeave(_source: EventControllerInput) {
+        if (!this._messagesService) {
+            console.error('Messages service is not initialized')
+            return
+        }
+
         console.log('Mouse has left the WebView');
 
         // Send mouse leave event with no position data
-        this._messagesService.send(engineMessagesService.inputEvent(
+        this._messagesService.postMessage(
+            EngineMessageType.INPUT_EVENT,
             engineInputEventsService.mouseLeave()
-        ));
+        );
     }
 
     /**
@@ -204,12 +227,18 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
+        if (!this._messagesService) {
+            console.error('Messages service is not initialized')
+            return
+        }
+
         console.log('Mouse has entered the WebView');
 
         // Send mouse enter event
-        this._messagesService.send(engineMessagesService.inputEvent(
+        this._messagesService.postMessage(
+            EngineMessageType.INPUT_EVENT,
             engineInputEventsService.mouseEnter({ x, y })
-        ));
+        );
     }
 
     /**
@@ -234,4 +263,6 @@ export class WebView extends WebKit.WebView {
         const contentType = extension ? mime.getType(extension) : null
         schemeRequest.finish(stream, -1, contentType)
     }
-} 
+}
+
+GObject.type_ensure(WebView.$gtype)

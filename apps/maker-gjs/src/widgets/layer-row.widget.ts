@@ -42,3 +42,4 @@ export class LayerRowWidget extends Adw.ActionRow {
   }
 }
 
+GObject.type_ensure(LayerRowWidget.$gtype)

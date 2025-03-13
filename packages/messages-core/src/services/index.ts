@@ -1,1 +1,3 @@
-export * from './base-message.service.ts';
+export * from './message-channel.ts';
+export * from './webkit-message-channel.ts';
+export * from './window-message.ts';

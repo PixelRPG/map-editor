@@ -1,14 +1,13 @@
 import { Engine, System, World, Scene, SystemType } from "excalibur";
-import { messagesService } from '../services/messages.service.ts'
 import {
     InputEventType,
     EngineMessageType,
-    engineMessagesService,
-    engineInputEventsService,
     engineMessageParserService,
-    engineTypeGuardsService
+    engineTypeGuardsService,
+    InputEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
+import { MessageChannel } from "@pixelrpg/messages-web";
 
 /**
  * System to handle input for the map editor
@@ -18,6 +17,10 @@ export class EditorInputSystem extends System {
     private dragStartPos = { x: 0, y: 0 };
 
     public systemType = SystemType.Update
+
+    private sendInputEventsToGJS = false;
+
+    private messages = new MessageChannel<EngineMessageType>('pixelrpg')
 
     private engine?: Engine;
 
@@ -48,14 +51,34 @@ export class EditorInputSystem extends System {
             this.dragStartPos = { x, y };
 
             // Send move event to GJS
-            messagesService.send(engineMessagesService.inputEvent(
-                engineInputEventsService.mouseMove({ x, y }, { x: deltaX, y: deltaY })
-            ));
+            if (this.sendInputEventsToGJS) {
+                this.messages.postMessage(
+                    EngineMessageType.INPUT_EVENT,
+                    {
+                        type: InputEventType.MOUSE_MOVE,
+                        data: {
+                            x: x,
+                            y: y,
+                            deltaX: deltaX,
+                            deltaY: deltaY
+                        }
+                    }
+                );
+            }
         } else {
             // Send move event to GJS without drag info
-            messagesService.send(engineMessagesService.inputEvent(
-                engineInputEventsService.mouseMove({ x, y })
-            ));
+            if (this.sendInputEventsToGJS) {
+                this.messages.postMessage(
+                    EngineMessageType.INPUT_EVENT,
+                    {
+                        type: InputEventType.MOUSE_MOVE,
+                        data: {
+                            x: x,
+                            y: y
+                        }
+                    }
+                );
+            }
         }
     }
 
@@ -69,9 +92,19 @@ export class EditorInputSystem extends System {
         this.dragStartPos = { x, y };
 
         // Send down event to GJS
-        messagesService.send(engineMessagesService.inputEvent(
-            engineInputEventsService.mouseDown({ x, y }, 0) // Left button
-        ));
+        if (this.sendInputEventsToGJS) {
+            this.messages.postMessage(
+                EngineMessageType.INPUT_EVENT,
+                {
+                    type: InputEventType.MOUSE_DOWN,
+                    data: {
+                        x: x,
+                        y: y,
+                        button: 0 // Left button
+                    }
+                }
+            );
+        }
     }
 
     /**
@@ -81,9 +114,19 @@ export class EditorInputSystem extends System {
         this.isDown = false;
 
         // Send up event to GJS
-        messagesService.send(engineMessagesService.inputEvent(
-            engineInputEventsService.mouseUp(this.dragStartPos, 0) // Left button
-        ));
+        if (this.sendInputEventsToGJS) {
+            this.messages.postMessage(
+                EngineMessageType.INPUT_EVENT,
+                {
+                    type: InputEventType.MOUSE_UP,
+                    data: {
+                        x: this.dragStartPos.x,
+                        y: this.dragStartPos.y,
+                        button: 0 // Left button
+                    }
+                }
+            );
+        }
     }
 
     /**
@@ -111,6 +154,7 @@ export class EditorInputSystem extends System {
     }
 
     public initialize(world: World, scene: Scene) {
+        console.debug('Initializing EditorInputSystem');
         if (super.initialize) {
             super.initialize(world, scene);
         }
@@ -131,25 +175,44 @@ export class EditorInputSystem extends System {
         });
 
         if (!settings.isWebKitView) {
+            console.debug('Setting up pointer move event listener for default browser behavior');
             // Default browser behavior
             pointer.on('move', (event) => {
                 this.onPointerMove(event.screenPos.x, event.screenPos.y);
             });
         } else {
-            // We receive mouse events from GTK via the message service to get drag scrolling also works outside the WebView
-            messagesService.on('event', (message) => {
-                if (engineMessageParserService.isInputEventMessage(message)) {
-                    const inputEvent = engineMessageParserService.getEventData(message);
+            console.debug('Setting up message listener for GJS input events');
+            // Handle input events from GJS
+            this.messages.onmessage = (event) => {
+
+                if (!engineMessageParserService.isEngineMessage(event.data)) {
+                    console.debug('Unhandled message type (not an engine message):', event.data);
+                    return;
+                }
+
+                if (!engineMessageParserService.isInputEventMessage(event.data)) {
+                    console.debug('Unhandled message type (not an input event message):', event.data);
+                    return;
+                }
+
+                console.debug('Input event message received:', event.data);
+
+                const { messageType, payload } = event.data;
+
+                // Handle input events
+                if (messageType === EngineMessageType.INPUT_EVENT) {
+                    const inputEvent = payload;
 
                     if (engineTypeGuardsService.isMouseMoveEvent(inputEvent) && inputEvent.data) {
+                        // In the new format, data directly contains x and y
                         this.onPointerMove(
-                            inputEvent.data.position.x,
-                            inputEvent.data.position.y
+                            inputEvent.data.x,
+                            inputEvent.data.y
                         );
                     } else if (engineTypeGuardsService.isMouseDownEvent(inputEvent) && inputEvent.data) {
                         this.onPointerDown(
-                            inputEvent.data.position.x,
-                            inputEvent.data.position.y
+                            inputEvent.data.x,
+                            inputEvent.data.y
                         );
                     } else if (engineTypeGuardsService.isMouseUpEvent(inputEvent)) {
                         this.onPointerUp();
@@ -158,21 +221,65 @@ export class EditorInputSystem extends System {
                         this.onPointerUp();
                     }
                 }
-            });
+            };
         }
 
         // Handle wheel events for zooming
         pointer.on('wheel', (wheelEvent) => {
-            // Extract position from worldPos or screenPos, or default to 0,0
-            const position = { x: wheelEvent.x || 0, y: wheelEvent.y || 0 }
+            // Extract position from wheelEvent
+            const x = wheelEvent.x || 0;
+            const y = wheelEvent.y || 0;
 
             // Handle zooming
-            this.onWheel(wheelEvent.deltaY, position);
+            this.onWheel(wheelEvent.deltaY, { x, y });
 
             // Send wheel event to GJS
-            messagesService.send(engineMessagesService.inputEvent(
-                engineInputEventsService.wheel(position, wheelEvent.deltaY)
-            ));
+            if (this.sendInputEventsToGJS) {
+                this.messages.postMessage(
+                    EngineMessageType.INPUT_EVENT,
+                    {
+                        type: InputEventType.WHEEL,
+                        data: {
+                            x,
+                            y,
+                            deltaY: wheelEvent.deltaY
+                        }
+                    }
+                );
+            }
         });
+    }
+
+
+    /**
+     * Handle input events from GJS
+     * @param event The input event
+     */
+    handleInputEvent(event: InputEvent): void {
+        // Handle input events from GJS based on type
+        switch (event.type) {
+            case InputEventType.MOUSE_MOVE:
+                // Handle mouse move
+                console.log('Mouse move event from GJS:', event.data)
+                break
+
+            case InputEventType.MOUSE_CLICK:
+                // Handle mouse click
+                console.log('Mouse click event from GJS:', event.data)
+                break
+
+            case InputEventType.KEY_DOWN:
+                // Handle key down
+                console.log('Key down event from GJS:', event.data)
+                break
+
+            case InputEventType.KEY_UP:
+                // Handle key up
+                console.log('Key up event from GJS:', event.data)
+                break
+
+            default:
+                console.log('Unhandled input event from GJS:', event)
+        }
     }
 }

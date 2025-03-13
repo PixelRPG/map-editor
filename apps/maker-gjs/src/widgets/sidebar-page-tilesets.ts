@@ -23,3 +23,5 @@ export class SidebarPageTilesets extends Adw.Bin {
     return super.set_child(child);
   }
 }
+
+GObject.type_ensure(SidebarPageTilesets.$gtype)

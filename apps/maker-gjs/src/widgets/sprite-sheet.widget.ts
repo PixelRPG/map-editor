@@ -45,3 +45,5 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     console.log("Selected sprite:", _sprite);
   }
 }
+
+GObject.type_ensure(SpriteSheetWidget.$gtype)

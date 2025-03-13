@@ -3381,9 +3381,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/messages-core@workspace:packages/messages-core"
   dependencies:
-    "@excaliburjs/plugin-tiled": "workspace:^"
-    "@types/lodash": "npm:^4.17.15"
-    excalibur: "workspace:^"
     typescript: "npm:^5.8.2"
   languageName: unknown
   linkType: soft
@@ -3392,9 +3389,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/messages-gjs@workspace:packages/messages-gjs"
   dependencies:
+    "@girs/gio-2.0": "npm:^2.83.3-4.0.0-beta.21"
+    "@girs/gjs": "npm:^4.0.0-beta.21"
     "@girs/javascriptcore-6.0": "npm:^2.47.3-4.0.0-beta.21"
     "@girs/webkit-6.0": "npm:^2.47.3-4.0.0-beta.21"
     "@pixelrpg/messages-core": "workspace:^"
+    typescript: "npm:^5.8.2"
   languageName: unknown
   linkType: soft
 
@@ -5534,7 +5534,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/lodash@npm:^4.14.167, @types/lodash@npm:^4.17.15":
+"@types/lodash@npm:^4.14.167":
   version: 4.17.15
   resolution: "@types/lodash@npm:4.17.15"
   checksum: 10c0/2eb2dc6d231f5fb4603d176c08c8d7af688f574d09af47466a179cd7812d9f64144ba74bb32ca014570ffdc544eedc51b7a5657212bad083b6eecbd72223f9bb

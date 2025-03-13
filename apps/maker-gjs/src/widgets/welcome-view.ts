@@ -34,4 +34,6 @@ export class WelcomeView extends Adw.Bin {
             this.emit('open-project')
         })
     }
-} 
+}
+
+GObject.type_ensure(WelcomeView.$gtype)

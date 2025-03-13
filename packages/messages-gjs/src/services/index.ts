@@ -1,2 +1,2 @@
-export * from './messages.service.ts'
+export * from './message-channel.ts'
 

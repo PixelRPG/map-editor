@@ -42,3 +42,5 @@ export class Sidebar extends Adw.Bin {
     this._pageLayer.set_child(layers)
   }
 }
+
+GObject.type_ensure(Sidebar.$gtype)

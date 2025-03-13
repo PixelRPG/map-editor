@@ -11,6 +11,7 @@ class ErrorService {
      * @param cause Original error that caused this error
      */
     createInitializationError(message: string, cause?: Error): EngineError {
+        console.error('Initialization error:', message, cause);
         return new EngineError(EngineErrorType.INITIALIZATION_ERROR, message, cause);
     }
 
@@ -20,6 +21,7 @@ class ErrorService {
      * @param cause Original error that caused this error
      */
     createRuntimeError(message: string, cause?: Error): EngineError {
+        console.error('Runtime error:', message, cause);
         return new EngineError(EngineErrorType.RUNTIME_ERROR, message, cause);
     }
 
@@ -29,6 +31,7 @@ class ErrorService {
      * @param cause Original error that caused this error
      */
     createResourceError(message: string, cause?: Error): EngineError {
+        console.error('Resource error:', message, cause);
         return new EngineError(EngineErrorType.RESOURCE_ERROR, message, cause);
     }
 
@@ -38,6 +41,7 @@ class ErrorService {
      * @param cause Original error that caused this error
      */
     createValidationError(message: string, cause?: Error): EngineError {
+        console.error('Validation error:', message, cause);
         return new EngineError(EngineErrorType.VALIDATION_ERROR, message, cause);
     }
 
@@ -47,6 +51,7 @@ class ErrorService {
      * @param cause Original error that caused this error
      */
     createNetworkError(message: string, cause?: Error): EngineError {
+        console.error('Network error:', message, cause);
         return new EngineError(EngineErrorType.NETWORK_ERROR, message, cause);
     }
 

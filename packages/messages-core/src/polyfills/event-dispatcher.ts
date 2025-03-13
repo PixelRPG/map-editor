@@ -1,6 +1,5 @@
-import type { EventListener } from "./types/index.ts";
+import type { EventListener } from "../types/index.ts";
 
-// deno-lint-ignore no-explicit-any
 export class EventDispatcher<T = any> {
   private listeners: { [event: string]: EventListener<T>[] } = {};
 

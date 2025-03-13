@@ -17,9 +17,9 @@ import { Layer } from '../g-objects/layer.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
-import { EngineMessageText } from '@pixelrpg/engine-core'
 
 import Template from './application-window.ui?raw'
+import { EngineMessage } from '@pixelrpg/engine-core'
 
 // Ensure widgets are loaded and can be used in the XML
 GObject.type_ensure(WebView.$gtype)
@@ -56,16 +56,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     // Connect engine signals if project view is active
     const gjsEngine = this._projectView?.gjsEngine
-    if (gjsEngine) {
-      gjsEngine.connect('message-received', (_source, message) => {
-        this.onEngineMessage(JSON.parse(message))
-      })
+    if (!gjsEngine) {
+      throw new Error('GJS engine not found')
     }
+
+    this._projectView?.gjsEngine?.connect('message-received', (_source, message) => {
+      this.onEngineMessage(JSON.parse(message))
+    })
+
+    this.connect('realize', () => {
+      this.initialize()
+    })
   }
 
-  protected onEngineMessage(message: EngineMessageText) {
-    console.log('Message from Engine:', message)
-    this._projectView?.gjsEngine?.sendMessage({ type: 'text', data: 'Hello back from GJS!' })
+  protected async initialize() {
+    await this._projectView?.gjsEngine?.initialize()
+  }
+
+  protected onEngineMessage(message: EngineMessage) {
+    console.log('[ApplicationWindow] Message from Engine:', message)
+    // Nthis._projectView?.gjsEngine?.sendMessage('text', 'Hello back from GJS!')
   }
 
   protected onCreateProject() {
@@ -135,7 +145,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   protected createNewProject(name: string) {
-    console.log('Creating new project:', name)
+    console.log('[ApplicationWindow] Creating new project:', name)
     // TODO: Implement project creation
     this._stack?.set_visible_child(this._projectView!)
   }
@@ -146,13 +156,19 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       return
     }
 
-    console.log('Opening project:', path)
+    if (!this._projectView) {
+      throw new Error('Project view not found')
+    }
+
+    console.log('[ApplicationWindow] Opening project:', path)
+
+    // Load the project in the engine
+    this._projectView.connect('ready', () => {
+      this._projectView!.gjsEngine!.loadProject(path)
+    })
 
     // Switch to project view
     this._stack?.set_visible_child(this._projectView!)
-
-    // Load the project in the engine
-    this._projectView?.gjsEngine?.loadProject(path)
   }
 
   protected showToast(message: string) {
@@ -171,3 +187,5 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     return new ImageResource(resource.path)
   }
 }
+
+GObject.type_ensure(ApplicationWindow.$gtype)

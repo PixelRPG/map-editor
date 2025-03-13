@@ -61,13 +61,11 @@ class EngineTypeGuardsService {
     isMouseMoveEvent(event: InputEvent): event is InputEvent<InputEventType.MOUSE_MOVE> {
         return event.type === InputEventType.MOUSE_MOVE &&
             event.data !== null &&
-            'position' in event.data &&
-            typeof event.data.position === 'object' &&
-            event.data.position !== null &&
-            'x' in event.data.position &&
-            'y' in event.data.position &&
-            typeof event.data.position.x === 'number' &&
-            typeof event.data.position.y === 'number';
+            typeof event.data === 'object' &&
+            'x' in event.data &&
+            'y' in event.data &&
+            typeof event.data.x === 'number' &&
+            typeof event.data.y === 'number';
     }
 
     /**
@@ -76,13 +74,11 @@ class EngineTypeGuardsService {
     isMouseDownEvent(event: InputEvent): event is InputEvent<InputEventType.MOUSE_DOWN> {
         return event.type === InputEventType.MOUSE_DOWN &&
             event.data !== null &&
-            'position' in event.data &&
-            typeof event.data.position === 'object' &&
-            event.data.position !== null &&
-            'x' in event.data.position &&
-            'y' in event.data.position &&
-            typeof event.data.position.x === 'number' &&
-            typeof event.data.position.y === 'number';
+            typeof event.data === 'object' &&
+            'x' in event.data &&
+            'y' in event.data &&
+            typeof event.data.x === 'number' &&
+            typeof event.data.y === 'number';
     }
 
     /**
@@ -91,13 +87,11 @@ class EngineTypeGuardsService {
     isMouseUpEvent(event: InputEvent): event is InputEvent<InputEventType.MOUSE_UP> {
         return event.type === InputEventType.MOUSE_UP &&
             event.data !== null &&
-            'position' in event.data &&
-            typeof event.data.position === 'object' &&
-            event.data.position !== null &&
-            'x' in event.data.position &&
-            'y' in event.data.position &&
-            typeof event.data.position.x === 'number' &&
-            typeof event.data.position.y === 'number';
+            typeof event.data === 'object' &&
+            'x' in event.data &&
+            'y' in event.data &&
+            typeof event.data.x === 'number' &&
+            typeof event.data.y === 'number';
     }
 
     /**
@@ -106,13 +100,11 @@ class EngineTypeGuardsService {
     isMouseEnterEvent(event: InputEvent): event is InputEvent<InputEventType.MOUSE_ENTER> {
         return event.type === InputEventType.MOUSE_ENTER &&
             event.data !== null &&
-            'position' in event.data &&
-            typeof event.data.position === 'object' &&
-            event.data.position !== null &&
-            'x' in event.data.position &&
-            'y' in event.data.position &&
-            typeof event.data.position.x === 'number' &&
-            typeof event.data.position.y === 'number';
+            typeof event.data === 'object' &&
+            'x' in event.data &&
+            'y' in event.data &&
+            typeof event.data.x === 'number' &&
+            typeof event.data.y === 'number';
     }
 
     /**
@@ -129,13 +121,11 @@ class EngineTypeGuardsService {
     isWheelEvent(event: InputEvent): event is InputEvent<InputEventType.WHEEL> {
         return event.type === InputEventType.WHEEL &&
             event.data !== null &&
-            'position' in event.data &&
-            typeof event.data.position === 'object' &&
-            event.data.position !== null &&
-            'x' in event.data.position &&
-            'y' in event.data.position &&
-            typeof event.data.position.x === 'number' &&
-            typeof event.data.position.y === 'number' &&
+            typeof event.data === 'object' &&
+            'x' in event.data &&
+            'y' in event.data &&
+            typeof event.data.x === 'number' &&
+            typeof event.data.y === 'number' &&
             'deltaY' in event.data &&
             typeof event.data.deltaY === 'number';
     }

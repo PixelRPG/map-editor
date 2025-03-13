@@ -36,8 +36,9 @@ Core packages (`*-core`) provide the foundation for the project, defining interf
 - Provide utilities for error handling and reporting
 
 ## Message System
-- Define message types and structures
-- Create message factory functions
-- Establish message validation patterns
-- Document message flow and handling expectations
-- Provide utilities for message serialization/deserialization
+- Follow WHATWG and WebKit standards for messaging
+- Implement standard-compliant interfaces for cross-context communication
+- Provide abstract base classes for different messaging patterns
+- Support both WebKit message handlers and window.postMessage APIs
+- Ensure type safety and proper error handling in message passing
+- Document message flow between different runtime environments 

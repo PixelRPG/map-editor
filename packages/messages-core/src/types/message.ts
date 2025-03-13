@@ -1,9 +1,11 @@
 /**
- * Generic message interface that allows for custom message types
- * This allows other packages to define their own message types
- * without modifying the messages-core package
+ * Standard message data structure for all messages
  */
-export interface Message<T = any, D = any> {
-    type: T;
-    data: D;
-} 
+export interface MessageData<T = string, P = any> {
+    /** Message type identifier for routing purposes */
+    messageType: T;
+    /** Actual payload data */
+    payload: P;
+    /** Optional channel identifier for multi-channel systems */
+    channel?: string;
+}

@@ -20,6 +20,9 @@ export class ProjectView extends Adw.Bin {
             GTypeName: 'ProjectView',
             Template,
             InternalChildren: ['sidebar', 'gjsEngine', 'splitView', 'showSidebarButton'],
+            Signals: {
+                'ready': {},
+            },
         }, this);
     }
 
@@ -28,7 +31,12 @@ export class ProjectView extends Adw.Bin {
 
         // Connect to the message-received signal from the EngineView
         this._gjsEngine?.connect('message-received', (_source: GjsEngine, message: string) => {
-            console.log('Message received from engine:', message)
+            console.log('[ProjectView] Message received from engine:', message)
+        })
+
+        this._gjsEngine?.connect('ready', () => {
+            console.log('[ProjectView] Ready')
+            this.emit('ready')
         })
     }
 
@@ -45,4 +53,6 @@ export class ProjectView extends Adw.Bin {
     get sidebar(): Sidebar | undefined {
         return this._sidebar
     }
-} 
+}
+
+GObject.type_ensure(ProjectView.$gtype)
