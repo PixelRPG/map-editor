@@ -293,7 +293,6 @@ export class ExcaliburEngine implements EngineInterface {
 
             try {
                 if (isEngineMessage(message)) {
-                    console.debug('Engine message received:', message);
                     if (isEngineEventMessage(message)) {
                         console.debug('Engine event message received:', message);
                         this.handleEngineEventMessage(message);
