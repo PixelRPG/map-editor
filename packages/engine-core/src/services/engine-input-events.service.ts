@@ -1,16 +1,13 @@
 import {
     InputEvent,
     InputEventType,
-    Position
 } from '../types/index.ts';
-import { errorService } from './error.service.ts';
+import { createValidationError } from '../utils/index.ts';
 
 /**
  * Service for creating properly typed input events
  */
 class EngineInputEventsService {
-
-    private errorService = errorService;
 
     /**
      * Create a mouse move event
@@ -24,7 +21,7 @@ class EngineInputEventsService {
         if (typeof position === 'object') {
             // Position object provided
             if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-                throw this.errorService.createValidationError('Invalid position for mouse move event');
+                throw createValidationError('Invalid position for mouse move event');
             }
             x = position.x;
             y = position.y;
@@ -32,13 +29,13 @@ class EngineInputEventsService {
             // x, y coordinates provided separately
             x = position;
         } else {
-            throw this.errorService.createValidationError('Invalid coordinates for mouse move event');
+            throw createValidationError('Invalid coordinates for mouse move event');
         }
 
         // Validate dragDelta if provided
         if ((dragDeltaX !== undefined && typeof dragDeltaX !== 'number') ||
             (dragDeltaY !== undefined && typeof dragDeltaY !== 'number')) {
-            throw this.errorService.createValidationError('Invalid dragDelta for mouse move event');
+            throw createValidationError('Invalid dragDelta for mouse move event');
         }
 
         return {
@@ -67,7 +64,7 @@ class EngineInputEventsService {
         if (typeof position === 'object') {
             // Position object provided
             if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-                throw this.errorService.createValidationError('Invalid position for mouse down event');
+                throw createValidationError('Invalid position for mouse down event');
             }
             x = position.x;
             y = position.y;
@@ -80,12 +77,12 @@ class EngineInputEventsService {
             x = position;
             y = yOrButton;
         } else {
-            throw this.errorService.createValidationError('Invalid coordinates for mouse down event');
+            throw createValidationError('Invalid coordinates for mouse down event');
         }
 
         // Validate button
         if (typeof button !== 'number' || button < 0) {
-            throw this.errorService.createValidationError('Invalid button for mouse down event');
+            throw createValidationError('Invalid button for mouse down event');
         }
 
         return {
@@ -111,7 +108,7 @@ class EngineInputEventsService {
         if (typeof position === 'object') {
             // Position object provided
             if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-                throw this.errorService.createValidationError('Invalid position for mouse up event');
+                throw createValidationError('Invalid position for mouse up event');
             }
             x = position.x;
             y = position.y;
@@ -124,12 +121,12 @@ class EngineInputEventsService {
             x = position;
             y = yOrButton;
         } else {
-            throw this.errorService.createValidationError('Invalid coordinates for mouse up event');
+            throw createValidationError('Invalid coordinates for mouse up event');
         }
 
         // Validate button
         if (typeof button !== 'number' || button < 0) {
-            throw this.errorService.createValidationError('Invalid button for mouse up event');
+            throw createValidationError('Invalid button for mouse up event');
         }
 
         return {
@@ -153,7 +150,7 @@ class EngineInputEventsService {
         if (typeof position === 'object') {
             // Position object provided
             if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-                throw this.errorService.createValidationError('Invalid position for mouse enter event');
+                throw createValidationError('Invalid position for mouse enter event');
             }
             x = position.x;
             y = position.y;
@@ -161,7 +158,7 @@ class EngineInputEventsService {
             // x, y coordinates provided separately
             x = position;
         } else {
-            throw this.errorService.createValidationError('Invalid coordinates for mouse enter event');
+            throw createValidationError('Invalid coordinates for mouse enter event');
         }
 
         return {
@@ -198,7 +195,7 @@ class EngineInputEventsService {
         if (typeof position === 'object') {
             // Position object provided
             if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-                throw this.errorService.createValidationError('Invalid position for wheel event');
+                throw createValidationError('Invalid position for wheel event');
             }
             x = position.x;
             y = position.y;
@@ -210,12 +207,12 @@ class EngineInputEventsService {
             y = yOrDeltaY;
             actualDeltaY = deltaY;
         } else {
-            throw this.errorService.createValidationError('Invalid parameters for wheel event');
+            throw createValidationError('Invalid parameters for wheel event');
         }
 
         // Validate deltaY
         if (typeof actualDeltaY !== 'number') {
-            throw this.errorService.createValidationError('Invalid deltaY for wheel event');
+            throw createValidationError('Invalid deltaY for wheel event');
         }
 
         return {

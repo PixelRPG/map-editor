@@ -9,13 +9,19 @@ import {
     InputEvent,
     ProjectLoadOptions,
     InputEventType,
-    engineMessageParserService,
     EngineCommandType,
-    errorService,
-    engineTypeGuardsService,
-    EngineMessage,
     EngineMessageType,
     EngineEventHandler,
+    isEngineMessage,
+    isEngineEventMessage,
+    getEventType,
+    getEventData,
+    isStatusChangedEvent,
+    createInitializationError,
+    createRuntimeError,
+    createValidationError,
+    createResourceError,
+    formatError,
 } from '@pixelrpg/engine-core'
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
@@ -99,7 +105,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
         } catch (error) {
             console.error('Failed to initialize engine:', error);
             this.setStatus(EngineStatus.ERROR);
-            throw errorService.createInitializationError('Failed to initialize GJS engine', error instanceof Error ? error : undefined);
+            throw createInitializationError('Failed to initialize GJS engine', error instanceof Error ? error : undefined);
         }
     }
 
@@ -116,11 +122,11 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     public async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
         if (this.status === EngineStatus.INITIALIZING) {
-            throw errorService.createRuntimeError('Engine not initialized');
+            throw createRuntimeError('Engine not initialized');
         }
 
         if (!projectPath || projectPath.trim() === '') {
-            throw errorService.createValidationError('Invalid project path');
+            throw createValidationError('Invalid project path');
         }
 
         try {
@@ -130,7 +136,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 { projectPath, options }
             );
         } catch (error) {
-            throw errorService.createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
+            throw createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
         }
     }
 
@@ -139,11 +145,11 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     public async loadMap(mapId: string): Promise<void> {
         if (this.status === EngineStatus.INITIALIZING) {
-            throw errorService.createRuntimeError('Engine not initialized');
+            throw createRuntimeError('Engine not initialized');
         }
 
         if (!mapId || mapId.trim() === '') {
-            throw errorService.createValidationError('Invalid map ID');
+            throw createValidationError('Invalid map ID');
         }
 
         try {
@@ -153,7 +159,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 { mapId }
             );
         } catch (error) {
-            throw errorService.createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
+            throw createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
         }
     }
 
@@ -162,7 +168,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     public async start(): Promise<void> {
         if (this.status === EngineStatus.INITIALIZING) {
-            throw errorService.createRuntimeError('Engine not initialized');
+            throw createRuntimeError('Engine not initialized');
         }
 
         try {
@@ -174,7 +180,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
 
             this.setStatus(EngineStatus.RUNNING);
         } catch (error) {
-            throw errorService.createRuntimeError('Failed to start engine', error instanceof Error ? error : undefined);
+            throw createRuntimeError('Failed to start engine', error instanceof Error ? error : undefined);
         }
     }
 
@@ -183,7 +189,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     public async stop(): Promise<void> {
         if (this.status === EngineStatus.INITIALIZING) {
-            throw errorService.createRuntimeError('Engine not initialized');
+            throw createRuntimeError('Engine not initialized');
         }
 
         try {
@@ -193,7 +199,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 { command: EngineCommandType.STOP }
             );
         } catch (error) {
-            throw errorService.createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
+            throw createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
         }
     }
 
@@ -202,7 +208,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     public async pause(): Promise<void> {
         if (this.status === EngineStatus.INITIALIZING) {
-            throw errorService.createRuntimeError('Engine not initialized');
+            throw createRuntimeError('Engine not initialized');
         }
 
         try {
@@ -212,7 +218,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 { command: EngineCommandType.PAUSE }
             );
         } catch (error) {
-            throw errorService.createRuntimeError('Failed to pause engine', error instanceof Error ? error : undefined);
+            throw createRuntimeError('Failed to pause engine', error instanceof Error ? error : undefined);
         }
     }
 
@@ -221,7 +227,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     public async resume(): Promise<void> {
         if (this.status === EngineStatus.INITIALIZING) {
-            throw errorService.createRuntimeError('Engine not initialized');
+            throw createRuntimeError('Engine not initialized');
         }
 
         try {
@@ -231,7 +237,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 { command: EngineCommandType.RESUME }
             );
         } catch (error) {
-            throw errorService.createRuntimeError('Failed to resume engine', error instanceof Error ? error : undefined);
+            throw createRuntimeError('Failed to resume engine', error instanceof Error ? error : undefined);
         }
     }
 
@@ -252,7 +258,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 event
             );
         } catch (error) {
-            console.error('Failed to handle input event:', errorService.formatError(error instanceof Error ? error : new Error(String(error))));
+            console.error('Failed to handle input event:', formatError(error instanceof Error ? error : new Error(String(error))));
         }
     }
 
@@ -276,7 +282,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
 
         // Listen for text messages from the WebView
         this._webView.messagesService.onmessage = (event) => {
-            if (!engineMessageParserService.isEngineMessage(event.data)) {
+            if (!isEngineMessage(event.data)) {
                 console.error('[GjsEngine] Unhandled message type (not an engine message):', event.data);
                 return;
             }
@@ -303,9 +309,9 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     private onEngineEventMessage(event: EngineEvent): void {
         try {
-            if (engineMessageParserService.isEngineEventMessage(event)) {
-                const engineEventType = engineMessageParserService.getEventType(event);
-                const engineEventData = engineMessageParserService.getEventData(event);
+            if (isEngineEventMessage(event)) {
+                const engineEventType = getEventType(event);
+                const engineEventData = getEventData(event);
 
                 if (engineEventData && typeof engineEventData === 'object' && 'type' in engineEventData) {
                     const engineEvent: EngineEvent = {
@@ -314,7 +320,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                     };
 
                     // Update the engine status if needed
-                    if (engineTypeGuardsService.isStatusChangedEvent(engineEvent)) {
+                    if (isStatusChangedEvent(engineEvent)) {
                         this.status = engineEvent.data as EngineStatus;
                         console.info('[GjsEngine] Engine status changed to:', this.status);
                     }
@@ -328,7 +334,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                 }
             }
         } catch (error) {
-            console.error('Error handling message:', errorService.formatError(error instanceof Error ? error : new Error(String(error))));
+            console.error('Error handling message:', formatError(error instanceof Error ? error : new Error(String(error))));
         }
     }
 

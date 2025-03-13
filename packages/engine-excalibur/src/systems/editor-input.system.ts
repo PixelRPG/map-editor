@@ -2,9 +2,13 @@ import { Engine, System, World, Scene, SystemType } from "excalibur";
 import {
     InputEventType,
     EngineMessageType,
-    engineMessageParserService,
-    engineTypeGuardsService,
-    InputEvent
+    InputEvent,
+    isInputEventMessage,
+    isEngineMessage,
+    isMouseMoveEvent,
+    isMouseDownEvent,
+    isMouseUpEvent,
+    isMouseLeaveEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
 import { MessageChannel } from "@pixelrpg/messages-web";
@@ -185,12 +189,12 @@ export class EditorInputSystem extends System {
             // Handle input events from GJS
             this.messages.onmessage = (event) => {
 
-                if (!engineMessageParserService.isEngineMessage(event.data)) {
+                if (!isEngineMessage(event.data)) {
                     console.debug('Unhandled message type (not an engine message):', event.data);
                     return;
                 }
 
-                if (!engineMessageParserService.isInputEventMessage(event.data)) {
+                if (!isInputEventMessage(event.data)) {
                     console.debug('Unhandled message type (not an input event message):', event.data);
                     return;
                 }
@@ -203,20 +207,20 @@ export class EditorInputSystem extends System {
                 if (messageType === EngineMessageType.INPUT_EVENT) {
                     const inputEvent = payload;
 
-                    if (engineTypeGuardsService.isMouseMoveEvent(inputEvent) && inputEvent.data) {
+                    if (isMouseMoveEvent(inputEvent) && inputEvent.data) {
                         // In the new format, data directly contains x and y
                         this.onPointerMove(
                             inputEvent.data.x,
                             inputEvent.data.y
                         );
-                    } else if (engineTypeGuardsService.isMouseDownEvent(inputEvent) && inputEvent.data) {
+                    } else if (isMouseDownEvent(inputEvent) && inputEvent.data) {
                         this.onPointerDown(
                             inputEvent.data.x,
                             inputEvent.data.y
                         );
-                    } else if (engineTypeGuardsService.isMouseUpEvent(inputEvent)) {
+                    } else if (isMouseUpEvent(inputEvent)) {
                         this.onPointerUp();
-                    } else if (engineTypeGuardsService.isMouseLeaveEvent(inputEvent)) {
+                    } else if (isMouseLeaveEvent(inputEvent)) {
                         // For mouse leave, we just need to call onPointerUp to cancel any drag operation
                         this.onPointerUp();
                     }

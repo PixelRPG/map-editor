@@ -10,7 +10,6 @@ import {
     ProjectLoadOptions,
     EngineMessageType,
     EngineCommandType,
-    engineMessageParserService,
     EngineMessage,
     EngineMessageEventInput,
     EngineMessageLoadProject,
@@ -21,7 +20,7 @@ import {
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
 import { EditorInputSystem } from '../systems/editor-input.system.ts'
-
+import { isEngineMessage, isEngineEventMessage, isLoadProjectMessage, isLoadMapMessage, isCommandMessage, isInputEventMessage } from '@pixelrpg/engine-core'
 // Define a type for the Excalibur engine with the methods we need
 type ExcaliburEngineType = Engine & {
     clock: Clock & {
@@ -293,21 +292,21 @@ export class ExcaliburEngine implements EngineInterface {
             const message = event.data;
 
             try {
-                if (engineMessageParserService.isEngineMessage(message)) {
+                if (isEngineMessage(message)) {
                     console.debug('Engine message received:', message);
-                    if (engineMessageParserService.isEngineEventMessage(message)) {
+                    if (isEngineEventMessage(message)) {
                         console.debug('Engine event message received:', message);
                         this.handleEngineEventMessage(message);
-                    } else if (engineMessageParserService.isLoadProjectMessage(message)) {
+                    } else if (isLoadProjectMessage(message)) {
                         console.debug('Load project message received:', message);
                         this.handleLoadProjectMessage(message);
-                    } else if (engineMessageParserService.isLoadMapMessage(message)) {
+                    } else if (isLoadMapMessage(message)) {
                         console.debug('Load map message received:', message);
                         this.handleLoadMapMessage(message);
-                    } else if (engineMessageParserService.isCommandMessage(message)) {
+                    } else if (isCommandMessage(message)) {
                         console.debug('Command message received:', message);
                         this.handleCommandMessage(message);
-                    } else if (engineMessageParserService.isInputEventMessage(message)) {
+                    } else if (isInputEventMessage(message)) {
                         // console.debug('Input event message received:', message);
                         this.handleInputEventMessage(message);
                     }
