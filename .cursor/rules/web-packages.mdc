@@ -25,7 +25,7 @@ Web packages (`*-web`) provide utilities and components for web browser integrat
 - Use standard WebKit message handlers (window.webkit.messageHandlers) when available
 - Implement WHATWG window.postMessage API as a fallback mechanism
 - Follow web standards for cross-context communication
-- Implement the abstract classes from messages-core package
+- Implement the abstract classes from message-channel-core package
 - Provide automatic detection and use of available communication channels
 - Ensure proper error handling and type safety in message passing
 

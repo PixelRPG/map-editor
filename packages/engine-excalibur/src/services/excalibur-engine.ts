@@ -1,6 +1,6 @@
 import { Engine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
-import { EventDispatcher, MessageEvent } from '@pixelrpg/messages-core'
-import { MessageChannel } from '@pixelrpg/messages-web'
+import { EventDispatcher, MessageEvent } from '@pixelrpg/message-channel-core'
+import { MessageChannel } from '@pixelrpg/message-channel-web'
 import {
     EngineInterface,
     EngineEvent,

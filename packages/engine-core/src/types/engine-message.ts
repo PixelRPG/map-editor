@@ -1,4 +1,4 @@
-import { MessageData } from '@pixelrpg/messages-core';
+import { MessageData } from '@pixelrpg/message-channel-core';
 import { EngineEvent } from './engine-event';
 import { InputEvent } from './input-event';
 import { EngineMessageType } from './engine-message-type';

@@ -1,4 +1,4 @@
-import { EventDispatcher } from '@pixelrpg/messages-core';
+import { EventDispatcher } from '@pixelrpg/message-channel-core';
 import { EngineEvent, EngineStatus, InputEvent, ProjectLoadOptions } from '../types/index';
 
 /**

@@ -17,7 +17,7 @@
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
-        "@pixelrpg/messages-core": "workspace:^",
+        "@pixelrpg/message-channel-core": "workspace:^",
         "esbuild": "^0.25.0",
         "fast-xml-parser": "^5.0.8",
         "jsdom": "^26.0.0",

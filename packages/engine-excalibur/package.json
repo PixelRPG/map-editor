@@ -30,8 +30,8 @@
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
         "@pixelrpg/engine-core": "workspace:^",
-        "@pixelrpg/messages-core": "workspace:^",
-        "@pixelrpg/messages-web": "workspace:^",
+        "@pixelrpg/message-channel-core": "workspace:^",
+        "@pixelrpg/message-channel-web": "workspace:^",
         "excalibur": "workspace:^",
         "vite-plugin-glsl": "^1.3.3"
     }

@@ -2,7 +2,7 @@ import type JavaScriptCore from '@girs/javascriptcore-6.0'
 import Gio from '@girs/gio-2.0'
 import WebKit from '@girs/webkit-6.0'
 
-import { MessageChannel as BaseMessageChannel, MessageEvent, createMessageData } from '@pixelrpg/messages-core'
+import { MessageChannel as BaseMessageChannel, MessageEvent, createMessageData } from '@pixelrpg/message-channel-core'
 
 // Promisify the evaluate_javascript method
 Gio._promisify(WebKit.WebView.prototype, 'evaluate_javascript')

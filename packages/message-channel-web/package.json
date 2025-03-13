@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/messages-web",
+    "name": "@pixelrpg/message-channel-web",
     "version": "0.0.1",
     "description": "Messages from WebKit.WebView to communicate with GJS",
     "main": "src/index.ts",
@@ -12,6 +12,6 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "dependencies": {
-        "@pixelrpg/messages-core": "workspace:^"
+        "@pixelrpg/message-channel-core": "workspace:^"
     }
 }

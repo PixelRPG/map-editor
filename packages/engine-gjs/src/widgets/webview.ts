@@ -4,7 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
 import Gio from '@girs/gio-2.0'
 
-import { MessageChannel } from '@pixelrpg/messages-gjs'
+import { MessageChannel } from '@pixelrpg/message-channel-gjs'
 import mime from 'mime'
 
 import Template from './webview.ui?raw'

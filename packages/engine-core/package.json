@@ -10,7 +10,7 @@
     },
     "dependencies": {
         "@pixelrpg/data-core": "workspace:*",
-        "@pixelrpg/messages-core": "workspace:*"
+        "@pixelrpg/message-channel-core": "workspace:*"
     },
     "devDependencies": {
         "typescript": "^5.0.0"

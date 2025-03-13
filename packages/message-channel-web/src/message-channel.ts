@@ -1,4 +1,4 @@
-import { MessageChannel as CoreMessageChannel, MessageEvent, MessageData, createMessageData } from '@pixelrpg/messages-core'
+import { MessageChannel as CoreMessageChannel, MessageEvent, MessageData, createMessageData } from '@pixelrpg/message-channel-core'
 import { WebKitMessageHandler } from './types/webkit-message-handler';
 
 

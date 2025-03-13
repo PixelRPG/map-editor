@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/messages-core",
+    "name": "@pixelrpg/message-channel-core",
     "version": "0.0.1",
     "description": "Common package to share code between GJS and the WebVew",
     "main": "src/index.ts",

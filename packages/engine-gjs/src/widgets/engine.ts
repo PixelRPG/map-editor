@@ -1,6 +1,6 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import { EventDispatcher } from '@pixelrpg/messages-core'
+import { EventDispatcher } from '@pixelrpg/message-channel-core'
 import {
     EngineInterface,
     EngineEvent,

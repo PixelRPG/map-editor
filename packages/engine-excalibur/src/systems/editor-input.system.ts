@@ -11,7 +11,7 @@ import {
     isMouseLeaveEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
-import { MessageChannel } from "@pixelrpg/messages-web";
+import { MessageChannel } from "@pixelrpg/message-channel-web";
 
 /**
  * System to handle input for the map editor

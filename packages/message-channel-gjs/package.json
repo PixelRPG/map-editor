@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/messages-gjs",
+    "name": "@pixelrpg/message-channel-gjs",
     "version": "0.0.1",
     "description": "Messages from GJS to communicate with WebKit.WebView",
     "main": "src/index.ts",
@@ -16,7 +16,7 @@
         "@girs/gjs": "^4.0.0-beta.21",
         "@girs/javascriptcore-6.0": "^2.47.3-4.0.0-beta.21",
         "@girs/webkit-6.0": "^2.47.3-4.0.0-beta.21",
-        "@pixelrpg/messages-core": "workspace:^"
+        "@pixelrpg/message-channel-core": "workspace:^"
     },
     "devDependencies": {
         "typescript": "^5.8.2"

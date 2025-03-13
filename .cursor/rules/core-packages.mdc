@@ -1,5 +1,5 @@
 ---
-description: Guidelines for core packages (data-core, engine-core, messages-core)
+description: Guidelines for core packages (data-core, engine-core, message-channel-core)
 globs: packages/*-core/**/*.ts
 alwaysApply: false
 ---
