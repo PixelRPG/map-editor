@@ -33,13 +33,13 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _messagesService?: MessageChannel<string>
+    protected _messageChannel?: MessageChannel<string>
 
     /**
      * Get the messages service for communication with the WebView
      */
-    get messagesService() {
-        return this._messagesService
+    get messageChannel() {
+        return this._messageChannel
     }
 
     /**
@@ -115,7 +115,7 @@ export class WebView extends WebKit.WebView {
 
         this.connect('realize', () => {
             console.log('WebView realized')
-            this._messagesService = this.initMessagesService()
+            this._messageChannel = this.initMessagesService()
 
             this.initInputController()
             this.initPageLoadListener()
@@ -184,7 +184,7 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
-        if (!this._messagesService) {
+        if (!this._messageChannel) {
             console.error('Messages service is not initialized')
             return
         }
@@ -194,7 +194,7 @@ export class WebView extends WebKit.WebView {
         y = Math.round(y * 10) / 10
 
         // Send mouse move event
-        this._messagesService.postMessage(
+        this._messageChannel.postMessage(
             EngineMessageType.INPUT_EVENT,
             engineInputEventsService.mouseMove({ x, y })
         );
@@ -205,7 +205,7 @@ export class WebView extends WebKit.WebView {
      * @param _source The event source
      */
     protected onMouseLeave(_source: EventControllerInput) {
-        if (!this._messagesService) {
+        if (!this._messageChannel) {
             console.error('Messages service is not initialized')
             return
         }
@@ -213,7 +213,7 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has left the WebView');
 
         // Send mouse leave event with no position data
-        this._messagesService.postMessage(
+        this._messageChannel.postMessage(
             EngineMessageType.INPUT_EVENT,
             engineInputEventsService.mouseLeave()
         );
@@ -226,7 +226,7 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
-        if (!this._messagesService) {
+        if (!this._messageChannel) {
             console.error('Messages service is not initialized')
             return
         }
@@ -234,7 +234,7 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has entered the WebView');
 
         // Send mouse enter event
-        this._messagesService.postMessage(
+        this._messageChannel.postMessage(
             EngineMessageType.INPUT_EVENT,
             engineInputEventsService.mouseEnter({ x, y })
         );

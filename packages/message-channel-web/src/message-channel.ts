@@ -11,7 +11,9 @@ export class MessageChannel<T = string> extends CoreMessageChannel<T> {
     /**
      * Reference to the WebKit message handler, if available
      */
-    protected webKitHandler: WebKitMessageHandler | null = null;
+    get webKitHandler(): WebKitMessageHandler | null {
+        return window.webkit?.messageHandlers[this.channelName] || null;
+    }
 
     /**
      * Create a new WebView message channel

@@ -125,7 +125,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a message to the WebView to load the project
-            this._webView.messagesService?.postMessage(
+            this._webView.messageChannel?.postMessage(
                 EngineMessageType.LOAD_PROJECT,
                 { projectPath, options }
             );
@@ -148,7 +148,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a message to the WebView to load the map
-            this._webView.messagesService?.postMessage(
+            this._webView.messageChannel?.postMessage(
                 EngineMessageType.LOAD_MAP,
                 { mapId }
             );
@@ -167,7 +167,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a command to the WebView to start the engine
-            this._webView.messagesService?.postMessage(
+            this._webView.messageChannel?.postMessage(
                 EngineMessageType.COMMAND,
                 { command: EngineCommandType.START }
             );
@@ -188,7 +188,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a command to the WebView to stop the engine
-            this._webView.messagesService?.postMessage(
+            this._webView.messageChannel?.postMessage(
                 EngineMessageType.COMMAND,
                 { command: EngineCommandType.STOP }
             );
@@ -203,7 +203,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * @param payload Payload of the message
      */
     public postMessage<P = any>(messageType: EngineMessageType, payload: P): void {
-        this._webView.messagesService?.postMessage(messageType, payload);
+        this._webView.messageChannel?.postMessage(messageType, payload);
     }
 
     /**
@@ -211,12 +211,12 @@ export class Engine extends Adw.Bin implements EngineInterface {
      */
     private setupEventListeners(): void {
 
-        if (!this._webView.messagesService) {
+        if (!this._webView.messageChannel) {
             throw new Error('Messages service is not initialized');
         }
 
         // Listen for text messages from the WebView
-        this._webView.messagesService.onmessage = (event) => {
+        this._webView.messageChannel.onmessage = (event) => {
             if (!isEngineMessage(event.data)) {
                 console.error('[Engine] Unhandled message type (not an engine message):', event.data);
                 return;

@@ -74,8 +74,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   protected onEngineMessage(message: EngineMessage) {
-    console.log('[ApplicationWindow] Message from Engine:', message)
-    // Nthis._projectView?.engine?.sendMessage('text', 'Hello back from GJS!')
+    // console.log('[ApplicationWindow] Message from Engine:', message)
   }
 
   protected onCreateProject() {

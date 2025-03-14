@@ -31,7 +31,7 @@ export class ProjectView extends Adw.Bin {
 
         // Connect to the message-received signal from the EngineView
         this._engine?.connect('message-received', (_source: Engine, message: string) => {
-            console.log('[ProjectView] Message received from engine:', message)
+            // console.log('[ProjectView] Message received from engine:', message)
         })
 
         this._engine?.connect('ready', () => {
