@@ -273,7 +273,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
         });
 
         // Register RPC methods to handle events from the WebView
-        this._webView.rpcServer.registerMethod('notifyEngineEvent', async (event) => {
+        this._webView.rpcServer.registerHandler('notifyEngineEvent', async (event) => {
             console.log('[Engine] Engine event received from WebView:', event);
             this.onEngineEventMessage(event as EngineEvent);
             return { success: true };

@@ -81,7 +81,7 @@ class MyRpcServer extends RpcServer {
 const server = new MyRpcServer("rpc-channel");
 
 // Register methods that can be called by clients
-server.registerMethod("getUser", async (params) => {
+server.registerHandler("getUser", async (params) => {
   const userId = params as string;
   // Fetch user data...
   return { id: userId, name: "John Doe" };
@@ -184,7 +184,7 @@ import { RpcServer } from '@pixelrpg/message-channel-gjs'; // or '@pixelrpg/mess
 const server = new RpcServer('my-channel', webview);
 
 // Register method handlers
-server.registerMethod('greet', async (params) => {
+server.registerHandler('greet', async (params) => {
   return `Hello, ${params.name}!`;
 });
 
@@ -218,7 +218,7 @@ client.registerHandler('notify', (data) => {
 The RPC system enables bidirectional communication between different environments (e.g., GJS and Web). Each side can act as both client and server:
 
 1. **RpcServer**: Receives requests, processes them, and sends responses
-   - Use `registerMethod(name, handler)` to handle incoming requests
+   - Use `registerHandler(name, handler)` to handle incoming requests
    - The handler receives parameters and returns a response (can be async)
 
 2. **RpcClient**: Sends requests and processes responses
@@ -238,7 +238,7 @@ When using both the RpcServer and RpcClient in different contexts:
 │  └─────────────┘  │                    │  └─────────────┘  │
 │        ▲          │                    │        │          │
 │        │          │                    │        │          │
-│        │          │  registerMethod()  │        ▼          │
+│        │          │  registerHandler()  │        ▼          │
 │        │          │                    │  ┌─────────────┐  │
 │        │          │                    │  │   Handler   │  │
 │        │          │                    │  └─────────────┘  │
@@ -289,7 +289,7 @@ In the web implementation:
 ### In GJS Context
 
 In the GJS implementation:
-- `RpcServer.registerMethod()` adds handlers to an internal map
+- `RpcServer.registerHandler()` adds handlers to an internal map
 - When web calls these methods through RPC, the handlers are executed
 - Results are returned through WebKit's message reply mechanism
 

@@ -133,7 +133,7 @@ export class WebView extends WebKit.WebView {
         const rpcServer = new RpcServer<EngineMessage>(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
-        rpcServer.registerMethod('handleInputEvent', async (params) => {
+        rpcServer.registerHandler('handleInputEvent', async (params) => {
             console.debug('Handling input event:', params);
             // Process the input event
             // The implementation would depend on how input events are handled

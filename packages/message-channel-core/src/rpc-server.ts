@@ -30,7 +30,7 @@ export abstract class RpcServer<TMessage extends BaseMessage = BaseMessage> {
      * @param methodName Name of the method to register
      * @param handler Function to handle the method call
      */
-    public registerMethod<TParams = unknown, TResult = unknown>(
+    public registerHandler<TParams = unknown, TResult = unknown>(
         methodName: string,
         handler: MethodHandler<TParams, TResult>
     ): void {
@@ -41,7 +41,7 @@ export abstract class RpcServer<TMessage extends BaseMessage = BaseMessage> {
      * Unregister a previously registered method
      * @param methodName Name of the method to unregister
      */
-    public unregisterMethod(methodName: string): void {
+    public unregisterHandler(methodName: string): void {
         this.methods.delete(methodName);
     }
 

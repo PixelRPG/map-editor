@@ -29,13 +29,13 @@ const webView = new WebKit.WebView();
 const rpcServer = new RpcServer('my-channel', webView);
 
 // Register methods that can be called from the client
-rpcServer.registerMethod('saveData', async (params) => {
+rpcServer.registerHandler('saveData', async (params) => {
   const { filename, data } = params;
   await saveToFile(filename, data);
   return { success: true };
 });
 
-rpcServer.registerMethod('getData', async (params) => {
+rpcServer.registerHandler('getData', async (params) => {
   const { id } = params;
   const data = await loadFromDatabase(id);
   return data;
