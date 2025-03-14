@@ -13,6 +13,7 @@ Core messaging library implementing WHATWG and WebKit standards for communicatio
 - Promise-based API for asynchronous communication
 - Platform-specific optimizations for efficient communication
 - Simple, intuitive API that follows web standards
+- Unified bidirectional communication through a single endpoint
 
 ## Usage
 
@@ -48,24 +49,30 @@ channel.onmessage = (event: MessageEvent) => {
 // which is called in your implementation to process events
 ```
 
-### RPC Client-Server
+### Unified RPC Endpoint
 
 ```typescript
 import {
-  RpcClient,
-  RpcServer,
+  RpcEndpoint,
   MethodHandler,
   DirectReplyFunction
 } from '@pixelrpg/message-channel-core';
 
-// Server-side (extends RpcServer)
-class MyRpcServer extends RpcServer {
+// Create your RPC endpoint implementation
+class MyRpcEndpoint extends RpcEndpoint {
   // Implementation details...
   
   // You must implement the abstract postMessage method
-  protected async postMessage(message: RpcResponse): Promise<void> {
-    // Your implementation to send the response
-    console.log(`Sending response:`, message);
+  protected async postMessage(message: RpcRequest | RpcResponse): Promise<void> {
+    // Your implementation to send messages
+    console.log(`Sending message:`, message);
+    return Promise.resolve();
+  }
+  
+  // You must implement sendMessage for generic messages
+  public async sendMessage(message: BaseMessage): Promise<void> {
+    // Your implementation to send generic messages
+    console.log(`Sending standard message:`, message);
     return Promise.resolve();
   }
   
@@ -77,35 +84,20 @@ class MyRpcServer extends RpcServer {
   }
 }
 
-// Create a server instance
-const server = new MyRpcServer("rpc-channel");
+// Create an endpoint instance
+const endpoint = new MyRpcEndpoint("rpc-channel");
 
-// Register methods that can be called by clients
-server.registerHandler("getUser", async (params) => {
+// Register methods that can be called by other endpoints
+endpoint.registerHandler("getUser", async (params) => {
   const userId = params as string;
   // Fetch user data...
   return { id: userId, name: "John Doe" };
 });
 
-// Client-side (extends RpcClient)
-class MyRpcClient extends RpcClient {
-  // Implementation details...
-  
-  // You must implement the abstract postMessage method
-  protected async postMessage(message: RpcRequest): Promise<void> {
-    // Your implementation to send the request
-    console.log(`Sending request:`, message);
-    return Promise.resolve();
-  }
-}
-
-// Create a client instance
-const client = new MyRpcClient("rpc-channel");
-
 // Call a remote method and wait for the response
 async function getUser(id: string) {
   try {
-    const user = await client.sendRequest("getUser", id);
+    const user = await endpoint.sendRequest("getUser", id);
     console.log("User data:", user);
   } catch (error) {
     console.error("Error fetching user:", error);
@@ -118,11 +110,10 @@ async function getUser(id: string) {
 The package provides:
 
 1. `MessageChannel` - Abstract base class for all channel implementations
-2. `RpcClient` - Abstract base class for RPC clients
-3. `RpcServer` - Abstract base class for RPC servers with direct reply support
-4. `EventDispatcher` - Event handling utility for typed events
-5. `MessageEvent` - Standard-compliant event polyfill
-6. Various helper functions and type definitions for message handling
+2. `RpcEndpoint` - Unified abstract base class for bidirectional RPC communication
+3. `EventDispatcher` - Event handling utility for typed events
+4. `MessageEvent` - Standard-compliant event polyfill
+5. Various helper functions and type definitions for message handling
 
 ## Platform-Specific Optimizations
 
@@ -152,89 +143,72 @@ This package follows the WHATWG Web Messaging API and WebKit message handler sta
 
 ## Migration from MessageChannel to RPC Architecture
 
-The project is moving away from the MessageChannel abstraction in favor of a more direct RPC-based architecture. This change brings several benefits:
+The project has moved away from the MessageChannel abstraction in favor of a more direct RPC-based architecture. This change brings several benefits:
 
-1. **Direct API Access**: Both RpcServer and RpcClient now directly access platform APIs, reducing abstraction layers.
+1. **Direct API Access**: The RpcEndpoint directly accesses platform APIs, reducing abstraction layers.
 2. **Optimized Communication**: The GJS implementation leverages WebKit's direct reply mechanism for more efficient request/response patterns.
-3. **Consistent Patterns**: The architecture now follows a consistent RPC pattern across all platforms.
+3. **Consistent Patterns**: The architecture follows a consistent RPC pattern across all platforms.
 4. **Better Type Safety**: The RPC mechanism provides better type safety through method registration and typed responses.
+5. **Unified Architecture**: A single RpcEndpoint class handles both client and server functionality.
 
 ### How to Migrate
 
-1. **Replace MessageChannel with RpcServer/RpcClient**:
-   - In GJS contexts: Replace `MessageChannel` with `RpcServer`
-   - In Web contexts: Replace `MessageChannel` with `RpcClient`
+1. **Replace MessageChannel with RpcEndpoint**:
+   - In all contexts: Replace `MessageChannel` with the appropriate `RpcEndpoint` implementation
 
 2. **Update Message Handling**:
    - Replace `onmessage` handlers with registered RPC methods
-   - Replace `postMessage()` calls with `sendRequest()` calls
+   - Replace `postMessage()` calls with `sendRequest()` or `sendMessage()` calls
 
 3. **Using Event-style Messages**:
-   - For backward compatibility, use `rpcServer.sendMessage()` instead of `messageChannel.postMessage()`
-   - Register event handlers using the events dispatcher: `rpcClient.events.on('eventName', handler)`
+   - For backward compatibility, use `endpoint.sendMessage()` instead of `messageChannel.postMessage()`
+   - Register event handlers using the events dispatcher: `endpoint.events.on('eventName', handler)`
 
 ## Basic Usage
 
-### Server Side (Receiving Requests)
+### Bidirectional Communication
 
 ```typescript
-import { RpcServer } from '@pixelrpg/message-channel-gjs'; // or '@pixelrpg/message-channel-web'
+import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'; // or '@pixelrpg/message-channel-web'
 
-// Create a server instance
-const server = new RpcServer('my-channel', webview);
+// Create an endpoint instance
+const endpoint = new RpcEndpoint('my-channel', webview);
 
 // Register method handlers
-server.registerHandler('greet', async (params) => {
+endpoint.registerHandler('greet', async (params) => {
   return `Hello, ${params.name}!`;
 });
 
 // Handle events
-server.events.on((message) => {
+endpoint.events.on((message) => {
   console.log('Received a message:', message);
 });
-```
-
-### Client Side (Sending Requests)
-
-```typescript
-import { RpcClient } from '@pixelrpg/message-channel-web'; // or '@pixelrpg/message-channel-gjs'
-
-// Create a client instance
-const client = new RpcClient('my-channel');
 
 // Send a request and wait for a response
-const response = await client.sendRequest('greet', { name: 'World' });
-console.log(response); // "Hello, World!"
-
-// Register a handler that can be called by the server
-client.registerHandler('notify', (data) => {
-  console.log('Notification received:', data);
-  return { received: true };
-});
+const response = await endpoint.sendRequest('remoteMethod', { data: 'some data' });
+console.log(response);
 ```
 
 ## RPC Architecture
 
-The RPC system enables bidirectional communication between different environments (e.g., GJS and Web). Each side can act as both client and server:
+The RPC system enables bidirectional communication between different environments (e.g., GJS and Web). Each RpcEndpoint can act as both client and server:
 
-1. **RpcServer**: Receives requests, processes them, and sends responses
-   - Use `registerHandler(name, handler)` to handle incoming requests
+1. **Send Requests**: Use `sendRequest(method, params)` to call a remote method
+2. **Receive Requests**: Use `registerHandler(name, handler)` to handle incoming requests
    - The handler receives parameters and returns a response (can be async)
-
-2. **RpcClient**: Sends requests and processes responses
-   - Use `sendRequest(method, params)` to call a remote method
-   - Use `registerHandler(name, handler)` to register handlers that the server can call
+3. **Send Messages**: Use `sendMessage(message)` for one-way communication
+4. **Receive Messages**: Use `events.on(handler)` to listen for incoming messages
 
 ### Understanding the Communication Flow
 
-When using both the RpcServer and RpcClient in different contexts:
+When using RpcEndpoint in different contexts:
 
 ```
 ┌───────────────────┐                    ┌───────────────────┐
 │     Context A     │                    │     Context B     │
 │                   │                    │                   │
 │  ┌─────────────┐  │  sendRequest()     │  ┌─────────────┐  │
-│  │  RpcClient  │──┼───────────────────▶│  │  RpcServer  │  │
+│  │ RpcEndpoint │──┼───────────────────▶│  │ RpcEndpoint │  │
 │  └─────────────┘  │                    │  └─────────────┘  │
 │        ▲          │                    │        │          │
 │        │          │                    │        │          │
@@ -248,78 +222,12 @@ When using both the RpcServer and RpcClient in different contexts:
 │  ┌─────────────┐  │      Response      │  ┌─────────────┐  │
 │  │   Handler   │◀─┼───────────────────┼──│  Response    │  │
 │  └─────────────┘  │                    │  └─────────────┘  │
-│                   │                    │                   │
-└───────────────────┘                    └───────────────────┘
-```
-
-Similarly, Context B can call methods in Context A using its own RpcClient:
-
-```
-┌───────────────────┐                    ┌───────────────────┐
-│     Context A     │                    │     Context B     │
-│                   │                    │                   │
+│        │          │                    │        ▲          │
+│        ▼          │  sendRequest()     │        │          │
 │  ┌─────────────┐  │                    │  ┌─────────────┐  │
-│  │  RpcServer  │◀─┼───────────────────┼──│  RpcClient  │  │
+│  │ RpcEndpoint │──┼───────────────────▶│  │ RpcEndpoint │  │
 │  └─────────────┘  │                    │  └─────────────┘  │
-│        │          │                    │                   │
-│        │          │                    │                   │
-│        ▼          │                    │                   │
-│  ┌─────────────┐  │                    │                   │
-│  │   Handler   │  │                    │                   │
-│  └─────────────┘  │                    │                   │
-│        │          │                    │                   │
-│        │          │                    │                   │
-│        ▼          │                    │                   │
-│  ┌─────────────┐  │                    │                   │
-│  │  Response   │──┼───────────────────▶│                   │
-│  └─────────────┘  │                    │                   │
-│                   │                    │                   │
 └───────────────────┘                    └───────────────────┘
 ```
 
-## Implementation Details
-
-### In Web Context
-
-In the web implementation:
-- `RpcClient.registerHandler()` creates entries in the global `window.rpcHandlers` object
-- When GJS sends a request, it evaluates JavaScript that calls the appropriate handler
-- The response is returned directly through the WebKit JavaScript evaluation API
-
-### In GJS Context
-
-In the GJS implementation:
-- `RpcServer.registerHandler()` adds handlers to an internal map
-- When web calls these methods through RPC, the handlers are executed
-- Results are returned through WebKit's message reply mechanism
-
-## Migrating from Event-Based Messaging
-
-To migrate from older event-based messaging:
-
-- Replace `postMessage()` calls with `sendRequest()` calls
-- Replace message event listeners with registered methods
-- Use typed message interfaces instead of custom message formats
-
-## Type Safety
-
-All messages are fully typed using TypeScript interfaces:
-
-```typescript
-import { RpcClient, DirectReplyFunction } from '@pixelrpg/message-channel-core';
-
-// Type your requests and responses
-interface UserRequest {
-  id: number;
-}
-
-interface UserResponse {
-  id: number;
-  name: string;
-  email: string;
-}
-
-// Use with generics for type safety
-const user = await client.sendRequest<UserResponse>("getUser", { id: 1 });
-console.log(user.name); // Fully typed!
-```
+This bidirectional communication allows for more flexible interactions between different runtime environments.

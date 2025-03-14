@@ -1,25 +1,26 @@
 import {
-    RpcClient as CoreRpcClient,
+    RpcEndpoint as CoreRpcEndpoint,
     MessageEvent,
     RpcRequest,
-    HandlerFunction,
+    RpcResponse,
+    MethodHandler,
     BaseMessage
 } from '@pixelrpg/message-channel-core';
 import { WebKitMessageHandler } from './types/webkit-message-handler';
 
 /**
- * Web implementation of the RPC client 
+ * Web implementation of the RPC endpoint
  * Handles communication with parent window or iframe using direct browser APIs
  * @template TMessage Type of messages that can be sent via sendMessage
  */
-export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreRpcClient<TMessage> {
+export class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> extends CoreRpcEndpoint<TMessage> {
     /**
      * WebKit message handler reference, if available
      */
     private webKitHandler: WebKitMessageHandler | null;
 
     /**
-     * Create a new Web RPC client with direct browser API access
+     * Create a new Web RPC endpoint with direct browser API access
      * @param channelName Name of the channel
      */
     constructor(channelName: string) {
@@ -29,27 +30,23 @@ export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreR
         this.webKitHandler = window.webkit?.messageHandlers[channelName] || null;
 
         // Set up event listener for receiving messages
-        window.addEventListener('message', (event) => {
-            const messageEvent = event as unknown as MessageEvent;
-
-            // Check if message is intended for this channel
-            if (messageEvent.data?.channel === channelName) {
-                this.handleRpcMessage(messageEvent);
-            }
-        });
+        window.addEventListener('message', this.handleMessageEvent);
     }
 
     /**
-     * Register a handler function that can be called by the server
+     * Register a handler function that can be called by the other endpoint
      * In the web context, this registers the handler in the global window.rpcHandlers object
      * @param methodName Name of the method to register
      * @param handler Function to handle the method call
      */
-    public registerHandler<TParams = unknown, TResult = unknown>(
+    public override registerHandler<TParams = unknown, TResult = unknown>(
         methodName: string,
-        handler: HandlerFunction<TParams, TResult>
+        handler: MethodHandler<TParams, TResult>
     ): void {
-        // Ensure window.rpcHandlers exists
+        // Call the parent method to register the handler internally
+        super.registerHandler(methodName, handler);
+
+        // Also register in the global window.rpcHandlers object for external access
         if (!window.rpcHandlers) {
             window.rpcHandlers = {};
         }
@@ -76,7 +73,11 @@ export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreR
      * Unregister a previously registered handler
      * @param methodName Name of the method to unregister
      */
-    public unregisterHandler(methodName: string): void {
+    public override unregisterHandler(methodName: string): void {
+        // Call the parent method to unregister the handler internally
+        super.unregisterHandler(methodName);
+
+        // Also unregister from the global window.rpcHandlers object
         if (window.rpcHandlers && window.rpcHandlers[methodName]) {
             delete window.rpcHandlers[methodName];
             console.debug(`Unregistered RPC handler for method: ${methodName}`);
@@ -102,7 +103,7 @@ export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreR
      * Used by both sendMessage and postMessage
      * @param message The message to send
      */
-    private async sendMessageInternal(message: TMessage | RpcRequest): Promise<void> {
+    private async sendMessageInternal(message: TMessage | RpcRequest | RpcResponse): Promise<void> {
         // Try WebKit handler first if available
         if (this.webKitHandler) {
             try {
@@ -124,10 +125,10 @@ export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreR
     }
 
     /**
-     * Send an RPC request message
-     * @param message The RPC request to send
+     * Send an RPC request or response message
+     * @param message The RPC message to send
      */
-    protected async postMessage(message: RpcRequest): Promise<void> {
+    protected async postMessage(message: RpcRequest | RpcResponse): Promise<void> {
         // Set channel if not already set
         if (message.channel === undefined) {
             message.channel = this.channelName;
@@ -137,6 +138,16 @@ export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreR
     }
 
     /**
+     * Event handler for incoming messages
+     */
+    private handleMessageEvent = (event: Event): void => {
+        const messageEvent = event as unknown as MessageEvent;
+        if (messageEvent.data?.channel === this.channelName) {
+            this.handleRpcMessage(messageEvent);
+        }
+    };
+
+    /**
      * Clean up resources
      */
     public override destroy(): void {
@@ -144,15 +155,5 @@ export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreR
 
         // Remove the message event listener
         window.removeEventListener('message', this.handleMessageEvent);
-    }
-
-    /**
-     * Event handler reference for cleanup
-     */
-    private handleMessageEvent = (event: Event): void => {
-        const messageEvent = event as unknown as MessageEvent;
-        if (messageEvent.data?.channel === this.channelName) {
-            this.handleRpcMessage(messageEvent);
-        }
     }
 } 

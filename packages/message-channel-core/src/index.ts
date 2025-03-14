@@ -1,6 +1,5 @@
 export * from './message-channel.ts'
-export * from './rpc-client.ts'
-export * from './rpc-server.ts'
+export * from './rpc-endpoint.ts'
 export * from './polyfills/index.ts'
 export * from './types/index.ts'
 export * from './utils/index.ts'

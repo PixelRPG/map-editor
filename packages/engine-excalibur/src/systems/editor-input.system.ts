@@ -15,7 +15,7 @@ import {
     isKeyUpEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
-import { RpcClient } from "@pixelrpg/message-channel-web";
+import { RpcEndpoint } from "@pixelrpg/message-channel-web";
 
 /**
  * System to handle input for the map editor
@@ -26,7 +26,7 @@ export class EditorInputSystem extends System {
 
     public systemType = SystemType.Update
 
-    private rpcClient = new RpcClient('pixelrpg')
+    private rpcClient = new RpcEndpoint('pixelrpg')
 
     private engine?: Engine;
 

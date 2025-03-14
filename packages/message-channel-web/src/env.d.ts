@@ -1,5 +1,5 @@
 import { WebKitMessageHandler } from './types/index.ts'
-import { HandlerFunction } from '@pixelrpg/message-channel-core';
+import { MethodHandler } from '@pixelrpg/message-channel-core';
 
 declare global {
   interface Window {
@@ -20,7 +20,7 @@ declare global {
      * Do not modify this object directly - use the RpcClient methods instead.
      */
     rpcHandlers?: {
-      [method: string]: HandlerFunction
+      [method: string]: MethodHandler
     }
   }
 }

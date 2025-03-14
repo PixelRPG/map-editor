@@ -1,6 +1,6 @@
 import { Engine as ExcaliburEngine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
 import { EventDispatcher } from '@pixelrpg/message-channel-core'
-import { RpcClient } from '@pixelrpg/message-channel-web'
+import { RpcEndpoint } from '@pixelrpg/message-channel-web'
 import {
     EngineInterface,
     EngineEvent,
@@ -61,7 +61,7 @@ export class Engine implements EngineInterface {
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
-    private rpcClient = new RpcClient<EngineMessage>(this.messageHandlerName)
+    private rpcClient = new RpcEndpoint<EngineMessage>(this.messageHandlerName)
 
 
     /**

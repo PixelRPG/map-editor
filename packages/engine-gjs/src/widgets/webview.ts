@@ -4,7 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
 import Gio from '@girs/gio-2.0'
 
-import { RpcServer } from '@pixelrpg/message-channel-gjs'
+import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'
 import mime from 'mime'
 
 import Template from './webview.ui?raw'
@@ -34,7 +34,7 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _rpcServer?: RpcServer<EngineMessage>
+    protected _rpcServer?: RpcEndpoint<EngineMessage>
 
     /**
      * Get the RPC server for communication with the WebView
@@ -130,7 +130,7 @@ export class WebView extends WebKit.WebView {
      */
     protected initRpcServer() {
         console.log('Initializing RpcServer, webView:', this)
-        const rpcServer = new RpcServer<EngineMessage>(INTERNAL_PROTOCOL, this)
+        const rpcServer = new RpcEndpoint<EngineMessage>(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
         rpcServer.registerHandler('handleInputEvent', async (params) => {

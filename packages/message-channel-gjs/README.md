@@ -1,6 +1,6 @@
 # @pixelrpg/message-channel-gjs
 
-GJS implementation of the messaging API for communication between GJS and WebViews following WHATWG and WebKit standards, with RPC server support.
+GJS implementation of the messaging API for communication between GJS and WebViews following WHATWG and WebKit standards, with RPC endpoint support.
 
 ## Features
 
@@ -8,7 +8,7 @@ GJS implementation of the messaging API for communication between GJS and WebVie
 - WebKit message handler registration and listening for messages from WebViews
 - Based on WebKit's UserContentManager for script message handling
 - Implements the abstract MessageChannel class from @pixelrpg/message-channel-core
-- RPC server implementation with direct reply support using WebKit's script-message-with-reply
+- Unified RpcEndpoint implementation with bidirectional communication support
 - Promise-based API for asynchronous communication
 - Uses standard DOM naming patterns for API consistency
 
@@ -16,37 +16,38 @@ GJS implementation of the messaging API for communication between GJS and WebVie
 
 ### MessageChannel is Deprecated
 
-The MessageChannel class is deprecated. Please use the RpcServer/RpcClient pattern instead for better communication with WebViews.
+The MessageChannel class is deprecated. Please use the RpcEndpoint pattern instead for better communication with WebViews.
 
-### RPC Server
+### RPC Endpoint
 
 ```typescript
-import { RpcServer } from '@pixelrpg/message-channel-gjs';
+import { RpcEndpoint } from '@pixelrpg/message-channel-gjs';
 import WebKit from '@girs/webkit-6.0';
 
-// Create an RPC server with a channel name and WebView
+// Create an RPC endpoint with a channel name and WebView
 const webView = new WebKit.WebView();
-const rpcServer = new RpcServer('my-channel', webView);
+const endpoint = new RpcEndpoint('my-channel', webView);
 
-// Register methods that can be called from the client
-rpcServer.registerHandler('saveData', async (params) => {
+// Register methods that can be called from the web client
+endpoint.registerHandler('saveData', async (params) => {
   const { filename, data } = params;
   await saveToFile(filename, data);
   return { success: true };
 });
 
-rpcServer.registerHandler('getData', async (params) => {
+endpoint.registerHandler('getData', async (params) => {
   const { id } = params;
   const data = await loadFromDatabase(id);
   return data;
 });
 
-// For backward compatibility with MessageChannel pattern, 
-// you can send events using sendMessage
-rpcServer.sendMessage({
-  type: 'userEvent',
-  data: { id: 123, action: 'login' }
-});
+// Call methods on the web client side
+try {
+  const result = await endpoint.sendRequest('updateUI', { component: 'dashboard', visible: true });
+  console.log('UI updated:', result);
+} catch (error) {
+  console.error('Failed to update UI:', error);
+}
 ```
 
 ## Implementation Details
@@ -60,9 +61,10 @@ The GJS implementation provides:
    - Receives messages via the 'script-message-received' signal
    - Converts messages to standard MessageEvent format using the core package
 
-2. `RpcServer` - Implements the RPC server with direct reply support
+2. `RpcEndpoint` - Implements unified bidirectional RPC communication
    - Uses WebKit's `script-message-with-reply-received` signal for efficient request-response
    - Directly responds to RPC requests without needing a separate message channel
+   - Can both send requests to and receive/handle requests from WebViews
    - Automatically handles message routing and response sending
    - Provides proper error handling and serialization
    - Supports typed parameters and return values

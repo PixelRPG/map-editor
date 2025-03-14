@@ -1,13 +1,13 @@
 # @pixelrpg/message-channel-web
 
-Web implementation of the messaging API for communication between WebViews and GJS following WHATWG and WebKit standards, with RPC client support.
+Web implementation of the messaging API for communication between WebViews and GJS following WHATWG and WebKit standards, with RPC endpoint support.
 
 ## Features
 
 - Standards-compliant WebKit message handlers for communication with GJS
 - WHATWG window.postMessage fallback for cross-context messaging
 - Implements the abstract MessageChannel class from @pixelrpg/message-channel-core
-- RPC client implementation for request-response pattern
+- Unified RpcEndpoint implementation for bidirectional communication
 - Promise-based API for asynchronous communication
 - Uses standard DOM naming patterns for API consistency
 
@@ -35,18 +35,25 @@ messages.postMessage({
 });
 ```
 
-### RPC Client
+### RPC Endpoint
 
 ```typescript
-import { RpcClient } from '@pixelrpg/message-channel-web';
+import { RpcEndpoint } from '@pixelrpg/message-channel-web';
 
-// Create an RPC client
-const client = new RpcClient('rpc-channel');
+// Create an RPC endpoint
+const endpoint = new RpcEndpoint('rpc-channel');
+
+// Register handler methods that can be called from GJS
+endpoint.registerHandler('updateUIState', (state) => {
+  console.log('Updating UI state:', state);
+  // Update UI logic here
+  return { success: true };
+});
 
 // Call a remote method and wait for the response
 async function login(username: string, password: string) {
   try {
-    const result = await client.sendRequest('login', { username, password });
+    const result = await endpoint.sendRequest('login', { username, password });
     console.log('Login successful:', result);
     return result;
   } catch (error) {
@@ -58,7 +65,7 @@ async function login(username: string, password: string) {
 // Call another method
 async function getUserProfile(userId: string) {
   try {
-    const profile = await client.sendRequest('getUserProfile', userId);
+    const profile = await endpoint.sendRequest('getUserProfile', userId);
     console.log('User profile:', profile);
     return profile;
   } catch (error) {
@@ -77,12 +84,14 @@ The Web implementation provides:
    - The handler is manually set - the implementation does not automatically detect the WebKit handler
    - Provides a simple check for handler availability via isHandlerRegistered()
 
-2. `RpcClient` - Implements the RPC client for request-response pattern
+2. `RpcEndpoint` - Implements unified bidirectional RPC communication
    - Directly uses WebKit message handlers (when available) and window.postMessage APIs
    - Automatically detects appropriate communication channel (WebKit or window messaging)
+   - Can both send requests and receive/handle requests from GJS
    - Automatically handles message routing and promise resolution
    - Provides timeout handling for requests
    - Supports typed responses with generics
+   - Registers handlers in the global `window.rpcHandlers` object for access from GJS
 
 ## Dependencies
 
