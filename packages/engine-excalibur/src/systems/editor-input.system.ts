@@ -26,8 +26,6 @@ export class EditorInputSystem extends System {
 
     public systemType = SystemType.Update
 
-    private sendInputEventsToGJS = false;
-
     private rpcClient = new RpcClient('pixelrpg')
 
     private engine?: Engine;
@@ -57,36 +55,6 @@ export class EditorInputSystem extends System {
             this.engine.currentScene.camera.x -= deltaX;
             this.engine.currentScene.camera.y -= deltaY;
             this.dragStartPos = { x, y };
-
-            // Send move event to GJS
-            if (this.sendInputEventsToGJS) {
-                this.rpcClient.sendRequest('handleInputEvent', {
-                    messageType: EngineMessageType.INPUT_EVENT,
-                    payload: {
-                        type: InputEventType.MOUSE_MOVE,
-                        data: {
-                            x: x,
-                            y: y,
-                            deltaX: deltaX,
-                            deltaY: deltaY
-                        }
-                    }
-                }).catch(error => console.error('Failed to send mouse move event:', error));
-            }
-        } else {
-            // Send move event to GJS without drag info
-            if (this.sendInputEventsToGJS) {
-                this.rpcClient.sendRequest('handleInputEvent', {
-                    messageType: EngineMessageType.INPUT_EVENT,
-                    payload: {
-                        type: InputEventType.MOUSE_MOVE,
-                        data: {
-                            x: x,
-                            y: y
-                        }
-                    }
-                }).catch(error => console.error('Failed to send mouse move event:', error));
-            }
         }
     }
 
@@ -98,21 +66,6 @@ export class EditorInputSystem extends System {
     protected onPointerDown(x: number, y: number) {
         this.isDown = true;
         this.dragStartPos = { x, y };
-
-        // Send down event to GJS
-        if (this.sendInputEventsToGJS) {
-            this.rpcClient.sendRequest('handleInputEvent', {
-                messageType: EngineMessageType.INPUT_EVENT,
-                payload: {
-                    type: InputEventType.MOUSE_DOWN,
-                    data: {
-                        x: x,
-                        y: y,
-                        button: 0 // Left button
-                    }
-                }
-            }).catch(error => console.error('Failed to send mouse down event:', error));
-        }
     }
 
     /**
@@ -120,21 +73,6 @@ export class EditorInputSystem extends System {
      */
     protected onPointerUp() {
         this.isDown = false;
-
-        // Send up event to GJS
-        if (this.sendInputEventsToGJS) {
-            this.rpcClient.sendRequest('handleInputEvent', {
-                messageType: EngineMessageType.INPUT_EVENT,
-                payload: {
-                    type: InputEventType.MOUSE_UP,
-                    data: {
-                        x: this.dragStartPos.x,
-                        y: this.dragStartPos.y,
-                        button: 0 // Left button
-                    }
-                }
-            }).catch(error => console.error('Failed to send mouse up event:', error));
-        }
     }
 
     /**
@@ -195,29 +133,22 @@ export class EditorInputSystem extends System {
             this.rpcClient.registerHandler('handleInputEvent', (params) => {
                 console.debug('[EditorInputSystem] Input event received via RPC:', params);
 
-                // Check if the message has the correct structure
-                if (params && typeof params === 'object' && 'messageType' in params && 'payload' in params) {
-                    // Check if it's an input event message
-                    if (params.messageType === EngineMessageType.INPUT_EVENT) {
-                        const payload = params.payload;
+                // Verwende die vorhandenen Type Guards anstatt manueller Validierung
+                if (isEngineMessage(params) && isInputEventMessage(params)) {
+                    // Wir haben eine valide Engine-Message vom Typ INPUT_EVENT
+                    const inputEvent = params.payload;
+                    console.debug('[EditorInputSystem] Valid input event:', inputEvent);
 
-                        // Validate that the payload is a valid InputEvent
-                        if (payload && typeof payload === 'object' && 'type' in payload) {
-                            // We have a valid input event
-                            const inputEvent = payload as InputEvent;
-                            console.debug('[EditorInputSystem] Valid input event:', inputEvent);
-
-                            // Process the event - type guards will be applied within handleInputEvent
-                            this.handleInputEvent(inputEvent);
-                            return { success: true };
-                        } else {
-                            console.warn('[EditorInputSystem] Invalid input event payload:', payload);
-                        }
-                    } else {
-                        console.warn('[EditorInputSystem] Not an input event message type:', params.messageType);
-                    }
+                    // Verarbeite das Event - Type Guards werden innerhalb handleInputEvent angewendet
+                    this.handleInputEvent(inputEvent);
+                    return { success: true };
                 } else {
-                    console.warn('[EditorInputSystem] Invalid message format:', params);
+                    // Detailliertere Fehlerdiagnose mit vorhandenen Guards
+                    if (!isEngineMessage(params)) {
+                        console.warn('[EditorInputSystem] Not a valid engine message:', params);
+                    } else if (!isInputEventMessage(params)) {
+                        console.warn('[EditorInputSystem] Not an input event message:', params);
+                    }
                 }
 
                 return { success: false, error: 'Invalid input event format' };
@@ -234,19 +165,17 @@ export class EditorInputSystem extends System {
             this.onWheel(wheelEvent.deltaY, { x, y });
 
             // Send wheel event to GJS
-            if (this.sendInputEventsToGJS) {
-                this.rpcClient.sendRequest('handleInputEvent', {
-                    messageType: EngineMessageType.INPUT_EVENT,
-                    payload: {
-                        type: InputEventType.WHEEL,
-                        data: {
-                            x,
-                            y,
-                            deltaY: wheelEvent.deltaY
-                        }
+            this.rpcClient.sendRequest('handleInputEvent', {
+                messageType: EngineMessageType.INPUT_EVENT,
+                payload: {
+                    type: InputEventType.WHEEL,
+                    data: {
+                        x,
+                        y,
+                        deltaY: wheelEvent.deltaY
                     }
-                }).catch(error => console.error('Failed to send wheel event:', error));
-            }
+                }
+            }).catch(error => console.error('Failed to send wheel event:', error));
         });
     }
 
