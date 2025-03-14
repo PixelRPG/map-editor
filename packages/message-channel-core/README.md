@@ -11,6 +11,7 @@ Core messaging library implementing WHATWG and WebKit standards for communicatio
 - Type-safe message routing
 - RPC (Remote Procedure Call) support with request-response pattern
 - Promise-based API for asynchronous communication
+- Platform-specific optimizations for efficient communication
 - Simple, intuitive API that follows web standards
 
 ## Usage
@@ -53,7 +54,8 @@ channel.onmessage = (event: MessageEvent) => {
 import {
   RpcClient,
   RpcServer,
-  MethodHandler
+  MethodHandler,
+  DirectReplyFunction
 } from '@pixelrpg/message-channel-core';
 
 // Server-side (extends RpcServer)
@@ -65,6 +67,13 @@ class MyRpcServer extends RpcServer {
     // Your implementation to send the response
     console.log(`Sending response:`, message);
     return Promise.resolve();
+  }
+  
+  // Example of processing a message with optional direct reply
+  processMyMessage(event: MessageEvent, directReply?: DirectReplyFunction) {
+    // Pass the directReply function to the handleRpcMessage method
+    // if your platform supports direct replies
+    this.handleRpcMessage(event, directReply);
   }
 }
 
@@ -110,10 +119,17 @@ The package provides:
 
 1. `MessageChannel` - Abstract base class for all channel implementations
 2. `RpcClient` - Abstract base class for RPC clients
-3. `RpcServer` - Abstract base class for RPC servers
+3. `RpcServer` - Abstract base class for RPC servers with direct reply support
 4. `EventDispatcher` - Event handling utility for typed events
 5. `MessageEvent` - Standard-compliant event polyfill
 6. Various helper functions and type definitions for message handling
+
+## Platform-Specific Optimizations
+
+The core RPC architecture supports platform-specific optimizations:
+
+- **DirectReply Support**: Platforms that support direct message replies (like WebKit's `script-message-with-reply-received` in GJS) can use the `DirectReplyFunction` to reply directly to requests without separate message sending.
+- **Standard Fallback**: Platforms without direct reply support automatically fall back to the standard postMessage approach.
 
 ## Implementation Notes
 

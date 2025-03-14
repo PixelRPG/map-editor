@@ -8,7 +8,7 @@ GJS implementation of the messaging API for communication between GJS and WebVie
 - WebKit message handler registration and listening for messages from WebViews
 - Based on WebKit's UserContentManager for script message handling
 - Implements the abstract MessageChannel class from @pixelrpg/message-channel-core
-- RPC server implementation for request-response pattern
+- RPC server implementation with direct reply support using WebKit's script-message-with-reply
 - Promise-based API for asynchronous communication
 - Uses standard DOM naming patterns for API consistency
 
@@ -39,7 +39,7 @@ messages.postMessage({
 });
 ```
 
-### RPC Server
+### RPC Server with Direct Reply Support
 
 ```typescript
 import { RpcServer } from '@pixelrpg/message-channel-gjs';
@@ -85,8 +85,9 @@ The GJS implementation provides:
    - Receives messages via the 'script-message-received' signal
    - Converts messages to standard MessageEvent format using the core package
 
-2. `RpcServer` - Implements the RPC server for request-response pattern
-   - Registers methods that can be called by clients in the WebView
+2. `RpcServer` - Implements the RPC server with direct reply support
+   - Uses WebKit's `script-message-with-reply-received` signal for efficient request-response
+   - Directly responds to RPC requests without needing a separate message channel
    - Automatically handles message routing and response sending
    - Provides proper error handling and serialization
    - Supports typed parameters and return values
@@ -103,6 +104,7 @@ The GJS implementation provides:
 This package implements WebKit's message handler specification to enable standard-compliant communication with WebViews. It uses:
 
 - WebKit UserContentManager for registering script message handlers
+- WebKit's script-message-with-reply for efficient RPC communication
 - Standard WebKit JavaScript APIs for message passing
 - Standard DOM naming conventions like `postMessage` and `onmessage`
 - Clean standard MessageEvent handling without custom extensions

@@ -41,11 +41,7 @@ messages.postMessage({
 import { RpcClient } from '@pixelrpg/message-channel-web';
 
 // Create an RPC client
-const client = new RpcClient(
-  'rpc-channel',
-  window.parent, // Target window (parent, opener, or iframe)
-  '*'            // Target origin (use specific origin in production)
-);
+const client = new RpcClient('rpc-channel');
 
 // Call a remote method and wait for the response
 async function login(username: string, password: string) {
@@ -82,7 +78,8 @@ The Web implementation provides:
    - Provides a simple check for handler availability via isHandlerRegistered()
 
 2. `RpcClient` - Implements the RPC client for request-response pattern
-   - Uses window.postMessage for communication
+   - Directly uses WebKit message handlers (when available) and window.postMessage APIs
+   - Automatically detects appropriate communication channel (WebKit or window messaging)
    - Automatically handles message routing and promise resolution
    - Provides timeout handling for requests
    - Supports typed responses with generics

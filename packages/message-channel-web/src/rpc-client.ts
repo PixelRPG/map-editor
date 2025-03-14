@@ -1,63 +1,65 @@
 import { RpcClient as CoreRpcClient, MessageEvent, RpcRequest } from '@pixelrpg/message-channel-core';
-import { MessageChannel } from './message-channel';
+import { WebKitMessageHandler } from './types/webkit-message-handler';
 
 /**
  * Web implementation of the RPC client 
- * Handles communication with parent window or iframe
+ * Handles communication with parent window or iframe using direct browser APIs
  */
 export class RpcClient extends CoreRpcClient {
     /**
-     * The underlying message channel for communication
+     * WebKit message handler reference, if available
      */
-    private messageChannel: MessageChannel;
+    private webKitHandler: WebKitMessageHandler | null;
 
     /**
-     * Create a new Web RPC client
+     * Create a new Web RPC client with direct browser API access
      * @param channelName Name of the channel
-     * @param targetWindow Window to send messages to (defaults to parent)
-     * @param targetOrigin Target origin for security (defaults to *)
      */
-    constructor(
-        channelName: string,
-        targetWindow?: Window,
-        private readonly targetOrigin: string = '*'
-    ) {
+    constructor(channelName: string) {
         super(channelName);
 
-        // Create the message channel
-        this.messageChannel = new MessageChannel(channelName);
+        // Try to get WebKit message handler if available
+        this.webKitHandler = window.webkit?.messageHandlers[channelName] || null;
 
-        // Set the WebKit handler (only needed if available, will be null in most browser contexts)
-        if (window.webkit?.messageHandlers) {
-            // Nothing to do, MessageChannel already checks for handlers
-        }
-
-        // Setup message handler
+        // Set up event listener for receiving messages
         window.addEventListener('message', (event) => {
-            // For security, you might want to check the origin
-            // if (event.origin !== this.targetOrigin && this.targetOrigin !== '*') {
-            //     return;
-            // }
+            const messageEvent = event as unknown as MessageEvent;
 
-            this.handleRpcMessage(event as unknown as MessageEvent);
+            // Check if message is intended for this channel
+            if (messageEvent.data?.channel === channelName) {
+                this.handleRpcMessage(messageEvent);
+            }
         });
     }
 
     /**
-     * Send a message to the target window
+     * Send a message to the target window or WebKit
      * @param message The message to send
      */
     protected async postMessage(message: RpcRequest): Promise<void> {
-        // If WebKit handler is available, MessageChannel will use it
-        if (window.webkit?.messageHandlers?.[this.channelName]) {
-            await this.messageChannel.postMessage(message);
-        } else {
-            // Otherwise use standard postMessage
-            const targetWindow = window.parent;
-            targetWindow.postMessage(message, this.targetOrigin);
+        // Ensure message has channel information
+        if (!message.channel) {
+            message.channel = this.channelName;
         }
 
-        return Promise.resolve();
+        // Try WebKit handler first if available
+        if (this.webKitHandler) {
+            try {
+                this.webKitHandler.postMessage(message);
+                return Promise.resolve();
+            } catch (error) {
+                console.warn('WebKit postMessage failed:', error);
+                // Fall through to window.postMessage
+            }
+        }
+
+        // Fall back to window.postMessage
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage(message, '*');
+            return Promise.resolve();
+        } else {
+            return Promise.reject(new Error('No valid message target available'));
+        }
     }
 
     /**
@@ -65,7 +67,18 @@ export class RpcClient extends CoreRpcClient {
      */
     public override destroy(): void {
         super.destroy();
-        // No need to remove the event listener as it's added to window directly
-        // and will be cleaned up when the window is destroyed
+
+        // Remove the message event listener
+        window.removeEventListener('message', this.handleMessageEvent);
+    }
+
+    /**
+     * Event handler reference for cleanup
+     */
+    private handleMessageEvent = (event: Event): void => {
+        const messageEvent = event as unknown as MessageEvent;
+        if (messageEvent.data?.channel === this.channelName) {
+            this.handleRpcMessage(messageEvent);
+        }
     }
 } 

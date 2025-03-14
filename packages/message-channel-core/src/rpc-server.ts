@@ -8,6 +8,12 @@ import { createRpcResponse, createRpcErrorResponse, isRpcRequest } from "./utils
 export type MethodHandler = (params?: unknown) => Promise<unknown>;
 
 /**
+ * Function type for direct reply mechanism
+ * Used in platform-specific implementations that support direct replies
+ */
+export type DirectReplyFunction = (response: RpcResponse) => void;
+
+/**
  * Base class for RPC servers
  * Provides the core functionality for receiving requests and sending responses
  */
@@ -15,7 +21,7 @@ export abstract class RpcServer {
     /**
      * Map of registered methods
      */
-    private methods = new Map<string, MethodHandler>();
+    protected methods = new Map<string, MethodHandler>();
 
     /**
      * Event dispatcher for raw messages
@@ -48,8 +54,9 @@ export abstract class RpcServer {
     /**
      * Handle an incoming message event
      * @param event The message event to handle
+     * @param directReply Optional function to directly reply to the request without using postMessage
      */
-    protected async handleRpcMessage(event: MessageEvent): Promise<void> {
+    protected async handleRpcMessage(event: MessageEvent, directReply?: DirectReplyFunction): Promise<void> {
         // Extract the message data
         const message = event.data;
 
@@ -66,8 +73,18 @@ export abstract class RpcServer {
         // Dispatch the raw message event
         this.events.dispatch(message);
 
+        // Process the request and prepare response
+        await this.processRequest(message, directReply);
+    }
+
+    /**
+     * Process an RPC request and send a response
+     * @param request The RPC request to process
+     * @param directReply Optional function to directly reply to the request
+     */
+    protected async processRequest(request: RpcRequest, directReply?: DirectReplyFunction): Promise<void> {
         // Find the registered method
-        const { id, method, params } = message;
+        const { id, method, params } = request;
         const handler = this.methods.get(method);
 
         let response: RpcResponse;
@@ -86,8 +103,14 @@ export abstract class RpcServer {
             response = createRpcErrorResponse(id, -32000, errorMessage, this.channelName);
         }
 
-        // Send the response back
-        await this.postMessage(response);
+        // Send the response using the preferred method
+        if (directReply) {
+            // Use direct reply mechanism if available
+            directReply(response);
+        } else {
+            // Fall back to standard postMessage
+            await this.postMessage(response);
+        }
     }
 
     /**
