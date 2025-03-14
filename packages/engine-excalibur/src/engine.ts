@@ -1,4 +1,4 @@
-import { Engine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
+import { Engine as ExcaliburEngine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
 import { EventDispatcher, MessageEvent } from '@pixelrpg/message-channel-core'
 import { MessageChannel } from '@pixelrpg/message-channel-web'
 import {
@@ -19,20 +19,13 @@ import {
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
-import { EditorInputSystem } from '../systems/editor-input.system.ts'
+import { EditorInputSystem } from './systems/editor-input.system.ts'
 import { isEngineMessage, isEngineEventMessage, isLoadProjectMessage, isLoadMapMessage, isCommandMessage, isInputEventMessage } from '@pixelrpg/engine-core'
-// Define a type for the Excalibur engine with the methods we need
-type ExcaliburEngineType = Engine & {
-    clock: Clock & {
-        pause(): void;
-        unpause(): void;
-    }
-};
 
 /**
  * Excalibur implementation of the game engine
  */
-export class ExcaliburEngine implements EngineInterface {
+export class Engine implements EngineInterface {
     /**
      * Current status of the engine
      */
@@ -46,7 +39,7 @@ export class ExcaliburEngine implements EngineInterface {
     /**
      * Excalibur engine instance
      */
-    private engine: Engine | null = null
+    private excalibur: ExcaliburEngine | null = null
 
     /**
      * Current game project resource
@@ -69,10 +62,8 @@ export class ExcaliburEngine implements EngineInterface {
      * Create a new Excalibur engine
      * @param canvasElementId ID of the canvas element
      */
-    constructor(private canvasElementId: string = 'map-view') {
-        // Enable debug logging in the browser console
-        console.debug = console.log
-        this.logger.info('Creating ExcaliburEngine')
+    constructor(private canvasElementId: string = 'engine-view') {
+        this.logger.info('Creating Engine')
 
         // Set up message handlers
         this.setupMessageHandlers()
@@ -85,18 +76,18 @@ export class ExcaliburEngine implements EngineInterface {
         this.setStatus(EngineStatus.INITIALIZING)
 
         // Create the Excalibur engine
-        this.engine = new Engine({
+        this.excalibur = new ExcaliburEngine({
             canvasElementId: this.canvasElementId,
             displayMode: DisplayMode.FillScreen,
             pixelArt: true,
             suppressPlayButton: true,
-            backgroundColor: Color.Transparent,
+            backgroundColor: Color.Black, // TODO: Change this based on the OS light/dark mode
             enableCanvasTransparency: true,
             enableCanvasContextMenu: true, // Enable the right click context menu for debugging
         })
 
         // Add the editor input system
-        this.engine.currentScene.world.add(EditorInputSystem)
+        this.excalibur.currentScene.world.add(EditorInputSystem)
 
         this.setStatus(EngineStatus.READY)
     }
@@ -107,13 +98,13 @@ export class ExcaliburEngine implements EngineInterface {
      * @param options Options for loading the project
      */
     async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
-        if (!this.engine) {
+        if (!this.excalibur) {
             throw new Error('Engine not initialized')
         }
 
         this.setStatus(EngineStatus.LOADING)
 
-        this.logger.info(`[ExcaliburEngine] Loading project: ${projectPath}`)
+        this.logger.info(`[Engine] Loading project: ${projectPath}`)
 
         // Create the game project resource
         this.gameProjectResource = new GameProjectResource(projectPath, {
@@ -153,7 +144,7 @@ export class ExcaliburEngine implements EngineInterface {
 
             // Add the active map to the scene
             if (this.gameProjectResource?.activeMap) {
-                this.gameProjectResource.addToScene(this.engine!.currentScene)
+                this.gameProjectResource.addToScene(this.excalibur!.currentScene)
                 this.logger.info(`Map ${this.gameProjectResource.activeMap.mapData.name} added to scene`)
 
                 this.events.dispatch(EngineEventType.MAP_LOADED, {
@@ -175,7 +166,7 @@ export class ExcaliburEngine implements EngineInterface {
         })
 
         // Start the engine with the loader
-        await this.engine.start(loader)
+        await this.excalibur.start(loader)
     }
 
     /**
@@ -183,7 +174,7 @@ export class ExcaliburEngine implements EngineInterface {
      * @param mapId ID of the map to load
      */
     async loadMap(mapId: string): Promise<void> {
-        if (!this.engine || !this.gameProjectResource) {
+        if (!this.excalibur || !this.gameProjectResource) {
             throw new Error('Engine not initialized or project not loaded')
         }
 
@@ -192,8 +183,8 @@ export class ExcaliburEngine implements EngineInterface {
         // Create a new scene
         const newScene = new Scene()
         newScene.world.add(EditorInputSystem)
-        this.engine.addScene('map', newScene)
-        this.engine.goToScene('map')
+        this.excalibur.addScene('map', newScene)
+        this.excalibur.goToScene('map')
 
         // Try to load the map
         if (this.gameProjectResource) {
@@ -210,7 +201,7 @@ export class ExcaliburEngine implements EngineInterface {
 
         // Add the map to the scene
         if (this.gameProjectResource.activeMap) {
-            this.gameProjectResource.addToScene(this.engine.currentScene)
+            this.gameProjectResource.addToScene(this.excalibur.currentScene)
             this.logger.info(`Map ${this.gameProjectResource.activeMap.mapData.name} added to scene`)
 
             this.events.dispatch(EngineEventType.MAP_LOADED, {
@@ -224,10 +215,10 @@ export class ExcaliburEngine implements EngineInterface {
      * Start the engine
      */
     async start(): Promise<void> {
-        if (!this.engine) {
+        if (!this.excalibur) {
             throw new Error('Engine not initialized')
         }
-
+        this.excalibur.start()
         this.setStatus(EngineStatus.RUNNING)
     }
 
@@ -235,51 +226,14 @@ export class ExcaliburEngine implements EngineInterface {
      * Stop the engine
      */
     async stop(): Promise<void> {
-        if (!this.engine) {
+        if (!this.excalibur) {
             throw new Error('Engine not initialized')
         }
 
-        await this.engine.stop()
+        this.excalibur.stop()
         this.setStatus(EngineStatus.READY)
     }
 
-    /**
-     * Pause the engine
-     */
-    pause(): void {
-        if (!this.engine) {
-            throw new Error('Engine not initialized')
-        }
-
-        // Use the clock to pause the engine if available
-        const engineWithClock = this.engine as ExcaliburEngineType
-        if (engineWithClock.clock && typeof engineWithClock.clock.pause === 'function') {
-            engineWithClock.clock.pause()
-        }
-    }
-
-    /**
-     * Resume the engine
-     */
-    resume(): void {
-        if (!this.engine) {
-            throw new Error('Engine not initialized')
-        }
-
-        // Use the clock to unpause the engine if available
-        const engineWithClock = this.engine as ExcaliburEngineType
-        if (engineWithClock.clock && typeof engineWithClock.clock.unpause === 'function') {
-            engineWithClock.clock.unpause()
-        }
-    }
-
-    /**
-     * Handle input events
-     */
-    handleInput(event: InputEvent): void {
-        // Not implemented for Excalibur engine
-        // Input is handled by the EditorInputSystem
-    }
 
     /**
      * Set up message handlers to observe and execute messages from GJS
@@ -290,26 +244,30 @@ export class ExcaliburEngine implements EngineInterface {
         // Use a single onmessage handler for all message types
         this.messages.onmessage = (event: MessageEvent) => {
             const message = event.data;
-
             try {
-                if (isEngineMessage(message)) {
-                    if (isEngineEventMessage(message)) {
-                        console.debug('Engine event message received:', message);
-                        this.handleEngineEventMessage(message);
-                    } else if (isLoadProjectMessage(message)) {
-                        console.debug('Load project message received:', message);
-                        this.handleLoadProjectMessage(message);
-                    } else if (isLoadMapMessage(message)) {
-                        console.debug('Load map message received:', message);
-                        this.handleLoadMapMessage(message);
-                    } else if (isCommandMessage(message)) {
-                        console.debug('Command message received:', message);
-                        this.handleCommandMessage(message);
-                    } else if (isInputEventMessage(message)) {
-                        // console.debug('Input event message received:', message);
-                        this.handleInputEventMessage(message);
-                    }
+
+                if (!isEngineMessage(message)) {
+                    this.logger.warn(`Unknown message type: ${message.messageType}`)
+                    return
                 }
+
+                if (isEngineEventMessage(message)) {
+                    this.logger.debug('Engine event message received:', message);
+                    this.handleEngineEventMessage(message);
+                } else if (isLoadProjectMessage(message)) {
+                    this.logger.debug('Load project message received:', message);
+                    this.handleLoadProjectMessage(message);
+                } else if (isLoadMapMessage(message)) {
+                    this.logger.debug('Load map message received:', message);
+                    this.handleLoadMapMessage(message);
+                } else if (isCommandMessage(message)) {
+                    this.logger.debug('Command message received:', message);
+                    this.handleCommandMessage(message);
+                } else if (isInputEventMessage(message)) {
+                    // this.logger.debug('Input event message received:', message);
+                    this.handleInputEventMessage(message);
+                }
+
             } catch (error) {
                 this.logger.error(`Error handling message of type ${message.messageType}:`, error);
             }
@@ -358,14 +316,6 @@ export class ExcaliburEngine implements EngineInterface {
                 });
                 break;
 
-            case EngineCommandType.PAUSE:
-                this.pause();
-                break;
-
-            case EngineCommandType.RESUME:
-                this.resume();
-                break;
-
             default:
                 this.logger.warn(`Unknown command: ${command}`);
         }
@@ -376,7 +326,8 @@ export class ExcaliburEngine implements EngineInterface {
      * @param data The input event message data
      */
     private handleInputEventMessage(data: EngineMessageEventInput): void {
-        this.handleInput(data.payload);
+        // Not implemented for Excalibur engine
+        // Input is handled by the EditorInputSystem
     }
 
     /**

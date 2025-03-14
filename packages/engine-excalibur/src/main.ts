@@ -1,6 +1,5 @@
 import { Logger } from 'excalibur'
-import { ExcaliburEngine } from './services/excalibur-engine.ts'
-import './main.css'
+import { Engine } from './engine.ts'
 import { settings } from './settings.ts';
 
 // Set up logging
@@ -10,7 +9,7 @@ console.debug = console.log;
 logger.info('Starting map editor application');
 
 // Create and initialize the engine
-const engine = new ExcaliburEngine('map-view');
+const engine = new Engine('engine-view');
 await engine.initialize();
 
 // If this is in preview mode, load the project for demo purposes

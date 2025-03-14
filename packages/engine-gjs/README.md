@@ -17,13 +17,13 @@ yarn add @pixelrpg/engine-gjs
 
 ## Usage
 
-The GjsEngine is now a GObject widget that can be directly included in your GNOME application:
+The Engine is now a GObject widget that can be directly included in your GNOME application:
 
 ```typescript
-import { GjsEngine } from '@pixelrpg/engine-gjs';
+import { Engine } from '@pixelrpg/engine-gjs';
 
 // Create a new engine instance
-const engine = new GjsEngine();
+const engine = new Engine();
 
 // Set resource paths (must be done before or right after adding to UI)
 engine.setResourcePaths(['/path/to/resources']);

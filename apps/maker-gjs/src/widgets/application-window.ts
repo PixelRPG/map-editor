@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
-import { GjsEngine, WebView } from '@pixelrpg/engine-gjs'
+import { Engine, WebView } from '@pixelrpg/engine-gjs'
 import { Sidebar } from './sidebar.ts'
 import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
@@ -24,7 +24,7 @@ import { EngineMessage } from '@pixelrpg/engine-core'
 // Ensure widgets are loaded and can be used in the XML
 GObject.type_ensure(WebView.$gtype)
 GObject.type_ensure(Sidebar.$gtype)
-GObject.type_ensure(GjsEngine.$gtype)
+GObject.type_ensure(Engine.$gtype)
 GObject.type_ensure(WelcomeView.$gtype)
 GObject.type_ensure(ProjectView.$gtype)
 
@@ -55,12 +55,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._welcomeView?.connect('open-project', this.onOpenProject)
 
     // Connect engine signals if project view is active
-    const gjsEngine = this._projectView?.gjsEngine
-    if (!gjsEngine) {
+    const engine = this._projectView?.engine
+    if (!engine) {
       throw new Error('GJS engine not found')
     }
 
-    this._projectView?.gjsEngine?.connect('message-received', (_source, message) => {
+    this._projectView?.engine?.connect('message-received', (_source, message) => {
       this.onEngineMessage(JSON.parse(message))
     })
 
@@ -70,12 +70,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   protected async initialize() {
-    await this._projectView?.gjsEngine?.initialize()
+    await this._projectView?.engine?.initialize()
   }
 
   protected onEngineMessage(message: EngineMessage) {
     console.log('[ApplicationWindow] Message from Engine:', message)
-    // Nthis._projectView?.gjsEngine?.sendMessage('text', 'Hello back from GJS!')
+    // Nthis._projectView?.engine?.sendMessage('text', 'Hello back from GJS!')
   }
 
   protected onCreateProject() {
@@ -164,7 +164,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     // Load the project in the engine
     this._projectView.connect('ready', () => {
-      this._projectView!.gjsEngine!.loadProject(path)
+      this._projectView!.engine!.loadProject(path)
     })
 
     // Switch to project view

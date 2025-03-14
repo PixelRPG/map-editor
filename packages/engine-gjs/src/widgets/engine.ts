@@ -31,7 +31,7 @@ import Template from './engine.ui?raw'
 /**
  * GJS implementation of the game engine as a GObject widget
  */
-export class GjsEngine extends Adw.Bin implements EngineInterface {
+export class Engine extends Adw.Bin implements EngineInterface {
 
     /**
      * WebView for rendering the game
@@ -40,7 +40,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
 
     static {
         GObject.registerClass({
-            GTypeName: 'GjsEngine',
+            GTypeName: 'Engine',
             Template,
             Signals: {
                 'message-received': { param_types: [GObject.TYPE_STRING] },
@@ -84,17 +84,12 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
         try {
             this.setStatus(EngineStatus.INITIALIZING);
 
-            // this._webView = new WebView({});
-
-            // // Add the WebView to this container
-            // this.set_child(this._webView);
-
             // Initialize resource paths
             this._webView.setResourcePaths(this.resourcePaths);
             this._webView.setGResourcePath(this.gresourcePath);
 
             this._webView.connect('ready', () => {
-                console.log('[GjsEngine] WebView ready');
+                console.log('[Engine] WebView ready');
 
                 // Set up event listeners
                 this.setupEventListeners();
@@ -113,8 +108,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      * Initialize the engine
      */
     public async initialize(): Promise<void> {
-
-
+        // Nothing to do yet
     }
 
     /**
@@ -204,72 +198,13 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
     }
 
     /**
-     * Pause the engine
-     */
-    public async pause(): Promise<void> {
-        if (this.status === EngineStatus.INITIALIZING) {
-            throw createRuntimeError('Engine not initialized');
-        }
-
-        try {
-            // Send a command to the WebView to pause the engine
-            this._webView.messagesService?.postMessage(
-                EngineMessageType.COMMAND,
-                { command: EngineCommandType.PAUSE }
-            );
-        } catch (error) {
-            throw createRuntimeError('Failed to pause engine', error instanceof Error ? error : undefined);
-        }
-    }
-
-    /**
-     * Resume the engine
-     */
-    public async resume(): Promise<void> {
-        if (this.status === EngineStatus.INITIALIZING) {
-            throw createRuntimeError('Engine not initialized');
-        }
-
-        try {
-            // Send a command to the WebView to resume the engine
-            this._webView.messagesService?.postMessage(
-                EngineMessageType.COMMAND,
-                { command: EngineCommandType.RESUME }
-            );
-        } catch (error) {
-            throw createRuntimeError('Failed to resume engine', error instanceof Error ? error : undefined);
-        }
-    }
-
-    /**
-     * Handle input events
-     * @param event Input event
-     */
-    public handleInput(event: InputEvent): void {
-        if (!event || !event.type || !Object.values(InputEventType).includes(event.type)) {
-            console.warn('Invalid input event:', event);
-            return;
-        }
-
-        try {
-            // Send the input event to the WebView
-            this._webView.messagesService?.postMessage(
-                EngineMessageType.INPUT_EVENT,
-                event
-            );
-        } catch (error) {
-            console.error('Failed to handle input event:', formatError(error instanceof Error ? error : new Error(String(error))));
-        }
-    }
-
-    /**
-     * Send a message to the engine
+     * Send a message to the other side of the engine (WebView)
      * @param messageType Type of message
      * @param payload Payload of the message
      */
-    // public sendMessage(messageType: EngineMessage['messageType'], payload: any): void {
-    //     this._webView.messagesService?.postMessage(messageType, payload);
-    // }
+    public postMessage<P = any>(messageType: EngineMessageType, payload: P): void {
+        this._webView.messagesService?.postMessage(messageType, payload);
+    }
 
     /**
      * Set up event listeners for the WebView
@@ -283,11 +218,11 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
         // Listen for text messages from the WebView
         this._webView.messagesService.onmessage = (event) => {
             if (!isEngineMessage(event.data)) {
-                console.error('[GjsEngine] Unhandled message type (not an engine message):', event.data);
+                console.error('[Engine] Unhandled message type (not an engine message):', event.data);
                 return;
             }
 
-            console.log('[GjsEngine] Engine message received:', event.data);
+            console.log('[Engine] Engine message received:', event.data);
 
             const { messageType, payload } = event.data;
 
@@ -322,14 +257,14 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
                     // Update the engine status if needed
                     if (isStatusChangedEvent(engineEvent)) {
                         this.status = engineEvent.data as EngineStatus;
-                        console.info('[GjsEngine] Engine status changed to:', this.status);
+                        console.info('[Engine] Engine status changed to:', this.status);
                     }
 
                     // Dispatch the event
                     if (Object.values(EngineEventType).includes(engineEvent.type)) {
                         this.events.dispatch(engineEvent.type, engineEvent);
                     } else {
-                        console.warn(`[GjsEngine] Unknown engine event type: ${engineEvent.type}`);
+                        console.warn(`[Engine] Unknown engine event type: ${engineEvent.type}`);
                     }
                 }
             }
@@ -344,7 +279,7 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
      */
     private setStatus(status: EngineStatus): void {
         if (!Object.values(EngineStatus).includes(status)) {
-            console.warn(`[GjsEngine] Invalid engine status: ${status}`);
+            console.warn(`[Engine] Invalid engine status: ${status}`);
             return;
         }
 
@@ -422,4 +357,4 @@ export class GjsEngine extends Adw.Bin implements EngineInterface {
     }
 }
 
-GObject.type_ensure(GjsEngine.$gtype)
+GObject.type_ensure(Engine.$gtype)

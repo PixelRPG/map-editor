@@ -1,34 +1,34 @@
 # Migration Guide
 
-This guide explains how to migrate from the previous EngineView + GjsEngine pattern to the new integrated GjsEngine widget.
+This guide explains how to migrate from the previous EngineView + Engine pattern to the new integrated Engine widget.
 
 ## Previous Pattern
 
-Previously, you would use the GjsEngine class with a separate EngineView wrapper:
+Previously, you would use the Engine class with a separate EngineView wrapper:
 
 ```typescript
 // Create the EngineView component
-const gjsEngine = new EngineView();
+const engine = new EngineView();
 
 // Get the engine from the view
-const engine = gjsEngine.getEngine();
+const engine = engine.getEngine();
 
 // Add the view to your UI
-myContainer.append(gjsEngine);
+myContainer.append(engine);
 
 // Use the engine through the view
-await gjsEngine.loadProject('/path/to/project.json');
-await gjsEngine.loadMap('map1');
-await gjsEngine.start();
+await engine.loadProject('/path/to/project.json');
+await engine.loadMap('map1');
+await engine.start();
 ```
 
 ## New Pattern
 
-Now, the GjsEngine is a GObject widget that can be directly included in your application:
+Now, the Engine is a GObject widget that can be directly included in your application:
 
 ```typescript
-// Create the GjsEngine directly
-const engine = new GjsEngine();
+// Create the Engine directly
+const engine = new Engine();
 
 // Set resource paths (must be done before or right after adding to UI)
 engine.setResourcePaths(['/path/to/resources']);
@@ -55,24 +55,24 @@ engine.connect('message-received', (_source, message) => {
    import { EngineView } from './widgets/engine-view';
    
    // New
-   import { GjsEngine } from '@pixelrpg/engine-gjs';
+   import { Engine } from '@pixelrpg/engine-gjs';
    ```
 
 2. Replace instantiation:
    ```typescript
    // Old
-   const gjsEngine = new EngineView();
-   const engine = gjsEngine.getEngine();
+   const engine = new EngineView();
+   const engine = engine.getEngine();
    
    // New
-   const engine = new GjsEngine();
+   const engine = new Engine();
    engine.setResourcePaths(['/path/to/resources']);
    ```
 
 3. Replace UI integration:
    ```typescript
    // Old
-   myContainer.append(gjsEngine);
+   myContainer.append(engine);
    
    // New
    myContainer.append(engine);
@@ -81,9 +81,9 @@ engine.connect('message-received', (_source, message) => {
 4. Replace method calls:
    ```typescript
    // Old
-   await gjsEngine.loadProject('/path/to/project.json');
-   await gjsEngine.loadMap('map1');
-   await gjsEngine.start();
+   await engine.loadProject('/path/to/project.json');
+   await engine.loadMap('map1');
+   await engine.start();
    
    // New
    await engine.loadProject('/path/to/project.json');
@@ -94,7 +94,7 @@ engine.connect('message-received', (_source, message) => {
 5. Update message handling:
    ```typescript
    // Old
-   gjsEngine.connect('message-received', (_source, message) => {
+   engine.connect('message-received', (_source, message) => {
      console.log('Message from engine:', message);
    });
    

@@ -42,20 +42,4 @@ export interface EngineInterface {
      * Stop the engine
      */
     stop(): Promise<void>;
-
-    /**
-     * Pause the engine
-     */
-    pause(): void;
-
-    /**
-     * Resume the engine
-     */
-    resume(): void;
-
-    /**
-     * Handle input events
-     * @param event Input event
-     */
-    handleInput(event: InputEvent): void;
 } 
