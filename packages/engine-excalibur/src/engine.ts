@@ -1,6 +1,6 @@
 import { Engine as ExcaliburEngine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
-import { EventDispatcher, MessageEvent } from '@pixelrpg/message-channel-core'
-import { MessageChannel } from '@pixelrpg/message-channel-web'
+import { EventDispatcher } from '@pixelrpg/message-channel-core'
+import { RpcClient } from '@pixelrpg/message-channel-web'
 import {
     EngineInterface,
     EngineEvent,
@@ -16,11 +16,17 @@ import {
     EngineMessageLoadMap,
     EngineMessageCommand,
     EngineMessageEventEngine,
+    EngineMessageBase,
+    isEngineMessage,
+    isEngineEventMessage,
+    isLoadProjectMessage,
+    isLoadMapMessage,
+    isCommandMessage,
+    isInputEventMessage
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
 import { EditorInputSystem } from './systems/editor-input.system.ts'
-import { isEngineMessage, isEngineEventMessage, isLoadProjectMessage, isLoadMapMessage, isCommandMessage, isInputEventMessage } from '@pixelrpg/engine-core'
 
 /**
  * Excalibur implementation of the game engine
@@ -55,7 +61,7 @@ export class Engine implements EngineInterface {
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
-    private messages = new MessageChannel(this.messageHandlerName)
+    private rpcClient = new RpcClient<EngineMessage>(this.messageHandlerName)
 
 
     /**
@@ -67,6 +73,116 @@ export class Engine implements EngineInterface {
 
         // Set up message handlers
         this.setupMessageHandlers()
+
+        // Register RPC handlers for GJS to call
+        this.registerRpcHandlers()
+    }
+
+    /**
+     * Register RPC handlers for the GJS side to call
+     */
+    private registerRpcHandlers(): void {
+        this.logger.info('Registering RPC handlers');
+
+        // Register loadProject handler
+        this.rpcClient.registerHandler('loadProject', async (params) => {
+            this.logger.info('RPC call: loadProject', params);
+            try {
+                // Type guard for project load parameters
+                if (!params || typeof params !== 'object') {
+                    throw new Error('Invalid parameters');
+                }
+
+                const typedParams = params as { projectPath: string; options?: unknown };
+                if (!typedParams.projectPath) {
+                    throw new Error('Project path is required');
+                }
+
+                await this.loadProject(typedParams.projectPath, typedParams.options);
+                return { success: true };
+            } catch (error) {
+                this.logger.error('Error loading project:', error);
+                throw error;
+            }
+        });
+
+        // Register loadMap handler
+        this.rpcClient.registerHandler('loadMap', async (params) => {
+            this.logger.info('RPC call: loadMap', params);
+            try {
+                // Type guard for map load parameters
+                if (!params || typeof params !== 'object') {
+                    throw new Error('Invalid parameters');
+                }
+
+                const typedParams = params as { mapId: string };
+                if (!typedParams.mapId) {
+                    throw new Error('Map ID is required');
+                }
+
+                await this.loadMap(typedParams.mapId);
+                return { success: true };
+            } catch (error) {
+                this.logger.error('Error loading map:', error);
+                throw error;
+            }
+        });
+
+        // Register engineCommand handler
+        this.rpcClient.registerHandler('engineCommand', async (params) => {
+            this.logger.info('RPC call: engineCommand', params);
+            try {
+                // Type guard for command parameters
+                if (!params || typeof params !== 'object') {
+                    throw new Error('Invalid parameters');
+                }
+
+                const typedParams = params as { command: EngineCommandType };
+                if (!typedParams.command) {
+                    throw new Error('Command is required');
+                }
+
+                switch (typedParams.command) {
+                    case EngineCommandType.START:
+                        await this.start();
+                        break;
+                    case EngineCommandType.STOP:
+                        await this.stop();
+                        break;
+                    default:
+                        throw new Error(`Unknown command: ${typedParams.command}`);
+                }
+
+                return { success: true };
+            } catch (error) {
+                this.logger.error('Error executing command:', error);
+                throw error;
+            }
+        });
+
+        // Register notifyStatusChange handler
+        this.rpcClient.registerHandler('notifyStatusChange', (params) => {
+            this.logger.info('RPC call: notifyStatusChange', params);
+            try {
+                // Type guard for status parameters
+                if (!params || typeof params !== 'object') {
+                    throw new Error('Invalid parameters');
+                }
+
+                const typedParams = params as { status: EngineStatus };
+                if (!typedParams.status) {
+                    throw new Error('Status is required');
+                }
+
+                this.setStatus(typedParams.status);
+                return { success: true };
+            } catch (error) {
+                this.logger.error('Error changing status:', error);
+                throw error;
+            }
+        });
+
+        this.logger.info('RPC handlers registered');
     }
 
     /**
@@ -241,37 +357,35 @@ export class Engine implements EngineInterface {
     private setupMessageHandlers(): void {
         this.logger.info('Setting up message handlers')
 
-        // Use a single onmessage handler for all message types
-        this.messages.onmessage = (event: MessageEvent) => {
-            const message = event.data;
+        // Register RPC methods for handling different engine messages
+        this.rpcClient.events.on((message) => {
             try {
-
-                if (!isEngineMessage(message)) {
-                    this.logger.warn(`Unknown message type: ${message.messageType}`)
-                    return
+                // Check if this is an engine message
+                if (isEngineMessage(message)) {
+                    // Route to specific handlers based on message type
+                    if (isLoadProjectMessage(message)) {
+                        this.logger.info('Received load project message')
+                        this.handleLoadProjectMessage(message);
+                    } else if (isLoadMapMessage(message)) {
+                        this.logger.info('Received load map message')
+                        this.handleLoadMapMessage(message);
+                    } else if (isCommandMessage(message)) {
+                        this.logger.info('Received command message')
+                        this.handleCommandMessage(message);
+                    } else if (isInputEventMessage(message)) {
+                        this.logger.info('Received input event message')
+                        this.handleInputEventMessage(message);
+                    } else if (isEngineEventMessage(message)) {
+                        // this.logger.info('Received engine event message')
+                        this.handleEngineEventMessage(message);
+                    } else {
+                        this.logger.warn(`Unknown engine message type: ${(message as EngineMessageBase).messageType}`);
+                    }
                 }
-
-                if (isEngineEventMessage(message)) {
-                    this.logger.debug('Engine event message received:', message);
-                    this.handleEngineEventMessage(message);
-                } else if (isLoadProjectMessage(message)) {
-                    this.logger.debug('Load project message received:', message);
-                    this.handleLoadProjectMessage(message);
-                } else if (isLoadMapMessage(message)) {
-                    this.logger.debug('Load map message received:', message);
-                    this.handleLoadMapMessage(message);
-                } else if (isCommandMessage(message)) {
-                    this.logger.debug('Command message received:', message);
-                    this.handleCommandMessage(message);
-                } else if (isInputEventMessage(message)) {
-                    // this.logger.debug('Input event message received:', message);
-                    this.handleInputEventMessage(message);
-                }
-
             } catch (error) {
-                this.logger.error(`Error handling message of type ${message.messageType}:`, error);
+                this.logger.error('Error handling message:', error);
             }
-        }
+        });
     }
 
     /**
@@ -360,11 +474,11 @@ export class Engine implements EngineInterface {
             // Dispatch the event locally
             // this.events.dispatch(event.type, event)
 
-            // Send the event to GJS
-            this.messages.postMessage({
-                messageType: EngineMessageType.ENGINE_EVENT,
-                payload: event
-            })
+            // Send the event to GJS using RPC
+            this.rpcClient.sendRequest('notifyEngineEvent', event)
+                .catch(error => {
+                    this.logger.error('Error notifying status change:', error);
+                });
         }
     }
 } 

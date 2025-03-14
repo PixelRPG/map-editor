@@ -5,16 +5,24 @@ import {
     RpcRequest,
     RpcResponse,
     MessageEvent,
+    BaseMessage,
     isRpcRequest,
     createRpcResponse,
-    createRpcErrorResponse
+    createRpcErrorResponse,
+    createRpcRequest
 } from '@pixelrpg/message-channel-core'
 
 /**
  * GJS implementation of the RPC server
  * Handles communication between GJS and WebViews using standard WebKit APIs
+ * @template TMessage Type of messages that can be sent via sendMessage
  */
-export class RpcServer extends CoreRpcServer {
+export class RpcServer<TMessage extends BaseMessage = BaseMessage> extends CoreRpcServer<TMessage> {
+    /**
+     * Message counter for unique IDs
+     */
+    protected messageCounter = 0;
+
     /**
      * Create a new GJS RPC server
      * @param channelName Name of the channel
@@ -55,6 +63,7 @@ export class RpcServer extends CoreRpcServer {
 
                     // Check if this is a valid RPC request
                     if (!isRpcRequest(message) || (message.channel && message.channel !== this.channelName)) {
+                        console.error('Invalid RPC request format', message);
                         // Not a valid request or not for us
                         reply.return_error_message('Invalid RPC request format');
                         return false;
@@ -93,13 +102,128 @@ export class RpcServer extends CoreRpcServer {
     }
 
     /**
-     * Send a message to the WebView
-     * Note: This method is primarily for backward compatibility. 
-     * Most responses are sent directly through the reply mechanism.
+     * Send an RPC request to the WebView and wait for the response
+     * @param method The method name to call
+     * @param params Optional parameters to pass
+     * @returns Promise that resolves with the response
+     */
+    async sendRequest<TParams = unknown, TResult = unknown>(
+        method: string,
+        params?: TParams
+    ): Promise<TResult> {
+        const id = `${this.channelName}-${++this.messageCounter}`;
+        const request = createRpcRequest(method, params, id, this.channelName);
+
+        // Use JavaScript to evaluate in WebView context
+        // Important: Ensure the script always returns a serializable value that WebKit can handle
+        const script = `
+            (() => {
+                try {
+                    // Parse the request
+                    const request = ${JSON.stringify(request)};
+                    
+                    // Get the method handler
+                    const methodName = request.method;
+                    const handler = window.rpcHandlers && window.rpcHandlers[methodName];
+                    
+                    // If no handler, return error response
+                    if (typeof handler !== 'function') {
+                        return JSON.stringify({ 
+                            type: 'response',
+                            id: request.id,
+                            error: { 
+                                code: -32601, 
+                                message: 'Method "' + methodName + '" not found'
+                            },
+                            channel: request.channel
+                        });
+                    }
+                    
+                    // For synchronous results, return immediately
+                    try {
+                        const result = handler(request.params);
+                        
+                        // Don't try to handle promises directly - that's not supported by WebKit's evaluate_javascript
+                        // Instead, just return a success response with the immediate result
+                        const response = {
+                            type: 'response',
+                            id: request.id,
+                            result: result,
+                            channel: request.channel
+                        };
+                        
+                        // Always return a serialized string to avoid WebKit type issues
+                        return JSON.stringify(response);
+                    } catch (error) {
+                        // Return error response
+                        return JSON.stringify({
+                            type: 'response',
+                            id: request.id,
+                            error: { 
+                                code: -32000, 
+                                message: error.message || String(error)
+                            },
+                            channel: request.channel
+                        });
+                    }
+                } catch (error) {
+                    // Return general error
+                    return JSON.stringify({ 
+                        type: 'response',
+                        id: request.id,
+                        error: { 
+                            code: -32000, 
+                            message: error.message || String(error)
+                        },
+                        channel: request.channel
+                    });
+                }
+            })();
+        `;
+
+        try {
+            // Execute the script to get the response
+            const result = await this.webView.evaluate_javascript(
+                script,
+                -1,
+                null,
+                null,
+                null
+            );
+
+            if (!result) {
+                throw new Error('No response from WebView');
+            }
+
+            // Parse the response which is now a JSON string
+            const responseData = result.to_string();
+            const response = JSON.parse(responseData);
+
+            // Check for error
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
+
+            // Return the result
+            return response.result as TResult;
+        } catch (error) {
+            console.error(`Error sending RPC request "${method}":`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send a message to the WebView, primarily for event notifications
+     * This is a replacement for the MessageChannel.postMessage method
      * @param message The message to send
      */
-    protected async postMessage(message: RpcResponse): Promise<void> {
+    async sendMessage(message: TMessage): Promise<void> {
         try {
+            // Set the channel property if not already set
+            if (message.channel === undefined) {
+                message.channel = this.channelName;
+            }
+
             // Convert message to JSON string
             const messageJson = JSON.stringify(message);
 
@@ -114,6 +238,17 @@ export class RpcServer extends CoreRpcServer {
         } catch (error) {
             console.error('Error sending message to WebView:', error);
         }
+    }
+
+    /**
+     * Send a message to the WebView
+     * This implements the abstract method from CoreRpcServer for RPC responses
+     * Note: Most responses are sent directly through the reply mechanism.
+     * @param message The message to send
+     */
+    protected async postMessage(message: RpcResponse): Promise<void> {
+        // Reuse the sendMessage implementation for consistency
+        return this.sendMessage(message as unknown as TMessage);
     }
 
     /**

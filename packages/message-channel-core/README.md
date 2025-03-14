@@ -149,3 +149,177 @@ This package follows the WHATWG Web Messaging API and WebKit message handler sta
 - Standard naming patterns like `postMessage` and `onmessage`
 - Compatible with WebKit's `WKScriptMessageHandler` API
 - Clean separation between standard APIs and convenience extensions
+
+## Migration from MessageChannel to RPC Architecture
+
+The project is moving away from the MessageChannel abstraction in favor of a more direct RPC-based architecture. This change brings several benefits:
+
+1. **Direct API Access**: Both RpcServer and RpcClient now directly access platform APIs, reducing abstraction layers.
+2. **Optimized Communication**: The GJS implementation leverages WebKit's direct reply mechanism for more efficient request/response patterns.
+3. **Consistent Patterns**: The architecture now follows a consistent RPC pattern across all platforms.
+4. **Better Type Safety**: The RPC mechanism provides better type safety through method registration and typed responses.
+
+### How to Migrate
+
+1. **Replace MessageChannel with RpcServer/RpcClient**:
+   - In GJS contexts: Replace `MessageChannel` with `RpcServer`
+   - In Web contexts: Replace `MessageChannel` with `RpcClient`
+
+2. **Update Message Handling**:
+   - Replace `onmessage` handlers with registered RPC methods
+   - Replace `postMessage()` calls with `sendRequest()` calls
+
+3. **Using Event-style Messages**:
+   - For backward compatibility, use `rpcServer.sendMessage()` instead of `messageChannel.postMessage()`
+   - Register event handlers using the events dispatcher: `rpcClient.events.on('eventName', handler)`
+
+## Basic Usage
+
+### Server Side (Receiving Requests)
+
+```typescript
+import { RpcServer } from '@pixelrpg/message-channel-gjs'; // or '@pixelrpg/message-channel-web'
+
+// Create a server instance
+const server = new RpcServer('my-channel', webview);
+
+// Register method handlers
+server.registerMethod('greet', async (params) => {
+  return `Hello, ${params.name}!`;
+});
+
+// Handle events
+server.events.on((message) => {
+  console.log('Received a message:', message);
+});
+```
+
+### Client Side (Sending Requests)
+
+```typescript
+import { RpcClient } from '@pixelrpg/message-channel-web'; // or '@pixelrpg/message-channel-gjs'
+
+// Create a client instance
+const client = new RpcClient('my-channel');
+
+// Send a request and wait for a response
+const response = await client.sendRequest('greet', { name: 'World' });
+console.log(response); // "Hello, World!"
+
+// Register a handler that can be called by the server
+client.registerHandler('notify', (data) => {
+  console.log('Notification received:', data);
+  return { received: true };
+});
+```
+
+## RPC Architecture
+
+The RPC system enables bidirectional communication between different environments (e.g., GJS and Web). Each side can act as both client and server:
+
+1. **RpcServer**: Receives requests, processes them, and sends responses
+   - Use `registerMethod(name, handler)` to handle incoming requests
+   - The handler receives parameters and returns a response (can be async)
+
+2. **RpcClient**: Sends requests and processes responses
+   - Use `sendRequest(method, params)` to call a remote method
+   - Use `registerHandler(name, handler)` to register handlers that the server can call
+
+### Understanding the Communication Flow
+
+When using both the RpcServer and RpcClient in different contexts:
+
+```
+┌───────────────────┐                    ┌───────────────────┐
+│     Context A     │                    │     Context B     │
+│                   │                    │                   │
+│  ┌─────────────┐  │  sendRequest()     │  ┌─────────────┐  │
+│  │  RpcClient  │──┼───────────────────▶│  │  RpcServer  │  │
+│  └─────────────┘  │                    │  └─────────────┘  │
+│        ▲          │                    │        │          │
+│        │          │                    │        │          │
+│        │          │  registerMethod()  │        ▼          │
+│        │          │                    │  ┌─────────────┐  │
+│        │          │                    │  │   Handler   │  │
+│        │          │                    │  └─────────────┘  │
+│        │          │                    │        │          │
+│        │          │                    │        │          │
+│        │          │                    │        ▼          │
+│  ┌─────────────┐  │      Response      │  ┌─────────────┐  │
+│  │   Handler   │◀─┼───────────────────┼──│  Response    │  │
+│  └─────────────┘  │                    │  └─────────────┘  │
+│                   │                    │                   │
+└───────────────────┘                    └───────────────────┘
+```
+
+Similarly, Context B can call methods in Context A using its own RpcClient:
+
+```
+┌───────────────────┐                    ┌───────────────────┐
+│     Context A     │                    │     Context B     │
+│                   │                    │                   │
+│  ┌─────────────┐  │                    │  ┌─────────────┐  │
+│  │  RpcServer  │◀─┼───────────────────┼──│  RpcClient  │  │
+│  └─────────────┘  │                    │  └─────────────┘  │
+│        │          │                    │                   │
+│        │          │                    │                   │
+│        ▼          │                    │                   │
+│  ┌─────────────┐  │                    │                   │
+│  │   Handler   │  │                    │                   │
+│  └─────────────┘  │                    │                   │
+│        │          │                    │                   │
+│        │          │                    │                   │
+│        ▼          │                    │                   │
+│  ┌─────────────┐  │                    │                   │
+│  │  Response   │──┼───────────────────▶│                   │
+│  └─────────────┘  │                    │                   │
+│                   │                    │                   │
+└───────────────────┘                    └───────────────────┘
+```
+
+## Implementation Details
+
+### In Web Context
+
+In the web implementation:
+- `RpcClient.registerHandler()` creates entries in the global `window.rpcHandlers` object
+- When GJS sends a request, it evaluates JavaScript that calls the appropriate handler
+- The response is returned directly through the WebKit JavaScript evaluation API
+
+### In GJS Context
+
+In the GJS implementation:
+- `RpcServer.registerMethod()` adds handlers to an internal map
+- When web calls these methods through RPC, the handlers are executed
+- Results are returned through WebKit's message reply mechanism
+
+## Migrating from Event-Based Messaging
+
+To migrate from older event-based messaging:
+
+- Replace `postMessage()` calls with `sendRequest()` calls
+- Replace message event listeners with registered methods
+- Use typed message interfaces instead of custom message formats
+
+## Type Safety
+
+All messages are fully typed using TypeScript interfaces:
+
+```typescript
+import { RpcClient, DirectReplyFunction } from '@pixelrpg/message-channel-core';
+
+// Type your requests and responses
+interface UserRequest {
+  id: number;
+}
+
+interface UserResponse {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// Use with generics for type safety
+const user = await client.sendRequest<UserResponse>("getUser", { id: 1 });
+console.log(user.name); // Fully typed!
+```

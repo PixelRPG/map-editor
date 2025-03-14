@@ -8,10 +8,14 @@ import {
     isMouseMoveEvent,
     isMouseDownEvent,
     isMouseUpEvent,
-    isMouseLeaveEvent
+    isMouseLeaveEvent,
+    isMouseEnterEvent,
+    isWheelEvent,
+    isKeyDownEvent,
+    isKeyUpEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
-import { MessageChannel } from "@pixelrpg/message-channel-web";
+import { RpcClient } from "@pixelrpg/message-channel-web";
 
 /**
  * System to handle input for the map editor
@@ -24,7 +28,7 @@ export class EditorInputSystem extends System {
 
     private sendInputEventsToGJS = false;
 
-    private messages = new MessageChannel('pixelrpg')
+    private rpcClient = new RpcClient('pixelrpg')
 
     private engine?: Engine;
 
@@ -56,7 +60,7 @@ export class EditorInputSystem extends System {
 
             // Send move event to GJS
             if (this.sendInputEventsToGJS) {
-                this.messages.postMessage({
+                this.rpcClient.sendRequest('handleInputEvent', {
                     messageType: EngineMessageType.INPUT_EVENT,
                     payload: {
                         type: InputEventType.MOUSE_MOVE,
@@ -67,12 +71,12 @@ export class EditorInputSystem extends System {
                             deltaY: deltaY
                         }
                     }
-                });
+                }).catch(error => console.error('Failed to send mouse move event:', error));
             }
         } else {
             // Send move event to GJS without drag info
             if (this.sendInputEventsToGJS) {
-                this.messages.postMessage({
+                this.rpcClient.sendRequest('handleInputEvent', {
                     messageType: EngineMessageType.INPUT_EVENT,
                     payload: {
                         type: InputEventType.MOUSE_MOVE,
@@ -81,7 +85,7 @@ export class EditorInputSystem extends System {
                             y: y
                         }
                     }
-                });
+                }).catch(error => console.error('Failed to send mouse move event:', error));
             }
         }
     }
@@ -97,7 +101,7 @@ export class EditorInputSystem extends System {
 
         // Send down event to GJS
         if (this.sendInputEventsToGJS) {
-            this.messages.postMessage({
+            this.rpcClient.sendRequest('handleInputEvent', {
                 messageType: EngineMessageType.INPUT_EVENT,
                 payload: {
                     type: InputEventType.MOUSE_DOWN,
@@ -107,7 +111,7 @@ export class EditorInputSystem extends System {
                         button: 0 // Left button
                     }
                 }
-            });
+            }).catch(error => console.error('Failed to send mouse down event:', error));
         }
     }
 
@@ -119,7 +123,7 @@ export class EditorInputSystem extends System {
 
         // Send up event to GJS
         if (this.sendInputEventsToGJS) {
-            this.messages.postMessage({
+            this.rpcClient.sendRequest('handleInputEvent', {
                 messageType: EngineMessageType.INPUT_EVENT,
                 payload: {
                     type: InputEventType.MOUSE_UP,
@@ -129,7 +133,7 @@ export class EditorInputSystem extends System {
                         button: 0 // Left button
                     }
                 }
-            });
+            }).catch(error => console.error('Failed to send mouse up event:', error));
         }
     }
 
@@ -154,11 +158,11 @@ export class EditorInputSystem extends System {
         zoom = Math.round(zoom * 10) / 10;
 
         this.engine.currentScene.camera.zoom = zoom;
-        console.debug('Wheel zoom to', zoom);
+        console.debug('[EditorInputSystem] Wheel zoom to', zoom);
     }
 
     public initialize(world: World, scene: Scene) {
-        console.debug('Initializing EditorInputSystem');
+        console.debug('[EditorInputSystem] Initializing');
         if (super.initialize) {
             super.initialize(world, scene);
         }
@@ -179,53 +183,45 @@ export class EditorInputSystem extends System {
         });
 
         if (!settings.isWebKitView) {
-            console.debug('Setting up pointer move event listener for default browser behavior');
+            console.debug('[EditorInputSystem] Setting up pointer move event listener for default browser behavior');
             // Default browser behavior
             pointer.on('move', (event) => {
                 this.onPointerMove(event.screenPos.x, event.screenPos.y);
             });
         } else {
-            console.debug('Setting up message listener for GJS input events');
-            // Handle input events from GJS
-            this.messages.onmessage = (event) => {
+            console.debug('[EditorInputSystem] Setting up RPC client for GJS input events');
 
-                if (!isEngineMessage(event.data)) {
-                    console.debug('Unhandled message type (not an engine message):', event.data);
-                    return;
-                }
+            // Register handler for input events from GJS
+            this.rpcClient.registerHandler('handleInputEvent', (params) => {
+                console.debug('[EditorInputSystem] Input event received via RPC:', params);
 
-                if (!isInputEventMessage(event.data)) {
-                    console.debug('Unhandled message type (not an input event message):', event.data);
-                    return;
-                }
+                // Check if the message has the correct structure
+                if (params && typeof params === 'object' && 'messageType' in params && 'payload' in params) {
+                    // Check if it's an input event message
+                    if (params.messageType === EngineMessageType.INPUT_EVENT) {
+                        const payload = params.payload;
 
-                console.debug('Input event message received:', event.data);
+                        // Validate that the payload is a valid InputEvent
+                        if (payload && typeof payload === 'object' && 'type' in payload) {
+                            // We have a valid input event
+                            const inputEvent = payload as InputEvent;
+                            console.debug('[EditorInputSystem] Valid input event:', inputEvent);
 
-                const { messageType, payload } = event.data;
-
-                // Handle input events
-                if (messageType === EngineMessageType.INPUT_EVENT) {
-                    const inputEvent = payload;
-
-                    if (isMouseMoveEvent(inputEvent) && inputEvent.data) {
-                        // In the new format, data directly contains x and y
-                        this.onPointerMove(
-                            inputEvent.data.x,
-                            inputEvent.data.y
-                        );
-                    } else if (isMouseDownEvent(inputEvent) && inputEvent.data) {
-                        this.onPointerDown(
-                            inputEvent.data.x,
-                            inputEvent.data.y
-                        );
-                    } else if (isMouseUpEvent(inputEvent)) {
-                        this.onPointerUp();
-                    } else if (isMouseLeaveEvent(inputEvent)) {
-                        // For mouse leave, we just need to call onPointerUp to cancel any drag operation
-                        this.onPointerUp();
+                            // Process the event - type guards will be applied within handleInputEvent
+                            this.handleInputEvent(inputEvent);
+                            return { success: true };
+                        } else {
+                            console.warn('[EditorInputSystem] Invalid input event payload:', payload);
+                        }
+                    } else {
+                        console.warn('[EditorInputSystem] Not an input event message type:', params.messageType);
                     }
+                } else {
+                    console.warn('[EditorInputSystem] Invalid message format:', params);
                 }
-            };
+
+                return { success: false, error: 'Invalid input event format' };
+            });
         }
 
         // Handle wheel events for zooming
@@ -239,7 +235,7 @@ export class EditorInputSystem extends System {
 
             // Send wheel event to GJS
             if (this.sendInputEventsToGJS) {
-                this.messages.postMessage({
+                this.rpcClient.sendRequest('handleInputEvent', {
                     messageType: EngineMessageType.INPUT_EVENT,
                     payload: {
                         type: InputEventType.WHEEL,
@@ -249,41 +245,74 @@ export class EditorInputSystem extends System {
                             deltaY: wheelEvent.deltaY
                         }
                     }
-                });
+                }).catch(error => console.error('Failed to send wheel event:', error));
             }
         });
     }
 
+    /**
+     * Clean up resources when this system is removed
+     */
+    public onRemove(): void {
+        // Cleanup the RPC client
+        this.rpcClient.destroy();
+    }
 
     /**
      * Handle input events from GJS
      * @param event The input event
      */
     handleInputEvent(event: InputEvent): void {
-        // Handle input events from GJS based on type
-        switch (event.type) {
-            case InputEventType.MOUSE_MOVE:
-                // Handle mouse move
-                console.log('Mouse move event from GJS:', event.data)
-                break
+        // First use type guards to determine the event type for better type safety
+        if (isMouseMoveEvent(event)) {
+            // Handle mouse move with proper typing
+            console.log('Mouse move event from GJS:', event.data);
+            // If in webkit view, manually update the pointer position
+            if (settings.isWebKitView && this.engine) {
+                // Simulate a pointer move in Excalibur
+                const pointer = this.engine.input.pointers.primary;
 
-            case InputEventType.MOUSE_CLICK:
-                // Handle mouse click
-                console.log('Mouse click event from GJS:', event.data)
-                break
-
-            case InputEventType.KEY_DOWN:
-                // Handle key down
-                console.log('Key down event from GJS:', event.data)
-                break
-
-            case InputEventType.KEY_UP:
-                // Handle key up
-                console.log('Key up event from GJS:', event.data)
-                break
-
-            default:
-                console.log('Unhandled input event from GJS:', event)
+                // Update the pointer position - Excalibur handles pointer positions differently
+                // Handle the movement in our system instead of trying to update internal state
+                this.onPointerMove(event.data.x, event.data.y);
+            }
+        } else if (isMouseDownEvent(event)) {
+            // Handle mouse down with proper typing
+            console.log('Mouse down event from GJS:', event.data);
+            if (settings.isWebKitView && this.engine) {
+                this.onPointerDown(event.data.x, event.data.y);
+            }
+        } else if (isMouseUpEvent(event)) {
+            // Handle mouse up with proper typing
+            console.log('Mouse up event from GJS:', event.data);
+            if (settings.isWebKitView && this.engine) {
+                this.onPointerUp();
+            }
+        } else if (isMouseLeaveEvent(event)) {
+            // Handle mouse leave with proper typing
+            console.log('Mouse leave event from GJS');
+            if (settings.isWebKitView && this.engine) {
+                // Handle mouse leaving the canvas
+                this.onPointerUp(); // treat as pointer up to cancel any dragging
+            }
+        } else if (isMouseEnterEvent(event)) {
+            // Handle mouse enter with proper typing
+            console.log('Mouse enter event from GJS:', event.data);
+        } else if (isWheelEvent(event)) {
+            // Handle wheel with proper typing
+            console.log('Wheel event from GJS:', event.data);
+            if (settings.isWebKitView && this.engine) {
+                this.onWheel(event.data.deltaY, { x: event.data.x, y: event.data.y });
+            }
+        } else if (isKeyDownEvent(event)) {
+            // Handle key down with proper typing
+            console.log('Key down event from GJS:', event.data);
+        } else if (isKeyUpEvent(event)) {
+            // Handle key up with proper typing
+            console.log('Key up event from GJS:', event.data);
+        } else {
+            // Fallback for unknown event types
+            console.log('Unhandled input event from GJS:', event);
         }
     }
 }

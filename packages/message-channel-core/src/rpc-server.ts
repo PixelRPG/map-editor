@@ -1,27 +1,18 @@
 import { type MessageEvent, EventDispatcher } from "./polyfills/index.ts";
-import { RpcRequest, RpcResponse, RpcMessageType } from "./types/message";
+import { RpcRequest, RpcResponse, RpcMessageType, BaseMessage } from "./types/message";
+import { MethodHandler, DirectReplyFunction } from "./types/handlers";
 import { createRpcResponse, createRpcErrorResponse, isRpcRequest } from "./utils/message";
-
-/**
- * Type for method handlers
- */
-export type MethodHandler = (params?: unknown) => Promise<unknown>;
-
-/**
- * Function type for direct reply mechanism
- * Used in platform-specific implementations that support direct replies
- */
-export type DirectReplyFunction = (response: RpcResponse) => void;
 
 /**
  * Base class for RPC servers
  * Provides the core functionality for receiving requests and sending responses
+ * @template TMessage Type of messages that can be sent via sendMessage
  */
-export abstract class RpcServer {
+export abstract class RpcServer<TMessage extends BaseMessage = BaseMessage> {
     /**
      * Map of registered methods
      */
-    protected methods = new Map<string, MethodHandler>();
+    protected methods = new Map<string, MethodHandler<any, any>>();
 
     /**
      * Event dispatcher for raw messages
@@ -39,7 +30,10 @@ export abstract class RpcServer {
      * @param methodName Name of the method to register
      * @param handler Function to handle the method call
      */
-    public registerMethod(methodName: string, handler: MethodHandler): void {
+    public registerMethod<TParams = unknown, TResult = unknown>(
+        methodName: string,
+        handler: MethodHandler<TParams, TResult>
+    ): void {
         this.methods.set(methodName, handler);
     }
 
@@ -95,7 +89,7 @@ export abstract class RpcServer {
             }
 
             // Call the handler and create a success response
-            const result = await handler(params);
+            const result = await Promise.resolve(handler(params));
             response = createRpcResponse(id, result, this.channelName);
         } catch (error) {
             // Create an error response
@@ -120,9 +114,35 @@ export abstract class RpcServer {
     protected abstract postMessage(message: RpcResponse): Promise<void>;
 
     /**
+     * Send a message to clients, primarily for event notifications
+     * This is used for events where no response is expected
+     * @param message The message to send
+     */
+    public abstract sendMessage(message: TMessage): Promise<void>;
+
+    /**
      * Clean up resources
      */
     public destroy(): void {
         this.methods.clear();
+    }
+
+    /**
+     * Counter for generating unique message IDs
+     */
+    protected messageCounter = 0;
+
+    /**
+     * Send an RPC request to clients
+     * This is a base implementation that subclasses should extend with platform-specific logic
+     * @param method Method name to call
+     * @param params Optional parameters to pass
+     * @throws This base implementation throws an error as it needs to be implemented by platform-specific subclasses
+     */
+    public async sendRequest<TParams = unknown, TResult = unknown>(
+        method: string,
+        params?: TParams
+    ): Promise<TResult> {
+        throw new Error("sendRequest not implemented in base RpcServer class. Platform-specific subclasses must implement this method.");
     }
 } 

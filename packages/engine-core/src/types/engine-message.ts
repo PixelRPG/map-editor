@@ -1,4 +1,4 @@
-import { MessageData } from '@pixelrpg/message-channel-core';
+import { BaseMessage } from '@pixelrpg/message-channel-core';
 import { EngineEvent } from './engine-event';
 import { InputEvent } from './input-event';
 import { EngineMessageType } from './engine-message-type';
@@ -6,36 +6,59 @@ import { EngineCommandType } from './engine-command-type';
 import { ProjectLoadOptions } from './project-options';
 
 /**
+ * Base interface for all engine messages
+ */
+export interface EngineMessageBase extends BaseMessage {
+    messageType: EngineMessageType;
+    payload: unknown;
+}
+
+/**
  * Message event for engine events
  */
-export type EngineMessageEventEngine = MessageData<EngineMessageType.ENGINE_EVENT, EngineEvent>;
+export interface EngineMessageEventEngine extends EngineMessageBase {
+    messageType: EngineMessageType.ENGINE_EVENT;
+    payload: EngineEvent;
+}
 
 /**
  * Message event for input events
  */
-export type EngineMessageEventInput = MessageData<EngineMessageType.INPUT_EVENT, InputEvent>;
+export interface EngineMessageEventInput extends EngineMessageBase {
+    messageType: EngineMessageType.INPUT_EVENT;
+    payload: InputEvent;
+}
 
 /**
  * Message for sending commands to the engine
  */
-export type EngineMessageCommand = MessageData<EngineMessageType.COMMAND, {
-    command: EngineCommandType;
-}>;
+export interface EngineMessageCommand extends EngineMessageBase {
+    messageType: EngineMessageType.COMMAND;
+    payload: {
+        command: EngineCommandType;
+    };
+}
 
 /**
  * Message to load a project
  */
-export type EngineMessageLoadProject = MessageData<EngineMessageType.LOAD_PROJECT, {
-    projectPath: string;
-    options?: ProjectLoadOptions;
-}>;
+export interface EngineMessageLoadProject extends EngineMessageBase {
+    messageType: EngineMessageType.LOAD_PROJECT;
+    payload: {
+        projectPath: string;
+        options?: ProjectLoadOptions;
+    };
+}
 
 /**
  * Message to load a specific map
  */
-export type EngineMessageLoadMap = MessageData<EngineMessageType.LOAD_MAP, {
-    mapId: string;
-}>;
+export interface EngineMessageLoadMap extends EngineMessageBase {
+    messageType: EngineMessageType.LOAD_MAP;
+    payload: {
+        mapId: string;
+    };
+}
 
 /**
  * Union type of all engine-specific messages

@@ -1,11 +1,18 @@
-import { RpcClient as CoreRpcClient, MessageEvent, RpcRequest } from '@pixelrpg/message-channel-core';
+import {
+    RpcClient as CoreRpcClient,
+    MessageEvent,
+    RpcRequest,
+    HandlerFunction,
+    BaseMessage
+} from '@pixelrpg/message-channel-core';
 import { WebKitMessageHandler } from './types/webkit-message-handler';
 
 /**
  * Web implementation of the RPC client 
  * Handles communication with parent window or iframe using direct browser APIs
+ * @template TMessage Type of messages that can be sent via sendMessage
  */
-export class RpcClient extends CoreRpcClient {
+export class RpcClient<TMessage extends BaseMessage = BaseMessage> extends CoreRpcClient<TMessage> {
     /**
      * WebKit message handler reference, if available
      */
@@ -33,15 +40,69 @@ export class RpcClient extends CoreRpcClient {
     }
 
     /**
-     * Send a message to the target window or WebKit
+     * Register a handler function that can be called by the server
+     * In the web context, this registers the handler in the global window.rpcHandlers object
+     * @param methodName Name of the method to register
+     * @param handler Function to handle the method call
+     */
+    public registerHandler<TParams = unknown, TResult = unknown>(
+        methodName: string,
+        handler: HandlerFunction<TParams, TResult>
+    ): void {
+        // Ensure window.rpcHandlers exists
+        if (!window.rpcHandlers) {
+            window.rpcHandlers = {};
+        }
+
+        // Register the handler
+        window.rpcHandlers[methodName] = async (params?: unknown) => {
+            try {
+                // Call the handler and return its result
+                return await Promise.resolve(handler(params as TParams));
+            } catch (error) {
+                // Convert errors to a standard format
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error(`Error in RPC handler for method "${methodName}":`, error);
+
+                // Re-throw as an object with message to ensure proper serialization
+                throw { message: errorMessage };
+            }
+        };
+
+        console.debug(`Registered RPC handler for method: ${methodName}`);
+    }
+
+    /**
+     * Unregister a previously registered handler
+     * @param methodName Name of the method to unregister
+     */
+    public unregisterHandler(methodName: string): void {
+        if (window.rpcHandlers && window.rpcHandlers[methodName]) {
+            delete window.rpcHandlers[methodName];
+            console.debug(`Unregistered RPC handler for method: ${methodName}`);
+        }
+    }
+
+    /**
+     * Send a standard message (not an RPC request) to the target
+     * This is used for events and notifications where no response is expected
      * @param message The message to send
      */
-    protected async postMessage(message: RpcRequest): Promise<void> {
-        // Ensure message has channel information
-        if (!message.channel) {
+    public async sendMessage(message: TMessage): Promise<void> {
+        // Set channel if not already set
+        if (message.channel === undefined) {
             message.channel = this.channelName;
         }
 
+        return this.sendMessageInternal(message);
+    }
+
+    /**
+     * Internal method to send a message to the target window or WebKit
+     * Used by both sendMessage and postMessage
+     * @param message The message to send
+     */
+    private async sendMessageInternal(message: TMessage | RpcRequest): Promise<void> {
         // Try WebKit handler first if available
         if (this.webKitHandler) {
             try {
@@ -60,6 +121,19 @@ export class RpcClient extends CoreRpcClient {
         } else {
             return Promise.reject(new Error('No valid message target available'));
         }
+    }
+
+    /**
+     * Send an RPC request message
+     * @param message The RPC request to send
+     */
+    protected async postMessage(message: RpcRequest): Promise<void> {
+        // Set channel if not already set
+        if (message.channel === undefined) {
+            message.channel = this.channelName;
+        }
+
+        return this.sendMessageInternal(message);
     }
 
     /**

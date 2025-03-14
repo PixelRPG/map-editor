@@ -14,64 +14,39 @@ GJS implementation of the messaging API for communication between GJS and WebVie
 
 ## Usage
 
-### Basic MessageChannel
+### MessageChannel is Deprecated
 
-```typescript
-import { MessageChannel } from '@pixelrpg/message-channel-gjs';
-import WebKit from '@girs/webkit-6.0';
+The MessageChannel class is deprecated. Please use the RpcServer/RpcClient pattern instead for better communication with WebViews.
 
-// Create a WebKit WebView
-const webView = new WebKit.WebView();
-
-// Create a message channel with a channel name and the WebView instance
-const messages = new MessageChannel('my-channel', webView);
-
-// Use standard DOM event handler pattern
-messages.onmessage = (event) => {
-  console.log('Received raw message event:', event);
-};
-
-// Send a message using standard postMessage method
-messages.postMessage({ 
-  type: 'login',
-  username: 'user', 
-  timestamp: new Date() 
-});
-```
-
-### RPC Server with Direct Reply Support
+### RPC Server
 
 ```typescript
 import { RpcServer } from '@pixelrpg/message-channel-gjs';
 import WebKit from '@girs/webkit-6.0';
 
-// Create a WebKit WebView
+// Create an RPC server with a channel name and WebView
 const webView = new WebKit.WebView();
+const rpcServer = new RpcServer('my-channel', webView);
 
-// Create an RPC server
-const server = new RpcServer('rpc-channel', webView);
-
-// Register methods that can be called by clients in the WebView
-server.registerMethod('getMapData', async (params) => {
-  const mapId = params as string;
-  // Load map data from file system or database
-  return {
-    id: mapId,
-    name: 'Forest Level',
-    tiles: [/* ... */],
-    entities: [/* ... */]
-  };
-});
-
-server.registerMethod('saveMapData', async (params) => {
-  const mapData = params as any;
-  // Save map data to file system or database
-  console.log('Saving map data:', mapData);
+// Register methods that can be called from the client
+rpcServer.registerMethod('saveData', async (params) => {
+  const { filename, data } = params;
+  await saveToFile(filename, data);
   return { success: true };
 });
 
-// You can also unregister methods when they're no longer needed
-// server.unregisterMethod('saveMapData');
+rpcServer.registerMethod('getData', async (params) => {
+  const { id } = params;
+  const data = await loadFromDatabase(id);
+  return data;
+});
+
+// For backward compatibility with MessageChannel pattern, 
+// you can send events using sendMessage
+rpcServer.sendMessage({
+  type: 'userEvent',
+  data: { id: 123, action: 'login' }
+});
 ```
 
 ## Implementation Details

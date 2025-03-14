@@ -8,16 +8,3 @@ export interface WebKitMessageHandler {
      */
     postMessage(message: any): void;
 }
-
-/**
- * Global WebKit interface available in WebView contexts
- */
-declare global {
-    interface Window {
-        webkit?: {
-            messageHandlers: {
-                [key: string]: WebKitMessageHandler;
-            };
-        };
-    }
-}

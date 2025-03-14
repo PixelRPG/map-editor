@@ -124,12 +124,15 @@ export class Engine extends Adw.Bin implements EngineInterface {
         }
 
         try {
-            // Send a message to the WebView to load the project
-            this._webView.messageChannel?.postMessage({
-                messageType: EngineMessageType.LOAD_PROJECT,
-                payload: { projectPath, options }
+            // Send an RPC request to load the project
+            await this._webView.rpcServer?.sendRequest('loadProject', {
+                projectPath,
+                options
             });
+
+            console.log('[Engine] Project load request sent:', projectPath);
         } catch (error) {
+            console.error('[Engine] Failed to load project:', error);
             throw createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
         }
     }
@@ -147,12 +150,14 @@ export class Engine extends Adw.Bin implements EngineInterface {
         }
 
         try {
-            // Send a message to the WebView to load the map
-            this._webView.messageChannel?.postMessage({
-                messageType: EngineMessageType.LOAD_MAP,
-                payload: { mapId }
+            // Send an RPC request to load the map
+            await this._webView.rpcServer?.sendRequest('loadMap', {
+                mapId
             });
+
+            console.log('[Engine] Map load request sent:', mapId);
         } catch (error) {
+            console.error('[Engine] Failed to load map:', error);
             throw createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
         }
     }
@@ -166,14 +171,15 @@ export class Engine extends Adw.Bin implements EngineInterface {
         }
 
         try {
-            // Send a command to the WebView to start the engine
-            this._webView.messageChannel?.postMessage({
-                messageType: EngineMessageType.COMMAND,
-                payload: { command: EngineCommandType.START }
+            // Send an RPC request to start the engine
+            await this._webView.rpcServer?.sendRequest('engineCommand', {
+                command: EngineCommandType.START
             });
 
+            console.log('[Engine] Start command sent');
             this.setStatus(EngineStatus.RUNNING);
         } catch (error) {
+            console.error('[Engine] Failed to start engine:', error);
             throw createRuntimeError('Failed to start engine', error instanceof Error ? error : undefined);
         }
     }
@@ -187,12 +193,14 @@ export class Engine extends Adw.Bin implements EngineInterface {
         }
 
         try {
-            // Send a command to the WebView to stop the engine
-            this._webView.messageChannel?.postMessage({
-                messageType: EngineMessageType.COMMAND,
-                payload: { command: EngineCommandType.STOP }
+            // Send an RPC request to stop the engine
+            await this._webView.rpcServer?.sendRequest('engineCommand', {
+                command: EngineCommandType.STOP
             });
+
+            console.log('[Engine] Stop command sent');
         } catch (error) {
+            console.error('[Engine] Failed to stop engine:', error);
             throw createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
         }
     }
@@ -203,42 +211,75 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * @param payload Payload of the message
      */
     public postMessage<P = any>(messageType: EngineMessageType, payload: P): void {
-        this._webView.messageChannel?.postMessage({
-            messageType,
-            payload
-        });
+        try {
+            // Map engine message types to RPC methods
+            let method: string;
+            switch (messageType) {
+                case EngineMessageType.ENGINE_EVENT:
+                    method = 'handleEngineEvent';
+                    break;
+                case EngineMessageType.INPUT_EVENT:
+                    method = 'handleInputEvent';
+                    break;
+                case EngineMessageType.COMMAND:
+                    method = 'engineCommand';
+                    break;
+                case EngineMessageType.LOAD_PROJECT:
+                    method = 'loadProject';
+                    break;
+                case EngineMessageType.LOAD_MAP:
+                    method = 'loadMap';
+                    break;
+                default:
+                    method = 'handleMessage';
+            }
+
+            this._webView.rpcServer?.sendRequest(method, payload)
+                .catch(error => console.error(`[Engine] Error sending message (${method}):`, error));
+
+            console.log(`[Engine] Sent message: ${method}`, payload);
+        } catch (error) {
+            console.error('[Engine] Failed to send message:', error);
+        }
     }
 
     /**
      * Set up event listeners for the WebView
      */
     private setupEventListeners(): void {
-
-        if (!this._webView.messageChannel) {
-            throw new Error('Messages service is not initialized');
+        if (!this._webView.rpcServer) {
+            throw new Error('RPC server is not initialized');
         }
 
-        // Listen for text messages from the WebView
-        this._webView.messageChannel.onmessage = (event) => {
-            if (!isEngineMessage(event.data)) {
-                console.error('[Engine] Unhandled message type (not an engine message):', event.data);
-                return;
+        // Register a handler for engine messages
+        this._webView.rpcServer.events.on((message) => {
+            try {
+                // Check if this is a valid engine message
+                if (isEngineMessage(message)) {
+                    console.log('[Engine] Engine message received:', message);
+
+                    // Emit a signal that can be caught by the application
+                    this.emit('message-received', JSON.stringify(message));
+
+                    // Handle specific message types
+                    if (message.messageType === EngineMessageType.ENGINE_EVENT) {
+                        this.onEngineEventMessage(message.payload);
+                    }
+                    // Add other message type handlers as needed
+                }
+            } catch (error) {
+                console.error('[Engine] Error handling message:', error);
             }
+        });
 
-            console.log('[Engine] Engine message received:', event.data);
+        // Register RPC methods to handle events from the WebView
+        this._webView.rpcServer.registerMethod('notifyEngineEvent', async (event) => {
+            console.log('[Engine] Engine event received from WebView:', event);
+            this.onEngineEventMessage(event as EngineEvent);
+            return { success: true };
+        });
 
-            const { messageType, payload } = event.data;
-
-            // Emit a signal that can be caught by the application
-            this.emit('message-received', JSON.stringify(event.data));
-
-            switch (messageType) {
-                case EngineMessageType.ENGINE_EVENT:
-                    this.onEngineEventMessage(payload);
-                    break;
-                // Add other message type handlers as needed
-            }
-        };
+        console.log('[Engine] Event listeners set up');
     }
 
     /**
@@ -247,32 +288,36 @@ export class Engine extends Adw.Bin implements EngineInterface {
      */
     private onEngineEventMessage(event: EngineEvent): void {
         try {
-            if (isEngineEventMessage(event)) {
-                const engineEventType = getEventType(event);
-                const engineEventData = getEventData(event);
+            if (typeof event === 'object' && 'type' in event) {
+                const engineEventType = event.type;
+                const engineEventData = event.data;
 
-                if (engineEventData && typeof engineEventData === 'object' && 'type' in engineEventData) {
-                    const engineEvent: EngineEvent = {
-                        type: engineEventType,
-                        data: engineEventData
-                    };
+                // Update the engine status if needed
+                if (engineEventType === EngineEventType.STATUS_CHANGED) {
+                    this.status = engineEventData as EngineStatus;
+                    console.info('[Engine] Engine status changed to:', this.status);
+                }
 
-                    // Update the engine status if needed
-                    if (isStatusChangedEvent(engineEvent)) {
-                        this.status = engineEvent.data as EngineStatus;
-                        console.info('[Engine] Engine status changed to:', this.status);
+                // Emit a signal that can be caught by the application
+                this.emit('message-received', JSON.stringify({
+                    type: engineEventType,
+                    data: engineEventData
+                }));
+
+                // Dispatch the event to registered handlers
+                const handlers = this.engineEventHandlers.get(engineEventType);
+                if (handlers) {
+                    for (const handler of handlers) {
+                        try {
+                            handler(event);
+                        } catch (handlerError) {
+                            console.error('[Engine] Error in event handler:', handlerError);
+                        }
                     }
-
-                    // Dispatch the event
-                    // if (Object.values(EngineEventType).includes(engineEvent.type)) {
-                    //     this.events.dispatch(engineEvent.type, engineEvent);
-                    // } else {
-                    //     console.warn(`[Engine] Unknown engine event type: ${engineEvent.type}`);
-                    // }
                 }
             }
         } catch (error) {
-            console.error('Error handling message:', formatError(error instanceof Error ? error : new Error(String(error))));
+            console.error('[Engine] Error handling message:', formatError(error instanceof Error ? error : new Error(String(error))));
         }
     }
 
@@ -294,7 +339,26 @@ export class Engine extends Adw.Bin implements EngineInterface {
             data: status
         };
 
-        // this.events.dispatch(EngineEventType.STATUS_CHANGED, statusEvent);
+        // Dispatch to local handlers
+        const handlers = this.engineEventHandlers.get(EngineEventType.STATUS_CHANGED);
+        if (handlers) {
+            for (const handler of handlers) {
+                try {
+                    handler(statusEvent);
+                } catch (error) {
+                    console.error('[Engine] Error in status event handler:', error);
+                }
+            }
+        }
+
+        // Also send to the WebView using RPC
+        try {
+            this._webView.rpcServer?.sendRequest('notifyStatusChange', {
+                status: status
+            }).catch(error => console.error('[Engine] Error notifying status change:', error));
+        } catch (error) {
+            console.error('[Engine] Failed to send status change:', error);
+        }
     }
 
     /**

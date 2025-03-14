@@ -1,21 +1,24 @@
 import { type MessageEvent, EventDispatcher } from "./polyfills/index.ts";
-import { RpcRequest, RpcResponse, RpcMessageType } from "./types/message";
+import { RpcRequest, BaseMessage, RpcMessageType, HandlerFunction } from "./types/index";
 import { createRpcRequest, isRpcResponse } from "./utils/message";
+
 
 /**
  * Type for pending request objects
+ * TODO: Move to ./types/pending-request.ts
  */
 interface PendingRequest<T = any> {
     resolve: (value: T | PromiseLike<T>) => void;
     reject: (reason: Error) => void;
-    timeoutId: number;
+    timeoutId: ReturnType<typeof setTimeout>;
 }
 
 /**
  * Base class for RPC clients
  * Provides the core functionality for sending requests and handling responses
+ * @template TMessage Type of messages that can be sent via sendMessage
  */
-export abstract class RpcClient {
+export abstract class RpcClient<TMessage extends BaseMessage = BaseMessage> {
     /**
      * Map of pending requests by their ID
      */
@@ -43,23 +46,48 @@ export abstract class RpcClient {
     constructor(protected readonly channelName: string) { }
 
     /**
+     * Register a handler function that can be called by the server
+     * This is an abstract method that should be implemented by platform-specific subclasses
+     * @param methodName Name of the method to register
+     * @param handler Function to handle the method call
+     */
+    public abstract registerHandler<TParams = unknown, TResult = unknown>(
+        methodName: string,
+        handler: HandlerFunction<TParams, TResult>
+    ): void;
+
+    /**
+     * Unregister a previously registered handler
+     * This is an abstract method that should be implemented by platform-specific subclasses
+     * @param methodName Name of the method to unregister
+     */
+    public abstract unregisterHandler(methodName: string): void;
+
+    /**
+     * Send a standard message (not an RPC request) to the target
+     * This is used for events and notifications where no response is expected
+     * @param message The message to send
+     */
+    public abstract sendMessage(message: TMessage): Promise<void>;
+
+    /**
      * Send an RPC request and wait for the response
      * @param method Method name to call
      * @param params Optional parameters to pass
      * @param timeoutMs Timeout in milliseconds (defaults to 30000)
      */
-    public async sendRequest<T = unknown>(
+    public async sendRequest<TParams = unknown, TResult = unknown>(
         method: string,
-        params?: unknown,
+        params?: TParams,
         timeoutMs?: number
-    ): Promise<T> {
+    ): Promise<TResult> {
         const id = `${this.channelName}-${++this.messageCounter}`;
         const request = createRpcRequest(method, params, id, this.channelName);
 
         // Create a promise that will be resolved when we get a response
-        return new Promise<T>((resolve, reject) => {
+        return new Promise<TResult>((resolve, reject) => {
             // Set a timeout to reject the promise if no response is received
-            const timeoutId = window.setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 if (this.pendingRequests.has(id)) {
                     this.pendingRequests.delete(id);
                     reject(new Error(`Request timeout for method ${method}`));
@@ -68,14 +96,14 @@ export abstract class RpcClient {
 
             // Store the promise resolvers
             this.pendingRequests.set(id, {
-                resolve: resolve as (value: any) => void,
+                resolve,
                 reject,
                 timeoutId
             });
 
             // Send the request
             this.postMessage(request).catch(error => {
-                window.clearTimeout(timeoutId);
+                clearTimeout(timeoutId);
                 this.pendingRequests.delete(id);
                 reject(error);
             });
@@ -96,7 +124,7 @@ export abstract class RpcClient {
 
             if (pendingRequest) {
                 // Clear the timeout and remove from pending requests
-                window.clearTimeout(pendingRequest.timeoutId);
+                clearTimeout(pendingRequest.timeoutId);
                 this.pendingRequests.delete(message.id);
 
                 // Resolve or reject the promise based on the response
@@ -124,7 +152,7 @@ export abstract class RpcClient {
     public destroy(): void {
         // Clear all timeouts and reject pending requests
         for (const [id, { reject, timeoutId }] of this.pendingRequests.entries()) {
-            window.clearTimeout(timeoutId);
+            clearTimeout(timeoutId);
             reject(new Error('Client destroyed'));
             this.pendingRequests.delete(id);
         }

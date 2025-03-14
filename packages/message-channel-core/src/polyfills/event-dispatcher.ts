@@ -15,6 +15,14 @@ export class EventDispatcher<T> {
   }
 
   /**
+   * Alias for addEventListener, with a more concise API
+   * @param listener Function to call when event is dispatched
+   */
+  public on(listener: EventListener<T>): void {
+    this.addEventListener(listener);
+  }
+
+  /**
    * Remove a previously registered listener
    * @param listener Listener to remove
    */
@@ -23,6 +31,14 @@ export class EventDispatcher<T> {
     if (index !== -1) {
       this.listeners.splice(index, 1);
     }
+  }
+
+  /**
+   * Alias for removeEventListener, with a more concise API
+   * @param listener Listener to remove
+   */
+  public off(listener: EventListener<T>): void {
+    this.removeEventListener(listener);
   }
 
   /**

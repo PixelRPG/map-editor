@@ -4,14 +4,15 @@ import GObject from '@girs/gobject-2.0'
 import WebKit from '@girs/webkit-6.0'
 import Gio from '@girs/gio-2.0'
 
-import { MessageChannel } from '@pixelrpg/message-channel-gjs'
+import { RpcServer } from '@pixelrpg/message-channel-gjs'
 import mime from 'mime'
 
 import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
 import {
     engineInputEventsService,
-    EngineMessageType
+    EngineMessageType,
+    EngineMessage
 } from '@pixelrpg/engine-core'
 
 import { ResourceManager } from '../services/resource-manager.ts'
@@ -33,13 +34,13 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _messageChannel?: MessageChannel
+    protected _rpcServer?: RpcServer<EngineMessage>
 
     /**
-     * Get the messages service for communication with the WebView
+     * Get the RPC server for communication with the WebView
      */
-    get messageChannel() {
-        return this._messageChannel
+    get rpcServer() {
+        return this._rpcServer
     }
 
     /**
@@ -115,7 +116,7 @@ export class WebView extends WebKit.WebView {
 
         this.connect('realize', () => {
             console.log('WebView realized')
-            this._messageChannel = this.initMessagesService()
+            this._rpcServer = this.initRpcServer()
 
             this.initInputController()
             this.initPageLoadListener()
@@ -125,12 +126,21 @@ export class WebView extends WebKit.WebView {
     }
 
     /**
-     * Initialize the messages service for communication with the WebView
+     * Initialize the RPC server for communication with the WebView
      */
-    protected initMessagesService() {
-        console.log('Initializing MessagesService, webView:', this)
-        const messagesService = new MessageChannel(INTERNAL_PROTOCOL, this)
-        return messagesService
+    protected initRpcServer() {
+        console.log('Initializing RpcServer, webView:', this)
+        const rpcServer = new RpcServer<EngineMessage>(INTERNAL_PROTOCOL, this)
+
+        // Register RPC methods
+        rpcServer.registerMethod('handleInputEvent', async (params) => {
+            console.debug('Handling input event:', params);
+            // Process the input event
+            // The implementation would depend on how input events are handled
+            return { success: true };
+        });
+
+        return rpcServer
     }
 
     /**
@@ -184,8 +194,8 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
-        if (!this._messageChannel) {
-            console.error('Messages service is not initialized')
+        if (!this._rpcServer) {
+            console.error('RPC server is not initialized')
             return
         }
 
@@ -193,10 +203,12 @@ export class WebView extends WebKit.WebView {
         x = Math.round(x * 10) / 10
         y = Math.round(y * 10) / 10
 
-        // Send mouse move event
-        this._messageChannel.postMessage({
+        // Send mouse move event using RPC request instead of direct message
+        this._rpcServer.sendRequest('handleInputEvent', {
             messageType: EngineMessageType.INPUT_EVENT,
             payload: engineInputEventsService.mouseMove({ x, y })
+        }).catch(error => {
+            console.error('Error sending mouse move event:', error);
         });
     }
 
@@ -205,17 +217,19 @@ export class WebView extends WebKit.WebView {
      * @param _source The event source
      */
     protected onMouseLeave(_source: EventControllerInput) {
-        if (!this._messageChannel) {
-            console.error('Messages service is not initialized')
+        if (!this._rpcServer) {
+            console.error('RPC server is not initialized')
             return
         }
 
         console.log('Mouse has left the WebView');
 
-        // Send mouse leave event with no position data
-        this._messageChannel.postMessage({
+        // Send mouse leave event with no position data using RPC request
+        this._rpcServer.sendRequest('handleInputEvent', {
             messageType: EngineMessageType.INPUT_EVENT,
             payload: engineInputEventsService.mouseLeave()
+        }).catch(error => {
+            console.error('Error sending mouse leave event:', error);
         });
     }
 
@@ -226,17 +240,19 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
-        if (!this._messageChannel) {
-            console.error('Messages service is not initialized')
+        if (!this._rpcServer) {
+            console.error('RPC server is not initialized')
             return
         }
 
         console.log('Mouse has entered the WebView');
 
-        // Send mouse enter event
-        this._messageChannel.postMessage({
+        // Send mouse enter event using RPC request
+        this._rpcServer.sendRequest('handleInputEvent', {
             messageType: EngineMessageType.INPUT_EVENT,
             payload: engineInputEventsService.mouseEnter({ x, y })
+        }).catch(error => {
+            console.error('Error sending mouse enter event:', error);
         });
     }
 
