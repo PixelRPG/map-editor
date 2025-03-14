@@ -74,58 +74,59 @@ export class RpcEndpoint extends CoreRpcEndpoint {
             }
         );
 
+        // TODO: Implement direct reply support
+
         // 2. Register specialized handler for RPC requests that need direct replies
-        userContentManager.register_script_message_handler_with_reply(this.channelName, null);
+        // userContentManager.register_script_message_handler_with_reply(this.channelName, null);
 
-        // Connect to the script-message-with-reply-received signal for requests
-        userContentManager.connect(
-            'script-message-with-reply-received',
-            (_userContentManager, jsValue: JavaScriptCore.Value, reply: WebKit.ScriptMessageReply) => {
-                throw new Error('Is this implemented?');
-                try {
-                    // Parse the message from JSON
-                    const data = jsValue.to_json(0);
-                    const message = JSON.parse(data);
-                    const jsContext = jsValue.get_context();
+        // // Connect to the script-message-with-reply-received signal for requests
+        // userContentManager.connect(
+        //     'script-message-with-reply-received',
+        //     (_userContentManager, jsValue: JavaScriptCore.Value, reply: WebKit.ScriptMessageReply) => {
+        //         try {
+        //             // Parse the message from JSON
+        //             const data = jsValue.to_json(0);
+        //             const message = JSON.parse(data);
+        //             const jsContext = jsValue.get_context();
 
-                    // Check if this is a valid RPC request
-                    if (!isRpcRequest(message) || (message.channel && message.channel !== this.channelName)) {
-                        console.error('Invalid RPC request format', message);
-                        // Not a valid request or not for us
-                        reply.return_error_message('Invalid RPC request format');
-                        return false;
-                    }
+        //             // Check if this is a valid RPC request
+        //             if (!isRpcRequest(message) || (message.channel && message.channel !== this.channelName)) {
+        //                 console.error('Invalid RPC request format', message);
+        //                 // Not a valid request or not for us
+        //                 reply.return_error_message('Invalid RPC request format');
+        //                 return false;
+        //             }
 
-                    // Create a MessageEvent to pass to the handler
-                    const event = new MessageEvent('message', {
-                        data: message,
-                        origin: 'webkit-webview',
-                        source: null
-                    });
+        //             // Create a MessageEvent to pass to the handler
+        //             const event = new MessageEvent('message', {
+        //                 data: message,
+        //                 origin: 'webkit-webview',
+        //                 source: null
+        //             });
 
-                    // Create a direct reply function that uses WebKit's reply mechanism
-                    const directReply = (response: RpcResponse) => {
-                        try {
-                            const jsValue = JavaScriptCore.Value.new_from_json(jsContext, JSON.stringify(response));
-                            reply.return_value(jsValue);
-                        } catch (error) {
-                            console.error('Error sending direct reply:', error);
-                            reply.return_error_message(`Error sending reply: ${error}`);
-                        }
-                    };
+        //             // Create a direct reply function that uses WebKit's reply mechanism
+        //             const directReply = (response: RpcResponse) => {
+        //                 try {
+        //                     const jsValue = JavaScriptCore.Value.new_from_json(jsContext, JSON.stringify(response));
+        //                     reply.return_value(jsValue);
+        //                 } catch (error) {
+        //                     console.error('Error sending direct reply:', error);
+        //                     reply.return_error_message(`Error sending reply: ${error}`);
+        //                 }
+        //             };
 
-                    // Handle the message with direct reply support
-                    this.handleRpcMessage(event, directReply);
+        //             // Handle the message with direct reply support
+        //             this.handleRpcMessage(event, directReply);
 
-                    // Return true to indicate we're handling the request asynchronously
-                    return true;
-                } catch (error) {
-                    console.error('Error processing RPC message:', error);
-                    reply.return_error_message(`Internal error: ${error}`);
-                    return false;
-                }
-            }
-        );
+        //             // Return true to indicate we're handling the request asynchronously
+        //             return true;
+        //         } catch (error) {
+        //             console.error('Error processing RPC message:', error);
+        //             reply.return_error_message(`Internal error: ${error}`);
+        //             return false;
+        //         }
+        //     }
+        // );
     }
 
     /**

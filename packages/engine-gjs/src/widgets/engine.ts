@@ -112,7 +112,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to load the project
-            await this._webView.rpcServer?.sendRequest('loadProject', {
+            await this._webView.rpc?.sendRequest('loadProject', {
                 projectPath,
                 options
             });
@@ -138,7 +138,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to load the map
-            await this._webView.rpcServer?.sendRequest('loadMap', {
+            await this._webView.rpc?.sendRequest('loadMap', {
                 mapId
             });
 
@@ -159,7 +159,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to start the engine
-            await this._webView.rpcServer?.sendRequest('engineCommand', {
+            await this._webView.rpc?.sendRequest('engineCommand', {
                 command: EngineCommandType.START
             });
 
@@ -181,7 +181,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to stop the engine
-            await this._webView.rpcServer?.sendRequest('engineCommand', {
+            await this._webView.rpc?.sendRequest('engineCommand', {
                 command: EngineCommandType.STOP
             });
 
@@ -196,12 +196,12 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * Set up event listeners for the WebView
      */
     private setupEventListeners(): void {
-        if (!this._webView.rpcServer) {
+        if (!this._webView.rpc) {
             throw new Error('RPC server is not initialized');
         }
 
         // Register handler for engine events from the WebView using RPC
-        this._webView.rpcServer.registerHandler('notifyEngineEvent', async (event) => {
+        this._webView.rpc.registerHandler('notifyEngineEvent', async (event) => {
             console.log('[Engine] Engine event received from WebView:', event);
             // Handle the event with proper typing
             if (event && typeof event === 'object' && 'type' in event) {
@@ -285,7 +285,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         // Also send to the WebView using RPC
         try {
-            this._webView.rpcServer?.sendRequest('notifyStatusChange', {
+            this._webView.rpc?.sendRequest('notifyStatusChange', {
                 status: status
             }).catch(error => console.error('[Engine] Error notifying status change:', error));
         } catch (error) {

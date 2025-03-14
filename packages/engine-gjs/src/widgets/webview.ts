@@ -32,13 +32,13 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _rpcServer?: RpcEndpoint
+    protected _rpc?: RpcEndpoint
 
     /**
      * Get the RPC server for communication with the WebView
      */
-    get rpcServer() {
-        return this._rpcServer
+    get rpc() {
+        return this._rpc
     }
 
     /**
@@ -114,7 +114,7 @@ export class WebView extends WebKit.WebView {
 
         this.connect('realize', () => {
             console.log('WebView realized')
-            this._rpcServer = this.initRpcServer()
+            this._rpc = this.initRpcServer()
 
             this.initInputController()
             this.initPageLoadListener()
@@ -128,17 +128,17 @@ export class WebView extends WebKit.WebView {
      */
     protected initRpcServer() {
         console.log('Initializing RpcServer, webView:', this)
-        const rpcServer = new RpcEndpoint(INTERNAL_PROTOCOL, this)
+        const rpc = new RpcEndpoint(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
-        rpcServer.registerHandler('handleInputEvent', async (params) => {
+        rpc.registerHandler('handleInputEvent', async (params) => {
             console.log('Handling input event:', params);
             // Process the input event
             // The implementation would depend on how input events are handled
             return { success: true };
         });
 
-        return rpcServer
+        return rpc
     }
 
     /**
@@ -192,7 +192,7 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
-        if (!this._rpcServer) {
+        if (!this._rpc) {
             console.error('RPC server is not initialized');
             return;
         }
@@ -204,7 +204,7 @@ export class WebView extends WebKit.WebView {
         try {
             // Send mouse move event using notification (no response expected)
             // This prevents timeouts for frequent events
-            this._rpcServer.sendNotification(
+            this._rpc.sendNotification(
                 'handleInputEvent',
                 engineInputEventsService.mouseMove({ x, y })
             ).catch(error => {
@@ -220,7 +220,7 @@ export class WebView extends WebKit.WebView {
      * @param _source The event source
      */
     protected onMouseLeave(_source: EventControllerInput) {
-        if (!this._rpcServer) {
+        if (!this._rpc) {
             console.error('RPC server is not initialized');
             return;
         }
@@ -228,7 +228,7 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has left the WebView');
 
         // Send mouse leave event with no position data using notification (fire and forget)
-        this._rpcServer.sendNotification(
+        this._rpc.sendNotification(
             'handleInputEvent',
             engineInputEventsService.mouseLeave()
         ).catch(error => {
@@ -243,7 +243,7 @@ export class WebView extends WebKit.WebView {
      * @param y The y coordinate
      */
     protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
-        if (!this._rpcServer) {
+        if (!this._rpc) {
             console.error('RPC server is not initialized');
             return;
         }
@@ -251,7 +251,7 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has entered the WebView');
 
         // Send mouse enter event using notification (fire and forget)
-        this._rpcServer.sendNotification(
+        this._rpc.sendNotification(
             'handleInputEvent',
             engineInputEventsService.mouseEnter({ x, y })
         ).catch(error => {

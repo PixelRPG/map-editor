@@ -1,7 +1,6 @@
 import {
     InputEvent,
     InputEventType,
-    InputEventDataMap
 } from '../types/index';
 import { isNonNullObject, hasStringProperty } from './validation';
 

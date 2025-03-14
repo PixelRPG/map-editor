@@ -46,7 +46,7 @@ export class Engine implements EngineInterface {
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
-    private rpcClient = new RpcEndpoint(this.messageHandlerName)
+    private rpc = new RpcEndpoint(this.messageHandlerName)
 
 
     /**
@@ -67,7 +67,7 @@ export class Engine implements EngineInterface {
         this.logger.info('Registering RPC handlers');
 
         // Register loadProject handler
-        this.rpcClient.registerHandler('loadProject', async (params) => {
+        this.rpc.registerHandler('loadProject', async (params) => {
             this.logger.info('RPC call: loadProject', params);
             try {
                 // Type guard for project load parameters
@@ -89,7 +89,7 @@ export class Engine implements EngineInterface {
         });
 
         // Register loadMap handler
-        this.rpcClient.registerHandler('loadMap', async (params) => {
+        this.rpc.registerHandler('loadMap', async (params) => {
             this.logger.info('RPC call: loadMap', params);
             try {
                 // Type guard for map load parameters
@@ -111,7 +111,7 @@ export class Engine implements EngineInterface {
         });
 
         // Register engineCommand handler
-        this.rpcClient.registerHandler('engineCommand', async (params) => {
+        this.rpc.registerHandler('engineCommand', async (params) => {
             this.logger.info('RPC call: engineCommand', params);
             try {
                 // Type guard for command parameters
@@ -143,7 +143,7 @@ export class Engine implements EngineInterface {
         });
 
         // Register notifyStatusChange handler
-        this.rpcClient.registerHandler('notifyStatusChange', (params) => {
+        this.rpc.registerHandler('notifyStatusChange', (params) => {
             this.logger.info('RPC call: notifyStatusChange', params);
             try {
                 // Type guard for status parameters
@@ -353,7 +353,7 @@ export class Engine implements EngineInterface {
             // this.events.dispatch(event.type, event)
 
             // Send the event to GJS using RPC
-            this.rpcClient.sendRequest('notifyEngineEvent', event)
+            this.rpc.sendRequest('notifyEngineEvent', event)
                 .catch(error => {
                     this.logger.error('Error notifying status change:', error);
                 });

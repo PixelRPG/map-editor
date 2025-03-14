@@ -25,7 +25,7 @@ export class EditorInputSystem extends System {
 
     public systemType = SystemType.Update
 
-    private rpcClient = new RpcEndpoint('pixelrpg')
+    private rpc = new RpcEndpoint('pixelrpg')
 
     private engine?: Engine;
 
@@ -129,7 +129,7 @@ export class EditorInputSystem extends System {
             console.debug('[EditorInputSystem] Setting up RPC client for GJS input events');
 
             // Register handler for input events from GJS
-            this.rpcClient.registerHandler('handleInputEvent', (params) => {
+            this.rpc.registerHandler('handleInputEvent', (params) => {
                 // Check if it's a valid input event
                 if (isValidInputEvent(params)) {
                     // We can directly use the InputEvent as is, since it matches our type
@@ -152,7 +152,7 @@ export class EditorInputSystem extends System {
             this.onWheel(wheelEvent.deltaY, { x, y });
 
             // Send wheel event to GJS
-            this.rpcClient.sendRequest('handleInputEvent', {
+            this.rpc.sendRequest('handleInputEvent', {
                 messageType: EngineMessageType.INPUT_EVENT,
                 payload: {
                     type: InputEventType.WHEEL,
@@ -171,7 +171,7 @@ export class EditorInputSystem extends System {
      */
     public onRemove(): void {
         // Cleanup the RPC client
-        this.rpcClient.destroy();
+        this.rpc.destroy();
     }
 
     /**
