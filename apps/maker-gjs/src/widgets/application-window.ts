@@ -19,7 +19,6 @@ import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
 
 import Template from './application-window.ui?raw'
-import { EngineMessage } from '@pixelrpg/engine-core'
 
 // Ensure widgets are loaded and can be used in the XML
 GObject.type_ensure(WebView.$gtype)
@@ -46,7 +45,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   constructor(application: Adw.Application) {
     super({ application })
-    this.onEngineMessage = this.onEngineMessage.bind(this)
     this.onCreateProject = this.onCreateProject.bind(this)
     this.onOpenProject = this.onOpenProject.bind(this)
 
@@ -60,10 +58,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       throw new Error('GJS engine not found')
     }
 
-    this._projectView?.engine?.connect('message-received', (_source, message) => {
-      this.onEngineMessage(JSON.parse(message))
-    })
-
     this.connect('realize', () => {
       this.initialize()
     })
@@ -73,9 +67,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     await this._projectView?.engine?.initialize()
   }
 
-  protected onEngineMessage(message: EngineMessage) {
-    // console.log('[ApplicationWindow] Message from Engine:', message)
-  }
 
   protected onCreateProject() {
     // Show dialog to create a new project

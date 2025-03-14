@@ -3,8 +3,6 @@ import {
     InputEventType,
     EngineMessageType,
     InputEvent,
-    isInputEventMessage,
-    isEngineMessage,
     isMouseMoveEvent,
     isMouseDownEvent,
     isMouseUpEvent,
@@ -12,7 +10,8 @@ import {
     isMouseEnterEvent,
     isWheelEvent,
     isKeyDownEvent,
-    isKeyUpEvent
+    isKeyUpEvent,
+    isValidInputEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
 import { RpcEndpoint } from "@pixelrpg/message-channel-web";
@@ -131,27 +130,15 @@ export class EditorInputSystem extends System {
 
             // Register handler for input events from GJS
             this.rpcClient.registerHandler('handleInputEvent', (params) => {
-                console.debug('[EditorInputSystem] Input event received via RPC:', params);
-
-                // Verwende die vorhandenen Type Guards anstatt manueller Validierung
-                if (isEngineMessage(params) && isInputEventMessage(params)) {
-                    // Wir haben eine valide Engine-Message vom Typ INPUT_EVENT
-                    const inputEvent = params.payload;
-                    console.debug('[EditorInputSystem] Valid input event:', inputEvent);
-
-                    // Verarbeite das Event - Type Guards werden innerhalb handleInputEvent angewendet
-                    this.handleInputEvent(inputEvent);
+                // Check if it's a valid input event
+                if (isValidInputEvent(params)) {
+                    // We can directly use the InputEvent as is, since it matches our type
+                    this.handleInputEvent(params);
                     return { success: true };
                 } else {
-                    // Detailliertere Fehlerdiagnose mit vorhandenen Guards
-                    if (!isEngineMessage(params)) {
-                        console.warn('[EditorInputSystem] Not a valid engine message:', params);
-                    } else if (!isInputEventMessage(params)) {
-                        console.warn('[EditorInputSystem] Not an input event message:', params);
-                    }
+                    console.warn('[EditorInputSystem] Not a valid input event:', params);
+                    return { success: false, error: 'Invalid input event format' };
                 }
-
-                return { success: false, error: 'Invalid input event format' };
             });
         }
 
@@ -195,7 +182,7 @@ export class EditorInputSystem extends System {
         // First use type guards to determine the event type for better type safety
         if (isMouseMoveEvent(event)) {
             // Handle mouse move with proper typing
-            console.log('Mouse move event from GJS:', event.data);
+            // console.log('Mouse move event from GJS:', event.data);
             // If in webkit view, manually update the pointer position
             if (settings.isWebKitView && this.engine) {
                 // Simulate a pointer move in Excalibur

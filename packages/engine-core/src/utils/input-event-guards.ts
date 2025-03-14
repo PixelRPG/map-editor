@@ -1,6 +1,7 @@
 import {
     InputEvent,
-    InputEventType
+    InputEventType,
+    InputEventDataMap
 } from '../types/index';
 import { isNonNullObject, hasStringProperty } from './validation';
 
@@ -12,6 +13,22 @@ export const isInputEventOfType = <T extends InputEventType>(
     type: T
 ): event is InputEvent<T> => {
     return event.type === type;
+};
+
+/**
+ * Check if an object is a valid input event
+ * This is used for validating events received via RPC
+ */
+export const isValidInputEvent = (obj: unknown): obj is InputEvent => {
+    if (obj === null || typeof obj !== 'object' || !('type' in obj) || !('data' in obj)) {
+        return false;
+    }
+
+    const event = obj as InputEvent;
+
+    // Check if the type is a valid InputEventType 
+    // Since InputEventType is a string enum, we can check if the value exists
+    return Object.values(InputEventType).includes(event.type as InputEventType);
 };
 
 /**

@@ -11,8 +11,6 @@ import Template from './webview.ui?raw'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
 import {
     engineInputEventsService,
-    EngineMessageType,
-    EngineMessage
 } from '@pixelrpg/engine-core'
 
 import { ResourceManager } from '../services/resource-manager.ts'
@@ -34,7 +32,7 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _rpcServer?: RpcEndpoint<EngineMessage>
+    protected _rpcServer?: RpcEndpoint
 
     /**
      * Get the RPC server for communication with the WebView
@@ -130,7 +128,7 @@ export class WebView extends WebKit.WebView {
      */
     protected initRpcServer() {
         console.log('Initializing RpcServer, webView:', this)
-        const rpcServer = new RpcEndpoint<EngineMessage>(INTERNAL_PROTOCOL, this)
+        const rpcServer = new RpcEndpoint(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
         rpcServer.registerHandler('handleInputEvent', async (params) => {
@@ -195,21 +193,26 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
         if (!this._rpcServer) {
-            console.error('RPC server is not initialized')
-            return
+            console.error('RPC server is not initialized');
+            return;
         }
 
-        // Round to 10th
-        x = Math.round(x * 10) / 10
-        y = Math.round(y * 10) / 10
+        // Round to 10th for optimization
+        x = Math.round(x * 10) / 10;
+        y = Math.round(y * 10) / 10;
 
-        // Send mouse move event using RPC request instead of direct message
-        this._rpcServer.sendRequest('handleInputEvent', {
-            messageType: EngineMessageType.INPUT_EVENT,
-            payload: engineInputEventsService.mouseMove({ x, y })
-        }).catch(error => {
-            console.error('Error sending mouse move event:', error);
-        });
+        try {
+            // Send mouse move event using notification (no response expected)
+            // This prevents timeouts for frequent events
+            this._rpcServer.sendNotification(
+                'handleInputEvent',
+                engineInputEventsService.mouseMove({ x, y })
+            ).catch(error => {
+                console.error('Error sending mouse move event:', error);
+            });
+        } catch (error) {
+            console.error('Error creating mouse move event:', error);
+        }
     }
 
     /**
@@ -218,17 +221,17 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseLeave(_source: EventControllerInput) {
         if (!this._rpcServer) {
-            console.error('RPC server is not initialized')
-            return
+            console.error('RPC server is not initialized');
+            return;
         }
 
         console.log('Mouse has left the WebView');
 
-        // Send mouse leave event with no position data using RPC request
-        this._rpcServer.sendRequest('handleInputEvent', {
-            messageType: EngineMessageType.INPUT_EVENT,
-            payload: engineInputEventsService.mouseLeave()
-        }).catch(error => {
+        // Send mouse leave event with no position data using notification (fire and forget)
+        this._rpcServer.sendNotification(
+            'handleInputEvent',
+            engineInputEventsService.mouseLeave()
+        ).catch(error => {
             console.error('Error sending mouse leave event:', error);
         });
     }
@@ -241,17 +244,17 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
         if (!this._rpcServer) {
-            console.error('RPC server is not initialized')
-            return
+            console.error('RPC server is not initialized');
+            return;
         }
 
         console.log('Mouse has entered the WebView');
 
-        // Send mouse enter event using RPC request
-        this._rpcServer.sendRequest('handleInputEvent', {
-            messageType: EngineMessageType.INPUT_EVENT,
-            payload: engineInputEventsService.mouseEnter({ x, y })
-        }).catch(error => {
+        // Send mouse enter event using notification (fire and forget)
+        this._rpcServer.sendNotification(
+            'handleInputEvent',
+            engineInputEventsService.mouseEnter({ x, y })
+        ).catch(error => {
             console.error('Error sending mouse enter event:', error);
         });
     }

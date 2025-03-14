@@ -15,9 +15,9 @@ interface PendingRequest<T = any> {
 /**
  * Unified RPC endpoint class that combines server and client functionality
  * Provides core functionality for bidirectional RPC communication
- * @template TMessage Type of messages that can be sent via sendMessage
+ * @template TMessage Type of messages that can be sent via sendLegacyNotification
  */
-export abstract class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> {
+export abstract class RpcEndpoint {
     /**
      * Map of registered method handlers
      */
@@ -196,18 +196,31 @@ export abstract class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> {
     }
 
     /**
+     * Send an RPC notification (fire-and-forget) without waiting for a response
+     * @param method Method name to call
+     * @param params Optional parameters to pass
+     * @returns Promise that resolves when the notification is sent
+     */
+    public async sendNotification<TParams = unknown>(
+        method: string,
+        params?: TParams
+    ): Promise<void> {
+        // Create a unique ID for this notification
+        const id = `${this.channelName}-${++this.messageCounter}`;
+
+        // Create the request object but don't register for a response
+        const request = createRpcRequest(method, params, id, this.channelName);
+
+        // Send the notification without waiting for a response
+        await this.postMessage(request);
+    }
+
+    /**
      * Abstract method to send a message 
      * To be implemented by platform-specific subclasses
      * @param message The message to send
      */
     protected abstract postMessage(message: RpcRequest | RpcResponse): Promise<void>;
-
-    /**
-     * Send a standard message (not an RPC request/response) to the target
-     * This is used for events and notifications where no response is expected
-     * @param message The message to send
-     */
-    public abstract sendMessage(message: TMessage): Promise<void>;
 
     /**
      * Clean up resources

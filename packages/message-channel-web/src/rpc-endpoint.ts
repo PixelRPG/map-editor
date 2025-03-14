@@ -11,9 +11,9 @@ import { WebKitMessageHandler } from './types/webkit-message-handler';
 /**
  * Web implementation of the RPC endpoint
  * Handles communication with parent window or iframe using direct browser APIs
- * @template TMessage Type of messages that can be sent via sendMessage
+ * @template TMessage Type of messages that can be sent via notification methods
  */
-export class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> extends CoreRpcEndpoint<TMessage> {
+export class RpcEndpoint extends CoreRpcEndpoint {
     /**
      * WebKit message handler reference, if available
      */
@@ -85,25 +85,23 @@ export class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> extends Cor
     }
 
     /**
-     * Send a standard message (not an RPC request) to the target
-     * This is used for events and notifications where no response is expected
-     * @param message The message to send
+     * Override the sendNotification method from the base class to implement method/params style notification
+     * @param method The method name to call
+     * @param params The parameters to send
      */
-    public async sendMessage(message: TMessage): Promise<void> {
-        // Set channel if not already set
-        if (message.channel === undefined) {
-            message.channel = this.channelName;
-        }
-
-        return this.sendMessageInternal(message);
+    public override async sendNotification<TParams = unknown>(
+        method: string,
+        params?: TParams
+    ): Promise<void> {
+        return super.sendNotification(method, params);
     }
 
     /**
      * Internal method to send a message to the target window or WebKit
-     * Used by both sendMessage and postMessage
+     * Used by postMessage
      * @param message The message to send
      */
-    private async sendMessageInternal(message: TMessage | RpcRequest | RpcResponse): Promise<void> {
+    private async sendMessageInternal(message: RpcRequest | RpcResponse): Promise<void> {
         // Try WebKit handler first if available
         if (this.webKitHandler) {
             try {

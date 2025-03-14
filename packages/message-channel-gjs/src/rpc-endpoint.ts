@@ -14,9 +14,9 @@ import {
 /**
  * GJS implementation of the RPC endpoint
  * Handles communication between GJS and WebViews using standard WebKit APIs
- * @template TMessage Type of messages that can be sent via sendMessage
+ * @template TMessage Type of messages that can be sent via notification methods
  */
-export class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> extends CoreRpcEndpoint<TMessage> {
+export class RpcEndpoint extends CoreRpcEndpoint {
     /**
      * Create a new GJS RPC endpoint
      * @param channelName Name of the channel
@@ -42,13 +42,46 @@ export class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> extends Cor
 
         const userContentManager = this.webView.get_user_content_manager();
 
-        // Register a specialized handler for RPC messages that allows direct replies
+        // 1. Register a regular script message handler for responses and notifications
+        userContentManager.register_script_message_handler(this.channelName, null);
+
+        // Connect to the script-message-received signal for responses
+        userContentManager.connect(
+            'script-message-received',
+            (_userContentManager, jsValue: JavaScriptCore.Value) => {
+                try {
+                    // Parse the message from JSON
+                    const data = jsValue.to_json(0);
+                    const message = JSON.parse(data);
+
+                    // Skip messages that aren't for our channel
+                    if (message.channel && message.channel !== this.channelName) {
+                        return;
+                    }
+
+                    // Create a MessageEvent to pass to the handler
+                    const event = new MessageEvent('message', {
+                        data: message,
+                        origin: 'webkit-webview',
+                        source: null
+                    });
+
+                    // Handle the message (this will resolve pending requests for responses)
+                    this.handleRpcMessage(event);
+                } catch (error) {
+                    console.error('Error processing RPC message:', error);
+                }
+            }
+        );
+
+        // 2. Register specialized handler for RPC requests that need direct replies
         userContentManager.register_script_message_handler_with_reply(this.channelName, null);
 
-        // Connect to the script-message-with-reply-received signal
+        // Connect to the script-message-with-reply-received signal for requests
         userContentManager.connect(
             'script-message-with-reply-received',
             (_userContentManager, jsValue: JavaScriptCore.Value, reply: WebKit.ScriptMessageReply) => {
+                throw new Error('Is this implemented?');
                 try {
                     // Parse the message from JSON
                     const data = jsValue.to_json(0);
@@ -124,32 +157,15 @@ export class RpcEndpoint<TMessage extends BaseMessage = BaseMessage> extends Cor
     }
 
     /**
-     * Send a standard message (not an RPC request) to the WebView
-     * This is used for events and notifications where no response is expected
-     * @param message The message to send
+     * Override the sendNotification method from the base class to implement method/params style notification
+     * @param method The method name to call
+     * @param params The parameters to send
      */
-    public async sendMessage(message: TMessage): Promise<void> {
-        try {
-            // Set the channel property if not already set
-            if (message.channel === undefined) {
-                message.channel = this.channelName;
-            }
-
-            // Convert message to JSON string
-            const messageJson = JSON.stringify(message);
-
-            // Create a script to send the message to the WebView
-            const script = `
-                window.postMessage(${messageJson}, "*");
-                void(0);
-            `;
-
-            // Execute the script in the WebView
-            await this.webView.evaluate_javascript(script, -1, null, null, null);
-        } catch (error) {
-            console.error('Error sending message to WebView:', error);
-            throw error;
-        }
+    public override async sendNotification<TParams = unknown>(
+        method: string,
+        params?: TParams
+    ): Promise<void> {
+        return super.sendNotification(method, params);
     }
 
     /**

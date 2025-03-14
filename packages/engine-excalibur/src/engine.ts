@@ -6,23 +6,8 @@ import {
     EngineEvent,
     EngineEventType,
     EngineStatus,
-    InputEvent,
     ProjectLoadOptions,
-    EngineMessageType,
     EngineCommandType,
-    EngineMessage,
-    EngineMessageEventInput,
-    EngineMessageLoadProject,
-    EngineMessageLoadMap,
-    EngineMessageCommand,
-    EngineMessageEventEngine,
-    EngineMessageBase,
-    isEngineMessage,
-    isEngineEventMessage,
-    isLoadProjectMessage,
-    isLoadMapMessage,
-    isCommandMessage,
-    isInputEventMessage
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 
@@ -61,7 +46,7 @@ export class Engine implements EngineInterface {
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
-    private rpcClient = new RpcEndpoint<EngineMessage>(this.messageHandlerName)
+    private rpcClient = new RpcEndpoint(this.messageHandlerName)
 
 
     /**

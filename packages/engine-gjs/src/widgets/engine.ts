@@ -6,17 +6,9 @@ import {
     EngineEvent,
     EngineEventType,
     EngineStatus,
-    InputEvent,
     ProjectLoadOptions,
-    InputEventType,
     EngineCommandType,
-    EngineMessageType,
     EngineEventHandler,
-    isEngineMessage,
-    isEngineEventMessage,
-    getEventType,
-    getEventData,
-    isStatusChangedEvent,
     createInitializationError,
     createRuntimeError,
     createValidationError,
@@ -54,11 +46,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * Current status of the engine
      */
     public status: EngineStatus = EngineStatus.INITIALIZING
-
-    /**
-     * Event dispatcher for engine events
-     */
-    // public events = new EventDispatcher<EngineEvent>()
 
     /**
      * Resource paths for the engine
@@ -202,44 +189,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
         } catch (error) {
             console.error('[Engine] Failed to stop engine:', error);
             throw createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
-        }
-    }
-
-    /**
-     * Send a message to the other side of the engine (WebView)
-     * @param messageType Type of message
-     * @param payload Payload of the message
-     */
-    public postMessage<P = any>(messageType: EngineMessageType, payload: P): void {
-        try {
-            // Map engine message types to RPC methods
-            let method: string;
-            switch (messageType) {
-                case EngineMessageType.ENGINE_EVENT:
-                    method = 'handleEngineEvent';
-                    break;
-                case EngineMessageType.INPUT_EVENT:
-                    method = 'handleInputEvent';
-                    break;
-                case EngineMessageType.COMMAND:
-                    method = 'engineCommand';
-                    break;
-                case EngineMessageType.LOAD_PROJECT:
-                    method = 'loadProject';
-                    break;
-                case EngineMessageType.LOAD_MAP:
-                    method = 'loadMap';
-                    break;
-                default:
-                    method = 'handleMessage';
-            }
-
-            this._webView.rpcServer?.sendRequest(method, payload)
-                .catch(error => console.error(`[Engine] Error sending message (${method}):`, error));
-
-            console.log(`[Engine] Sent message: ${method}`, payload);
-        } catch (error) {
-            console.error('[Engine] Failed to send message:', error);
         }
     }
 
