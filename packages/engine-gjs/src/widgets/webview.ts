@@ -33,7 +33,7 @@ export class WebView extends WebKit.WebView {
         }, this);
     }
 
-    protected _messageChannel?: MessageChannel<string>
+    protected _messageChannel?: MessageChannel
 
     /**
      * Get the messages service for communication with the WebView
@@ -129,7 +129,7 @@ export class WebView extends WebKit.WebView {
      */
     protected initMessagesService() {
         console.log('Initializing MessagesService, webView:', this)
-        const messagesService = new MessageChannel<string>(INTERNAL_PROTOCOL, this)
+        const messagesService = new MessageChannel(INTERNAL_PROTOCOL, this)
         return messagesService
     }
 
@@ -194,10 +194,10 @@ export class WebView extends WebKit.WebView {
         y = Math.round(y * 10) / 10
 
         // Send mouse move event
-        this._messageChannel.postMessage(
-            EngineMessageType.INPUT_EVENT,
-            engineInputEventsService.mouseMove({ x, y })
-        );
+        this._messageChannel.postMessage({
+            messageType: EngineMessageType.INPUT_EVENT,
+            payload: engineInputEventsService.mouseMove({ x, y })
+        });
     }
 
     /**
@@ -213,10 +213,10 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has left the WebView');
 
         // Send mouse leave event with no position data
-        this._messageChannel.postMessage(
-            EngineMessageType.INPUT_EVENT,
-            engineInputEventsService.mouseLeave()
-        );
+        this._messageChannel.postMessage({
+            messageType: EngineMessageType.INPUT_EVENT,
+            payload: engineInputEventsService.mouseLeave()
+        });
     }
 
     /**
@@ -234,10 +234,10 @@ export class WebView extends WebKit.WebView {
         console.log('Mouse has entered the WebView');
 
         // Send mouse enter event
-        this._messageChannel.postMessage(
-            EngineMessageType.INPUT_EVENT,
-            engineInputEventsService.mouseEnter({ x, y })
-        );
+        this._messageChannel.postMessage({
+            messageType: EngineMessageType.INPUT_EVENT,
+            payload: engineInputEventsService.mouseEnter({ x, y })
+        });
     }
 
     /**

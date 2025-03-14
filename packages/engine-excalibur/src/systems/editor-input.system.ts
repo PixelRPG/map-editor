@@ -24,7 +24,7 @@ export class EditorInputSystem extends System {
 
     private sendInputEventsToGJS = false;
 
-    private messages = new MessageChannel<EngineMessageType>('pixelrpg')
+    private messages = new MessageChannel('pixelrpg')
 
     private engine?: Engine;
 
@@ -56,9 +56,9 @@ export class EditorInputSystem extends System {
 
             // Send move event to GJS
             if (this.sendInputEventsToGJS) {
-                this.messages.postMessage(
-                    EngineMessageType.INPUT_EVENT,
-                    {
+                this.messages.postMessage({
+                    messageType: EngineMessageType.INPUT_EVENT,
+                    payload: {
                         type: InputEventType.MOUSE_MOVE,
                         data: {
                             x: x,
@@ -67,21 +67,21 @@ export class EditorInputSystem extends System {
                             deltaY: deltaY
                         }
                     }
-                );
+                });
             }
         } else {
             // Send move event to GJS without drag info
             if (this.sendInputEventsToGJS) {
-                this.messages.postMessage(
-                    EngineMessageType.INPUT_EVENT,
-                    {
+                this.messages.postMessage({
+                    messageType: EngineMessageType.INPUT_EVENT,
+                    payload: {
                         type: InputEventType.MOUSE_MOVE,
                         data: {
                             x: x,
                             y: y
                         }
                     }
-                );
+                });
             }
         }
     }
@@ -97,9 +97,9 @@ export class EditorInputSystem extends System {
 
         // Send down event to GJS
         if (this.sendInputEventsToGJS) {
-            this.messages.postMessage(
-                EngineMessageType.INPUT_EVENT,
-                {
+            this.messages.postMessage({
+                messageType: EngineMessageType.INPUT_EVENT,
+                payload: {
                     type: InputEventType.MOUSE_DOWN,
                     data: {
                         x: x,
@@ -107,7 +107,7 @@ export class EditorInputSystem extends System {
                         button: 0 // Left button
                     }
                 }
-            );
+            });
         }
     }
 
@@ -119,9 +119,9 @@ export class EditorInputSystem extends System {
 
         // Send up event to GJS
         if (this.sendInputEventsToGJS) {
-            this.messages.postMessage(
-                EngineMessageType.INPUT_EVENT,
-                {
+            this.messages.postMessage({
+                messageType: EngineMessageType.INPUT_EVENT,
+                payload: {
                     type: InputEventType.MOUSE_UP,
                     data: {
                         x: this.dragStartPos.x,
@@ -129,7 +129,7 @@ export class EditorInputSystem extends System {
                         button: 0 // Left button
                     }
                 }
-            );
+            });
         }
     }
 
@@ -239,9 +239,9 @@ export class EditorInputSystem extends System {
 
             // Send wheel event to GJS
             if (this.sendInputEventsToGJS) {
-                this.messages.postMessage(
-                    EngineMessageType.INPUT_EVENT,
-                    {
+                this.messages.postMessage({
+                    messageType: EngineMessageType.INPUT_EVENT,
+                    payload: {
                         type: InputEventType.WHEEL,
                         data: {
                             x,
@@ -249,7 +249,7 @@ export class EditorInputSystem extends System {
                             deltaY: wheelEvent.deltaY
                         }
                     }
-                );
+                });
             }
         });
     }

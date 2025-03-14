@@ -58,7 +58,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     /**
      * Event dispatcher for engine events
      */
-    public events = new EventDispatcher<EngineEvent>()
+    // public events = new EventDispatcher<EngineEvent>()
 
     /**
      * Resource paths for the engine
@@ -125,10 +125,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a message to the WebView to load the project
-            this._webView.messageChannel?.postMessage(
-                EngineMessageType.LOAD_PROJECT,
-                { projectPath, options }
-            );
+            this._webView.messageChannel?.postMessage({
+                messageType: EngineMessageType.LOAD_PROJECT,
+                payload: { projectPath, options }
+            });
         } catch (error) {
             throw createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
         }
@@ -148,10 +148,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a message to the WebView to load the map
-            this._webView.messageChannel?.postMessage(
-                EngineMessageType.LOAD_MAP,
-                { mapId }
-            );
+            this._webView.messageChannel?.postMessage({
+                messageType: EngineMessageType.LOAD_MAP,
+                payload: { mapId }
+            });
         } catch (error) {
             throw createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
         }
@@ -167,10 +167,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a command to the WebView to start the engine
-            this._webView.messageChannel?.postMessage(
-                EngineMessageType.COMMAND,
-                { command: EngineCommandType.START }
-            );
+            this._webView.messageChannel?.postMessage({
+                messageType: EngineMessageType.COMMAND,
+                payload: { command: EngineCommandType.START }
+            });
 
             this.setStatus(EngineStatus.RUNNING);
         } catch (error) {
@@ -188,10 +188,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send a command to the WebView to stop the engine
-            this._webView.messageChannel?.postMessage(
-                EngineMessageType.COMMAND,
-                { command: EngineCommandType.STOP }
-            );
+            this._webView.messageChannel?.postMessage({
+                messageType: EngineMessageType.COMMAND,
+                payload: { command: EngineCommandType.STOP }
+            });
         } catch (error) {
             throw createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
         }
@@ -203,7 +203,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * @param payload Payload of the message
      */
     public postMessage<P = any>(messageType: EngineMessageType, payload: P): void {
-        this._webView.messageChannel?.postMessage(messageType, payload);
+        this._webView.messageChannel?.postMessage({
+            messageType,
+            payload
+        });
     }
 
     /**
@@ -261,11 +264,11 @@ export class Engine extends Adw.Bin implements EngineInterface {
                     }
 
                     // Dispatch the event
-                    if (Object.values(EngineEventType).includes(engineEvent.type)) {
-                        this.events.dispatch(engineEvent.type, engineEvent);
-                    } else {
-                        console.warn(`[Engine] Unknown engine event type: ${engineEvent.type}`);
-                    }
+                    // if (Object.values(EngineEventType).includes(engineEvent.type)) {
+                    //     this.events.dispatch(engineEvent.type, engineEvent);
+                    // } else {
+                    //     console.warn(`[Engine] Unknown engine event type: ${engineEvent.type}`);
+                    // }
                 }
             }
         } catch (error) {
@@ -291,7 +294,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
             data: status
         };
 
-        this.events.dispatch(EngineEventType.STATUS_CHANGED, statusEvent);
+        // this.events.dispatch(EngineEventType.STATUS_CHANGED, statusEvent);
     }
 
     /**

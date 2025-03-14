@@ -13,7 +13,7 @@ export interface EngineInterface {
     /**
      * Event dispatcher for engine events
      */
-    events: EventDispatcher<EngineEvent>;
+    // events: EventDispatcher<EngineEvent>;
 
     /**
      * Initialize the engine

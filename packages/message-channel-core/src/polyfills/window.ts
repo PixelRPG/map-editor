@@ -12,7 +12,7 @@ class Window {
     /**
      * Event dispatcher to simulate DOM events
      */
-    private events = new EventDispatcher();
+    private events = new EventDispatcher<MessageEvent>();
 
     /**
      * Event listeners mapped by type
@@ -44,7 +44,7 @@ class Window {
         }
 
         // Also emit through EventDispatcher for internal use
-        this.events.dispatch('message', messageEvent);
+        this.events.dispatch(messageEvent);
     }
 
     /**
@@ -58,8 +58,10 @@ class Window {
         }
         this.listeners[type].add(listener);
 
-        // Also register with our EventDispatcher
-        this.events.on(type, listener as any);
+        // Also register with our EventDispatcher (only for 'message' events)
+        if (type === 'message') {
+            this.events.addEventListener(listener as any);
+        }
     }
 
     /**
@@ -72,8 +74,10 @@ class Window {
             this.listeners[type].delete(listener);
         }
 
-        // Also remove from EventDispatcher
-        this.events.off(type, listener as any);
+        // Also remove from EventDispatcher (only for 'message' events)
+        if (type === 'message') {
+            this.events.removeEventListener(listener as any);
+        }
     }
 }
 

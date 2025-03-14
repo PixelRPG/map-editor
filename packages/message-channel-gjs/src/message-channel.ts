@@ -2,7 +2,7 @@ import type JavaScriptCore from '@girs/javascriptcore-6.0'
 import Gio from '@girs/gio-2.0'
 import WebKit from '@girs/webkit-6.0'
 
-import { MessageChannel as BaseMessageChannel, MessageEvent, createMessageData } from '@pixelrpg/message-channel-core'
+import { MessageChannel as BaseMessageChannel, MessageEvent } from '@pixelrpg/message-channel-core'
 
 // Promisify the evaluate_javascript method
 Gio._promisify(WebKit.WebView.prototype, 'evaluate_javascript')
@@ -11,9 +11,7 @@ Gio._promisify(WebKit.WebView.prototype, 'evaluate_javascript')
  * GJS implementation of the WebKit message channel.
  * Handles communication between GJS and WebViews using standard WebKit APIs.
  */
-export class MessageChannel<T = string> extends BaseMessageChannel<T> {
-
-    protected readonlywebView: WebKit.WebView | null = null
+export class MessageChannel extends BaseMessageChannel {
 
     /**
      * Create a new GJS message channel
@@ -30,17 +28,17 @@ export class MessageChannel<T = string> extends BaseMessageChannel<T> {
 
     /**
      * Send a message to the WebView using standard postMessage
-     * @param messageType Type of message to send
-     * @param payload Data payload to send
+     * @param data Data to send
      */
-    async postMessage<P = any>(messageType: T, payload: P): Promise<void> {
-
+    async postMessage(data: any): Promise<void> {
         try {
-            // Create a structured message using the utility function
-            const messageData = createMessageData(messageType, payload, this.channelName);
+            // Add channel information if not present
+            if (typeof data === 'object' && data !== null && !('channel' in data)) {
+                data.channel = this.channelName;
+            }
 
             const script = `
-                window.postMessage(${JSON.stringify(messageData)}, "*");
+                window.postMessage(${JSON.stringify(data)}, "*");
                 void(0);
             `;
 
@@ -54,7 +52,6 @@ export class MessageChannel<T = string> extends BaseMessageChannel<T> {
         } catch (error) {
             console.error('Error sending message to webview: s', error)
         }
-
     }
 
     /**

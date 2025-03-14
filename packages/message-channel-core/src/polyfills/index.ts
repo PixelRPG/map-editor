@@ -4,7 +4,6 @@
  * by the messaging system.
  */
 
-// Export polyfill implementations
 export * from './event-dispatcher.ts'
 export * from './message-event.ts'
 export * from './window.ts'

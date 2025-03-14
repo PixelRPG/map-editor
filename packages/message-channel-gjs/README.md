@@ -1,6 +1,6 @@
 # @pixelrpg/message-channel-gjs
 
-GJS implementation of the messaging API for communication between GJS and WebViews following WHATWG and WebKit standards.
+GJS implementation of the messaging API for communication between GJS and WebViews following WHATWG and WebKit standards, with RPC server support.
 
 ## Features
 
@@ -8,26 +8,23 @@ GJS implementation of the messaging API for communication between GJS and WebVie
 - WebKit message handler registration and listening for messages from WebViews
 - Based on WebKit's UserContentManager for script message handling
 - Implements the abstract MessageChannel class from @pixelrpg/message-channel-core
+- RPC server implementation for request-response pattern
+- Promise-based API for asynchronous communication
 - Uses standard DOM naming patterns for API consistency
 
 ## Usage
+
+### Basic MessageChannel
 
 ```typescript
 import { MessageChannel } from '@pixelrpg/message-channel-gjs';
 import WebKit from '@girs/webkit-6.0';
 
-// Define message types (can use enum, string literals, or plain strings)
-enum MessageTypes {
-  LOGIN = 'login',
-  LOGOUT = 'logout',
-  DATA_UPDATE = 'data:update'
-}
-
 // Create a WebKit WebView
 const webView = new WebKit.WebView();
 
 // Create a message channel with a channel name and the WebView instance
-const messages = new MessageChannel<MessageTypes>('my-channel', webView);
+const messages = new MessageChannel('my-channel', webView);
 
 // Use standard DOM event handler pattern
 messages.onmessage = (event) => {
@@ -35,21 +32,64 @@ messages.onmessage = (event) => {
 };
 
 // Send a message using standard postMessage method
-messages.postMessage(MessageTypes.LOGIN, { 
+messages.postMessage({ 
+  type: 'login',
   username: 'user', 
   timestamp: new Date() 
 });
 ```
 
+### RPC Server
+
+```typescript
+import { RpcServer } from '@pixelrpg/message-channel-gjs';
+import WebKit from '@girs/webkit-6.0';
+
+// Create a WebKit WebView
+const webView = new WebKit.WebView();
+
+// Create an RPC server
+const server = new RpcServer('rpc-channel', webView);
+
+// Register methods that can be called by clients in the WebView
+server.registerMethod('getMapData', async (params) => {
+  const mapId = params as string;
+  // Load map data from file system or database
+  return {
+    id: mapId,
+    name: 'Forest Level',
+    tiles: [/* ... */],
+    entities: [/* ... */]
+  };
+});
+
+server.registerMethod('saveMapData', async (params) => {
+  const mapData = params as any;
+  // Save map data to file system or database
+  console.log('Saving map data:', mapData);
+  return { success: true };
+});
+
+// You can also unregister methods when they're no longer needed
+// server.unregisterMethod('saveMapData');
+```
+
 ## Implementation Details
 
-The GJS implementation:
+The GJS implementation provides:
 
-1. Uses WebKit's UserContentManager to register script message handlers
-2. Utilizes GJS's Gio._promisify for asynchronous JavaScript evaluation
-3. Sends messages to the WebView using `webView.evaluate_javascript()`
-4. Receives messages via the 'script-message-received' signal
-5. Converts messages to standard MessageEvent format using the core package
+1. `MessageChannel` - Implements the abstract MessageChannel class
+   - Uses WebKit's UserContentManager to register script message handlers
+   - Utilizes GJS's Gio._promisify for asynchronous JavaScript evaluation
+   - Sends messages to the WebView using `webView.evaluate_javascript()`
+   - Receives messages via the 'script-message-received' signal
+   - Converts messages to standard MessageEvent format using the core package
+
+2. `RpcServer` - Implements the RPC server for request-response pattern
+   - Registers methods that can be called by clients in the WebView
+   - Automatically handles message routing and response sending
+   - Provides proper error handling and serialization
+   - Supports typed parameters and return values
 
 ## Dependencies
 

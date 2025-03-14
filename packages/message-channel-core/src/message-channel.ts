@@ -5,7 +5,7 @@ import type { MessageEvent } from "./polyfills/message-event.ts";
  * This provides a unified API for sending and receiving messages between
  * different contexts (GJS and WebView) using web standards.
  */
-export abstract class MessageChannel<T = string> {
+export abstract class MessageChannel {
     /**
      * Handler for message events (standard DOM pattern)
      */
@@ -34,19 +34,17 @@ export abstract class MessageChannel<T = string> {
 
     /**
      * Send a message through the channel
-     * Standard-compliant method that takes type and payload separately
-     * @param messageType Type identifier for routing
-     * @param payload Actual data to send
+     * Standard-compliant method that takes a single data parameter
+     * @param data Any data to send via the channel
      */
-    abstract postMessage<P = any>(messageType: T, payload: P): Promise<void>;
+    abstract postMessage(data: any): Promise<void>;
 
     /**
      * Handle incoming standard MessageEvent
-     * Extracts our MessageData structure and processes it
      */
     protected handleMessageEvent(event: MessageEvent): void {
         if ((!event.data.channel || event.data.channel === this.channelName)) {
-            // Call the standard onmessage handler first if set
+            // Call the standard onmessage handler if set
             if (this._onmessage) {
                 this._onmessage(event);
             }

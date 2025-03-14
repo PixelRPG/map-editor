@@ -1,4 +1,4 @@
-import { MessageChannel as CoreMessageChannel, MessageEvent, MessageData, createMessageData } from '@pixelrpg/message-channel-core'
+import { MessageChannel as CoreMessageChannel, MessageEvent } from '@pixelrpg/message-channel-core'
 import { WebKitMessageHandler } from './types/webkit-message-handler';
 
 
@@ -7,7 +7,7 @@ import { WebKitMessageHandler } from './types/webkit-message-handler';
  * This implementation tries WebKit message handlers first (for native communication),
  * then falls back to standard Window message API.
  */
-export class MessageChannel<T = string> extends CoreMessageChannel<T> {
+export class MessageChannel extends CoreMessageChannel {
     /**
      * Reference to the WebKit message handler, if available
      */
@@ -26,20 +26,21 @@ export class MessageChannel<T = string> extends CoreMessageChannel<T> {
 
     /**
      * Send a message using WebKit handler
-     * @param messageType Type of message to send
-     * @param payload Data payload to send
+     * @param data Data to send
      */
-    async postMessage<P = any>(messageType: T, payload: P): Promise<void> {
+    async postMessage(data: any): Promise<void> {
         if (!this.isHandlerRegistered()) {
             console.warn('WebKit message handler not available');
             return;
         }
 
-        // Create a properly structured message
-        const messageData = createMessageData(messageType, payload, this.channelName);
+        // Add channel information if not present
+        if (typeof data === 'object' && data !== null && !('channel' in data)) {
+            data.channel = this.channelName;
+        }
 
         // Send via WebKit handler
-        this.webKitHandler?.postMessage(messageData);
+        this.webKitHandler?.postMessage(data);
         return Promise.resolve();
     }
 
@@ -51,7 +52,7 @@ export class MessageChannel<T = string> extends CoreMessageChannel<T> {
 
         // Set up window message listener for receiving messages
         window.addEventListener('message', (event) => {
-            this.handleMessageEvent(event as unknown as MessageEvent<MessageData<T>>);
+            this.handleMessageEvent(event as unknown as MessageEvent);
         });
     }
 

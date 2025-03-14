@@ -1,2 +1,2 @@
 export * from './message-channel.ts';
-export * from './types/index.ts';
+export * from './rpc-server.ts';

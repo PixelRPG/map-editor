@@ -1,28 +1,25 @@
 # @pixelrpg/message-channel-web
 
-Web implementation of the messaging API for communication between WebViews and GJS following WHATWG and WebKit standards.
+Web implementation of the messaging API for communication between WebViews and GJS following WHATWG and WebKit standards, with RPC client support.
 
 ## Features
 
 - Standards-compliant WebKit message handlers for communication with GJS
 - WHATWG window.postMessage fallback for cross-context messaging
 - Implements the abstract MessageChannel class from @pixelrpg/message-channel-core
+- RPC client implementation for request-response pattern
+- Promise-based API for asynchronous communication
 - Uses standard DOM naming patterns for API consistency
 
 ## Usage
 
+### Basic MessageChannel
+
 ```typescript
 import { MessageChannel } from '@pixelrpg/message-channel-web';
 
-// Define message types (can use enum, string literals, or plain strings)
-enum AppMessageTypes {
-  LOGIN = 'login',
-  LOGOUT = 'logout',
-  STATUS_UPDATE = 'status:update'
-}
-
 // Create a message channel with a channel name
-const messages = new MessageChannel<AppMessageTypes>('my-channel');
+const messages = new MessageChannel('my-channel');
 
 // Use standard DOM event handler pattern
 messages.onmessage = (event) => {
@@ -30,38 +27,65 @@ messages.onmessage = (event) => {
 };
 
 // Send a message using standard postMessage method
-messages.postMessage(AppMessageTypes.LOGIN, { 
+messages.postMessage({ 
+  type: 'login',
   username: 'user123', 
   device: 'mobile',
   timestamp: new Date()
 });
 ```
 
-## Implementation Details
-
-The Web implementation:
-
-1. Sets up a message event listener on window to receive messages
-2. Uses a WebKitMessageHandler (if available) for sending messages
-3. The handler is manually set - the implementation does not automatically detect the WebKit handler
-4. Provides a simple check for handler availability via isHandlerRegistered()
-
-## WebKit Message Handler
-
-The current implementation provides a placeholder for WebKit message handlers, but the WebKit handler needs to be manually set after creation. To fully utilize the WebKit channel:
+### RPC Client
 
 ```typescript
-import { MessageChannel } from '@pixelrpg/message-channel-web';
+import { RpcClient } from '@pixelrpg/message-channel-web';
 
-const channel = new MessageChannel('my-channel');
+// Create an RPC client
+const client = new RpcClient(
+  'rpc-channel',
+  window.parent, // Target window (parent, opener, or iframe)
+  '*'            // Target origin (use specific origin in production)
+);
 
-// Set the WebKit handler manually 
-// The current implementation has the webKitHandler property set to null by default
-channel.webKitHandler = window.webkit.messageHandlers.myHandler;
+// Call a remote method and wait for the response
+async function login(username: string, password: string) {
+  try {
+    const result = await client.sendRequest('login', { username, password });
+    console.log('Login successful:', result);
+    return result;
+  } catch (error) {
+    console.error('Login failed:', error);
+    throw error;
+  }
+}
 
-// Now you can use the WebKit channel
-channel.postMessage('login', { username: 'user' });
+// Call another method
+async function getUserProfile(userId: string) {
+  try {
+    const profile = await client.sendRequest('getUserProfile', userId);
+    console.log('User profile:', profile);
+    return profile;
+  } catch (error) {
+    console.error('Failed to get user profile:', error);
+    throw error;
+  }
+}
 ```
+
+## Implementation Details
+
+The Web implementation provides:
+
+1. `MessageChannel` - Sets up a message event listener on window to receive messages
+   - Uses a WebKitMessageHandler (if available) for sending messages
+   - The handler is manually set - the implementation does not automatically detect the WebKit handler
+   - Provides a simple check for handler availability via isHandlerRegistered()
+
+2. `RpcClient` - Implements the RPC client for request-response pattern
+   - Uses window.postMessage for communication
+   - Automatically handles message routing and promise resolution
+   - Provides timeout handling for requests
+   - Supports typed responses with generics
 
 ## Dependencies
 

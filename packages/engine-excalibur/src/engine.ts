@@ -55,7 +55,7 @@ export class Engine implements EngineInterface {
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
-    private messages = new MessageChannel<EngineMessageType>(this.messageHandlerName)
+    private messages = new MessageChannel(this.messageHandlerName)
 
 
     /**
@@ -126,10 +126,10 @@ export class Engine implements EngineInterface {
             this.logger.error('Loader error:', error)
             this.setStatus(EngineStatus.ERROR)
 
-            this.events.dispatch(EngineEventType.ERROR, {
-                type: EngineEventType.ERROR,
-                data: { message: 'Loader error', error: error instanceof Error ? error : new Error(String(error)) }
-            })
+            // this.events.dispatch(EngineEventType.ERROR, {
+            //     type: EngineEventType.ERROR,
+            //     data: { message: 'Loader error', error: error instanceof Error ? error : new Error(String(error)) }
+            // })
         })
 
         loader.on('complete', () => {
@@ -147,20 +147,20 @@ export class Engine implements EngineInterface {
                 this.gameProjectResource.addToScene(this.excalibur!.currentScene)
                 this.logger.info(`Map ${this.gameProjectResource.activeMap.mapData.name} added to scene`)
 
-                this.events.dispatch(EngineEventType.MAP_LOADED, {
-                    type: EngineEventType.MAP_LOADED,
-                    data: { mapId: this.gameProjectResource.activeMap.mapData.id }
-                })
+                // this.events.dispatch(EngineEventType.MAP_LOADED, {
+                //     type: EngineEventType.MAP_LOADED,
+                //     data: { mapId: this.gameProjectResource.activeMap.mapData.id }
+                // })
             }
 
             // Access the project data
             // The property might be named 'project' or 'projectData' depending on the implementation
             const projectData = this.gameProjectResource.data
 
-            this.events.dispatch(EngineEventType.PROJECT_LOADED, {
-                type: EngineEventType.PROJECT_LOADED,
-                data: { projectId: projectData.id || 'unknown' }
-            })
+            // this.events.dispatch(EngineEventType.PROJECT_LOADED, {
+            //     type: EngineEventType.PROJECT_LOADED,
+            //     data: { projectId: projectData.id || 'unknown' }
+            // })
 
             this.setStatus(EngineStatus.READY)
         })
@@ -204,10 +204,10 @@ export class Engine implements EngineInterface {
             this.gameProjectResource.addToScene(this.excalibur.currentScene)
             this.logger.info(`Map ${this.gameProjectResource.activeMap.mapData.name} added to scene`)
 
-            this.events.dispatch(EngineEventType.MAP_LOADED, {
-                type: EngineEventType.MAP_LOADED,
-                data: { mapId: this.gameProjectResource.activeMap.mapData.id }
-            })
+            // this.events.dispatch(EngineEventType.MAP_LOADED, {
+            //     type: EngineEventType.MAP_LOADED,
+            //     data: { mapId: this.gameProjectResource.activeMap.mapData.id }
+            // })
         }
     }
 
@@ -358,13 +358,13 @@ export class Engine implements EngineInterface {
             }
 
             // Dispatch the event locally
-            this.events.dispatch(event.type, event)
+            // this.events.dispatch(event.type, event)
 
             // Send the event to GJS
-            this.messages.postMessage(
-                EngineMessageType.ENGINE_EVENT,
-                event
-            )
+            this.messages.postMessage({
+                messageType: EngineMessageType.ENGINE_EVENT,
+                payload: event
+            })
         }
     }
 } 

@@ -1,6 +1,6 @@
 # @pixelrpg/message-channel-core
 
-Core messaging library implementing WHATWG and WebKit standards for communication between GJS and WebView runtimes.
+Core messaging library implementing WHATWG and WebKit standards for communication between GJS and WebView runtimes, with RPC support.
 
 ## Features
 
@@ -8,33 +8,29 @@ Core messaging library implementing WHATWG and WebKit standards for communicatio
 - Uses native `MessageEvent` with structured data
 - WebKit message handler implementation
 - Window.postMessage API support
-- Type-safe message routing with enum support
+- Type-safe message routing
+- RPC (Remote Procedure Call) support with request-response pattern
+- Promise-based API for asynchronous communication
 - Simple, intuitive API that follows web standards
 
 ## Usage
 
+### Basic MessageChannel
+
 ```typescript
 import { 
   MessageChannel,
-  MessageEvent,
-  createMessageData
+  MessageEvent
 } from '@pixelrpg/message-channel-core';
 
-// Define your message types (optional but recommended)
-enum AppMessageTypes {
-  LOGIN = 'login',
-  LOGOUT = 'logout',
-  UPDATE = 'update'
-}
-
 // Extend the base abstract class
-class MyChannel extends MessageChannel<AppMessageTypes> {
+class MyChannel extends MessageChannel {
   // Implementation details...
   
   // You must implement the abstract postMessage method
-  async postMessage<P = any>(messageType: AppMessageTypes, payload: P): Promise<void> {
+  async postMessage(data: any): Promise<void> {
     // Your implementation here
-    console.log(`Sending message: ${messageType}`, payload);
+    console.log(`Sending message:`, data);
     return Promise.resolve();
   }
 }
@@ -51,14 +47,73 @@ channel.onmessage = (event: MessageEvent) => {
 // which is called in your implementation to process events
 ```
 
+### RPC Client-Server
+
+```typescript
+import {
+  RpcClient,
+  RpcServer,
+  MethodHandler
+} from '@pixelrpg/message-channel-core';
+
+// Server-side (extends RpcServer)
+class MyRpcServer extends RpcServer {
+  // Implementation details...
+  
+  // You must implement the abstract postMessage method
+  protected async postMessage(message: RpcResponse): Promise<void> {
+    // Your implementation to send the response
+    console.log(`Sending response:`, message);
+    return Promise.resolve();
+  }
+}
+
+// Create a server instance
+const server = new MyRpcServer("rpc-channel");
+
+// Register methods that can be called by clients
+server.registerMethod("getUser", async (params) => {
+  const userId = params as string;
+  // Fetch user data...
+  return { id: userId, name: "John Doe" };
+});
+
+// Client-side (extends RpcClient)
+class MyRpcClient extends RpcClient {
+  // Implementation details...
+  
+  // You must implement the abstract postMessage method
+  protected async postMessage(message: RpcRequest): Promise<void> {
+    // Your implementation to send the request
+    console.log(`Sending request:`, message);
+    return Promise.resolve();
+  }
+}
+
+// Create a client instance
+const client = new MyRpcClient("rpc-channel");
+
+// Call a remote method and wait for the response
+async function getUser(id: string) {
+  try {
+    const user = await client.sendRequest("getUser", id);
+    console.log("User data:", user);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+  }
+}
+```
+
 ## Core Classes and Utilities
 
 The package provides:
 
-1. `MessageChannel<T>` - Abstract base class for all channel implementations
-2. `MessageEvent` - Standard-compliant event polyfill
-3. `createMessageData()` - Helper function to create properly structured messages
-4. Various type definitions for message handling
+1. `MessageChannel` - Abstract base class for all channel implementations
+2. `RpcClient` - Abstract base class for RPC clients
+3. `RpcServer` - Abstract base class for RPC servers
+4. `EventDispatcher` - Event handling utility for typed events
+5. `MessageEvent` - Standard-compliant event polyfill
+6. Various helper functions and type definitions for message handling
 
 ## Implementation Notes
 
