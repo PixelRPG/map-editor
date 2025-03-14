@@ -251,32 +251,15 @@ export class Engine extends Adw.Bin implements EngineInterface {
             throw new Error('RPC server is not initialized');
         }
 
-        // Register a handler for engine messages
-        this._webView.rpcServer.events.on((message) => {
-            try {
-                // Check if this is a valid engine message
-                if (isEngineMessage(message)) {
-                    console.log('[Engine] Engine message received:', message);
-
-                    // Emit a signal that can be caught by the application
-                    this.emit('message-received', JSON.stringify(message));
-
-                    // Handle specific message types
-                    if (message.messageType === EngineMessageType.ENGINE_EVENT) {
-                        this.onEngineEventMessage(message.payload);
-                    }
-                    // Add other message type handlers as needed
-                }
-            } catch (error) {
-                console.error('[Engine] Error handling message:', error);
-            }
-        });
-
-        // Register RPC methods to handle events from the WebView
+        // Register handler for engine events from the WebView using RPC
         this._webView.rpcServer.registerHandler('notifyEngineEvent', async (event) => {
             console.log('[Engine] Engine event received from WebView:', event);
-            this.onEngineEventMessage(event as EngineEvent);
-            return { success: true };
+            // Handle the event with proper typing
+            if (event && typeof event === 'object' && 'type' in event) {
+                this.onEngineEventMessage(event as EngineEvent);
+                return { success: true };
+            }
+            return { success: false, error: 'Invalid engine event format' };
         });
 
         console.log('[Engine] Event listeners set up');

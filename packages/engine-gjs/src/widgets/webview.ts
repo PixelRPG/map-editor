@@ -134,7 +134,7 @@ export class WebView extends WebKit.WebView {
 
         // Register RPC methods
         rpcServer.registerHandler('handleInputEvent', async (params) => {
-            console.debug('Handling input event:', params);
+            console.log('Handling input event:', params);
             // Process the input event
             // The implementation would depend on how input events are handled
             return { success: true };

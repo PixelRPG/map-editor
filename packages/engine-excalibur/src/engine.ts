@@ -71,9 +71,6 @@ export class Engine implements EngineInterface {
     constructor(private canvasElementId: string = 'engine-view') {
         this.logger.info('Creating Engine')
 
-        // Set up message handlers
-        this.setupMessageHandlers()
-
         // Register RPC handlers for GJS to call
         this.registerRpcHandlers()
     }
@@ -348,110 +345,6 @@ export class Engine implements EngineInterface {
 
         this.excalibur.stop()
         this.setStatus(EngineStatus.READY)
-    }
-
-
-    /**
-     * Set up message handlers to observe and execute messages from GJS
-     */
-    private setupMessageHandlers(): void {
-        this.logger.info('Setting up message handlers')
-
-        // Register RPC methods for handling different engine messages
-        this.rpcClient.events.on((message) => {
-            try {
-                // Check if this is an engine message
-                if (isEngineMessage(message)) {
-                    // Route to specific handlers based on message type
-                    if (isLoadProjectMessage(message)) {
-                        this.logger.info('Received load project message')
-                        this.handleLoadProjectMessage(message);
-                    } else if (isLoadMapMessage(message)) {
-                        this.logger.info('Received load map message')
-                        this.handleLoadMapMessage(message);
-                    } else if (isCommandMessage(message)) {
-                        this.logger.info('Received command message')
-                        this.handleCommandMessage(message);
-                    } else if (isInputEventMessage(message)) {
-                        this.logger.info('Received input event message')
-                        this.handleInputEventMessage(message);
-                    } else if (isEngineEventMessage(message)) {
-                        // this.logger.info('Received engine event message')
-                        this.handleEngineEventMessage(message);
-                    } else {
-                        this.logger.warn(`Unknown engine message type: ${(message as EngineMessageBase).messageType}`);
-                    }
-                }
-            } catch (error) {
-                this.logger.error('Error handling message:', error);
-            }
-        });
-    }
-
-    /**
-     * Handle load project message
-     * @param data The load project message data
-     */
-    private handleLoadProjectMessage(data: EngineMessageLoadProject): void {
-        const { projectPath, options } = data.payload;
-        this.loadProject(projectPath, options).catch(error => {
-            this.logger.error('Error loading project:', error);
-        });
-    }
-
-    /**
-     * Handle load map message
-     * @param data The load map message data
-     */
-    private handleLoadMapMessage(data: EngineMessageLoadMap): void {
-        const { mapId } = data.payload;
-        this.loadMap(mapId).catch(error => {
-            this.logger.error('Error loading map:', error);
-        });
-    }
-
-    /**
-     * Handle command message
-     * @param data The command message data
-     */
-    private handleCommandMessage(data: EngineMessageCommand): void {
-        const { command } = data.payload;
-
-        switch (command) {
-            case EngineCommandType.START:
-                this.start().catch(error => {
-                    this.logger.error('Error starting engine:', error);
-                });
-                break;
-
-            case EngineCommandType.STOP:
-                this.stop().catch(error => {
-                    this.logger.error('Error stopping engine:', error);
-                });
-                break;
-
-            default:
-                this.logger.warn(`Unknown command: ${command}`);
-        }
-    }
-
-    /**
-     * Handle input event message
-     * @param data The input event message data
-     */
-    private handleInputEventMessage(data: EngineMessageEventInput): void {
-        // Not implemented for Excalibur engine
-        // Input is handled by the EditorInputSystem
-    }
-
-    /**
-     * Handle engine event message
-     * @param data The engine event message data
-     */
-    private handleEngineEventMessage(data: EngineMessageEventEngine): void {
-        // Handle engine events if needed
-        // Currently, we just log them
-        this.logger.info('Engine event received:', data);
     }
 
     /**
