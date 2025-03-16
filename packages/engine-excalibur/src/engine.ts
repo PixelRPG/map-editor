@@ -46,7 +46,7 @@ export class Engine implements EngineInterface {
      * Message handler name used in the messages service
      */
     private messageHandlerName = 'pixelrpg'
-    private rpc = new RpcEndpoint(this.messageHandlerName)
+    private rpc = RpcEndpoint.getInstance(this.messageHandlerName)
 
 
     /**

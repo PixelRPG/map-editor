@@ -76,7 +76,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
             this._webView.setGResourcePath(this.gresourcePath);
 
             this._webView.connect('ready', () => {
-                console.log('[Engine] WebView ready');
+                console.log('[GJS Engine] WebView ready');
 
                 // Set up event listeners
                 this.setupEventListeners();
@@ -102,6 +102,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * Load a project
      */
     public async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
+        if (!this._webView.rpc) {
+            throw createRuntimeError('RPC server is not initialized');
+        }
+
         if (this.status === EngineStatus.INITIALIZING) {
             throw createRuntimeError('Engine not initialized');
         }
@@ -112,14 +116,14 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to load the project
-            await this._webView.rpc?.sendRequest('loadProject', {
+            await this._webView.rpc.sendRequest('loadProject', {
                 projectPath,
                 options
             });
 
-            console.log('[Engine] Project load request sent:', projectPath);
+            console.log('[GJS Engine] Project load request sent:', projectPath);
         } catch (error) {
-            console.error('[Engine] Failed to load project:', error);
+            console.error('[GJS Engine] Failed to load project:', error);
             throw createResourceError(`Failed to load project: ${projectPath}`, error instanceof Error ? error : undefined);
         }
     }
@@ -142,9 +146,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
                 mapId
             });
 
-            console.log('[Engine] Map load request sent:', mapId);
+            console.log('[GJS Engine] Map load request sent:', mapId);
         } catch (error) {
-            console.error('[Engine] Failed to load map:', error);
+            console.error('[GJS Engine] Failed to load map:', error);
             throw createResourceError(`Failed to load map: ${mapId}`, error instanceof Error ? error : undefined);
         }
     }
@@ -163,10 +167,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
                 command: EngineCommandType.START
             });
 
-            console.log('[Engine] Start command sent');
+            console.log('[GJS Engine] Start command sent');
             this.setStatus(EngineStatus.RUNNING);
         } catch (error) {
-            console.error('[Engine] Failed to start engine:', error);
+            console.error('[GJS Engine] Failed to start engine:', error);
             throw createRuntimeError('Failed to start engine', error instanceof Error ? error : undefined);
         }
     }
@@ -185,9 +189,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
                 command: EngineCommandType.STOP
             });
 
-            console.log('[Engine] Stop command sent');
+            console.log('[GJS Engine] Stop command sent');
         } catch (error) {
-            console.error('[Engine] Failed to stop engine:', error);
+            console.error('[GJS Engine] Failed to stop engine:', error);
             throw createRuntimeError('Failed to stop engine', error instanceof Error ? error : undefined);
         }
     }
@@ -202,7 +206,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         // Register handler for engine events from the WebView using RPC
         this._webView.rpc.registerHandler('notifyEngineEvent', async (event) => {
-            console.log('[Engine] Engine event received from WebView:', event);
+            console.log('[GJS Engine] Engine event received from WebView:', event);
             // Handle the event with proper typing
             if (event && typeof event === 'object' && 'type' in event) {
                 this.onEngineEventMessage(event as EngineEvent);
@@ -211,7 +215,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
             return { success: false, error: 'Invalid engine event format' };
         });
 
-        console.log('[Engine] Event listeners set up');
+        console.log('[GJS Engine] Event listeners set up');
     }
 
     /**
@@ -227,7 +231,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
                 // Update the engine status if needed
                 if (engineEventType === EngineEventType.STATUS_CHANGED) {
                     this.status = engineEventData as EngineStatus;
-                    console.info('[Engine] Engine status changed to:', this.status);
+                    console.info('[GJS Engine] Engine status changed to:', this.status);
                 }
 
                 // Emit a signal that can be caught by the application
@@ -243,13 +247,13 @@ export class Engine extends Adw.Bin implements EngineInterface {
                         try {
                             handler(event);
                         } catch (handlerError) {
-                            console.error('[Engine] Error in event handler:', handlerError);
+                            console.error('[GJS Engine] Error in event handler:', handlerError);
                         }
                     }
                 }
             }
         } catch (error) {
-            console.error('[Engine] Error handling message:', formatError(error instanceof Error ? error : new Error(String(error))));
+            console.error('[GJS Engine] Error handling message:', formatError(error instanceof Error ? error : new Error(String(error))));
         }
     }
 
@@ -259,7 +263,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
      */
     private setStatus(status: EngineStatus): void {
         if (!Object.values(EngineStatus).includes(status)) {
-            console.warn(`[Engine] Invalid engine status: ${status}`);
+            console.warn(`[GJS Engine] Invalid engine status: ${status}`);
             return;
         }
 
@@ -278,7 +282,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
                 try {
                     handler(statusEvent);
                 } catch (error) {
-                    console.error('[Engine] Error in status event handler:', error);
+                    console.error('[GJS Engine] Error in status event handler:', error);
                 }
             }
         }
@@ -287,9 +291,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
         try {
             this._webView.rpc?.sendRequest('notifyStatusChange', {
                 status: status
-            }).catch(error => console.error('[Engine] Error notifying status change:', error));
+            }).catch(error => console.error('[GJS Engine] Error notifying status change:', error));
         } catch (error) {
-            console.error('[Engine] Failed to send status change:', error);
+            console.error('[GJS Engine] Failed to send status change:', error);
         }
     }
 

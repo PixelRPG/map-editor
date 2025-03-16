@@ -25,7 +25,7 @@ export class EditorInputSystem extends System {
 
     public systemType = SystemType.Update
 
-    private rpc = new RpcEndpoint('pixelrpg')
+    private rpc = RpcEndpoint.getInstance('pixelrpg')
 
     private engine?: Engine;
 

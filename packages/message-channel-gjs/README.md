@@ -26,7 +26,7 @@ import WebKit from '@girs/webkit-6.0';
 
 // Create an RPC endpoint with a channel name and WebView
 const webView = new WebKit.WebView();
-const endpoint = new RpcEndpoint('my-channel', webView);
+const endpoint = RpcEndpoint.getInstance('my-channel', webView);
 
 // Register methods that can be called from the web client
 endpoint.registerHandler('saveData', async (params) => {

@@ -41,7 +41,7 @@ messages.postMessage({
 import { RpcEndpoint } from '@pixelrpg/message-channel-web';
 
 // Create an RPC endpoint
-const endpoint = new RpcEndpoint('rpc-channel');
+const endpoint = RpcEndpoint.getInstance('rpc-channel');
 
 // Register handler methods that can be called from GJS
 endpoint.registerHandler('updateUIState', (state) => {

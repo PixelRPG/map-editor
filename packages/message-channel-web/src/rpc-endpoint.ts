@@ -15,15 +15,33 @@ import { WebKitMessageHandler } from './types/webkit-message-handler';
  */
 export class RpcEndpoint extends CoreRpcEndpoint {
     /**
+     * Registry of all created endpoints by channel name
+     */
+    private static instances: Map<string, RpcEndpoint> = new Map();
+
+    /**
+     * Get or create an RPC endpoint for a specific channel
+     * @param channelName Name of the channel
+     * @returns An RPC endpoint instance for the specified channel
+     */
+    public static getInstance(channelName: string): RpcEndpoint {
+        if (!this.instances.has(channelName)) {
+            this.instances.set(channelName, new RpcEndpoint(channelName));
+        }
+        return this.instances.get(channelName)!;
+    }
+
+    /**
      * WebKit message handler reference, if available
      */
     private webKitHandler: WebKitMessageHandler | null;
 
     /**
      * Create a new Web RPC endpoint with direct browser API access
+     * Use RpcEndpoint.getInstance() instead of calling the constructor directly
      * @param channelName Name of the channel
      */
-    constructor(channelName: string) {
+    protected constructor(channelName: string) {
         super(channelName);
 
         // Try to get WebKit message handler if available
@@ -140,18 +158,22 @@ export class RpcEndpoint extends CoreRpcEndpoint {
      */
     private handleMessageEvent = (event: Event): void => {
         const messageEvent = event as unknown as MessageEvent;
+        console.log('[RpcEndpoint] Handling message event:', messageEvent);
         if (messageEvent.data?.channel === this.channelName) {
             this.handleRpcMessage(messageEvent);
         }
     };
 
     /**
-     * Clean up resources
+     * Clean up resources and remove from registry
      */
     public override destroy(): void {
         super.destroy();
 
         // Remove the message event listener
         window.removeEventListener('message', this.handleMessageEvent);
+
+        // Remove from instances registry
+        RpcEndpoint.instances.delete(this.channelName);
     }
 } 

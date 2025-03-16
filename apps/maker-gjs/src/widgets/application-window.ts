@@ -125,7 +125,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (response === Gtk.ResponseType.ACCEPT) {
         const file = dialog.get_file()
         if (file) {
-          this.openProject(file.get_path())
+          try {
+            this.openProject(file.get_path())
+          } catch (error) {
+            console.error('[ApplicationWindow] Failed to open project:', error)
+          }
         }
       }
       dialog.destroy()
@@ -154,7 +158,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     // Load the project in the engine
     this._projectView.connect('ready', () => {
-      this._projectView!.engine!.loadProject(path)
+      try {
+        console.log('[ApplicationWindow] Loading project:', path)
+        this._projectView!.engine!.loadProject(path)
+      } catch (error) {
+        console.error('[ApplicationWindow] Failed to load project:', error)
+      }
     })
 
     // Switch to project view

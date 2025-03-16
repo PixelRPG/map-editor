@@ -128,7 +128,7 @@ export class WebView extends WebKit.WebView {
      */
     protected initRpcServer() {
         console.log('Initializing RpcServer, webView:', this)
-        const rpc = new RpcEndpoint(INTERNAL_PROTOCOL, this)
+        const rpc = RpcEndpoint.getInstance(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
         rpc.registerHandler('handleInputEvent', async (params) => {

@@ -129,7 +129,7 @@ export abstract class RpcEndpoint {
 
         try {
             if (!handler) {
-                throw new Error(`Method '${method}' not found`);
+                throw new Error(`Method '${method}' not found, available methods: ${Array.from(this.handlers.keys()).join(', ')}`);
             }
 
             // Call the handler and create a success response

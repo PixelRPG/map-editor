@@ -18,11 +18,34 @@ import {
  */
 export class RpcEndpoint extends CoreRpcEndpoint {
     /**
+     * Registry of all created endpoints by channel name and WebView
+     * The key is a combination of channelName and WebView object ID
+     */
+    private static instances: Map<string, RpcEndpoint> = new Map();
+
+    /**
+     * Get or create an RPC endpoint for a specific channel and WebView
+     * @param channelName Name of the channel
+     * @param webView WebKit WebView instance
+     * @returns An RPC endpoint instance for the specified channel and WebView
+     */
+    public static getInstance(channelName: string, webView: WebKit.WebView): RpcEndpoint {
+        // Create a unique key from the channel name and WebView instance
+        const instanceKey = `${channelName}:${webView.toString()}`;
+
+        if (!this.instances.has(instanceKey)) {
+            this.instances.set(instanceKey, new RpcEndpoint(channelName, webView));
+        }
+        return this.instances.get(instanceKey)!;
+    }
+
+    /**
      * Create a new GJS RPC endpoint
+     * Use RpcEndpoint.getInstance() instead of calling the constructor directly
      * @param channelName Name of the channel
      * @param webView WebKit WebView instance
      */
-    constructor(
+    protected constructor(
         channelName: string,
         private readonly webView: WebKit.WebView
     ) {
@@ -174,6 +197,11 @@ export class RpcEndpoint extends CoreRpcEndpoint {
      */
     public override destroy(): void {
         super.destroy();
+
+        // Remove from instances registry
+        const instanceKey = `${this.channelName}:${this.webView.toString()}`;
+        RpcEndpoint.instances.delete(instanceKey);
+
         // No need to explicitly unregister the script message handler
         // The WebView will clean up when destroyed
     }
