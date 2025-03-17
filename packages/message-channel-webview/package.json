@@ -1,10 +1,13 @@
 {
-    "name": "@pixelrpg/message-channel-web",
+    "name": "@pixelrpg/message-channel-webview",
     "version": "0.0.1",
     "description": "Messages from WebKit.WebView to communicate with GJS",
     "main": "src/index.ts",
     "type": "module",
-    "private": true,
+    "exports": {
+        ".": "./src/index.ts",
+        "./env": "./src/env.ts"
+    },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "check": "tsc --noEmit"

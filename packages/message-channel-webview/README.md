@@ -1,4 +1,4 @@
-# @pixelrpg/message-channel-web
+# @pixelrpg/message-channel-webview
 
 Web implementation of the messaging API for communication between WebViews and GJS following WHATWG and WebKit standards, with RPC endpoint support.
 
@@ -16,7 +16,7 @@ Web implementation of the messaging API for communication between WebViews and G
 ### Basic MessageChannel
 
 ```typescript
-import { MessageChannel } from '@pixelrpg/message-channel-web';
+import { MessageChannel } from '@pixelrpg/message-channel-webview';
 
 // Create a message channel with a channel name
 const messages = new MessageChannel('my-channel');
@@ -38,7 +38,7 @@ messages.postMessage({
 ### RPC Endpoint
 
 ```typescript
-import { RpcEndpoint } from '@pixelrpg/message-channel-web';
+import { RpcEndpoint } from '@pixelrpg/message-channel-webview';
 
 // Create an RPC endpoint
 const endpoint = RpcEndpoint.getInstance('rpc-channel');
