@@ -18,8 +18,8 @@
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
         "@pixelrpg/message-channel-core": "workspace:^",
-        "esbuild": "^0.25.0",
-        "fast-xml-parser": "^5.0.8",
+        "esbuild": "^0.25.1",
+        "fast-xml-parser": "^5.0.9",
         "jsdom": "^26.0.0",
         "yargs": "^17.7.2"
     },

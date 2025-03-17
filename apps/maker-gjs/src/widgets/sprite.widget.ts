@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Object from '@girs/gobject-2.0'
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
-import { Sprite } from '../g-objects/sprite.ts'
+import { Sprite } from '../objects/sprite.ts'
 
 import Template from './sprite.widget.ui?raw'
 

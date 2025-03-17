@@ -22,7 +22,7 @@
         "@pixelrpg/esbuild": "workspace:^",
         "@rollup/pluginutils": "^5.1.4",
         "typescript": "^5.8.2",
-        "vite": "^6.2.0"
+        "vite": "^6.2.2"
     },
     "dependencies": {
         "@excaliburjs/dev-tools": "^0.28.0",

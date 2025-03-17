@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import { Layer } from '../g-objects/layer.ts'
+import { Layer } from '../objects/layer.ts'
 import { LayerRowWidget } from './layer-row.widget.ts'
 
 import Template from './layers.widget.ui?raw'

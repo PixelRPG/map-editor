@@ -11,8 +11,8 @@ import { LayersWidget } from './layers.widget.ts'
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
-import { SpriteSheet } from '../g-objects/sprite-sheet.ts'
-import { Layer } from '../g-objects/layer.ts'
+import { SpriteSheet } from '../objects/sprite-sheet.ts'
+import { Layer } from '../objects/layer.ts'
 
 
 import type { ImageReference } from '@pixelrpg/data-core'
