@@ -22,9 +22,9 @@ class Window {
     /**
      * Post a message to this window context
      * @param message Message data to post
-     * @param targetOrigin Target origin for security checks (not enforced in GJS)
+     * @param _targetOrigin Target origin for security checks (not enforced in GJS)
      */
-    postMessage(message: any, targetOrigin: string): void {
+    postMessage(message: any, _targetOrigin: string): void {
         // Create a standard-compliant MessageEvent
         const messageEvent = new MessageEvent('message', {
             data: message,

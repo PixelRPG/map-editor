@@ -127,7 +127,7 @@ The core RPC architecture supports platform-specific optimizations:
 This is a core package that provides the foundation for concrete implementations like:
 
 - `@pixelrpg/message-channel-gjs` - GJS implementation for WebKit WebViews
-- `@pixelrpg/message-channel-web` - Web implementation for browser environments
+- `@pixelrpg/message-channel-webview` - Web implementation for browser environments
 
 The core package itself doesn't provide runtime functionality but serves as a base 
 for platform-specific implementations.
@@ -169,7 +169,7 @@ The project has moved away from the MessageChannel abstraction in favor of a mor
 ### Bidirectional Communication
 
 ```typescript
-import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'; // or '@pixelrpg/message-channel-web'
+import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'; // or '@pixelrpg/message-channel-webview'
 
 // Create an endpoint instance
 const endpoint = new RpcEndpoint('my-channel', webview);

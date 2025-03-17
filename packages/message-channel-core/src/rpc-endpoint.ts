@@ -1,5 +1,5 @@
 import { type MessageEvent, EventDispatcher } from "./polyfills/index.ts";
-import { RpcRequest, RpcResponse, RpcMessageType, BaseMessage } from "./types/message";
+import { RpcRequest, RpcResponse, RpcMessageType } from "./types/message";
 import { MethodHandler, DirectReplyFunction } from "./types/handlers";
 import { createRpcResponse, createRpcErrorResponse, isRpcRequest, isRpcResponse, createRpcRequest } from "./utils/message";
 
