@@ -1,0 +1,29 @@
+---
+description: CLI Implementation
+globs: apps/cli/**/*.ts
+alwaysApply: false
+---
+# CLI Implementation
+
+The CLI application provides command-line tools for working with PixelRPG projects.
+
+## CLI Structure
+- Use a modular command structure
+- Implement consistent command patterns
+- Provide helpful error messages and documentation
+- Follow standard CLI conventions
+- Support both interactive and non-interactive modes
+
+## Command Implementation
+- Create reusable command classes or functions
+- Implement proper argument parsing
+- Provide sensible defaults
+- Include help text for all commands
+- Handle errors gracefully
+
+## Integration with Packages
+- Use core packages for data structures
+- Implement platform-specific functionality as needed
+- Maintain separation of concerns
+- Document integration points
+- Handle cross-platform compatibility

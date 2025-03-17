@@ -1,0 +1,17 @@
+{
+    "name": "@pixelrpg/message-channel-web",
+    "version": "0.0.1",
+    "description": "Messages from WebKit.WebView to communicate with GJS",
+    "main": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "check": "tsc --noEmit"
+    },
+    "author": "Pascal Garber <pascal@artandcode.studio>",
+    "license": "MIT",
+    "dependencies": {
+        "@pixelrpg/message-channel-core": "workspace:^"
+    }
+}

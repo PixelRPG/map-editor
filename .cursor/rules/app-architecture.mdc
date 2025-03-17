@@ -1,0 +1,43 @@
+---
+description: Architecture standards for end-user applications
+globs: apps/**/*.ts, apps/**/*.tsx
+alwaysApply: false
+---
+# Application Architecture
+
+End-user applications in the `apps/` directory should follow these architectural guidelines to ensure consistency and maintainability.
+
+## Application Structure
+- Organize code into logical modules and components
+- Separate UI components from business logic
+- Use a consistent directory structure
+- Follow platform-specific conventions (GJS or web)
+- Implement proper error handling and logging
+
+## UI Components
+- Create reusable, composable components
+- Implement responsive layouts
+- Follow platform UI guidelines (GNOME HIG or web best practices)
+- Handle proper resource management
+- Support accessibility features
+
+## State Management
+- Use appropriate state management patterns
+- Avoid global state when possible
+- Implement proper data flow between components
+- Handle asynchronous operations cleanly
+- Ensure type safety in state transitions
+
+## Error Handling
+- Implement user-friendly error messages
+- Log errors for debugging
+- Handle edge cases gracefully
+- Provide recovery mechanisms when possible
+- Use proper error boundaries
+
+## Integration with Packages
+- Use packages from the `packages/` directory
+- Follow the interfaces defined in core packages
+- Handle platform-specific concerns appropriately
+- Maintain separation of concerns
+- Document integration points

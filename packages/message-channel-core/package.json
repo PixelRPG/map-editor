@@ -1,0 +1,17 @@
+{
+    "name": "@pixelrpg/message-channel-core",
+    "version": "0.0.1",
+    "description": "Common package to share code between GJS and the WebVew",
+    "main": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "check": "tsc --noEmit"
+    },
+    "author": "Pascal Garber <pascal@artandcode.studio>",
+    "license": "MIT",
+    "devDependencies": {
+        "typescript": "^5.8.2"
+    }
+}

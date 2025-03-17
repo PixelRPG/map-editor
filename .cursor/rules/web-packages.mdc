@@ -1,0 +1,37 @@
+---
+description: Guidelines for web packages
+globs: packages/*-web/**/*.ts
+alwaysApply: false
+---
+# Web Packages
+
+Web packages (`*-web`) provide utilities and components for web browser integration, focusing on communication and integration with web technologies.
+
+## Package Responsibilities
+- Implement browser-specific functionality
+- Handle web communication patterns
+- Provide utilities for DOM manipulation
+- Bridge between core interfaces and web APIs
+- Focus on web application integration
+
+## Implementation Patterns
+- Use modern browser APIs and features
+- Follow web development best practices
+- Handle browser compatibility concerns
+- Use TypeScript for type safety
+- Properly integrate with the DOM and browser events
+
+## Message Handling
+- Use standard WebKit message handlers (window.webkit.messageHandlers) when available
+- Implement WHATWG window.postMessage API as a fallback mechanism
+- Follow web standards for cross-context communication
+- Implement the abstract classes from message-channel-core package
+- Provide automatic detection and use of available communication channels
+- Ensure proper error handling and type safety in message passing
+
+## Integration with Core Packages
+- Implement core interfaces faithfully
+- Translate between core types and web types
+- Handle platform-specific edge cases
+- Provide web-specific extensions where needed
+- Maintain type safety in interface implementations 

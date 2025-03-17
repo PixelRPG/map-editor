@@ -1,0 +1,32 @@
+{
+    "name": "@pixelrpg/cli",
+    "version": "0.0.1",
+    "description": "PixelRPG CLI tools",
+    "type": "module",
+    "private": true,
+    "main": "src/main.js",
+    "bin": {
+        "pixelrpg": "./src/main.js"
+    },
+    "scripts": {
+        "build": "node esbuild.js",
+        "start": "node dist/main.js",
+        "dev": "node --experimental-specifier-resolution=bundler --experimental-strip-types src/main.ts"
+    },
+    "dependencies": {
+        "@excaliburjs/plugin-tiled": "workspace:^",
+        "@pixelrpg/data-core": "workspace:^",
+        "@pixelrpg/data-excalibur": "workspace:^",
+        "@pixelrpg/message-channel-core": "workspace:^",
+        "esbuild": "^0.25.1",
+        "fast-xml-parser": "^5.0.9",
+        "jsdom": "^26.0.0",
+        "yargs": "^17.7.2"
+    },
+    "devDependencies": {
+        "@types/jsdom": "^21.1.7",
+        "@types/node": "^22.13.8",
+        "@types/yargs": "^17.0.33",
+        "typescript": "^5.8.2"
+    }
+}

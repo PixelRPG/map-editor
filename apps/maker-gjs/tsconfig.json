@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {   
+    "lib": ["ESNext"],
+    "types": [],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+  },
+  "files": [
+    "src/main.ts",
+  ],
+  "include": [
+    "@girs/gjs",
+    "@girs/gjs/dom",
+    "src/env.d.ts",
+  ]
+}

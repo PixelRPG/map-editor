@@ -1,0 +1,16 @@
+{
+    "name": "@pixelrpg/data-core",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "src/index.ts",
+    "scripts": {
+        "check": "tsc"
+    },
+    "dependencies": {
+        "excalibur": "workspace:^"
+    },
+    "devDependencies": {
+        "@types/node": "^22.13.8",
+        "typescript": "^5.8.2"
+    }
+}

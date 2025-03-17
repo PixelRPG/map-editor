@@ -1,0 +1,39 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ApplicationWindow: Adw.ApplicationWindow {
+  name: "application-window";
+  default-width: 800;
+  default-height: 600;
+  width-request: 360;
+  height-request: 480;
+
+  Adw.Breakpoint {
+    condition ("max-width: 400sp")
+
+    setters {
+      // splitView.collapsed: true;
+      // showSidebarButton.visible: true;
+    }
+  }
+
+  content: Adw.ToastOverlay toastOverlay {
+    child: Adw.ViewStack stack {
+      vexpand: true;
+      hexpand: true;
+
+      Adw.ViewStackPage {
+        name: "welcome-view";
+        title: _("Welcome");
+        child: $WelcomeView welcomeView {};
+      }
+
+      Adw.ViewStackPage {
+        name: "project-view";
+        title: _("Project");
+        child: $ProjectView projectView {};
+      }
+    };
+  };
+}
+

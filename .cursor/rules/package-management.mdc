@@ -1,0 +1,28 @@
+---
+description: Package management standards for the project
+globs: package.json, **/package.json
+alwaysApply: false
+---
+# Package Management
+
+This project uses Yarn workspaces for package management, with a monorepo structure.
+
+## Workspace Structure
+- Root workspace in the project root
+- Packages in `packages/` directory
+- Applications in `apps/` directory
+- Each package and app has its own `package.json`
+
+## Dependencies
+- Use workspace references for internal dependencies
+- Specify exact versions for external dependencies
+- Document dependency purposes in package.json
+- Keep dependencies up to date
+- Minimize external dependencies
+
+## Scripts
+- Implement consistent script names across packages
+- Include build, test, and lint scripts
+- Use workspace-level scripts for project-wide operations
+- Document script usage in README files
+- Ensure scripts work cross-platform

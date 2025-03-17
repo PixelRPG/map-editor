@@ -1,0 +1,44 @@
+---
+description: Guidelines for core packages (data-core, engine-core, message-channel-core)
+globs: packages/*-core/**/*.ts
+alwaysApply: false
+---
+# Core Packages
+
+Core packages (`*-core`) provide the foundation for the project, defining interfaces, types, and platform-independent functionality that other packages implement.
+
+## Package Responsibilities
+- Define interfaces and types that will be implemented by platform-specific packages
+- Provide platform-independent utility functions and services
+- Establish the contract between different parts of the system
+- Avoid dependencies on platform-specific libraries or frameworks
+- Focus on reusability and extensibility
+
+## Type Definitions
+- Define clear, well-documented interfaces for all major components
+- Use TypeScript interfaces for object shapes and types for unions/primitives
+- Create type guards for runtime type checking
+- Use discriminated unions with explicit type properties
+- Document nullability and optional parameters
+
+## Implementation Guidelines
+- Keep core implementations platform-agnostic
+- Provide default implementations where appropriate
+- Use dependency injection patterns for extensibility
+- Avoid direct dependencies on browser, Node.js, or GJS APIs
+- Create factory functions for instantiating complex objects
+
+## Error Handling
+- Define error types and hierarchies
+- Create error factory functions for consistent error creation
+- Include appropriate context in error objects
+- Document error conditions in interface definitions
+- Provide utilities for error handling and reporting
+
+## Message System
+- Follow WHATWG and WebKit standards for messaging
+- Implement standard-compliant interfaces for cross-context communication
+- Provide abstract base classes for different messaging patterns
+- Support both WebKit message handlers and window.postMessage APIs
+- Ensure type safety and proper error handling in message passing
+- Document message flow between different runtime environments 

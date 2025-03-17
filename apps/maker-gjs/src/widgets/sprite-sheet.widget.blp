@@ -1,0 +1,16 @@
+using Gtk 4.0;
+
+template $SpriteSheetWidget: ScrolledWindow {
+    name: "sprite-sheet-widget";
+    FlowBox flowBox {
+        max-children-per-line: 20;
+        min-children-per-line: 1;
+        row-spacing: 0;
+        column-spacing: 0;
+        orientation: horizontal;
+        selection-mode: single;
+        // css-name: "sprite-sheet-widget";
+        hexpand: true;
+        vexpand: true;
+    }
+}

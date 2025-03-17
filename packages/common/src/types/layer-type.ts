@@ -1,1 +1,0 @@
-export type LayerType = 'object' | 'image' | 'tile' | 'iso-tile' | 'unknown';

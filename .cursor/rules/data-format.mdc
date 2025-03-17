@@ -1,0 +1,36 @@
+---
+description: Format Implementation
+globs: packages/data-*/**/*.ts
+alwaysApply: false
+---
+# Data Format
+
+The data packages (`data-core`, `data-gjs`, `data-excalibur`) define and implement the game data formats.
+
+## Data Structures
+- Define clear, well-documented interfaces for all data types
+- Use TypeScript interfaces for object shapes
+- Implement proper validation for all data
+- Use discriminated unions for different data types
+- Document data relationships and hierarchies
+
+## File Formats
+- Use JSON for data storage
+- Implement proper serialization/deserialization
+- Include version information in data files
+- Handle backward compatibility
+- Validate data integrity
+
+## Resource Management
+- Implement proper resource loading and caching
+- Handle platform-specific resource paths
+- Support asynchronous resource loading
+- Implement proper error handling for missing resources
+- Document resource dependencies
+
+## Integration with Engine
+- Provide data structures that can be consumed by the engine
+- Implement proper data transformation for engine consumption
+- Handle platform-specific data requirements
+- Document data flow between data and engine packages
+- Ensure type safety in data transformations
