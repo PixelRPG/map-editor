@@ -20,13 +20,6 @@ import { ImageResource } from '@pixelrpg/data-gjs'
 
 import Template from './application-window.ui?raw'
 
-// Ensure widgets are loaded and can be used in the XML
-GObject.type_ensure(WebView.$gtype)
-GObject.type_ensure(Sidebar.$gtype)
-GObject.type_ensure(Engine.$gtype)
-GObject.type_ensure(WelcomeView.$gtype)
-GObject.type_ensure(ProjectView.$gtype)
-
 export class ApplicationWindow extends Adw.ApplicationWindow {
 
   // GObject internal children

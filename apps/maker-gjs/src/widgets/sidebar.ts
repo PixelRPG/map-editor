@@ -9,9 +9,6 @@ import { LayersWidget } from './layers.widget.ts'
 
 import Template from './sidebar.ui?raw'
 
-// GObject.type_ensure(SidebarPageTilesets.$gtype)
-// GObject.type_ensure(SidebarPageLayer.$gtype)
-
 export class Sidebar extends Adw.Bin {
 
   // GObject internal children
