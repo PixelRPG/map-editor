@@ -34,6 +34,7 @@ export class Application extends Adw.Application {
     /** Load the stylesheet in a CssProvider and add it to the Gtk.StyleContext */
     protected initStyles() {
         const provider = new Gtk.CssProvider();
+        console.log('[Application] Loading stylesheet', mainStyle)
         provider.load_from_string(mainStyle);
         const display = Gdk.Display.get_default()
 

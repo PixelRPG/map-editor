@@ -24,6 +24,6 @@ export default defineConfig({
     esbuild: {
       external: [new RegExp('^gi://*', 'i'), 'system', 'gettext', 'jsdom', 'react'],
     },
-    cssMinify: 'lightningcss',
+    cssMinify: false // Disable CSS minification to keep semicolons
   },
 })
