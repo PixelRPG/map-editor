@@ -5,6 +5,7 @@
  */
 export async function loadTextFile(path: string): Promise<string> {
     try {
+        console.log('Loading text file:', path);
         const response = await fetch(path);
         if (!response.ok) {
             throw new Error(`Failed to load file: ${path} (${response.status})`);

@@ -14,7 +14,7 @@ import {
     isValidInputEvent
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
-import { RpcEndpoint } from "@pixelrpg/message-channel-web";
+import { rpcEndpointFactory } from "../utils/rpc.ts";
 
 /**
  * System to handle input for the map editor
@@ -25,7 +25,7 @@ export class EditorInputSystem extends System {
 
     public systemType = SystemType.Update
 
-    private rpc = RpcEndpoint.getInstance('pixelrpg')
+    private rpc = rpcEndpointFactory()
 
     private engine?: Engine;
 
@@ -129,6 +129,7 @@ export class EditorInputSystem extends System {
             console.debug('[EditorInputSystem] Setting up RPC client for GJS input events');
 
             // Register handler for input events from GJS
+            // TODO: Make this type safe
             this.rpc.registerHandler('handleInputEvent', (params) => {
                 // Check if it's a valid input event
                 if (isValidInputEvent(params)) {

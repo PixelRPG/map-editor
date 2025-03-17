@@ -1,6 +1,6 @@
 import { Engine as ExcaliburEngine, DisplayMode, Loader, Color, Logger, Scene, Clock } from 'excalibur'
 import { EventDispatcher } from '@pixelrpg/message-channel-core'
-import { RpcEndpoint } from '@pixelrpg/message-channel-web'
+import { rpcEndpointFactory } from './utils/rpc.ts'
 import {
     EngineInterface,
     EngineEvent,
@@ -10,7 +10,6 @@ import {
     EngineCommandType,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
-
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 
 /**
@@ -42,11 +41,7 @@ export class Engine implements EngineInterface {
      */
     private logger = Logger.getInstance()
 
-    /**
-     * Message handler name used in the messages service
-     */
-    private messageHandlerName = 'pixelrpg'
-    private rpc = RpcEndpoint.getInstance(this.messageHandlerName)
+    private rpc = rpcEndpointFactory()
 
 
     /**
@@ -55,6 +50,7 @@ export class Engine implements EngineInterface {
      */
     constructor(private canvasElementId: string = 'engine-view') {
         this.logger.info('Creating Engine')
+
 
         // Register RPC handlers for GJS to call
         this.registerRpcHandlers()
@@ -67,6 +63,7 @@ export class Engine implements EngineInterface {
         this.logger.info('Registering RPC handlers');
 
         // Register loadProject handler
+        // TODO: Make this type safe
         this.rpc.registerHandler('loadProject', async (params) => {
             this.logger.info('RPC call: loadProject', params);
             try {
@@ -89,6 +86,7 @@ export class Engine implements EngineInterface {
         });
 
         // Register loadMap handler
+        // TODO: Make this type safe
         this.rpc.registerHandler('loadMap', async (params) => {
             this.logger.info('RPC call: loadMap', params);
             try {
@@ -111,6 +109,7 @@ export class Engine implements EngineInterface {
         });
 
         // Register engineCommand handler
+        // TODO: Make this type safe
         this.rpc.registerHandler('engineCommand', async (params) => {
             this.logger.info('RPC call: engineCommand', params);
             try {
@@ -143,6 +142,7 @@ export class Engine implements EngineInterface {
         });
 
         // Register notifyStatusChange handler
+        // TODO: Make this type safe
         this.rpc.registerHandler('notifyStatusChange', (params) => {
             this.logger.info('RPC call: notifyStatusChange', params);
             try {

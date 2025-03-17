@@ -205,6 +205,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
         }
 
         // Register handler for engine events from the WebView using RPC
+        // TODO: Make this type safe
         this._webView.rpc.registerHandler('notifyEngineEvent', async (event) => {
             console.log('[GJS Engine] Engine event received from WebView:', event);
             // Handle the event with proper typing

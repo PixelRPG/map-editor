@@ -11,7 +11,7 @@ The rules are organized into the following categories:
    - `core-packages.mdc`: Guidelines for core packages (data-core, engine-core, message-channel-core)
    - `gjs-packages.mdc`: Guidelines for GJS packages (engine-gjs, data-gjs, message-channel-gjs)
    - `excalibur-packages.mdc`: Guidelines for Excalibur packages (engine-excalibur, data-excalibur)
-   - `web-packages.mdc`: Guidelines for web packages (message-channel-web)
+   - `web-packages.mdc`: Guidelines for web packages (message-channel-web, message-channel-webview)
    - `data-format.mdc`: Guidelines for data format implementation
 3. **Application Rules**:
    - `app-architecture.mdc`: Architecture standards for end-user applications

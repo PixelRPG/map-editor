@@ -11,7 +11,8 @@ alwaysApply: false
   - `*-core`: Core interfaces, types, and platform-independent functionality
   - `*-gjs`: GJS/GTK implementation for desktop environments
   - `*-excalibur`: Web/Excalibur.js implementation for browsers
-  - `*-web`: Web-specific utilities and components
+  - `*-web`: Web-specific utilities and components for standard browser environments
+  - `*-webview`: WebKit webview specific implementations for native applications
 
 ## Code Quality Standards
 - Use TypeScript with explicit types for all public interfaces

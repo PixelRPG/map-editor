@@ -1,0 +1,35 @@
+{
+    "name": "@pixelrpg/maker-web",
+    "version": "0.0.1",
+    "description": "PixelRPG Maker for Web",
+    "type": "module",
+    "private": true,
+    "keywords": [
+        "pixelrpg",
+        "maker",
+        "web"
+    ],
+    "author": "Pascal Garber <pascal@artandcode.studio>",
+    "license": "GPL-3.0",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "concurrently 'yarn:preview:*'",
+        "preview:maker-web": "vite preview",
+        "preview:engine-excalibur": "yarn workspace @pixelrpg/engine-excalibur preview",
+        "preview:zelda-like": "yarn workspace @pixelrpg/games-zelda-like preview"
+    },
+    "dependencies": {
+        "@pixelrpg/engine-core": "workspace:^",
+        "@pixelrpg/engine-excalibur": "workspace:^",
+        "@pixelrpg/message-channel-core": "workspace:*",
+        "@pixelrpg/message-channel-web": "workspace:*"
+    },
+    "devDependencies": {
+        "@pixelrpg/games-zelda-like": "workspace:^",
+        "@types/node": "^22.13.10",
+        "concurrently": "^9.1.2",
+        "typescript": "^5.0.0",
+        "vite": "^5.0.0"
+    }
+}

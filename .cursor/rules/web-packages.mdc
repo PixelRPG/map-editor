@@ -1,11 +1,13 @@
 ---
 description: Guidelines for web packages
-globs: packages/*-web/**/*.ts
+globs: packages/*-web/**/*.ts,packages/*-webview/**/*.ts
 alwaysApply: false
 ---
 # Web Packages
 
-Web packages (`*-web`) provide utilities and components for web browser integration, focusing on communication and integration with web technologies.
+Web packages include two categories:
+- `*-web`: Packages that provide utilities and components for web browser integration, focusing on communication and integration with web technologies
+- `*-webview`: Packages that implement communication channels for WebKit webview environments
 
 ## Package Responsibilities
 - Implement browser-specific functionality
@@ -22,9 +24,17 @@ Web packages (`*-web`) provide utilities and components for web browser integrat
 - Properly integrate with the DOM and browser events
 
 ## Message Handling
+### Web Packages (`*-web`)
+- Implement standards-based web communication (postMessage, MessageChannel API, etc.)
+- Focus on browser-to-browser communication
+- Support iframe and window messaging patterns
+- Provide utilities for cross-origin communication
+- Use web standards for message serialization
+
+### WebView Packages (`*-webview`)
 - Use standard WebKit message handlers (window.webkit.messageHandlers) when available
 - Implement WHATWG window.postMessage API as a fallback mechanism
-- Follow web standards for cross-context communication
+- Focus on native app to web view communication
 - Implement the abstract classes from message-channel-core package
 - Provide automatic detection and use of available communication channels
 - Ensure proper error handling and type safety in message passing

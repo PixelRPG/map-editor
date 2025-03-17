@@ -21,7 +21,8 @@
     "packageManager": "yarn@4.7.0",
     "workspaces": [
         "packages/*",
-        "apps/*"
+        "apps/*",
+        "games/*"
     ],
     "resolutions": {
         "excalibur": "workspace:^",

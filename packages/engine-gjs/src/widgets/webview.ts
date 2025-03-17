@@ -131,6 +131,7 @@ export class WebView extends WebKit.WebView {
         const rpc = RpcEndpoint.getInstance(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
+        // TODO: Make this type safe
         rpc.registerHandler('handleInputEvent', async (params) => {
             console.log('Handling input event:', params);
             // Process the input event

@@ -19,6 +19,25 @@ export function extractDirectoryPath(filePath: string): string {
  * @returns Normalized path with trailing slash if it had one
  */
 export function normalizePath(path: string): string {
+    // Special handling for URLs with protocol to preserve double slash
+    if (path.match(/^https?:\/\//)) {
+        const urlParts = path.split('://');
+        const protocol = urlParts[0];
+        const restOfUrl = urlParts.slice(1).join('://'); // Handle any additional :// in the URL
+
+        // Normalize the rest of the URL without affecting protocol
+        const normalizedRest = normalizePathWithoutProtocol(restOfUrl);
+        return `${protocol}://${normalizedRest}`;
+    }
+
+    return normalizePathWithoutProtocol(path);
+}
+
+/**
+ * Helper function to normalize path segments without affecting URL protocols
+ * @private
+ */
+function normalizePathWithoutProtocol(path: string): string {
     // Check if path ends with a slash
     const endsWithSlash = path.endsWith('/');
 
@@ -54,6 +73,18 @@ export function normalizePath(path: string): string {
 export function joinPaths(basePath: string, relativePath: string): string {
     // Handle absolute paths in relativePath
     if (relativePath.startsWith('/')) {
+        // If basePath is a URL, preserve the origin
+        if (basePath.match(/^https?:\/\//)) {
+            try {
+                // Use URL API to properly parse and join
+                const baseUrl = new URL(basePath);
+                return `${baseUrl.protocol}//${baseUrl.host}${relativePath}`;
+            } catch (e) {
+                // Fallback to basic joining if URL parsing fails
+                const origin = basePath.split('/').slice(0, 3).join('/');
+                return `${origin}${relativePath}`;
+            }
+        }
         return relativePath;
     }
 
@@ -62,16 +93,19 @@ export function joinPaths(basePath: string, relativePath: string): string {
         return relativePath;
     }
 
+    // Handle URLs in basePath
+    if (basePath.match(/^https?:\/\//)) {
+        // Ensure base path ends with slash for proper joining
+        const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
+        return normalizedBase + relativePath;
+    }
+
     // Ensure base path ends with slash if it's not empty
     const normalizedBase = basePath ?
         (basePath.endsWith('/') ? basePath : basePath + '/') : '';
 
-    // Remove leading slash from relative path if it exists
-    const normalizedRelative = relativePath.startsWith('/') ?
-        relativePath.substring(1) : relativePath;
-
     // Join and normalize
-    return normalizePath(normalizedBase + normalizedRelative);
+    return normalizePath(normalizedBase + relativePath);
 }
 
 /**

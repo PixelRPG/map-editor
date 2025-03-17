@@ -1,0 +1,19 @@
+{
+    "name": "@pixelrpg/games-zelda-like",
+    "version": "0.0.1",
+    "description": "Zelda like game",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "preview": "serve -l 5001 --cors"
+    },
+    "files": [
+        "assets"
+    ],
+    "exports": {
+        "./assets/*": "./assets/*"
+    },
+    "devDependencies": {
+        "serve": "^14.2.4"
+    }
+}
