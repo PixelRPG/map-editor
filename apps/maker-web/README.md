@@ -1,63 +1,47 @@
 # Pixel RPG Map Editor - Web Version
 
-This is the web implementation of the Pixel RPG Map Editor. It serves as a testing ground for the engine's capabilities in a browser environment.
+A browser-based implementation of the Pixel RPG Map Editor, serving as a testing ground for the engine in web environments.
 
-## Current Implementation
+## Implementation
 
-The current implementation uses an iframe to load and display the engine. This approach was chosen primarily for testing purposes, as it mirrors how the engine is integrated in the GJS version using a webview component.
+The editor uses an iframe to load the engine, mirroring the WebView approach in the GJS version for testing purposes.
 
-### Why an iframe?
+### Benefits of the iframe Approach
 
-Using an iframe allows us to:
-
-1. **Test RPC Communication**: Demonstrate that our Remote Procedure Call (RPC) implementation works both ways:
-   - GJS <-> WebView in the desktop application
-   - Browser <-> iframe in this web version
-
-2. **Maintain Architecture Consistency**: By using similar integration patterns across platforms, we can ensure that the same message passing systems work consistently.
-
-3. **Isolation**: The engine runs in its own context, which can help with performance and memory management.
+- **RPC Testing**: Validates that communication works between Browser <-> iframe (similar to GJS <-> WebView)
+- **Consistency**: Maintains similar integration patterns across platforms
+- **Isolation**: Engine runs in its own context
 
 ## Future Considerations
 
-In a production web version, the iframe approach would not necessarily be required:
+For a production web version:
 
-- **Direct Integration**: The engine could be loaded directly in the same document, eliminating the overhead of cross-document communication.
-  
-- **Simplified Architecture**: Without the iframe, we could avoid the complexity of cross-origin issues and message passing.
+**Without iframe:**
+- Direct integration would eliminate cross-document communication overhead
+- Avoids cross-origin complexities
+- Potentially better performance
 
-- **Better Performance**: Direct integration would likely result in better performance without the overhead of iframe communication.
+**With iframe:**
+- Maintains architectural consistency across platforms
+- Enables code sharing for message-passing components
 
-However, maintaining the iframe approach could:
+The final approach will be determined based on performance, maintenance, and resource considerations.
 
-- **Provide Consistency**: Keep the architecture similar between platforms, potentially simplifying maintenance.
-  
-- **Enable Easier Shared Code**: Components designed to work with the message-passing system would work across platforms without modification.
-
-The final implementation approach remains open for discussion and will be determined based on performance requirements, maintenance considerations, and development resources.
-
-## Development Focus
-
-Currently, development efforts are primarily focused on the GJS version of the application, as it's the main target platform. This web version serves as a complementary testing environment and proof of concept.
-
-## Running the Web Version
+## Development
 
 ```bash
-# Install dependencies
-yarn install
-
-# Start the development server
-yarn dev
-
-# Build for production
-yarn build
-
-# Preview the production build
-yarn preview
+yarn install              # Install dependencies
+yarn dev                  # Start development server
+yarn build                # Build for production
+yarn preview              # Preview the production build using serve (port 5001)
 ```
 
 ## Project Structure
 
-- `src/` - Source code for the map editor interface
+- `src/` - Editor interface source code
 - `dist/` - Built application
-- `index.html` - Main entry point 
+- `index.html` - Entry point
+
+## Note
+
+This web version is secondary to the primary GJS implementation and serves mainly as a testing environment. 

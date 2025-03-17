@@ -13,9 +13,8 @@
         "build:resources": "glib-compile-resources org.pixelrpg.maker.data.gresource.xml",
         "build": "yarn build:resources && yarn build:blueprints && yarn build:vite",
         "check": "tsc",
-        "start:app": "gjs -m dist/main.js",
-        "debug:app": "GTK_DEBUG=interactive gjs -m dist/main.js",
-        "start": "yarn build:resources && yarn start:app"
+        "start": "gjs -m dist/main.js",
+        "start:debug": "GTK_DEBUG=interactive gjs -m dist/main.js"
     },
     "keywords": [
         "pixelrpg",
