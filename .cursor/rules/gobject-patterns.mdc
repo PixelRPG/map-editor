@@ -1,0 +1,108 @@
+---
+description: 
+globs: packages/*-gjs/**/*.ts,apps/*-gjs/**/*.ts
+alwaysApply: false
+---
+# GObject-Oriented Programming
+
+GObject-oriented programming is a declarative approach to GNOME application development that leverages GObject's property and signal system for cleaner, more maintainable code.
+
+## Core Principles
+- Adopt a UI-first, declarative approach to application design
+- Use GObject properties and signals instead of imperative code
+- Minimize direct widget manipulation in code
+- Separate data management from UI updates
+- Design components that communicate through signals rather than callbacks
+
+## GObject Properties
+- Define properties using GObject.Property() instead of class fields
+- Specify proper type, default value, and flags for each property
+- Use property bindings in UI templates to reflect state changes automatically
+- Avoid manual widget property updates through setters when possible
+- Leverage property bindings to keep UI and state in sync
+
+## Example Property Pattern
+```typescript
+// Instead of this:
+class MyWidget extends Gtk.Widget {
+    private _value: number = 0;
+    
+    get value(): number {
+        return this._value;
+    }
+    
+    set value(val: number) {
+        this._value = val;
+        this._updateUI();
+    }
+    
+    private _updateUI(): void {
+        this._label.set_text(this._value.toString());
+    }
+}
+
+// Prefer this:
+class MyWidget extends Gtk.Widget {
+    value = GObject.Property({
+        type: Number,
+        default: 0,
+    });
+    
+    // In the UI template:
+    // <Label text="bind template.value.toString()"/>
+}
+```
+
+## GObject Signals
+- Define signals using GObject.Signal() for component communication
+- Emit signals to notify parent components of state changes
+- Connect to signals in UI templates when possible
+- Use signal handlers with appropriate error handling
+- Prefer signal-based communication over callback passing
+
+## Example Signal Pattern
+```typescript
+// Instead of this:
+class LoadingWidget extends Gtk.Widget {
+    load(callback: () => void): void {
+        // Do loading work
+        if (loadingComplete) {
+            callback();
+        }
+    }
+}
+
+// Parent usage:
+loadingWidget.load(() => {
+    navigateToNextPage();
+});
+
+// Prefer this:
+class LoadingWidget extends Gtk.Widget {
+    loadFinished = GObject.Signal();
+    
+    private _load(): void {
+        // Do loading work
+        if (loadingComplete) {
+            this.emit('load-finished');
+        }
+    }
+}
+
+// In parent UI template:
+// <LoadingWidget id="loading_widget" load-finished="on_loading_finished()"/>
+```
+
+## Template Integration
+- Use Gtk.Template for widget definition
+- Define template callbacks with @Gtk.Template.Callback()
+- Reference template child widgets with @Gtk.Template.Child()
+- Connect signals in templates rather than programmatically
+- Leverage blueprints for declarative UI definition
+
+## Best Practices
+- Keep classes focused on a single responsibility
+- Use GObject inheritance appropriately
+- Document signals and properties with JSDoc comments
+- Provide type information for all GObject properties and signals
+- Test signal connections and property bindings thoroughly

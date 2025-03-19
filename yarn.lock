@@ -3627,9 +3627,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/storybook@workspace:apps/storybook":
+"@pixelrpg/storybook-gjs@workspace:apps/storybook-gjs":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/storybook@workspace:apps/storybook"
+  resolution: "@pixelrpg/storybook-gjs@workspace:apps/storybook-gjs"
   dependencies:
     "@girs/adw-1": "npm:^1.7.0-4.0.0-beta.21"
     "@girs/gdk-4.0": "npm:^4.0.0-4.0.0-beta.21"

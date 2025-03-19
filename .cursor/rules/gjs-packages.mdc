@@ -20,6 +20,14 @@ GJS packages (`*-gjs`) implement core interfaces for the GNOME JavaScript (GJS) 
 - Handle GJS-specific memory management concerns
 - Use GTK modern patterns (like composite templates)
 - Properly integrate with GObject-introspection
+- Prefer GObject-oriented and UI-first approach for cleaner, more declarative code
+
+## GObject Properties and Signals
+- Use GObject properties instead of regular class properties for better UI integration
+- Implement property bindings in UI templates to reduce manual widget updates
+- Leverage GObject signals for class-to-class communication
+- Design components to emit signals rather than accept callbacks
+- Use template callbacks to handle signals from child components
 
 ## UI Components
 - Create reusable GTK widgets and components
@@ -27,6 +35,7 @@ GJS packages (`*-gjs`) implement core interfaces for the GNOME JavaScript (GJS) 
 - Implement responsive layouts
 - Handle proper resource management
 - Support accessibility features
+- Use Blueprint templates for declarative UI definitions when possible
 
 ## Integration with Core Packages
 - Implement core interfaces faithfully
@@ -41,4 +50,4 @@ GJS packages (`*-gjs`) implement core interfaces for the GNOME JavaScript (GJS) 
 - Use evaluate_javascript with standard APIs for sending messages to WebViews
 - Implement the abstract classes from message-channel-core package
 - Support both WebKit message handlers and window.postMessage standards
-- Ensure proper error handling and type safety in message passing 
+- Ensure proper error handling and type safety in message passing

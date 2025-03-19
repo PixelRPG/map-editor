@@ -1,5 +1,5 @@
 {
-    "name": "@pixelrpg/storybook",
+    "name": "@pixelrpg/storybook-gjs",
     "version": "0.1.0",
     "description": "Storybook for PixelRPG GTK Widgets",
     "main": "lib/main.js",
