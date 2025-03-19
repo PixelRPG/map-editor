@@ -1,6 +1,48 @@
 ---
-description: 
+description: story related
 globs: 
 alwaysApply: false
 ---
- placeholder
+# Storybook Guidelines
+
+## Story Structure
+- Stories are organized using the `StoryWidget` pattern
+- Follow the title format `'Category/Name'` for consistent organization
+- Use clear, descriptive titles that indicate widget purpose
+- Group related widgets in the same category
+- Implement the `StoryModule` interface to register stories properly
+- Register stories using the `StoryRegistry` interface
+
+## Widget Stories
+- Create separate `.story.ts` files for each widget
+- Include `.story.ui` and `.story.blp` files for UI templates
+- Implement a variety of scenarios/variants for each widget
+- Document widget properties using the `ArgType` interface
+- Provide meaningful default values for all properties
+- Include edge cases and error states in stories
+
+## Control Types
+- Use appropriate `ControlType` for each property:
+  - `TEXT` for string properties
+  - `NUMBER` for numerical values
+  - `BOOLEAN` for toggles/flags
+  - `SELECT` for enumerated values
+  - `RANGE` for bounded numerical values
+  - `COLOR` for color properties
+- Configure proper constraints (`min`, `max`, `step`) for numeric controls
+- Provide comprehensive options for `SELECT` controls
+- Include descriptive labels for all controls
+
+## GJS Integration
+- Follow GObject-style class patterns for story widgets
+- Use proper GTK widget inheritance
+- Handle GJS-specific lifecycle concerns
+- Integrate properly with Adwaita style guidelines
+- Document GObject property connections
+
+## Testing Patterns
+- Test widgets in isolation to validate behavior
+- Include interactive states for user testing
+- Validate responsive layouts with different window sizes
+- Test with various property combinations
+- Document expected behavior in descriptions

@@ -22,6 +22,16 @@ import Template from './engine.ui?raw'
 
 GObject.type_ensure(WebView.$gtype)
 
+export namespace Engine {
+
+    export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
+
+    export interface SignalProps {
+        'message-received': [string]
+        'ready': []
+    }
+}
+
 /**
  * GJS implementation of the game engine as a GObject widget
  */
@@ -67,7 +77,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     /**
      * Create a new GJS engine
      */
-    constructor(params: Partial<Adw.Bin.ConstructorProps> = {}) {
+    constructor(params: Engine.ConstructorProps = {}) {
         super(params);
 
         try {

@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
-import { StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { StoryModule, StoryWidget, StoryWidgetConstructor } from '@pixelrpg/story-gjs'
 
 import Template from './application-window.ui?raw'
 
@@ -59,17 +59,28 @@ export class StorybookWindow extends Adw.ApplicationWindow {
      * @param storyModules The story modules to display
      */
     populateSidebar(storyModules: StoryModule[]): void {
+        // Ensure each module has instances
+        if (!storyModules.some(module => module.instances && module.instances.length > 0)) {
+            console.error('Story modules do not have instances. Call createStoryInstances first.')
+            return
+        }
+
         // Organize stories by categories
         const categories = new Map<string, StoryWidget[]>()
 
         storyModules.forEach(storyModule => {
-            // For each story in the module
-            storyModule.stories.forEach(story => {
-                const [category] = story.meta.title.split('/')
+            // Skip modules without instances
+            if (!storyModule.instances || storyModule.instances.length === 0) {
+                return
+            }
+
+            // For each story instance in the module
+            storyModule.instances.forEach(storyInstance => {
+                const [category] = storyInstance.meta.title.split('/')
                 if (!categories.has(category)) {
                     categories.set(category, [])
                 }
-                categories.get(category)!.push(story)
+                categories.get(category)!.push(storyInstance)
             })
         })
 
@@ -134,7 +145,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
         this.currentStory = storyWidget
 
         // Update title
-        this._preview_title.set_title(`${storyWidget.meta.title} - ${storyWidget.name}`)
+        this._preview_title.set_title(`${storyWidget.meta.title} - ${storyWidget.story}`)
 
         // Clear content area
         this._clearContentArea()

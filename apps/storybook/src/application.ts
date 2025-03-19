@@ -1,12 +1,12 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
-import { StoryModule, StoryRegistry, StoryWidget } from '@pixelrpg/story-gjs'
+import { StoryModule, StoryRegistry, StoryWidget, registry } from '@pixelrpg/story-gjs'
 import { StorybookWindow } from './widgets'
 
 export class StorybookApplication extends Adw.Application {
     private window: StorybookWindow | null = null
-    // private registry: StoryRegistry
+    private registry: StoryRegistry
 
     static {
         GObject.registerClass({
@@ -14,26 +14,29 @@ export class StorybookApplication extends Adw.Application {
         }, this)
     }
 
-    constructor(/*registry: StoryRegistry*/) {
+    constructor(storyRegistry: StoryRegistry = registry) {
         super({
             application_id: 'org.pixelrpg.storybook',
             flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
         })
 
-        // this.registry = registry
+        this.registry = storyRegistry
         this.connect('activate', this._onActivate.bind(this))
     }
 
-    public setStories(stories: StoryModule[]) {
-        stories.forEach(story => {
-            story.stories.forEach(story => {
-                console.log("Initializing story: " + story.meta.title)
-                story.initialize()
-            })
-        })
+    /**
+     * Set stories to display in the application
+     * @param storyModules Story modules to display
+     */
+    public setStories(storyModules: StoryModule[]): void {
+        // Register the story modules with the registry
+        this.registry.registerStories(storyModules)
 
-        // Populate the sidebar with stories
-        this.window!.populateSidebar(stories)
+        // Create instances of story widgets
+        const modulesWithInstances = this.registry.createStoryInstances()
+
+        // Populate the sidebar with the modules containing instances
+        this.window?.populateSidebar(modulesWithInstances)
     }
 
     /**
@@ -44,11 +47,6 @@ export class StorybookApplication extends Adw.Application {
         // Create the main window if it doesn't exist
         if (!this.window) {
             this.window = new StorybookWindow({ application: this })
-
-            // Get all stories from the registry
-            // const stories = this.registry.getStories()
-
-
         }
 
         // Show the window

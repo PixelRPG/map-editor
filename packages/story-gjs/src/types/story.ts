@@ -1,4 +1,5 @@
 import GObject from '@girs/gobject-2.0'
+import Adw from '@girs/adw-1'
 import type { StoryWidget } from '../widgets/story.widget'
 
 /**
@@ -56,11 +57,22 @@ export interface StoryMeta {
 }
 
 /**
+ * Constructor type for story widget classes
+ */
+export interface StoryWidgetConstructor {
+    new(adwParams?: Partial<Adw.Bin.ConstructorProps>): StoryWidget;
+    $gtype: GObject.GType;
+    getMetadata?: () => StoryMeta;
+}
+
+/**
  * A module containing stories for a component
  */
 export interface StoryModule {
-    /** Stories in this module */
-    stories: StoryWidget[]
+    /** Story classes in this module */
+    stories: StoryWidgetConstructor[]
+    /** Story instances (populated after initialization) */
+    instances?: StoryWidget[]
 }
 
 /**
@@ -73,4 +85,6 @@ export interface StoryRegistry {
     registerStories: (storyModules: StoryModule[]) => void
     /** Get all registered story modules */
     getStories: () => StoryModule[]
+    /** Create instances of all story widgets */
+    createStoryInstances: () => StoryModule[]
 } 

@@ -1,14 +1,16 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
-import { StoryWidget, StoryMeta, ControlType } from '@pixelrpg/story-gjs'
+import { StoryWidget, StoryMeta, ControlType, StoryModule } from '@pixelrpg/story-gjs'
 import { Engine } from './engine'
 import { EngineStatus } from '@pixelrpg/engine-core'
 
-import Template from './engine.story.ui?raw'
+import BasicEngineStoryTemplate from './basic-engine.story.ui?raw'
+import FullscreenEngineStoryTemplate from './fullscreen-engine.story.ui?raw'
+import MobileEngineStoryTemplate from './mobile-engine.story.ui?raw'
 
 /**
- * Story widget for the Engine component
+ * Base story widget for the Engine component
  */
 export class EngineStoryWidget extends StoryWidget {
     // UI elements
@@ -19,15 +21,7 @@ export class EngineStoryWidget extends StoryWidget {
     declare _engine_frame: Gtk.Frame
 
     // The engine instance
-    private engine: Engine | null = null
-
-    static {
-        GObject.registerClass({
-            GTypeName: 'EngineStoryWidget',
-            Template,
-            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
-        }, this)
-    }
+    protected engine: Engine | null = null
 
     constructor(params: StoryWidget.ConstructorProps, adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
         // Set default meta data for Engine story
@@ -42,9 +36,6 @@ export class EngineStoryWidget extends StoryWidget {
         this._start_button.connect('clicked', this._onStartClicked.bind(this))
         this._stop_button.connect('clicked', this._onStopClicked.bind(this))
         this._load_button.connect('clicked', this._onLoadClicked.bind(this))
-
-        // Initialize the story
-        // this.initialize()
     }
 
     /**
@@ -95,10 +86,6 @@ export class EngineStoryWidget extends StoryWidget {
         // Create engine instance
         this.engine = new Engine()
 
-        // Set dimensions based on args
-        this.engine.width_request = this.args.width || 800
-        this.engine.height_request = this.args.height || 600
-
         // Add engine to the frame
         this._engine_frame.set_child(this.engine)
 
@@ -123,7 +110,7 @@ export class EngineStoryWidget extends StoryWidget {
      * @param args New arguments for the story
      */
     updateArgs(args: Record<string, any>): void {
-        // Update engine dimensions
+        // Update engine dimensions if provided
         if (args.width !== undefined && this.engine) {
             this.engine.width_request = args.width
         }
@@ -138,7 +125,7 @@ export class EngineStoryWidget extends StoryWidget {
      * @param _engine The engine that sent the message
      * @param message The message data
      */
-    private _onEngineMessage(_engine: Engine, message: string): void {
+    protected _onEngineMessage(_engine: Engine, message: string): void {
         try {
             const event = JSON.parse(message)
             console.log('Engine event:', event)
@@ -157,7 +144,7 @@ export class EngineStoryWidget extends StoryWidget {
      * Update the status label
      * @param status The new engine status
      */
-    private _updateStatusLabel(status: EngineStatus): void {
+    protected _updateStatusLabel(status: EngineStatus): void {
         this._status_label.set_label(`Status: ${status}`)
     }
 
@@ -165,7 +152,7 @@ export class EngineStoryWidget extends StoryWidget {
      * Update button sensitivities based on engine status
      * @param status The engine status
      */
-    private _updateButtons(status: EngineStatus): void {
+    protected _updateButtons(status: EngineStatus): void {
         this._start_button.set_sensitive(status === EngineStatus.READY)
         this._stop_button.set_sensitive(status === EngineStatus.RUNNING)
         this._load_button.set_sensitive(status === EngineStatus.READY)
@@ -174,21 +161,21 @@ export class EngineStoryWidget extends StoryWidget {
     /**
      * Handle start button clicks
      */
-    private _onStartClicked(): void {
+    protected _onStartClicked(): void {
         this.engine?.start().catch(console.error)
     }
 
     /**
      * Handle stop button clicks
      */
-    private _onStopClicked(): void {
+    protected _onStopClicked(): void {
         this.engine?.stop().catch(console.error)
     }
 
     /**
      * Handle load project button clicks
      */
-    private _onLoadClicked(): void {
+    protected _onLoadClicked(): void {
         this.engine?.loadProject('/path/to/project').catch(console.error)
     }
 }
@@ -196,38 +183,76 @@ export class EngineStoryWidget extends StoryWidget {
 // Ensure the type is registered
 GObject.type_ensure(EngineStoryWidget.$gtype)
 
-// // Create the story instances
-// export const Basic = new EngineStoryWidget({
-//     story: 'Basic',
-//     args: {
-//         width: 800,
-//         height: 600,
-//         status: EngineStatus.INITIALIZING
-//     },
-//     meta: EngineStoryWidget.getMetadata()
-// })
+/**
+ * Basic Engine Story Widget (800x600)
+ */
+export class BasicEngineStoryWidget extends EngineStoryWidget {
+    static {
+        GObject.registerClass({
+            GTypeName: 'BasicEngineStoryWidget',
+            Template: BasicEngineStoryTemplate,
+            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
+        }, this)
+    }
 
-// export const Fullscreen = new EngineStoryWidget({
-//     story: 'Fullscreen',
-//     args: {
-//         width: 1920,
-//         height: 1080,
-//         status: EngineStatus.INITIALIZING
-//     },
-//     meta: EngineStoryWidget.getMetadata()
-// })
+    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
+        super({
+            story: 'Basic',
+            args: {
+                status: EngineStatus.INITIALIZING
+            },
+            meta: EngineStoryWidget.getMetadata()
+        }, adwParams)
+    }
+}
 
-// export const Mobile = new EngineStoryWidget({
-//     story: 'Mobile',
-//     args: {
-//         width: 320,
-//         height: 480,
-//         status: EngineStatus.INITIALIZING
-//     },
-//     meta: EngineStoryWidget.getMetadata()
-// })
+/**
+ * Fullscreen Engine Story Widget (1920x1080)
+ */
+export class FullscreenEngineStoryWidget extends EngineStoryWidget {
+    static {
+        GObject.registerClass({
+            GTypeName: 'FullscreenEngineStoryWidget',
+            Template: FullscreenEngineStoryTemplate,
+            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
+        }, this)
+    }
+
+    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
+        super({
+            story: 'Fullscreen',
+            args: {
+                status: EngineStatus.INITIALIZING
+            },
+            meta: EngineStoryWidget.getMetadata()
+        }, adwParams)
+    }
+}
+
+/**
+ * Mobile Engine Story Widget (320x480)
+ */
+export class MobileEngineStoryWidget extends EngineStoryWidget {
+    static {
+        GObject.registerClass({
+            GTypeName: 'MobileEngineStoryWidget',
+            Template: MobileEngineStoryTemplate,
+            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
+        }, this)
+    }
+
+    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
+        super({
+            story: 'Mobile',
+            args: {
+                status: EngineStatus.INITIALIZING
+            },
+            meta: EngineStoryWidget.getMetadata()
+        }, adwParams)
+    }
+}
 
 // Export all stories
-// export const EngineStories = {
-//     stories: [Basic/*, Fullscreen, Mobile*/]
-// }
+export const EngineStories: StoryModule = {
+    stories: [BasicEngineStoryWidget, FullscreenEngineStoryWidget, MobileEngineStoryWidget]
+}

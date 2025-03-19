@@ -7,7 +7,7 @@
     "scripts": {
         "check": "tsc",
         "watch": "tsc -w",
-        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui && blueprint-compiler compile src/widgets/engine.story.blp --output src/widgets/engine.story.ui",
+        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui && blueprint-compiler compile src/widgets/basic-engine.story.blp --output src/widgets/basic-engine.story.ui && blueprint-compiler compile src/widgets/fullscreen-engine.story.blp --output src/widgets/fullscreen-engine.story.ui && blueprint-compiler compile src/widgets/mobile-engine.story.blp --output src/widgets/mobile-engine.story.ui",
         "build": "yarn build:blueprints"
     },
     "exports": {
