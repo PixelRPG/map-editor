@@ -1,0 +1,5 @@
+/* Main stylesheet for the Storybook app */
+.storybook-preview {
+  margin: 10px;
+  padding: 10px;
+} 

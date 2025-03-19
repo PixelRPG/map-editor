@@ -20,6 +20,8 @@ import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 import { WebView } from './webview.ts'
 import Template from './engine.ui?raw'
 
+GObject.type_ensure(WebView.$gtype)
+
 /**
  * GJS implementation of the game engine as a GObject widget
  */
@@ -28,7 +30,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     /**
      * WebView for rendering the game
      */
-    declare _webView: WebView
+    declare _webView: WebView | null
 
     static {
         GObject.registerClass({
@@ -65,17 +67,17 @@ export class Engine extends Adw.Bin implements EngineInterface {
     /**
      * Create a new GJS engine
      */
-    constructor() {
-        super();
+    constructor(params: Partial<Adw.Bin.ConstructorProps> = {}) {
+        super(params);
 
         try {
             this.setStatus(EngineStatus.INITIALIZING);
 
             // Initialize resource paths
-            this._webView.setResourcePaths(this.resourcePaths);
-            this._webView.setGResourcePath(this.gresourcePath);
+            this._webView?.setResourcePaths(this.resourcePaths);
+            this._webView?.setGResourcePath(this.gresourcePath);
 
-            this._webView.connect('ready', () => {
+            this._webView?.connect('ready', () => {
                 console.log('[GJS Engine] WebView ready');
 
                 // Set up event listeners
@@ -85,7 +87,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
                 this.emit('ready');
             })
         } catch (error) {
-            console.error('Failed to initialize engine:', error);
+            console.error('[GJS Engine] Failed to initialize engine:', error);
             this.setStatus(EngineStatus.ERROR);
             throw createInitializationError('Failed to initialize GJS engine', error instanceof Error ? error : undefined);
         }
@@ -102,7 +104,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * Load a project
      */
     public async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
-        if (!this._webView.rpc) {
+        if (!this._webView?.rpc) {
             throw createRuntimeError('RPC server is not initialized');
         }
 
@@ -142,7 +144,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to load the map
-            await this._webView.rpc?.sendRequest('loadMap', {
+            await this._webView?.rpc?.sendRequest('loadMap', {
                 mapId
             });
 
@@ -163,7 +165,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to start the engine
-            await this._webView.rpc?.sendRequest('engineCommand', {
+            await this._webView?.rpc?.sendRequest('engineCommand', {
                 command: EngineCommandType.START
             });
 
@@ -185,7 +187,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         try {
             // Send an RPC request to stop the engine
-            await this._webView.rpc?.sendRequest('engineCommand', {
+            await this._webView?.rpc?.sendRequest('engineCommand', {
                 command: EngineCommandType.STOP
             });
 
@@ -200,7 +202,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
      * Set up event listeners for the WebView
      */
     private setupEventListeners(): void {
-        if (!this._webView.rpc) {
+        if (!this._webView?.rpc) {
             throw new Error('RPC server is not initialized');
         }
 
@@ -290,7 +292,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         // Also send to the WebView using RPC
         try {
-            this._webView.rpc?.sendRequest('notifyStatusChange', {
+            this._webView?.rpc?.sendRequest('notifyStatusChange', {
                 status: status
             }).catch(error => console.error('[GJS Engine] Error notifying status change:', error));
         } catch (error) {
@@ -304,7 +306,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
      */
     public setResourcePaths(resourcePaths: string[]): void {
         this.resourcePaths = resourcePaths;
-        this._webView.setResourcePaths(resourcePaths);
+        this._webView?.setResourcePaths(resourcePaths);
     }
 
     /**
@@ -313,7 +315,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
      */
     public setGResourcePath(gresourcePath: string): void {
         this.gresourcePath = gresourcePath;
-        this._webView.setGResourcePath(gresourcePath);
+        this._webView?.setGResourcePath(gresourcePath);
     }
 
     /**
@@ -323,7 +325,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     public addResourcePath(path: string): void {
         if (!this.resourcePaths.includes(path)) {
             this.resourcePaths.push(path);
-            this._webView.addResourcePath(path);
+            this._webView?.addResourcePath(path);
         }
     }
 

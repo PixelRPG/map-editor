@@ -1,0 +1,20 @@
+{
+    "name": "@pixelrpg/story-gjs",
+    "version": "0.1.0",
+    "description": "GJS Implementation of the Storybook functionality for PixelRPG",
+    "main": "src/index.ts",
+    "scripts": {
+        "check": "tsc",
+        "build": "yarn build:blueprints",
+        "build:blueprints": "blueprint-compiler compile src/widgets/story.widget.blp --output src/widgets/story.widget.ui",
+        "watch": "tsc -w"
+    },
+    "dependencies": {
+        "@girs/adw-1": "^1.7.0-4.0.0-beta.21",
+        "@girs/gobject-2.0": "^2.83.3-4.0.0-beta.21",
+        "@girs/gtk-4.0": "^4.17.5-4.0.0-beta.21"
+    },
+    "devDependencies": {
+        "typescript": "^5.2.2"
+    }
+}

@@ -1,0 +1,31 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $StoryWidget : Adw.Bin {
+  Gtk.Box content_box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+    
+    Gtk.Label story_title {
+      halign: start;
+      styles ["title-3"]
+    }
+    
+    Adw.PreferencesGroup {
+      title: _("Story Preview");
+      
+      Gtk.Box story_content {
+        orientation: vertical;
+        halign: center;
+        valign: center;
+        margin-top: 24;
+        margin-bottom: 24;
+        hexpand: true;
+      }
+    }
+  }
+} 

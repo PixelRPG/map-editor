@@ -7,8 +7,12 @@
     "scripts": {
         "check": "tsc",
         "watch": "tsc -w",
-        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui",
+        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui && blueprint-compiler compile src/widgets/engine.story.blp --output src/widgets/engine.story.ui",
         "build": "yarn build:blueprints"
+    },
+    "exports": {
+        ".": "./src/index.ts",
+        "./stories": "./src/stories.ts"
     },
     "dependencies": {
         "@girs/adw-1": "^1.7.0-4.0.0-beta.21",
@@ -27,6 +31,7 @@
         "mime": "^4.0.6"
     },
     "devDependencies": {
+        "@pixelrpg/story-gjs": "workspace:^",
         "typescript": "^5.0.0"
     }
 }
