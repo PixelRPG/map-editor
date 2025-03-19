@@ -1,5 +1,5 @@
 ---
-description: 
+description: GObject-oriented programming patterns for GJS
 globs: packages/*-gjs/**/*.ts,apps/*-gjs/**/*.ts
 alwaysApply: false
 ---
@@ -105,4 +105,4 @@ class LoadingWidget extends Gtk.Widget {
 - Use GObject inheritance appropriately
 - Document signals and properties with JSDoc comments
 - Provide type information for all GObject properties and signals
-- Test signal connections and property bindings thoroughly
+- Test signal connections and property bindings thoroughly 

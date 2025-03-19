@@ -1,6 +1,6 @@
 ---
 description: Guidelines for Excalibur packages (engine-excalibur, data-excalibur)
-globs: packages/*-excalibur/**/*.ts, packages/excalibur*/**/*.ts
+globs: packages/*-excalibur/**/*.ts,packages/excalibur-*/**/*.ts
 alwaysApply: false
 ---
 # Excalibur Packages

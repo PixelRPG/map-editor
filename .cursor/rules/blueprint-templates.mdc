@@ -1,5 +1,5 @@
 ---
-description: 
+description: Guidelines for Blueprint UI templates
 globs: **/*.blp
 alwaysApply: false
 ---
@@ -48,4 +48,4 @@ Blueprint is a markup language for GTK user interfaces that provides a clean, de
 - Set proper element IDs for CSS styling
 - Choose correct widgets for the intended purpose
 - Use templates for reusable components
-- Separate complex UI into multiple template files for maintainability
+- Separate complex UI into multiple template files for maintainability 

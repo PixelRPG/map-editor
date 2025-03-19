@@ -1,6 +1,6 @@
 ---
 description: TypeScript best practices for the project
-globs: **/*.ts, **/*.tsx
+globs: **/*.ts
 alwaysApply: false
 ---
 # TypeScript Best Practices

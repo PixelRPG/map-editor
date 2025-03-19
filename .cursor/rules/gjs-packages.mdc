@@ -50,4 +50,4 @@ GJS packages (`*-gjs`) implement core interfaces for the GNOME JavaScript (GJS) 
 - Use evaluate_javascript with standard APIs for sending messages to WebViews
 - Implement the abstract classes from message-channel-core package
 - Support both WebKit message handlers and window.postMessage standards
-- Ensure proper error handling and type safety in message passing
+- Ensure proper error handling and type safety in message passing 
