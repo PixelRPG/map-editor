@@ -5,44 +5,67 @@ alwaysApply: false
 ---
 # Storybook Guidelines
 
-## Story Structure
-- Stories are organized using the `StoryWidget` pattern
-- Follow the title format `'Category/Name'` for consistent organization
-- Use clear, descriptive titles that indicate widget purpose
-- Group related widgets in the same category
-- Implement the `StoryModule` interface to register stories properly
-- Register stories using the `StoryRegistry` interface
+## Architecture Overview
+- Stories are implemented as GObject-based GTK widgets
+- Story classes are registered with a central registry
+- Story instances are created only when the GTK environment is ready
+- Each story has its own UI template to ensure correct class names and properties
+- Use the `StoryRegistry` service for centralized story management
 
-## Widget Stories
-- Create separate `.story.ts` files for each widget
-- Include `.story.ui` and `.story.blp` files for UI templates
-- Implement a variety of scenarios/variants for each widget
-- Document widget properties using the `ArgType` interface
-- Provide meaningful default values for all properties
-- Include edge cases and error states in stories
+## Story Structure
+- Create stories as classes extending the `StoryWidget` base class
+- Define abstract base classes for common story functionality
+- Create variant subclasses for different configurations of the same component
+- Register story classes (not instances) with the registry
+- Follow the title format `'Category/Name'` for consistent organization
+- Group related widgets in the same category
+- Implement the `StoryModule` interface to group related stories
+
+## Widget Implementation
+- Create separate `.story.ts` files for each component
+- Define separate `.story.blp`/`.story.ui` files for each variant
+- Set default property values in the Blueprint template when possible
+- Define internal child widgets in the GObject class registration
+- Implement proper error handling in all widget methods
+- Override `initialize()` to set up the widget after creation
+- Override `updateArgs()` to handle property changes
+
+## UI Templates
+- Each story variant should have its own Blueprint template
+- Use proper widget class names in templates
+- Define dimensions and static properties in the template
+- Follow GTK's spacing and margin guidelines
+- Use clear widget IDs that match their purpose
+- Reference templates directly with `?raw` import syntax
 
 ## Control Types
-- Use appropriate `ControlType` for each property:
-  - `TEXT` for string properties
-  - `NUMBER` for numerical values
-  - `BOOLEAN` for toggles/flags
-  - `SELECT` for enumerated values
-  - `RANGE` for bounded numerical values
-  - `COLOR` for color properties
-- Configure proper constraints (`min`, `max`, `step`) for numeric controls
-- Provide comprehensive options for `SELECT` controls
-- Include descriptive labels for all controls
+- Use appropriate `ControlType` from the enum (not string literals)
+- Configure proper constraints for numeric controls
+- Provide comprehensive options for select controls
+- Include descriptive labels and tooltips
+- Handle property changes efficiently
+- Group related controls logically
 
-## GJS Integration
-- Follow GObject-style class patterns for story widgets
-- Use proper GTK widget inheritance
-- Handle GJS-specific lifecycle concerns
-- Integrate properly with Adwaita style guidelines
-- Document GObject property connections
+## Error Handling
+- Check for null/undefined values before use
+- Use try/catch blocks for error-prone operations 
+- Log meaningful error messages
+- Use Promise chaining with proper error handlers
+- Provide graceful fallbacks when operations fail
+- Check widget state before performing actions
 
-## Testing Patterns
-- Test widgets in isolation to validate behavior
-- Include interactive states for user testing
-- Validate responsive layouts with different window sizes
-- Test with various property combinations
-- Document expected behavior in descriptions
+## Type Safety
+- Use proper TypeScript types and interfaces
+- Avoid `any` type - use generic types with constraints
+- Define clear interfaces for story components
+- Use type guards for runtime checks
+- Create custom types for complex structures
+- Use proper nullability handling
+
+## Documentation
+- Document all public classes, methods, and properties
+- Use consistent JSDoc style comments
+- Include parameter and return type descriptions
+- Document expected behavior and edge cases
+- Add examples for complex usage patterns
+- Comment non-obvious code sections

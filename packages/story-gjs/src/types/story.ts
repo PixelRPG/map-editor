@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import type { StoryWidget } from '../widgets/story.widget'
 
 /**
- * Describes the type of control to be rendered for a specific property
+ * Control types available for story property editors
  */
 export enum ControlType {
     TEXT = 'text',
@@ -20,26 +20,26 @@ export enum ControlType {
 export interface ControlConfig {
     /** Type of the control to render */
     type: ControlType
-    /** Optional minimum value for number/range controls */
+    /** Minimum value for number/range controls */
     min?: number
-    /** Optional maximum value for number/range controls */
+    /** Maximum value for number/range controls */
     max?: number
-    /** Optional step value for number/range controls */
+    /** Step increment for number/range controls */
     step?: number
-    /** Optional options for select controls */
+    /** Options for select controls */
     options?: string[] | Record<string, string>
 }
 
 /**
- * Metadata for a story argument (widget property)
+ * Metadata for a story property
  */
-export interface ArgType {
-    /** Control configuration for this argument */
+export interface ArgType<T = unknown> {
+    /** Control configuration for this property */
     control: ControlConfig
-    /** Optional description of the argument */
+    /** Description of the property */
     description?: string
-    /** Optional default value for the argument */
-    defaultValue?: any
+    /** Default value for the property */
+    defaultValue?: T
 }
 
 /**
@@ -48,16 +48,16 @@ export interface ArgType {
 export interface StoryMeta {
     /** Title of the story (format: 'Category/Name') */
     title: string
-    /** GType of the component */
+    /** GType of the component being showcased */
     component: GObject.GType
-    /** Optional list of tags */
+    /** Tags for filtering and organization */
     tags?: string[]
-    /** Configuration for the arguments/properties */
+    /** Configuration for the component properties */
     argTypes: Record<string, ArgType>
 }
 
 /**
- * Constructor type for story widget classes
+ * Constructor interface for story widget classes
  */
 export interface StoryWidgetConstructor {
     new(adwParams?: Partial<Adw.Bin.ConstructorProps>): StoryWidget;
@@ -66,7 +66,7 @@ export interface StoryWidgetConstructor {
 }
 
 /**
- * A module containing stories for a component
+ * A module containing related stories for a component
  */
 export interface StoryModule {
     /** Story classes in this module */
@@ -76,15 +76,15 @@ export interface StoryModule {
 }
 
 /**
- * Registry for story modules
+ * Registry for managing story modules
  */
 export interface StoryRegistry {
-    /** Register a story module */
+    /** Register a single story module */
     registerStory: (storyModule: StoryModule) => void
     /** Register multiple story modules */
     registerStories: (storyModules: StoryModule[]) => void
     /** Get all registered story modules */
     getStories: () => StoryModule[]
-    /** Create instances of all story widgets */
+    /** Create instances of all story widgets and prepare them for display */
     createStoryInstances: () => StoryModule[]
 } 

@@ -1,5 +1,6 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import Gio from '@girs/gio-2.0'
 import { EventDispatcher } from '@pixelrpg/message-channel-core'
 import {
     EngineInterface,
@@ -125,6 +126,8 @@ export class Engine extends Adw.Bin implements EngineInterface {
         if (!projectPath || projectPath.trim() === '') {
             throw createValidationError('Invalid project path');
         }
+
+        projectPath = Gio.File.new_for_path(projectPath).get_path()!
 
         try {
             // Send an RPC request to load the project
