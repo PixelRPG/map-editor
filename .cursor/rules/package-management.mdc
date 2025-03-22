@@ -1,6 +1,6 @@
 ---
 description: Package management standards for the project
-globs: package.json, **/package.json
+globs: package.json,**/*/package.json
 alwaysApply: false
 ---
 # Package Management

@@ -1,7 +1,7 @@
 ---
-description: General guidelines for the project
-globs: **/*
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # General Guidelines
 

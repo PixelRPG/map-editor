@@ -1,0 +1,35 @@
+{
+    "name": "@pixelrpg/storybook-gjs",
+    "version": "0.1.0",
+    "description": "Storybook for PixelRPG GTK Widgets",
+    "main": "lib/main.js",
+    "type": "module",
+    "scripts": {
+        "build:vite": "vite build",
+        "build:blueprints": "blueprint-compiler compile src/widgets/application-window.blp --output src/widgets/application-window.ui",
+        "build": "yarn build:blueprints && yarn build:vite",
+        "check": "tsc",
+        "start": "gjs -m dist/main.js",
+        "start:debug": "GTK_DEBUG=interactive gjs -m dist/main.js"
+    },
+    "dependencies": {
+        "@girs/adw-1": "^1.8.0-4.0.0-beta.23",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.23",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.23",
+        "@girs/gio-2.0": "^2.84.0-4.0.0-beta.23",
+        "@girs/gjs": "^4.0.0-beta.23",
+        "@girs/glib-2.0": "^2.84.0-4.0.0-beta.23",
+        "@girs/gobject-2.0": "^2.84.0-4.0.0-beta.23",
+        "@girs/gtk-4.0": "^4.18.3-4.0.0-beta.23",
+        "@girs/javascriptcore-6.0": "^2.48.0-4.0.0-beta.23",
+        "@girs/webkit-6.0": "^2.48.0-4.0.0-beta.23",
+        "@pixelrpg/engine-gjs": "workspace:^",
+        "@pixelrpg/story-gjs": "workspace:^"
+    },
+    "devDependencies": {
+        "@pixelrpg/esbuild": "workspace:^",
+        "lightningcss": "^1.29.3",
+        "typescript": "^5.8.2",
+        "vite": "^6.2.2"
+    }
+}

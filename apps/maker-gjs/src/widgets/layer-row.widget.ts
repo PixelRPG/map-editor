@@ -33,7 +33,6 @@ export class LayerRowWidget extends Adw.ActionRow {
     })
     this._layer = layerObject
 
-    // TODO(ts-for-gir): Add / fix signal types
     this.connect("activated", this.onActivated);
   }
 

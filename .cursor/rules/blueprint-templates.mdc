@@ -1,0 +1,51 @@
+---
+description: Guidelines for Blueprint UI templates
+globs: **/*.blp
+alwaysApply: false
+---
+# Blueprint Templates
+
+Blueprint is a markup language for GTK user interfaces that provides a clean, declarative approach to UI design.
+
+## General Principles
+- Use Blueprint templates for all GTK UI definitions
+- Leverage declarative approach rather than programmatic UI construction
+- Focus on defining relationships between UI elements and data
+- Separate UI structure from behavioral logic
+- Follow GTK and GNOME HIG (Human Interface Guidelines)
+
+## Template Structure
+- Use proper namespaces (using Gtk 4.0, Adw 1, etc.)
+- Create templates with descriptive names prefixed with "$"
+- Extend appropriate base classes (Adw.Window, Adw.Bin, etc.)
+- Organize UI hierarchically from container to child elements
+- Group related elements within appropriate containers
+
+## Property Binding
+- Bind UI element properties to template properties using "bind template.property_name"
+- Avoid hardcoding values when they should be dynamic
+- Use one-way binding for display-only properties
+- Use two-way binding for editable properties when appropriate
+- Leverage expressions for property transformations when needed
+
+## Signal Handling
+- Connect signals to callback methods using "signal_name => $_callback_method()"
+- Name callback methods consistently (prefixed with "_")
+- Keep signal callbacks in UI templates rather than connecting programmatically
+- Use signals for communication between components
+- Ensure signal handler methods are properly registered with @Gtk.Template.Callback()
+
+## Accessibility
+- Include proper accessibility attributes
+- Use meaningful labels for all interactive elements
+- Set appropriate tooltips for complex controls
+- Ensure keyboard navigation works correctly
+- Follow the GNOME accessibility guidelines
+
+## Best Practices
+- Avoid deep nesting of containers when possible
+- Use appropriate spacing and margin properties
+- Set proper element IDs for CSS styling
+- Choose correct widgets for the intended purpose
+- Use templates for reusable components
+- Separate complex UI into multiple template files for maintainability 

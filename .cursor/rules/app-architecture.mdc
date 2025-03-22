@@ -1,6 +1,6 @@
 ---
 description: Architecture standards for end-user applications
-globs: apps/**/*.ts, apps/**/*.tsx
+globs: apps/**/*.ts
 alwaysApply: false
 ---
 # Application Architecture

@@ -48,7 +48,7 @@ export class WebView extends WebKit.WebView {
     setResourcePaths(paths: string[]) {
         // Create a new resource manager with the updated paths
         this.resourceManager = new ResourceManager(paths, this.resourceManager.gresourcePath)
-        console.log('Resource paths updated:', paths)
+        console.log('[WebView] Resource paths updated:', paths)
     }
 
     /**
@@ -57,7 +57,7 @@ export class WebView extends WebKit.WebView {
      */
     addResourcePath(path: string) {
         this.resourceManager.addPath(path)
-        console.log('Resource path added:', path)
+        console.log('[WebView] Resource path added:', path)
     }
 
     /**
@@ -66,7 +66,7 @@ export class WebView extends WebKit.WebView {
      */
     setGResourcePath(path: string) {
         this.resourceManager.setGResourcePath(path)
-        console.log('GResource path updated:', path)
+        console.log('[WebView] GResource path updated:', path)
     }
 
     /**
@@ -77,7 +77,7 @@ export class WebView extends WebKit.WebView {
     constructor(
         props: Partial<WebKit.WebView.ConstructorProps>
     ) {
-        console.log('Creating WebView')
+        console.log('[WebView] Creating WebView')
         const network_session = new WebKit.NetworkSession({})
 
         const web_context = new WebKit.WebContext()
@@ -110,10 +110,10 @@ export class WebView extends WebKit.WebView {
 
         this.registerURIScheme(INTERNAL_PROTOCOL, this.onInternalRequest)
 
-        console.log('Initializing WebView')
+        console.log('[WebView] Initializing WebView')
 
         this.connect('realize', () => {
-            console.log('WebView realized')
+            console.log('[WebView] WebView realized')
             this._rpc = this.initRpcServer()
 
             this.initInputController()
@@ -127,13 +127,13 @@ export class WebView extends WebKit.WebView {
      * Initialize the RPC server for communication with the WebView
      */
     protected initRpcServer() {
-        console.log('Initializing RpcServer, webView:', this)
+        console.log('[WebView] Initializing RpcServer...')
         const rpc = RpcEndpoint.getInstance(INTERNAL_PROTOCOL, this)
 
         // Register RPC methods
         // TODO: Make this type safe
         rpc.registerHandler('handleInputEvent', async (params) => {
-            console.log('Handling input event:', params);
+            console.log('[WebView] Handling input event:', params);
             // Process the input event
             // The implementation would depend on how input events are handled
             return { success: true };
@@ -158,9 +158,9 @@ export class WebView extends WebKit.WebView {
      */
     protected initPageLoadListener() {
         const signalId = this.connect('load-changed', (_source: this, loadEvent: WebKit.LoadEvent) => {
-            console.log('WebView load changed')
+            console.log('[WebView] Load changed')
             if (loadEvent === WebKit.LoadEvent.FINISHED) {
-                console.log('WebView load finished')
+                console.log('[WebView] Load finished')
                 this.onReady()
                 this.disconnect(signalId);
             }
@@ -182,7 +182,7 @@ export class WebView extends WebKit.WebView {
      * Called when the page is ready
      */
     protected onReady() {
-        console.log('First page view is finished')
+        console.log('[WebView] First page view is finished')
         this.emit('ready')
     }
 
@@ -194,7 +194,7 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseMotion(_source: EventControllerInput, x: number, y: number) {
         if (!this._rpc) {
-            console.error('RPC server is not initialized');
+            console.error('[WebView] RPC server is not initialized');
             return;
         }
 
@@ -209,10 +209,10 @@ export class WebView extends WebKit.WebView {
                 'handleInputEvent',
                 engineInputEventsService.mouseMove({ x, y })
             ).catch(error => {
-                console.error('Error sending mouse move event:', error);
+                console.error('[WebView] Error sending mouse move event:', error);
             });
         } catch (error) {
-            console.error('Error creating mouse move event:', error);
+            console.error('[WebView] Error creating mouse move event:', error);
         }
     }
 
@@ -222,18 +222,18 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseLeave(_source: EventControllerInput) {
         if (!this._rpc) {
-            console.error('RPC server is not initialized');
+            console.error('[WebView] RPC server is not initialized');
             return;
         }
 
-        console.log('Mouse has left the WebView');
+        console.log('[WebView] Mouse has left the WebView');
 
         // Send mouse leave event with no position data using notification (fire and forget)
         this._rpc.sendNotification(
             'handleInputEvent',
             engineInputEventsService.mouseLeave()
         ).catch(error => {
-            console.error('Error sending mouse leave event:', error);
+            console.error('[WebView] Error sending mouse leave event:', error);
         });
     }
 
@@ -245,18 +245,18 @@ export class WebView extends WebKit.WebView {
      */
     protected onMouseEnter(_source: EventControllerInput, x: number, y: number) {
         if (!this._rpc) {
-            console.error('RPC server is not initialized');
+            console.error('[WebView] RPC server is not initialized');
             return;
         }
 
-        console.log('Mouse has entered the WebView');
+        console.log('[WebView] Mouse has entered the WebView');
 
         // Send mouse enter event using notification (fire and forget)
         this._rpc.sendNotification(
             'handleInputEvent',
             engineInputEventsService.mouseEnter({ x, y })
         ).catch(error => {
-            console.error('Error sending mouse enter event:', error);
+            console.error('[WebView] Error sending mouse enter event:', error);
         });
     }
 
@@ -266,13 +266,13 @@ export class WebView extends WebKit.WebView {
      */
     protected onInternalRequest(schemeRequest: WebKit.URISchemeRequest) {
         const path = schemeRequest.get_path()
-        console.log(`Handling internal request for: ${path}`)
+        console.log(`[WebView] Handling internal request for: ${path}`)
 
         const extension = path.split('.').pop()
 
         const stream = this.resourceManager.stream(path)
         if (!stream) {
-            console.error('Error opening stream', path)
+            console.error('[WebView] Error opening stream', path)
             schemeRequest.finish_error(new Gio.IOErrorEnum({
                 code: Gio.IOErrorEnum.NOT_FOUND,
                 message: `Resource not found: ${path}`

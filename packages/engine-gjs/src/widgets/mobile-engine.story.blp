@@ -1,0 +1,39 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MobileEngineStoryWidget : $StoryWidget {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 12;
+    
+    Gtk.Label status_label {
+      halign: start;
+      margin-bottom: 6;
+    }
+    
+    Gtk.Box control_box {
+      orientation: horizontal;
+      spacing: 12;
+      margin-bottom: 12;
+      
+      Gtk.Button start_button {
+        label: _("Start Engine");
+      }
+      
+      Gtk.Button stop_button {
+        label: _("Stop Engine");
+      }
+      
+      Gtk.Button load_button {
+        label: _("Load Project");
+      }
+    }
+    
+    Gtk.Frame engine_frame {
+      vexpand: true;
+      hexpand: true;
+      width-request: 320;
+      height-request: 480;
+    }
+  }
+} 

@@ -7,18 +7,22 @@
     "scripts": {
         "check": "tsc",
         "watch": "tsc -w",
-        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui",
+        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui && blueprint-compiler compile src/widgets/fullscreen-engine.story.blp --output src/widgets/fullscreen-engine.story.ui && blueprint-compiler compile src/widgets/mobile-engine.story.blp --output src/widgets/mobile-engine.story.ui",
         "build": "yarn build:blueprints"
     },
+    "exports": {
+        ".": "./src/index.ts",
+        "./stories": "./src/stories.ts"
+    },
     "dependencies": {
-        "@girs/adw-1": "^1.7.0-4.0.0-beta.21",
-        "@girs/gio-2.0": "^2.83.3-4.0.0-beta.21",
-        "@girs/gjs": "^4.0.0-beta.21",
-        "@girs/glib-2.0": "^2.83.3-4.0.0-beta.21",
-        "@girs/gobject-2.0": "^2.83.3-4.0.0-beta.21",
-        "@girs/gtk-4.0": "^4.17.5-4.0.0-beta.21",
-        "@girs/javascriptcore-6.0": "^2.47.3-4.0.0-beta.21",
-        "@girs/webkit-6.0": "^2.47.3-4.0.0-beta.21",
+        "@girs/adw-1": "^1.8.0-4.0.0-beta.23",
+        "@girs/gio-2.0": "^2.84.0-4.0.0-beta.23",
+        "@girs/gjs": "^4.0.0-beta.23",
+        "@girs/glib-2.0": "^2.84.0-4.0.0-beta.23",
+        "@girs/gobject-2.0": "^2.84.0-4.0.0-beta.23",
+        "@girs/gtk-4.0": "^4.18.3-4.0.0-beta.23",
+        "@girs/javascriptcore-6.0": "^2.48.0-4.0.0-beta.23",
+        "@girs/webkit-6.0": "^2.48.0-4.0.0-beta.23",
         "@pixelrpg/data-core": "workspace:*",
         "@pixelrpg/data-gjs": "workspace:*",
         "@pixelrpg/engine-core": "workspace:*",
@@ -27,6 +31,7 @@
         "mime": "^4.0.6"
     },
     "devDependencies": {
+        "@pixelrpg/story-gjs": "workspace:^",
         "typescript": "^5.0.0"
     }
 }

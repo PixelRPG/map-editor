@@ -1,3 +1,3 @@
-export * from './services/index.ts';
-export * from './widgets/index.ts';
-export * from './utils/index.ts';
+export * from './services/index';
+export * from './widgets/index';
+export * from './utils/index';

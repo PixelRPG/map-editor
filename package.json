@@ -29,7 +29,7 @@
         "@excaliburjs/plugin-tiled": "workspace:^"
     },
     "devDependencies": {
-        "prettier": "^3.5.1",
+        "prettier": "^3.5.3",
         "typescript": "^5.8.2"
     }
 }
