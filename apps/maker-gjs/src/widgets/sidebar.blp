@@ -11,7 +11,7 @@ template $Sidebar: Adw.Bin {
       MenuButton {
         primary: true;
         icon-name: 'open-menu-symbolic';
-        tooltip-text: _('Menu');
+        tooltip-text: _("Menu");
         menu-model: primary_menu;
       }
     }
@@ -49,22 +49,22 @@ template $Sidebar: Adw.Bin {
 menu primary_menu {
   section {
     item {
-      label: _('_Preferences');
+      label: _("_Preferences");
       action: 'app.preferences';
     }
 
     item {
-      label: _('_Keyboard Shortcuts');
+      label: _("_Keyboard Shortcuts");
       action: 'win.show-help-overlay';
     }
 
     item {
-      label: _('_About Test');
+      label: _("_About Test");
       action: 'app.about';
     }
 
     item {
-      label: _('_Quit');
+      label: _("_Quit");
       action: 'app.quit';
     }
   }
