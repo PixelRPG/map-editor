@@ -7,15 +7,13 @@ import { Engine } from './engine'
 import { EngineStatus } from '@pixelrpg/engine-core'
 
 // Import story templates
-import BasicEngineStoryTemplate from './basic-engine.story.ui?raw'
-import FullscreenEngineStoryTemplate from './fullscreen-engine.story.ui?raw'
-import MobileEngineStoryTemplate from './mobile-engine.story.ui?raw'
+import EngineStoryTemplate from './engine.story.ui?raw'
 
 /**
- * Base story widget for the Engine component
- * Provides common functionality for all engine story variants
+ * Engine Story Widget
+ * Showcases the Engine component with interactive controls
  */
-export abstract class EngineStoryWidget extends StoryWidget {
+export class EngineStoryWidget extends StoryWidget {
     // UI elements from template
     declare _status_label: Gtk.Label
     declare _start_button: Gtk.Button
@@ -26,13 +24,25 @@ export abstract class EngineStoryWidget extends StoryWidget {
     /** The engine instance being showcased */
     protected engine: Engine | null = null
 
+    static {
+        GObject.registerClass({
+            GTypeName: 'EngineStoryWidget',
+            Template: EngineStoryTemplate,
+            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
+        }, this)
+    }
+
     /**
      * Create a new Engine story widget
      */
-    constructor(params: StoryWidget.ConstructorProps, adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
+    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
         // Set default metadata if not provided
-        if (!params.meta) {
-            params.meta = EngineStoryWidget.getMetadata()
+        const params = {
+            story: 'Engine',
+            args: {
+                status: EngineStatus.INITIALIZING
+            },
+            meta: EngineStoryWidget.getMetadata()
         }
 
         // Create the widget
@@ -233,84 +243,12 @@ export abstract class EngineStoryWidget extends StoryWidget {
     }
 }
 
-// Ensure the base type is registered
+// Ensure the type is registered
 GObject.type_ensure(EngineStoryWidget.$gtype)
-
-/**
- * Basic Engine Story Widget (800x600)
- * Standard desktop resolution for game testing
- */
-export class BasicEngineStoryWidget extends EngineStoryWidget {
-    static {
-        GObject.registerClass({
-            GTypeName: 'BasicEngineStoryWidget',
-            Template: BasicEngineStoryTemplate,
-            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
-        }, this)
-    }
-
-    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
-        super({
-            story: 'Basic',
-            args: {
-                status: EngineStatus.INITIALIZING
-            },
-            meta: EngineStoryWidget.getMetadata()
-        }, adwParams)
-    }
-}
-
-/**
- * Fullscreen Engine Story Widget (1920x1080)
- * Full HD resolution for testing high-resolution displays
- */
-export class FullscreenEngineStoryWidget extends EngineStoryWidget {
-    static {
-        GObject.registerClass({
-            GTypeName: 'FullscreenEngineStoryWidget',
-            Template: FullscreenEngineStoryTemplate,
-            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
-        }, this)
-    }
-
-    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
-        super({
-            story: 'Fullscreen',
-            args: {
-                status: EngineStatus.INITIALIZING
-            },
-            meta: EngineStoryWidget.getMetadata()
-        }, adwParams)
-    }
-}
-
-/**
- * Mobile Engine Story Widget (320x480)
- * Mobile phone portrait resolution for testing
- */
-export class MobileEngineStoryWidget extends EngineStoryWidget {
-    static {
-        GObject.registerClass({
-            GTypeName: 'MobileEngineStoryWidget',
-            Template: MobileEngineStoryTemplate,
-            InternalChildren: ['status_label', 'start_button', 'stop_button', 'load_button', 'engine_frame'],
-        }, this)
-    }
-
-    constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
-        super({
-            story: 'Mobile',
-            args: {
-                status: EngineStatus.INITIALIZING
-            },
-            meta: EngineStoryWidget.getMetadata()
-        }, adwParams)
-    }
-}
 
 /**
  * Collection of all engine story variants
  */
 export const EngineStories: StoryModule = {
-    stories: [BasicEngineStoryWidget, FullscreenEngineStoryWidget, MobileEngineStoryWidget]
+    stories: [EngineStoryWidget]
 }
