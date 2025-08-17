@@ -7,7 +7,7 @@ import { SidebarPageLayer } from './sidebar-page-layer.ts'
 import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
 import { LayersWidget } from './layers.widget.ts'
 
-import Template from './sidebar.ui?raw'
+import Template from './sidebar.blp'
 
 export class Sidebar extends Adw.Bin {
 

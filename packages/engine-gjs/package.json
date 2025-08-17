@@ -5,10 +5,7 @@
     "main": "src/index.ts",
     "type": "module",
     "scripts": {
-        "check": "tsc",
-        "watch": "tsc -w",
-        "build:blueprints": "blueprint-compiler compile src/widgets/webview.blp --output src/widgets/webview.ui && blueprint-compiler compile src/widgets/engine.blp --output src/widgets/engine.ui && blueprint-compiler compile src/widgets/engine.story.blp --output src/widgets/engine.story.ui",
-        "build": "yarn build:blueprints"
+        "check": "tsc"
     },
     "exports": {
         ".": "./src/index.ts",

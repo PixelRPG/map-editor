@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import Template from './welcome-view.ui?raw'
+import Template from './welcome-view.blp'
 
 export class WelcomeView extends Adw.Bin {
 

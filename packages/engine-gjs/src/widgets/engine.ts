@@ -19,7 +19,7 @@ import {
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
 import { WebView } from './webview.ts'
-import Template from './engine.ui?raw'
+import Template from './engine.blp'
 
 GObject.type_ensure(WebView.$gtype)
 

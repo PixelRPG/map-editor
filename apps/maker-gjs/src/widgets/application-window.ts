@@ -18,7 +18,7 @@ import { Layer } from '../objects/layer.ts'
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
 
-import Template from './application-window.ui?raw'
+import Template from './application-window.blp'
 
 export class ApplicationWindow extends Adw.ApplicationWindow {
 

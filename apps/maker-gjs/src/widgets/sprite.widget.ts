@@ -5,7 +5,7 @@ import Object from '@girs/gobject-2.0'
 import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import { Sprite } from '../objects/sprite.ts'
 
-import Template from './sprite.widget.ui?raw'
+import Template from './sprite.widget.blp'
 
 export class SpriteWidget extends Adw.Bin {
 

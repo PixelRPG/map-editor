@@ -7,7 +7,7 @@ import Gio from '@girs/gio-2.0'
 import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'
 import mime from 'mime'
 
-import Template from './webview.ui?raw'
+import Template from './webview.blp'
 import { EventControllerInput, INTERNAL_PROTOCOL } from '../utils/index.ts'
 import {
     engineInputEventsService,

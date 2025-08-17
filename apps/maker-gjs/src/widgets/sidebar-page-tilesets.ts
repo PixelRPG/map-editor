@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 
 import { SpriteSheetWidget } from './sprite-sheet.widget'
 
-import Template from './sidebar-page-tilesets.ui?raw'
+import Template from './sidebar-page-tilesets.blp'
 
 export class SidebarPageTilesets extends Adw.Bin {
 

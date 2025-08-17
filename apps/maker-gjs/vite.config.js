@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import blueprintPlugin from "@gjsify/vite-plugin-blueprint";
 
 export default defineConfig({
   css: {
@@ -27,4 +28,9 @@ export default defineConfig({
     },
     cssMinify: false // Disable CSS minification to keep semicolons
   },
+  plugins: [
+    blueprintPlugin({
+      minify: true,
+    }),
+  ],
 })

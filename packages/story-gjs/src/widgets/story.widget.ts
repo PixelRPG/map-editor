@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { StoryMeta } from '../types/story'
 
-import Template from './story.widget.ui?raw'
+import Template from './story.widget.blp'
 
 export namespace StoryWidget {
     export interface ConstructorProps {

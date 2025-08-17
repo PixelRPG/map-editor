@@ -1,13 +1,13 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
-import Gio from '@girs/gio-2.0'
+
 import { StoryWidget, StoryMeta, ControlType, StoryModule } from '@pixelrpg/story-gjs'
 import { Engine } from './engine'
 import { EngineStatus } from '@pixelrpg/engine-core'
 
 // Import story templates
-import EngineStoryTemplate from './engine.story.ui?raw'
+import EngineStoryTemplate from './engine.story.blp'
 
 /**
  * Engine Story Widget

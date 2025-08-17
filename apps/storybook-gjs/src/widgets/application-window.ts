@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { ControlType, StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
 import { StoryRow } from '../types'
-import Template from './application-window.ui?raw'
+import Template from './application-window.blp'
 
 
 /**

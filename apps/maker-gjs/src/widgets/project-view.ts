@@ -5,7 +5,7 @@ import Gtk from '@girs/gtk-4.0'
 import { Engine } from '@pixelrpg/engine-gjs'
 import { Sidebar } from './sidebar.ts'
 
-import Template from './project-view.ui?raw'
+import Template from './project-view.blp'
 
 export class ProjectView extends Adw.Bin {
 

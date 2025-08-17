@@ -5,7 +5,7 @@ import Adw from '@girs/adw-1'
 import { Layer } from '../objects/layer.ts'
 import { LayerRowWidget } from './layer-row.widget.ts'
 
-import Template from './layers.widget.ui?raw'
+import Template from './layers.widget.blp'
 
 export class LayersWidget extends Adw.Bin {
 

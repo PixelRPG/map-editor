@@ -5,7 +5,7 @@ import Adw from '@girs/adw-1'
 import { Layer } from '../objects/layer.ts'
 // import { LayerWidget } from './layer.widget.ts'
 
-import Template from './layer-row.widget.ui?raw'
+import Template from './layer-row.widget.blp'
 
 export class LayerRowWidget extends Adw.ActionRow {
 

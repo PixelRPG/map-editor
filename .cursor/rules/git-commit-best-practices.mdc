@@ -11,16 +11,19 @@ You are a meticulous developer who commits code frequently with clear, atomic co
 - **Continuous Validation**: Use yarn commands regularly to ensure code quality and functionality
 
 ## Validation Strategy
-Before every commit, validate your code using the commands from [package-management.mdc](mdc:.cursor/rules/package-management.mdc):
+Before every commit, validate your code using the available yarn commands:
 
 **For regular commits (recommended):**
-- `yarn check:app` - Fast check for core packages and linting
-- `yarn check:lint` - Quick linting only
-- `yarn test:tests` - Quick local testing to catch breaking changes
-- `yarn format` - Code formatting consistency
+- `yarn build` - Build all packages to catch compilation errors
+- `yarn check` - Run type checking across all packages
+- `yarn format` - Ensure code formatting consistency with Prettier
 
 **For major changes only:**
-- `yarn check` - ⚠️ **WARNING**: Very slow! Full type checking across ALL packages. Only use after larger changes and when types are already built (see scripts in [package.json](mdc:file:package.json))
+- `yarn check` - ⚠️ **WARNING**: This runs type checking across ALL packages and can be slow. Only use after larger changes.
+
+**Individual package validation:**
+- `yarn workspace @pixelrpg/[package-name] run check` - Type check specific package
+- `yarn workspace @pixelrpg/[package-name] run build` - Build specific package
 
 Always fix all errors and warnings before proceeding with the commit
 
@@ -44,4 +47,4 @@ Before committing:
 - Match the established commit style of the project
 
 ## Key Principle for AI Agents
-**Always ensure the codebase remains functional after each commit.** Use the yarn workspace commands (see [package-management.mdc](mdc:.cursor/rules/package-management.mdc)) to validate your changes before committing. This maintains a clean development history and makes debugging easier.
+**Always ensure the codebase remains functional after each commit.** Use the [yarn workspace commands](mdc:.cursor/rules/package-management.mdc) to validate your changes before committing. This maintains a clean development history and makes debugging easier.

@@ -4,7 +4,7 @@ import Gtk from '@girs/gtk-4.0'
 
 import { LayersWidget } from './layers.widget.ts'
 
-import Template from './sidebar-page-layer.ui?raw'
+import Template from './sidebar-page-layer.blp'
 
 export class SidebarPageLayer extends Adw.Bin {
 

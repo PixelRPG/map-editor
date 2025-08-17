@@ -4,7 +4,7 @@ import Object from '@girs/gobject-2.0'
 
 import { SpriteWidget } from './sprite.widget.ts'
 
-import Template from './sprite-sheet.widget.ui?raw'
+import Template from './sprite-sheet.widget.blp'
 import { SpriteSheet } from '../objects/sprite-sheet.ts'
 
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
