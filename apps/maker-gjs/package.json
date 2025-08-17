@@ -25,9 +25,9 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "GPL-3.0",
     "devDependencies": {
-        "lightningcss": "^1.29.3",
-        "typescript": "^5.8.2",
-        "vite": "^6.2.2"
+        "lightningcss": "^1.30.1",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.2"
     },
     "dependencies": {
         "@girs/adw-1": "^1.8.0-4.0.0-beta.34",
@@ -46,6 +46,6 @@
         "@pixelrpg/engine-gjs": "workspace:^",
         "@pixelrpg/message-channel-core": "workspace:^",
         "@pixelrpg/message-channel-gjs": "workspace:^",
-        "mime": "^4.0.6"
+        "mime": "^4.0.7"
     }
 }

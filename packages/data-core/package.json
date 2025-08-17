@@ -10,7 +10,7 @@
         "excalibur": "workspace:^"
     },
     "devDependencies": {
-        "@types/node": "^22.13.8",
-        "typescript": "^5.8.2"
+        "@types/node": "^24.3.0",
+        "typescript": "^5.9.2"
     }
 }

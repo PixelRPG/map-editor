@@ -27,9 +27,9 @@
     },
     "devDependencies": {
         "@pixelrpg/games-zelda-like": "workspace:^",
-        "@types/node": "^22.13.11",
-        "concurrently": "^9.1.2",
-        "typescript": "^5.8.2",
-        "vite": "^6.2.2"
+        "@types/node": "^24.3.0",
+        "concurrently": "^9.2.0",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.2"
     }
 }
