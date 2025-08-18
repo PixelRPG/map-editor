@@ -10,6 +10,7 @@
         "@pixelrpg/data-core": "workspace:^"
     },
     "devDependencies": {
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.34",
         "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.34",
         "@girs/gio-2.0": "^2.84.4-4.0.0-beta.34",
         "@girs/glib-2.0": "^2.84.4-4.0.0-beta.34",

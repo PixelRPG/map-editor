@@ -3,36 +3,42 @@ import { loadTextFile } from '../utils'
 import GLib from '@girs/glib-2.0'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
+import Gdk from '@girs/gdk-4.0'
 
 /**
- * GJS implementation of an image resource loader
+ * Pure Gdk.Texture image resource - 100% modern GTK4 architecture
+ * 
+ * 🚀 ZERO GdkPixbuf dependencies - direct texture loading and storage!
+ * Scaling handled at widget level for clean separation of concerns.
  */
-export class ImageResource extends GObject.Object implements Loadable<GdkPixbuf.Pixbuf> {
+export class ImageResource extends GObject.Object implements Loadable<Gdk.Texture> {
     private _path: string;
-    private _scale: number;
     private _useGResource: boolean;
     private _resourcePrefix: string | undefined;
 
-    private _pixbuf: GdkPixbuf.Pixbuf | null = null
+    // Pure texture-based storage
+    private _texture: Gdk.Texture | null = null
 
     static {
         GObject.registerClass({
             GTypeName: 'Image',
-            // Template,
             Properties: {
-                pixbuf: GObject.ParamSpec.object('pixbuf', 'Pixbuf', 'Pixbuf for the image', GObject.ParamFlags.READWRITE, GdkPixbuf.Pixbuf),
+                texture: GObject.ParamSpec.object('texture', 'Texture', 'Texture for the image', GObject.ParamFlags.READWRITE, Gdk.Texture),
             }
         }, this);
     }
 
-    static fromPixbuf(pixbuf: GdkPixbuf.Pixbuf) {
+    // Removed: fromPixbuf method - pure texture architecture only
+
+    /**
+     * Create an ImageResource directly from a Gdk.Texture
+     */
+    static fromTexture(texture: Gdk.Texture) {
         const imageResource = new ImageResource('', {
-            scale: 1,
             useGResource: false,
             resourcePrefix: ''
         })
-        imageResource._pixbuf = pixbuf
+        imageResource._texture = texture
         return imageResource
     }
 
@@ -43,24 +49,22 @@ export class ImageResource extends GObject.Object implements Loadable<GdkPixbuf.
      * @param options Configuration options
      */
     constructor(path: string, options?: {
-        scale?: number;
         useGResource?: boolean;
         resourcePrefix?: string;
     }) {
         super()
         this._path = path;
-        this._scale = options?.scale || 1;
         this._useGResource = options?.useGResource || false;
         this._resourcePrefix = options?.resourcePrefix;
     }
 
     /**
      * Load the image from the file
-     * @returns Promise that resolves with the loaded pixbuf
+     * @returns Promise that resolves with the loaded texture
      */
-    async load(): Promise<GdkPixbuf.Pixbuf> {
-        if (this._pixbuf) {
-            return this._pixbuf;
+    async load(): Promise<Gdk.Texture> {
+        if (this._texture) {
+            return this._texture;
         }
 
         try {
@@ -83,25 +87,18 @@ export class ImageResource extends GObject.Object implements Loadable<GdkPixbuf.
                 }
             }
 
-            // Load the pixbuf from file
-            this._pixbuf = GdkPixbuf.Pixbuf.new_from_file(absolute);
+            // Load texture directly from file (pure GTK4 approach)
+            const file = Gio.File.new_for_path(absolute);
+            this._texture = Gdk.Texture.new_from_file(file);
 
-            // Apply scaling if needed
-            if (this._scale !== 1 && this._pixbuf) {
-                const width = this._pixbuf.get_width() * this._scale;
-                const height = this._pixbuf.get_height() * this._scale;
-                this._pixbuf = this._pixbuf.scale_simple(
-                    width,
-                    height,
-                    GdkPixbuf.InterpType.BILINEAR
-                );
+            // Note: Scaling is now handled at the widget level (Gtk.Picture)
+            // This keeps the texture data pure and allows for dynamic scaling
+
+            if (!this._texture) {
+                throw new Error(`Failed to load texture from ${this._path}`);
             }
 
-            if (!this._pixbuf) {
-                throw new Error(`Failed to load image from ${this._path}`);
-            }
-
-            return this._pixbuf;
+            return this._texture;
         } catch (error) {
             console.error(`Error loading image: ${error}`);
             throw error;
@@ -109,13 +106,37 @@ export class ImageResource extends GObject.Object implements Loadable<GdkPixbuf.
     }
 
     /**
-     * Get the loaded pixbuf
+     * Get the loaded texture (modern approach)
      */
-    get data(): GdkPixbuf.Pixbuf {
-        if (!this._pixbuf) {
-            throw new Error('Image not loaded');
+    get texture(): Gdk.Texture {
+        if (!this._texture) {
+            throw new Error('Image texture not loaded');
         }
-        return this._pixbuf;
+        return this._texture;
+    }
+
+    /**
+     * Get the loaded data (returns texture for Loadable interface compatibility)
+     */
+    get data(): Gdk.Texture {
+        return this.texture;
+    }
+
+    /**
+     * Get image dimensions from texture
+     */
+    get width(): number {
+        if (!this._texture) {
+            throw new Error('No texture data available');
+        }
+        return this._texture.get_width();
+    }
+
+    get height(): number {
+        if (!this._texture) {
+            throw new Error('No texture data available');
+        }
+        return this._texture.get_height();
     }
 
     /**
@@ -127,9 +148,15 @@ export class ImageResource extends GObject.Object implements Loadable<GdkPixbuf.
 
     /**
      * Check if the resource is loaded
-     * @returns True if the resource is loaded
      */
     isLoaded(): boolean {
-        return this._pixbuf !== null;
+        return this._texture !== null;
+    }
+
+    /**
+     * Check if texture is available
+     */
+    hasTexture(): boolean {
+        return this._texture !== null;
     }
 }

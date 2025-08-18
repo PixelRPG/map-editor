@@ -1,13 +1,14 @@
 import GObject from '@girs/gobject-2.0'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
+import Gdk from '@girs/gdk-4.0'
 import { ImageResource } from './ImageResource'
 
 /**
- * Represents a single sprite with image data
- * Moved from apps/maker-gjs to enable reuse across packages
+ * Pure Gdk.Texture sprite resource - 100% modern GTK4 architecture
+ * 
+ * 🚀 ZERO GdkPixbuf dependencies - clean, sustainable, performant!
+ * Direct texture-only input for optimal GPU rendering.
  */
 export class SpriteResource extends GObject.Object {
-
   // GObject properties
   declare _image: ImageResource
 
@@ -20,16 +21,46 @@ export class SpriteResource extends GObject.Object {
     }, this);
   }
 
-  get width() {
-    return this._image.data.get_width()
+  /**
+   * Get sprite width from texture
+   */
+  get width(): number {
+    return this._image.width;
   }
 
-  get height() {
-    return this._image.data.get_height()
+  /**
+   * Get sprite height from texture
+   */
+  get height(): number {
+    return this._image.height;
   }
 
-  constructor(spritePixbuf: GdkPixbuf.Pixbuf) {
+  /**
+   * Get the sprite texture
+   */
+  get texture(): Gdk.Texture {
+    return this._image.texture;
+  }
+
+  /**
+   * Constructor - accepts only Gdk.Texture (pure modern approach)
+   */
+  constructor(texture: Gdk.Texture) {
     super()
-    this._image = ImageResource.fromPixbuf(spritePixbuf)
+    this._image = ImageResource.fromTexture(texture)
+  }
+
+  /**
+   * Create from Gdk.Texture (only supported method)
+   */
+  static fromTexture(texture: Gdk.Texture): SpriteResource {
+    return new SpriteResource(texture);
+  }
+
+  /**
+   * Check if the sprite is loaded
+   */
+  isLoaded(): boolean {
+    return this._image.isLoaded();
   }
 }

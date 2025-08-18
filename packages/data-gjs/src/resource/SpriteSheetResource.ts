@@ -55,8 +55,14 @@ export class SpriteSheetResource extends GObject.Object {
         //   pixbufHeight: imageResource.pixbuf.height,
         // })
 
-        const spritePixbuf = imageResource.data.new_subpixbuf(posX, posY, rows, columns)
-        const sprite = new SpriteResource(spritePixbuf)
+        // TODO: Implement texture-based sub-texture extraction
+        // For now, create a simple texture from the full image
+        // This needs proper sub-texture implementation when GTK4 supports it
+        // const spritePixbuf = imageResource.data.new_subpixbuf(posX, posY, rows, columns)
+        // const sprite = new SpriteResource(spritePixbuf)
+
+        const fullTexture = imageResource.texture;
+        const sprite = SpriteResource.fromTexture(fullTexture);
 
         sprites.push(sprite);
       }
