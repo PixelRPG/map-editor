@@ -9,7 +9,6 @@ import Template from './sprite-sheet.widget.blp'
 
 /**
  * Widget for displaying a sprite sheet as a grid of sprites
- * Migrated from apps/maker-gjs to enable reuse across packages
  */
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
 
@@ -45,8 +44,8 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
 
   onSelected(parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
     const spriteWidget = flowBoxChild.child as SpriteWidget;
-    const _sprite = spriteWidget._sprite;
-    console.log("Selected sprite:", _sprite);
+    const sprite = spriteWidget.sprite;
+    console.log("Selected sprite:", sprite);
   }
 }
 
