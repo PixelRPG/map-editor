@@ -1,2 +1,4 @@
 export * from './sprite.widget';
 export * from './sprite-sheet.widget';
+export * from './sprite.widget.story';
+export * from './mock-data';

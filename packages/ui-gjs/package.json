@@ -8,7 +8,8 @@
     },
     "dependencies": {
         "@pixelrpg/data-core": "workspace:^",
-        "@pixelrpg/data-gjs": "workspace:^"
+        "@pixelrpg/data-gjs": "workspace:^",
+        "@pixelrpg/story-gjs": "workspace:^"
     },
     "devDependencies": {
         "@girs/adw-1": "^1.8.0-4.0.0-beta.34",
