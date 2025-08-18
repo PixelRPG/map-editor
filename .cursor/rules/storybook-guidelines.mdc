@@ -36,7 +36,7 @@ alwaysApply: false
 - Define dimensions and static properties in the template
 - Follow GTK's spacing and margin guidelines
 - Use clear widget IDs that match their purpose
-- Reference templates directly with `?raw` import syntax
+- Reference blueprint templates directly with `.blp` import syntax, we use a vite plugin to import and resolve them directly
 
 ## Control Types
 - Use appropriate `ControlType` from the enum (not string literals)
