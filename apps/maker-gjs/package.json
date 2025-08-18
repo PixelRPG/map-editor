@@ -46,6 +46,7 @@
         "@pixelrpg/engine-gjs": "workspace:^",
         "@pixelrpg/message-channel-core": "workspace:^",
         "@pixelrpg/message-channel-gjs": "workspace:^",
+        "@pixelrpg/ui-gjs": "workspace:^",
         "mime": "^4.0.7"
     }
 }
