@@ -21,8 +21,7 @@ export class ImageResource extends GObject.Object implements Loadable<GdkPixbuf.
             GTypeName: 'Image',
             // Template,
             Properties: {
-                // TODO(ts-for-gir): fix type of flags parameter
-                pixbuf: GObject.ParamSpec.object('pixbuf', 'Pixbuf', 'Pixbuf for the image', GObject.ParamFlags.READWRITE as any, GdkPixbuf.Pixbuf),
+                pixbuf: GObject.ParamSpec.object('pixbuf', 'Pixbuf', 'Pixbuf for the image', GObject.ParamFlags.READWRITE, GdkPixbuf.Pixbuf),
             }
         }, this);
     }

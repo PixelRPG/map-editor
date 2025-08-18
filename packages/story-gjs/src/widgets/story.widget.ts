@@ -38,7 +38,6 @@ export class StoryWidget extends Adw.Bin {
                     'meta',
                     'Meta',
                     'Story metadata',
-                    // @ts-ignore
                     GObject.ParamFlags.READWRITE,
                     GObject.Object
                 ),
@@ -46,7 +45,6 @@ export class StoryWidget extends Adw.Bin {
                     'story',
                     'Story Name',
                     'Story name',
-                    // @ts-ignore
                     GObject.ParamFlags.READWRITE,
                     ''
                 ),
@@ -54,7 +52,6 @@ export class StoryWidget extends Adw.Bin {
                     'args',
                     'Args',
                     'Story arguments',
-                    // @ts-ignore
                     GObject.ParamFlags.READWRITE,
                     GObject.Object
                 ),
