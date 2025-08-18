@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 
-import { SpriteSheetWidget } from './sprite-sheet.widget'
+import { SpriteSheetWidget } from '@pixelrpg/ui-gjs'
 
 import Template from './sidebar-page-tilesets.blp'
 

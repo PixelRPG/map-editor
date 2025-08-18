@@ -5,13 +5,13 @@ import { gettext as _ } from 'gettext'
 
 import { Engine, WebView } from '@pixelrpg/engine-gjs'
 import { Sidebar } from './sidebar.ts'
-import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
+import { SpriteSheetWidget } from '@pixelrpg/ui-gjs'
 import { LayersWidget } from './layers.widget.ts'
 
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
-import { SpriteSheet } from '../objects/sprite-sheet.ts'
+import { SpriteSheetResource } from '@pixelrpg/data-gjs'
 import { Layer } from '../objects/layer.ts'
 
 

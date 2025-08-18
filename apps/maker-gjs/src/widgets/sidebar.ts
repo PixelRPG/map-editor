@@ -4,7 +4,7 @@ import Adw from '@girs/adw-1'
 
 import { SidebarPageTilesets } from './sidebar-page-tilesets.ts'
 import { SidebarPageLayer } from './sidebar-page-layer.ts'
-import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
+import { SpriteSheetWidget } from '@pixelrpg/ui-gjs'
 import { LayersWidget } from './layers.widget.ts'
 
 import Template from './sidebar.blp'
