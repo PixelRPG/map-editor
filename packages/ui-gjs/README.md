@@ -27,15 +27,36 @@ This package follows the established naming convention:
 ### Sprite Components
 
 #### SpriteWidget
-Displays a single sprite with scaling and pixbuf handling.
+Modern GTK4 sprite widget using unified **Gtk.Picture + Gdk.Texture** architecture.
+
+**Architecture:**
+- **`Gtk.Picture`** = UI Widget (displays the content)
+- **`Gdk.Texture`** = Data Format (the image content)
+- **Unified approach** = No legacy GdkPixbuf complications
 
 ```typescript
-import { SpriteWidget } from '@pixelrpg/ui-gjs';
+import { SpriteWidget, SpriteMockData } from '@pixelrpg/ui-gjs';
 import { SpriteResource } from '@pixelrpg/data-gjs';
 
-const sprite = new SpriteResource(pixbuf);
+// Modern texture-first approach (recommended)
+const texture = SpriteMockData.createSolidTexture(32, 32, SpriteMockData.COLORS.RED);
+const sprite = SpriteResource.fromTexture(texture);
 const widget = new SpriteWidget(sprite);
+
+// Optimized sprite creation with automatic texture conversion
+const spriteFromMock = SpriteMockData.createSpriteOptimized(64, 64, 'SOLID', 'BLUE');
+const modernWidget = new SpriteWidget(spriteFromMock);
+
+// Pure texture architecture - clean and performant!
+// Note: Only texture input is supported - no legacy pixbuf compatibility
 ```
+
+**Key Benefits:**
+- ✅ **Performance**: Native GTK4 texture rendering
+- ✅ **Memory**: Efficient texture-based storage  
+- ✅ **Unified**: Pure texture architecture throughout
+- ✅ **Clean**: No pixbuf complications or mixed states
+- ✅ **Patterns**: All sprite patterns (solid, checkerboard, stripes, gradient, border) are texture-native
 
 #### SpriteSheetWidget  
 Displays a collection of sprites in a scrollable grid layout.

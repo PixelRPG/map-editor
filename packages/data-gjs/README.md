@@ -9,7 +9,7 @@ This package provides GJS-specific implementations for loading and managing Pixe
 ## Features
 
 - Load map data from JSON files
-- Load sprite sets with GdkPixbuf integration
+- Load sprite sets with Gdk.Texture integration
 - Load game projects with resource management
 - GResource support for packaged applications
 - Utilities for file operations in GJS
