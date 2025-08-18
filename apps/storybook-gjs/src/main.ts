@@ -1,37 +1,21 @@
 import system from 'system'
 import { StorybookApplication } from './application'
 import { StoryRegistryService } from '@pixelrpg/story-gjs'
-// TODO: Remove this
-// import './main.css?inline'
 import { EngineStories } from '@pixelrpg/engine-gjs/stories'
-
+import { UIStories } from '@pixelrpg/ui-gjs'
 
 // Create the registry
 const registry = new StoryRegistryService()
-
-console.log("Registering stories...")
-
-// Register stories
-// registry.registerStories([{
-//     stories: [new EngineStoryWidget({
-//         story: 'Basic',
-//         args: {
-//             width: 800,
-//             height: 600,
-//         },
-//         meta: EngineStoryWidget.getMetadata()
-//     })]
-// }])
 
 // Create and run the application
 const app = new StorybookApplication()
 app.connect('activate', () => {
     console.log("Activating application")
 
-    // Register story classes (not instances)
-    registry.registerStories([EngineStories])
+    // Register story modules
+    registry.registerStories([EngineStories, ...UIStories])
 
-    // Create and set up instances when GTK is ready
+    // Set up stories in the application
     app.setStories(registry.getStories())
 })
 

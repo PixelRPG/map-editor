@@ -22,7 +22,8 @@
         "@girs/javascriptcore-6.0": "^2.48.5-4.0.0-beta.34",
         "@girs/webkit-6.0": "^2.48.5-4.0.0-beta.34",
         "@pixelrpg/engine-gjs": "workspace:^",
-        "@pixelrpg/story-gjs": "workspace:^"
+        "@pixelrpg/story-gjs": "workspace:^",
+        "@pixelrpg/ui-gjs": "workspace:^"
     },
     "devDependencies": {
         "@gjsify/vite-plugin-blueprint": "^0.2.2",
