@@ -3195,6 +3195,8 @@ __metadata:
     "@girs/gio-2.0": "npm:^2.84.4-4.0.0-beta.34"
     "@girs/glib-2.0": "npm:^2.84.4-4.0.0-beta.34"
     "@girs/gobject-2.0": "npm:^2.84.4-4.0.0-beta.34"
+    "@girs/graphene-1.0": "npm:^1.0.0-4.0.0-beta.34"
+    "@girs/gtk-4.0": "npm:^4.19.1-4.0.0-beta.34"
     "@girs/pango-1.0": "npm:^1.56.4-4.0.0-beta.34"
     "@pixelrpg/data-core": "workspace:^"
     typescript: "npm:^5.9.2"
