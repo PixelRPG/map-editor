@@ -34,6 +34,13 @@ export class SpriteSheetResource extends GObject.Object {
 
   protected createSprites(spriteSheetData: SpriteSetData, imageResource: ImageResource, rows: number, columns: number): SpriteResource[] {
     const sprites: SpriteResource[] = []
+    
+    // Calculate individual sprite dimensions
+    const textureWidth = imageResource.width
+    const textureHeight = imageResource.height
+    const spriteWidth = Math.floor(textureWidth / spriteSheetData.columns)
+    const spriteHeight = Math.floor(textureHeight / spriteSheetData.rows)
+    
     for (let y = 0; y < spriteSheetData.rows; y++) {
       for (let x = 0; x < spriteSheetData.columns; x++) {
         const index = y * spriteSheetData.columns + x
@@ -41,28 +48,22 @@ export class SpriteSheetResource extends GObject.Object {
           console.error('Image resource not found', spriteSheetData.image?.path)
           continue
         }
-        // Calculate the sprite slice for each sprite
-        const posX = x * rows
-        const posY = y * columns
-        // console.log({
-        //   posX,
-        //   posY,
-        //   width: spriteData.width,
-        //   height: spriteData.height,
-        //   imageWidth: spriteData.image.width,
-        //   imageHeight: spriteData.image.height,
-        //   pixbufWidth: imageResource.pixbuf.width,
-        //   pixbufHeight: imageResource.pixbuf.height,
-        // })
+        
+        // Calculate the correct sprite position in the texture
+        // Fixed: posX should be x * spriteWidth, posY should be y * spriteHeight
+        const posX = x * spriteWidth
+        const posY = y * spriteHeight
+        
+        console.log(`Creating sprite ${index} at position (${posX}, ${posY}) with size ${spriteWidth}x${spriteHeight}`)
 
-        // TODO: Implement texture-based sub-texture extraction
-        // For now, create a simple texture from the full image
-        // This needs proper sub-texture implementation when GTK4 supports it
-        // const spritePixbuf = imageResource.data.new_subpixbuf(posX, posY, rows, columns)
-        // const sprite = new SpriteResource(spritePixbuf)
-
-        const fullTexture = imageResource.texture;
-        const sprite = SpriteResource.fromTexture(fullTexture);
+        // Create sprite using sub-texture extraction with SpritePaintable
+        const sprite = SpriteResource.fromSubTexture(
+          imageResource.texture,
+          posX,
+          posY,
+          spriteWidth,
+          spriteHeight
+        );
 
         sprites.push(sprite);
       }
