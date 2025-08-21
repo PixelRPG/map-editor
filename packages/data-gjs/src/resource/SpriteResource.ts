@@ -1,16 +1,10 @@
 import GObject from '@girs/gobject-2.0'
 import Gdk from '@girs/gdk-4.0'
-import { ImageResource } from './ImageResource'
 import { SpritePaintable } from './SpritePaintable'
-
-// Maximum value for 32-bit signed integer (GObject int type limit)
-const MAX_INT32 = 2147483647
+import { MAX_INT32 } from '../constants'
 
 /**
  * Modern sprite resource with proper sub-texture support
- * 
- * 🚀 Uses GdkPaintable for proper sprite sheet handling in GTK4
- * Supports both full textures and sub-texture regions from sprite sheets.
  */
 export class SpriteResource extends GObject.Object {
   // GObject properties
@@ -19,35 +13,60 @@ export class SpriteResource extends GObject.Object {
   declare _height: number
 
   static {
-    GObject.registerClass({
-      GTypeName: 'SpriteResource',
-      Properties: {
-        paintable: GObject.ParamSpec.object('paintable', 'Paintable', 'Paintable for the sprite', GObject.ParamFlags.READWRITE, GObject.Object),
-        width: GObject.ParamSpec.int('width', 'Width', 'Width of the sprite', GObject.ParamFlags.READWRITE, 1, MAX_INT32, 1), // min, max, default
-        height: GObject.ParamSpec.int('height', 'Height', 'Height of the sprite', GObject.ParamFlags.READWRITE, 1, MAX_INT32, 1), // min, max, default
-      }
-    }, this);
+    GObject.registerClass(
+      {
+        GTypeName: 'SpriteResource',
+        Properties: {
+          paintable: GObject.ParamSpec.object(
+            'paintable',
+            'Paintable',
+            'Paintable for the sprite',
+            GObject.ParamFlags.READWRITE,
+            GObject.Object,
+          ),
+          width: GObject.ParamSpec.int(
+            'width',
+            'Width',
+            'Width of the sprite',
+            GObject.ParamFlags.READWRITE,
+            1,
+            MAX_INT32,
+            1,
+          ), // min, max, default
+          height: GObject.ParamSpec.int(
+            'height',
+            'Height',
+            'Height of the sprite',
+            GObject.ParamFlags.READWRITE,
+            1,
+            MAX_INT32,
+            1,
+          ), // min, max, default
+        },
+      },
+      this,
+    )
   }
 
   /**
    * Get sprite width
    */
   get width(): number {
-    return this._width;
+    return this._width
   }
 
   /**
    * Get sprite height
    */
   get height(): number {
-    return this._height;
+    return this._height
   }
 
   /**
    * Get the sprite paintable (can be used with Gtk.Picture)
    */
   get paintable(): Gdk.Paintable {
-    return this._paintable;
+    return this._paintable
   }
 
   /**
@@ -56,11 +75,15 @@ export class SpriteResource extends GObject.Object {
    */
   get texture(): Gdk.Texture {
     if (this._paintable instanceof SpritePaintable) {
-      return this._paintable.texture;
+      const sourceTexture = this._paintable.sourceTexture
+      if (!sourceTexture) {
+        throw new Error('SpritePaintable has been disposed')
+      }
+      return sourceTexture
     }
     // If it's a regular texture paintable, we need to extract the texture
     // For now, we'll assume it's a texture and cast it
-    return this._paintable as unknown as Gdk.Texture;
+    return this._paintable as unknown as Gdk.Texture
   }
 
   /**
@@ -77,21 +100,31 @@ export class SpriteResource extends GObject.Object {
    * Create from Gdk.Texture (full texture sprite)
    */
   static fromTexture(texture: Gdk.Texture): SpriteResource {
-    return new SpriteResource(texture, texture.get_width(), texture.get_height());
+    return new SpriteResource(
+      texture,
+      texture.get_width(),
+      texture.get_height(),
+    )
   }
 
   /**
    * Create from a sub-region of a texture (sprite sheet)
    */
-  static fromSubTexture(texture: Gdk.Texture, x: number, y: number, width: number, height: number): SpriteResource {
-    const spritePaintable = new SpritePaintable(texture, x, y, width, height);
-    return new SpriteResource(spritePaintable as unknown as Gdk.Paintable, width, height);
+  static fromSubTexture(
+    texture: Gdk.Texture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): SpriteResource {
+    const spritePaintable = new SpritePaintable(texture, x, y, width, height)
+    return new SpriteResource(spritePaintable, width, height)
   }
 
   /**
    * Check if the sprite is loaded
    */
   isLoaded(): boolean {
-    return this._paintable !== null;
+    return this._paintable !== null
   }
 }
