@@ -1,5 +1,14 @@
 import { defineConfig } from 'vite'
-import blueprintPlugin from "@gjsify/vite-plugin-blueprint";
+import blueprintPlugin from '@gjsify/vite-plugin-blueprint'
+
+const externals = [
+  new RegExp('^gi://*', 'i'),
+  'system',
+  'gettext',
+  'jsdom',
+  'react',
+  '@pixelrpg/games-zelda-like',
+]
 
 export default defineConfig({
   css: {
@@ -14,20 +23,19 @@ export default defineConfig({
     // target: "firefox91", // Since GJS 1.71.1
     // target: "firefox102", // Since GJS 1.73.2
     // target: "firefox115", // Since GJS 1.77.2
-    target: "firefox128", // Since GJS 1.81.2
+    target: 'firefox128', // Since GJS 1.81.2
     minify: false,
     rollupOptions: {
       input: 'src/main.ts',
       output: {
         entryFileNames: 'main.js',
       },
-      external: [new RegExp('^gi://*', 'i'), 'system', 'gettext', 'jsdom', 'react'],
+      external: externals,
     },
     esbuild: {
-      external: [new RegExp('^gi://*', 'i'), 'system', 'gettext', 'jsdom', 'react'],
-
+      external: externals,
     },
-    cssMinify: false // Disable CSS minification to keep semicolons
+    cssMinify: false, // Disable CSS minification to keep semicolons
   },
   plugins: [
     blueprintPlugin({

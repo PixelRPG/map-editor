@@ -44,7 +44,7 @@ const sprite = SpriteResource.fromTexture(texture);
 const widget = new SpriteWidget(sprite);
 
 // Optimized sprite creation with automatic texture conversion
-const spriteFromMock = SpriteMockData.createSpriteOptimized(64, 64, 'SOLID', 'BLUE');
+const spriteFromMock = SpriteMockData.createSprite(64, 64, 'SOLID', 'BLUE');
 const modernWidget = new SpriteWidget(spriteFromMock);
 
 // Pure texture architecture - clean and performant!

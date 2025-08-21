@@ -9,7 +9,8 @@
         "declaration": true,
         "outDir": "dist",
         "noEmit": true,
-        "allowImportingTsExtensions": true
+        "allowImportingTsExtensions": true,
+        "resolveJsonModule": true
     },
     "include": ["src/**/*", "env.d.ts"]
 } 

@@ -28,7 +28,7 @@
         "@pixelrpg/esbuild": "workspace:^",
         "@rollup/pluginutils": "^5.2.0",
         "typescript": "^5.9.2",
-        "vite": "^7.1.2"
+        "vite": "^7.1.3"
     },
     "dependencies": {
         "@excaliburjs/dev-tools": "^0.28.0",

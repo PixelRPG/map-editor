@@ -21,6 +21,7 @@
         "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.36",
         "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.36",
         "@girs/pango-1.0": "^1.56.4-4.0.0-beta.36",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "vite": "^7.1.3"
     }
 }

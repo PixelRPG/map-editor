@@ -1,0 +1,55 @@
+using Gtk 4.0;
+
+template $SpriteSheetWidgetStory: $StoryWidget {
+    Gtk.Box {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+
+        Gtk.Label {
+            label: "SpriteSheetWidget Showcase";
+            styles ["title-2"]
+        }
+
+        Gtk.Label info_label {
+            label: "Loading sprite sheet information...";
+            styles ["dim-label", "caption"]
+            xalign: 0;
+        }
+
+        Gtk.Frame {
+            styles ["card"]
+            
+            child: Gtk.ScrolledWindow {
+                hscrollbar-policy: automatic;
+                vscrollbar-policy: automatic;
+                min-content-width: 400;
+                min-content-height: 300;
+                max-content-width: 800;
+                max-content-height: 600;
+                
+                child: Gtk.Box sprite_sheet_container {
+                    orientation: vertical;
+                    spacing: 12;
+                    margin-top: 12;
+                    margin-bottom: 12;
+                    margin-start: 12;
+                    margin-end: 12;
+                    halign: center;
+                    valign: start;
+                };
+            };
+        }
+
+        Gtk.Label {
+            label: "This displays the Lokiri Forest sprite sheet with individual sprites in a grid layout. Use the controls to adjust display settings.";
+            styles ["dim-label", "caption"]
+            wrap: true;
+            justify: center;
+            xalign: 0.5;
+        }
+    }
+}

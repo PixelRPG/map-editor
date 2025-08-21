@@ -11,9 +11,8 @@ import { LayersWidget } from './layers.widget.ts'
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
-import { SpriteSheetResource } from '@pixelrpg/data-gjs'
+import { SpriteSheet } from '@pixelrpg/data-gjs'
 import { Layer } from '../objects/layer.ts'
-
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
@@ -21,7 +20,6 @@ import { ImageResource } from '@pixelrpg/data-gjs'
 import Template from './application-window.blp'
 
 export class ApplicationWindow extends Adw.ApplicationWindow {
-
   // GObject internal children
   declare _welcomeView: WelcomeView | undefined
   declare _projectView: ProjectView | undefined
@@ -29,11 +27,19 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _toastOverlay: Adw.ToastOverlay | undefined
 
   static {
-    GObject.registerClass({
-      GTypeName: 'ApplicationWindow',
-      Template,
-      InternalChildren: ['welcomeView', 'projectView', 'stack', 'toastOverlay'],
-    }, this);
+    GObject.registerClass(
+      {
+        GTypeName: 'ApplicationWindow',
+        Template,
+        InternalChildren: [
+          'welcomeView',
+          'projectView',
+          'stack',
+          'toastOverlay',
+        ],
+      },
+      this,
+    )
   }
 
   constructor(application: Adw.Application) {
@@ -60,22 +66,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     await this._projectView?.engine?.initialize()
   }
 
-
   protected onCreateProject() {
     // Show dialog to create a new project
     const dialog = new Adw.MessageDialog({
-      heading: _("Create New Project"),
-      body: _("Enter a name for your new project:"),
+      heading: _('Create New Project'),
+      body: _('Enter a name for your new project:'),
       transient_for: this,
       modal: true,
     })
 
-    dialog.add_response('cancel', _("Cancel"))
-    dialog.add_response('create', _("Create"))
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.add_response('create', _('Create'))
     dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED)
 
     const entry = new Gtk.Entry({
-      placeholder_text: _("Project name"),
+      placeholder_text: _('Project name'),
       margin_top: 12,
       margin_bottom: 12,
       margin_start: 12,
@@ -89,7 +94,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         if (projectName) {
           this.createNewProject(projectName)
         } else {
-          this.showToast(_("Please enter a project name"))
+          this.showToast(_('Please enter a project name'))
         }
       }
       dialog.destroy()
@@ -100,18 +105,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   protected onOpenProject() {
     const dialog = new Gtk.FileChooserDialog({
-      title: _("Open Project"),
+      title: _('Open Project'),
       action: Gtk.FileChooserAction.OPEN,
       transient_for: this,
       modal: true,
     })
 
-    dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
-    dialog.add_button(_("Open"), Gtk.ResponseType.ACCEPT)
+    dialog.add_button(_('Cancel'), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_('Open'), Gtk.ResponseType.ACCEPT)
 
     const filter = new Gtk.FileFilter()
-    filter.set_name(_("PixelRPG Project Files"))
-    filter.add_pattern("*.json")
+    filter.set_name(_('PixelRPG Project Files'))
+    filter.add_pattern('*.json')
     dialog.add_filter(filter)
 
     dialog.connect('response', (dialog, response) => {
@@ -139,7 +144,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   protected openProject(path: string | null) {
     if (!path) {
-      this.showToast(_("Invalid project path"))
+      this.showToast(_('Invalid project path'))
       return
     }
 

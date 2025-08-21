@@ -22,6 +22,7 @@
         "@girs/javascriptcore-6.0": "^2.48.5-4.0.0-beta.36",
         "@girs/webkit-6.0": "^2.48.5-4.0.0-beta.36",
         "@pixelrpg/engine-gjs": "workspace:^",
+        "@pixelrpg/games-zelda-like": "workspace:^",
         "@pixelrpg/story-gjs": "workspace:^",
         "@pixelrpg/ui-gjs": "workspace:^"
     },
@@ -30,6 +31,6 @@
         "@pixelrpg/esbuild": "workspace:^",
         "lightningcss": "^1.30.1",
         "typescript": "^5.9.2",
-        "vite": "^7.1.2"
+        "vite": "^7.1.3"
     }
 }
