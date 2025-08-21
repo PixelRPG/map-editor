@@ -13,6 +13,9 @@ import Template from './sprite-sheet.widget.blp'
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   // GObject properties
   declare _spriteSheet: SpriteSheet
+  declare scale: number
+  declare showGrid: boolean
+  declare maxColumns: number
 
   // GObject internal children
   declare _flowBox: Gtk.FlowBox
@@ -31,22 +34,112 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
             GObject.ParamFlags.READWRITE as any,
             SpriteSheet,
           ),
+          scale: GObject.ParamSpec.double(
+            'scale',
+            'Scale',
+            'Scale factor for sprites',
+            GObject.ParamFlags.READWRITE,
+            0.25,
+            4.0,
+            1.0, // min, max, default
+          ),
+          showGrid: GObject.ParamSpec.boolean(
+            'showGrid',
+            'Show Grid',
+            'Show grid lines between sprites',
+            GObject.ParamFlags.READWRITE,
+            true, // default
+          ),
+          maxColumns: GObject.ParamSpec.int(
+            'maxColumns',
+            'Max Columns',
+            'Maximum number of columns to display',
+            GObject.ParamFlags.READWRITE,
+            4,
+            32,
+            16, // min, max, default
+          ),
         },
       },
       this,
     )
   }
-  constructor(spriteSheetObject: SpriteSheet) {
-    super({})
+  constructor(
+    spriteSheetObject: SpriteSheet,
+    options: { scale?: number; showGrid?: boolean; maxColumns?: number } = {},
+  ) {
+    // Layout properties are configured in the Blueprint template
+    super()
+
     this._spriteSheet = spriteSheetObject
+    this.scale = options.scale ?? 1.0
+    this.showGrid = options.showGrid ?? true
+    this.maxColumns = options.maxColumns ?? 16
     this.onSelected = this.onSelected.bind(this)
 
-    for (const sprite of spriteSheetObject.sprites) {
-      const spriteWidget = new SpriteWidget(sprite)
-      this._flowBox.append(spriteWidget)
+    this._populateSprites()
+    this._applyProperties()
+    this._flowBox.connect('child-activated', this.onSelected)
+  }
+
+  /**
+   * Populate the flow box with sprite widgets
+   */
+  private _populateSprites(): void {
+    // Clear existing children
+    let child = this._flowBox.get_first_child()
+    while (child) {
+      const next = child.get_next_sibling()
+      this._flowBox.remove(child)
+      child = next
     }
 
-    this._flowBox.connect('child-activated', this.onSelected)
+    // Add sprites with current scale
+    for (const sprite of this._spriteSheet.sprites) {
+      const spriteWidget = new SpriteWidget(sprite, this.scale)
+      this._flowBox.append(spriteWidget)
+    }
+  }
+
+  /**
+   * Apply current properties to the widget
+   */
+  private _applyProperties(): void {
+    // Apply max columns
+    this._flowBox.set_max_children_per_line(this.maxColumns)
+
+    // Apply grid spacing based on showGrid
+    if (this.showGrid) {
+      this._flowBox.set_row_spacing(1)
+      this._flowBox.set_column_spacing(1)
+    } else {
+      this._flowBox.set_row_spacing(0)
+      this._flowBox.set_column_spacing(0)
+    }
+  }
+
+  /**
+   * Update scale for all sprite widgets
+   */
+  updateScale(newScale: number): void {
+    this.scale = newScale
+    this._populateSprites()
+  }
+
+  /**
+   * Update show grid setting
+   */
+  updateShowGrid(showGrid: boolean): void {
+    this.showGrid = showGrid
+    this._applyProperties()
+  }
+
+  /**
+   * Update max columns setting
+   */
+  updateMaxColumns(maxColumns: number): void {
+    this.maxColumns = maxColumns
+    this._applyProperties()
   }
 
   onSelected(parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
