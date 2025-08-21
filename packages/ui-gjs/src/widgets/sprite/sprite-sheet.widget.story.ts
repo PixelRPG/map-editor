@@ -171,12 +171,12 @@ export class SpriteSheetWidgetStory extends StoryWidget {
       // Create the sprite sheet widget using the sprite sheet from SpriteSetResource
       this.spriteSheetWidget = new SpriteSheetWidget(
         this.spriteSetResource.spriteSheet,
+        {
+          scale: this.args.scale ?? 1.0,
+          showGrid: this.args.showGrid ?? true,
+          maxColumns: this.args.maxColumns ?? 16,
+        },
       )
-
-      // Apply current args (if the widget supports these properties)
-      const scale = this.args.scale ?? 1.0
-      // Note: The current SpriteSheetWidget might not have these properties yet
-      // This is where you would apply scale, showGrid, maxColumns if implemented
 
       // Add to container
       this._sprite_sheet_container.append(this.spriteSheetWidget)

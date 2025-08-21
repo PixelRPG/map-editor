@@ -22,25 +22,19 @@ template $SpriteSheetWidgetStory: $StoryWidget {
 
         Gtk.Frame {
             styles ["card"]
+            hexpand: true;
+            vexpand: true;
             
-            child: Gtk.ScrolledWindow {
-                hscrollbar-policy: automatic;
-                vscrollbar-policy: automatic;
-                min-content-width: 400;
-                min-content-height: 300;
-                max-content-width: 800;
-                max-content-height: 600;
-                
-                child: Gtk.Box sprite_sheet_container {
-                    orientation: vertical;
-                    spacing: 12;
-                    margin-top: 12;
-                    margin-bottom: 12;
-                    margin-start: 12;
-                    margin-end: 12;
-                    halign: center;
-                    valign: start;
-                };
+            child: Gtk.Box sprite_sheet_container {
+                orientation: vertical;
+                spacing: 12;
+                margin-top: 12;
+                margin-bottom: 12;
+                margin-start: 12;
+                margin-end: 12;
+                hexpand: true;
+                vexpand: true;
+                height-request: 600;
             };
         }
 
