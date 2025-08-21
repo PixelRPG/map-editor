@@ -1,6 +1,6 @@
 ---
 description: Guidelines for GJS packages (engine-gjs, data-gjs, message-channel-gjs)
-globs: packages/*-gjs/**/*.ts, apps/maker-gjs/**/*.ts
+globs: packages/*-gjs/**/*.ts,apps/*-gjs/**/*.ts
 alwaysApply: false
 ---
 # GJS Packages

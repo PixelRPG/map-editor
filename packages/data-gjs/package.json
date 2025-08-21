@@ -10,14 +10,14 @@
         "@pixelrpg/data-core": "workspace:^"
     },
     "devDependencies": {
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.34",
-        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.34",
-        "@girs/gio-2.0": "^2.84.4-4.0.0-beta.34",
-        "@girs/glib-2.0": "^2.84.4-4.0.0-beta.34",
-        "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.34",
-        "@girs/graphene-1.0": "^1.0.0-4.0.0-beta.34",
-        "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.34",
-        "@girs/pango-1.0": "^1.56.4-4.0.0-beta.34",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.36",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.36",
+        "@girs/gio-2.0": "^2.84.4-4.0.0-beta.36",
+        "@girs/glib-2.0": "^2.84.4-4.0.0-beta.36",
+        "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.36",
+        "@girs/graphene-1.0": "^1.0.0-4.0.0-beta.36",
+        "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.36",
+        "@girs/pango-1.0": "^1.56.4-4.0.0-beta.36",
         "typescript": "^5.9.2"
     }
 }
