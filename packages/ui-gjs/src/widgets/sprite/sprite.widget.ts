@@ -1,4 +1,5 @@
 import GObject from '@girs/gobject-2.0'
+import GLib from '@girs/glib-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
@@ -53,19 +54,33 @@ export class SpriteWidget extends Adw.Bin {
     super()
     this.sprite = spriteResource
     this.scale = scale
-    this._initializeSprite()
+
+    // Initialize sprite after template is constructed
+    GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+      this._initializeSprite()
+      return GLib.SOURCE_REMOVE
+    })
+
+    // Connect property change handlers
+    this.connect('notify::sprite', () => this._initializeSprite())
+    this.connect('notify::scale', () => this._configureSizing())
   }
 
   /**
    * Initialize the sprite display with optimal Gtk.Picture configuration
    */
   private _initializeSprite(): void {
-    if (!this.sprite || !this._image) {
+    if (!this.sprite) {
+      return
+    }
+
+    if (!this._image) {
       return
     }
 
     try {
       const paintable = this.sprite.paintable
+
       if (!paintable) {
         throw new Error('Sprite paintable is null or undefined')
       }
@@ -101,13 +116,6 @@ export class SpriteWidget extends Adw.Bin {
    */
   private _handleInitializationError(): void {
     this.set_size_request(32, 32)
-  }
-
-  /**
-   * Get the current texture (direct access from sprite)
-   */
-  get texture(): Gdk.Texture {
-    return this.sprite.texture
   }
 }
 
