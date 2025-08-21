@@ -65,12 +65,8 @@ const lastSprite = sprites[sprites.length - 1]; // Bottom-right sprite
 ### Using Sprites in GTK Widgets
 
 ```typescript
-// Method 1: Using the paintable directly
 const picture = new Gtk.Picture();
 picture.set_paintable(sprite.paintable);
-
-// Method 2: For backward compatibility with texture-based code
-const texture = sprite.texture; // Returns the full sprite sheet texture
 ```
 
 ## Implementation Details

@@ -70,23 +70,6 @@ export class SpriteResource extends GObject.Object {
   }
 
   /**
-   * Get the sprite texture (for backward compatibility)
-   * Note: This returns the full texture if this is a sub-sprite
-   */
-  get texture(): Gdk.Texture {
-    if (this._paintable instanceof SpritePaintable) {
-      const sourceTexture = this._paintable.sourceTexture
-      if (!sourceTexture) {
-        throw new Error('SpritePaintable has been disposed')
-      }
-      return sourceTexture
-    }
-    // If it's a regular texture paintable, we need to extract the texture
-    // For now, we'll assume it's a texture and cast it
-    return this._paintable as unknown as Gdk.Texture
-  }
-
-  /**
    * Constructor - accepts a paintable (texture or sprite paintable)
    */
   constructor(paintable: Gdk.Paintable, width: number, height: number) {
