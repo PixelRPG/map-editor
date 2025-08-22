@@ -12,7 +12,7 @@ import Template from './sprite-sheet.widget.blp'
  */
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   // GObject properties
-  declare _spriteSheet: SpriteSheet
+  declare spriteSheet: SpriteSheet
   declare scale: number
   declare showGrid: boolean
   declare maxColumns: number
@@ -27,13 +27,6 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
         Template,
         InternalChildren: ['flowBox'],
         Properties: {
-          spriteSheet: Object.ParamSpec.object(
-            'spriteSheet',
-            'SpriteSheet',
-            'SpriteSheet',
-            GObject.ParamFlags.READWRITE as any,
-            SpriteSheet,
-          ),
           scale: GObject.ParamSpec.double(
             'scale',
             'Scale',
@@ -65,13 +58,13 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     )
   }
   constructor(
-    spriteSheetObject: SpriteSheet,
+    spriteSheet: SpriteSheet,
     options: { scale?: number; showGrid?: boolean; maxColumns?: number } = {},
   ) {
     // Layout properties are configured in the Blueprint template
     super()
 
-    this._spriteSheet = spriteSheetObject
+    this.spriteSheet = spriteSheet
     this.scale = options.scale ?? 1.0
     this.showGrid = options.showGrid ?? true
     this.maxColumns = options.maxColumns ?? 16
@@ -95,7 +88,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     }
 
     // Add sprites with current scale
-    for (const sprite of this._spriteSheet.sprites) {
+    for (const sprite of this.spriteSheet.sprites) {
       const spriteWidget = new SpriteWidget(sprite, this.scale)
       this._flowBox.append(spriteWidget)
     }

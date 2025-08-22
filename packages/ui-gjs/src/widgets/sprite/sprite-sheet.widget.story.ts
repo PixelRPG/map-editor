@@ -61,7 +61,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
         scale: {
           control: {
             type: ControlType.RANGE,
-            min: 0.25,
+            min: 1,
             max: 4.0,
             step: 0.25,
           },
