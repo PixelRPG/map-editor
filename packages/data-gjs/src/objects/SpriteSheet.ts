@@ -1,4 +1,4 @@
-import { SpriteResource } from '../resource/SpriteResource.ts'
+import { Sprite } from './Sprite.ts'
 import type { SpriteSetData } from '@pixelrpg/data-core'
 import type { ImageResource } from '../resource/ImageResource.ts'
 
@@ -8,10 +8,10 @@ import type { ImageResource } from '../resource/ImageResource.ts'
  * Similar to Excalibur SpriteSheet: `packages/excalibur/src/engine/Graphics/SpriteSheet.ts`
  *
  * @see SpriteSetResource For loading sprite set JSON files and images
- * @see SpriteResource For individual sprite representation
+ * @see Sprite For individual sprite representation
  */
 export class SpriteSheet {
-  private _sprites: SpriteResource[]
+  private _sprites: Sprite[]
 
   rows: number
   columns: number
@@ -33,7 +33,7 @@ export class SpriteSheet {
   /**
    * Get all sprites in the sprite sheet (similar to Excalibur SpriteSheet.sprites)
    */
-  get sprites(): SpriteResource[] {
+  get sprites(): Sprite[] {
     return this._sprites
   }
 
@@ -42,7 +42,7 @@ export class SpriteSheet {
    * @param x Column index (0-based)
    * @param y Row index (0-based)
    */
-  getSprite(x: number, y: number): SpriteResource | undefined {
+  getSprite(x: number, y: number): Sprite | undefined {
     if (x >= this.columns || x < 0 || y >= this.rows || y < 0) {
       console.warn(
         `Invalid sprite coordinates (${x}, ${y}) for ${this.columns}x${this.rows} sprite sheet`,
@@ -61,8 +61,8 @@ export class SpriteSheet {
     imageResource: ImageResource,
     rows: number,
     columns: number,
-  ): SpriteResource[] {
-    const sprites: SpriteResource[] = []
+  ): Sprite[] {
+    const sprites: Sprite[] = []
 
     // Calculate individual sprite dimensions
     const textureWidth = imageResource.width
@@ -87,8 +87,8 @@ export class SpriteSheet {
           `Creating sprite ${index} at position (${posX}, ${posY}) with size ${spriteWidth}x${spriteHeight}`,
         )
 
-        // Create sprite using sub-texture extraction with SpritePaintable
-        const sprite = SpriteResource.fromSubTexture(
+        // Create sprite using sub-texture extraction with Sprite
+        const sprite = Sprite.fromSubTexture(
           imageResource.texture,
           posX,
           posY,

@@ -7,7 +7,7 @@ This document explains the modern sprite sheet implementation using GDK 4.0 and 
 The sprite sheet implementation has been completely rewritten to use modern GTK4 patterns:
 
 - **`SpritePaintable`**: A custom `GdkPaintable` implementation that renders sub-regions of a texture
-- **`SpriteResource`**: Updated to support both full textures and sub-texture regions
+- **`SpritePaintable`**: Complete sprite implementation with both rendering and resource management
 - **`SpriteSheetResource`**: Fixed sprite calculation and proper sub-texture extraction
 
 ## Key Features
@@ -26,10 +26,10 @@ The sprite sheet implementation has been completely rewritten to use modern GTK4
 ### 3. Clean API
 ```typescript
 // Create a full texture sprite
-const sprite = SpriteResource.fromTexture(texture);
+const sprite = SpritePaintable.fromTexture(texture);
 
 // Create a sub-texture sprite from a sprite sheet
-const sprite = SpriteResource.fromSubTexture(texture, x, y, width, height);
+const sprite = SpritePaintable.fromSubTexture(texture, x, y, width, height);
 
 // Use with GTK widgets
 const picture = new Gtk.Picture();

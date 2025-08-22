@@ -11,7 +11,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { SpriteWidget } from './sprite.widget'
-import { SpriteResource } from '@pixelrpg/data-gjs'
+import { Sprite } from '@pixelrpg/data-gjs'
 
 // Import story template
 import SpriteStoryTemplate from './sprite.widget.story.blp'
@@ -44,7 +44,7 @@ function createTextureFromPixels(
 /**
  * Create a simple red sprite
  */
-function createRedSprite(width: number, height: number): SpriteResource {
+function createRedSprite(width: number, height: number): Sprite {
   console.log(`Creating red sprite ${width}x${height}`)
 
   const actualWidth = Math.max(width, 1)
@@ -61,10 +61,10 @@ function createRedSprite(width: number, height: number): SpriteResource {
 
   const texture = createTextureFromPixels(actualWidth, actualHeight, pixels)
   console.log('Texture created:', texture)
-  const spriteResource = SpriteResource.fromTexture(texture)
-  console.log('SpriteResource created:', spriteResource)
+  const sprite = Sprite.fromTexture(texture)
+  console.log('Sprite created:', sprite)
 
-  return spriteResource
+  return sprite
 }
 
 /**
@@ -167,10 +167,10 @@ export class SpriteWidgetStory extends StoryWidget {
 
     try {
       // Create simple red sprite
-      const spriteResource = createRedSprite(width, height)
+      const sprite = createRedSprite(width, height)
 
       // Create the sprite widget
-      this.spriteWidget = new SpriteWidget(spriteResource)
+      this.spriteWidget = new SpriteWidget(sprite)
 
       // Add to container
       this._sprite_container.append(this.spriteWidget)

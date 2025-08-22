@@ -8,21 +8,19 @@ import Gsk from '@girs/gsk-4.0'
 import { MAX_INT32 } from '../constants.ts'
 
 /**
- * A GdkPaintable implementation for rendering sub-regions of a texture
+ * A complete sprite resource implementation with GdkPaintable interface
  *
- * This class enables proper sprite sheet handling in GTK4 by rendering
- * specific regions from a larger texture using GTK4's clip & translate
- * approach for optimal GPU performance.
+ * This class combines sprite resource management with GTK4 paintable rendering,
+ * enabling proper sprite sheet handling by rendering specific regions from a
+ * larger texture using GTK4's clip & translate approach for optimal GPU performance.
  *
- * Implementation follows GTK4 best practices:
- * 1. Push clip rectangle for destination bounds
- * 2. Translate coordinates to position sprite region at origin
- * 3. Render complete source texture (clipped region becomes visible)
+ * Features:
+ * - Direct usage as Gdk.Paintable for GTK widgets
+ * - Factory methods for easy sprite creation
+ * - Sub-texture support for sprite sheets
+ * - Pixel-perfect rendering with nearest neighbor filtering
  */
-export class SpritePaintable
-  extends GObject.Object
-  implements Gdk.Paintable.Interface
-{
+export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   private _sourceTexture: Gdk.Texture
   private _x: number
   private _y: number
@@ -45,7 +43,7 @@ export class SpritePaintable
   static {
     GObject.registerClass(
       {
-        GTypeName: 'SpritePaintable',
+        GTypeName: 'Sprite',
         Implements: [Gdk.Paintable],
         Properties: {
           sourceTexture: GObject.ParamSpec.object(
@@ -98,7 +96,7 @@ export class SpritePaintable
   }
 
   /**
-   * Create a new SpritePaintable
+   * Create a new Sprite
    * @param texture The source texture containing the sprite sheet
    * @param x X position of the sprite in the texture
    * @param y Y position of the sprite in the texture
@@ -243,7 +241,40 @@ export class SpritePaintable
   get height(): number {
     return this._height
   }
+
+  /**
+   * Create from Gdk.Texture (full texture sprite)
+   */
+  static fromTexture(texture: Gdk.Texture): Sprite {
+    return new Sprite(
+      texture,
+      0, // x
+      0, // y
+      texture.get_width(), // width
+      texture.get_height(), // height
+    )
+  }
+
+  /**
+   * Create from a sub-region of a texture (sprite sheet)
+   */
+  static fromSubTexture(
+    texture: Gdk.Texture,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): Sprite {
+    return new Sprite(texture, x, y, width, height)
+  }
+
+  /**
+   * Check if the sprite is loaded
+   */
+  isLoaded(): boolean {
+    return this._sourceTexture !== null && !this._disposed
+  }
 }
 
 // Ensure the type is registered
-GObject.type_ensure(SpritePaintable.$gtype)
+GObject.type_ensure(Sprite.$gtype)

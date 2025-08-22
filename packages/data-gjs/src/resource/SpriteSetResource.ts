@@ -5,8 +5,7 @@ import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions'
 import { loadTextFile } from '../utils'
 import { SpriteSetFormat, Loadable } from '@pixelrpg/data-core'
 import { ImageResource } from './ImageResource'
-import { SpriteSheet } from '../objects/index.ts'
-import { SpriteResource } from './SpriteResource'
+import { SpriteSheet, Sprite } from '../objects/index.ts'
 
 /**
  * Resource class for loading custom SpriteSet format into GJS.
@@ -14,14 +13,14 @@ import { SpriteResource } from './SpriteResource'
  * Similar to Excalibur SpriteSetResource: `packages/data-excalibur/src/resource/SpriteSetResource.ts`
  *
  * @see SpriteSheet For processing loaded data into individual sprites
- * @see SpriteResource For individual sprite representation
+ * @see Sprite For individual sprite representation
  */
 export class SpriteSetResource implements Loadable<SpriteSetData> {
   private _data: SpriteSetData | null = null
   private _path: string
   private _imageResource: ImageResource | null = null
   private _spriteSheet: SpriteSheet | null = null
-  private _sprites: Record<number, SpriteResource> = {}
+  private _sprites: Record<number, Sprite> = {}
   private _useGResource: boolean
   private _resourcePrefix: string | undefined = undefined
 
@@ -134,8 +133,8 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
   private createSprites(
     data: SpriteSetData,
     spriteSheet: SpriteSheet,
-  ): Record<number, SpriteResource> {
-    const sprites: Record<number, SpriteResource> = {}
+  ): Record<number, Sprite> {
+    const sprites: Record<number, Sprite> = {}
 
     if (data.sprites && data.sprites.length > 0) {
       data.sprites.forEach((spriteData) => {
@@ -164,14 +163,14 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
   /**
    * Get all created sprites by ID
    */
-  get sprites(): Record<number, SpriteResource> {
+  get sprites(): Record<number, Sprite> {
     return this._sprites
   }
 
   /**
    * Get a specific sprite by ID
    */
-  getSprite(id: number): SpriteResource | undefined {
+  getSprite(id: number): Sprite | undefined {
     return this._sprites[id]
   }
 

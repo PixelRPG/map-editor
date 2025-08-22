@@ -1,9 +1,8 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import Object from '@girs/gobject-2.0'
 
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSheet, SpriteResource } from '@pixelrpg/data-gjs'
+import { SpriteSheet } from '@pixelrpg/data-gjs'
 
 import Template from './sprite-sheet.widget.blp'
 

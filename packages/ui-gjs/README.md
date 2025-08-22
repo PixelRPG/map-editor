@@ -36,11 +36,11 @@ Modern GTK4 sprite widget using unified **Gtk.Picture + Gdk.Texture** architectu
 
 ```typescript
 import { SpriteWidget, SpriteMockData } from '@pixelrpg/ui-gjs';
-import { SpriteResource } from '@pixelrpg/data-gjs';
+import { Sprite } from '@pixelrpg/data-gjs';
 
 // Modern texture-first approach (recommended)
 const texture = SpriteMockData.createSolidTexture(32, 32, SpriteMockData.COLORS.RED);
-const sprite = SpriteResource.fromTexture(texture);
+const sprite = Sprite.fromTexture(texture);
 const widget = new SpriteWidget(sprite);
 
 // Optimized sprite creation with automatic texture conversion

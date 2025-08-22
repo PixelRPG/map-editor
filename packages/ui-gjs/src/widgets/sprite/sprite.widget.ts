@@ -3,7 +3,7 @@ import GLib from '@girs/glib-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
-import { SpriteResource, SpritePaintable } from '@pixelrpg/data-gjs'
+import { Sprite } from '@pixelrpg/data-gjs'
 
 import Template from './sprite.widget.blp'
 
@@ -15,7 +15,7 @@ import Template from './sprite.widget.blp'
  */
 export class SpriteWidget extends Adw.Bin {
   // GObject properties
-  declare sprite: SpriteResource
+  declare sprite: Sprite
   declare scale: number
 
   // GObject internal children - Gtk.Picture is the modern image widget
@@ -33,7 +33,7 @@ export class SpriteWidget extends Adw.Bin {
             'Sprite',
             'Sprite resource to display',
             GObject.ParamFlags.READWRITE,
-            SpriteResource,
+            Sprite,
           ),
           scale: GObject.ParamSpec.double(
             'scale',
@@ -50,9 +50,9 @@ export class SpriteWidget extends Adw.Bin {
     )
   }
 
-  constructor(spriteResource: SpriteResource, scale: number = 1.0) {
+  constructor(sprite: Sprite, scale: number = 1.0) {
     super()
-    this.sprite = spriteResource
+    this.sprite = sprite
     this.scale = scale
 
     // Connect property change handlers
@@ -74,7 +74,7 @@ export class SpriteWidget extends Adw.Bin {
     this._updateScale()
 
     // Set the paintable once - it will handle all future scaling internally
-    this._image.set_paintable(this.sprite.paintable)
+    this._image.set_paintable(this.sprite)
   }
 
   /**
