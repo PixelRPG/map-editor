@@ -70,25 +70,6 @@ export class SpriteResource extends GObject.Object {
   }
 
   /**
-   * Get the current scale factor
-   */
-  get scale(): number {
-    return this._paintable.scale
-  }
-
-  /**
-   * Set the scale factor - updates the paintable and dimensions
-   */
-  set scale(newScale: number) {
-    this._paintable.scale = newScale
-    // Update our stored dimensions to match the new scale
-    const originalWidth = this._paintable.width
-    const originalHeight = this._paintable.height
-    this._width = Math.round(originalWidth * newScale)
-    this._height = Math.round(originalHeight * newScale)
-  }
-
-  /**
    * Constructor - accepts a paintable (texture or sprite paintable)
    */
   constructor(paintable: SpritePaintable, width: number, height: number) {
@@ -101,22 +82,19 @@ export class SpriteResource extends GObject.Object {
   /**
    * Create from Gdk.Texture (full texture sprite)
    */
-  static fromTexture(
-    texture: Gdk.Texture,
-    scale: number = 1.0,
-  ): SpriteResource {
-    // Always use SpritePaintable for consistency and scaling support
+  static fromTexture(texture: Gdk.Texture): SpriteResource {
     const spritePaintable = new SpritePaintable(
       texture,
       0, // x
       0, // y
       texture.get_width(), // width
       texture.get_height(), // height
-      scale,
     )
-    const scaledWidth = Math.round(texture.get_width() * scale)
-    const scaledHeight = Math.round(texture.get_height() * scale)
-    return new SpriteResource(spritePaintable, scaledWidth, scaledHeight)
+    return new SpriteResource(
+      spritePaintable,
+      texture.get_width(),
+      texture.get_height(),
+    )
   }
 
   /**
@@ -128,19 +106,9 @@ export class SpriteResource extends GObject.Object {
     y: number,
     width: number,
     height: number,
-    scale: number = 1.0,
   ): SpriteResource {
-    const spritePaintable = new SpritePaintable(
-      texture,
-      x,
-      y,
-      width,
-      height,
-      scale,
-    )
-    const scaledWidth = Math.round(width * scale)
-    const scaledHeight = Math.round(height * scale)
-    return new SpriteResource(spritePaintable, scaledWidth, scaledHeight)
+    const spritePaintable = new SpritePaintable(texture, x, y, width, height)
+    return new SpriteResource(spritePaintable, width, height)
   }
 
   /**

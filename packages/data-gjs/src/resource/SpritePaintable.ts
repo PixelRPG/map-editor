@@ -28,7 +28,6 @@ export class SpritePaintable
   private _y: number
   private _width: number
   private _height: number
-  private _scale: number
   private _disposed: boolean = false
 
   // Regular methods are automatically provided by GObject runtime
@@ -92,15 +91,6 @@ export class SpritePaintable
             MAX_INT32, // maximum (2^31 - 1, max 32-bit signed int)
             1, // default value
           ),
-          scale: GObject.ParamSpec.double(
-            'scale',
-            'Scale',
-            'Scale factor for the sprite',
-            GObject.ParamFlags.READWRITE,
-            0.1, // minimum
-            10.0, // maximum
-            1.0, // default value
-          ),
         },
       },
       this,
@@ -114,7 +104,6 @@ export class SpritePaintable
    * @param y Y position of the sprite in the texture
    * @param width Width of the sprite
    * @param height Height of the sprite
-   * @param scale Scale factor for the sprite (default: 1.0)
    */
   constructor(
     texture: Gdk.Texture,
@@ -122,7 +111,6 @@ export class SpritePaintable
     y: number,
     width: number,
     height: number,
-    scale: number = 1.0,
   ) {
     super()
     this._sourceTexture = texture
@@ -130,28 +118,27 @@ export class SpritePaintable
     this._y = y
     this._width = width
     this._height = height
-    this._scale = scale
   }
 
   /**
-   * Get the intrinsic width of this paintable (scaled)
+   * Get the intrinsic width of this paintable
    */
   vfunc_get_intrinsic_width(): number {
-    return Math.round(this._width * this._scale)
+    return this._width
   }
 
   /**
-   * Get the intrinsic height of this paintable (scaled)
+   * Get the intrinsic height of this paintable
    */
   vfunc_get_intrinsic_height(): number {
-    return Math.round(this._height * this._scale)
+    return this._height
   }
 
   /**
-   * Get the intrinsic aspect ratio (unchanged by scale)
+   * Get the intrinsic aspect ratio
    */
   vfunc_get_intrinsic_aspect_ratio(): number {
-    return this._width / this._height
+    return this._width / this._height || 1
   }
 
   /**
@@ -163,13 +150,10 @@ export class SpritePaintable
    * 3. Translate to position sprite region at origin
    * 4. Render complete texture (clipped to scaled sprite region)
    */
-  vfunc_snapshot(snapshot: Gdk.Snapshot, width: number, height: number): void {
+  vfunc_snapshot(snapshot: Gtk.Snapshot, width: number, height: number): void {
     if (this._disposed || !this._sourceTexture) {
       return
     }
-
-    // Cast to Gtk.Snapshot to access the full GTK4 API
-    const gtkSnapshot = snapshot as unknown as Gtk.Snapshot
 
     // Create a rectangle for the target area (where to render)
     // append_scaled_texture takes a destination rectangle, not source rectangle
@@ -179,10 +163,10 @@ export class SpritePaintable
     // Clip to target area
     const clipRect = new Graphene.Rect()
     clipRect.init(0, 0, width, height)
-    gtkSnapshot.push_clip(clipRect)
+    snapshot.push_clip(clipRect)
 
     // Save transformation state
-    gtkSnapshot.save()
+    snapshot.save()
 
     // Calculate the scale factor needed to make the sprite region fill our target area
     const textureToTargetScale = width / this._width // Should be equal to this._scale
@@ -191,7 +175,7 @@ export class SpritePaintable
     const translatePoint = new Graphene.Point()
     translatePoint.x = -this._x * textureToTargetScale
     translatePoint.y = -this._y * textureToTargetScale
-    gtkSnapshot.translate(translatePoint)
+    snapshot.translate(translatePoint)
 
     // Create rectangle for the entire texture scaled to the right size
     // The texture needs to be scaled so that our sprite region (16x16) becomes target size (64x64)
@@ -204,14 +188,14 @@ export class SpritePaintable
     )
 
     // Use append_scaled_texture with NEAREST filtering
-    gtkSnapshot.append_scaled_texture(
+    snapshot.append_scaled_texture(
       this._sourceTexture,
       Gsk.ScalingFilter.NEAREST,
       scaledTextureRect,
     )
 
-    gtkSnapshot.restore()
-    gtkSnapshot.pop()
+    snapshot.restore()
+    snapshot.pop()
   }
 
   /**
@@ -223,10 +207,9 @@ export class SpritePaintable
 
   /**
    * Get paintable flags (required by GdkPaintable interface)
-   * Returns static flags to avoid GC issues during shutdown
    */
   vfunc_get_flags(): Gdk.PaintableFlags {
-    return Gdk.PaintableFlags.SIZE | Gdk.PaintableFlags.CONTENTS
+    return 0 as Gdk.PaintableFlags
   }
 
   /**
@@ -259,23 +242,6 @@ export class SpritePaintable
 
   get height(): number {
     return this._height
-  }
-
-  get scale(): number {
-    return this._scale
-  }
-
-  /**
-   * Set the scale factor and invalidate the paintable
-   */
-  set scale(newScale: number) {
-    if (this._scale !== newScale) {
-      this._scale = newScale
-      // Invalidate size to trigger re-layout with new intrinsic dimensions
-      this.invalidate_size()
-      // Invalidate contents to trigger re-rendering
-      this.invalidate_contents()
-    }
   }
 }
 
