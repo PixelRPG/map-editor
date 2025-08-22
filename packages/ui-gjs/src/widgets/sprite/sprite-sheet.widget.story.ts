@@ -103,9 +103,33 @@ export class SpriteSheetWidgetStory extends StoryWidget {
    * @param args - New arguments for the story
    */
   updateArgs(args: Record<string, any>): void {
-    // Only recreate widget if we have loaded resources
-    if (this.spriteSetResource?.spriteSheet) {
-      this._createSpriteSheetWidget()
+    // Only update if we have loaded resources and widget exists
+    if (!this.spriteSetResource?.spriteSheet || !this.spriteSheetWidget) {
+      return
+    }
+
+    let hasChanges = false
+
+    // Check and update scale
+    if (this.args.scale !== this.spriteSheetWidget.scale) {
+      this.spriteSheetWidget.updateScale(this.args.scale)
+      hasChanges = true
+    }
+
+    // Check and update showGrid
+    if (this.args.showGrid !== this.spriteSheetWidget.showGrid) {
+      this.spriteSheetWidget.updateShowGrid(this.args.showGrid)
+      hasChanges = true
+    }
+
+    // Check and update maxColumns
+    if (this.args.maxColumns !== this.spriteSheetWidget.maxColumns) {
+      this.spriteSheetWidget.updateMaxColumns(this.args.maxColumns)
+      hasChanges = true
+    }
+
+    // Only update info label if something actually changed
+    if (hasChanges) {
       this._updateInfoLabel()
     }
   }
@@ -153,7 +177,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
   }
 
   /**
-   * Create or recreate the sprite sheet widget with current args
+   * Create the sprite sheet widget (called only once during initialization)
    */
   private _createSpriteSheetWidget(): void {
     if (!this.spriteSetResource?.spriteSheet) {
@@ -161,14 +185,8 @@ export class SpriteSheetWidgetStory extends StoryWidget {
       return
     }
 
-    // Remove existing widget if present
-    if (this.spriteSheetWidget) {
-      this._sprite_sheet_container.remove(this.spriteSheetWidget)
-      this.spriteSheetWidget = null
-    }
-
     try {
-      // Create the sprite sheet widget using the sprite sheet from SpriteSetResource
+      // Create the widget with initial args
       this.spriteSheetWidget = new SpriteSheetWidget(
         this.spriteSetResource.spriteSheet,
         {

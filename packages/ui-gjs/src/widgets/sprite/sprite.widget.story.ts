@@ -100,6 +100,11 @@ export class SpriteWidgetStory extends StoryWidget {
     })
   }
 
+  vfunc_dispose(): void {
+    this._clearSpriteWidget()
+    super.vfunc_dispose()
+  }
+
   /**
    * Get the metadata for the SpriteWidget story
    */
@@ -151,15 +156,19 @@ export class SpriteWidgetStory extends StoryWidget {
     this._updateInfoLabel()
   }
 
+  private _clearSpriteWidget(): void {
+    if (this.spriteWidget) {
+      this._sprite_container.remove(this.spriteWidget)
+      this.spriteWidget = null
+    }
+  }
+
   /**
    * Create or recreate the sprite widget with current args
    */
   private _createSpriteWidget(): void {
     // Remove existing widget if present
-    if (this.spriteWidget) {
-      this._sprite_container.remove(this.spriteWidget)
-      this.spriteWidget = null
-    }
+    this._clearSpriteWidget()
 
     // Get current args with defaults
     const width = this.args.width ?? 32
