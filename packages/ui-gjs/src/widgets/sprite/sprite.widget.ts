@@ -3,7 +3,7 @@ import GLib from '@girs/glib-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
-import { SpriteResource } from '@pixelrpg/data-gjs'
+import { SpriteResource, SpritePaintable } from '@pixelrpg/data-gjs'
 
 import Template from './sprite.widget.blp'
 
@@ -63,7 +63,7 @@ export class SpriteWidget extends Adw.Bin {
 
     // Connect property change handlers
     this.connect('notify::sprite', () => this._initializeSprite())
-    this.connect('notify::scale', () => this._configureSizing())
+    this.connect('notify::scale', () => this._initializeSprite())
   }
 
   /**
@@ -79,36 +79,35 @@ export class SpriteWidget extends Adw.Bin {
     }
 
     try {
-      const paintable = this.sprite.paintable
+      let paintable = this.sprite.paintable
 
       if (!paintable) {
         throw new Error('Sprite paintable is null or undefined')
       }
 
-      // Set the paintable - all other configuration is handled in the Blueprint
+      // If we need scaling and the paintable is a SpritePaintable, create a scaled version
+      if (this.scale !== 1.0 && paintable instanceof SpritePaintable) {
+        const scaledPaintable = new SpritePaintable(
+          paintable.sourceTexture!,
+          paintable.x,
+          paintable.y,
+          paintable.width,
+          paintable.height,
+          this.scale,
+        )
+        paintable = scaledPaintable
+      }
+
+      // Set the paintable - Picture will use its intrinsic size
       this._image.set_paintable(paintable)
 
-      // Configure widget sizing
-      this._configureSizing()
+      // Let the Picture widget auto-size based on paintable's intrinsic size
+      this.set_size_request(-1, -1)
+      this._image.set_size_request(-1, -1)
     } catch (error) {
       console.error('Error initializing sprite widget:', error)
       this._handleInitializationError()
     }
-  }
-
-  /**
-   * Configure widget sizing and scaling based on sprite dimensions
-   */
-  private _configureSizing(): void {
-    if (!this.sprite) return
-
-    const scaledWidth = Math.max(this.sprite.width * this.scale, 16)
-    const scaledHeight = Math.max(this.sprite.height * this.scale, 16)
-
-    // Set size request for the scaled dimensions
-    // Layout behavior is configured in the Blueprint template
-    this.set_size_request(scaledWidth, scaledHeight)
-    this._image.set_size_request(scaledWidth, scaledHeight)
   }
 
   /**

@@ -99,9 +99,19 @@ export class SpriteResource extends GObject.Object {
     y: number,
     width: number,
     height: number,
+    scale: number = 1.0,
   ): SpriteResource {
-    const spritePaintable = new SpritePaintable(texture, x, y, width, height)
-    return new SpriteResource(spritePaintable, width, height)
+    const spritePaintable = new SpritePaintable(
+      texture,
+      x,
+      y,
+      width,
+      height,
+      scale,
+    )
+    const scaledWidth = Math.round(width * scale)
+    const scaledHeight = Math.round(height * scale)
+    return new SpriteResource(spritePaintable, scaledWidth, scaledHeight)
   }
 
   /**

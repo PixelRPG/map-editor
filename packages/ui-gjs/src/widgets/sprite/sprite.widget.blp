@@ -7,13 +7,13 @@ template $SpriteWidget: Adw.Bin {
     halign: center;
     valign: center;
     
-    child: Gtk.Picture image {
-        can-shrink: false;
-        keep-aspect-ratio: true;
-        content-fit: fill;
-        hexpand: false;
-        vexpand: false;
-        halign: fill;
-        valign: fill;
-    };
+      child: Gtk.Picture image {
+    can-shrink: false;
+    keep-aspect-ratio: true;
+    content-fit: scale_down;
+    hexpand: false;
+    vexpand: false;
+    halign: center;
+    valign: center;
+  };
 }

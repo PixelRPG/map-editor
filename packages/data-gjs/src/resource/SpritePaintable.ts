@@ -27,6 +27,7 @@ export class SpritePaintable
   private _y: number
   private _width: number
   private _height: number
+  private _scale: number
   private _disposed: boolean = false
 
   // Regular methods are automatically provided by GObject runtime
@@ -90,6 +91,15 @@ export class SpritePaintable
             MAX_INT32, // maximum (2^31 - 1, max 32-bit signed int)
             1, // default value
           ),
+          scale: GObject.ParamSpec.double(
+            'scale',
+            'Scale',
+            'Scale factor for the sprite',
+            GObject.ParamFlags.READWRITE,
+            0.1, // minimum
+            10.0, // maximum
+            1.0, // default value
+          ),
         },
       },
       this,
@@ -103,6 +113,7 @@ export class SpritePaintable
    * @param y Y position of the sprite in the texture
    * @param width Width of the sprite
    * @param height Height of the sprite
+   * @param scale Scale factor for the sprite (default: 1.0)
    */
   constructor(
     texture: Gdk.Texture,
@@ -110,6 +121,7 @@ export class SpritePaintable
     y: number,
     width: number,
     height: number,
+    scale: number = 1.0,
   ) {
     super()
     this._sourceTexture = texture
@@ -117,24 +129,25 @@ export class SpritePaintable
     this._y = y
     this._width = width
     this._height = height
+    this._scale = scale
   }
 
   /**
-   * Get the intrinsic width of this paintable
+   * Get the intrinsic width of this paintable (scaled)
    */
   vfunc_get_intrinsic_width(): number {
-    return this._width
+    return Math.round(this._width * this._scale)
   }
 
   /**
-   * Get the intrinsic height of this paintable
+   * Get the intrinsic height of this paintable (scaled)
    */
   vfunc_get_intrinsic_height(): number {
-    return this._height
+    return Math.round(this._height * this._scale)
   }
 
   /**
-   * Get the intrinsic aspect ratio
+   * Get the intrinsic aspect ratio (unchanged by scale)
    */
   vfunc_get_intrinsic_aspect_ratio(): number {
     return this._width / this._height
@@ -143,10 +156,11 @@ export class SpritePaintable
   /**
    * Render the sprite region from the source texture using GTK4 Snapshot API
    *
-   * Uses the GTK4 clip & translate approach for optimal GPU performance:
+   * Uses clip + scale + translate approach for pixel-perfect sprite scaling:
    * 1. Clip to destination bounds
-   * 2. Translate to position sprite region at origin
-   * 3. Render complete texture (only sprite region visible)
+   * 2. Scale by the scale factor
+   * 3. Translate to position sprite region at origin
+   * 4. Render complete texture (clipped to scaled sprite region)
    */
   vfunc_snapshot(snapshot: Gdk.Snapshot, width: number, height: number): void {
     if (this._disposed || !this._sourceTexture) {
@@ -156,11 +170,9 @@ export class SpritePaintable
     // Cast to Gtk.Snapshot to access the full GTK4 API
     const gtkSnapshot = snapshot as unknown as Gtk.Snapshot
 
-    // Create clipping rectangle for the destination sprite area
+    // Create clipping rectangle to only show the sprite region
     const clipRect = new Graphene.Rect()
     clipRect.init(0, 0, width, height)
-
-    // Push clip to restrict rendering to destination bounds
     gtkSnapshot.push_clip(clipRect)
 
     try {
@@ -168,14 +180,16 @@ export class SpritePaintable
       gtkSnapshot.save()
 
       try {
-        // Translate coordinates so the sprite region appears at origin
+        // Scale the rendering
+        gtkSnapshot.scale(this._scale, this._scale)
+
+        // Translate so the sprite region appears at origin
         const translatePoint = new Graphene.Point()
         translatePoint.x = -this._x
         translatePoint.y = -this._y
         gtkSnapshot.translate(translatePoint)
 
-        // Render the complete source texture at its original size
-        // Only the sprite region will be visible due to clipping and translation
+        // Render the complete texture (clipped to sprite region)
         const sourceRect = new Graphene.Rect()
         sourceRect.init(
           0,
@@ -183,14 +197,11 @@ export class SpritePaintable
           this._sourceTexture.get_width(),
           this._sourceTexture.get_height(),
         )
-
         gtkSnapshot.append_texture(this._sourceTexture, sourceRect)
       } finally {
-        // Always restore transformation state
         gtkSnapshot.restore()
       }
     } finally {
-      // Always pop the clip
       gtkSnapshot.pop()
     }
   }
@@ -243,6 +254,10 @@ export class SpritePaintable
 
   get height(): number {
     return this._height
+  }
+
+  get scale(): number {
+    return this._scale
   }
 }
 
