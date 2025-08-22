@@ -14,12 +14,8 @@ import Template from './sprite.widget.blp'
  * Clean, unified approach without legacy pixbuf complications.
  */
 export class SpriteWidget extends Adw.Bin {
-  // GObject properties
-  declare sprite: Sprite
-  declare scale: number
-
   // GObject internal children - Gtk.Picture is the modern image widget
-  declare _image: Gtk.Picture
+  declare _image: Gtk.Picture | null
 
   static {
     GObject.registerClass(
@@ -50,10 +46,11 @@ export class SpriteWidget extends Adw.Bin {
     )
   }
 
-  constructor(sprite: Sprite, scale: number = 1.0) {
+  constructor(
+    public sprite: Sprite | null,
+    public scale: number = 1.0,
+  ) {
     super()
-    this.sprite = sprite
-    this.scale = scale
 
     // Connect property change handlers
     this.connect('notify::sprite', () => this._initializeSprite())
@@ -81,7 +78,7 @@ export class SpriteWidget extends Adw.Bin {
    * Update the widget size based on sprite dimensions and scale
    */
   private _updateScale(): void {
-    if (!this.sprite || !this.scale) {
+    if (!this.sprite || !this.scale || !this._image) {
       return
     }
 

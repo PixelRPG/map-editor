@@ -21,12 +21,11 @@ import { MAX_INT32 } from '../constants.ts'
  * - Pixel-perfect rendering with nearest neighbor filtering
  */
 export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
-  private _sourceTexture: Gdk.Texture
+  private _sourceTexture: Gdk.Texture | null = null
   private _x: number
   private _y: number
   private _width: number
   private _height: number
-  private _disposed: boolean = false
 
   // Regular methods are automatically provided by GObject runtime
   // but we add them for TypeScript compatibility during development
@@ -149,7 +148,7 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * 4. Render complete texture (clipped to scaled sprite region)
    */
   vfunc_snapshot(snapshot: Gtk.Snapshot, width: number, height: number): void {
-    if (this._disposed || !this._sourceTexture) {
+    if (!this._sourceTexture) {
       return
     }
 
@@ -210,19 +209,8 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
     return 0 as Gdk.PaintableFlags
   }
 
-  /**
-   * Dispose method to clean up resources and prevent GC issues
-   */
-  vfunc_dispose(): void {
-    if (!this._disposed) {
-      this._disposed = true
-      // this._sourceTexture = null
-    }
-    super.vfunc_dispose?.()
-  }
-
   // Getters for the properties
-  get sourceTexture(): Gdk.Texture {
+  get sourceTexture(): Gdk.Texture | null {
     return this._sourceTexture
   }
 
@@ -272,7 +260,7 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * Check if the sprite is loaded
    */
   isLoaded(): boolean {
-    return this._sourceTexture !== null && !this._disposed
+    return this._sourceTexture !== null
   }
 }
 
