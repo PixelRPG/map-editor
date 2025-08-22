@@ -40,7 +40,7 @@ export class SpriteWidget extends Adw.Bin {
             'Scale',
             'Scale factor for the sprite',
             GObject.ParamFlags.READWRITE,
-            0.1,
+            1.0,
             10.0,
             1.0, // min, max, default
           ),
@@ -55,15 +55,11 @@ export class SpriteWidget extends Adw.Bin {
     this.sprite = spriteResource
     this.scale = scale
 
-    // Initialize sprite after template is constructed
-    GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-      this._initializeSprite()
-      return GLib.SOURCE_REMOVE
-    })
-
     // Connect property change handlers
     this.connect('notify::sprite', () => this._initializeSprite())
     this.connect('notify::scale', () => this._updateScale())
+
+    this._initializeSprite()
   }
 
   /**
@@ -74,36 +70,23 @@ export class SpriteWidget extends Adw.Bin {
       return
     }
 
-    try {
-      const paintable = this.sprite.paintable
+    // Apply initial scale
+    this._updateScale()
 
-      // Set the paintable once - it will handle all future scaling internally
-      this._image.set_paintable(paintable)
-
-      // Apply initial scale
-      this._updateScale()
-    } catch (error) {
-      console.error('Error initializing sprite widget:', error)
-      this._handleInitializationError()
-    }
+    // Set the paintable once - it will handle all future scaling internally
+    this._image.set_paintable(this.sprite.paintable)
   }
 
   /**
-   * Update only the scale on the existing sprite
+   * Update the widget size based on sprite dimensions and scale
    */
   private _updateScale(): void {
-    if (!this.sprite) {
+    if (!this.sprite || !this.scale) {
       return
     }
 
-    this.sprite.scale = this.scale
-  }
-
-  /**
-   * Handle initialization errors gracefully
-   */
-  private _handleInitializationError(): void {
-    this.set_size_request(32, 32)
+    this.width_request = this.sprite.width * this.scale
+    this.height_request = this.sprite.height * this.scale
   }
 }
 
