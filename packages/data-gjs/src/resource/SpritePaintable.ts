@@ -3,6 +3,7 @@ import Gdk from '@girs/gdk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import GLib from '@girs/glib-2.0'
 import Graphene from '@girs/graphene-1.0'
+import Gsk from '@girs/gsk-4.0'
 
 import { MAX_INT32 } from '../constants.ts'
 
@@ -170,40 +171,47 @@ export class SpritePaintable
     // Cast to Gtk.Snapshot to access the full GTK4 API
     const gtkSnapshot = snapshot as unknown as Gtk.Snapshot
 
-    // Create clipping rectangle to only show the sprite region
+    // Create a rectangle for the target area (where to render)
+    // append_scaled_texture takes a destination rectangle, not source rectangle
+    const targetRect = new Graphene.Rect()
+    targetRect.init(0, 0, width, height)
+
+    // Clip to target area
     const clipRect = new Graphene.Rect()
     clipRect.init(0, 0, width, height)
     gtkSnapshot.push_clip(clipRect)
 
-    try {
-      // Save transformation state
-      gtkSnapshot.save()
+    // Save transformation state
+    gtkSnapshot.save()
 
-      try {
-        // Scale the rendering
-        gtkSnapshot.scale(this._scale, this._scale)
+    // Calculate the scale factor needed to make the sprite region fill our target area
+    const textureToTargetScale = width / this._width // Should be equal to this._scale
 
-        // Translate so the sprite region appears at origin
-        const translatePoint = new Graphene.Point()
-        translatePoint.x = -this._x
-        translatePoint.y = -this._y
-        gtkSnapshot.translate(translatePoint)
+    // Translate so our sprite region appears at origin
+    const translatePoint = new Graphene.Point()
+    translatePoint.x = -this._x * textureToTargetScale
+    translatePoint.y = -this._y * textureToTargetScale
+    gtkSnapshot.translate(translatePoint)
 
-        // Render the complete texture (clipped to sprite region)
-        const sourceRect = new Graphene.Rect()
-        sourceRect.init(
-          0,
-          0,
-          this._sourceTexture.get_width(),
-          this._sourceTexture.get_height(),
-        )
-        gtkSnapshot.append_texture(this._sourceTexture, sourceRect)
-      } finally {
-        gtkSnapshot.restore()
-      }
-    } finally {
-      gtkSnapshot.pop()
-    }
+    // Create rectangle for the entire texture scaled to the right size
+    // The texture needs to be scaled so that our sprite region (16x16) becomes target size (64x64)
+    const scaledTextureRect = new Graphene.Rect()
+    scaledTextureRect.init(
+      0,
+      0,
+      this._sourceTexture.get_width() * textureToTargetScale,
+      this._sourceTexture.get_height() * textureToTargetScale,
+    )
+
+    // Use append_scaled_texture with NEAREST filtering
+    gtkSnapshot.append_scaled_texture(
+      this._sourceTexture,
+      Gsk.ScalingFilter.NEAREST,
+      scaledTextureRect,
+    )
+
+    gtkSnapshot.restore()
+    gtkSnapshot.pop()
   }
 
   /**

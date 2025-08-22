@@ -7,6 +7,8 @@
         "check": "tsc"
     },
     "dependencies": {
+        "@girs/cairo-1.0": "^1.0.0-4.0.0-beta.36",
+        "@girs/gsk-4.0": "^4.0.0-4.0.0-beta.36",
         "@pixelrpg/data-core": "workspace:^"
     },
     "devDependencies": {

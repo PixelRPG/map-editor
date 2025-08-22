@@ -2174,7 +2174,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@girs/cairo-1.0@npm:1.0.0-4.0.0-beta.36":
+"@girs/cairo-1.0@npm:1.0.0-4.0.0-beta.36, @girs/cairo-1.0@npm:^1.0.0-4.0.0-beta.36":
   version: 1.0.0-4.0.0-beta.36
   resolution: "@girs/cairo-1.0@npm:1.0.0-4.0.0-beta.36"
   dependencies:
@@ -2293,7 +2293,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@girs/gsk-4.0@npm:4.0.0-4.0.0-beta.36":
+"@girs/gsk-4.0@npm:4.0.0-4.0.0-beta.36, @girs/gsk-4.0@npm:^4.0.0-4.0.0-beta.36":
   version: 4.0.0-4.0.0-beta.36
   resolution: "@girs/gsk-4.0@npm:4.0.0-4.0.0-beta.36"
   dependencies:
@@ -3190,12 +3190,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/data-gjs@workspace:packages/data-gjs"
   dependencies:
+    "@girs/cairo-1.0": "npm:^1.0.0-4.0.0-beta.36"
     "@girs/gdk-4.0": "npm:^4.0.0-4.0.0-beta.36"
     "@girs/gdkpixbuf-2.0": "npm:^2.0.0-4.0.0-beta.36"
     "@girs/gio-2.0": "npm:^2.84.4-4.0.0-beta.36"
     "@girs/glib-2.0": "npm:^2.84.4-4.0.0-beta.36"
     "@girs/gobject-2.0": "npm:^2.84.4-4.0.0-beta.36"
     "@girs/graphene-1.0": "npm:^1.0.0-4.0.0-beta.36"
+    "@girs/gsk-4.0": "npm:^4.0.0-4.0.0-beta.36"
     "@girs/gtk-4.0": "npm:^4.19.1-4.0.0-beta.36"
     "@girs/pango-1.0": "npm:^1.56.4-4.0.0-beta.36"
     "@pixelrpg/data-core": "workspace:^"
