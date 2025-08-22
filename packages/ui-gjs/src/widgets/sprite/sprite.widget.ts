@@ -63,51 +63,40 @@ export class SpriteWidget extends Adw.Bin {
 
     // Connect property change handlers
     this.connect('notify::sprite', () => this._initializeSprite())
-    this.connect('notify::scale', () => this._initializeSprite())
+    this.connect('notify::scale', () => this._updateScale())
   }
 
   /**
-   * Initialize the sprite display with optimal Gtk.Picture configuration
+   * Initialize the sprite display - set paintable once
    */
   private _initializeSprite(): void {
-    if (!this.sprite) {
-      return
-    }
-
-    if (!this._image) {
+    if (!this.sprite || !this._image) {
       return
     }
 
     try {
-      let paintable = this.sprite.paintable
+      const paintable = this.sprite.paintable
 
-      if (!paintable) {
-        throw new Error('Sprite paintable is null or undefined')
-      }
-
-      // If we need scaling and the paintable is a SpritePaintable, create a scaled version
-      if (this.scale !== 1.0 && paintable instanceof SpritePaintable) {
-        const scaledPaintable = new SpritePaintable(
-          paintable.sourceTexture!,
-          paintable.x,
-          paintable.y,
-          paintable.width,
-          paintable.height,
-          this.scale,
-        )
-        paintable = scaledPaintable
-      }
-
-      // Set the paintable - Picture will use its intrinsic size
+      // Set the paintable once - it will handle all future scaling internally
       this._image.set_paintable(paintable)
 
-      // Let the Picture widget auto-size based on paintable's intrinsic size
-      this.set_size_request(-1, -1)
-      this._image.set_size_request(-1, -1)
+      // Apply initial scale
+      this._updateScale()
     } catch (error) {
       console.error('Error initializing sprite widget:', error)
       this._handleInitializationError()
     }
+  }
+
+  /**
+   * Update only the scale on the existing sprite
+   */
+  private _updateScale(): void {
+    if (!this.sprite) {
+      return
+    }
+
+    this.sprite.scale = this.scale
   }
 
   /**

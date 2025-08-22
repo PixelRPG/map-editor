@@ -23,7 +23,7 @@ export class SpritePaintable
   extends GObject.Object
   implements Gdk.Paintable.Interface
 {
-  private _sourceTexture: Gdk.Texture | null
+  private _sourceTexture: Gdk.Texture
   private _x: number
   private _y: number
   private _width: number
@@ -226,9 +226,6 @@ export class SpritePaintable
    * Returns static flags to avoid GC issues during shutdown
    */
   vfunc_get_flags(): Gdk.PaintableFlags {
-    if (this._disposed) {
-      return 0 as Gdk.PaintableFlags
-    }
     return Gdk.PaintableFlags.SIZE | Gdk.PaintableFlags.CONTENTS
   }
 
@@ -238,13 +235,13 @@ export class SpritePaintable
   vfunc_dispose(): void {
     if (!this._disposed) {
       this._disposed = true
-      this._sourceTexture = null
+      // this._sourceTexture = null
     }
     super.vfunc_dispose?.()
   }
 
   // Getters for the properties
-  get sourceTexture(): Gdk.Texture | null {
+  get sourceTexture(): Gdk.Texture {
     return this._sourceTexture
   }
 
@@ -266,6 +263,19 @@ export class SpritePaintable
 
   get scale(): number {
     return this._scale
+  }
+
+  /**
+   * Set the scale factor and invalidate the paintable
+   */
+  set scale(newScale: number) {
+    if (this._scale !== newScale) {
+      this._scale = newScale
+      // Invalidate size to trigger re-layout with new intrinsic dimensions
+      this.invalidate_size()
+      // Invalidate contents to trigger re-rendering
+      this.invalidate_contents()
+    }
   }
 }
 

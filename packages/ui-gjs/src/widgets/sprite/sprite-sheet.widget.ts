@@ -3,7 +3,7 @@ import Gtk from '@girs/gtk-4.0'
 import Object from '@girs/gobject-2.0'
 
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSheet } from '@pixelrpg/data-gjs'
+import { SpriteSheet, SpriteResource } from '@pixelrpg/data-gjs'
 
 import Template from './sprite-sheet.widget.blp'
 
@@ -123,7 +123,18 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    */
   updateScale(newScale: number): void {
     this.scale = newScale
-    this._populateSprites()
+
+    // Update scale on existing SpriteWidgets using clean API
+    let child = this._flowBox.get_first_child()
+    while (child) {
+      if (child instanceof Gtk.FlowBoxChild) {
+        const spriteWidget = child.child as SpriteWidget
+        if (spriteWidget) {
+          spriteWidget.scale = newScale
+        }
+      }
+      child = child.get_next_sibling()
+    }
   }
 
   /**
