@@ -1,4 +1,3 @@
-import GObject from '@girs/gobject-2.0'
 import { SpriteResource } from '../resource/SpriteResource.ts'
 import type { SpriteSetData } from '@pixelrpg/data-core'
 import type { ImageResource } from '../resource/ImageResource.ts'
@@ -11,27 +10,8 @@ import type { ImageResource } from '../resource/ImageResource.ts'
  * @see SpriteSetResource For loading sprite set JSON files and images
  * @see SpriteResource For individual sprite representation
  */
-export class SpriteSheet extends GObject.Object {
-  // GObject properties
-  declare _sprites: SpriteResource[]
-
-  static {
-    GObject.registerClass(
-      {
-        GTypeName: 'SpriteSheet',
-        Properties: {
-          // TODO: jsobject?
-          sprites: GObject.ParamSpec.jsobject<SpriteResource[]>(
-            'sprites',
-            'Sprites',
-            'Sprites of the spriteSheet',
-            GObject.ParamFlags.READWRITE,
-          ),
-        },
-      },
-      this,
-    )
-  }
+export class SpriteSheet {
+  private _sprites: SpriteResource[]
 
   rows: number
   columns: number
@@ -40,7 +20,6 @@ export class SpriteSheet extends GObject.Object {
    * Creates a new SpriteSheet to process sprite set data into individual sprites
    */
   constructor(spriteSheetData: SpriteSetData, imageResource: ImageResource) {
-    super()
     this.rows = spriteSheetData.rows
     this.columns = spriteSheetData.columns
     this._sprites = this.createSprites(
