@@ -79,12 +79,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    */
   private _populateSprites(): void {
     // Clear existing children
-    let child = this._flowBox.get_first_child()
-    while (child) {
-      const next = child.get_next_sibling()
-      this._flowBox.remove(child)
-      child = next
-    }
+    this._flowBox.remove_all()
 
     // Add sprites with current scale
     for (const sprite of this.spriteSheet.sprites) {
@@ -149,6 +144,14 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     const spriteWidget = flowBoxChild.child as SpriteWidget
     const sprite = spriteWidget.sprite
     console.log('Selected sprite:', sprite)
+  }
+
+  /**
+   * Clean up all sprite widgets when disposed
+   */
+  vfunc_dispose(): void {
+    this._flowBox.remove_all()
+    super.vfunc_dispose()
   }
 }
 
