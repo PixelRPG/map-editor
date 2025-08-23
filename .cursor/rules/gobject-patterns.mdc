@@ -3,6 +3,30 @@ description: GObject-oriented programming patterns for GJS
 globs: packages/*-gjs/**/*.ts,apps/*-gjs/**/*.ts
 alwaysApply: false
 ---
+# GTK 4 Modern Development Cheat Sheet
+
+## Quick Checklist for Agents
+
+### ✅ Do
+- Use **Gtk.Snapshot** (`vfunc_snapshot()`) for all custom drawing
+- Use **Gdk.Texture** + **Gdk.Paintable** for images
+- Use **clip + translate** to extract sprites from a spritesheet (zero-copy GPU path)
+- Use **Gdk.MemoryTexture** only if you truly need new pixel data
+- Use **append_scaled_texture()** with a scaling filter for resizing
+- Use **GObject.Property** and **GObject.Signal** for state & communication
+- Use **Gtk.Template** and blueprint UIs for declarative definitions
+- Use **map/unmap/unroot** for signal & source management
+- Use **dispose** only for breaking external references
+- Always call `super.vfunc_*()` in overrides
+
+### ❌ Don’t
+- Don’t use **Cairo** in new GTK 4 code unless absolutely necessary
+- Don’t use **Gtk.DrawingArea + Cairo** for performance-critical graphics
+- Don’t mutate **Gdk.Texture** (they are immutable)
+- Don’t call `destroy()` manually (rely on parent removal)
+- Don’t use `::destroy` handlers (deprecated)
+- Don’t disconnect JS signals in `dispose` (GC warnings in GJS)
+
 # GObject-Oriented Programming
 
 GObject-oriented programming is a declarative approach to GNOME application development that leverages GObject's property and signal system for cleaner, more maintainable code.
@@ -25,31 +49,25 @@ GObject-oriented programming is a declarative approach to GNOME application deve
 ```typescript
 // Instead of this:
 class MyWidget extends Gtk.Widget {
-    private _value: number = 0;
-    
-    get value(): number {
-        return this._value;
-    }
-    
-    set value(val: number) {
-        this._value = val;
-        this._updateUI();
-    }
-    
-    private _updateUI(): void {
-        this._label.set_text(this._value.toString());
-    }
+  private _value: number = 0;
+  get value(): number { return this._value; }
+  set value(val: number) {
+    this._value = val;
+    this._updateUI();
+  }
+  private _updateUI(): void {
+    this._label.set_text(this._value.toString());
+  }
 }
 
 // Prefer this:
 class MyWidget extends Gtk.Widget {
-    value = GObject.Property({
-        type: Number,
-        default: 0,
-    });
-    
-    // In the UI template:
-    // <Label text="bind template.value.toString()"/>
+  value = GObject.Property({
+    type: Number,
+    default: 0,
+  });
+  // In the UI template:
+  // <Label text="bind template.value.toString()"/>
 }
 ```
 
@@ -66,31 +84,23 @@ class MyWidget extends Gtk.Widget {
 ```typescript
 // Instead of this:
 class LoadingWidget extends Gtk.Widget {
-    load(callback: () => void): void {
-        // Do loading work
-        if (loadingComplete) {
-            callback();
-        }
-    }
+  load(callback: () => void): void {
+    // Do loading work
+    if (loadingComplete) callback();
+  }
 }
 
 // Parent usage:
-loadingWidget.load(() => {
-    navigateToNextPage();
-});
+loadingWidget.load(() => navigateToNextPage());
 
 // Prefer this:
 class LoadingWidget extends Gtk.Widget {
-    loadFinished = GObject.Signal();
-    
-    private _load(): void {
-        // Do loading work
-        if (loadingComplete) {
-            this.emit('load-finished');
-        }
-    }
+  loadFinished = GObject.Signal();
+  private _load(): void {
+    // Do loading work
+    if (loadingComplete) this.emit('load-finished');
+  }
 }
-
 // In parent UI template:
 // <LoadingWidget id="loading_widget" load-finished="on_loading_finished()"/>
 ```
@@ -103,65 +113,78 @@ class LoadingWidget extends Gtk.Widget {
 * Connect signals in templates rather than programmatically
 * Leverage blueprints for declarative UI definition
 
-## Widget Lifecycle & Memory Management
+# Modern Graphics in GTK 4 (GSK-first, no Cairo by default)
+
+**Key rule:** GTK 4 relies on GPU-backed rendering (OpenGL/Vulkan via GSK). Cairo is a fallback only.
+
+### Sprite Sheets (zero-copy GPU path)
+
+```js
+vfunc_snapshot(snapshot) {
+  const tw = this.tileWidth, th = this.tileHeight;
+  const sx = this.tileX * tw, sy = this.tileY * th;
+  snapshot.push_clip(new Graphene.Rect({ x: 0, y: 0, width: tw, height: th }));
+  snapshot.save();
+  snapshot.translate(new Graphene.Point({ x: -sx, y: -sy }));
+  snapshot.append_texture(this.texture, new Graphene.Rect({
+    x: 0, y: 0,
+    width: this.texture.get_width(),
+    height: this.texture.get_height()
+  }));
+  snapshot.restore();
+  snapshot.pop();
+}
+```
+
+### Sub-Textures (RAM copy path)
+
+```js
+function sliceTexture(sheet, sx, sy, sw, sh) {
+  const W = sheet.get_width(), H = sheet.get_height();
+  const stride = W * 4;
+  const src = new Uint8Array(stride * H);
+  sheet.download(src);
+
+  const outStride = sw * 4;
+  const out = new Uint8Array(outStride * sh);
+  for (let r = 0; r < sh; r++) {
+    const s0 = (sy + r) * stride + sx * 4;
+    out.set(src.subarray(s0, s0 + outStride), r * outStride);
+  }
+  const bytes = GLib.Bytes.new(out);
+  return Gdk.MemoryTexture.new(sw, sh, Gdk.MemoryFormat.ARGB8888, bytes, outStride);
+}
+```
+
+# Widget Lifecycle & Memory Management
 
 ### GTK 4 Modern Patterns
 
-* **NEVER use `::destroy` handlers** - deprecated in GTK 4, use parent removal instead
-* **NEVER call `destroy()` manually** - rely on reference counting and parent removal
-* **Remove widgets via parent API**: `parent.remove(child)` not `child.destroy()`
-* **Trust reference counting**: Widgets auto-cleanup when no references remain
+* NEVER use `::destroy` handlers
+* NEVER call `destroy()` manually
+* Remove via `parent.remove(child)` instead
+* Trust reference counting for cleanup
 
 ### Lifecycle Hierarchy
 
-* **`vfunc_map()` / `vfunc_unmap()` / `vfunc_unroot()`**
-
-  * For **visibility-bound cleanup** (signals, GLib sources, tick callbacks, animations).
-* **`vfunc_dispose()`**
-
-  * For **breaking external GObject references** (child widgets, bindings).
-  * Must be **idempotent** and always call `super.vfunc_dispose()`.
-  * ⚠️ Never disconnect JS signals here in GJS → causes "JS callback during GC" warnings.
-* **`vfunc_finalize()`**
-
-  * For **non-GObject resources** (buffers, arrays, raw data).
-  * Called once, must always chain up with `super.vfunc_finalize()`.
+* **map/unmap/unroot** → for signals & GLib sources
+* **dispose** → break external references
+* **finalize** → free raw/non-GObject resources
 
 ### GJS-Specific GC Safety
 
-* **Avoid running JS callbacks inside `dispose`** – triggers critical GC warnings.
-* **Signal management**: use `map/unmap` instead of `dispose`.
-* **`run_dispose()` is not a cleanup tool in GJS** – rely on reference counting.
+* Don’t run JS callbacks in `dispose`
+* Manage signals in `map/unmap`
+* Don’t use `run_dispose()` in GJS
 
-### Resource Management Rules
-
-* **GLib Sources**: Always store IDs; remove in `unmap`: `GLib.Source.remove(id)`
-* **Tick Callbacks**: Store IDs; remove with `this.remove_tick_callback(id)`
-* **Timeouts/Idle**: Cleanup explicitly (`GLib.timeout_add()` → `GLib.Source.remove()`)
-* **Signal Handlers**: Keep handler IDs in an array; connect in `map`, disconnect in `unmap`
-
-### Navigation & Page Management
-
-* **AdwNavigationView**: Dynamic pages are auto-destroyed when popped
-* **Static pages**: Remove via `remove()`, never `destroy()`
-* **Cleanup**: Let `dispose` handle references; `unmap` handle signals/sources
-
-### Common Pitfalls to Avoid
-
-* ❌ Disconnecting signals in `dispose` (GJS issue → GC warnings)
-* ❌ Manual `destroy()` calls on widgets
-* ❌ `::destroy` signal handlers
-* ❌ Forgetting to cleanup GLib sources/timeouts
-* ❌ Skipping `super.vfunc_*()` in overrides
-* ❌ Using boolean flags instead of array-length checks for handler state
+---
 
 ## Best Practices
 
-* Keep classes focused on a single responsibility
-* Use GObject inheritance appropriately
-* Document signals and properties with JSDoc comments
-* Provide type information for all GObject properties and signals
-* Test signal connections and property bindings thoroughly
-* Follow GTK 4 lifecycle patterns to avoid GC issues
-* Prefer `vfunc_unmap()`/`vfunc_unroot()` for cleanup in GJS, use `dispose` only for breaking GObject references, and `finalize` for internal memory cleanup
+* Keep classes focused on single responsibility
+* Document properties/signals
+* Provide type info everywhere
+* Test signal/property bindings
+* Follow GTK 4 lifecycle patterns
+* Prefer `unmap`/`unroot` for cleanup in GJS
 
