@@ -3,6 +3,8 @@ description: Guidelines for Blueprint UI templates
 globs: **/*.blp
 alwaysApply: false
 ---
+
+> **See also:** [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for TypeScript GObject implementation patterns and lifecycle management.
 # Blueprint Templates
 
 Blueprint is a markup language for GTK user interfaces that provides a clean, declarative approach to UI design.
@@ -35,6 +37,65 @@ Blueprint is a markup language for GTK user interfaces that provides a clean, de
 - Use signals for communication between components
 - Ensure signal handler methods are properly registered with @Gtk.Template.Callback()
 
+## TypeScript Integration
+
+### Template Registration Pattern
+```typescript
+import GObject from '@girs/gobject-2.0';
+import Gtk from '@girs/gtk-4.0';
+import Template from './my-widget.blp'; // Resolved using vite + @gjsify/vite-plugin-blueprint
+
+export class MyWidget extends Gtk.Widget {
+  static {
+    GObject.registerClass({
+      GTypeName: 'MyWidget',
+      Template,
+      InternalChildren: ['main_label', 'action_button'],
+      Properties: {
+        title: GObject.ParamSpec.string(
+          'title', 'Title', 'Widget title',
+          GObject.ParamFlags.READWRITE, ''
+        ),
+      },
+    }, this);
+  }
+
+  declare _main_label: Gtk.Label;
+  declare _action_button: Gtk.Button;
+}
+```
+
+### Signal Handler Implementation
+```blp
+Button action_button {
+  label: "Click Me";
+  clicked => $_on_action_clicked();
+}
+```
+
+```typescript
+// In TypeScript class:
+_onActionClicked() {
+  // Handler implementation
+  this.emit('action-performed');
+}
+```
+
+### Property Binding Patterns
+```blp
+template $MyWidget : Gtk.Box {
+  Label main_label {
+    label: bind template.title;
+    visible: bind template.title as <bool>;
+  }
+  
+  Entry title_entry {
+    text: bind template.title bidirectional;
+    placeholder-text: "Enter title...";
+  }
+}
+```
+
 ## Accessibility
 - Include proper accessibility attributes
 - Use meaningful labels for all interactive elements
@@ -42,10 +103,73 @@ Blueprint is a markup language for GTK user interfaces that provides a clean, de
 - Ensure keyboard navigation works correctly
 - Follow the GNOME accessibility guidelines
 
+## Advanced Patterns
+
+### Conditional Visibility and Styling
+```blp
+Label error_label {
+  label: bind template.error-message;
+  visible: bind template.has-error;
+  styles: ["error"];
+}
+
+Button submit_button {
+  sensitive: bind template.form-valid;
+  label: bind template.is-loading ? "Loading..." : "Submit";
+}
+```
+
+### Menu and Action Integration
+```blp
+MenuButton menu_button {
+  icon-name: "open-menu-symbolic";
+  menu-model: template.main_menu;
+  popover.position: bottom;
+}
+
+Button {
+  action-name: "app.save";
+  action-target: bind template.document-id;
+}
+```
+
+### Layout and Responsive Design
+```blp
+Box main_container {
+  orientation: vertical;
+  spacing: 12;
+  margin-top: 24;
+  margin-bottom: 24;
+  margin-start: 24;
+  margin-end: 24;
+  
+  Box header_box {
+    orientation: horizontal;
+    spacing: 6;
+    
+    Label title {
+      label: bind template.title;
+      hexpand: true;
+      xalign: 0;
+      styles: ["title-1"];
+    }
+    
+    Button close_button {
+      icon-name: "window-close-symbolic";
+      clicked => $_on_close_clicked();
+    }
+  }
+}
+```
+
 ## Best Practices
 - Avoid deep nesting of containers when possible
 - Use appropriate spacing and margin properties
 - Set proper element IDs for CSS styling
 - Choose correct widgets for the intended purpose
 - Use templates for reusable components
-- Separate complex UI into multiple template files for maintainability 
+- Separate complex UI into multiple template files for maintainability
+- Leverage Adwaita styles and design patterns
+- Use meaningful widget names for InternalChildren access
+- Group related functionality in logical containers
+- Consider responsive design with proper expand/align properties 

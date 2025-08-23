@@ -3,6 +3,8 @@ description: GObject-oriented programming patterns for GJS
 globs: packages/*-gjs/**/*.ts,apps/*-gjs/**/*.ts
 alwaysApply: false
 ---
+
+> **See also:** [@blueprint-templates](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint UI template patterns and best practices.
 # GTK 4 Modern Development Cheat Sheet
 
 ## Quick Checklist for Agents
@@ -113,46 +115,37 @@ export class LoadingWidget extends Gtk.Widget {
 * Keep signal handlers as class methods (names must match the Blueprint connection).
 * Favor bindings/expressions over imperative updates.
 
-**Blueprint Example**
+## Blueprint Template Patterns
 
-```blp
-using Gtk 4.0;
-template $StatusView : Gtk.Box {
-  orientation: Gtk.Orientation.VERTICAL;
-
-  Label status_label { label: bind template.status; }
-  Button refresh_button { label: $"Refresh"; clicked: on_refresh_clicked(); }
-}
-```
-
-**TypeScript Integration**
-
+### Template Registration
 ```typescript
-import GObject from '@girs/gobject-2.0';
-import Gtk from '@girs/gtk-4.0';
-import Template from './status-view.blp';
+import Template from './my-widget.blp';
 
-export class StatusView extends Gtk.Box {
+export class MyWidget extends Gtk.Widget {
   static {
     GObject.registerClass({
-      GTypeName: 'StatusView',
+      GTypeName: 'MyWidget',
       Template,
-      InternalChildren: ['status_label', 'refresh_button'],
-      Properties: {
-        status: GObject.ParamSpec.string(
-          'status', 'Status', 'Current status',
-          GObject.ParamFlags.READWRITE, 'Ready'
-        ),
-      },
+      InternalChildren: ['main_box', 'action_button'],
+      Properties: { /* ... */ },
+      Signals: { /* ... */ },
     }, this);
-  }
-
-  _onRefreshClicked() {
-    this.status = "Refreshing...";
-    this.status = "Updated";
   }
 }
 ```
+
+### Signal Handler Naming Convention
+- Blueprint: `clicked => $_on_button_clicked()`
+- TypeScript: `_onButtonClicked() { /* handler */ }`
+- Use consistent naming: `_on[ElementName][SignalName]` pattern
+
+### Property Binding Best Practices
+- Prefer `bind template.property` over manual updates
+- Use expressions for transformations: `bind template.count as <string>`
+- Leverage two-way binding for form inputs when appropriate
+
+**Complete Example**
+See [@blueprint-templates](blueprint-templates.mdc) for detailed Blueprint syntax and TypeScript integration examples.
 
 # Modern Graphics in GTK 4 (GSK-first)
 
