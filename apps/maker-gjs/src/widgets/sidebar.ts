@@ -2,25 +2,27 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import { SidebarPageTilesets } from './sidebar-page-tilesets.ts'
-import { SidebarPageLayer } from './sidebar-page-layer.ts'
-import { SpriteSheetWidget } from '@pixelrpg/ui-gjs'
-import { LayersWidget } from './layers.widget.ts'
+import {
+  MapEditorPanel,
+  SpriteSheetWidget,
+  LayersWidget,
+} from '@pixelrpg/ui-gjs'
 
 import Template from './sidebar.blp'
 
 export class Sidebar extends Adw.Bin {
-
   // GObject internal children
-  declare _pageTilesets: SidebarPageTilesets
-  declare _pageLayer: SidebarPageLayer
+  declare _mapEditorPanel: MapEditorPanel
 
   static {
-    GObject.registerClass({
-      GTypeName: 'Sidebar',
-      Template,
-      InternalChildren: ['pageTilesets', 'pageLayer']
-    }, this);
+    GObject.registerClass(
+      {
+        GTypeName: 'Sidebar',
+        Template,
+        InternalChildren: ['mapEditorPanel'],
+      },
+      this,
+    )
   }
 
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
@@ -28,16 +30,22 @@ export class Sidebar extends Adw.Bin {
   }
 
   /**
-   * Set the content widget of the sidebar
-   * @param content The content widget to set
+   * Set the sprite sheet widget for tileset selection
+   * @param tileset The sprite sheet widget to set
    */
   setSpriteSheet(tileset: SpriteSheetWidget) {
-    this._pageTilesets.set_child(tileset)
+    this._mapEditorPanel.setSpriteSheet(tileset)
   }
 
+  /**
+   * Set the layers widget for layer selection
+   * @param layers The layers widget to set
+   */
   setLayers(layers: LayersWidget) {
-    this._pageLayer.set_child(layers)
+    this._mapEditorPanel.setLayers(layers)
   }
 }
+// WORKAROUND: Make sure the MapEditorPanel is registered before the Sidebar, try fixed by import order?
+GObject.type_ensure(MapEditorPanel.$gtype)
 
 GObject.type_ensure(Sidebar.$gtype)

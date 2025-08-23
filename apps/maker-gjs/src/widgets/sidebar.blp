@@ -16,33 +16,7 @@ template $Sidebar: Adw.Bin {
       }
     }
 
-    content: Adw.ViewStack stack {
-      vexpand: true;
-
-      Adw.ViewStackPage {
-        name: "pageTilesets";
-        title: _("Tilesets");
-        icon-name: "star-filled-rounded-symbolic";
-        use-underline: true;
-
-        child: $SidebarPageTilesets pageTilesets {};
-      }
-
-      Adw.ViewStackPage {
-        name: "pageLayer";
-        title: _("Layer");
-        icon-name: "clock-alt-symbolic";
-        use-underline: true;
-
-        child: $SidebarPageLayer pageLayer {};
-      }
-    };
-
-    [bottom]
-    Adw.ViewSwitcherBar switcher_bar {
-      stack: stack;
-      reveal: true;
-    }
+    content: $MapEditorPanel mapEditorPanel {};
   }
 }
 
