@@ -29,6 +29,7 @@
         "@excaliburjs/plugin-tiled": "workspace:^"
     },
     "devDependencies": {
+        "barrelsby": "^2.8.1",
         "prettier": "^3.6.2",
         "typescript": "^5.9.2"
     }

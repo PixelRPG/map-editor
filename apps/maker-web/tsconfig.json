@@ -19,5 +19,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/env.d.ts"]
+  "include": ["env.d.ts"]
 } 

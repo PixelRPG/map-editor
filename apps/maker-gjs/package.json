@@ -10,7 +10,8 @@
         "clear": "rm -rf dist",
         "build:vite": "vite build",
         "build:resources": "glib-compile-resources org.pixelrpg.maker.data.gresource.xml",
-        "build": "yarn build:resources && yarn build:vite",
+        "build:barrels": "barrelsby --delete --directory src src/widgets src/objects",
+        "build": "yarn build:resources && yarn build:barrels && yarn build:vite",
         "check": "tsc",
         "start": "gjs -m dist/main.js",
         "start:debug": "GTK_DEBUG=interactive gjs -m dist/main.js"
@@ -25,6 +26,7 @@
     "license": "GPL-3.0",
     "devDependencies": {
         "@gjsify/vite-plugin-blueprint": "^0.2.2",
+        "barrelsby": "^2.8.1",
         "lightningcss": "^1.30.1",
         "typescript": "^5.9.2",
         "vite": "^7.1.3"

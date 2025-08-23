@@ -4,13 +4,16 @@
     "type": "module",
     "main": "src/index.ts",
     "scripts": {
-        "check": "tsc"
+        "check": "tsc",
+        "build:barrels": "barrelsby --delete --directory src src/format src/types src/utils",
+        "build": "yarn build:barrels"
     },
     "dependencies": {
         "excalibur": "workspace:^"
     },
     "devDependencies": {
         "@types/node": "^24.3.0",
+        "barrelsby": "^2.8.1",
         "typescript": "^5.9.2"
     }
 }
