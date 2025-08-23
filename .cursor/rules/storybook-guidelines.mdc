@@ -195,34 +195,7 @@ export { MyDemoWidgetStories } from './widgets/demo/demo.widget.story';
 - Include descriptive labels and tooltips via `description` property
 - Handle property changes efficiently in `updateArgs()` method
 - Group related controls logically in the `controls` array
-- Use the new `controls` array format instead of the deprecated `argTypes` object
 
-### Migration from argTypes to controls
-The story system has been updated to use a more consistent `controls` array format:
-
-```typescript
-// ❌ Old format (deprecated):
-argTypes: {
-  propertyName: {
-    control: { type: ControlType.RANGE, min: 0, max: 100 },
-    description: 'Property description',
-    defaultValue: 50
-  }
-}
-
-// ✅ New format:
-controls: [
-  {
-    name: 'propertyName',
-    label: 'Property Name',
-    type: ControlType.RANGE,
-    min: 0,
-    max: 100,
-    defaultValue: 50,
-    description: 'Property description'
-  }
-]
-```
 
 ### Control Configuration Examples
 ```typescript
