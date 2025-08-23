@@ -18,22 +18,27 @@ alwaysApply: false
 - Use the `StoryRegistry` service for centralized story management
 
 ## Story Structure
-- Create stories as classes extending the `StoryWidget` base class
+- Create stories as classes extending the `StoryWidget` base class (which extends `Adw.Bin`)
 - Define abstract base classes for common story functionality
 - Create variant subclasses for different configurations of the same component
-- Register story classes (not instances) with the registry
+- Register story classes (not instances) with the registry using `StoryModule` objects
 - Follow the title format `'Category/Name'` for consistent organization
 - Group related widgets in the same category
-- Implement the `StoryModule` interface to group related stories
+- Export `StoryModule` objects containing arrays of story classes
+- Implement static `getMetadata()` method for each story class
 
 ## Widget Implementation
 - Create separate `.story.ts` files for each component
-- Define separate `.story.blp`/`.story.ui` files for each variant
+- Define separate `.story.blp` files for each variant (inheriting from `$StoryWidget`)
 - Set default property values in the Blueprint template when possible
-- Define internal child widgets in the GObject class registration
+- Define internal child widgets in the GObject class registration using `InternalChildren`
 - Implement proper error handling in all widget methods
-- Override `initialize()` to set up the widget after creation
-- Override `updateArgs()` to handle property changes
+- Override `initialize()` to set up the widget after creation (called once)
+- Override `updateArgs()` to handle property changes (called when controls change)
+- Implement static `getMetadata()` method returning `StoryMeta` object
+- Use constructor with `{ story, args, meta }` parameters
+- Export `StoryModule` objects containing story class arrays
+- Call `GObject.type_ensure()` after class definition
 - Follow [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for proper GObject registration and lifecycle management
 - Use proper signal lifecycle patterns (`vfunc_map`/`vfunc_unmap`) for story widgets
 
@@ -53,22 +58,47 @@ alwaysApply: false
 ### GObject Registration for Stories
 ```typescript
 import GObject from '@girs/gobject-2.0';
+import { StoryWidget, StoryMeta, ControlType, StoryModule } from '@pixelrpg/story-gjs';
 import Template from './my-story.blp';
 
 export class MyStory extends StoryWidget {
+  // Declare internal children from template
+  declare _demo_widget: Gtk.Widget;
+  declare _info_label: Gtk.Label;
+
   static {
     GObject.registerClass({
       GTypeName: 'MyStory',
       Template,
-      InternalChildren: ['demo_widget', 'controls_box'],
-      Properties: {
-        // Story control properties
-        demoValue: GObject.ParamSpec.string(
-          'demo-value', 'Demo Value', 'Value for demonstration',
-          GObject.ParamFlags.READWRITE, 'default'
-        ),
-      },
+      InternalChildren: ['demo_widget', 'info_label'],
     }, this);
+  }
+
+  constructor() {
+    super({
+      story: 'MyStory',
+      args: {
+        demoValue: 'default',
+      },
+      meta: MyStory.getMetadata(),
+    });
+  }
+
+  static getMetadata(): StoryMeta {
+    return {
+      title: 'Category/My Story',
+      component: MyDemoWidget.$gtype,
+      tags: ['autodocs', 'demo'],
+      argTypes: {
+        demoValue: {
+          control: {
+            type: ControlType.TEXT,
+          },
+          description: 'Value for demonstration',
+          defaultValue: 'default',
+        },
+      },
+    };
   }
 }
 ```
@@ -76,23 +106,73 @@ export class MyStory extends StoryWidget {
 ### Blueprint Template for Stories
 ```blp
 using Gtk 4.0;
-template $MyStory : StoryWidget {
-  Box {
+
+template $MyStory: $StoryWidget {
+  Gtk.Box {
     orientation: vertical;
     spacing: 12;
-    
-    // Demo widget area
-    MyDemoWidget demo_widget {
-      value: bind template.demo-value;
+    margin-top: 24;
+    margin-bottom: 24;
+    margin-start: 24;
+    margin-end: 24;
+
+    Gtk.Label {
+      label: "My Demo Widget Showcase";
+      styles ["title-2"];
     }
-    
-    // Controls area (handled by StoryWidget base)
-    Box controls_box {
-      orientation: horizontal;
-      spacing: 6;
+
+    Gtk.Label info_label {
+      label: "Loading demo information...";
+      styles ["dim-label", "caption"];
+      xalign: 0;
+    }
+
+    Gtk.Frame {
+      styles ["card"];
+      
+      child: Gtk.Box demo_widget {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+        halign: center;
+        valign: center;
+      };
     }
   }
 }
+```
+
+### StoryModule Export Pattern
+```typescript
+// Ensure the type is registered
+GObject.type_ensure(MyStory.$gtype);
+
+/**
+ * Collection of all demo widget story variants
+ */
+export const MyDemoWidgetStories: StoryModule = {
+  stories: [MyStory],
+};
+```
+
+### Story Collection and Registration
+```typescript
+// In stories.ts file
+import { StoryModule } from '@pixelrpg/story-gjs';
+import { MyDemoWidgetStories } from './widgets/demo/demo.widget.story';
+
+/**
+ * All story modules available in this package
+ */
+export const AllStories: StoryModule[] = [
+  MyDemoWidgetStories,
+];
+
+// Export individual story modules for selective imports
+export { MyDemoWidgetStories } from './widgets/demo/demo.widget.story';
 ```
 
 ## Control Types
