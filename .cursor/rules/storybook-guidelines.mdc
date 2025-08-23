@@ -3,6 +3,11 @@ description: story related
 globs: 
 alwaysApply: false
 ---
+
+> **See also:** 
+> - [@blueprint-templates](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint UI template patterns and best practices
+> - [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for TypeScript GObject implementation patterns and lifecycle management
+
 # Storybook Guidelines
 
 ## Architecture Overview
@@ -29,6 +34,8 @@ alwaysApply: false
 - Implement proper error handling in all widget methods
 - Override `initialize()` to set up the widget after creation
 - Override `updateArgs()` to handle property changes
+- Follow [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for proper GObject registration and lifecycle management
+- Use proper signal lifecycle patterns (`vfunc_map`/`vfunc_unmap`) for story widgets
 
 ## UI Templates
 - Each story variant should have its own Blueprint template
@@ -37,6 +44,56 @@ alwaysApply: false
 - Follow GTK's spacing and margin guidelines
 - Use clear widget IDs that match their purpose
 - Reference blueprint templates directly with `.blp` import syntax, we use a vite plugin to import and resolve them directly
+- Follow [@blueprint-templates](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint syntax, property binding, and accessibility guidelines
+- Use proper template structure with namespaces and descriptive template names
+- Leverage property binding patterns for dynamic story controls
+
+## Story-Specific Patterns
+
+### GObject Registration for Stories
+```typescript
+import GObject from '@girs/gobject-2.0';
+import Template from './my-story.blp';
+
+export class MyStory extends StoryWidget {
+  static {
+    GObject.registerClass({
+      GTypeName: 'MyStory',
+      Template,
+      InternalChildren: ['demo_widget', 'controls_box'],
+      Properties: {
+        // Story control properties
+        demoValue: GObject.ParamSpec.string(
+          'demo-value', 'Demo Value', 'Value for demonstration',
+          GObject.ParamFlags.READWRITE, 'default'
+        ),
+      },
+    }, this);
+  }
+}
+```
+
+### Blueprint Template for Stories
+```blp
+using Gtk 4.0;
+template $MyStory : StoryWidget {
+  Box {
+    orientation: vertical;
+    spacing: 12;
+    
+    // Demo widget area
+    MyDemoWidget demo_widget {
+      value: bind template.demo-value;
+    }
+    
+    // Controls area (handled by StoryWidget base)
+    Box controls_box {
+      orientation: horizontal;
+      spacing: 6;
+    }
+  }
+}
+```
 
 ## Control Types
 - Use appropriate `ControlType` from the enum (not string literals)
