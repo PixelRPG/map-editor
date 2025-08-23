@@ -9,11 +9,13 @@ This package provides GJS-specific implementations for loading and managing Pixe
 ## Features
 
 - Load map data from JSON files
-- Load sprite sets with Gdk.Texture integration
+- Load sprite sets with modern Gdk.Texture integration
+- Lightweight Sprite data structures with on-demand Gdk.Paintable creation
 - Load game projects with resource management
 - GResource support for packaged applications
 - Utilities for file operations in GJS
 - Integration with GNOME file system and resources
+- GC-safe sprite rendering without vfunc disposal issues
 
 ## Installation
 
@@ -45,19 +47,24 @@ import { SpriteSetResource } from '@pixelrpg/data-gjs';
 
 // Create a sprite set resource
 const spriteSetResource = new SpriteSetResource({
-  path: '/path/to/spriteset.json',
-  scale: 2 // Optional scaling factor
+  path: '/path/to/spriteset.json'
 });
 
 // Load the sprite set data
 const spriteSetData = await spriteSetResource.load();
 console.log(spriteSetData.name);
 
-// Access the loaded pixbuf
-const pixbuf = spriteSetResource.pixbuf;
-if (pixbuf) {
-  // Use the pixbuf with GTK widgets
-  imageWidget.set_from_pixbuf(pixbuf);
+// Access the loaded texture and sprite sheet
+const texture = spriteSetResource.texture;
+const spriteSheet = spriteSetResource.spriteSheet;
+
+if (texture && spriteSheet) {
+  // Get individual sprites
+  const sprite = spriteSheet.getSprite(0, 0); // First sprite
+  
+  // Use sprite with GTK widgets
+  const picture = new Gtk.Picture();
+  picture.set_paintable(sprite.createPaintable());
 }
 ```
 

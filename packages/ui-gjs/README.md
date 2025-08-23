@@ -35,44 +35,50 @@ Modern GTK4 sprite widget using unified **Gtk.Picture + Gdk.Texture** architectu
 - **Unified approach** = No legacy GdkPixbuf complications
 
 ```typescript
-import { SpriteWidget, SpriteMockData } from '@pixelrpg/ui-gjs';
+import { SpriteWidget } from '@pixelrpg/ui-gjs';
 import { Sprite } from '@pixelrpg/data-gjs';
 
-// Modern texture-first approach (recommended)
-const texture = SpriteMockData.createSolidTexture(32, 32, SpriteMockData.COLORS.RED);
+// Create sprite from texture
+const texture = Gdk.Texture.new_from_file(Gio.File.new_for_path('sprite.png'));
 const sprite = Sprite.fromTexture(texture);
 const widget = new SpriteWidget(sprite);
 
-// Optimized sprite creation with automatic texture conversion
-const spriteFromMock = SpriteMockData.createSprite(64, 64, 'SOLID', 'BLUE');
-const modernWidget = new SpriteWidget(spriteFromMock);
+// Create sprite from sub-texture (sprite sheet)
+const spriteFromSheet = Sprite.fromSubTexture(texture, 0, 0, 32, 32);
+const sheetWidget = new SpriteWidget(spriteFromSheet);
 
-// Pure texture architecture - clean and performant!
-// Note: Only texture input is supported - no legacy pixbuf compatibility
+// Lightweight sprite architecture with on-demand paintable creation
+// Note: Sprites are lightweight data structures, paintables created as needed
 ```
 
 **Key Benefits:**
-- ✅ **Performance**: Native GTK4 texture rendering
-- ✅ **Memory**: Efficient texture-based storage  
-- ✅ **Unified**: Pure texture architecture throughout
-- ✅ **Clean**: No pixbuf complications or mixed states
-- ✅ **Patterns**: All sprite patterns (solid, checkerboard, stripes, gradient, border) are texture-native
+- ✅ **Performance**: Native GTK4 texture rendering with on-demand paintables
+- ✅ **Memory**: Lightweight sprite data structures without GObject overhead
+- ✅ **GC-Safe**: No "JS callback during GC" errors with new architecture
+- ✅ **Clean**: Separation of data (Sprite) and rendering (SpritePaintable)
+- ✅ **Scalable**: Efficient handling of large sprite sheets
 
 #### SpriteSheetWidget  
 Displays a collection of sprites in a scrollable grid layout.
 
 ```typescript
 import { SpriteSheetWidget } from '@pixelrpg/ui-gjs';
-import { SpriteSheetResource } from '@pixelrpg/data-gjs';
+import { SpriteSetResource } from '@pixelrpg/data-gjs';
 
-const spriteSheet = new SpriteSheetResource(spriteSetData, imageResource);
-const widget = new SpriteSheetWidget(spriteSheet);
+// Load sprite set resource
+const spriteSetResource = new SpriteSetResource({ path: '/path/to/spriteset.json' });
+await spriteSetResource.load();
 
-// Handle sprite selection
-widget.connect('child-activated', (parent, flowBoxChild) => {
-    const spriteWidget = flowBoxChild.child as SpriteWidget;
-    console.log('Selected sprite:', spriteWidget._sprite);
-});
+const spriteSheet = spriteSetResource.spriteSheet;
+if (spriteSheet) {
+    const widget = new SpriteSheetWidget(spriteSheet);
+
+    // Handle sprite selection
+    widget.connect('child-activated', (parent, flowBoxChild) => {
+        const spriteWidget = flowBoxChild.child as SpriteWidget;
+        console.log('Selected sprite:', spriteWidget.sprite);
+    });
+}
 ```
 
 ## Dependencies

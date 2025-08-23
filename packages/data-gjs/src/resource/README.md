@@ -6,9 +6,10 @@ This document explains the modern sprite sheet implementation using GDK 4.0 and 
 
 The sprite sheet implementation has been completely rewritten to use modern GTK4 patterns:
 
+- **`Sprite`**: Lightweight data structure for sprite regions without GObject overhead
 - **`SpritePaintable`**: A custom `GdkPaintable` implementation that renders sub-regions of a texture
-- **`SpritePaintable`**: Complete sprite implementation with both rendering and resource management
-- **`SpriteSheetResource`**: Fixed sprite calculation and proper sub-texture extraction
+- **`SpriteSheet`**: Container for multiple sprites from a single texture
+- **`SpriteSetResource`**: Resource loader with proper sprite calculation and texture management
 
 ## Key Features
 
@@ -26,14 +27,14 @@ The sprite sheet implementation has been completely rewritten to use modern GTK4
 ### 3. Clean API
 ```typescript
 // Create a full texture sprite
-const sprite = SpritePaintable.fromTexture(texture);
+const sprite = Sprite.fromTexture(texture);
 
 // Create a sub-texture sprite from a sprite sheet
-const sprite = SpritePaintable.fromSubTexture(texture, x, y, width, height);
+const sprite = Sprite.fromSubTexture(texture, x, y, width, height);
 
 // Use with GTK widgets
 const picture = new Gtk.Picture();
-picture.set_paintable(sprite.paintable);
+picture.set_paintable(sprite.createPaintable());
 ```
 
 ## Usage Examples
@@ -41,40 +42,49 @@ picture.set_paintable(sprite.paintable);
 ### Loading a Sprite Sheet
 
 ```typescript
-import { SpriteSheetResource, ImageResource } from '@pixelrpg/data-gjs';
+import { SpriteSetResource } from '@pixelrpg/data-gjs';
 
-// Load sprite sheet data and image
-const imageResource = new ImageResource('path/to/spritesheet.png');
-await imageResource.load();
+// Load sprite set resource
+const spriteSetResource = new SpriteSetResource({
+  path: '/path/to/spriteset.json'
+});
 
-const spriteSheetData = {
-  rows: 4,
-  columns: 8,
-  image: { path: 'path/to/spritesheet.png' }
-};
+const spriteSetData = await spriteSetResource.load();
 
-// Create sprite sheet with proper sub-texture extraction
-const spriteSheet = new SpriteSheetResource(spriteSheetData, imageResource);
-
-// Access individual sprites
-const sprites = spriteSheet._sprites;
-const firstSprite = sprites[0]; // Top-left sprite
-const lastSprite = sprites[sprites.length - 1]; // Bottom-right sprite
+// Access the sprite sheet
+const spriteSheet = spriteSetResource.spriteSheet;
+if (spriteSheet) {
+  // Access individual sprites by grid position
+  const firstSprite = spriteSheet.getSprite(0, 0); // Top-left sprite
+  const sprite_1_2 = spriteSheet.getSprite(1, 2); // Column 1, Row 2
+  
+  // Access all sprites
+  const allSprites = spriteSheet.sprites;
+}
 ```
 
 ### Using Sprites in GTK Widgets
 
 ```typescript
 const picture = new Gtk.Picture();
-picture.set_paintable(sprite.paintable);
+picture.set_paintable(sprite.createPaintable());
 ```
 
 ## Implementation Details
 
-### SpritePaintable Class
+### Sprite and SpritePaintable Architecture
 
-The `SpritePaintable` class implements the `GdkPaintable` interface to render sub-regions of a texture:
+The implementation uses a two-class architecture for optimal performance and GC safety:
 
+#### Sprite Class (Lightweight Data Structure)
+- Plain TypeScript class without GObject overhead
+- Stores sprite region data (x, y, width, height, sourceTexture)
+- Provides `createPaintable()` method for on-demand rendering
+- No vfuncs to avoid GC callback issues
+
+#### SpritePaintable Class (Rendering Object)
+- Implements the `GdkPaintable` interface for GTK integration
+- Created on-demand to minimize GObject instances
 - **Snapshot rendering**: Uses transformation matrix to render only the sprite region
 - **Intrinsic sizing**: Reports correct sprite dimensions
 - **Static flags**: Optimized for static sprite content
@@ -96,21 +106,26 @@ const posY = y * spriteHeight;
 ### Memory Efficiency
 
 - Only one `Gdk.Texture` is stored per sprite sheet
-- Each sprite uses a `SpritePaintable` that references the shared texture
+- Each `Sprite` is a lightweight data structure without GObject overhead
+- `SpritePaintable` instances are created on-demand and can be garbage collected
 - No duplicate texture data in memory
+- Significantly reduced GObject instances compared to previous implementation
 
 ## Migration Guide
 
 If you're migrating from the old implementation:
 
-1. **Replace direct texture access**: Use `sprite.paintable` instead of `sprite.texture` when possible
-2. **Update widget usage**: `Gtk.Picture.set_paintable()` instead of texture-based methods
+1. **Replace direct paintable access**: Use `sprite.createPaintable()` instead of `sprite` as paintable
+2. **Update widget usage**: `picture.set_paintable(sprite.createPaintable())` instead of `picture.set_paintable(sprite)`
 3. **Check sprite indexing**: Sprite ordering is now consistent (left-to-right, top-to-bottom)
+4. **No more GC issues**: The new architecture eliminates "JS callback during GC" errors
 
 ## Performance Considerations
 
 - **GPU-friendly**: Uses `GdkPaintable` which is optimized for GPU rendering
 - **Memory efficient**: Shared texture storage for all sprites in a sheet
+- **GC-safe**: Lightweight `Sprite` data structures avoid GC callback issues
+- **On-demand rendering**: `SpritePaintable` instances created only when needed
 - **Scalable**: Sprites can be scaled at render time without quality loss
 
 ## Debugging
