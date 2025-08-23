@@ -470,22 +470,44 @@ export class StorybookWindow extends Adw.ApplicationWindow {
     currentValue: any,
     config: { min?: number; max?: number; step?: number },
   ): Gtk.Scale {
+    const step = config.step ?? 1
+    const shouldRoundToInteger =
+      Number.isInteger(step) && Number.isInteger(currentValue ?? 0)
+
+    const adjustment = new Gtk.Adjustment({
+      lower: config.min ?? 0,
+      upper: config.max ?? 100,
+      step_increment: step,
+      value: currentValue ?? 0,
+    })
+
+    // WORKAROUND: This is a workaround to ensure the step increment is set correctly
+    adjustment.step_increment = step
+
     const scale = new Gtk.Scale({
       orientation: Gtk.Orientation.HORIZONTAL,
-      adjustment: new Gtk.Adjustment({
-        lower: config.min ?? 0,
-        upper: config.max ?? 100,
-        step_increment: config.step ?? 1,
-        value: currentValue ?? 0,
-      }),
+      adjustment,
       draw_value: true,
       hexpand: true,
     })
 
     scale.connect('value-changed', () => {
+      let value = scale.get_value()
+
+      // WORKAROUND: Round to integer if step and default value are both integers
+      if (shouldRoundToInteger) {
+        const roundedValue = Math.round(value)
+        if (roundedValue !== value) {
+          // Update the slider to show the rounded value
+          scale.set_value(roundedValue)
+          return // The recursive call will handle updating storyWidget.args
+        }
+        value = roundedValue
+      }
+
       storyWidget.args = {
         ...storyWidget.args,
-        [propName]: scale.get_value(),
+        [propName]: value,
       }
     })
 
