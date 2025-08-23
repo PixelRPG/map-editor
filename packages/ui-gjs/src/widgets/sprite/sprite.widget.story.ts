@@ -100,11 +100,6 @@ export class SpriteWidgetStory extends StoryWidget {
     })
   }
 
-  vfunc_dispose(): void {
-    this._clearSpriteWidget()
-    super.vfunc_dispose()
-  }
-
   /**
    * Get the metadata for the SpriteWidget story
    */
@@ -158,7 +153,10 @@ export class SpriteWidgetStory extends StoryWidget {
 
   private _clearSpriteWidget(): void {
     if (this.spriteWidget) {
-      this._sprite_container.remove(this.spriteWidget)
+      // Remove from parent if still attached
+      if (this.spriteWidget.get_parent() === this._sprite_container) {
+        this._sprite_container.remove(this.spriteWidget)
+      }
       this.spriteWidget = null
     }
   }
