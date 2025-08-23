@@ -3,16 +3,8 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
-import { Engine, WebView } from '@pixelrpg/engine-gjs'
-import { Sidebar } from './sidebar.ts'
-import { SpriteSheetWidget } from '@pixelrpg/ui-gjs'
-import { LayerSelector } from './layers.widget.ts'
-
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
-
-import { SpriteSheet } from '@pixelrpg/data-gjs'
-import { Layer } from '../objects/layer.ts'
 
 import type { ImageReference } from '@pixelrpg/data-core'
 import { ImageResource } from '@pixelrpg/data-gjs'
