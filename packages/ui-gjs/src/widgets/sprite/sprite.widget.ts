@@ -27,13 +27,6 @@ export class SpriteWidget extends Adw.Bin {
         Template,
         InternalChildren: ['image'],
         Properties: {
-          sprite: GObject.ParamSpec.object(
-            'sprite',
-            'Sprite',
-            'Sprite resource to display',
-            GObject.ParamFlags.READWRITE,
-            Sprite,
-          ),
           scale: GObject.ParamSpec.double(
             'scale',
             'Scale',
@@ -70,7 +63,7 @@ export class SpriteWidget extends Adw.Bin {
     this._updateScale()
 
     // Set the paintable directly
-    this._image.set_paintable(this.sprite)
+    this._image.set_paintable(this.sprite.createPaintable())
   }
 
   /**
@@ -93,13 +86,10 @@ export class SpriteWidget extends Adw.Bin {
 
     if (this._signalHandlers.length === 0) {
       // Connect property change handlers
-      const spriteHandlerId = this.connect('notify::sprite', () =>
-        this._initializeSprite(),
-      )
       const scaleHandlerId = this.connect('notify::scale', () =>
         this._updateScale(),
       )
-      this._signalHandlers.push(spriteHandlerId, scaleHandlerId)
+      this._signalHandlers.push(scaleHandlerId)
     }
   }
 
