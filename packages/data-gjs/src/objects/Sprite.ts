@@ -12,13 +12,14 @@ import { MAX_INT32 } from '../constants.ts'
  *
  * This class combines sprite resource management with GTK4 paintable rendering,
  * enabling proper sprite sheet handling by rendering specific regions from a
- * larger texture using GTK4's clip & translate approach for optimal GPU performance.
+ * larger texture using GTK4's snapshot approach for optimal GPU performance.
  *
  * Features:
  * - Direct usage as Gdk.Paintable for GTK widgets
  * - Factory methods for easy sprite creation
  * - Sub-texture support for sprite sheets
  * - Pixel-perfect rendering with nearest neighbor filtering
+ * - GC-safe vfunc implementation (required by Gdk.Paintable interface)
  */
 export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   private _sourceTexture: Gdk.Texture | null = null
@@ -27,8 +28,7 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   private _width: number
   private _height: number
 
-  // Regular methods are automatically provided by GObject runtime
-  // but we add them for TypeScript compatibility during development
+  // Interface method declarations (TypeScript compatibility)
   declare get_current_image: Gdk.Paintable['get_current_image']
   declare get_flags: Gdk.Paintable['get_flags']
   declare get_intrinsic_aspect_ratio: Gdk.Paintable['get_intrinsic_aspect_ratio']
@@ -153,7 +153,6 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
     }
 
     // Create a rectangle for the target area (where to render)
-    // append_scaled_texture takes a destination rectangle, not source rectangle
     const targetRect = new Graphene.Rect()
     targetRect.init(0, 0, width, height)
 
@@ -166,7 +165,7 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
     snapshot.save()
 
     // Calculate the scale factor needed to make the sprite region fill our target area
-    const textureToTargetScale = width / this._width // Should be equal to this._scale
+    const textureToTargetScale = width / this._width
 
     // Translate so our sprite region appears at origin
     const translatePoint = new Graphene.Point()
@@ -175,7 +174,6 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
     snapshot.translate(translatePoint)
 
     // Create rectangle for the entire texture scaled to the right size
-    // The texture needs to be scaled so that our sprite region (16x16) becomes target size (64x64)
     const scaledTextureRect = new Graphene.Rect()
     scaledTextureRect.init(
       0,
@@ -196,14 +194,14 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   }
 
   /**
-   * Get current image (required by GdkPaintable interface)
+   * Get current image
    */
-  vfunc_get_current_image(this: this & Gdk.Paintable): Gdk.Paintable {
+  vfunc_get_current_image(): Gdk.Paintable {
     return this
   }
 
   /**
-   * Get paintable flags (required by GdkPaintable interface)
+   * Get paintable flags
    */
   vfunc_get_flags(): Gdk.PaintableFlags {
     return 0 as Gdk.PaintableFlags
