@@ -26,6 +26,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _stack: Adw.ViewStack | undefined
   declare _toastOverlay: Adw.ToastOverlay | undefined
 
+  // Signal management
+  private _signalHandlers: number[] = []
+
   static {
     GObject.registerClass(
       {
@@ -47,19 +50,58 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.onCreateProject = this.onCreateProject.bind(this)
     this.onOpenProject = this.onOpenProject.bind(this)
 
-    // Connect welcome view signals
-    this._welcomeView?.connect('create-project', this.onCreateProject)
-    this._welcomeView?.connect('open-project', this.onOpenProject)
-
-    // Connect engine signals if project view is active
-    const engine = this._projectView?.engine
-    if (!engine) {
-      throw new Error('GJS engine not found')
-    }
-
     this.connect('realize', () => {
       this.initialize()
     })
+  }
+
+  /**
+   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
+
+    if (this._signalHandlers.length === 0) {
+      // Connect welcome view signals
+      if (this._welcomeView) {
+        const createProjectHandlerId = this._welcomeView.connect(
+          'create-project',
+          this.onCreateProject,
+        )
+        const openProjectHandlerId = this._welcomeView.connect(
+          'open-project',
+          this.onOpenProject,
+        )
+        this._signalHandlers.push(createProjectHandlerId, openProjectHandlerId)
+      }
+
+      // Connect engine signals if project view is active
+      const engine = this._projectView?.engine
+      if (!engine) {
+        throw new Error('GJS engine not found')
+      }
+    }
+  }
+
+  /**
+   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
+   */
+  vfunc_unmap(): void {
+    if (this._signalHandlers.length > 0) {
+      // Disconnect all signal handlers
+      let handlerIndex = 0
+      if (this._welcomeView && handlerIndex < this._signalHandlers.length) {
+        this._welcomeView.disconnect(this._signalHandlers[handlerIndex])
+        handlerIndex++
+        if (handlerIndex < this._signalHandlers.length) {
+          this._welcomeView.disconnect(this._signalHandlers[handlerIndex])
+          handlerIndex++
+        }
+      }
+      this._signalHandlers = []
+    }
+
+    super.vfunc_unmap()
   }
 
   protected async initialize() {

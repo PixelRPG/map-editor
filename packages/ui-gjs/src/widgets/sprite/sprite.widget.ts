@@ -20,6 +20,10 @@ export class SpriteWidget extends Adw.Bin {
   // Signal management
   private _signalHandlers: number[] = []
 
+  // Private fields for sprite data
+  private _sprite: Sprite | null = null
+  private _scale: number = 1.0
+
   static {
     GObject.registerClass(
       {
@@ -27,6 +31,13 @@ export class SpriteWidget extends Adw.Bin {
         Template,
         InternalChildren: ['image'],
         Properties: {
+          sprite: GObject.ParamSpec.object(
+            'sprite',
+            'Sprite',
+            'The sprite to display',
+            GObject.ParamFlags.READWRITE,
+            GObject.Object.$gtype,
+          ),
           scale: GObject.ParamSpec.double(
             'scale',
             'Scale',
@@ -42,20 +53,47 @@ export class SpriteWidget extends Adw.Bin {
     )
   }
 
-  constructor(
-    public sprite: Sprite | null,
-    public scale: number = 1.0,
-  ) {
+  constructor(sprite?: Sprite | null, scale?: number) {
     super()
 
+    if (sprite !== undefined) {
+      this.sprite = sprite
+    }
+    if (scale !== undefined) {
+      this.scale = scale
+    }
+  }
+
+  // GObject property getters and setters
+  get sprite(): Sprite | null {
+    return this._sprite
+  }
+
+  set sprite(value: Sprite | null) {
+    if (this._sprite === value) return
+
+    this._sprite = value
+    this.notify('sprite')
     this._initializeSprite()
+  }
+
+  get scale(): number {
+    return this._scale
+  }
+
+  set scale(value: number) {
+    if (this._scale === value) return
+
+    this._scale = value
+    this.notify('scale')
+    this._updateScale()
   }
 
   /**
    * Initialize the sprite display - set paintable once
    */
   private _initializeSprite(): void {
-    if (!this.sprite || !this._image) {
+    if (!this._sprite || !this._image) {
       return
     }
 
@@ -63,19 +101,19 @@ export class SpriteWidget extends Adw.Bin {
     this._updateScale()
 
     // Set the paintable directly
-    this._image.set_paintable(this.sprite.createPaintable())
+    this._image.set_paintable(this._sprite.createPaintable())
   }
 
   /**
    * Update the widget size based on sprite dimensions and scale
    */
   private _updateScale(): void {
-    if (!this.sprite || !this.scale || !this._image) {
+    if (!this._sprite || !this._scale || !this._image) {
       return
     }
 
-    this.width_request = this.sprite.width * this.scale
-    this.height_request = this.sprite.height * this.scale
+    this.width_request = this._sprite.width * this._scale
+    this.height_request = this._sprite.height * this._scale
   }
 
   /**
@@ -89,7 +127,10 @@ export class SpriteWidget extends Adw.Bin {
       const scaleHandlerId = this.connect('notify::scale', () =>
         this._updateScale(),
       )
-      this._signalHandlers.push(scaleHandlerId)
+      const spriteHandlerId = this.connect('notify::sprite', () =>
+        this._initializeSprite(),
+      )
+      this._signalHandlers.push(scaleHandlerId, spriteHandlerId)
     }
   }
 

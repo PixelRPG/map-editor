@@ -8,8 +8,8 @@ import { LayerRowWidget } from './layer-row.widget.ts'
 import Template from './layers.widget.blp'
 
 export class LayersWidget extends Adw.Bin {
-  // GObject properties
-  declare _layers: Layer[]
+  // Private fields for GObject properties
+  private _layers: Layer[] = []
 
   // GObject internal children
   declare _listBox: Gtk.ListBox
@@ -36,10 +36,40 @@ export class LayersWidget extends Adw.Bin {
     )
   }
 
-  constructor(layersObject: Layer[]) {
+  constructor(layersObject?: Layer[]) {
     super({})
-    this._layers = layersObject
 
+    if (layersObject) {
+      this.layers = layersObject
+    }
+  }
+
+  // GObject property getters and setters
+  get layers(): Layer[] {
+    return this._layers
+  }
+
+  set layers(value: Layer[]) {
+    if (this._layers === value) return
+
+    this._layers = value
+    this.notify('layers')
+    this._populateLayers()
+  }
+
+  /**
+   * Populate the list box with layer widgets
+   */
+  private _populateLayers(): void {
+    // Clear existing children
+    let child = this._listBox.get_first_child()
+    while (child) {
+      const next = child.get_next_sibling()
+      this._listBox.remove(child)
+      child = next
+    }
+
+    // Add new layers
     for (const layer of this._layers) {
       const actionRow = new LayerRowWidget(layer)
       this._listBox.append(actionRow)

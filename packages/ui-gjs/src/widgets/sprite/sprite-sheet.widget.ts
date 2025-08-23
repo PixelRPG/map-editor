@@ -10,11 +10,11 @@ import Template from './sprite-sheet.widget.blp'
  * Widget for displaying a sprite sheet as a grid of sprites
  */
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
-  // GObject properties
-  declare spriteSheet: SpriteSheet
-  declare scale: number
-  declare showGrid: boolean
-  declare maxColumns: number
+  // Private fields for GObject properties
+  private _spriteSheet: SpriteSheet | null = null
+  private _scale: number = 1.0
+  private _showGrid: boolean = true
+  private _maxColumns: number = 16
 
   // GObject internal children
   declare _flowBox: Gtk.FlowBox
@@ -29,6 +29,12 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
         Template,
         InternalChildren: ['flowBox'],
         Properties: {
+          spriteSheet: GObject.ParamSpec.jsobject(
+            'spriteSheet',
+            'Sprite Sheet',
+            'The sprite sheet to display',
+            GObject.ParamFlags.READWRITE,
+          ),
           scale: GObject.ParamSpec.double(
             'scale',
             'Scale',
@@ -60,19 +66,81 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     )
   }
   constructor(
-    spriteSheet: SpriteSheet,
+    spriteSheet?: SpriteSheet,
     options: { scale?: number; showGrid?: boolean; maxColumns?: number } = {},
   ) {
     // Layout properties are configured in the Blueprint template
     super()
 
-    this.spriteSheet = spriteSheet
-    this.scale = options.scale ?? 1.0
-    this.showGrid = options.showGrid ?? true
-    this.maxColumns = options.maxColumns ?? 16
+    if (spriteSheet) {
+      this.spriteSheet = spriteSheet
+    }
+    if (options.scale !== undefined) {
+      this.scale = options.scale
+    }
+    if (options.showGrid !== undefined) {
+      this.showGrid = options.showGrid
+    }
+    if (options.maxColumns !== undefined) {
+      this.maxColumns = options.maxColumns
+    }
     this.onSelected = this.onSelected.bind(this)
 
-    this._populateSprites()
+    if (this._spriteSheet) {
+      this._populateSprites()
+      this._applyProperties()
+    }
+  }
+
+  // GObject property getters and setters
+  get spriteSheet(): SpriteSheet | null {
+    return this._spriteSheet
+  }
+
+  set spriteSheet(value: SpriteSheet | null) {
+    if (this._spriteSheet === value) return
+
+    this._spriteSheet = value
+    this.notify('spriteSheet')
+    if (value) {
+      this._populateSprites()
+      this._applyProperties()
+    }
+  }
+
+  get scale(): number {
+    return this._scale
+  }
+
+  set scale(value: number) {
+    if (this._scale === value) return
+
+    this._scale = value
+    this.notify('scale')
+    this.updateScale(value)
+  }
+
+  get showGrid(): boolean {
+    return this._showGrid
+  }
+
+  set showGrid(value: boolean) {
+    if (this._showGrid === value) return
+
+    this._showGrid = value
+    this.notify('showGrid')
+    this._applyProperties()
+  }
+
+  get maxColumns(): number {
+    return this._maxColumns
+  }
+
+  set maxColumns(value: number) {
+    if (this._maxColumns === value) return
+
+    this._maxColumns = value
+    this.notify('maxColumns')
     this._applyProperties()
   }
 
@@ -80,12 +148,14 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    * Populate the flow box with sprite widgets
    */
   private _populateSprites(): void {
+    if (!this._spriteSheet) return
+
     // Clear existing children
     this._flowBox.remove_all()
 
     // Add sprites with current scale
-    for (const sprite of this.spriteSheet.sprites) {
-      const spriteWidget = new SpriteWidget(sprite, this.scale)
+    for (const sprite of this._spriteSheet.sprites) {
+      const spriteWidget = new SpriteWidget(sprite, this._scale)
       this._flowBox.append(spriteWidget)
     }
   }
@@ -95,10 +165,10 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    */
   private _applyProperties(): void {
     // Apply max columns
-    this._flowBox.set_max_children_per_line(this.maxColumns)
+    this._flowBox.set_max_children_per_line(this._maxColumns)
 
     // Apply grid spacing based on showGrid
-    if (this.showGrid) {
+    if (this._showGrid) {
       this._flowBox.set_row_spacing(1)
       this._flowBox.set_column_spacing(1)
     } else {
@@ -111,8 +181,6 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    * Update scale for all sprite widgets
    */
   updateScale(newScale: number): void {
-    this.scale = newScale
-
     // Update scale on existing SpriteWidgets using clean API
     let child = this._flowBox.get_first_child()
     while (child) {
@@ -131,7 +199,6 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    */
   updateShowGrid(showGrid: boolean): void {
     this.showGrid = showGrid
-    this._applyProperties()
   }
 
   /**
@@ -139,7 +206,6 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    */
   updateMaxColumns(maxColumns: number): void {
     this.maxColumns = maxColumns
-    this._applyProperties()
   }
 
   onSelected(parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
