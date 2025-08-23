@@ -159,13 +159,14 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    * Add a story item to the sidebar
    */
   private _addStoryToSidebar(story: StoryWidget): void {
-    const storyName = story.meta.title.split('/')[1]
+    const titleParts = story.meta.title.split('/')
+    const storyName = titleParts.length > 1 ? titleParts[1] : story.meta.title
 
     // Create row for the story
     const storyRow = new Gtk.ListBoxRow() as StoryRow
 
     const storyLabel = new Gtk.Label({
-      label: storyName,
+      label: storyName || 'Unnamed Story',
       halign: Gtk.Align.START,
       margin_start: 20,
     })
@@ -240,12 +241,18 @@ export class StorybookWindow extends Adw.ApplicationWindow {
     this._clearControlPanel()
 
     // Create controls for each property
-    Object.entries(storyWidget.meta.argTypes).forEach(([propName, argType]) => {
-      const controlRow = this._createControlRow(storyWidget, propName, argType)
-      if (controlRow) {
-        this._control_panel.append(controlRow)
-      }
-    })
+    if (storyWidget.meta.controls && Array.isArray(storyWidget.meta.controls)) {
+      storyWidget.meta.controls.forEach((control) => {
+        if (control && control.name && control.type) {
+          const controlRow = this._createControlRow(storyWidget, control)
+          if (controlRow) {
+            this._control_panel.append(controlRow)
+          }
+        } else {
+          console.warn('Invalid control configuration:', control)
+        }
+      })
+    }
 
     // Show controls panel when a story is selected
     this._show_controls_button.set_active(true)
@@ -267,8 +274,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    */
   private _createControlRow(
     storyWidget: StoryWidget,
-    propName: string,
-    argType: any,
+    controlConfig: any,
   ): Gtk.Box | null {
     const controlRow = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
@@ -276,11 +282,18 @@ export class StorybookWindow extends Adw.ApplicationWindow {
     })
 
     // Label with description
-    const labelBox = this._createPropertyLabelBox(propName, argType.description)
+    const labelBox = this._createPropertyLabelBox(
+      controlConfig.name,
+      controlConfig.description,
+    )
     controlRow.append(labelBox)
 
     // Create the control based on the type
-    const control = this._createControl(storyWidget, propName, argType.control)
+    const control = this._createControl(
+      storyWidget,
+      controlConfig.name,
+      controlConfig,
+    )
     if (control) {
       controlRow.append(control)
       return controlRow
@@ -302,7 +315,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
     })
 
     const nameLabel = new Gtk.Label({
-      label: `<b>${propName}</b>`,
+      label: `<b>${propName || 'Unknown Property'}</b>`,
       use_markup: true,
       halign: Gtk.Align.START,
     })

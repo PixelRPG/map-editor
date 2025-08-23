@@ -55,38 +55,40 @@ export class SpriteSheetWidgetStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'UI/Sprite Sheet Widget',
+      description:
+        'Display and interact with complete sprite sheets with grid layout and scaling options',
       component: SpriteSheetWidget.$gtype,
       tags: ['autodocs', 'ui', 'graphics', 'sprite-sheet'],
-      argTypes: {
-        scale: {
-          control: {
-            type: ControlType.RANGE,
-            min: 1,
-            max: 4.0,
-            step: 0.25,
-          },
-          description: 'Scale factor for displaying sprites',
+      controls: [
+        {
+          name: 'scale',
+          label: 'Scale',
+          type: ControlType.RANGE,
+          min: 1,
+          max: 4.0,
+          step: 0.25,
           defaultValue: 1.0,
+          description: 'Scale factor for displaying sprites',
         },
-        showGrid: {
-          control: {
-            type: ControlType.BOOLEAN,
-          },
-          description: 'Show grid lines between sprites',
+        {
+          name: 'showGrid',
+          label: 'Show Grid',
+          type: ControlType.BOOLEAN,
           defaultValue: true,
+          description: 'Show grid lines between sprites',
         },
-        maxColumns: {
-          control: {
-            type: ControlType.RANGE,
-            min: 4,
-            max: 32,
-            step: 4,
-          },
+        {
+          name: 'maxColumns',
+          label: 'Max Columns',
+          type: ControlType.RANGE,
+          min: 4,
+          max: 32,
+          step: 4,
+          defaultValue: 16,
           description:
             'Maximum number of columns to display (for large sprite sheets)',
-          defaultValue: 16,
         },
-      },
+      ],
     }
   }
 

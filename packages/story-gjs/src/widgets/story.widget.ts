@@ -27,6 +27,7 @@ export class StoryWidget extends Adw.Bin {
   // UI elements
   declare _content_box: Gtk.Box
   declare _story_title: Gtk.Label
+  declare _story_description: Gtk.Label
   declare _story_content: Gtk.Box
 
   static {
@@ -57,7 +58,12 @@ export class StoryWidget extends Adw.Bin {
             GObject.Object,
           ),
         },
-        InternalChildren: ['content_box', 'story_title', 'story_content'],
+        InternalChildren: [
+          'content_box',
+          'story_title',
+          'story_description',
+          'story_content',
+        ],
       },
       this,
     )
@@ -80,6 +86,7 @@ export class StoryWidget extends Adw.Bin {
     this._args = params.args
 
     this._updateTitle()
+    this._updateDescription()
   }
 
   /**
@@ -98,6 +105,7 @@ export class StoryWidget extends Adw.Bin {
     this._meta = value
     this.notify('meta')
     this._updateTitle()
+    this._updateDescription()
   }
 
   /**
@@ -142,6 +150,20 @@ export class StoryWidget extends Adw.Bin {
   private _updateTitle(): void {
     if (this._story_title && this._meta) {
       this._story_title.set_label(`${this._meta.title} - ${this._story}`)
+    }
+  }
+
+  /**
+   * Update the story description
+   */
+  private _updateDescription(): void {
+    if (this._story_description && this._meta) {
+      if (this._meta.description) {
+        this._story_description.set_label(this._meta.description)
+        this._story_description.set_visible(true)
+      } else {
+        this._story_description.set_visible(false)
+      }
     }
   }
 

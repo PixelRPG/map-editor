@@ -54,30 +54,32 @@ export class SpriteWidgetStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'UI/Sprite Widget',
+      description:
+        'Display individual sprites from a sprite sheet with configurable scaling',
       component: SpriteWidget.$gtype,
       tags: ['autodocs', 'ui', 'graphics'],
-      argTypes: {
-        scale: {
-          control: {
-            type: ControlType.RANGE,
-            min: 1.0,
-            max: 4.0,
-            step: 0.25,
-          },
-          description: 'Scale factor for displaying the sprite',
+      controls: [
+        {
+          name: 'scale',
+          label: 'Scale',
+          type: ControlType.RANGE,
+          min: 1.0,
+          max: 4.0,
+          step: 0.25,
           defaultValue: 2.0,
+          description: 'Scale factor for displaying the sprite',
         },
-        spriteIndex: {
-          control: {
-            type: ControlType.RANGE,
-            min: 0,
-            max: 255,
-            step: 1,
-          },
-          description: 'Index of the sprite to display from the sprite sheet',
+        {
+          name: 'spriteIndex',
+          label: 'Sprite Index',
+          type: ControlType.RANGE,
+          min: 0,
+          max: 255,
+          step: 1,
           defaultValue: 0,
+          description: 'Index of the sprite to display from the sprite sheet',
         },
-      },
+      ],
     }
   }
 

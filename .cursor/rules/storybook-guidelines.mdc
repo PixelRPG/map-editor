@@ -5,8 +5,8 @@ alwaysApply: false
 ---
 
 > **See also:** 
-> - [@blueprint-templates](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint UI template patterns and best practices
-> - [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for TypeScript GObject implementation patterns and lifecycle management
+> - [@blueprint-templates.mdc](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint UI template patterns and best practices
+> - [@gobject-patterns.mdc](mdc:.cursor/rules/gobject-patterns.mdc) for TypeScript GObject implementation patterns and lifecycle management
 
 # Storybook Guidelines
 
@@ -23,9 +23,21 @@ alwaysApply: false
 - Create variant subclasses for different configurations of the same component
 - Register story classes (not instances) with the registry using `StoryModule` objects
 - Follow the title format `'Category/Name'` for consistent organization
+- Include a descriptive `description` property explaining what the story demonstrates
 - Group related widgets in the same category
 - Export `StoryModule` objects containing arrays of story classes
 - Implement static `getMetadata()` method for each story class
+
+### StoryMeta Structure
+The story metadata is defined by the `StoryMeta` and `StoryControl` interfaces in `@packages/story-gjs/src/types/story.ts`. Key properties include:
+
+- **`title`**: Story title in 'Category/Name' format
+- **`description`**: Optional description of what the story demonstrates
+- **`component`**: GType of the component being showcased
+- **`tags`**: Array of tags for filtering and organization
+- **`controls`**: Array of interactive control configurations
+
+See the full interface definitions in `@pixelrpg/story-gjs` types.
 
 ## Widget Implementation
 - Create separate `.story.ts` files for each component
@@ -35,11 +47,11 @@ alwaysApply: false
 - Implement proper error handling in all widget methods
 - Override `initialize()` to set up the widget after creation (called once)
 - Override `updateArgs()` to handle property changes (called when controls change)
-- Implement static `getMetadata()` method returning `StoryMeta` object
+- Implement static `getMetadata()` method returning `StoryMeta` object with `title`, `description`, and `controls`
 - Use constructor with `{ story, args, meta }` parameters
 - Export `StoryModule` objects containing story class arrays
 - Call `GObject.type_ensure()` after class definition
-- Follow [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for proper GObject registration and lifecycle management
+- Follow [@gobject-patterns.mdc](mdc:.cursor/rules/gobject-patterns.mdc) for proper GObject registration and lifecycle management
 - Use proper signal lifecycle patterns (`vfunc_map`/`vfunc_unmap`) for story widgets
 
 ## UI Templates
@@ -49,7 +61,7 @@ alwaysApply: false
 - Follow GTK's spacing and margin guidelines
 - Use clear widget IDs that match their purpose
 - Reference blueprint templates directly with `.blp` import syntax, we use a vite plugin to import and resolve them directly
-- Follow [@blueprint-templates](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint syntax, property binding, and accessibility guidelines
+- Follow [@blueprint-templates.mdc](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint syntax, property binding, and accessibility guidelines
 - Use proper template structure with namespaces and descriptive template names
 - Leverage property binding patterns for dynamic story controls
 
@@ -87,17 +99,18 @@ export class MyStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Category/My Story',
+      description: 'Demonstration of my demo widget with interactive controls',
       component: MyDemoWidget.$gtype,
       tags: ['autodocs', 'demo'],
-      argTypes: {
-        demoValue: {
-          control: {
-            type: ControlType.TEXT,
-          },
-          description: 'Value for demonstration',
+      controls: [
+        {
+          name: 'demoValue',
+          label: 'Demo Value',
+          type: ControlType.TEXT,
           defaultValue: 'default',
+          description: 'Value for demonstration',
         },
-      },
+      ],
     };
   }
 }
@@ -175,13 +188,76 @@ export const AllStories: StoryModule[] = [
 export { MyDemoWidgetStories } from './widgets/demo/demo.widget.story';
 ```
 
-## Control Types
+## Control Types and Configuration
 - Use appropriate `ControlType` from the enum (not string literals)
-- Configure proper constraints for numeric controls
-- Provide comprehensive options for select controls
-- Include descriptive labels and tooltips
-- Handle property changes efficiently
-- Group related controls logically
+- Configure proper constraints for numeric controls (`min`, `max`, `step`)
+- Provide comprehensive options for select controls using `{ label, value }` objects
+- Include descriptive labels and tooltips via `description` property
+- Handle property changes efficiently in `updateArgs()` method
+- Group related controls logically in the `controls` array
+- Use the new `controls` array format instead of the deprecated `argTypes` object
+
+### Migration from argTypes to controls
+The story system has been updated to use a more consistent `controls` array format:
+
+```typescript
+// ❌ Old format (deprecated):
+argTypes: {
+  propertyName: {
+    control: { type: ControlType.RANGE, min: 0, max: 100 },
+    description: 'Property description',
+    defaultValue: 50
+  }
+}
+
+// ✅ New format:
+controls: [
+  {
+    name: 'propertyName',
+    label: 'Property Name',
+    type: ControlType.RANGE,
+    min: 0,
+    max: 100,
+    defaultValue: 50,
+    description: 'Property description'
+  }
+]
+```
+
+### Control Configuration Examples
+```typescript
+controls: [
+  {
+    name: 'scale',
+    label: 'Scale Factor',
+    type: ControlType.RANGE,
+    min: 0.5,
+    max: 4.0,
+    step: 0.25,
+    defaultValue: 1.0,
+    description: 'Scale factor for rendering the widget',
+  },
+  {
+    name: 'enabled',
+    label: 'Enable Feature',
+    type: ControlType.BOOLEAN,
+    defaultValue: true,
+    description: 'Toggle to enable or disable the feature',
+  },
+  {
+    name: 'mode',
+    label: 'Display Mode',
+    type: ControlType.SELECT,
+    options: [
+      { label: 'Grid View', value: 'grid' },
+      { label: 'List View', value: 'list' },
+      { label: 'Card View', value: 'card' },
+    ],
+    defaultValue: 'grid',
+    description: 'Select the display mode for the widget',
+  },
+]
+```
 
 ## Error Handling
 - Check for null/undefined values before use

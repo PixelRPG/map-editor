@@ -15,6 +15,14 @@ template $StoryWidget : Adw.Bin {
       styles ["title-3"]
     }
     
+    Gtk.Label story_description {
+      halign: start;
+      wrap: true;
+      xalign: 0;
+      styles ["dim-label", "caption"]
+      visible: false;
+    }
+    
     Adw.PreferencesGroup {
       title: _("Story Preview");
       
