@@ -76,6 +76,11 @@ export class Engine extends Adw.Bin implements EngineInterface {
     private engineEventHandlers = new Map<string, Set<EngineEventHandler>>()
 
     /**
+     * Signal management for GC safety
+     */
+    private _signalHandlers: number[] = []
+
+    /**
      * Create a new GJS engine
      */
     constructor(params: Engine.ConstructorProps = {}) {
@@ -88,15 +93,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
             this._webView?.setResourcePaths(this.resourcePaths);
             this._webView?.setGResourcePath(this.gresourcePath);
 
-            this._webView?.connect('ready', () => {
-                console.log('[GJS Engine] WebView ready');
-
-                // Set up event listeners
-                this.setupEventListeners();
-
-                this.setStatus(EngineStatus.READY);
-                this.emit('ready');
-            })
+            // Note: WebView signal connection will be done in vfunc_map for GC safety
         } catch (error) {
             console.error('[GJS Engine] Failed to initialize engine:', error);
             this.setStatus(EngineStatus.ERROR);
@@ -373,6 +370,44 @@ export class Engine extends Adw.Bin implements EngineInterface {
     hasEventListener(type: string): boolean {
         const handlers = this.engineEventHandlers.get(type);
         return !!handlers && handlers.size > 0;
+    }
+
+    /**
+     * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
+     */
+    vfunc_map(): void {
+        super.vfunc_map();
+
+        if (this._signalHandlers.length === 0 && this._webView) {
+            // Connect WebView ready signal
+            const readyHandlerId = this._webView.connect('ready', () => {
+                console.log('[GJS Engine] WebView ready');
+
+                // Set up event listeners
+                this.setupEventListeners();
+
+                this.setStatus(EngineStatus.READY);
+                this.emit('ready');
+            });
+            this._signalHandlers.push(readyHandlerId);
+        }
+    }
+
+    /**
+     * Disconnect signals when widget becomes invisible (GC-safe cleanup)
+     */
+    vfunc_unmap(): void {
+        if (this._signalHandlers.length > 0 && this._webView) {
+            // Disconnect all signal handlers
+            for (const handlerId of this._signalHandlers) {
+                if (handlerId > 0) {
+                    this._webView.disconnect(handlerId);
+                }
+            }
+            this._signalHandlers = [];
+        }
+
+        super.vfunc_unmap();
     }
 }
 

@@ -23,6 +23,7 @@ export class SpritePaintable
   // Interface method declarations (TypeScript compatibility)
   declare get_current_image: Gdk.Paintable['get_current_image']
   declare get_flags: Gdk.Paintable['get_flags']
+  declare vfunc_get_flags: Gdk.Paintable['vfunc_get_flags']
   declare get_intrinsic_aspect_ratio: Gdk.Paintable['get_intrinsic_aspect_ratio']
   declare get_intrinsic_height: Gdk.Paintable['get_intrinsic_height']
   declare get_intrinsic_width: Gdk.Paintable['get_intrinsic_width']
@@ -103,7 +104,7 @@ export class SpritePaintable
       this._sourceTexture.get_height() * textureToTargetScale,
     )
 
-    // Use append_scaled_texture with NEAREST filtering
+    // Use append_scaled_texture with NEAREST filtering for pixel-perfect sprites
     snapshot.append_scaled_texture(
       this._sourceTexture,
       Gsk.ScalingFilter.NEAREST,
@@ -118,9 +119,8 @@ export class SpritePaintable
     return this
   }
 
-  vfunc_get_flags(): Gdk.PaintableFlags {
-    return 0 as Gdk.PaintableFlags
-  }
+  // Note: vfunc_get_flags is implemented by the GObject system automatically
+  // We don't override it to avoid GC callback issues as per gobject-patterns rules
 }
 
 // Ensure the SpritePaintable type is registered
