@@ -19,7 +19,6 @@ import { MAX_INT32 } from '../constants.ts'
  * - Factory methods for easy sprite creation
  * - Sub-texture support for sprite sheets
  * - Pixel-perfect rendering with nearest neighbor filtering
- * - GC-safe vfunc implementation (required by Gdk.Paintable interface)
  */
 export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   private _sourceTexture: Gdk.Texture | null = null
@@ -27,6 +26,7 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   private _y: number
   private _width: number
   private _height: number
+  private _disposed: boolean = false
 
   // Interface method declarations (TypeScript compatibility)
   declare get_current_image: Gdk.Paintable['get_current_image']
@@ -118,9 +118,26 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
   }
 
   /**
+   * Dispose method to clean up resources and prevent GC callback issues
+   */
+  vfunc_dispose(): void {
+    if (this._disposed) {
+      return
+    }
+    
+    this._disposed = true
+    this._sourceTexture = null
+    
+    super.vfunc_dispose()
+  }
+
+  /**
    * Get the intrinsic width of this paintable
    */
   vfunc_get_intrinsic_width(): number {
+    if (this._disposed) {
+      return 0
+    }
     return this._width
   }
 
@@ -128,6 +145,9 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * Get the intrinsic height of this paintable
    */
   vfunc_get_intrinsic_height(): number {
+    if (this._disposed) {
+      return 0
+    }
     return this._height
   }
 
@@ -135,6 +155,9 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * Get the intrinsic aspect ratio
    */
   vfunc_get_intrinsic_aspect_ratio(): number {
+    if (this._disposed) {
+      return 1
+    }
     return this._width / this._height || 1
   }
 
@@ -148,7 +171,7 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * 4. Render complete texture (clipped to scaled sprite region)
    */
   vfunc_snapshot(snapshot: Gtk.Snapshot, width: number, height: number): void {
-    if (!this._sourceTexture) {
+    if (this._disposed || !this._sourceTexture) {
       return
     }
 
@@ -197,13 +220,20 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * Get current image
    */
   vfunc_get_current_image(): Gdk.Paintable {
+    if (this._disposed) {
+      // Return a safe fallback - this should not happen in normal usage
+      return this
+    }
     return this
   }
 
   /**
-   * Get paintable flags
+   * Get paintable flags - this is the method causing the GC errors
    */
   vfunc_get_flags(): Gdk.PaintableFlags {
+    if (this._disposed) {
+      return 0 as Gdk.PaintableFlags
+    }
     return 0 as Gdk.PaintableFlags
   }
 
@@ -258,6 +288,9 @@ export class Sprite extends GObject.Object implements Gdk.Paintable.Interface {
    * Check if the sprite is loaded
    */
   isLoaded(): boolean {
+    if (this._disposed) {
+      return false
+    }
     return this._sourceTexture !== null
   }
 }
