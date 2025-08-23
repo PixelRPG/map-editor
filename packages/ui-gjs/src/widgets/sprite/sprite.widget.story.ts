@@ -1,8 +1,6 @@
 import GObject from '@girs/gobject-2.0'
-import GLib from '@girs/glib-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
-import Gdk from '@girs/gdk-4.0'
 
 import {
   StoryWidget,
@@ -11,68 +9,18 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { SpriteWidget } from './sprite.widget'
-import { Sprite } from '@pixelrpg/data-gjs'
+import { SpriteSetResource } from '@pixelrpg/data-gjs'
 
 // Import story template
 import SpriteStoryTemplate from './sprite.widget.story.blp'
 
 /**
- * Red color constant
- */
-const RED_COLOR = [255, 0, 0, 255] as const
-
-/**
- * Create a GdkMemoryTexture directly from raw pixel data
- */
-function createTextureFromPixels(
-  width: number,
-  height: number,
-  pixels: Uint8Array,
-): Gdk.Texture {
-  const bytes = GLib.Bytes.new(pixels)
-  const rowstride = width * 4
-
-  return Gdk.MemoryTexture.new(
-    width,
-    height,
-    Gdk.MemoryFormat.R8G8B8A8,
-    bytes,
-    rowstride,
-  )
-}
-
-/**
- * Create a simple red sprite
- */
-function createRedSprite(width: number, height: number): Sprite {
-  console.log(`Creating red sprite ${width}x${height}`)
-
-  const actualWidth = Math.max(width, 1)
-  const actualHeight = Math.max(height, 1)
-  const pixels = new Uint8Array(actualWidth * actualHeight * 4)
-
-  // Fill with red color
-  for (let i = 0; i < pixels.length; i += 4) {
-    pixels[i] = RED_COLOR[0] // R
-    pixels[i + 1] = RED_COLOR[1] // G
-    pixels[i + 2] = RED_COLOR[2] // B
-    pixels[i + 3] = RED_COLOR[3] // A
-  }
-
-  const texture = createTextureFromPixels(actualWidth, actualHeight, pixels)
-  console.log('Texture created:', texture)
-  const sprite = Sprite.fromTexture(texture)
-  console.log('Sprite created:', sprite)
-
-  return sprite
-}
-
-/**
  * SpriteWidget Story
- * Showcases the SpriteWidget component with interactive controls
+ * Showcases the SpriteWidget component with a single sprite from Lokiri Forest
  */
 export class SpriteWidgetStory extends StoryWidget {
   private spriteWidget: SpriteWidget | null = null
+  private spriteSetResource: SpriteSetResource | null = null
 
   // UI elements from template
   declare _info_label: Gtk.Label
@@ -93,8 +41,8 @@ export class SpriteWidgetStory extends StoryWidget {
     super({
       story: 'SpriteWidget',
       args: {
-        width: 32,
-        height: 32,
+        scale: 2.0,
+        spriteIndex: 0,
       },
       meta: SpriteWidgetStory.getMetadata(),
     })
@@ -109,25 +57,25 @@ export class SpriteWidgetStory extends StoryWidget {
       component: SpriteWidget.$gtype,
       tags: ['autodocs', 'ui', 'graphics'],
       argTypes: {
-        width: {
+        scale: {
           control: {
             type: ControlType.RANGE,
-            min: 8,
-            max: 128,
-            step: 8,
+            min: 1.0,
+            max: 4.0,
+            step: 0.25,
           },
-          description: 'Width of the sprite in pixels',
-          defaultValue: 32,
+          description: 'Scale factor for displaying the sprite',
+          defaultValue: 2.0,
         },
-        height: {
+        spriteIndex: {
           control: {
             type: ControlType.RANGE,
-            min: 8,
-            max: 128,
-            step: 8,
+            min: 0,
+            max: 255,
+            step: 1,
           },
-          description: 'Height of the sprite in pixels',
-          defaultValue: 32,
+          description: 'Index of the sprite to display from the sprite sheet',
+          defaultValue: 0,
         },
       },
     }
@@ -135,11 +83,10 @@ export class SpriteWidgetStory extends StoryWidget {
 
   /**
    * Initialize the story
-   * Creates the sprite widget instance and sets up the display
+   * Loads the Lokiri Forest sprite sheet and creates the widget
    */
   initialize(): void {
-    this._createSpriteWidget()
-    this._updateInfoLabel()
+    this._loadSpriteSheet()
   }
 
   /**
@@ -147,59 +94,154 @@ export class SpriteWidgetStory extends StoryWidget {
    * @param args - New arguments for the story
    */
   updateArgs(args: Record<string, any>): void {
-    this._createSpriteWidget()
-    this._updateInfoLabel()
-  }
+    // Only update if we have loaded resources and widget exists
+    if (!this.spriteSetResource?.spriteSheet || !this.spriteWidget) {
+      return
+    }
 
-  private _clearSpriteWidget(): void {
-    if (this.spriteWidget) {
-      // Remove from parent if still attached
-      if (this.spriteWidget.get_parent() === this._sprite_container) {
-        this._sprite_container.remove(this.spriteWidget)
-      }
-      this.spriteWidget = null
+    let hasChanges = false
+
+    // Check and update scale
+    if (this.args.scale !== this.spriteWidget.scale) {
+      this.spriteWidget.scale = this.args.scale
+      hasChanges = true
+    }
+
+    // Check and update sprite index
+    const currentSpriteIndex = this._getCurrentSpriteIndex()
+    if (this.args.spriteIndex !== currentSpriteIndex) {
+      this._updateSprite()
+      hasChanges = true
+    }
+
+    // Only update info label if something actually changed
+    if (hasChanges) {
+      this._updateInfoLabel()
     }
   }
 
   /**
-   * Create or recreate the sprite widget with current args
+   * Load the Lokiri Forest sprite sheet data and image using SpriteSetResource
+   */
+  private async _loadSpriteSheet(): Promise<void> {
+    try {
+      this._info_label.set_label('Loading Lokiri Forest sprite sheet...')
+
+      // 1. Create SpriteSetResource with the JSON file path
+      // SpriteSetResource now handles everything internally (like Excalibur)
+      this.spriteSetResource = new SpriteSetResource(
+        '../../games/zelda-like/spritesets/lokiri-forest.json',
+      )
+      const spriteSetData = await this.spriteSetResource.load()
+
+      // 2. Verify sprite sheet was created
+      if (!this.spriteSetResource.spriteSheet) {
+        throw new Error(
+          'SpriteSetResource did not create sprite sheet properly',
+        )
+      }
+
+      // 3. Create the widget
+      this._createSpriteWidget()
+      this._updateInfoLabel()
+    } catch (error) {
+      console.error('Failed to load sprite sheet:', error)
+      this._info_label.set_label(
+        `Error: Failed to load sprite sheet - ${error}`,
+      )
+
+      // Show error message in container
+      const errorLabel = new Gtk.Label({
+        label:
+          'Failed to load the Lokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
+        justify: Gtk.Justification.CENTER,
+        wrap: true,
+      })
+      errorLabel.add_css_class('dim-label')
+      this._sprite_container.append(errorLabel)
+    }
+  }
+
+  /**
+   * Create the sprite widget (called only once during initialization)
    */
   private _createSpriteWidget(): void {
-    // Remove existing widget if present
-    this._clearSpriteWidget()
-
-    // Get current args with defaults
-    const width = this.args.width ?? 32
-    const height = this.args.height ?? 32
+    if (!this.spriteSetResource?.spriteSheet) {
+      console.warn('Cannot create sprite widget: resources not loaded')
+      return
+    }
 
     try {
-      // Create simple red sprite
-      const sprite = createRedSprite(width, height)
+      // Get the sprite at the specified index
+      const spriteIndex = Math.max(0, this.args.spriteIndex ?? 0)
+      const sprites = this.spriteSetResource.spriteSheet.sprites
+      const sprite = sprites[Math.min(spriteIndex, sprites.length - 1)]
 
-      // Create the sprite widget
-      this.spriteWidget = new SpriteWidget(sprite)
+      if (!sprite) {
+        throw new Error('No sprite found at the specified index')
+      }
+
+      // Create the widget with initial args
+      this.spriteWidget = new SpriteWidget(sprite, this.args.scale ?? 2.0)
 
       // Add to container
       this._sprite_container.append(this.spriteWidget)
     } catch (error) {
       console.error('Failed to create sprite widget:', error)
-      this._info_label.set_label('Error: Failed to create sprite')
+      this._info_label.set_label('Error: Failed to create sprite widget')
     }
+  }
+
+  /**
+   * Update the displayed sprite based on current sprite index
+   */
+  private _updateSprite(): void {
+    if (!this.spriteSetResource?.spriteSheet || !this.spriteWidget) {
+      return
+    }
+
+    const spriteIndex = Math.max(0, this.args.spriteIndex ?? 0)
+    const sprites = this.spriteSetResource.spriteSheet.sprites
+    const sprite = sprites[Math.min(spriteIndex, sprites.length - 1)]
+
+    if (sprite) {
+      this.spriteWidget.sprite = sprite
+    }
+  }
+
+  /**
+   * Get the current sprite index
+   */
+  private _getCurrentSpriteIndex(): number {
+    if (!this.spriteSetResource?.spriteSheet || !this.spriteWidget?.sprite) {
+      return 0
+    }
+
+    const sprites = this.spriteSetResource.spriteSheet.sprites
+    return sprites.indexOf(this.spriteWidget.sprite)
   }
 
   /**
    * Update the info label with current sprite information
    */
   private _updateInfoLabel(): void {
-    if (!this.spriteWidget) {
+    if (!this.spriteSetResource?.spriteSheet || !this.spriteWidget?.sprite) {
       this._info_label.set_label('No sprite loaded')
       return
     }
 
-    const width = this.args.width ?? 32
-    const height = this.args.height ?? 32
+    const data = this.spriteSetResource.data
+    const sprite = this.spriteWidget.sprite
+    const spriteIndex = this._getCurrentSpriteIndex()
+    const scale = this.args.scale ?? 2.0
 
-    const info = `Red sprite: ${width}×${height}px`
+    const info = [
+      `Lokiri Forest Sprite #${spriteIndex}`,
+      `${sprite.width}×${sprite.height}px`,
+      `Position: (${sprite.x}, ${sprite.y})`,
+      `Scale: ${scale}x`,
+    ].join(' • ')
+
     this._info_label.set_label(info)
   }
 }
