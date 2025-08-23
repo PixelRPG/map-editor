@@ -19,6 +19,9 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   // GObject internal children
   declare _flowBox: Gtk.FlowBox
 
+  // Signal management
+  private _signalHandlers: number[] = []
+
   static {
     GObject.registerClass(
       {
@@ -71,7 +74,6 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
 
     this._populateSprites()
     this._applyProperties()
-    this._flowBox.connect('child-activated', this.onSelected)
   }
 
   /**
@@ -147,11 +149,36 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   }
 
   /**
-   * Clean up all sprite widgets when disposed
+   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
    */
-  vfunc_dispose(): void {
-    this._flowBox.remove_all()
-    super.vfunc_dispose()
+  vfunc_map(): void {
+    super.vfunc_map()
+
+    if (this._signalHandlers.length === 0) {
+      // Connect child-activated signal
+      const handlerId = this._flowBox.connect(
+        'child-activated',
+        this.onSelected,
+      )
+      this._signalHandlers.push(handlerId)
+    }
+  }
+
+  /**
+   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
+   */
+  vfunc_unmap(): void {
+    if (this._signalHandlers.length > 0) {
+      // Disconnect all signal handlers
+      for (const handlerId of this._signalHandlers) {
+        if (handlerId > 0) {
+          this._flowBox.disconnect(handlerId)
+        }
+      }
+      this._signalHandlers = []
+    }
+
+    super.vfunc_unmap()
   }
 }
 

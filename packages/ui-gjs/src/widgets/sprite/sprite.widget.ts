@@ -17,6 +17,9 @@ export class SpriteWidget extends Adw.Bin {
   // GObject internal children - Gtk.Picture is the modern image widget
   declare _image: Gtk.Picture | null
 
+  // Signal management
+  private _signalHandlers: number[] = []
+
   static {
     GObject.registerClass(
       {
@@ -52,10 +55,6 @@ export class SpriteWidget extends Adw.Bin {
   ) {
     super()
 
-    // Connect property change handlers
-    this.connect('notify::sprite', () => this._initializeSprite())
-    this.connect('notify::scale', () => this._updateScale())
-
     this._initializeSprite()
   }
 
@@ -70,7 +69,7 @@ export class SpriteWidget extends Adw.Bin {
     // Apply initial scale
     this._updateScale()
 
-    // Set the paintable once - it will handle all future scaling internally
+    // Set the paintable directly
     this._image.set_paintable(this.sprite)
   }
 
@@ -84,6 +83,41 @@ export class SpriteWidget extends Adw.Bin {
 
     this.width_request = this.sprite.width * this.scale
     this.height_request = this.sprite.height * this.scale
+  }
+
+  /**
+   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
+
+    if (this._signalHandlers.length === 0) {
+      // Connect property change handlers
+      const spriteHandlerId = this.connect('notify::sprite', () =>
+        this._initializeSprite(),
+      )
+      const scaleHandlerId = this.connect('notify::scale', () =>
+        this._updateScale(),
+      )
+      this._signalHandlers.push(spriteHandlerId, scaleHandlerId)
+    }
+  }
+
+  /**
+   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
+   */
+  vfunc_unmap(): void {
+    if (this._signalHandlers.length > 0) {
+      // Disconnect all signal handlers
+      for (const handlerId of this._signalHandlers) {
+        if (handlerId > 0) {
+          this.disconnect(handlerId)
+        }
+      }
+      this._signalHandlers = []
+    }
+
+    super.vfunc_unmap()
   }
 }
 
