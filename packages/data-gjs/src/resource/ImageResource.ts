@@ -67,6 +67,18 @@ export class ImageResource
     this._resourcePrefix = options?.resourcePrefix
   }
 
+  // GObject property getters and setters
+  get texture(): Gdk.Texture | null {
+    return this._texture
+  }
+
+  set texture(value: Gdk.Texture | null) {
+    if (this._texture === value) return
+
+    this._texture = value
+    this.notify('texture')
+  }
+
   /**
    * Load the image from the file
    * @returns Promise that resolves with the loaded texture
@@ -115,19 +127,12 @@ export class ImageResource
   }
 
   /**
-   * Get the loaded texture (modern approach)
-   */
-  get texture(): Gdk.Texture {
-    if (!this._texture) {
-      throw new Error('Image texture not loaded')
-    }
-    return this._texture
-  }
-
-  /**
    * Get the loaded data (returns texture for Loadable interface compatibility)
    */
   get data(): Gdk.Texture {
+    if (!this.texture) {
+      throw new Error('No texture data available')
+    }
     return this.texture
   }
 

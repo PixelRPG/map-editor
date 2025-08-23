@@ -62,6 +62,16 @@ export class SpriteSheet {
     rows: number,
     columns: number,
   ): Sprite[] {
+    if (!imageResource) {
+      throw new Error(
+        `Image resource not found: ${spriteSheetData.image?.path}`,
+      )
+    }
+    if (!imageResource.texture) {
+      throw new Error(
+        `Image resource not loaded: ${spriteSheetData.image?.path}`,
+      )
+    }
     const sprites: Sprite[] = []
 
     // Calculate individual sprite dimensions
@@ -73,19 +83,11 @@ export class SpriteSheet {
     for (let y = 0; y < spriteSheetData.rows; y++) {
       for (let x = 0; x < spriteSheetData.columns; x++) {
         const index = y * spriteSheetData.columns + x
-        if (!imageResource) {
-          console.error('Image resource not found', spriteSheetData.image?.path)
-          continue
-        }
 
         // Calculate the correct sprite position in the texture
         // Fixed: posX should be x * spriteWidth, posY should be y * spriteHeight
         const posX = x * spriteWidth
         const posY = y * spriteHeight
-
-        console.log(
-          `Creating sprite ${index} at position (${posX}, ${posY}) with size ${spriteWidth}x${spriteHeight}`,
-        )
 
         // Create sprite using sub-texture extraction with Sprite
         const sprite = Sprite.fromSubTexture(

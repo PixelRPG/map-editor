@@ -22,6 +22,7 @@ export class Sprite {
   private _y: number
   private _width: number
   private _height: number
+  private _paintable: SpritePaintable | null = null
 
   /**
    * Create a new Sprite
@@ -47,16 +48,19 @@ export class Sprite {
 
   /**
    * Create a Gdk.Paintable for rendering this sprite
-   * This creates a new SpritePaintable instance that can be used with GTK widgets
+   * This creates a SpritePaintable instance with lazy loading for better performance
    */
   createPaintable(): Gdk.Paintable {
-    return new SpritePaintable(
-      this._sourceTexture,
-      this._x,
-      this._y,
-      this._width,
-      this._height,
-    )
+    if (!this._paintable) {
+      this._paintable = new SpritePaintable(
+        this._sourceTexture,
+        this._x,
+        this._y,
+        this._width,
+        this._height,
+      )
+    }
+    return this._paintable
   }
 
   // Getters for the properties
