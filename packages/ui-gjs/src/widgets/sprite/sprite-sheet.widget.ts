@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSheet } from '@pixelrpg/data-gjs'
+import { SpriteSheet, Sprite } from '@pixelrpg/data-gjs'
 
 import Template from './sprite-sheet.widget.blp'
 
@@ -60,6 +60,11 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
             32,
             16, // min, max, default
           ),
+        },
+        Signals: {
+          'sprite-selected': {
+            param_types: [GObject.TYPE_JSOBJECT], // Sprite object
+          },
         },
       },
       this,
@@ -175,6 +180,12 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
       this._flowBox.set_row_spacing(0)
       this._flowBox.set_column_spacing(0)
     }
+
+    // Ensure tight packing when grid is disabled
+    if (!this._showGrid) {
+      // Set homogeneous to false to prevent equal sizing that could add gaps
+      this._flowBox.set_homogeneous(false)
+    }
   }
 
   /**
@@ -208,10 +219,55 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     this.maxColumns = maxColumns
   }
 
+  /**
+   * Handle sprite selection in the FlowBox
+   * @param parent - The FlowBox that contains the selected child
+   * @param flowBoxChild - The selected FlowBoxChild
+   */
   onSelected(parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
     const spriteWidget = flowBoxChild.child as SpriteWidget
     const sprite = spriteWidget.sprite
-    console.log('Selected sprite:', sprite)
+
+    if (sprite) {
+      console.log(
+        'Selected sprite:',
+        `Sprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
+      )
+      // Emit the sprite-selected signal for external listeners
+      this.emit('sprite-selected', sprite)
+    }
+  }
+
+  /**
+   * Get the currently selected sprite
+   * @returns The selected sprite or null if none is selected
+   */
+  getSelectedSprite(): Sprite | null {
+    const selectedChildren = this._flowBox.get_selected_children()
+    if (selectedChildren.length > 0) {
+      const selectedChild = selectedChildren[0] as Gtk.FlowBoxChild
+      const spriteWidget = selectedChild.child as SpriteWidget
+      return spriteWidget.sprite
+    }
+    return null
+  }
+
+  /**
+   * Clear the current selection
+   */
+  clearSelection(): void {
+    this._flowBox.unselect_all()
+  }
+
+  /**
+   * Select a sprite by its index in the sprite sheet
+   * @param index - The index of the sprite to select
+   */
+  selectSpriteByIndex(index: number): void {
+    const child = this._flowBox.get_child_at_index(index)
+    if (child) {
+      this._flowBox.select_child(child as Gtk.FlowBoxChild)
+    }
   }
 
   /**
