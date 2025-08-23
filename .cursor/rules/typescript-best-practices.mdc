@@ -33,6 +33,14 @@ alwaysApply: false
 - Handle edge cases explicitly
 - Use try/catch blocks for error-prone operations
 
+## File Organization
+- Create one class per TypeScript file for better maintainability and discoverability
+- Avoid multiple class definitions in a single file
+- Name files using PascalCase matching the primary class name (e.g., `UserService.ts` for `UserService` class)
+- Use index files to re-export public classes from directories
+- Keep related utility functions and types in the same file as the class that uses them
+- Separate interfaces and types into dedicated files when shared across multiple classes
+
 ## Functional Patterns
 - Prefer pure functions where possible
 - Use array methods (map, filter, reduce) instead of loops
