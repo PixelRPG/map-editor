@@ -6,7 +6,7 @@ import { gettext as _ } from 'gettext'
 import { Engine, WebView } from '@pixelrpg/engine-gjs'
 import { Sidebar } from './sidebar.ts'
 import { SpriteSheetWidget } from '@pixelrpg/ui-gjs'
-import { LayersWidget } from './layers.widget.ts'
+import { LayerSelector } from './layers.widget.ts'
 
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
