@@ -1,0 +1,41 @@
+using Gtk 4.0;
+
+template $TilesetSelectorStory: $StoryWidget {
+  height-request: 600;
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 24;
+    margin-bottom: 24;
+    margin-start: 24;
+    margin-end: 24;
+
+    Gtk.Label {
+      label: "Tileset Selector Showcase";
+      styles ["title-2"]
+    }
+
+    Gtk.Label info_label {
+      label: "Loading tileset selector...";
+      styles ["dim-label", "caption"]
+      xalign: 0;
+    }
+
+    Gtk.Frame {
+      styles ["card"]
+      
+      child: Gtk.Box tileset_selector_container {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+        halign: fill;
+        valign: fill;
+        
+        // Container will be populated with TilesetSelector widget
+      };
+    }
+  }
+}
