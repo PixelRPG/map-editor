@@ -7,6 +7,7 @@ import { StoryModule } from '@pixelrpg/story-gjs'
 import { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
 import { SpriteSheetWidgetStories } from './widgets/sprite/sprite-sheet.widget.story'
 import { MapEditorPanelStories } from './widgets/map-editor/map-editor-panel.story'
+import { TilesetSelectorStories } from './widgets/map-editor/tileset-selector.story'
 
 // Ensure all widgets are registered before stories are used
 import { MapEditorPanel } from './widgets/map-editor/map-editor-panel'
@@ -26,9 +27,11 @@ export const UIStories: StoryModule[] = [
   SpriteWidgetStories,
   SpriteSheetWidgetStories,
   MapEditorPanelStories,
+  TilesetSelectorStories,
 ]
 
 // Export individual story modules for selective imports
 export { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
 export { SpriteSheetWidgetStories } from './widgets/sprite/sprite-sheet.widget.story'
 export { MapEditorPanelStories } from './widgets/map-editor/map-editor-panel.story'
+export { TilesetSelectorStories } from './widgets/map-editor/tileset-selector.story'
