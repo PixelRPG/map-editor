@@ -1,6 +1,7 @@
 using Gtk 4.0;
 
 template $SpriteSheetWidgetStory: $StoryWidget {
+    height-request: 600;
     Gtk.Box {
         orientation: vertical;
         spacing: 12;
@@ -8,6 +9,7 @@ template $SpriteSheetWidgetStory: $StoryWidget {
         margin-bottom: 24;
         margin-start: 24;
         margin-end: 24;
+        hexpand: true;
 
         Gtk.Label {
             label: "SpriteSheetWidget Showcase";
@@ -29,7 +31,7 @@ template $SpriteSheetWidgetStory: $StoryWidget {
                 orientation: vertical;
                 hexpand: true;
                 vexpand: true;
-                height-request: 600;
+
             };
         }
 
