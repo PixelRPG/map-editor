@@ -42,10 +42,7 @@ export class MapEditorPanelStory extends StoryWidget {
   constructor() {
     super({
       story: 'MapEditorPanel',
-      args: {
-        defaultPage: 'pageTilesets',
-        tilesetCount: 2,
-      },
+      args: {},
       meta: MapEditorPanelStory.getMetadata(),
     })
   }
@@ -60,29 +57,7 @@ export class MapEditorPanelStory extends StoryWidget {
         'Interactive panel for map editing with multiple tilesets and layer selection',
       component: MapEditorPanel.$gtype,
       tags: ['autodocs', 'ui', 'map-editor', 'panel'],
-      controls: [
-        {
-          name: 'defaultPage',
-          label: 'Default Page',
-          type: ControlType.SELECT,
-          defaultValue: 'pageTilesets',
-          options: [
-            { label: 'Tilesets', value: 'pageTilesets' },
-            { label: 'Layer', value: 'pageLayer' },
-          ],
-          description: 'Select which page to show by default',
-        },
-        {
-          name: 'tilesetCount',
-          label: 'Tileset Count',
-          type: ControlType.RANGE,
-          min: 0,
-          max: 3,
-          step: 1,
-          defaultValue: 2,
-          description: 'Number of tilesets to display in the panel',
-        },
-      ],
+      controls: [],
     }
   }
 
@@ -99,29 +74,7 @@ export class MapEditorPanelStory extends StoryWidget {
    * @param args - New arguments for the story
    */
   updateArgs(args: Record<string, any>): void {
-    // Only update if we have loaded tilesets
-    if (this.loadedTilesets.length === 0) {
-      return
-    }
-
-    let hasChanges = false
-
-    // Check and update tileset count
-    if (this.args.tilesetCount !== this.loadedTilesets.length) {
-      this._updateTilesetCount(this.args.tilesetCount)
-      hasChanges = true
-    }
-
-    // Check and update default page
-    if (this.args.defaultPage) {
-      this._updateDefaultPage(this.args.defaultPage as string)
-      hasChanges = true
-    }
-
-    // Only update info label if something actually changed
-    if (hasChanges) {
-      this._updateInfoLabel()
-    }
+    // No dynamic controls to update
   }
 
   /**
@@ -180,11 +133,10 @@ export class MapEditorPanelStory extends StoryWidget {
    */
   private _initializePanel(): void {
     try {
-      // Set initial tilesets based on tilesetCount
-      this._updateTilesetCount(this.args.tilesetCount ?? 2)
-
-      // Set default page
-      this._updateDefaultPage(this.args.defaultPage as string)
+      // Set all loaded tilesets
+      for (const tileset of this.loadedTilesets) {
+        this._mapEditorPanel.addTileset(tileset.spriteSheet, tileset.name)
+      }
 
       // Create a placeholder layers widget
       this._createLayerSelector()
@@ -213,31 +165,6 @@ export class MapEditorPanelStory extends StoryWidget {
   }
 
   /**
-   * Update the number of displayed tilesets
-   */
-  private _updateTilesetCount(count: number): void {
-    const targetCount = Math.min(count, this.loadedTilesets.length)
-
-    // Clear existing tilesets
-    this._mapEditorPanel.clearTilesets()
-
-    // Add tilesets up to the target count
-    for (let i = 0; i < targetCount; i++) {
-      const tileset = this.loadedTilesets[i]
-      this._mapEditorPanel.addTileset(tileset.spriteSheet, tileset.name)
-    }
-  }
-
-  /**
-   * Update the default page
-   */
-  private _updateDefaultPage(defaultPage: string): void {
-    if (defaultPage) {
-      this._mapEditorPanel.stack.set_visible_child_name(defaultPage)
-    }
-  }
-
-  /**
    * Update the info label with current panel information
    */
   private _updateInfoLabel(): void {
@@ -246,19 +173,16 @@ export class MapEditorPanelStory extends StoryWidget {
       return
     }
 
-    const displayedCount = Math.min(
-      this.args.tilesetCount ?? 2,
-      this.loadedTilesets.length,
+    const displayedCount = this.loadedTilesets.length
+    const totalSprites = this.loadedTilesets.reduce(
+      (sum, tileset) => sum + tileset.spriteSheet.sprites.length,
+      0,
     )
-    const totalSprites = this.loadedTilesets
-      .slice(0, displayedCount)
-      .reduce((sum, tileset) => sum + tileset.spriteSheet.sprites.length, 0)
 
     const info = [
       `Map Editor Panel`,
       `${displayedCount} tileset${displayedCount !== 1 ? 's' : ''} loaded`,
       `${totalSprites} total sprites available`,
-      `Page: ${this.args.defaultPage === 'pageTilesets' ? 'Tilesets' : 'Layers'}`,
     ].join(' • ')
 
     this._info_label.set_label(info)
