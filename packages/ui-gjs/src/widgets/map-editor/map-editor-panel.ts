@@ -5,6 +5,7 @@ import Adw from '@girs/adw-1'
 import { TilesetSelector } from './tileset-selector'
 import { LayerSelector, LayersWidget } from './layer-selector'
 import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
+import { SpriteSheet } from '@pixelrpg/data-gjs'
 
 import Template from './map-editor-panel.blp'
 
@@ -36,11 +37,36 @@ export class MapEditorPanel extends Adw.Bin {
   }
 
   /**
-   * Set the sprite sheet widget for tileset selection
+   * Set the sprite sheet widget for tileset selection (legacy method)
    * @param tileset The sprite sheet widget to set
+   * @deprecated Use addTileset or setTilesets instead
    */
   setSpriteSheet(tileset: SpriteSheetWidget) {
     this._tilesetSelector.setSpriteSheet(tileset)
+  }
+
+  /**
+   * Add a single tileset to the selector
+   * @param spriteSheet The sprite sheet to add as a tileset
+   * @param name Optional name for the tileset section
+   */
+  addTileset(spriteSheet: SpriteSheet, name?: string): void {
+    this._tilesetSelector.addTileset(spriteSheet, name)
+  }
+
+  /**
+   * Set multiple tilesets at once
+   * @param tilesets Array of sprite sheets to display as tilesets
+   */
+  setTilesets(tilesets: SpriteSheet[]): void {
+    this._tilesetSelector.tilesets = tilesets
+  }
+
+  /**
+   * Clear all tilesets
+   */
+  clearTilesets(): void {
+    this._tilesetSelector.clearTilesets()
   }
 
   /**
