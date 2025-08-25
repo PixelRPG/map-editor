@@ -44,8 +44,6 @@ export class TilesetSelectorStory extends StoryWidget {
       args: {
         spriteScale: 1.0,
         showGrid: true,
-        spacing: 12,
-        tilesetCount: 2,
       },
       meta: TilesetSelectorStory.getMetadata(),
     })
@@ -78,27 +76,6 @@ export class TilesetSelectorStory extends StoryWidget {
           type: ControlType.BOOLEAN,
           defaultValue: true,
           description: 'Show grid lines between sprites in all tilesets',
-        },
-        {
-          name: 'spacing',
-          label: 'Section Spacing',
-          type: ControlType.RANGE,
-          min: 0,
-          max: 48,
-          step: 4,
-          defaultValue: 12,
-          description: 'Spacing between tileset sections',
-        },
-        {
-          name: 'tilesetCount',
-          label: 'Tileset Count',
-          type: ControlType.RANGE,
-          min: 0,
-          max: 3,
-          step: 1,
-          defaultValue: 2,
-          description:
-            'Number of tilesets to display (simulates different scenarios)',
         },
       ],
     }
@@ -133,18 +110,6 @@ export class TilesetSelectorStory extends StoryWidget {
     // Check and update showGrid
     if (this.args.showGrid !== this.tilesetSelector.showGrid) {
       this.tilesetSelector.showGrid = this.args.showGrid
-      hasChanges = true
-    }
-
-    // Check and update spacing
-    if (this.args.spacing !== this.tilesetSelector.spacing) {
-      this.tilesetSelector.spacing = this.args.spacing
-      hasChanges = true
-    }
-
-    // Check and update tileset count
-    if (this.args.tilesetCount !== this.loadedTilesets.length) {
-      this._updateTilesetCount(this.args.tilesetCount)
       hasChanges = true
     }
 
@@ -244,10 +209,11 @@ export class TilesetSelectorStory extends StoryWidget {
       // Set properties after creation
       this.tilesetSelector.spriteScale = this.args.spriteScale ?? 1.0
       this.tilesetSelector.showGrid = this.args.showGrid ?? true
-      this.tilesetSelector.spacing = this.args.spacing ?? 12
 
-      // Set initial tilesets based on tilesetCount
-      this._updateTilesetCount(this.args.tilesetCount ?? 2)
+      // Set all loaded tilesets
+      for (const tileset of this.loadedTilesets) {
+        this.tilesetSelector.addTileset(tileset.spriteSheet, tileset.name)
+      }
 
       // Connect sprite selection signal
       this.tilesetSelector.connect(
@@ -271,24 +237,6 @@ export class TilesetSelectorStory extends StoryWidget {
   }
 
   /**
-   * Update the number of displayed tilesets
-   */
-  private _updateTilesetCount(count: number): void {
-    if (!this.tilesetSelector) return
-
-    const targetCount = Math.min(count, this.loadedTilesets.length)
-
-    // Clear existing tilesets
-    this.tilesetSelector.clearTilesets()
-
-    // Add tilesets up to the target count
-    for (let i = 0; i < targetCount; i++) {
-      const tileset = this.loadedTilesets[i]
-      this.tilesetSelector.addTileset(tileset.spriteSheet, tileset.name)
-    }
-  }
-
-  /**
    * Update the info label with current tileset information
    */
   private _updateInfoLabel(): void {
@@ -303,13 +251,11 @@ export class TilesetSelectorStory extends StoryWidget {
       0,
     )
     const scale = this.args.spriteScale ?? 1.0
-    const spacing = this.args.spacing ?? 12
 
     const info = [
       `${displayedCount} tileset${displayedCount !== 1 ? 's' : ''} displayed`,
       `${totalSprites} total sprites`,
       `Scale: ${scale}x`,
-      `Spacing: ${spacing}px`,
     ].join(' • ')
 
     this._info_label.set_label(info)
