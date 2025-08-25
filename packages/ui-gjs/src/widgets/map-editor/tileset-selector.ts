@@ -170,20 +170,6 @@ export class TilesetSelector extends Adw.Bin {
   }
 
   /**
-   * Set multiple tilesets at once (legacy method for compatibility)
-   * @param spriteSheet The sprite sheet widget to display
-   * @deprecated Use the tilesets property instead
-   */
-  setSpriteSheet(spriteSheet: SpriteSheetWidget): void {
-    console.warn('setSpriteSheet is deprecated, use tilesets property instead')
-    // For backward compatibility, clear existing and add this one
-    this.clearTilesets()
-    if (spriteSheet.spriteSheet) {
-      this.addTileset(spriteSheet.spriteSheet)
-    }
-  }
-
-  /**
    * Update the display when tilesets change
    */
   private _updateDisplay(): void {

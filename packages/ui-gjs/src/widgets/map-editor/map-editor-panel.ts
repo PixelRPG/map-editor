@@ -4,7 +4,6 @@ import Adw from '@girs/adw-1'
 
 import { TilesetSelector } from './tileset-selector'
 import { LayerSelector, LayersWidget } from './layer-selector'
-import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
 import { SpriteSheet } from '@pixelrpg/data-gjs'
 
 import Template from './map-editor-panel.blp'
@@ -34,15 +33,6 @@ export class MapEditorPanel extends Adw.Bin {
 
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
     super(params)
-  }
-
-  /**
-   * Set the sprite sheet widget for tileset selection (legacy method)
-   * @param tileset The sprite sheet widget to set
-   * @deprecated Use addTileset or setTilesets instead
-   */
-  setSpriteSheet(tileset: SpriteSheetWidget) {
-    this._tilesetSelector.setSpriteSheet(tileset)
   }
 
   /**
