@@ -3,9 +3,11 @@
  */
 
 export * from "./stories";
+export * from "./types/index";
 export * from "./widgets/map-editor/layer-selector";
 export * from "./widgets/map-editor/map-editor-panel.story";
 export * from "./widgets/map-editor/map-editor-panel";
+export * from "./widgets/map-editor/tileset-selector.story";
 export * from "./widgets/map-editor/tileset-selector";
 export * from "./widgets/sprite/sprite-sheet.widget.story";
 export * from "./widgets/sprite/sprite-sheet.widget";

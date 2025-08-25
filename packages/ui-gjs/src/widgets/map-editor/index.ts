@@ -5,4 +5,5 @@
 export * from "./layer-selector";
 export * from "./map-editor-panel.story";
 export * from "./map-editor-panel";
+export * from "./tileset-selector.story";
 export * from "./tileset-selector";
