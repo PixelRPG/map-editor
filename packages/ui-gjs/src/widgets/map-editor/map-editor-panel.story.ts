@@ -10,7 +10,7 @@ import {
 } from '@pixelrpg/story-gjs'
 import { MapEditorPanel } from './map-editor-panel'
 import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
-import { SpriteSetResource } from '@pixelrpg/data-gjs'
+import { SpriteSetResource, SpriteSheet } from '@pixelrpg/data-gjs'
 
 // Import story template
 import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
@@ -21,7 +21,8 @@ import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
  */
 export class MapEditorPanelStory extends StoryWidget {
   private spriteSheetWidget: SpriteSheetWidget | null = null
-  private spriteSetResource: SpriteSetResource | null = null
+  private spriteSetResources: SpriteSetResource[] = []
+  private loadedTilesets: { spriteSheet: SpriteSheet; name: string }[] = []
 
   // UI elements from template
   declare _info_label: Gtk.Label
@@ -43,6 +44,7 @@ export class MapEditorPanelStory extends StoryWidget {
       story: 'MapEditorPanel',
       args: {
         defaultPage: 'pageTilesets',
+        tilesetCount: 2,
       },
       meta: MapEditorPanelStory.getMetadata(),
     })
@@ -53,9 +55,11 @@ export class MapEditorPanelStory extends StoryWidget {
    */
   static getMetadata(): StoryMeta {
     return {
-      title: 'MapEditorPanel',
+      title: 'Map Editor/Map Editor Panel',
       description:
-        'Interactive panel for map editing with tileset and layer selection',
+        'Interactive panel for map editing with multiple tilesets and layer selection',
+      component: MapEditorPanel.$gtype,
+      tags: ['autodocs', 'ui', 'map-editor', 'panel'],
       controls: [
         {
           name: 'defaultPage',
@@ -68,35 +72,122 @@ export class MapEditorPanelStory extends StoryWidget {
           ],
           description: 'Select which page to show by default',
         },
+        {
+          name: 'tilesetCount',
+          label: 'Tileset Count',
+          type: ControlType.RANGE,
+          min: 0,
+          max: 3,
+          step: 1,
+          defaultValue: 2,
+          description: 'Number of tilesets to display in the panel',
+        },
       ],
     }
   }
 
   /**
-   * Called when the story is initialized or args change
+   * Initialize the story
+   * Loads multiple sample tilesets and creates the panel
    */
-  async onArgsChanged(): Promise<void> {
-    if (!this.spriteSheetWidget) {
-      await this._initializePanel()
-    }
-
-    this._updatePanel()
+  initialize(): void {
+    this._loadTilesets()
   }
 
   /**
-   * Initialize the map editor panel (called only once)
+   * Update the story arguments
+   * @param args - New arguments for the story
    */
-  private async _initializePanel(): Promise<void> {
+  updateArgs(args: Record<string, any>): void {
+    // Only update if we have loaded tilesets
+    if (this.loadedTilesets.length === 0) {
+      return
+    }
+
+    let hasChanges = false
+
+    // Check and update tileset count
+    if (this.args.tilesetCount !== this.loadedTilesets.length) {
+      this._updateTilesetCount(this.args.tilesetCount)
+      hasChanges = true
+    }
+
+    // Check and update default page
+    if (this.args.defaultPage) {
+      this._updateDefaultPage(this.args.defaultPage as string)
+      hasChanges = true
+    }
+
+    // Only update info label if something actually changed
+    if (hasChanges) {
+      this._updateInfoLabel()
+    }
+  }
+
+  /**
+   * Load sample tilesets for the map editor panel
+   */
+  private async _loadTilesets(): Promise<void> {
     try {
-      // Load sprite sheet for tileset demonstration
-      await this._loadSpriteSheet()
+      this._info_label.set_label('Loading sample tilesets for map editor...')
+
+      // Load the main Lokiri Forest sprite set
+      const lokiriResource = new SpriteSetResource(
+        '../../games/zelda-like/spritesets/lokiri-forest.json',
+      )
+      await lokiriResource.load()
+
+      if (lokiriResource.spriteSheet) {
+        this.spriteSetResources.push(lokiriResource)
+        this.loadedTilesets.push({
+          spriteSheet: lokiriResource.spriteSheet,
+          name: lokiriResource.data.name,
+        })
+      }
+
+      // Try to load water tileset if available
+      try {
+        const waterResource = new SpriteSetResource(
+          '../../games/zelda-like/spritesets/water.json',
+        )
+        await waterResource.load()
+
+        if (waterResource.spriteSheet) {
+          this.spriteSetResources.push(waterResource)
+          this.loadedTilesets.push({
+            spriteSheet: waterResource.spriteSheet,
+            name: waterResource.data.name,
+          })
+        }
+      } catch (error) {
+        console.warn('Water tileset not available:', error)
+      }
+
+      // Initialize the panel with loaded tilesets
+      this._initializePanel()
+      this._updateInfoLabel()
+    } catch (error) {
+      console.error('Failed to load tilesets:', error)
+      this._info_label.set_label(`Error: Failed to load tilesets - ${error}`)
+
+      // Show error in panel
+      this._createErrorPlaceholder()
+    }
+  }
+
+  /**
+   * Initialize the panel with loaded tilesets
+   */
+  private _initializePanel(): void {
+    try {
+      // Set initial tilesets based on tilesetCount
+      this._updateTilesetCount(this.args.tilesetCount ?? 2)
+
+      // Set default page
+      this._updateDefaultPage(this.args.defaultPage as string)
 
       // Create a placeholder layers widget
       this._createLayerSelector()
-
-      this._info_label.set_label(
-        'MapEditorPanel initialized with sample tileset and layers',
-      )
     } catch (error) {
       console.error('Failed to initialize MapEditorPanel:', error)
       this._info_label.set_label(
@@ -106,68 +197,71 @@ export class MapEditorPanelStory extends StoryWidget {
   }
 
   /**
-   * Load sprite sheet for demonstration
-   */
-  private async _loadSpriteSheet(): Promise<void> {
-    try {
-      // Load the Lokiri Forest sprite set for demonstration
-      this.spriteSetResource = new SpriteSetResource('kokiri-forest')
-      await this.spriteSetResource.load()
-
-      if (this.spriteSetResource?.spriteSheet) {
-        // Create sprite sheet widget
-        this.spriteSheetWidget = new SpriteSheetWidget(
-          this.spriteSetResource.spriteSheet,
-          {
-            scale: 1.0,
-            showGrid: true,
-            maxColumns: 16,
-          },
-        )
-
-        // Set it in the map editor panel
-        this._mapEditorPanel.setSpriteSheet(this.spriteSheetWidget)
-      }
-    } catch (error) {
-      console.warn('Failed to load sprite sheet:', error)
-      // Create a placeholder label for the tileset selector
-      const placeholderLabel = new Gtk.Label({
-        label: 'No tileset loaded\n(Sample sprite sheet not available)',
-        justify: Gtk.Justification.CENTER,
-        valign: Gtk.Align.CENTER,
-        vexpand: true,
-      })
-      placeholderLabel.add_css_class('dim-label')
-
-      // Create a simple container widget that can be set as child
-      const placeholderWidget = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        valign: Gtk.Align.CENTER,
-        vexpand: true,
-      })
-      placeholderWidget.append(placeholderLabel)
-
-      this._mapEditorPanel.setSpriteSheet(placeholderWidget as any)
-    }
-  }
-
-  /**
    * Create a placeholder layers widget
    */
   private _createLayerSelector(): void {
     // TODO: Implement layer selector
-    // this.mapEditorPanel?.setLayers()
+    // this._mapEditorPanel?.setLayers()
   }
 
   /**
-   * Update panel based on current args
+   * Create error placeholder when assets can't be loaded
    */
-  private _updatePanel(): void {
-    // Switch to the default page
-    const defaultPage = this.args.defaultPage as string
+  private _createErrorPlaceholder(): void {
+    // Clear any existing tilesets
+    this._mapEditorPanel.clearTilesets()
+  }
+
+  /**
+   * Update the number of displayed tilesets
+   */
+  private _updateTilesetCount(count: number): void {
+    const targetCount = Math.min(count, this.loadedTilesets.length)
+
+    // Clear existing tilesets
+    this._mapEditorPanel.clearTilesets()
+
+    // Add tilesets up to the target count
+    for (let i = 0; i < targetCount; i++) {
+      const tileset = this.loadedTilesets[i]
+      this._mapEditorPanel.addTileset(tileset.spriteSheet, tileset.name)
+    }
+  }
+
+  /**
+   * Update the default page
+   */
+  private _updateDefaultPage(defaultPage: string): void {
     if (defaultPage) {
       this._mapEditorPanel.stack.set_visible_child_name(defaultPage)
     }
+  }
+
+  /**
+   * Update the info label with current panel information
+   */
+  private _updateInfoLabel(): void {
+    if (this.loadedTilesets.length === 0) {
+      this._info_label.set_label('No tilesets loaded')
+      return
+    }
+
+    const displayedCount = Math.min(
+      this.args.tilesetCount ?? 2,
+      this.loadedTilesets.length,
+    )
+    const totalSprites = this.loadedTilesets
+      .slice(0, displayedCount)
+      .reduce((sum, tileset) => sum + tileset.spriteSheet.sprites.length, 0)
+
+    const info = [
+      `Map Editor Panel`,
+      `${displayedCount} tileset${displayedCount !== 1 ? 's' : ''} loaded`,
+      `${totalSprites} total sprites available`,
+      `Page: ${this.args.defaultPage === 'pageTilesets' ? 'Tilesets' : 'Layers'}`,
+    ].join(' • ')
+
+    this._info_label.set_label(info)
   }
 }
 
