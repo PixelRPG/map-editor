@@ -20,13 +20,27 @@ template $TilesetSelector: Adw.Bin {
       vexpand: true;
       hscrollbar-policy: never;
       
-      Gtk.Box placeholder_box {
+      Gtk.Box tilesets_container {
         orientation: vertical;
-        spacing: 6;
+        spacing: 0;
         
-        Gtk.Label {
-          label: "No tileset loaded";
-          css-classes: ["dim-label"];
+        Gtk.Box placeholder_box {
+          orientation: vertical;
+          spacing: 6;
+          halign: center;
+          valign: center;
+          margin-top: 48;
+          margin-bottom: 48;
+          
+          Gtk.Label {
+            label: "No tilesets loaded";
+            css-classes: ["dim-label"];
+          }
+          
+          Gtk.Label {
+            label: "Add sprite sheets to display them as tilesets";
+            css-classes: ["dim-label", "caption"];
+          }
         }
       }
     }
