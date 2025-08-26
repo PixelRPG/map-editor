@@ -5,7 +5,7 @@
     "main": "src/index.ts",
     "scripts": {
         "check": "tsc",
-        "build:barrels": "barrelsby --delete --directory src src/format src/types src/utils",
+        "build:barrels": "barrelsby --delete --directory src src/format src/types src/utils src/resource",
         "build": "yarn build:barrels"
     },
     "dependencies": {
