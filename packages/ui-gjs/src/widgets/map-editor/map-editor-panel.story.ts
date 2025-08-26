@@ -1,15 +1,8 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import Adw from '@girs/adw-1'
 
-import {
-  StoryWidget,
-  StoryMeta,
-  ControlType,
-  StoryModule,
-} from '@pixelrpg/story-gjs'
+import { StoryWidget, StoryMeta, StoryModule } from '@pixelrpg/story-gjs'
 import { MapEditorPanel } from './map-editor-panel'
-import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
 import { SpriteSetResource, SpriteSheet } from '@pixelrpg/data-gjs'
 
 // Import story template
@@ -20,7 +13,6 @@ import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
  * Showcases the MapEditorPanel component with tileset and layer selection
  */
 export class MapEditorPanelStory extends StoryWidget {
-  private spriteSheetWidget: SpriteSheetWidget | null = null
   private spriteSetResources: SpriteSetResource[] = []
   private loadedTilesets: { spriteSheet: SpriteSheet; name: string }[] = []
 

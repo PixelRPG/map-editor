@@ -72,11 +72,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
   private gresourcePath: string = CLIENT_RESOURCE_PATH
 
   /**
-   * Signal handlers for the engine
-   */
-  private engineEventHandlers = new Map<string, Set<EngineEventHandler>>()
-
-  /**
    * Signal management for GC safety
    */
   private _signalHandlers: number[] = []
@@ -88,7 +83,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     super(params)
 
     try {
-      this.setStatus(EngineStatus.INITIALIZING)
+      this.status = EngineStatus.INITIALIZING
 
       // Initialize resource paths
       this._webView?.setResourcePaths(this.resourcePaths)
@@ -97,7 +92,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
       // Note: WebView signal connection will be done in vfunc_map for GC safety
     } catch (error) {
       console.error('[GJS Engine] Failed to initialize engine:', error)
-      this.setStatus(EngineStatus.ERROR)
+      this.status = EngineStatus.ERROR
       throw createInitializationError(
         'Failed to initialize GJS engine',
         error instanceof Error ? error : undefined,
@@ -135,12 +130,16 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the project
-      await this._webView.rpc.sendRequest('loadProject', {
+      const response = await this._webView.rpc.sendRequest('loadProject', {
         projectPath,
         options,
       })
 
-      console.log('[GJS Engine] Project load request sent:', projectPath)
+      console.log(
+        '[GJS Engine] Project load request sent:',
+        projectPath,
+        response,
+      )
     } catch (error) {
       console.error('[GJS Engine] Failed to load project:', error)
       throw createResourceError(
@@ -193,7 +192,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
       })
 
       console.log('[GJS Engine] Start command sent')
-      this.setStatus(EngineStatus.RUNNING)
+      this.status = EngineStatus.RUNNING
     } catch (error) {
       console.error('[GJS Engine] Failed to start engine:', error)
       throw createRuntimeError(
@@ -240,8 +239,13 @@ export class Engine extends Adw.Bin implements EngineInterface {
     this._webView.rpc.registerHandler('notifyEngineEvent', async (event) => {
       console.log('[GJS Engine] Engine event received from WebView:', event)
       // Handle the event with proper typing
-      if (event && typeof event === 'object' && 'type' in event) {
-        this.onEngineEventMessage(event as EngineEvent)
+      if (
+        event &&
+        typeof event === 'object' &&
+        'type' in event &&
+        Object.values(EngineEventType).includes(event.type as EngineEventType)
+      ) {
+        this.onEngineEvent(event as EngineEvent)
         return { success: true }
       }
       return { success: false, error: 'Invalid engine event format' }
@@ -251,97 +255,70 @@ export class Engine extends Adw.Bin implements EngineInterface {
   }
 
   /**
-   * Handler for event messages
+   * Handler for engine events from the WebView
    * @param event The engine event
    */
-  private onEngineEventMessage(event: EngineEvent): void {
-    try {
-      if (typeof event === 'object' && 'type' in event) {
-        const engineEventType = event.type
-        const engineEventData = event.data
+  private onEngineEvent(event: EngineEvent): void {
+    if (typeof event === 'object' && 'type' in event) {
+      const engineEventType = event.type
 
-        // Update the engine status if needed
-        if (engineEventType === EngineEventType.STATUS_CHANGED) {
-          this.status = engineEventData as EngineStatus
-          console.info('[GJS Engine] Engine status changed to:', this.status)
-        }
+      console.info('[GJS Engine] Engine event received:', event)
 
-        // Emit a signal that can be caught by the application
-        this.emit(
-          'message-received',
-          JSON.stringify({
-            type: engineEventType,
-            data: engineEventData,
-          }),
-        )
-
-        // Dispatch the event to registered handlers
-        const handlers = this.engineEventHandlers.get(engineEventType)
-        if (handlers) {
-          for (const handler of handlers) {
-            try {
-              handler(event)
-            } catch (handlerError) {
-              console.error(
-                '[GJS Engine] Error in event handler:',
-                handlerError,
-              )
-            }
-          }
-        }
+      switch (engineEventType) {
+        case EngineEventType.STATUS_CHANGED:
+          this.onEngineEventStatusChanged(
+            event as EngineEvent<EngineEventType.STATUS_CHANGED>,
+          )
+          break
+        case EngineEventType.MAP_LOADED:
+          this.onEngineEventMapLoaded(
+            event as EngineEvent<EngineEventType.MAP_LOADED>,
+          )
+          break
+        case EngineEventType.PROJECT_LOADED:
+          this.onEngineEventProjectLoaded(
+            event as EngineEvent<EngineEventType.PROJECT_LOADED>,
+          )
+          break
+        case EngineEventType.ERROR:
+          console.error('[GJS Engine] Engine error:', event.data)
+          break
+        default:
+          console.warn('[GJS Engine] Unknown engine event:', event)
+          break
       }
-    } catch (error) {
-      console.error(
-        '[GJS Engine] Error handling message:',
-        formatError(error instanceof Error ? error : new Error(String(error))),
-      )
     }
   }
 
   /**
-   * Set the engine status and dispatch a status changed event
-   * @param status New engine status
+   * Handler for engine status changed event from the WebView
+   * @param event The engine event
    */
-  private setStatus(status: EngineStatus): void {
-    if (!Object.values(EngineStatus).includes(status)) {
-      console.warn(`[GJS Engine] Invalid engine status: ${status}`)
-      return
-    }
+  private onEngineEventStatusChanged(
+    event: EngineEvent<EngineEventType.STATUS_CHANGED>,
+  ): void {
+    this.status = event.data
+    console.info('[GJS Engine] Engine status changed to:', this.status)
+  }
 
-    this.status = status
+  /**
+   * Handler for map loaded event from the WebView
+   * @param event The engine event
+   */
+  private onEngineEventMapLoaded(
+    event: EngineEvent<EngineEventType.MAP_LOADED>,
+  ): void {
+    console.info('[GJS Engine] Map loaded:', event.data.mapId)
+  }
 
-    // Dispatch a status changed event
-    const statusEvent: EngineEvent<EngineEventType.STATUS_CHANGED> = {
-      type: EngineEventType.STATUS_CHANGED,
-      data: status,
-    }
-
-    // Dispatch to local handlers
-    const handlers = this.engineEventHandlers.get(
-      EngineEventType.STATUS_CHANGED,
-    )
-    if (handlers) {
-      for (const handler of handlers) {
-        try {
-          handler(statusEvent)
-        } catch (error) {
-          console.error('[GJS Engine] Error in status event handler:', error)
-        }
-      }
-    }
-
-    // Also send to the WebView using RPC
-    try {
-      this._webView?.rpc
-        ?.sendRequest('notifyStatusChange', {
-          status: status,
-        })
-        .catch((error) =>
-          console.error('[GJS Engine] Error notifying status change:', error),
-        )
-    } catch (error) {
-      console.error('[GJS Engine] Failed to send status change:', error)
-    }
+  /**
+   * Handler for project loaded event from the WebView
+   * @param event The engine event
+   */
+  private onEngineEventProjectLoaded(
+    event: EngineEvent<EngineEventType.PROJECT_LOADED>,
+  ): void {
+    console.info('[GJS Engine] Project loaded:', event.data.projectId)
   }
 
   /**
@@ -374,39 +351,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
   }
 
   /**
-   * Add an event handler for an engine event
-   * @param type Type of event to listen for
-   * @param handler Handler function
-   */
-  addEventListener(type: string, handler: EngineEventHandler): void {
-    if (!this.engineEventHandlers.has(type)) {
-      this.engineEventHandlers.set(type, new Set())
-    }
-    this.engineEventHandlers.get(type)!.add(handler)
-  }
-
-  /**
-   * Remove an event handler for an engine event
-   * @param type Type of event to remove handler for
-   * @param handler Handler function to remove
-   */
-  removeEventListener(type: string, handler: EngineEventHandler): void {
-    const handlers = this.engineEventHandlers.get(type)
-    if (handlers) {
-      handlers.delete(handler)
-    }
-  }
-
-  /**
-   * Check if we have event listeners for a given event type
-   * @param type Type of event to check for
-   */
-  hasEventListener(type: string): boolean {
-    const handlers = this.engineEventHandlers.get(type)
-    return !!handlers && handlers.size > 0
-  }
-
-  /**
    * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
    */
   vfunc_map(): void {
@@ -420,7 +364,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
         // Set up event listeners
         this.setupEventListeners()
 
-        this.setStatus(EngineStatus.READY)
+        this.status = EngineStatus.READY
         this.emit('ready')
       })
       this._signalHandlers.push(readyHandlerId)
