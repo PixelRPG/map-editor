@@ -1,12 +1,9 @@
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import {
-  MapEditorPanel,
-  SpriteSheetWidget,
-  LayersWidget,
-} from '@pixelrpg/ui-gjs'
+import { MapEditorPanel, LayersWidget } from '@pixelrpg/ui-gjs'
+import { MapData } from '@pixelrpg/data-core'
+import { SpriteSheet } from '@pixelrpg/data-gjs'
 
 import Template from './sidebar.blp'
 
@@ -30,19 +27,21 @@ export class Sidebar extends Adw.Bin {
   }
 
   /**
-   * Set the sprite sheet widget for tileset selection
-   * @param tileset The sprite sheet widget to set
+   * Initialize the sidebar with map data including tilesets and layers
+   * @param mapData The map data containing layers and sprite set references
+   * @param spriteSheets Array of loaded sprite sheets
    */
-  setSpriteSheet(tileset: SpriteSheetWidget) {
-    this._mapEditorPanel.setSpriteSheet(tileset)
-  }
+  initializeMapData(mapData: MapData, spriteSheets: SpriteSheet[]): void {
+    console.log(
+      '[Sidebar] Initializing map data:',
+      mapData.name,
+      'with',
+      spriteSheets.length,
+      'sprite sheets',
+    )
 
-  /**
-   * Set the layers widget for layer selection
-   * @param layers The layers widget to set
-   */
-  setLayers(layers: LayersWidget) {
-    this._mapEditorPanel.setLayers(layers)
+    // Pass the map data to the MapEditorPanel
+    this._mapEditorPanel.initializeMapData(mapData, spriteSheets)
   }
 }
 // WORKAROUND: Make sure the MapEditorPanel is registered before the Sidebar, try fixed by import order?
