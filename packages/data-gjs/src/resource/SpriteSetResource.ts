@@ -1,9 +1,12 @@
 import Gio from '@girs/gio-2.0'
 import Gdk from '@girs/gdk-4.0'
-import { SpriteSetData } from '@pixelrpg/data-core'
+import {
+  SpriteSetData,
+  SpriteSetResource as BaseSpriteSetResource,
+} from '@pixelrpg/data-core'
 import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions'
 import { loadTextFile } from '../utils'
-import { SpriteSetFormat, Loadable } from '@pixelrpg/data-core'
+import { SpriteSetFormat } from '@pixelrpg/data-core'
 import { ImageResource } from './ImageResource'
 import { SpriteSheet, Sprite } from '../objects/index.ts'
 
@@ -15,7 +18,7 @@ import { SpriteSheet, Sprite } from '../objects/index.ts'
  * @see SpriteSheet For processing loaded data into individual sprites
  * @see Sprite For individual sprite representation
  */
-export class SpriteSetResource implements Loadable<SpriteSetData> {
+export class SpriteSetResource extends BaseSpriteSetResource {
   private _data: SpriteSetData | null = null
   private _path: string
   private _imageResource: ImageResource | null = null
@@ -29,6 +32,7 @@ export class SpriteSetResource implements Loadable<SpriteSetData> {
    * @param path The path to the sprite set file
    */
   constructor(path: string, options?: SpriteSetResourceOptions) {
+    super()
     this._path = path
     this._useGResource = options?.useGResource || false
     this._resourcePrefix = options?.resourcePrefix || undefined

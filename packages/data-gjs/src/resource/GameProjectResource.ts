@@ -3,10 +3,10 @@ import GLib from '@girs/glib-2.0'
 import {
   GameProjectData,
   MapData,
-  SpriteSetData,
   GameProjectFormat,
   GameProjectResource as BaseGameProjectResource,
 } from '@pixelrpg/data-core'
+import type { SpriteSetData } from '@pixelrpg/data-core'
 import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions'
 import { MapResource } from './MapResource'
 import { SpriteSetResource } from './SpriteSetResource'
@@ -243,11 +243,11 @@ export class GameProjectResource extends BaseGameProjectResource {
   }
 
   /**
-   * Get a sprite set resource by ID
+   * Get a sprite set resource instance by ID
    * @param id Sprite set ID
-   * @returns Sprite set data or null if not found
+   * @returns Sprite set resource or null if not found
    */
-  async getSpriteSet(id: string): Promise<SpriteSetData | null> {
+  async getSpriteSet(id: string): Promise<SpriteSetResource | null> {
     if (!this._data) {
       await this.load()
     }
@@ -258,7 +258,7 @@ export class GameProjectResource extends BaseGameProjectResource {
       if (!resource.data) {
         await resource.load()
       }
-      return resource.data
+      return resource
     }
 
     // Find the sprite set reference
@@ -269,10 +269,15 @@ export class GameProjectResource extends BaseGameProjectResource {
 
     // Load the sprite set
     const spriteSetPath = this.resolvePath(spriteSetRef.path)
-    const spriteSetResource = new SpriteSetResource(spriteSetPath)
+    const spriteSetResource = new SpriteSetResource(spriteSetPath, {
+      useGResource: this._useGResource,
+      resourcePrefix: this._resourcePrefix,
+    })
     this._spriteSets.set(id, spriteSetResource)
 
-    return await spriteSetResource.load()
+    // Load the resource
+    await spriteSetResource.load()
+    return spriteSetResource
   }
 
   /**
