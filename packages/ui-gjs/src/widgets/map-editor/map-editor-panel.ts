@@ -70,15 +70,35 @@ export class MapEditorPanel extends Adw.Bin {
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       spacing: 6,
+      margin_top: 6,
+      margin_bottom: 6,
+      margin_start: 6,
+      margin_end: 6,
     })
 
     // Add a label for each layer
     for (const layer of mapData.layers) {
+      const layerRow = new Gtk.Box({
+        orientation: Gtk.Orientation.HORIZONTAL,
+        spacing: 8,
+      })
+
+      // Layer visibility toggle (placeholder)
+      const visibilityIcon = new Gtk.Label({
+        label: layer.visible ? '👁' : '🚫',
+        tooltip_text: layer.visible ? 'Layer visible' : 'Layer hidden',
+      })
+
+      // Layer name and type
       const label = new Gtk.Label({
         label: `${layer.name} (${layer.type})`,
         xalign: 0,
+        hexpand: true,
       })
-      box.append(label)
+
+      layerRow.append(visibilityIcon)
+      layerRow.append(label)
+      box.append(layerRow)
     }
 
     return box

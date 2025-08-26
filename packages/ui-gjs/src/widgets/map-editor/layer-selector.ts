@@ -9,13 +9,14 @@ export type LayersWidget = Gtk.Widget
 
 export class LayerSelector extends Adw.Bin {
   declare _placeholder_box: Gtk.Box
+  declare _layers_scrolled_window: Gtk.ScrolledWindow
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'LayerSelector',
         Template,
-        InternalChildren: ['placeholder_box'],
+        InternalChildren: ['placeholder_box', 'layers_scrolled_window'],
       },
       this,
     )
@@ -30,13 +31,10 @@ export class LayerSelector extends Adw.Bin {
    * @param layersWidget The layers widget to display
    */
   setLayers(layersWidget: LayersWidget) {
-    // Replace the placeholder with the actual layers widget
-    if (this._placeholder_box && layersWidget) {
-      const parent = this._placeholder_box.get_parent() as Gtk.Box
-      if (parent && parent.remove && parent.append) {
-        parent.remove(this._placeholder_box)
-        parent.append(layersWidget)
-      }
+    if (layersWidget && this._layers_scrolled_window) {
+      this._layers_scrolled_window.set_child(layersWidget)
+    } else {
+      console.error('[LayerSelector] Missing layers widget or scrolled window')
     }
   }
 }
