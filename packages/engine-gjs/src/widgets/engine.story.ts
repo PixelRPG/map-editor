@@ -9,7 +9,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { Engine } from './engine'
-import { EngineStatus } from '@pixelrpg/engine-core'
+import { EngineStatus, EngineEventType } from '@pixelrpg/engine-core'
 
 // Import story templates
 import EngineStoryTemplate from './engine.story.blp'
@@ -157,7 +157,39 @@ export class EngineStoryWidget extends StoryWidget {
   private _connectEngineEvents(): void {
     if (!this.engine) return
 
-    this.engine.connect('message-received', this._onEngineMessage.bind(this))
+    // Connect to the new specific event signals
+    this.engine.connect(
+      EngineEventType.STATUS_CHANGED,
+      (_engine: Engine, status: EngineStatus) => {
+        console.log('[EngineStoryWidget] Engine status changed:', status)
+        this._updateStatusLabel(status)
+        this._updateButtons(status)
+      },
+    )
+
+    this.engine.connect(
+      EngineEventType.PROJECT_LOADED,
+      (_engine: Engine, projectId: string) => {
+        console.log('[EngineStoryWidget] Engine project loaded:', projectId)
+      },
+    )
+
+    this.engine.connect(
+      EngineEventType.MAP_LOADED,
+      (_engine: Engine, mapId: string) => {
+        console.log('[EngineStoryWidget] Engine map loaded:', mapId)
+      },
+    )
+
+    this.engine.connect(
+      EngineEventType.ERROR,
+      (_engine: Engine, message: string, error: Error | null) => {
+        console.error('Engine error:', message, error)
+        this._updateStatusLabel(EngineStatus.ERROR)
+        this._updateButtons(EngineStatus.ERROR)
+      },
+    )
+
     this.engine.connect('ready', () => {
       console.log('Engine ready')
       this._updateStatusLabel(EngineStatus.READY)
@@ -189,26 +221,6 @@ export class EngineStoryWidget extends StoryWidget {
   }
 
   /**
-   * Handle engine messages
-   * @param _engine - The engine that sent the message
-   * @param message - The message data
-   */
-  protected _onEngineMessage(_engine: Engine, message: string): void {
-    try {
-      const event = JSON.parse(message)
-      console.log('Engine event:', event)
-
-      // Update status label if it's a status change
-      if (event.type === 'statusChanged' && event.data) {
-        this._updateStatusLabel(event.data)
-        this._updateButtons(event.data)
-      }
-    } catch (error) {
-      console.error('Failed to parse engine message:', error)
-    }
-  }
-
-  /**
    * Update the status label
    * @param status - The new engine status
    */
@@ -236,8 +248,10 @@ export class EngineStoryWidget extends StoryWidget {
 
     this.engine
       .start()
-      .then(() => console.log('Engine started'))
-      .catch((error) => console.error('Failed to start engine:', error))
+      .then(() => console.log('[EngineStoryWidget] Engine started'))
+      .catch((error) =>
+        console.error('[EngineStoryWidget] Failed to start engine:', error),
+      )
   }
 
   /**
@@ -248,8 +262,10 @@ export class EngineStoryWidget extends StoryWidget {
 
     this.engine
       .stop()
-      .then(() => console.log('Engine stopped'))
-      .catch((error) => console.error('Failed to stop engine:', error))
+      .then(() => console.log('[EngineStoryWidget] Engine stopped'))
+      .catch((error) =>
+        console.error('[EngineStoryWidget] Failed to stop engine:', error),
+      )
   }
 
   /**
@@ -260,8 +276,10 @@ export class EngineStoryWidget extends StoryWidget {
 
     this.engine
       .loadProject('../../games/zelda-like/game-project.json')
-      .then(() => console.log('Project loaded'))
-      .catch((error) => console.error('Failed to load project:', error))
+      .then(() => console.log('[EngineStoryWidget] Project loaded'))
+      .catch((error) =>
+        console.error('[EngineStoryWidget] Failed to load project:', error),
+      )
   }
 }
 

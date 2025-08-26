@@ -27,8 +27,11 @@ export namespace Engine {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
 
   export interface SignalProps {
-    'message-received': [string]
     ready: []
+    [EngineEventType.STATUS_CHANGED]: [EngineStatus]
+    [EngineEventType.PROJECT_LOADED]: [string] // projectId
+    [EngineEventType.MAP_LOADED]: [string] // mapId
+    [EngineEventType.ERROR]: [string, Error | null] // message, error
   }
 }
 
@@ -47,8 +50,17 @@ export class Engine extends Adw.Bin implements EngineInterface {
         GTypeName: 'Engine',
         Template,
         Signals: {
-          'message-received': { param_types: [GObject.TYPE_STRING] },
           ready: {},
+          [EngineEventType.STATUS_CHANGED]: {
+            param_types: [GObject.TYPE_STRING],
+          },
+          [EngineEventType.PROJECT_LOADED]: {
+            param_types: [GObject.TYPE_STRING],
+          },
+          [EngineEventType.MAP_LOADED]: { param_types: [GObject.TYPE_STRING] },
+          [EngineEventType.ERROR]: {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_OBJECT],
+          },
         },
         InternalChildren: ['webView'],
       },
@@ -281,7 +293,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
           )
           break
         case EngineEventType.ERROR:
-          console.error('[GJS Engine] Engine error:', event.data)
+          this.onEngineEventError(event as EngineEvent<EngineEventType.ERROR>)
           break
         default:
           console.warn('[GJS Engine] Unknown engine event:', event)
@@ -299,6 +311,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
   ): void {
     this.status = event.data
     console.info('[GJS Engine] Engine status changed to:', this.status)
+    this.emit(EngineEventType.STATUS_CHANGED, this.status)
   }
 
   /**
@@ -309,6 +322,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     event: EngineEvent<EngineEventType.MAP_LOADED>,
   ): void {
     console.info('[GJS Engine] Map loaded:', event.data.mapId)
+    this.emit(EngineEventType.MAP_LOADED, event.data.mapId)
   }
 
   /**
@@ -319,6 +333,20 @@ export class Engine extends Adw.Bin implements EngineInterface {
     event: EngineEvent<EngineEventType.PROJECT_LOADED>,
   ): void {
     console.info('[GJS Engine] Project loaded:', event.data.projectId)
+    this.emit(EngineEventType.PROJECT_LOADED, event.data.projectId)
+  }
+
+  /**
+   * Handler for engine error event from the WebView
+   * @param event The engine event
+   */
+  private onEngineEventError(event: EngineEvent<EngineEventType.ERROR>): void {
+    console.error('[GJS Engine] Engine error:', event.data)
+    this.emit(
+      EngineEventType.ERROR,
+      event.data.message,
+      event.data.error || null,
+    )
   }
 
   /**
