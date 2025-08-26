@@ -95,18 +95,13 @@ export class ProjectView extends Adw.Bin {
   }
 
   /**
-   * Handle project loaded event
-   * @param projectId The ID of the loaded project
+   * Load a project in the ProjectView (parallel to engine loading)
+   * @param projectPath The full path to the project file
    */
-  private async _onProjectLoaded(projectId: string): Promise<void> {
+  public async loadProject(projectPath: string): Promise<void> {
     try {
-      // For now, we need to derive the project path from the projectId
-      // This is a limitation of the current engine interface
-      // In a real implementation, the engine should provide the project path
-      const projectPath = `${projectId}.json` // This is a simplification
-
       console.log(
-        '[ProjectView] Creating GameProjectResource for:',
+        '[ProjectView] Starting parallel project loading:',
         projectPath,
       )
 
@@ -122,7 +117,26 @@ export class ProjectView extends Adw.Bin {
       console.log('[ProjectView] GameProjectResource loaded successfully')
     } catch (error) {
       console.error('[ProjectView] Failed to load GameProjectResource:', error)
+      throw error
     }
+  }
+
+  /**
+   * Handle project loaded event from the engine
+   * @param projectId The ID of the loaded project
+   */
+  private async _onProjectLoaded(projectId: string): Promise<void> {
+    console.log('[ProjectView] Engine project loaded:', projectId)
+
+    // Verify that our parallel-loaded project matches the engine's loaded project
+    if (this._gameProjectResource?.data.id !== projectId) {
+      throw new Error(
+        `[ProjectView] Project ID mismatch: expected ${projectId}, got ${this._gameProjectResource?.data.id}`,
+      )
+    }
+
+    // Both engine and GJS have loaded the project successfully
+    console.log('[ProjectView] Project synchronization complete')
   }
 
   /**

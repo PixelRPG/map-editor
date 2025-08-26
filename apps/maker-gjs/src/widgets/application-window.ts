@@ -176,7 +176,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._stack?.set_visible_child(this._projectView!)
   }
 
-  protected openProject(path: string | null) {
+  protected async openProject(path: string | null) {
     if (!path) {
       this.showToast(_('Invalid project path'))
       return
@@ -188,18 +188,34 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     console.log('[ApplicationWindow] Opening project:', path)
 
-    // Load the project in the engine
-    this._projectView.connect('ready', () => {
-      try {
-        console.log('[ApplicationWindow] Loading project:', path)
-        this._projectView!.engine!.loadProject(path)
-      } catch (error) {
-        console.error('[ApplicationWindow] Failed to load project:', error)
-      }
-    })
-
-    // Switch to project view
+    // Switch to project view first
     this._stack?.set_visible_child(this._projectView!)
+
+    try {
+      // Wait for the project view to be ready, then start parallel loading
+      if (this._projectView.engine?.status !== 'ready') {
+        await new Promise<void>((resolve) => {
+          this._projectView!.connect('ready', () => resolve())
+        })
+      }
+
+      console.log('[ApplicationWindow] Starting parallel project loading')
+
+      // Start both loading operations in parallel
+      const engineLoadPromise = this._projectView!.engine!.loadProject(path)
+      const projectViewLoadPromise = this._projectView!.loadProject(path)
+
+      // Wait for both to complete
+      await Promise.all([engineLoadPromise, projectViewLoadPromise])
+
+      console.log(
+        '[ApplicationWindow] Parallel project loading completed successfully',
+      )
+      this.showToast(_('Project loaded successfully'))
+    } catch (error) {
+      console.error('[ApplicationWindow] Failed to load project:', error)
+      this.showToast(_('Failed to load project'))
+    }
   }
 
   protected showToast(message: string) {
