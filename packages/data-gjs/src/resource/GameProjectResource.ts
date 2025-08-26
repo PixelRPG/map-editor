@@ -1,219 +1,292 @@
-import Gio from '@girs/gio-2.0';
-import GLib from '@girs/glib-2.0';
-import { GameProjectData, MapData, SpriteSetData, Loadable } from '@pixelrpg/data-core';
-import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions';
-import { MapResource } from './MapResource';
-import { SpriteSetResource } from './SpriteSetResource';
-import { loadTextFile } from '../utils';
-import { GameProjectFormat } from '@pixelrpg/data-core';
+import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
+import {
+  GameProjectData,
+  MapData,
+  SpriteSetData,
+  GameProjectFormat,
+  GameProjectResource as BaseGameProjectResource,
+} from '@pixelrpg/data-core'
+import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions'
+import { MapResource } from './MapResource'
+import { SpriteSetResource } from './SpriteSetResource'
+import { loadTextFile } from '../utils'
 
 /**
  * GJS implementation of a game project resource loader
  */
-export class GameProjectResource implements Loadable<GameProjectData> {
-    private _data: GameProjectData | null = null;
-    private _path: string;
-    private _baseDir: Gio.File;
-    private _preloadResources: boolean;
-    private _useGResource: boolean;
-    private _resourcePrefix: string;
+export class GameProjectResource extends BaseGameProjectResource {
+  private _data: GameProjectData | null = null
+  private _path: string
+  private _baseDir: Gio.File
+  private _preloadResources: boolean
+  private _useGResource: boolean
+  private _resourcePrefix: string
 
-    private _maps: Map<string, MapResource> = new Map();
-    private _spriteSets: Map<string, SpriteSetResource> = new Map();
+  private _maps: Map<string, MapResource> = new Map()
+  private _spriteSets: Map<string, SpriteSetResource> = new Map()
 
-    /**
-     * Create a new GameProjectResource
-     * @param options Options for loading the game project
-     */
-    constructor(path: string, options: GameProjectResourceOptions) {
-        this._path = path;
+  /**
+   * Create a new GameProjectResource
+   * @param path Path to the game project file
+   * @param options Options for loading the game project
+   */
+  constructor(path: string, options: GameProjectResourceOptions) {
+    super()
+    this._path = path
 
-        if (options.baseDir) {
-            if (typeof options.baseDir === 'string') {
-                this._baseDir = Gio.File.new_for_path(options.baseDir);
-            } else {
-                this._baseDir = options.baseDir;
-            }
-        } else {
-            // Default to the directory containing the project file
-            const projectFile = Gio.File.new_for_path(this._path);
-            const parent = projectFile.get_parent();
-            this._baseDir = parent || Gio.File.new_for_path(GLib.get_current_dir());
-        }
-
-        this._preloadResources = options.preloadResources || false;
-        this._useGResource = options.useGResource || false;
-        this._resourcePrefix = options.resourcePrefix || '/org/pixelrpg/game';
+    if (options.baseDir) {
+      if (typeof options.baseDir === 'string') {
+        this._baseDir = Gio.File.new_for_path(options.baseDir)
+      } else {
+        this._baseDir = options.baseDir
+      }
+    } else {
+      // Default to the directory containing the project file
+      const projectFile = Gio.File.new_for_path(this._path)
+      const parent = projectFile.get_parent()
+      this._baseDir = parent || Gio.File.new_for_path(GLib.get_current_dir())
     }
 
-    /**
-     * Load the game project data from the file
-     * @returns Promise that resolves when the game project is loaded
-     */
-    async load(): Promise<GameProjectData> {
-        if (this._data) {
-            return this._data;
-        }
+    this._preloadResources = options.preloadResources || false
+    this._useGResource = options.useGResource || false
+    this._resourcePrefix = options.resourcePrefix || '/org/pixelrpg/game'
+  }
 
-        try {
-            const projectText = await loadTextFile(
-                this._path,
-                this._useGResource,
-                this._resourcePrefix
-            );
-            this._data = GameProjectFormat.deserialize(projectText);
+  /**
+   * Get the loaded game project data
+   */
+  get data(): GameProjectData {
+    if (!this._data) {
+      throw new Error('Game project data not loaded')
+    }
+    return this._data
+  }
 
-            // Preload resources if requested
-            if (this._preloadResources) {
-                await this.preloadResources();
-            }
+  /**
+   * Load the raw game project data from file
+   * @param path Path to the game project file
+   * @returns Promise that resolves to the game project data
+   */
+  protected async loadGameProjectData(path: string): Promise<GameProjectData> {
+    try {
+      const projectText = await loadTextFile(
+        path,
+        this._useGResource,
+        this._resourcePrefix,
+      )
+      return GameProjectFormat.deserialize(projectText)
+    } catch (error) {
+      console.error(`Error parsing game project file: ${error}`)
+      throw error
+    }
+  }
 
-            return this._data;
-        } catch (error) {
-            console.error(`Error parsing game project file: ${error}`);
-            throw error;
-        }
+  /**
+   * Load the game project data from the file
+   * @returns Promise that resolves when the game project is loaded
+   */
+  async load(): Promise<GameProjectData> {
+    if (this._data) {
+      return this._data
     }
 
-    /**
-     * Preload all maps and sprite sets referenced in the project
-     */
-    async preloadResources(): Promise<void> {
-        if (!this._data) {
-            throw new Error('Cannot preload resources before loading project data');
-        }
+    try {
+      this._data = await this.loadGameProjectData(this._path)
 
-        const loadPromises: Promise<any>[] = [];
+      // Preload resources if requested
+      if (this._preloadResources) {
+        await this.loadSpriteSets()
+        await this.loadMaps()
+      }
 
-        // Load maps
-        if (this._data.maps) {
-            for (const mapRef of this._data.maps) {
-                const mapPath = this.resolvePath(mapRef.path);
-                const mapResource = new MapResource(mapPath);
-                this._maps.set(mapRef.id, mapResource);
-                loadPromises.push(mapResource.load());
-            }
-        }
+      return this._data
+    } catch (error) {
+      console.error(`Error loading game project: ${error}`)
+      throw error
+    }
+  }
 
-        // Load sprite sets
-        if (this._data.spriteSets) {
-            for (const spriteSetRef of this._data.spriteSets) {
-                const spriteSetPath = this.resolvePath(spriteSetRef.path);
-                const spriteSetResource = new SpriteSetResource(spriteSetPath);
-                this._spriteSets.set(spriteSetRef.id, spriteSetResource);
-                loadPromises.push(spriteSetResource.load());
-            }
-        }
-
-        await Promise.all(loadPromises);
+  /**
+   * Load all sprite sets referenced in the project
+   * @returns Promise that resolves when all sprite sets are loaded
+   */
+  protected async loadSpriteSets(): Promise<void> {
+    if (!this._data) {
+      throw new Error('Cannot load sprite sets before loading project data')
     }
 
-    /**
-     * Resolve a path relative to the base directory
-     * @param path Path to resolve
-     * @returns Absolute path
-     */
-    resolvePath(path: string): string {
-        if (path.startsWith('/')) {
-            return path;
-        }
-
-        if (this._useGResource) {
-            return `${this._resourcePrefix}/${path}`;
-        }
-
-        return this._baseDir.get_child(path).get_path() || path;
+    if (!this._data.spriteSets || this._data.spriteSets.length === 0) {
+      return
     }
 
-    /**
-     * Get a map resource by ID
-     * @param id Map ID
-     * @returns Map resource or null if not found
-     */
-    async getMap(id: string): Promise<MapData | null> {
-        if (!this._data) {
-            await this.load();
-        }
+    const loadPromises: Promise<SpriteSetData>[] = []
 
-        // If already loaded, return it
-        if (this._maps.has(id)) {
-            const resource = this._maps.get(id)!;
-            if (!resource.data) {
-                await resource.load();
-            }
-            return resource.data;
-        }
-
-        // Find the map reference
-        const mapRef = this._data?.maps?.find(m => m.id === id);
-        if (!mapRef) {
-            return null;
-        }
-
-        // Load the map
-        const mapPath = this.resolvePath(mapRef.path);
-        const mapResource = new MapResource(mapPath);
-        this._maps.set(id, mapResource);
-
-        return await mapResource.load();
+    for (const spriteSetRef of this._data.spriteSets) {
+      const spriteSetPath = this.resolvePath(spriteSetRef.path)
+      const spriteSetResource = new SpriteSetResource(spriteSetPath)
+      this._spriteSets.set(spriteSetRef.id, spriteSetResource)
+      loadPromises.push(spriteSetResource.load())
     }
 
-    /**
-     * Get a sprite set resource by ID
-     * @param id Sprite set ID
-     * @returns Sprite set resource or null if not found
-     */
-    async getSpriteSet(id: string): Promise<SpriteSetData | null> {
-        if (!this._data) {
-            await this.load();
-        }
+    await Promise.all(loadPromises)
+  }
 
-        // If already loaded, return it
-        if (this._spriteSets.has(id)) {
-            const resource = this._spriteSets.get(id)!;
-            if (!resource.data) {
-                await resource.load();
-            }
-            return resource.data;
-        }
-
-        // Find the sprite set reference
-        const spriteSetRef = this._data?.spriteSets?.find(s => s.id === id);
-        if (!spriteSetRef) {
-            return null;
-        }
-
-        // Load the sprite set
-        const spriteSetPath = this.resolvePath(spriteSetRef.path);
-        const spriteSetResource = new SpriteSetResource(spriteSetPath);
-        this._spriteSets.set(id, spriteSetResource);
-
-        return await spriteSetResource.load();
+  /**
+   * Load all maps referenced in the project
+   * @returns Promise that resolves when all maps are loaded
+   */
+  protected async loadMaps(): Promise<void> {
+    if (!this._data) {
+      throw new Error('Cannot load maps before loading project data')
     }
 
-    /**
-     * Get the loaded game project data
-     */
-    get data(): GameProjectData {
-        if (!this._data) {
-            throw new Error('Game project data not loaded');
-        }
-
-        return this._data;
+    if (!this._data.maps || this._data.maps.length === 0) {
+      return
     }
 
-    /**
-     * Get the path to the game project file
-     */
-    get path(): string {
-        return this._path;
+    const loadPromises: Promise<MapData>[] = []
+
+    for (const mapRef of this._data.maps) {
+      const mapPath = this.resolvePath(mapRef.path)
+      const mapResource = new MapResource(mapPath)
+      this._maps.set(mapRef.id, mapResource)
+      loadPromises.push(mapResource.load())
     }
 
-    /**
-     * Check if the resource is loaded
-     * @returns True if the resource is loaded
-     */
-    isLoaded(): boolean {
-        return this._data !== null;
+    await Promise.all(loadPromises)
+  }
+
+  /**
+   * Preload all maps and sprite sets referenced in the project
+   * @deprecated Use loadSpriteSets() and loadMaps() instead
+   */
+  async preloadResources(): Promise<void> {
+    await this.loadSpriteSets()
+    await this.loadMaps()
+  }
+
+  /**
+   * Resolve a path relative to the base directory
+   * @param path Path to resolve
+   * @returns Absolute path
+   */
+  resolvePath(path: string): string {
+    if (path.startsWith('/')) {
+      return path
     }
-} 
+
+    if (this._useGResource) {
+      return `${this._resourcePrefix}/${path}`
+    }
+
+    return this._baseDir.get_child(path).get_path() || path
+  }
+
+  /**
+   * Get a map resource by ID
+   * @param id Map ID
+   * @returns Map data or null if not found
+   */
+  async getMap(id: string): Promise<MapData | null> {
+    if (!this._data) {
+      await this.load()
+    }
+
+    // If already loaded, return it
+    if (this._maps.has(id)) {
+      const resource = this._maps.get(id)!
+      if (!resource.data) {
+        await resource.load()
+      }
+      return resource.data
+    }
+
+    // Find the map reference
+    const mapRef = this._data?.maps?.find((m) => m.id === id)
+    if (!mapRef) {
+      return null
+    }
+
+    // Load the map
+    const mapResource = await this.loadMap(id)
+    return mapResource.data
+  }
+
+  /**
+   * Load a specific map by ID
+   * @param mapId Map ID to load
+   * @returns Promise that resolves to the loaded map resource
+   */
+  async loadMap(mapId: string): Promise<MapResource> {
+    if (this._maps.has(mapId)) {
+      return this._maps.get(mapId)!
+    }
+
+    if (!this._data) {
+      await this.load()
+    }
+
+    // Find the map reference
+    const mapRef = this._data?.maps?.find((m) => m.id === mapId)
+    if (!mapRef) {
+      throw new Error(`Map with ID ${mapId} not found in game project`)
+    }
+
+    // Load the map
+    const mapPath = this.resolvePath(mapRef.path)
+    const mapResource = new MapResource(mapPath)
+    this._maps.set(mapId, mapResource)
+    await mapResource.load()
+
+    return mapResource
+  }
+
+  /**
+   * Get a sprite set resource by ID
+   * @param id Sprite set ID
+   * @returns Sprite set data or null if not found
+   */
+  async getSpriteSet(id: string): Promise<SpriteSetData | null> {
+    if (!this._data) {
+      await this.load()
+    }
+
+    // If already loaded, return it
+    if (this._spriteSets.has(id)) {
+      const resource = this._spriteSets.get(id)!
+      if (!resource.data) {
+        await resource.load()
+      }
+      return resource.data
+    }
+
+    // Find the sprite set reference
+    const spriteSetRef = this._data?.spriteSets?.find((s) => s.id === id)
+    if (!spriteSetRef) {
+      return null
+    }
+
+    // Load the sprite set
+    const spriteSetPath = this.resolvePath(spriteSetRef.path)
+    const spriteSetResource = new SpriteSetResource(spriteSetPath)
+    this._spriteSets.set(id, spriteSetResource)
+
+    return await spriteSetResource.load()
+  }
+
+  /**
+   * Get the path to the game project file
+   */
+  get path(): string {
+    return this._path
+  }
+
+  /**
+   * Check if the resource is loaded
+   * @returns True if the resource is loaded
+   */
+  isLoaded(): boolean {
+    return this._data !== null
+  }
+}

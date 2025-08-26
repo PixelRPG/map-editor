@@ -154,7 +154,7 @@ export class Engine implements EngineInterface {
    * Initialize the engine
    */
   async initialize(): Promise<void> {
-    this.setStatus(EngineStatus.INITIALIZING)
+    await this.setStatus(EngineStatus.INITIALIZING)
 
     // Create the Excalibur engine
     this.excalibur = new ExcaliburEngine({
@@ -167,7 +167,7 @@ export class Engine implements EngineInterface {
       enableCanvasContextMenu: true, // Enable the right click context menu for debugging
     })
 
-    this.setStatus(EngineStatus.READY)
+    await this.setStatus(EngineStatus.READY)
   }
 
   /**
@@ -262,9 +262,7 @@ export class Engine implements EngineInterface {
     this.excalibur.add(mapId, mapScene)
     this.excalibur.goToScene(mapId)
 
-    this.logger.info(
-      `Map ${this.gameProjectResource.getMap(mapId)?.mapData.name} added to scene`,
-    )
+    this.logger.info(`Map ${mapResource.mapData.name} added to scene`)
 
     // Create an RPC event for the map loaded event
     const event: EngineEvent = {

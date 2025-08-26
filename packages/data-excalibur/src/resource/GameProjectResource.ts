@@ -1,8 +1,10 @@
-import { Logger, Scene } from 'excalibur'
+import { Logger } from 'excalibur'
 import {
   GameProjectData,
   GameProjectFormat,
-  Loadable,
+  GameProjectResource as BaseGameProjectResource,
+  MapData,
+  SpriteSetData,
   extractDirectoryPath,
   getFilename,
   joinPaths,
@@ -15,7 +17,7 @@ import type { GameProjectResourceOptions } from '../types'
 /**
  * Resource class for loading a complete game project into Excalibur
  */
-export class GameProjectResource implements Loadable<GameProjectData> {
+export class GameProjectResource extends BaseGameProjectResource {
   /**
    * The loaded game project data
    */
@@ -63,20 +65,21 @@ export class GameProjectResource implements Loadable<GameProjectData> {
   }
 
   /**
-   * Get a map by ID
+   * Get a map resource by ID
    */
-  public getMap(id: string): MapResource | undefined {
+  public getMapResource(id: string): MapResource | undefined {
     return this.mapResources.get(id)
   }
 
   /**
-   * Get a sprite set by ID
+   * Get a sprite set resource by ID
    */
-  public getSpriteSet(id: string): SpriteSetResource | undefined {
+  public getSpriteSetResource(id: string): SpriteSetResource | undefined {
     return this.spriteSetResources.get(id)
   }
 
   constructor(path: string, options?: GameProjectResourceOptions) {
+    super()
     this.headless = options?.headless ?? this.headless
     this.baseDir = options?.baseDir ?? extractDirectoryPath(path)
     this.filename = getFilename(path)
@@ -91,7 +94,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
   /**
    * Loads the game project data from JSON
    */
-  private async loadGameProjectData(path: string): Promise<GameProjectData> {
+  protected async loadGameProjectData(path: string): Promise<GameProjectData> {
     try {
       console.log('Loading game project data from:', path)
       const json = await loadTextFile(path)
@@ -108,7 +111,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
   /**
    * Loads all sprite sets in the game project
    */
-  private async loadSpriteSets(): Promise<void> {
+  protected async loadSpriteSets(): Promise<void> {
     if (
       !this.gameProjectData.spriteSets ||
       this.gameProjectData.spriteSets.length === 0
@@ -136,6 +139,29 @@ export class GameProjectResource implements Loadable<GameProjectData> {
     }
 
     this.logger.info(`Loaded ${this.spriteSetResources.size} sprite sets`)
+  }
+
+  /**
+   * Load all maps referenced in the project
+   * @returns Promise that resolves when all maps are loaded
+   */
+  protected async loadMaps(): Promise<void> {
+    if (!this.gameProjectData.maps || this.gameProjectData.maps.length === 0) {
+      this.logger.warn('No maps found in game project')
+      return
+    }
+
+    // Process each map
+    for (const map of this.gameProjectData.maps) {
+      try {
+        await this._loadMap(map.id)
+      } catch (error) {
+        this.logger.error(`Failed to load map ${map.id}: ${error}`)
+        throw error
+      }
+    }
+
+    this.logger.info(`Loaded ${this.mapResources.size} maps`)
   }
 
   /**
@@ -185,11 +211,7 @@ export class GameProjectResource implements Loadable<GameProjectData> {
 
       // Load all maps if configured to preload
       if (this.preloadAllMaps) {
-        for (const map of this.gameProjectData.maps) {
-          if (map.id !== initialMapId) {
-            await this._loadMap(map.id)
-          }
-        }
+        await this.loadMaps()
       }
 
       // Load the initial map
@@ -225,6 +247,53 @@ export class GameProjectResource implements Loadable<GameProjectData> {
 
     // Load the map if it's not already loaded
     return await this._loadMap(mapId)
+  }
+
+  /**
+   * Get a map resource by ID (returns data, not resource)
+   * @param id Map ID
+   * @returns Map data or null if not found
+   */
+  async getMap(id: string): Promise<MapData | null> {
+    try {
+      const mapResource = await this.loadMap(id)
+      return mapResource?.mapData || null
+    } catch (error) {
+      // Map not found or failed to load
+      return null
+    }
+  }
+
+  /**
+   * Get a sprite set resource by ID (returns data, not resource)
+   * @param id Sprite set ID
+   * @returns Sprite set data or null if not found
+   */
+  async getSpriteSet(id: string): Promise<SpriteSetData | null> {
+    const spriteSetResource = this.spriteSetResources.get(id)
+    if (!spriteSetResource) {
+      return null
+    }
+    return spriteSetResource.data || null
+  }
+
+  /**
+   * Resolve a path relative to the base directory
+   * @param path Path to resolve
+   * @returns Resolved absolute path
+   */
+  resolvePath(path: string): string {
+    if (path.startsWith('/')) {
+      return path
+    }
+    return joinPaths(this.baseDir, path)
+  }
+
+  /**
+   * Get the path to the game project file
+   */
+  get path(): string {
+    return joinPaths(this.baseDir, this.filename)
   }
 
   /**

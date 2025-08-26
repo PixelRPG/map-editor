@@ -5,6 +5,7 @@
 export * from "./format/GameProjectFormat";
 export * from "./format/MapFormat";
 export * from "./format/SpriteSetFormat";
+export * from "./resource/GameProjectResource";
 export * from "./types/GameStartupConfig";
 export * from "./types/Loadable";
 export * from "./types/MapCategory";
