@@ -4,7 +4,6 @@ import {
   GameProjectFormat,
   GameProjectResource as BaseGameProjectResource,
   MapData,
-  SpriteSetData,
   extractDirectoryPath,
   getFilename,
   joinPaths,
@@ -69,13 +68,6 @@ export class GameProjectResource extends BaseGameProjectResource {
    */
   public getMapResource(id: string): MapResource | undefined {
     return this.mapResources.get(id)
-  }
-
-  /**
-   * Get a sprite set resource by ID
-   */
-  public getSpriteSetResource(id: string): SpriteSetResource | undefined {
-    return this.spriteSetResources.get(id)
   }
 
   constructor(path: string, options?: GameProjectResourceOptions) {
@@ -265,16 +257,12 @@ export class GameProjectResource extends BaseGameProjectResource {
   }
 
   /**
-   * Get a sprite set resource by ID (returns data, not resource)
+   * Get a sprite set resource instance by ID
    * @param id Sprite set ID
-   * @returns Sprite set data or null if not found
+   * @returns Sprite set resource or null if not found
    */
-  async getSpriteSet(id: string): Promise<SpriteSetData | null> {
-    const spriteSetResource = this.spriteSetResources.get(id)
-    if (!spriteSetResource) {
-      return null
-    }
-    return spriteSetResource.data || null
+  async getSpriteSet(id: string): Promise<SpriteSetResource | null> {
+    return this.spriteSetResources.get(id) || null
   }
 
   /**
