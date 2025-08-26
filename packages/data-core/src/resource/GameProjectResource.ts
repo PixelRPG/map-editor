@@ -1,5 +1,5 @@
-import { GameProjectData, MapData, SpriteSetData } from '../types'
-import { Loadable } from '../types'
+import type { GameProjectData, MapData, Loadable } from '../types'
+import type { SpriteSetResource } from './SpriteSetResource'
 
 /**
  * Abstract base class for game project resource loaders
@@ -50,11 +50,11 @@ export abstract class GameProjectResource implements Loadable<GameProjectData> {
   abstract getMap(id: string): Promise<MapData | null>
 
   /**
-   * Get a sprite set resource by ID
+   * Get a sprite set resource instance by ID
    * @param id Sprite set ID
-   * @returns Promise that resolves to sprite set data or null if not found
+   * @returns Promise that resolves to sprite set resource or null if not found
    */
-  abstract getSpriteSet(id: string): Promise<SpriteSetData | null>
+  abstract getSpriteSet(id: string): Promise<SpriteSetResource | null>
 
   /**
    * Load a specific map by ID

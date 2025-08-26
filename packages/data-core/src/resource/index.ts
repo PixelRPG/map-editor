@@ -3,3 +3,4 @@
  */
 
 export * from "./GameProjectResource";
+export * from "./SpriteSetResource";
