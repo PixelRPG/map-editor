@@ -5,6 +5,7 @@ import Adw from '@girs/adw-1'
 import { TilesetSelector } from './tileset-selector'
 import { LayerSelector, LayersWidget } from './layer-selector'
 import { SpriteSheet } from '@pixelrpg/data-gjs'
+import { MapData } from '@pixelrpg/data-core'
 
 import Template from './map-editor-panel.blp'
 
@@ -36,6 +37,55 @@ export class MapEditorPanel extends Adw.Bin {
   }
 
   /**
+   * Initialize the map editor panel with map data including tilesets and layers
+   * @param mapData The map data containing layers and sprite set references
+   * @param spriteSheets Array of loaded sprite sheets
+   */
+  initializeMapData(mapData: MapData, spriteSheets: SpriteSheet[]): void {
+    console.log(
+      '[MapEditorPanel] Initializing with map:',
+      mapData.name || mapData.id,
+    )
+    console.log(
+      '[MapEditorPanel] Available sprite sheets:',
+      spriteSheets.length,
+    )
+    console.log('[MapEditorPanel] Map layers:', mapData.layers.length)
+
+    // Set the tilesets (sprite sheets)
+    this.setTilesets(spriteSheets)
+
+    // Create a simple layers widget from the map data
+    const layersWidget = this._createLayersWidget(mapData)
+    this.setLayers(layersWidget)
+  }
+
+  /**
+   * Create a simple layers widget from map data
+   * This is a temporary implementation until we have proper layer widgets
+   * @param mapData The map data
+   * @returns A simple widget representing the layers
+   */
+  private _createLayersWidget(mapData: MapData): LayersWidget {
+    const box = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      spacing: 6,
+    })
+
+    // Add a label for each layer
+    for (const layer of mapData.layers) {
+      const label = new Gtk.Label({
+        label: `${layer.name} (${layer.type})`,
+        xalign: 0,
+      })
+      box.append(label)
+    }
+
+    return box
+  }
+
+  /**
+   * @deprecated Use initializeMapData instead
    * Add a single tileset to the selector
    * @param spriteSheet The sprite sheet to add as a tileset
    * @param name Optional name for the tileset section
@@ -50,13 +100,6 @@ export class MapEditorPanel extends Adw.Bin {
    */
   setTilesets(tilesets: SpriteSheet[]): void {
     this._tilesetSelector.tilesets = tilesets
-  }
-
-  /**
-   * Clear all tilesets
-   */
-  clearTilesets(): void {
-    this._tilesetSelector.clearTilesets()
   }
 
   /**

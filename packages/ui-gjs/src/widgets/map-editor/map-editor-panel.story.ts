@@ -3,7 +3,12 @@ import Gtk from '@girs/gtk-4.0'
 
 import { StoryWidget, StoryMeta, StoryModule } from '@pixelrpg/story-gjs'
 import { MapEditorPanel } from './map-editor-panel'
-import { SpriteSetResource, SpriteSheet } from '@pixelrpg/data-gjs'
+import {
+  SpriteSetResource,
+  SpriteSheet,
+  GameProjectResource,
+} from '@pixelrpg/data-gjs'
+import { MapData } from '@pixelrpg/data-core'
 
 // Import story template
 import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
@@ -13,8 +18,9 @@ import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
  * Showcases the MapEditorPanel component with tileset and layer selection
  */
 export class MapEditorPanelStory extends StoryWidget {
-  private spriteSetResources: SpriteSetResource[] = []
-  private loadedTilesets: { spriteSheet: SpriteSheet; name: string }[] = []
+  private gameProjectResource: GameProjectResource | null = null
+  private currentMapData: MapData | null = null
+  private loadedSpriteSheets: SpriteSheet[] = []
 
   // UI elements from template
   declare _info_label: Gtk.Label
@@ -55,10 +61,10 @@ export class MapEditorPanelStory extends StoryWidget {
 
   /**
    * Initialize the story
-   * Loads multiple sample tilesets and creates the panel
+   * Loads the sample project and map data
    */
   initialize(): void {
-    this._loadTilesets()
+    this._loadProjectAndMap()
   }
 
   /**
@@ -70,50 +76,53 @@ export class MapEditorPanelStory extends StoryWidget {
   }
 
   /**
-   * Load sample tilesets for the map editor panel
+   * Load sample project and map data for the map editor panel
    */
-  private async _loadTilesets(): Promise<void> {
+  private async _loadProjectAndMap(): Promise<void> {
     try {
-      this._info_label.set_label('Loading sample tilesets for map editor...')
+      this._info_label.set_label('Loading sample project and map data...')
 
-      // Load the main Lokiri Forest sprite set
-      const lokiriResource = new SpriteSetResource(
-        '../../games/zelda-like/spritesets/lokiri-forest.json',
+      // Load the game project
+      this.gameProjectResource = new GameProjectResource(
+        '../../games/zelda-like/game-project.json',
+        {
+          preloadResources: true,
+          useGResource: false,
+        },
       )
-      await lokiriResource.load()
 
-      if (lokiriResource.spriteSheet) {
-        this.spriteSetResources.push(lokiriResource)
-        this.loadedTilesets.push({
-          spriteSheet: lokiriResource.spriteSheet,
-          name: lokiriResource.data.name,
-        })
+      await this.gameProjectResource.load()
+
+      // Load the sample map (kokiri-forest)
+      const mapId = 'kokiri-forest'
+      this.currentMapData = await this.gameProjectResource.getMap(mapId)
+
+      if (!this.currentMapData) {
+        throw new Error(`Map '${mapId}' not found in project`)
       }
 
-      // Try to load water tileset if available
-      try {
-        const waterResource = new SpriteSetResource(
-          '../../games/zelda-like/spritesets/water.json',
-        )
-        await waterResource.load()
-
-        if (waterResource.spriteSheet) {
-          this.spriteSetResources.push(waterResource)
-          this.loadedTilesets.push({
-            spriteSheet: waterResource.spriteSheet,
-            name: waterResource.data.name,
-          })
+      // Load sprite sheets for the map
+      if (this.currentMapData.spriteSets) {
+        for (const spriteSetRef of this.currentMapData.spriteSets) {
+          const spriteSetResource = await this.gameProjectResource.getSpriteSet(
+            spriteSetRef.id,
+          )
+          if (spriteSetResource && spriteSetResource.spriteSheet) {
+            this.loadedSpriteSheets.push(spriteSetResource.spriteSheet)
+          } else {
+            console.warn('SpriteSet or SpriteSheet not found:', spriteSetRef.id)
+          }
         }
-      } catch (error) {
-        console.warn('Water tileset not available:', error)
       }
 
-      // Initialize the panel with loaded tilesets
+      // Initialize the panel with loaded data
       this._initializePanel()
       this._updateInfoLabel()
     } catch (error) {
-      console.error('Failed to load tilesets:', error)
-      this._info_label.set_label(`Error: Failed to load tilesets - ${error}`)
+      console.error('Failed to load project and map:', error)
+      this._info_label.set_label(
+        `Error: Failed to load project and map - ${error}`,
+      )
 
       // Show error in panel
       this._createErrorPlaceholder()
@@ -121,17 +130,19 @@ export class MapEditorPanelStory extends StoryWidget {
   }
 
   /**
-   * Initialize the panel with loaded tilesets
+   * Initialize the panel with loaded map data and sprite sheets
    */
   private _initializePanel(): void {
     try {
-      // Set all loaded tilesets
-      for (const tileset of this.loadedTilesets) {
-        this._mapEditorPanel.addTileset(tileset.spriteSheet, tileset.name)
+      if (!this.currentMapData) {
+        throw new Error('No map data available')
       }
 
-      // Create a placeholder layers widget
-      this._createLayerSelector()
+      // Use the new initializeMapData method
+      this._mapEditorPanel.initializeMapData(
+        this.currentMapData,
+        this.loadedSpriteSheets,
+      )
     } catch (error) {
       console.error('Failed to initialize MapEditorPanel:', error)
       this._info_label.set_label(
@@ -141,40 +152,35 @@ export class MapEditorPanelStory extends StoryWidget {
   }
 
   /**
-   * Create a placeholder layers widget
-   */
-  private _createLayerSelector(): void {
-    // TODO: Implement layer selector
-    // this._mapEditorPanel?.setLayers()
-  }
-
-  /**
    * Create error placeholder when assets can't be loaded
    */
   private _createErrorPlaceholder(): void {
-    // Clear any existing tilesets
-    this._mapEditorPanel.clearTilesets()
+    // Reset the panel state - no specific clear method needed since
+    // initializeMapData will handle the complete state
+    console.warn('MapEditorPanel in error state')
   }
 
   /**
    * Update the info label with current panel information
    */
   private _updateInfoLabel(): void {
-    if (this.loadedTilesets.length === 0) {
-      this._info_label.set_label('No tilesets loaded')
+    if (!this.currentMapData || this.loadedSpriteSheets.length === 0) {
+      this._info_label.set_label('No map data or sprite sheets loaded')
       return
     }
 
-    const displayedCount = this.loadedTilesets.length
-    const totalSprites = this.loadedTilesets.reduce(
-      (sum, tileset) => sum + tileset.spriteSheet.sprites.length,
+    const spriteSheetCount = this.loadedSpriteSheets.length
+    const totalSprites = this.loadedSpriteSheets.reduce(
+      (sum, spriteSheet) => sum + spriteSheet.sprites.length,
       0,
     )
+    const layerCount = this.currentMapData.layers.length
 
     const info = [
-      `Map Editor Panel`,
-      `${displayedCount} tileset${displayedCount !== 1 ? 's' : ''} loaded`,
-      `${totalSprites} total sprites available`,
+      `Map: ${this.currentMapData.name || this.currentMapData.id}`,
+      `${spriteSheetCount} sprite sheet${spriteSheetCount !== 1 ? 's' : ''}`,
+      `${totalSprites} sprites`,
+      `${layerCount} layer${layerCount !== 1 ? 's' : ''}`,
     ].join(' • ')
 
     this._info_label.set_label(info)
