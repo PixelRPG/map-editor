@@ -1,40 +1,43 @@
-/* Individual Sprite Cells - FlowBoxChild containers */
-#sprite-sheet-widget flowbox flowboxchild {
-    /* Reset all spacing for tight packing */
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    min-width: 0;
-    min-height: 0;
-}
+#sprite-sheet-widget {
+    flowbox {
+        flowboxchild {
+            /* Reset all spacing for tight packing */
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            min-width: 0;
+            min-height: 0;
 
-/* SpriteWidget (Adw.Bin) inside FlowBoxChild */
-#sprite-sheet-widget flowbox flowboxchild > bin {
-    /* Reset all spacing and borders for tight packing */
-    padding: 0;
-    margin: 0;
-    border: 1px solid black;
-    border-radius: 0;
-    min-width: 0;
-    min-height: 0;
+            /* SpriteWidget (Adw.Bin) inside FlowBoxChild */
+            > bin {
+                /* Reset all spacing and borders for tight packing */
+                padding: 0;
+                margin: 0;
+                border: 1px solid black;
+                border-radius: 0;
+                min-width: 0;
+                min-height: 0;
 
-    /* Smooth selection transitions */
-    transition: outline var(--sprite-transition-duration) ease-in-out;
-}
+                /* Smooth selection transitions */
+                transition: outline var(--sprite-transition-duration) ease-in-out;
+            }
 
-/* Selection State - bright highlight without affecting layout */
-#sprite-sheet-widget flowbox flowboxchild:selected  {
-    outline: var(--sprite-selection-width) solid var(--sprite-selection-color);
-    outline-offset: calc(-1 * var(--sprite-selection-width));
-    /* Note: position and z-index are not supported in GTK CSS */
-}
+            /* Selection State - bright highlight without affecting layout */
+            &:selected {
+                outline: var(--sprite-selection-width) solid var(--sprite-selection-color);
+                outline-offset: calc(-1 * var(--sprite-selection-width));
+                /* Note: position and z-index are not supported in GTK CSS */
+            }
 
-/* Hover State - subtle preview of selection */
-#sprite-sheet-widget flowbox flowboxchild:hover:not(:selected) {
-    /* Use rgba() instead of color-mix() for better GTK compatibility */
-    outline: 1px solid rgba(53, 132, 228, var(--sprite-hover-opacity));
-    outline-offset: -1px;
+            /* Hover State - subtle preview of selection */
+            &:hover:not(:selected) {
+                /* Use rgba() instead of color-mix() for better GTK compatibility */
+                outline: 1px solid rgba(53, 132, 228, var(--sprite-hover-opacity));
+                outline-offset: -1px;
+            }
+        }
+    }
 } 
 
 
