@@ -1,0 +1,7 @@
+/* CSS Variables for testing */
+:root {
+    --sprite-selection-color: #3584e4;
+    --sprite-selection-width: 2px;
+    --sprite-hover-opacity: 0.5;
+    --sprite-transition-duration: 0.15s;
+  }
