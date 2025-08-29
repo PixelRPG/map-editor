@@ -16,6 +16,8 @@ import {
   EngineStatus,
   ProjectLoadOptions,
   EngineCommandType,
+  EngineEventDataMap,
+  EngineCommandEventDataMap,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -70,82 +72,88 @@ export class Engine implements EngineInterface {
 
     // Register loadProject handler
     // TODO: Make this type safe
-    this.rpc.registerHandler('loadProject', async (params) => {
-      this.logger.info('RPC call: loadProject', params)
-      try {
-        // Type guard for project load parameters
-        if (!params || typeof params !== 'object') {
-          throw new Error('Invalid parameters')
-        }
+    this.rpc.registerHandler(
+      'loadProject',
+      async (params: EngineEventDataMap[EngineEventType.PROJECT_LOADED]) => {
+        this.logger.info('RPC call: loadProject', params)
+        try {
+          // Type guard for project load parameters
+          if (!params || typeof params !== 'object') {
+            throw new Error('Invalid parameters')
+          }
 
-        const typedParams = params as { projectPath: string; options?: unknown }
-        if (!typedParams.projectPath) {
-          throw new Error('Project path is required')
-        }
+          if (!params.projectPath) {
+            throw new Error('Project path is required')
+          }
 
-        await this.loadProject(typedParams.projectPath, typedParams.options)
-        return { success: true }
-      } catch (error) {
-        this.logger.error('Error loading project:', error)
-        throw error
-      }
-    })
+          await this.loadProject(params.projectPath, params.options)
+          return { success: true }
+        } catch (error) {
+          this.logger.error('Error loading project:', error)
+          throw error
+        }
+      },
+    )
 
     // Register loadMap handler
     // TODO: Make this type safe
-    this.rpc.registerHandler('loadMap', async (params) => {
-      this.logger.info('RPC call: loadMap', params)
-      try {
-        // Type guard for map load parameters
-        if (!params || typeof params !== 'object') {
-          throw new Error('Invalid parameters')
-        }
+    this.rpc.registerHandler(
+      'loadMap',
+      async (params: EngineEventDataMap[EngineEventType.MAP_LOADED]) => {
+        this.logger.info('RPC call: loadMap', params)
+        try {
+          // Type guard for map load parameters
+          if (!params || typeof params !== 'object') {
+            throw new Error('Invalid parameters')
+          }
 
-        const typedParams = params as { mapId: string }
-        if (!typedParams.mapId) {
-          throw new Error('Map ID is required')
-        }
+          if (!params.mapId) {
+            throw new Error('Map ID is required')
+          }
 
-        await this.loadMap(typedParams.mapId)
-        return { success: true }
-      } catch (error) {
-        this.logger.error('Error loading map:', error)
-        throw error
-      }
-    })
+          await this.loadMap(params.mapId)
+          return { success: true }
+        } catch (error) {
+          this.logger.error('Error loading map:', error)
+          throw error
+        }
+      },
+    )
 
     // Register engineCommand handler
-    // TODO: Make this type safe
-    this.rpc.registerHandler('engineCommand', async (params) => {
-      this.logger.info('RPC call: engineCommand', params)
-      try {
-        // Type guard for command parameters
-        if (!params || typeof params !== 'object') {
-          throw new Error('Invalid parameters')
-        }
+    this.rpc.registerHandler(
+      'engineCommand',
+      async (params: EngineCommandEventDataMap[EngineCommandType]) => {
+        this.logger.info('RPC call: engineCommand', params)
+        try {
+          // Type guard for command parameters
+          if (!params || typeof params !== 'object') {
+            throw new Error('Invalid parameters')
+          }
 
-        const typedParams = params as { command: EngineCommandType }
-        if (!typedParams.command) {
-          throw new Error('Command is required')
-        }
+          const typedParams = params as { command: EngineCommandType }
+          if (!typedParams.command) {
+            throw new Error('Command is required')
+          }
 
-        switch (typedParams.command) {
-          case EngineCommandType.START:
-            await this.start()
-            break
-          case EngineCommandType.STOP:
-            await this.stop()
-            break
-          default:
-            throw new Error(`Unknown command: ${typedParams.command}`)
-        }
+          switch (typedParams.command) {
+            case EngineCommandType.START:
+              await this.start()
+              break
+            case EngineCommandType.STOP:
+              await this.stop()
+              break
+            default:
+              throw new Error(`Unknown command: ${typedParams.command}`)
+          }
 
-        return { success: true }
-      } catch (error) {
-        this.logger.error('Error executing command:', error)
-        throw error
-      }
-    })
+          return { success: true }
+        } catch (error) {
+          this.logger.error('Error executing command:', error)
+          throw error
+        }
+      },
+    )
 
     this.logger.info('RPC handlers registered')
   }
@@ -220,9 +228,9 @@ export class Engine implements EngineInterface {
       // Debug the game project
       this.gameProjectResource?.debugInfo()
 
-      const event: EngineEvent = {
+      const event: EngineEvent<EngineEventType.PROJECT_LOADED> = {
         type: EngineEventType.PROJECT_LOADED,
-        data: { projectId: this.gameProjectResource.data.id || 'unknown' },
+        data: { projectPath, options },
       }
 
       // Send the event to GJS using RPC
