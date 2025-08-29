@@ -11,13 +11,13 @@ import { EventDispatcher } from '@pixelrpg/message-channel-core'
 import { rpcEndpointFactory } from './utils/rpc.ts'
 import {
   EngineInterface,
-  EngineEvent,
-  EngineEventType,
+  EngineMessage,
+  EngineMessageType,
   EngineStatus,
   ProjectLoadOptions,
-  EngineCommandType,
-  EngineEventDataMap,
-  EngineCommandEventDataMap,
+  EngineMessageDataMap,
+  // Legacy aliases for backward compatibility
+  EngineEvent,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -71,10 +71,9 @@ export class Engine implements EngineInterface {
     this.logger.info('Registering RPC handlers')
 
     // Register loadProject handler
-    // TODO: Make this type safe
     this.rpc.registerHandler(
-      'loadProject',
-      async (params: EngineEventDataMap[EngineEventType.PROJECT_LOADED]) => {
+      'load-project',
+      async (params: EngineMessageDataMap[EngineMessageType.LOAD_PROJECT]) => {
         this.logger.info('RPC call: loadProject', params)
         try {
           // Type guard for project load parameters
@@ -96,10 +95,9 @@ export class Engine implements EngineInterface {
     )
 
     // Register loadMap handler
-    // TODO: Make this type safe
     this.rpc.registerHandler(
-      'loadMap',
-      async (params: EngineEventDataMap[EngineEventType.MAP_LOADED]) => {
+      'load-map',
+      async (params: EngineMessageDataMap[EngineMessageType.LOAD_MAP]) => {
         this.logger.info('RPC call: loadMap', params)
         try {
           // Type guard for map load parameters
@@ -120,36 +118,31 @@ export class Engine implements EngineInterface {
       },
     )
 
-    // Register engineCommand handler
+    // Register start handler
     this.rpc.registerHandler(
-      'engineCommand',
-      async (params: EngineCommandEventDataMap[EngineCommandType]) => {
-        this.logger.info('RPC call: engineCommand', params)
+      'start',
+      async (params: EngineMessageDataMap[EngineMessageType.START]) => {
+        this.logger.info('RPC call: start', params)
         try {
-          // Type guard for command parameters
-          if (!params || typeof params !== 'object') {
-            throw new Error('Invalid parameters')
-          }
-
-          const typedParams = params as { command: EngineCommandType }
-          if (!typedParams.command) {
-            throw new Error('Command is required')
-          }
-
-          switch (typedParams.command) {
-            case EngineCommandType.START:
-              await this.start()
-              break
-            case EngineCommandType.STOP:
-              await this.stop()
-              break
-            default:
-              throw new Error(`Unknown command: ${typedParams.command}`)
-          }
-
+          await this.start()
           return { success: true }
         } catch (error) {
-          this.logger.error('Error executing command:', error)
+          this.logger.error('Error starting engine:', error)
+          throw error
+        }
+      },
+    )
+
+    // Register stop handler
+    this.rpc.registerHandler(
+      'stop',
+      async (params: EngineMessageDataMap[EngineMessageType.STOP]) => {
+        this.logger.info('RPC call: stop', params)
+        try {
+          await this.stop()
+          return { success: true }
+        } catch (error) {
+          this.logger.error('Error stopping engine:', error)
           throw error
         }
       },
@@ -228,8 +221,8 @@ export class Engine implements EngineInterface {
       // Debug the game project
       this.gameProjectResource?.debugInfo()
 
-      const event: EngineEvent<EngineEventType.PROJECT_LOADED> = {
-        type: EngineEventType.PROJECT_LOADED,
+      const event: EngineMessage<EngineMessageType.PROJECT_LOADED> = {
+        type: EngineMessageType.PROJECT_LOADED,
         data: { projectPath, options },
       }
 
@@ -273,8 +266,8 @@ export class Engine implements EngineInterface {
     this.logger.info(`Map ${mapResource.mapData.name} added to scene`)
 
     // Create an RPC event for the map loaded event
-    const event: EngineEvent = {
-      type: EngineEventType.MAP_LOADED,
+    const event: EngineMessage = {
+      type: EngineMessageType.MAP_LOADED,
       data: { mapId: mapId },
     }
 
@@ -322,8 +315,8 @@ export class Engine implements EngineInterface {
     this.status = status
 
     // Create an event
-    const event: EngineEvent = {
-      type: EngineEventType.STATUS_CHANGED,
+    const event: EngineMessage = {
+      type: EngineMessageType.STATUS_CHANGED,
       data: status,
     }
 

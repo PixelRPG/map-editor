@@ -25,7 +25,7 @@ For detailed examples and advanced usage, see the [Getting Started Guide](docs/g
 
 ```typescript
 import { Engine } from '@pixelrpg/engine-gjs';
-import { EngineEventType } from '@pixelrpg/engine-core';
+import { EngineMessageType } from '@pixelrpg/engine-core';
 
 // Create a new engine instance
 const engine = new Engine();
@@ -49,19 +49,19 @@ await engine.loadMap('map1');
 await engine.start();
 
 // Handle engine events using enum values
-engine.connect(EngineEventType.STATUS_CHANGED, (_source, status) => {
+engine.connect(EngineMessageType.STATUS_CHANGED, (_source, status) => {
   console.log('Engine status changed:', status);
 });
 
-engine.connect(EngineEventType.PROJECT_LOADED, (_source, projectId) => {
+engine.connect(EngineMessageType.PROJECT_LOADED, (_source, projectId) => {
   console.log('Project loaded:', projectId);
 });
 
-engine.connect(EngineEventType.MAP_LOADED, (_source, mapId) => {
+engine.connect(EngineMessageType.MAP_LOADED, (_source, mapId) => {
   console.log('Map loaded:', mapId);
 });
 
-engine.connect(EngineEventType.ERROR, (_source, message, error) => {
+engine.connect(EngineMessageType.ERROR, (_source, message, error) => {
   console.error('Engine error:', message, error);
 });
 

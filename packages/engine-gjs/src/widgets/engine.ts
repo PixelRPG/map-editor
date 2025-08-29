@@ -4,17 +4,19 @@ import Gio from '@girs/gio-2.0'
 import { EventDispatcher } from '@pixelrpg/message-channel-core'
 import {
   EngineInterface,
-  EngineEvent,
-  EngineEventType,
+  EngineMessage,
+  EngineMessageType,
   EngineStatus,
   ProjectLoadOptions,
-  EngineCommandType,
-  EngineEventHandler,
+  EngineMessageHandler,
   createInitializationError,
   createRuntimeError,
   createValidationError,
   createResourceError,
   formatError,
+  // Legacy aliases for backward compatibility
+  EngineEvent,
+  EngineEventHandler,
 } from '@pixelrpg/engine-core'
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
@@ -28,10 +30,10 @@ export namespace Engine {
 
   export interface SignalProps {
     ready: []
-    [EngineEventType.STATUS_CHANGED]: [EngineStatus]
-    [EngineEventType.PROJECT_LOADED]: [string] // projectId
-    [EngineEventType.MAP_LOADED]: [string] // mapId
-    [EngineEventType.ERROR]: [string, Error | null] // message, error
+    [EngineMessageType.STATUS_CHANGED]: [EngineStatus]
+    [EngineMessageType.PROJECT_LOADED]: [string] // projectId
+    [EngineMessageType.MAP_LOADED]: [string] // mapId
+    [EngineMessageType.ERROR]: [string, Error | null] // message, error
   }
 }
 
@@ -51,14 +53,14 @@ export class Engine extends Adw.Bin implements EngineInterface {
         Template,
         Signals: {
           ready: {},
-          [EngineEventType.STATUS_CHANGED]: {
+          [EngineMessageType.STATUS_CHANGED]: {
             param_types: [GObject.TYPE_STRING],
           },
-          [EngineEventType.PROJECT_LOADED]: {
+          [EngineMessageType.PROJECT_LOADED]: {
             param_types: [GObject.TYPE_STRING],
           },
-          [EngineEventType.MAP_LOADED]: { param_types: [GObject.TYPE_STRING] },
-          [EngineEventType.ERROR]: {
+          [EngineMessageType.MAP_LOADED]: { param_types: [GObject.TYPE_STRING] },
+          [EngineMessageType.ERROR]: {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_OBJECT],
           },
         },
@@ -142,7 +144,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the project
-      const response = await this._webView.rpc.sendRequest('loadProject', {
+      const response = await this._webView.rpc.sendRequest('load-project', {
         projectPath,
         options,
       })
@@ -175,7 +177,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the map
-      await this._webView?.rpc?.sendRequest('loadMap', {
+      await this._webView?.rpc?.sendRequest('load-map', {
         mapId,
       })
 
@@ -199,9 +201,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to start the engine
-      await this._webView?.rpc?.sendRequest('engineCommand', {
-        command: EngineCommandType.START,
-      })
+      await this._webView?.rpc?.sendRequest('start', {})
 
       console.log('[GJS Engine] Start command sent')
       this.status = EngineStatus.RUNNING
@@ -224,9 +224,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to stop the engine
-      await this._webView?.rpc?.sendRequest('engineCommand', {
-        command: EngineCommandType.STOP,
-      })
+      await this._webView?.rpc?.sendRequest('stop', {})
 
       console.log('[GJS Engine] Stop command sent')
     } catch (error) {
@@ -255,9 +253,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
         event &&
         typeof event === 'object' &&
         'type' in event &&
-        Object.values(EngineEventType).includes(event.type as EngineEventType)
+        Object.values(EngineMessageType).includes(event.type as EngineMessageType)
       ) {
-        this.onEngineEvent(event as EngineEvent)
+        this.onEngineEvent(event as EngineMessage)
         return { success: true }
       }
       return { success: false, error: 'Invalid engine event format' }
@@ -270,30 +268,30 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * Handler for engine events from the WebView
    * @param event The engine event
    */
-  private onEngineEvent(event: EngineEvent): void {
+  private onEngineEvent(event: EngineMessage): void {
     if (typeof event === 'object' && 'type' in event) {
       const engineEventType = event.type
 
       console.info('[GJS Engine] Engine event received:', event)
 
       switch (engineEventType) {
-        case EngineEventType.STATUS_CHANGED:
+        case EngineMessageType.STATUS_CHANGED:
           this.onEngineEventStatusChanged(
-            event as EngineEvent<EngineEventType.STATUS_CHANGED>,
+            event as EngineMessage<EngineMessageType.STATUS_CHANGED>,
           )
           break
-        case EngineEventType.MAP_LOADED:
+        case EngineMessageType.MAP_LOADED:
           this.onEngineEventMapLoaded(
-            event as EngineEvent<EngineEventType.MAP_LOADED>,
+            event as EngineMessage<EngineMessageType.MAP_LOADED>,
           )
           break
-        case EngineEventType.PROJECT_LOADED:
+        case EngineMessageType.PROJECT_LOADED:
           this.onEngineEventProjectLoaded(
-            event as EngineEvent<EngineEventType.PROJECT_LOADED>,
+            event as EngineMessage<EngineMessageType.PROJECT_LOADED>,
           )
           break
-        case EngineEventType.ERROR:
-          this.onEngineEventError(event as EngineEvent<EngineEventType.ERROR>)
+        case EngineMessageType.ERROR:
+          this.onEngineEventError(event as EngineMessage<EngineMessageType.ERROR>)
           break
         default:
           console.warn('[GJS Engine] Unknown engine event:', event)
@@ -307,11 +305,11 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * @param event The engine event
    */
   private onEngineEventStatusChanged(
-    event: EngineEvent<EngineEventType.STATUS_CHANGED>,
+    event: EngineMessage<EngineMessageType.STATUS_CHANGED>,
   ): void {
     this.status = event.data
     console.info('[GJS Engine] Engine status changed to:', this.status)
-    this.emit(EngineEventType.STATUS_CHANGED, this.status)
+    this.emit(EngineMessageType.STATUS_CHANGED, this.status)
   }
 
   /**
@@ -319,10 +317,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * @param event The engine event
    */
   private onEngineEventMapLoaded(
-    event: EngineEvent<EngineEventType.MAP_LOADED>,
+    event: EngineMessage<EngineMessageType.MAP_LOADED>,
   ): void {
     console.info('[GJS Engine] Map loaded:', event.data.mapId)
-    this.emit(EngineEventType.MAP_LOADED, event.data.mapId)
+    this.emit(EngineMessageType.MAP_LOADED, event.data.mapId)
   }
 
   /**
@@ -330,20 +328,20 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * @param event The engine event
    */
   private onEngineEventProjectLoaded(
-    event: EngineEvent<EngineEventType.PROJECT_LOADED>,
+    event: EngineMessage<EngineMessageType.PROJECT_LOADED>,
   ): void {
-    console.info('[GJS Engine] Project loaded:', event.data.projectId)
-    this.emit(EngineEventType.PROJECT_LOADED, event.data.projectId)
+    console.info('[GJS Engine] Project loaded:', event.data.projectPath)
+    this.emit(EngineMessageType.PROJECT_LOADED, event.data.projectPath)
   }
 
   /**
    * Handler for engine error event from the WebView
    * @param event The engine event
    */
-  private onEngineEventError(event: EngineEvent<EngineEventType.ERROR>): void {
+  private onEngineEventError(event: EngineMessage<EngineMessageType.ERROR>): void {
     console.error('[GJS Engine] Engine error:', event.data)
     this.emit(
-      EngineEventType.ERROR,
+      EngineMessageType.ERROR,
       event.data.message,
       event.data.error || null,
     )

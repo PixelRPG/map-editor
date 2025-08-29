@@ -1,5 +1,6 @@
 /**
  * Engine event types
+ * @deprecated Use EngineMessageType instead
  */
 export enum EngineEventType {
     STATUS_CHANGED = 'status-changed',

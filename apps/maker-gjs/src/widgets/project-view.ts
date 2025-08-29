@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
 import { Engine } from '@pixelrpg/engine-gjs'
-import { EngineStatus, EngineEventType } from '@pixelrpg/engine-core'
+import { EngineStatus, EngineMessageType } from '@pixelrpg/engine-core'
 import { GameProjectResource, SpriteSheet } from '@pixelrpg/data-gjs'
 import { MapData, SpriteSetData } from '@pixelrpg/data-core'
 import { Sidebar } from './sidebar.ts'
@@ -45,14 +45,14 @@ export class ProjectView extends Adw.Bin {
 
     // Connect to engine event signals
     this._engine?.connect(
-      EngineEventType.STATUS_CHANGED,
+      EngineMessageType.STATUS_CHANGED,
       (_source: Engine, status: EngineStatus) => {
         console.log('[ProjectView] Engine status changed:', status)
       },
     )
 
     this._engine?.connect(
-      EngineEventType.PROJECT_LOADED,
+      EngineMessageType.PROJECT_LOADED,
       async (_source: Engine, projectId: string) => {
         console.log('[ProjectView] Project loaded:', projectId)
         await this._onProjectLoaded(projectId)
@@ -60,7 +60,7 @@ export class ProjectView extends Adw.Bin {
     )
 
     this._engine?.connect(
-      EngineEventType.MAP_LOADED,
+      EngineMessageType.MAP_LOADED,
       async (_source: Engine, mapId: string) => {
         console.log('[ProjectView] Map loaded:', mapId)
         await this._onMapLoaded(mapId)
@@ -68,7 +68,7 @@ export class ProjectView extends Adw.Bin {
     )
 
     this._engine?.connect(
-      EngineEventType.ERROR,
+      EngineMessageType.ERROR,
       (_source: Engine, message: string, error: Error | null) => {
         console.error('[ProjectView] Engine error:', message, error)
       },

@@ -2,6 +2,7 @@ import { EngineCommandType } from './engine-command-type'
 
 /**
  * Type mapping for command data based on command type
+ * @deprecated Use EngineMessageDataMap instead
  */
 export interface EngineCommandEventDataMap {
   [EngineCommandType.START]: { command: EngineCommandType.START }
@@ -10,18 +11,26 @@ export interface EngineCommandEventDataMap {
 
 /**
  * Base type for all engine command data
+ * @deprecated Use EngineMessageData instead
  */
-export type EngineCommandEventData = EngineCommandEventDataMap[EngineCommandType]
+export type EngineCommandEventData =
+  EngineCommandEventDataMap[EngineCommandType]
 
 /**
  * Generic engine command with typed data based on command type
+ * @deprecated Use EngineMessage instead
  */
-export interface EngineCommand<T extends EngineCommandType = EngineCommandType> {
+export interface EngineCommand<
+  T extends EngineCommandType = EngineCommandType,
+> {
   type: T
   data: EngineCommandEventDataMap[T]
 }
 
 /**
  * Command handler function type for engine commands
+ * @deprecated Use EngineMessageHandler instead
  */
-export type EngineCommandHandler = (command: EngineCommand) => void | Promise<void>
+export type EngineCommandHandler = (
+  command: EngineCommand,
+) => void | Promise<void>
