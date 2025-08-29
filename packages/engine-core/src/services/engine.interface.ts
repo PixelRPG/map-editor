@@ -1,5 +1,5 @@
 import { EventDispatcher } from '@pixelrpg/message-channel-core';
-import { EngineEvent, EngineStatus, InputEvent, ProjectLoadOptions } from '../types/index';
+import { EngineMessage, EngineStatus, InputEvent, ProjectLoadOptions } from '../types/index';
 
 /**
  * Interface for the game engine
@@ -13,7 +13,7 @@ export interface EngineInterface {
     /**
      * Event dispatcher for engine events
      */
-    // events: EventDispatcher<EngineEvent>;
+    // events: EventDispatcher<EngineMessage>;
 
     /**
      * Initialize the engine

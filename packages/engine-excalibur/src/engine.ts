@@ -16,8 +16,7 @@ import {
   EngineStatus,
   ProjectLoadOptions,
   EngineMessageDataMap,
-  // Legacy aliases for backward compatibility
-  EngineEvent,
+
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -34,7 +33,7 @@ export class Engine implements EngineInterface {
   /**
    * Event dispatcher for engine events
    */
-  public events = new EventDispatcher<EngineEvent>()
+  public events = new EventDispatcher<EngineMessage>()
 
   /**
    * Excalibur engine instance

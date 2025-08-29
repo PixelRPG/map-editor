@@ -14,9 +14,7 @@ import {
   createValidationError,
   createResourceError,
   formatError,
-  // Legacy aliases for backward compatibility
-  EngineEvent,
-  EngineEventHandler,
+
 } from '@pixelrpg/engine-core'
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
@@ -59,7 +57,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
           [EngineMessageType.PROJECT_LOADED]: {
             param_types: [GObject.TYPE_STRING],
           },
-          [EngineMessageType.MAP_LOADED]: { param_types: [GObject.TYPE_STRING] },
+          [EngineMessageType.MAP_LOADED]: {
+            param_types: [GObject.TYPE_STRING],
+          },
           [EngineMessageType.ERROR]: {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_OBJECT],
           },
@@ -253,7 +253,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
         event &&
         typeof event === 'object' &&
         'type' in event &&
-        Object.values(EngineMessageType).includes(event.type as EngineMessageType)
+        Object.values(EngineMessageType).includes(
+          event.type as EngineMessageType,
+        )
       ) {
         this.onEngineEvent(event as EngineMessage)
         return { success: true }
@@ -291,7 +293,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
           )
           break
         case EngineMessageType.ERROR:
-          this.onEngineEventError(event as EngineMessage<EngineMessageType.ERROR>)
+          this.onEngineEventError(
+            event as EngineMessage<EngineMessageType.ERROR>,
+          )
           break
         default:
           console.warn('[GJS Engine] Unknown engine event:', event)
@@ -338,7 +342,9 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * Handler for engine error event from the WebView
    * @param event The engine event
    */
-  private onEngineEventError(event: EngineMessage<EngineMessageType.ERROR>): void {
+  private onEngineEventError(
+    event: EngineMessage<EngineMessageType.ERROR>,
+  ): void {
     console.error('[GJS Engine] Engine error:', event.data)
     this.emit(
       EngineMessageType.ERROR,

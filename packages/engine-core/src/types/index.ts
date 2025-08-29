@@ -20,12 +20,4 @@ export * from './project-options'
 export * from './engine-message-type'
 export * from './engine-message'
 
-// Legacy message types (deprecated - use EngineMessageType instead)
-/** @deprecated Use EngineMessageType instead */
-export * from './engine-event-type'
-/** @deprecated Use EngineMessage instead */
-export * from './engine-event'
-/** @deprecated Use EngineMessageType instead */
-export * from './engine-command-type'
-/** @deprecated Use EngineMessage instead */
-export * from './engine-command'
+
