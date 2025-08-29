@@ -18,16 +18,12 @@
                 border-radius: 0;
                 min-width: 0;
                 min-height: 0;
-
-                /* Smooth selection transitions */
-                transition: outline var(--sprite-transition-duration) ease-in-out;
             }
 
             /* Selection State - bright highlight without affecting layout */
             &:selected {
                 outline: var(--sprite-selection-width) solid var(--sprite-selection-color);
                 outline-offset: calc(-1 * var(--sprite-selection-width));
-                /* Note: position and z-index are not supported in GTK CSS */
             }
 
             /* Hover State - subtle preview of selection */

@@ -14,9 +14,8 @@ import Template from './tileset-selector.blp'
 export class TilesetSelector extends Adw.Bin {
   // Private fields for GObject properties
   private _tilesets: SpriteSheet[] = []
-  private _spriteScale: number = 1.0
+  private _scale: number = 2.0
   private _showGrid: boolean = true
-  private _spacing: number = 12
 
   // Internal children from template
   declare _tilesets_container: Gtk.Box
@@ -38,14 +37,14 @@ export class TilesetSelector extends Adw.Bin {
             'Array of sprite sheets to display as tilesets',
             GObject.ParamFlags.READWRITE,
           ),
-          spriteScale: GObject.ParamSpec.double(
-            'spriteScale',
+          scale: GObject.ParamSpec.double(
+            'scale',
             'Sprite Scale',
             'Scale factor for all sprite sheets',
             GObject.ParamFlags.READWRITE,
             0.25,
             4.0,
-            1.0, // min, max, default
+            2.0, // min, max, default
           ),
           showGrid: GObject.ParamSpec.boolean(
             'showGrid',
@@ -53,15 +52,6 @@ export class TilesetSelector extends Adw.Bin {
             'Show grid lines between sprites in all tilesets',
             GObject.ParamFlags.READWRITE,
             true, // default
-          ),
-          spacing: GObject.ParamSpec.int(
-            'spacing',
-            'Spacing',
-            'Spacing between tileset sections',
-            GObject.ParamFlags.READWRITE,
-            0,
-            48,
-            12, // min, max, default
           ),
         },
         Signals: {
@@ -92,16 +82,16 @@ export class TilesetSelector extends Adw.Bin {
     this._updateDisplay()
   }
 
-  get spriteScale(): number {
-    return this._spriteScale
+  get scale(): number {
+    return this._scale
   }
 
-  set spriteScale(value: number) {
-    if (this._spriteScale === value) return
+  set scale(value: number) {
+    if (this._scale === value) return
 
-    this._spriteScale = value
-    this.notify('spriteScale')
-    this._updateSpriteScale()
+    this._scale = value
+    this.notify('scale')
+    this._updateScale()
   }
 
   get showGrid(): boolean {
@@ -114,18 +104,6 @@ export class TilesetSelector extends Adw.Bin {
     this._showGrid = value
     this.notify('showGrid')
     this._updateShowGrid()
-  }
-
-  get spacing(): number {
-    return this._spacing
-  }
-
-  set spacing(value: number) {
-    if (this._spacing === value) return
-
-    this._spacing = value
-    this.notify('spacing')
-    this._updateSpacing()
   }
 
   /**
@@ -191,7 +169,7 @@ export class TilesetSelector extends Adw.Bin {
     name?: string,
   ): void {
     const spriteSheetWidget = new SpriteSheetWidget(spriteSheet, {
-      scale: this._spriteScale,
+      scale: this._scale,
       showGrid: this._showGrid,
       maxColumns: 16, // Default max columns for tilesets
     })
@@ -204,8 +182,8 @@ export class TilesetSelector extends Adw.Bin {
     // Create a section container with optional title
     const section = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
-      spacing: 6,
-      marginBottom: this._spacing,
+      spacing: 0,
+      marginBottom: 0,
     })
 
     // Add a title label if a name is provided
@@ -242,9 +220,9 @@ export class TilesetSelector extends Adw.Bin {
   /**
    * Update sprite scale for all widgets
    */
-  private _updateSpriteScale(): void {
+  private _updateScale(): void {
     this._spriteSheetWidgets.forEach((widget) => {
-      widget.updateScale(this._spriteScale)
+      widget.updateScale(this._scale)
     })
   }
 
@@ -255,20 +233,6 @@ export class TilesetSelector extends Adw.Bin {
     this._spriteSheetWidgets.forEach((widget) => {
       widget.updateShowGrid(this._showGrid)
     })
-  }
-
-  /**
-   * Update spacing between sections
-   */
-  private _updateSpacing(): void {
-    // Update margin bottom for all section containers
-    let child = this._tilesets_container.get_first_child()
-    while (child) {
-      if (child instanceof Gtk.Box) {
-        child.set_margin_bottom(this._spacing)
-      }
-      child = child.get_next_sibling()
-    }
   }
 
   /**
