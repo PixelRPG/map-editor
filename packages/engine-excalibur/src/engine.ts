@@ -16,7 +16,12 @@ import {
   ProjectLoadOptions,
   RpcEngineParamMap,
   EngineRpcRegistry,
+  EngineErrors,
+} from '@pixelrpg/engine-core'
+import {
   isEngineEvent,
+  isValidRpcEngineParams,
+  isEngineStatus,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -76,13 +81,12 @@ export class Engine implements EngineInterface {
       RpcEngineType.LOAD_PROJECT,
       async (params: RpcEngineParamMap[RpcEngineType.LOAD_PROJECT]) => {
         this.logger.info('RPC call: loadProject', params)
-        // Type guard for project load parameters
-        if (!params || typeof params !== 'object') {
-          throw new Error('Invalid parameters')
-        }
 
-        if (!params.projectPath) {
-          throw new Error('Project path is required')
+        // Validate parameters using type guard
+        if (!isValidRpcEngineParams(RpcEngineType.LOAD_PROJECT, params)) {
+          throw new Error(
+            'Invalid parameters for loadProject: projectPath is required and must be a string',
+          )
         }
 
         await this.loadProject(params.projectPath, params.options)
@@ -95,13 +99,12 @@ export class Engine implements EngineInterface {
       RpcEngineType.LOAD_MAP,
       async (params: RpcEngineParamMap[RpcEngineType.LOAD_MAP]) => {
         this.logger.info('RPC call: loadMap', params)
-        // Type guard for map load parameters
-        if (!params || typeof params !== 'object') {
-          throw new Error('Invalid parameters')
-        }
 
-        if (!params.mapId) {
-          throw new Error('Map ID is required')
+        // Validate parameters using type guard
+        if (!isValidRpcEngineParams(RpcEngineType.LOAD_MAP, params)) {
+          throw new Error(
+            'Invalid parameters for loadMap: mapId is required and must be a string',
+          )
         }
 
         await this.loadMap(params.mapId)
@@ -110,18 +113,36 @@ export class Engine implements EngineInterface {
     )
 
     // Register start handler
-    this.rpc.registerHandler(RpcEngineType.START, async () => {
-      this.logger.info('RPC call: start')
-      await this.start()
-      return { success: true }
-    })
+    this.rpc.registerHandler(
+      RpcEngineType.START,
+      async (params: RpcEngineParamMap[RpcEngineType.START]) => {
+        this.logger.info('RPC call: start')
+
+        // Validate parameters using type guard
+        if (!isValidRpcEngineParams(RpcEngineType.START, params)) {
+          throw new Error('Invalid parameters for start')
+        }
+
+        await this.start()
+        return { success: true }
+      },
+    )
 
     // Register stop handler
-    this.rpc.registerHandler(RpcEngineType.STOP, async () => {
-      this.logger.info('RPC call: stop')
-      await this.stop()
-      return { success: true }
-    })
+    this.rpc.registerHandler(
+      RpcEngineType.STOP,
+      async (params: RpcEngineParamMap[RpcEngineType.STOP]) => {
+        this.logger.info('RPC call: stop')
+
+        // Validate parameters using type guard
+        if (!isValidRpcEngineParams(RpcEngineType.STOP, params)) {
+          throw new Error('Invalid parameters for stop')
+        }
+
+        await this.stop()
+        return { success: true }
+      },
+    )
 
     this.logger.info('RPC handlers registered')
   }
@@ -156,7 +177,8 @@ export class Engine implements EngineInterface {
     options?: ProjectLoadOptions,
   ): Promise<void> {
     if (!this.excalibur) {
-      throw new Error('Engine not initialized')
+      const error = EngineErrors.engineNotInitialized()
+      throw new Error(error.message)
     }
 
     this.setStatus(EngineStatus.LOADING)
@@ -196,9 +218,17 @@ export class Engine implements EngineInterface {
       // Debug the game project
       this.gameProjectResource?.debugInfo()
 
+      const eventData = { projectPath, options }
+
+      // Validate event data before sending
+      if (!isValidRpcEngineParams(RpcEngineType.PROJECT_LOADED, eventData)) {
+        this.logger.error('Invalid event data for PROJECT_LOADED')
+        return
+      }
+
       const event = {
         type: RpcEngineType.PROJECT_LOADED,
-        data: { projectPath, options },
+        data: eventData,
       }
 
       // Send the event to GJS using RPC
@@ -221,8 +251,14 @@ export class Engine implements EngineInterface {
    * @param mapId ID of the map to load
    */
   async loadMap(mapId: string): Promise<void> {
-    if (!this.excalibur || !this.gameProjectResource) {
-      throw new Error('Engine not initialized or project not loaded')
+    if (!this.excalibur) {
+      const error = EngineErrors.engineNotInitialized()
+      throw new Error(error.message)
+    }
+
+    if (!this.gameProjectResource) {
+      const error = EngineErrors.projectNotLoaded()
+      throw new Error(error.message)
     }
 
     this.logger.info(`Loading map: ${mapId}`)
@@ -238,10 +274,18 @@ export class Engine implements EngineInterface {
 
     this.logger.info(`Map ${mapResource.mapData.name} added to scene`)
 
+    const eventData = { mapId }
+
+    // Validate event data before sending
+    if (!isValidRpcEngineParams(RpcEngineType.MAP_LOADED, eventData)) {
+      this.logger.error('Invalid event data for MAP_LOADED')
+      return
+    }
+
     // Create an RPC event for the map loaded event
     const event = {
       type: RpcEngineType.MAP_LOADED,
-      data: { mapId },
+      data: eventData,
     }
 
     // Send the event to GJS using RPC
@@ -282,8 +326,20 @@ export class Engine implements EngineInterface {
 
     this.logger.info(`Engine status changed from ${this.status} to ${status}`)
 
+    // Validate status before using it
+    if (!isEngineStatus(status)) {
+      this.logger.error(`Invalid engine status: ${status}`)
+      return
+    }
+
     // Update the status
     this.status = status
+
+    // Validate event data before sending
+    if (!isValidRpcEngineParams(RpcEngineType.STATUS_CHANGED, status)) {
+      this.logger.error('Invalid event data for STATUS_CHANGED')
+      return
+    }
 
     // Create an event
     const event = {
