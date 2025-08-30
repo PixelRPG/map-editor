@@ -1,44 +1,26 @@
-import type { EventListener } from '../types/event-listener.ts';
-
 /**
- * Simple event dispatcher for typed events
+ * Simple event dispatcher implementation
  */
-export class EventDispatcher<T> {
-  private listeners: EventListener<T>[] = [];
+export class EventDispatcher<T = unknown> {
+  private listeners: ((event: T) => void)[] = []
 
   /**
-   * Add a listener to this event dispatcher
-   * @param listener Function to call when event is dispatched
+   * Add an event listener
+   * @param listener Function to call when an event is dispatched
    */
-  public addEventListener(listener: EventListener<T>): void {
-    this.listeners.push(listener);
+  public addEventListener(listener: (event: T) => void): void {
+    this.listeners.push(listener)
   }
 
   /**
-   * Alias for addEventListener, with a more concise API
-   * @param listener Function to call when event is dispatched
+   * Remove an event listener
+   * @param listener Function to remove
    */
-  public on(listener: EventListener<T>): void {
-    this.addEventListener(listener);
-  }
-
-  /**
-   * Remove a previously registered listener
-   * @param listener Listener to remove
-   */
-  public removeEventListener(listener: EventListener<T>): void {
-    const index = this.listeners.indexOf(listener);
+  public removeEventListener(listener: (event: T) => void): void {
+    const index = this.listeners.indexOf(listener)
     if (index !== -1) {
-      this.listeners.splice(index, 1);
+      this.listeners.splice(index, 1)
     }
-  }
-
-  /**
-   * Alias for removeEventListener, with a more concise API
-   * @param listener Listener to remove
-   */
-  public off(listener: EventListener<T>): void {
-    this.removeEventListener(listener);
   }
 
   /**
@@ -46,10 +28,15 @@ export class EventDispatcher<T> {
    * @param event Event to dispatch
    */
   public dispatch(event: T): void {
-    // Create a copy of the listeners array to allow listeners to remove themselves during execution
-    const currentListeners = [...this.listeners];
-    for (const listener of currentListeners) {
-      listener(event);
+    for (const listener of this.listeners) {
+      listener(event)
     }
   }
-} 
+
+  /**
+   * Remove all event listeners
+   */
+  public clear(): void {
+    this.listeners = []
+  }
+}

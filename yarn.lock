@@ -3341,6 +3341,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pixelrpg/message-channel-core@workspace:packages/message-channel-core"
   dependencies:
+    barrelsby: "npm:^2.8.1"
     typescript: "npm:^5.9.2"
   languageName: unknown
   linkType: soft
@@ -3354,6 +3355,7 @@ __metadata:
     "@girs/javascriptcore-6.0": "npm:^2.48.5-4.0.0-beta.36"
     "@girs/webkit-6.0": "npm:^2.48.5-4.0.0-beta.36"
     "@pixelrpg/message-channel-core": "workspace:^"
+    barrelsby: "npm:^2.8.1"
     typescript: "npm:^5.9.2"
   languageName: unknown
   linkType: soft
@@ -3363,6 +3365,7 @@ __metadata:
   resolution: "@pixelrpg/message-channel-web@workspace:packages/message-channel-web"
   dependencies:
     "@pixelrpg/message-channel-core": "workspace:*"
+    barrelsby: "npm:^2.8.1"
     typescript: "npm:^5.9.2"
   languageName: unknown
   linkType: soft
@@ -3372,6 +3375,8 @@ __metadata:
   resolution: "@pixelrpg/message-channel-webview@workspace:packages/message-channel-webview"
   dependencies:
     "@pixelrpg/message-channel-core": "workspace:^"
+    barrelsby: "npm:^2.8.1"
+    typescript: "npm:^5.9.2"
   languageName: unknown
   linkType: soft
 

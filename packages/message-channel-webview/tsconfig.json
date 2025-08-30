@@ -12,12 +12,14 @@
     "strictNullChecks": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
+    "typeRoots": ["./node_modules/@types", "./"]
   },
   "files": [
     "src/index.ts",
   ],
   "include": [
-    "src/env.d.ts"
+    "src/**/*",
+    "env.d.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

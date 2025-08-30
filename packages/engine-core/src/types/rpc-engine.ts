@@ -1,5 +1,10 @@
+import {
+  type RpcMethodRegistry,
+  type RpcResponse,
+} from '@pixelrpg/message-channel-core'
 import { EngineStatus } from './engine-status'
 import { ProjectLoadOptions } from './project-options'
+import { InputEvent, InputEventType } from './input-event'
 
 /**
  * Unified engine message types for both commands and events
@@ -24,12 +29,12 @@ export enum RpcEngineType {
 }
 
 /**
- * Type mapping for message data based on message type
+ * Type mapping for message parameters based on message type
  */
-export interface RpcEngineDataMap {
+export interface RpcEngineParamMap {
   // Commands
-  [RpcEngineType.START]: {}
-  [RpcEngineType.STOP]: {}
+  [RpcEngineType.START]: void
+  [RpcEngineType.STOP]: void
   [RpcEngineType.LOAD_PROJECT]: {
     projectPath: string
     options?: ProjectLoadOptions
@@ -44,23 +49,20 @@ export interface RpcEngineDataMap {
   }
   [RpcEngineType.MAP_LOADED]: { mapId: string }
   [RpcEngineType.ERROR]: { message: string; error?: Error }
-  [RpcEngineType.INPUT_EVENT]: { messageType: string; payload: any }
-
-  // Communication events
+  [RpcEngineType.INPUT_EVENT]: InputEvent
   [RpcEngineType.NOTIFY_ENGINE_EVENT]: {
-    type: string
-    data: unknown
+    type: RpcEngineType
+    data: RpcEngineParamMap[keyof RpcEngineParamMap]
   }
-  [RpcEngineType.HANDLE_INPUT_EVENT]: {
-    type: string
-    data: unknown
-  }
+  [RpcEngineType.HANDLE_INPUT_EVENT]: InputEvent<InputEventType>
 }
 
 /**
- * Generic engine message with typed data based on message type
+ * Engine RPC registry
  */
-export interface RpcEngine<T extends RpcEngineType = RpcEngineType> {
-  type: T
-  data: RpcEngineDataMap[T]
+export interface EngineRpcRegistry extends RpcMethodRegistry {
+  [method: string]: {
+    params: RpcEngineParamMap[keyof RpcEngineParamMap]
+    response: RpcResponse<void>
+  }
 }

@@ -7,7 +7,13 @@
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "check": "tsc --noEmit"
+        "check": "tsc --noEmit",
+        "build:barrels": "barrelsby --delete --directory src",
+        "build": "yarn build:barrels"
+    },
+    "exports": {
+        ".": "./src/index.ts",
+        "./env": "./env.d.ts"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
@@ -19,6 +25,7 @@
         "@pixelrpg/message-channel-core": "workspace:^"
     },
     "devDependencies": {
+        "barrelsby": "^2.8.1",
         "typescript": "^5.9.2"
     }
 }

@@ -11,11 +11,12 @@ import { EventDispatcher } from '@pixelrpg/message-channel-core'
 import { rpcEndpointFactory } from './utils/rpc.ts'
 import {
   EngineInterface,
-  RpcEngine,
   RpcEngineType,
   EngineStatus,
   ProjectLoadOptions,
-  RpcEngineDataMap,
+  RpcEngineParamMap,
+  EngineRpcRegistry,
+  isEngineEvent,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -32,7 +33,9 @@ export class Engine implements EngineInterface {
   /**
    * Event dispatcher for engine events
    */
-  public events = new EventDispatcher<RpcEngine>()
+  public events = new EventDispatcher<
+    RpcEngineParamMap[RpcEngineType.NOTIFY_ENGINE_EVENT]
+  >()
 
   /**
    * Excalibur engine instance
@@ -49,7 +52,7 @@ export class Engine implements EngineInterface {
    */
   private logger = Logger.getInstance()
 
-  private rpc = rpcEndpointFactory()
+  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
 
   /**
    * Create a new Excalibur engine
@@ -71,7 +74,7 @@ export class Engine implements EngineInterface {
     // Register loadProject handler
     this.rpc.registerHandler(
       RpcEngineType.LOAD_PROJECT,
-      async (params: RpcEngineDataMap[RpcEngineType.LOAD_PROJECT]) => {
+      async (params: RpcEngineParamMap[RpcEngineType.LOAD_PROJECT]) => {
         this.logger.info('RPC call: loadProject', params)
         // Type guard for project load parameters
         if (!params || typeof params !== 'object') {
@@ -90,7 +93,7 @@ export class Engine implements EngineInterface {
     // Register loadMap handler
     this.rpc.registerHandler(
       RpcEngineType.LOAD_MAP,
-      async (params: RpcEngineDataMap[RpcEngineType.LOAD_MAP]) => {
+      async (params: RpcEngineParamMap[RpcEngineType.LOAD_MAP]) => {
         this.logger.info('RPC call: loadMap', params)
         // Type guard for map load parameters
         if (!params || typeof params !== 'object') {
@@ -107,24 +110,18 @@ export class Engine implements EngineInterface {
     )
 
     // Register start handler
-    this.rpc.registerHandler(
-      RpcEngineType.START,
-      async (params: RpcEngineDataMap[RpcEngineType.START]) => {
-        this.logger.info('RPC call: start', params)
-        await this.start()
-        return { success: true }
-      },
-    )
+    this.rpc.registerHandler(RpcEngineType.START, async () => {
+      this.logger.info('RPC call: start')
+      await this.start()
+      return { success: true }
+    })
 
     // Register stop handler
-    this.rpc.registerHandler(
-      RpcEngineType.STOP,
-      async (params: RpcEngineDataMap[RpcEngineType.STOP]) => {
-        this.logger.info('RPC call: stop', params)
-        await this.stop()
-        return { success: true }
-      },
-    )
+    this.rpc.registerHandler(RpcEngineType.STOP, async () => {
+      this.logger.info('RPC call: stop')
+      await this.stop()
+      return { success: true }
+    })
 
     this.logger.info('RPC handlers registered')
   }
@@ -199,13 +196,13 @@ export class Engine implements EngineInterface {
       // Debug the game project
       this.gameProjectResource?.debugInfo()
 
-      const event: RpcEngine<RpcEngineType.PROJECT_LOADED> = {
+      const event = {
         type: RpcEngineType.PROJECT_LOADED,
         data: { projectPath, options },
       }
 
       // Send the event to GJS using RPC
-      await this.rpc.sendRequest(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+      await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
 
       // Add the active map to the scene
       if (this.gameProjectResource?.data.startup.initialMapId) {
@@ -242,13 +239,13 @@ export class Engine implements EngineInterface {
     this.logger.info(`Map ${mapResource.mapData.name} added to scene`)
 
     // Create an RPC event for the map loaded event
-    const event: RpcEngine = {
+    const event = {
       type: RpcEngineType.MAP_LOADED,
-      data: { mapId: mapId },
+      data: { mapId },
     }
 
     // Send the event to GJS using RPC
-    await this.rpc.sendRequest(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+    await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
   }
 
   /**
@@ -289,12 +286,12 @@ export class Engine implements EngineInterface {
     this.status = status
 
     // Create an event
-    const event: RpcEngine = {
+    const event = {
       type: RpcEngineType.STATUS_CHANGED,
       data: status,
     }
 
     // Send the event to GJS using RPC
-    await this.rpc.sendRequest(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+    await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
   }
 }

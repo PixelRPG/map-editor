@@ -1,18 +1,7 @@
-/**
- * Type definitions for RPC handlers and related functionality
- */
-import { RpcResponse } from './message';
+import { WireRpcResponse } from './wire'
 
 /**
- * Type for method handlers
- * @template TParams Type of parameters for the method
- * @template TResult Type of result returned by the method
+ * Function to directly reply to a request
+ * Used in platform-specific implementations where direct reply is possible
  */
-export type MethodHandler<TParams = unknown, TResult = unknown> =
-    (params?: TParams) => Promise<TResult> | TResult;
-
-/**
- * Function type for direct reply mechanism
- * Used in platform-specific implementations that support direct replies
- */
-export type DirectReplyFunction = (response: RpcResponse) => void; 
+export type DirectReplyFunction = (response: WireRpcResponse) => void

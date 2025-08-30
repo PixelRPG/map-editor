@@ -1,10 +1,6 @@
-import { EventDispatcher } from '@pixelrpg/message-channel-core'
-import {
-  RpcEngine,
-  EngineStatus,
-  InputEvent,
-  ProjectLoadOptions,
-} from '../types/index'
+import { type EventDispatcher } from '@pixelrpg/message-channel-core'
+import { EngineStatus, ProjectLoadOptions } from '../types/index'
+import { RpcEngineParamMap, RpcEngineType } from '../types/rpc-engine'
 
 /**
  * Interface for the game engine
@@ -18,7 +14,7 @@ export interface EngineInterface {
   /**
    * Event dispatcher for engine events
    */
-  // events: EventDispatcher<RpcEngine>;
+  events: EventDispatcher<RpcEngineParamMap[RpcEngineType.NOTIFY_ENGINE_EVENT]>
 
   /**
    * Initialize the engine
