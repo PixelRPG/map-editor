@@ -2,7 +2,6 @@ import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
 import { EventDispatcher } from '@pixelrpg/message-channel-core'
-import { TypedRpcEndpoint } from '@pixelrpg/message-channel-gjs'
 import {
   EngineInterface,
   EngineMessage,
@@ -15,6 +14,7 @@ import {
   createValidationError,
   createResourceError,
   formatError,
+
 } from '@pixelrpg/engine-core'
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
 
@@ -86,11 +86,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
   private gresourcePath: string = CLIENT_RESOURCE_PATH
 
   /**
-   * Typed RPC endpoint for type-safe communication
-   */
-  private typedRpc: TypedRpcEndpoint | null = null
-
-  /**
    * Signal management for GC safety
    */
   private _signalHandlers: number[] = []
@@ -107,9 +102,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
       // Initialize resource paths
       this._webView?.setResourcePaths(this.resourcePaths)
       this._webView?.setGResourcePath(this.gresourcePath)
-
-      // Initialize typed RPC endpoint
-      this.setupTypedRpc()
 
       // Note: WebView signal connection will be done in vfunc_map for GC safety
     } catch (error) {
@@ -130,73 +122,14 @@ export class Engine extends Adw.Bin implements EngineInterface {
   }
 
   /**
-   * Set up typed RPC communication
-   */
-  private setupTypedRpc(): void {
-    if (!this._webView?.webView) {
-      console.warn('[GJS Engine] WebView not available for RPC setup')
-      return
-    }
-
-    try {
-      // Create typed RPC endpoint
-      this.typedRpc = TypedRpcEndpoint.getInstance('pixelrpg', this._webView.webView)
-
-      // Register event handler for engine events from WebView
-      this.typedRpc.registerEventHandler('notify-engine-event', async (eventData) => {
-        console.info('[GJS Engine] Engine event received:', eventData)
-        this.handleEngineEvent(eventData)
-      })
-
-      console.log('[GJS Engine] Typed RPC setup completed')
-    } catch (error) {
-      console.error('[GJS Engine] Failed to setup typed RPC:', error)
-    }
-  }
-
-  /**
-   * Handle engine events from the WebView
-   */
-  private handleEngineEvent(eventData: { type: EngineMessageType; data: any }): void {
-    const { type, data } = eventData
-
-    switch (type) {
-      case EngineMessageType.STATUS_CHANGED:
-        this.status = data
-        console.info('[GJS Engine] Engine status changed to:', this.status)
-        this.emit(EngineMessageType.STATUS_CHANGED, this.status)
-        break
-
-      case EngineMessageType.PROJECT_LOADED:
-        console.info('[GJS Engine] Project loaded:', data.projectPath)
-        this.emit(EngineMessageType.PROJECT_LOADED, data.projectPath)
-        break
-
-      case EngineMessageType.MAP_LOADED:
-        console.info('[GJS Engine] Map loaded:', data.mapId)
-        this.emit(EngineMessageType.MAP_LOADED, data.mapId)
-        break
-
-      case EngineMessageType.ERROR:
-        console.error('[GJS Engine] Engine error:', data)
-        this.emit(EngineMessageType.ERROR, data.message, data.error || null)
-        break
-
-      default:
-        console.warn('[GJS Engine] Unknown engine event:', eventData)
-        break
-    }
-  }
-
-  /**
    * Load a project
    */
   public async loadProject(
     projectPath: string,
     options?: ProjectLoadOptions,
   ): Promise<void> {
-    if (!this.typedRpc) {
-      throw createRuntimeError('Typed RPC is not initialized')
+    if (!this._webView?.rpc) {
+      throw createRuntimeError('RPC server is not initialized')
     }
 
     if (this.status === EngineStatus.INITIALIZING) {
@@ -210,8 +143,8 @@ export class Engine extends Adw.Bin implements EngineInterface {
     projectPath = Gio.File.new_for_path(projectPath).get_path()!
 
     try {
-      // Send a typed RPC command to load the project
-      const response = await this.typedRpc.sendCommand('load-project', {
+      // Send an RPC request to load the project
+      const response = await this._webView.rpc.sendRequest('load-project', {
         projectPath,
         options,
       })
