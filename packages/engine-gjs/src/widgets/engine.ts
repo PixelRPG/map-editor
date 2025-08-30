@@ -1,23 +1,20 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
-import { EventDispatcher } from '@pixelrpg/message-channel-core'
+import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'
 import {
   EngineInterface,
-  EngineMessage,
-  EngineMessageType,
+  RpcEngine,
+  RpcEngineType,
   EngineStatus,
   ProjectLoadOptions,
-  EngineMessageHandler,
   createInitializationError,
   createRuntimeError,
   createValidationError,
   createResourceError,
   formatError,
-
 } from '@pixelrpg/engine-core'
 import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
-
 import { WebView } from './webview.ts'
 import Template from './engine.blp'
 
@@ -28,10 +25,10 @@ export namespace Engine {
 
   export interface SignalProps {
     ready: []
-    [EngineMessageType.STATUS_CHANGED]: [EngineStatus]
-    [EngineMessageType.PROJECT_LOADED]: [string] // projectId
-    [EngineMessageType.MAP_LOADED]: [string] // mapId
-    [EngineMessageType.ERROR]: [string, Error | null] // message, error
+    [RpcEngineType.STATUS_CHANGED]: [EngineStatus]
+    [RpcEngineType.PROJECT_LOADED]: [string] // projectId
+    [RpcEngineType.MAP_LOADED]: [string] // mapId
+    [RpcEngineType.ERROR]: [string, Error | null] // message, error
   }
 }
 
@@ -42,7 +39,14 @@ export class Engine extends Adw.Bin implements EngineInterface {
   /**
    * WebView for rendering the game
    */
-  declare _webView: WebView | null
+  declare _webView: WebView
+
+  get rpc(): RpcEndpoint {
+    if (!this._webView.rpc) {
+      throw new Error('RPC server is not initialized')
+    }
+    return this._webView.rpc
+  }
 
   static {
     GObject.registerClass(
@@ -51,16 +55,16 @@ export class Engine extends Adw.Bin implements EngineInterface {
         Template,
         Signals: {
           ready: {},
-          [EngineMessageType.STATUS_CHANGED]: {
+          [RpcEngineType.STATUS_CHANGED]: {
             param_types: [GObject.TYPE_STRING],
           },
-          [EngineMessageType.PROJECT_LOADED]: {
+          [RpcEngineType.PROJECT_LOADED]: {
             param_types: [GObject.TYPE_STRING],
           },
-          [EngineMessageType.MAP_LOADED]: {
+          [RpcEngineType.MAP_LOADED]: {
             param_types: [GObject.TYPE_STRING],
           },
-          [EngineMessageType.ERROR]: {
+          [RpcEngineType.ERROR]: {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_OBJECT],
           },
         },
@@ -177,7 +181,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the map
-      await this._webView?.rpc?.sendRequest('load-map', {
+      await this.rpc.sendRequest('load-map', {
         mapId,
       })
 
@@ -201,7 +205,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to start the engine
-      await this._webView?.rpc?.sendRequest('start', {})
+      await this.rpc.sendRequest('start', {})
 
       console.log('[GJS Engine] Start command sent')
       this.status = EngineStatus.RUNNING
@@ -224,7 +228,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to stop the engine
-      await this._webView?.rpc?.sendRequest('stop', {})
+      await this.rpc.sendRequest('stop', {})
 
       console.log('[GJS Engine] Stop command sent')
     } catch (error) {
@@ -246,18 +250,16 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     // Register handler for engine events from the WebView using RPC
     // TODO: Make this type safe
-    this._webView.rpc.registerHandler('notifyEngineEvent', async (event) => {
+    this._webView.rpc.registerHandler('notify-engine-event', async (event) => {
       console.log('[GJS Engine] Engine event received from WebView:', event)
       // Handle the event with proper typing
       if (
         event &&
         typeof event === 'object' &&
         'type' in event &&
-        Object.values(EngineMessageType).includes(
-          event.type as EngineMessageType,
-        )
+        Object.values(RpcEngineType).includes(event.type as RpcEngineType)
       ) {
-        this.onEngineEvent(event as EngineMessage)
+        this.onEngineEvent(event as RpcEngine)
         return { success: true }
       }
       return { success: false, error: 'Invalid engine event format' }
@@ -270,32 +272,30 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * Handler for engine events from the WebView
    * @param event The engine event
    */
-  private onEngineEvent(event: EngineMessage): void {
+  private onEngineEvent(event: RpcEngine): void {
     if (typeof event === 'object' && 'type' in event) {
       const engineEventType = event.type
 
       console.info('[GJS Engine] Engine event received:', event)
 
       switch (engineEventType) {
-        case EngineMessageType.STATUS_CHANGED:
+        case RpcEngineType.STATUS_CHANGED:
           this.onEngineEventStatusChanged(
-            event as EngineMessage<EngineMessageType.STATUS_CHANGED>,
+            event as RpcEngine<RpcEngineType.STATUS_CHANGED>,
           )
           break
-        case EngineMessageType.MAP_LOADED:
+        case RpcEngineType.MAP_LOADED:
           this.onEngineEventMapLoaded(
-            event as EngineMessage<EngineMessageType.MAP_LOADED>,
+            event as RpcEngine<RpcEngineType.MAP_LOADED>,
           )
           break
-        case EngineMessageType.PROJECT_LOADED:
+        case RpcEngineType.PROJECT_LOADED:
           this.onEngineEventProjectLoaded(
-            event as EngineMessage<EngineMessageType.PROJECT_LOADED>,
+            event as RpcEngine<RpcEngineType.PROJECT_LOADED>,
           )
           break
-        case EngineMessageType.ERROR:
-          this.onEngineEventError(
-            event as EngineMessage<EngineMessageType.ERROR>,
-          )
+        case RpcEngineType.ERROR:
+          this.onEngineEventError(event as RpcEngine<RpcEngineType.ERROR>)
           break
         default:
           console.warn('[GJS Engine] Unknown engine event:', event)
@@ -309,11 +309,11 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * @param event The engine event
    */
   private onEngineEventStatusChanged(
-    event: EngineMessage<EngineMessageType.STATUS_CHANGED>,
+    event: RpcEngine<RpcEngineType.STATUS_CHANGED>,
   ): void {
     this.status = event.data
     console.info('[GJS Engine] Engine status changed to:', this.status)
-    this.emit(EngineMessageType.STATUS_CHANGED, this.status)
+    this.emit(RpcEngineType.STATUS_CHANGED, this.status)
   }
 
   /**
@@ -321,10 +321,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * @param event The engine event
    */
   private onEngineEventMapLoaded(
-    event: EngineMessage<EngineMessageType.MAP_LOADED>,
+    event: RpcEngine<RpcEngineType.MAP_LOADED>,
   ): void {
     console.info('[GJS Engine] Map loaded:', event.data.mapId)
-    this.emit(EngineMessageType.MAP_LOADED, event.data.mapId)
+    this.emit(RpcEngineType.MAP_LOADED, event.data.mapId)
   }
 
   /**
@@ -332,25 +332,19 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * @param event The engine event
    */
   private onEngineEventProjectLoaded(
-    event: EngineMessage<EngineMessageType.PROJECT_LOADED>,
+    event: RpcEngine<RpcEngineType.PROJECT_LOADED>,
   ): void {
     console.info('[GJS Engine] Project loaded:', event.data.projectPath)
-    this.emit(EngineMessageType.PROJECT_LOADED, event.data.projectPath)
+    this.emit(RpcEngineType.PROJECT_LOADED, event.data.projectPath)
   }
 
   /**
    * Handler for engine error event from the WebView
    * @param event The engine event
    */
-  private onEngineEventError(
-    event: EngineMessage<EngineMessageType.ERROR>,
-  ): void {
+  private onEngineEventError(event: RpcEngine<RpcEngineType.ERROR>): void {
     console.error('[GJS Engine] Engine error:', event.data)
-    this.emit(
-      EngineMessageType.ERROR,
-      event.data.message,
-      event.data.error || null,
-    )
+    this.emit(RpcEngineType.ERROR, event.data.message, event.data.error || null)
   }
 
   /**

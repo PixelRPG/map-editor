@@ -136,7 +136,7 @@ export class WebView extends WebKit.WebView {
 
     // Register RPC methods
     // TODO: Make this type safe
-    rpc.registerHandler('handleInputEvent', async (params) => {
+    rpc.registerHandler('handle-input-event', async (params) => {
       console.log('[WebView] Handling input event:', params)
       // Process the input event
       // The implementation would depend on how input events are handled
@@ -215,7 +215,7 @@ export class WebView extends WebKit.WebView {
     // Send mouse move event using notification (no response expected)
     // This prevents timeouts for frequent events
     this._rpc.sendNotification(
-      'handleInputEvent',
+      'handle-input-event',
       engineInputEventsService.mouseMove({ x, y }),
     )
   }
@@ -234,7 +234,7 @@ export class WebView extends WebKit.WebView {
 
     // Send mouse leave event with no position data using notification (fire and forget)
     this._rpc.sendNotification(
-      'handleInputEvent',
+      'handle-input-event',
       engineInputEventsService.mouseLeave(),
     )
   }
@@ -255,7 +255,7 @@ export class WebView extends WebKit.WebView {
 
     // Send mouse enter event using notification (fire and forget)
     this._rpc.sendNotification(
-      'handleInputEvent',
+      'handle-input-event',
       engineInputEventsService.mouseEnter({ x, y }),
     )
   }

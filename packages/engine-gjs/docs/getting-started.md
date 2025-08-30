@@ -20,7 +20,7 @@ yarn add @pixelrpg/engine-gjs @pixelrpg/engine-core
 
 ```typescript
 import { Engine } from '@pixelrpg/engine-gjs';
-import { EngineMessageType, EngineStatus } from '@pixelrpg/engine-core';
+import { RpcEngineType, EngineStatus } from '@pixelrpg/engine-core';
 ```
 
 ### 2. Create and Configure the Engine
@@ -54,7 +54,7 @@ The Engine emits specific signals for different events:
 
 ```typescript
 // Listen for status changes
-engine.connect(EngineMessageType.STATUS_CHANGED, (_source, status: EngineStatus) => {
+engine.connect(RpcEngineType.STATUS_CHANGED, (_source, status: EngineStatus) => {
   console.log('Engine status changed:', status);
   
   switch (status) {
@@ -71,17 +71,17 @@ engine.connect(EngineMessageType.STATUS_CHANGED, (_source, status: EngineStatus)
 });
 
 // Listen for project load events
-engine.connect(EngineMessageType.PROJECT_LOADED, (_source, projectId: string) => {
+engine.connect(RpcEngineType.PROJECT_LOADED, (_source, projectId: string) => {
   console.log('Project loaded:', projectId);
 });
 
 // Listen for map load events
-engine.connect(EngineMessageType.MAP_LOADED, (_source, mapId: string) => {
+engine.connect(RpcEngineType.MAP_LOADED, (_source, mapId: string) => {
   console.log('Map loaded:', mapId);
 });
 
 // Listen for errors
-engine.connect(EngineMessageType.ERROR, (_source, message: string, error: Error | null) => {
+engine.connect(RpcEngineType.ERROR, (_source, message: string, error: Error | null) => {
   console.error('Engine error:', message, error);
 });
 
@@ -120,7 +120,7 @@ import GObject from '@girs/gobject-2.0';
 import Gtk from '@girs/gtk-4.0';
 import Adw from '@girs/adw-1';
 import { Engine } from '@pixelrpg/engine-gjs';
-import { EngineMessageType, EngineStatus } from '@pixelrpg/engine-core';
+import { RpcEngineType, EngineStatus } from '@pixelrpg/engine-core';
 
 export class GameWindow extends Adw.ApplicationWindow {
   private engine: Engine;
@@ -172,22 +172,22 @@ export class GameWindow extends Adw.ApplicationWindow {
 
   private setupEngineEvents(): void {
     // Status changes
-    this.engine.connect(EngineMessageType.STATUS_CHANGED, (_source, status) => {
+    this.engine.connect(RpcEngineType.STATUS_CHANGED, (_source, status) => {
       this.statusLabel.set_label(`Status: ${status}`);
     });
 
     // Project loaded
-    this.engine.connect(EngineMessageType.PROJECT_LOADED, (_source, projectId) => {
+    this.engine.connect(RpcEngineType.PROJECT_LOADED, (_source, projectId) => {
       console.log('Project loaded:', projectId);
     });
 
     // Map loaded
-    this.engine.connect(EngineMessageType.MAP_LOADED, (_source, mapId) => {
+    this.engine.connect(RpcEngineType.MAP_LOADED, (_source, mapId) => {
       console.log('Map loaded:', mapId);
     });
 
     // Errors
-    this.engine.connect(EngineMessageType.ERROR, (_source, message, error) => {
+    this.engine.connect(RpcEngineType.ERROR, (_source, message, error) => {
       this.statusLabel.set_label(`Error: ${message}`);
       console.error('Engine error:', message, error);
     });
@@ -268,7 +268,7 @@ export class MyGameView extends Adw.Bin {
     super();
     
     // Connect to engine events
-    this._game_engine.connect(EngineMessageType.STATUS_CHANGED, (_source, status) => {
+    this._game_engine.connect(RpcEngineType.STATUS_CHANGED, (_source, status) => {
       this._status_label.set_label(`Status: ${status}`);
     });
   }
@@ -297,7 +297,7 @@ engine.setGResourcePath('/org/myapp/resources/client.gresource');
 
 ```typescript
 // Comprehensive error handling
-engine.connect(EngineMessageType.ERROR, (_source, message, error) => {
+engine.connect(RpcEngineType.ERROR, (_source, message, error) => {
   // Log the error
   console.error('Engine error:', message);
   

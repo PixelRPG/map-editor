@@ -9,7 +9,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { Engine } from './engine'
-import { EngineStatus, EngineMessageType } from '@pixelrpg/engine-core'
+import { EngineStatus, RpcEngineType } from '@pixelrpg/engine-core'
 
 // Import story templates
 import EngineStoryTemplate from './engine.story.blp'
@@ -159,7 +159,7 @@ export class EngineStoryWidget extends StoryWidget {
 
     // Connect to the new specific event signals
     this.engine.connect(
-      EngineMessageType.STATUS_CHANGED,
+      RpcEngineType.STATUS_CHANGED,
       (_engine: Engine, status: EngineStatus) => {
         console.log('[EngineStoryWidget] Engine status changed:', status)
         this._updateStatusLabel(status)
@@ -168,21 +168,21 @@ export class EngineStoryWidget extends StoryWidget {
     )
 
     this.engine.connect(
-      EngineMessageType.PROJECT_LOADED,
+      RpcEngineType.PROJECT_LOADED,
       (_engine: Engine, projectId: string) => {
         console.log('[EngineStoryWidget] Engine project loaded:', projectId)
       },
     )
 
     this.engine.connect(
-      EngineMessageType.MAP_LOADED,
+      RpcEngineType.MAP_LOADED,
       (_engine: Engine, mapId: string) => {
         console.log('[EngineStoryWidget] Engine map loaded:', mapId)
       },
     )
 
     this.engine.connect(
-      EngineMessageType.ERROR,
+      RpcEngineType.ERROR,
       (_engine: Engine, message: string, error: Error | null) => {
         console.error('Engine error:', message, error)
         this._updateStatusLabel(EngineStatus.ERROR)

@@ -14,4 +14,4 @@ export * from './engine-error'
 export * from './project-options'
 
 // Message types (unified)
-export * from './engine-message'
+export * from './rpc-engine'
