@@ -2,7 +2,7 @@ import { RpcEndpoint, IframeContext } from '@pixelrpg/message-channel-web'
 import { RpcEngineType, EngineRpcRegistry } from '@pixelrpg/engine-core'
 
 // Constant for the project path
-const PROJECT_PATH = 'http://localhost:3000/games/zelda-like/game-project.json'
+const PROJECT_PATH = 'http://localhost:5001/game-project.json'
 
 // DOM elements
 const loadButton = document.getElementById(
