@@ -5,4 +5,5 @@
 export * from "./message-conversion";
 export * from "./message";
 export * from "./objects";
+export * from "./rpc-validation";
 export * from "./type-conversion";
