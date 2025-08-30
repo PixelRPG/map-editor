@@ -9,25 +9,66 @@ import {
 } from './utils/message-conversion'
 import { methodToString } from './utils/type-conversion'
 import {
+  validateRpcRequest,
+  validateRpcResponse,
+  RpcValidationConfig,
+} from './utils/rpc-validation'
+import {
   RpcMethodRegistry,
   RpcMethodHandler,
   RpcResponse,
   RpcMethodParams,
 } from './types/rpc'
 import { RpcRequest, WireRpcResponse, RpcMessageType } from './types/wire'
+import { RpcErrors } from './types/errors'
 
 /**
- * Interface for pending request handlers
+ * Internal interface for tracking pending RPC requests
+ *
+ * @template T - The RPC method registry type
+ * @template K - The method key being tracked
  */
 interface PendingRequest<T extends RpcMethodRegistry, K extends keyof T> {
+  /** Function to resolve the promise when response is received */
   resolve: (value: T[K]['response'] | PromiseLike<T[K]['response']>) => void
+  /** Function to reject the promise when an error occurs */
   reject: (reason: Error) => void
+  /** Timeout ID for request timeout handling */
   timeoutId: ReturnType<typeof setTimeout>
 }
 
 /**
- * Unified RPC endpoint class that combines server and client functionality
- * Provides core functionality for bidirectional RPC communication
+ * Unified RPC endpoint that combines server and client functionality
+ *
+ * This abstract class provides the core functionality for bidirectional RPC communication
+ * between different contexts (main process, webviews, iframes, etc.). It handles:
+ * - Method registration and execution (server functionality)
+ * - Request sending and response handling (client functionality)
+ * - Message routing and error handling
+ * - Timeout management for requests
+ *
+ * @template T - The RPC method registry type defining available methods
+ *
+ * @example
+ * ```typescript
+ * class MyRpcEndpoint extends RpcEndpoint<MyRpcRegistry> {
+ *   protected postMessage(message: RpcRequest | WireRpcResponse): Promise<void> {
+ *     // Platform-specific message sending implementation
+ *     return this.sendToOtherContext(message)
+ *   }
+ * }
+ *
+ * const endpoint = new MyRpcEndpoint('my-channel')
+ *
+ * // Register a method handler
+ * endpoint.registerHandler('user.get', async (params) => {
+ *   const user = await getUserById(params.id)
+ *   return { success: true, data: user }
+ * })
+ *
+ * // Call a remote method
+ * const response = await endpoint.sendRequest('user.get', { id: '123' })
+ * ```
  */
 export abstract class RpcEndpoint<
   T extends RpcMethodRegistry = RpcMethodRegistry,
@@ -61,21 +102,58 @@ export abstract class RpcEndpoint<
   protected defaultTimeoutMs = 30000
 
   /**
+   * Validation configuration for incoming messages
+   */
+  protected validationConfig: RpcValidationConfig = {}
+
+  /**
    * Create a new RPC endpoint
-   * @param channelName Name of the channel for scoping messages
+   *
+   * @param channelName - Unique name for the communication channel.
+   *                        Used to scope messages and avoid conflicts between different endpoints.
+   *
+   * @example
+   * ```typescript
+   * const endpoint = new MyRpcEndpoint('game-engine')
+   * ```
    */
   constructor(protected readonly channelName: string) {}
 
   /**
-   * Register a handler function that can be called by the other endpoint
-   * @param methodName Name of the method to register
-   * @param handler Function to handle the method call
+   * Register a handler function for incoming RPC calls
+   *
+   * The registered handler will be called when the remote endpoint sends a request
+   * for the specified method. The handler receives type-safe parameters and must
+   * return a properly formatted response.
+   *
+   * @template K - The method key in the registry
+   * @param methodName - Name of the method to register (must exist in the registry type)
+   * @param handler - Function that handles the method call with type-safe parameters
+   *
+   * @throws Will throw if a handler for the same method is already registered
+   *
+   * @example
+   * ```typescript
+   * endpoint.registerHandler('user.get', async (params) => {
+   *   const user = await userService.findById(params.id)
+   *   if (!user) {
+   *     return { success: false, error: 'User not found' }
+   *   }
+   *   return { success: true, data: user }
+   * })
+   * ```
    */
   public registerHandler<K extends keyof T>(
     methodName: K,
     handler: RpcMethodHandler<T, K>,
   ): void {
-    this.handlers.set(methodToString(methodName), handler)
+    const methodString = methodToString(methodName)
+    if (this.handlers.has(methodString)) {
+      throw new Error(
+        `Handler for method '${methodString}' is already registered`,
+      )
+    }
+    this.handlers.set(methodString, handler)
   }
 
   /**
@@ -104,6 +182,19 @@ export abstract class RpcEndpoint<
         return
       }
 
+      // Validate the request message
+      const validation = validateRpcRequest(message, this.validationConfig)
+      if (!validation.valid) {
+        console.warn(
+          'Invalid RPC request received:',
+          validation.error,
+          validation.details,
+        )
+        // Still dispatch the raw message event for debugging
+        this.events.dispatch(message)
+        return
+      }
+
       // Dispatch the raw message event
       this.events.dispatch(message)
 
@@ -114,6 +205,19 @@ export abstract class RpcEndpoint<
 
     // Handle incoming responses (client functionality)
     if (isRpcResponse(message)) {
+      // Validate the response message
+      const validation = validateRpcResponse(message, this.validationConfig)
+      if (!validation.valid) {
+        console.warn(
+          'Invalid RPC response received:',
+          validation.error,
+          validation.details,
+        )
+        // Still dispatch the raw message event for debugging
+        this.events.dispatch(message)
+        return
+      }
+
       // Check if we have a pending request for this response
       const pendingRequest = this.pendingRequests.get(message.id)
       if (pendingRequest) {
@@ -153,23 +257,42 @@ export abstract class RpcEndpoint<
 
     try {
       if (!handler) {
-        throw new Error(
-          `Method '${method}' not found, available methods: ${Array.from(
-            this.handlers.keys(),
-          ).join(', ')}`,
-        )
+        const availableMethods = Array.from(this.handlers.keys()).join(', ')
+        const rpcError = RpcErrors.methodNotFound(method)
+        response = toMessageResponse(id, {
+          success: false,
+          error: rpcError.message,
+          code: rpcError.code,
+          data: { availableMethods },
+        })
+        return
       }
 
       // Call the handler and create a success response
       const result = await Promise.resolve(handler(params))
       response = toMessageResponse(id, result)
     } catch (error) {
-      // Create an error response
+      // Create an error response with structured error information
       const errorMessage =
         error instanceof Error ? error.message : String(error)
+
+      // Try to determine the error type for better error codes
+      let rpcError
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid parameters')) {
+          rpcError = RpcErrors.invalidParams(error.message)
+        } else {
+          rpcError = RpcErrors.internalError(error.message)
+        }
+      } else {
+        rpcError = RpcErrors.internalError(errorMessage)
+      }
+
       response = toMessageResponse(id, {
         success: false,
-        error: errorMessage,
+        error: rpcError.message,
+        code: rpcError.code,
+        data: rpcError.data,
       })
     }
 
@@ -189,11 +312,35 @@ export abstract class RpcEndpoint<
   }
 
   /**
-   * Send an RPC request and wait for the response
-   * @param method Method name to call
-   * @param params Optional parameters to pass
-   * @param timeoutMs Timeout in milliseconds (defaults to defaultTimeoutMs)
-   * @returns Promise that resolves with the result or rejects with an error
+   * Send an RPC request to the remote endpoint and wait for the response
+   *
+   * This method sends a type-safe request to the remote endpoint and returns a promise
+   * that resolves with the response. The method includes automatic timeout handling
+   * and proper error propagation.
+   *
+   * @template K - The method key in the registry
+   * @param method - Name of the remote method to call (must exist in the registry type)
+   * @param params - Type-safe parameters to pass to the remote method
+   * @param timeoutMs - Optional timeout in milliseconds (defaults to 30 seconds)
+   * @returns Promise that resolves with the type-safe response or rejects with an error
+   *
+   * @throws Will throw if the request times out
+   * @throws Will throw if the remote endpoint returns an error response
+   * @throws Will throw if message sending fails
+   *
+   * @example
+   * ```typescript
+   * try {
+   *   const response = await endpoint.sendRequest('user.get', { id: '123' })
+   *   if (response.success) {
+   *     console.log('User:', response.data)
+   *   } else {
+   *     console.error('Error:', response.error)
+   *   }
+   * } catch (error) {
+   *   console.error('Request failed:', error)
+   * }
+   * ```
    */
   public async sendRequest<K extends keyof T>(
     method: K,
@@ -217,9 +364,8 @@ export abstract class RpcEndpoint<
       const timeoutId = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id)
-          reject(
-            new Error(`Request timeout for method ${methodToString(method)}`),
-          )
+          const timeoutError = RpcErrors.timeout(methodToString(method))
+          reject(new Error(timeoutError.message))
         }
       }, timeoutMs || this.defaultTimeoutMs)
 
@@ -241,9 +387,32 @@ export abstract class RpcEndpoint<
 
   /**
    * Send an RPC notification (fire-and-forget) without waiting for a response
-   * @param method Method name to call
-   * @param params Optional parameters to pass
-   * @returns Promise that resolves when the notification is sent
+   *
+   * This method sends a one-way message to the remote endpoint without expecting
+   * a response. It's useful for events, status updates, or commands that don't
+   * require acknowledgment. The method will resolve as soon as the message is sent.
+   *
+   * @template K - The method key in the registry
+   * @param method - Name of the remote method to notify (must exist in the registry type)
+   * @param params - Type-safe parameters to pass to the remote method
+   * @returns Promise that resolves when the notification is sent (not when it's processed)
+   *
+   * @throws Will throw if message sending fails
+   *
+   * @example
+   * ```typescript
+   * // Send a status update notification
+   * await endpoint.sendNotification('engine.status-changed', {
+   *   type: 'status-changed',
+   *   data: EngineStatus.RUNNING
+   * })
+   *
+   * // Send an event notification
+   * await endpoint.sendNotification('user.logged-in', {
+   *   userId: '123',
+   *   timestamp: Date.now()
+   * })
+   * ```
    */
   public async sendNotification<K extends keyof T>(
     method: K,
