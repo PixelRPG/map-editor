@@ -136,11 +136,13 @@ export function validateRpcResponse(
     return baseValidation
   }
 
-  // Validate response structure
-  if (message.result === undefined && message.error === undefined) {
+  // Validate response structure - check for existence rather than undefined
+  // This aligns with the type definition where both result and error are optional
+  if (!('result' in message) && !('error' in message)) {
     return {
       valid: false,
-      error: 'Response must contain either result or error',
+      error: 'Response must contain either result or error field',
+      details: { hasResult: 'result' in message, hasError: 'error' in message },
     }
   }
 

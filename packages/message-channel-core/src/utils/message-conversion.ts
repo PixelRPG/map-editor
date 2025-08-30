@@ -9,17 +9,23 @@ export function toMessageResponse(
   id: string,
   response: RpcResponse<unknown>,
 ): WireRpcResponse {
-  return {
-    id,
-    type: 'response',
-    ...(response.success
-      ? { result: response.data }
-      : {
-          error: {
-            code: RpcErrorCode.UNKNOWN,
-            message: response.error || 'Unknown error',
-          },
-        }),
+  // Ensure we always have either result or error field, never both
+  if (response.success) {
+    return {
+      id,
+      type: 'response',
+      result: response.data !== undefined ? response.data : null, // Convert undefined to null for JSON compatibility
+    }
+  } else {
+    return {
+      id,
+      type: 'response',
+      error: {
+        code: response.code || RpcErrorCode.UNKNOWN,
+        message: response.error || 'Unknown error',
+        ...(response.data !== undefined ? { data: response.data } : {}),
+      },
+    }
   }
 }
 
@@ -29,15 +35,22 @@ export function toMessageResponse(
 export function fromMessageResponse(
   response: WireRpcResponse,
 ): RpcResponse<unknown> {
-  if (response.error) {
+  // Check for error first (takes precedence)
+  if (response.error !== undefined) {
     return {
       success: false,
       error: response.error.message,
+      code: response.error.code,
+      ...(response.error.data !== undefined
+        ? { data: response.error.data }
+        : {}),
     }
   }
+
+  // For successful responses, return result (could be null from undefined conversion)
   return {
     success: true,
-    data: response.result,
+    data: response.result !== undefined ? response.result : undefined,
   }
 }
 
