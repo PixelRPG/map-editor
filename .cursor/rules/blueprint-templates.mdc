@@ -4,172 +4,115 @@ globs: **/*.blp
 alwaysApply: false
 ---
 
-> **See also:** [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc) for TypeScript GObject implementation patterns and lifecycle management.
-# Blueprint Templates
+> See also: [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc)
 
-Blueprint is a markup language for GTK user interfaces that provides a clean, declarative approach to UI design.
+# Blueprint Templates (TL;DR)
 
-## General Principles
-- Use Blueprint templates for all GTK UI definitions
-- Leverage declarative approach rather than programmatic UI construction
-- Focus on defining relationships between UI elements and data
-- Separate UI structure from behavioral logic
-- Follow GTK and GNOME HIG (Human Interface Guidelines)
+**Goal:** Declarative UI in `.blp`; logic in TypeScript. Bind data, don’t hardcode.
 
-## Template Structure
-- Use proper namespaces (using Gtk 4.0, Adw 1, etc.)
-- Create templates with descriptive names prefixed with "$"
-- Extend appropriate base classes (Adw.Window, Adw.Bin, etc.)
-- Organize UI hierarchically from container to child elements
-- Group related elements within appropriate containers
+## Basics
+- Use Blueprint for all GTK UI; follow GNOME HIG.
+- Keep structure declarative; avoid programmatic widget construction.
+- Namespaces: `using Gtk 4.0; using Adw 1;` etc.
+- Prefix template names with `$` and extend proper base classes (`Adw.Window`, `Adw.Bin`, …).
 
-## Property Binding
-- Bind UI element properties to template properties using "bind template.property_name"
-- Avoid hardcoding values when they should be dynamic
-- Use one-way binding for display-only properties
-- Use two-way binding for editable properties when appropriate
-- Leverage expressions for property transformations when needed
+## Binding (default choice)
+- `bind template.prop` for one-way display.
+- `bind template.prop bidirectional` for editable fields.
+- Prefer expressions over ad-hoc callbacks for simple transforms.
+- Avoid magic constants; bind instead.
 
-## Signal Handling
-- Connect signals to callback methods using "signal_name => $_callback_method()"
-- Name callback methods consistently (prefixed with "_")
-- Keep signal callbacks in UI templates rather than connecting programmatically
-- Use signals for communication between components
-- Ensure signal handler methods are properly registered with @Gtk.Template.Callback()
+```blp
+template $MyWidget : Gtk.Box {
+  Label title { label: bind template.title; visible: bind template.title as <bool>; }
+  Entry  edit  { text: bind template.title bidirectional; }
+}
+```
 
-## TypeScript Integration
+## Signals (wire in .blp, implement in TS)
 
-### Template Registration Pattern
-```typescript
+* Connect in `.blp`: `clicked => $_on_action();`
+* Implement in class; annotate with `@Gtk.Template.Callback()` when needed.
+* Use consistent `_onXxx()` naming.
+
+```blp
+Button save { action-name: "app.save"; clicked => $_on_save(); }
+```
+
+```ts
+_on_save() { this.emit('save-requested'); }
+```
+
+## TypeScript Registration (minimal pattern)
+
+```ts
 import GObject from '@girs/gobject-2.0';
 import Gtk from '@girs/gtk-4.0';
-import Template from './my-widget.blp'; // Resolved using vite + @gjsify/vite-plugin-blueprint
+import Template from './my-widget.blp';
 
-export class MyWidget extends Gtk.Widget {
+export class MyWidget extends Gtk.Box {
   static {
     GObject.registerClass({
       GTypeName: 'MyWidget',
       Template,
-      InternalChildren: ['main_label', 'action_button'],
+      InternalChildren: ['title', 'save'],
       Properties: {
-        title: GObject.ParamSpec.string(
-          'title', 'Title', 'Widget title',
-          GObject.ParamFlags.READWRITE, ''
-        ),
+        title: GObject.ParamSpec.string('title','Title','', GObject.ParamFlags.READWRITE,''),
       },
     }, this);
   }
-
-  declare _main_label: Gtk.Label;
-  declare _action_button: Gtk.Button;
+  declare _title: Gtk.Label;
+  declare _save: Gtk.Button;
 }
 ```
 
-### Signal Handler Implementation
+## Actions, Menus & State
+
+* Prefer `GAction`/`action-name` over manual `clicked` where possible.
+* Bind action targets to template state.
+* Use menu models via `MenuButton.menu-model`.
+
 ```blp
-Button action_button {
-  label: "Click Me";
-  clicked => $_on_action_clicked();
-}
+Button { action-name: "app.export"; action-target: bind template.doc_id; }
+MenuButton { icon-name: "open-menu-symbolic"; menu-model: template.menu; }
 ```
 
-```typescript
-// In TypeScript class:
-_onActionClicked() {
-  // Handler implementation
-  this.emit('action-performed');
-}
-```
+## Conditional UI
 
-### Property Binding Patterns
+* Toggle with boolean binds; compute labels inline.
+
 ```blp
-template $MyWidget : Gtk.Box {
-  Label main_label {
-    label: bind template.title;
-    visible: bind template.title as <bool>;
-  }
-  
-  Entry title_entry {
-    text: bind template.title bidirectional;
-    placeholder-text: "Enter title...";
-  }
-}
+Label err { label: bind template.error; visible: bind template.has_error; styles: ["error"]; }
+Button submit { sensitive: bind template.form_valid; label: bind template.loading ? "Loading…" : "Submit"; }
 ```
 
-## Accessibility
-- Include proper accessibility attributes
-- Use meaningful labels for all interactive elements
-- Set appropriate tooltips for complex controls
-- Ensure keyboard navigation works correctly
-- Follow the GNOME accessibility guidelines
+## Layout (pragmatic defaults)
 
-## Advanced Patterns
+* Prefer shallow hierarchies; use spacing/margins instead of nested boxes.
+* Use `hexpand/halign/valign` intentionally for responsiveness.
 
-### Conditional Visibility and Styling
 ```blp
-Label error_label {
-  label: bind template.error-message;
-  visible: bind template.has-error;
-  styles: ["error"];
-}
-
-Button submit_button {
-  sensitive: bind template.form-valid;
-  label: bind template.is-loading ? "Loading..." : "Submit";
-}
-```
-
-### Menu and Action Integration
-```blp
-MenuButton menu_button {
-  icon-name: "open-menu-symbolic";
-  menu-model: template.main_menu;
-  popover.position: bottom;
-}
-
-Button {
-  action-name: "app.save";
-  action-target: bind template.document-id;
-}
-```
-
-### Layout and Responsive Design
-```blp
-Box main_container {
-  orientation: vertical;
-  spacing: 12;
-  margin-top: 24;
-  margin-bottom: 24;
-  margin-start: 24;
-  margin-end: 24;
-  
-  Box header_box {
-    orientation: horizontal;
-    spacing: 6;
-    
-    Label title {
-      label: bind template.title;
-      hexpand: true;
-      xalign: 0;
-      styles: ["title-1"];
-    }
-    
-    Button close_button {
-      icon-name: "window-close-symbolic";
-      clicked => $_on_close_clicked();
-    }
+Box root {
+  orientation: vertical; spacing: 12; margin-top: 24; margin-bottom: 24; margin-start: 24; margin-end: 24;
+  Box header {
+    orientation: horizontal; spacing: 6;
+    Label title { label: bind template.title; hexpand: true; xalign: 0; styles: ["title-1"]; }
+    Button close { icon-name: "window-close-symbolic"; clicked => $_on_close(); }
   }
 }
 ```
 
-## Best Practices
-- Avoid deep nesting of containers when possible
-- Use appropriate spacing and margin properties
-- Set proper element IDs for CSS styling
-- Choose correct widgets for the intended purpose
-- Use templates for reusable components
-- Separate complex UI into multiple template files for maintainability
-- Leverage Adwaita styles and design patterns
-- Use meaningful widget names for InternalChildren access
-- Group related functionality in logical containers
-- Consider responsive design with proper expand/align properties 
+## Accessibility (must-haves)
+
+* Meaningful labels/`accessible-name` for interactives.
+* Keyboard navigation preserved; avoid focus traps.
+* Tooltips only for non-obvious controls.
+
+## Best Practices (checklist)
+
+* ✅ Bind > hardcode; actions > ad-hoc handlers.
+* ✅ Split complex UIs into multiple templates; keep names meaningful.
+* ✅ Use `InternalChildren` only for elements you must touch in code.
+* ✅ Keep margins/spacing consistent; prefer Adwaita styles.
+* ❌ No deep container nesting; no business logic in `.blp`.
+* ❌ Don’t connect signals in code when `.blp` can do it.
