@@ -83,9 +83,9 @@ parentRpc.registerHandler('loadProjectData', async (projectId: string) => {
 });
 
 // Call methods in the iframe
-async function startGame() {
+async function start() {
   try {
-    const result = await parentRpc.sendRequest('startGame', { level: 1 });
+    const result = await parentRpc.sendRequest('start', { level: 1 });
     console.log('Game started:', result);
   } catch (error) {
     console.error('Failed to start game:', error);
@@ -98,7 +98,7 @@ const childRpc = RpcEndpoint.getInstance('game-rpc', {
 });
 
 // Register handler methods that can be called from the parent
-childRpc.registerHandler('startGame', async (params: { level: number }) => {
+childRpc.registerHandler('start', async (params: { level: number }) => {
   console.log('Starting game at level:', params.level);
   // Game start logic
   return { success: true, gameState: 'running' };
@@ -107,7 +107,7 @@ childRpc.registerHandler('startGame', async (params: { level: number }) => {
 // Call methods in the parent
 async function loadProject(projectId: string) {
   try {
-    const projectData = await childRpc.sendRequest('loadProjectData', projectId);
+    const projectData = await childRpc.sendRequest(RpcEngineType.LOAD_PROJECT, projectId);
     console.log('Project data loaded:', projectData);
     return projectData;
   } catch (error) {

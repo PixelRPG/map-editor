@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
-import { createFilter } from '@rollup/pluginutils';
-import glsl from 'vite-plugin-glsl';
+import { createFilter } from '@rollup/pluginutils'
+import glsl from 'vite-plugin-glsl'
 
 function cssAsRaw() {
-  const filter = createFilter('**/*.css');
+  const filter = createFilter('**/*.css')
 
   return {
     name: 'css-as-raw',
@@ -11,18 +11,27 @@ function cssAsRaw() {
       if (filter(id)) {
         return {
           code: `export default ${JSON.stringify(code)};`,
-          map: { mappings: '' }
-        };
+          map: { mappings: '' },
+        }
       }
-    }
-  };
+    },
+  }
 }
 
 export default defineConfig({
   plugins: [glsl()],
+  server: {
+    port: 4173,
+    host: true,
+    cors: true,
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
   define: {
     'process.env.__EX_VERSION': JSON.stringify('0.0.1-custom'),
-    'process.env.NODE_ENV': JSON.stringify('development')
+    'process.env.NODE_ENV': JSON.stringify('development'),
   },
   // logLevel: 'info',
   build: {

@@ -14,6 +14,7 @@
     "scripts": {
         "dev": "vite",
         "check": "tsc",
+        "start": "yarn preview",
         "build:vite": "vite build",
         "build:barrels": "barrelsby --delete --directory src",
         "build": "yarn build:vite && yarn build:barrels",

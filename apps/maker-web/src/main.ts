@@ -1,62 +1,46 @@
 import { RpcEndpoint, IframeContext } from '@pixelrpg/message-channel-web'
-import { LoadProjectRequest, LoadProjectResponse } from './types'
-import { RpcEngineType, RpcEngineDataMap } from '@pixelrpg/engine-core'
+import { RpcEngineType, EngineRpcRegistry } from '@pixelrpg/engine-core'
 
-// Konstante für den Projekt-Pfad
-const PROJECT_PATH = 'http://localhost:5001/game-project.json'
+// Constant for the project path
+const PROJECT_PATH = 'http://localhost:3000/games/zelda-like/game-project.json'
 
-// DOM-Elemente
+// DOM elements
 const loadButton = document.getElementById(
   'loadProjectBtn',
 ) as HTMLButtonElement
+const testButton = document.getElementById('testRpcBtn') as HTMLButtonElement
 const gameIframe = document.getElementById('game-iframe') as HTMLIFrameElement
 
-// RPC-Endpunkt für die Kommunikation mit dem iframe
-let rpc: RpcEndpoint | null = null
+// RPC endpoint for communication with the iframe
+let rpc: RpcEndpoint<EngineRpcRegistry> | null = null
 
 /**
- * Initialisiert die Anwendung
+ * Initialize the application
  */
 function init() {
   console.log('Initializing maker-web app')
 
-  // RPC-Endpunkt erstellen
-  rpc = RpcEndpoint.getInstance('pixelrpg', {
-    context: IframeContext.PARENT,
-    targetIframe: gameIframe,
-    targetOrigin: '*',
-  })
+  // Wait for iframe to load before creating RPC endpoint
+  gameIframe.onload = () => {
+    console.log('Iframe loaded, creating RPC endpoint')
 
-  rpc.registerHandler(
-    RpcEngineType.NOTIFY_ENGINE_EVENT,
-    (
-      event: RpcEngineDataMap[RpcEngineType.NOTIFY_ENGINE_EVENT] | undefined,
-    ) => {
-      if (!event) {
-        console.error('Invalid engine event: undefined')
-        return
-      }
-      console.log('Engine event:', event)
-    },
-  )
+    // Create RPC endpoint
+    rpc = RpcEndpoint.getInstance<EngineRpcRegistry>('pixelrpg', {
+      context: IframeContext.PARENT,
+      targetIframe: gameIframe,
+      targetOrigin: '*',
+    })
 
-  rpc.registerHandler(
-    RpcEngineType.HANDLE_INPUT_EVENT,
-    (event: RpcEngineDataMap[RpcEngineType.HANDLE_INPUT_EVENT] | undefined) => {
-      if (!event) {
-        console.error('Invalid input event: undefined')
-        return
-      }
-      console.log('Input event:', event)
-    },
-  )
+    console.log('RPC endpoint created for parent context')
+  }
 
-  // Button-Klick-Handler registrieren
+  // Register button click handlers
   loadButton.addEventListener('click', loadProject)
+  testButton.addEventListener('click', testRpcConnection)
 }
 
 /**
- * Lädt das Projekt in die Engine
+ * Load the project into the engine
  */
 async function loadProject() {
   if (!rpc) {
@@ -64,25 +48,59 @@ async function loadProject() {
     return
   }
 
+  console.log('Loading project:', PROJECT_PATH)
+
   try {
-    console.log('Loading project:', PROJECT_PATH)
+    // Send request to the engine
+    console.log('Sending RPC request to iframe...')
+    const response = await rpc.sendRequest(RpcEngineType.LOAD_PROJECT, {
+      projectPath: PROJECT_PATH,
+      options: {
+        preloadAllSpriteSets: true,
+        preloadAllMaps: false,
+        initialMapId: 'kokiri-forest',
+      },
+    })
 
-    // Anfrage an die Engine senden
-    const response = await rpc.sendRequest<
-      LoadProjectRequest,
-      LoadProjectResponse
-    >(RpcEngineType.LOAD_PROJECT, { projectPath: PROJECT_PATH })
+    console.log('Received RPC response:', response)
 
-    // Ergebnis verarbeiten
+    // Process result
     if (response.success) {
       console.log('Project loaded successfully')
     } else {
-      console.error('Failed to load project:', response.error)
+      // Error is always a string according to RpcResponse type
+      const errorMessage = response.error || 'Unknown error'
+
+      console.error('Failed to load project:', errorMessage)
+
+      // If you need error codes in the future, extend the RpcResponse type
+      // to support structured errors like WireRpcResponse.error
     }
   } catch (error) {
-    console.error('Error loading project:', error)
+    console.error('RPC request failed:', error)
   }
 }
 
-// App initialisieren, wenn das DOM geladen ist
+/**
+ * Test RPC connection to iframe
+ */
+async function testRpcConnection() {
+  console.log('Testing RPC connection...')
+
+  if (!rpc) {
+    console.error('RPC endpoint not initialized')
+    return
+  }
+
+  try {
+    console.log('Sending test ping...')
+    // Try to send a simple request that should always work
+    const response = await rpc.sendRequest(RpcEngineType.START, undefined)
+    console.log('RPC test successful:', response)
+  } catch (error) {
+    console.error('RPC test failed:', error)
+  }
+}
+
+// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', init)
