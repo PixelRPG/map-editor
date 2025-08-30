@@ -9,7 +9,7 @@
     },
     "scripts": {
         "check": "tsc",
-        "build:barrels": "barrelsby --delete --directory src src/types src/widgets src/widgets/map-editor src/widgets/sprite",
+        "build:barrels": "barrelsby --delete --directory src src/widgets src/widgets/map-editor src/widgets/sprite",
         "build": "yarn build:barrels"
     },
     "dependencies": {

@@ -42,7 +42,7 @@ export class TilesetSelectorStory extends StoryWidget {
     super({
       story: 'TilesetSelector',
       args: {
-        spriteScale: 1.0,
+        scale: 1.0,
         showGrid: true,
       },
       meta: TilesetSelectorStory.getMetadata(),
@@ -61,7 +61,7 @@ export class TilesetSelectorStory extends StoryWidget {
       tags: ['autodocs', 'ui', 'map-editor', 'tileset', 'container'],
       controls: [
         {
-          name: 'spriteScale',
+          name: 'scale',
           label: 'Sprite Scale',
           type: ControlType.RANGE,
           min: 0.5,
@@ -102,8 +102,8 @@ export class TilesetSelectorStory extends StoryWidget {
     let hasChanges = false
 
     // Check and update sprite scale
-    if (this.args.spriteScale !== this.tilesetSelector.spriteScale) {
-      this.tilesetSelector.spriteScale = this.args.spriteScale
+    if (this.args.scale !== this.tilesetSelector.scale) {
+      this.tilesetSelector.scale = this.args.scale
       hasChanges = true
     }
 
@@ -207,7 +207,7 @@ export class TilesetSelectorStory extends StoryWidget {
       this.tilesetSelector = new TilesetSelector()
 
       // Set properties after creation
-      this.tilesetSelector.spriteScale = this.args.spriteScale ?? 1.0
+      this.tilesetSelector.scale = this.args.scale ?? 1.0
       this.tilesetSelector.showGrid = this.args.showGrid ?? true
 
       // Set all loaded tilesets
@@ -250,7 +250,7 @@ export class TilesetSelectorStory extends StoryWidget {
       (sum, tileset) => sum + tileset.sprites.length,
       0,
     )
-    const scale = this.args.spriteScale ?? 1.0
+    const scale = this.args.scale ?? 1.0
 
     const info = [
       `${displayedCount} tileset${displayedCount !== 1 ? 's' : ''} displayed`,
