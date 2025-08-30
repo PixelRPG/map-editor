@@ -18,7 +18,7 @@
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
-    "packageManager": "yarn@4.7.0",
+    "packageManager": "yarn@4.9.2",
     "workspaces": [
         "packages/*",
         "apps/*",
@@ -29,7 +29,8 @@
         "@excaliburjs/plugin-tiled": "workspace:^"
     },
     "devDependencies": {
-        "prettier": "^3.5.1",
-        "typescript": "^5.8.2"
+        "barrelsby": "^2.8.1",
+        "prettier": "^3.6.2",
+        "typescript": "^5.9.2"
     }
 }

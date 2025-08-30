@@ -1,0 +1,34 @@
+{
+    "name": "@pixelrpg/ui-gjs",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "src/index.ts",
+    "exports": {
+        "./index.css": "./src/index.css",
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "check": "tsc",
+        "build:barrels": "barrelsby --delete --directory src src/widgets src/widgets/map-editor src/widgets/sprite",
+        "build": "yarn build:barrels"
+    },
+    "dependencies": {
+        "@pixelrpg/data-core": "workspace:^",
+        "@pixelrpg/data-gjs": "workspace:^",
+        "@pixelrpg/story-gjs": "workspace:^"
+    },
+    "devDependencies": {
+        "@girs/adw-1": "^1.8.0-4.0.0-beta.36",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.36",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.36",
+        "@girs/gio-2.0": "^2.84.4-4.0.0-beta.36",
+        "@girs/gjs": "^4.0.0-beta.36",
+        "@girs/glib-2.0": "^2.84.4-4.0.0-beta.36",
+        "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.36",
+        "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.36",
+        "@girs/pango-1.0": "^1.56.4-4.0.0-beta.36",
+        "barrelsby": "^2.8.1",
+        "typescript": "^5.9.2",
+        "vite": "^7.1.3"
+    }
+}

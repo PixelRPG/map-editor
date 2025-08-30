@@ -65,6 +65,27 @@ function normalizePathWithoutProtocol(path: string): string {
 }
 
 /**
+ * Extracts the protocol and host from a URL
+ * @param url The URL to parse
+ * @returns An object with protocol and host properties, or null if parsing fails
+ */
+function extractUrlParts(url: string): { protocol: string, host: string } | null {
+    // Regular expression to extract protocol and host from URL
+    // This matches: protocol://host (where host can contain anything before the first slash)
+    const urlRegex = /^(https?:)\/\/([^/]+)/;
+    const match = url.match(urlRegex);
+
+    if (!match) {
+        return null;
+    }
+
+    return {
+        protocol: match[1],
+        host: match[2]
+    };
+}
+
+/**
  * Joins path segments and normalizes the result
  * @param basePath The base path
  * @param relativePath The relative path to join
@@ -76,9 +97,15 @@ export function joinPaths(basePath: string, relativePath: string): string {
         // If basePath is a URL, preserve the origin
         if (basePath.match(/^https?:\/\//)) {
             try {
-                // Use URL API to properly parse and join
-                const baseUrl = new URL(basePath);
-                return `${baseUrl.protocol}//${baseUrl.host}${relativePath}`;
+                // Parse the URL without using the URL constructor
+                const urlParts = extractUrlParts(basePath);
+                if (urlParts) {
+                    return `${urlParts.protocol}//${urlParts.host}${relativePath}`;
+                }
+
+                // Fallback to basic joining if URL parsing fails
+                const origin = basePath.split('/').slice(0, 3).join('/');
+                return `${origin}${relativePath}`;
             } catch (e) {
                 // Fallback to basic joining if URL parsing fails
                 const origin = basePath.split('/').slice(0, 3).join('/');

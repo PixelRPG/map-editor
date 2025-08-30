@@ -212,7 +212,7 @@ When using RpcEndpoint in different contexts:
 │  └─────────────┘  │                    │  └─────────────┘  │
 │        ▲          │                    │        │          │
 │        │          │                    │        │          │
-│        │          │  registerHandler()  │        ▼          │
+│        │          │  registerHandler() │        ▼          │
 │        │          │                    │  ┌─────────────┐  │
 │        │          │                    │  │   Handler   │  │
 │        │          │                    │  └─────────────┘  │
@@ -220,7 +220,7 @@ When using RpcEndpoint in different contexts:
 │        │          │                    │        │          │
 │        │          │                    │        ▼          │
 │  ┌─────────────┐  │      Response      │  ┌─────────────┐  │
-│  │   Handler   │◀─┼───────────────────┼──│  Response    │  │
+│  │   Handler   │◀─┼────────────────────┼──│  Response   │  │
 │  └─────────────┘  │                    │  └─────────────┘  │
 │        │          │                    │        ▲          │
 │        ▼          │  sendRequest()     │        │          │

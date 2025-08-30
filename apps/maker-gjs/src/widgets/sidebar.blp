@@ -11,60 +11,34 @@ template $Sidebar: Adw.Bin {
       MenuButton {
         primary: true;
         icon-name: 'open-menu-symbolic';
-        tooltip-text: _('Menu');
+        tooltip-text: _("Menu");
         menu-model: primary_menu;
       }
     }
 
-    content: Adw.ViewStack stack {
-      vexpand: true;
-
-      Adw.ViewStackPage {
-        name: "pageTilesets";
-        title: _("Tilesets");
-        icon-name: "star-filled-rounded-symbolic";
-        use-underline: true;
-
-        child: $SidebarPageTilesets pageTilesets {};
-      }
-
-      Adw.ViewStackPage {
-        name: "pageLayer";
-        title: _("Layer");
-        icon-name: "clock-alt-symbolic";
-        use-underline: true;
-
-        child: $SidebarPageLayer pageLayer {};
-      }
-    };
-
-    [bottom]
-    Adw.ViewSwitcherBar switcher_bar {
-      stack: stack;
-      reveal: true;
-    }
+    content: $MapEditorPanel mapEditorPanel {};
   }
 }
 
 menu primary_menu {
   section {
     item {
-      label: _('_Preferences');
+      label: _("_Preferences");
       action: 'app.preferences';
     }
 
     item {
-      label: _('_Keyboard Shortcuts');
+      label: _("_Keyboard Shortcuts");
       action: 'win.show-help-overlay';
     }
 
     item {
-      label: _('_About Test');
+      label: _("_About Test");
       action: 'app.about';
     }
 
     item {
-      label: _('_Quit');
+      label: _("_Quit");
       action: 'app.quit';
     }
   }

@@ -1,0 +1,28 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $LayerSelector: Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-start: 0;
+    margin-end: 0;
+
+    Gtk.ScrolledWindow layers_scrolled_window {
+      vexpand: true;
+      hscrollbar-policy: never;
+      
+      Gtk.Box placeholder_box {
+        orientation: vertical;
+        spacing: 6;
+        
+        Gtk.Label {
+          label: "No layers loaded";
+          css-classes: ["dim-label"];
+        }
+      }
+    }
+  }
+}

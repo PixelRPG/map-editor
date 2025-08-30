@@ -1,0 +1,45 @@
+using Gtk 4.0;
+
+template $MapEditorPanelStory: $StoryWidget {
+    height-request: 600;
+    Gtk.Box {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+
+        Gtk.Label {
+            label: "MapEditorPanel Showcase";
+            css-classes: ["title-2"];
+        }
+
+        Gtk.Label info_label {
+            label: "Interactive map editing panel with tileset and layer selection";
+            css-classes: ["dim-label", "caption"];
+            xalign: 0;
+        }
+
+        Gtk.Frame {
+            css-classes: ["card"];
+            vexpand: true;
+            
+            child: $MapEditorPanel mapEditorPanel {
+                margin-top: 12;
+                margin-bottom: 12;
+                margin-start: 12;
+                margin-end: 12;
+                vexpand: true;
+            };
+        }
+
+        Gtk.Label {
+            label: "Switch between Tilesets and Layer tabs to see the different panels. Use the controls to modify the panel behavior.";
+            css-classes: ["dim-label", "caption"];
+            wrap: true;
+            justify: center;
+            xalign: 0.5;
+        }
+    }
+}

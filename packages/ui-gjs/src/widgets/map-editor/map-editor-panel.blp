@@ -1,0 +1,35 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MapEditorPanel: Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    
+    Adw.ViewStack stack {
+      vexpand: true;
+
+      Adw.ViewStackPage {
+        name: "pageTilesets";
+        title: _("Tilesets");
+        icon-name: "star-filled-rounded-symbolic";
+        use-underline: true;
+
+        child: $TilesetSelector tilesetSelector {};
+      }
+
+      Adw.ViewStackPage {
+        name: "pageLayer";
+        title: _("Layer");
+        icon-name: "clock-alt-symbolic";
+        use-underline: true;
+
+        child: $LayerSelector layerSelector {};
+      }
+    }
+    
+    Adw.ViewSwitcherBar viewSwitcherBar {
+      stack: stack;
+      reveal: true;
+    }
+  }
+}

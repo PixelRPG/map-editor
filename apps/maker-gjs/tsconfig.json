@@ -19,6 +19,6 @@
   "include": [
     "@girs/gjs",
     "@girs/gjs/dom",
-    "src/env.d.ts",
+    "env.d.ts",
   ]
 }

@@ -1,0 +1,257 @@
+---
+description: story related
+globs: 
+alwaysApply: false
+---
+
+> **See also:** 
+> - [@blueprint-templates.mdc](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint UI template patterns and best practices
+> - [@gobject-patterns.mdc](mdc:.cursor/rules/gobject-patterns.mdc) for TypeScript GObject implementation patterns and lifecycle management
+
+# Storybook Guidelines
+
+## Architecture Overview
+- Stories are implemented as GObject-based GTK widgets
+- Story classes are registered with a central registry
+- Story instances are created only when the GTK environment is ready
+- Each story has its own UI template to ensure correct class names and properties
+- Use the `StoryRegistry` service for centralized story management
+
+## Story Structure
+- Create stories as classes extending the `StoryWidget` base class (which extends `Adw.Bin`)
+- Define abstract base classes for common story functionality
+- Create variant subclasses for different configurations of the same component
+- Register story classes (not instances) with the registry using `StoryModule` objects
+- Follow the title format `'Category/Name'` for consistent organization
+- Include a descriptive `description` property explaining what the story demonstrates
+- Group related widgets in the same category
+- Export `StoryModule` objects containing arrays of story classes
+- Implement static `getMetadata()` method for each story class
+
+### StoryMeta Structure
+The story metadata is defined by the `StoryMeta` and `StoryControl` interfaces in `@packages/story-gjs/src/types/story.ts`. Key properties include:
+
+- **`title`**: Story title in 'Category/Name' format
+- **`description`**: Optional description of what the story demonstrates
+- **`component`**: GType of the component being showcased
+- **`tags`**: Array of tags for filtering and organization
+- **`controls`**: Array of interactive control configurations
+
+See the full interface definitions in `@pixelrpg/story-gjs` types.
+
+## Widget Implementation
+- Create separate `.story.ts` files for each component
+- Define separate `.story.blp` files for each variant (inheriting from `$StoryWidget`)
+- Set default property values in the Blueprint template when possible
+- Define internal child widgets in the GObject class registration using `InternalChildren`
+- Implement proper error handling in all widget methods
+- Override `initialize()` to set up the widget after creation (called once)
+- Override `updateArgs()` to handle property changes (called when controls change)
+- Implement static `getMetadata()` method returning `StoryMeta` object with `title`, `description`, and `controls`
+- Use constructor with `{ story, args, meta }` parameters
+- Export `StoryModule` objects containing story class arrays
+- Call `GObject.type_ensure()` after class definition
+- Follow [@gobject-patterns.mdc](mdc:.cursor/rules/gobject-patterns.mdc) for proper GObject registration and lifecycle management
+- Use proper signal lifecycle patterns (`vfunc_map`/`vfunc_unmap`) for story widgets
+
+## UI Templates
+- Each story variant should have its own Blueprint template
+- Use proper widget class names in templates
+- Define dimensions and static properties in the template
+- Follow GTK's spacing and margin guidelines
+- Use clear widget IDs that match their purpose
+- Reference blueprint templates directly with `.blp` import syntax, we use a vite plugin to import and resolve them directly
+- Follow [@blueprint-templates.mdc](mdc:.cursor/rules/blueprint-templates.mdc) for Blueprint syntax, property binding, and accessibility guidelines
+- Use proper template structure with namespaces and descriptive template names
+- Leverage property binding patterns for dynamic story controls
+
+## Story-Specific Patterns
+
+### GObject Registration for Stories
+```typescript
+import GObject from '@girs/gobject-2.0';
+import { StoryWidget, StoryMeta, ControlType, StoryModule } from '@pixelrpg/story-gjs';
+import Template from './my-story.blp';
+
+export class MyStory extends StoryWidget {
+  // Declare internal children from template
+  declare _demo_widget: Gtk.Widget;
+  declare _info_label: Gtk.Label;
+
+  static {
+    GObject.registerClass({
+      GTypeName: 'MyStory',
+      Template,
+      InternalChildren: ['demo_widget', 'info_label'],
+    }, this);
+  }
+
+  constructor() {
+    super({
+      story: 'MyStory',
+      args: {
+        demoValue: 'default',
+      },
+      meta: MyStory.getMetadata(),
+    });
+  }
+
+  static getMetadata(): StoryMeta {
+    return {
+      title: 'Category/My Story',
+      description: 'Demonstration of my demo widget with interactive controls',
+      component: MyDemoWidget.$gtype,
+      tags: ['autodocs', 'demo'],
+      controls: [
+        {
+          name: 'demoValue',
+          label: 'Demo Value',
+          type: ControlType.TEXT,
+          defaultValue: 'default',
+          description: 'Value for demonstration',
+        },
+      ],
+    };
+  }
+}
+```
+
+### Blueprint Template for Stories
+```blp
+using Gtk 4.0;
+
+template $MyStory: $StoryWidget {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 24;
+    margin-bottom: 24;
+    margin-start: 24;
+    margin-end: 24;
+
+    Gtk.Label {
+      label: "My Demo Widget Showcase";
+      styles ["title-2"];
+    }
+
+    Gtk.Label info_label {
+      label: "Loading demo information...";
+      styles ["dim-label", "caption"];
+      xalign: 0;
+    }
+
+    Gtk.Frame {
+      styles ["card"];
+      
+      child: Gtk.Box demo_widget {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 24;
+        margin-end: 24;
+        halign: center;
+        valign: center;
+      };
+    }
+  }
+}
+```
+
+### StoryModule Export Pattern
+```typescript
+// Ensure the type is registered
+GObject.type_ensure(MyStory.$gtype);
+
+/**
+ * Collection of all demo widget story variants
+ */
+export const MyDemoWidgetStories: StoryModule = {
+  stories: [MyStory],
+};
+```
+
+### Story Collection and Registration
+```typescript
+// In stories.ts file
+import { StoryModule } from '@pixelrpg/story-gjs';
+import { MyDemoWidgetStories } from './widgets/demo/demo.widget.story';
+
+/**
+ * All story modules available in this package
+ */
+export const AllStories: StoryModule[] = [
+  MyDemoWidgetStories,
+];
+
+// Export individual story modules for selective imports
+export { MyDemoWidgetStories } from './widgets/demo/demo.widget.story';
+```
+
+## Control Types and Configuration
+- Use appropriate `ControlType` from the enum (not string literals)
+- Configure proper constraints for numeric controls (`min`, `max`, `step`)
+- Provide comprehensive options for select controls using `{ label, value }` objects
+- Include descriptive labels and tooltips via `description` property
+- Handle property changes efficiently in `updateArgs()` method
+- Group related controls logically in the `controls` array
+
+
+### Control Configuration Examples
+```typescript
+controls: [
+  {
+    name: 'scale',
+    label: 'Scale Factor',
+    type: ControlType.RANGE,
+    min: 0.5,
+    max: 4.0,
+    step: 0.25,
+    defaultValue: 1.0,
+    description: 'Scale factor for rendering the widget',
+  },
+  {
+    name: 'enabled',
+    label: 'Enable Feature',
+    type: ControlType.BOOLEAN,
+    defaultValue: true,
+    description: 'Toggle to enable or disable the feature',
+  },
+  {
+    name: 'mode',
+    label: 'Display Mode',
+    type: ControlType.SELECT,
+    options: [
+      { label: 'Grid View', value: 'grid' },
+      { label: 'List View', value: 'list' },
+      { label: 'Card View', value: 'card' },
+    ],
+    defaultValue: 'grid',
+    description: 'Select the display mode for the widget',
+  },
+]
+```
+
+## Error Handling
+- Check for null/undefined values before use
+- Use try/catch blocks for error-prone operations 
+- Log meaningful error messages
+- Use Promise chaining with proper error handlers
+- Provide graceful fallbacks when operations fail
+- Check widget state before performing actions
+
+## Type Safety
+- Use proper TypeScript types and interfaces
+- Avoid `any` type - use generic types with constraints
+- Define clear interfaces for story components
+- Use type guards for runtime checks
+- Create custom types for complex structures
+- Use proper nullability handling
+
+## Documentation
+- Document all public classes, methods, and properties
+- Use consistent JSDoc style comments
+- Include parameter and return type descriptions
+- Document expected behavior and edge cases
+- Add examples for complex usage patterns
+- Comment non-obvious code sections

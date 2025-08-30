@@ -1,26 +1,25 @@
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
-import { SidebarPageTilesets } from './sidebar-page-tilesets.ts'
-import { SidebarPageLayer } from './sidebar-page-layer.ts'
-import { SpriteSheetWidget } from './sprite-sheet.widget.ts'
-import { LayersWidget } from './layers.widget.ts'
+import { MapEditorPanel, LayersWidget } from '@pixelrpg/ui-gjs'
+import { MapData } from '@pixelrpg/data-core'
+import { SpriteSheet } from '@pixelrpg/data-gjs'
 
-import Template from './sidebar.ui?raw'
+import Template from './sidebar.blp'
 
 export class Sidebar extends Adw.Bin {
-
   // GObject internal children
-  declare _pageTilesets: SidebarPageTilesets
-  declare _pageLayer: SidebarPageLayer
+  declare _mapEditorPanel: MapEditorPanel
 
   static {
-    GObject.registerClass({
-      GTypeName: 'Sidebar',
-      Template,
-      InternalChildren: ['pageTilesets', 'pageLayer']
-    }, this);
+    GObject.registerClass(
+      {
+        GTypeName: 'Sidebar',
+        Template,
+        InternalChildren: ['mapEditorPanel'],
+      },
+      this,
+    )
   }
 
   constructor(params: Partial<Adw.Bin.ConstructorProps>) {
@@ -28,16 +27,24 @@ export class Sidebar extends Adw.Bin {
   }
 
   /**
-   * Set the content widget of the sidebar
-   * @param content The content widget to set
+   * Initialize the sidebar with map data including tilesets and layers
+   * @param mapData The map data containing layers and sprite set references
+   * @param spriteSheets Array of loaded sprite sheets
    */
-  setSpriteSheet(tileset: SpriteSheetWidget) {
-    this._pageTilesets.set_child(tileset)
-  }
+  initializeMapData(mapData: MapData, spriteSheets: SpriteSheet[]): void {
+    console.log(
+      '[Sidebar] Initializing map data:',
+      mapData.name,
+      'with',
+      spriteSheets.length,
+      'sprite sheets',
+    )
 
-  setLayers(layers: LayersWidget) {
-    this._pageLayer.set_child(layers)
+    // Pass the map data to the MapEditorPanel
+    this._mapEditorPanel.initializeMapData(mapData, spriteSheets)
   }
 }
+// WORKAROUND: Make sure the MapEditorPanel is registered before the Sidebar, try fixed by import order?
+GObject.type_ensure(MapEditorPanel.$gtype)
 
 GObject.type_ensure(Sidebar.$gtype)

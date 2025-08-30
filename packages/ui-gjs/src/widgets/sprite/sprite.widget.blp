@@ -1,0 +1,13 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SpriteWidget: Adw.Bin {
+    hexpand: false;
+    vexpand: false;
+    halign: start;
+    valign: start;
+    
+    child: Gtk.Picture image {
+      content-fit: fill;
+    };
+}

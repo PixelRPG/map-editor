@@ -15,12 +15,17 @@ GJS implementation of the PixelRPG game engine for GNOME applications.
 yarn add @pixelrpg/engine-gjs
 ```
 
-## Usage
+## Quick Start
 
-The Engine is now a GObject widget that can be directly included in your GNOME application:
+The Engine is a GObject widget that can be directly included in your GNOME application.
+
+For detailed examples and advanced usage, see the [Getting Started Guide](docs/getting-started.md).
+
+### Basic Example
 
 ```typescript
 import { Engine } from '@pixelrpg/engine-gjs';
+import { EngineMessageType } from '@pixelrpg/engine-core';
 
 // Create a new engine instance
 const engine = new Engine();
@@ -43,14 +48,29 @@ await engine.loadMap('map1');
 // Start the engine
 await engine.start();
 
-// Handle messages from the engine
-engine.connect('message-received', (_source, message) => {
-  console.log('Message from engine:', message);
+// Handle engine events using enum values
+engine.connect(EngineMessageType.STATUS_CHANGED, (_source, status) => {
+  console.log('Engine status changed:', status);
 });
 
-// Send a message to the engine
-engine.sendMessage({ type: 'custom-message', data: { foo: 'bar' } });
+engine.connect(EngineMessageType.PROJECT_LOADED, (_source, projectId) => {
+  console.log('Project loaded:', projectId);
+});
+
+engine.connect(EngineMessageType.MAP_LOADED, (_source, mapId) => {
+  console.log('Map loaded:', mapId);
+});
+
+engine.connect(EngineMessageType.ERROR, (_source, message, error) => {
+  console.error('Engine error:', message, error);
+});
+
 ```
+
+## Documentation
+
+- [Getting Started Guide](docs/getting-started.md) - Comprehensive guide with examples
+- [API Reference](src/) - TypeScript source code with JSDoc comments
 
 ## Building
 

@@ -1,0 +1,3 @@
+@import "@pixelrpg/ui-gjs/index.css";
+@import "./widgets/application-window.css";
+@import "./widgets/layer-row.widget.css";

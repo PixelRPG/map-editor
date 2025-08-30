@@ -7,11 +7,10 @@
     "scripts": {
         "preview": "serve -l 5001 --cors"
     },
-    "files": [
-        "assets"
-    ],
     "exports": {
-        "./assets/*": "./assets/*"
+        "./*": "./*",
+        "./spritesets/*": "./spritesets/*",
+        "./maps/*": "./maps/*"
     },
     "devDependencies": {
         "serve": "^14.2.4"
