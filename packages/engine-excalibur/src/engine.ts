@@ -77,72 +77,60 @@ export class Engine implements EngineInterface {
     this.logger.info('Registering RPC handlers')
 
     // Register loadProject handler
-    this.rpc.registerHandler(
-      RpcEngineType.LOAD_PROJECT,
-      async (params: RpcEngineParamMap[RpcEngineType.LOAD_PROJECT]) => {
-        this.logger.info('RPC call: loadProject', params)
+    this.rpc.registerHandler(RpcEngineType.LOAD_PROJECT, async (params) => {
+      this.logger.info('RPC call: loadProject', params)
 
-        // Validate parameters using type guard
-        if (!isValidRpcEngineParams(RpcEngineType.LOAD_PROJECT, params)) {
-          throw new Error(
-            'Invalid parameters for loadProject: projectPath is required and must be a string',
-          )
-        }
+      // Validate parameters using type guard
+      if (!isValidRpcEngineParams(RpcEngineType.LOAD_PROJECT, params)) {
+        throw new Error(
+          'Invalid parameters for loadProject: projectPath is required and must be a string',
+        )
+      }
 
-        await this.loadProject(params.projectPath, params.options)
-        return { success: true }
-      },
-    )
+      await this.loadProject(params.projectPath, params.options)
+      return { success: true }
+    })
 
     // Register loadMap handler
-    this.rpc.registerHandler(
-      RpcEngineType.LOAD_MAP,
-      async (params: RpcEngineParamMap[RpcEngineType.LOAD_MAP]) => {
-        this.logger.info('RPC call: loadMap', params)
+    this.rpc.registerHandler(RpcEngineType.LOAD_MAP, async (params) => {
+      this.logger.info('RPC call: loadMap', params)
 
-        // Validate parameters using type guard
-        if (!isValidRpcEngineParams(RpcEngineType.LOAD_MAP, params)) {
-          throw new Error(
-            'Invalid parameters for loadMap: mapId is required and must be a string',
-          )
-        }
+      // Validate parameters using type guard
+      if (!isValidRpcEngineParams(RpcEngineType.LOAD_MAP, params)) {
+        throw new Error(
+          'Invalid parameters for loadMap: mapId is required and must be a string',
+        )
+      }
 
-        await this.loadMap(params.mapId)
-        return { success: true }
-      },
-    )
+      await this.loadMap(params.mapId)
+      return { success: true }
+    })
 
     // Register start handler
-    this.rpc.registerHandler(
-      RpcEngineType.START,
-      async (params: RpcEngineParamMap[RpcEngineType.START]) => {
-        this.logger.info('RPC call: start')
+    this.rpc.registerHandler(RpcEngineType.START, async (params) => {
+      this.logger.info('RPC call: start')
 
-        // Validate parameters using type guard
-        if (!isValidRpcEngineParams(RpcEngineType.START, params)) {
-          throw new Error('Invalid parameters for start')
-        }
+      // Validate parameters using type guard
+      if (!isValidRpcEngineParams(RpcEngineType.START, params)) {
+        throw new Error('Invalid parameters for start')
+      }
 
-        await this.start()
-        return { success: true }
-      },
-    )
+      await this.start()
+      return { success: true }
+    })
 
     // Register stop handler
-    this.rpc.registerHandler(
-      RpcEngineType.STOP,
-      async (params: RpcEngineParamMap[RpcEngineType.STOP]) => {
-        this.logger.info('RPC call: stop')
+    this.rpc.registerHandler(RpcEngineType.STOP, async (params) => {
+      this.logger.info('RPC call: stop')
 
-        // Validate parameters using type guard
-        if (!isValidRpcEngineParams(RpcEngineType.STOP, params)) {
-          throw new Error('Invalid parameters for stop')
-        }
+      // Validate parameters using type guard
+      if (!isValidRpcEngineParams(RpcEngineType.STOP, params)) {
+        throw new Error('Invalid parameters for stop')
+      }
 
-        await this.stop()
-        return { success: true }
-      },
-    )
+      await this.stop()
+      return { success: true }
+    })
 
     this.logger.info('RPC handlers registered')
   }

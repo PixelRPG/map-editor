@@ -45,6 +45,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
   /**
    * Event dispatcher for engine events
+   * TODO: Currently unused
    */
   public readonly events = new EventDispatcher<
     RpcEngineParamMap[RpcEngineType.NOTIFY_ENGINE_EVENT]
@@ -248,7 +249,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
   /**
    * Set up event listeners for the WebView
    */
-  private setupEventListeners(): void {
+  private registerRpcHandlers(): void {
     // Register handler for engine events from the WebView using RPC
     this.rpc.registerHandler(
       RpcEngineType.NOTIFY_ENGINE_EVENT,
@@ -282,7 +283,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
     console.info('[GJS Engine] Engine event received:', event)
 
     // Dispatch the event to any registered listeners
-    this.events.dispatch(event)
+    // this.events.dispatch(event)
 
     switch (event.type) {
       case RpcEngineType.STATUS_CHANGED:
@@ -393,7 +394,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
         console.log('[GJS Engine] WebView ready')
 
         // Set up event listeners
-        this.setupEventListeners()
+        this.registerRpcHandlers()
 
         this.status = EngineStatus.READY
         this.emit('ready')
