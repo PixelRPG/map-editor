@@ -149,10 +149,13 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the project
-      const response = await this._webView.rpc.sendRequest('load-project', {
-        projectPath,
-        options,
-      })
+      const response = await this._webView.rpc.sendRequest(
+        RpcEngineType.LOAD_PROJECT,
+        {
+          projectPath,
+          options,
+        },
+      )
 
       console.log(
         '[GJS Engine] Project load request sent:',
@@ -182,7 +185,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the map
-      await this.rpc.sendRequest('load-map', {
+      await this.rpc.sendRequest(RpcEngineType.LOAD_MAP, {
         mapId,
       })
 
@@ -206,7 +209,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to start the engine
-      await this.rpc.sendRequest('start', {})
+      await this.rpc.sendRequest(RpcEngineType.START, {})
 
       console.log('[GJS Engine] Start command sent')
       this.status = EngineStatus.RUNNING
@@ -229,7 +232,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to stop the engine
-      await this.rpc.sendRequest('stop', {})
+      await this.rpc.sendRequest(RpcEngineType.STOP, {})
 
       console.log('[GJS Engine] Stop command sent')
     } catch (error) {

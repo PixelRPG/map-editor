@@ -71,7 +71,7 @@ async function loadProject() {
     const response = await rpc.sendRequest<
       LoadProjectRequest,
       LoadProjectResponse
-    >('loadProject', { projectPath: PROJECT_PATH })
+    >(RpcEngineType.LOAD_PROJECT, { projectPath: PROJECT_PATH })
 
     // Ergebnis verarbeiten
     if (response.success) {
