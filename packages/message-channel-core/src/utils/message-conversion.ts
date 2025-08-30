@@ -1,5 +1,6 @@
 import { RpcResponse } from '../types/rpc'
 import { RpcRequest, WireRpcResponse } from '../types/wire'
+import { RpcErrorCode } from '../types/errors'
 
 /**
  * Convert an RPC response to message format
@@ -13,7 +14,12 @@ export function toMessageResponse(
     type: 'response',
     ...(response.success
       ? { result: response.data }
-      : { error: { code: 1, message: response.error || 'Unknown error' } }),
+      : {
+          error: {
+            code: RpcErrorCode.UNKNOWN,
+            message: response.error || 'Unknown error',
+          },
+        }),
   }
 }
 

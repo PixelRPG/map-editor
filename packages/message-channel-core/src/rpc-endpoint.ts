@@ -19,8 +19,8 @@ import { RpcRequest, WireRpcResponse, RpcMessageType } from './types/wire'
 /**
  * Interface for pending request handlers
  */
-interface PendingRequest<T = any> {
-  resolve: (value: T | PromiseLike<T>) => void
+interface PendingRequest<T extends RpcMethodRegistry, K extends keyof T> {
+  resolve: (value: T[K]['response'] | PromiseLike<T[K]['response']>) => void
   reject: (reason: Error) => void
   timeoutId: ReturnType<typeof setTimeout>
 }
@@ -43,7 +43,7 @@ export abstract class RpcEndpoint<
   /**
    * Map of pending requests by message ID
    */
-  protected pendingRequests = new Map<string, PendingRequest<any>>()
+  protected pendingRequests = new Map<string, PendingRequest<T, keyof T>>()
 
   /**
    * Event dispatcher for raw messages

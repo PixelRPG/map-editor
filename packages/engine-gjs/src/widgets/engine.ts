@@ -141,10 +141,6 @@ export class Engine extends Adw.Bin implements EngineInterface {
     projectPath: string,
     options?: ProjectLoadOptions,
   ): Promise<void> {
-    if (!this._webView?.rpc) {
-      throw createRuntimeError('RPC server is not initialized')
-    }
-
     if (this.status === EngineStatus.INITIALIZING) {
       throw createRuntimeError('Engine not initialized')
     }
@@ -157,13 +153,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     try {
       // Send an RPC request to load the project
-      const response = await this._webView.rpc.sendRequest(
-        RpcEngineType.LOAD_PROJECT,
-        {
-          projectPath,
-          options,
-        },
-      )
+      const response = await this.rpc.sendRequest(RpcEngineType.LOAD_PROJECT, {
+        projectPath,
+        options,
+      })
 
       console.log(
         '[GJS Engine] Project load request sent:',
@@ -256,15 +249,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
    * Set up event listeners for the WebView
    */
   private setupEventListeners(): void {
-    if (!this._webView?.rpc) {
-      throw new Error('RPC server is not initialized')
-    }
-
     // Register handler for engine events from the WebView using RPC
-    // TODO: Make this type safe
-    this._webView.rpc.registerHandler(
+    this.rpc.registerHandler(
       RpcEngineType.NOTIFY_ENGINE_EVENT,
-      async (event) => {
+      async (event: RpcEngineParamMap[RpcEngineType.NOTIFY_ENGINE_EVENT]) => {
         console.log('[GJS Engine] Engine event received from WebView:', event)
         // Handle the event with proper typing
         if (!event) {

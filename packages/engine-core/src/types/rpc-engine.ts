@@ -52,7 +52,10 @@ export interface RpcEngineParamMap {
   [RpcEngineType.INPUT_EVENT]: InputEvent
   [RpcEngineType.NOTIFY_ENGINE_EVENT]: {
     type: RpcEngineType
-    data: RpcEngineParamMap[keyof RpcEngineParamMap]
+    data: RpcEngineParamMap[Exclude<
+      keyof RpcEngineParamMap,
+      RpcEngineType.START | RpcEngineType.STOP
+    >]
   }
   [RpcEngineType.HANDLE_INPUT_EVENT]: InputEvent<InputEventType>
 }
@@ -61,8 +64,28 @@ export interface RpcEngineParamMap {
  * Engine RPC registry
  */
 export interface EngineRpcRegistry extends RpcMethodRegistry {
-  [method: string]: {
-    params: RpcEngineParamMap[keyof RpcEngineParamMap]
+  [RpcEngineType.START]: {
+    params: RpcEngineParamMap[RpcEngineType.START]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.STOP]: {
+    params: RpcEngineParamMap[RpcEngineType.STOP]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.LOAD_PROJECT]: {
+    params: RpcEngineParamMap[RpcEngineType.LOAD_PROJECT]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.LOAD_MAP]: {
+    params: RpcEngineParamMap[RpcEngineType.LOAD_MAP]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.NOTIFY_ENGINE_EVENT]: {
+    params: RpcEngineParamMap[RpcEngineType.NOTIFY_ENGINE_EVENT]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.HANDLE_INPUT_EVENT]: {
+    params: RpcEngineParamMap[RpcEngineType.HANDLE_INPUT_EVENT]
     response: RpcResponse<void>
   }
 }

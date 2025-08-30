@@ -9,7 +9,12 @@ import {
  * Check if a value is a base message
  */
 export function isBaseMessage(data: unknown): data is BaseMessage {
-  return typeof data === 'object' && data !== null
+  if (typeof data !== 'object' || data === null) {
+    return false
+  }
+
+  const msg = data as Record<string, unknown>
+  return msg.channel === undefined || typeof msg.channel === 'string'
 }
 
 /**

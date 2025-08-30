@@ -1,9 +1,4 @@
-import {
-  type MessageEvent,
-  type MessageEventHandler,
-  type BaseMessage,
-  isBaseMessage,
-} from '@pixelrpg/message-channel-core'
+import { type BaseMessage, isBaseMessage } from '@pixelrpg/message-channel-core'
 import {
   IframeContext,
   type RpcEndpointOptions,
@@ -17,7 +12,7 @@ export class MessageChannel {
   /**
    * Event handler for incoming messages
    */
-  public onmessage: MessageEventHandler | null = null
+  public onmessage: ((event: globalThis.MessageEvent) => void) | null = null
 
   /**
    * Target origin for postMessage
@@ -94,15 +89,13 @@ export class MessageChannel {
   /**
    * Handle incoming message events
    */
-  private handleMessageEvent = (event: Event): void => {
-    const messageEvent = event as unknown as MessageEvent
-
+  private handleMessageEvent = (event: globalThis.MessageEvent): void => {
     // Check if the message is a valid base message for this channel
-    const data = messageEvent.data
+    const data = event.data
     if (isBaseMessage(data) && data.channel === this.channelName) {
       // If an onmessage handler is registered, call it with the message event
       if (this.onmessage) {
-        this.onmessage(messageEvent)
+        this.onmessage(event)
       }
     }
   }

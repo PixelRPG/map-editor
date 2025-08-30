@@ -34,8 +34,12 @@ export interface WireRpcResponse extends RpcMessage {
   result?: unknown
   /** Error information if the call failed */
   error?: {
+    /** Error code for categorizing errors */
     code: number
+    /** Human-readable error message */
     message: string
+    /** Optional additional error details */
+    data?: unknown
   }
 }
 
