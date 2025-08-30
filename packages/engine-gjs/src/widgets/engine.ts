@@ -6,6 +6,7 @@ import {
   EngineInterface,
   RpcEngine,
   RpcEngineType,
+  RpcEngineDataMap,
   EngineStatus,
   ProjectLoadOptions,
   createInitializationError,
@@ -250,20 +251,25 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
     // Register handler for engine events from the WebView using RPC
     // TODO: Make this type safe
-    this._webView.rpc.registerHandler('notify-engine-event', async (event) => {
-      console.log('[GJS Engine] Engine event received from WebView:', event)
-      // Handle the event with proper typing
-      if (
-        event &&
-        typeof event === 'object' &&
-        'type' in event &&
-        Object.values(RpcEngineType).includes(event.type as RpcEngineType)
-      ) {
-        this.onEngineEvent(event as RpcEngine)
-        return { success: true }
-      }
-      return { success: false, error: 'Invalid engine event format' }
-    })
+    this._webView.rpc.registerHandler(
+      RpcEngineType.NOTIFY_ENGINE_EVENT,
+      async (
+        event: RpcEngineDataMap[RpcEngineType.NOTIFY_ENGINE_EVENT] | undefined,
+      ) => {
+        console.log('[GJS Engine] Engine event received from WebView:', event)
+        // Handle the event with proper typing
+        if (
+          event &&
+          typeof event === 'object' &&
+          'type' in event &&
+          Object.values(RpcEngineType).includes(event.type as RpcEngineType)
+        ) {
+          this.onEngineEvent(event as RpcEngine)
+          return { success: true }
+        }
+        return { success: false, error: 'Invalid engine event format' }
+      },
+    )
 
     console.log('[GJS Engine] Event listeners set up')
   }

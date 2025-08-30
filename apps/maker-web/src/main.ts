@@ -1,5 +1,6 @@
 import { RpcEndpoint, IframeContext } from '@pixelrpg/message-channel-web'
 import { LoadProjectRequest, LoadProjectResponse } from './types'
+import { RpcEngineType, RpcEngineDataMap } from '@pixelrpg/engine-core'
 
 // Konstante für den Projekt-Pfad
 const PROJECT_PATH = 'http://localhost:5001/game-project.json'
@@ -26,15 +27,29 @@ function init() {
     targetOrigin: '*',
   })
 
-  // TODO: Make this type safe
-  rpc.registerHandler('notify-engine-event', (event: any) => {
-    console.log('Engine event:', event)
-  })
+  rpc.registerHandler(
+    RpcEngineType.NOTIFY_ENGINE_EVENT,
+    (
+      event: RpcEngineDataMap[RpcEngineType.NOTIFY_ENGINE_EVENT] | undefined,
+    ) => {
+      if (!event) {
+        console.error('Invalid engine event: undefined')
+        return
+      }
+      console.log('Engine event:', event)
+    },
+  )
 
-  // TODO: Make this type safe
-  rpc.registerHandler('handle-input-event', (event: any) => {
-    console.log('Input event:', event)
-  })
+  rpc.registerHandler(
+    RpcEngineType.HANDLE_INPUT_EVENT,
+    (event: RpcEngineDataMap[RpcEngineType.HANDLE_INPUT_EVENT] | undefined) => {
+      if (!event) {
+        console.error('Invalid input event: undefined')
+        return
+      }
+      console.log('Input event:', event)
+    },
+  )
 
   // Button-Klick-Handler registrieren
   loadButton.addEventListener('click', loadProject)

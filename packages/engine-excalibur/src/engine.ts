@@ -70,7 +70,7 @@ export class Engine implements EngineInterface {
 
     // Register loadProject handler
     this.rpc.registerHandler(
-      'load-project',
+      RpcEngineType.LOAD_PROJECT,
       async (params: RpcEngineDataMap[RpcEngineType.LOAD_PROJECT]) => {
         this.logger.info('RPC call: loadProject', params)
         // Type guard for project load parameters
@@ -89,7 +89,7 @@ export class Engine implements EngineInterface {
 
     // Register loadMap handler
     this.rpc.registerHandler(
-      'load-map',
+      RpcEngineType.LOAD_MAP,
       async (params: RpcEngineDataMap[RpcEngineType.LOAD_MAP]) => {
         this.logger.info('RPC call: loadMap', params)
         // Type guard for map load parameters
@@ -108,7 +108,7 @@ export class Engine implements EngineInterface {
 
     // Register start handler
     this.rpc.registerHandler(
-      'start',
+      RpcEngineType.START,
       async (params: RpcEngineDataMap[RpcEngineType.START]) => {
         this.logger.info('RPC call: start', params)
         await this.start()
@@ -118,7 +118,7 @@ export class Engine implements EngineInterface {
 
     // Register stop handler
     this.rpc.registerHandler(
-      'stop',
+      RpcEngineType.STOP,
       async (params: RpcEngineDataMap[RpcEngineType.STOP]) => {
         this.logger.info('RPC call: stop', params)
         await this.stop()
@@ -205,7 +205,7 @@ export class Engine implements EngineInterface {
       }
 
       // Send the event to GJS using RPC
-      await this.rpc.sendRequest('notify-engine-event', event)
+      await this.rpc.sendRequest(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
 
       // Add the active map to the scene
       if (this.gameProjectResource?.data.startup.initialMapId) {
@@ -248,7 +248,7 @@ export class Engine implements EngineInterface {
     }
 
     // Send the event to GJS using RPC
-    await this.rpc.sendRequest('notify-engine-event', event)
+    await this.rpc.sendRequest(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
   }
 
   /**
@@ -295,6 +295,6 @@ export class Engine implements EngineInterface {
     }
 
     // Send the event to GJS using RPC
-    await this.rpc.sendRequest('notify-engine-event', event)
+    await this.rpc.sendRequest(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
   }
 }

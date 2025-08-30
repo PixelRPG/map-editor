@@ -17,6 +17,10 @@ export enum RpcEngineType {
   MAP_LOADED = 'map-loaded',
   ERROR = 'error',
   INPUT_EVENT = 'input-event',
+
+  // Communication events
+  NOTIFY_ENGINE_EVENT = 'notify-engine-event',
+  HANDLE_INPUT_EVENT = 'handle-input-event',
 }
 
 /**
@@ -41,6 +45,16 @@ export interface RpcEngineDataMap {
   [RpcEngineType.MAP_LOADED]: { mapId: string }
   [RpcEngineType.ERROR]: { message: string; error?: Error }
   [RpcEngineType.INPUT_EVENT]: { messageType: string; payload: any }
+
+  // Communication events
+  [RpcEngineType.NOTIFY_ENGINE_EVENT]: {
+    type: string
+    data: unknown
+  }
+  [RpcEngineType.HANDLE_INPUT_EVENT]: {
+    type: string
+    data: unknown
+  }
 }
 
 /**

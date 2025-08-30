@@ -5,6 +5,7 @@ import WebKit from '@girs/webkit-6.0'
 import Gio from '@girs/gio-2.0'
 
 import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'
+import { RpcEngineType, RpcEngineDataMap } from '@pixelrpg/engine-core'
 import mime from 'mime'
 
 import Template from './webview.blp'
@@ -136,12 +137,17 @@ export class WebView extends WebKit.WebView {
 
     // Register RPC methods
     // TODO: Make this type safe
-    rpc.registerHandler('handle-input-event', async (params) => {
-      console.log('[WebView] Handling input event:', params)
-      // Process the input event
-      // The implementation would depend on how input events are handled
-      return { success: true }
-    })
+    rpc.registerHandler(
+      RpcEngineType.HANDLE_INPUT_EVENT,
+      async (
+        params: RpcEngineDataMap[RpcEngineType.HANDLE_INPUT_EVENT] | undefined,
+      ) => {
+        console.log('[WebView] Handling input event:', params)
+        // Process the input event
+        // The implementation would depend on how input events are handled
+        return { success: true }
+      },
+    )
 
     return rpc
   }
@@ -215,7 +221,7 @@ export class WebView extends WebKit.WebView {
     // Send mouse move event using notification (no response expected)
     // This prevents timeouts for frequent events
     this._rpc.sendNotification(
-      'handle-input-event',
+      RpcEngineType.HANDLE_INPUT_EVENT,
       engineInputEventsService.mouseMove({ x, y }),
     )
   }
@@ -234,7 +240,7 @@ export class WebView extends WebKit.WebView {
 
     // Send mouse leave event with no position data using notification (fire and forget)
     this._rpc.sendNotification(
-      'handle-input-event',
+      RpcEngineType.HANDLE_INPUT_EVENT,
       engineInputEventsService.mouseLeave(),
     )
   }
@@ -255,7 +261,7 @@ export class WebView extends WebKit.WebView {
 
     // Send mouse enter event using notification (fire and forget)
     this._rpc.sendNotification(
-      'handle-input-event',
+      RpcEngineType.HANDLE_INPUT_EVENT,
       engineInputEventsService.mouseEnter({ x, y }),
     )
   }
