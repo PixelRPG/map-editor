@@ -105,20 +105,10 @@ export class MapEditorPanel extends Adw.Bin {
   }
 
   /**
-   * @deprecated Use initializeMapData instead
-   * Add a single tileset to the selector
-   * @param spriteSheet The sprite sheet to add as a tileset
-   * @param name Optional name for the tileset section
-   */
-  addTileset(spriteSheet: SpriteSheet, name?: string): void {
-    this._tilesetSelector.addTileset(spriteSheet, name)
-  }
-
-  /**
    * Set multiple tilesets at once
    * @param tilesets Array of sprite sheets to display as tilesets
    */
-  setTilesets(tilesets: SpriteSheet[]): void {
+  private setTilesets(tilesets: SpriteSheet[]): void {
     this._tilesetSelector.tilesets = tilesets
   }
 
@@ -126,7 +116,7 @@ export class MapEditorPanel extends Adw.Bin {
    * Set the layers widget for layer selection
    * @param layers The layers widget to set
    */
-  setLayers(layers: LayersWidget) {
+  private setLayers(layers: LayersWidget) {
     this._layerSelector.setLayers(layers)
   }
 

@@ -158,15 +158,6 @@ export class GameProjectResource extends BaseGameProjectResource {
   }
 
   /**
-   * Preload all maps and sprite sets referenced in the project
-   * @deprecated Use loadSpriteSets() and loadMaps() instead
-   */
-  async preloadResources(): Promise<void> {
-    await this.loadSpriteSets()
-    await this.loadMaps()
-  }
-
-  /**
    * Resolve a path relative to the base directory
    * @param path Path to resolve
    * @returns Absolute path

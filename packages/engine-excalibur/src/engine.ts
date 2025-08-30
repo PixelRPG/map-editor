@@ -16,7 +16,6 @@ import {
   EngineStatus,
   ProjectLoadOptions,
   EngineMessageDataMap,
-
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
@@ -226,9 +225,7 @@ export class Engine implements EngineInterface {
       }
 
       // Send the event to GJS using RPC
-      await this.rpc.sendRequest('notifyEngineEvent', event).catch((error) => {
-        this.logger.error('Error notifying project loaded:', error)
-      })
+      await this.rpc.sendRequest('notifyEngineEvent', event)
 
       // Add the active map to the scene
       if (this.gameProjectResource?.data.startup.initialMapId) {
@@ -271,9 +268,7 @@ export class Engine implements EngineInterface {
     }
 
     // Send the event to GJS using RPC
-    this.rpc.sendRequest('notifyEngineEvent', event).catch((error) => {
-      this.logger.error('Error notifying status change:', error)
-    })
+    await this.rpc.sendRequest('notifyEngineEvent', event)
   }
 
   /**
@@ -320,8 +315,6 @@ export class Engine implements EngineInterface {
     }
 
     // Send the event to GJS using RPC
-    await this.rpc.sendRequest('notifyEngineEvent', event).catch((error) => {
-      this.logger.error('Error notifying status change:', error)
-    })
+    await this.rpc.sendRequest('notifyEngineEvent', event)
   }
 }

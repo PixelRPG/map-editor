@@ -122,14 +122,6 @@ export class SpriteSetResource extends BaseSpriteSetResource {
   }
 
   /**
-   * Get the loaded texture for the sprite set image
-   * @deprecated Use .imageResource instead for better encapsulation
-   */
-  get texture(): Gdk.Texture | null {
-    return this._imageResource?.texture || null
-  }
-
-  /**
    * Creates individual sprites from the sprite sheet (similar to Excalibur pattern)
    * @param data The sprite set data
    * @param spriteSheet The created sprite sheet

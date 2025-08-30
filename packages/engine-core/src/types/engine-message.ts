@@ -1,6 +1,23 @@
-import { EngineMessageType } from './engine-message-type'
 import { EngineStatus } from './engine-status'
 import { ProjectLoadOptions } from './project-options'
+
+/**
+ * Unified engine message types for both commands and events
+ */
+export enum EngineMessageType {
+  // Commands (imperative actions)
+  START = 'start',
+  STOP = 'stop',
+  LOAD_PROJECT = 'load-project',
+  LOAD_MAP = 'load-map',
+
+  // Events (reactive notifications)
+  STATUS_CHANGED = 'status-changed',
+  PROJECT_LOADED = 'project-loaded',
+  MAP_LOADED = 'map-loaded',
+  ERROR = 'error',
+  INPUT_EVENT = 'input-event',
+}
 
 /**
  * Type mapping for message data based on message type
