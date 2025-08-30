@@ -8,6 +8,10 @@ import {
   type RpcMethodParams,
 } from '@pixelrpg/message-channel-core'
 import { WebKitMessageHandler } from './types/webkit-message-handler'
+import {
+  serializeMessage,
+  createTransmissionError,
+} from '@pixelrpg/message-channel-core/utils/serialization'
 
 /**
  * WebView implementation of the RPC endpoint
@@ -123,23 +127,27 @@ export class RpcEndpoint<
       message.channel = this.channelName
     }
 
-    // Try WebKit handler first if available
-    if (this.webKitHandler) {
-      try {
+    try {
+      // Try WebKit handler first if available
+      if (this.webKitHandler) {
         this.webKitHandler.postMessage(message)
-        return Promise.resolve()
-      } catch (error) {
-        console.warn('WebKit postMessage failed:', error)
-        // Fall through to window.postMessage
+        return
       }
-    }
 
-    // Fall back to window.postMessage
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage(message, '*')
-      return Promise.resolve()
-    } else {
-      return Promise.reject(new Error('No valid message target available'))
+      // Fall back to window.postMessage
+      if (window.parent && window.parent !== window) {
+        // Use standardized serialization for consistency
+        const serializedMessage = serializeMessage(message)
+        const parsedMessage = JSON.parse(serializedMessage) // Ensure clean object
+        window.parent.postMessage(parsedMessage, '*')
+        return
+      }
+
+      throw new Error('No valid message target available')
+    } catch (error) {
+      console.error('Error sending message from WebView:', error)
+      const transmissionError = createTransmissionError(error, 'WebView')
+      throw new Error(transmissionError.message)
     }
   }
 

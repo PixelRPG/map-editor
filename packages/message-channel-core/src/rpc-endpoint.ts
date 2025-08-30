@@ -352,6 +352,7 @@ export abstract class RpcEndpoint<
 
     // Create the request object
     const request = createMessageRequest(id, methodToString(method), params)
+    const methodStr = methodToString(method)
 
     // Set channel if not already set
     if (request.channel === undefined) {
@@ -364,7 +365,7 @@ export abstract class RpcEndpoint<
       const timeoutId = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id)
-          const timeoutError = RpcErrors.timeout(methodToString(method))
+          const timeoutError = RpcErrors.timeout(methodStr)
           reject(new Error(timeoutError.message))
         }
       }, timeoutMs || this.defaultTimeoutMs)

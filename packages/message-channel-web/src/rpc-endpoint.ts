@@ -11,6 +11,10 @@ import {
   IframeContext,
   type RpcEndpointOptions,
 } from './types/iframe-context.ts'
+import {
+  serializeMessage,
+  createTransmissionError,
+} from '@pixelrpg/message-channel-core/utils/serialization'
 
 /**
  * Web implementation of the RPC endpoint
@@ -146,22 +150,35 @@ export class RpcEndpoint<
       message.channel = this.channelName
     }
 
-    if (this.context === IframeContext.PARENT && this.targetIframe) {
-      // Send message to the iframe
-      if (this.targetIframe.contentWindow) {
-        this.targetIframe.contentWindow.postMessage(message, this.targetOrigin)
-        return Promise.resolve()
+    try {
+      if (this.context === IframeContext.PARENT && this.targetIframe) {
+        // Send message to the iframe
+        if (this.targetIframe.contentWindow) {
+          // Use standardized serialization for consistency
+          const serializedMessage = serializeMessage(message)
+          const parsedMessage = JSON.parse(serializedMessage) // Ensure clean object
+          this.targetIframe.contentWindow.postMessage(
+            parsedMessage,
+            this.targetOrigin,
+          )
+          return
+        } else {
+          throw new Error('Target iframe contentWindow not available')
+        }
+      } else if (this.context === IframeContext.CHILD) {
+        // Send message to parent window
+        // Use standardized serialization for consistency
+        const serializedMessage = serializeMessage(message)
+        const parsedMessage = JSON.parse(serializedMessage) // Ensure clean object
+        window.parent.postMessage(parsedMessage, this.targetOrigin)
+        return
       } else {
-        return Promise.reject(
-          new Error('Target iframe contentWindow not available'),
-        )
+        throw new Error('Invalid context or missing target')
       }
-    } else if (this.context === IframeContext.CHILD) {
-      // Send message to parent window
-      window.parent.postMessage(message, this.targetOrigin)
-      return Promise.resolve()
-    } else {
-      return Promise.reject(new Error('Invalid context or missing target'))
+    } catch (error) {
+      console.error('Error sending message from Web:', error)
+      const transmissionError = createTransmissionError(error, 'Web iframe')
+      throw new Error(transmissionError.message)
     }
   }
 

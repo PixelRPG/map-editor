@@ -11,6 +11,10 @@ import {
   isRpcRequest,
   createMessageRequest,
 } from '@pixelrpg/message-channel-core'
+import {
+  serializeMessage,
+  createTransmissionError,
+} from '@pixelrpg/message-channel-core/utils/serialization'
 
 /**
  * GJS implementation of the RPC endpoint
@@ -170,8 +174,8 @@ export class RpcEndpoint<
         message.channel = this.channelName
       }
 
-      // Convert message to JSON string
-      const messageJson = JSON.stringify(message)
+      // Use standardized serialization
+      const messageJson = serializeMessage(message)
 
       // Create a script to send the message to the WebView
       const script = `
@@ -183,7 +187,8 @@ export class RpcEndpoint<
       await this.webView.evaluate_javascript(script, -1, null, null, null)
     } catch (error) {
       console.error('Error sending message to WebView:', error)
-      throw error
+      const transmissionError = createTransmissionError(error, 'GJS WebView')
+      throw new Error(transmissionError.message)
     }
   }
 
