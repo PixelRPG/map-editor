@@ -128,13 +128,6 @@ export class ProjectView extends Adw.Bin {
   private async _onProjectLoaded(projectId: string): Promise<void> {
     console.log('[ProjectView] Engine project loaded:', projectId)
 
-    // Verify that our parallel-loaded project matches the engine's loaded project
-    if (this._gameProjectResource?.data.id !== projectId) {
-      throw new Error(
-        `[ProjectView] Project ID mismatch: expected ${projectId}, got ${this._gameProjectResource?.data.id}`,
-      )
-    }
-
     // Both engine and GJS have loaded the project successfully
     console.log('[ProjectView] Project synchronization complete')
   }

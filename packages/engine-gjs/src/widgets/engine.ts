@@ -166,6 +166,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
       )
     } catch (error) {
       console.error('[GJS Engine] Failed to load project:', error)
+
       throw createResourceError(
         `Failed to load project: ${projectPath}`,
         error instanceof Error ? error : undefined,
@@ -194,6 +195,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
       console.log('[GJS Engine] Map load request sent:', mapId)
     } catch (error) {
       console.error('[GJS Engine] Failed to load map:', error)
+
       throw createResourceError(
         `Failed to load map: ${mapId}`,
         error instanceof Error ? error : undefined,
@@ -217,6 +219,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
       this.status = EngineStatus.RUNNING
     } catch (error) {
       console.error('[GJS Engine] Failed to start engine:', error)
+
       throw createRuntimeError(
         'Failed to start engine',
         error instanceof Error ? error : undefined,
@@ -239,6 +242,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
       console.log('[GJS Engine] Stop command sent')
     } catch (error) {
       console.error('[GJS Engine] Failed to stop engine:', error)
+
       throw createRuntimeError(
         'Failed to stop engine',
         error instanceof Error ? error : undefined,
@@ -262,8 +266,13 @@ export class Engine extends Adw.Bin implements EngineInterface {
 
         // Handle the event
         if (isEngineEvent(event)) {
-          this.onEngineEvent(event)
-          return { success: true }
+          try {
+            this.onEngineEvent(event)
+            return { success: true }
+          } catch (error) {
+            console.error('[GJS Engine] Failed to handle engine event:', error)
+            return { success: false, error: 'Failed to handle engine event' }
+          }
         }
 
         return { success: false, error: 'Invalid event format' }
