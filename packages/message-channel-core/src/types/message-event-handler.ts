@@ -1,7 +1,7 @@
-import type { MessageEvent } from "../polyfills/message-event.ts";
+import type { MessageEventBase } from "./message-event";
 
 /**
  * Type definition for a message event handler
  * @param event - The message event object
  */
-export type MessageEventHandler = (event: MessageEvent) => void;
+export type MessageEventHandler = (event: MessageEventBase) => void;

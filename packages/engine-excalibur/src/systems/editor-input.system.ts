@@ -1,7 +1,7 @@
 import { Engine, System, World, Scene, SystemType } from 'excalibur'
 import {
   InputEventType,
-  EngineMessageType,
+  RpcEngineType,
   InputEvent,
   isMouseMoveEvent,
   isMouseDownEvent,
@@ -134,7 +134,7 @@ export class EditorInputSystem extends System {
 
       // Register handler for input events from GJS
       // TODO: Make this type safe
-      this.rpc.registerHandler('handleInputEvent', (params) => {
+      this.rpc.registerHandler(RpcEngineType.HANDLE_INPUT_EVENT, (params) => {
         // Check if it's a valid input event
         if (isValidInputEvent(params)) {
           // We can directly use the InputEvent as is, since it matches our type
@@ -157,8 +157,8 @@ export class EditorInputSystem extends System {
       this.onWheel(wheelEvent.deltaY, { x, y })
 
       // Send wheel event to GJS
-      this.rpc.sendNotification('handleInputEvent', {
-        messageType: EngineMessageType.INPUT_EVENT,
+      this.rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {
+        messageType: RpcEngineType.INPUT_EVENT,
         payload: {
           type: InputEventType.WHEEL,
           data: {

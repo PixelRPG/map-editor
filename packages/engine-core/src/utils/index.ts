@@ -1,8 +1,11 @@
 // Core utils
-export * from './validation.ts';
+export * from './validation.ts'
 
 // Error utilities
-export * from './error.ts';
+export * from './error.ts'
 
 // Input event utilities
-export * from './input-event-guards.ts';
+export * from './input-event-guards.ts'
+
+// Type guards
+export * from './type-guards.ts'

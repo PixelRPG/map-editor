@@ -6,11 +6,13 @@
     "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "check": "tsc --noEmit"
+        "check": "tsc --noEmit",
+        "build:barrels": "barrelsby --delete --directory src src/types",
+        "build": "yarn build:barrels"
     },
     "exports": {
         ".": "./src/index.ts",
-        "./env": "./src/env.ts"
+        "./env": "./env.d.ts"
     },
     "keywords": [
         "pixelrpg",
@@ -25,6 +27,7 @@
         "@pixelrpg/message-channel-core": "workspace:*"
     },
     "devDependencies": {
+        "barrelsby": "^2.8.1",
         "typescript": "^5.9.2"
     }
 }

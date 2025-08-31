@@ -1,55 +1,48 @@
-/**
- * Polyfill for standard DOM MessageEvent in GJS environments
- * This implements the basic interface needed for our messaging system
- */
-
-import type { MessageEventInit, MessagePort, MessageEventSource } from "../types/index.ts";
+import { MessagePort } from '../types/message-port'
+import { MessageEventInit } from '../types/message-event-init'
+import { MessageEventSource } from '../types/message-event-source'
 
 /**
- * Implementation of the standard DOM MessageEvent for GJS
+ * Polyfill for MessageEvent in GJS environment
  */
-export class MessageEvent<T = any> {
-    /**
-     * The type of the event, in this case 'message'
-     */
-    readonly type: string;
+import { MessageEventBase } from '../types/message-event'
 
-    /**
-     * The data payload of the message
-     */
-    readonly data: T;
+export class MessageEvent<T = unknown> implements MessageEventBase<T> {
+  /**
+   * Message data
+   */
+  public readonly data: T
 
-    /**
-     * Origin of the message, for security checks
-     */
-    readonly origin: string;
+  /**
+   * Message origin for security
+   */
+  public readonly origin: string
 
-    /**
-     * ID of the last event, used for event ordering
-     */
-    readonly lastEventId: string;
+  /**
+   * Event ID for ordering
+   */
+  public readonly lastEventId: string
 
-    /**
-     * Source window of the message
-     */
-    readonly source: MessageEventSource;
+  /**
+   * Message source
+   */
+  public readonly source: MessageEventSource | null
 
-    /**
-     * MessagePorts for communication channels
-     */
-    readonly ports: MessagePort[];
+  /**
+   * Associated ports
+   */
+  public readonly ports: readonly MessagePort[]
 
-    /**
-     * Create a new MessageEvent
-     * @param type Type of the event (usually 'message')
-     * @param init Initialization options
-     */
-    constructor(type: string, init: MessageEventInit<T> = {}) {
-        this.type = type;
-        this.data = init.data as T;
-        this.origin = init.origin || '';
-        this.lastEventId = init.lastEventId || '';
-        this.source = init.source || null;
-        this.ports = [...(init.ports || [])];
-    }
+  /**
+   * Create a new MessageEvent
+   * @param _type Event type (unused in our implementation)
+   * @param init Event initialization options
+   */
+  constructor(_type: string, init?: MessageEventInit<T>) {
+    this.data = init?.data as T
+    this.origin = init?.origin || ''
+    this.lastEventId = init?.lastEventId || ''
+    this.source = init?.source || null
+    this.ports = init?.ports || []
+  }
 }

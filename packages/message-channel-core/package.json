@@ -6,15 +6,19 @@
     "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "check": "tsc --noEmit"
+        "check": "tsc --noEmit",
+        "build:barrels": "barrelsby --delete --directory src/polyfills src/types src/utils",
+        "build": "yarn build:barrels"
     },
     "exports": {
         ".": "./src/index.ts",
-        "./env": "./src/env.ts"
+        "./env": "./src/env.ts",
+        "./utils/serialization": "./src/utils/serialization.ts"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "devDependencies": {
+        "barrelsby": "^2.8.1",
         "typescript": "^5.9.2"
     }
 }

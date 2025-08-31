@@ -1,5 +1,8 @@
-import { WebKitMessageHandler } from './types/index.ts'
-import { MethodHandler } from '@pixelrpg/message-channel-core';
+import { WebKitMessageHandler } from './src/types'
+import {
+  RpcMethodRegistry,
+  RpcMethodHandler,
+} from '@pixelrpg/message-channel-core'
 
 declare global {
   interface Window {
@@ -16,13 +19,14 @@ declare global {
     /**
      * RPC handlers registry
      * This object contains handler functions that can be called by the RPC server.
-     * It is managed by the RpcClient.registerHandler and RpcClient.unregisterHandler methods.
-     * Do not modify this object directly - use the RpcClient methods instead.
+     * It is managed by the RpcEndpoint.registerHandler and RpcEndpoint.unregisterHandler methods.
+     * Do not modify this object directly - use the RpcEndpoint methods instead.
      */
     rpcHandlers?: {
-      [method: string]: MethodHandler
+      [method: string]: RpcMethodHandler<
+        RpcMethodRegistry,
+        keyof RpcMethodRegistry
+      >
     }
   }
 }
-
-export { };

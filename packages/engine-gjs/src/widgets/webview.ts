@@ -5,6 +5,12 @@ import WebKit from '@girs/webkit-6.0'
 import Gio from '@girs/gio-2.0'
 
 import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'
+import {
+  RpcEngineType,
+  RpcEngineParamMap,
+  EngineRpcRegistry,
+  InputEventType,
+} from '@pixelrpg/engine-core'
 import mime from 'mime'
 
 import Template from './webview.blp'
@@ -32,12 +38,15 @@ export class WebView extends WebKit.WebView {
     )
   }
 
-  protected _rpc?: RpcEndpoint
+  protected _rpc?: RpcEndpoint<EngineRpcRegistry>
 
   /**
    * Get the RPC server for communication with the WebView
    */
-  get rpc() {
+  get rpc(): RpcEndpoint<EngineRpcRegistry> {
+    if (!this._rpc) {
+      throw new Error('RPC server is not initialized')
+    }
     return this._rpc
   }
 
@@ -130,13 +139,16 @@ export class WebView extends WebKit.WebView {
   /**
    * Initialize the RPC server for communication with the WebView
    */
-  protected initRpcServer() {
+  protected initRpcServer(): RpcEndpoint<EngineRpcRegistry> {
     console.log('[WebView] Initializing RpcServer...')
-    const rpc = RpcEndpoint.getInstance(INTERNAL_PROTOCOL, this)
+    const rpc = RpcEndpoint.getInstance<EngineRpcRegistry>(
+      INTERNAL_PROTOCOL,
+      this,
+    )
 
     // Register RPC methods
     // TODO: Make this type safe
-    rpc.registerHandler('handleInputEvent', async (params) => {
+    rpc.registerHandler(RpcEngineType.HANDLE_INPUT_EVENT, async (params) => {
       console.log('[WebView] Handling input event:', params)
       // Process the input event
       // The implementation would depend on how input events are handled
@@ -214,10 +226,10 @@ export class WebView extends WebKit.WebView {
 
     // Send mouse move event using notification (no response expected)
     // This prevents timeouts for frequent events
-    this._rpc.sendNotification(
-      'handleInputEvent',
-      engineInputEventsService.mouseMove({ x, y }),
-    )
+    this._rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {
+      type: InputEventType.MOUSE_MOVE,
+      data: { x, y },
+    })
   }
 
   /**
@@ -233,10 +245,10 @@ export class WebView extends WebKit.WebView {
     console.log('[WebView] Mouse has left the WebView')
 
     // Send mouse leave event with no position data using notification (fire and forget)
-    this._rpc.sendNotification(
-      'handleInputEvent',
-      engineInputEventsService.mouseLeave(),
-    )
+    this._rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {
+      type: InputEventType.MOUSE_LEAVE,
+      data: null,
+    })
   }
 
   /**
@@ -254,10 +266,10 @@ export class WebView extends WebKit.WebView {
     console.log('[WebView] Mouse has entered the WebView')
 
     // Send mouse enter event using notification (fire and forget)
-    this._rpc.sendNotification(
-      'handleInputEvent',
-      engineInputEventsService.mouseEnter({ x, y }),
-    )
+    this._rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {
+      type: InputEventType.MOUSE_ENTER,
+      data: { x, y },
+    })
   }
 
   /**
