@@ -133,7 +133,6 @@ export class EditorInputSystem extends System {
       )
 
       // Register handler for input events from GJS
-      // TODO: Make this type safe
       this.rpc.registerHandler(RpcEngineType.HANDLE_INPUT_EVENT, (params) => {
         // Check if it's a valid input event
         if (isValidInputEvent(params)) {

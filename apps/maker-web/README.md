@@ -241,13 +241,13 @@ import { RpcService } from './services/RpcService';
 const rpcService = new RpcService();
 
 // Register handler for engine events
-rpcService.registerHandler('engineReady', async () => {
+rpcService.registerHandler('engine-ready', async () => {
   console.log('Game engine is ready');
   // Initialize UI components
 });
 
 // Send commands to engine
-await rpcService.sendRequest('loadMap', {
+await rpcService.sendRequest('load-map', {
   mapId: 'overworld',
   position: { x: 0, y: 0 }
 });
@@ -296,37 +296,6 @@ yarn build
 - Check network tab for failed resource loads
 - Enable verbose logging for RPC communication debugging
 - Test on multiple browsers to ensure compatibility
-
-## 🔍 Browser Compatibility
-
-| Browser | Version | Status |
-|---------|---------|--------|
-| Chrome | 80+ | ✅ Fully Supported |
-| Firefox | 75+ | ✅ Fully Supported |
-| Safari | 13+ | ✅ Fully Supported |
-| Edge | 80+ | ✅ Fully Supported |
-| Mobile Safari | 13+ | ⚠️ Limited Support |
-
-### WebGL Requirements
-
-The game engine requires WebGL support for optimal performance:
-
-```javascript
-// Check WebGL support
-function hasWebGL() {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!(window.WebGLRenderingContext &&
-      canvas.getContext('webgl'));
-  } catch (e) {
-    return false;
-  }
-}
-
-if (!hasWebGL()) {
-  console.warn('WebGL not supported - falling back to canvas 2D');
-}
-```
 
 ## 🚀 Deployment
 

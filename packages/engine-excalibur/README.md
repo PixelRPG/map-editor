@@ -117,7 +117,7 @@ const webView = new WebKit.WebView();
 const engine = new Engine();
 
 // Load the web engine
-webView.load_uri('http://localhost:3000');
+webView.load_uri('${INTERNAL_PROTOCOL}:///index.html');
 
 // Control the web engine via RPC
 await engine.loadProject('/path/to/project.json');
