@@ -25,6 +25,8 @@ import {
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
+import { MapEditorSystem } from './systems/map-editor.system.ts'
+import { TileInteractionSystem } from './systems/tile-interaction.system.ts'
 
 /**
  * Excalibur implementation of the game engine
@@ -255,8 +257,14 @@ export class Engine implements EngineInterface {
 
     // Create a new scene
     const mapScene = new Scene() // TODO: Extend Scene to MapScene
+
+    // Add editor systems to the scene (they will only process entities with editor components)
     mapScene.world.add(EditorInputSystem)
+    mapScene.world.add(MapEditorSystem)
+    mapScene.world.add(TileInteractionSystem)
+
     mapResource.addToScene(mapScene)
+
     this.excalibur.add(mapId, mapScene)
     this.excalibur.goToScene(mapId)
 
