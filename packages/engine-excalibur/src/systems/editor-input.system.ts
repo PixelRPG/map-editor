@@ -1,4 +1,14 @@
-import { Engine, System, World, Scene, SystemType } from 'excalibur'
+import {
+  Engine,
+  System,
+  World,
+  Scene,
+  SystemType,
+  TileMap,
+  Vector,
+  vec,
+  Tile,
+} from 'excalibur'
 import {
   InputEventType,
   RpcEngineType,
@@ -15,9 +25,14 @@ import {
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
 import { rpcEndpointFactory } from '../utils/rpc.ts'
+import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 
 /**
  * System to handle input for the map editor
+ *
+ * This system integrates with the existing TileMap infrastructure to provide
+ * editor-specific input handling. It queries for TileMap entities with MapEditorComponent
+ * and processes interactions using the existing TileMap coordinate transformation methods.
  */
 export class EditorInputSystem extends System {
   private isDown = false
@@ -26,8 +41,12 @@ export class EditorInputSystem extends System {
   public systemType = SystemType.Update
 
   private rpc = rpcEndpointFactory()
-
   private engine?: Engine
+
+  /**
+   * Reference to the scene for accessing entities
+   */
+  private scene?: Scene
 
   constructor() {
     super()
@@ -42,8 +61,8 @@ export class EditorInputSystem extends System {
 
   /**
    * Handle pointer move events
-   * @param x X coordinate
-   * @param y Y coordinate
+   * @param x X coordinate in screen space
+   * @param y Y coordinate in screen space
    */
   protected onPointerMove(x: number, y: number) {
     if (this.isDown && this.engine) {
@@ -54,17 +73,23 @@ export class EditorInputSystem extends System {
       this.engine.currentScene.camera.x -= deltaX
       this.engine.currentScene.camera.y -= deltaY
       this.dragStartPos = { x, y }
+    } else {
+      // Handle hover interactions with TileMaps
+      this.handleTileMapInteraction(x, y, 'move')
     }
   }
 
   /**
    * Handle pointer down events
-   * @param x X coordinate
-   * @param y Y coordinate
+   * @param x X coordinate in screen space
+   * @param y Y coordinate in screen space
    */
   protected onPointerDown(x: number, y: number) {
     this.isDown = true
     this.dragStartPos = { x, y }
+
+    // Check if click was on an editor-enabled TileMap
+    this.handleTileMapInteraction(x, y, 'down')
   }
 
   /**
@@ -105,6 +130,7 @@ export class EditorInputSystem extends System {
     }
 
     this.engine = scene.engine
+    this.scene = scene
     const pointer = this.engine.input.pointers.primary
 
     pointer.on('down', (event) => {
@@ -168,6 +194,118 @@ export class EditorInputSystem extends System {
         },
       })
     })
+  }
+
+  /**
+   * Handle TileMap interactions using existing TileMap infrastructure
+   * @param screenX X coordinate in screen space
+   * @param screenY Y coordinate in screen space
+   * @param interactionType Type of interaction ('down' for clicks, 'move' for hovers)
+   */
+  private handleTileMapInteraction(
+    screenX: number,
+    screenY: number,
+    interactionType: 'down' | 'move',
+  ): void {
+    if (!this.engine || !this.scene) return
+
+    // Convert screen coordinates to world coordinates
+    const worldPos = this.engine.screen.screenToWorldCoordinates(
+      vec(screenX, screenY),
+    )
+
+    // Get all entities from the scene and filter for TileMaps with MapEditorComponent
+    const tileMaps = this.scene.entities.filter(
+      (entity) => entity instanceof TileMap,
+    ) as TileMap[]
+
+    for (const tileMap of tileMaps) {
+      // Check if this TileMap has MapEditorComponent
+      const mapEditorComponent = tileMap.get(MapEditorComponent)
+
+      // Skip if no MapEditorComponent or editing is disabled
+      if (!mapEditorComponent?.isEditable) continue
+
+      // Use existing TileMap.getTileByPoint() to find the tile at the position
+      const tile = tileMap.getTileByPoint(worldPos)
+
+      if (tile) {
+        // Get coordinates from tile object
+        const coords = { x: tile.x, y: tile.y }
+
+        if (interactionType === 'down') {
+          // Send TILE_CLICKED RPC event
+          this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
+            coords,
+            tileMapId: tileMap.id || 'unknown',
+          })
+
+          // Handle tool-based tile placement if EditorToolComponent is present
+          this.handleTilePlacement(tileMap, tile, coords)
+        } else if (interactionType === 'move') {
+          // Send TILE_HOVERED RPC event (only if coordinates changed)
+          const currentHover = mapEditorComponent.hoverTileCoords
+          if (
+            !currentHover ||
+            currentHover.x !== coords.x ||
+            currentHover.y !== coords.y
+          ) {
+            this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
+              coords,
+              tileMapId: tileMap.id || 'unknown',
+            })
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle tile placement based on current tool selection
+   * @param tileMap The TileMap being edited
+   * @param tile The tile that was clicked
+   * @param coords The tile coordinates
+   */
+  private handleTilePlacement(
+    tileMap: TileMap,
+    tile: Tile,
+    coords: { x: number; y: number },
+  ): void {
+    const toolComponent = tileMap.get(EditorToolComponent)
+    if (!toolComponent || !toolComponent.isReadyForEditing()) return
+
+    const { currentTool, selectedTileId, selectedLayerId } = toolComponent
+
+    // Only proceed if we have all required information
+    if (!selectedLayerId) return
+
+    if (currentTool === 'brush' && selectedTileId !== null) {
+      // Place tile using brush tool
+      // TODO: Implement actual tile placement logic
+      console.log(
+        `[EditorInputSystem] Placing tile ${selectedTileId} at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
+      )
+
+      // Send TILE_PLACED RPC event
+      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
+        coords,
+        tileId: selectedTileId,
+        layerId: selectedLayerId,
+      })
+    } else if (currentTool === 'eraser') {
+      // Erase tile
+      // TODO: Implement actual tile erasing logic
+      console.log(
+        `[EditorInputSystem] Erasing tile at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
+      )
+
+      // Send TILE_PLACED RPC event with tileId 0 (or null) for erase
+      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
+        coords,
+        tileId: 0, // 0 typically represents empty/erased tile
+        layerId: selectedLayerId,
+      })
+    }
   }
 
   /**
