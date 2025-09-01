@@ -10,7 +10,8 @@
         "clear": "rm -rf dist",
         "preview": "yarn clear && yarn build && vite preview --port 5000",
         "start": "yarn preview",
-        "build": "vite build",
+        "build:barrels": "barrelsby --delete --directory src/systems src/components src/utils",
+        "build": "yarn build:barrels && vite build",
         "check": "tsc --noEmit"
     },
     "exports": {
@@ -27,6 +28,7 @@
     "devDependencies": {
         "@pixelrpg/esbuild": "workspace:^",
         "@rollup/pluginutils": "^5.2.0",
+        "barrelsby": "^2.8.1",
         "typescript": "^5.9.2",
         "vite": "^7.1.3"
     },

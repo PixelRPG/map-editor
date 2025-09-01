@@ -3238,6 +3238,7 @@ __metadata:
     "@pixelrpg/message-channel-web": "workspace:^"
     "@pixelrpg/message-channel-webview": "workspace:^"
     "@rollup/pluginutils": "npm:^5.2.0"
+    barrelsby: "npm:^2.8.1"
     excalibur: "workspace:^"
     typescript: "npm:^5.9.2"
     vite: "npm:^7.1.3"
