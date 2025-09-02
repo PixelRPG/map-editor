@@ -18,11 +18,39 @@ This phase establishes the service architecture for map editing using Needle DI 
 ### 3.1 Establish Service Architecture with Needle DI
 **Files:**
 - `packages/engine-gjs/src/services/map-editor.service.ts`
-- `packages/engine-gjs/src/di/container.ts`
+- `apps/maker-gjs/src/di/container.ts` (DI container at app level)
 - `packages/engine-gjs/tsconfig.json`
+- `packages/ui-gjs/tsconfig.json` (for SelectionToolsWidget)
 
 #### Description
-Create a clean service architecture using Needle DI that centralizes RPC handler management and provides proper dependency injection for WebView access. No experimental decorators or reflection polyfills needed.
+Create a clean service architecture using Needle DI that centralizes RPC handler management and provides proper dependency injection for WebView access. **Package-Separation**: Services remain in their packages, DI container is configured at app level. No experimental decorators or reflection polyfills needed.
+
+#### Package-Separation Strategy
+
+Since we have a Yarn Workspace with isolated packages, there are several approaches for DI across package boundaries:
+
+**🎯 Recommended Solution: App-Level Container**
+```typescript
+// ✅ Best approach for our architecture
+// apps/maker-gjs/src/di/container.ts
+import { Container } from '@needle-di/core'
+import { WebView, MapEditorService } from '@pixelrpg/engine-gjs'
+import { TilesetSelector, LayerSelector } from '@pixelrpg/ui-gjs'
+
+export const container = new Container()
+// All services from different packages are registered here
+```
+
+**Alternative Options:**
+- **Multiple Containers**: Each package has its own container (difficult to coordinate)
+- **Service Locator**: Services injected via interfaces (less type-safe)
+- **Factory Pattern**: Services created via factory functions (more boilerplate)
+
+**Why App-Level Container?**
+- ✅ Respects package isolation
+- ✅ Type-safe across package boundaries
+- ✅ Easy to test and maintain
+- ✅ Clear separation between library and app code
 
 #### TypeScript Configuration
 ```json
@@ -40,19 +68,27 @@ Create a clean service architecture using Needle DI that centralizes RPC handler
 }
 ```
 
-#### DI Container Setup
+#### DI Container Setup (App-Level)
 ```typescript
-// packages/engine-gjs/src/di/container.ts
+// apps/maker-gjs/src/di/container.ts
 import { Container } from '@needle-di/core'
+import { WebView, MapEditorService } from '@pixelrpg/engine-gjs'
+import { TilesetSelector, LayerSelector, SelectionToolsWidget } from '@pixelrpg/ui-gjs'
 
-// Create global container instance
+// Create global container instance at app level
 export const container = new Container()
 
-// Register core services
+// Register engine services (from engine-gjs package)
 container.register(WebView, { useClass: WebView })
 container.register(MapEditorService, { useClass: MapEditorService })
+
+// Register UI services (from ui-gjs package)
 container.register(TilesetSelector, { useClass: TilesetSelector })
 container.register(LayerSelector, { useClass: LayerSelector })
+container.register(SelectionToolsWidget, { useClass: SelectionToolsWidget })
+
+// Export for use in application
+export { Container }
 ```
 
 #### Service Architecture with Needle DI
@@ -99,22 +135,29 @@ export class MapEditorService {
   }
 }
 
-// Usage in application
-import { container } from '../di/container'
+// Usage in application (apps/maker-gjs/src/main.ts)
+import { container } from './di/container'
 
+// Get service instance - dependencies automatically resolved!
 const mapEditorService = container.get(MapEditorService)
-// All dependencies automatically resolved!
+
+// Services remain in their packages, container is in the app
+// engine-gjs package: exports MapEditorService
+// ui-gjs package: exports TilesetSelector, LayerSelector
+// App: imports both and configures DI
 ```
 
 #### Architecture Benefits
 1. **Modern DI**: Uses ECMAScript Stage 3 decorators (no legacy experimentalDecorators)
 2. **No Reflection Polyfill**: Needle DI has built-in reflection mechanism
-3. **Clean Dependency Injection**: WebView is injected, not accessed globally
-4. **Centralized RPC Management**: All editor-related handlers in one place
-5. **UI-Service Coupling**: Direct connections between UI and service
-6. **Testability**: Services can be easily mocked for testing
-7. **Maintainability**: Clear separation of concerns
-8. **GJS Compatible**: Works perfectly with GObject inheritance
+3. **Package Separation**: Services remain in their packages, DI configured at app level
+4. **Clean Dependency Injection**: WebView is injected, not accessed globally
+5. **Centralized RPC Management**: All editor-related handlers in one place
+6. **UI-Service Coupling**: Direct connections between UI and service across package boundaries
+7. **Testability**: Services can be easily mocked for testing
+8. **Maintainability**: Clear separation of concerns and package isolation
+9. **GJS Compatible**: Works perfectly with GObject inheritance
+10. **Workspace Friendly**: Respects Yarn Workspace package structure
 
 #### Acceptance Criteria
 - ✅ Needle DI setup with modern TypeScript configuration
@@ -364,10 +407,11 @@ export class MapEditorService {
 - **Phase 1 Components**: MapEditorComponent, EditorToolComponent
 - **Phase 1 RPC Types**: Extended RpcEngineType definitions
 - **Phase 2 Systems**: MapEditorSystem, TileInteractionSystem
-- **Existing UI Components**: TilesetSelector, LayerSelector, MapEditorPanel
+- **Existing UI Components**: TilesetSelector, LayerSelector, MapEditorPanel (from `ui-gjs` package)
 - **Existing Story Infrastructure**: StoryWidget, StoryMeta, ControlType
-- **Existing GJS Infrastructure**: WebView, RPC communication
-- **Needle DI**: `@needle-di/core` package for dependency injection
+- **Existing GJS Infrastructure**: WebView, RPC communication (from `engine-gjs` package)
+- **Needle DI**: `@needle-di/core` package for cross-package dependency injection
+- **App-Level Setup**: DI container in `apps/maker-gjs` for cross-package services
 
 ## ✅ Definition of Done
 - [ ] MapEditorService with clean dependency injection implemented
