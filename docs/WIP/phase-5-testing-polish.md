@@ -1,337 +1,534 @@
-# Phase 5: Testing & Polish
+# Phase 5: Story-Based Testing & Polish
 
 ## 📋 Overview
-**Status:** Planned | **Estimate:** 1-2 days | **Priority:** Medium
+**Status:** Planned | **Estimate:** 2-3 days | **Priority:** Medium
 
-This phase focuses on quality assurance, testing, and user experience improvements for the completed Map Editor implementation.
+This phase focuses on comprehensive Story-based testing, performance optimization, and user experience improvements for the completed Map Editor implementation.
 
 ## 🎯 Goals
-- Comprehensive testing of all implemented features
+- Comprehensive Story testing of all implemented features
 - Performance optimization and monitoring
-- UI/UX improvements and polish
+- UI/UX improvements and polish based on Story feedback
 - Documentation and user experience refinement
+- Story-based validation of service architecture
 
 ## 📝 Detailed Tasks
 
-### 5.1 Unit Testing
-**Files:** `packages/engine-excalibur/src/**/*.spec.ts`, `packages/engine-gjs/src/**/*.spec.ts`
+### 5.1 Story-Based Testing
+**Files:** `packages/ui-gjs/src/widgets/**/*.story.ts`, `packages/engine-gjs/src/widgets/**/*.story.ts`
 
 #### Description
-Create comprehensive unit tests for all critical components and systems.
+Create and validate comprehensive Stories for all UI components and services, replacing traditional unit tests with interactive Story-based testing.
 
-#### Test Coverage Requirements
+#### Story Testing Coverage
 ```typescript
-// Component Tests
-describe('MapEditorComponent', () => {
-  it('should initialize with default values', () => {
-    const component = new MapEditorComponent()
-    expect(component.isEditable).toBe(true)
-    expect(component.selectedTileCoords).toBeNull()
+// SelectionToolsWidget Story Validation
+describe('SelectionToolsWidget Story', () => {
+  it('should handle tool selection correctly', async () => {
+    const story = new SelectionToolsWidgetStory()
+    await story.initialize()
+
+    // Test brush tool selection
+    story.updateArgs({ activeTool: EditorTool.Brush })
+    expect(story._selectionToolsWidget.currentTool).toBe(EditorTool.Brush)
+
+    // Test signal emission
+    const signalSpy = spyOn(story._selectionToolsWidget, 'emit')
+    story.updateArgs({ activeTool: EditorTool.Eraser })
+    expect(signalSpy).toHaveBeenCalledWith('tool-selected', EditorTool.Eraser)
   })
 
-  it('should handle state changes correctly', () => {
-    const component = new MapEditorComponent()
-    const coords = new ex.Vector(5, 10)
-    component.selectedTileCoords = coords
-    expect(component.selectedTileCoords).toEqual(coords)
+  it('should handle tool configuration changes', async () => {
+    const story = new SelectionToolsWidgetStory()
+    await story.initialize()
+
+    // Test brush size configuration
+    story.updateArgs({ brushSize: 5 })
+    expect(story._selectionToolsWidget.brushSize).toBe(5)
+
+    // Test eraser size configuration
+    story.updateArgs({ activeTool: EditorTool.Eraser, eraserSize: 3 })
+    expect(story._selectionToolsWidget.eraserSize).toBe(3)
   })
 })
 
-// System Tests
-describe('MapEditorSystem', () => {
-  it('should process only entities with MapEditorComponent', () => {
-    const world = new ex.World(new ex.Scene())
-    const system = new MapEditorSystem(world)
+// MapEditorService Story Validation
+describe('MapEditorService Story Integration', () => {
+  it('should handle tile placement workflow', async () => {
+    const mockWebView = createMockWebView()
+    const service = new MapEditorService(mockWebView, mockTilesetSelector, mockLayerSelector)
 
-    // Add entity with MapEditorComponent
-    const entityWithEditor = new ex.Entity()
-    entityWithEditor.addComponent(new MapEditorComponent())
-    world.add(entityWithEditor)
+    // Setup service state
+    service.setSelectedTile(42)
+    service.setSelectedLayer('foreground')
 
-    // Add entity without MapEditorComponent
-    const entityWithoutEditor = new ex.Entity()
-    world.add(entityWithoutEditor)
-
-    // System should only process the first entity
-    spyOn(system, 'processEditorEntity')
-    system.update(16)
-    expect(system.processEditorEntity).toHaveBeenCalledTimes(1)
-  })
-})
-
-// Tool Tests
-describe('BrushTool', () => {
-  it('should place single tile correctly', async () => {
-    const tool = new BrushTool(mockMapEditorService, mockEngine)
-    const coords = new ex.Vector(5, 5)
-
-    spyOn(tool, 'placeTile')
-
-    await tool.handleTileClick(coords)
-
-    expect(tool.placeTile).toHaveBeenCalledWith(coords, expectedTileId)
-  })
-})
-```
-
-#### Test Categories
-1. **Component Tests**: State management, lifecycle, property changes
-2. **System Tests**: Query performance, entity processing, error handling
-3. **Tool Tests**: Interaction handling, state management, RPC calls
-4. **Service Tests**: State synchronization, error handling, API consistency
-5. **RPC Tests**: Message serialization, handler registration, error scenarios
-
-#### Acceptance Criteria
-- ✅ >80% code coverage across all critical paths
-- ✅ All components have corresponding test suites
-- ✅ Edge cases and error scenarios covered
-- ✅ Mock-based isolation for external dependencies
-- ✅ Fast execution (< 30 seconds total)
-
-#### Implementation Notes
-- Use Jest or similar testing framework
-- Mock external dependencies (RPC, file system)
-- Test both success and failure scenarios
-- Include performance assertions where relevant
-
-### 5.2 Integration Testing
-**Files:** `packages/engine-gjs/src/**/*.integration.spec.ts`
-
-#### Description
-Test the complete workflows and interactions between components, systems, and services.
-
-#### Integration Test Scenarios
-```typescript
-describe('Map Editor Integration', () => {
-  it('should handle complete tile placement workflow', async () => {
-    // Setup: Create tilemap with editor components
-    const tileMap = createEditableTileMap()
-    const mapEditorSystem = new MapEditorSystem(world)
-    const tileInteractionSystem = new TileInteractionSystem(world)
-
-    // Setup: Configure tool selection
-    const brushTool = new BrushTool(mapEditorService, engine)
-    mapEditorService.setTool(brushTool)
-    mapEditorService.setSelectedTile(42)
-
-    // Action: Simulate user interaction
-    const clickCoords = new ex.Vector(5, 5)
-    await tileInteractionSystem.simulateTileClick(clickCoords)
-
-    // Assertion: Verify tile was placed
-    const placedTile = await engine.getTileAt(clickCoords)
-    expect(placedTile).toBe(42)
-  })
-
-  it('should synchronize state between host and engine', async () => {
-    // Setup: Initialize complete system
-    const { engine, host, mapEditorService } = await setupCompleteSystem()
-
-    // Action: Change tool in host
-    await host.setTool(EditorTool.Eraser)
-
-    // Assertion: Verify engine received state change
-    const engineState = await engine.getEditorState()
-    expect(engineState.currentTool).toBe('eraser')
-  })
-})
-```
-
-#### Integration Areas
-1. **Component ↔ System**: Component state changes trigger system updates
-2. **System ↔ RPC**: Systems communicate correctly with host
-3. **Host ↔ Engine**: Bidirectional state synchronization
-4. **Tool ↔ Service**: Tool operations use correct service state
-5. **UI ↔ Service**: UI components reflect service state changes
-
-#### Acceptance Criteria
-- ✅ Complete user workflows tested end-to-end
-- ✅ RPC communication tested with realistic latency
-- ✅ Error scenarios handled gracefully
-- ✅ State consistency maintained across components
-- ✅ Performance acceptable under normal conditions
-
-#### Implementation Notes
-- Use test doubles for external systems
-- Test both happy path and error scenarios
-- Include timing assertions for performance
-- Document test setup procedures
-
-### 5.3 Performance Optimization
-**Files:** Various system and component files
-
-#### Description
-Optimize performance-critical paths and add monitoring capabilities.
-
-#### Performance Improvements
-```typescript
-// Optimize query performance
-export class MapEditorSystem extends ex.System {
-  private cachedQuery: Query | null = null
-
-  private getEditableMapsQuery(): Query {
-    if (!this.cachedQuery) {
-      this.cachedQuery = this.world.query([
-        ex.TileMap,
-        MapEditorComponent
-      ])
-    }
-    return this.cachedQuery
-  }
-
-  // Batch RPC calls for performance
-  private batchRpcCalls: Array<{type: string, params: any}> = []
-  private rpcBatchTimer: number | null = null
-
-  private queueRpcCall(type: string, params: any): void {
-    this.batchRpcCalls.push({ type, params })
-
-    if (!this.rpcBatchTimer) {
-      this.rpcBatchTimer = setTimeout(() => {
-        this.flushRpcBatch()
-      }, 16) // Next frame
-    }
-  }
-
-  private async flushRpcBatch(): Promise<void> {
-    // Send batched RPC calls
-    await Promise.all(
-      this.batchRpcCalls.map(call =>
-        this.rpc.sendNotification(call.type, call.params)
-      )
-    )
-    this.batchRpcCalls = []
-    this.rpcBatchTimer = null
-  }
-}
-```
-
-#### Optimization Areas
-1. **Query Caching**: Cache frequently used queries
-2. **RPC Batching**: Batch multiple RPC calls
-3. **Coordinate Caching**: Cache expensive coordinate transformations
-4. **Memory Management**: Proper cleanup of resources
-5. **Event Debouncing**: Prevent excessive event firing
-
-#### Acceptance Criteria
-- ✅ Query performance < 1ms for typical scenarios
-- ✅ System overhead < 5% of total frame time
-- ✅ Memory usage remains stable during editing
-- ✅ RPC batching reduces network overhead
-- ✅ No performance degradation with large maps
-
-#### Implementation Notes
-- Profile before and after optimization
-- Add performance monitoring hooks
-- Document performance characteristics
-- Include performance regression tests
-
-### 5.4 UI/UX Polish
-**Files:** `apps/maker-gjs/src/widgets/**/*.ts`
-
-#### Description
-Enhance user experience with visual feedback, keyboard shortcuts, and accessibility improvements.
-
-#### UI Improvements
-```typescript
-// Enhanced TilesetSelector with visual feedback
-export class TilesetSelector extends Adw.Bin {
-  private setupVisualFeedback(): void {
-    // Add hover effects
-    this.spriteSheetWidget.connect('tile-hovered', (tileId: number) => {
-      this.showTileTooltip(tileId)
-      this.highlightTile(tileId)
+    // Simulate tile click
+    const result = await service.handleTileClicked({
+      coords: new ex.Vector(5, 5)
     })
 
-    // Add selection feedback
-    this.spriteSheetWidget.connect('tile-selected', (tileId: number) => {
-      this.updateSelectionVisual(tileId)
-      this.playSelectionSound()
-    })
-  }
-
-  // Keyboard shortcuts
-  private setupKeyboardShortcuts(): void {
-    const keyController = new Gtk.EventControllerKey()
-    keyController.connect('key-pressed', (controller, keyval, keycode, state) => {
-      switch (keyval) {
-        case Gdk.KEY_b:
-          this.mapEditorService.setTool(EditorTool.Brush)
-          return true
-        case Gdk.KEY_e:
-          this.mapEditorService.setTool(EditorTool.Eraser)
-          return true
-        case Gdk.KEY_f:
-          this.mapEditorService.setTool(EditorTool.Fill)
-          return true
-        case Gdk.KEY_z:
-          if (state & Gdk.ModifierType.CONTROL_MASK) {
-            this.undoLastAction()
-            return true
-          }
+    expect(result.success).toBe(true)
+    expect(mockWebView.rpc.sendRequest).toHaveBeenCalledWith(
+      RpcEngineType.TILE_PLACED,
+      {
+        coords: new ex.Vector(5, 5),
+        tileId: 42,
+        layerId: 'foreground'
       }
-      return false
-    })
-    this.add_controller(keyController)
+    )
+  })
+})
+```
+
+#### Story Categories
+1. **Widget Stories**: Interactive testing of UI components
+2. **Service Stories**: Validation of service logic and RPC communication
+3. **Integration Stories**: End-to-end workflow testing
+4. **Error Stories**: Edge case and error scenario testing
+5. **Performance Stories**: Load testing and performance validation
+
+#### Acceptance Criteria
+- ✅ All major components have corresponding Stories
+- ✅ Stories cover all user interactions and edge cases
+- ✅ Interactive controls validate component behavior
+- ✅ Signal emission and handling properly tested
+- ✅ Mock data provides realistic testing scenarios
+
+#### Implementation Notes
+- Stories serve as both documentation and tests
+- Interactive controls allow runtime behavior validation
+- Console logging helps debug signal flow
+- Mock services provide controlled testing environment
+
+### 5.2 Service Architecture Validation
+**Files:** `packages/engine-gjs/src/services/**/*.story.ts`
+
+#### Description
+Create Stories to validate the service architecture and RPC communication patterns.
+
+#### Service Validation Stories with Needle DI
+```typescript
+// MapEditorService Story with Needle DI
+export class MapEditorServiceStory extends StoryWidget {
+  static getMetadata(): StoryMeta {
+    return {
+      title: 'Services/Map Editor Service',
+      description: 'Validation of MapEditorService with Needle DI dependency injection',
+      component: MapEditorService.$gtype,
+      tags: ['service', 'rpc', 'needle-di'],
+      controls: [
+        {
+          name: 'selectedTileId',
+          label: 'Selected Tile ID',
+          type: ControlType.RANGE,
+          min: 0,
+          max: 100,
+          defaultValue: 42
+        },
+        {
+          name: 'selectedLayerId',
+          label: 'Selected Layer',
+          type: ControlType.SELECT,
+          options: [
+            { label: 'Background', value: 'background' },
+            { label: 'Foreground', value: 'foreground' },
+            { label: 'Collision', value: 'collision' }
+          ],
+          defaultValue: 'foreground'
+        },
+        {
+          name: 'simulateTileClick',
+          label: 'Simulate Tile Click',
+          type: ControlType.BOOLEAN,
+          defaultValue: false
+        }
+      ]
+    }
+  }
+
+  initialize(): void {
+    // Create DI container with mocks for testing
+    const container = new Container()
+
+    // Register mock services
+    container.register(WebView, { useValue: this.createMockWebView() })
+    container.register(TilesetSelector, { useValue: this.createMockTilesetSelector() })
+    container.register(LayerSelector, { useValue: this.createMockLayerSelector() })
+
+    // Get service instance - dependencies automatically injected!
+    this.service = container.get(MapEditorService)
+
+    // Setup logging for RPC calls
+    this.setupRpcLogging(this.service.webView)
+
+    this.add_child(new Gtk.Label({ label: 'MapEditorService Validation (Needle DI)' }))
+  }
+
+  updateArgs(args: Record<string, any>): void {
+    if (args.selectedTileId !== undefined) {
+      this.service.setSelectedTile(args.selectedTileId)
+      console.log('Tile selected:', args.selectedTileId)
+    }
+
+    if (args.selectedLayerId !== undefined) {
+      this.service.setSelectedLayer(args.selectedLayerId)
+      console.log('Layer selected:', args.selectedLayerId)
+    }
+
+    if (args.simulateTileClick) {
+      this.simulateTileClick()
+    }
+  }
+
+  private simulateTileClick(): void {
+    const coords = new ex.Vector(5, 5)
+    this.service.handleTileClicked({ coords })
+      .then(result => console.log('Tile click result:', result))
+      .catch(error => console.error('Tile click error:', error))
   }
 }
 ```
 
-#### UI Enhancements
-1. **Visual Feedback**: Hover effects, selection highlights, previews
-2. **Keyboard Shortcuts**: Tool switching, undo/redo, common actions
-3. **Accessibility**: Screen reader support, keyboard navigation
-4. **Performance**: Smooth animations, responsive interactions
-5. **Error Handling**: User-friendly error messages and recovery
+#### Service Validation Areas
+1. **RPC Handler Registration**: Verify all handlers are properly registered
+2. **State Management**: Test state synchronization between components
+3. **Error Handling**: Validate error scenarios and recovery
+4. **Dependency Injection**: Ensure proper service initialization
+5. **Event Flow**: Test signal emission and handling
 
 #### Acceptance Criteria
-- ✅ Intuitive user interface following GNOME guidelines
-- ✅ Responsive interactions with visual feedback
-- ✅ Complete keyboard navigation support
-- ✅ Accessibility compliance (WCAG 2.1)
-- ✅ Error states handled gracefully with user guidance
+- ✅ Service initialization works with dependency injection
+- ✅ RPC handlers respond correctly to messages
+- ✅ State changes trigger appropriate notifications
+- ✅ Error scenarios handled gracefully
+- ✅ Clean separation between concerns maintained
 
 #### Implementation Notes
-- Follow GNOME Human Interface Guidelines
-- Test with screen readers and keyboard-only navigation
-- Provide clear visual hierarchy
-- Include loading states and progress indicators
+- Mock WebView provides controlled RPC testing
+- Console logging helps debug communication flow
+- Stories document expected service behavior
+
+### 5.3 Story-Based Performance Validation
+**Files:** `packages/ui-gjs/src/widgets/**/*.performance.story.ts`
+
+#### Description
+Create performance-focused Stories to validate system responsiveness and identify bottlenecks.
+
+#### Performance Validation Stories
+```typescript
+// Performance Story for SelectionToolsWidget
+export class SelectionToolsWidgetPerformanceStory extends StoryWidget {
+  static getMetadata(): StoryMeta {
+    return {
+      title: 'Performance/Selection Tools',
+      description: 'Performance validation for SelectionToolsWidget interactions',
+      component: SelectionToolsWidget.$gtype,
+      tags: ['performance', 'ui'],
+      controls: [
+        {
+          name: 'rapidToolSwitching',
+          label: 'Rapid Tool Switching',
+          type: ControlType.BOOLEAN,
+          defaultValue: false
+        },
+        {
+          name: 'stressTestTileSelection',
+          label: 'Stress Test Tile Selection',
+          type: ControlType.BOOLEAN,
+          defaultValue: false
+        }
+      ]
+    }
+  }
+
+  private performanceMetrics = {
+    toolSwitchTime: [] as number[],
+    tileSelectionTime: [] as number[],
+    memoryUsage: [] as number[]
+  }
+
+  initialize(): void {
+    this._selectionToolsWidget = new SelectionToolsWidget()
+
+    // Setup performance monitoring
+    this.setupPerformanceMonitoring()
+
+    this.add_child(this._selectionToolsWidget)
+  }
+
+  updateArgs(args: Record<string, any>): void {
+    if (args.rapidToolSwitching) {
+      this.runRapidToolSwitchingTest()
+    }
+
+    if (args.stressTestTileSelection) {
+      this.runTileSelectionStressTest()
+    }
+  }
+
+  private async runRapidToolSwitchingTest(): Promise<void> {
+    const tools = [EditorTool.Brush, EditorTool.Eraser, EditorTool.Fill]
+    const iterations = 100
+
+    console.log('Starting rapid tool switching test...')
+
+    for (let i = 0; i < iterations; i++) {
+      const startTime = performance.now()
+
+      const tool = tools[i % tools.length]
+      this._selectionToolsWidget.setActiveTool(tool)
+
+      const endTime = performance.now()
+      this.performanceMetrics.toolSwitchTime.push(endTime - startTime)
+    }
+
+    this.logPerformanceResults('Tool Switching')
+  }
+
+  private async runTileSelectionStressTest(): Promise<void> {
+    console.log('Starting tile selection stress test...')
+
+    for (let i = 0; i < 1000; i++) {
+      const startTime = performance.now()
+
+      // Simulate rapid tile selection changes
+      this._selectionToolsWidget.setSelectedTile(i % 100, this.createMockTexture())
+
+      const endTime = performance.now()
+      this.performanceMetrics.tileSelectionTime.push(endTime - startTime)
+    }
+
+    this.logPerformanceResults('Tile Selection')
+  }
+
+  private logPerformanceResults(testName: string): void {
+    const times = this.performanceMetrics.toolSwitchTime
+    const avg = times.reduce((a, b) => a + b, 0) / times.length
+    const max = Math.max(...times)
+    const min = Math.min(...times)
+
+    console.log(`${testName} Performance Results:`)
+    console.log(`  Average: ${avg.toFixed(2)}ms`)
+    console.log(`  Max: ${max.toFixed(2)}ms`)
+    console.log(`  Min: ${min.toFixed(2)}ms`)
+    console.log(`  Samples: ${times.length}`)
+  }
+}
+```
+
+#### Performance Validation Areas
+1. **UI Responsiveness**: Measure widget interaction times
+2. **Memory Usage**: Monitor memory consumption during operations
+3. **RPC Latency**: Validate communication performance
+4. **Event Handling**: Test event processing efficiency
+5. **Rendering Performance**: Check UI update speeds
+
+#### Acceptance Criteria
+- ✅ Tool switching < 50ms average response time
+- ✅ Tile selection < 100ms for bulk operations
+- ✅ Memory usage remains stable during stress tests
+- ✅ No UI freezing during rapid interactions
+- ✅ Performance meets Story-defined thresholds
+
+#### Implementation Notes
+- Use browser performance API for accurate measurements
+- Console logging provides detailed performance data
+- Stories help identify performance bottlenecks interactively
+
+### 5.4 Story-Driven UI/UX Refinement
+**Files:** `packages/ui-gjs/src/widgets/**/*.story.ts`
+
+#### Description
+Use Stories to iteratively refine UI/UX based on interactive testing and user feedback.
+
+#### UI Refinement Stories
+```typescript
+// SelectionToolsWidget UX Story
+export class SelectionToolsWidgetUXStory extends StoryWidget {
+  static getMetadata(): StoryMeta {
+    return {
+      title: 'UX/Selection Tools Refinement',
+      description: 'Iterative UI/UX refinement for SelectionToolsWidget based on user feedback',
+      component: SelectionToolsWidget.$gtype,
+      tags: ['ux', 'refinement', 'feedback'],
+      controls: [
+        {
+          name: 'showTooltips',
+          label: 'Show Tooltips',
+          type: ControlType.BOOLEAN,
+          defaultValue: true
+        },
+        {
+          name: 'enableAnimations',
+          label: 'Enable Animations',
+          type: ControlType.BOOLEAN,
+          defaultValue: true
+        },
+        {
+          name: 'colorScheme',
+          label: 'Color Scheme',
+          type: ControlType.SELECT,
+          options: [
+            { label: 'Default', value: 'default' },
+            { label: 'High Contrast', value: 'high-contrast' },
+            { label: 'Dark', value: 'dark' }
+          ],
+          defaultValue: 'default'
+        },
+        {
+          name: 'simulateAccessibility',
+          label: 'Simulate Accessibility',
+          type: ControlType.BOOLEAN,
+          defaultValue: false
+        }
+      ]
+    }
+  }
+
+  initialize(): void {
+    this._selectionToolsWidget = new SelectionToolsWidget()
+
+    // Setup UX monitoring
+    this.setupUXMonitoring()
+
+    // Add accessibility testing
+    this.setupAccessibilityTesting()
+
+    this.add_child(this._selectionToolsWidget)
+  }
+
+  updateArgs(args: Record<string, any>): void {
+    if (args.showTooltips !== undefined) {
+      this._selectionToolsWidget.showTooltips = args.showTooltips
+    }
+
+    if (args.enableAnimations !== undefined) {
+      this._selectionToolsWidget.animationsEnabled = args.enableAnimations
+    }
+
+    if (args.colorScheme !== undefined) {
+      this.applyColorScheme(args.colorScheme)
+    }
+
+    if (args.simulateAccessibility) {
+      this.simulateAccessibilityMode()
+    }
+  }
+
+  private applyColorScheme(scheme: string): void {
+    const cssProvider = new Gtk.CssProvider()
+
+    switch (scheme) {
+      case 'high-contrast':
+        cssProvider.load_from_data(`
+          .tool-button { border: 2px solid black; }
+          .selected { background-color: yellow; color: black; }
+        `)
+        break
+      case 'dark':
+        cssProvider.load_from_data(`
+          .tool-button { background-color: #333; color: white; }
+          .selected { background-color: #666; }
+        `)
+        break
+    }
+
+    this._selectionToolsWidget.get_style_context().add_provider(
+      cssProvider,
+      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+    )
+  }
+
+  private simulateAccessibilityMode(): void {
+    // Simulate screen reader interactions
+    console.log('Accessibility Mode: Testing keyboard navigation...')
+
+    // Test tab order
+    this.testTabNavigation()
+
+    // Test ARIA labels
+    this.testAriaLabels()
+
+    // Test focus indicators
+    this.testFocusIndicators()
+  }
+
+  private testTabNavigation(): void {
+    // Simulate tab key presses and verify focus order
+    const focusableElements = this.getFocusableElements()
+    console.log('Focusable elements:', focusableElements.length)
+    console.log('Tab order validated')
+  }
+
+  private testAriaLabels(): void {
+    // Check that all interactive elements have proper ARIA labels
+    const interactiveElements = this.getInteractiveElements()
+    interactiveElements.forEach(element => {
+      const ariaLabel = element.get_accessible().get_label()
+      console.log(`ARIA label for ${element.constructor.name}: ${ariaLabel || 'MISSING'}`)
+    })
+  }
+}
+```
+
+#### UI/UX Refinement Areas
+1. **Visual Design**: Color schemes, spacing, typography
+2. **Interaction Design**: Hover states, animations, feedback
+3. **Accessibility**: Keyboard navigation, screen reader support
+4. **Performance**: Smooth animations, responsive interactions
+5. **User Feedback**: Tooltips, help text, error messages
+
+#### Acceptance Criteria
+- ✅ Intuitive visual hierarchy and spacing
+- ✅ Smooth animations and transitions
+- ✅ Complete keyboard accessibility
+- ✅ Screen reader compatibility
+- ✅ Multiple color scheme support
+- ✅ Clear visual feedback for all interactions
+
+#### Implementation Notes
+- Stories allow rapid iteration on UI designs
+- Interactive controls test different UX variations
+- Console logging helps track accessibility compliance
+- Multiple color schemes support different user preferences
 
 ## 🔗 Dependencies
-- **All Previous Phases**: Complete implementation of components, systems, services, and tools
-- **Testing Framework**: Jest or similar for unit and integration tests
-- **Performance Tools**: Profiling tools for optimization
-- **Accessibility Tools**: Screen reader testing, keyboard navigation testing
+- **Phase 3**: MapEditorService and SelectionToolsWidget with Needle DI
+- **Phase 4**: Extended tool system with eraser and fill tools
+- **Existing Story Infrastructure**: StoryWidget, StoryMeta, ControlType
+- **Existing UI Components**: TilesetSelector, LayerSelector, MapEditorPanel
+- **Needle DI**: `@needle-di/core` for dependency injection in services
 
 ## ✅ Definition of Done
-- [ ] Comprehensive unit test suite (>80% coverage)
-- [ ] Integration tests for complete workflows
-- [ ] Performance optimizations implemented
-- [ ] UI/UX polish completed
-- [ ] Accessibility requirements met
-- [ ] Documentation updated
-- [ ] Final QA review completed
+- [ ] Comprehensive Story suite for all components
+- [ ] Service architecture validation through Stories
+- [ ] Performance benchmarks established via Stories
+- [ ] UI/UX refinements completed based on Story feedback
+- [ ] Accessibility compliance verified through Stories
+- [ ] All acceptance criteria met
+- [ ] Final Story review completed
 
 ## 📋 Testing Strategy
-- **Automated Tests**: Unit tests, integration tests, performance tests
-- **Manual Testing**: User experience testing, accessibility testing
-- **Performance Testing**: Load testing, memory leak detection
-- **Compatibility Testing**: Different map sizes, tile configurations
+- **Story-Based Testing**: Interactive validation of all features
+- **Service Testing**: Architecture validation through mock environments
+- **Performance Testing**: Real-time performance monitoring via Stories
+- **UX Testing**: Iterative design refinement through Story controls
+- **Accessibility Testing**: Compliance validation through Story simulations
 
 ## 🎯 Final Deliverables
 After completing Phase 5:
-- **Functional Map Editor**: Complete working implementation
-- **Test Suite**: Comprehensive automated tests
-- **Performance Optimized**: Optimized for production use
-- **User Ready**: Polished user experience
-- **Documented**: Complete documentation for maintenance
+- **Story-Tested Map Editor**: Complete working implementation validated through Stories
+- **Service Architecture**: Robust and well-tested service layer
+- **Performance Optimized**: Optimized based on Story performance data
+- **User Ready**: Polished user experience refined through Story feedback
+- **Documented**: Complete Story documentation for maintenance
 
 ## 📊 Quality Metrics
-- **Code Coverage**: >80% for critical components
-- **Performance**: < 5% system overhead
-- **Accessibility**: WCAG 2.1 AA compliant
-- **User Experience**: Intuitive and responsive
-- **Error Handling**: Graceful failure recovery
+- **Story Coverage**: All major features covered by Stories
+- **Performance**: < 50ms average response times validated via Stories
+- **Accessibility**: WCAG 2.1 AA compliant verified through Stories
+- **User Experience**: Intuitive and responsive validated through Stories
+- **Service Architecture**: Clean dependency injection and RPC handling
 
 ---
-*Final phase focuses on quality, performance, and user experience. Ensure the implementation is production-ready and maintainable.*
+*Focus on Story-based validation and refinement. Stories serve as both tests and documentation, ensuring quality and maintainability.*
