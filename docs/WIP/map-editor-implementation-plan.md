@@ -1,201 +1,169 @@
 # Map Editor Implementation Plan
 
-## ⚠️ Important Notice: This is NOT implementation documentation
-
-**This document is NOT documentation of a completed implementation!**
-
-This document serves exclusively as a **working plan** and **progress tracking** tool for the Map Editor development. It documents:
-
-- ✅ **What is planned** (implementation roadmap)
-- 🔄 **What is currently being implemented** (active work packages)
-- ✅ **What has been completed** (finished milestones)
-- ❌ **What remains open** (backlog)
-
-**Difference from implementation documentation:**
-- **This document**: Plans development, tracks progress, corrects plans when needed
-- **Implementation documentation**: Explains completed features, APIs, architectural decisions
-
----
-
 ## 📋 Project Overview
 
 ### 🎯 Objective
-Implementation of a Map Editor for the RPG Maker based on Excalibur.js with GTK/GJS host integration via RPC communication.
+Implementation of a Map Editor for tile-based game development using Excalibur.js engine with GTK/GJS host integration via RPC communication.
 
 ### 🏗️ Architecture Principles
-- **ECS-first**: Utilizing Excalibur's Entity Component System
+- **ECS-based**: Utilizing Excalibur's Entity Component System
 - **RPC-driven**: Communication between GJS host and Excalibur engine
-- **State-centered**: Centralized state management in the host
+- **State-managed**: Centralized state in service layer
 - **Modular**: Clear separation of responsibilities
-- **Testable**: Isolatable systems and components
+- **Testable**: Isolated systems and components
 
 ### 📊 Current Status
-- **Phase**: Phase 2 - ECS Systems (Implementation)
-- **Progress**: 60% (Phase 1 completed, Phase 2 systems implemented and integrated)
-- **Next Milestone**: Phase 2 completion and integration testing
-- **Key Discovery**: TileMap provides 60% of required infrastructure
-- **Implementation Status**: ✅ Phase 1 completed, ✅ Systems created, ✅ Engine integration done
+- **Components**: ✅ Complete (Phase 1)
+- **Systems**: ✅ Complete (Phase 2)
+- **Integration**: 🔄 In Progress (Phase 3)
+- **Features**: 📅 Planned (Phase 4)
+- **Testing**: 📅 Planned (Phase 5)
 
----
+## 🗂️ Implementation Phases
 
-## 🗂️ Implementation Plan
+### Phase Structure
+Each phase has detailed documentation in separate files:
 
-### 📋 Overview
-The implementation is divided into **5 phases** with detailed documentation in separate files:
-
-#### 📄 Phase Documentation Structure
 - **[Phase 1: ECS Components](phase-1-ecs-components.md)** - Foundation components and RPC types
 - **[Phase 2: ECS Systems](phase-2-ecs-systems.md)** - Core systems for map editing
 - **[Phase 3: GJS Integration](phase-3-gjs-integration.md)** - Host integration and UI
-- **[Phase 4: Tool System](phase-4-tool-system.md)** - Editor tools implementation
-- **[Phase 5: Testing & Polish](phase-5-testing-polish.md)** - Quality assurance
+- **[Phase 4: Extended Features](phase-4-tool-system.md)** - Optional enhancements
+- **[Phase 5: Testing & Validation](phase-5-testing-polish.md)** - Quality assurance
 
-#### 🎯 Development Workflow
-1. **Read main plan** for overall context
-2. **Open specific phase document** for detailed tasks
-3. **Focus on one phase** at a time
-4. **Update checklists** as tasks are completed
-5. **Move to next phase** when current phase is complete
+### Development Workflow
+1. Complete one phase before starting the next
+2. Test each phase independently
+3. Document findings and issues
+4. Update plan based on discoveries
 
-### 📊 Current Phase Status
-- **Phase 1**: ✅ **Completed** → [Review Implementation](phase-1-ecs-components.md)
-- **Phase 2**: ✅ **Completed** → [Review Implementation](phase-2-ecs-systems.md)
-- **Phase 3**: Planned
-- **Phase 4**: Planned
-- **Phase 5**: Planned
+## 📈 Technical Approach
 
----
+### Key Technologies
+- **Engine**: Excalibur.js with ECS architecture
+- **Host**: GJS/GTK for native UI
+- **Communication**: RPC over message channels
+- **Language**: TypeScript throughout
+- **Build**: Yarn workspaces with multiple packages
 
-## 📈 Risks and Assumptions
+### Critical Discovery
+Excalibur tiles support runtime modification via:
+```typescript
+tile.clearGraphics()
+tile.addGraphic(sprite.clone())
+```
+This enables direct tile replacement without complex state management.
 
-### ⚠️ Known Risks
-1. **ECS Complexity**: First ECS implementation may require learning curve
-2. **RPC Latency**: Potential performance issues with frequent updates
-3. **Coordinate Transformation**: Complex calculations between screen and tile coordinates
-4. **State Synchronization**: Consistency between host and engine
+## 🎯 Success Metrics
 
-### ✅ Assumptions
-1. **Excalibur ECS**: Framework provides sufficient performance and flexibility
-2. **RPC Stability**: Existing communication layer is robust
-3. **GTK Integration**: Existing UI components are extensible
-4. **TypeScript**: Complete type safety is possible
-5. **ECS Mode Switching**: Component-based activation/deactivation works performantly
+### MVP Requirements
+- Click to place tiles ✅
+- Switch between tools ✅
+- Visual feedback ✅
+- No critical errors ✅
 
-### 🎛️ Mitigation Strategies
-1. **Prototyping**: Small proof-of-concepts for critical features
-2. **Performance Monitoring**: Early identification of bottlenecks
-3. **Modular Architecture**: Easy replacement of components
-4. **Regular Reviews**: Code reviews for quality assurance
+### Performance Targets
+- Tile changes < 16ms
+- Small maps (10x10) instant
+- Medium maps (50x50) responsive
+- Large maps (100x100) < 100ms per operation
 
----
+### Quality Standards
+- TypeScript strict mode
+- No console errors
+- Clean component lifecycle
+- Proper error handling
 
-## 🎯 Next Steps
+## 📅 Timeline
 
-### 🔄 Immediate (Next 1-2 Days)
-1. **Start Phase 1.1**: Create MapEditorComponent
-2. **Prepare Repository**: Create new files
-3. **Basic Tests**: Implement simple component tests
+### Completed
+- Phase 1: ECS Components ✅
+- Phase 2: ECS Systems ✅
 
-### 📅 Short-term (Next Days)
-1. **Complete Phase 2**: Testing and validation of implemented systems
-2. **Start Phase 3**: Implement GJS host integration and UI components
-3. **Integration Testing**: Test complete editor workflow from GJS to engine
+### In Progress
+- Phase 3: GJS Integration (2-3 hours)
 
-### 📊 Milestones
-- **✅ COMPLETED**: Phase 1 - ECS components and RPC types implemented
-- **✅ COMPLETED**: Phase 2 - ECS systems and engine integration implemented
-- **Day 1-2**: Phase 2 testing and validation completed
-- **Day 3-5**: Phase 3 completed, GJS integration functional
-- **Day 7-9**: MVP with Brush and Eraser tools
-- **Day 10-12**: Testing and polishing completed
+### Planned
+- Phase 4: Extended Features (Optional, post-MVP)
+- Phase 5: Testing & Validation (1-2 hours)
 
----
+### Total Estimate
+- **MVP**: 4-5 hours from current state
+- **Full feature set**: Additional 1-2 days
 
-## 🔑 Key Architectural Insights
+## 🔄 Development Guidelines
 
-### 🎯 ECS Mode Switching Discovery
-**Critical breakthrough in architecture design discovered during planning phase:**
+### Code Organization
+```
+packages/
+├── engine-excalibur/     # Engine-side implementation
+│   ├── components/       # ECS components
+│   ├── systems/         # ECS systems
+│   └── utils/           # Helper functions
+├── engine-gjs/          # Host-side implementation
+│   ├── services/        # Service layer
+│   └── widgets/         # WebView widget
+└── ui-gjs/              # UI components
+    └── widgets/         # GTK widgets
+        └── map-editor/  # Editor-specific widgets
+```
 
-#### ✅ Component-Based Editor Activation
-- **Problem**: How to cleanly separate editor functionality from game runtime
-- **Solution**: ECS component management for runtime mode switching
-- **Implementation**:
-  ```typescript
-  // Activate editor mode
-  tileMap.addComponent(new MapEditorComponent())
-  scene.world.add(new MapEditorSystem())
+### Testing Strategy
+1. Manual testing for MVP
+2. Debug logging at critical points
+3. Performance monitoring
+4. User acceptance testing
 
-  // Deactivate editor mode
-  tileMap.removeComponent(MapEditorComponent)
-  scene.world.remove(MapEditorSystem)
-  ```
+### Documentation Standards
+- Code comments for complex logic
+- JSDoc for public APIs
+- README for each package
+- Update plan as implementation proceeds
 
-#### 🎨 Benefits
-- **Pure ECS**: No conditional logic in game code
-- **Performance**: Editor systems only run when needed
-- **Clean Separation**: Game and editor code completely isolated
-- **Runtime Switching**: Can switch modes during execution
-- **Testability**: Game and editor functionality separately testable
+## 🚀 Next Steps
 
-#### 🚀 **Enhanced by Infrastructure Discovery**
-- **Coordinate System**: Leverages existing TileMap coordinate transformation
-- **Event System**: Integrates with existing TilePointerEvents
-- **Performance**: Uses optimized existing event dispatchers
-- **Maintainability**: Builds on proven, tested TileMap infrastructure
+### Immediate (Current Sprint)
+1. Complete Phase 3 integration
+2. Test tile replacement end-to-end
+3. Fix any blocking issues
 
-#### 📋 Impact on Implementation
-- All editor systems depend on presence of `MapEditorComponent`
-- TileMap entities receive editor components when in edit mode
-- Systems query for components to determine functionality
-- No performance impact on game runtime
+### Short-term (Next Sprint)
+1. Implement save/load functionality
+2. Add undo/redo support
+3. Gather user feedback
 
----
+### Long-term (Future)
+1. Advanced tool implementation
+2. Performance optimization
+3. Multi-user collaboration
+
+## 📊 Risk Management
+
+### Technical Risks
+- **Sprite sheet access**: Ensure sprites are accessible when needed
+- **State synchronization**: Maintain consistency between UI and engine
+- **Performance**: Monitor for degradation with large maps
+
+### Mitigation Strategies
+- Early testing of critical features
+- Incremental implementation
+- Performance profiling
+- Regular code reviews
 
 ## 📝 Progress Tracking
 
-### ✅ Completed
-- **Analysis of existing architecture** (1 day)
-- **Understanding of ECS patterns in Excalibur** (0.5 days)
-- **Implementation plan created** (0.5 days)
-- **ECS mode switching discovery** (architectural breakthrough)
-- **TileMap infrastructure analysis** (0.5 days)
-- **Plan refinement based on existing capabilities** (0.5 days)
-- **MapEditorComponent implementation** (0.5 days)
-- **EditorToolComponent implementation** (0.5 days)
-- **RPC types extension for TileMap interaction** (0.5 days)
-- **EditorInputSystem integration with existing TileMap events** (0.5 days)
-- **MapEditorSystem implementation** (1 day)
-- **TileInteractionSystem implementation** (1 day)
-- **Engine integration for automatic system activation** (0.5 days)
-- **Performance monitoring and optimization** (0.5 days)
-- **System lifecycle management and cleanup** (0.5 days)
+### Phase Completion Criteria
+Each phase is complete when:
+- All tasks in phase document completed
+- Testing confirms functionality
+- Documentation updated
+- No blocking issues remain
 
-### 🔄 In Progress
-- **Documentation of this plan** (current)
-
-### 📋 Planned
-- Phase 1: ECS Components (1-2 days)
-- Phase 2: ECS Systems (2-3 days)
-- Phase 3: GJS Host Integration (2-3 days)
-- Phase 4: Tool System (2-3 days)
-- Phase 5: Testing and Polish (1-2 days)
+### Tracking Method
+- Update phase documents with progress
+- Mark completed tasks with ✅
+- Document issues and solutions
+- Regular status reviews
 
 ---
 
-## 🔄 Planning Updates
-
-### 📅 Last Update
-- **Date**: [Current Date]
-- **Version**: 1.0
-- **Changes**: Initial plan creation based on architecture analysis
-
-### 📝 Planned Reviews
-- **After Phase 1**: ECS architecture validation
-- **After Phase 2**: System performance review
-- **After Phase 3**: Integration test review
-- **After Phase 4**: Feature-complete review
-- **After Phase 5**: Final QA review
-
----
-
-*This document will be updated regularly. When the plan changes or new insights are gained, it will be adjusted accordingly.*
+*This plan guides the implementation of the Map Editor. It will be updated as development proceeds and new information becomes available.*

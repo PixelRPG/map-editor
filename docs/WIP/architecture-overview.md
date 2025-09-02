@@ -1,334 +1,243 @@
-# Map Editor Architecture Overview
+# Map Editor Architecture
 
-## 🎯 Core Concept: ECS Mode Switching
+## 🎯 Core Concept
 
-The Map Editor architecture is built around a revolutionary **ECS (Entity Component System) Mode Switching** approach that enables clean separation between game runtime and editor functionality.
+The Map Editor enables runtime tile modification through direct manipulation of Excalibur's tile graphics using a clean ECS architecture.
 
-## 🏗️ Architecture Principles
+## 🔑 Technical Foundation
 
-### 1. Component-Based Feature Activation
+Tiles are modified at runtime using Excalibur's graphics API:
 ```typescript
-// Editor mode activation through components
-tileMap.addComponent(new MapEditorComponent())
-tileMap.addComponent(new EditorToolComponent())
-
-// Editor mode deactivation
-tileMap.removeComponent(MapEditorComponent)
-tileMap.removeComponent(EditorToolComponent)
+tile.clearGraphics()
+tile.addGraphic(sprite.clone())
 ```
 
-### 2. System-Conditional Execution
+## 🏗️ System Architecture
+
+### Three-Layer Design
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                 1. UI Layer (GJS/GTK)                    │
+├─────────────────────────────────────────────────────────┤
+│  • TilesetSelector - Choose tiles from tileset           │
+│  • ToolSelector - Switch between editing tools           │
+│  • LayerSelector - Select map layers                     │
+│  • MapEditorPanel - Container for editor widgets         │
+└────────────────────────┬─────────────────────────────────┘
+                         │
+                    ↓ RPC Events ↓
+                         │
+┌────────────────────────▼─────────────────────────────────┐
+│             2. Service Layer (Bridge)                     │
+├─────────────────────────────────────────────────────────┤
+│  • MapEditorService - State coordination                 │
+│  • RPC message handling                                  │
+│  • UI-Engine synchronization                             │
+└────────────────────────┬─────────────────────────────────┘
+                         │
+                    ↓ State Updates ↓
+                         │
+┌────────────────────────▼─────────────────────────────────┐
+│           3. Engine Layer (Excalibur)                     │
+├─────────────────────────────────────────────────────────┤
+│  • EditorInputSystem - Mouse event processing            │
+│  • MapEditorComponent - Editable state management        │
+│  • EditorToolComponent - Tool and selection state        │
+│  • MapEditorSystem - Coordination and state sync         │
+│  • TileInteractionSystem - Tile interaction handling     │
+│  • TileMap - Actual tile graphic manipulation            │
+└─────────────────────────────────────────────────────────┘
+```
+
+## 📊 Data Flow
+
+### Tile Selection Flow
+```
+1. User clicks tile in TilesetSelector
+2. TilesetSelector emits 'tile-selected' signal
+3. MapEditorService.selectTile(tileId) called
+4. Service sends RPC: EDITOR_STATE_CHANGED
+5. MapEditorSystem receives state update
+6. EditorToolComponent.selectedTileId updated
+```
+
+### Tile Placement Flow
+```
+1. User clicks on map
+2. EditorInputSystem detects click
+3. System reads EditorToolComponent state
+4. System calls tile.clearGraphics()
+5. System calls tile.addGraphic(sprite)
+6. Tile visually changes immediately
+7. System sends RPC: TILE_PLACED confirmation
+```
+
+## 🛠️ Core Components
+
+### UI Layer Components
+
+#### TilesetSelector
+- Displays available tiles in a grid
+- Handles tile selection
+- Emits selection signals
+- Provides visual feedback
+
+#### ToolSelector
+- Simple toggle buttons for tools
+- Exclusive selection (one tool active)
+- Emits tool change signals
+
+#### LayerSelector
+- Lists available map layers
+- Handles layer switching
+- Updates editing context
+
+### Service Layer
+
+#### MapEditorService
+- Manages editor state
+- Bridges UI and Engine
+- Handles RPC communication
+- Coordinates tool and tile selection
+
+Key responsibilities:
 ```typescript
-// Systems only run when components are present
-export class MapEditorSystem extends ex.System {
-  public update(): void {
-    // This system only processes entities WITH MapEditorComponent
-    for (const entity of this.editableMapsQuery.entities) {
-      // Editor logic here
-    }
-  }
+class MapEditorService {
+  // State management
+  selectedTileId: number
+  currentTool: 'brush' | 'eraser'
+  selectedLayerId: string
+  
+  // UI integration
+  selectTile(id: number): void
+  setTool(tool: string): void
+  setLayer(id: string): void
+  
+  // Engine communication
+  updateEngineState(): void
+  setupRpcHandlers(): void
 }
 ```
 
-### 3. Clean Separation of Concerns
-- **Game Runtime**: Pure Excalibur ECS without editor overhead
-- **Editor Mode**: Additional components and systems for editing
-- **Host Integration**: GJS host manages editor state and UI
+### Engine Layer Components
 
-## 🏛️ System Architecture
+#### EditorInputSystem
+Processes mouse events and triggers tile modifications:
+- Converts screen to tile coordinates
+- Handles click and hover events
+- Executes tile modifications
+- Sends RPC notifications
 
-### Core Components
+#### MapEditorComponent
+Marks entities as editable:
+- `isEditable`: Enable/disable editing
+- `selectedTileCoords`: Current selection
+- `hoverTileCoords`: Hover position
+- Event callbacks for UI updates
 
-#### 🎮 MapEditorComponent
-```typescript
-export class MapEditorComponent extends ex.Component {
-  // Editor activation flag
-  public isEditable: boolean = true
+#### EditorToolComponent
+Stores tool and selection state:
+- `currentTool`: Active editing tool
+- `selectedTileId`: Tile to place
+- `selectedLayerId`: Target layer
+- Tool-specific settings
 
-  // Current interaction state
-  public selectedTileCoords: ex.Vector | null = null
-  public hoverTileCoords: ex.Vector | null = null
+#### MapEditorSystem
+Coordinates editor functionality:
+- Manages component queries
+- Handles state synchronization
+- Processes RPC messages
+- Updates tool components
 
-  // RPC callbacks for state synchronization
-  public onTileSelected?: (coords: ex.Vector) => void
-  public onTileHovered?: (coords: ex.Vector) => void
-}
-```
+#### TileInteractionSystem
+Processes tile interactions:
+- Handles tile selection
+- Routes to appropriate tools
+- Manages visual feedback
 
-#### 🛠️ EditorToolComponent
-```typescript
-export class EditorToolComponent extends ex.Component {
-  // Current tool selection
-  public currentTool: 'brush' | 'eraser' | 'fill' | null = null
+## 🔧 Implementation Phases
 
-  // Selected resources
-  public selectedTileId: number | null = null
-  public selectedLayerId: string | null = null
+### Phase 1: Core Components ✅
+- MapEditorComponent
+- EditorToolComponent
+- RPC type definitions
 
-  // Tool-specific state
-  public brushSize: number = 1
-  public fillTolerance: number = 0
-}
-```
+### Phase 2: Systems ✅
+- MapEditorSystem
+- TileInteractionSystem
+- EditorInputSystem
 
-### Core Systems
+### Phase 3: Integration 🔄
+- MapEditorService
+- ToolSelector widget
+- Component wiring
 
-#### 🎯 MapEditorSystem (Coordinator)
-- **Purpose**: Central coordination system with type-safe architecture
-- **Queries**: Type-safe queries for entities with MapEditorComponent and EditorToolComponent
-- **Type Safety**: Uses `Query<ComponentCtor<Component>>` and `Entity[]` for complete type safety
-- **Responsibilities**:
-  - State synchronization between components with proper typing
-  - RPC communication management with typed parameters
-  - Performance monitoring with built-in metrics
-  - Mode switching coordination with clean component lifecycle
+### Phase 4: Features (Optional)
+- Save/Load
+- Undo/Redo
+- Advanced tools
 
-#### 🖱️ TileInteractionSystem (Input Handler)
-- **Purpose**: Handle tile-based interactions with complete type safety
-- **Queries**: Type-safe query using `Query<typeof MapEditorComponent>` for precise entity selection
-- **Type Safety**: Uses `Entity` and proper component access patterns for type-safe operations
-- **Responsibilities**:
-  - Coordinate-to-tile conversion using Excalibur Vector types
-  - Click and hover event processing with typed RPC notifications
-  - Tool routing based on current selection with proper type checking
-  - Visual feedback management using typed component access
+### Phase 5: Testing
+- Functional validation
+- Performance testing
+- Bug fixes
 
-#### 🔧 EditorInputSystem (Extended)
-- **Purpose**: Extended input handling for editor with type-safe Excalibur integration
-- **Type Safety**: Proper use of Excalibur `Vector`, `vec()`, and `Tile` types
-- **Enhancements**:
-  - Tile coordinate calculation using `screenToWorldCoordinates(vec(x, y))`
-  - Component integration with typed entity access
-  - RPC event generation with proper parameter typing
+## 🎯 Design Principles
 
-## 🌐 Communication Architecture
+### ECS Architecture
+- Components store state
+- Systems process logic
+- Clean separation of concerns
+- Runtime composition
 
-### RPC Communication Flow
-```
-GJS Host ←───────RPC────────→ Excalibur Engine
-    │                           │
-    ├── MapEditorService        ├── MapEditorSystem
-    ├── Tool Management         ├── Component State
-    ├── UI State                ├── TileMap Interactions
-    └── User Actions            └── Visual Feedback
-```
+### Simplicity
+- Direct instantiation
+- Minimal dependencies
+- Clear data flow
+- Easy debugging
 
-### Key RPC Messages
-```typescript
-enum RpcEngineType {
-  // TileMap interactions
-  TILE_CLICKED = 'tile-clicked',
-  TILE_HOVERED = 'tile-hovered',
-  TILE_PLACED = 'tile-placed',
+### Extensibility
+- Add features incrementally
+- Maintain backward compatibility
+- Plugin-friendly design
+- Modular components
 
-  // Editor state
-  EDITOR_STATE_CHANGED = 'editor-state-changed'
-}
-```
+## 📋 Success Criteria
 
-## 🛠️ Tool System Architecture
+The architecture succeeds when:
+1. **Tile selection** updates engine state
+2. **Map clicks** change tile graphics
+3. **Tool switches** modify behavior
+4. **No errors** in console
+5. **Performance** remains responsive
 
-### Abstract Tool Pattern
-```typescript
-export abstract class AbstractTool {
-  constructor(
-    protected mapEditorService: MapEditorService,
-    protected engine: Engine
-  ) {}
+## 🚀 Extension Points
 
-  // Lifecycle
-  abstract activate(): void
-  abstract deactivate(): void
+The architecture supports future additions:
 
-  // Interactions
-  abstract handleTileClick(coords: ex.Vector): Promise<void>
-  abstract handleTileHover(coords: ex.Vector): Promise<void>
-}
-```
+### Persistence
+- Serialize map state
+- File system integration
+- Project management
 
-### Concrete Tools
-- **BrushTool**: Single/multi-tile placement with patterns
-- **EraserTool**: Safe tile removal with area support
-- **FillTool**: Flood fill with tolerance and boundary detection
+### Advanced Tools
+- Multi-tile brushes
+- Fill algorithms
+- Selection tools
+- Transform operations
 
-## 🎨 Mode Switching Mechanism
+### Optimization
+- Batch operations
+- Dirty rectangles
+- Viewport culling
+- Sprite caching
 
-### Activation Process
-```typescript
-async function activateEditorMode(tileMap: ex.TileMap): Promise<void> {
-  // 1. Add editor components to TileMap entity
-  tileMap.addComponent(new MapEditorComponent())
-  tileMap.addComponent(new EditorToolComponent())
+### Collaboration
+- Multi-user editing
+- Change tracking
+- Conflict resolution
 
-  // 2. Add editor systems to scene
-  scene.world.add(new MapEditorSystem())
-  scene.world.add(new TileInteractionSystem())
+---
 
-  // 3. Configure RPC handlers
-  engine.setupEditorRpcHandlers()
-
-  // 4. Initialize UI components
-  sidebar.initializeEditorMode()
-}
-```
-
-### Deactivation Process
-```typescript
-async function deactivateEditorMode(tileMap: ex.TileMap): Promise<void> {
-  // 1. Remove editor components
-  tileMap.removeComponent(MapEditorComponent)
-  tileMap.removeComponent(EditorToolComponent)
-
-  // 2. Remove editor systems
-  scene.world.remove(MapEditorSystem)
-  scene.world.remove(TileInteractionSystem)
-
-  // 3. Cleanup RPC handlers
-  engine.cleanupEditorRpcHandlers()
-
-  // 4. Reset UI components
-  sidebar.deactivateEditorMode()
-}
-```
-
-## 📊 Performance Characteristics
-
-### Runtime Impact
-- **Game Mode**: Zero editor overhead (no editor components/systems)
-- **Editor Mode**: Minimal overhead (< 5% of frame time)
-- **Memory**: Efficient component-based activation
-
-### Optimization Strategies
-- **Query Caching**: Frequently used queries are cached
-- **RPC Batching**: Multiple RPC calls batched for performance
-- **Coordinate Caching**: Expensive transformations cached
-- **Event Debouncing**: High-frequency events debounced
-
-## 🔧 Integration Points
-
-### GJS Host Integration
-- **MapEditorService**: Central state management
-- **RPC Handlers**: Bidirectional communication
-- **UI Components**: Reactive state updates
-- **Tool Management**: Host-side tool coordination
-
-### Excalibur Engine Integration
-- **Scene Management**: Dynamic system addition/removal
-- **Component System**: Entity-based editor state
-- **RPC Communication**: Seamless host communication
-- **Performance Monitoring**: Built-in performance tracking
-
-## 🎯 Benefits of This Architecture
-
-### ✅ Pure ECS Design
-- No conditional logic in core game code
-- Clean separation through component composition
-- Extensible through new components and systems
-
-### ✅ Type-Safe Implementation
-- Complete TypeScript type safety throughout all systems
-- Proper use of Excalibur types (`Query<ComponentType>`, `Entity`, `Vector`, `Tile`)
-- Eliminated `any` types for better maintainability and error prevention
-- Strong typing for RPC parameters and component interactions
-
-### ✅ Performance Optimized
-- Zero runtime cost when editor is inactive
-- Efficient queries and caching
-- Batched operations for network communication
-
-### ✅ Maintainable
-- Clear separation of concerns with typed interfaces
-- Modular component and system design
-- Easy to extend with new tools and features
-- Self-documenting code through TypeScript types
-
-### ✅ Testable
-- Components can be tested in isolation
-- Systems can be tested with mock components
-- Integration tests for complete workflows
-- Type safety enables better test coverage
-
-### ✅ User Experience
-- Seamless mode switching
-- Responsive interactions
-- Visual feedback and previews
-- Keyboard shortcuts and accessibility
-
-## 🚀 Future Extensibility
-
-### New Tools
-```typescript
-// Easy to add new tools with type safety
-export class NewCustomTool extends AbstractTool {
-  // Implement required methods with proper typing
-  async handleTileClick(coords: ex.Vector): Promise<void> {
-    // Custom tool logic with type-safe component access
-    const editorComponent = this.entity.get(MapEditorComponent)
-    const toolComponent = this.entity.get(EditorToolComponent)
-
-    if (editorComponent && toolComponent) {
-      // Type-safe tool implementation
-    }
-  }
-}
-```
-
-### New Components
-```typescript
-// Easy to add new editor features with type safety
-export class AdvancedSelectionComponent extends ex.Component {
-  // Advanced selection state with proper typing
-  public selectedTiles: ex.Vector[] = []
-  public selectionMode: 'single' | 'multi' | 'area' = 'single'
-
-  // Type-safe methods
-  public addTile(tileCoords: ex.Vector): void {
-    this.selectedTiles.push(tileCoords)
-  }
-
-  public clearSelection(): void {
-    this.selectedTiles = []
-  }
-}
-```
-
-### New Systems
-```typescript
-// Easy to add new editor systems with type safety
-export class AdvancedEditingSystem extends ex.System {
-  // Type-safe queries for advanced editing
-  private advancedEntitiesQuery: ex.Query<typeof AdvancedSelectionComponent>
-
-  public initialize(world: ex.World, scene: ex.Scene): void {
-    this.world = world
-    this.advancedEntitiesQuery = this.world.query([AdvancedSelectionComponent])
-  }
-
-  public update(elapsed: number): void {
-    // Advanced editing logic with type safety
-    const entities = this.advancedEntitiesQuery.entities
-
-    for (const entity of entities) {
-      const selectionComponent = entity.get(AdvancedSelectionComponent)
-      if (selectionComponent) {
-        // Type-safe advanced editing operations
-        this.processAdvancedSelection(entity, selectionComponent)
-      }
-    }
-  }
-
-  private processAdvancedSelection(entity: ex.Entity, component: AdvancedSelectionComponent): void {
-    // Type-safe processing of advanced selections
-  }
-}
-```
-
-## 📋 Development Phases
-
-1. **[Phase 1](phase-1-ecs-components.md)**: Core components and RPC foundation
-2. **[Phase 2](phase-2-ecs-systems.md)**: Editor systems and scene integration
-3. **[Phase 3](phase-3-gjs-integration.md)**: Host services and UI integration
-4. **[Phase 4](phase-4-tool-system.md)**: Complete tool implementations
-5. **[Phase 5](phase-5-testing-polish.md)**: Quality assurance and optimization
-
-This architecture provides a solid, extensible foundation for the Map Editor while maintaining clean separation between game runtime and editor functionality.
+*This architecture provides a solid foundation for map editing while maintaining simplicity and extensibility.*
