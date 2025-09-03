@@ -64,22 +64,22 @@ Enable tile replacement with a single click in the map editor.
 - [x] Ensured all packages build without warnings
 
 ### Step 7: Problem Analysis & Research (~2 hours) 🔄 IN PROGRESS
-**Warum wichtig**: Behebung der verbleibenden Probleme für eine saubere und nachhaltige Lösung
+**Why important**: Resolve remaining issues for clean and sustainable solutions
 
-**Bekannte Probleme:**
-- **Layer Selection Issue**: Ausgewählter Layer wird nicht berücksichtigt, alle Grafiken werden ersetzt
-- **Tile Selection Issue**: Ausgewähltes Tile wird nicht berücksichtigt, immer das erste Tile aus dem Tileset
-- **Tool Selection Issue**: Brush Tool ist vorausgewählt, muss aber erneut ausgewählt werden
+**Known Issues:**
+- **Layer Selection Issue**: Selected layer is not considered, all graphics are replaced
+- **Tile Selection Issue**: Selected tile is not considered, always the first tile from the tileset
+- **Tool Selection Issue**: Brush tool is pre-selected, but must be re-selected
 
-**Research-Aufgaben:**
-- [ ] Analysieren der `handleTilePlacement` Methode in EditorInputSystem
-- [ ] Prüfen der `EditorToolComponent` State-Verwaltung
-- [ ] Untersuchen der RPC-Kommunikation zwischen UI und Engine
-- [ ] Verifizieren der `MapEditorSystem` State-Aktualisierung
-- [ ] Testen der `TilesetSelector` und `LayerSelector` Signal-Verbindungen
-- [ ] Debuggen der Tool-Button State-Verwaltung
+**Research Tasks:**
+- [ ] Analyze the `handleTilePlacement` method in EditorInputSystem
+- [ ] Check the `EditorToolComponent` state management
+- [ ] Investigate RPC communication between UI and Engine
+- [ ] Verify the `MapEditorSystem` state updates
+- [ ] Test the `TilesetSelector` and `LayerSelector` signal connections
+- [ ] Debug the tool button state management
 
-**Erwartetes Ergebnis:** Klare Ursachenanalyse und Lösungswege für jedes Problem
+**Expected Result:** Clear root cause analysis and solution paths for each problem
 
 ### Step 8: Implement Fixes (~1-2 hours)
 - [ ] Fix Layer Selection Integration
@@ -111,49 +111,49 @@ Enable tile replacement with a single click in the map editor.
 ## 🐛 Known Issues & Current Status
 
 ### ✅ Resolved Issues
-1. **Hover Events Optimization**: Vereinfacht zu robuster Basis-Implementierung
-2. **Layer Display**: Alle Layer werden korrekt angezeigt mit Namen
-3. **Layer Selection UI**: Refaktorierte Architektur mit sauberer Signal-Verbindung
-4. **Code Quality**: Entfernt alle Debug-Logs und überflüssigen Versuche
-5. **Build Status**: Alle Packages bauen ohne Warnungen
+1. **Hover Events Optimization**: Simplified to robust base implementation
+2. **Layer Display**: All layers are correctly displayed with names
+3. **Layer Selection UI**: Refactored architecture with clean signal connections
+4. **Code Quality**: Removed all debug logs and unnecessary attempts
+5. **Build Status**: All packages build without warnings
 
-### 🚧 Active Issues (Priorität für Step 7-8)
-1. **Layer Selection Not Working**: Ausgewählter Layer wird ignoriert bei Tile-Ersetzung
-   - **Symptom**: Immer alle Grafiken an einer Position werden ersetzt
-   - **Ursache**: Wahrscheinlich fehlende Integration in `handleTilePlacement`
+### 🚧 Active Issues (Priority for Step 7-8)
+1. **Layer Selection Not Working**: Selected layer is ignored during tile replacement
+   - **Symptom**: Always all graphics at a position are replaced
+   - **Cause**: Probably missing integration in `handleTilePlacement`
 
-2. **Tile Selection Not Working**: Ausgewähltes Tile wird ignoriert
-   - **Symptom**: Immer das erste Tile aus dem Tileset wird verwendet
-   - **Ursache**: Wahrscheinlich fehlende State-Synchronisation in `EditorToolComponent`
+2. **Tile Selection Not Working**: Selected tile is ignored
+   - **Symptom**: Always the first tile from the tileset is used
+   - **Cause**: Probably missing state synchronization in `EditorToolComponent`
 
-3. **Tool Selection State**: Brush Tool muss erneut ausgewählt werden
-   - **Symptom**: Vorauswahl funktioniert nicht beim ersten Laden
-   - **Ursache**: Wahrscheinlich Timing-Problem bei Initialisierung
+3. **Tool Selection State**: Brush tool must be re-selected
+   - **Symptom**: Pre-selection doesn't work on first load
+   - **Cause**: Probably timing issue during initialization
 
 ### 🔍 Research Strategy for Step 7
 
-**Für jedes Problem:**
-1. **Code Review**: Betroffene Methoden analysieren
-2. **State Debugging**: Aktuelle Werte in EditorToolComponent prüfen
-3. **RPC Monitoring**: Kommunikation zwischen UI und Engine verfolgen
-4. **Integration Testing**: Schrittweise Funktionalität testen
-5. **Root Cause Analysis**: Ursache identifizieren und dokumentieren
+**For each problem:**
+1. **Code Review**: Analyze affected methods
+2. **State Debugging**: Check current values in EditorToolComponent
+3. **RPC Monitoring**: Track communication between UI and Engine
+4. **Integration Testing**: Test functionality step by step
+5. **Root Cause Analysis**: Identify cause and document solution
 
-**Debug-Schritte:**
-- Console logs in kritischen Pfaden hinzufügen (temporär)
-- State-Inspektion in EditorToolComponent
-- RPC-Nachrichten überwachen
-- Timing-Analyse für Initialisierung
+**Debug Steps:**
+- Add console logs in critical paths (temporary)
+- State inspection in EditorToolComponent
+- Monitor RPC messages
+- Timing analysis for initialization
 
 ## 📊 Success Criteria
 
 MVP is complete when:
-- [x] Can select any tile from tileset (UI funktioniert)
-- [x] Can click on map to replace tile (grundlegende Funktionalität ✅)
+- [x] Can select any tile from tileset (UI works)
+- [x] Can click on map to replace tile (basic functionality ✅)
 - [x] Change is immediately visible (✅)
 - [x] Can erase tiles (✅)
 - [x] No console errors (✅)
-- [x] State syncs between UI and engine (⚠️ teilweise)
+- [x] State syncs between UI and engine (⚠️ partially)
 - [ ] Selected layer is respected in tile placement
 - [ ] Selected tile is actually used (not always first tile)
 - [ ] Tool selection works without re-selection
@@ -161,16 +161,16 @@ MVP is complete when:
 ## 📊 Current Status Report
 
 ### ✅ Major Achievements
-- **Functional Tile Replacement**: Tiles können visuell verändert werden
-- **Eraser Tool**: Funktioniert zuverlässig
-- **RPC Infrastructure**: Vollständige bidirektionale Kommunikation
-- **Clean Architecture**: Refaktorierte Layer-Auswahl mit sauberer Trennung
-- **Build Stability**: Alle Packages bauen ohne Fehler oder Warnungen
+- **Functional Tile Replacement**: Tiles can be visually modified
+- **Eraser Tool**: Works reliably
+- **RPC Infrastructure**: Complete bidirectional communication
+- **Clean Architecture**: Refactored layer selection with clean separation
+- **Build Stability**: All packages build without errors or warnings
 
 ### 🚧 Next Priority: Step 7 - Problem Analysis & Research
-**Warum wichtig**: Verbleibende Probleme systematisch identifizieren und beheben
-**Zeitaufwand**: ~2 Stunden Research + ~1-2 Stunden Implementierung
-**Erwartetes Ergebnis**: Vollständig funktionierender Map Editor
+**Why important**: Systematically identify and resolve remaining issues
+**Time required**: ~2 hours research + ~1-2 hours implementation
+**Expected result**: Fully functional map editor
 
 ### 🔄 Technical Architecture
 ```
@@ -184,10 +184,10 @@ GJS UI Layer          Service Layer          Engine Layer
 ## 📝 Implementation Notes
 
 ### Lessons Learned
-- **Hover Optimization**: Zu komplexe Lösungen können mehr Probleme verursachen als lösen
-- **Layer Management**: Selbstständige Widgets mit klaren Signalen sind wartbarer
-- **State Synchronization**: RPC-basierte Architektur funktioniert, aber Timing ist kritisch
-- **Code Cleanup**: Regelmäßiges Aufräumen verhindert technische Schulden
+- **Hover Optimization**: Overly complex solutions can cause more problems than they solve
+- **Layer Management**: Self-contained widgets with clear signals are more maintainable
+- **State Synchronization**: RPC-based architecture works, but timing is critical
+- **Code Cleanup**: Regular cleanup prevents technical debt
 
 ### Current Capabilities
 - ✅ Tile placement with visual feedback (color-coded placeholders)
@@ -214,4 +214,4 @@ GJS UI Layer          Service Layer          Engine Layer
 
 ---
 
-*Next: Step 7 - Systematische Analyse der verbleibenden Probleme für nachhaltige Lösungen.*
+*Next: Step 7 - Systematic analysis of remaining issues for sustainable solutions.*
