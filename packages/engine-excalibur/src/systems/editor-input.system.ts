@@ -321,7 +321,12 @@ export class EditorInputSystem extends System {
         console.warn(
           `[EditorInputSystem] Could not find sprite info for tileId ${selectedTileId}, using fallback`,
         )
-        SpriteUtils.applyFallbackTile(tileMap, tile, selectedTileId, effectiveLayerId)
+        SpriteUtils.applyFallbackTile(
+          tileMap,
+          tile,
+          selectedTileId,
+          effectiveLayerId,
+        )
         return
       }
 
@@ -336,7 +341,12 @@ export class EditorInputSystem extends System {
         console.warn(
           `[EditorInputSystem] Could not get sprite ${spriteInfo.spriteId} from sprite set ${spriteInfo.spriteSetId}, using fallback`,
         )
-        SpriteUtils.applyFallbackTile(tileMap, tile, selectedTileId, effectiveLayerId)
+        SpriteUtils.applyFallbackTile(
+          tileMap,
+          tile,
+          selectedTileId,
+          effectiveLayerId,
+        )
         return
       }
 
@@ -351,7 +361,6 @@ export class EditorInputSystem extends System {
       // Set selectedTileCoords so TileInteractionSystem can handle the placement
       mapEditorComponent.selectedTileCoords = coords
     } else if (currentTool === 'eraser') {
-
       // Clear sprites for the selected layer only
       mapResource.clearSpritesForTileAndLayer(tile, effectiveLayerId)
 
@@ -370,13 +379,6 @@ export class EditorInputSystem extends System {
       mapEditorComponent.selectedTileCoords = coords
     }
   }
-
-  
-
-
-  
-
-  
 
   /**
    * Clean up resources when this system is removed
