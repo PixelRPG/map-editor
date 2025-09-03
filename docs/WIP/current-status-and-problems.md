@@ -1,66 +1,106 @@
-# Map Editor - Aktueller Implementierungsstand & Verbleibende Probleme
+# Map Editor - Current Implementation Status & Remaining Issues
 
-> 📅 **Aktualisiert**: Dezember 2024 - Nach erfolgreicher Implementierung der Kernfunktionalität
-> 🎯 **Status**: Grundlegende Tile-Ersetzung funktioniert, verfeinerte Probleme verbleiben
-> 📋 **Für nächste Session**: Siehe [Roadmap für Session 2](#roadmap-für-session-2)
+> 📅 **Updated**: December 2024 - After successful implementation of core functionality
+> 🎯 **Status**: Basic tile replacement works, refined issues remain
+> 📋 **Next Session**: See [Roadmap for Session 2](#roadmap-for-session-2)
 
-## 📊 Aktueller Status - Dezember 2024
+## 📊 Current Status - December 2024
 
-### ✅ **Vollständig Implementiert und Funktionierend**
+### ✅ **Fully Implemented and Functional**
 
-#### **Kernfunktionalität**
-- **Tile-Ersetzung**: Ein Klick auf eine Karte ersetzt das Tile visuell
-- **Visuelle Rückmeldung**: Sofortige Änderung sichtbar im Browser
-- **Eraser-Tool**: Tiles können entfernt werden (solid = false)
-- **RPC-Kommunikation**: Bidirektionale Kommunikation zwischen UI und Engine
-- **Service-Architektur**: MapEditorService als Brücke zwischen UI und Engine
+#### **Core Functionality**
+- **Tile Replacement**: Single click replaces tile visually
+- **Visual Feedback**: Immediate changes visible in browser
+- **Eraser Tool**: Tiles can be removed (solid = false)
+- **RPC Communication**: Bidirectional communication between UI and Engine
+- **Service Architecture**: MapEditorService bridges UI and Engine
 
-#### **UI-Komponenten**
-- **TilesetSelector**: Funktioniert, zeigt verfügbare Tiles
-- **LayerSelector**: Zeigt Layer an, UI-Verbindungen funktionieren
-- **Tool-Buttons**: Brush/Eraser Buttons verfügbar und ansprechbar
-- **MapEditorPanel**: Integriert alle UI-Komponenten
+#### **UI Components**
+- **TilesetSelector**: Functional, displays available tiles
+- **LayerSelector**: Shows layers, UI connections work
+- **Tool Buttons**: Brush/Eraser buttons available and responsive
+- **MapEditorPanel**: Integrates all UI components
 
-#### **Architektur**
-- **ECS-System**: Saubere Trennung von Zuständigkeiten
-- **State-Synchronisation**: UI-Änderungen werden zur Engine übertragen
-- **Hover-Optimierung**: `hoverHasChanged` verhindert unnötige RPC-Aufrufe
-- **Konfigurierbare Defaults**: EditorToolComponent unterstützt optionale Parameter
+#### **Architecture**
+- **ECS System**: Clean separation of responsibilities
+- **State Synchronization**: UI changes transmitted to Engine
+- **Hover Optimization**: `hoverHasChanged` prevents unnecessary RPC calls
+- **Configurable Defaults**: EditorToolComponent supports optional parameters
 
-### ⚠️ **Verbleibende Probleme (Priorität für nächste Session)**
+### ⚠️ **Remaining Issues (Critical Priority)**
 
-#### **1. Tile-ID Problem - Mittel Priorität**
+#### **1. Multiple Tilesets Problem - CRITICAL**
 ```typescript
-// Symptom: Immer tileId: 0 in RPC-Nachrichten
-Gjs-Console-Message: Tile placed: { tileId: 0, layerId: "default" }
+// Symptom: Wrong tile from wrong tileset is used
+// Example: Tile from second tileset selected → Tile from first tileset gets placed
 
-// Wahrscheinliche Ursache:
-- Sprite.index Property wird nicht korrekt gesetzt
-- Oder: Sprite-zu-Tile-ID Mapping fehlt
+// Logs show the problem:
+[MapEditorPanel] Sprite selected: sprite.index: 34 tileId: 34 from tileset 0
+[MapEditorService] Tile placed: { tileId: 32, layerId: "layer_8" }
+
+// Root Cause: Tileset index not considered during tile placement
+// Impact: Map Editor cannot distinguish between different tilesets
 ```
 
-#### **2. Layer-Selection Problem - Niedrig Priorität**
+#### **2. Layer System Problem - CRITICAL**
 ```typescript
-// Symptom: Immer layerId: "default" verwendet
-// Erwartet: Ausgewählter Layer sollte verwendet werden
+// Symptom: Layer selection completely ignored
+// Issue 1: Default layer "default" does not exist in the map
+// Issue 2: During tile placement ALL layer graphics are replaced
+// Issue 3: Selected layer (e.g., "layer_8") is not used
+
+// Logs show the problem:
+[MapEditorService] Updating engine state: { tileId: 34, layerId: "layer_8" }
+[MapEditorService] Tile placed: { tileId: 32, layerId: "layer_8" }
+// But: All graphics on all layers are replaced!
+
+// Root Cause: Lack of understanding how tile graphics work together on the map
+// Impact: Map Editor cannot edit layer-specifically
 ```
 
-#### **3. Tool-State Reset Problem - Niedrig Priorität**
+#### **3. Eraser Tool Problem - HIGH**
 ```typescript
-// Symptom: Brush-Tool muss manchmal neu ausgewählt werden
-// Ursache: Wahrscheinlich Timing-Issue bei Initialisierung
+// Symptom: Eraser tool no longer works
+// Before: Eraser removed tiles completely, but for all layers
+// After: Eraser has no effect
+
+// Likely Root Cause: Type changes or state sync issues
+// Impact: No way to remove tiles
 ```
 
-## 🔧 **Technische Lösungen (Bereits Implementiert)**
-
-### **Hover-Optimierung**
+#### **4. State Synchronization Problem - MEDIUM**
 ```typescript
-// Vorher: Jeder Hover-Event sendet RPC
+// Symptom: UI → Engine state sync not working
+// Example:
+UI sends: tileId: 34
+Engine receives: tileId: 34
+But TilePlacement uses: tileId: 32
+
+// Root Cause: EditorToolComponent.selectedTileId not updated correctly
+// Impact: Selected tiles are not actually used
+```
+
+#### **5. Tile Graphics Mapping Problem - MEDIUM**
+```typescript
+// Symptom: How do tile graphics work on the map?
+// Unknown: How are tiles mapped to visual graphics?
+// Unknown: How are layer graphics managed?
+// Unknown: How are tiles placed/deleted without affecting other layers?
+
+// Root Cause: Missing understanding of TileMap architecture
+// Impact: No way to implement layer-specific changes
+```
+
+## 🔧 **Technical Solutions (Already Implemented)**
+
+### **Hover Optimization**
+```typescript
+// Before: Every hover event sends RPC
 if (coords changed) {
   send TILE_HOVERED RPC
 }
 
-// Nachher: Nur bei tatsächlicher Änderung
+// After: Only when actually changed
 if (!mapEditorComponent.hoverTileCoords ||
     mapEditorComponent.hoverTileCoords.x !== coords.x ||
     mapEditorComponent.hoverTileCoords.y !== coords.y) {
@@ -69,9 +109,9 @@ if (!mapEditorComponent.hoverTileCoords ||
 }
 ```
 
-### **State-Synchronisation**
+### **State Synchronization**
 ```typescript
-// Service initialisiert mit korrekten Defaults
+// Service initialized with correct defaults
 private currentState = {
   tool: 'brush' as 'brush' | 'eraser',
   tileId: 1 as number | null,
@@ -79,9 +119,9 @@ private currentState = {
 }
 ```
 
-### **Konfigurierbare Component-Initialisierung**
+### **Configurable Component Initialization**
 ```typescript
-// Constructor unterstützt optionale Parameter
+// Constructor supports optional parameters
 const toolComponent = new EditorToolComponent({
   defaultTool: 'brush',
   defaultTileId: 1,
@@ -89,89 +129,131 @@ const toolComponent = new EditorToolComponent({
 })
 ```
 
-## 🧪 **Test-Ergebnisse**
+## 🧪 **Test Results**
 
-### **Funktionierende Tests**
+### **Working Tests**
 ```bash
-✅ Tile-Ersetzung: Klick ändert Tile visuell
-✅ Eraser-Tool: Entfernt Tile-Grafiken
-✅ RPC-Kommunikation: Bidirektionale Nachrichten
-✅ UI-State-Sync: Tool-Änderungen werden übertragen
-✅ Hover-Optimierung: Reduziert unnötige RPC-Calls
+✅ Tile Replacement: Click changes tile visually
+✅ Eraser Tool: Removes tile graphics
+✅ RPC Communication: Bidirectional messages
+✅ UI State Sync: Tool changes are transmitted
+✅ Hover Optimization: Reduces unnecessary RPC calls
 ```
 
-### **Bekannte Einschränkungen**
+### **Known Limitations**
 ```typescript
-// Diese Funktionen sind eingeschränkt:
-❌ Tile-ID immer 0 (nicht die tatsächlich ausgewählte)
-❌ Layer-Selection wird nicht berücksichtigt
-❌ Manchmal muss Tool neu ausgewählt werden
+// These functions are limited:
+❌ Tile ID always 0 (not the actually selected)
+❌ Layer selection not considered
+❌ Sometimes tool needs to be re-selected
 ```
 
-## 📋 **Roadmap für Session 2**
+## 📋 **Neue Roadmap für Session 2 (Kritische Probleme)**
 
-### **Phase 1: Tile-ID Fix (2-3 Stunden)**
-1. **Debug Sprite-Index**: Verfolgen, warum `sprite.index` nicht korrekt gesetzt wird
-2. **Alternative Mapping**: Falls Index nicht funktioniert, alternatives Mapping implementieren
-3. **Test Tile-Auswahl**: Sicherstellen, dass ausgewählte Tiles tatsächlich verwendet werden
+### **Phase 1: Grundlagenverständnis (2-3 Stunden) - KRITISCH**
+1. **TileMap-Architektur verstehen**: Wie funktionieren Tiles und Layer?
+2. **Grafik-Mapping analysieren**: Wie werden Tiles zu visuellen Elementen?
+3. **Layer-System dokumentieren**: Welche Layer existieren und wie werden sie verwaltet?
+4. **Tileset-System verstehen**: Wie funktionieren mehrere Tilesets?
 
-### **Phase 2: Layer-Integration (1-2 Stunden)**
-1. **Layer-State-Verfolgung**: Sicherstellen, dass `selectedLayerId` korrekt gesetzt wird
-2. **Layer-spezifische Platzierung**: Tile-Änderungen nur auf ausgewähltem Layer durchführen
-3. **UI-State-Sync**: Layer-Selection mit Engine synchronisieren
+### **Phase 2: State-Synchronisation reparieren (2-3 Stunden) - HOCH**
+1. **EditorToolComponent Debug**: Warum wird selectedTileId nicht aktualisiert?
+2. **MapEditorSystem RPC-Handler**: Überprüfen der EDITOR_STATE_CHANGED Verarbeitung
+3. **Tileset-Index Integration**: Tileset-Index bei Tile-Platzierung berücksichtigen
+4. **Layer-State Validierung**: Sicherstellen, dass existierende Layer verwendet werden
 
-### **Phase 3: Tool-State Stabilität (1 Stunde)**
-1. **Timing-Analyse**: Wann und warum Tool-State zurückgesetzt wird
-2. **Persistente Tool-Auswahl**: Tool-Auswahl über Sessions hinweg beibehalten
-3. **Fallback-Mechanismen**: Sicherstellen, dass immer ein gültiges Tool aktiv ist
+### **Phase 3: Eraser Tool reparieren (1-2 Stunden) - HOCH**
+1. **Eraser-Funktionalität wiederherstellen**: Warum funktioniert Eraser nicht mehr?
+2. **Type-Sicherheit prüfen**: Sind die Änderungen kompatibel?
+3. **State-Sync für Eraser**: Eraser-State korrekt übertragen
 
-### **Phase 4: Testing & Polish (2-3 Stunden)**
-1. **End-to-End Tests**: Vollständige Workflows testen
-2. **Performance-Optimierung**: Hover-Events weiter optimieren
-3. **Error Handling**: Robuste Fehlerbehandlung für Edge-Cases
+### **Phase 4: Layer-System implementieren (3-4 Stunden) - KRITISCH**
+1. **Layer-spezifische Platzierung**: Nur aktiven Layer modifizieren
+2. **Layer-Grafik Mapping**: Verstehen wie Layer-Grafiken verwaltet werden
+3. **Layer-Selection Integration**: Ausgewählten Layer tatsächlich verwenden
+4. **Default-Layer Problem**: "default" Layer durch existierenden Layer ersetzen
 
-## 🎯 **Erfolgskriterien für Session 2**
+### **Phase 5: Multiple Tilesets Support (2-3 Stunden) - KRITISCH**
+1. **Tileset-Index berücksichtigen**: Bei Tile-Platzierung richtiges Tileset verwenden
+2. **Sprite-zu-Tile Mapping**: Korrekte Tile-ID Berechnung über Tilesets hinweg
+3. **Tileset-State Management**: Tileset-Selection persistent halten
 
-**Session 2 ist erfolgreich, wenn:**
-- ✅ Ausgewählte Tile-ID wird tatsächlich verwendet (nicht immer 0)
-- ✅ Ausgewählter Layer wird bei Tile-Platzierung berücksichtigt
-- ✅ Tool-Auswahl stabil über Sessions hinweg funktioniert
-- ✅ Keine bekannten kritischen Bugs verbleiben
-- ✅ Saubere, wartbare Codebasis
+### **Phase 6: Integration & Testing (2-3 Stunden) - MITTEL**
+1. **End-to-End Workflows**: Vollständige Tile-Editierung testen
+2. **Multiple Tilesets testen**: Verschiedene Tilesets korrekt verwenden
+3. **Layer-spezifische Editierung**: Nur aktive Layer modifizieren
+4. **Error Handling**: Robuste Fehlerbehandlung für alle Edge-Cases
 
-## 📚 **Dokumentation für nächste Session**
+## 🎯 **New Success Criteria for Session 2**
 
-### **Code-Struktur verstehen**
+**Session 2 is successful when:**
+- ✅ **Multiple Tilesets work**: Selected tile from correct tileset gets placed
+- ✅ **Layer System works**: Only the selected layer gets modified
+- ✅ **Eraser Tool works**: Tiles can be removed again
+- ✅ **State Synchronization works**: UI changes reach the engine correctly
+- ✅ **Tile Graphics Mapping understood**: How tiles become visual elements
+- ✅ **No critical bugs remain**: All basic editing functions work
+- ✅ **Clean, maintainable codebase**: Clear separation of responsibilities
+
+## ⏱️ **New Time Estimate for Session 2**
+
+**Total time: 13-18 hours** (distributed across 6 phases)
+
+- **Phase 1**: Foundation Understanding (2-3h) - Understand architecture
+- **Phase 2**: State Synchronization (2-3h) - Debug and repair
+- **Phase 3**: Eraser Tool (1-2h) - Quick repair
+- **Phase 4**: Layer System (3-4h) - Complex implementation
+- **Phase 5**: Multiple Tilesets (2-3h) - Tileset index integration
+- **Phase 6**: Integration & Testing (2-3h) - Complete validation
+
+## 📚 **Required Analysis for Next Session**
+
+### **Critical Questions to Answer:**
 ```typescript
-// Wichtige Dateien für Session 2:
-packages/data-gjs/src/objects/Sprite.ts         // Tile-ID Mapping
-packages/ui-gjs/src/widgets/map-editor/         // UI-Komponenten
-packages/engine-excalibur/src/components/       // State-Management
-packages/engine-gjs/src/services/               // Service-Layer
+// 1. How do TileMap layers work?
+// - Which layers actually exist?
+// - How are layer graphics managed?
+// - How are tiles mapped to visual elements?
+
+// 2. How do multiple tilesets work?
+// - How are tiles identified across tilesets?
+// - How is tileset index used during tile placement?
+// - How are sprite indices translated to global tile IDs?
+
+// 3. How does the layer system work?
+// - How are layer-specific changes performed?
+// - How are all layer graphics vs. individual layers distinguished?
+// - How is the "default" layer replaced with existing layers?
 ```
 
-### **Debug-Workflow**
+### **Debug Workflow for Session 2:**
 ```bash
-# 1. Tile-Auswahl debuggen
-console.log('Selected sprite:', sprite)
+# 1. Understand TileMap structure
+console.log('Map layers:', map.layers)
+console.log('Map tilesets:', map.tilesets)
+console.log('Tile at position:', map.getTile(x, y, layer))
+
+# 2. Analyze layer graphics mapping
+console.log('Layer graphics before:', layer.graphics)
+console.log('Layer graphics after:', layer.graphics)
+
+# 3. Debug tileset index integration
+console.log('Selected tileset:', selectedTilesetIndex)
 console.log('Sprite index:', sprite.index)
-console.log('Tile ID sent:', tileId)
+console.log('Global tile ID:', calculateGlobalTileId(tilesetIndex, spriteIndex))
 
-# 2. Layer-State prüfen
-console.log('Selected layer:', selectedLayerId)
-console.log('Available layers:', mapData.layers)
-
-# 3. Tool-State überwachen
-console.log('Current tool:', currentTool)
-console.log('Tool state synced:', toolStateSynced)
+# 4. Identify state sync issues
+console.log('UI sends:', { tileId: 34, layerId: 'layer_8' })
+console.log('Engine receives:', params)
+console.log('EditorToolComponent state:', toolComponent)
 ```
 
-## 🚀 **Nächste Schritte**
+## 🚀 **Next Steps**
 
-**Für die nächste KI-Session bereit:**
-1. **Fokus auf verbleibende 3 Probleme**
-2. **Saubere Codebasis als Ausgangspunkt**
-3. **Funktionierende Grundarchitektur**
-4. **Umfassende Dokumentation verfügbar**
+**Ready for next session:**
+1. **Focus on foundation understanding**: Fully understand TileMap architecture
+2. **Systematic problem solving**: Address each issue individually
+3. **Comprehensive documentation**: Document new findings
+4. **Step-by-step implementation**: Small, testable changes
 
-**Die Map Editor Kernfunktionalität ist implementiert und einsatzbereit!** 🎉
+**The problems are more complex than assumed - but solvable!** 🔧

@@ -29,6 +29,7 @@ export class MapResource implements Loadable<TileMap> {
       spriteId: number
       animationId?: string
       zIndex?: number
+      layerId: string
     }>
   > = new Map()
 
@@ -181,6 +182,7 @@ export class MapResource implements Loadable<TileMap> {
           animationId: spriteData.animationId,
           zIndex:
             spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
+          layerId: layer.id,
         })
         this.tileToSpriteMap.set(tile, existingRefs)
       }
@@ -260,6 +262,7 @@ export class MapResource implements Loadable<TileMap> {
           spriteId: obj.spriteId,
           animationId: obj.animationId,
           zIndex: zIndex,
+          layerId: layer.id,
         })
 
         // Store the updated array
@@ -380,6 +383,96 @@ export class MapResource implements Loadable<TileMap> {
    */
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {
     return this.tileSetResources
+  }
+
+  /**
+   * Get all sprites for a specific tile and layer
+   * @param tile The tile to get sprites for
+   * @param layerId The layer ID to filter by (optional)
+   * @returns Array of sprite references
+   */
+  getSpritesForTileAndLayer(
+    tile: Tile,
+    layerId?: string,
+  ): Array<{
+    spriteSetId: string
+    spriteId: number
+    animationId?: string
+    zIndex?: number
+    layerId: string
+  }> {
+    const allSprites = this.tileToSpriteMap.get(tile) || []
+    if (!layerId) {
+      return allSprites
+    }
+    return allSprites.filter((sprite) => sprite.layerId === layerId)
+  }
+
+  /**
+   * Set sprites for a specific tile and layer
+   * @param tile The tile to modify
+   * @param layerId The layer ID
+   * @param sprites Array of sprite references for this layer
+   */
+  setSpritesForTileAndLayer(
+    tile: Tile,
+    layerId: string,
+    sprites: Array<{
+      spriteSetId: string
+      spriteId: number
+      animationId?: string
+      zIndex?: number
+    }>,
+  ): void {
+    // Get existing sprites for this tile
+    const existingSprites = this.tileToSpriteMap.get(tile) || []
+
+    // Remove sprites from the specified layer
+    const otherLayerSprites = existingSprites.filter(
+      (sprite) => sprite.layerId !== layerId,
+    )
+
+    // Add new sprites for this layer
+    const newSprites = sprites.map((sprite) => ({
+      ...sprite,
+      layerId: layerId,
+    }))
+
+    // Combine and store
+    const updatedSprites = [...otherLayerSprites, ...newSprites]
+    this.tileToSpriteMap.set(tile, updatedSprites)
+  }
+
+  /**
+   * Clear all sprites for a specific tile and layer
+   * @param tile The tile to modify
+   * @param layerId The layer ID to clear
+   */
+  clearSpritesForTileAndLayer(tile: Tile, layerId: string): void {
+    const existingSprites = this.tileToSpriteMap.get(tile) || []
+    const remainingSprites = existingSprites.filter(
+      (sprite) => sprite.layerId !== layerId,
+    )
+    this.tileToSpriteMap.set(tile, remainingSprites)
+  }
+
+  /**
+   * Get all available layer IDs from the map data
+   * @returns Array of layer IDs
+   */
+  getAvailableLayerIds(): string[] {
+    return this._mapData.layers
+      .filter((layer) => layer.type === 'tile' && layer.visible)
+      .map((layer) => layer.id)
+  }
+
+  /**
+   * Get the first available layer ID (for default selection)
+   * @returns The first layer ID or null if no layers available
+   */
+  getFirstLayerId(): string | null {
+    const layerIds = this.getAvailableLayerIds()
+    return layerIds.length > 0 ? layerIds[0] : null
   }
 
   /**

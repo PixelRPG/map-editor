@@ -18,6 +18,9 @@ export class MapEditorPanel extends Adw.Bin {
   declare _brushButton: Gtk.ToggleButton
   declare _eraserButton: Gtk.ToggleButton
 
+  // Store map data for tile ID calculations
+  private _mapData: MapData | null = null
+
   // Signal management
   private _signalHandlers: number[] = []
 
@@ -70,6 +73,9 @@ export class MapEditorPanel extends Adw.Bin {
     )
     console.log('[MapEditorPanel] Map layers:', mapData.layers.length)
 
+    // Store the map data for tile ID calculations
+    this._mapData = mapData
+
     // Set the tilesets (sprite sheets)
     this.setTilesets(spriteSheets)
 
@@ -87,22 +93,65 @@ export class MapEditorPanel extends Adw.Bin {
 
   /**
    * Handle sprite selection from tileset selector
-   * Convert sprite selection to tile ID and emit tile-selected signal
+   * Convert sprite selection to global tile ID and emit tile-selected signal
    */
   private _onSpriteSelected(
-    spriteSheetWidget: any,
+    sender: any,
     sprite: any,
     tilesetIndex: number,
   ): void {
-    // Extract tile ID from sprite (assuming sprites are indexed sequentially)
-    const tileId = sprite ? sprite.index || 0 : 0
-    console.log(
-      '[MapEditorPanel] Sprite selected:',
-      tileId,
-      'from tileset',
-      tilesetIndex,
-    )
-    this.emit('tile-selected', tileId)
+    // Validate input parameters
+    if (!sprite || typeof sprite.index !== 'number') {
+      console.warn('[MapEditorPanel] Invalid sprite object received')
+      return
+    }
+
+    if (!this._mapData) {
+      console.warn('[MapEditorPanel] No map data available')
+      return
+    }
+
+    if (!this._mapData.spriteSets || !Array.isArray(this._mapData.spriteSets)) {
+      console.warn('[MapEditorPanel] Invalid sprite sets data')
+      return
+    }
+
+    if (tilesetIndex < 0 || tilesetIndex >= this._mapData.spriteSets.length) {
+      console.warn(`[MapEditorPanel] Tileset index ${tilesetIndex} out of bounds`)
+      return
+    }
+
+    // Get the sprite set reference for this tileset index
+    const spriteSetRef = this._mapData.spriteSets[tilesetIndex]
+    if (!spriteSetRef) {
+      console.warn(
+        `[MapEditorPanel] Sprite set reference not found for tileset index: ${tilesetIndex}`,
+      )
+      return
+    }
+
+    // Validate firstGid
+    if (typeof spriteSetRef.firstGid !== 'number' || spriteSetRef.firstGid < 0) {
+      console.warn(`[MapEditorPanel] Invalid firstGid: ${spriteSetRef.firstGid}`)
+      return
+    }
+
+    // Validate sprite index
+    if (sprite.index < 0) {
+      console.warn(`[MapEditorPanel] Invalid sprite index: ${sprite.index}`)
+      return
+    }
+
+    // Calculate global tile ID: sprite.index + firstGid
+    const globalTileId = sprite.index + spriteSetRef.firstGid
+
+    // Validate global tile ID
+    if (globalTileId < 0) {
+      console.warn(`[MapEditorPanel] Calculated global tile ID is negative: ${globalTileId}`)
+      return
+    }
+
+    this.emit('tile-selected', globalTileId)
   }
 
   /**

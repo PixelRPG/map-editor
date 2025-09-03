@@ -7,10 +7,12 @@ import {
   Entity,
   ComponentCtor,
   Component,
+  TileMap,
 } from 'excalibur'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 import { RpcEngineType, EngineRpcRegistry } from '@pixelrpg/engine-core'
 import { rpcEndpointFactory } from '../utils/rpc.ts'
+import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
 /**
  * Interface for editor state change RPC parameters
@@ -42,10 +44,11 @@ interface EditorStateChangeParams {
  */
 export class MapEditorSystem extends System {
   public readonly systemType = SystemType.Update
-  public readonly priority = 10 // Run after input systems but before rendering
+  public readonly priority = EDITOR_CONSTANTS.EDITOR_SYSTEM_PRIORITY // Run after input systems but before rendering
 
   private rpc = rpcEndpointFactory<EngineRpcRegistry>()
   private world: World
+  private scene: Scene
 
   /**
    * Query for entities with complete editor setup (MapEditorComponent + EditorToolComponent)
@@ -57,6 +60,15 @@ export class MapEditorSystem extends System {
    */
   private editorEntitiesQuery: Query<ComponentCtor<Component>>
 
+  /**
+   * Cache for last sent coordinates to avoid sending duplicates
+   * Key: entityId, Value: { hover: coords, selection: coords }
+   */
+  private lastSentCoords: Map<string, {
+    hover?: { x: number; y: number }
+    selection?: { x: number; y: number }
+  }> = new Map()
+
   constructor() {
     super()
   }
@@ -65,13 +77,12 @@ export class MapEditorSystem extends System {
    * Initialize the system with world and scene references
    */
   public initialize(world: World, scene: Scene): void {
-    console.debug('[MapEditorSystem] Initializing editor coordination system')
-
     if (super.initialize) {
       super.initialize(world, scene)
     }
 
     this.world = world
+    this.scene = scene
 
     // Initialize queries after world is available
     this.editableEntitiesQuery = this.world.query([
@@ -119,10 +130,6 @@ export class MapEditorSystem extends System {
         return { success: true }
       },
     )
-
-    console.log(
-      '[MapEditorSystem] ✅ RPC handlers registered for EDITOR_STATE_CHANGED',
-    )
   }
 
   /**
@@ -135,20 +142,60 @@ export class MapEditorSystem extends System {
 
       if (!editorComponent || !toolComponent) continue
 
-      // Synchronize hover state
-      if (editorComponent.hoverTileCoords) {
-        this.notifyHostOfStateChange('hover', {
-          coords: editorComponent.hoverTileCoords,
-          entityId: String(entity.id || 'unknown'),
-        })
+      const entityId = String(entity.id || 'unknown')
+
+      // Get or create cache entry for this entity
+      let entityCache = this.lastSentCoords.get(entityId)
+      if (!entityCache) {
+        entityCache = {}
+        this.lastSentCoords.set(entityId, entityCache)
       }
 
-      // Synchronize selection state
+      // Synchronize hover state - only send if coordinates changed
+      if (editorComponent.hoverTileCoords) {
+        const coordsChanged =
+          !entityCache.hover ||
+          entityCache.hover.x !== editorComponent.hoverTileCoords.x ||
+          entityCache.hover.y !== editorComponent.hoverTileCoords.y
+
+        if (coordsChanged) {
+          entityCache.hover = { ...editorComponent.hoverTileCoords }
+          this.notifyHostOfStateChange('hover', {
+            coords: editorComponent.hoverTileCoords,
+            entityId: entityId,
+          })
+        }
+      } else {
+        // Clear hover state if no coordinates
+        if (entityCache.hover) {
+          delete entityCache.hover
+        }
+      }
+
+      // Synchronize selection state - only send if coordinates changed
       if (editorComponent.selectedTileCoords) {
-        this.notifyHostOfStateChange('selection', {
-          coords: editorComponent.selectedTileCoords,
-          entityId: String(entity.id || 'unknown'),
-        })
+        const coordsChanged =
+          !entityCache.selection ||
+          entityCache.selection.x !== editorComponent.selectedTileCoords.x ||
+          entityCache.selection.y !== editorComponent.selectedTileCoords.y
+
+        if (coordsChanged) {
+          entityCache.selection = { ...editorComponent.selectedTileCoords }
+          this.notifyHostOfStateChange('selection', {
+            coords: editorComponent.selectedTileCoords,
+            entityId: entityId,
+          })
+        }
+      } else {
+        // Clear selection state if no coordinates
+        if (entityCache.selection) {
+          delete entityCache.selection
+        }
+      }
+
+      // Clean up empty cache entries
+      if (!entityCache.hover && !entityCache.selection) {
+        this.lastSentCoords.delete(entityId)
       }
     }
   }
@@ -157,47 +204,38 @@ export class MapEditorSystem extends System {
    * Handle editor state changes from the host
    */
   private handleEditorStateChange(params: EditorStateChangeParams): void {
-    console.log('[MapEditorSystem] 🎯 EDITOR_STATE_CHANGED received:', params)
-
     const editableEntities = this.editableEntitiesQuery.entities
-    console.log(
-      '[MapEditorSystem] Found editable entities:',
-      editableEntities.length,
-    )
 
     for (const entity of editableEntities) {
       const toolComponent = entity.get(EditorToolComponent)
-      console.log(
-        '[MapEditorSystem] Processing entity:',
-        entity.id,
-        'has tool component:',
-        !!toolComponent,
-      )
 
       if (toolComponent && params.tileId !== undefined) {
-        console.log(
-          '[MapEditorSystem] ✅ Tool component found, updating tool component',
-        )
-
         // Update tool state based on host parameters
         if (params.tool !== toolComponent.currentTool) {
-          console.log(
-            `[MapEditorSystem] 🔄 Updating tool: ${toolComponent.currentTool} → ${params.tool}`,
-          )
           toolComponent.setTool(
             params.tool as 'brush' | 'eraser' | 'fill' | null,
           )
         }
 
         if (params.tileId !== toolComponent.selectedTileId) {
-          console.log(
-            `[MapEditorSystem] 🔄 Updating tileId: ${toolComponent.selectedTileId} → ${params.tileId}`,
-          )
           toolComponent.setSelectedTile(params.tileId)
         }
 
-        // Use default layer if not specified
-        const layerId = params.layerId || 'default'
+        // Use first available layer if not specified
+        let layerId = params.layerId
+        if (!layerId) {
+          // Try to get the first available layer from any TileMap
+          const tileMaps = this.scene?.world.entities.filter(
+            (entity) => entity instanceof TileMap,
+          ) as TileMap[]
+          if (tileMaps && tileMaps.length > 0) {
+            const mapResource = (tileMaps[0] as any).mapResource
+            if (mapResource) {
+              layerId = mapResource.getFirstLayerId() || 'default'
+            }
+          }
+          layerId = layerId || EDITOR_CONSTANTS.DEFAULT_LAYER_NAME
+        }
         if (layerId !== toolComponent.selectedLayerId) {
           console.log(
             `[MapEditorSystem] 🔄 Updating layerId: ${toolComponent.selectedLayerId} → ${layerId}`,
@@ -205,20 +243,7 @@ export class MapEditorSystem extends System {
           toolComponent.setSelectedLayer(layerId)
         }
 
-        // Log final state
-        console.log('[MapEditorSystem] ✨ Final state:', {
-          tool: toolComponent.currentTool,
-          tileId: toolComponent.selectedTileId,
-          layerId: toolComponent.selectedLayerId,
-        })
-      } else {
-        console.warn(
-          '[MapEditorSystem] ❌ Missing required components/parameters:',
-          {
-            hasToolComponent: !!toolComponent,
-            hasTileId: params.tileId !== undefined,
-          },
-        )
+
       }
     }
   }
@@ -230,14 +255,28 @@ export class MapEditorSystem extends System {
     type: 'hover' | 'selection',
     data: { coords: { x: number; y: number }; entityId: string },
   ): void {
-    console.debug(`[MapEditorSystem] Notifying host of ${type} change:`, data)
+    // Send RPC notification to host
+    if (type === 'hover') {
+      this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
+        coords: data.coords,
+        tileMapId: data.entityId,
+      })
+    } else if (type === 'selection') {
+      this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
+        coords: data.coords,
+        tileMapId: data.entityId,
+      })
+    }
   }
 
   /**
    * Clean up resources when the system is removed
    */
   public onRemove(): void {
-    console.debug('[MapEditorSystem] Cleaning up editor system')
+    // Clear coordinate cache
+    this.lastSentCoords.clear()
+
+    // Destroy RPC client
     this.rpc.destroy()
   }
 }

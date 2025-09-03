@@ -28,6 +28,8 @@ import { settings } from '../settings.ts'
 import { rpcEndpointFactory } from '../utils/rpc.ts'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 import { EngineRpcRegistry } from '@pixelrpg/engine-core'
+import { SpriteUtils } from '../utils/sprite-utils.ts'
+import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
 /**
  * System to handle input for the map editor
@@ -111,22 +113,20 @@ export class EditorInputSystem extends System {
 
     const direction = deltaY > 0 ? -1 : 1
     let zoom = this.engine.currentScene.camera.zoom
-    zoom += direction * 0.2
+    zoom += direction * EDITOR_CONSTANTS.ZOOM_STEP
 
     // Limit minimum zoom
-    if (zoom <= 0.1) {
-      zoom = 0.1
+    if (zoom <= EDITOR_CONSTANTS.MIN_ZOOM) {
+      zoom = EDITOR_CONSTANTS.MIN_ZOOM
     }
 
     // Round zoom to one decimal place
     zoom = Math.round(zoom * 10) / 10
 
     this.engine.currentScene.camera.zoom = zoom
-    console.debug('[EditorInputSystem] Wheel zoom to', zoom)
   }
 
   public initialize(world: World, scene: Scene) {
-    console.debug('[EditorInputSystem] Initializing')
     if (super.initialize) {
       super.initialize(world, scene)
     }
@@ -148,18 +148,11 @@ export class EditorInputSystem extends System {
     })
 
     if (!settings.isWebKitView) {
-      console.debug(
-        '[EditorInputSystem] Setting up pointer move event listener for default browser behavior',
-      )
       // Default browser behavior
       pointer.on('move', (event) => {
         this.onPointerMove(event.screenPos.x, event.screenPos.y)
       })
     } else {
-      console.debug(
-        '[EditorInputSystem] Setting up RPC client for GJS input events',
-      )
-
       // Register handler for input events from GJS
       this.rpc.registerHandler(RpcEngineType.HANDLE_INPUT_EVENT, (params) => {
         // Check if it's a valid input event
@@ -301,114 +294,89 @@ export class EditorInputSystem extends System {
 
     const { currentTool, selectedTileId, selectedLayerId } = toolComponent
 
-    console.log(
-      `[EditorInputSystem] Tool state: tool=${currentTool}, tileId=${selectedTileId}, layerId=${selectedLayerId}`,
-    )
+    // Get the MapResource to access layer-specific methods
+    const mapResource = (tileMap as any).mapResource
+    if (!mapResource) {
+      console.warn('[EditorInputSystem] No MapResource found on TileMap')
+      return
+    }
 
-    // Use default layer if not specified
-    const effectiveLayerId = selectedLayerId || 'default'
-    console.log(`[EditorInputSystem] Using layer: ${effectiveLayerId}`)
+    // Use first available layer if not specified, or fall back to existing logic
+    let effectiveLayerId = selectedLayerId
+    if (!effectiveLayerId) {
+      effectiveLayerId = mapResource.getFirstLayerId()
+      if (!effectiveLayerId) {
+        console.warn('[EditorInputSystem] No layers available in map')
+        return
+      }
+    }
 
     if (currentTool === 'brush' && selectedTileId !== null) {
-      console.log(
-        `[EditorInputSystem] Brush tool: placing tile ${selectedTileId} at (${coords.x}, ${coords.y})`,
+      // Find the sprite set and sprite ID for the selected tile
+      const spriteInfo = SpriteUtils.findSpriteInfoForTileId(
+        mapResource,
+        selectedTileId,
       )
+      if (!spriteInfo) {
+        console.warn(
+          `[EditorInputSystem] Could not find sprite info for tileId ${selectedTileId}, using fallback`,
+        )
+        SpriteUtils.applyFallbackTile(tileMap, tile, selectedTileId, effectiveLayerId)
+        return
+      }
+
+      // Get the actual sprite from the sprite set
+      const spriteSetResource = mapResource.getSpriteSetResource(
+        spriteInfo.spriteSetId,
+      )
+      if (
+        !spriteSetResource ||
+        !spriteSetResource.sprites[spriteInfo.spriteId]
+      ) {
+        console.warn(
+          `[EditorInputSystem] Could not get sprite ${spriteInfo.spriteId} from sprite set ${spriteInfo.spriteSetId}, using fallback`,
+        )
+        SpriteUtils.applyFallbackTile(tileMap, tile, selectedTileId, effectiveLayerId)
+        return
+      }
+
+      const actualSprite = spriteSetResource.sprites[spriteInfo.spriteId]
 
       // Clear existing graphics
       tile.clearGraphics()
 
-      // Try to get sprite from sprite sheet
-      const sprite = this.getSpriteForTile(tileMap, selectedTileId)
+      // Add the actual sprite
+      tile.addGraphic(actualSprite.clone())
 
-      if (sprite) {
-        // Use actual sprite from sprite sheet
-        tile.addGraphic(sprite.clone())
-      } else {
-        // Fallback: create a simple colored rectangle
-        console.warn(
-          `[EditorInputSystem] Could not find sprite for tileId ${selectedTileId}, using fallback`,
-        )
-        const tileWidth = tileMap.tileWidth
-        const tileHeight = tileMap.tileHeight
+      // Set selectedTileCoords so TileInteractionSystem can handle the placement
+      mapEditorComponent.selectedTileCoords = coords
+    } else if (currentTool === 'eraser') {
 
-        // Create a simple colored rectangle based on tileId
-        const colorIndex = selectedTileId % 8
-        const colors = [
-          '#FF0000',
-          '#00FF00',
-          '#0000FF',
-          '#FFFF00',
-          '#FF00FF',
-          '#00FFFF',
-          '#800080',
-          '#FFA500',
-        ]
+      // Clear sprites for the selected layer only
+      mapResource.clearSpritesForTileAndLayer(tile, effectiveLayerId)
 
-        // Create a simple colored graphic for testing using Excalibur Canvas
-        const exCanvas = new Canvas({
-          width: tileWidth,
-          height: tileHeight,
-          draw: (ctx: CanvasRenderingContext2D) => {
-            ctx.fillStyle = colors[colorIndex]
-            ctx.fillRect(0, 0, tileWidth, tileHeight)
+      // Rebuild tile graphics from remaining sprites
+      SpriteUtils.rebuildTileGraphics(tileMap, mapResource, tile)
 
-            // Add border for visibility
-            ctx.strokeStyle = '#000000'
-            ctx.lineWidth = 1
-            ctx.strokeRect(0, 0, tileWidth, tileHeight)
-          },
-        })
-
-        // Use Canvas directly as graphic (Canvas extends Graphic)
-        tile.addGraphic(exCanvas)
-      }
-
-      // Update tile properties
-      tile.solid = selectedTileId > 0
-      tile.data.set('tileId', selectedTileId)
+      // Update tile properties - only set solid to false if no sprites remain
+      const remainingSprites = mapResource.getSpritesForTileAndLayer(tile)
+      tile.solid = remainingSprites.length > 0
+      tile.data.set(
+        'tileId',
+        remainingSprites.length > 0 ? selectedTileId || 1 : 0,
+      )
 
       // Set selectedTileCoords so TileInteractionSystem can handle the placement
       mapEditorComponent.selectedTileCoords = coords
     }
   }
 
-  /**
-   * Get a sprite for the given tile ID from the TileMap's sprite sheets
-   * @param tileMap The TileMap to get sprite from
-   * @param tileId The tile ID to look for
-   * @returns The sprite if found, null otherwise
-   */
-  private getSpriteForTile(tileMap: TileMap, tileId: number): Sprite | null {
-    try {
-      // Try to access the MapResource stored on the TileMap
-      const mapResource = (tileMap as any).mapResource
-      if (!mapResource) {
-        console.warn('[EditorInputSystem] No MapResource found on TileMap')
-        return null
-      }
+  
 
-      // Get all sprite set resources
-      const spriteSetResources = mapResource.getAllSpriteSetResources()
 
-      // Try to find the sprite in any of the sprite sets
-      for (const [spriteSetId, spriteSetResource] of spriteSetResources) {
-        if (spriteSetResource.sprites && spriteSetResource.sprites[tileId]) {
-          console.debug(
-            `[EditorInputSystem] Found sprite ${tileId} in sprite set ${spriteSetId}`,
-          )
-          return spriteSetResource.sprites[tileId]
-        }
-      }
+  
 
-      console.warn(
-        `[EditorInputSystem] Sprite ${tileId} not found in any sprite set`,
-      )
-      return null
-    } catch (error) {
-      console.error('[EditorInputSystem] Error getting sprite for tile:', error)
-      return null
-    }
-  }
+  
 
   /**
    * Clean up resources when this system is removed
@@ -426,7 +394,6 @@ export class EditorInputSystem extends System {
     // First use type guards to determine the event type for better type safety
     if (isMouseMoveEvent(event)) {
       // Handle mouse move with proper typing
-      // console.log('Mouse move event from GJS:', event.data);
       // If in webkit view, manually update the pointer position
       if (settings.isWebKitView && this.engine) {
         // Simulate a pointer move in Excalibur
@@ -438,41 +405,37 @@ export class EditorInputSystem extends System {
       }
     } else if (isMouseDownEvent(event)) {
       // Handle mouse down with proper typing
-      console.log('Mouse down event from GJS:', event.data)
       if (settings.isWebKitView && this.engine) {
         this.onPointerDown(event.data.x, event.data.y)
       }
     } else if (isMouseUpEvent(event)) {
       // Handle mouse up with proper typing
-      console.log('Mouse up event from GJS:', event.data)
       if (settings.isWebKitView && this.engine) {
         this.onPointerUp()
       }
     } else if (isMouseLeaveEvent(event)) {
       // Handle mouse leave with proper typing
-      console.log('Mouse leave event from GJS')
       if (settings.isWebKitView && this.engine) {
         // Handle mouse leaving the canvas
         this.onPointerUp() // treat as pointer up to cancel any dragging
       }
     } else if (isMouseEnterEvent(event)) {
       // Handle mouse enter with proper typing
-      console.log('Mouse enter event from GJS:', event.data)
+      // Mouse enter event - no specific action needed
     } else if (isWheelEvent(event)) {
       // Handle wheel with proper typing
-      console.log('Wheel event from GJS:', event.data)
       if (settings.isWebKitView && this.engine) {
         this.onWheel(event.data.deltaY, { x: event.data.x, y: event.data.y })
       }
     } else if (isKeyDownEvent(event)) {
       // Handle key down with proper typing
-      console.log('Key down event from GJS:', event.data)
+      // Key events could be used for keyboard shortcuts in the future
     } else if (isKeyUpEvent(event)) {
       // Handle key up with proper typing
-      console.log('Key up event from GJS:', event.data)
+      // Key events could be used for keyboard shortcuts in the future
     } else {
       // Fallback for unknown event types
-      console.log('Unhandled input event from GJS:', event)
+      console.warn('[EditorInputSystem] Unhandled input event from GJS:', event)
     }
   }
 }

@@ -77,20 +77,23 @@ Enable tile replacement with a single click in the map editor.
 - ⚠️ **Layer-State**: selectedLayerId wird nicht berücksichtigt
 - ⚠️ **Tool-State Timing**: Gelegentliche Reset-Probleme
 
-### Step 8: Session 2 - Verbleibende Fixes (~4-6 hours) 🔄 NEXT SESSION
-**Fokus für nächste KI-Session**
+### Step 8: Session 2 - Komplexe Probleme lösen (~13-18 hours) 🔄 NEXT SESSION
+**Fokus für nächste KI-Session: Grundlagenverständnis und systematische Lösung**
 
-**Prioritäten:**
-1. **Tile-ID Fix** (2-3h): Sprite-zu-Tile-ID Mapping korrigieren
-2. **Layer-Integration** (1-2h): Layer-spezifische Tile-Platzierung
-3. **Tool-State Stabilität** (1h): Persistente Tool-Auswahl
-4. **End-to-End Testing** (2-3h): Vollständige Workflows validieren
+**Neue Prioritäten (kritisch):**
+1. **Grundlagenverständnis** (2-3h): TileMap-Architektur vollständig verstehen
+2. **State-Synchronisation reparieren** (2-3h): UI→Engine Sync wiederherstellen
+3. **Eraser Tool reparieren** (1-2h): Löschfunktionalität wiederherstellen
+4. **Layer-System implementieren** (3-4h): Layer-spezifische Editierung
+5. **Multiple Tilesets Support** (2-3h): Tileset-Index Integration
+6. **Integration & Testing** (2-3h): Vollständige Validierung
 
-**Erwartete Ergebnisse:**
-- ✅ Ausgewählte Tiles werden tatsächlich verwendet (nicht immer ID 0)
-- ✅ Layer-Selection wird bei Tile-Platzierung berücksichtigt
-- ✅ Tool-Auswahl bleibt stabil über Sessions
-- ✅ Keine kritischen Bugs verbleiben
+**Neue erwartete Ergebnisse:**
+- ✅ **Multiple Tilesets funktionieren**: Richtiges Tile aus richtigem Tileset
+- ✅ **Layer-System funktioniert**: Nur aktiver Layer wird modifiziert
+- ✅ **Eraser Tool funktioniert**: Tiles können entfernt werden
+- ✅ **State-Sync funktioniert**: UI-Änderungen erreichen Engine korrekt
+- ✅ **Tile-Grafik Mapping verstanden**: Wie Tiles zu visuellen Elementen werden
 
 ## 🧪 Testing Checklist
 
@@ -122,18 +125,27 @@ Enable tile replacement with a single click in the map editor.
 4. **Code Quality**: Removed all debug logs and unnecessary attempts
 5. **Build Status**: All packages build without warnings
 
-### 🚧 Active Issues (Priority for Step 7-8)
-1. **Layer Selection Not Working**: Selected layer is ignored during tile replacement
-   - **Symptom**: Always all graphics at a position are replaced
-   - **Cause**: Probably missing integration in `handleTilePlacement`
+### 🚧 Active Issues (Critical Priority for Step 8)
 
-2. **Tile Selection Not Working**: Selected tile is ignored
-   - **Symptom**: Always the first tile from the tileset is used
-   - **Cause**: Probably missing state synchronization in `EditorToolComponent`
+1. **Multiple Tilesets Problem - KRITISCH**:
+   - **Symptom**: Tile aus zweitem Tileset ausgewählt → Tile aus erstem Tileset wird platziert
+   - **Cause**: Tileset-Index wird nicht bei Tile-Platzierung berücksichtigt
 
-3. **Tool Selection State**: Brush tool must be re-selected
-   - **Symptom**: Pre-selection doesn't work on first load
-   - **Cause**: Probably timing issue during initialization
+2. **Layer-System Problem - KRITISCH**:
+   - **Symptom**: Alle Layer/Grafiken werden ersetzt statt nur der aktive Layer
+   - **Cause**: Unverständnis wie TileMap Layer funktionieren
+
+3. **Eraser Tool Broken - HOCH**:
+   - **Symptom**: Eraser Tool funktioniert gar nicht mehr
+   - **Cause**: Wahrscheinlich durch Type-Änderungen oder State-Sync Probleme
+
+4. **State-Synchronization Broken - HOCH**:
+   - **Symptom**: UI sendet tileId: 34, aber Engine verwendet tileId: 32
+   - **Cause**: EditorToolComponent.selectedTileId wird nicht korrekt aktualisiert
+
+5. **Tile-Graphic Mapping Unknown - MITTEL**:
+   - **Symptom**: Wie werden Tiles zu visuellen Elementen auf der Map?
+   - **Cause**: Fehlendes Verständnis der TileMap-Architektur
 
 ### 🔍 Research Strategy for Step 7
 

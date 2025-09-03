@@ -59,20 +59,15 @@ export class MapEditorService {
 
     // Handle tile clicked events from engine
     this.rpc.registerHandler(RpcEngineType.TILE_CLICKED, (params) => {
-      console.log('[MapEditorService] Tile clicked:', params)
       return { success: true }
     })
 
     // Handle tile hovered events from engine
     this.rpc.registerHandler(RpcEngineType.TILE_HOVERED, (params) => {
       if (params.coords) {
-        console.log(
-          '[MapEditorService] Tile hovered:',
-          params.coords,
-          params.tileMapId,
-        )
+        // Tile hover event - no specific action needed for hover
       } else {
-        console.log('[MapEditorService] Tile hover cleared (mouse left map)')
+        // Tile hover cleared (mouse left map) - no specific action needed
       }
       return { success: true }
     })
