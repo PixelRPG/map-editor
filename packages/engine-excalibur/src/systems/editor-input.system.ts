@@ -5,9 +5,10 @@ import {
   Scene,
   SystemType,
   TileMap,
-  Vector,
   vec,
   Tile,
+  Sprite,
+  Canvas,
 } from 'excalibur'
 import {
   InputEventType,
@@ -280,10 +281,61 @@ export class EditorInputSystem extends System {
     if (!selectedLayerId) return
 
     if (currentTool === 'brush' && selectedTileId !== null) {
-      // Place tile using brush tool
-      // TODO: Implement actual tile placement logic
+      // Clear existing graphics
+      tile.clearGraphics()
+
+      // Try to get sprite from sprite sheet
+      const sprite = this.getSpriteForTile(tileMap, selectedTileId)
+
+      if (sprite) {
+        // Use actual sprite from sprite sheet
+        tile.addGraphic(sprite.clone())
+      } else {
+        // Fallback: create a simple colored rectangle
+        console.warn(
+          `[EditorInputSystem] Could not find sprite for tileId ${selectedTileId}, using fallback`,
+        )
+        const tileWidth = tileMap.tileWidth
+        const tileHeight = tileMap.tileHeight
+
+        // Create a simple colored rectangle based on tileId
+        const colorIndex = selectedTileId % 8
+        const colors = [
+          '#FF0000',
+          '#00FF00',
+          '#0000FF',
+          '#FFFF00',
+          '#FF00FF',
+          '#00FFFF',
+          '#800080',
+          '#FFA500',
+        ]
+
+        // Create a simple colored graphic for testing using Excalibur Canvas
+        const exCanvas = new Canvas({
+          width: tileWidth,
+          height: tileHeight,
+          draw: (ctx: CanvasRenderingContext2D) => {
+            ctx.fillStyle = colors[colorIndex]
+            ctx.fillRect(0, 0, tileWidth, tileHeight)
+
+            // Add border for visibility
+            ctx.strokeStyle = '#000000'
+            ctx.lineWidth = 1
+            ctx.strokeRect(0, 0, tileWidth, tileHeight)
+          },
+        })
+
+        // Use Canvas directly as graphic (Canvas extends Graphic)
+        tile.addGraphic(exCanvas)
+      }
+
+      // Update tile properties
+      tile.solid = selectedTileId > 0
+      tile.data.set('tileId', selectedTileId)
+
       console.log(
-        `[EditorInputSystem] Placing tile ${selectedTileId} at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
+        `[EditorInputSystem] Placed tile ${selectedTileId} at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
       )
 
       // Send TILE_PLACED RPC event
@@ -293,10 +345,13 @@ export class EditorInputSystem extends System {
         layerId: selectedLayerId,
       })
     } else if (currentTool === 'eraser') {
-      // Erase tile
-      // TODO: Implement actual tile erasing logic
+      // Clear tile
+      tile.clearGraphics()
+      tile.solid = false
+      tile.data.set('tileId', 0)
+
       console.log(
-        `[EditorInputSystem] Erasing tile at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
+        `[EditorInputSystem] Erased tile at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
       )
 
       // Send TILE_PLACED RPC event with tileId 0 (or null) for erase
@@ -305,6 +360,44 @@ export class EditorInputSystem extends System {
         tileId: 0, // 0 typically represents empty/erased tile
         layerId: selectedLayerId,
       })
+    }
+  }
+
+  /**
+   * Get a sprite for the given tile ID from the TileMap's sprite sheets
+   * @param tileMap The TileMap to get sprite from
+   * @param tileId The tile ID to look for
+   * @returns The sprite if found, null otherwise
+   */
+  private getSpriteForTile(tileMap: TileMap, tileId: number): Sprite | null {
+    try {
+      // Try to access the MapResource stored on the TileMap
+      const mapResource = (tileMap as any).mapResource
+      if (!mapResource) {
+        console.warn('[EditorInputSystem] No MapResource found on TileMap')
+        return null
+      }
+
+      // Get all sprite set resources
+      const spriteSetResources = mapResource.getAllSpriteSetResources()
+
+      // Try to find the sprite in any of the sprite sets
+      for (const [spriteSetId, spriteSetResource] of spriteSetResources) {
+        if (spriteSetResource.sprites && spriteSetResource.sprites[tileId]) {
+          console.debug(
+            `[EditorInputSystem] Found sprite ${tileId} in sprite set ${spriteSetId}`,
+          )
+          return spriteSetResource.sprites[tileId]
+        }
+      }
+
+      console.warn(
+        `[EditorInputSystem] Sprite ${tileId} not found in any sprite set`,
+      )
+      return null
+    } catch (error) {
+      console.error('[EditorInputSystem] Error getting sprite for tile:', error)
+      return null
     }
   }
 
