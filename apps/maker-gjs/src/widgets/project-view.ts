@@ -7,6 +7,7 @@ import { EngineStatus, RpcEngineType } from '@pixelrpg/engine-core'
 import { GameProjectResource, SpriteSheet } from '@pixelrpg/data-gjs'
 import { MapData, SpriteSetData } from '@pixelrpg/data-core'
 import { Sidebar } from './sidebar.ts'
+import { MapEditorService } from '@pixelrpg/engine-gjs'
 
 import Template from './project-view.blp'
 
@@ -20,6 +21,9 @@ export class ProjectView extends Adw.Bin {
   // Project management
   private _gameProjectResource: GameProjectResource | null = null
   private _currentProjectPath: string | null = null
+
+  // Map editor service
+  private _mapEditorService: MapEditorService | null = null
 
   static {
     GObject.registerClass(
@@ -78,6 +82,9 @@ export class ProjectView extends Adw.Bin {
       console.log('[ProjectView] Ready')
       this.emit('ready')
     })
+
+    // Note: Sidebar signals will be connected in _onMapLoaded when both
+    // sidebar and MapEditorService are available
   }
 
   /**
@@ -179,9 +186,48 @@ export class ProjectView extends Adw.Bin {
 
       // Initialize the sidebar with the map data
       this._sidebar?.initializeMapData(mapData, spriteSheets)
+
+      // Initialize the map editor service with the engine's web view
+      if (this._engine && this._engine.webView) {
+        this._mapEditorService = new MapEditorService(this._engine.webView)
+        console.log('[ProjectView] MapEditorService initialized')
+
+        // Now connect sidebar signals when both components are available
+        this._connectSidebarSignals()
+      } else {
+        console.warn(
+          '[ProjectView] Engine or WebView not available for MapEditorService',
+        )
+      }
     } catch (error) {
       console.error('[ProjectView] Failed to load map data:', error)
     }
+  }
+
+  /**
+   * Connect sidebar signals when both sidebar and MapEditorService are available
+   */
+  private _connectSidebarSignals(): void {
+    if (!this._sidebar || !this._mapEditorService) {
+      console.warn(
+        '[ProjectView] Cannot connect sidebar signals: missing components',
+      )
+      return
+    }
+
+    console.log('[ProjectView] Connecting sidebar signals...')
+
+    this._sidebar.connect('tile-selected', (_sidebar, tileId) => {
+      console.log('[ProjectView] Tile selected from sidebar:', tileId)
+      this._mapEditorService!.selectTile(tileId)
+    })
+
+    this._sidebar.connect('tool-changed', (_sidebar, tool) => {
+      console.log('[ProjectView] Tool changed from sidebar:', tool)
+      this._mapEditorService!.setTool(tool as 'brush' | 'eraser')
+    })
+
+    console.log('[ProjectView] Sidebar signals connected successfully')
   }
 }
 
