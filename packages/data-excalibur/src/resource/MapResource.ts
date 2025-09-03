@@ -358,6 +358,11 @@ export class MapResource implements Loadable<TileMap> {
     // Apply sprites to tiles based on the stored references
     this.applySpritesToTiles()
 
+    // Mark the TileMap as editor-enabled for later component addition
+    ;(this.tileMap as any).editorEnabled = true
+
+    this.logger.debug('Marked TileMap as editor-enabled')
+
     // Add the map to the scene
     scene.add(this.tileMap)
   }

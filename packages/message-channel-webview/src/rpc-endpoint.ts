@@ -156,7 +156,7 @@ export class RpcEndpoint<
    */
   private handleMessageEvent = (event: Event): void => {
     const messageEvent = event as unknown as MessageEvent
-    console.log('[RpcEndpoint] Handling message event:', messageEvent)
+    // console.log('[RpcEndpoint] Handling message event:', messageEvent)
     // Handle only valid base messages for this channel
     const data = messageEvent.data
     if (

@@ -3,7 +3,7 @@ import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
 import { TilesetSelector } from './tileset-selector'
-import { LayerSelector, LayersWidget } from './layer-selector'
+import { LayerSelector } from './layer-selector'
 import { SpriteSheet } from '@pixelrpg/data-gjs'
 import { MapData } from '@pixelrpg/data-core'
 
@@ -41,6 +41,9 @@ export class MapEditorPanel extends Adw.Bin {
           'tool-changed': {
             param_types: [GObject.TYPE_STRING], // tool ('brush' | 'eraser')
           },
+          'layer-selected': {
+            param_types: [GObject.TYPE_STRING], // layerId
+          },
         },
       },
       this,
@@ -70,9 +73,16 @@ export class MapEditorPanel extends Adw.Bin {
     // Set the tilesets (sprite sheets)
     this.setTilesets(spriteSheets)
 
-    // Create a simple layers widget from the map data
-    const layersWidget = this._createLayersWidget(mapData)
-    this.setLayers(layersWidget)
+    // Set the map data in the layer selector
+    this._layerSelector.setMapData(mapData)
+
+    // Connect layer selector signal to forward it
+    this._layerSelector.connect(
+      'layer-selected',
+      (_: LayerSelector, layerId: string) => {
+        this.emit('layer-selected', layerId)
+      },
+    )
   }
 
   /**
@@ -115,63 +125,11 @@ export class MapEditorPanel extends Adw.Bin {
   }
 
   /**
-   * Create a simple layers widget from map data
-   * This is a temporary implementation until we have proper layer widgets
-   * @param mapData The map data
-   * @returns A simple widget representing the layers
-   */
-  private _createLayersWidget(mapData: MapData): LayersWidget {
-    const box = new Gtk.Box({
-      orientation: Gtk.Orientation.VERTICAL,
-      spacing: 6,
-      margin_top: 6,
-      margin_bottom: 6,
-      margin_start: 6,
-      margin_end: 6,
-    })
-
-    // Add a label for each layer
-    for (const layer of mapData.layers) {
-      const layerRow = new Gtk.Box({
-        orientation: Gtk.Orientation.HORIZONTAL,
-        spacing: 8,
-      })
-
-      // Layer visibility toggle (placeholder)
-      const visibilityIcon = new Gtk.Label({
-        label: layer.visible ? '👁' : '🚫',
-        tooltip_text: layer.visible ? 'Layer visible' : 'Layer hidden',
-      })
-
-      // Layer name and type
-      const label = new Gtk.Label({
-        label: `${layer.name} (${layer.type})`,
-        xalign: 0,
-        hexpand: true,
-      })
-
-      layerRow.append(visibilityIcon)
-      layerRow.append(label)
-      box.append(layerRow)
-    }
-
-    return box
-  }
-
-  /**
    * Set multiple tilesets at once
    * @param tilesets Array of sprite sheets to display as tilesets
    */
   private setTilesets(tilesets: SpriteSheet[]): void {
     this._tilesetSelector.tilesets = tilesets
-  }
-
-  /**
-   * Set the layers widget for layer selection
-   * @param layers The layers widget to set
-   */
-  private setLayers(layers: LayersWidget) {
-    this._layerSelector.setLayers(layers)
   }
 
   /**

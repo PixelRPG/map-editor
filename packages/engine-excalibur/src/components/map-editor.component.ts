@@ -83,6 +83,14 @@ export class MapEditorComponent extends Component {
   }
 
   /**
+   * Clear the hover state
+   * Called by external systems to reset hover state
+   */
+  public clearHoverState(): void {
+    this.hoverTileCoords = null
+  }
+
+  /**
    * Set up event listeners for TileMap pointer events
    * Uses existing TileMapEvents.PointerDown and TileMapEvents.PointerMove
    */

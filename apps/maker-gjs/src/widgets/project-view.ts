@@ -227,6 +227,11 @@ export class ProjectView extends Adw.Bin {
       this._mapEditorService!.setTool(tool as 'brush' | 'eraser')
     })
 
+    this._sidebar.connect('layer-selected', (_sidebar, layerId) => {
+      console.log('[ProjectView] Layer selected from sidebar:', layerId)
+      this._mapEditorService!.setLayer(layerId)
+    })
+
     console.log('[ProjectView] Sidebar signals connected successfully')
   }
 }

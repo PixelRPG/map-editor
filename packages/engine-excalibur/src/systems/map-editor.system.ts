@@ -9,7 +9,7 @@ import {
   Component,
 } from 'excalibur'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
-import { RpcEngineType } from '@pixelrpg/engine-core'
+import { RpcEngineType, EngineRpcRegistry } from '@pixelrpg/engine-core'
 import { rpcEndpointFactory } from '../utils/rpc.ts'
 
 /**
@@ -44,7 +44,7 @@ export class MapEditorSystem extends System {
   public readonly systemType = SystemType.Update
   public readonly priority = 10 // Run after input systems but before rendering
 
-  private rpc = rpcEndpointFactory()
+  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
   private world: World
 
   /**
@@ -106,15 +106,23 @@ export class MapEditorSystem extends System {
    * Set up RPC handlers for bidirectional communication with GJS host
    */
   private setupRpcHandlers(): void {
+    console.log('[MapEditorSystem] 🚀 Setting up RPC handlers...')
+
     this.rpc.registerHandler(
       RpcEngineType.EDITOR_STATE_CHANGED,
       (params: unknown) => {
+        console.log(
+          '[MapEditorSystem] 📨 RPC handler called with params:',
+          params,
+        )
         this.handleEditorStateChange(params as EditorStateChangeParams)
         return { success: true }
       },
     )
 
-    console.debug('[MapEditorSystem] RPC handlers registered')
+    console.log(
+      '[MapEditorSystem] ✅ RPC handlers registered for EDITOR_STATE_CHANGED',
+    )
   }
 
   /**
@@ -149,33 +157,68 @@ export class MapEditorSystem extends System {
    * Handle editor state changes from the host
    */
   private handleEditorStateChange(params: EditorStateChangeParams): void {
-    console.debug('[MapEditorSystem] Received editor state change:', params)
+    console.log('[MapEditorSystem] 🎯 EDITOR_STATE_CHANGED received:', params)
 
     const editableEntities = this.editableEntitiesQuery.entities
+    console.log(
+      '[MapEditorSystem] Found editable entities:',
+      editableEntities.length,
+    )
 
     for (const entity of editableEntities) {
       const toolComponent = entity.get(EditorToolComponent)
+      console.log(
+        '[MapEditorSystem] Processing entity:',
+        entity.id,
+        'has tool component:',
+        !!toolComponent,
+      )
 
-      if (
-        toolComponent &&
-        params.tool &&
-        params.tileId !== undefined &&
-        params.layerId
-      ) {
+      if (toolComponent && params.tileId !== undefined) {
+        console.log(
+          '[MapEditorSystem] ✅ Tool component found, updating tool component',
+        )
+
         // Update tool state based on host parameters
         if (params.tool !== toolComponent.currentTool) {
+          console.log(
+            `[MapEditorSystem] 🔄 Updating tool: ${toolComponent.currentTool} → ${params.tool}`,
+          )
           toolComponent.setTool(
             params.tool as 'brush' | 'eraser' | 'fill' | null,
           )
         }
 
         if (params.tileId !== toolComponent.selectedTileId) {
+          console.log(
+            `[MapEditorSystem] 🔄 Updating tileId: ${toolComponent.selectedTileId} → ${params.tileId}`,
+          )
           toolComponent.setSelectedTile(params.tileId)
         }
 
-        if (params.layerId !== toolComponent.selectedLayerId) {
-          toolComponent.setSelectedLayer(params.layerId)
+        // Use default layer if not specified
+        const layerId = params.layerId || 'default'
+        if (layerId !== toolComponent.selectedLayerId) {
+          console.log(
+            `[MapEditorSystem] 🔄 Updating layerId: ${toolComponent.selectedLayerId} → ${layerId}`,
+          )
+          toolComponent.setSelectedLayer(layerId)
         }
+
+        // Log final state
+        console.log('[MapEditorSystem] ✨ Final state:', {
+          tool: toolComponent.currentTool,
+          tileId: toolComponent.selectedTileId,
+          layerId: toolComponent.selectedLayerId,
+        })
+      } else {
+        console.warn(
+          '[MapEditorSystem] ❌ Missing required components/parameters:',
+          {
+            hasToolComponent: !!toolComponent,
+            hasTileId: params.tileId !== undefined,
+          },
+        )
       }
     }
   }

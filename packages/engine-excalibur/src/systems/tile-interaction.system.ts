@@ -124,7 +124,7 @@ export class TileInteractionSystem extends System {
     // Send TILE_HOVERED RPC event
     this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
       coords,
-      tileMapId: entity.id || 'unknown',
+      tileMapId: String(entity.id || 'unknown'),
     })
   }
 

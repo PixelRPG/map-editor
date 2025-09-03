@@ -6,6 +6,8 @@ import {
   Logger,
   Scene,
   Clock,
+  TileMap,
+  Entity,
 } from 'excalibur'
 import { EventDispatcher } from '@pixelrpg/message-channel-core'
 import { rpcEndpointFactory } from './utils/rpc.ts'
@@ -27,6 +29,7 @@ import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { EditorInputSystem } from './systems/editor-input.system.ts'
 import { MapEditorSystem } from './systems/map-editor.system.ts'
 import { TileInteractionSystem } from './systems/tile-interaction.system.ts'
+import { MapEditorComponent, EditorToolComponent } from './components/index.ts'
 
 /**
  * Excalibur implementation of the game engine
@@ -265,6 +268,9 @@ export class Engine implements EngineInterface {
 
     mapResource.addToScene(mapScene)
 
+    // Add editor components to all TileMap entities for editing functionality
+    this.addEditorComponentsToTileMaps(mapScene)
+
     this.excalibur.add(mapId, mapScene)
     this.excalibur.goToScene(mapId)
 
@@ -286,6 +292,43 @@ export class Engine implements EngineInterface {
 
     // Send the event to GJS using RPC
     await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+  }
+
+  /**
+   * Add editor components to all TileMap entities for editing functionality
+   */
+  private addEditorComponentsToTileMaps(scene: Scene): void {
+    // Get all entities in the scene
+    const entities = scene.world.entities
+    let tileMapCount = 0
+
+    for (const entity of entities) {
+      // Check if this entity is a TileMap
+      if (this.isTileMap(entity)) {
+        this.logger.debug(
+          `Adding editor components to TileMap entity: ${entity.id}`,
+        )
+
+        // Add the editor components
+        entity.addComponent(new MapEditorComponent())
+        entity.addComponent(new EditorToolComponent())
+
+        tileMapCount++
+        this.logger.debug('Editor components added successfully')
+      }
+    }
+
+    this.logger.info(
+      `Added editor components to ${tileMapCount} TileMap entities`,
+    )
+  }
+
+  /**
+   * Check if an entity is a TileMap
+   */
+  private isTileMap(entity: Entity): boolean {
+    // Check if the entity is an instance of TileMap
+    return entity instanceof TileMap
   }
 
   /**

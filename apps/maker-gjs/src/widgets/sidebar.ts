@@ -27,6 +27,9 @@ export class Sidebar extends Adw.Bin {
           'tool-changed': {
             param_types: [GObject.TYPE_STRING], // tool ('brush' | 'eraser')
           },
+          'layer-selected': {
+            param_types: [GObject.TYPE_STRING], // layerId
+          },
         },
       },
       this,
@@ -67,6 +70,17 @@ export class Sidebar extends Adw.Bin {
   }
 
   /**
+   * Handle layer selection from map editor panel
+   */
+  private _onLayerSelected(
+    mapEditorPanel: MapEditorPanel,
+    layerId: string,
+  ): void {
+    console.log('[Sidebar] Layer selected:', layerId)
+    this.emit('layer-selected', layerId)
+  }
+
+  /**
    * Handle tool change from map editor panel
    */
   private _onToolChanged(mapEditorPanel: MapEditorPanel, tool: string): void {
@@ -93,6 +107,12 @@ export class Sidebar extends Adw.Bin {
         this._onToolChanged.bind(this),
       )
       this._signalHandlers.push(toolHandlerId)
+
+      const layerHandlerId = this._mapEditorPanel.connect(
+        'layer-selected',
+        this._onLayerSelected.bind(this),
+      )
+      this._signalHandlers.push(layerHandlerId)
     }
   }
 

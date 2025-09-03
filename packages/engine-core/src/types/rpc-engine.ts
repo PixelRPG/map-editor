@@ -73,7 +73,7 @@ export interface RpcEngineParamMap {
     tileMapId: string
   }
   [RpcEngineType.TILE_HOVERED]: {
-    coords: { x: number; y: number }
+    coords: { x: number; y: number } | null
     tileMapId: string
   }
   [RpcEngineType.TILE_PLACED]: {
@@ -116,6 +116,18 @@ export interface EngineRpcRegistry extends RpcMethodRegistry {
   }
   [RpcEngineType.HANDLE_INPUT_EVENT]: {
     params: RpcEngineParamMap[RpcEngineType.HANDLE_INPUT_EVENT]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.TILE_CLICKED]: {
+    params: RpcEngineParamMap[RpcEngineType.TILE_CLICKED]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.TILE_HOVERED]: {
+    params: RpcEngineParamMap[RpcEngineType.TILE_HOVERED]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.TILE_PLACED]: {
+    params: RpcEngineParamMap[RpcEngineType.TILE_PLACED]
     response: RpcResponse<void>
   }
 }

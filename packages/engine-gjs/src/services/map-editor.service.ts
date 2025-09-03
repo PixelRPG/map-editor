@@ -65,7 +65,15 @@ export class MapEditorService {
 
     // Handle tile hovered events from engine
     this.rpc.registerHandler(RpcEngineType.TILE_HOVERED, (params) => {
-      console.log('[MapEditorService] Tile hovered:', params)
+      if (params.coords) {
+        console.log(
+          '[MapEditorService] Tile hovered:',
+          params.coords,
+          params.tileMapId,
+        )
+      } else {
+        console.log('[MapEditorService] Tile hover cleared (mouse left map)')
+      }
       return { success: true }
     })
 

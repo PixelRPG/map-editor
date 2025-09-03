@@ -27,6 +27,7 @@ import {
 import { settings } from '../settings.ts'
 import { rpcEndpointFactory } from '../utils/rpc.ts'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
+import { EngineRpcRegistry } from '@pixelrpg/engine-core'
 
 /**
  * System to handle input for the map editor
@@ -41,7 +42,7 @@ export class EditorInputSystem extends System {
 
   public systemType = SystemType.Update
 
-  private rpc = rpcEndpointFactory()
+  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
   private engine?: Engine
 
   /**
@@ -184,14 +185,11 @@ export class EditorInputSystem extends System {
 
       // Send wheel event to GJS
       this.rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {
-        messageType: RpcEngineType.INPUT_EVENT,
-        payload: {
-          type: InputEventType.WHEEL,
-          data: {
-            x,
-            y,
-            deltaY: wheelEvent.deltaY,
-          },
+        type: InputEventType.WHEEL,
+        data: {
+          x,
+          y,
+          deltaY: wheelEvent.deltaY,
         },
       })
     })
@@ -220,6 +218,8 @@ export class EditorInputSystem extends System {
       (entity) => entity instanceof TileMap,
     ) as TileMap[]
 
+    let foundHoveredTile = false
+
     for (const tileMap of tileMaps) {
       // Check if this TileMap has MapEditorComponent
       const mapEditorComponent = tileMap.get(MapEditorComponent)
@@ -238,24 +238,43 @@ export class EditorInputSystem extends System {
           // Send TILE_CLICKED RPC event
           this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
             coords,
-            tileMapId: tileMap.id || 'unknown',
+            tileMapId: String(tileMap.id || 'unknown'),
           })
 
           // Handle tool-based tile placement if EditorToolComponent is present
           this.handleTilePlacement(tileMap, tile, coords)
         } else if (interactionType === 'move') {
-          // Send TILE_HOVERED RPC event (only if coordinates changed)
-          const currentHover = mapEditorComponent.hoverTileCoords
-          if (
-            !currentHover ||
-            currentHover.x !== coords.x ||
-            currentHover.y !== coords.y
-          ) {
-            this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
-              coords,
-              tileMapId: tileMap.id || 'unknown',
-            })
-          }
+          foundHoveredTile = true
+
+          // Update the component's hover state
+          mapEditorComponent.hoverTileCoords = coords
+
+          // Send TILE_HOVERED RPC event
+          this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
+            coords,
+            tileMapId: String(tileMap.id || 'unknown'),
+          })
+        }
+      }
+    }
+
+    // If we're moving and no tile was found, clear hover state
+    if (interactionType === 'move' && !foundHoveredTile) {
+      // Clear hover state for all TileMaps that currently have hover state
+      for (const tileMap of tileMaps) {
+        const mapEditorComponent = tileMap.get(MapEditorComponent)
+        if (
+          mapEditorComponent?.isEditable &&
+          mapEditorComponent.hoverTileCoords !== null
+        ) {
+          // Clear the hover state using the component method
+          mapEditorComponent.clearHoverState()
+
+          // Send TILE_HOVERED RPC event with null coords to indicate no hover
+          this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
+            coords: null,
+            tileMapId: String(tileMap.id || 'unknown'),
+          })
         }
       }
     }
@@ -277,10 +296,21 @@ export class EditorInputSystem extends System {
 
     const { currentTool, selectedTileId, selectedLayerId } = toolComponent
 
+    console.log(
+      `[EditorInputSystem] Tool state: tool=${currentTool}, tileId=${selectedTileId}, layerId=${selectedLayerId}`,
+    )
+
     // Only proceed if we have all required information
-    if (!selectedLayerId) return
+    if (!selectedLayerId) {
+      console.warn('[EditorInputSystem] No selectedLayerId, using default')
+      return
+    }
 
     if (currentTool === 'brush' && selectedTileId !== null) {
+      console.log(
+        `[EditorInputSystem] Brush tool: placing tile ${selectedTileId} at (${coords.x}, ${coords.y})`,
+      )
+
       // Clear existing graphics
       tile.clearGraphics()
 
