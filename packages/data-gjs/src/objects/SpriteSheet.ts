@@ -96,6 +96,7 @@ export class SpriteSheet {
           posY,
           spriteWidth,
           spriteHeight,
+          index, // Pass the sprite index for tileId mapping
         )
 
         sprites.push(sprite)

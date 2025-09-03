@@ -246,14 +246,17 @@ export class EditorInputSystem extends System {
         } else if (interactionType === 'move') {
           foundHoveredTile = true
 
-          // Update the component's hover state
-          mapEditorComponent.hoverTileCoords = coords
-
-          // Send TILE_HOVERED RPC event
-          this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
-            coords,
-            tileMapId: String(tileMap.id || 'unknown'),
-          })
+          // Only update hover state if coordinates actually changed
+          if (
+            !mapEditorComponent.hoverTileCoords ||
+            mapEditorComponent.hoverTileCoords.x !== coords.x ||
+            mapEditorComponent.hoverTileCoords.y !== coords.y
+          ) {
+            mapEditorComponent.hoverTileCoords = coords
+            mapEditorComponent.hoverHasChanged = true
+          } else {
+            continue
+          }
         }
       }
     }
@@ -268,13 +271,8 @@ export class EditorInputSystem extends System {
           mapEditorComponent.hoverTileCoords !== null
         ) {
           // Clear the hover state using the component method
+          // This will set hoverHasChanged = true and hoverTileCoords = null
           mapEditorComponent.clearHoverState()
-
-          // Send TILE_HOVERED RPC event with null coords to indicate no hover
-          this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
-            coords: null,
-            tileMapId: String(tileMap.id || 'unknown'),
-          })
         }
       }
     }
@@ -292,7 +290,14 @@ export class EditorInputSystem extends System {
     coords: { x: number; y: number },
   ): void {
     const toolComponent = tileMap.get(EditorToolComponent)
-    if (!toolComponent || !toolComponent.isReadyForEditing()) return
+    const mapEditorComponent = tileMap.get(MapEditorComponent)
+
+    if (
+      !toolComponent ||
+      !toolComponent.isReadyForEditing() ||
+      !mapEditorComponent
+    )
+      return
 
     const { currentTool, selectedTileId, selectedLayerId } = toolComponent
 
@@ -300,11 +305,9 @@ export class EditorInputSystem extends System {
       `[EditorInputSystem] Tool state: tool=${currentTool}, tileId=${selectedTileId}, layerId=${selectedLayerId}`,
     )
 
-    // Only proceed if we have all required information
-    if (!selectedLayerId) {
-      console.warn('[EditorInputSystem] No selectedLayerId, using default')
-      return
-    }
+    // Use default layer if not specified
+    const effectiveLayerId = selectedLayerId || 'default'
+    console.log(`[EditorInputSystem] Using layer: ${effectiveLayerId}`)
 
     if (currentTool === 'brush' && selectedTileId !== null) {
       console.log(
@@ -364,32 +367,8 @@ export class EditorInputSystem extends System {
       tile.solid = selectedTileId > 0
       tile.data.set('tileId', selectedTileId)
 
-      console.log(
-        `[EditorInputSystem] Placed tile ${selectedTileId} at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
-      )
-
-      // Send TILE_PLACED RPC event
-      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
-        coords,
-        tileId: selectedTileId,
-        layerId: selectedLayerId,
-      })
-    } else if (currentTool === 'eraser') {
-      // Clear tile
-      tile.clearGraphics()
-      tile.solid = false
-      tile.data.set('tileId', 0)
-
-      console.log(
-        `[EditorInputSystem] Erased tile at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
-      )
-
-      // Send TILE_PLACED RPC event with tileId 0 (or null) for erase
-      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
-        coords,
-        tileId: 0, // 0 typically represents empty/erased tile
-        layerId: selectedLayerId,
-      })
+      // Set selectedTileCoords so TileInteractionSystem can handle the placement
+      mapEditorComponent.selectedTileCoords = coords
     }
   }
 

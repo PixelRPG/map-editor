@@ -311,7 +311,14 @@ export class Engine implements EngineInterface {
 
         // Add the editor components
         entity.addComponent(new MapEditorComponent())
-        entity.addComponent(new EditorToolComponent())
+
+        // Initialize EditorToolComponent with default values
+        const toolComponent = new EditorToolComponent({
+          defaultTool: 'brush', // Default to brush tool
+          defaultTileId: 1, // Default to first tile
+          defaultLayerId: null, // No default layer - must be selected by user
+        })
+        entity.addComponent(toolComponent)
 
         tileMapCount++
         this.logger.debug('Editor components added successfully')

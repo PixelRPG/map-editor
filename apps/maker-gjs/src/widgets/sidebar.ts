@@ -11,6 +11,13 @@ export class Sidebar extends Adw.Bin {
   // GObject internal children
   declare _mapEditorPanel: MapEditorPanel
 
+  /**
+   * Get access to the map editor panel
+   */
+  get mapEditorPanel(): MapEditorPanel {
+    return this._mapEditorPanel
+  }
+
   // Signal management
   private _signalHandlers: number[] = []
 

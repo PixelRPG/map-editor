@@ -37,6 +37,12 @@ export class MapEditorComponent extends Component {
   public hoverTileCoords: { x: number; y: number } | null = null
 
   /**
+   * Flag indicating if the hover has changed
+   * We need this to avoid sending unnecessary RPC events
+   */
+  public hoverHasChanged: boolean = false
+
+  /**
    * Callback fired when a tile is selected (clicked)
    * Provides both the tile object and its coordinates
    */
@@ -55,28 +61,19 @@ export class MapEditorComponent extends Component {
   private tileMap: TileMap | null = null
 
   /**
-   * Cleanup function to remove event listeners
-   * Called when component is removed or entity is destroyed
-   */
-  private cleanup?: () => void
-
-  /**
    * Initialize the component when added to a TileMap entity
    * Sets up event listeners for existing TileMap pointer events
    */
   public onAdd(owner: TileMap): void {
     this.tileMap = owner
-    this.setupEventListeners()
+    // Event listeners are now handled by EditorInputSystem
+    // this.setupEventListeners()
   }
 
   /**
-   * Clean up event listeners when component is removed
+   * Clean up when component is removed
    */
   public onRemove(): void {
-    if (this.cleanup) {
-      this.cleanup()
-      this.cleanup = undefined
-    }
     this.tileMap = null
     this.selectedTileCoords = null
     this.hoverTileCoords = null
@@ -87,60 +84,11 @@ export class MapEditorComponent extends Component {
    * Called by external systems to reset hover state
    */
   public clearHoverState(): void {
-    this.hoverTileCoords = null
-  }
-
-  /**
-   * Set up event listeners for TileMap pointer events
-   * Uses existing TileMapEvents.PointerDown and TileMapEvents.PointerMove
-   */
-  private setupEventListeners(): void {
-    if (!this.tileMap) return
-
-    // Listen for pointer down events (tile selection)
-    const pointerDownSubscription = this.tileMap.on('pointerdown', (event) => {
-      if (!this.isEditable) return
-
-      // Use existing TileMap.getTileByPoint() to find the clicked tile
-      const tile = this.tileMap!.getTileByPoint(event.worldPos)
-      if (tile) {
-        // Get coordinates from the tile object itself
-        const coords = { x: tile.x, y: tile.y }
-        this.selectedTileCoords = coords
-
-        // Trigger callback if provided
-        this.onTileSelected?.(tile, this.selectedTileCoords)
-      }
-    })
-
-    // Listen for pointer move events (hover tracking)
-    const pointerMoveSubscription = this.tileMap.on('pointermove', (event) => {
-      if (!this.isEditable) return
-
-      const tile = this.tileMap!.getTileByPoint(event.worldPos)
-      if (tile) {
-        const coords = { x: tile.x, y: tile.y }
-
-        // Only update if coordinates actually changed
-        if (
-          !this.hoverTileCoords ||
-          this.hoverTileCoords.x !== coords.x ||
-          this.hoverTileCoords.y !== coords.y
-        ) {
-          this.hoverTileCoords = coords
-          this.onTileHovered?.(tile, this.hoverTileCoords)
-        }
-      } else {
-        // Clear hover state when not over a tile
-        this.hoverTileCoords = null
-      }
-    })
-
-    // Set up cleanup function
-    this.cleanup = () => {
-      pointerDownSubscription.close()
-      pointerMoveSubscription.close()
+    // Only set hoverHasChanged if there was actually a hover state to clear
+    if (this.hoverTileCoords !== null) {
+      this.hoverHasChanged = true
     }
+    this.hoverTileCoords = null
   }
 
   /**

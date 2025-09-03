@@ -141,6 +141,18 @@ export class MapEditorPanel extends Adw.Bin {
   }
 
   /**
+   * Set the initial tool state
+   * @param tool The tool to activate
+   */
+  setInitialTool(tool: 'brush' | 'eraser'): void {
+    if (tool === 'brush' && this._brushButton) {
+      this._brushButton.active = true
+    } else if (tool === 'eraser' && this._eraserButton) {
+      this._eraserButton.active = true
+    }
+  }
+
+  /**
    * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
    */
   vfunc_map(): void {

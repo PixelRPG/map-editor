@@ -20,12 +20,12 @@ export class MapEditorService {
   private _webView?: WebView
 
   /**
-   * Current editor state
+   * Current editor state - initialized with same defaults as engine
    */
   private currentState = {
-    tool: null as 'brush' | 'eraser' | 'fill' | null,
-    tileId: null as number | null,
-    layerId: null as string | null,
+    tool: 'brush' as 'brush' | 'eraser' | 'fill' | null, // Same default as engine
+    tileId: 1 as number | null, // Same default as engine
+    layerId: null as string | null, // Engine uses 'default', but UI starts with null
   }
 
   /**

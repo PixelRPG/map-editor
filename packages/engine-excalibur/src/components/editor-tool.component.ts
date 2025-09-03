@@ -24,6 +24,14 @@ export type EditorTool = 'brush' | 'eraser' | 'fill' | null
  * tileMap.addComponent(toolComponent)
  * ```
  */
+export interface EditorToolComponentOptions {
+  defaultTool?: EditorTool
+  defaultTileId?: number | null
+  defaultLayerId?: string | null
+  brushSize?: number
+  fillTolerance?: number
+}
+
 export class EditorToolComponent extends Component {
   /**
    * The currently active editing tool
@@ -42,6 +50,31 @@ export class EditorToolComponent extends Component {
    * Determines which layer tiles are placed on or modified
    */
   public selectedLayerId: string | null = null
+
+  /**
+   * Create a new EditorToolComponent with optional default values
+   * @param options Configuration options for default values
+   */
+  constructor(options: EditorToolComponentOptions = {}) {
+    super()
+
+    // Set default values if provided
+    if (options.defaultTool !== undefined) {
+      this.setTool(options.defaultTool)
+    }
+    if (options.defaultTileId !== undefined) {
+      this.setSelectedTile(options.defaultTileId)
+    }
+    if (options.defaultLayerId !== undefined) {
+      this.setSelectedLayer(options.defaultLayerId)
+    }
+    if (options.brushSize !== undefined) {
+      this.brushSize = options.brushSize
+    }
+    if (options.fillTolerance !== undefined) {
+      this.fillTolerance = options.fillTolerance
+    }
+  }
 
   /**
    * Size of the brush tool in tiles

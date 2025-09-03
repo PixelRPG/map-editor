@@ -23,6 +23,7 @@ export class Sprite {
   private _width: number
   private _height: number
   private _paintable: SpritePaintable | null = null
+  private _index: number = 0
 
   /**
    * Create a new Sprite
@@ -31,6 +32,7 @@ export class Sprite {
    * @param y Y position of the sprite in the texture
    * @param width Width of the sprite
    * @param height Height of the sprite
+   * @param index The index of this sprite in the sprite sheet
    */
   constructor(
     texture: Gdk.Texture,
@@ -38,12 +40,14 @@ export class Sprite {
     y: number,
     width: number,
     height: number,
+    index: number = 0,
   ) {
     this._sourceTexture = texture
     this._x = x
     this._y = y
     this._width = width
     this._height = height
+    this._index = index
   }
 
   /**
@@ -84,16 +88,21 @@ export class Sprite {
     return this._height
   }
 
+  get index(): number {
+    return this._index
+  }
+
   /**
    * Create from Gdk.Texture (full texture sprite)
    */
-  static fromTexture(texture: Gdk.Texture): Sprite {
+  static fromTexture(texture: Gdk.Texture, index: number = 0): Sprite {
     return new Sprite(
       texture,
       0, // x
       0, // y
       texture.get_width(), // width
       texture.get_height(), // height
+      index,
     )
   }
 
@@ -106,8 +115,9 @@ export class Sprite {
     y: number,
     width: number,
     height: number,
+    index: number = 0,
   ): Sprite {
-    return new Sprite(texture, x, y, width, height)
+    return new Sprite(texture, x, y, width, height, index)
   }
 
   /**

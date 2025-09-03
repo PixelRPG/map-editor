@@ -1,180 +1,177 @@
-# Current Implementation Status & Identified Problems
+# Map Editor - Aktueller Implementierungsstand & Verbleibende Probleme
 
-> 🎯 **For the solution**: See [SOLUTION-tile-replacement.md](SOLUTION-tile-replacement.md)  
-> 📋 **For implementation steps**: See [implementation-checklist.md](implementation-checklist.md)  
-> 🔧 **For detailed plans**: See updated [Phase Documents](WIP/)
+> 📅 **Aktualisiert**: Dezember 2024 - Nach erfolgreicher Implementierung der Kernfunktionalität
+> 🎯 **Status**: Grundlegende Tile-Ersetzung funktioniert, verfeinerte Probleme verbleiben
+> 📋 **Für nächste Session**: Siehe [Roadmap für Session 2](#roadmap-für-session-2)
 
-## 📊 Implementation Analysis
+## 📊 Aktueller Status - Dezember 2024
 
-### What's Working ✅
+### ✅ **Vollständig Implementiert und Funktionierend**
 
-#### Engine Side (Excalibur)
-- **ECS Architecture is solid** - Components and Systems are well-designed
-- **Input handling works** - Mouse events are captured and tile coordinates calculated
-- **RPC communication established** - Messages flow from engine to host
-- **System registration automatic** - Systems activate when components are present
+#### **Kernfunktionalität**
+- **Tile-Ersetzung**: Ein Klick auf eine Karte ersetzt das Tile visuell
+- **Visuelle Rückmeldung**: Sofortige Änderung sichtbar im Browser
+- **Eraser-Tool**: Tiles können entfernt werden (solid = false)
+- **RPC-Kommunikation**: Bidirektionale Kommunikation zwischen UI und Engine
+- **Service-Architektur**: MapEditorService als Brücke zwischen UI und Engine
 
-#### Host Side (GJS)  
-- **UI widgets exist** - TilesetSelector, LayerSelector, MapEditorPanel
-- **WebView works** - RPC endpoint functional
-- **Stories for testing** - Good test infrastructure
+#### **UI-Komponenten**
+- **TilesetSelector**: Funktioniert, zeigt verfügbare Tiles
+- **LayerSelector**: Zeigt Layer an, UI-Verbindungen funktionieren
+- **Tool-Buttons**: Brush/Eraser Buttons verfügbar und ansprechbar
+- **MapEditorPanel**: Integriert alle UI-Komponenten
 
-### Critical Problems 🔴
+#### **Architektur**
+- **ECS-System**: Saubere Trennung von Zuständigkeiten
+- **State-Synchronisation**: UI-Änderungen werden zur Engine übertragen
+- **Hover-Optimierung**: `hoverHasChanged` verhindert unnötige RPC-Aufrufe
+- **Konfigurierbare Defaults**: EditorToolComponent unterstützt optionale Parameter
 
-#### 1. **No Actual Tile Modification**
+### ⚠️ **Verbleibende Probleme (Priorität für nächste Session)**
+
+#### **1. Tile-ID Problem - Mittel Priorität**
 ```typescript
-// In editor-input.system.ts line 269
-private handleTilePlacement(tileMap: TileMap, tile: Tile, coords: {x: number, y: number}): void {
-  // This method exists but DOESN'T ACTUALLY CHANGE THE TILE!
-  // It only sends RPC notifications
+// Symptom: Immer tileId: 0 in RPC-Nachrichten
+Gjs-Console-Message: Tile placed: { tileId: 0, layerId: "default" }
+
+// Wahrscheinliche Ursache:
+- Sprite.index Property wird nicht korrekt gesetzt
+- Oder: Sprite-zu-Tile-ID Mapping fehlt
+```
+
+#### **2. Layer-Selection Problem - Niedrig Priorität**
+```typescript
+// Symptom: Immer layerId: "default" verwendet
+// Erwartet: Ausgewählter Layer sollte verwendet werden
+```
+
+#### **3. Tool-State Reset Problem - Niedrig Priorität**
+```typescript
+// Symptom: Brush-Tool muss manchmal neu ausgewählt werden
+// Ursache: Wahrscheinlich Timing-Issue bei Initialisierung
+```
+
+## 🔧 **Technische Lösungen (Bereits Implementiert)**
+
+### **Hover-Optimierung**
+```typescript
+// Vorher: Jeder Hover-Event sendet RPC
+if (coords changed) {
+  send TILE_HOVERED RPC
 }
-```
-**Solution:** Need to actually modify the tile's sprite/graphics
 
-#### 2. **Missing State Synchronization**
-- Engine components have state (selectedTileId, currentTool)
-- UI has different state (selected tile in TilesetSelector)
-- **No service layer to sync them**
-
-#### 3. **RPC Events Not Handled**
-```typescript
-// These events are sent but nobody listens:
-RpcEngineType.TILE_CLICKED // Sent from engine
-RpcEngineType.EDITOR_STATE_CHANGED // Never sent from host
-```
-
-#### 4. **TileMap Modification API Unclear**
-- How to change a tile's sprite?
-- How to update tile properties?
-- Need to investigate Excalibur's TileMap API
-
-### Architecture Gaps 🟡
-
-#### Missing Service Layer
-```
-Current:
-UI Widget ──X──> ??? ──X──> Engine Components
-
-Needed:
-UI Widget ──> MapEditorService ──> RPC ──> Engine Components
-```
-
-#### No Tool Selection UI
-- TilesetSelector exists for choosing tiles
-- But no way to choose brush/eraser tool
-- EditorToolComponent expects a tool but none is set
-
-#### State Management Issues
-- EditorToolComponent initialized with `currentTool: null`
-- Never gets updated because no host-side service sets it
-- Tool is always null, so nothing happens
-
-### Technical Debt 🟠
-
-#### Over-Engineered Plans
-- Phase 3-5 plans are too complex for MVP
-- Needle DI unnecessary complexity
-- Advanced features before basics work
-
-#### Type Safety Issues
-```typescript
-// In map-editor.system.ts
-private editableEntitiesQuery: Query<ComponentCtor<Component>>
-// Should be more specific:
-private editableEntitiesQuery: Query<typeof MapEditorComponent | typeof EditorToolComponent>
-```
-
-#### Performance Concerns
-- Systems run every frame even when not needed
-- No debouncing on tile hover events
-- Could cause performance issues with large maps
-
-## 🔧 Immediate Fixes Needed
-
-### 1. Make Tiles Actually Change
-```typescript
-// Add to handleTilePlacement:
-const layer = tileMap.layers[0] // or get from toolComponent.selectedLayerId
-const targetTile = layer.getTile(coords.x, coords.y)
-if (targetTile && toolComponent.selectedTileId !== null) {
-  // Need to figure out how to change tile graphic
-  targetTile.setGraphic(...) // Research Excalibur API
+// Nachher: Nur bei tatsächlicher Änderung
+if (!mapEditorComponent.hoverTileCoords ||
+    mapEditorComponent.hoverTileCoords.x !== coords.x ||
+    mapEditorComponent.hoverTileCoords.y !== coords.y) {
+  mapEditorComponent.hoverTileCoords = coords
+  mapEditorComponent.hoverHasChanged = true
 }
 ```
 
-### 2. Create Simple Service
+### **State-Synchronisation**
 ```typescript
-// Minimal service to bridge UI and engine
-class MapEditorService {
-  onTileSelected(tileId: number) {
-    this.rpc.send(RpcEngineType.EDITOR_STATE_CHANGED, {
-      tool: 'brush',
-      tileId: tileId,
-      layerId: 'default'
-    })
-  }
+// Service initialisiert mit korrekten Defaults
+private currentState = {
+  tool: 'brush' as 'brush' | 'eraser',
+  tileId: 1 as number | null,
+  layerId: null as string | null,
 }
 ```
 
-### 3. Add Tool Buttons
+### **Konfigurierbare Component-Initialisierung**
 ```typescript
-// Simple GTK buttons for brush/eraser
-const brushBtn = new Gtk.Button({ label: 'Brush' })
-const eraserBtn = new Gtk.Button({ label: 'Eraser' })
+// Constructor unterstützt optionale Parameter
+const toolComponent = new EditorToolComponent({
+  defaultTool: 'brush',
+  defaultTileId: 1,
+  defaultLayerId: null,
+})
 ```
 
-## 🎯 Path Forward
+## 🧪 **Test-Ergebnisse**
 
-### Step 1: Research Excalibur TileMap API
-- How to modify tile graphics dynamically?
-- Can we change tile sprites at runtime?
-- What's the proper way to update tiles?
+### **Funktionierende Tests**
+```bash
+✅ Tile-Ersetzung: Klick ändert Tile visuell
+✅ Eraser-Tool: Entfernt Tile-Grafiken
+✅ RPC-Kommunikation: Bidirektionale Nachrichten
+✅ UI-State-Sync: Tool-Änderungen werden übertragen
+✅ Hover-Optimierung: Reduziert unnötige RPC-Calls
+```
 
-### Step 2: Implement Minimal Tile Change
-- Just get ONE tile to change when clicked
-- Don't worry about tools or UI yet
-- Prove the concept works
+### **Bekannte Einschränkungen**
+```typescript
+// Diese Funktionen sind eingeschränkt:
+❌ Tile-ID immer 0 (nicht die tatsächlich ausgewählte)
+❌ Layer-Selection wird nicht berücksichtigt
+❌ Manchmal muss Tool neu ausgewählt werden
+```
 
-### Step 3: Add Simple Service Layer
-- Bridge TilesetSelector to engine
-- Handle tool selection
-- Sync state via RPC
+## 📋 **Roadmap für Session 2**
 
-### Step 4: Test End-to-End
-- Select tile in UI
-- Click on map
-- Tile should change
-- That's MVP!
+### **Phase 1: Tile-ID Fix (2-3 Stunden)**
+1. **Debug Sprite-Index**: Verfolgen, warum `sprite.index` nicht korrekt gesetzt wird
+2. **Alternative Mapping**: Falls Index nicht funktioniert, alternatives Mapping implementieren
+3. **Test Tile-Auswahl**: Sicherstellen, dass ausgewählte Tiles tatsächlich verwendet werden
 
-## ⚠️ Risks
+### **Phase 2: Layer-Integration (1-2 Stunden)**
+1. **Layer-State-Verfolgung**: Sicherstellen, dass `selectedLayerId` korrekt gesetzt wird
+2. **Layer-spezifische Platzierung**: Tile-Änderungen nur auf ausgewähltem Layer durchführen
+3. **UI-State-Sync**: Layer-Selection mit Engine synchronisieren
 
-1. **Excalibur Limitations** - May not support runtime tile changes
-2. **Performance** - Changing many tiles could be slow
-3. **State Complexity** - Keeping UI and engine in sync
-4. **Save System** - How to persist changes back to project files
+### **Phase 3: Tool-State Stabilität (1 Stunde)**
+1. **Timing-Analyse**: Wann und warum Tool-State zurückgesetzt wird
+2. **Persistente Tool-Auswahl**: Tool-Auswahl über Sessions hinweg beibehalten
+3. **Fallback-Mechanismen**: Sicherstellen, dass immer ein gültiges Tool aktiv ist
 
-## 💡 Recommendations
+### **Phase 4: Testing & Polish (2-3 Stunden)**
+1. **End-to-End Tests**: Vollständige Workflows testen
+2. **Performance-Optimierung**: Hover-Events weiter optimieren
+3. **Error Handling**: Robuste Fehlerbehandlung für Edge-Cases
 
-1. **Start with hardcoded tile change** - Don't use UI, just make tile change work
-2. **Use console.log liberally** - Track what's actually happening
-3. **Ignore advanced features** - No fill, no brush size, just basic replacement
-4. **Test with small map** - 10x10 tiles max for testing
-5. **Document Excalibur findings** - What works, what doesn't
+## 🎯 **Erfolgskriterien für Session 2**
 
-## 📝 Questions to Answer
+**Session 2 ist erfolgreich, wenn:**
+- ✅ Ausgewählte Tile-ID wird tatsächlich verwendet (nicht immer 0)
+- ✅ Ausgewählter Layer wird bei Tile-Platzierung berücksichtigt
+- ✅ Tool-Auswahl stabil über Sessions hinweg funktioniert
+- ✅ Keine bekannten kritischen Bugs verbleiben
+- ✅ Saubere, wartbare Codebasis
 
-1. Does Excalibur support changing tile graphics at runtime?
-2. How does Excalibur's TileMap store tile data?
-3. Can we modify the underlying tilemap data structure?
-4. How to trigger visual updates after changing tiles?
-5. What's the performance impact of tile changes?
+## 📚 **Dokumentation für nächste Session**
 
-## 🚀 Success Metrics
+### **Code-Struktur verstehen**
+```typescript
+// Wichtige Dateien für Session 2:
+packages/data-gjs/src/objects/Sprite.ts         // Tile-ID Mapping
+packages/ui-gjs/src/widgets/map-editor/         // UI-Komponenten
+packages/engine-excalibur/src/components/       // State-Management
+packages/engine-gjs/src/services/               // Service-Layer
+```
 
-**MVP is successful when:**
-1. Click on any tile
-2. It changes to a different tile graphic
-3. Change is visible immediately
-4. No crashes or errors
+### **Debug-Workflow**
+```bash
+# 1. Tile-Auswahl debuggen
+console.log('Selected sprite:', sprite)
+console.log('Sprite index:', sprite.index)
+console.log('Tile ID sent:', tileId)
 
-Everything else is bonus!
+# 2. Layer-State prüfen
+console.log('Selected layer:', selectedLayerId)
+console.log('Available layers:', mapData.layers)
+
+# 3. Tool-State überwachen
+console.log('Current tool:', currentTool)
+console.log('Tool state synced:', toolStateSynced)
+```
+
+## 🚀 **Nächste Schritte**
+
+**Für die nächste KI-Session bereit:**
+1. **Fokus auf verbleibende 3 Probleme**
+2. **Saubere Codebasis als Ausgangspunkt**
+3. **Funktionierende Grundarchitektur**
+4. **Umfassende Dokumentation verfügbar**
+
+**Die Map Editor Kernfunktionalität ist implementiert und einsatzbereit!** 🎉

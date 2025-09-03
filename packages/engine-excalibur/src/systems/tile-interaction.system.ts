@@ -58,8 +58,10 @@ export class TileInteractionSystem extends System {
       if (!editorComponent?.isEditable) continue
 
       // Process hover interactions
-      if (editorComponent.hoverTileCoords) {
+      if (editorComponent.hoverHasChanged) {
         this.handleTileHover(entity, editorComponent.hoverTileCoords)
+        // Reset the flag after processing
+        editorComponent.hoverHasChanged = false
       }
 
       // Process selection interactions
@@ -119,9 +121,9 @@ export class TileInteractionSystem extends System {
    */
   private handleTileHover(
     entity: Entity,
-    coords: { x: number; y: number },
+    coords: { x: number; y: number } | null,
   ): void {
-    // Send TILE_HOVERED RPC event
+    // Send TILE_HOVERED RPC event (coords can be null to indicate no hover)
     this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
       coords,
       tileMapId: String(entity.id || 'unknown'),
