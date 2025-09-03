@@ -123,12 +123,12 @@ export class WebView extends WebKit.WebView {
 
     this.registerURIScheme(INTERNAL_PROTOCOL, this.onInternalRequest)
 
+    this._rpc = this.initRpcServer()
+
     console.log('[WebView] Initializing WebView')
 
     this.connect('realize', () => {
       console.log('[WebView] WebView realized')
-      this._rpc = this.initRpcServer()
-
       this.initInputController()
       this.initPageLoadListener()
 
