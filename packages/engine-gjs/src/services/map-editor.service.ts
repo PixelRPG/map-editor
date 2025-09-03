@@ -1,13 +1,23 @@
 import { RpcEndpoint } from '@pixelrpg/message-channel-gjs'
-import { RpcEngineType, RpcEngineParamMap } from '@pixelrpg/engine-core'
+import {
+  RpcEngineType,
+  RpcEngineParamMap,
+  EngineRpcRegistry,
+} from '@pixelrpg/engine-core'
 import { WebView } from '../widgets/webview.ts'
 
 /**
  * Service that bridges the GJS UI with the engine state for map editing
  */
 export class MapEditorService {
-  private rpc?: RpcEndpoint
-  private webView?: WebView
+  private get rpc(): RpcEndpoint<EngineRpcRegistry> {
+    if (!this._webView) {
+      throw new Error('WebView not set')
+    }
+    return this._webView.rpc
+  }
+
+  private _webView?: WebView
 
   /**
    * Current editor state
@@ -22,23 +32,18 @@ export class MapEditorService {
    * Create a new MapEditorService
    * @param webView The WebView instance to communicate with the engine
    */
-  constructor(webView?: WebView) {
+  constructor(webView: WebView) {
     this.webView = webView
-    this.setupRpcHandlers()
   }
 
   /**
    * Set the WebView instance
    * @param webView The WebView instance
    */
-  setWebView(webView: WebView): void {
-    this.webView = webView
-
-    // Initialize RPC endpoint with the WebView
-    if (!this.rpc) {
-      this.rpc = RpcEndpoint.getInstance('pixelrpg', webView)
-      this.setupRpcHandlers()
-    }
+  set webView(webView: WebView) {
+    this.removeRpcHandlers()
+    this._webView = webView
+    this.setupRpcHandlers()
   }
 
   /**
@@ -69,6 +74,25 @@ export class MapEditorService {
       console.log('[MapEditorService] Tile placed:', params)
       return { success: true }
     })
+  }
+
+  private removeRpcHandlers(): void {
+    // Check _webView directly to avoid calling the getter before it's set
+    if (!this._webView) {
+      return
+    }
+
+    try {
+      this.rpc.unregisterHandler(RpcEngineType.TILE_CLICKED)
+      this.rpc.unregisterHandler(RpcEngineType.TILE_HOVERED)
+      this.rpc.unregisterHandler(RpcEngineType.TILE_PLACED)
+    } catch (error) {
+      // Ignore errors during cleanup - the handlers might not be registered
+      console.debug(
+        '[MapEditorService] Error during RPC handler cleanup:',
+        error,
+      )
+    }
   }
 
   /**
