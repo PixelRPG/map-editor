@@ -25,6 +25,40 @@ template $MapEditorPanel: Adw.Bin {
 
         child: $LayerSelector layerSelector {};
       }
+
+      Adw.ViewStackPage {
+        name: "pageTools";
+        title: _("Tools");
+        icon-name: "tools-symbolic";
+        use-underline: true;
+
+        child: Gtk.Box toolBox {
+          orientation: vertical;
+          spacing: 12;
+          margin-top: 12;
+          margin-bottom: 12;
+          margin-start: 12;
+          margin-end: 12;
+
+          Gtk.Label {
+            label: _("Drawing Tools");
+            xalign: 0;
+            css-classes: ["heading"];
+          }
+
+          Gtk.ToggleButton brushButton {
+            label: _("🖌️ Brush");
+            active: true;
+            halign: start;
+            margin-bottom: 6;
+          }
+
+          Gtk.ToggleButton eraserButton {
+            label: _("🧹 Eraser");
+            halign: start;
+          }
+        };
+      }
     }
     
     Adw.ViewSwitcherBar viewSwitcherBar {

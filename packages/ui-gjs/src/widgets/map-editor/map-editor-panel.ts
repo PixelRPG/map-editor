@@ -15,6 +15,11 @@ export class MapEditorPanel extends Adw.Bin {
   declare _layerSelector: LayerSelector
   declare _stack: Adw.ViewStack
   declare _viewSwitcherBar: Adw.ViewSwitcherBar
+  declare _brushButton: Gtk.ToggleButton
+  declare _eraserButton: Gtk.ToggleButton
+
+  // Signal management
+  private _signalHandlers: number[] = []
 
   static {
     GObject.registerClass(
@@ -26,7 +31,17 @@ export class MapEditorPanel extends Adw.Bin {
           'layerSelector',
           'stack',
           'viewSwitcherBar',
+          'brushButton',
+          'eraserButton',
         ],
+        Signals: {
+          'tile-selected': {
+            param_types: [GObject.TYPE_INT], // tileId
+          },
+          'tool-changed': {
+            param_types: [GObject.TYPE_STRING], // tool ('brush' | 'eraser')
+          },
+        },
       },
       this,
     )
@@ -58,6 +73,45 @@ export class MapEditorPanel extends Adw.Bin {
     // Create a simple layers widget from the map data
     const layersWidget = this._createLayersWidget(mapData)
     this.setLayers(layersWidget)
+  }
+
+  /**
+   * Handle sprite selection from tileset selector
+   * Convert sprite selection to tile ID and emit tile-selected signal
+   */
+  private _onSpriteSelected(
+    spriteSheetWidget: any,
+    sprite: any,
+    tilesetIndex: number,
+  ): void {
+    // Extract tile ID from sprite (assuming sprites are indexed sequentially)
+    const tileId = sprite ? sprite.index || 0 : 0
+    console.log(
+      '[MapEditorPanel] Sprite selected:',
+      tileId,
+      'from tileset',
+      tilesetIndex,
+    )
+    this.emit('tile-selected', tileId)
+  }
+
+  /**
+   * Handle tool button toggles
+   */
+  private _onBrushToggled(button: Gtk.ToggleButton): void {
+    if (button.active) {
+      this._eraserButton.active = false
+      console.log('[MapEditorPanel] Brush tool selected')
+      this.emit('tool-changed', 'brush')
+    }
+  }
+
+  private _onEraserToggled(button: Gtk.ToggleButton): void {
+    if (button.active) {
+      this._brushButton.active = false
+      console.log('[MapEditorPanel] Eraser tool selected')
+      this.emit('tool-changed', 'eraser')
+    }
   }
 
   /**
@@ -126,6 +180,60 @@ export class MapEditorPanel extends Adw.Bin {
    */
   get stack(): Adw.ViewStack {
     return this._stack
+  }
+
+  /**
+   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
+
+    if (this._signalHandlers.length === 0) {
+      // Connect tileset selector signal
+      const tilesetHandlerId = this._tilesetSelector.connect(
+        'sprite-selected',
+        this._onSpriteSelected.bind(this),
+      )
+      this._signalHandlers.push(tilesetHandlerId)
+
+      // Connect tool button signals
+      const brushHandlerId = this._brushButton.connect(
+        'toggled',
+        this._onBrushToggled.bind(this),
+      )
+      this._signalHandlers.push(brushHandlerId)
+
+      const eraserHandlerId = this._eraserButton.connect(
+        'toggled',
+        this._onEraserToggled.bind(this),
+      )
+      this._signalHandlers.push(eraserHandlerId)
+    }
+  }
+
+  /**
+   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
+   */
+  vfunc_unmap(): void {
+    if (this._signalHandlers.length > 0) {
+      // Disconnect all signal handlers
+      // Note: We need to disconnect from the correct widgets
+      // The first handler is for tileset selector
+      if (this._signalHandlers[0] > 0) {
+        this._tilesetSelector.disconnect(this._signalHandlers[0])
+      }
+      // The second handler is for brush button
+      if (this._signalHandlers[1] > 0) {
+        this._brushButton.disconnect(this._signalHandlers[1])
+      }
+      // The third handler is for eraser button
+      if (this._signalHandlers[2] > 0) {
+        this._eraserButton.disconnect(this._signalHandlers[2])
+      }
+      this._signalHandlers = []
+    }
+
+    super.vfunc_unmap()
   }
 }
 
