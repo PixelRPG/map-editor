@@ -64,36 +64,36 @@ Enable tile replacement with a single click in the map editor.
 - [x] Ensured all packages build without warnings
 
 ### Step 7: Problem Analysis & Research (~2 hours) ✅ COMPLETED
-**Status**: Systematische Analyse aller verbleibenden Probleme durchgeführt
+**Status**: Systematic analysis of all remaining problems completed
 
-**Gelöste Probleme:**
-- ✅ **Hover-Optimierung**: `hoverHasChanged` implementiert zur RPC-Reduzierung
-- ✅ **State-Synchronisation**: UI-Defaults mit Engine-Defaults abgeglichen
-- ✅ **Constructor-Optionen**: EditorToolComponent mit konfigurierbaren Defaults
-- ✅ **Event-Handler-Vereinheitlichung**: Einheitliche TILE_HOVERED-Behandlung
+**Solved problems:**
+- ✅ **Hover Optimization**: `hoverHasChanged` implemented to reduce RPC calls
+- ✅ **State Synchronization**: UI defaults matched with engine defaults
+- ✅ **Constructor Options**: EditorToolComponent with configurable defaults
+- ✅ **Event Handler Unification**: Unified TILE_HOVERED handling
 
-**Identifizierte verbleibende Probleme:**
-- ⚠️ **Tile-ID Mapping**: Sprite.index wird nicht korrekt verwendet
-- ⚠️ **Layer-State**: selectedLayerId wird nicht berücksichtigt
-- ⚠️ **Tool-State Timing**: Gelegentliche Reset-Probleme
+**Identified remaining problems:**
+- ⚠️ **Tile-ID Mapping**: Sprite.index is not used correctly
+- ⚠️ **Layer-State**: selectedLayerId is not considered
+- ⚠️ **Tool-State Timing**: Occasional reset problems
 
-### Step 8: Session 2 - Komplexe Probleme lösen (~13-18 hours) 🔄 NEXT SESSION
-**Fokus für nächste KI-Session: Grundlagenverständnis und systematische Lösung**
+### Step 8: Session 2 - Solve Complex Problems (~13-18 hours) 🔄 NEXT SESSION
+**Focus for next AI session: Fundamental understanding and systematic solution**
 
-**Neue Prioritäten (kritisch):**
-1. **Grundlagenverständnis** (2-3h): TileMap-Architektur vollständig verstehen
-2. **State-Synchronisation reparieren** (2-3h): UI→Engine Sync wiederherstellen
-3. **Eraser Tool reparieren** (1-2h): Löschfunktionalität wiederherstellen
-4. **Layer-System implementieren** (3-4h): Layer-spezifische Editierung
-5. **Multiple Tilesets Support** (2-3h): Tileset-Index Integration
-6. **Integration & Testing** (2-3h): Vollständige Validierung
+**New priorities (critical):**
+1. **Fundamental understanding** (2-3h): Fully understand TileMap architecture
+2. **Repair state synchronization** (2-3h): Restore UI→Engine sync
+3. **Repair eraser tool** (1-2h): Restore deletion functionality
+4. **Implement layer system** (3-4h): Layer-specific editing
+5. **Multiple Tilesets Support** (2-3h): Tileset index integration
+6. **Integration & Testing** (2-3h): Complete validation
 
-**Neue erwartete Ergebnisse:**
-- ✅ **Multiple Tilesets funktionieren**: Richtiges Tile aus richtigem Tileset
-- ✅ **Layer-System funktioniert**: Nur aktiver Layer wird modifiziert
-- ✅ **Eraser Tool funktioniert**: Tiles können entfernt werden
-- ✅ **State-Sync funktioniert**: UI-Änderungen erreichen Engine korrekt
-- ✅ **Tile-Grafik Mapping verstanden**: Wie Tiles zu visuellen Elementen werden
+**New expected results:**
+- ✅ **Multiple Tilesets work**: Correct tile from correct tileset
+- ✅ **Layer system works**: Only active layer gets modified
+- ✅ **Eraser tool works**: Tiles can be removed
+- ✅ **State sync works**: UI changes reach engine correctly
+- ✅ **Tile graphics mapping understood**: How tiles become visual elements
 
 ## 🧪 Testing Checklist
 
@@ -127,25 +127,25 @@ Enable tile replacement with a single click in the map editor.
 
 ### 🚧 Active Issues (Critical Priority for Step 8)
 
-1. **Multiple Tilesets Problem - KRITISCH**:
-   - **Symptom**: Tile aus zweitem Tileset ausgewählt → Tile aus erstem Tileset wird platziert
-   - **Cause**: Tileset-Index wird nicht bei Tile-Platzierung berücksichtigt
+1. **Multiple Tilesets Problem - CRITICAL**:
+   - **Symptom**: Tile from second tileset selected → Tile from first tileset gets placed
+   - **Cause**: Tileset index is not considered during tile placement
 
-2. **Layer-System Problem - KRITISCH**:
-   - **Symptom**: Alle Layer/Grafiken werden ersetzt statt nur der aktive Layer
-   - **Cause**: Unverständnis wie TileMap Layer funktionieren
+2. **Layer-System Problem - CRITICAL**:
+   - **Symptom**: All layers/graphics are replaced instead of only the active layer
+   - **Cause**: Lack of understanding how TileMap layers work
 
-3. **Eraser Tool Broken - HOCH**:
-   - **Symptom**: Eraser Tool funktioniert gar nicht mehr
-   - **Cause**: Wahrscheinlich durch Type-Änderungen oder State-Sync Probleme
+3. **Eraser Tool Broken - HIGH**:
+   - **Symptom**: Eraser Tool doesn't work anymore
+   - **Cause**: Probably due to type changes or state sync problems
 
 4. **State-Synchronization Broken - HOCH**:
-   - **Symptom**: UI sendet tileId: 34, aber Engine verwendet tileId: 32
-   - **Cause**: EditorToolComponent.selectedTileId wird nicht korrekt aktualisiert
+   - **Symptom**: UI sends tileId: 34, but Engine uses tileId: 32
+   - **Cause**: EditorToolComponent.selectedTileId is not updated correctly
 
-5. **Tile-Graphic Mapping Unknown - MITTEL**:
-   - **Symptom**: Wie werden Tiles zu visuellen Elementen auf der Map?
-   - **Cause**: Fehlendes Verständnis der TileMap-Architektur
+5. **Tile-Graphic Mapping Unknown - MEDIUM**:
+   - **Symptom**: How do tiles become visual elements on the map?
+   - **Cause**: Missing understanding of TileMap architecture
 
 ### 🔍 Research Strategy for Step 7
 
@@ -162,39 +162,39 @@ Enable tile replacement with a single click in the map editor.
 - Monitor RPC messages
 - Timing analysis for initialization
 
-## 📊 Erfolgskriterien - Session 1 ✅
+## 📊 Success Criteria - Session 1 ✅
 
-**Session 1 erfolgreich abgeschlossen:**
-- ✅ **Tile-Ersetzung funktioniert**: Klick ändert Tile visuell
-- ✅ **Sofortige Rückmeldung**: Änderungen sofort sichtbar
-- ✅ **Eraser-Tool**: Tiles können entfernt werden
-- ✅ **RPC-Infrastruktur**: Bidirektionale Kommunikation
-- ✅ **Service-Architektur**: UI-Engine-Brücke funktioniert
-- ✅ **Hover-Optimierung**: Reduziert unnötige RPC-Calls
-- ✅ **State-Synchronisation**: Grundlegende Sync implementiert
+**Session 1 successfully completed:**
+- ✅ **Tile Replacement works**: Click changes tile visually
+- ✅ **Immediate Feedback**: Changes visible immediately
+- ✅ **Eraser Tool**: Tiles can be removed
+- ✅ **RPC Infrastructure**: Bidirectional communication
+- ✅ **Service Architecture**: UI-Engine bridge works
+- ✅ **Hover Optimization**: Reduces unnecessary RPC calls
+- ✅ **State Synchronization**: Basic sync implemented
 
-**Verbleibende Aufgaben für Session 2:**
-- ⚠️ **Tile-ID Mapping**: Ausgewählte Tiles werden tatsächlich verwendet
-- ⚠️ **Layer-Integration**: Ausgewählter Layer wird berücksichtigt
-- ⚠️ **Tool-State Stabilität**: Keine Reset-Probleme mehr
+**Remaining tasks for Session 2:**
+- ⚠️ **Tile-ID Mapping**: Selected tiles are actually used
+- ⚠️ **Layer Integration**: Selected layer is considered
+- ⚠️ **Tool-State Stability**: No more reset problems
 
-## 📊 Aktueller Status Report - Dezember 2024
+## 📊 Current Status Report - December 2024
 
 ### ✅ **Major Achievements - Session 1**
-- **Funktionierende Tile-Ersetzung**: Visuelle Tile-Änderung mit einem Klick
-- **Eraser Tool**: Zuverlässiges Entfernen von Tiles
-- **RPC-Infrastruktur**: Vollständige bidirektionale Kommunikation
-- **Saubere Architektur**: Refaktorierte Layer-Selection mit klarer Trennung
-- **Build-Stabilität**: Alle Packages bauen ohne Fehler oder Warnungen
-- **Hover-Optimierung**: `hoverHasChanged` reduziert unnötige RPC-Calls
-- **State-Synchronisation**: UI-Defaults mit Engine-Defaults abgeglichen
+- **Working Tile Replacement**: Visual tile change with one click
+- **Eraser Tool**: Reliable tile removal
+- **RPC Infrastructure**: Complete bidirectional communication
+- **Clean Architecture**: Refactored layer selection with clear separation
+- **Build Stability**: All packages build without errors or warnings
+- **Hover Optimization**: `hoverHasChanged` reduces unnecessary RPC calls
+- **State Synchronization**: UI defaults matched with engine defaults
 
-### 🚀 **Nächste Priorität: Session 2 - Finale Fixes**
-**Warum wichtig**: Verbleibende 3 Probleme systematisch lösen
-**Zeitbedarf**: ~4-6 Stunden für alle Fixes
-**Erwartetes Ergebnis**: Vollständig funktionaler Map Editor
+### 🚀 **Next Priority: Session 2 - Final Fixes**
+**Why important**: Solve remaining 3 problems systematically
+**Time required**: ~4-6 hours for all fixes
+**Expected result**: Fully functional map editor
 
-### 🔄 **Technische Architektur**
+### 🔄 **Technical Architecture**
 ```
 GJS UI Layer          Service Layer          Engine Layer
 ├── TilesetSelector ──→ MapEditorService ──→ EditorInputSystem    ⚠️ Tile-ID Issue (Session 2)
@@ -225,16 +225,16 @@ GJS UI Layer          Service Layer          Engine Layer
 - ⚠️ Tool-State Management (Session 2 - Timing-Issues)
 
 ### **Success Metrics - Session 1 ✅**
-- ✅ Code kompiliert ohne Fehler oder Warnungen
-- ✅ Grundlegende Tile-Ersetzung funktioniert (visuelle Rückmeldung)
-- ✅ Service-Architektur implementiert und funktional
-- ✅ UI-Controls verbunden und responsiv
-- ✅ Saubere, refaktorierte Codebasis
-- ✅ Alle major Components integriert
-- ✅ Hover-Optimierung implementiert
-- ✅ State-Synchronisation grundlegend funktional
+- ✅ Code compiles without errors or warnings
+- ✅ Basic tile replacement works (visual feedback)
+- ✅ Service architecture implemented and functional
+- ✅ UI controls connected and responsive
+- ✅ Clean, refactored codebase
+- ✅ All major components integrated
+- ✅ Hover optimization implemented
+- ✅ State synchronization basically functional
 
 ---
 
-**Session 1 erfolgreich abgeschlossen!** 🎉
-**Für Session 2 bereit: Fokus auf verbleibende 3 Probleme**
+**Session 1 successfully completed!** 🎉
+**Ready for Session 2: Focus on remaining 3 problems**
