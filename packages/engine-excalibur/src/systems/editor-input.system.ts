@@ -28,6 +28,8 @@ import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 import { EngineRpcRegistry } from '@pixelrpg/engine-core'
 import { SpriteUtils } from '../utils/sprite-utils.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { MapResource } from '@pixelrpg/data-excalibur'
+import { MapScene } from '../scenes/map.scene.ts'
 
 /**
  * System to handle input for the map editor
@@ -323,7 +325,7 @@ export class EditorInputSystem extends System {
     }
 
     const { currentTool, selectedTileId } = toolComponent
-    const mapResource = this.getMapResource(tileMap)
+    const mapResource = (this.scene as MapScene).mapResource
     if (!mapResource) return
 
     const effectiveLayerId = this.getEffectiveLayerId(
@@ -338,6 +340,7 @@ export class EditorInputSystem extends System {
           tileMap,
           tile,
           coords,
+          effectiveLayerId,
           selectedTileId,
           mapResource,
           mapEditorComponent,
@@ -373,22 +376,11 @@ export class EditorInputSystem extends System {
   }
 
   /**
-   * Get MapResource from TileMap
-   */
-  private getMapResource(tileMap: TileMap): any {
-    const mapResource = (tileMap as any).mapResource
-    if (!mapResource) {
-      console.warn('[EditorInputSystem] No MapResource found on TileMap')
-    }
-    return mapResource
-  }
-
-  /**
    * Get effective layer ID for operations
    */
   private getEffectiveLayerId(
     toolComponent: EditorToolComponent,
-    mapResource: any,
+    mapResource: MapResource,
   ): string | null {
     const { selectedLayerId } = toolComponent
 
@@ -410,33 +402,27 @@ export class EditorInputSystem extends System {
     tileMap: TileMap,
     tile: Tile,
     coords: { x: number; y: number },
+    layerId: string,
     selectedTileId: number,
-    mapResource: any,
+    mapResource: MapResource,
     mapEditorComponent: MapEditorComponent,
   ): void {
-    const spriteInfo = SpriteUtils.findSpriteInfoForTileId(
+    // Use the new layer-specific method to set the sprite
+    SpriteUtils.setSpriteOnTileForLayer(
+      tileMap,
       mapResource,
+      tile,
+      layerId,
       selectedTileId,
     )
-    if (!spriteInfo) {
-      console.error(
-        `[EditorInputSystem] Could not find sprite info for tileId ${selectedTileId}`,
-      )
-      return
-    }
 
-    const spriteSetResource = mapResource.getSpriteSetResource(
-      spriteInfo.spriteSetId,
-    )
-    if (!spriteSetResource?.sprites[spriteInfo.spriteId]) {
-      console.error(
-        `[EditorInputSystem] Could not get sprite ${spriteInfo.spriteId} from sprite set ${spriteInfo.spriteSetId}`,
-      )
-      return
-    }
+    // Update tile solid state based on all layers
+    const allSprites = mapResource.getSpritesForTileAndLayer(tile)
+    tile.solid = allSprites.length > 0
 
-    const actualSprite = spriteSetResource.sprites[spriteInfo.spriteId]
-    tile.addGraphic(actualSprite.clone())
+    // Update tile data with the selected tile ID for this layer
+    tile.data.set('tileId', selectedTileId)
+
     mapEditorComponent.selectedTileCoords = coords
   }
 
@@ -449,19 +435,23 @@ export class EditorInputSystem extends System {
     coords: { x: number; y: number },
     layerId: string,
     selectedTileId: number | null,
-    mapResource: any,
+    mapResource: MapResource,
     mapEditorComponent: MapEditorComponent,
   ): void {
-    mapResource.clearSpritesForTileAndLayer(tile, layerId)
-    SpriteUtils.rebuildTileGraphics(tileMap, mapResource, tile)
-
-    // Update tile properties
-    const remainingSprites = mapResource.getSpritesForTileAndLayer(tile)
-    tile.solid = remainingSprites.length > 0
-    tile.data.set(
-      'tileId',
-      remainingSprites.length > 0 ? selectedTileId || 1 : 0,
+    // Use the new layer-specific method to remove sprites from this layer
+    SpriteUtils.removeSpritesFromTileForLayer(
+      tileMap,
+      mapResource,
+      tile,
+      layerId,
     )
+
+    // Update tile solid state based on all remaining layers
+    const allSprites = mapResource.getSpritesForTileAndLayer(tile)
+    tile.solid = allSprites.length > 0
+
+    // Clear tile data for this layer (set to 0)
+    tile.data.set('tileId', 0)
 
     mapEditorComponent.selectedTileCoords = coords
   }

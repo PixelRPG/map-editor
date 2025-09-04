@@ -10,7 +10,7 @@
         "clear": "rm -rf dist",
         "preview": "yarn clear && yarn build && vite preview --port 5000",
         "start": "yarn preview",
-        "build:barrels": "barrelsby --delete --directory src/systems src/components src/utils",
+        "build:barrels": "barrelsby --delete --directory src/systems src/components src/utils src/scenes",
         "build": "yarn build:barrels && vite build",
         "check": "tsc --noEmit"
     },
