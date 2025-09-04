@@ -1,6 +1,10 @@
 import { Sprite, Canvas } from 'excalibur'
 import { TileMap, Tile } from 'excalibur'
-import { EDITOR_CONSTANTS, getFallbackColor, areTileDimensionsValid } from './constants.ts'
+import {
+  EDITOR_CONSTANTS,
+  getFallbackColor,
+  areTileDimensionsValid,
+} from './constants.ts'
 
 /**
  * Utility class for sprite management and tile graphics operations
@@ -59,35 +63,65 @@ export class SpriteUtils {
         (ref: any) => ref && ref.id === spriteSetId,
       )
       if (!spriteSetRef) {
-        console.warn(
-          `[SpriteUtils] No sprite set ref found for ${spriteSetId}`,
-        )
+        console.warn(`[SpriteUtils] No sprite set ref found for ${spriteSetId}`)
         continue
       }
 
       if (typeof spriteSetRef.firstGid !== 'number') {
-        console.warn(`[SpriteUtils] Invalid firstGid for sprite set ${spriteSetId}`)
+        console.warn(
+          `[SpriteUtils] Invalid firstGid for sprite set ${spriteSetId}`,
+        )
         continue
       }
 
       const firstGid = spriteSetRef.firstGid
       if (!spriteSetResource || !spriteSetResource.sprites) {
-        console.warn(`[SpriteUtils] Invalid sprite set resource for ${spriteSetId}`)
+        console.warn(
+          `[SpriteUtils] Invalid sprite set resource for ${spriteSetId}`,
+        )
         continue
       }
 
-      const lastGid = firstGid + spriteSetResource.sprites.length - 1
+      // Calculate the number of sprites and last GID
+      let spriteCount = 0
+      if (Array.isArray(spriteSetResource.sprites)) {
+        // Excalibur format: sprites is an array
+        spriteCount = spriteSetResource.sprites.length
+      } else if (
+        spriteSetResource.sprites &&
+        typeof spriteSetResource.sprites === 'object'
+      ) {
+        // GJS format: sprites is a Record<number, Sprite>
+        const spriteIds = Object.keys(spriteSetResource.sprites).map((id) =>
+          parseInt(id),
+        )
+        if (spriteIds.length > 0) {
+          spriteCount = Math.max(...spriteIds) + 1 // Find the maximum sprite ID + 1
+        } else {
+          spriteCount = 0
+        }
+      }
+
+      const lastGid = firstGid + spriteCount - 1
 
       // Check if the global tile ID falls within this sprite set's range
       if (globalTileId >= firstGid && globalTileId <= lastGid) {
         const localSpriteId = globalTileId - firstGid
 
         // Additional validation: check if the sprite actually exists
-        if (
-          !spriteSetResource.sprites ||
-          !Array.isArray(spriteSetResource.sprites) ||
-          !spriteSetResource.sprites[localSpriteId]
+        let spriteExists = false
+        if (Array.isArray(spriteSetResource.sprites)) {
+          // Excalibur format
+          spriteExists = !!spriteSetResource.sprites[localSpriteId]
+        } else if (
+          spriteSetResource.sprites &&
+          typeof spriteSetResource.sprites === 'object'
         ) {
+          // GJS format
+          spriteExists = !!spriteSetResource.sprites[localSpriteId]
+        }
+
+        if (!spriteExists) {
           console.warn(
             `[SpriteUtils] Sprite ${localSpriteId} not found in sprite set ${spriteSetId}, even though tileId ${globalTileId} is in range`,
           )
@@ -135,7 +169,10 @@ export class SpriteUtils {
 
       // Get all sprite set resources
       const spriteSetResources = mapResource.getAllSpriteSetResources()
-      if (!spriteSetResources || typeof spriteSetResources[Symbol.iterator] !== 'function') {
+      if (
+        !spriteSetResources ||
+        typeof spriteSetResources[Symbol.iterator] !== 'function'
+      ) {
         console.warn('[SpriteUtils] Invalid sprite set resources')
         return null
       }
@@ -146,14 +183,22 @@ export class SpriteUtils {
           continue
         }
 
-        if (Array.isArray(spriteSetResource.sprites) && spriteSetResource.sprites[tileId]) {
-          return spriteSetResource.sprites[tileId]
+        // Support both array format (Excalibur) and record format (GJS)
+        let sprite = null
+        if (Array.isArray(spriteSetResource.sprites)) {
+          // Excalibur format: sprites is an array
+          sprite = spriteSetResource.sprites[tileId]
+        } else if (typeof spriteSetResource.sprites === 'object') {
+          // GJS format: sprites is a Record<number, Sprite>
+          sprite = spriteSetResource.sprites[tileId]
+        }
+
+        if (sprite) {
+          return sprite
         }
       }
 
-      console.warn(
-        `[SpriteUtils] Sprite ${tileId} not found in any sprite set`,
-      )
+      console.warn(`[SpriteUtils] Sprite ${tileId} not found in any sprite set`)
       return null
     } catch (error) {
       console.error('[SpriteUtils] Error getting sprite for tile:', error)
@@ -204,7 +249,9 @@ export class SpriteUtils {
 
       // Validate tile dimensions
       if (tileWidth <= 0 || tileHeight <= 0) {
-        console.warn(`[SpriteUtils] Invalid tile dimensions: ${tileWidth}x${tileHeight}`)
+        console.warn(
+          `[SpriteUtils] Invalid tile dimensions: ${tileWidth}x${tileHeight}`,
+        )
         return
       }
 
@@ -280,14 +327,18 @@ export class SpriteUtils {
 
       // Sort by z-index for proper layering
       const sortedSprites = allSprites.sort((a, b) => {
-        const aZ = (a && typeof a.zIndex === 'number') ? a.zIndex : 0
-        const bZ = (b && typeof b.zIndex === 'number') ? b.zIndex : 0
+        const aZ = a && typeof a.zIndex === 'number' ? a.zIndex : 0
+        const bZ = b && typeof b.zIndex === 'number' ? b.zIndex : 0
         return aZ - bZ
       })
 
       // Add graphics for each sprite
       for (const spriteInfo of sortedSprites) {
-        if (!spriteInfo || !spriteInfo.spriteSetId || typeof spriteInfo.spriteId !== 'number') {
+        if (
+          !spriteInfo ||
+          !spriteInfo.spriteSetId ||
+          typeof spriteInfo.spriteId !== 'number'
+        ) {
           console.warn('[SpriteUtils] Invalid sprite info:', spriteInfo)
           continue
         }
@@ -296,18 +347,26 @@ export class SpriteUtils {
           spriteInfo.spriteSetId,
         )
         if (!spriteSetResource) {
-          console.warn(`[SpriteUtils] Sprite set resource not found: ${spriteInfo.spriteSetId}`)
+          console.warn(
+            `[SpriteUtils] Sprite set resource not found: ${spriteInfo.spriteSetId}`,
+          )
           continue
         }
 
         let graphic: any = null
 
         // Try to get the sprite
-        if (spriteSetResource.sprites && spriteSetResource.sprites[spriteInfo.spriteId]) {
+        if (
+          spriteSetResource.sprites &&
+          spriteSetResource.sprites[spriteInfo.spriteId]
+        ) {
           try {
             graphic = spriteSetResource.sprites[spriteInfo.spriteId].clone()
           } catch (error) {
-            console.warn(`[SpriteUtils] Error cloning sprite ${spriteInfo.spriteId}:`, error)
+            console.warn(
+              `[SpriteUtils] Error cloning sprite ${spriteInfo.spriteId}:`,
+              error,
+            )
           }
         }
 
@@ -321,7 +380,9 @@ export class SpriteUtils {
 
           // Validate tile dimensions
           if (!areTileDimensionsValid(tileWidth, tileHeight)) {
-            console.warn(`[SpriteUtils] Invalid tile dimensions: ${tileWidth}x${tileHeight}`)
+            console.warn(
+              `[SpriteUtils] Invalid tile dimensions: ${tileWidth}x${tileHeight}`,
+            )
             continue
           }
 
@@ -338,7 +399,10 @@ export class SpriteUtils {
               },
             })
           } catch (error) {
-            console.warn('[SpriteUtils] Error creating fallback graphic:', error)
+            console.warn(
+              '[SpriteUtils] Error creating fallback graphic:',
+              error,
+            )
             continue
           }
         }
