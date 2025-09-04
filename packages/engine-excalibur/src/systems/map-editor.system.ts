@@ -11,8 +11,8 @@ import {
 } from 'excalibur'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 import { RpcEngineType, EngineRpcRegistry } from '@pixelrpg/engine-core'
-import { rpcEndpointFactory } from '../utils/rpc.ts'
-import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { rpcEndpointFactory } from '../lib/rpc.ts'
+import { EDITOR_CONSTANTS } from '../lib/constants.ts'
 
 /**
  * Interface for editor state change RPC parameters
@@ -64,10 +64,13 @@ export class MapEditorSystem extends System {
    * Cache for last sent coordinates to avoid sending duplicates
    * Key: entityId, Value: { hover: coords, selection: coords }
    */
-  private lastSentCoords: Map<string, {
-    hover?: { x: number; y: number }
-    selection?: { x: number; y: number }
-  }> = new Map()
+  private lastSentCoords: Map<
+    string,
+    {
+      hover?: { x: number; y: number }
+      selection?: { x: number; y: number }
+    }
+  > = new Map()
 
   constructor() {
     super()
@@ -242,8 +245,6 @@ export class MapEditorSystem extends System {
           )
           toolComponent.setSelectedLayer(layerId)
         }
-
-
       }
     }
   }

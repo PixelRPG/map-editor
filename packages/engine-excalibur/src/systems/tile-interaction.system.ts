@@ -1,7 +1,7 @@
 import { System, World, Scene, SystemType, Query, Entity } from 'excalibur'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 import { RpcEngineType } from '@pixelrpg/engine-core'
-import { rpcEndpointFactory } from '../utils/rpc.ts'
+import { rpcEndpointFactory } from '../lib/rpc.ts'
 
 /**
  * ECS system that handles tile-based interactions

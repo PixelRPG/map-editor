@@ -241,7 +241,7 @@ export class WebView extends WebKit.WebView {
       return
     }
 
-    console.log('[WebView] Mouse has left the WebView')
+    // console.log('[WebView] Mouse has left the WebView')
 
     // Send mouse leave event with no position data using notification (fire and forget)
     this._rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {
@@ -262,7 +262,7 @@ export class WebView extends WebKit.WebView {
       return
     }
 
-    console.log('[WebView] Mouse has entered the WebView')
+    // console.log('[WebView] Mouse has entered the WebView')
 
     // Send mouse enter event using notification (fire and forget)
     this._rpc.sendNotification(RpcEngineType.HANDLE_INPUT_EVENT, {

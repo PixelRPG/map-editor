@@ -23,33 +23,331 @@ import {
   isValidInputEvent,
 } from '@pixelrpg/engine-core'
 import { settings } from '../settings.ts'
-import { rpcEndpointFactory } from '../utils/rpc.ts'
+import { rpcEndpointFactory } from '../lib/rpc.ts'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 import { EngineRpcRegistry } from '@pixelrpg/engine-core'
-import { SpriteUtils } from '../utils/sprite-utils.ts'
-import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { LayerManager } from '../services/index.ts'
+import { EDITOR_CONSTANTS } from '../lib/constants.ts'
 import { MapResource } from '@pixelrpg/data-excalibur'
 import { MapScene } from '../scenes/map.scene.ts'
 
 /**
- * System to handle input for the map editor
- *
- * This system integrates with the existing TileMap infrastructure to provide
- * editor-specific input handling. It queries for TileMap entities with MapEditorComponent
- * and processes interactions using the existing TileMap coordinate transformation methods.
+ * Handles basic input events and coordinates with specialized handlers
  */
-export class EditorInputSystem extends System {
+export class InputCoordinator {
   private isDown = false
   private dragStartPos = { x: 0, y: 0 }
-
-  public systemType = SystemType.Update
-
-  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
   private engine?: Engine
+  private tileMapInteractor?: TileMapInteractor
 
   /**
-   * Reference to the scene for accessing entities
+   * Set the engine reference
    */
+  setEngine(engine: Engine): void {
+    this.engine = engine
+  }
+
+  /**
+   * Set the tile map interactor
+   */
+  setTileMapInteractor(interactor: TileMapInteractor): void {
+    this.tileMapInteractor = interactor
+  }
+
+  /**
+   * Handle pointer move events
+   */
+  onPointerMove(x: number, y: number): void {
+    if (this.isDown && this.engine) {
+      // Handle camera movement (drag)
+      const zoom = this.engine.currentScene.camera.zoom
+      const deltaX = (x - this.dragStartPos.x) / zoom
+      const deltaY = (y - this.dragStartPos.y) / zoom
+      this.engine.currentScene.camera.x -= deltaX
+      this.engine.currentScene.camera.y -= deltaY
+      this.dragStartPos = { x, y }
+    } else {
+      // Handle hover interactions with TileMaps
+      this.tileMapInteractor?.handleInteraction(x, y, 'move')
+    }
+  }
+
+  /**
+   * Handle pointer down events
+   */
+  onPointerDown(x: number, y: number): void {
+    this.isDown = true
+    this.dragStartPos = { x, y }
+
+    // Check if click was on an editor-enabled TileMap
+    this.tileMapInteractor?.handleInteraction(x, y, 'down')
+  }
+
+  /**
+   * Handle pointer up events
+   */
+  onPointerUp(): void {
+    this.isDown = false
+  }
+}
+
+/**
+ * Handles TileMap-specific interactions and editing operations
+ */
+export class TileMapInteractor {
+  private scene?: Scene
+  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
+
+  /**
+   * Set the scene reference
+   */
+  setScene(scene: Scene): void {
+    this.scene = scene
+  }
+
+  /**
+   * Handle interaction with TileMaps at screen coordinates
+   */
+  handleInteraction(x: number, y: number, type: 'move' | 'down' | 'up'): void {
+    if (!this.scene || !this.scene.engine) return
+
+    const worldPos = this.scene.engine.screen.screenToWorldCoordinates(
+      vec(x, y),
+    )
+
+    // Find TileMap entities with MapEditorComponent
+    const tileMapEntities = this.scene.world.entityManager.entities.filter(
+      (entity) => entity instanceof TileMap,
+    )
+
+    for (const tileMap of tileMapEntities as TileMap[]) {
+      const editorComponent = tileMap.get(MapEditorComponent)
+      const toolComponent = tileMap.get(EditorToolComponent)
+
+      if (!editorComponent?.isEditable) continue
+
+      const tileCoords = this.getTileCoordinates(tileMap, worldPos)
+      if (!tileCoords) continue
+
+      const tile = tileMap.getTile(tileCoords.x, tileCoords.y)
+      if (!tile) continue
+
+      // Handle the interaction based on type
+      this.handleTileInteraction(tileMap, tile, tileCoords, type, toolComponent)
+      break // Only handle the first matching TileMap
+    }
+  }
+
+  /**
+   * Get tile coordinates from world position
+   */
+  private getTileCoordinates(
+    tileMap: TileMap,
+    worldPos: { x: number; y: number },
+  ): { x: number; y: number } | null {
+    try {
+      // Convert world position to local position relative to tilemap
+      const localPos = {
+        x: worldPos.x - tileMap.pos.x,
+        y: worldPos.y - tileMap.pos.y,
+      }
+
+      const tileX = Math.floor(localPos.x / tileMap.tileWidth)
+      const tileY = Math.floor(localPos.y / tileMap.tileHeight)
+
+      // Check bounds
+      if (
+        tileX >= 0 &&
+        tileX < tileMap.columns &&
+        tileY >= 0 &&
+        tileY < tileMap.rows
+      ) {
+        return { x: tileX, y: tileY }
+      }
+      return null
+    } catch (error) {
+      console.warn('[TileMapInteractor] Error getting tile coordinates:', error)
+      return null
+    }
+  }
+
+  /**
+   * Handle tile interaction based on tool and interaction type
+   */
+  private handleTileInteraction(
+    tileMap: TileMap,
+    tile: Tile,
+    coords: { x: number; y: number },
+    type: 'move' | 'down' | 'up',
+    toolComponent?: EditorToolComponent,
+  ): void {
+    const tool = toolComponent?.currentTool || 'brush'
+    const tileId = toolComponent?.selectedTileId
+    const layerId = toolComponent?.selectedLayerId
+
+    if (type === 'move') {
+      this.handleTileHover(tileMap, tile, coords)
+    } else if (type === 'down' && tool && tileId !== null && layerId) {
+      this.handleTileClick(tileMap, tile, coords, tool, tileId, layerId)
+    }
+  }
+
+  /**
+   * Handle tile hover
+   */
+  private handleTileHover(
+    tileMap: TileMap,
+    tile: Tile,
+    coords: { x: number; y: number },
+  ): void {
+    const editorComponent = tileMap.get(MapEditorComponent)
+    if (!editorComponent) return
+
+    // Update hover state
+    editorComponent.hoverTileCoords = coords
+    editorComponent.hoverHasChanged = true
+
+    // Send hover event via RPC
+    this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
+      coords,
+      tileMapId: tileMap.id.toString(),
+    })
+
+    // Trigger callback if available
+    editorComponent.onTileHovered?.(tile, coords)
+  }
+
+  /**
+   * Handle tile click based on current tool
+   */
+  private handleTileClick(
+    tileMap: TileMap,
+    tile: Tile,
+    coords: { x: number; y: number },
+    tool: string,
+    tileId: number,
+    layerId: string,
+  ): void {
+    const editorComponent = tileMap.get(MapEditorComponent)
+    if (!editorComponent) return
+
+    // Update selected state
+    editorComponent.selectedTileCoords = coords
+
+    // Handle based on tool
+    if (tool === 'brush') {
+      this.applyBrushTool(tileMap, tile, tileId, layerId)
+    } else if (tool === 'eraser') {
+      this.applyEraserTool(tileMap, tile, layerId)
+    }
+
+    // Send click event via RPC
+    this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
+      coords,
+      tileMapId: tileMap.id.toString(),
+    })
+
+    // Trigger callback if available
+    editorComponent.onTileSelected?.(tile, coords)
+  }
+
+  /**
+   * Apply brush tool to tile
+   */
+  private applyBrushTool(
+    tileMap: TileMap,
+    tile: Tile,
+    tileId: number,
+    layerId: string,
+  ): void {
+    try {
+      // Get map resource from scene
+      const mapScene = this.scene as MapScene
+      if (!mapScene?.mapResource) return
+
+      // Add sprite to tile for the layer
+      LayerManager.addSpriteToTileForLayer(
+        tileMap,
+        mapScene.mapResource,
+        tile,
+        layerId,
+        tileId,
+      )
+
+      // Send tile placed event via RPC
+      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
+        coords: this.getTileCoordinatesFromTile(tileMap, tile)!,
+        tileId,
+        layerId,
+      })
+    } catch (error) {
+      console.error('[TileMapInteractor] Error applying brush tool:', error)
+    }
+  }
+
+  /**
+   * Apply eraser tool to tile
+   */
+  private applyEraserTool(tileMap: TileMap, tile: Tile, layerId: string): void {
+    try {
+      // Get map resource from scene
+      const mapScene = this.scene as MapScene
+      if (!mapScene?.mapResource) return
+
+      // Remove sprites from tile for the layer
+      LayerManager.removeSpritesFromTileForLayer(
+        tileMap,
+        mapScene.mapResource,
+        tile,
+        layerId,
+      )
+    } catch (error) {
+      console.error('[TileMapInteractor] Error applying eraser tool:', error)
+    }
+  }
+
+  /**
+   * Get tile coordinates from tile object
+   */
+  private getTileCoordinatesFromTile(
+    tileMap: TileMap,
+    tile: Tile,
+  ): { x: number; y: number } | null {
+    try {
+      for (let x = 0; x < tileMap.columns; x++) {
+        for (let y = 0; y < tileMap.rows; y++) {
+          if (tileMap.getTile(x, y) === tile) {
+            return { x, y }
+          }
+        }
+      }
+      return null
+    } catch (error) {
+      console.warn(
+        '[TileMapInteractor] Error getting coordinates from tile:',
+        error,
+      )
+      return null
+    }
+  }
+}
+
+/**
+ * System to handle input for the map editor
+ *
+ * This system coordinates input handling using specialized components:
+ * - InputCoordinator: Basic input event coordination
+ * - TileMapInteractor: TileMap-specific interactions
+ *
+ * It follows the single responsibility principle by delegating to focused classes.
+ */
+export class EditorInputSystem extends System {
+  public systemType = SystemType.Update
+
+  private inputCoordinator = new InputCoordinator()
+  private tileMapInteractor = new TileMapInteractor()
+  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
+  private engine?: Engine
   private scene?: Scene
 
   constructor() {
@@ -57,6 +355,7 @@ export class EditorInputSystem extends System {
     this.onPointerMove = this.onPointerMove.bind(this)
     this.onPointerDown = this.onPointerDown.bind(this)
     this.onPointerUp = this.onPointerUp.bind(this)
+    this.onWheel = this.onWheel.bind(this)
   }
 
   public update(delta: number) {
@@ -69,18 +368,7 @@ export class EditorInputSystem extends System {
    * @param y Y coordinate in screen space
    */
   protected onPointerMove(x: number, y: number) {
-    if (this.isDown && this.engine) {
-      // Handle camera movement (drag)
-      const zoom = this.engine.currentScene.camera.zoom
-      const deltaX = (x - this.dragStartPos.x) / zoom
-      const deltaY = (y - this.dragStartPos.y) / zoom
-      this.engine.currentScene.camera.x -= deltaX
-      this.engine.currentScene.camera.y -= deltaY
-      this.dragStartPos = { x, y }
-    } else {
-      // Handle hover interactions with TileMaps
-      this.handleTileMapInteraction(x, y, 'move')
-    }
+    this.inputCoordinator.onPointerMove(x, y)
   }
 
   /**
@@ -89,26 +377,20 @@ export class EditorInputSystem extends System {
    * @param y Y coordinate in screen space
    */
   protected onPointerDown(x: number, y: number) {
-    this.isDown = true
-    this.dragStartPos = { x, y }
-
-    // Check if click was on an editor-enabled TileMap
-    this.handleTileMapInteraction(x, y, 'down')
+    this.inputCoordinator.onPointerDown(x, y)
   }
 
   /**
    * Handle pointer up events
    */
   protected onPointerUp() {
-    this.isDown = false
+    this.inputCoordinator.onPointerUp()
   }
 
   /**
    * Handle wheel events for zooming
-   * @param deltaY Wheel delta Y
-   * @param position Mouse position
    */
-  protected onWheel(deltaY: number, position: { x: number; y: number }) {
+  protected onWheel(deltaY: number, position: { x: number; y: number }): void {
     if (!this.engine) return
 
     const direction = deltaY > 0 ? -1 : 1
@@ -126,6 +408,9 @@ export class EditorInputSystem extends System {
     this.engine.currentScene.camera.zoom = zoom
   }
 
+  /**
+   * Initialize the system with world and scene references
+   */
   public initialize(world: World, scene: Scene) {
     if (super.initialize) {
       super.initialize(world, scene)
@@ -133,6 +418,12 @@ export class EditorInputSystem extends System {
 
     this.engine = scene.engine
     this.scene = scene
+
+    // Set up coordinator and interactor
+    this.inputCoordinator.setEngine(this.engine)
+    this.tileMapInteractor.setScene(this.scene)
+    this.inputCoordinator.setTileMapInteractor(this.tileMapInteractor)
+
     const pointer = this.engine.input.pointers.primary
 
     pointer.on('down', (event) => {
@@ -155,9 +446,7 @@ export class EditorInputSystem extends System {
     } else {
       // Register handler for input events from GJS
       this.rpc.registerHandler(RpcEngineType.HANDLE_INPUT_EVENT, (params) => {
-        // Check if it's a valid input event
         if (isValidInputEvent(params)) {
-          // We can directly use the InputEvent as is, since it matches our type
           this.handleInputEvent(params)
           return { success: true }
         } else {
@@ -169,11 +458,9 @@ export class EditorInputSystem extends System {
 
     // Handle wheel events for zooming
     pointer.on('wheel', (wheelEvent) => {
-      // Extract position from wheelEvent
       const x = wheelEvent.x || 0
       const y = wheelEvent.y || 0
 
-      // Handle zooming
       this.onWheel(wheelEvent.deltaY, { x, y })
 
       // Send wheel event to GJS
@@ -189,284 +476,7 @@ export class EditorInputSystem extends System {
   }
 
   /**
-   * Handle TileMap interactions using existing TileMap infrastructure
-   * @param screenX X coordinate in screen space
-   * @param screenY Y coordinate in screen space
-   * @param interactionType Type of interaction ('down' for clicks, 'move' for hovers)
-   */
-  private handleTileMapInteraction(
-    screenX: number,
-    screenY: number,
-    interactionType: 'down' | 'move',
-  ): void {
-    if (!this.engine || !this.scene) return
-
-    const worldPos = this.engine.screen.screenToWorldCoordinates(
-      vec(screenX, screenY),
-    )
-    const tileMaps = this.getEditableTileMaps()
-
-    if (interactionType === 'down') {
-      this.handleTileClick(worldPos, tileMaps)
-    } else if (interactionType === 'move') {
-      this.handleTileHover(worldPos, tileMaps)
-    }
-  }
-
-  /**
-   * Get all editable TileMaps from the scene
-   */
-  private getEditableTileMaps(): TileMap[] {
-    return this.scene!.entities.filter(
-      (entity) => entity instanceof TileMap,
-    ).filter((tileMap) => {
-      const mapEditorComponent = tileMap.get(MapEditorComponent)
-      return mapEditorComponent?.isEditable
-    }) as TileMap[]
-  }
-
-  /**
-   * Handle tile click interactions
-   */
-  private handleTileClick(
-    worldPos: { x: number; y: number },
-    tileMaps: TileMap[],
-  ): void {
-    for (const tileMap of tileMaps) {
-      const tile = tileMap.getTileByPoint(vec(worldPos.x, worldPos.y))
-      if (tile) {
-        const coords = { x: tile.x, y: tile.y }
-
-        // Send TILE_CLICKED RPC event
-        this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
-          coords,
-          tileMapId: String(tileMap.id || 'unknown'),
-        })
-
-        // Handle tool-based tile placement
-        this.handleTilePlacement(tileMap, tile, coords)
-      }
-    }
-  }
-
-  /**
-   * Handle tile hover interactions
-   */
-  private handleTileHover(
-    worldPos: { x: number; y: number },
-    tileMaps: TileMap[],
-  ): void {
-    let foundHoveredTile = false
-
-    for (const tileMap of tileMaps) {
-      const tile = tileMap.getTileByPoint(vec(worldPos.x, worldPos.y))
-      if (tile) {
-        foundHoveredTile = true
-        const coords = { x: tile.x, y: tile.y }
-        this.updateHoverState(tileMap, coords)
-      }
-    }
-
-    // Clear hover state if no tile was found
-    if (!foundHoveredTile) {
-      this.clearAllHoverStates(tileMaps)
-    }
-  }
-
-  /**
-   * Update hover state for a specific TileMap
-   */
-  private updateHoverState(
-    tileMap: TileMap,
-    coords: { x: number; y: number },
-  ): void {
-    const mapEditorComponent = tileMap.get(MapEditorComponent)
-    if (!mapEditorComponent) return
-
-    // Only update if coordinates actually changed
-    if (
-      !mapEditorComponent.hoverTileCoords ||
-      mapEditorComponent.hoverTileCoords.x !== coords.x ||
-      mapEditorComponent.hoverTileCoords.y !== coords.y
-    ) {
-      mapEditorComponent.hoverTileCoords = coords
-      mapEditorComponent.hoverHasChanged = true
-    }
-  }
-
-  /**
-   * Clear hover state for all TileMaps
-   */
-  private clearAllHoverStates(tileMaps: TileMap[]): void {
-    for (const tileMap of tileMaps) {
-      const mapEditorComponent = tileMap.get(MapEditorComponent)
-      if (mapEditorComponent?.hoverTileCoords !== null) {
-        mapEditorComponent.clearHoverState()
-      }
-    }
-  }
-
-  /**
-   * Handle tile placement based on current tool selection
-   * @param tileMap The TileMap being edited
-   * @param tile The tile that was clicked
-   * @param coords The tile coordinates
-   */
-  private handleTilePlacement(
-    tileMap: TileMap,
-    tile: Tile,
-    coords: { x: number; y: number },
-  ): void {
-    const toolComponent = tileMap.get(EditorToolComponent)
-    const mapEditorComponent = tileMap.get(MapEditorComponent)
-
-    if (!this.isValidForTilePlacement(toolComponent, mapEditorComponent)) {
-      return
-    }
-
-    const { currentTool, selectedTileId } = toolComponent
-    const mapResource = (this.scene as MapScene).mapResource
-    if (!mapResource) return
-
-    const effectiveLayerId = this.getEffectiveLayerId(
-      toolComponent,
-      mapResource,
-    )
-    if (!effectiveLayerId) return
-
-    try {
-      if (currentTool === 'brush' && selectedTileId !== null) {
-        this.handleBrushTool(
-          tileMap,
-          tile,
-          coords,
-          effectiveLayerId,
-          selectedTileId,
-          mapResource,
-          mapEditorComponent,
-        )
-      } else if (currentTool === 'eraser') {
-        this.handleEraserTool(
-          tileMap,
-          tile,
-          coords,
-          effectiveLayerId,
-          selectedTileId,
-          mapResource,
-          mapEditorComponent,
-        )
-      }
-    } catch (error) {
-      console.error('[EditorInputSystem] Error handling tile placement:', error)
-    }
-  }
-
-  /**
-   * Validate components for tile placement
-   */
-  private isValidForTilePlacement(
-    toolComponent: EditorToolComponent | undefined,
-    mapEditorComponent: MapEditorComponent | undefined,
-  ): boolean {
-    return !!(
-      toolComponent &&
-      toolComponent.isReadyForEditing() &&
-      mapEditorComponent
-    )
-  }
-
-  /**
-   * Get effective layer ID for operations
-   */
-  private getEffectiveLayerId(
-    toolComponent: EditorToolComponent,
-    mapResource: MapResource,
-  ): string | null {
-    const { selectedLayerId } = toolComponent
-
-    if (selectedLayerId) {
-      return selectedLayerId
-    }
-
-    const firstLayerId = mapResource.getFirstLayerId()
-    if (!firstLayerId) {
-      console.warn('[EditorInputSystem] No layers available in map')
-    }
-    return firstLayerId
-  }
-
-  /**
-   * Handle brush tool operations
-   */
-  private handleBrushTool(
-    tileMap: TileMap,
-    tile: Tile,
-    coords: { x: number; y: number },
-    layerId: string,
-    selectedTileId: number,
-    mapResource: MapResource,
-    mapEditorComponent: MapEditorComponent,
-  ): void {
-    // Use the new layer-specific method to set the sprite
-    SpriteUtils.setSpriteOnTileForLayer(
-      tileMap,
-      mapResource,
-      tile,
-      layerId,
-      selectedTileId,
-    )
-
-    // Update tile solid state based on all layers
-    const allSprites = mapResource.getSpritesForTileAndLayer(tile)
-    tile.solid = allSprites.length > 0
-
-    // Update tile data with the selected tile ID for this layer
-    tile.data.set('tileId', selectedTileId)
-
-    mapEditorComponent.selectedTileCoords = coords
-  }
-
-  /**
-   * Handle eraser tool operations
-   */
-  private handleEraserTool(
-    tileMap: TileMap,
-    tile: Tile,
-    coords: { x: number; y: number },
-    layerId: string,
-    selectedTileId: number | null,
-    mapResource: MapResource,
-    mapEditorComponent: MapEditorComponent,
-  ): void {
-    // Use the new layer-specific method to remove sprites from this layer
-    SpriteUtils.removeSpritesFromTileForLayer(
-      tileMap,
-      mapResource,
-      tile,
-      layerId,
-    )
-
-    // Update tile solid state based on all remaining layers
-    const allSprites = mapResource.getSpritesForTileAndLayer(tile)
-    tile.solid = allSprites.length > 0
-
-    // Clear tile data for this layer (set to 0)
-    tile.data.set('tileId', 0)
-
-    mapEditorComponent.selectedTileCoords = coords
-  }
-
-  /**
-   * Clean up resources when this system is removed
-   */
-  public onRemove(): void {
-    // Cleanup the RPC client
-    this.rpc.destroy()
-  }
-
-  /**
    * Handle input events from GJS
-   * @param event The input event
    */
   handleInputEvent(event: InputEvent): void {
     if (!settings.isWebKitView || !this.engine) {
@@ -490,5 +500,12 @@ export class EditorInputSystem extends System {
       // Mouse enter event - no specific action needed
       console.warn('[EditorInputSystem] Unhandled input event from GJS:', event)
     }
+  }
+
+  /**
+   * Clean up resources when this system is removed
+   */
+  public onRemove(): void {
+    this.rpc.destroy()
   }
 }

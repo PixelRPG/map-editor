@@ -5,5 +5,4 @@
 export * from "./constants";
 export * from "./format";
 export * from "./rpc";
-export * from "./sprite-utils";
 export * from "./url";
