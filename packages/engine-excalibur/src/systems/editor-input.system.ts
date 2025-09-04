@@ -7,8 +7,6 @@ import {
   TileMap,
   vec,
   Tile,
-  Sprite,
-  Canvas,
 } from 'excalibur'
 import {
   InputEventType,
@@ -201,72 +199,107 @@ export class EditorInputSystem extends System {
   ): void {
     if (!this.engine || !this.scene) return
 
-    // Convert screen coordinates to world coordinates
     const worldPos = this.engine.screen.screenToWorldCoordinates(
       vec(screenX, screenY),
     )
+    const tileMaps = this.getEditableTileMaps()
 
-    // Get all entities from the scene and filter for TileMaps with MapEditorComponent
-    const tileMaps = this.scene.entities.filter(
+    if (interactionType === 'down') {
+      this.handleTileClick(worldPos, tileMaps)
+    } else if (interactionType === 'move') {
+      this.handleTileHover(worldPos, tileMaps)
+    }
+  }
+
+  /**
+   * Get all editable TileMaps from the scene
+   */
+  private getEditableTileMaps(): TileMap[] {
+    return this.scene!.entities.filter(
       (entity) => entity instanceof TileMap,
-    ) as TileMap[]
+    ).filter((tileMap) => {
+      const mapEditorComponent = tileMap.get(MapEditorComponent)
+      return mapEditorComponent?.isEditable
+    }) as TileMap[]
+  }
 
+  /**
+   * Handle tile click interactions
+   */
+  private handleTileClick(
+    worldPos: { x: number; y: number },
+    tileMaps: TileMap[],
+  ): void {
+    for (const tileMap of tileMaps) {
+      const tile = tileMap.getTileByPoint(vec(worldPos.x, worldPos.y))
+      if (tile) {
+        const coords = { x: tile.x, y: tile.y }
+
+        // Send TILE_CLICKED RPC event
+        this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
+          coords,
+          tileMapId: String(tileMap.id || 'unknown'),
+        })
+
+        // Handle tool-based tile placement
+        this.handleTilePlacement(tileMap, tile, coords)
+      }
+    }
+  }
+
+  /**
+   * Handle tile hover interactions
+   */
+  private handleTileHover(
+    worldPos: { x: number; y: number },
+    tileMaps: TileMap[],
+  ): void {
     let foundHoveredTile = false
 
     for (const tileMap of tileMaps) {
-      // Check if this TileMap has MapEditorComponent
-      const mapEditorComponent = tileMap.get(MapEditorComponent)
-
-      // Skip if no MapEditorComponent or editing is disabled
-      if (!mapEditorComponent?.isEditable) continue
-
-      // Use existing TileMap.getTileByPoint() to find the tile at the position
-      const tile = tileMap.getTileByPoint(worldPos)
-
+      const tile = tileMap.getTileByPoint(vec(worldPos.x, worldPos.y))
       if (tile) {
-        // Get coordinates from tile object
+        foundHoveredTile = true
         const coords = { x: tile.x, y: tile.y }
-
-        if (interactionType === 'down') {
-          // Send TILE_CLICKED RPC event
-          this.rpc.sendNotification(RpcEngineType.TILE_CLICKED, {
-            coords,
-            tileMapId: String(tileMap.id || 'unknown'),
-          })
-
-          // Handle tool-based tile placement if EditorToolComponent is present
-          this.handleTilePlacement(tileMap, tile, coords)
-        } else if (interactionType === 'move') {
-          foundHoveredTile = true
-
-          // Only update hover state if coordinates actually changed
-          if (
-            !mapEditorComponent.hoverTileCoords ||
-            mapEditorComponent.hoverTileCoords.x !== coords.x ||
-            mapEditorComponent.hoverTileCoords.y !== coords.y
-          ) {
-            mapEditorComponent.hoverTileCoords = coords
-            mapEditorComponent.hoverHasChanged = true
-          } else {
-            continue
-          }
-        }
+        this.updateHoverState(tileMap, coords)
       }
     }
 
-    // If we're moving and no tile was found, clear hover state
-    if (interactionType === 'move' && !foundHoveredTile) {
-      // Clear hover state for all TileMaps that currently have hover state
-      for (const tileMap of tileMaps) {
-        const mapEditorComponent = tileMap.get(MapEditorComponent)
-        if (
-          mapEditorComponent?.isEditable &&
-          mapEditorComponent.hoverTileCoords !== null
-        ) {
-          // Clear the hover state using the component method
-          // This will set hoverHasChanged = true and hoverTileCoords = null
-          mapEditorComponent.clearHoverState()
-        }
+    // Clear hover state if no tile was found
+    if (!foundHoveredTile) {
+      this.clearAllHoverStates(tileMaps)
+    }
+  }
+
+  /**
+   * Update hover state for a specific TileMap
+   */
+  private updateHoverState(
+    tileMap: TileMap,
+    coords: { x: number; y: number },
+  ): void {
+    const mapEditorComponent = tileMap.get(MapEditorComponent)
+    if (!mapEditorComponent) return
+
+    // Only update if coordinates actually changed
+    if (
+      !mapEditorComponent.hoverTileCoords ||
+      mapEditorComponent.hoverTileCoords.x !== coords.x ||
+      mapEditorComponent.hoverTileCoords.y !== coords.y
+    ) {
+      mapEditorComponent.hoverTileCoords = coords
+      mapEditorComponent.hoverHasChanged = true
+    }
+  }
+
+  /**
+   * Clear hover state for all TileMaps
+   */
+  private clearAllHoverStates(tileMaps: TileMap[]): void {
+    for (const tileMap of tileMaps) {
+      const mapEditorComponent = tileMap.get(MapEditorComponent)
+      if (mapEditorComponent?.hoverTileCoords !== null) {
+        mapEditorComponent.clearHoverState()
       }
     }
   }
@@ -285,99 +318,152 @@ export class EditorInputSystem extends System {
     const toolComponent = tileMap.get(EditorToolComponent)
     const mapEditorComponent = tileMap.get(MapEditorComponent)
 
-    if (
-      !toolComponent ||
-      !toolComponent.isReadyForEditing() ||
-      !mapEditorComponent
-    )
+    if (!this.isValidForTilePlacement(toolComponent, mapEditorComponent)) {
       return
+    }
 
-    const { currentTool, selectedTileId, selectedLayerId } = toolComponent
+    const { currentTool, selectedTileId } = toolComponent
+    const mapResource = this.getMapResource(tileMap)
+    if (!mapResource) return
 
-    // Get the MapResource to access layer-specific methods
+    const effectiveLayerId = this.getEffectiveLayerId(
+      toolComponent,
+      mapResource,
+    )
+    if (!effectiveLayerId) return
+
+    try {
+      if (currentTool === 'brush' && selectedTileId !== null) {
+        this.handleBrushTool(
+          tileMap,
+          tile,
+          coords,
+          selectedTileId,
+          mapResource,
+          mapEditorComponent,
+        )
+      } else if (currentTool === 'eraser') {
+        this.handleEraserTool(
+          tileMap,
+          tile,
+          coords,
+          effectiveLayerId,
+          selectedTileId,
+          mapResource,
+          mapEditorComponent,
+        )
+      }
+    } catch (error) {
+      console.error('[EditorInputSystem] Error handling tile placement:', error)
+    }
+  }
+
+  /**
+   * Validate components for tile placement
+   */
+  private isValidForTilePlacement(
+    toolComponent: EditorToolComponent | undefined,
+    mapEditorComponent: MapEditorComponent | undefined,
+  ): boolean {
+    return !!(
+      toolComponent &&
+      toolComponent.isReadyForEditing() &&
+      mapEditorComponent
+    )
+  }
+
+  /**
+   * Get MapResource from TileMap
+   */
+  private getMapResource(tileMap: TileMap): any {
     const mapResource = (tileMap as any).mapResource
     if (!mapResource) {
       console.warn('[EditorInputSystem] No MapResource found on TileMap')
+    }
+    return mapResource
+  }
+
+  /**
+   * Get effective layer ID for operations
+   */
+  private getEffectiveLayerId(
+    toolComponent: EditorToolComponent,
+    mapResource: any,
+  ): string | null {
+    const { selectedLayerId } = toolComponent
+
+    if (selectedLayerId) {
+      return selectedLayerId
+    }
+
+    const firstLayerId = mapResource.getFirstLayerId()
+    if (!firstLayerId) {
+      console.warn('[EditorInputSystem] No layers available in map')
+    }
+    return firstLayerId
+  }
+
+  /**
+   * Handle brush tool operations
+   */
+  private handleBrushTool(
+    tileMap: TileMap,
+    tile: Tile,
+    coords: { x: number; y: number },
+    selectedTileId: number,
+    mapResource: any,
+    mapEditorComponent: MapEditorComponent,
+  ): void {
+    const spriteInfo = SpriteUtils.findSpriteInfoForTileId(
+      mapResource,
+      selectedTileId,
+    )
+    if (!spriteInfo) {
+      console.error(
+        `[EditorInputSystem] Could not find sprite info for tileId ${selectedTileId}`,
+      )
       return
     }
 
-    // Use first available layer if not specified, or fall back to existing logic
-    let effectiveLayerId = selectedLayerId
-    if (!effectiveLayerId) {
-      effectiveLayerId = mapResource.getFirstLayerId()
-      if (!effectiveLayerId) {
-        console.warn('[EditorInputSystem] No layers available in map')
-        return
-      }
+    const spriteSetResource = mapResource.getSpriteSetResource(
+      spriteInfo.spriteSetId,
+    )
+    if (!spriteSetResource?.sprites[spriteInfo.spriteId]) {
+      console.error(
+        `[EditorInputSystem] Could not get sprite ${spriteInfo.spriteId} from sprite set ${spriteInfo.spriteSetId}`,
+      )
+      return
     }
 
-    if (currentTool === 'brush' && selectedTileId !== null) {
-      // Find the sprite set and sprite ID for the selected tile
-      const spriteInfo = SpriteUtils.findSpriteInfoForTileId(
-        mapResource,
-        selectedTileId,
-      )
-      if (!spriteInfo) {
-        console.warn(
-          `[EditorInputSystem] Could not find sprite info for tileId ${selectedTileId}, using fallback`,
-        )
-        SpriteUtils.applyFallbackTile(
-          tileMap,
-          tile,
-          selectedTileId,
-          effectiveLayerId,
-        )
-        return
-      }
+    const actualSprite = spriteSetResource.sprites[spriteInfo.spriteId]
+    tile.addGraphic(actualSprite.clone())
+    mapEditorComponent.selectedTileCoords = coords
+  }
 
-      // Get the actual sprite from the sprite set
-      const spriteSetResource = mapResource.getSpriteSetResource(
-        spriteInfo.spriteSetId,
-      )
-      if (
-        !spriteSetResource ||
-        !spriteSetResource.sprites[spriteInfo.spriteId]
-      ) {
-        console.warn(
-          `[EditorInputSystem] Could not get sprite ${spriteInfo.spriteId} from sprite set ${spriteInfo.spriteSetId}, using fallback`,
-        )
-        SpriteUtils.applyFallbackTile(
-          tileMap,
-          tile,
-          selectedTileId,
-          effectiveLayerId,
-        )
-        return
-      }
+  /**
+   * Handle eraser tool operations
+   */
+  private handleEraserTool(
+    tileMap: TileMap,
+    tile: Tile,
+    coords: { x: number; y: number },
+    layerId: string,
+    selectedTileId: number | null,
+    mapResource: any,
+    mapEditorComponent: MapEditorComponent,
+  ): void {
+    mapResource.clearSpritesForTileAndLayer(tile, layerId)
+    SpriteUtils.rebuildTileGraphics(tileMap, mapResource, tile)
 
-      const actualSprite = spriteSetResource.sprites[spriteInfo.spriteId]
+    // Update tile properties
+    const remainingSprites = mapResource.getSpritesForTileAndLayer(tile)
+    tile.solid = remainingSprites.length > 0
+    tile.data.set(
+      'tileId',
+      remainingSprites.length > 0 ? selectedTileId || 1 : 0,
+    )
 
-      // Clear existing graphics
-      tile.clearGraphics()
-
-      // Add the actual sprite
-      tile.addGraphic(actualSprite.clone())
-
-      // Set selectedTileCoords so TileInteractionSystem can handle the placement
-      mapEditorComponent.selectedTileCoords = coords
-    } else if (currentTool === 'eraser') {
-      // Clear sprites for the selected layer only
-      mapResource.clearSpritesForTileAndLayer(tile, effectiveLayerId)
-
-      // Rebuild tile graphics from remaining sprites
-      SpriteUtils.rebuildTileGraphics(tileMap, mapResource, tile)
-
-      // Update tile properties - only set solid to false if no sprites remain
-      const remainingSprites = mapResource.getSpritesForTileAndLayer(tile)
-      tile.solid = remainingSprites.length > 0
-      tile.data.set(
-        'tileId',
-        remainingSprites.length > 0 ? selectedTileId || 1 : 0,
-      )
-
-      // Set selectedTileCoords so TileInteractionSystem can handle the placement
-      mapEditorComponent.selectedTileCoords = coords
-    }
+    mapEditorComponent.selectedTileCoords = coords
   }
 
   /**
@@ -393,50 +479,25 @@ export class EditorInputSystem extends System {
    * @param event The input event
    */
   handleInputEvent(event: InputEvent): void {
-    // First use type guards to determine the event type for better type safety
-    if (isMouseMoveEvent(event)) {
-      // Handle mouse move with proper typing
-      // If in webkit view, manually update the pointer position
-      if (settings.isWebKitView && this.engine) {
-        // Simulate a pointer move in Excalibur
-        const pointer = this.engine.input.pointers.primary
+    if (!settings.isWebKitView || !this.engine) {
+      return
+    }
 
-        // Update the pointer position - Excalibur handles pointer positions differently
-        // Handle the movement in our system instead of trying to update internal state
-        this.onPointerMove(event.data.x, event.data.y)
-      }
+    // Route to appropriate handler based on event type
+    if (isMouseMoveEvent(event)) {
+      this.onPointerMove(event.data.x, event.data.y)
     } else if (isMouseDownEvent(event)) {
-      // Handle mouse down with proper typing
-      if (settings.isWebKitView && this.engine) {
-        this.onPointerDown(event.data.x, event.data.y)
-      }
+      this.onPointerDown(event.data.x, event.data.y)
     } else if (isMouseUpEvent(event)) {
-      // Handle mouse up with proper typing
-      if (settings.isWebKitView && this.engine) {
-        this.onPointerUp()
-      }
+      this.onPointerUp()
     } else if (isMouseLeaveEvent(event)) {
-      // Handle mouse leave with proper typing
-      if (settings.isWebKitView && this.engine) {
-        // Handle mouse leaving the canvas
-        this.onPointerUp() // treat as pointer up to cancel any dragging
-      }
-    } else if (isMouseEnterEvent(event)) {
-      // Handle mouse enter with proper typing
-      // Mouse enter event - no specific action needed
+      this.onPointerUp() // Treat as pointer up to cancel dragging
     } else if (isWheelEvent(event)) {
-      // Handle wheel with proper typing
-      if (settings.isWebKitView && this.engine) {
-        this.onWheel(event.data.deltaY, { x: event.data.x, y: event.data.y })
-      }
-    } else if (isKeyDownEvent(event)) {
-      // Handle key down with proper typing
+      this.onWheel(event.data.deltaY, { x: event.data.x, y: event.data.y })
+    } else if (isKeyDownEvent(event) || isKeyUpEvent(event)) {
       // Key events could be used for keyboard shortcuts in the future
-    } else if (isKeyUpEvent(event)) {
-      // Handle key up with proper typing
-      // Key events could be used for keyboard shortcuts in the future
-    } else {
-      // Fallback for unknown event types
+    } else if (!isMouseEnterEvent(event)) {
+      // Mouse enter event - no specific action needed
       console.warn('[EditorInputSystem] Unhandled input event from GJS:', event)
     }
   }

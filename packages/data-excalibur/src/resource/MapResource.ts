@@ -355,14 +355,8 @@ export class MapResource implements Loadable<TileMap> {
       throw new Error('Map resource not loaded')
     }
 
-    // Store reference to this MapResource on the TileMap for editor access
-    ;(this.tileMap as any).mapResource = this
-
     // Apply sprites to tiles based on the stored references
     this.applySpritesToTiles()
-
-    // Mark the TileMap as editor-enabled for later component addition
-    ;(this.tileMap as any).editorEnabled = true
 
     this.logger.debug('Marked TileMap as editor-enabled')
 
