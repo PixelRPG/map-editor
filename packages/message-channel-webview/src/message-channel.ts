@@ -64,4 +64,21 @@ export class MessageChannel extends CoreMessageChannel {
   protected isHandlerRegistered(): boolean {
     return this.webKitHandler !== null
   }
+
+  /**
+   * Close the message channel and clean up resources.
+   * Removes event listeners and clears references.
+   */
+  close(): void {
+    try {
+      // Remove window message event listener
+      window.removeEventListener('message', this.handleMessageEvent as any)
+      console.log(`MessageChannel '${this.channelName}' closed`)
+    } catch (error) {
+      console.error(
+        `Error closing MessageChannel '${this.channelName}':`,
+        error,
+      )
+    }
+  }
 }

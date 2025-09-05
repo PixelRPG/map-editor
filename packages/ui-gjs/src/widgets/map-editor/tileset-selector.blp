@@ -4,36 +4,48 @@ using Adw 1;
 template $TilesetSelector: Adw.Bin {
   Gtk.Box {
     orientation: vertical;
-    spacing: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    margin-start: 0;
-    margin-end: 0;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
 
     Gtk.ScrolledWindow {
       vexpand: true;
       hscrollbar-policy: never;
-      
+      accessible-role: presentation;
+
       Gtk.Box tilesets_container {
         orientation: vertical;
-        spacing: 0;
-        
+        spacing: 6;
+
         Gtk.Box placeholder_box {
           orientation: vertical;
-          spacing: 6;
+          spacing: 12;
           halign: center;
           valign: center;
           margin-top: 48;
           margin-bottom: 48;
-          
+
+          Gtk.Image {
+            icon-name: "image-missing-symbolic";
+            pixel-size: 64;
+            css-classes: ["dim-label"];
+            accessible-role: presentation;
+          }
+
           Gtk.Label {
             label: "No tilesets loaded";
-            css-classes: ["dim-label"];
+            css-classes: ["dim-label", "heading"];
           }
-          
+
           Gtk.Label {
             label: "Add sprite sheets to display them as tilesets";
             css-classes: ["dim-label", "caption"];
+            xalign: 0.5;
+            justify: center;
+            max-width-chars: 30;
+            wrap: true;
           }
         }
       }

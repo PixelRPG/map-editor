@@ -57,7 +57,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
             'Maximum number of columns to display',
             GObject.ParamFlags.READWRITE,
             4,
-            32,
+            64,
             16, // min, max, default
           ),
         },
@@ -77,21 +77,22 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     // Layout properties are configured in the Blueprint template
     super()
 
-    if (spriteSheet) {
-      this.spriteSheet = spriteSheet
-    }
+    // Set properties first before setting sprite sheet
     if (options.scale !== undefined) {
-      this.scale = options.scale
+      this._scale = options.scale
     }
     if (options.showGrid !== undefined) {
-      this.showGrid = options.showGrid
+      this._showGrid = options.showGrid
     }
     if (options.maxColumns !== undefined) {
-      this.maxColumns = options.maxColumns
+      this._maxColumns = options.maxColumns
     }
     this.onSelected = this.onSelected.bind(this)
 
-    if (this._spriteSheet) {
+    if (spriteSheet) {
+      this.spriteSheet = spriteSheet
+    } else if (this._spriteSheet) {
+      // If we already have a sprite sheet, apply properties
       this._populateSprites()
       this._applyProperties()
     }
@@ -186,6 +187,9 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
       // Set homogeneous to false to prevent equal sizing that could add gaps
       this._flowBox.set_homogeneous(false)
     }
+
+    // Force layout update after property changes
+    this._flowBox.queue_resize()
   }
 
   /**

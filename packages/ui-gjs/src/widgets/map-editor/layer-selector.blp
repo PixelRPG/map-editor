@@ -2,26 +2,46 @@ using Gtk 4.0;
 using Adw 1;
 
 template $LayerSelector: Adw.Bin {
-
   Gtk.Box {
     orientation: vertical;
-    spacing: 0;
-    margin-top: 0;
-    margin-bottom: 0;
-    margin-start: 0;
-    margin-end: 0;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
 
     Gtk.ScrolledWindow layers_scrolled_window {
       vexpand: true;
       hscrollbar-policy: never;
+      accessible-role: presentation;
 
       Gtk.Box placeholder_box {
         orientation: vertical;
-        spacing: 6;
+        spacing: 12;
+        halign: center;
+        valign: center;
+        margin-top: 48;
+        margin-bottom: 48;
+
+        Gtk.Image {
+          icon-name: "layers-symbolic";
+          pixel-size: 64;
+          css-classes: ["dim-label"];
+          accessible-role: presentation;
+        }
 
         Gtk.Label {
           label: "No layers loaded";
-          css-classes: ["dim-label"];
+          css-classes: ["dim-label", "heading"];
+        }
+
+        Gtk.Label {
+          label: "Load a map to see its layers";
+          css-classes: ["dim-label", "caption"];
+          xalign: 0.5;
+          justify: center;
+          max-width-chars: 25;
+          wrap: true;
         }
       }
     }

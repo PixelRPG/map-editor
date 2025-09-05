@@ -151,6 +151,37 @@ export class LayerSelector extends Adw.Bin {
   get selectedLayerId(): string | null {
     return this._selectedLayerId
   }
+
+  /**
+   * Called when the widget is mapped to the screen.
+   * Sets up signal connections and starts any background processes.
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
+    // Connect to any signals that need to be active while visible
+  }
+
+  /**
+   * Called when the widget is unmapped from the screen.
+   * Disconnects signal connections and stops background processes.
+   */
+  vfunc_unmap(): void {
+    // Disconnect any signals connected in vfunc_map
+    super.vfunc_unmap()
+  }
+
+  /**
+   * Called when the widget is being destroyed.
+   * Cleans up all resources and breaks references.
+   */
+  vfunc_unroot(): void {
+    // Clear layer elements to prevent memory leaks
+    this._layerElements = []
+    this._selectedLayerId = null
+
+    // Call parent unroot
+    super.vfunc_unroot()
+  }
 }
 
 GObject.type_ensure(LayerSelector.$gtype)

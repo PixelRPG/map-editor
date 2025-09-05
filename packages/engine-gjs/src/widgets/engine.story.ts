@@ -49,18 +49,16 @@ export class EngineStoryWidget extends StoryWidget {
   /**
    * Create a new Engine story widget
    */
-  constructor(adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
-    // Set default metadata if not provided
-    const params = {
+  constructor(
+    params: StoryWidget.ConstructorProps = {
       story: 'Engine',
       args: {
         status: EngineStatus.INITIALIZING,
       },
       meta: EngineStoryWidget.getMetadata(),
-    }
-
-    // Create the widget
-    super(params, adwParams)
+    },
+  ) {
+    super(params)
 
     // Connect button signals
     this._connectSignals()

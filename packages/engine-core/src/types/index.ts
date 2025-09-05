@@ -1,4 +1,3 @@
-export * from './engine-error'
 export * from './engine-errors'
 export * from './engine-status'
 export * from './input-event'

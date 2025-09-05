@@ -82,8 +82,8 @@ export class SpriteSheetWidgetStory extends StoryWidget {
           label: 'Max Columns',
           type: ControlType.RANGE,
           min: 4,
-          max: 32,
-          step: 4,
+          max: 64,
+          step: 1,
           defaultValue: 16,
           description:
             'Maximum number of columns to display (for large sprite sheets)',
