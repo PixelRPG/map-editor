@@ -18,17 +18,17 @@
         "@pixelrpg/story-gjs": "workspace:^"
     },
     "devDependencies": {
-        "@girs/adw-1": "^1.8.0-4.0.0-beta.36",
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.36",
-        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.36",
-        "@girs/gio-2.0": "^2.84.4-4.0.0-beta.36",
-        "@girs/gjs": "^4.0.0-beta.36",
-        "@girs/glib-2.0": "^2.84.4-4.0.0-beta.36",
-        "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.36",
-        "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.36",
-        "@girs/pango-1.0": "^1.56.4-4.0.0-beta.36",
+        "@girs/adw-1": "^1.9.0-4.0.0-beta.38",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.38",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.38",
+        "@girs/gio-2.0": "^2.86.0-4.0.0-beta.38",
+        "@girs/gjs": "^4.0.0-beta.38",
+        "@girs/glib-2.0": "^2.86.0-4.0.0-beta.38",
+        "@girs/gobject-2.0": "^2.86.0-4.0.0-beta.38",
+        "@girs/gtk-4.0": "^4.20.1-4.0.0-beta.38",
+        "@girs/pango-1.0": "^1.57.0-4.0.0-beta.38",
         "barrelsby": "^2.8.1",
         "typescript": "^5.9.2",
-        "vite": "^7.1.3"
+        "vite": "^7.1.7"
     }
 }
