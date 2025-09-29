@@ -1,12 +1,5 @@
 /* Layer selector styles */
 
 .layer-selected {
-  background-color: rgba(0, 123, 255, 0.1);
-  border-left: 3px solid #007bff;
-  padding-left: 6px;
-}
-
-/* Ensure proper button styling */
-.layer-selected button {
-  font-weight: bold;
+  /* Nothing yet */
 }
