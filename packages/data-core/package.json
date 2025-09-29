@@ -8,11 +8,8 @@
         "build:barrels": "barrelsby --delete --directory src src/format src/types src/utils src/resource",
         "build": "yarn build:barrels"
     },
-    "dependencies": {
-        "excalibur": "workspace:^"
-    },
     "devDependencies": {
-        "@types/node": "^24.3.0",
+        "@types/node": "^24.5.2",
         "barrelsby": "^2.8.1",
         "typescript": "^5.9.2"
     }

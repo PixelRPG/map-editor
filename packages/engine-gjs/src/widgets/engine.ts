@@ -41,7 +41,7 @@ export class Engine extends Adw.Bin implements EngineInterface {
   /**
    * WebView for rendering the game
    */
-  declare _webView: WebView
+  declare private _webView: WebView
 
   /**
    * Event dispatcher for engine events
@@ -56,6 +56,10 @@ export class Engine extends Adw.Bin implements EngineInterface {
       throw new Error('RPC server is not initialized')
     }
     return this._webView.rpc
+  }
+
+  get webView(): WebView {
+    return this._webView
   }
 
   static {

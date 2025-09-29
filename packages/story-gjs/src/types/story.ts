@@ -86,7 +86,10 @@ export interface StoryMeta {
  * Constructor interface for story widget classes
  */
 export interface StoryWidgetConstructor {
-  new (adwParams?: Partial<Adw.Bin.ConstructorProps>): StoryWidget
+  new (
+    params?: StoryWidget.ConstructorProps,
+    adwParams?: Partial<Adw.Bin.ConstructorProps>,
+  ): StoryWidget
   $gtype: GObject.GType
   getMetadata?: () => StoryMeta
 }

@@ -25,23 +25,23 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "GPL-3.0",
     "devDependencies": {
-        "@gjsify/vite-plugin-blueprint": "^0.2.2",
+        "@gjsify/vite-plugin-blueprint": "^0.2.9",
         "barrelsby": "^2.8.1",
         "lightningcss": "^1.30.1",
         "typescript": "^5.9.2",
-        "vite": "^7.1.3"
+        "vite": "^7.1.7"
     },
     "dependencies": {
-        "@girs/adw-1": "^1.8.0-4.0.0-beta.36",
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.36",
-        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.36",
-        "@girs/gio-2.0": "^2.84.4-4.0.0-beta.36",
-        "@girs/gjs": "^4.0.0-beta.36",
-        "@girs/glib-2.0": "^2.84.4-4.0.0-beta.36",
-        "@girs/gobject-2.0": "^2.84.4-4.0.0-beta.36",
-        "@girs/gtk-4.0": "^4.19.1-4.0.0-beta.36",
-        "@girs/javascriptcore-6.0": "^2.48.5-4.0.0-beta.36",
-        "@girs/webkit-6.0": "^2.48.5-4.0.0-beta.36",
+        "@girs/adw-1": "^1.9.0-4.0.0-beta.38",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.38",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.38",
+        "@girs/gio-2.0": "^2.86.0-4.0.0-beta.38",
+        "@girs/gjs": "^4.0.0-beta.38",
+        "@girs/glib-2.0": "^2.86.0-4.0.0-beta.38",
+        "@girs/gobject-2.0": "^2.86.0-4.0.0-beta.38",
+        "@girs/gtk-4.0": "^4.20.1-4.0.0-beta.38",
+        "@girs/javascriptcore-6.0": "^2.50.0-4.0.0-beta.38",
+        "@girs/webkit-6.0": "^2.50.0-4.0.0-beta.38",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-gjs": "workspace:^",
         "@pixelrpg/engine-core": "workspace:^",
@@ -49,6 +49,6 @@
         "@pixelrpg/message-channel-core": "workspace:^",
         "@pixelrpg/message-channel-gjs": "workspace:^",
         "@pixelrpg/ui-gjs": "workspace:^",
-        "mime": "^4.0.7"
+        "mime": "^4.1.0"
     }
 }

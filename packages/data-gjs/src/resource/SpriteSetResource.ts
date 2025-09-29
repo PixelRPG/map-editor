@@ -171,6 +171,14 @@ export class SpriteSetResource extends BaseSpriteSetResource {
   }
 
   /**
+   * Get animations (for compatibility with Excalibur SpriteSetResource)
+   * TODO: Implement animation support for GJS
+   */
+  get animations(): Record<string, any> {
+    return {} // Empty for now - animations not yet implemented in GJS
+  }
+
+  /**
    * Check if the resource is loaded
    * @returns True if both data and image resource are loaded
    */

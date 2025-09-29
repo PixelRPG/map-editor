@@ -7,6 +7,7 @@ import { EngineStatus, RpcEngineType } from '@pixelrpg/engine-core'
 import { GameProjectResource, SpriteSheet } from '@pixelrpg/data-gjs'
 import { MapData, SpriteSetData } from '@pixelrpg/data-core'
 import { Sidebar } from './sidebar.ts'
+import { MapEditorService } from '@pixelrpg/engine-gjs'
 
 import Template from './project-view.blp'
 
@@ -20,6 +21,9 @@ export class ProjectView extends Adw.Bin {
   // Project management
   private _gameProjectResource: GameProjectResource | null = null
   private _currentProjectPath: string | null = null
+
+  // Map editor service
+  private _mapEditorService: MapEditorService | null = null
 
   static {
     GObject.registerClass(
@@ -78,6 +82,9 @@ export class ProjectView extends Adw.Bin {
       console.log('[ProjectView] Ready')
       this.emit('ready')
     })
+
+    // Note: Sidebar signals will be connected in _onMapLoaded when both
+    // sidebar and MapEditorService are available
   }
 
   /**
@@ -179,9 +186,84 @@ export class ProjectView extends Adw.Bin {
 
       // Initialize the sidebar with the map data
       this._sidebar?.initializeMapData(mapData, spriteSheets)
+
+      // Initialize the map editor service with the engine's web view
+      if (this._engine && this._engine.webView) {
+        this._mapEditorService = new MapEditorService(this._engine.webView)
+        console.log('[ProjectView] MapEditorService initialized')
+
+        // Synchronize UI with engine defaults
+        this._syncUIWithDefaults()
+
+        // Now connect sidebar signals when both components are available
+        this._connectSidebarSignals()
+      } else {
+        console.warn(
+          '[ProjectView] Engine or WebView not available for MapEditorService',
+        )
+      }
     } catch (error) {
       console.error('[ProjectView] Failed to load map data:', error)
     }
+  }
+
+  /**
+   * Synchronize UI components with engine default values
+   */
+  private _syncUIWithDefaults(): void {
+    if (!this._sidebar || !this._mapEditorService) {
+      console.warn('[ProjectView] Cannot sync UI defaults: missing components')
+      return
+    }
+
+    console.log('[ProjectView] Synchronizing UI with engine defaults')
+
+    // Get current state from service (which should have engine defaults)
+    const currentState = this._mapEditorService.getCurrentState()
+
+    console.log('[ProjectView] Current engine state:', currentState)
+
+    // Sync initial tool state in UI
+    if (currentState.tool && this._sidebar?.mapEditorPanel) {
+      this._sidebar.mapEditorPanel.setInitialTool(
+        currentState.tool as 'brush' | 'eraser',
+      )
+      console.log('[ProjectView] Initial tool state synced:', currentState.tool)
+    }
+
+    // Note: Layer and tile selection will be synced when UI components are ready
+    // They get their initial values from the sidebar initialization
+  }
+
+  /**
+   * Connect sidebar signals when both sidebar and MapEditorService are available
+   */
+  private _connectSidebarSignals(): void {
+    if (!this._sidebar || !this._mapEditorService) {
+      console.warn(
+        '[ProjectView] Cannot connect sidebar signals: missing components',
+      )
+      return
+    }
+
+    console.log('[ProjectView] Connecting sidebar signals...')
+
+    this._sidebar.connect('tile-selected', (_sidebar, tileId) => {
+      console.log('[ProjectView] Tile selected from sidebar:', tileId)
+      this._mapEditorService!.selectTile(tileId)
+    })
+
+    this._sidebar.connect('tool-changed', (_sidebar, tool) => {
+      console.log('[ProjectView] Tool changed from sidebar:', tool)
+      this._mapEditorService!.setTool(tool as 'brush' | 'eraser')
+    })
+
+    this._sidebar.connect('layer-selected', (_sidebar, layerId) => {
+      console.log('[ProjectView] Layer selected from sidebar:', layerId)
+      this._mapEditorService!.setLayer(layerId)
+    })
+
+    console.log('[ProjectView] Sidebar signals connected successfully')
   }
 }
 

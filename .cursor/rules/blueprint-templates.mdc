@@ -4,7 +4,9 @@ globs: **/*.blp
 alwaysApply: false
 ---
 
-> See also: [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc)
+See also:
+* [@gobject-patterns](mdc:.cursor/rules/gobject-patterns.mdc)
+* [@adwaita-styling](mdc:.cursor/rules/adwaita-styling)
 
 # Blueprint Templates (TL;DR)
 

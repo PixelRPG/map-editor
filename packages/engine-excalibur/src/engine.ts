@@ -6,9 +6,11 @@ import {
   Logger,
   Scene,
   Clock,
+  TileMap,
+  Entity,
 } from 'excalibur'
-import { EventDispatcher } from '@pixelrpg/message-channel-core'
-import { rpcEndpointFactory } from './utils/rpc.ts'
+import { EventDispatcher, RpcEndpoint } from '@pixelrpg/message-channel-core'
+import { rpcEndpointFactory } from './lib/rpc.ts'
 import {
   EngineInterface,
   RpcEngineType,
@@ -24,10 +26,190 @@ import {
   isEngineStatus,
 } from '@pixelrpg/engine-core'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
-import { EditorInputSystem } from './systems/editor-input.system.ts'
+import { MapScene } from './scenes/map.scene.ts'
+
+/**
+ * Handles engine initialization and configuration
+ */
+export class EngineInitializer {
+  /**
+   * Create and configure an Excalibur engine instance
+   */
+  static createEngine(
+    canvasElementId: string,
+    logger: Logger,
+  ): ExcaliburEngine {
+    logger.info('Creating Excalibur engine instance')
+
+    const engine = new ExcaliburEngine({
+      canvasElementId: canvasElementId,
+      displayMode: DisplayMode.FillScreen,
+      pixelArt: true,
+      suppressPlayButton: true,
+      backgroundColor: Color.Black, // TODO: Change this based on the OS light/dark mode
+      enableCanvasTransparency: true,
+      enableCanvasContextMenu: true, // Enable the right click context menu for debugging
+    })
+
+    // Configure engine settings
+    this.configureEngineSettings(engine, logger)
+
+    return engine
+  }
+
+  /**
+   * Configure engine settings
+   */
+  private static configureEngineSettings(
+    engine: ExcaliburEngine,
+    logger: Logger,
+  ): void {
+    logger.info('Configuring engine settings')
+
+    // Set up loader with error handling
+    const loader = new Loader()
+    loader.suppressPlayButton = true
+
+    // Configure debug settings based on environment
+    const isDevelopment = process.env.NODE_ENV === 'development'
+    if (isDevelopment) {
+      engine.showDebug(true)
+      logger.info('Debug mode enabled')
+    }
+  }
+
+  /**
+   * Initialize engine with scenes and systems
+   */
+  static initializeEngine(
+    engine: ExcaliburEngine,
+    mapScene: MapScene,
+    logger: Logger,
+  ): void {
+    logger.info('Initializing engine with scenes and systems')
+
+    // Add scenes
+    engine.addScene('map', mapScene)
+
+    // Set initial scene
+    engine.goToScene('map')
+
+    // Set up engine event handlers
+    this.setupEngineEventHandlers(engine, logger)
+  }
+
+  /**
+   * Set up engine event handlers
+   */
+  private static setupEngineEventHandlers(
+    engine: ExcaliburEngine,
+    logger: Logger,
+  ): void {
+    engine.on('initialize', () => {
+      logger.info('Engine initialized')
+    })
+
+    engine.on('start', () => {
+      logger.info('Engine started')
+    })
+
+    engine.on('stop', () => {
+      logger.info('Engine stopped')
+    })
+
+    engine.on('preupdate', () => {
+      // Pre-update logic if needed
+    })
+
+    engine.on('postupdate', () => {
+      // Post-update logic if needed
+    })
+
+    engine.on('predraw', () => {
+      // Pre-draw logic if needed
+    })
+
+    engine.on('postdraw', () => {
+      // Post-draw logic if needed
+    })
+  }
+}
+
+/**
+ * Manages RPC handlers for engine communication
+ */
+export class RpcHandlerManager {
+  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
+  private logger = Logger.getInstance()
+
+  /**
+   * Get the RPC endpoint
+   */
+  get rpcEndpoint(): RpcEndpoint<EngineRpcRegistry> {
+    return this.rpc
+  }
+
+  /**
+   * Register all RPC handlers
+   */
+  registerHandlers(
+    loadProjectCallback: (params: any) => Promise<void>,
+    loadMapCallback: (params: any) => Promise<void>,
+    startCallback: () => Promise<void>,
+    stopCallback: () => Promise<void>,
+  ): void {
+    this.logger.info('Registering RPC handlers')
+
+    // Register loadProject handler
+    this.rpc.registerHandler(RpcEngineType.LOAD_PROJECT, async (params) => {
+      this.logger.info('RPC call: loadProject', params)
+
+      if (!isValidRpcEngineParams(RpcEngineType.LOAD_PROJECT, params)) {
+        throw new Error('Invalid parameters for loadProject')
+      }
+
+      await loadProjectCallback(params)
+      return { success: true }
+    })
+
+    // Register loadMap handler
+    this.rpc.registerHandler(RpcEngineType.LOAD_MAP, async (params) => {
+      this.logger.info('RPC call: loadMap', params)
+
+      if (!isValidRpcEngineParams(RpcEngineType.LOAD_MAP, params)) {
+        throw new Error('Invalid parameters for loadMap')
+      }
+
+      await loadMapCallback(params)
+      return { success: true }
+    })
+
+    // Register start handler
+    this.rpc.registerHandler(RpcEngineType.START, async () => {
+      this.logger.info('RPC call: start')
+      await startCallback()
+      return { success: true }
+    })
+
+    // Register stop handler
+    this.rpc.registerHandler(RpcEngineType.STOP, async () => {
+      this.logger.info('RPC call: stop')
+      await stopCallback()
+      return { success: true }
+    })
+  }
+
+  /**
+   * Destroy the RPC endpoint
+   */
+  destroy(): void {
+    this.rpc.destroy()
+  }
+}
 
 /**
  * Excalibur implementation of the game engine
+ * Now serves as a facade coordinating specialized components
  */
 export class Engine implements EngineInterface {
   /**
@@ -43,21 +225,18 @@ export class Engine implements EngineInterface {
   >()
 
   /**
-   * Excalibur engine instance
+   * Specialized components for engine functionality
+   */
+  private initializer = new EngineInitializer()
+  private rpcManager = new RpcHandlerManager()
+
+  /**
+   * Core engine resources
    */
   private excalibur: ExcaliburEngine | null = null
-
-  /**
-   * Current game project resource
-   */
   private gameProjectResource: GameProjectResource | null = null
-
-  /**
-   * Logger instance
-   */
   private logger = Logger.getInstance()
-
-  private rpc = rpcEndpointFactory<EngineRpcRegistry>()
+  private mapScene: MapScene | null = null
 
   /**
    * Create a new Excalibur engine
@@ -67,72 +246,19 @@ export class Engine implements EngineInterface {
     this.logger.info('Creating Engine')
 
     // Register RPC handlers for GJS to call
-    this.registerRpcHandlers()
+    this.setupRpcHandlers()
   }
 
   /**
-   * Register RPC handlers for the GJS side to call
+   * Set up RPC handlers using the manager
    */
-  private registerRpcHandlers(): void {
-    this.logger.info('Registering RPC handlers')
-
-    // Register loadProject handler
-    this.rpc.registerHandler(RpcEngineType.LOAD_PROJECT, async (params) => {
-      this.logger.info('RPC call: loadProject', params)
-
-      // Validate parameters using type guard
-      if (!isValidRpcEngineParams(RpcEngineType.LOAD_PROJECT, params)) {
-        throw new Error(
-          'Invalid parameters for loadProject: projectPath is required and must be a string',
-        )
-      }
-
-      await this.loadProject(params.projectPath, params.options)
-      return { success: true }
-    })
-
-    // Register loadMap handler
-    this.rpc.registerHandler(RpcEngineType.LOAD_MAP, async (params) => {
-      this.logger.info('RPC call: loadMap', params)
-
-      // Validate parameters using type guard
-      if (!isValidRpcEngineParams(RpcEngineType.LOAD_MAP, params)) {
-        throw new Error(
-          'Invalid parameters for loadMap: mapId is required and must be a string',
-        )
-      }
-
-      await this.loadMap(params.mapId)
-      return { success: true }
-    })
-
-    // Register start handler
-    this.rpc.registerHandler(RpcEngineType.START, async (params) => {
-      this.logger.info('RPC call: start')
-
-      // Validate parameters using type guard
-      if (!isValidRpcEngineParams(RpcEngineType.START, params)) {
-        throw new Error('Invalid parameters for start')
-      }
-
-      await this.start()
-      return { success: true }
-    })
-
-    // Register stop handler
-    this.rpc.registerHandler(RpcEngineType.STOP, async (params) => {
-      this.logger.info('RPC call: stop')
-
-      // Validate parameters using type guard
-      if (!isValidRpcEngineParams(RpcEngineType.STOP, params)) {
-        throw new Error('Invalid parameters for stop')
-      }
-
-      await this.stop()
-      return { success: true }
-    })
-
-    this.logger.info('RPC handlers registered')
+  private setupRpcHandlers(): void {
+    this.rpcManager.registerHandlers(
+      (params) => this.loadProject(params.projectPath, params.options),
+      (params) => this.loadMap(params.mapId),
+      () => this.start(),
+      () => this.stop(),
+    )
   }
 
   /**
@@ -141,36 +267,30 @@ export class Engine implements EngineInterface {
   async initialize(): Promise<void> {
     await this.setStatus(EngineStatus.INITIALIZING)
 
-    // Create the Excalibur engine
-    this.excalibur = new ExcaliburEngine({
-      canvasElementId: this.canvasElementId,
-      displayMode: DisplayMode.FillScreen,
-      pixelArt: true,
-      suppressPlayButton: true,
-      backgroundColor: Color.Black, // TODO: Change this based on the OS light/dark mode
-      enableCanvasTransparency: true,
-      enableCanvasContextMenu: true, // Enable the right click context menu for debugging
-    })
+    // Create the Excalibur engine using the initializer
+    this.excalibur = EngineInitializer.createEngine(
+      this.canvasElementId,
+      this.logger,
+    )
+
+    // Note: Map scene will be created when loading the first map
+    // Engine initialization is handled by the EngineInitializer
 
     await this.setStatus(EngineStatus.READY)
   }
 
   /**
    * Load a game project
-   * @param projectPath Path to the game project file
-   * @param options Options for loading the project
    */
   async loadProject(
     projectPath: string,
     options?: ProjectLoadOptions,
   ): Promise<void> {
     if (!this.excalibur) {
-      const error = EngineErrors.engineNotInitialized()
-      throw new Error(error.message)
+      throw new Error(EngineErrors.engineNotInitialized().message)
     }
 
-    this.setStatus(EngineStatus.LOADING)
-
+    await this.setStatus(EngineStatus.LOADING)
     this.logger.info(`[Engine] Loading project: ${projectPath}`)
 
     // Create the game project resource
@@ -202,13 +322,10 @@ export class Engine implements EngineInterface {
 
     loader.on('afterload', async () => {
       this.logger.info('GameProjectResource loaded successfully')
-
-      // Debug the game project
       this.gameProjectResource?.debugInfo()
 
       const eventData = { projectPath, options }
 
-      // Validate event data before sending
       if (!isValidRpcEngineParams(RpcEngineType.PROJECT_LOADED, eventData)) {
         this.logger.error('Invalid event data for PROJECT_LOADED')
         return
@@ -220,14 +337,17 @@ export class Engine implements EngineInterface {
       }
 
       // Send the event to GJS using RPC
-      await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+      await this.rpcManager.rpcEndpoint.sendNotification(
+        RpcEngineType.NOTIFY_ENGINE_EVENT,
+        event,
+      )
 
       // Add the active map to the scene
       if (this.gameProjectResource?.data.startup.initialMapId) {
         await this.loadMap(this.gameProjectResource.data.startup.initialMapId)
       }
 
-      this.setStatus(EngineStatus.READY)
+      await this.setStatus(EngineStatus.READY)
     })
 
     // Start the engine with the loader
@@ -236,48 +356,46 @@ export class Engine implements EngineInterface {
 
   /**
    * Load a specific map
-   * @param mapId ID of the map to load
    */
   async loadMap(mapId: string): Promise<void> {
     if (!this.excalibur) {
-      const error = EngineErrors.engineNotInitialized()
-      throw new Error(error.message)
+      throw new Error(EngineErrors.engineNotInitialized().message)
     }
 
     if (!this.gameProjectResource) {
-      const error = EngineErrors.projectNotLoaded()
-      throw new Error(error.message)
+      throw new Error(EngineErrors.projectNotLoaded().message)
     }
 
     this.logger.info(`Loading map: ${mapId}`)
 
     const mapResource = await this.gameProjectResource.loadMap(mapId)
 
-    // Create a new scene
-    const mapScene = new Scene() // TODO: Extend Scene to MapScene
-    mapScene.world.add(EditorInputSystem)
-    mapResource.addToScene(mapScene)
-    this.excalibur.add(mapId, mapScene)
+    // Create a new map scene with the loaded map resource
+    const newMapScene = new MapScene(mapResource)
+    this.mapScene = newMapScene
+
+    // Add the scene to the engine
+    this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)
 
-    this.logger.info(`Map ${mapResource.mapData.name} added to scene`)
+    this.logger.info(`Map ${mapResource.mapData.name} loaded`)
 
     const eventData = { mapId }
 
-    // Validate event data before sending
     if (!isValidRpcEngineParams(RpcEngineType.MAP_LOADED, eventData)) {
       this.logger.error('Invalid event data for MAP_LOADED')
       return
     }
 
-    // Create an RPC event for the map loaded event
     const event = {
       type: RpcEngineType.MAP_LOADED,
       data: eventData,
     }
 
-    // Send the event to GJS using RPC
-    await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+    await this.rpcManager.rpcEndpoint.sendNotification(
+      RpcEngineType.NOTIFY_ENGINE_EVENT,
+      event,
+    )
   }
 
   /**
@@ -288,7 +406,7 @@ export class Engine implements EngineInterface {
       throw new Error('Engine not initialized')
     }
     this.excalibur.start()
-    this.setStatus(EngineStatus.RUNNING)
+    await this.setStatus(EngineStatus.RUNNING)
   }
 
   /**
@@ -300,12 +418,11 @@ export class Engine implements EngineInterface {
     }
 
     this.excalibur.stop()
-    this.setStatus(EngineStatus.READY)
+    await this.setStatus(EngineStatus.READY)
   }
 
   /**
    * Set the engine status and dispatch a status changed event
-   * @param status New engine status
    */
   private async setStatus(status: EngineStatus): Promise<void> {
     if (this.status === status) {
@@ -314,28 +431,26 @@ export class Engine implements EngineInterface {
 
     this.logger.info(`Engine status changed from ${this.status} to ${status}`)
 
-    // Validate status before using it
     if (!isEngineStatus(status)) {
       this.logger.error(`Invalid engine status: ${status}`)
       return
     }
 
-    // Update the status
     this.status = status
 
-    // Validate event data before sending
     if (!isValidRpcEngineParams(RpcEngineType.STATUS_CHANGED, status)) {
       this.logger.error('Invalid event data for STATUS_CHANGED')
       return
     }
 
-    // Create an event
     const event = {
       type: RpcEngineType.STATUS_CHANGED,
       data: status,
     }
 
-    // Send the event to GJS using RPC
-    await this.rpc.sendNotification(RpcEngineType.NOTIFY_ENGINE_EVENT, event)
+    await this.rpcManager.rpcEndpoint.sendNotification(
+      RpcEngineType.NOTIFY_ENGINE_EVENT,
+      event,
+    )
   }
 }

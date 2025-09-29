@@ -5,6 +5,7 @@ import {
   IframeContext,
   RpcEndpoint as WebRpcEndpoint,
 } from '@pixelrpg/message-channel-web'
+import { EngineRpcRegistry } from '@pixelrpg/engine-core'
 
 let rpcEndpoint: RpcEndpoint | null = null
 
@@ -14,7 +15,7 @@ let rpcEndpoint: RpcEndpoint | null = null
  * @returns RPC endpoint instance
  */
 export const rpcEndpointFactory = <
-  T extends RpcMethodRegistry = RpcMethodRegistry,
+  T extends RpcMethodRegistry = EngineRpcRegistry,
 >(
   messageHandlerName = 'pixelrpg',
 ): RpcEndpoint<T> => {

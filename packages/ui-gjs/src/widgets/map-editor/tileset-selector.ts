@@ -244,10 +244,20 @@ export class TilesetSelector extends Adw.Bin {
   }
 
   /**
-   * Get the currently selected sprite from any tileset
-   * @returns Object with sprite and tileset index, or null if none selected
+   * Get the currently selected sprite from any tileset.
+   *
+   * @returns Object with sprite data and tileset index, or null if none selected
+   *
+   * @example
+   * ```typescript
+   * const selection = tilesetSelector.getSelectedSprite();
+   * if (selection) {
+   *   console.log(`Selected sprite from tileset ${selection.tilesetIndex}`);
+   *   // Use selection.sprite for tile placement
+   * }
+   * ```
    */
-  getSelectedSprite(): { sprite: any; tilesetIndex: number } | null {
+  getSelectedSprite(): { sprite: unknown; tilesetIndex: number } | null {
     for (let i = 0; i < this._spriteSheetWidgets.length; i++) {
       const sprite = this._spriteSheetWidgets[i].getSelectedSprite()
       if (sprite) {
@@ -264,6 +274,41 @@ export class TilesetSelector extends Adw.Bin {
     this._spriteSheetWidgets.forEach((widget) => {
       widget.clearSelection()
     })
+  }
+
+  /**
+   * Called when the widget is mapped to the screen.
+   * Sets up signal connections and starts any background processes.
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
+    // Connect to any signals that need to be active while visible
+    // This is where you would connect to external signals or start timers
+  }
+
+  /**
+   * Called when the widget is unmapped from the screen.
+   * Disconnects signal connections and stops background processes.
+   */
+  vfunc_unmap(): void {
+    // Disconnect any signals connected in vfunc_map
+    // Stop any timers or background processes
+    super.vfunc_unmap()
+  }
+
+  /**
+   * Called when the widget is being destroyed.
+   * Cleans up all resources and breaks references.
+   */
+  vfunc_unroot(): void {
+    // Clear widget references to prevent memory leaks
+    this._spriteSheetWidgets = []
+
+    // Clear tilesets array
+    this._tilesets = []
+
+    // Call parent unroot
+    super.vfunc_unroot()
   }
 }
 

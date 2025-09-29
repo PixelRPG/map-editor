@@ -26,6 +26,14 @@ export enum RpcEngineType {
   // Communication events
   NOTIFY_ENGINE_EVENT = 'notify-engine-event',
   HANDLE_INPUT_EVENT = 'handle-input-event',
+
+  // TileMap interaction events
+  TILE_CLICKED = 'tile-clicked',
+  TILE_HOVERED = 'tile-hovered',
+  TILE_PLACED = 'tile-placed',
+
+  // Editor state synchronization
+  EDITOR_STATE_CHANGED = 'editor-state-changed',
 }
 
 /**
@@ -58,6 +66,28 @@ export interface RpcEngineParamMap {
     >]
   }
   [RpcEngineType.HANDLE_INPUT_EVENT]: InputEvent<InputEventType>
+
+  // TileMap interaction
+  [RpcEngineType.TILE_CLICKED]: {
+    coords: { x: number; y: number }
+    tileMapId: string
+  }
+  [RpcEngineType.TILE_HOVERED]: {
+    coords: { x: number; y: number } | null
+    tileMapId: string
+  }
+  [RpcEngineType.TILE_PLACED]: {
+    coords: { x: number; y: number }
+    tileId: number
+    layerId: string
+  }
+
+  // Editor state
+  [RpcEngineType.EDITOR_STATE_CHANGED]: {
+    tool: 'brush' | 'eraser' | 'fill' | null
+    tileId: number | null
+    layerId: string | null
+  }
 }
 
 /**
@@ -86,6 +116,18 @@ export interface EngineRpcRegistry extends RpcMethodRegistry {
   }
   [RpcEngineType.HANDLE_INPUT_EVENT]: {
     params: RpcEngineParamMap[RpcEngineType.HANDLE_INPUT_EVENT]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.TILE_CLICKED]: {
+    params: RpcEngineParamMap[RpcEngineType.TILE_CLICKED]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.TILE_HOVERED]: {
+    params: RpcEngineParamMap[RpcEngineType.TILE_HOVERED]
+    response: RpcResponse<void>
+  }
+  [RpcEngineType.TILE_PLACED]: {
+    params: RpcEngineParamMap[RpcEngineType.TILE_PLACED]
     response: RpcResponse<void>
   }
 }

@@ -1,0 +1,71 @@
+---
+description: Comprehensive TypeScript architecture refactoring guidelines for scalable, maintainable codebases combining proven patterns from various frameworks.
+alwaysApply: false
+---
+# TypeScript Architecture & Refactoring Excellence
+
+## Core Architecture Principles
+- **Modular Design**: One module/domain, single responsibility, clear boundaries
+- **SOLID Compliance**: Single responsibility, open/closed, Liskov substitution, interface segregation, dependency inversion
+- **Composition over Inheritance**: Prefer composition for flexibility and testability
+- **Layer Separation**: Distinct layers for presentation, business logic, data access
+
+## TypeScript Excellence
+- **Strict Typing**: No `any`, explicit types for all variables/functions/parameters/returns
+- **Interface Contracts**: Define clear interfaces for component/service contracts
+- **Immutability First**: `readonly` for unchanging data, `as const` for literals, functional updates
+- **Advanced Types**: Union types, discriminated unions, mapped types, conditional types
+
+## Code Quality Standards
+- **Function Constraints**: <20 executable lines, ≤4 parameters, single purpose, verb-first naming
+- **Class Limits**: <200 lines, <10 public methods, <10 properties, single responsibility
+- **Naming Conventions**: PascalCase (classes), camelCase (variables/methods), kebab-case (files), UPPERCASE (constants)
+- **File Organization**: One export per file, logical imports grouping, barrel exports for clean APIs
+
+## Refactoring Priorities
+- **Performance**: Memoization, lazy loading, efficient algorithms
+- **Maintainability**: DRY principle, clear abstractions, comprehensive documentation
+- **Readability**: Self-documenting code, meaningful names, consistent formatting
+- **Testability**: Dependency injection, pure functions, clear side-effect boundaries
+
+## Component Architecture Patterns
+- **Functional Components**: Use with explicit prop interfaces for type safety
+- **Custom Logic Abstraction**: Hooks/utilities for reusable logic, state machines for complex state
+- **Component Separation**: Smart/presentational component distinction for clear responsibilities
+- **Composition over Nesting**: Prefer component composition for flexible architectures
+
+## Service Layer Patterns
+- **Business Logic Encapsulation**: Dedicated service layers for domain logic separation
+- **Dependency Injection**: Constructor injection for testability and loose coupling
+- **Module-per-Domain**: Clear boundaries with single responsibility per module
+- **Cross-Cutting Concerns**: Shared modules/utilities for common functionality
+
+## Data Flow & State Management
+- **Reactive Patterns**: Observable/event-driven data flow for responsive applications
+- **State Machine Architecture**: Complex state management through structured state machines
+- **Immutable Updates**: Functional state updates to prevent side effects
+- **Clear Boundaries**: Well-defined interfaces between data access and business logic
+
+## Error Handling & Resilience
+- Exceptions for unexpected errors, validation for expected cases
+- Global error boundaries with context preservation
+- Graceful degradation, user-friendly error messages
+- Comprehensive logging with structured data
+
+## Testing Strategy
+- Unit tests for pure functions, integration tests for modules
+- Arrange-Act-Assert pattern, meaningful test names
+- Test doubles for dependencies, acceptance tests for critical paths
+- Coverage metrics with quality over quantity focus
+
+## Performance Optimization
+- Bundle splitting, tree shaking, code splitting
+- Efficient algorithms, memoization, virtualization
+- Lazy loading, prefetching, caching strategies
+- Runtime performance monitoring and profiling
+
+## Documentation & Communication
+- JSDoc for public APIs, inline comments for complex logic
+- Architecture decision records for significant changes
+- Code review guidelines, consistent commit messages
+- Living documentation updated with code changes
