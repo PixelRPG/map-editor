@@ -47,3 +47,6 @@ alwaysApply: false
 - Avoid mutating function parameters
 - Use optional chaining for nullable properties
 - Implement proper error handling in functional chains
+
+## Dependencies
+- Always add new dependencies using `yarn workspace @pixelrpg/package add package-name` for the latest version

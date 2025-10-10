@@ -34,7 +34,7 @@ const engine = new Engine();
 engine.setResourcePaths(['/path/to/resources']);
 
 // Set GResource path if needed
-engine.setGResourcePath('/org/pixelrpg/maker/engine-excalibur');
+engine.setGResourcePath('/org/pixelrpg/maker');
 
 // Add the engine to your UI
 myContainer.append(engine);

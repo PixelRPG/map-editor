@@ -1,2 +1,2 @@
-export * from './constants.ts';
-export * from './event-controller-input.ts'; 
+export * from '../constants.ts'
+export * from './event-controller-input.ts'

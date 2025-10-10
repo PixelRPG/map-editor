@@ -7,14 +7,14 @@
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "clear": "rm -rf dist",
+        "clear": "rm -rf dist org.pixelrpg.maker",
         "build:vite": "vite build",
-        "build:resources": "glib-compile-resources org.pixelrpg.maker.data.gresource.xml",
+        "build:resources": "glib-compile-resources --sourcedir data data/org.pixelrpg.maker.data.gresource.xml",
         "build:barrels": "barrelsby --delete --directory src src/widgets src/objects",
         "build": "yarn build:resources && yarn build:barrels && yarn build:vite",
         "check": "tsc",
-        "start": "gjs -m dist/main.js",
-        "start:debug": "GTK_DEBUG=interactive gjs -m dist/main.js"
+        "start": "gjs -m org.pixelrpg.maker",
+        "start:debug": "GTK_DEBUG=interactive gjs -m org.pixelrpg.maker"
     },
     "keywords": [
         "pixelrpg",
@@ -26,10 +26,12 @@
     "license": "GPL-3.0",
     "devDependencies": {
         "@gjsify/vite-plugin-blueprint": "^0.2.9",
+        "@gjsify/vite-plugin-gettext": "^0.2.9",
         "barrelsby": "^2.8.1",
         "lightningcss": "^1.30.1",
         "typescript": "^5.9.2",
-        "vite": "^7.1.7"
+        "vite": "^7.1.7",
+        "vite-plugin-static-copy": "^3.1.2"
     },
     "dependencies": {
         "@girs/adw-1": "^1.9.0-4.0.0-beta.38",

@@ -1,0 +1,24 @@
+/// <reference types="vite/client" />
+
+import '@gjsify/vite-plugin-blueprint/src/type.d.ts'
+
+// Declare global variables defined by vite.config.js
+declare global {
+  /** eu.jumplink.Learn6502 */
+  const __APPLICATION_ID__: string
+  /** /eu/jumplink/Learn6502 */
+  const __RESOURCES_PATH__: string
+  /** e.g. 0.4.0 */
+  const __PACKAGE_VERSION__: string
+  /** /usr */
+  const __PREFIX__: string
+  /** /usr/lib */
+  const __LIBDIR__: string
+  /** /usr/share */
+  const __DATADIR__: string
+  /** /usr/bin */
+  const __BINDIR__: string
+  /** #!/usr/bin/env -S gjs -m */
+  const __GJS_CONSOLE__: string
+  const __PKGDATADIR__: string
+}

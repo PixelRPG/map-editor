@@ -2367,6 +2367,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@girs/gtksource-5@npm:^5.18.0-4.0.0-beta.38":
+  version: 5.18.0-4.0.0-beta.38
+  resolution: "@girs/gtksource-5@npm:5.18.0-4.0.0-beta.38"
+  dependencies:
+    "@girs/cairo-1.0": "npm:1.0.0-4.0.0-beta.38"
+    "@girs/freetype2-2.0": "npm:2.0.0-4.0.0-beta.38"
+    "@girs/gdk-4.0": "npm:4.0.0-4.0.0-beta.38"
+    "@girs/gdkpixbuf-2.0": "npm:2.0.0-4.0.0-beta.38"
+    "@girs/gio-2.0": "npm:2.86.0-4.0.0-beta.38"
+    "@girs/gjs": "npm:4.0.0-beta.38"
+    "@girs/glib-2.0": "npm:2.86.0-4.0.0-beta.38"
+    "@girs/gmodule-2.0": "npm:2.0.0-4.0.0-beta.38"
+    "@girs/gobject-2.0": "npm:2.86.0-4.0.0-beta.38"
+    "@girs/graphene-1.0": "npm:1.0.0-4.0.0-beta.38"
+    "@girs/gsk-4.0": "npm:4.0.0-4.0.0-beta.38"
+    "@girs/gtk-4.0": "npm:4.20.1-4.0.0-beta.38"
+    "@girs/harfbuzz-0.0": "npm:11.5.0-4.0.0-beta.38"
+    "@girs/pango-1.0": "npm:1.57.0-4.0.0-beta.38"
+    "@girs/pangocairo-1.0": "npm:1.0.0-4.0.0-beta.38"
+  checksum: 10c0/8decd547275eaf1183ff8139316f0f4cb290d73e572d5358d9f7fe52d8ad3964db995269434718e9a5833024c8fc9e836b47a9dce4ebd64bf29f0d4615bca128
+  languageName: node
+  linkType: hard
+
 "@girs/harfbuzz-0.0@npm:11.5.0-4.0.0-beta.38":
   version: 11.5.0-4.0.0-beta.38
   resolution: "@girs/harfbuzz-0.0@npm:11.5.0-4.0.0-beta.38"
@@ -2477,6 +2500,19 @@ __metadata:
   peerDependencies:
     vite: "*"
   checksum: 10c0/f847d8c8acc8a82bf74e95e880b74840fb6f1ce6d71da6df2da0f27bee9c6595b8140cd69850279c0319faf0b2041d0459eefedd1b5a262edd2f96fd772c9ffb
+  languageName: node
+  linkType: hard
+
+"@gjsify/vite-plugin-gettext@npm:^0.2.9":
+  version: 0.2.9
+  resolution: "@gjsify/vite-plugin-gettext@npm:0.2.9"
+  dependencies:
+    execa: "npm:^9.6.0"
+    fast-glob: "npm:^3.3.3"
+    gettext-parser: "npm:^8.0.0"
+  peerDependencies:
+    vite: "*"
+  checksum: 10c0/c3d9ee759f2f1ddd8b8aa804a40c05391d3a4d9891c3fa39ac94c117ceac28288773c61bb039e229102952365e1af317c92fc6a5b8ecbcf809a7efb6917e7efe
   languageName: node
   linkType: hard
 
@@ -3293,6 +3329,7 @@ __metadata:
     "@girs/pango-1.0": "npm:^1.57.0-4.0.0-beta.38"
     "@pixelrpg/data-core": "workspace:^"
     typescript: "npm:^5.9.2"
+    vite: "npm:^7.1.7"
   languageName: unknown
   linkType: soft
 
@@ -3333,13 +3370,16 @@ __metadata:
   resolution: "@pixelrpg/engine-gjs@workspace:packages/engine-gjs"
   dependencies:
     "@girs/adw-1": "npm:^1.9.0-4.0.0-beta.38"
+    "@girs/gdk-4.0": "npm:^4.0.0-4.0.0-beta.38"
     "@girs/gio-2.0": "npm:^2.86.0-4.0.0-beta.38"
     "@girs/gjs": "npm:^4.0.0-beta.38"
     "@girs/glib-2.0": "npm:^2.86.0-4.0.0-beta.38"
     "@girs/gobject-2.0": "npm:^2.86.0-4.0.0-beta.38"
     "@girs/gtk-4.0": "npm:^4.20.1-4.0.0-beta.38"
+    "@girs/gtksource-5": "npm:^5.18.0-4.0.0-beta.38"
     "@girs/javascriptcore-6.0": "npm:^2.50.0-4.0.0-beta.38"
     "@girs/webkit-6.0": "npm:^2.50.0-4.0.0-beta.38"
+    "@gjsify/vite-plugin-blueprint": "npm:^0.2.9"
     "@pixelrpg/data-core": "workspace:*"
     "@pixelrpg/data-gjs": "workspace:*"
     "@pixelrpg/engine-core": "workspace:*"
@@ -3395,6 +3435,7 @@ __metadata:
     "@girs/javascriptcore-6.0": "npm:^2.50.0-4.0.0-beta.38"
     "@girs/webkit-6.0": "npm:^2.50.0-4.0.0-beta.38"
     "@gjsify/vite-plugin-blueprint": "npm:^0.2.9"
+    "@gjsify/vite-plugin-gettext": "npm:^0.2.9"
     "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-gjs": "workspace:^"
     "@pixelrpg/engine-core": "workspace:^"
@@ -3407,6 +3448,7 @@ __metadata:
     mime: "npm:^4.1.0"
     typescript: "npm:^5.9.2"
     vite: "npm:^7.1.7"
+    vite-plugin-static-copy: "npm:^3.1.2"
   languageName: unknown
   linkType: soft
 
@@ -6497,7 +6539,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"content-type@npm:~1.0.4, content-type@npm:~1.0.5":
+"content-type@npm:^1.0.5, content-type@npm:~1.0.4, content-type@npm:~1.0.5":
   version: 1.0.5
   resolution: "content-type@npm:1.0.5"
   checksum: 10c0/b76ebed15c000aee4678c3707e0860cb6abd4e680a598c0a26e17f0bfae723ec9cc2802f0ff1bc6e4d80603719010431d2231018373d4dde10f9ccff9dadf5af
@@ -8738,6 +8780,18 @@ __metadata:
     data-uri-to-buffer: "npm:^6.0.2"
     debug: "npm:^4.3.4"
   checksum: 10c0/c7ff5d5d55de53d23ecce7c5108cc3ed0db1174db43c9aa15506d640283d36ee0956fd8ba1fc50b06a718466cc85794ae9d8860193f91318afe846e3e7010f3a
+  languageName: node
+  linkType: hard
+
+"gettext-parser@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "gettext-parser@npm:8.0.0"
+  dependencies:
+    content-type: "npm:^1.0.5"
+    encoding: "npm:^0.1.13"
+    readable-stream: "npm:^4.5.2"
+    safe-buffer: "npm:^5.2.1"
+  checksum: 10c0/b329981791afeded45c010a5b59f980b199b53a29cfd064d09a38e9b7a9678b34666bc505cff6888984ce70ab6a7bb7d1df3e95f8c1310e21b18edac28a05160
   languageName: node
   linkType: hard
 
@@ -12010,6 +12064,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "pixelrpg@workspace:."
   dependencies:
+    "@girs/gtksource-5": "npm:^5.18.0-4.0.0-beta.38"
     barrelsby: "npm:^2.8.1"
     prettier: "npm:^3.6.2"
     typescript: "npm:^5.9.2"
@@ -12600,7 +12655,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"readable-stream@npm:^4.4.2":
+"readable-stream@npm:^4.4.2, readable-stream@npm:^4.5.2":
   version: 4.7.0
   resolution: "readable-stream@npm:4.7.0"
   dependencies:
@@ -15108,7 +15163,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-static-copy@npm:3.1.2":
+"vite-plugin-static-copy@npm:3.1.2, vite-plugin-static-copy@npm:^3.1.2":
   version: 3.1.2
   resolution: "vite-plugin-static-copy@npm:3.1.2"
   dependencies:

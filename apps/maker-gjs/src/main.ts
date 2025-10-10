@@ -3,6 +3,7 @@ import '@girs/gjs'
 import system from 'system'
 
 import { Application } from './application.ts'
+
 export function main(argv: string[]) {
   const application = new Application()
   return application.runAsync(argv)

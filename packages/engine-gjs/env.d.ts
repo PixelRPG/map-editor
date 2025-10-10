@@ -1,6 +1,3 @@
 /// <reference types="vite/client" />
 
 import '@gjsify/vite-plugin-blueprint/src/type.d.ts'
-
-// This empty export is necessary to make this a module
-export {}

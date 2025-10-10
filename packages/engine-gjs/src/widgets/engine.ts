@@ -16,7 +16,8 @@ import {
   createValidationError,
   createResourceError,
 } from '@pixelrpg/engine-core'
-import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '../utils/constants.ts'
+import { CLIENT_DIR_PATH, CLIENT_RESOURCE_PATH } from '@pixelrpg/data-gjs'
+
 import { WebView } from './webview.ts'
 import Template from './engine.blp'
 

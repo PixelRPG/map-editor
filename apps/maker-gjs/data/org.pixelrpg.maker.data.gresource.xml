@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/pixelrpg/maker">
+    <file alias="index.html">../../../packages/engine-excalibur/dist/index.html</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/tileset-symbolic.svg</file>
+    <!-- <file preprocess="xml-stripblanks">icons/scalable/actions/layers-symbolic.svg</file> -->
+    <file preprocess="xml-stripblanks">icons/scalable/actions/pencil-symbolic.svg</file>
+  </gresource>
+</gresources>

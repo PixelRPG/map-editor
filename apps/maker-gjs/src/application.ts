@@ -3,9 +3,14 @@ import Gio from '@girs/gio-2.0'
 import Gdk from '@girs/gdk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
+import { ResourceManager } from '@pixelrpg/engine-gjs'
 
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
-import { APPLICATION_ID } from '@pixelrpg/engine-gjs'
+import {
+  APPLICATION_ID,
+  RESOURCES_PATH,
+  PACKAGE_VERSION,
+} from '@pixelrpg/data-gjs'
 
 import applicationStyle from './application.css?inline'
 
@@ -31,6 +36,8 @@ export class Application extends Adw.Application {
 
   protected onStartup(): void {
     this.initStyles()
+    const resourceManager = new ResourceManager()
+    resourceManager.initialize()
   }
 
   /** Load the stylesheet in a CssProvider and add it to the Gtk.StyleContext */
@@ -65,17 +72,22 @@ export class Application extends Adw.Application {
     // About action
     const showAboutAction = new Gio.SimpleAction({ name: 'about' })
     showAboutAction.connect('activate', (_action) => {
-      const aboutParams = {
-        transient_for: this.active_window,
-        application_name: 'PixelRPG Map Editor',
-        application_icon: APPLICATION_ID,
-        developer_name: 'Pascal Garber',
-        version: '0.1.0',
-        developers: ['Pascal Garber'],
-        copyright: '© 2024 Pascal Garber',
-      }
-      const aboutWindow = new Adw.AboutWindow(aboutParams)
-      aboutWindow.present()
+      // const aboutParams: Partial<Adw.AboutWindow.ConstructorProps> = {
+      //   transient_for: this.active_window,
+      //   application_name: 'PixelRPG Map Editor',
+      //   application_icon: APPLICATION_ID,
+      //   developer_name: 'Pascal Garber',
+      //   version: '0.1.0',
+      //   developers: ['Pascal Garber'],
+      //   copyright: '© 2024 Pascal Garber',
+      // }
+      // const aboutWindow = new Adw.AboutWindow(aboutParams)
+      const aboutDialog = Adw.AboutDialog.new_from_appdata(
+        `${RESOURCES_PATH}/metainfo/${APPLICATION_ID}.metainfo.xml`,
+        PACKAGE_VERSION,
+      )
+      aboutDialog.present(this.get_active_window())
+      // aboutWindow.present()
     })
     this.add_action(showAboutAction)
 

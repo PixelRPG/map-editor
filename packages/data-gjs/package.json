@@ -20,6 +20,7 @@
         "@girs/graphene-1.0": "^1.0.0-4.0.0-beta.38",
         "@girs/gtk-4.0": "^4.20.1-4.0.0-beta.38",
         "@girs/pango-1.0": "^1.57.0-4.0.0-beta.38",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "vite": "^7.1.7"
     }
 }

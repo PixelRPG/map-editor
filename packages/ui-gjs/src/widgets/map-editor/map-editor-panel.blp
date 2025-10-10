@@ -11,7 +11,7 @@ template $MapEditorPanel: Adw.Bin {
       Adw.ViewStackPage {
         name: "pageTilesets";
         title: _("Tilesets");
-        icon-name: "star-filled-rounded-symbolic";
+        icon-name: "tileset-symbolic";
         use-underline: true;
 
         child: $TilesetSelector tilesetSelector {};
@@ -20,7 +20,7 @@ template $MapEditorPanel: Adw.Bin {
       Adw.ViewStackPage {
         name: "pageLayer";
         title: _("Layer");
-        icon-name: "clock-alt-symbolic";
+        icon-name: "layers-symbolic";
         use-underline: true;
 
         child: $LayerSelector layerSelector {};
@@ -29,7 +29,7 @@ template $MapEditorPanel: Adw.Bin {
       Adw.ViewStackPage {
         name: "pageTools";
         title: _("Tools");
-        icon-name: "tools-symbolic";
+        icon-name: "pencil-symbolic";
         use-underline: true;
 
         child: Gtk.Box toolBox {

@@ -12,6 +12,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["src/**/*", "@girs/gjs", "@girs/gjs/dom"],
+  "include": ["src/**/*", "@girs/gjs", "@girs/gjs/dom", "env.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
