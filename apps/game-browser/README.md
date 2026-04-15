@@ -1,7 +1,7 @@
 # @pixelrpg/game-browser
 
-Minimal browser host for a PixelRPG game project. Exists primarily to verify
-that `@pixelrpg/engine-excalibur` still runs in a plain browser after the GJS
+Minimal browser host for a PixelRPG game project. Exists to verify that
+`@pixelrpg/engine-excalibur` still runs in a plain browser after the GJS
 integration work — the map editor uses the same engine via a GTK widget, so
 keeping a browser entry alive guards against accidental GJS-only regressions.
 
@@ -12,17 +12,17 @@ yarn workspace @pixelrpg/game-browser build
 yarn workspace @pixelrpg/game-browser start
 ```
 
-`build` bundles `src/main.ts` via `gjsify build --app browser` into
-`dist/main.js`. `start` serves `public/` (which includes the bundled
-`main.js` once the build step is wired to copy it; see TODO below).
+- `build` runs `gjsify build --app browser` for `src/main.ts` into
+  `dist/main.js`, then copies `public/index.html` into `dist/`.
+- `start` serves the **repository root** via `http-server` and opens
+  `/apps/game-browser/dist/index.html`. Serving from the repo root lets
+  `/games/zelda-like/*` resolve without a separate asset server.
 
-## Status
+Open <http://127.0.0.1:8080/apps/game-browser/dist/index.html> to load
+the zelda-like demo project against a full-viewport WebGL canvas.
 
-Scaffolding only. The engine boots against `<canvas id="game">` and loads
-`games/zelda-like/game-project.json`, but the build pipeline still needs:
+## Not included
 
-- copy `public/index.html` → `dist/index.html` as part of `build`
-- resolve the `../games/zelda-like/...` asset path when served from `dist/`
-  (likely via a dev-server rewrite or a `--public-dir` option on gjsify build)
-
-Once those are in place, drop this section.
+This app is deliberately a thin harness. It is **not** meant to be the
+future game runtime — see `apps/maker-gjs` for the editor and treat this
+as a smoke test.

@@ -18,7 +18,11 @@ async function main(): Promise<void> {
 
   await engine.initialize()
 
-  const projectPath = new URL('../games/zelda-like/game-project.json', window.location.href).toString()
+  // The `start` script serves the repo root, so index.html lives at
+  // /apps/game-browser/dist/ while the zelda-like assets live at
+  // /games/zelda-like/. Absolute path from origin avoids depending on
+  // how deep the HTML file is served from.
+  const projectPath = new URL('/games/zelda-like/game-project.json', window.location.origin).toString()
   await engine.loadProject(projectPath)
 }
 
