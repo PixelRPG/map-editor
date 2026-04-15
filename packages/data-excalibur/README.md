@@ -99,12 +99,12 @@ When contributing to this package:
 
 ## Relationship to Core Packages
 
-- **@pixelrpg/data-core**: Provides the data structures that this package implements for Excalibur
+- **@pixelrpg/data-excalibur**: Provides the data structures that this package implements for Excalibur
 - Core data structures are consumed but never modified
 - Engine-specific extensions are kept in this package
 - Circular dependencies between packages are avoided
 
 ## Dependencies
 
-- **@pixelrpg/data-core**: Core data structures and type definitions
+- **@pixelrpg/data-excalibur**: Core data structures and type definitions
 - **excaliburjs/excalibur**: The Excalibur game engine

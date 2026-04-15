@@ -4055,7 +4055,6 @@ __metadata:
   resolution: "@pixelrpg/cli@workspace:apps/cli"
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
-    "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-excalibur": "workspace:^"
     "@types/jsdom": "npm:^21.1.7"
     "@types/node": "npm:^24.5.2"
@@ -4070,21 +4069,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/data-core@workspace:*, @pixelrpg/data-core@workspace:^, @pixelrpg/data-core@workspace:packages/data-core":
-  version: 0.0.0-use.local
-  resolution: "@pixelrpg/data-core@workspace:packages/data-core"
-  dependencies:
-    "@types/node": "npm:^24.5.2"
-    barrelsby: "npm:^2.8.1"
-    typescript: "npm:^5.9.2"
-  languageName: unknown
-  linkType: soft
-
-"@pixelrpg/data-excalibur@workspace:^, @pixelrpg/data-excalibur@workspace:packages/data-excalibur":
+"@pixelrpg/data-excalibur@workspace:*, @pixelrpg/data-excalibur@workspace:^, @pixelrpg/data-excalibur@workspace:packages/data-excalibur":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/data-excalibur@workspace:packages/data-excalibur"
   dependencies:
-    "@pixelrpg/data-core": "workspace:^"
     "@types/node": "npm:^24.5.2"
     barrelsby: "npm:^2.8.1"
     excalibur: "workspace:^"
@@ -4106,7 +4094,7 @@ __metadata:
     "@girs/gsk-4.0": "npm:^4.0.0-4.0.0-rc.3"
     "@girs/gtk-4.0": "npm:^4.23.0-4.0.0-rc.3"
     "@girs/pango-1.0": "npm:^1.57.0-4.0.0-beta.44"
-    "@pixelrpg/data-core": "workspace:^"
+    "@pixelrpg/data-excalibur": "workspace:^"
     typescript: "npm:^5.9.2"
     vite: "npm:^7.1.7"
   languageName: unknown
@@ -4117,7 +4105,6 @@ __metadata:
   resolution: "@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur"
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
-    "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-excalibur": "workspace:^"
     barrelsby: "npm:^2.8.1"
     excalibur: "workspace:^"
@@ -4142,7 +4129,7 @@ __metadata:
     "@gjsify/event-bridge": "npm:^0.1.11"
     "@gjsify/vite-plugin-blueprint": "npm:^0.2.9"
     "@gjsify/webgl": "npm:^0.1.11"
-    "@pixelrpg/data-core": "workspace:*"
+    "@pixelrpg/data-excalibur": "workspace:*"
     "@pixelrpg/data-gjs": "workspace:*"
     "@pixelrpg/engine-excalibur": "workspace:*"
     "@pixelrpg/story-gjs": "workspace:^"
@@ -4206,7 +4193,7 @@ __metadata:
     "@gjsify/webgl": "npm:^0.1.11"
     "@gjsify/xmlhttprequest": "npm:^0.1.11"
     "@gjsify/zlib": "npm:^0.1.11"
-    "@pixelrpg/data-core": "workspace:^"
+    "@pixelrpg/data-excalibur": "workspace:^"
     "@pixelrpg/data-gjs": "workspace:^"
     "@pixelrpg/engine-excalibur": "workspace:^"
     "@pixelrpg/engine-gjs": "workspace:^"
@@ -4268,7 +4255,7 @@ __metadata:
     "@girs/gobject-2.0": "npm:^2.88.0-4.0.0-rc.3"
     "@girs/gtk-4.0": "npm:^4.23.0-4.0.0-rc.3"
     "@girs/pango-1.0": "npm:^1.57.0-4.0.0-beta.44"
-    "@pixelrpg/data-core": "workspace:^"
+    "@pixelrpg/data-excalibur": "workspace:^"
     "@pixelrpg/data-gjs": "workspace:^"
     "@pixelrpg/story-gjs": "workspace:^"
     barrelsby: "npm:^2.8.1"

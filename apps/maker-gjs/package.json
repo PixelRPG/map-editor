@@ -57,7 +57,7 @@
         "@gjsify/webgl": "^0.1.11",
         "@gjsify/xmlhttprequest": "^0.1.11",
         "@gjsify/zlib": "^0.1.11",
-        "@pixelrpg/data-core": "workspace:^",
+        "@pixelrpg/data-excalibur": "workspace:^",
         "@pixelrpg/data-gjs": "workspace:^",
         "@pixelrpg/engine-excalibur": "workspace:^",
         "@pixelrpg/engine-gjs": "workspace:^",

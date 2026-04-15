@@ -3,13 +3,19 @@
     "version": "0.1.0",
     "type": "module",
     "main": "src/index.ts",
+    "types": "index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "default": "./src/index.ts"
+        }
+    },
     "scripts": {
         "check": "tsc",
-        "build:barrels": "barrelsby --delete --directory src src/resource src/types src/utils",
+        "build:barrels": "barrelsby --delete --directory src src/resource src/types src/utils src/format",
         "build": "yarn build:barrels"
     },
     "dependencies": {
-        "@pixelrpg/data-core": "workspace:^",
         "excalibur": "workspace:^"
     },
     "devDependencies": {

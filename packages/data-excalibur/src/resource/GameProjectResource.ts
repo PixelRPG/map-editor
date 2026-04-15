@@ -1,13 +1,7 @@
 import { Logger } from 'excalibur'
-import {
-  GameProjectData,
-  GameProjectFormat,
-  GameProjectResource as BaseGameProjectResource,
-  MapData,
-  extractDirectoryPath,
-  getFilename,
-  joinPaths,
-} from '@pixelrpg/data-core'
+import { GameProjectFormat } from '../format/GameProjectFormat'
+import type { GameProjectData, MapData } from '../types'
+import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { MapResource } from './MapResource'
 import { SpriteSetResource } from './SpriteSetResource'
 import { loadTextFile } from '../utils'
@@ -16,7 +10,7 @@ import type { GameProjectResourceOptions } from '../types'
 /**
  * Resource class for loading a complete game project into Excalibur
  */
-export class GameProjectResource extends BaseGameProjectResource {
+export class GameProjectResource {
   /**
    * The loaded game project data
    */
@@ -71,7 +65,6 @@ export class GameProjectResource extends BaseGameProjectResource {
   }
 
   constructor(path: string, options?: GameProjectResourceOptions) {
-    super()
     this.headless = options?.headless ?? this.headless
     this.baseDir = options?.baseDir ?? extractDirectoryPath(path)
     this.filename = getFilename(path)

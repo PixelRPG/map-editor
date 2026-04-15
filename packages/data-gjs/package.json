@@ -9,7 +9,7 @@
     "dependencies": {
         "@girs/cairo-1.0": "^1.0.0-4.0.0-rc.3",
         "@girs/gsk-4.0": "^4.0.0-4.0.0-rc.3",
-        "@pixelrpg/data-core": "workspace:^"
+        "@pixelrpg/data-excalibur": "workspace:^"
     },
     "devDependencies": {
         "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.3",

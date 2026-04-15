@@ -1,4 +1,4 @@
-import { ResourceOptions } from '@pixelrpg/data-core';
+import { ResourceOptions } from '../ResourceOptions';
 
 export interface MapResourceOptions extends ResourceOptions {
     /**

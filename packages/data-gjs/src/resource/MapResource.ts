@@ -1,10 +1,10 @@
-import { MapData, Loadable } from '@pixelrpg/data-core'
+import { MapData, Loadable } from '@pixelrpg/data-excalibur'
 import { MapResourceOptions } from '../types/MapResourceOptions'
 import { loadTextFile } from '../utils'
-import { MapFormat } from '@pixelrpg/data-core'
+import { MapFormat } from '@pixelrpg/data-excalibur'
 import { SpriteSetResource } from './SpriteSetResource'
 import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions'
-import { extractDirectoryPath } from '@pixelrpg/data-core'
+import { extractDirectoryPath } from '@pixelrpg/data-excalibur'
 import { resolveResourcePath } from '../utils/path'
 
 /**

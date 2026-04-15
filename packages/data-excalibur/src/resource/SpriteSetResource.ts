@@ -8,25 +8,20 @@ import {
   ImageFiltering,
   ImageWrapping,
 } from 'excalibur'
-import {
+import type {
   SpriteSetData,
   SpriteDataSet,
   AnimationData,
-  SpriteSetFormat,
-  SpriteSetResource as BaseSpriteSetResource,
-} from '@pixelrpg/data-core'
-import {
-  extractDirectoryPath,
-  getFilename,
-  joinPaths,
-} from '@pixelrpg/data-core'
+} from '../types'
+import { SpriteSetFormat } from '../format/SpriteSetFormat'
+import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { loadTextFile, toFetchUrl } from '../utils'
 import type { SpriteSetResourceOptions } from '../types'
 
 /**
  * Resource class for loading custom SpriteSet format into Excalibur
  */
-export class SpriteSetResource extends BaseSpriteSetResource {
+export class SpriteSetResource {
   /**
    * The loaded sprite set data
    */
@@ -56,7 +51,6 @@ export class SpriteSetResource extends BaseSpriteSetResource {
   private logger = Logger.getInstance()
 
   constructor(path: string, options?: SpriteSetResourceOptions) {
-    super()
     this.headless = options?.headless ?? this.headless
     this.basePath = extractDirectoryPath(path)
     this.filename = getFilename(path)

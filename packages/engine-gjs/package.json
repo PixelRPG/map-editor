@@ -23,7 +23,7 @@
         "@gjsify/dom-elements": "^0.1.11",
         "@gjsify/event-bridge": "^0.1.11",
         "@gjsify/webgl": "^0.1.11",
-        "@pixelrpg/data-core": "workspace:*",
+        "@pixelrpg/data-excalibur": "workspace:*",
         "@pixelrpg/data-gjs": "workspace:*",
         "@pixelrpg/engine-excalibur": "workspace:*",
         "excalibur": "workspace:^"

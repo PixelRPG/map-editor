@@ -6,7 +6,7 @@ import { gettext as _ } from 'gettext'
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
-import type { ImageReference } from '@pixelrpg/data-core'
+import type { ImageReference } from '@pixelrpg/data-excalibur'
 import { ImageResource } from '@pixelrpg/data-gjs'
 
 import Template from './application-window.blp'

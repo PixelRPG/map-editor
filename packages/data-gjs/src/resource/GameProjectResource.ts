@@ -4,9 +4,8 @@ import {
   GameProjectData,
   MapData,
   GameProjectFormat,
-  GameProjectResource as BaseGameProjectResource,
-} from '@pixelrpg/data-core'
-import type { SpriteSetData } from '@pixelrpg/data-core'
+} from '@pixelrpg/data-excalibur'
+import type { SpriteSetData } from '@pixelrpg/data-excalibur'
 import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions'
 import { MapResource } from './MapResource'
 import { SpriteSetResource } from './SpriteSetResource'
@@ -15,7 +14,7 @@ import { loadTextFile } from '../utils'
 /**
  * GJS implementation of a game project resource loader
  */
-export class GameProjectResource extends BaseGameProjectResource {
+export class GameProjectResource {
   private _data: GameProjectData | null = null
   private _path: string
   private _baseDir: Gio.File
@@ -32,7 +31,6 @@ export class GameProjectResource extends BaseGameProjectResource {
    * @param options Options for loading the game project
    */
   constructor(path: string, options: GameProjectResourceOptions) {
-    super()
     this._path = path
 
     if (options.baseDir) {

@@ -1,4 +1,4 @@
-import { ResourceOptions } from '@pixelrpg/data-core';
+import { ResourceOptions } from '../ResourceOptions';
 
 /**
  * Options for the GameProjectResource

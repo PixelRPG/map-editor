@@ -10,6 +10,6 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
   },
-  "include": ["env.d.ts", "src/**/*", "../data-core/src/utils/url.ts"],
+  "include": ["env.d.ts", "src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
