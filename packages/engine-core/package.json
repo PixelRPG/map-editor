@@ -9,8 +9,7 @@
         "watch": "tsc -w"
     },
     "dependencies": {
-        "@pixelrpg/data-core": "workspace:*",
-        "@pixelrpg/message-channel-core": "workspace:*"
+        "@pixelrpg/data-core": "workspace:*"
     },
     "devDependencies": {
         "typescript": "^5.9.2"

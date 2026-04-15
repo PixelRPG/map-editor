@@ -7,14 +7,15 @@
     "private": true,
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "clear": "rm -rf dist org.pixelrpg.maker",
-        "build:vite": "vite build",
-        "build:resources": "glib-compile-resources --sourcedir data data/org.pixelrpg.maker.data.gresource.xml",
+        "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
+        "gjsify": "node ../../../../gjsify/packages/infra/cli/lib/index.js",
+        "build:resources": "yarn gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
         "build:barrels": "barrelsby --delete --directory src src/widgets src/objects",
-        "build": "yarn build:resources && yarn build:barrels && yarn build:vite",
+        "build:app": "yarn gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
+        "build": "yarn build:resources && yarn build:barrels && yarn build:app",
         "check": "tsc",
-        "start": "gjs -m org.pixelrpg.maker",
-        "start:debug": "GTK_DEBUG=interactive gjs -m org.pixelrpg.maker"
+        "start": "yarn gjsify run org.pixelrpg.maker",
+        "start:debug": "GTK_DEBUG=interactive yarn gjsify run org.pixelrpg.maker"
     },
     "keywords": [
         "pixelrpg",
@@ -25,32 +26,43 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "GPL-3.0",
     "devDependencies": {
-        "@gjsify/vite-plugin-blueprint": "^0.2.9",
-        "@gjsify/vite-plugin-gettext": "^0.2.9",
         "barrelsby": "^2.8.1",
-        "lightningcss": "^1.30.1",
-        "typescript": "^5.9.2",
-        "vite": "^7.1.7",
-        "vite-plugin-static-copy": "^3.1.2"
+        "typescript": "^5.9.2"
+    },
+    "dependenciesMeta": {
+        "@gjsify/webgl": {
+            "unplugged": true
+        }
     },
     "dependencies": {
-        "@girs/adw-1": "^1.9.0-4.0.0-beta.38",
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.38",
-        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.38",
-        "@girs/gio-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gjs": "^4.0.0-beta.38",
-        "@girs/glib-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gobject-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gtk-4.0": "^4.20.1-4.0.0-beta.38",
-        "@girs/javascriptcore-6.0": "^2.50.0-4.0.0-beta.38",
-        "@girs/webkit-6.0": "^2.50.0-4.0.0-beta.38",
+        "@girs/adw-1": "^1.10.0-4.0.0-rc.3",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.3",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.3",
+        "@girs/gio-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gjs": "^4.0.0-rc.3",
+        "@girs/glib-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.3",
+        "@gjsify/buffer": "^0.1.11",
+        "@gjsify/canvas2d": "^0.1.11",
+        "@gjsify/dom-elements": "^0.1.11",
+        "@gjsify/dom-events": "^0.1.11",
+        "@gjsify/dom-exception": "^0.1.11",
+        "@gjsify/event-bridge": "^0.1.11",
+        "@gjsify/fetch": "^0.1.11",
+        "@gjsify/gamepad": "^0.1.11",
+        "@gjsify/node-globals": "^0.1.11",
+        "@gjsify/web-globals": "^0.1.11",
+        "@gjsify/webaudio": "^0.1.11",
+        "@gjsify/webgl": "^0.1.11",
+        "@gjsify/xmlhttprequest": "^0.1.11",
+        "@gjsify/zlib": "^0.1.11",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-gjs": "workspace:^",
         "@pixelrpg/engine-core": "workspace:^",
+        "@pixelrpg/engine-excalibur": "workspace:^",
         "@pixelrpg/engine-gjs": "workspace:^",
-        "@pixelrpg/message-channel-core": "workspace:^",
-        "@pixelrpg/message-channel-gjs": "workspace:^",
         "@pixelrpg/ui-gjs": "workspace:^",
-        "mime": "^4.1.0"
+        "excalibur": "workspace:^"
     }
 }

@@ -67,11 +67,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         this._signalHandlers.push(createProjectHandlerId, openProjectHandlerId)
       }
 
-      // Connect engine signals if project view is active
-      const engine = this._projectView?.engine
-      if (!engine) {
-        throw new Error('GJS engine not found')
-      }
     }
   }
 

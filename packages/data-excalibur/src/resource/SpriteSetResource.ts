@@ -20,7 +20,7 @@ import {
   getFilename,
   joinPaths,
 } from '@pixelrpg/data-core'
-import { loadTextFile } from '../utils'
+import { loadTextFile, toFetchUrl } from '../utils'
 import type { SpriteSetResourceOptions } from '../types'
 
 /**
@@ -302,8 +302,10 @@ export class SpriteSetResource extends BaseSpriteSetResource {
       throw new Error('Invalid image path: path is empty')
     }
 
-    // Create the image source with transparency settings
-    const imageLoader = new ImageSource(imagePath, {
+    // Excalibur's ImageSource fetches the URL as-is; normalize POSIX absolute
+    // paths to `file://` so GJS fetch accepts them (and does not treat them
+    // as origin-relative against the CWD).
+    const imageLoader = new ImageSource(toFetchUrl(imagePath), {
       // Set filtering to preserve pixel art quality
       filtering: ImageFiltering.Pixel,
       // Ensure proper wrapping

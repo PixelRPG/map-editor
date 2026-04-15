@@ -58,6 +58,8 @@ export function normalizePath(path: string): string {
  * @private
  */
 function normalizePathWithoutProtocol(path: string): string {
+  // Preserve a leading slash (POSIX absolute path) — split+filter would drop it
+  const isAbsolute = path.startsWith('/')
   // Check if path ends with a slash
   const endsWithSlash = path.endsWith('/')
 
@@ -78,12 +80,12 @@ function normalizePathWithoutProtocol(path: string): string {
     }
   }
 
-  // Reconstruct the path, preserving trailing slash if it existed
-  return result.length > 0
-    ? result.join('/') + (endsWithSlash ? '/' : '')
-    : endsWithSlash
-      ? '/'
-      : ''
+  // Reconstruct the path, preserving leading/trailing slashes if they existed
+  const leading = isAbsolute ? '/' : ''
+  if (result.length === 0) {
+    return isAbsolute ? '/' : endsWithSlash ? '/' : ''
+  }
+  return leading + result.join('/') + (endsWithSlash ? '/' : '')
 }
 
 /**

@@ -1,46 +1,26 @@
-import { type EventDispatcher } from '@pixelrpg/message-channel-core'
-import { EngineStatus, ProjectLoadOptions } from '../types/index'
-import { RpcEngineParamMap, RpcEngineType } from '../types/rpc-engine'
+import { EngineStatus } from '../types/engine-status.ts'
+import { ProjectLoadOptions } from '../types/project-options.ts'
+import { EngineEventMap } from '../types/engine-events.ts'
+import { EditorState } from '../types/editor-state.ts'
+import { TypedEventEmitter } from '../utils/emitter.ts'
 
 /**
- * Interface for the game engine
+ * In-process engine API.
+ *
+ * The engine is constructed with a canvas element (in GJS via
+ * `@gjsify/webgl`'s CanvasWebGLWidget, in the browser via `document.createElement`),
+ * owns its lifecycle and emits events through a TypedEventEmitter.
  */
 export interface EngineInterface {
-  /**
-   * Current status of the engine
-   */
-  status: EngineStatus
+  readonly status: EngineStatus
+  readonly events: TypedEventEmitter<EngineEventMap>
 
-  /**
-   * Event dispatcher for engine events
-   */
-  events: EventDispatcher<RpcEngineParamMap[RpcEngineType.NOTIFY_ENGINE_EVENT]>
-
-  /**
-   * Initialize the engine
-   */
   initialize(): Promise<void>
-
-  /**
-   * Load a game project
-   * @param projectPath Path to the game project file
-   * @param options Options for loading the project
-   */
   loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void>
-
-  /**
-   * Load a specific map
-   * @param mapId ID of the map to load
-   */
   loadMap(mapId: string): Promise<void>
-
-  /**
-   * Start the engine
-   */
   start(): Promise<void>
-
-  /**
-   * Stop the engine
-   */
   stop(): Promise<void>
+
+  setEditorState(state: Partial<EditorState>): void
+  getEditorState(): EditorState
 }

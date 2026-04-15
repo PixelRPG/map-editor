@@ -1,5 +1,5 @@
-import '@girs/gjs/dom'
-import '@girs/gjs'
+import '@gjsify/dom-elements/register'
+
 import system from 'system'
 
 import { Application } from './application.ts'

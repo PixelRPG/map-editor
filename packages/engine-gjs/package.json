@@ -8,26 +8,26 @@
         "check": "tsc"
     },
     "exports": {
-        ".": "./src/index.ts",
-        "./stories": "./src/stories.ts"
+        ".": "./src/index.ts"
     },
     "dependencies": {
-        "@girs/adw-1": "^1.9.0-4.0.0-beta.38",
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.38",
-        "@girs/gio-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gjs": "^4.0.0-beta.38",
-        "@girs/glib-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gobject-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gtk-4.0": "^4.20.1-4.0.0-beta.38",
-        "@girs/gtksource-5": "^5.18.0-4.0.0-beta.38",
-        "@girs/javascriptcore-6.0": "^2.50.0-4.0.0-beta.38",
-        "@girs/webkit-6.0": "^2.50.0-4.0.0-beta.38",
+        "@girs/adw-1": "^1.10.0-4.0.0-rc.3",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.3",
+        "@girs/gio-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gjs": "^4.0.0-rc.3",
+        "@girs/glib-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.3",
+        "@girs/gtksource-5": "^5.18.0-4.0.0-beta.40",
+        "@gjsify/canvas2d": "^0.1.11",
+        "@gjsify/dom-elements": "^0.1.11",
+        "@gjsify/event-bridge": "^0.1.11",
+        "@gjsify/webgl": "^0.1.11",
         "@pixelrpg/data-core": "workspace:*",
         "@pixelrpg/data-gjs": "workspace:*",
         "@pixelrpg/engine-core": "workspace:*",
-        "@pixelrpg/message-channel-core": "workspace:*",
-        "@pixelrpg/message-channel-gjs": "workspace:*",
-        "mime": "^4.1.0"
+        "@pixelrpg/engine-excalibur": "workspace:*",
+        "excalibur": "workspace:^"
     },
     "devDependencies": {
         "@gjsify/vite-plugin-blueprint": "^0.2.9",

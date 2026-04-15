@@ -1,5 +1,10 @@
 import { Entity, Logger, Scene, TileMap } from 'excalibur'
 import { MapResource } from '@pixelrpg/data-excalibur'
+import {
+  EditorState,
+  EngineEventMap,
+  TypedEventEmitter,
+} from '@pixelrpg/engine-core'
 import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
 
 import {
@@ -11,11 +16,15 @@ import {
 export class MapScene extends Scene {
   private logger = Logger.getInstance()
 
-  constructor(public readonly mapResource: MapResource) {
+  constructor(
+    public readonly mapResource: MapResource,
+    events: TypedEventEmitter<EngineEventMap>,
+    getEditorState: () => EditorState,
+  ) {
     super()
-    this.world.add(new EditorInputSystem())
-    this.world.add(new MapEditorSystem())
-    this.world.add(new TileInteractionSystem())
+    this.world.add(new EditorInputSystem(events))
+    this.world.add(new MapEditorSystem(getEditorState))
+    this.world.add(new TileInteractionSystem(events))
 
     mapResource.addToScene(this)
     this.addEditorComponentsToTileMaps(this)

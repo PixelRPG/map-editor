@@ -5,9 +5,10 @@ template $Engine : Adw.Bin {
   vexpand: true;
   hexpand: true;
   visible: true;
-  $WebView webView {
+
+  Gtk.Box canvasContainer {
     vexpand: true;
     hexpand: true;
-    visible: true;
+    orientation: vertical;
   }
-} 
+}

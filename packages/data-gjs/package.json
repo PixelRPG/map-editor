@@ -7,19 +7,19 @@
         "check": "tsc"
     },
     "dependencies": {
-        "@girs/cairo-1.0": "^1.0.0-4.0.0-beta.38",
-        "@girs/gsk-4.0": "^4.0.0-4.0.0-beta.38",
+        "@girs/cairo-1.0": "^1.0.0-4.0.0-rc.3",
+        "@girs/gsk-4.0": "^4.0.0-4.0.0-rc.3",
         "@pixelrpg/data-core": "workspace:^"
     },
     "devDependencies": {
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.38",
-        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-beta.38",
-        "@girs/gio-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/glib-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/gobject-2.0": "^2.86.0-4.0.0-beta.38",
-        "@girs/graphene-1.0": "^1.0.0-4.0.0-beta.38",
-        "@girs/gtk-4.0": "^4.20.1-4.0.0-beta.38",
-        "@girs/pango-1.0": "^1.57.0-4.0.0-beta.38",
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.3",
+        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.3",
+        "@girs/gio-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/glib-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/graphene-1.0": "^1.0.0-4.0.0-rc.3",
+        "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.3",
+        "@girs/pango-1.0": "^1.57.0-4.0.0-beta.44",
         "typescript": "^5.9.2",
         "vite": "^7.1.7"
     }
