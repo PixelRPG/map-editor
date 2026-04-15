@@ -6,18 +6,17 @@ import {
   Logger,
 } from 'excalibur'
 import {
-  EngineInterface,
   EngineStatus,
   EngineEvent,
   EngineEventMap,
   EditorState,
   ProjectLoadOptions,
-  TypedEventEmitter,
-} from '@pixelrpg/engine-core'
+} from './types/index.ts'
+import { TypedEventEmitter } from './utils/index.ts'
 import { GameProjectResource } from '@pixelrpg/data-excalibur'
 import { MapScene } from './scenes/map.scene.ts'
 
-export class Engine implements EngineInterface {
+export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new TypedEventEmitter<EngineEventMap>()
 

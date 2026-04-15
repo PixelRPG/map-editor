@@ -1,10 +1,7 @@
 import { Entity, Logger, Scene, TileMap } from 'excalibur'
 import { MapResource } from '@pixelrpg/data-excalibur'
-import {
-  EditorState,
-  EngineEventMap,
-  TypedEventEmitter,
-} from '@pixelrpg/engine-core'
+import { EditorState, EngineEventMap } from '../types/index.ts'
+import { TypedEventEmitter } from '../utils/index.ts'
 import { MapEditorComponent } from '../components/index.ts'
 
 import {

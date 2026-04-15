@@ -25,7 +25,6 @@
         "@gjsify/webgl": "^0.1.11",
         "@pixelrpg/data-core": "workspace:*",
         "@pixelrpg/data-gjs": "workspace:*",
-        "@pixelrpg/engine-core": "workspace:*",
         "@pixelrpg/engine-excalibur": "workspace:*",
         "excalibur": "workspace:^"
     },

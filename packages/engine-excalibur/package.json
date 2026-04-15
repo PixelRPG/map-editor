@@ -29,7 +29,6 @@
         "@excaliburjs/plugin-tiled": "workspace:^",
         "@pixelrpg/data-core": "workspace:^",
         "@pixelrpg/data-excalibur": "workspace:^",
-        "@pixelrpg/engine-core": "workspace:^",
         "excalibur": "workspace:^"
     }
 }

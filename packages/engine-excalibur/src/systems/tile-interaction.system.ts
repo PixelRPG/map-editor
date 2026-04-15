@@ -3,8 +3,8 @@ import {
   EditorState,
   EngineEvent,
   EngineEventMap,
-  TypedEventEmitter,
-} from '@pixelrpg/engine-core'
+} from '../types/index.ts'
+import { TypedEventEmitter } from '../utils/index.ts'
 import { MapEditorComponent } from '../components/index.ts'
 
 /**

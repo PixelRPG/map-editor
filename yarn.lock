@@ -4112,15 +4112,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/engine-core@workspace:*, @pixelrpg/engine-core@workspace:^, @pixelrpg/engine-core@workspace:packages/engine-core":
-  version: 0.0.0-use.local
-  resolution: "@pixelrpg/engine-core@workspace:packages/engine-core"
-  dependencies:
-    "@pixelrpg/data-core": "workspace:*"
-    typescript: "npm:^5.9.2"
-  languageName: unknown
-  linkType: soft
-
 "@pixelrpg/engine-excalibur@workspace:*, @pixelrpg/engine-excalibur@workspace:^, @pixelrpg/engine-excalibur@workspace:packages/engine-excalibur":
   version: 0.0.0-use.local
   resolution: "@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur"
@@ -4128,7 +4119,6 @@ __metadata:
     "@excaliburjs/plugin-tiled": "workspace:^"
     "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-excalibur": "workspace:^"
-    "@pixelrpg/engine-core": "workspace:^"
     barrelsby: "npm:^2.8.1"
     excalibur: "workspace:^"
     typescript: "npm:^5.9.2"
@@ -4154,7 +4144,6 @@ __metadata:
     "@gjsify/webgl": "npm:^0.1.11"
     "@pixelrpg/data-core": "workspace:*"
     "@pixelrpg/data-gjs": "workspace:*"
-    "@pixelrpg/engine-core": "workspace:*"
     "@pixelrpg/engine-excalibur": "workspace:*"
     "@pixelrpg/story-gjs": "workspace:^"
     excalibur: "workspace:^"
@@ -4219,7 +4208,6 @@ __metadata:
     "@gjsify/zlib": "npm:^0.1.11"
     "@pixelrpg/data-core": "workspace:^"
     "@pixelrpg/data-gjs": "workspace:^"
-    "@pixelrpg/engine-core": "workspace:^"
     "@pixelrpg/engine-excalibur": "workspace:^"
     "@pixelrpg/engine-gjs": "workspace:^"
     "@pixelrpg/ui-gjs": "workspace:^"

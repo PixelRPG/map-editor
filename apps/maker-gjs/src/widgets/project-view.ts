@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
 import { Engine } from '@pixelrpg/engine-gjs'
-import { EngineEvent, EngineStatus } from '@pixelrpg/engine-core'
+import { EngineEvent, EngineStatus } from '@pixelrpg/engine-excalibur'
 import { GameProjectResource, SpriteSheet } from '@pixelrpg/data-gjs'
 import { Sidebar } from './sidebar.ts'
 

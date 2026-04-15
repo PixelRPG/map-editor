@@ -7,12 +7,11 @@ import {
   EditorState,
   EngineEvent,
   EngineEventMap,
-  EngineInterface,
   EngineStatus,
   ProjectLoadOptions,
   TypedEventEmitter,
-} from '@pixelrpg/engine-core'
-import { Engine as ExcaliburEngine } from '@pixelrpg/engine-excalibur'
+  Engine as ExcaliburEngine,
+} from '@pixelrpg/engine-excalibur'
 import Template from './engine.blp'
 
 function describeError(err: unknown): string {
@@ -45,7 +44,7 @@ export namespace Engine {
  * the in-process Excalibur engine directly on its canvas. Falls back to
  * Canvas2DWidget (Cairo) if WebGL initialization fails.
  */
-export class Engine extends Adw.Bin implements EngineInterface {
+export class Engine extends Adw.Bin {
   declare private _canvasContainer: Gtk.Box
 
   private _widget: CanvasWebGLWidget | Canvas2DWidget | null = null
