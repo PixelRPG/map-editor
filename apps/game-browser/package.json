@@ -1,0 +1,22 @@
+{
+  "name": "@pixelrpg/game-browser",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Minimal browser runtime that hosts an Excalibur game via @pixelrpg/engine-excalibur.",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "gjsify build src/main.ts --app browser --outfile dist/main.js",
+    "start": "http-server dist -o"
+  },
+  "dependencies": {
+    "@pixelrpg/data": "workspace:^",
+    "@pixelrpg/engine-excalibur": "workspace:^",
+    "excalibur": "workspace:^"
+  },
+  "devDependencies": {
+    "@gjsify/cli": "^0.1.11",
+    "http-server": "^14.1.1",
+    "typescript": "^5.9.2"
+  }
+}
