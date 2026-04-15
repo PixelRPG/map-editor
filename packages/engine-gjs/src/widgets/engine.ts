@@ -50,6 +50,7 @@ export class Engine extends Adw.Bin {
   private _widget: CanvasWebGLWidget | Canvas2DWidget | null = null
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
+  private _excaliburUnsubscribers: Array<() => void> = []
 
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new TypedEventEmitter<EngineEventMap>()
@@ -180,32 +181,60 @@ export class Engine extends Adw.Bin {
   }
 
   private _forwardEvents(engine: ExcaliburEngine): void {
-    engine.events.on(EngineEvent.STATUS_CHANGED, (p) => {
-      this.status = p.status
-      this.events.emit(EngineEvent.STATUS_CHANGED, p)
-      this.emit(EngineEvent.STATUS_CHANGED, p.status)
-    })
-    engine.events.on(EngineEvent.PROJECT_LOADED, (p) => {
-      this.events.emit(EngineEvent.PROJECT_LOADED, p)
-      this.emit(EngineEvent.PROJECT_LOADED, p.projectPath)
-    })
-    engine.events.on(EngineEvent.MAP_LOADED, (p) => {
-      this.events.emit(EngineEvent.MAP_LOADED, p)
-      this.emit(EngineEvent.MAP_LOADED, p.mapId)
-    })
-    engine.events.on(EngineEvent.ERROR, (p) => {
-      this.events.emit(EngineEvent.ERROR, p)
-      this.emit(EngineEvent.ERROR, p.message)
-    })
-    engine.events.on(EngineEvent.TILE_CLICKED, (p) => {
-      this.events.emit(EngineEvent.TILE_CLICKED, p)
-    })
-    engine.events.on(EngineEvent.TILE_HOVERED, (p) => {
-      this.events.emit(EngineEvent.TILE_HOVERED, p)
-    })
-    engine.events.on(EngineEvent.TILE_PLACED, (p) => {
-      this.events.emit(EngineEvent.TILE_PLACED, p)
-    })
+    this._excaliburUnsubscribers.push(
+      engine.events.on(EngineEvent.STATUS_CHANGED, (p) => {
+        this.status = p.status
+        this.events.emit(EngineEvent.STATUS_CHANGED, p)
+        this.emit(EngineEvent.STATUS_CHANGED, p.status)
+      }),
+      engine.events.on(EngineEvent.PROJECT_LOADED, (p) => {
+        this.events.emit(EngineEvent.PROJECT_LOADED, p)
+        this.emit(EngineEvent.PROJECT_LOADED, p.projectPath)
+      }),
+      engine.events.on(EngineEvent.MAP_LOADED, (p) => {
+        this.events.emit(EngineEvent.MAP_LOADED, p)
+        this.emit(EngineEvent.MAP_LOADED, p.mapId)
+      }),
+      engine.events.on(EngineEvent.ERROR, (p) => {
+        this.events.emit(EngineEvent.ERROR, p)
+        this.emit(EngineEvent.ERROR, p.message)
+      }),
+      engine.events.on(EngineEvent.TILE_CLICKED, (p) => {
+        this.events.emit(EngineEvent.TILE_CLICKED, p)
+      }),
+      engine.events.on(EngineEvent.TILE_HOVERED, (p) => {
+        this.events.emit(EngineEvent.TILE_HOVERED, p)
+      }),
+      engine.events.on(EngineEvent.TILE_PLACED, (p) => {
+        this.events.emit(EngineEvent.TILE_PLACED, p)
+      }),
+    )
+  }
+
+  // Tear down the Excalibur engine + its event bridge before GJS starts
+  // reclaiming the widget. Running this in `vfunc_unmap` (not in dispose)
+  // keeps us off the GC path, which would otherwise trigger
+  // "Attempting to run a JS callback during garbage collection" criticals
+  // on app exit.
+  vfunc_unmap(): void {
+    for (const unsubscribe of this._excaliburUnsubscribers) {
+      try {
+        unsubscribe()
+      } catch {
+        // ignore — listener map may already be gone
+      }
+    }
+    this._excaliburUnsubscribers = []
+
+    try {
+      this._excalibur?.stop()
+    } catch {
+      // engine may not be started yet
+    }
+    this._excalibur?.events.clear()
+    this._excalibur = null
+
+    super.vfunc_unmap()
   }
 
   private async _waitForReady(): Promise<void> {
