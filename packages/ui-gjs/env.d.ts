@@ -1,5 +1,3 @@
-/// <reference types="vite/client" />
-
 declare const __APPLICATION_ID__: string
 declare const __RESOURCES_PATH__: string
 declare const __PACKAGE_VERSION__: string
