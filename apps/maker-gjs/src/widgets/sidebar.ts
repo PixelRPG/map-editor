@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 
 import { MapEditorPanel, LayersWidget } from '@pixelrpg/ui-gjs'
-import { MapData } from '@pixelrpg/data-excalibur'
+import { MapData } from '@pixelrpg/data'
 import { SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './sidebar.blp'

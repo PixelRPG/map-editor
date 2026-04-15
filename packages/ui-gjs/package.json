@@ -14,7 +14,7 @@
         "build": "yarn build:barrels"
     },
     "dependencies": {
-        "@pixelrpg/data-excalibur": "workspace:^",
+        "@pixelrpg/data": "workspace:^",
         "@pixelrpg/story-gjs": "workspace:^"
     },
     "devDependencies": {

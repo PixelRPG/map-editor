@@ -13,7 +13,7 @@ import {
   ProjectLoadOptions,
 } from './types/index.ts'
 import { TypedEventEmitter } from './utils/index.ts'
-import { GameProjectResource } from '@pixelrpg/data-excalibur'
+import { GameProjectResource } from '@pixelrpg/data'
 import { MapScene } from './scenes/map.scene.ts'
 
 export class Engine {

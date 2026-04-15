@@ -8,7 +8,7 @@ import {
   SpriteSheet,
   GameProjectResource,
 } from '@pixelrpg/ui-gjs/sprite'
-import { MapData } from '@pixelrpg/data-excalibur'
+import { MapData } from '@pixelrpg/data'
 
 // Import story template
 import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'

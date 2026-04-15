@@ -4,8 +4,8 @@ import {
   GameProjectData,
   MapData,
   GameProjectFormat,
-} from '@pixelrpg/data-excalibur'
-import type { SpriteSetData } from '@pixelrpg/data-excalibur'
+} from '@pixelrpg/data'
+import type { SpriteSetData } from '@pixelrpg/data'
 import { GameProjectResourceOptions } from '../types/GameProjectResourceOptions'
 import { MapResource } from './MapResource'
 import { SpriteSetResource } from './SpriteSetResource'

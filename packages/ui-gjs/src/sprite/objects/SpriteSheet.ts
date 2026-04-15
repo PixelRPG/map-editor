@@ -1,5 +1,5 @@
 import { Sprite } from './Sprite.ts'
-import type { SpriteSetData } from '@pixelrpg/data-excalibur'
+import type { SpriteSetData } from '@pixelrpg/data'
 import type { ImageResource } from '../resource/ImageResource.ts'
 
 /**

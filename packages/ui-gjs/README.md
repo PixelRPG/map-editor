@@ -84,7 +84,7 @@ if (spriteSheet) {
 ## Dependencies
 
 ### Runtime Dependencies
-- `@pixelrpg/data-excalibur`: Core data types and interfaces
+- `@pixelrpg/data`: Core data types and interfaces
 - `@pixelrpg/data-gjs`: GJS-specific data resources
 
 ### Development Dependencies

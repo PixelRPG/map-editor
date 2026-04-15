@@ -27,7 +27,7 @@
     },
     "dependencies": {
         "@excaliburjs/plugin-tiled": "workspace:^",
-        "@pixelrpg/data-excalibur": "workspace:^",
+        "@pixelrpg/data": "workspace:^",
         "excalibur": "workspace:^"
     }
 }

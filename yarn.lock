@@ -4240,7 +4240,7 @@ __metadata:
   resolution: "@pixelrpg/cli@workspace:apps/cli"
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
-    "@pixelrpg/data-excalibur": "workspace:^"
+    "@pixelrpg/data": "workspace:^"
     "@types/jsdom": "npm:^21.1.7"
     "@types/node": "npm:^24.5.2"
     "@types/yargs": "npm:^17.0.33"
@@ -4254,9 +4254,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pixelrpg/data-excalibur@workspace:*, @pixelrpg/data-excalibur@workspace:^, @pixelrpg/data-excalibur@workspace:packages/data-excalibur":
+"@pixelrpg/data@workspace:*, @pixelrpg/data@workspace:^, @pixelrpg/data@workspace:packages/data":
   version: 0.0.0-use.local
-  resolution: "@pixelrpg/data-excalibur@workspace:packages/data-excalibur"
+  resolution: "@pixelrpg/data@workspace:packages/data"
   dependencies:
     "@types/node": "npm:^24.5.2"
     barrelsby: "npm:^2.8.1"
@@ -4270,7 +4270,7 @@ __metadata:
   resolution: "@pixelrpg/engine-excalibur@workspace:packages/engine-excalibur"
   dependencies:
     "@excaliburjs/plugin-tiled": "workspace:^"
-    "@pixelrpg/data-excalibur": "workspace:^"
+    "@pixelrpg/data": "workspace:^"
     barrelsby: "npm:^2.8.1"
     excalibur: "workspace:^"
     typescript: "npm:^5.9.2"
@@ -4295,7 +4295,7 @@ __metadata:
     "@gjsify/event-bridge": "npm:^0.1.11"
     "@gjsify/vite-plugin-blueprint": "npm:^0.2.9"
     "@gjsify/webgl": "npm:^0.1.11"
-    "@pixelrpg/data-excalibur": "workspace:*"
+    "@pixelrpg/data": "workspace:*"
     "@pixelrpg/engine-excalibur": "workspace:*"
     "@pixelrpg/story-gjs": "workspace:^"
     excalibur: "workspace:^"
@@ -4358,7 +4358,7 @@ __metadata:
     "@gjsify/webgl": "npm:^0.1.11"
     "@gjsify/xmlhttprequest": "npm:^0.1.11"
     "@gjsify/zlib": "npm:^0.1.11"
-    "@pixelrpg/data-excalibur": "workspace:^"
+    "@pixelrpg/data": "workspace:^"
     "@pixelrpg/engine-excalibur": "workspace:^"
     "@pixelrpg/engine-gjs": "workspace:^"
     "@pixelrpg/ui-gjs": "workspace:^"
@@ -4419,7 +4419,7 @@ __metadata:
     "@girs/gobject-2.0": "npm:^2.88.0-4.0.0-rc.3"
     "@girs/gtk-4.0": "npm:^4.23.0-4.0.0-rc.3"
     "@girs/pango-1.0": "npm:^1.57.0-4.0.0-beta.44"
-    "@pixelrpg/data-excalibur": "workspace:^"
+    "@pixelrpg/data": "workspace:^"
     "@pixelrpg/story-gjs": "workspace:^"
     barrelsby: "npm:^2.8.1"
     typescript: "npm:^5.9.2"

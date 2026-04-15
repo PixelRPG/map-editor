@@ -1,4 +1,4 @@
-import type { ImageReference, Loadable } from '@pixelrpg/data-excalibur'
+import type { ImageReference, Loadable } from '@pixelrpg/data'
 import { loadTextFile } from '../utils'
 import GLib from '@girs/glib-2.0'
 import Gio from '@girs/gio-2.0'

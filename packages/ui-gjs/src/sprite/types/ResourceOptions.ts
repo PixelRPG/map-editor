@@ -1,4 +1,4 @@
-import { ResourceOptions as CoreResourceOptions } from '@pixelrpg/data-excalibur';
+import { ResourceOptions as CoreResourceOptions } from '@pixelrpg/data';
 
 export interface ResourceOptions extends CoreResourceOptions {
     /**

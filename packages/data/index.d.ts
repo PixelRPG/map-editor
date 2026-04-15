@@ -1,4 +1,4 @@
-// Minimal ambient typings for @pixelrpg/data-excalibur.
+// Minimal ambient typings for @pixelrpg/data.
 //
 // Same pattern as engine-excalibur: the real implementation in `src/`
 // imports types from the local excalibur fork (`../excalibur/src/engine/*`),

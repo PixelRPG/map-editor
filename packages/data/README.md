@@ -1,4 +1,4 @@
-# @pixelrpg/data-excalibur
+# @pixelrpg/data
 
 Excalibur.js-specific implementation of the PixelRPG data structures and resource loaders.
 
@@ -39,7 +39,7 @@ The package implements a hierarchical resource loading system:
 
 ```typescript
 import { Engine } from 'excalibur';
-import { GameProjectResource } from '@pixelrpg/data-excalibur';
+import { GameProjectResource } from '@pixelrpg/data';
 
 // Create an Excalibur game engine
 const game = new Engine({
@@ -99,12 +99,12 @@ When contributing to this package:
 
 ## Relationship to Core Packages
 
-- **@pixelrpg/data-excalibur**: Provides the data structures that this package implements for Excalibur
+- **@pixelrpg/data**: Provides the data structures that this package implements for Excalibur
 - Core data structures are consumed but never modified
 - Engine-specific extensions are kept in this package
 - Circular dependencies between packages are avoided
 
 ## Dependencies
 
-- **@pixelrpg/data-excalibur**: Core data structures and type definitions
+- **@pixelrpg/data**: Core data structures and type definitions
 - **excaliburjs/excalibur**: The Excalibur game engine

@@ -3,6 +3,7 @@
  */
 
 export * from "./stories";
+export * from "./sprite/index";
 export * from "./widgets/map-editor/layer-selector";
 export * from "./widgets/map-editor/map-editor-panel.story";
 export * from "./widgets/map-editor/map-editor-panel";

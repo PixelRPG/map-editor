@@ -1,5 +1,5 @@
 import { TileMap, Tile } from 'excalibur'
-import { MapResource } from '@pixelrpg/data-excalibur'
+import { MapResource } from '@pixelrpg/data'
 import { SpriteValidator } from './sprite.validator'
 import { SpriteInfoResolver } from './sprite-info.resolver'
 import { TileGraphicsManager } from './tile-graphics.manager'

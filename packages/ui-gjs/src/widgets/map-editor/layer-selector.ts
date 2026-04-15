@@ -9,7 +9,7 @@ import './layer-selector.css'
 export type LayersWidget = Gtk.Widget
 
 // Import MapData type - assuming it's available
-import type { MapData } from '@pixelrpg/data-excalibur'
+import type { MapData } from '@pixelrpg/data'
 
 export class LayerSelector extends Adw.Bin {
   declare _placeholder_box: Gtk.Box

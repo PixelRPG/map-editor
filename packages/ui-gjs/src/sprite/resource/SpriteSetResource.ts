@@ -1,9 +1,9 @@
 import Gio from '@girs/gio-2.0'
 import Gdk from '@girs/gdk-4.0'
-import type { SpriteSetData } from '@pixelrpg/data-excalibur'
+import type { SpriteSetData } from '@pixelrpg/data'
 import { SpriteSetResourceOptions } from '../types/SpriteSetResourceOptions'
 import { loadTextFile } from '../utils'
-import { SpriteSetFormat } from '@pixelrpg/data-excalibur'
+import { SpriteSetFormat } from '@pixelrpg/data'
 import { ImageResource } from './ImageResource'
 import { SpriteSheet, Sprite } from '../objects/index.ts'
 
