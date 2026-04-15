@@ -7,7 +7,7 @@ import {
   SpriteSetResource,
   SpriteSheet,
   GameProjectResource,
-} from '@pixelrpg/data-gjs'
+} from '@pixelrpg/ui-gjs/sprite'
 import { MapData } from '@pixelrpg/data-excalibur'
 
 // Import story template

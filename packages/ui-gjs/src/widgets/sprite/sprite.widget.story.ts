@@ -9,7 +9,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSetResource } from '@pixelrpg/data-gjs'
+import { SpriteSetResource } from '@pixelrpg/ui-gjs/sprite'
 
 // Import story template
 import SpriteStoryTemplate from './sprite.widget.story.blp'

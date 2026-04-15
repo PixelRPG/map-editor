@@ -17,6 +17,7 @@
         "@girs/gjs": "^4.0.0-rc.3",
         "@girs/glib-2.0": "^2.88.0-4.0.0-rc.3",
         "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.3",
+        "@girs/gsk-4.0": "^4.0.0-4.0.0-rc.3",
         "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.3",
         "@girs/gtksource-5": "^5.18.0-4.0.0-beta.40",
         "@gjsify/canvas2d": "^0.1.11",
@@ -24,7 +25,6 @@
         "@gjsify/event-bridge": "^0.1.11",
         "@gjsify/webgl": "^0.1.11",
         "@pixelrpg/data-excalibur": "workspace:*",
-        "@pixelrpg/data-gjs": "workspace:*",
         "@pixelrpg/engine-excalibur": "workspace:*",
         "excalibur": "workspace:^"
     },

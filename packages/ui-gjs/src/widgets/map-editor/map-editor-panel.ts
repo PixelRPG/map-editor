@@ -4,7 +4,7 @@ import Adw from '@girs/adw-1'
 
 import { TilesetSelector } from './tileset-selector'
 import { LayerSelector } from './layer-selector'
-import { SpriteSheet } from '@pixelrpg/data-gjs'
+import { SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 import { MapData } from '@pixelrpg/data-excalibur'
 
 import Template from './map-editor-panel.blp'

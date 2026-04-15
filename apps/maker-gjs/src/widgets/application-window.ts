@@ -7,7 +7,7 @@ import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
 import type { ImageReference } from '@pixelrpg/data-excalibur'
-import { ImageResource } from '@pixelrpg/data-gjs'
+import { ImageResource } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './application-window.blp'
 

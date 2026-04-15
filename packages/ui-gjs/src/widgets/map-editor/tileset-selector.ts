@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
 import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
-import { SpriteSheet } from '@pixelrpg/data-gjs'
+import { SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './tileset-selector.blp'
 

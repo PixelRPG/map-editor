@@ -9,7 +9,7 @@ import {
   APPLICATION_ID,
   RESOURCES_PATH,
   PACKAGE_VERSION,
-} from '@pixelrpg/data-gjs'
+} from './constants.ts'
 
 import applicationStyle from './application.css'
 

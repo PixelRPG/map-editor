@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSheet, Sprite } from '@pixelrpg/data-gjs'
+import { SpriteSheet, Sprite } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './sprite-sheet.widget.blp'
 

@@ -5,6 +5,7 @@
     "main": "src/index.ts",
     "exports": {
         "./index.css": "./src/index.css",
+        "./sprite": "./src/sprite/index.ts",
         ".": "./src/index.ts"
     },
     "scripts": {
@@ -14,7 +15,6 @@
     },
     "dependencies": {
         "@pixelrpg/data-excalibur": "workspace:^",
-        "@pixelrpg/data-gjs": "workspace:^",
         "@pixelrpg/story-gjs": "workspace:^"
     },
     "devDependencies": {

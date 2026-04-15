@@ -3,6 +3,7 @@
  */
 
 export * from "./application";
+export * from "./constants";
 export * from "./main";
 export * from "./objects/layer";
 export * from "./widgets/application-window";

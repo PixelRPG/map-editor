@@ -4,7 +4,7 @@ import Gtk from '@girs/gtk-4.0'
 
 import { Engine } from '@pixelrpg/engine-gjs'
 import { EngineEvent, EngineStatus } from '@pixelrpg/engine-excalibur'
-import { GameProjectResource, SpriteSheet } from '@pixelrpg/data-gjs'
+import { GameProjectResource, SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 import { Sidebar } from './sidebar.ts'
 
 import Template from './project-view.blp'

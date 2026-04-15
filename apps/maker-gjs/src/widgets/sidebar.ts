@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 
 import { MapEditorPanel, LayersWidget } from '@pixelrpg/ui-gjs'
 import { MapData } from '@pixelrpg/data-excalibur'
-import { SpriteSheet } from '@pixelrpg/data-gjs'
+import { SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './sidebar.blp'
 

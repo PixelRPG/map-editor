@@ -2,7 +2,7 @@ import Gio from '@girs/gio-2.0'
 
 /**
  * Application ID, e.g. "org.pixelrpg.maker"
- * Note: Defined in vite.config.js
+ * Defined via esbuild `define` in gjsify.config.js.
  */
 export const APPLICATION_ID = __APPLICATION_ID__
 export const RESOURCES_PATH = __RESOURCES_PATH__
@@ -14,8 +14,7 @@ export const DATADIR = __DATADIR__
 export const BINDIR = __BINDIR__
 export const PKGDATADIR = __PKGDATADIR__
 
-// Base directory for the running app; defined via Vite
 export const ROOT_DIR = Gio.File.new_for_path(PREFIX)
 
-// Maximum value for 32-bit signed integer (GObject int type limit)
+/** Maximum value for 32-bit signed integer (GObject int type limit) */
 export const MAX_INT32 = 2147483647
