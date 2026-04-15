@@ -1,15 +1,19 @@
 import { System, World, Scene, SystemType, Query, Entity } from 'excalibur'
 import {
+  EditorState,
   EngineEvent,
   EngineEventMap,
   TypedEventEmitter,
 } from '@pixelrpg/engine-core'
-import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
+import { MapEditorComponent } from '../components/index.ts'
 
 /**
  * ECS system that emits tile-click/hover events for entities with MapEditorComponent.
  *
- * Emits events directly via the engine's TypedEventEmitter (no RPC).
+ * Reads the active editor tool/tile/layer directly from the engine-held
+ * EditorState (previously mirrored into an EditorToolComponent by
+ * MapEditorSystem — both are now gone). Emits events via the engine's
+ * TypedEventEmitter; no RPC.
  */
 export class TileInteractionSystem extends System {
   public readonly systemType = SystemType.Update
@@ -18,7 +22,10 @@ export class TileInteractionSystem extends System {
   private world!: World
   private interactiveEntitiesQuery!: Query<typeof MapEditorComponent>
 
-  constructor(private readonly events: TypedEventEmitter<EngineEventMap>) {
+  constructor(
+    private readonly events: TypedEventEmitter<EngineEventMap>,
+    private readonly getEditorState: () => EditorState,
+  ) {
     super()
   }
 
@@ -33,10 +40,10 @@ export class TileInteractionSystem extends System {
 
   public update(_elapsed: number): void {
     const interactiveEntities = this.interactiveEntitiesQuery.entities
+    const state = this.getEditorState()
 
     for (const entity of interactiveEntities) {
       const editorComponent = entity.get(MapEditorComponent)
-      const toolComponent = entity.get(EditorToolComponent)
 
       if (!editorComponent?.isEditable) continue
 
@@ -46,11 +53,7 @@ export class TileInteractionSystem extends System {
       }
 
       if (editorComponent.selectedTileCoords) {
-        this.handleTileClick(
-          entity,
-          editorComponent.selectedTileCoords,
-          toolComponent,
-        )
+        this.handleTileClick(entity, editorComponent.selectedTileCoords, state)
       }
     }
   }
@@ -58,24 +61,22 @@ export class TileInteractionSystem extends System {
   private handleTileClick(
     entity: Entity,
     coords: { x: number; y: number },
-    toolComponent?: EditorToolComponent,
+    state: EditorState,
   ): void {
-    if (!toolComponent?.isReadyForEditing()) return
+    const { tool, tileId, layerId } = state
+    if (!layerId || !tool) return
 
-    const { currentTool, selectedTileId, selectedLayerId } = toolComponent
-    if (!selectedLayerId) return
-
-    if (currentTool === 'brush' && selectedTileId !== null) {
+    if (tool === 'brush' && tileId !== null) {
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords,
-        tileId: selectedTileId,
-        layerId: selectedLayerId,
+        tileId,
+        layerId,
       })
-    } else if (currentTool === 'eraser') {
+    } else if (tool === 'eraser') {
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords,
         tileId: 0,
-        layerId: selectedLayerId,
+        layerId,
       })
     }
 

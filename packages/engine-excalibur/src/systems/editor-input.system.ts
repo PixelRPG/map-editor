@@ -9,11 +9,12 @@ import {
   Tile,
 } from 'excalibur'
 import {
+  EditorState,
   EngineEvent,
   EngineEventMap,
   TypedEventEmitter,
 } from '@pixelrpg/engine-core'
-import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
+import { MapEditorComponent } from '../components/index.ts'
 import { LayerManager } from '../services/index.ts'
 import { EDITOR_CONSTANTS } from '../lib/constants.ts'
 import { MapScene } from '../scenes/map.scene.ts'
@@ -75,7 +76,10 @@ export class InputCoordinator {
 export class TileMapInteractor {
   private scene?: Scene
 
-  constructor(private readonly events: TypedEventEmitter<EngineEventMap>) {}
+  constructor(
+    private readonly events: TypedEventEmitter<EngineEventMap>,
+    private readonly getEditorState: () => EditorState,
+  ) {}
 
   setScene(scene: Scene): void {
     this.scene = scene
@@ -92,7 +96,6 @@ export class TileMapInteractor {
 
     for (const tileMap of tileMapEntities as TileMap[]) {
       const editorComponent = tileMap.get(MapEditorComponent)
-      const toolComponent = tileMap.get(EditorToolComponent)
 
       if (!editorComponent?.isEditable) continue
 
@@ -102,7 +105,7 @@ export class TileMapInteractor {
       const tile = tileMap.getTile(tileCoords.x, tileCoords.y)
       if (!tile) continue
 
-      this.handleTileInteraction(tileMap, tile, tileCoords, type, toolComponent)
+      this.handleTileInteraction(tileMap, tile, tileCoords, type)
       break
     }
   }
@@ -140,17 +143,29 @@ export class TileMapInteractor {
     tile: Tile,
     coords: { x: number; y: number },
     type: 'move' | 'down' | 'up',
-    toolComponent?: EditorToolComponent,
   ): void {
-    const tool = toolComponent?.currentTool || 'brush'
-    const tileId = toolComponent?.selectedTileId
-    const layerId = toolComponent?.selectedLayerId
+    const state = this.getEditorState()
+    const tool = state.tool ?? 'brush'
+    const tileId = state.tileId
+    const layerId = this.resolveLayerId(state.layerId)
 
     if (type === 'move') {
       this.handleTileHover(tileMap, tile, coords)
     } else if (type === 'down' && tool && tileId !== null && tileId !== undefined && layerId) {
       this.handleTileClick(tileMap, tile, coords, tool, tileId, layerId)
     }
+  }
+
+  // Mirrors the fallback that the deleted MapEditorSystem used to apply:
+  // when no layer is explicitly selected, pick the first layer from the
+  // scene's mapResource, or fall back to the default layer name.
+  private resolveLayerId(layerId: string | null): string | null {
+    if (layerId) return layerId
+    const mapScene = this.scene as MapScene | undefined
+    return (
+      mapScene?.mapResource?.getFirstLayerId?.() ??
+      EDITOR_CONSTANTS.DEFAULT_LAYER_NAME
+    )
   }
 
   private handleTileHover(
@@ -283,9 +298,12 @@ export class EditorInputSystem extends System {
   private engine?: Engine
   private scene?: Scene
 
-  constructor(events: TypedEventEmitter<EngineEventMap>) {
+  constructor(
+    events: TypedEventEmitter<EngineEventMap>,
+    getEditorState: () => EditorState,
+  ) {
     super()
-    this.tileMapInteractor = new TileMapInteractor(events)
+    this.tileMapInteractor = new TileMapInteractor(events, getEditorState)
     this.onPointerMove = this.onPointerMove.bind(this)
     this.onPointerDown = this.onPointerDown.bind(this)
     this.onPointerUp = this.onPointerUp.bind(this)

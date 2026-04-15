@@ -3,5 +3,4 @@
  */
 
 export * from "./editor-input.system";
-export * from "./map-editor.system";
 export * from "./tile-interaction.system";
