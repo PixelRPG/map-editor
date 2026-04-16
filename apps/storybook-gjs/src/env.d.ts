@@ -21,6 +21,11 @@ declare module '*?url' {
     export default url
 }
 
+declare module '*.css' {
+    const content: string
+    export default content
+}
+
 declare module '*.css?inline' {
     const style: string
     export default style
