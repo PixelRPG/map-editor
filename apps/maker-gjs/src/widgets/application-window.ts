@@ -167,7 +167,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   protected createNewProject(name: string) {
     console.log('[ApplicationWindow] Creating new project:', name)
-    // TODO: Implement project creation
+    // Not yet implemented: scaffold project files (project.json, default map,
+    // empty tileset) and open the new project. Currently only switches view.
     this._stack?.set_visible_child(this._projectView!)
   }
 

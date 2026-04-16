@@ -89,13 +89,15 @@ This will open the GTK Inspector alongside the application, allowing you to:
 
 ## Dependencies
 
-- **@pixelrpg/story-gjs**: Core storybook functionality
-- **@pixelrpg/engine-gjs**: Game engine GTK components
-- **@pixelrpg/ui-gjs**: Common UI widgets
-- **@girs/***: GTK and GNOME platform bindings
+- [`@pixelrpg/story-gjs`](../../packages/story-gjs) — Storybook framework
+- [`@pixelrpg/gjs`](../../packages/gjs) — the widgets being storied
+- [`@pixelrpg/games-zelda-like`](../../games/zelda-like) — sample assets used by some stories
+- `@girs/*` — GTK and GNOME platform bindings
 
 ## Related Documentation
 
+- [Project README](../../README.md)
+- [AGENTS.md](../../AGENTS.md) — coding conventions, Storybook section
 - [GTK Documentation](https://docs.gtk.org/)
 - [GJS Guide](https://gjs.guide/)
 - [Blueprint UI Reference](https://jwestman.pages.gitlab.gnome.org/blueprint-compiler/)

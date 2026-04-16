@@ -82,48 +82,53 @@ git checkout -b docs/update-readme
 ### Daily Development
 
 ```bash
-# Start development server
-yarn start
+# Run the editor
+yarn workspace @pixelrpg/maker-gjs start
 
-# Run type checking
-yarn check
+# Run the storybook
+yarn workspace @pixelrpg/storybook-gjs start
 
-# Format code
-yarn format
+# Type-check a single package
+yarn workspace @pixelrpg/<pkg> run check
 
-# Run tests
-yarn test
+# Type-check + build everything
+yarn workspaces foreach -A run check
+yarn build
 ```
+
+There is currently no project-wide test runner or formatter — tests and formatting are areas slated for future work.
 
 ## 🏗️ Architecture Guidelines
 
 ### Package Structure
 
-The project follows a strict package structure:
-
 ```
 packages/
-├── *-core/        # Platform-independent interfaces
-├── *-gjs/         # GNOME implementations
-├── *-excalibur/   # Web/Excalibur implementations
-└── *-web/         # Web-specific utilities
+├── engine/       # Excalibur-based engine + editor logic
+├── gjs/          # GTK4/libadwaita widgets + Gdk preview pipeline
+└── story-gjs/    # Storybook framework for GTK widgets
+
+apps/
+├── maker-gjs/      # The map editor (primary)
+├── storybook-gjs/  # Widget playground
+└── game-browser/   # Browser-runtime template for game export
 ```
+
+See [README.md](../README.md#workspace) and [AGENTS.md](../AGENTS.md) for the full overview.
 
 ### Design Principles
 
-- **Platform Independence**: Core packages must remain runtime-agnostic
-- **Interface Segregation**: Clean contracts between components
+- **ECS-First**: Game and editor state lives in Excalibur `Component`s; behavior in `System`s. Avoid parallel class hierarchies.
 - **Type Safety**: No `any` types, strict TypeScript usage
-- **Modular Design**: Clear boundaries and single responsibility
-- **Testability**: Dependency injection and isolated components
+- **Single Responsibility**: Clear boundaries between widgets, services, and engine code
+- **Upstream-First**: Prefer fixes in `gjsify`/`excalibur`/`@girs/*` over local patches
 
 ### Adding New Features
 
-1. **Define Interface**: Add to appropriate `-core` package
-2. **Implement**: Create platform-specific implementations
-3. **Test**: Add comprehensive test coverage
-4. **Document**: Update API documentation
-5. **Example**: Create Storybook stories for UI components
+1. **State**: Model state as Excalibur Components
+2. **Behavior**: Implement as Excalibur Systems
+3. **UI**: GTK widgets in `packages/gjs`, declarative Blueprint files
+4. **Stories**: Add Storybook stories for new UI components
 
 ## 💻 Coding Standards
 
@@ -190,57 +195,14 @@ function calculateDistance(point1: Point, point2: Point): number {
 
 ## 🧪 Testing
 
-### Test Structure
+There is currently no automated test infrastructure. Verification is done manually:
 
-Tests are organized alongside source code:
+- **Type-check**: `yarn workspaces foreach -A run check`
+- **Build**: `yarn build` — must succeed for all packages
+- **Smoke-test the editor**: `yarn workspace @pixelrpg/maker-gjs start` — open a map, try the brush/eraser tools
+- **Smoke-test the storybook**: `yarn workspace @pixelrpg/storybook-gjs start` — render widget stories
 
-```
-src/
-├── component.ts
-└── component.test.ts
-```
-
-### Testing Guidelines
-
-- **Unit Tests**: Test individual functions and classes
-- **Integration Tests**: Test component interactions
-- **E2E Tests**: Test complete user workflows
-- **Coverage**: Aim for >80% code coverage
-
-### Running Tests
-
-```bash
-# Run all tests
-yarn test
-
-# Run tests for specific package
-yarn workspace @pixelrpg/data-core test
-
-# Run tests with coverage
-yarn test --coverage
-
-# Run tests in watch mode
-yarn test --watch
-```
-
-### Writing Tests
-
-```typescript
-import { describe, it, expect } from 'vitest'
-import { calculateDistance } from './math'
-
-describe('calculateDistance', () => {
-  it('should calculate distance between two points', () => {
-    const result = calculateDistance({x: 0, y: 0}, {x: 3, y: 4})
-    expect(result).toBe(5)
-  })
-
-  it('should handle negative coordinates', () => {
-    const result = calculateDistance({x: -1, y: -1}, {x: 1, y: 1})
-    expect(result).toBeCloseTo(2.828, 3)
-  })
-})
-```
+Test infrastructure (unit tests, integration tests) is planned but not yet in place. When adding tests, colocate them next to the source they cover (`foo.ts` + `foo.test.ts`).
 
 ## 📚 Documentation
 
@@ -332,11 +294,10 @@ Add screenshots of UI changes.
 ### Automated Checks
 
 All PRs must pass:
-- ✅ TypeScript compilation
-- ✅ Linting (ESLint)
-- ✅ Unit tests
-- ✅ Build process
-- ✅ Documentation generation
+- TypeScript compilation (`yarn workspaces foreach -A run check`)
+- Build process (`yarn build`)
+
+Linting and automated testing are not yet wired up — see the [Testing](#-testing) section.
 
 ## 🆘 Getting Help
 
@@ -348,10 +309,9 @@ All PRs must pass:
 
 ### Resources
 
-- [Architecture Overview](../../docs/WIP/architecture-overview.md)
-- [Implementation Guide](../../docs/WIP/implementation-guide.md)
-- [API Documentation](../../docs/README.md#api-documentation)
-- [Storybook](http://localhost:6006) (when running locally)
+- [Project README](../README.md) — overview, architecture, workspace layout
+- [AGENTS.md](../AGENTS.md) — coding conventions, ECS patterns, Blueprint, GTK4 lifecycle
+- Storybook: `yarn workspace @pixelrpg/storybook-gjs start`
 
 ## 🎉 Recognition
 
