@@ -18,22 +18,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system build tools
-        # The `.blp` templates are compiled to XML via
-        # `@gjsify/esbuild-plugin-blueprint` → `blueprint-compiler`, which
-        # in turn needs the `.gir` introspection files for the referenced
-        # namespaces (`using Gtk 4.0;`, `using Adw 1;`, `using GtkSource 5;`).
-        # `libglib2.0-bin` provides `glib-compile-resources` for
-        # `gjsify gresource`.
+      - name: Install GNOME dev libs
+        # `blueprint-compiler` needs the `.gir` introspection files for the
+        # namespaces referenced in `using …;` lines of our `.blp` templates
+        # (Gtk 4.0, Adw 1, GtkSource 5). `libglib2.0-bin` ships
+        # `glib-compile-resources` for `gjsify gresource`. `meson`/`ninja`
+        # are for the blueprint-compiler-from-source build in the next step.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            blueprint-compiler \
             libglib2.0-bin \
             libgirepository1.0-dev \
             libgtk-4-dev \
             libadwaita-1-dev \
-            libgtksourceview-5-dev
+            libgtksourceview-5-dev \
+            meson \
+            ninja-build \
+            python3
+
+      - name: Install blueprint-compiler from source
+        # Ubuntu 24.04 ships blueprint-compiler 0.10, which predates the
+        # `css-classes: [...]` array literal syntax used in our templates.
+        # Pin the latest upstream tag (v0.20.4) from GNOME GitLab. Bump
+        # this whenever we adopt newer blueprint syntax.
+        run: |
+          git clone --depth 1 --branch v0.20.4 \
+            https://gitlab.gnome.org/jwestman/blueprint-compiler.git /tmp/bpc
+          meson setup --prefix=/usr/local /tmp/bpc /tmp/bpc/_build
+          sudo meson install -C /tmp/bpc/_build
+          blueprint-compiler --version
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
