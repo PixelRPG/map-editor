@@ -3,7 +3,7 @@ import GLib from '@girs/glib-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
-import { Sprite } from '@pixelrpg/data-gjs'
+import { Sprite } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './sprite.widget.blp'
 

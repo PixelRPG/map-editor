@@ -9,7 +9,6 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "yarn workspaces foreach -v -W -t run build",
         "check": "yarn workspaces foreach -v -W -t run check",
-        "preview": "yarn workspace @pixelrpg/engine-excalibur run preview",
         "start": "yarn workspace @pixelrpg/maker-gjs run start",
         "clear": "yarn workspaces foreach -v --parallel -W run clear",
         "format": "yarn prettier --write .",
@@ -18,22 +17,27 @@
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
-    "packageManager": "yarn@4.9.2",
+    "packageManager": "yarn@4.13.0",
     "workspaces": [
         "packages/*",
         "apps/*",
         "games/*"
     ],
     "resolutions": {
-        "excalibur": "workspace:^",
-        "@excaliburjs/plugin-tiled": "workspace:^"
+        "excalibur": "^0.32.0",
+        "@excaliburjs/plugin-tiled": "^0.32.0"
     },
     "devDependencies": {
         "barrelsby": "^2.8.1",
-        "prettier": "^3.6.2",
-        "typescript": "^5.9.2"
+        "prettier": "^3.8.3",
+        "typescript": "^6.0.2"
     },
     "dependencies": {
-        "@girs/gtksource-5": "^5.18.0-4.0.0-beta.38"
+        "@girs/gtksource-5": "^5.20.0-4.0.0-rc.4"
+    },
+    "dependenciesMeta": {
+        "@gjsify/webgl@0.1.11": {
+            "unplugged": true
+        }
     }
 }

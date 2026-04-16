@@ -14,19 +14,17 @@
         "dev": "node --experimental-specifier-resolution=bundler --experimental-strip-types src/main.ts"
     },
     "dependencies": {
-        "@excaliburjs/plugin-tiled": "workspace:^",
-        "@pixelrpg/data-core": "workspace:^",
-        "@pixelrpg/data-excalibur": "workspace:^",
-        "@pixelrpg/message-channel-core": "workspace:^",
-        "esbuild": "^0.25.10",
-        "fast-xml-parser": "^5.2.5",
-        "jsdom": "^27.0.0",
+        "@excaliburjs/plugin-tiled": "^0.32.0",
+        "@pixelrpg/data": "workspace:^",
+        "esbuild": "^0.28.0",
+        "fast-xml-parser": "^5.6.0",
+        "jsdom": "^29.0.2",
         "yargs": "^18.0.0"
     },
     "devDependencies": {
-        "@types/jsdom": "^21.1.7",
-        "@types/node": "^24.5.2",
-        "@types/yargs": "^17.0.33",
-        "typescript": "^5.9.2"
+        "@types/jsdom": "^28.0.1",
+        "@types/node": "^24.12.2",
+        "@types/yargs": "^17.0.35",
+        "typescript": "^6.0.2"
     }
 }

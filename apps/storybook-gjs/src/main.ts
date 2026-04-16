@@ -1,7 +1,6 @@
 import system from 'system'
 import { StorybookApplication } from './application'
 import { StoryRegistryService } from '@pixelrpg/story-gjs'
-import { EngineStories } from '@pixelrpg/engine-gjs/stories'
 import { UIStories } from '@pixelrpg/ui-gjs'
 
 // Create the registry
@@ -13,7 +12,7 @@ app.connect('activate', () => {
     console.log("Activating application")
 
     // Register story modules
-    registry.registerStories([EngineStories, ...UIStories])
+    registry.registerStories([...UIStories])
 
     // Set up stories in the application
     app.setStories(registry.getStories())

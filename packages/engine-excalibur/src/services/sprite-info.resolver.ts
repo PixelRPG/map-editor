@@ -1,4 +1,4 @@
-import { MapResource } from '@pixelrpg/data-excalibur'
+import { MapResource } from '@pixelrpg/data'
 import { SpriteValidator } from './sprite.validator'
 
 /**

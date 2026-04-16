@@ -1,5 +1,5 @@
 import { TileMap, Tile } from 'excalibur'
-import { MapResource } from '@pixelrpg/data-excalibur'
+import { MapResource } from '@pixelrpg/data'
 
 /**
  * Manager for tile graphics operations and sprite rendering

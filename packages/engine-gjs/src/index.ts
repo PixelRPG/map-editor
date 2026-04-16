@@ -1,3 +1,2 @@
-export * from './services/index';
-export * from './widgets/index';
-export * from './utils/index';
+export * from './widgets/index.ts'
+export * from './utils/index.ts'

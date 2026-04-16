@@ -9,7 +9,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { TilesetSelector } from './tileset-selector'
-import { SpriteSetResource, SpriteSheet } from '@pixelrpg/data-gjs'
+import { SpriteSetResource, SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 
 // Import story template
 import TilesetSelectorStoryTemplate from './tileset-selector.story.blp'

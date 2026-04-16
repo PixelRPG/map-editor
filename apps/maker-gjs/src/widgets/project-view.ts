@@ -3,27 +3,24 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
 import { Engine } from '@pixelrpg/engine-gjs'
-import { EngineStatus, RpcEngineType } from '@pixelrpg/engine-core'
-import { GameProjectResource, SpriteSheet } from '@pixelrpg/data-gjs'
-import { MapData, SpriteSetData } from '@pixelrpg/data-core'
+import { EngineEvent, EngineStatus } from '@pixelrpg/engine-excalibur'
+import { GameProjectResource, SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
 import { Sidebar } from './sidebar.ts'
-import { MapEditorService } from '@pixelrpg/engine-gjs'
 
 import Template from './project-view.blp'
 
+// Ensure the Engine GType is registered before any template that references
+// `$Engine` is instantiated.
+GObject.type_ensure(Engine.$gtype)
+
 export class ProjectView extends Adw.Bin {
-  // GObject internal children
   declare _sidebar: Sidebar | undefined
   declare _engine: Engine | undefined
   declare _splitView: Adw.OverlaySplitView | undefined
   declare _showSidebarButton: Gtk.ToggleButton | undefined
 
-  // Project management
   private _gameProjectResource: GameProjectResource | null = null
   private _currentProjectPath: string | null = null
-
-  // Map editor service
-  private _mapEditorService: MapEditorService | null = null
 
   static {
     GObject.registerClass(
@@ -47,16 +44,15 @@ export class ProjectView extends Adw.Bin {
   constructor() {
     super()
 
-    // Connect to engine event signals
     this._engine?.connect(
-      RpcEngineType.STATUS_CHANGED,
+      EngineEvent.STATUS_CHANGED,
       (_source: Engine, status: EngineStatus) => {
         console.log('[ProjectView] Engine status changed:', status)
       },
     )
 
     this._engine?.connect(
-      RpcEngineType.PROJECT_LOADED,
+      EngineEvent.PROJECT_LOADED,
       async (_source: Engine, projectId: string) => {
         console.log('[ProjectView] Project loaded:', projectId)
         await this._onProjectLoaded(projectId)
@@ -64,7 +60,7 @@ export class ProjectView extends Adw.Bin {
     )
 
     this._engine?.connect(
-      RpcEngineType.MAP_LOADED,
+      EngineEvent.MAP_LOADED,
       async (_source: Engine, mapId: string) => {
         console.log('[ProjectView] Map loaded:', mapId)
         await this._onMapLoaded(mapId)
@@ -72,9 +68,9 @@ export class ProjectView extends Adw.Bin {
     )
 
     this._engine?.connect(
-      RpcEngineType.ERROR,
-      (_source: Engine, message: string, error: Error | null) => {
-        console.error('[ProjectView] Engine error:', message, error)
+      EngineEvent.ERROR,
+      (_source: Engine, message: string) => {
+        console.error('[ProjectView] Engine error:', message)
       },
     )
 
@@ -82,35 +78,19 @@ export class ProjectView extends Adw.Bin {
       console.log('[ProjectView] Ready')
       this.emit('ready')
     })
-
-    // Note: Sidebar signals will be connected in _onMapLoaded when both
-    // sidebar and MapEditorService are available
   }
 
-  /**
-   * Get the engine view
-   */
   get engine(): Engine | undefined {
     return this._engine
   }
 
-  /**
-   * Get the sidebar
-   */
   get sidebar(): Sidebar | undefined {
     return this._sidebar
   }
 
-  /**
-   * Load a project in the ProjectView (parallel to engine loading)
-   * @param projectPath The full path to the project file
-   */
   public async loadProject(projectPath: string): Promise<void> {
     try {
-      console.log(
-        '[ProjectView] Starting parallel project loading:',
-        projectPath,
-      )
+      console.log('[ProjectView] Starting parallel project loading:', projectPath)
 
       this._currentProjectPath = projectPath
       this._gameProjectResource = new GameProjectResource(projectPath, {
@@ -118,9 +98,7 @@ export class ProjectView extends Adw.Bin {
         useGResource: false,
       })
 
-      // Load the project data and preload sprite sets
       await this._gameProjectResource.load()
-
       console.log('[ProjectView] GameProjectResource loaded successfully')
     } catch (error) {
       console.error('[ProjectView] Failed to load GameProjectResource:', error)
@@ -128,40 +106,25 @@ export class ProjectView extends Adw.Bin {
     }
   }
 
-  /**
-   * Handle project loaded event from the engine
-   * @param projectId The ID of the loaded project
-   */
   private async _onProjectLoaded(projectId: string): Promise<void> {
     console.log('[ProjectView] Engine project loaded:', projectId)
-
-    // Both engine and GJS have loaded the project successfully
-    console.log('[ProjectView] Project synchronization complete')
   }
 
-  /**
-   * Handle map loaded event
-   * @param mapId The ID of the loaded map
-   */
   private async _onMapLoaded(mapId: string): Promise<void> {
     if (!this._gameProjectResource) {
-      console.warn(
-        '[ProjectView] No GameProjectResource available for map loading',
-      )
+      console.warn('[ProjectView] No GameProjectResource available for map loading')
       return
     }
 
     try {
       console.log('[ProjectView] Loading map data for:', mapId)
 
-      // Load the map data
       const mapData = await this._gameProjectResource.getMap(mapId)
       if (!mapData) {
         console.error('[ProjectView] Map not found:', mapId)
         return
       }
 
-      // Load the sprite sheets referenced by the map
       const spriteSheets: SpriteSheet[] = []
       if (mapData.spriteSets) {
         for (const spriteSetRef of mapData.spriteSets) {
@@ -170,100 +133,47 @@ export class ProjectView extends Adw.Bin {
           if (spriteSetResource && spriteSetResource.spriteSheet) {
             spriteSheets.push(spriteSetResource.spriteSheet)
           } else {
-            console.warn(
-              '[ProjectView] SpriteSet or SpriteSheet not found:',
-              spriteSetRef.id,
-            )
+            console.warn('[ProjectView] SpriteSet or SpriteSheet not found:', spriteSetRef.id)
           }
         }
       }
 
-      console.log(
-        '[ProjectView] Loaded map with',
-        spriteSheets.length,
-        'sprite sheets',
-      )
+      console.log('[ProjectView] Loaded map with', spriteSheets.length, 'sprite sheets')
 
-      // Initialize the sidebar with the map data
       this._sidebar?.initializeMapData(mapData, spriteSheets)
 
-      // Initialize the map editor service with the engine's web view
-      if (this._engine && this._engine.webView) {
-        this._mapEditorService = new MapEditorService(this._engine.webView)
-        console.log('[ProjectView] MapEditorService initialized')
-
-        // Synchronize UI with engine defaults
+      if (this._engine) {
         this._syncUIWithDefaults()
-
-        // Now connect sidebar signals when both components are available
         this._connectSidebarSignals()
-      } else {
-        console.warn(
-          '[ProjectView] Engine or WebView not available for MapEditorService',
-        )
       }
     } catch (error) {
       console.error('[ProjectView] Failed to load map data:', error)
     }
   }
 
-  /**
-   * Synchronize UI components with engine default values
-   */
   private _syncUIWithDefaults(): void {
-    if (!this._sidebar || !this._mapEditorService) {
-      console.warn('[ProjectView] Cannot sync UI defaults: missing components')
-      return
+    if (!this._sidebar || !this._engine) return
+
+    const state = this._engine.getEditorState()
+    if (state.tool && this._sidebar?.mapEditorPanel) {
+      this._sidebar.mapEditorPanel.setInitialTool(state.tool as 'brush' | 'eraser')
     }
-
-    console.log('[ProjectView] Synchronizing UI with engine defaults')
-
-    // Get current state from service (which should have engine defaults)
-    const currentState = this._mapEditorService.getCurrentState()
-
-    console.log('[ProjectView] Current engine state:', currentState)
-
-    // Sync initial tool state in UI
-    if (currentState.tool && this._sidebar?.mapEditorPanel) {
-      this._sidebar.mapEditorPanel.setInitialTool(
-        currentState.tool as 'brush' | 'eraser',
-      )
-      console.log('[ProjectView] Initial tool state synced:', currentState.tool)
-    }
-
-    // Note: Layer and tile selection will be synced when UI components are ready
-    // They get their initial values from the sidebar initialization
   }
 
-  /**
-   * Connect sidebar signals when both sidebar and MapEditorService are available
-   */
   private _connectSidebarSignals(): void {
-    if (!this._sidebar || !this._mapEditorService) {
-      console.warn(
-        '[ProjectView] Cannot connect sidebar signals: missing components',
-      )
-      return
-    }
-
-    console.log('[ProjectView] Connecting sidebar signals...')
+    if (!this._sidebar || !this._engine) return
 
     this._sidebar.connect('tile-selected', (_sidebar, tileId) => {
-      console.log('[ProjectView] Tile selected from sidebar:', tileId)
-      this._mapEditorService!.selectTile(tileId)
+      this._engine!.setEditorState({ tileId })
     })
 
     this._sidebar.connect('tool-changed', (_sidebar, tool) => {
-      console.log('[ProjectView] Tool changed from sidebar:', tool)
-      this._mapEditorService!.setTool(tool as 'brush' | 'eraser')
+      this._engine!.setEditorState({ tool: tool as 'brush' | 'eraser' })
     })
 
     this._sidebar.connect('layer-selected', (_sidebar, layerId) => {
-      console.log('[ProjectView] Layer selected from sidebar:', layerId)
-      this._mapEditorService!.setLayer(layerId)
+      this._engine!.setEditorState({ layerId })
     })
-
-    console.log('[ProjectView] Sidebar signals connected successfully')
   }
 }
 

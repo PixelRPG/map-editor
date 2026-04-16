@@ -3,16 +3,15 @@ import Gio from '@girs/gio-2.0'
 import Gdk from '@girs/gdk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
-import { ResourceManager } from '@pixelrpg/engine-gjs'
 
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 import {
   APPLICATION_ID,
   RESOURCES_PATH,
   PACKAGE_VERSION,
-} from '@pixelrpg/data-gjs'
+} from './constants.ts'
 
-import applicationStyle from './application.css?inline'
+import applicationStyle from './application.css'
 
 export class Application extends Adw.Application {
   static {
@@ -36,14 +35,11 @@ export class Application extends Adw.Application {
 
   protected onStartup(): void {
     this.initStyles()
-    const resourceManager = new ResourceManager()
-    resourceManager.initialize()
   }
 
   /** Load the stylesheet in a CssProvider and add it to the Gtk.StyleContext */
   protected initStyles() {
     const provider = new Gtk.CssProvider()
-    console.log('[Application] Loading stylesheet', applicationStyle)
     provider.load_from_string(applicationStyle)
     const display = Gdk.Display.get_default()
 

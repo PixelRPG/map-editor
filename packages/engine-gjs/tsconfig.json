@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Bundler",
+    "lib": ["dom", "dom.iterable", "es5", "ESNext"],
     "esModuleInterop": true,
     "strict": true,
     "declaration": true,
@@ -10,8 +11,9 @@
     "rootDir": "src",
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": []
   },
-  "include": ["src/**/*", "@girs/gjs", "@girs/gjs/dom", "env.d.ts"],
+  "include": ["src/**/*", "env.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

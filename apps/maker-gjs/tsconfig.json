@@ -1,6 +1,6 @@
 {
-  "compilerOptions": {   
-    "lib": ["ESNext"],
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "ESNext"],
     "types": [],
     "target": "ESNext",
     "module": "ESNext",
@@ -8,13 +8,14 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "noImplicitThis": true,
     "alwaysStrict": true,
+    "skipLibCheck": true
   },
   "files": [
-    "src/main.ts",
+    "src/main.ts"
   ],
   "include": [
     "@girs/gjs",

@@ -1,47 +1,33 @@
 {
     "name": "@pixelrpg/engine-excalibur",
     "version": "0.0.1",
-    "description": "Browser side browser part of the map editor",
-    "main": "dist/index.html",
+    "description": "Excalibur.js engine wrapper for the PixelRPG map editor",
+    "main": "src/index.ts",
+    "types": "index.d.ts",
     "type": "module",
     "private": true,
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "clear": "rm -rf dist",
-        "preview": "yarn clear && yarn build && vite preview --port 5000",
-        "start": "yarn preview",
-        "build:barrels": "barrelsby --delete --directory src/systems src/components src/lib src/services src/scenes",
-        "build": "yarn build:barrels && vite build",
+        "clear": "rm -rf dist tsconfig.tsbuildinfo",
+        "build:barrels": "barrelsby --delete --directory src/systems src/components src/services src/scenes",
+        "build": "yarn build:barrels && tsc --noEmit",
         "check": "tsc --noEmit"
     },
     "exports": {
-        ".": "./dist/index.html",
-        "./package.json": "./package.json",
-        "./index.html": "./dist/index.html",
-        "./dist/*.js": "./dist/*.js",
-        "./dist/*.map": "./dist/*.map",
-        "./dist/*.css": "./dist/*.css",
-        "./dist/*.json": "./dist/*.json"
+        ".": {
+            "types": "./index.d.ts",
+            "default": "./src/index.ts"
+        },
+        "./package.json": "./package.json"
     },
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "MIT",
     "devDependencies": {
-        "@pixelrpg/esbuild": "workspace:^",
-        "@rollup/pluginutils": "^5.3.0",
         "barrelsby": "^2.8.1",
-        "typescript": "^5.9.2",
-        "vite": "^7.1.7"
+        "typescript": "^6.0.2"
     },
     "dependencies": {
-        "@excaliburjs/dev-tools": "^0.28.0",
-        "@excaliburjs/plugin-tiled": "workspace:^",
-        "@pixelrpg/data-core": "workspace:^",
-        "@pixelrpg/data-excalibur": "workspace:^",
-        "@pixelrpg/engine-core": "workspace:^",
-        "@pixelrpg/message-channel-core": "workspace:^",
-        "@pixelrpg/message-channel-web": "workspace:^",
-        "@pixelrpg/message-channel-webview": "workspace:^",
-        "excalibur": "workspace:^",
-        "vite-plugin-glsl": "^1.5.2"
+        "@excaliburjs/plugin-tiled": "^0.32.0",
+        "@pixelrpg/data": "workspace:^",
+        "excalibur": "^0.32.0"
     }
 }

@@ -1,140 +1,98 @@
 import { System, World, Scene, SystemType, Query, Entity } from 'excalibur'
-import { MapEditorComponent, EditorToolComponent } from '../components/index.ts'
-import { RpcEngineType } from '@pixelrpg/engine-core'
-import { rpcEndpointFactory } from '../lib/rpc.ts'
+import {
+  EditorState,
+  EngineEvent,
+  EngineEventMap,
+} from '../types/index.ts'
+import { TypedEventEmitter } from '../utils/index.ts'
+import { MapEditorComponent } from '../components/index.ts'
 
 /**
- * ECS system that handles tile-based interactions
+ * ECS system that emits tile-click/hover events for entities with MapEditorComponent.
  *
- * This system processes click and hover events on entities with MapEditorComponent.
- * It uses Excalibur's Query system to efficiently find interactive entities and routes
- * interactions to the appropriate editing tools.
+ * Reads the active editor tool/tile/layer directly from the engine-held
+ * EditorState (previously mirrored into an EditorToolComponent by
+ * MapEditorSystem — both are now gone). Emits events via the engine's
+ * TypedEventEmitter; no RPC.
  */
 export class TileInteractionSystem extends System {
   public readonly systemType = SystemType.Update
-  public readonly priority = 11 // Run after MapEditorSystem
+  public readonly priority = 11
 
-  private rpc = rpcEndpointFactory()
-  private world: World
+  private world!: World
+  private interactiveEntitiesQuery!: Query<typeof MapEditorComponent>
 
-  /**
-   * Query for entities with MapEditorComponent
-   */
-  private interactiveEntitiesQuery: Query<typeof MapEditorComponent>
-
-  constructor() {
+  constructor(
+    private readonly events: TypedEventEmitter<EngineEventMap>,
+    private readonly getEditorState: () => EditorState,
+  ) {
     super()
   }
 
-  /**
-   * Initialize the system with world and scene references
-   */
   public initialize(world: World, scene: Scene): void {
-    console.debug(
-      '[TileInteractionSystem] Initializing tile interaction system',
-    )
-
     if (super.initialize) {
       super.initialize(world, scene)
     }
 
     this.world = world
-
-    // Initialize query after world is available
     this.interactiveEntitiesQuery = this.world.query([MapEditorComponent])
   }
 
-  /**
-   * Main update loop for processing interactions
-   */
-  public update(elapsed: number): void {
-    // Get all entities with MapEditorComponent
+  public update(_elapsed: number): void {
     const interactiveEntities = this.interactiveEntitiesQuery.entities
+    const state = this.getEditorState()
 
     for (const entity of interactiveEntities) {
       const editorComponent = entity.get(MapEditorComponent)
-      const toolComponent = entity.get(EditorToolComponent)
 
       if (!editorComponent?.isEditable) continue
 
-      // Process hover interactions
       if (editorComponent.hoverHasChanged) {
         this.handleTileHover(entity, editorComponent.hoverTileCoords)
-        // Reset the flag after processing
         editorComponent.hoverHasChanged = false
       }
 
-      // Process selection interactions
       if (editorComponent.selectedTileCoords) {
-        this.handleTileClick(
-          entity,
-          editorComponent.selectedTileCoords,
-          toolComponent,
-        )
+        this.handleTileClick(entity, editorComponent.selectedTileCoords, state)
       }
     }
   }
 
-  /**
-   * Handle tile click interactions based on current tool
-   */
   private handleTileClick(
     entity: Entity,
     coords: { x: number; y: number },
-    toolComponent?: EditorToolComponent,
+    state: EditorState,
   ): void {
-    if (!toolComponent?.isReadyForEditing()) return
+    const { tool, tileId, layerId } = state
+    if (!layerId || !tool) return
 
-    const { currentTool, selectedTileId, selectedLayerId } = toolComponent
-
-    if (!selectedLayerId) return
-
-    if (currentTool === 'brush' && selectedTileId !== null) {
-      console.log(
-        `[TileInteractionSystem] Placing tile ${selectedTileId} at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
-      )
-      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
+    if (tool === 'brush' && tileId !== null) {
+      this.events.emit(EngineEvent.TILE_PLACED, {
         coords,
-        tileId: selectedTileId,
-        layerId: selectedLayerId,
+        tileId,
+        layerId,
       })
-    } else if (currentTool === 'eraser') {
-      console.log(
-        `[TileInteractionSystem] Erasing tile at (${coords.x}, ${coords.y}) on layer ${selectedLayerId}`,
-      )
-      this.rpc.sendNotification(RpcEngineType.TILE_PLACED, {
+    } else if (tool === 'eraser') {
+      this.events.emit(EngineEvent.TILE_PLACED, {
         coords,
         tileId: 0,
-        layerId: selectedLayerId,
+        layerId,
       })
     }
 
-    // Clear selected tile coords after processing
     const editorComponent = entity.get(MapEditorComponent)
     if (editorComponent) {
       editorComponent.selectedTileCoords = null
     }
   }
 
-  /**
-   * Handle tile hover interactions
-   */
   private handleTileHover(
     entity: Entity,
     coords: { x: number; y: number } | null,
   ): void {
-    // Send TILE_HOVERED RPC event (coords can be null to indicate no hover)
-    this.rpc.sendNotification(RpcEngineType.TILE_HOVERED, {
+    this.events.emit(EngineEvent.TILE_HOVERED, {
       coords,
       tileMapId: String(entity.id || 'unknown'),
     })
-  }
-
-  /**
-   * Clean up resources when the system is removed
-   */
-  public onRemove(): void {
-    console.debug('[TileInteractionSystem] Cleaning up interaction system')
-    this.rpc.destroy()
   }
 }

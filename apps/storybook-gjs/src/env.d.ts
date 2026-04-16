@@ -1,38 +1,37 @@
 /// <reference types="@girs/gjs" />
 /// <reference types="@girs/gjs/dom" />
 
-/**
- * Type definition for asset content files
- * @see https://vitejs.dev/guide/assets.html#impgitorting-asset-as-string
- */
+declare const __APPLICATION_ID__: string
+declare const __RESOURCES_PATH__: string
+declare const __PACKAGE_VERSION__: string
+declare const __PREFIX__: string
+declare const __LIBDIR__: string
+declare const __DATADIR__: string
+declare const __BINDIR__: string
+declare const __GJS_CONSOLE__: string
+declare const __PKGDATADIR__: string
+
 declare module '*?raw' {
     const textContent: string
     export default textContent
 }
 
-/**
- * Type definition for url asset strings
- * @see https://vitejs.dev/guide/assets.html#explicit-url-imports
- */
 declare module '*?url' {
     const url: string
     export default url
 }
 
-/**
- * Type definition for inline style strings
- * @see https://vitejs.dev/guide/assets.html#inline-assets
- */
+declare module '*.css' {
+    const content: string
+    export default content
+}
+
 declare module '*.css?inline' {
     const style: string
     export default style
 }
 
-/**
- * Type definition for GNOME blueprint files
- * @see https://github.com/gjsify/vite/tree/main/packages/vite-plugin-blueprint
- */
-declare module "*.blp" {
-    const content: string;
-    export default content;
+declare module '*.blp' {
+    const content: string
+    export default content
 }

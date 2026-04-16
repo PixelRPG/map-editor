@@ -6,8 +6,8 @@ import { gettext as _ } from 'gettext'
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
-import type { ImageReference } from '@pixelrpg/data-core'
-import { ImageResource } from '@pixelrpg/data-gjs'
+import type { ImageReference } from '@pixelrpg/data'
+import { ImageResource } from '@pixelrpg/ui-gjs/sprite'
 
 import Template from './application-window.blp'
 
@@ -67,11 +67,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         this._signalHandlers.push(createProjectHandlerId, openProjectHandlerId)
       }
 
-      // Connect engine signals if project view is active
-      const engine = this._projectView?.engine
-      if (!engine) {
-        throw new Error('GJS engine not found')
-      }
     }
   }
 
