@@ -6,8 +6,8 @@ import { gettext as _ } from 'gettext'
 import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
-import type { ImageReference } from '@pixelrpg/data'
-import { ImageResource } from '@pixelrpg/ui-gjs/sprite'
+import type { ImageReference } from '@pixelrpg/engine'
+import { ImageTexture } from '@pixelrpg/gjs'
 
 import Template from './application-window.blp'
 
@@ -194,18 +194,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         })
       }
 
-      console.log('[ApplicationWindow] Starting parallel project loading')
+      console.log('[ApplicationWindow] Loading project:', path)
 
-      // Start both loading operations in parallel
-      const engineLoadPromise = this._projectView!.engine!.loadProject(path)
-      const projectViewLoadPromise = this._projectView!.loadProject(path)
+      await this._projectView!.engine!.loadProject(path)
 
-      // Wait for both to complete
-      await Promise.all([engineLoadPromise, projectViewLoadPromise])
-
-      console.log(
-        '[ApplicationWindow] Parallel project loading completed successfully',
-      )
+      console.log('[ApplicationWindow] Project loaded successfully')
       this.showToast(_('Project loaded successfully'))
     } catch (error) {
       console.error('[ApplicationWindow] Failed to load project:', error)
@@ -221,12 +214,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._toastOverlay?.add_toast(toast)
   }
 
-  parseImageResource(resource: ImageReference): ImageResource | null {
+  parseImageResource(resource: ImageReference): ImageTexture | null {
     if (!resource.path) {
       return null
     }
 
-    return new ImageResource(resource.path)
+    return new ImageTexture(resource.path)
   }
 }
 

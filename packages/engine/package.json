@@ -1,0 +1,28 @@
+{
+    "name": "@pixelrpg/engine",
+    "version": "0.0.1",
+    "description": "Cross-platform Excalibur.js engine and data layer for the PixelRPG map editor",
+    "main": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "clear": "rm -rf dist tsconfig.tsbuildinfo",
+        "build:barrels": "barrelsby --delete --directory src/systems src/components src/services src/scenes src/format src/resource",
+        "build": "yarn build:barrels && tsc --noEmit",
+        "check": "tsc --noEmit"
+    },
+    "exports": {
+        ".": "./src/index.ts",
+        "./package.json": "./package.json"
+    },
+    "author": "Pascal Garber <pascal@artandcode.studio>",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^24.12.2",
+        "barrelsby": "^2.8.1",
+        "typescript": "^6.0.2"
+    },
+    "dependencies": {
+        "excalibur": "^0.32.0"
+    }
+}

@@ -1,1 +1,4 @@
-@import "@pixelrpg/ui-gjs/index.css";
+@import "@pixelrpg/gjs/index.css";
+
+/* Storybook-specific styles can go here. */
+

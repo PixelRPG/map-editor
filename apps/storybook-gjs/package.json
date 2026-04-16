@@ -2,15 +2,16 @@
     "name": "@pixelrpg/storybook-gjs",
     "version": "0.1.0",
     "description": "Storybook for PixelRPG GTK Widgets",
-    "main": "lib/main.js",
+    "main": "src/main.ts",
     "type": "module",
     "scripts": {
+        "clear": "rm -rf dist org.pixelrpg.storybook",
         "check": "tsc",
         "build:barrels": "barrelsby --delete --directory src src/types src/widgets",
-        "build:vite": "vite build",
-        "build": "yarn build:barrels && yarn build:vite",
-        "start": "gjs -m dist/main.js",
-        "start:debug": "GTK_DEBUG=interactive gjs -m dist/main.js"
+        "build:app": "gjsify build src/main.ts --app gjs --globals dom --shebang --outfile org.pixelrpg.storybook",
+        "build": "yarn build:barrels && yarn build:app",
+        "start": "gjsify run org.pixelrpg.storybook",
+        "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.storybook"
     },
     "dependencies": {
         "@girs/adw-1": "^1.10.0-4.0.0-rc.4",
@@ -21,15 +22,14 @@
         "@girs/glib-2.0": "^2.88.0-4.0.0-rc.4",
         "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.4",
         "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.4",
+        "@gjsify/dom-elements": "^0.1.11",
         "@pixelrpg/games-zelda-like": "workspace:^",
-        "@pixelrpg/story-gjs": "workspace:^",
-        "@pixelrpg/ui-gjs": "workspace:^"
+        "@pixelrpg/gjs": "workspace:^",
+        "@pixelrpg/story-gjs": "workspace:^"
     },
     "devDependencies": {
-        "@gjsify/vite-plugin-blueprint": "^0.2.9",
+        "@gjsify/cli": "^0.1.11",
         "barrelsby": "^2.8.1",
-        "lightningcss": "^1.32.0",
-        "typescript": "^6.0.2",
-        "vite": "^8.0.8"
+        "typescript": "^6.0.2"
     }
 }

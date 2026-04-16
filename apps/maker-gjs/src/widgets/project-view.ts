@@ -2,15 +2,12 @@ import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
-import { Engine } from '@pixelrpg/engine-gjs'
-import { EngineEvent, EngineStatus } from '@pixelrpg/engine-excalibur'
-import { GameProjectResource, SpriteSheet } from '@pixelrpg/ui-gjs/sprite'
+import { Engine, SpriteSetResource, type SpriteSheet } from '@pixelrpg/gjs'
+import { EngineEvent, type EngineStatus } from '@pixelrpg/engine'
 import { Sidebar } from './sidebar.ts'
 
 import Template from './project-view.blp'
 
-// Ensure the Engine GType is registered before any template that references
-// `$Engine` is instantiated.
 GObject.type_ensure(Engine.$gtype)
 
 export class ProjectView extends Adw.Bin {
@@ -19,8 +16,7 @@ export class ProjectView extends Adw.Bin {
   declare _splitView: Adw.OverlaySplitView | undefined
   declare _showSidebarButton: Gtk.ToggleButton | undefined
 
-  private _gameProjectResource: GameProjectResource | null = null
-  private _currentProjectPath: string | null = null
+  private _previewSpriteSheets = new Map<string, SpriteSheet>()
 
   static {
     GObject.registerClass(
@@ -55,7 +51,6 @@ export class ProjectView extends Adw.Bin {
       EngineEvent.PROJECT_LOADED,
       async (_source: Engine, projectId: string) => {
         console.log('[ProjectView] Project loaded:', projectId)
-        await this._onProjectLoaded(projectId)
       },
     )
 
@@ -88,66 +83,57 @@ export class ProjectView extends Adw.Bin {
     return this._sidebar
   }
 
-  public async loadProject(projectPath: string): Promise<void> {
-    try {
-      console.log('[ProjectView] Starting parallel project loading:', projectPath)
-
-      this._currentProjectPath = projectPath
-      this._gameProjectResource = new GameProjectResource(projectPath, {
-        preloadResources: true,
-        useGResource: false,
-      })
-
-      await this._gameProjectResource.load()
-      console.log('[ProjectView] GameProjectResource loaded successfully')
-    } catch (error) {
-      console.error('[ProjectView] Failed to load GameProjectResource:', error)
-      throw error
-    }
-  }
-
-  private async _onProjectLoaded(projectId: string): Promise<void> {
-    console.log('[ProjectView] Engine project loaded:', projectId)
-  }
-
   private async _onMapLoaded(mapId: string): Promise<void> {
-    if (!this._gameProjectResource) {
-      console.warn('[ProjectView] No GameProjectResource available for map loading')
+    const resource = this._engine?.excalibur?.gameProjectResource
+    if (!resource) {
+      console.warn('[ProjectView] Engine has no gameProjectResource yet')
       return
     }
 
-    try {
-      console.log('[ProjectView] Loading map data for:', mapId)
+    const mapData = await resource.getMap(mapId)
+    if (!mapData) {
+      console.error('[ProjectView] Map not found:', mapId)
+      return
+    }
 
-      const mapData = await this._gameProjectResource.getMap(mapId)
-      if (!mapData) {
-        console.error('[ProjectView] Map not found:', mapId)
-        return
-      }
-
-      const spriteSheets: SpriteSheet[] = []
-      if (mapData.spriteSets) {
-        for (const spriteSetRef of mapData.spriteSets) {
-          const spriteSetResource =
-            await this._gameProjectResource.getSpriteSet(spriteSetRef.id)
-          if (spriteSetResource && spriteSetResource.spriteSheet) {
-            spriteSheets.push(spriteSetResource.spriteSheet)
-          } else {
-            console.warn('[ProjectView] SpriteSet or SpriteSheet not found:', spriteSetRef.id)
+    const spriteSheets: SpriteSheet[] = []
+    if (mapData.spriteSets) {
+      for (const spriteSetRef of mapData.spriteSets) {
+        try {
+          let sheet = this._previewSpriteSheets.get(spriteSetRef.id)
+          if (!sheet) {
+            // SpriteSet paths in MapData are relative to the map file, not the
+            // project file. Reuse the already-loaded engine SpriteSetResource's
+            // absolute path instead of re-resolving against the project root.
+            const engineSet = await resource.getSpriteSet(spriteSetRef.id)
+            if (!engineSet) {
+              console.warn(
+                `[ProjectView] Engine has no sprite set for ${spriteSetRef.id}`,
+              )
+              continue
+            }
+            const setResource = new SpriteSetResource(engineSet.path)
+            await setResource.load()
+            if (setResource.spriteSheet) {
+              sheet = setResource.spriteSheet
+              this._previewSpriteSheets.set(spriteSetRef.id, sheet)
+            }
           }
+          if (sheet) spriteSheets.push(sheet)
+        } catch (error) {
+          console.warn(
+            `[ProjectView] Failed to load sprite set ${spriteSetRef.id}:`,
+            error,
+          )
         }
       }
+    }
 
-      console.log('[ProjectView] Loaded map with', spriteSheets.length, 'sprite sheets')
+    this._sidebar?.initializeMapData(mapData, spriteSheets)
 
-      this._sidebar?.initializeMapData(mapData, spriteSheets)
-
-      if (this._engine) {
-        this._syncUIWithDefaults()
-        this._connectSidebarSignals()
-      }
-    } catch (error) {
-      console.error('[ProjectView] Failed to load map data:', error)
+    if (this._engine) {
+      this._syncUIWithDefaults()
+      this._connectSidebarSignals()
     }
   }
 

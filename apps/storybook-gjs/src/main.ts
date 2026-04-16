@@ -1,7 +1,9 @@
+import '@gjsify/dom-elements/register'
+
 import system from 'system'
 import { StorybookApplication } from './application'
 import { StoryRegistryService } from '@pixelrpg/story-gjs'
-import { UIStories } from '@pixelrpg/ui-gjs'
+import { UIStories } from '@pixelrpg/gjs/stories'
 
 // Create the registry
 const registry = new StoryRegistryService()
@@ -18,7 +20,9 @@ app.connect('activate', () => {
     app.setStories(registry.getStories())
 })
 
-const exitCode = await app.runAsync([])
+const exitCode = await app.runAsync(
+    [imports.system.programInvocationName].concat(ARGV),
+)
 log('exitCode: ' + exitCode)
 
 // Exit the application
