@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSheet, Sprite } from '../../sprite'
+import { GdkSpriteSheet, GdkSprite } from '../../sprite'
 
 import Template from './sprite-sheet.widget.blp'
 
@@ -11,7 +11,7 @@ import Template from './sprite-sheet.widget.blp'
  */
 export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   // Private fields for GObject properties
-  private _spriteSheet: SpriteSheet | null = null
+  private _spriteSheet: GdkSpriteSheet | null = null
   private _scale: number = 1.0
   private _showGrid: boolean = true
   private _maxColumns: number = 16
@@ -63,7 +63,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
         },
         Signals: {
           'sprite-selected': {
-            param_types: [GObject.TYPE_JSOBJECT], // Sprite object
+            param_types: [GObject.TYPE_JSOBJECT], // GdkSprite object
           },
         },
       },
@@ -71,7 +71,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     )
   }
   constructor(
-    spriteSheet?: SpriteSheet,
+    spriteSheet?: GdkSpriteSheet,
     options: { scale?: number; showGrid?: boolean; maxColumns?: number } = {},
   ) {
     // Layout properties are configured in the Blueprint template
@@ -99,11 +99,11 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
   }
 
   // GObject property getters and setters
-  get spriteSheet(): SpriteSheet | null {
+  get spriteSheet(): GdkSpriteSheet | null {
     return this._spriteSheet
   }
 
-  set spriteSheet(value: SpriteSheet | null) {
+  set spriteSheet(value: GdkSpriteSheet | null) {
     if (this._spriteSheet === value) return
 
     this._spriteSheet = value
@@ -235,7 +235,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
     if (sprite) {
       console.log(
         'Selected sprite:',
-        `Sprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
+        `GdkSprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
       )
       // Emit the sprite-selected signal for external listeners
       this.emit('sprite-selected', sprite)
@@ -246,7 +246,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    * Get the currently selected sprite
    * @returns The selected sprite or null if none is selected
    */
-  getSelectedSprite(): Sprite | null {
+  getSelectedSprite(): GdkSprite | null {
     const selectedChildren = this._flowBox.get_selected_children()
     if (selectedChildren.length > 0) {
       const selectedChild = selectedChildren[0] as Gtk.FlowBoxChild

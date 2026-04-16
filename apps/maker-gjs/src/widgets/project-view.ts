@@ -2,7 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
-import { Engine, SpriteSetResource, type SpriteSheet } from '@pixelrpg/gjs'
+import { Engine, GdkSpriteSetResource, type GdkSpriteSheet } from '@pixelrpg/gjs'
 import { EngineEvent, type EngineStatus } from '@pixelrpg/engine'
 import { Sidebar } from './sidebar.ts'
 
@@ -16,7 +16,7 @@ export class ProjectView extends Adw.Bin {
   declare _splitView: Adw.OverlaySplitView | undefined
   declare _showSidebarButton: Gtk.ToggleButton | undefined
 
-  private _previewSpriteSheets = new Map<string, SpriteSheet>()
+  private _previewSpriteSheets = new Map<string, GdkSpriteSheet>()
 
   static {
     GObject.registerClass(
@@ -96,7 +96,7 @@ export class ProjectView extends Adw.Bin {
       return
     }
 
-    const spriteSheets: SpriteSheet[] = []
+    const spriteSheets: GdkSpriteSheet[] = []
     if (mapData.spriteSets) {
       for (const spriteSetRef of mapData.spriteSets) {
         try {
@@ -112,7 +112,7 @@ export class ProjectView extends Adw.Bin {
               )
               continue
             }
-            const setResource = new SpriteSetResource(engineSet.path)
+            const setResource = new GdkSpriteSetResource(engineSet.path)
             await setResource.load()
             if (setResource.spriteSheet) {
               sheet = setResource.spriteSheet

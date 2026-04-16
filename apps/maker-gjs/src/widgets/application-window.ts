@@ -7,7 +7,7 @@ import { WelcomeView } from './welcome-view.ts'
 import { ProjectView } from './project-view.ts'
 
 import type { ImageReference } from '@pixelrpg/engine'
-import { ImageTexture } from '@pixelrpg/gjs'
+import { GdkImageTexture } from '@pixelrpg/gjs'
 
 import Template from './application-window.blp'
 
@@ -215,12 +215,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._toastOverlay?.add_toast(toast)
   }
 
-  parseImageResource(resource: ImageReference): ImageTexture | null {
+  parseImageResource(resource: ImageReference): GdkImageTexture | null {
     if (!resource.path) {
       return null
     }
 
-    return new ImageTexture(resource.path)
+    return new GdkImageTexture(resource.path)
   }
 }
 

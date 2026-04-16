@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
 
-import { MapEditorPanel, SpriteSheet } from '@pixelrpg/gjs'
+import { MapEditorPanel, GdkSpriteSheet } from '@pixelrpg/gjs'
 import { MapData } from '@pixelrpg/engine'
 
 import Template from './sidebar.blp'
@@ -51,7 +51,7 @@ export class Sidebar extends Adw.Bin {
    * @param mapData The map data containing layers and sprite set references
    * @param spriteSheets Array of loaded sprite sheets
    */
-  initializeMapData(mapData: MapData, spriteSheets: SpriteSheet[]): void {
+  initializeMapData(mapData: MapData, spriteSheets: GdkSpriteSheet[]): void {
     console.log(
       '[Sidebar] Initializing map data:',
       mapData.name,

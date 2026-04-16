@@ -1,3 +1,3 @@
-export * from './Sprite.ts'
-export * from './SpritePaintable.ts'
-export * from './SpriteSheet.ts'
+export * from './GdkSprite.ts'
+export * from './GdkSpritePaintable.ts'
+export * from './GdkSpriteSheet.ts'

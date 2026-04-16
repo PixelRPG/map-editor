@@ -9,7 +9,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { TilesetSelector } from './tileset-selector'
-import { SpriteSetResource, SpriteSheet } from '../../sprite'
+import { GdkSpriteSetResource, GdkSpriteSheet } from '../../sprite'
 
 // Import story template
 import TilesetSelectorStoryTemplate from './tileset-selector.story.blp'
@@ -20,8 +20,8 @@ import TilesetSelectorStoryTemplate from './tileset-selector.story.blp'
  */
 export class TilesetSelectorStory extends StoryWidget {
   private tilesetSelector: TilesetSelector | null = null
-  private spriteSetResources: SpriteSetResource[] = []
-  private loadedTilesets: { spriteSheet: SpriteSheet; name: string }[] = []
+  private spriteSetResources: GdkSpriteSetResource[] = []
+  private loadedTilesets: { spriteSheet: GdkSpriteSheet; name: string }[] = []
 
   // UI elements from template
   declare _info_label: Gtk.Label
@@ -129,7 +129,7 @@ export class TilesetSelectorStory extends StoryWidget {
       this._info_label.set_label('Loading sample tilesets...')
 
       // Load the main Lokiri Forest sprite set
-      const lokiriResource = new SpriteSetResource(
+      const lokiriResource = new GdkSpriteSetResource(
         '../../games/zelda-like/spritesets/lokiri-forest.json',
       )
       await lokiriResource.load()
@@ -144,7 +144,7 @@ export class TilesetSelectorStory extends StoryWidget {
 
       // Try to load water tileset if available
       try {
-        const waterResource = new SpriteSetResource(
+        const waterResource = new GdkSpriteSetResource(
           '../../games/zelda-like/spritesets/water.json',
         )
         await waterResource.load()
@@ -223,7 +223,7 @@ export class TilesetSelectorStory extends StoryWidget {
         (widget, sprite, tilesetIndex) => {
           console.log(
             `Selected sprite from tileset ${tilesetIndex}:`,
-            `Sprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
+            `GdkSprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
           )
         },
       )

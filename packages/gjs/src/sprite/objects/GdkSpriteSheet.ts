@@ -1,25 +1,21 @@
-import { Sprite } from './Sprite.ts'
+import { GdkSprite } from './GdkSprite.ts'
 import type { SpriteSetData } from '@pixelrpg/engine'
-import type { ImageTexture } from '../resource/ImageTexture.ts'
+import type { GdkImageTexture } from '../resource/GdkImageTexture.ts'
 
 /**
- * Represents a collection of sprites from a source image with some organization in a grid
+ * Grid-organized collection of `GdkSprite`s sliced from a single `Gdk.Texture`.
  *
- * Similar to Excalibur SpriteSheet: `packages/excalibur/src/engine/Graphics/SpriteSheet.ts`
- *
- * @see SpriteSetResource For loading sprite set JSON files and images
- * @see Sprite For individual sprite representation
+ * GTK-only — distinct from `ex.SpriteSheet` (which produces canvas/WebGL
+ * sprites for the Excalibur game loop). Both pipelines coexist intentionally;
+ * see the package README.
  */
-export class SpriteSheet {
-  private _sprites: Sprite[]
+export class GdkSpriteSheet {
+  private _sprites: GdkSprite[]
 
   rows: number
   columns: number
 
-  /**
-   * Creates a new SpriteSheet to process sprite set data into individual sprites
-   */
-  constructor(spriteSheetData: SpriteSetData, imageResource: ImageTexture) {
+  constructor(spriteSheetData: SpriteSetData, imageResource: GdkImageTexture) {
     this.rows = spriteSheetData.rows
     this.columns = spriteSheetData.columns
     this._sprites = this.createSprites(
@@ -30,19 +26,17 @@ export class SpriteSheet {
     )
   }
 
-  /**
-   * Get all sprites in the sprite sheet (similar to Excalibur SpriteSheet.sprites)
-   */
-  get sprites(): Sprite[] {
+  /** All sprites in the sprite sheet, in row-major order. */
+  get sprites(): GdkSprite[] {
     return this._sprites
   }
 
   /**
-   * Get a sprite by its grid coordinates (similar to Excalibur SpriteSheet.getSprite)
+   * Get a sprite by its grid coordinates.
    * @param x Column index (0-based)
    * @param y Row index (0-based)
    */
-  getSprite(x: number, y: number): Sprite | undefined {
+  getSprite(x: number, y: number): GdkSprite | undefined {
     if (x >= this.columns || x < 0 || y >= this.rows || y < 0) {
       console.warn(
         `Invalid sprite coordinates (${x}, ${y}) for ${this.columns}x${this.rows} sprite sheet`,
@@ -53,15 +47,12 @@ export class SpriteSheet {
     return this._sprites[index]
   }
 
-  /**
-   * Creates individual sprite resources from a sprite sheet image
-   */
   protected createSprites(
     spriteSheetData: SpriteSetData,
-    imageResource: ImageTexture,
-    rows: number,
-    columns: number,
-  ): Sprite[] {
+    imageResource: GdkImageTexture,
+    _rows: number,
+    _columns: number,
+  ): GdkSprite[] {
     if (!imageResource) {
       throw new Error(
         `Image resource not found: ${spriteSheetData.image?.path}`,
@@ -72,9 +63,8 @@ export class SpriteSheet {
         `Image resource not loaded: ${spriteSheetData.image?.path}`,
       )
     }
-    const sprites: Sprite[] = []
+    const sprites: GdkSprite[] = []
 
-    // Calculate individual sprite dimensions
     const textureWidth = imageResource.width
     const textureHeight = imageResource.height
     const spriteWidth = Math.floor(textureWidth / spriteSheetData.columns)
@@ -83,20 +73,16 @@ export class SpriteSheet {
     for (let y = 0; y < spriteSheetData.rows; y++) {
       for (let x = 0; x < spriteSheetData.columns; x++) {
         const index = y * spriteSheetData.columns + x
-
-        // Calculate the correct sprite position in the texture
-        // Fixed: posX should be x * spriteWidth, posY should be y * spriteHeight
         const posX = x * spriteWidth
         const posY = y * spriteHeight
 
-        // Create sprite using sub-texture extraction with Sprite
-        const sprite = Sprite.fromSubTexture(
+        const sprite = GdkSprite.fromSubTexture(
           imageResource.texture,
           posX,
           posY,
           spriteWidth,
           spriteHeight,
-          index, // Pass the sprite index for tileId mapping
+          index,
         )
 
         sprites.push(sprite)

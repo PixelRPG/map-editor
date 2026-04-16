@@ -4,7 +4,7 @@ import Gtk from '@girs/gtk-4.0'
 import Gio from '@girs/gio-2.0'
 import { StoryWidget, StoryMeta, StoryModule } from '@pixelrpg/story-gjs'
 import { MapEditorPanel } from './map-editor-panel'
-import { SpriteSetResource, SpriteSheet } from '../../sprite'
+import { GdkSpriteSetResource, GdkSpriteSheet } from '../../sprite'
 import { loadTextFile } from '../../sprite/utils/file'
 import {
   type GameProjectData,
@@ -23,7 +23,7 @@ import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
 export class MapEditorPanelStory extends StoryWidget {
   private gameProjectData: GameProjectData | null = null
   private currentMapData: MapData | null = null
-  private loadedSpriteSheets: SpriteSheet[] = []
+  private loadedSpriteSheets: GdkSpriteSheet[] = []
 
   // UI elements from template
   declare _info_label: Gtk.Label
@@ -104,12 +104,12 @@ export class MapEditorPanelStory extends StoryWidget {
           const mapDir = Gio.File.new_for_path(mapPath).get_parent()
           const spriteSetPath =
             mapDir?.get_child(spriteSetRef.path).get_path() || spriteSetRef.path
-          const spriteSetResource = new SpriteSetResource(spriteSetPath)
+          const spriteSetResource = new GdkSpriteSetResource(spriteSetPath)
           await spriteSetResource.load()
           if (spriteSetResource.spriteSheet) {
             this.loadedSpriteSheets.push(spriteSetResource.spriteSheet)
           } else {
-            console.warn('SpriteSheet not created for:', spriteSetRef.id)
+            console.warn('GdkSpriteSheet not created for:', spriteSetRef.id)
           }
         }
       }
