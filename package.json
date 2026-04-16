@@ -24,8 +24,7 @@
         "games/*"
     ],
     "resolutions": {
-        "excalibur": "^0.32.0",
-        "@excaliburjs/plugin-tiled": "^0.32.0"
+        "excalibur": "^0.32.0"
     },
     "devDependencies": {
         "barrelsby": "^2.8.1",
