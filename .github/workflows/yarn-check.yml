@@ -18,6 +18,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system build tools
+        # `blueprint-compiler` is needed by `@gjsify/esbuild-plugin-blueprint`
+        # when it compiles `.blp` templates into XML strings during the
+        # `gjsify build` step. Available in Ubuntu 24.04 (noble) as
+        # `blueprint-compiler`. Also install `glib-compile-resources`
+        # (from libglib2.0-bin) for `gjsify gresource`.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            blueprint-compiler \
+            libglib2.0-bin
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
