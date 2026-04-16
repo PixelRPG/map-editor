@@ -2084,6 +2084,7 @@ __metadata:
     "@girs/gtk-4.0": "npm:^4.23.0-4.0.0-rc.4"
     "@gjsify/buffer": "npm:^0.1.11"
     "@gjsify/canvas2d": "npm:^0.1.11"
+    "@gjsify/cli": "npm:^0.1.11"
     "@gjsify/dom-elements": "npm:^0.1.11"
     "@gjsify/dom-events": "npm:^0.1.11"
     "@gjsify/dom-exception": "npm:^0.1.11"

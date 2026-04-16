@@ -8,14 +8,13 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
-        "gjsify": "node ../../../../gjsify/packages/infra/cli/lib/index.js",
-        "build:resources": "yarn gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
+        "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
         "build:barrels": "barrelsby --delete --directory src src/widgets src/objects",
-        "build:app": "yarn gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
+        "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
         "build": "yarn build:resources && yarn build:barrels && yarn build:app",
         "check": "tsc",
-        "start": "yarn gjsify run org.pixelrpg.maker",
-        "start:debug": "GTK_DEBUG=interactive yarn gjsify run org.pixelrpg.maker"
+        "start": "gjsify run org.pixelrpg.maker",
+        "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker"
     },
     "keywords": [
         "pixelrpg",
@@ -26,6 +25,7 @@
     "author": "Pascal Garber <pascal@artandcode.studio>",
     "license": "GPL-3.0",
     "devDependencies": {
+        "@gjsify/cli": "^0.1.11",
         "barrelsby": "^2.8.1",
         "typescript": "^6.0.2"
     },
