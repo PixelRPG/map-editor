@@ -155,8 +155,6 @@ export class ProjectView extends Adw.Bin {
     if (!this._sidebar || !this._engine) return
 
     const state = this._engine.getEditorState()
-    console.log('[ProjectView] Current editor state:', state)
-
     if (state.tool && this._sidebar?.mapEditorPanel) {
       this._sidebar.mapEditorPanel.setInitialTool(state.tool as 'brush' | 'eraser')
     }

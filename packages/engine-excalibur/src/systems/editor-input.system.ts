@@ -372,7 +372,6 @@ export class EditorInputSystem extends System {
     })
 
     pointer.on('wheel', (wheelEvent) => {
-      console.info('[EditorInputSystem] pointer.wheel dy=', wheelEvent.deltaY, 'x=', wheelEvent.x, 'y=', wheelEvent.y)
       const x = wheelEvent.x || 0
       const y = wheelEvent.y || 0
       this.onWheel(wheelEvent.deltaY, { x, y })
