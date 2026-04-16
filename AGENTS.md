@@ -42,8 +42,6 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 [`apps/**/*.ts`] |UI ⟂ business logic |reusable composable components (GNOME HIG or web best practices) |no global state |async clean, type-safe state transitions |user-friendly errors w/ recovery |integrate via `packages/*` core ifaces
 
-[`apps/cli/**/*.ts`] |modular commands, reusable cmd classes/fns |proper argparse, sensible defaults, help text per cmd |interactive + non-interactive modes
-
 ## GTK4 + GObject (GJS)
 
 [Design] declarative UI (Blueprint) + reactive state (GObject props/signals)
