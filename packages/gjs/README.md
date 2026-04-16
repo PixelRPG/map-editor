@@ -1,95 +1,38 @@
-# PixelRPG Engine GJS
+# @pixelrpg/gjs
 
-GJS implementation of the PixelRPG game engine for GNOME applications.
+GTK4/libadwaita widgets for the PixelRPG map editor. Hosts the [`@pixelrpg/engine`](../engine) inside a GTK widget alongside the editor's UI panels (tileset selector, layers, tools).
 
-## Features
+Also provides a Gdk-side preview pipeline (`Sprite`, `SpriteSheet`, `ImageTexture`) for rendering sprites in plain GTK widgets via the Gsk snapshot API — distinct from Excalibur's canvas pipeline, both coexist.
 
-- WebKit-based rendering of the Excalibur.js game engine
-- GObject integration for easy use in GNOME applications
-- Resource management for game assets
-- Message passing between GJS and the web engine
+## Exports
 
-## Installation
+- `widgets/engine` — GTK widget that hosts the engine's `<canvas>` and forwards GTK pointer events
+- `widgets/map-editor` — `MapEditorPanel`, `LayerSelector`, `TilesetSelector`
+- `widgets/sprite` — `SpriteWidget`, `SpriteSheetWidget` (Gdk-rendered)
+- `sprite/` — preview-pipeline primitives: `Sprite`, `SpriteSheet`, `ImageTexture`
+- `stories.ts` — Storybook story registrations for the above (consumed by `@pixelrpg/storybook-gjs`)
 
-```bash
-yarn add @pixelrpg/engine-gjs
-```
-
-## Quick Start
-
-The Engine is a GObject widget that can be directly included in your GNOME application.
-
-For detailed examples and advanced usage, see the [Getting Started Guide](docs/getting-started.md).
-
-### Basic Example
+## Usage
 
 ```typescript
-import { Engine } from '@pixelrpg/engine-gjs';
-import { RpcEngineType } from '@pixelrpg/engine-core';
+import { Engine, MapEditorPanel } from '@pixelrpg/gjs'
 
-// Create a new engine instance
-const engine = new Engine();
-
-// Set resource paths (must be done before or right after adding to UI)
-engine.setResourcePaths(['/path/to/resources']);
-
-// Set GResource path if needed
-engine.setGResourcePath('/org/pixelrpg/maker');
-
-// Add the engine to your UI
-myContainer.append(engine);
-
-// Load a project
-await engine.loadProject('/path/to/project.json');
-
-// Load a map
-await engine.loadMap('map1');
-
-// Start the engine
-await engine.start();
-
-// Handle engine events using enum values
-engine.connect(RpcEngineType.STATUS_CHANGED, (_source, status) => {
-  console.log('Engine status changed:', status);
-});
-
-engine.connect(RpcEngineType.PROJECT_LOADED, (_source, projectId) => {
-  console.log('Project loaded:', projectId);
-});
-
-engine.connect(RpcEngineType.MAP_LOADED, (_source, mapId) => {
-  console.log('Map loaded:', mapId);
-});
-
-engine.connect(RpcEngineType.ERROR, (_source, message, error) => {
-  console.error('Engine error:', message, error);
-});
-
+const window = new Adw.ApplicationWindow({ application })
+const engine = new Engine()
+const editor = new MapEditorPanel({ engine })
+window.set_content(editor)
 ```
 
-## Documentation
+CSS: import `@pixelrpg/gjs/index.css` from your application's stylesheet. Lowering of CSS Nesting (`&:hover`) for the GTK CSS parser is handled by gjsify's CSS plugin at build time.
 
-- [Getting Started Guide](docs/getting-started.md) - Comprehensive guide with examples
-- [API Reference](src/) - TypeScript source code with JSDoc comments
-
-## Building
+## Build
 
 ```bash
-# Install dependencies
-yarn
-
-# Build the package
-yarn build
+yarn workspace @pixelrpg/gjs run build
+yarn workspace @pixelrpg/gjs run check
 ```
 
-## Development
+## Related
 
-```bash
-# Watch for changes
-yarn watch
-```
-
-## Related Packages
-
-- `@pixelrpg/engine-core`: Core engine interfaces
-- `@pixelrpg/engine-excalibur`: Excalibur.js implementation 
+- [`@pixelrpg/engine`](../engine) — the engine being hosted
+- [`@pixelrpg/story-gjs`](../story-gjs) — Storybook framework used by this package's `.story.ts` files

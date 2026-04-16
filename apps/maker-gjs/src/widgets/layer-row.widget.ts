@@ -3,7 +3,6 @@ import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
 
 import { Layer } from '../objects/layer.ts'
-// import { LayerWidget } from './layer.widget.ts'
 
 import Template from './layer-row.widget.blp'
 

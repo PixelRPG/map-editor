@@ -1,6 +1,5 @@
 import GObject from '@girs/gobject-2.0'
 
-// TODO: Move to packages/data-gjs
 export class Layer extends GObject.Object {
   // Private fields for GObject properties
   private _name: string = ''
