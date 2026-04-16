@@ -15,10 +15,10 @@
         ".": "./src/index.ts"
     },
     "dependencies": {
-        "@gjsify/canvas2d": "^0.1.11",
-        "@gjsify/dom-elements": "^0.1.11",
-        "@gjsify/event-bridge": "^0.1.11",
-        "@gjsify/webgl": "^0.1.11",
+        "@gjsify/canvas2d": "^0.1.12",
+        "@gjsify/dom-elements": "^0.1.12",
+        "@gjsify/event-bridge": "^0.1.12",
+        "@gjsify/webgl": "^0.1.12",
         "@pixelrpg/engine": "workspace:*",
         "@pixelrpg/story-gjs": "workspace:^",
         "excalibur": "^0.32.0"

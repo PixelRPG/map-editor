@@ -22,13 +22,13 @@
         "@girs/glib-2.0": "^2.88.0-4.0.0-rc.4",
         "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.4",
         "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.4",
-        "@gjsify/dom-elements": "^0.1.11",
+        "@gjsify/dom-elements": "^0.1.12",
         "@pixelrpg/games-zelda-like": "workspace:^",
         "@pixelrpg/gjs": "workspace:^",
         "@pixelrpg/story-gjs": "workspace:^"
     },
     "devDependencies": {
-        "@gjsify/cli": "^0.1.11",
+        "@gjsify/cli": "^0.1.12",
         "barrelsby": "^2.8.1",
         "typescript": "^6.0.2"
     }

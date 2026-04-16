@@ -15,10 +15,11 @@ export default {
       'process.env.__EX_VERSION': JSON.stringify(pkg.version),
       'process.env.NODE_ENV': JSON.stringify('production'),
     },
+    // `.css` is handled upstream by `@gjsify/esbuild-plugin-css` (since
+    // @gjsify/cli v0.1.12) — no `.css` loader override needed here.
     loader: {
       '.glsl': 'text',
       '.png': 'dataurl',
-      '.css': 'text',
     },
   },
 }

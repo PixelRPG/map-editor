@@ -38,11 +38,14 @@ export default {
             'process.env.NODE_ENV': JSON.stringify('production'),
         },
         loader: {
-            '.css': 'text',
             // Excalibur 0.31.0 fork ships GLSL shaders and a bitmap font as
             // source-level imports. Excalibur's ImageSource expects a base64
             // data URL (`.endsWith('...')`), so `.png` must be `dataurl`, not
             // `binary` (which esbuild returns as Uint8Array).
+            //
+            // `.css` is handled upstream by `@gjsify/esbuild-plugin-css` (since
+            // @gjsify/cli v0.1.12): @import statements are resolved at build
+            // time and the result is exposed as a JS string default export.
             '.glsl': 'text',
             '.png': 'dataurl',
         },
