@@ -26,8 +26,8 @@
         "typescript": "^5.9.2"
     },
     "dependencies": {
-        "@excaliburjs/plugin-tiled": "workspace:^",
+        "@excaliburjs/plugin-tiled": "^0.32.0",
         "@pixelrpg/data": "workspace:^",
-        "excalibur": "workspace:^"
+        "excalibur": "^0.32.0"
     }
 }

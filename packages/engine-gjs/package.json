@@ -26,7 +26,7 @@
         "@gjsify/webgl": "^0.1.11",
         "@pixelrpg/data": "workspace:*",
         "@pixelrpg/engine-excalibur": "workspace:*",
-        "excalibur": "workspace:^"
+        "excalibur": "^0.32.0"
     },
     "devDependencies": {
         "@pixelrpg/story-gjs": "workspace:^",

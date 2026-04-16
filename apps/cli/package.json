@@ -14,7 +14,7 @@
         "dev": "node --experimental-specifier-resolution=bundler --experimental-strip-types src/main.ts"
     },
     "dependencies": {
-        "@excaliburjs/plugin-tiled": "workspace:^",
+        "@excaliburjs/plugin-tiled": "^0.32.0",
         "@pixelrpg/data": "workspace:^",
         "esbuild": "^0.25.10",
         "fast-xml-parser": "^5.2.5",
