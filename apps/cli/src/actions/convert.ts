@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs'
-import { Properties } from '@pixelrpg/data'
-import { TileSetData, TileDataTileSet, MapData, LayerData, TileSetReference } from '@pixelrpg/data'
+import { Properties } from '@pixelrpg/engine'
+import { TileSetData, TileDataTileSet, MapData, LayerData, TileSetReference } from '@pixelrpg/engine'
 import { TiledParser, TiledMap, TiledTileLayer, TiledObjectLayer, TiledImageLayer, isTiledTilesetExternal, TiledObject } from '@excaliburjs/plugin-tiled'
 import path from 'path'
 

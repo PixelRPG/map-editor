@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "Minimal browser runtime that hosts an Excalibur game via @pixelrpg/engine-excalibur.",
+  "description": "Minimal browser runtime that hosts an Excalibur game via @pixelrpg/engine.",
   "scripts": {
     "clear": "rm -rf dist",
     "check": "tsc --noEmit",
@@ -13,8 +13,7 @@
     "start": "http-server ../.. -c-1 -o /apps/game-browser/dist/index.html"
   },
   "dependencies": {
-    "@pixelrpg/data": "workspace:^",
-    "@pixelrpg/engine-excalibur": "workspace:^",
+    "@pixelrpg/engine": "workspace:^",
     "excalibur": "^0.32.0"
   },
   "devDependencies": {

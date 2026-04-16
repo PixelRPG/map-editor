@@ -4,7 +4,7 @@ import Gio from '@girs/gio-2.0'
 import { StoryModule, StoryRegistry, registry } from '@pixelrpg/story-gjs'
 import { StorybookWindow } from './widgets'
 
-import applicationStyle from './application.css?inline'
+import applicationStyle from './application.css'
 import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
 

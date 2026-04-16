@@ -1,4 +1,4 @@
-import { Engine, EngineEvent } from '@pixelrpg/engine-excalibur'
+import { Engine, EngineEvent } from '@pixelrpg/engine'
 
 /**
  * Bootstraps the Excalibur engine against a <canvas id="game"> in index.html
