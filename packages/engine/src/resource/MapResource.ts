@@ -27,6 +27,7 @@ export class MapResource implements Loadable<TileMap> {
   private readonly basePath: string = ''
   private readonly filename: string = ''
   private tileSetResources: Map<string, SpriteSetResource> = new Map()
+  private readonly _preloadedSpriteSets: Map<string, SpriteSetResource>
   private _mapData!: MapData
 
   private tileMap!: TileMap
@@ -42,6 +43,7 @@ export class MapResource implements Loadable<TileMap> {
     this.headless = options?.headless ?? this.headless
     this.basePath = extractDirectoryPath(path)
     this.filename = getFilename(path)
+    this._preloadedSpriteSets = options?.preloadedSpriteSets ?? new Map()
     this.logger.debug(`MapResource created with path: ${path}`)
   }
 
@@ -54,6 +56,17 @@ export class MapResource implements Loadable<TileMap> {
     }
 
     for (const spriteSetRef of spriteSetRefs) {
+      // Reuse pre-loaded resource if available (typically from GameProjectResource)
+      const preloaded = this._preloadedSpriteSets.get(spriteSetRef.id)
+      if (preloaded) {
+        this.tileSetResources.set(spriteSetRef.id, preloaded)
+        this.logger.debug(
+          `Reused pre-loaded sprite set: ${spriteSetRef.id}`,
+        )
+        continue
+      }
+
+      // Otherwise load fresh (standalone MapResource usage)
       try {
         const fullPath = joinPaths(this.basePath, spriteSetRef.path)
         const resource = new SpriteSetResource(fullPath, {
