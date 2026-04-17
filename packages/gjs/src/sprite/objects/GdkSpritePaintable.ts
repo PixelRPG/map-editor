@@ -5,12 +5,14 @@ import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 
 /**
- * A reusable GObject that implements Gdk.Paintable for sprite rendering
+ * GObject implementing `Gdk.Paintable` for sprite rendering inside GTK widgets.
  *
- * This class is designed to be created on-demand and reused to minimize
- * the number of GObject instances and avoid GC callback issues.
+ * GTK-only — distinct from any Excalibur graphics primitive.
+ *
+ * Designed to be created on-demand and reused to minimize GObject instances
+ * and avoid GC callback issues.
  */
-export class SpritePaintable
+export class GdkSpritePaintable
   extends GObject.Object
   implements Gdk.Paintable.Interface
 {
@@ -35,7 +37,7 @@ export class SpritePaintable
   static {
     GObject.registerClass(
       {
-        GTypeName: 'SpritePaintable',
+        GTypeName: 'GdkSpritePaintable',
         Implements: [Gdk.Paintable],
       },
       this,
@@ -123,5 +125,4 @@ export class SpritePaintable
   // We don't override it to avoid GC callback issues as per gobject-patterns rules
 }
 
-// Ensure the SpritePaintable type is registered
-GObject.type_ensure(SpritePaintable.$gtype)
+GObject.type_ensure(GdkSpritePaintable.$gtype)

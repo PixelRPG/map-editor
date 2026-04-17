@@ -1,32 +1,28 @@
 import Gdk from '@girs/gdk-4.0'
 
-import { SpritePaintable } from './SpritePaintable.ts'
+import { GdkSpritePaintable } from './GdkSpritePaintable.ts'
 
 /**
- * A lightweight sprite data structure for sprite sheet handling
+ * A lightweight sprite data structure for sprite sheet handling, backed by a
+ * `Gdk.Texture` region for GTK widget rendering via the Gsk snapshot API.
  *
- * This class represents a sprite region within a larger texture without
- * implementing Gdk.Paintable directly to avoid GC issues with many instances.
- * Use createPaintable() to get a Gdk.Paintable for rendering when needed.
+ * GTK-only — distinct from `ex.Sprite` (which renders via Canvas2D/WebGL).
+ * Both pipelines coexist intentionally; see the package README.
  *
- * Features:
- * - Lightweight data structure for sprite regions
- * - Factory methods for easy sprite creation
- * - Sub-texture support for sprite sheets
- * - Creates paintable objects on demand for rendering
- * - Avoids GC callback issues by not implementing Gdk.Paintable directly
+ * Does not implement `Gdk.Paintable` directly to avoid GC issues with many
+ * instances. Use `createPaintable()` to get a paintable for rendering.
  */
-export class Sprite {
+export class GdkSprite {
   private _sourceTexture: Gdk.Texture | null = null
   private _x: number
   private _y: number
   private _width: number
   private _height: number
-  private _paintable: SpritePaintable | null = null
+  private _paintable: GdkSpritePaintable | null = null
   private _index: number = 0
 
   /**
-   * Create a new Sprite
+   * Create a new GdkSprite
    * @param texture The source texture containing the sprite sheet
    * @param x X position of the sprite in the texture
    * @param y Y position of the sprite in the texture
@@ -51,12 +47,12 @@ export class Sprite {
   }
 
   /**
-   * Create a Gdk.Paintable for rendering this sprite
-   * This creates a SpritePaintable instance with lazy loading for better performance
+   * Create a Gdk.Paintable for rendering this sprite. Lazily allocates a
+   * `GdkSpritePaintable` on first call.
    */
   createPaintable(): Gdk.Paintable {
     if (!this._paintable) {
-      this._paintable = new SpritePaintable(
+      this._paintable = new GdkSpritePaintable(
         this._sourceTexture,
         this._x,
         this._y,
@@ -95,8 +91,8 @@ export class Sprite {
   /**
    * Create from Gdk.Texture (full texture sprite)
    */
-  static fromTexture(texture: Gdk.Texture, index: number = 0): Sprite {
-    return new Sprite(
+  static fromTexture(texture: Gdk.Texture, index: number = 0): GdkSprite {
+    return new GdkSprite(
       texture,
       0, // x
       0, // y
@@ -116,8 +112,8 @@ export class Sprite {
     width: number,
     height: number,
     index: number = 0,
-  ): Sprite {
-    return new Sprite(texture, x, y, width, height, index)
+  ): GdkSprite {
+    return new GdkSprite(texture, x, y, width, height, index)
   }
 
   /**

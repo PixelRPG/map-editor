@@ -3,7 +3,7 @@ import GLib from '@girs/glib-2.0'
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
-import { Sprite } from '../../sprite'
+import { GdkSprite } from '../../sprite'
 
 import Template from './sprite.widget.blp'
 
@@ -21,7 +21,7 @@ export class SpriteWidget extends Adw.Bin {
   private _signalHandlers: number[] = []
 
   // Private fields for sprite data
-  private _sprite: Sprite | null = null
+  private _sprite: GdkSprite | null = null
   private _scale: number = 1.0
 
   static {
@@ -53,7 +53,7 @@ export class SpriteWidget extends Adw.Bin {
     )
   }
 
-  constructor(sprite?: Sprite | null, scale?: number) {
+  constructor(sprite?: GdkSprite | null, scale?: number) {
     super()
 
     if (sprite !== undefined) {
@@ -65,11 +65,11 @@ export class SpriteWidget extends Adw.Bin {
   }
 
   // GObject property getters and setters
-  get sprite(): Sprite | null {
+  get sprite(): GdkSprite | null {
     return this._sprite
   }
 
-  set sprite(value: Sprite | null) {
+  set sprite(value: GdkSprite | null) {
     if (this._sprite === value) return
 
     this._sprite = value

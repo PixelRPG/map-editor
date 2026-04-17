@@ -6,18 +6,18 @@ import Gdk from '@girs/gdk-4.0'
 /**
  * GObject wrapper around a `Gdk.Texture` loaded from a local file.
  *
- * Used by GTK widgets (via `SpritePaintable` / `Gtk.Picture`) to render
- * sprite previews. Cross-platform Excalibur rendering uses `ImageSource`
- * from `@pixelrpg/engine` / excalibur directly — this class is GJS-only.
+ * Used by GTK widgets (via `GdkSpritePaintable` / `Gtk.Picture`) to render
+ * sprite previews. Distinct from Excalibur's `ex.ImageSource` (which expects a
+ * URL/HTMLImageElement); both pipelines coexist intentionally.
  */
-export class ImageTexture extends GObject.Object {
+export class GdkImageTexture extends GObject.Object {
   private _path: string
   private _texture: Gdk.Texture | null = null
 
   static {
     GObject.registerClass(
       {
-        GTypeName: 'ImageTexture',
+        GTypeName: 'GdkImageTexture',
         Properties: {
           texture: GObject.ParamSpec.object(
             'texture',
@@ -32,9 +32,9 @@ export class ImageTexture extends GObject.Object {
     )
   }
 
-  /** Create an ImageTexture directly from an already-loaded Gdk.Texture. */
-  static fromTexture(texture: Gdk.Texture): ImageTexture {
-    const imageTexture = new ImageTexture('')
+  /** Create a GdkImageTexture directly from an already-loaded Gdk.Texture. */
+  static fromTexture(texture: Gdk.Texture): GdkImageTexture {
+    const imageTexture = new GdkImageTexture('')
     imageTexture._texture = texture
     return imageTexture
   }
@@ -55,8 +55,8 @@ export class ImageTexture extends GObject.Object {
   }
 
   /**
-   * Load the texture from the configured path. Relative paths resolve
-   * against the current working directory.
+   * Load the texture from the configured path. Relative paths resolve against
+   * the current working directory.
    */
   async load(): Promise<Gdk.Texture> {
     if (this._texture) {

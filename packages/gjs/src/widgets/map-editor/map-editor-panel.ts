@@ -4,7 +4,7 @@ import Adw from '@girs/adw-1'
 
 import { TilesetSelector } from './tileset-selector'
 import { LayerSelector } from './layer-selector'
-import { SpriteSheet } from '../../sprite'
+import { GdkSpriteSheet } from '../../sprite'
 import { MapData } from '@pixelrpg/engine'
 
 import Template from './map-editor-panel.blp'
@@ -62,7 +62,7 @@ export class MapEditorPanel extends Adw.Bin {
    * @param mapData The map data containing layers and sprite set references
    * @param spriteSheets Array of loaded sprite sheets
    */
-  initializeMapData(mapData: MapData, spriteSheets: SpriteSheet[]): void {
+  initializeMapData(mapData: MapData, spriteSheets: GdkSpriteSheet[]): void {
     console.log(
       '[MapEditorPanel] Initializing with map:',
       mapData.name || mapData.id,
@@ -177,7 +177,7 @@ export class MapEditorPanel extends Adw.Bin {
    * Set multiple tilesets at once
    * @param tilesets Array of sprite sheets to display as tilesets
    */
-  private setTilesets(tilesets: SpriteSheet[]): void {
+  private setTilesets(tilesets: GdkSpriteSheet[]): void {
     this._tilesetSelector.tilesets = tilesets
   }
 

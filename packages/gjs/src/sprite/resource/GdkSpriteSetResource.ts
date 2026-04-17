@@ -2,21 +2,23 @@ import Gio from '@girs/gio-2.0'
 import type { SpriteSetData } from '@pixelrpg/engine'
 import { SpriteSetFormat } from '@pixelrpg/engine'
 import { loadTextFile } from '../utils'
-import { ImageTexture } from './ImageTexture.ts'
-import { SpriteSheet, Sprite } from '../objects/index.ts'
+import { GdkImageTexture } from './GdkImageTexture.ts'
+import { GdkSpriteSheet, GdkSprite } from '../objects/index.ts'
 
 /**
- * GJS-specific SpriteSet loader that produces a {@link SpriteSheet} of GJS
- * {@link Sprite}s rendering via `Gdk.Paintable`. The cross-platform Excalibur
- * equivalent lives in `@pixelrpg/engine` (`SpriteSetResource`); this class
- * exists only for GTK previews in the editor UI.
+ * GTK-side SpriteSet loader that produces a `GdkSpriteSheet` of `GdkSprite`s
+ * for rendering via `Gdk.Paintable`.
+ *
+ * The cross-platform Excalibur equivalent lives in `@pixelrpg/engine`
+ * (`SpriteSetResource`); this class exists only for GTK previews in the editor
+ * UI. Both pipelines coexist intentionally.
  */
-export class SpriteSetResource {
+export class GdkSpriteSetResource {
   private _data: SpriteSetData | null = null
   private _path: string
-  private _imageTexture: ImageTexture | null = null
-  private _spriteSheet: SpriteSheet | null = null
-  private _sprites: Record<number, Sprite> = {}
+  private _imageTexture: GdkImageTexture | null = null
+  private _spriteSheet: GdkSpriteSheet | null = null
+  private _sprites: Record<number, GdkSprite> = {}
 
   constructor(path: string) {
     this._path = path
@@ -40,10 +42,10 @@ export class SpriteSetResource {
             .get_path() || imagePath
 
       try {
-        this._imageTexture = new ImageTexture(absoluteImagePath)
+        this._imageTexture = new GdkImageTexture(absoluteImagePath)
         await this._imageTexture.load()
 
-        this._spriteSheet = new SpriteSheet(this._data, this._imageTexture)
+        this._spriteSheet = new GdkSpriteSheet(this._data, this._imageTexture)
         this._sprites = this.createSprites(this._data, this._spriteSheet)
       } catch (error) {
         console.error(`Error loading sprite set image: ${error}`)
@@ -64,15 +66,15 @@ export class SpriteSetResource {
     return this._path
   }
 
-  get imageTexture(): ImageTexture | null {
+  get imageTexture(): GdkImageTexture | null {
     return this._imageTexture
   }
 
   private createSprites(
     data: SpriteSetData,
-    spriteSheet: SpriteSheet,
-  ): Record<number, Sprite> {
-    const sprites: Record<number, Sprite> = {}
+    spriteSheet: GdkSpriteSheet,
+  ): Record<number, GdkSprite> {
+    const sprites: Record<number, GdkSprite> = {}
 
     if (data.sprites && data.sprites.length > 0) {
       data.sprites.forEach((spriteData) => {
@@ -90,15 +92,15 @@ export class SpriteSetResource {
     return sprites
   }
 
-  get spriteSheet(): SpriteSheet | null {
+  get spriteSheet(): GdkSpriteSheet | null {
     return this._spriteSheet
   }
 
-  get sprites(): Record<number, Sprite> {
+  get sprites(): Record<number, GdkSprite> {
     return this._sprites
   }
 
-  getSprite(id: number): Sprite | undefined {
+  getSprite(id: number): GdkSprite | undefined {
     return this._sprites[id]
   }
 

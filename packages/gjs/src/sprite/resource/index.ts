@@ -1,2 +1,2 @@
-export * from './ImageTexture.ts'
-export * from './SpriteSetResource.ts'
+export * from './GdkImageTexture.ts'
+export * from './GdkSpriteSetResource.ts'

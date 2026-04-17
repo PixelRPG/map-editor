@@ -9,7 +9,7 @@ import {
   StoryModule,
 } from '@pixelrpg/story-gjs'
 import { SpriteWidget } from './sprite.widget'
-import { SpriteSetResource } from '../../sprite'
+import { GdkSpriteSetResource } from '../../sprite'
 
 // Import story template
 import SpriteStoryTemplate from './sprite.widget.story.blp'
@@ -20,7 +20,7 @@ import SpriteStoryTemplate from './sprite.widget.story.blp'
  */
 export class SpriteWidgetStory extends StoryWidget {
   private spriteWidget: SpriteWidget | null = null
-  private spriteSetResource: SpriteSetResource | null = null
+  private spriteSetResource: GdkSpriteSetResource | null = null
 
   // UI elements from template
   declare _info_label: Gtk.Label
@@ -131,7 +131,7 @@ export class SpriteWidgetStory extends StoryWidget {
 
       // 1. Create SpriteSetResource with the JSON file path
       // SpriteSetResource now handles everything internally (like Excalibur)
-      this.spriteSetResource = new SpriteSetResource(
+      this.spriteSetResource = new GdkSpriteSetResource(
         '../../games/zelda-like/spritesets/lokiri-forest.json',
       )
       const spriteSetData = await this.spriteSetResource.load()

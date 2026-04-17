@@ -3,7 +3,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 
 import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
-import { SpriteSheet } from '../../sprite'
+import { GdkSpriteSheet } from '../../sprite'
 
 import Template from './tileset-selector.blp'
 
@@ -13,7 +13,7 @@ import Template from './tileset-selector.blp'
  */
 export class TilesetSelector extends Adw.Bin {
   // Private fields for GObject properties
-  private _tilesets: SpriteSheet[] = []
+  private _tilesets: GdkSpriteSheet[] = []
   private _scale: number = 2.0
   private _showGrid: boolean = true
 
@@ -70,11 +70,11 @@ export class TilesetSelector extends Adw.Bin {
   }
 
   // GObject property getters and setters
-  get tilesets(): SpriteSheet[] {
+  get tilesets(): GdkSpriteSheet[] {
     return this._tilesets
   }
 
-  set tilesets(value: SpriteSheet[]) {
+  set tilesets(value: GdkSpriteSheet[]) {
     if (this._tilesets === value) return
 
     this._tilesets = value || []
@@ -111,7 +111,7 @@ export class TilesetSelector extends Adw.Bin {
    * @param spriteSheet The sprite sheet to add as a tileset
    * @param name Optional name for the tileset section
    */
-  addTileset(spriteSheet: SpriteSheet, name?: string): void {
+  addTileset(spriteSheet: GdkSpriteSheet, name?: string): void {
     this._tilesets.push(spriteSheet)
     this.notify('tilesets')
     this._addSpriteSheetWidget(spriteSheet, this._tilesets.length - 1, name)
@@ -164,7 +164,7 @@ export class TilesetSelector extends Adw.Bin {
    * Add a sprite sheet widget to the container
    */
   private _addSpriteSheetWidget(
-    spriteSheet: SpriteSheet,
+    spriteSheet: GdkSpriteSheet,
     index: number,
     name?: string,
   ): void {
