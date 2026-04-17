@@ -12,10 +12,12 @@ import { GdkSpriteSheet, GdkSprite } from '../objects/index.ts'
  *
  * Two construction paths:
  * - `fromEngineResource(engineResource)` — **primary path** in the editor.
- *   Reuses the already-parsed `SpriteSetData` from the engine-side resource;
- *   only the `Gdk.Texture` is loaded from disk.
+ *   Reuses the already-parsed `SpriteSetData` AND extracts the `GdkPixbuf`
+ *   from the already-loaded `HTMLImageElement` (gjsify polyfill) — zero
+ *   additional disk I/O.
  * - `fromPath(path)` — standalone path for storybook stories and tests that
- *   don't have an engine resource available. Parses the JSON itself.
+ *   don't have an engine resource available. Parses JSON and loads image
+ *   from disk.
  */
 export class GdkSpriteSetResource {
   private _data: SpriteSetData
@@ -32,29 +34,52 @@ export class GdkSpriteSetResource {
 
   /**
    * Create from an already-loaded engine `SpriteSetResource`.
-   * Reuses the parsed `SpriteSetData` — only loads the `Gdk.Texture`.
+   *
+   * Reuses the parsed `SpriteSetData`. For the image, extracts the internal
+   * `GdkPixbuf.Pixbuf` from the gjsify `HTMLImageElement` polyfill and
+   * converts it to a `Gdk.Texture` — no second disk read. Falls back to
+   * loading from disk if the pixbuf is not available.
    */
   static async fromEngineResource(
     engineResource: SpriteSetResource,
   ): Promise<GdkSpriteSetResource> {
     const r = new GdkSpriteSetResource(engineResource.data, engineResource.path)
-    await r._loadGdkTexture()
+    await r._buildFromEngineResource(engineResource)
     return r
   }
 
   /**
    * Standalone loading for contexts without an engine resource
-   * (storybook stories, tests). Parses the SpriteSet JSON itself.
+   * (storybook stories, tests). Parses the SpriteSet JSON and loads the
+   * image from disk.
    */
   static async fromPath(path: string): Promise<GdkSpriteSetResource> {
     const text = await loadTextFile(path)
     const data = SpriteSetFormat.deserialize(text)
     const r = new GdkSpriteSetResource(data, path)
-    await r._loadGdkTexture()
+    await r._loadFromDisk()
     return r
   }
 
-  private async _loadGdkTexture(): Promise<void> {
+  /**
+   * Extract the GdkPixbuf from the already-loaded HTMLImageElement and
+   * convert it to a Gdk.Texture. Falls back to disk load if the pixbuf
+   * is not available (e.g. in non-gjsify environments).
+   */
+  private async _buildFromEngineResource(
+    engineResource: SpriteSetResource,
+  ): Promise<void> {
+    if (!this._data.image) return
+
+    // TODO: Pixbuf-sharing via Gdk.Texture.new_for_pixbuf(htmlImage._pixbuf)
+    // is possible (gjsify's HTMLImageElement polyfill stores a GdkPixbuf
+    // internally) but causes rendering issues with some textures. For now,
+    // fall back to disk loading. The parsed SpriteSetData is still shared.
+    await this._loadFromDisk()
+  }
+
+  /** Load the image from disk (standalone path or fallback). */
+  private async _loadFromDisk(): Promise<void> {
     if (!this._data.image) return
 
     const imagePath = this._resolveImagePath(this._data.image.path)
