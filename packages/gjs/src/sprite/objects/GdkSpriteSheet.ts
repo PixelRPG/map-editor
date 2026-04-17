@@ -1,5 +1,6 @@
 import { GdkSprite } from './GdkSprite.ts'
 import type { SpriteSetData } from '@pixelrpg/engine'
+import { iterateSpriteGrid } from '@pixelrpg/engine'
 import type { GdkImageTexture } from '../resource/GdkImageTexture.ts'
 
 /**
@@ -8,6 +9,9 @@ import type { GdkImageTexture } from '../resource/GdkImageTexture.ts'
  * GTK-only — distinct from `ex.SpriteSheet` (which produces canvas/WebGL
  * sprites for the Excalibur game loop). Both pipelines coexist intentionally;
  * see the package README.
+ *
+ * Uses the shared `iterateSpriteGrid` helper from `@pixelrpg/engine` for
+ * consistent grid iteration with the engine-side pipeline.
  */
 export class GdkSpriteSheet {
   private _sprites: GdkSprite[]
@@ -18,12 +22,7 @@ export class GdkSpriteSheet {
   constructor(spriteSheetData: SpriteSetData, imageResource: GdkImageTexture) {
     this.rows = spriteSheetData.rows
     this.columns = spriteSheetData.columns
-    this._sprites = this.createSprites(
-      spriteSheetData,
-      imageResource,
-      spriteSheetData.rows,
-      spriteSheetData.columns,
-    )
+    this._sprites = this.createSprites(spriteSheetData, imageResource)
   }
 
   /** All sprites in the sprite sheet, in row-major order. */
@@ -50,45 +49,25 @@ export class GdkSpriteSheet {
   protected createSprites(
     spriteSheetData: SpriteSetData,
     imageResource: GdkImageTexture,
-    _rows: number,
-    _columns: number,
   ): GdkSprite[] {
-    if (!imageResource) {
-      throw new Error(
-        `Image resource not found: ${spriteSheetData.image?.path}`,
-      )
-    }
-    if (!imageResource.texture) {
+    if (!imageResource?.texture) {
       throw new Error(
         `Image resource not loaded: ${spriteSheetData.image?.path}`,
       )
     }
     const sprites: GdkSprite[] = []
-
-    const textureWidth = imageResource.width
-    const textureHeight = imageResource.height
-    const spriteWidth = Math.floor(textureWidth / spriteSheetData.columns)
-    const spriteHeight = Math.floor(textureHeight / spriteSheetData.rows)
-
-    for (let y = 0; y < spriteSheetData.rows; y++) {
-      for (let x = 0; x < spriteSheetData.columns; x++) {
-        const index = y * spriteSheetData.columns + x
-        const posX = x * spriteWidth
-        const posY = y * spriteHeight
-
-        const sprite = GdkSprite.fromSubTexture(
+    for (const cell of iterateSpriteGrid(spriteSheetData)) {
+      sprites.push(
+        GdkSprite.fromSubTexture(
           imageResource.texture,
-          posX,
-          posY,
-          spriteWidth,
-          spriteHeight,
-          index,
-        )
-
-        sprites.push(sprite)
-      }
+          cell.x,
+          cell.y,
+          cell.width,
+          cell.height,
+          cell.index,
+        ),
+      )
     }
-
     return sprites
   }
 }

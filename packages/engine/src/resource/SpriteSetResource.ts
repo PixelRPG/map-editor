@@ -368,4 +368,13 @@ export class SpriteSetResource {
   getSprite(id: number): Sprite | undefined {
     return this.sprites[id]
   }
+
+  /**
+   * Get a loaded ImageSource by its image ID.
+   * Useful for platform-specific subclasses that need to extract native
+   * image data (e.g. GdkPixbuf from gjsify's HTMLImageElement polyfill).
+   */
+  getImageSource(imageId: string): ImageSource | undefined {
+    return this.imageLoaders.get(imageId)
+  }
 }

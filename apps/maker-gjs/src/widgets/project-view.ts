@@ -112,8 +112,7 @@ export class ProjectView extends Adw.Bin {
               )
               continue
             }
-            const setResource = new GdkSpriteSetResource(engineSet.path)
-            await setResource.load()
+            const setResource = await GdkSpriteSetResource.fromEngineResource(engineSet)
             if (setResource.spriteSheet) {
               sheet = setResource.spriteSheet
               this._previewSpriteSheets.set(spriteSetRef.id, sheet)

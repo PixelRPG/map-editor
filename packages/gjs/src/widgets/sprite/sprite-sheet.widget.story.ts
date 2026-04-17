@@ -145,10 +145,9 @@ export class SpriteSheetWidgetStory extends StoryWidget {
 
       // 1. Create SpriteSetResource with the JSON file path
       // SpriteSetResource now handles everything internally (like Excalibur)
-      this.spriteSetResource = new GdkSpriteSetResource(
+      this.spriteSetResource = await GdkSpriteSetResource.fromPath(
         '../../games/zelda-like/spritesets/lokiri-forest.json',
       )
-      const spriteSetData = await this.spriteSetResource.load()
 
       // 2. Verify sprite sheet was created
       if (!this.spriteSetResource.spriteSheet) {
