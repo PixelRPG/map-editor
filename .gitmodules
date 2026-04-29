@@ -1,0 +1,3 @@
+[submodule "refs/Game-Dev-Library"]
+	path = refs/Game-Dev-Library
+	url = git@github.com:jyoung4242/Game-Dev-Library.git
