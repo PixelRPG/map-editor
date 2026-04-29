@@ -1,4 +1,6 @@
 import Gio from '@girs/gio-2.0'
+import Gdk from '@girs/gdk-4.0'
+import type GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import type { SpriteSetData } from '@pixelrpg/engine'
 import { SpriteSetFormat } from '@pixelrpg/engine'
 import type { SpriteSetResource } from '@pixelrpg/engine'
@@ -71,11 +73,37 @@ export class GdkSpriteSetResource {
   ): Promise<void> {
     if (!this._data.image) return
 
-    // TODO: Pixbuf-sharing via Gdk.Texture.new_for_pixbuf(htmlImage._pixbuf)
-    // is possible (gjsify's HTMLImageElement polyfill stores a GdkPixbuf
-    // internally) but causes rendering issues with some textures. For now,
-    // fall back to disk loading. The parsed SpriteSetData is still shared.
-    await this._loadFromDisk()
+    const imageSource = engineResource.getImageSource(this._data.image.id)
+    // _pixbuf is protected on gjsify's HTMLImageElement — access via cast.
+    const pixbuf = (imageSource?.data as any)?._pixbuf as
+      | GdkPixbuf.Pixbuf
+      | undefined
+
+    if (pixbuf) {
+      // Ensure RGBA — GdkPixbuf may be RGB-only for JPEG sources.
+      const rgbaPixbuf = pixbuf.get_has_alpha()
+        ? pixbuf
+        : (pixbuf.add_alpha(false, 0, 0, 0) ?? pixbuf)
+
+      // GTK4-native: explicit format avoids the deprecated
+      // Gdk.Texture.new_for_pixbuf() and its colour-space/alpha ambiguity.
+      // GdkPixbuf stores pixels as R, G, B, A bytes = MemoryFormat.R8G8B8A8.
+      const texture = Gdk.MemoryTexture['new'](
+        rgbaPixbuf.get_width(),
+        rgbaPixbuf.get_height(),
+        Gdk.MemoryFormat.R8G8B8A8,
+        rgbaPixbuf.get_pixels(),
+        rgbaPixbuf.get_rowstride(),
+      )
+      this._imageTexture = GdkImageTexture.fromTexture(texture)
+      this._spriteSheet = new GdkSpriteSheet(this._data, this._imageTexture)
+      this._sprites = this._buildNamedSprites()
+    } else {
+      console.warn(
+        `[GdkSpriteSetResource] No _pixbuf on HTMLImageElement for "${this._data.image.id}" — falling back to disk load`,
+      )
+      await this._loadFromDisk()
+    }
   }
 
   /** Load the image from disk (standalone path or fallback). */
