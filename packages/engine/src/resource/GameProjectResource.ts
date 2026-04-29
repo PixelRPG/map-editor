@@ -163,6 +163,7 @@ export class GameProjectResource {
       const fullPath = joinPaths(this.baseDir, mapEntry.path)
       const resource = new MapResource(fullPath, {
         headless: this.headless,
+        preloadedSpriteSets: this.spriteSetResources,
       })
 
       await resource.load()

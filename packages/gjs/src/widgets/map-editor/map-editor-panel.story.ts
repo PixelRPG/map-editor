@@ -104,8 +104,7 @@ export class MapEditorPanelStory extends StoryWidget {
           const mapDir = Gio.File.new_for_path(mapPath).get_parent()
           const spriteSetPath =
             mapDir?.get_child(spriteSetRef.path).get_path() || spriteSetRef.path
-          const spriteSetResource = new GdkSpriteSetResource(spriteSetPath)
-          await spriteSetResource.load()
+          const spriteSetResource = await GdkSpriteSetResource.fromPath(spriteSetPath)
           if (spriteSetResource.spriteSheet) {
             this.loadedSpriteSheets.push(spriteSetResource.spriteSheet)
           } else {

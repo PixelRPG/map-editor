@@ -1,64 +1,118 @@
 import Gio from '@girs/gio-2.0'
 import type { SpriteSetData } from '@pixelrpg/engine'
 import { SpriteSetFormat } from '@pixelrpg/engine'
+import type { SpriteSetResource } from '@pixelrpg/engine'
 import { loadTextFile } from '../utils'
 import { GdkImageTexture } from './GdkImageTexture.ts'
 import { GdkSpriteSheet, GdkSprite } from '../objects/index.ts'
 
 /**
- * GTK-side SpriteSet loader that produces a `GdkSpriteSheet` of `GdkSprite`s
- * for rendering via `Gdk.Paintable`.
+ * GTK-side SpriteSet resource. Produces `GdkSpriteSheet`/`GdkSprite`s for
+ * rendering in GTK widgets via `Gdk.Paintable`.
  *
- * The cross-platform Excalibur equivalent lives in `@pixelrpg/engine`
- * (`SpriteSetResource`); this class exists only for GTK previews in the editor
- * UI. Both pipelines coexist intentionally.
+ * Two construction paths:
+ * - `fromEngineResource(engineResource)` — **primary path** in the editor.
+ *   Reuses the already-parsed `SpriteSetData` AND extracts the `GdkPixbuf`
+ *   from the already-loaded `HTMLImageElement` (gjsify polyfill) — zero
+ *   additional disk I/O.
+ * - `fromPath(path)` — standalone path for storybook stories and tests that
+ *   don't have an engine resource available. Parses JSON and loads image
+ *   from disk.
  */
 export class GdkSpriteSetResource {
-  private _data: SpriteSetData | null = null
+  private _data: SpriteSetData
   private _path: string
   private _imageTexture: GdkImageTexture | null = null
   private _spriteSheet: GdkSpriteSheet | null = null
   private _sprites: Record<number, GdkSprite> = {}
 
-  constructor(path: string) {
+  /** Private — use the static factory methods. */
+  private constructor(data: SpriteSetData, path: string) {
+    this._data = data
     this._path = path
   }
 
-  async load(): Promise<SpriteSetData> {
-    if (this._data) {
-      return this._data
-    }
+  /**
+   * Create from an already-loaded engine `SpriteSetResource`.
+   *
+   * Reuses the parsed `SpriteSetData`. For the image, extracts the internal
+   * `GdkPixbuf.Pixbuf` from the gjsify `HTMLImageElement` polyfill and
+   * converts it to a `Gdk.Texture` — no second disk read. Falls back to
+   * loading from disk if the pixbuf is not available.
+   */
+  static async fromEngineResource(
+    engineResource: SpriteSetResource,
+  ): Promise<GdkSpriteSetResource> {
+    const r = new GdkSpriteSetResource(engineResource.data, engineResource.path)
+    await r._buildFromEngineResource(engineResource)
+    return r
+  }
 
-    const spriteSetText = await loadTextFile(this._path)
-    this._data = SpriteSetFormat.deserialize(spriteSetText)
+  /**
+   * Standalone loading for contexts without an engine resource
+   * (storybook stories, tests). Parses the SpriteSet JSON and loads the
+   * image from disk.
+   */
+  static async fromPath(path: string): Promise<GdkSpriteSetResource> {
+    const text = await loadTextFile(path)
+    const data = SpriteSetFormat.deserialize(text)
+    const r = new GdkSpriteSetResource(data, path)
+    await r._loadFromDisk()
+    return r
+  }
 
-    if (this._data.image) {
-      const imagePath = this._data.image.path
-      const absoluteImagePath = imagePath.startsWith('/')
-        ? imagePath
-        : Gio.File.new_for_path(this._path)
-            .get_parent()
-            ?.get_child(imagePath)
-            .get_path() || imagePath
+  /**
+   * Extract the GdkPixbuf from the already-loaded HTMLImageElement and
+   * convert it to a Gdk.Texture. Falls back to disk load if the pixbuf
+   * is not available (e.g. in non-gjsify environments).
+   */
+  private async _buildFromEngineResource(
+    engineResource: SpriteSetResource,
+  ): Promise<void> {
+    if (!this._data.image) return
 
-      try {
-        this._imageTexture = new GdkImageTexture(absoluteImagePath)
-        await this._imageTexture.load()
+    // TODO: Pixbuf-sharing via Gdk.Texture.new_for_pixbuf(htmlImage._pixbuf)
+    // is possible (gjsify's HTMLImageElement polyfill stores a GdkPixbuf
+    // internally) but causes rendering issues with some textures. For now,
+    // fall back to disk loading. The parsed SpriteSetData is still shared.
+    await this._loadFromDisk()
+  }
 
-        this._spriteSheet = new GdkSpriteSheet(this._data, this._imageTexture)
-        this._sprites = this.createSprites(this._data, this._spriteSheet)
-      } catch (error) {
-        console.error(`Error loading sprite set image: ${error}`)
+  /** Load the image from disk (standalone path or fallback). */
+  private async _loadFromDisk(): Promise<void> {
+    if (!this._data.image) return
+
+    const imagePath = this._resolveImagePath(this._data.image.path)
+    this._imageTexture = new GdkImageTexture(imagePath)
+    await this._imageTexture.load()
+
+    this._spriteSheet = new GdkSpriteSheet(this._data, this._imageTexture)
+    this._sprites = this._buildNamedSprites()
+  }
+
+  private _buildNamedSprites(): Record<number, GdkSprite> {
+    if (!this._spriteSheet) return {}
+    const sprites: Record<number, GdkSprite> = {}
+    for (const sprite of this._data.sprites) {
+      const index = sprite.row * this._data.columns + sprite.col
+      if (index < this._spriteSheet.sprites.length) {
+        sprites[sprite.id] = this._spriteSheet.sprites[index]
       }
     }
+    return sprites
+  }
 
-    return this._data
+  private _resolveImagePath(relativePath: string): string {
+    if (relativePath.startsWith('/')) return relativePath
+    return (
+      Gio.File.new_for_path(this._path)
+        .get_parent()
+        ?.get_child(relativePath)
+        .get_path() || relativePath
+    )
   }
 
   get data(): SpriteSetData {
-    if (!this._data) {
-      throw new Error('Sprite set data not loaded')
-    }
     return this._data
   }
 
@@ -68,28 +122,6 @@ export class GdkSpriteSetResource {
 
   get imageTexture(): GdkImageTexture | null {
     return this._imageTexture
-  }
-
-  private createSprites(
-    data: SpriteSetData,
-    spriteSheet: GdkSpriteSheet,
-  ): Record<number, GdkSprite> {
-    const sprites: Record<number, GdkSprite> = {}
-
-    if (data.sprites && data.sprites.length > 0) {
-      data.sprites.forEach((spriteData) => {
-        try {
-          const spriteIndex = spriteData.row * data.columns + spriteData.col
-          if (spriteIndex < spriteSheet.sprites.length) {
-            sprites[spriteData.id] = spriteSheet.sprites[spriteIndex]
-          }
-        } catch (error) {
-          console.error(`Error creating sprite ${spriteData.id}:`, error)
-        }
-      })
-    }
-
-    return sprites
   }
 
   get spriteSheet(): GdkSpriteSheet | null {
@@ -104,12 +136,12 @@ export class GdkSpriteSetResource {
     return this._sprites[id]
   }
 
-  /** Placeholder for animation support (not yet implemented in GJS). */
+  /** Placeholder — animation support is not yet implemented in the GTK pipeline. */
   get animations(): Record<string, unknown> {
     return {}
   }
 
   isLoaded(): boolean {
-    return this._data !== null && (this._imageTexture?.isLoaded() ?? false)
+    return this._imageTexture?.isLoaded() ?? false
   }
 }

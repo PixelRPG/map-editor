@@ -129,10 +129,9 @@ export class TilesetSelectorStory extends StoryWidget {
       this._info_label.set_label('Loading sample tilesets...')
 
       // Load the main Lokiri Forest sprite set
-      const lokiriResource = new GdkSpriteSetResource(
+      const lokiriResource = await GdkSpriteSetResource.fromPath(
         '../../games/zelda-like/spritesets/lokiri-forest.json',
       )
-      await lokiriResource.load()
 
       if (lokiriResource.spriteSheet) {
         this.spriteSetResources.push(lokiriResource)
@@ -144,10 +143,9 @@ export class TilesetSelectorStory extends StoryWidget {
 
       // Try to load water tileset if available
       try {
-        const waterResource = new GdkSpriteSetResource(
+        const waterResource = await GdkSpriteSetResource.fromPath(
           '../../games/zelda-like/spritesets/water.json',
         )
-        await waterResource.load()
 
         if (waterResource.spriteSheet) {
           this.spriteSetResources.push(waterResource)
