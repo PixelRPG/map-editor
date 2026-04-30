@@ -1,8 +1,7 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-
-import { MapEditorPanel, GdkSpriteSheet } from '@pixelrpg/gjs'
-import { MapData } from '@pixelrpg/engine'
+import GObject from '@girs/gobject-2.0'
+import type { MapData } from '@pixelrpg/engine'
+import { type GdkSpriteSheet, MapEditorPanel, SignalScope } from '@pixelrpg/gjs'
 
 import Template from './sidebar.blp'
 
@@ -17,8 +16,7 @@ export class Sidebar extends Adw.Bin {
     return this._mapEditorPanel
   }
 
-  // Signal management
-  private _signalHandlers: number[] = []
+  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -38,12 +36,8 @@ export class Sidebar extends Adw.Bin {
           },
         },
       },
-      this,
+      Sidebar,
     )
-  }
-
-  constructor(params: Partial<Adw.Bin.ConstructorProps>) {
-    super(params)
   }
 
   /**
@@ -52,13 +46,7 @@ export class Sidebar extends Adw.Bin {
    * @param spriteSheets Array of loaded sprite sheets
    */
   initializeMapData(mapData: MapData, spriteSheets: GdkSpriteSheet[]): void {
-    console.log(
-      '[Sidebar] Initializing map data:',
-      mapData.name,
-      'with',
-      spriteSheets.length,
-      'sprite sheets',
-    )
+    console.log('[Sidebar] Initializing map data:', mapData.name, 'with', spriteSheets.length, 'sprite sheets')
 
     // Pass the map data to the MapEditorPanel
     this._mapEditorPanel.initializeMapData(mapData, spriteSheets)
@@ -67,10 +55,7 @@ export class Sidebar extends Adw.Bin {
   /**
    * Handle tile selection from map editor panel
    */
-  private _onTileSelected(
-    mapEditorPanel: MapEditorPanel,
-    tileId: number,
-  ): void {
+  private _onTileSelected(_mapEditorPanel: MapEditorPanel, tileId: number): void {
     console.log('[Sidebar] Tile selected:', tileId)
     this.emit('tile-selected', tileId)
   }
@@ -78,10 +63,7 @@ export class Sidebar extends Adw.Bin {
   /**
    * Handle layer selection from map editor panel
    */
-  private _onLayerSelected(
-    mapEditorPanel: MapEditorPanel,
-    layerId: string,
-  ): void {
+  private _onLayerSelected(_mapEditorPanel: MapEditorPanel, layerId: string): void {
     console.log('[Sidebar] Layer selected:', layerId)
     this.emit('layer-selected', layerId)
   }
@@ -89,53 +71,20 @@ export class Sidebar extends Adw.Bin {
   /**
    * Handle tool change from map editor panel
    */
-  private _onToolChanged(mapEditorPanel: MapEditorPanel, tool: string): void {
+  private _onToolChanged(_mapEditorPanel: MapEditorPanel, tool: string): void {
     console.log('[Sidebar] Tool changed:', tool)
     this.emit('tool-changed', tool)
   }
 
-  /**
-   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
-   */
   vfunc_map(): void {
     super.vfunc_map()
-
-    if (this._signalHandlers.length === 0) {
-      // Connect map editor panel signals
-      const tileHandlerId = this._mapEditorPanel.connect(
-        'tile-selected',
-        this._onTileSelected.bind(this),
-      )
-      this._signalHandlers.push(tileHandlerId)
-
-      const toolHandlerId = this._mapEditorPanel.connect(
-        'tool-changed',
-        this._onToolChanged.bind(this),
-      )
-      this._signalHandlers.push(toolHandlerId)
-
-      const layerHandlerId = this._mapEditorPanel.connect(
-        'layer-selected',
-        this._onLayerSelected.bind(this),
-      )
-      this._signalHandlers.push(layerHandlerId)
-    }
+    this.signals.connect(this._mapEditorPanel, 'tile-selected', this._onTileSelected.bind(this))
+    this.signals.connect(this._mapEditorPanel, 'tool-changed', this._onToolChanged.bind(this))
+    this.signals.connect(this._mapEditorPanel, 'layer-selected', this._onLayerSelected.bind(this))
   }
 
-  /**
-   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
-   */
   vfunc_unmap(): void {
-    if (this._signalHandlers.length > 0) {
-      // Disconnect all signal handlers from map editor panel
-      for (const handlerId of this._signalHandlers) {
-        if (handlerId > 0) {
-          this._mapEditorPanel.disconnect(handlerId)
-        }
-      }
-      this._signalHandlers = []
-    }
-
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 }

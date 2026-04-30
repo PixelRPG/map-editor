@@ -1,15 +1,12 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { gettext as _ } from 'gettext'
-
-import { WelcomeView } from './welcome-view.ts'
-import { ProjectView } from './project-view.ts'
-
 import type { ImageReference } from '@pixelrpg/engine'
-import { GdkImageTexture } from '@pixelrpg/gjs'
-
+import { GdkImageTexture, SignalScope } from '@pixelrpg/gjs'
+import { gettext as _ } from 'gettext'
 import Template from './application-window.blp'
+import type { ProjectView } from './project-view.ts'
+import type { WelcomeView } from './welcome-view.ts'
 
 export class ApplicationWindow extends Adw.ApplicationWindow {
   // GObject internal children
@@ -18,22 +15,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _stack: Adw.ViewStack | undefined
   declare _toastOverlay: Adw.ToastOverlay | undefined
 
-  // Signal management
-  private _signalHandlers: number[] = []
+  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'ApplicationWindow',
         Template,
-        InternalChildren: [
-          'welcomeView',
-          'projectView',
-          'stack',
-          'toastOverlay',
-        ],
+        InternalChildren: ['welcomeView', 'projectView', 'stack', 'toastOverlay'],
       },
-      this,
+      ApplicationWindow,
     )
   }
 
@@ -47,47 +38,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
   }
 
-  /**
-   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
-   */
   vfunc_map(): void {
     super.vfunc_map()
-
-    if (this._signalHandlers.length === 0) {
-      // Connect welcome view signals
-      if (this._welcomeView) {
-        const createProjectHandlerId = this._welcomeView.connect(
-          'create-project',
-          this.onCreateProject,
-        )
-        const openProjectHandlerId = this._welcomeView.connect(
-          'open-project',
-          this.onOpenProject,
-        )
-        this._signalHandlers.push(createProjectHandlerId, openProjectHandlerId)
-      }
-
+    if (this._welcomeView) {
+      this.signals.connect(this._welcomeView, 'create-project', this.onCreateProject)
+      this.signals.connect(this._welcomeView, 'open-project', this.onOpenProject)
     }
   }
 
-  /**
-   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
-   */
   vfunc_unmap(): void {
-    if (this._signalHandlers.length > 0) {
-      // Disconnect all signal handlers
-      let handlerIndex = 0
-      if (this._welcomeView && handlerIndex < this._signalHandlers.length) {
-        this._welcomeView.disconnect(this._signalHandlers[handlerIndex])
-        handlerIndex++
-        if (handlerIndex < this._signalHandlers.length) {
-          this._welcomeView.disconnect(this._signalHandlers[handlerIndex])
-          handlerIndex++
-        }
-      }
-      this._signalHandlers = []
-    }
-
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 

@@ -8,9 +8,12 @@
   "scripts": {
     "build": "yarn workspaces foreach -v -W -t run build",
     "check": "yarn workspaces foreach -v -W -t run check",
+    "check:barrels-clean": "yarn workspaces foreach -v -W -t run build:barrels && git diff --exit-code -- '**/index.ts'",
+    "format:barrels": "yarn workspaces foreach -v -W -t run build:barrels && biome format --write .",
+    "test": "yarn workspaces foreach -v -W --include @pixelrpg/engine run test",
     "start": "yarn workspace @pixelrpg/maker-gjs run start",
     "clear": "yarn workspaces foreach -v --parallel -W run clear",
-    "format": "biome check . --write --unsafe",
+    "format": "yarn format:barrels && biome check . --write --unsafe",
     "lint": "biome check .",
     "prepare": "husky",
     "git:merge-upstream": "yarn workspaces foreach -v --parallel -A run git:merge-upstream"

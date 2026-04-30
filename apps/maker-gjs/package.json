@@ -1,64 +1,63 @@
 {
-    "name": "@pixelrpg/maker-gjs",
-    "version": "0.0.1",
-    "description": "PixelRPG Maker for GNOME",
-    "main": "src/main.ts",
-    "type": "module",
-    "private": true,
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
-        "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
-        "build:barrels": "barrelsby --delete --directory src src/widgets src/objects",
-        "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
-        "build": "yarn build:resources && yarn build:barrels && yarn build:app",
-        "check": "tsc",
-        "start": "gjsify run org.pixelrpg.maker",
-        "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker"
-    },
-    "keywords": [
-        "pixelrpg",
-        "maker",
-        "gnome",
-        "gjs"
-    ],
-    "author": "Pascal Garber <pascal@artandcode.studio>",
-    "license": "GPL-3.0",
-    "devDependencies": {
-        "@gjsify/cli": "^0.1.13",
-        "barrelsby": "^2.8.1",
-        "typescript": "^6.0.2"
-    },
-    "dependenciesMeta": {
-        "@gjsify/webgl": {
-            "unplugged": true
-        }
-    },
-    "dependencies": {
-        "@girs/adw-1": "^1.10.0-4.0.0-rc.4",
-        "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.4",
-        "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.4",
-        "@girs/gio-2.0": "^2.88.0-4.0.0-rc.4",
-        "@girs/gjs": "^4.0.0-rc.4",
-        "@girs/glib-2.0": "^2.88.0-4.0.0-rc.4",
-        "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.4",
-        "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.4",
-        "@gjsify/buffer": "^0.1.13",
-        "@gjsify/canvas2d": "^0.1.13",
-        "@gjsify/dom-elements": "^0.1.13",
-        "@gjsify/dom-events": "^0.1.13",
-        "@gjsify/dom-exception": "^0.1.13",
-        "@gjsify/event-bridge": "^0.1.13",
-        "@gjsify/fetch": "^0.1.13",
-        "@gjsify/gamepad": "^0.1.13",
-        "@gjsify/node-globals": "^0.1.13",
-        "@gjsify/web-globals": "^0.1.13",
-        "@gjsify/webaudio": "^0.1.13",
-        "@gjsify/webgl": "^0.1.13",
-        "@gjsify/xmlhttprequest": "^0.1.13",
-        "@gjsify/zlib": "^0.1.13",
-        "@pixelrpg/engine": "workspace:^",
-        "@pixelrpg/gjs": "workspace:^",
-        "excalibur": "^0.32.0"
+  "name": "@pixelrpg/maker-gjs",
+  "version": "0.0.1",
+  "description": "PixelRPG Maker for GNOME",
+  "main": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
+    "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
+    "build:barrels": "barrelsby --delete --directory src src/widgets src/objects",
+    "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
+    "build": "yarn build:resources && yarn build:barrels && yarn build:app",
+    "check": "yarn build:barrels && tsc",
+    "start": "gjsify run org.pixelrpg.maker",
+    "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker"
+  },
+  "keywords": [
+    "pixelrpg",
+    "maker",
+    "gnome",
+    "gjs"
+  ],
+  "author": "Pascal Garber <pascal@artandcode.studio>",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@gjsify/cli": "^0.1.13",
+    "barrelsby": "^2.8.1",
+    "typescript": "^6.0.2"
+  },
+  "dependenciesMeta": {
+    "@gjsify/webgl": {
+      "unplugged": true
     }
+  },
+  "dependencies": {
+    "@girs/adw-1": "^1.10.0-4.0.0-rc.4",
+    "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.4",
+    "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.4",
+    "@girs/gio-2.0": "^2.88.0-4.0.0-rc.4",
+    "@girs/gjs": "^4.0.0-rc.4",
+    "@girs/glib-2.0": "^2.88.0-4.0.0-rc.4",
+    "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.4",
+    "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.4",
+    "@gjsify/buffer": "^0.1.13",
+    "@gjsify/canvas2d": "^0.1.13",
+    "@gjsify/dom-elements": "^0.1.13",
+    "@gjsify/dom-events": "^0.1.13",
+    "@gjsify/dom-exception": "^0.1.13",
+    "@gjsify/event-bridge": "^0.1.13",
+    "@gjsify/fetch": "^0.1.13",
+    "@gjsify/gamepad": "^0.1.13",
+    "@gjsify/node-globals": "^0.1.13",
+    "@gjsify/web-globals": "^0.1.13",
+    "@gjsify/webaudio": "^0.1.13",
+    "@gjsify/webgl": "^0.1.13",
+    "@gjsify/xmlhttprequest": "^0.1.13",
+    "@gjsify/zlib": "^0.1.13",
+    "@pixelrpg/engine": "workspace:^",
+    "@pixelrpg/gjs": "workspace:^",
+    "excalibur": "^0.32.0"
+  }
 }

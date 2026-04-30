@@ -33,6 +33,7 @@ export class MapValidationError extends Error {
  * @class MapFormat
  * @since 0.1.0
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class MapFormat {
   /**
    * Current version of the map format
@@ -68,66 +69,30 @@ export class MapFormat {
     }
 
     if (typeof data.version !== 'string') {
-      throw new MapValidationError(
-        'Map version must be a string',
-        'version',
-        data.version,
-      )
+      throw new MapValidationError('Map version must be a string', 'version', data.version)
     }
 
     // Validate tile dimensions
-    if (
-      !data.tileWidth ||
-      typeof data.tileWidth !== 'number' ||
-      data.tileWidth <= 0
-    ) {
-      throw new MapValidationError(
-        'Tile width must be a positive number',
-        'tileWidth',
-        data.tileWidth,
-      )
+    if (!data.tileWidth || typeof data.tileWidth !== 'number' || data.tileWidth <= 0) {
+      throw new MapValidationError('Tile width must be a positive number', 'tileWidth', data.tileWidth)
     }
 
-    if (
-      !data.tileHeight ||
-      typeof data.tileHeight !== 'number' ||
-      data.tileHeight <= 0
-    ) {
-      throw new MapValidationError(
-        'Tile height must be a positive number',
-        'tileHeight',
-        data.tileHeight,
-      )
+    if (!data.tileHeight || typeof data.tileHeight !== 'number' || data.tileHeight <= 0) {
+      throw new MapValidationError('Tile height must be a positive number', 'tileHeight', data.tileHeight)
     }
 
     // Validate map dimensions
-    if (
-      !data.columns ||
-      typeof data.columns !== 'number' ||
-      data.columns <= 0
-    ) {
-      throw new MapValidationError(
-        'Map columns must be a positive number',
-        'columns',
-        data.columns,
-      )
+    if (!data.columns || typeof data.columns !== 'number' || data.columns <= 0) {
+      throw new MapValidationError('Map columns must be a positive number', 'columns', data.columns)
     }
 
     if (!data.rows || typeof data.rows !== 'number' || data.rows <= 0) {
-      throw new MapValidationError(
-        'Map rows must be a positive number',
-        'rows',
-        data.rows,
-      )
+      throw new MapValidationError('Map rows must be a positive number', 'rows', data.rows)
     }
 
     // Validate layers
     if (!Array.isArray(data.layers)) {
-      throw new MapValidationError(
-        'Layers must be an array',
-        'layers',
-        data.layers,
-      )
+      throw new MapValidationError('Layers must be an array', 'layers', data.layers)
     }
 
     if (data.layers.length === 0) {
@@ -136,18 +101,11 @@ export class MapFormat {
 
     // Validate sprite sets
     if (!data.spriteSets || !Array.isArray(data.spriteSets)) {
-      throw new MapValidationError(
-        'Sprite sets must be an array',
-        'spriteSets',
-        data.spriteSets,
-      )
+      throw new MapValidationError('Sprite sets must be an array', 'spriteSets', data.spriteSets)
     }
 
     if (data.spriteSets.length === 0) {
-      throw new MapValidationError(
-        'Map must have at least one sprite set',
-        'spriteSets',
-      )
+      throw new MapValidationError('Map must have at least one sprite set', 'spriteSets')
     }
 
     // Validate each sprite set reference
@@ -192,7 +150,7 @@ export class MapFormat {
    * ```
    */
   static serialize(data: MapData): string {
-    this.validate(data)
+    MapFormat.validate(data)
     return JSON.stringify(data, null, 2)
   }
 
@@ -220,11 +178,7 @@ export class MapFormat {
    */
   static deserialize(json: string): MapData {
     if (!json || typeof json !== 'string') {
-      throw new MapValidationError(
-        'JSON string is required for deserialization',
-        'json',
-        json,
-      )
+      throw new MapValidationError('JSON string is required for deserialization', 'json', json)
     }
 
     let data: unknown
@@ -240,7 +194,7 @@ export class MapFormat {
 
     // Type assertion after parsing
     const mapData = data as MapData
-    this.validate(mapData)
+    MapFormat.validate(mapData)
 
     return mapData
   }
@@ -262,7 +216,7 @@ export class MapFormat {
    */
   static isValidMapData(data: unknown): data is MapData {
     try {
-      this.validate(data as MapData)
+      MapFormat.validate(data as MapData)
       return true
     } catch {
       return false

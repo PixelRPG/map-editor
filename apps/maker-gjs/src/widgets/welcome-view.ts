@@ -1,6 +1,7 @@
-import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
+import { SignalScope } from '@pixelrpg/gjs'
 
 import Template from './welcome-view.blp'
 
@@ -9,8 +10,7 @@ export class WelcomeView extends Adw.Bin {
   declare _createButton: Gtk.Button | undefined
   declare _openButton: Gtk.Button | undefined
 
-  // Signal management
-  private _signalHandlers: number[] = []
+  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -23,56 +23,22 @@ export class WelcomeView extends Adw.Bin {
           'open-project': {},
         },
       },
-      this,
+      WelcomeView,
     )
   }
 
-  constructor() {
-    super()
-  }
-
-  /**
-   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
-   */
   vfunc_map(): void {
     super.vfunc_map()
-
-    if (this._signalHandlers.length === 0) {
-      // Connect button signals
-      if (this._createButton) {
-        const createHandlerId = this._createButton.connect('clicked', () => {
-          this.emit('create-project')
-        })
-        this._signalHandlers.push(createHandlerId)
-      }
-
-      if (this._openButton) {
-        const openHandlerId = this._openButton.connect('clicked', () => {
-          this.emit('open-project')
-        })
-        this._signalHandlers.push(openHandlerId)
-      }
+    if (this._createButton) {
+      this.signals.connect(this._createButton, 'clicked', () => this.emit('create-project'))
+    }
+    if (this._openButton) {
+      this.signals.connect(this._openButton, 'clicked', () => this.emit('open-project'))
     }
   }
 
-  /**
-   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
-   */
   vfunc_unmap(): void {
-    if (this._signalHandlers.length > 0) {
-      // Disconnect all signal handlers from their respective objects
-      let handlerIndex = 0
-      if (this._createButton && handlerIndex < this._signalHandlers.length) {
-        this._createButton.disconnect(this._signalHandlers[handlerIndex])
-        handlerIndex++
-      }
-      if (this._openButton && handlerIndex < this._signalHandlers.length) {
-        this._openButton.disconnect(this._signalHandlers[handlerIndex])
-        handlerIndex++
-      }
-      this._signalHandlers = []
-    }
-
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 }
