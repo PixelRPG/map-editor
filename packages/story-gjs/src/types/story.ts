@@ -1,5 +1,5 @@
-import GObject from '@girs/gobject-2.0'
-import Adw from '@girs/adw-1'
+import type Adw from '@girs/adw-1'
+import type GObject from '@girs/gobject-2.0'
 import type { StoryWidget } from '../widgets/story.widget'
 
 /**
@@ -86,10 +86,7 @@ export interface StoryMeta {
  * Constructor interface for story widget classes
  */
 export interface StoryWidgetConstructor {
-  new (
-    params?: StoryWidget.ConstructorProps,
-    adwParams?: Partial<Adw.Bin.ConstructorProps>,
-  ): StoryWidget
+  new (params?: StoryWidget.ConstructorProps, adwParams?: Partial<Adw.Bin.ConstructorProps>): StoryWidget
   $gtype: GObject.GType
   getMetadata?: () => StoryMeta
 }

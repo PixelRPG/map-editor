@@ -14,12 +14,6 @@
     "alwaysStrict": true,
     "skipLibCheck": true
   },
-  "files": [
-    "src/main.ts"
-  ],
-  "include": [
-    "@girs/gjs",
-    "@girs/gjs/dom",
-    "env.d.ts"
-  ]
+  "files": ["src/main.ts"],
+  "include": ["@girs/gjs", "@girs/gjs/dom", "env.d.ts"]
 }

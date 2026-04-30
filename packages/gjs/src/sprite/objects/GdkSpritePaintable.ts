@@ -1,8 +1,8 @@
-import GObject from '@girs/gobject-2.0'
 import Gdk from '@girs/gdk-4.0'
-import Gtk from '@girs/gtk-4.0'
+import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
+import type Gtk from '@girs/gtk-4.0'
 
 /**
  * GObject implementing `Gdk.Paintable` for sprite rendering inside GTK widgets.
@@ -12,10 +12,7 @@ import Gsk from '@girs/gsk-4.0'
  * Designed to be created on-demand and reused to minimize GObject instances
  * and avoid GC callback issues.
  */
-export class GdkSpritePaintable
-  extends GObject.Object
-  implements Gdk.Paintable.Interface
-{
+export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.Interface {
   private _sourceTexture: Gdk.Texture | null = null
   private _x: number
   private _y: number
@@ -40,17 +37,11 @@ export class GdkSpritePaintable
         GTypeName: 'GdkSpritePaintable',
         Implements: [Gdk.Paintable],
       },
-      this,
+      GdkSpritePaintable,
     )
   }
 
-  constructor(
-    texture: Gdk.Texture | null,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ) {
+  constructor(texture: Gdk.Texture | null, x: number, y: number, width: number, height: number) {
     super()
     this._sourceTexture = texture
     this._x = x
@@ -107,11 +98,7 @@ export class GdkSpritePaintable
     )
 
     // Use append_scaled_texture with NEAREST filtering for pixel-perfect sprites
-    snapshot.append_scaled_texture(
-      this._sourceTexture,
-      Gsk.ScalingFilter.NEAREST,
-      scaledTextureRect,
-    )
+    snapshot.append_scaled_texture(this._sourceTexture, Gsk.ScalingFilter.NEAREST, scaledTextureRect)
 
     snapshot.restore()
     snapshot.pop()

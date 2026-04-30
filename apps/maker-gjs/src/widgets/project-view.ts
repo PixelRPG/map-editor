@@ -1,12 +1,10 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-
-import { Engine, GdkSpriteSetResource, type GdkSpriteSheet } from '@pixelrpg/gjs'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
 import { EngineEvent, type EngineStatus } from '@pixelrpg/engine'
-import { Sidebar } from './sidebar.ts'
-
+import { Engine, GdkSpriteSetResource, type GdkSpriteSheet } from '@pixelrpg/gjs'
 import Template from './project-view.blp'
+import type { Sidebar } from './sidebar.ts'
 
 GObject.type_ensure(Engine.$gtype)
 
@@ -23,51 +21,34 @@ export class ProjectView extends Adw.Bin {
       {
         GTypeName: 'ProjectView',
         Template,
-        InternalChildren: [
-          'sidebar',
-          'engine',
-          'splitView',
-          'showSidebarButton',
-        ],
+        InternalChildren: ['sidebar', 'engine', 'splitView', 'showSidebarButton'],
         Signals: {
           ready: {},
         },
       },
-      this,
+      ProjectView,
     )
   }
 
   constructor() {
     super()
 
-    this._engine?.connect(
-      EngineEvent.STATUS_CHANGED,
-      (_source: Engine, status: EngineStatus) => {
-        console.log('[ProjectView] Engine status changed:', status)
-      },
-    )
+    this._engine?.connect(EngineEvent.STATUS_CHANGED, (_source: Engine, status: EngineStatus) => {
+      console.log('[ProjectView] Engine status changed:', status)
+    })
 
-    this._engine?.connect(
-      EngineEvent.PROJECT_LOADED,
-      async (_source: Engine, projectId: string) => {
-        console.log('[ProjectView] Project loaded:', projectId)
-      },
-    )
+    this._engine?.connect(EngineEvent.PROJECT_LOADED, async (_source: Engine, projectId: string) => {
+      console.log('[ProjectView] Project loaded:', projectId)
+    })
 
-    this._engine?.connect(
-      EngineEvent.MAP_LOADED,
-      async (_source: Engine, mapId: string) => {
-        console.log('[ProjectView] Map loaded:', mapId)
-        await this._onMapLoaded(mapId)
-      },
-    )
+    this._engine?.connect(EngineEvent.MAP_LOADED, async (_source: Engine, mapId: string) => {
+      console.log('[ProjectView] Map loaded:', mapId)
+      await this._onMapLoaded(mapId)
+    })
 
-    this._engine?.connect(
-      EngineEvent.ERROR,
-      (_source: Engine, message: string) => {
-        console.error('[ProjectView] Engine error:', message)
-      },
-    )
+    this._engine?.connect(EngineEvent.ERROR, (_source: Engine, message: string) => {
+      console.error('[ProjectView] Engine error:', message)
+    })
 
     this._engine?.connect('ready', () => {
       console.log('[ProjectView] Ready')
@@ -107,9 +88,7 @@ export class ProjectView extends Adw.Bin {
             // absolute path instead of re-resolving against the project root.
             const engineSet = await resource.getSpriteSet(spriteSetRef.id)
             if (!engineSet) {
-              console.warn(
-                `[ProjectView] Engine has no sprite set for ${spriteSetRef.id}`,
-              )
+              console.warn(`[ProjectView] Engine has no sprite set for ${spriteSetRef.id}`)
               continue
             }
             const setResource = await GdkSpriteSetResource.fromEngineResource(engineSet)
@@ -120,10 +99,7 @@ export class ProjectView extends Adw.Bin {
           }
           if (sheet) spriteSheets.push(sheet)
         } catch (error) {
-          console.warn(
-            `[ProjectView] Failed to load sprite set ${spriteSetRef.id}:`,
-            error,
-          )
+          console.warn(`[ProjectView] Failed to load sprite set ${spriteSetRef.id}:`, error)
         }
       }
     }

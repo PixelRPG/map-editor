@@ -1,7 +1,7 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import { StoryMeta } from '../types/story'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
+import type { StoryMeta } from '../types/story'
 
 import Template from './story.widget.blp'
 
@@ -43,13 +43,7 @@ export class StoryWidget extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             GObject.Object,
           ),
-          story: GObject.ParamSpec.string(
-            'story',
-            'Story Name',
-            'Story name',
-            GObject.ParamFlags.READWRITE,
-            '',
-          ),
+          story: GObject.ParamSpec.string('story', 'Story Name', 'Story name', GObject.ParamFlags.READWRITE, ''),
           args: GObject.ParamSpec.object(
             'args',
             'Args',
@@ -58,14 +52,9 @@ export class StoryWidget extends Adw.Bin {
             GObject.Object,
           ),
         },
-        InternalChildren: [
-          'content_box',
-          'story_title',
-          'story_description',
-          'story_content',
-        ],
+        InternalChildren: ['content_box', 'story_title', 'story_description', 'story_content'],
       },
-      this,
+      StoryWidget,
     )
   }
 
@@ -75,10 +64,7 @@ export class StoryWidget extends Adw.Bin {
    * @param name Story name
    * @param args Story arguments
    */
-  constructor(
-    params: StoryWidget.ConstructorProps,
-    adwParams: Partial<Adw.Bin.ConstructorProps> = {},
-  ) {
+  constructor(params: StoryWidget.ConstructorProps, adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
     super(adwParams)
 
     this._meta = params.meta
@@ -180,7 +166,7 @@ export class StoryWidget extends Adw.Bin {
    * Override this method in subclasses
    * @param args New arguments for the story
    */
-  updateArgs(args: Record<string, any>): void {
+  updateArgs(_args: Record<string, any>): void {
     // Implement in subclasses
   }
 

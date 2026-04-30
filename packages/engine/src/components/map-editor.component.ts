@@ -1,5 +1,5 @@
+import type { Tile, TileMap } from 'excalibur'
 import { Component } from 'excalibur'
-import type { TileMap, Tile } from 'excalibur'
 
 export interface TileSpriteRef {
   spriteSetId: string
@@ -57,33 +57,22 @@ export class MapEditorComponent extends Component {
     }
   }
 
-  public getSpritesForTileAndLayer(
-    tile: Tile,
-    layerId?: string,
-  ): TileSpriteRef[] {
+  public getSpritesForTileAndLayer(tile: Tile, layerId?: string): TileSpriteRef[] {
     const allSprites = this.sprites.get(tile) || []
     if (!layerId) return allSprites
     return allSprites.filter((sprite) => sprite.layerId === layerId)
   }
 
-  public setSpritesForTileAndLayer(
-    tile: Tile,
-    layerId: string,
-    sprites: Array<Omit<TileSpriteRef, 'layerId'>>,
-  ): void {
+  public setSpritesForTileAndLayer(tile: Tile, layerId: string, sprites: Array<Omit<TileSpriteRef, 'layerId'>>): void {
     const existingSprites = this.sprites.get(tile) || []
-    const otherLayerSprites = existingSprites.filter(
-      (sprite) => sprite.layerId !== layerId,
-    )
+    const otherLayerSprites = existingSprites.filter((sprite) => sprite.layerId !== layerId)
     const newSprites = sprites.map((sprite) => ({ ...sprite, layerId }))
     this.sprites.set(tile, [...otherLayerSprites, ...newSprites])
   }
 
   public clearSpritesForTileAndLayer(tile: Tile, layerId: string): void {
     const existingSprites = this.sprites.get(tile) || []
-    const remainingSprites = existingSprites.filter(
-      (sprite) => sprite.layerId !== layerId,
-    )
+    const remainingSprites = existingSprites.filter((sprite) => sprite.layerId !== layerId)
     this.sprites.set(tile, remainingSprites)
   }
 

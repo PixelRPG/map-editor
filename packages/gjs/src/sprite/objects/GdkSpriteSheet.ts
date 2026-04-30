@@ -1,7 +1,7 @@
-import { GdkSprite } from './GdkSprite.ts'
 import type { SpriteSetData } from '@pixelrpg/engine'
 import { iterateSpriteGrid } from '@pixelrpg/engine'
 import type { GdkImageTexture } from '../resource/GdkImageTexture.ts'
+import { GdkSprite } from './GdkSprite.ts'
 
 /**
  * Grid-organized collection of `GdkSprite`s sliced from a single `Gdk.Texture`.
@@ -37,36 +37,20 @@ export class GdkSpriteSheet {
    */
   getSprite(x: number, y: number): GdkSprite | undefined {
     if (x >= this.columns || x < 0 || y >= this.rows || y < 0) {
-      console.warn(
-        `Invalid sprite coordinates (${x}, ${y}) for ${this.columns}x${this.rows} sprite sheet`,
-      )
+      console.warn(`Invalid sprite coordinates (${x}, ${y}) for ${this.columns}x${this.rows} sprite sheet`)
       return undefined
     }
     const index = y * this.columns + x
     return this._sprites[index]
   }
 
-  protected createSprites(
-    spriteSheetData: SpriteSetData,
-    imageResource: GdkImageTexture,
-  ): GdkSprite[] {
+  protected createSprites(spriteSheetData: SpriteSetData, imageResource: GdkImageTexture): GdkSprite[] {
     if (!imageResource?.texture) {
-      throw new Error(
-        `Image resource not loaded: ${spriteSheetData.image?.path}`,
-      )
+      throw new Error(`Image resource not loaded: ${spriteSheetData.image?.path}`)
     }
     const sprites: GdkSprite[] = []
     for (const cell of iterateSpriteGrid(spriteSheetData)) {
-      sprites.push(
-        GdkSprite.fromSubTexture(
-          imageResource.texture,
-          cell.x,
-          cell.y,
-          cell.width,
-          cell.height,
-          cell.index,
-        ),
-      )
+      sprites.push(GdkSprite.fromSubTexture(imageResource.texture, cell.x, cell.y, cell.width, cell.height, cell.index))
     }
     return sprites
   }

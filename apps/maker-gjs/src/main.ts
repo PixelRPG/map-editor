@@ -9,8 +9,6 @@ export function main(argv: string[]) {
   return application.runAsync(argv)
 }
 
-const exit_code = await main(
-  [imports.system.programInvocationName].concat(ARGV),
-)
-log('exit_code: ' + exit_code)
+const exit_code = await main([imports.system.programInvocationName].concat(ARGV))
+log(`exit_code: ${exit_code}`)
 system.exit(exit_code)

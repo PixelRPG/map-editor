@@ -9,9 +9,9 @@
  * `loadTextFile` wrapper.
  */
 export function toFetchUrl(path: string): string {
-    if (/^(https?|file|data|blob):/i.test(path)) return path
-    if (path.startsWith('/')) return `file://${path}`
-    return path
+  if (/^(https?|file|data|blob):/i.test(path)) return path
+  if (path.startsWith('/')) return `file://${path}`
+  return path
 }
 
 /**
@@ -20,18 +20,18 @@ export function toFetchUrl(path: string): string {
  * @returns The file contents as a string
  */
 export async function loadTextFile(path: string): Promise<string> {
-    const url = toFetchUrl(path)
-    try {
-        console.log('Loading text file:', url);
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Failed to load file: ${url} (${response.status})`);
-        }
-        return await response.text();
-    } catch (error) {
-        console.error(`Error loading file: ${error}`);
-        throw error;
+  const url = toFetchUrl(path)
+  try {
+    console.log('Loading text file:', url)
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to load file: ${url} (${response.status})`)
     }
+    return await response.text()
+  } catch (error) {
+    console.error(`Error loading file: ${error}`)
+    throw error
+  }
 }
 
 /**
@@ -40,6 +40,6 @@ export async function loadTextFile(path: string): Promise<string> {
  * @returns Parsed JSON data
  */
 export async function loadJsonFile<T>(path: string): Promise<T> {
-    const content = await loadTextFile(path);
-    return JSON.parse(content) as T;
+  const content = await loadTextFile(path)
+  return JSON.parse(content) as T
 }

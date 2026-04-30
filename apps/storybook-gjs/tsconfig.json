@@ -1,5 +1,5 @@
 {
-  "compilerOptions": {   
+  "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": [],
     "target": "ESNext",
@@ -12,12 +12,8 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
     "noImplicitThis": true,
-    "alwaysStrict": true,
+    "alwaysStrict": true
   },
-  "files": [
-    "src/main.ts",
-  ],
-  "include": [
-    "src/env.d.ts",
-  ]
+  "files": ["src/main.ts"],
+  "include": ["src/env.d.ts"]
 }

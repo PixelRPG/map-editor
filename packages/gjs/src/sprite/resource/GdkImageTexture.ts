@@ -1,7 +1,7 @@
-import GLib from '@girs/glib-2.0'
-import Gio from '@girs/gio-2.0'
-import GObject from '@girs/gobject-2.0'
 import Gdk from '@girs/gdk-4.0'
+import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
+import GObject from '@girs/gobject-2.0'
 
 /**
  * GObject wrapper around a `Gdk.Texture` loaded from a local file.
@@ -28,7 +28,7 @@ export class GdkImageTexture extends GObject.Object {
           ),
         },
       },
-      this,
+      GdkImageTexture,
     )
   }
 

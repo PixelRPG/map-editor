@@ -1,9 +1,7 @@
-import GObject from '@girs/gobject-2.0'
-import GLib from '@girs/glib-2.0'
 import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import Gdk from '@girs/gdk-4.0'
-import { GdkSprite } from '../../sprite'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
+import type { GdkSprite } from '../../sprite'
 
 import Template from './sprite.widget.blp'
 
@@ -49,7 +47,7 @@ export class SpriteWidget extends Adw.Bin {
           ),
         },
       },
-      this,
+      SpriteWidget,
     )
   }
 
@@ -124,12 +122,8 @@ export class SpriteWidget extends Adw.Bin {
 
     if (this._signalHandlers.length === 0) {
       // Connect property change handlers
-      const scaleHandlerId = this.connect('notify::scale', () =>
-        this._updateScale(),
-      )
-      const spriteHandlerId = this.connect('notify::sprite', () =>
-        this._initializeSprite(),
-      )
+      const scaleHandlerId = this.connect('notify::scale', () => this._updateScale())
+      const spriteHandlerId = this.connect('notify::sprite', () => this._initializeSprite())
       this._signalHandlers.push(scaleHandlerId, spriteHandlerId)
     }
   }

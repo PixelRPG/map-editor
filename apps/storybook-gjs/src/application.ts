@@ -1,12 +1,11 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import Gio from '@girs/gio-2.0'
-import { StoryModule, StoryRegistry, registry } from '@pixelrpg/story-gjs'
-import { StorybookWindow } from './widgets'
-
-import applicationStyle from './application.css'
-import Gtk from '@girs/gtk-4.0'
 import Gdk from '@girs/gdk-4.0'
+import Gio from '@girs/gio-2.0'
+import GObject from '@girs/gobject-2.0'
+import Gtk from '@girs/gtk-4.0'
+import { registry, type StoryModule, type StoryRegistry } from '@pixelrpg/story-gjs'
+import applicationStyle from './application.css'
+import { StorybookWindow } from './widgets'
 
 /**
  * Main application class for the Storybook
@@ -24,7 +23,7 @@ export class StorybookApplication extends Adw.Application {
       {
         GTypeName: 'StorybookApplication',
       },
-      this,
+      StorybookApplication,
     )
   }
 
@@ -83,11 +82,7 @@ export class StorybookApplication extends Adw.Application {
       return
     }
 
-    Gtk.StyleContext.add_provider_for_display(
-      display,
-      provider,
-      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-    )
+    Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   }
 
   /**

@@ -15,9 +15,7 @@
 export function extractDirectoryPath(filePath: string): string {
   // Input validation
   if (filePath === null || filePath === undefined) {
-    throw new Error(
-      'extractDirectoryPath: filePath cannot be null or undefined',
-    )
+    throw new Error('extractDirectoryPath: filePath cannot be null or undefined')
   }
 
   if (typeof filePath !== 'string') {
@@ -93,9 +91,7 @@ function normalizePathWithoutProtocol(path: string): string {
  * @param url The URL to parse
  * @returns An object with protocol and host properties, or null if parsing fails
  */
-function extractUrlParts(
-  url: string,
-): { protocol: string; host: string } | null {
+function extractUrlParts(url: string): { protocol: string; host: string } | null {
   // Regular expression to extract protocol and host from URL
   // This matches: protocol://host (where host can contain anything before the first slash)
   const urlRegex = /^(https?:)\/\/([^/]+)/
@@ -154,7 +150,7 @@ export function joinPaths(basePath: string, relativePath: string): string {
         // Fallback to basic joining if URL parsing fails
         const origin = basePath.split('/').slice(0, 3).join('/')
         return `${origin}${relativePath}`
-      } catch (e) {
+      } catch (_e) {
         // Fallback to basic joining if URL parsing fails
         const origin = basePath.split('/').slice(0, 3).join('/')
         return `${origin}${relativePath}`
@@ -164,10 +160,7 @@ export function joinPaths(basePath: string, relativePath: string): string {
   }
 
   // Handle URLs in relativePath
-  if (
-    relativePath.startsWith('http://') ||
-    relativePath.startsWith('https://')
-  ) {
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
     return relativePath
   }
 
@@ -179,11 +172,7 @@ export function joinPaths(basePath: string, relativePath: string): string {
   }
 
   // Ensure base path ends with slash if it's not empty
-  const normalizedBase = basePath
-    ? basePath.endsWith('/')
-      ? basePath
-      : basePath + '/'
-    : ''
+  const normalizedBase = basePath ? (basePath.endsWith('/') ? basePath : `${basePath}/`) : ''
 
   // Join and normalize
   return normalizePath(normalizedBase + relativePath)

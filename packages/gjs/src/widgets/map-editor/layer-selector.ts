@@ -1,5 +1,5 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
 import Template from './layer-selector.blp'
@@ -16,8 +16,7 @@ export class LayerSelector extends Adw.Bin {
   declare _layers_scrolled_window: Gtk.ScrolledWindow
 
   private _selectedLayerId: string | null = null
-  private _layerElements: Array<{ box: Gtk.Box; icon: Gtk.Label; layer: any }> =
-    []
+  private _layerElements: Array<{ box: Gtk.Box; icon: Gtk.Label; layer: any }> = []
 
   static {
     GObject.registerClass(
@@ -31,12 +30,8 @@ export class LayerSelector extends Adw.Bin {
           },
         },
       },
-      this,
+      LayerSelector,
     )
-  }
-
-  constructor(params: Partial<Adw.Bin.ConstructorProps>) {
-    super(params)
   }
 
   /**

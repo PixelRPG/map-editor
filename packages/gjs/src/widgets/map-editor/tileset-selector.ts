@@ -1,9 +1,8 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-
+import type { GdkSpriteSheet } from '../../sprite'
 import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
-import { GdkSpriteSheet } from '../../sprite'
 
 import Template from './tileset-selector.blp'
 
@@ -60,7 +59,7 @@ export class TilesetSelector extends Adw.Bin {
           },
         },
       },
-      this,
+      TilesetSelector,
     )
   }
 
@@ -163,11 +162,7 @@ export class TilesetSelector extends Adw.Bin {
   /**
    * Add a sprite sheet widget to the container
    */
-  private _addSpriteSheetWidget(
-    spriteSheet: GdkSpriteSheet,
-    index: number,
-    name?: string,
-  ): void {
+  private _addSpriteSheetWidget(spriteSheet: GdkSpriteSheet, index: number, name?: string): void {
     const spriteSheetWidget = new SpriteSheetWidget(spriteSheet, {
       scale: this._scale,
       showGrid: this._showGrid,
@@ -175,7 +170,7 @@ export class TilesetSelector extends Adw.Bin {
     })
 
     // Connect sprite selection signal
-    spriteSheetWidget.connect('sprite-selected', (widget, sprite) => {
+    spriteSheetWidget.connect('sprite-selected', (_widget, sprite) => {
       this.emit('sprite-selected', sprite, index)
     })
 

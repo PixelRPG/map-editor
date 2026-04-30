@@ -1,15 +1,9 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import Adw from '@girs/adw-1'
 
-import {
-  StoryWidget,
-  StoryMeta,
-  ControlType,
-  StoryModule,
-} from '@pixelrpg/story-gjs'
+import { ControlType, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { GdkSpriteSetResource, type GdkSpriteSheet } from '../../sprite'
 import { TilesetSelector } from './tileset-selector'
-import { GdkSpriteSetResource, GdkSpriteSheet } from '../../sprite'
 
 // Import story template
 import TilesetSelectorStoryTemplate from './tileset-selector.story.blp'
@@ -34,7 +28,7 @@ export class TilesetSelectorStory extends StoryWidget {
         Template: TilesetSelectorStoryTemplate,
         InternalChildren: ['info_label', 'tileset_selector_container'],
       },
-      this,
+      TilesetSelectorStory,
     )
   }
 
@@ -57,8 +51,7 @@ export class TilesetSelectorStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Map Editor/Tileset Selector',
-      description:
-        'Container for displaying multiple tilesets vertically with individual sprite sheet widgets',
+      description: 'Container for displaying multiple tilesets vertically with individual sprite sheet widgets',
       component: TilesetSelector.$gtype,
       tags: ['autodocs', 'ui', 'map-editor', 'tileset', 'container'],
       controls: [
@@ -95,7 +88,7 @@ export class TilesetSelectorStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(args: Record<string, any>): void {
+  updateArgs(_args: Record<string, any>): void {
     // Only update if we have loaded the widget
     if (!this.tilesetSelector) {
       return
@@ -129,9 +122,7 @@ export class TilesetSelectorStory extends StoryWidget {
       this._info_label.set_label('Loading sample tilesets...')
 
       // Load the main Lokiri Forest sprite set
-      const lokiriResource = await GdkSpriteSetResource.fromPath(
-        '../../games/zelda-like/spritesets/lokiri-forest.json',
-      )
+      const lokiriResource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/lokiri-forest.json')
 
       if (lokiriResource.spriteSheet) {
         this.spriteSetResources.push(lokiriResource)
@@ -143,9 +134,7 @@ export class TilesetSelectorStory extends StoryWidget {
 
       // Try to load water tileset if available
       try {
-        const waterResource = await GdkSpriteSetResource.fromPath(
-          '../../games/zelda-like/spritesets/water.json',
-        )
+        const waterResource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/water.json')
 
         if (waterResource.spriteSheet) {
           this.spriteSetResources.push(waterResource)
@@ -169,8 +158,7 @@ export class TilesetSelectorStory extends StoryWidget {
 
       // Show error message in container
       const errorLabel = new Gtk.Label({
-        label:
-          'Failed to load sample tilesets.\nPlease check that the assets are properly configured.',
+        label: 'Failed to load sample tilesets.\nPlease check that the assets are properly configured.',
         justify: Gtk.Justification.CENTER,
         wrap: true,
       })
@@ -185,9 +173,7 @@ export class TilesetSelectorStory extends StoryWidget {
   private _createMockTileset(): void {
     // For now, just add a note that mock tileset creation is not implemented
     // In a real scenario, you would create proper mock sprites with actual textures
-    console.warn(
-      'Mock tileset creation not implemented - requires actual texture data',
-    )
+    console.warn('Mock tileset creation not implemented - requires actual texture data')
 
     // Note: Creating a proper SpriteSheet requires a texture and proper sprite creation
     // This would need to be implemented with actual mock texture data if needed
@@ -216,23 +202,18 @@ export class TilesetSelectorStory extends StoryWidget {
       }
 
       // Connect sprite selection signal
-      this.tilesetSelector.connect(
-        'sprite-selected',
-        (widget, sprite, tilesetIndex) => {
-          console.log(
-            `Selected sprite from tileset ${tilesetIndex}:`,
-            `GdkSprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
-          )
-        },
-      )
+      this.tilesetSelector.connect('sprite-selected', (_widget, sprite, tilesetIndex) => {
+        console.log(
+          `Selected sprite from tileset ${tilesetIndex}:`,
+          `GdkSprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
+        )
+      })
 
       // Add to container
       this._tileset_selector_container.append(this.tilesetSelector)
     } catch (error) {
       console.error('Failed to create tileset selector widget:', error)
-      this._info_label.set_label(
-        'Error: Failed to create tileset selector widget',
-      )
+      this._info_label.set_label('Error: Failed to create tileset selector widget')
     }
   }
 
@@ -246,10 +227,7 @@ export class TilesetSelectorStory extends StoryWidget {
     }
 
     const displayedCount = this.tilesetSelector.tilesets.length
-    const totalSprites = this.tilesetSelector.tilesets.reduce(
-      (sum, tileset) => sum + tileset.sprites.length,
-      0,
-    )
+    const totalSprites = this.tilesetSelector.tilesets.reduce((sum, tileset) => sum + tileset.sprites.length, 0)
     const scale = this.args.scale ?? 1.0
 
     const info = [

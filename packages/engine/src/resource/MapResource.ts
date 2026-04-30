@@ -1,15 +1,11 @@
-import { Scene, TileMap, Vector, Tile, Logger } from 'excalibur'
 import type { Loadable } from 'excalibur'
-import type { MapData, LayerData } from '../types'
+import { Logger, type Scene, type Tile, TileMap, Vector } from 'excalibur'
+import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
 import { MapFormat } from '../format/MapFormat'
-import { SpriteSetResource } from './SpriteSetResource.ts'
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
+import type { LayerData, MapData, MapResourceOptions } from '../types'
 import { loadTextFile } from '../utils'
-import type { MapResourceOptions } from '../types'
-import {
-  MapEditorComponent,
-  type TileSpriteRef,
-} from '../components/map-editor.component.ts'
+import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
+import { SpriteSetResource } from './SpriteSetResource.ts'
 
 /**
  * Resource class for loading custom Map format into Excalibur.
@@ -60,9 +56,7 @@ export class MapResource implements Loadable<TileMap> {
       const preloaded = this._preloadedSpriteSets.get(spriteSetRef.id)
       if (preloaded) {
         this.tileSetResources.set(spriteSetRef.id, preloaded)
-        this.logger.debug(
-          `Reused pre-loaded sprite set: ${spriteSetRef.id}`,
-        )
+        this.logger.debug(`Reused pre-loaded sprite set: ${spriteSetRef.id}`)
         continue
       }
 
@@ -75,13 +69,9 @@ export class MapResource implements Loadable<TileMap> {
         await resource.load()
 
         this.tileSetResources.set(spriteSetRef.id, resource)
-        this.logger.debug(
-          `Loaded sprite set: ${spriteSetRef.id} from ${fullPath}`,
-        )
+        this.logger.debug(`Loaded sprite set: ${spriteSetRef.id} from ${fullPath}`)
       } catch (error) {
-        this.logger.error(
-          `Failed to load sprite set ${spriteSetRef.id}: ${error}`,
-        )
+        this.logger.error(`Failed to load sprite set ${spriteSetRef.id}: ${error}`)
         throw error
       }
     }
@@ -105,42 +95,28 @@ export class MapResource implements Loadable<TileMap> {
 
   private processLayers(tileMap: TileMap, data: MapData): void {
     const sortedLayers = [...data.layers].sort((a, b) => {
-      const zIndexA = Number(a.properties?.['z'] ?? 0)
-      const zIndexB = Number(b.properties?.['z'] ?? 0)
+      const zIndexA = Number(a.properties?.z ?? 0)
+      const zIndexB = Number(b.properties?.z ?? 0)
       return zIndexA - zIndexB
     })
 
-    const tileLayers = sortedLayers.filter(
-      (layer) => layer.type === 'tile' && layer.visible,
-    )
+    const tileLayers = sortedLayers.filter((layer) => layer.type === 'tile' && layer.visible)
     tileLayers.forEach((layer) => this.processTileLayer(tileMap, layer))
 
-    const objectLayers = sortedLayers.filter(
-      (layer) => layer.type === 'object' && layer.visible,
-    )
+    const objectLayers = sortedLayers.filter((layer) => layer.type === 'object' && layer.visible)
     objectLayers.forEach((layer) => this.processObjectLayer(tileMap, layer))
   }
 
   private processTileLayer(tileMap: TileMap, layer: LayerData): void {
-    if (
-      !layer.sprites ||
-      !Array.isArray(layer.sprites) ||
-      layer.sprites.length === 0
-    ) {
+    if (!layer.sprites || !Array.isArray(layer.sprites) || layer.sprites.length === 0) {
       this.logger.warn(`Skipping layer ${layer.name}: No sprites found`)
       return
     }
 
-    const layerZIndex =
-      layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : 0
+    const layerZIndex = layer.properties?.z !== undefined ? Number(layer.properties.z) : 0
 
     for (const spriteData of layer.sprites) {
-      if (
-        spriteData.x < 0 ||
-        spriteData.x >= tileMap.columns ||
-        spriteData.y < 0 ||
-        spriteData.y >= tileMap.rows
-      ) {
+      if (spriteData.x < 0 || spriteData.x >= tileMap.columns || spriteData.y < 0 || spriteData.y >= tileMap.rows) {
         continue
       }
 
@@ -166,8 +142,7 @@ export class MapResource implements Loadable<TileMap> {
         spriteSetId: spriteData.spriteSetId,
         spriteId: spriteData.spriteId,
         animationId: spriteData.animationId,
-        zIndex:
-          spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
+        zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
         layerId: layer.id,
       })
       this.initialSprites.set(tile, existingRefs)
@@ -175,35 +150,21 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   private processObjectLayer(tileMap: TileMap, layer: LayerData): void {
-    if (
-      !layer.objects ||
-      !Array.isArray(layer.objects) ||
-      layer.objects.length === 0
-    ) {
+    if (!layer.objects || !Array.isArray(layer.objects) || layer.objects.length === 0) {
       return
     }
 
-    const layerZIndex =
-      layer.properties?.['z'] !== undefined ? Number(layer.properties['z']) : 0
+    const layerZIndex = layer.properties?.z !== undefined ? Number(layer.properties.z) : 0
 
     for (const obj of layer.objects) {
-      if (
-        obj.type !== 'sprite' ||
-        obj.spriteId === undefined ||
-        !obj.spriteSetId
-      ) {
+      if (obj.type !== 'sprite' || obj.spriteId === undefined || !obj.spriteSetId) {
         continue
       }
 
       const tileX = Math.floor(obj.x / tileMap.tileWidth)
       const tileY = Math.floor(obj.y / tileMap.tileHeight)
 
-      if (
-        tileX < 0 ||
-        tileX >= tileMap.columns ||
-        tileY < 0 ||
-        tileY >= tileMap.rows
-      ) {
+      if (tileX < 0 || tileX >= tileMap.columns || tileY < 0 || tileY >= tileMap.rows) {
         continue
       }
 
@@ -303,9 +264,7 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   getAvailableLayerIds(): string[] {
-    return this._mapData.layers
-      .filter((layer) => layer.type === 'tile' && layer.visible)
-      .map((layer) => layer.id)
+    return this._mapData.layers.filter((layer) => layer.type === 'tile' && layer.visible).map((layer) => layer.id)
   }
 
   getFirstLayerId(): string | null {

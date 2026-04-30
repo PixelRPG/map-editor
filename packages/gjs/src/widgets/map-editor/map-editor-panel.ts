@@ -1,13 +1,11 @@
-import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
-
-import { TilesetSelector } from './tileset-selector'
-import { LayerSelector } from './layer-selector'
-import { GdkSpriteSheet } from '../../sprite'
-import { MapData } from '@pixelrpg/engine'
-
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
+import type { MapData } from '@pixelrpg/engine'
+import type { GdkSpriteSheet } from '../../sprite'
+import type { LayerSelector } from './layer-selector'
 import Template from './map-editor-panel.blp'
+import type { TilesetSelector } from './tileset-selector'
 
 export class MapEditorPanel extends Adw.Bin {
   // GObject internal children
@@ -49,12 +47,8 @@ export class MapEditorPanel extends Adw.Bin {
           },
         },
       },
-      this,
+      MapEditorPanel,
     )
-  }
-
-  constructor(params: Partial<Adw.Bin.ConstructorProps>) {
-    super(params)
   }
 
   /**
@@ -63,14 +57,8 @@ export class MapEditorPanel extends Adw.Bin {
    * @param spriteSheets Array of loaded sprite sheets
    */
   initializeMapData(mapData: MapData, spriteSheets: GdkSpriteSheet[]): void {
-    console.log(
-      '[MapEditorPanel] Initializing with map:',
-      mapData.name || mapData.id,
-    )
-    console.log(
-      '[MapEditorPanel] Available sprite sheets:',
-      spriteSheets.length,
-    )
+    console.log('[MapEditorPanel] Initializing with map:', mapData.name || mapData.id)
+    console.log('[MapEditorPanel] Available sprite sheets:', spriteSheets.length)
     console.log('[MapEditorPanel] Map layers:', mapData.layers.length)
 
     // Store the map data for tile ID calculations
@@ -83,23 +71,16 @@ export class MapEditorPanel extends Adw.Bin {
     this._layerSelector.setMapData(mapData)
 
     // Connect layer selector signal to forward it
-    this._layerSelector.connect(
-      'layer-selected',
-      (_: LayerSelector, layerId: string) => {
-        this.emit('layer-selected', layerId)
-      },
-    )
+    this._layerSelector.connect('layer-selected', (_: LayerSelector, layerId: string) => {
+      this.emit('layer-selected', layerId)
+    })
   }
 
   /**
    * Handle sprite selection from tileset selector
    * Convert sprite selection to global tile ID and emit tile-selected signal
    */
-  private _onSpriteSelected(
-    sender: any,
-    sprite: any,
-    tilesetIndex: number,
-  ): void {
+  private _onSpriteSelected(_sender: any, sprite: any, tilesetIndex: number): void {
     // Validate input parameters
     if (!sprite || typeof sprite.index !== 'number') {
       console.warn('[MapEditorPanel] Invalid sprite object received')
@@ -124,9 +105,7 @@ export class MapEditorPanel extends Adw.Bin {
     // Get the sprite set reference for this tileset index
     const spriteSetRef = this._mapData.spriteSets[tilesetIndex]
     if (!spriteSetRef) {
-      console.warn(
-        `[MapEditorPanel] Sprite set reference not found for tileset index: ${tilesetIndex}`,
-      )
+      console.warn(`[MapEditorPanel] Sprite set reference not found for tileset index: ${tilesetIndex}`)
       return
     }
 
@@ -209,23 +188,14 @@ export class MapEditorPanel extends Adw.Bin {
 
     if (this._signalHandlers.length === 0) {
       // Connect tileset selector signal
-      const tilesetHandlerId = this._tilesetSelector.connect(
-        'sprite-selected',
-        this._onSpriteSelected.bind(this),
-      )
+      const tilesetHandlerId = this._tilesetSelector.connect('sprite-selected', this._onSpriteSelected.bind(this))
       this._signalHandlers.push(tilesetHandlerId)
 
       // Connect tool button signals
-      const brushHandlerId = this._brushButton.connect(
-        'toggled',
-        this._onBrushToggled.bind(this),
-      )
+      const brushHandlerId = this._brushButton.connect('toggled', this._onBrushToggled.bind(this))
       this._signalHandlers.push(brushHandlerId)
 
-      const eraserHandlerId = this._eraserButton.connect(
-        'toggled',
-        this._onEraserToggled.bind(this),
-      )
+      const eraserHandlerId = this._eraserButton.connect('toggled', this._onEraserToggled.bind(this))
       this._signalHandlers.push(eraserHandlerId)
     }
   }

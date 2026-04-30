@@ -1,18 +1,18 @@
 {
-    "name": "@pixelrpg/games-zelda-like",
-    "version": "0.0.1",
-    "description": "Zelda like game",
-    "type": "module",
-    "private": true,
-    "scripts": {
-        "preview": "serve -l 5001 --cors"
-    },
-    "exports": {
-        "./*": "./*",
-        "./spritesets/*": "./spritesets/*",
-        "./maps/*": "./maps/*"
-    },
-    "devDependencies": {
-        "serve": "^14.2.6"
-    }
+  "name": "@pixelrpg/games-zelda-like",
+  "version": "0.0.1",
+  "description": "Zelda like game",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "preview": "serve -l 5001 --cors"
+  },
+  "exports": {
+    "./*": "./*",
+    "./spritesets/*": "./spritesets/*",
+    "./maps/*": "./maps/*"
+  },
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
 }

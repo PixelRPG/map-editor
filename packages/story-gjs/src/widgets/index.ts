@@ -1,1 +1,1 @@
-export * from './story.widget' 
+export * from './story.widget'

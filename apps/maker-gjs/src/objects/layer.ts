@@ -10,23 +10,11 @@ export class Layer extends GObject.Object {
       {
         GTypeName: 'Layer',
         Properties: {
-          name: GObject.ParamSpec.string(
-            'name',
-            'Name',
-            'Layer name',
-            GObject.ParamFlags.READWRITE,
-            '',
-          ),
-          type: GObject.ParamSpec.string(
-            'type',
-            'Type',
-            'Layer type',
-            GObject.ParamFlags.READWRITE,
-            '',
-          ),
+          name: GObject.ParamSpec.string('name', 'Name', 'Layer name', GObject.ParamFlags.READWRITE, ''),
+          type: GObject.ParamSpec.string('type', 'Type', 'Layer type', GObject.ParamFlags.READWRITE, ''),
         },
       },
-      this,
+      Layer,
     )
   }
 

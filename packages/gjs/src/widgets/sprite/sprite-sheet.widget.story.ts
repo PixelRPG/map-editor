@@ -1,15 +1,9 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import Adw from '@girs/adw-1'
 
-import {
-  StoryWidget,
-  StoryMeta,
-  ControlType,
-  StoryModule,
-} from '@pixelrpg/story-gjs'
-import { SpriteSheetWidget } from './sprite-sheet.widget'
+import { ControlType, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
 import { GdkSpriteSetResource } from '../../sprite'
+import { SpriteSheetWidget } from './sprite-sheet.widget'
 
 // Import story template
 import SpriteSheetStoryTemplate from './sprite-sheet.widget.story.blp'
@@ -33,7 +27,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
         Template: SpriteSheetStoryTemplate,
         InternalChildren: ['info_label', 'sprite_sheet_container'],
       },
-      this,
+      SpriteSheetWidgetStory,
     )
   }
 
@@ -55,8 +49,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'UI/Sprite Sheet Widget',
-      description:
-        'Display and interact with complete sprite sheets with grid layout and scaling options',
+      description: 'Display and interact with complete sprite sheets with grid layout and scaling options',
       component: SpriteSheetWidget.$gtype,
       tags: ['autodocs', 'ui', 'graphics', 'sprite-sheet'],
       controls: [
@@ -85,8 +78,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
           max: 64,
           step: 1,
           defaultValue: 16,
-          description:
-            'Maximum number of columns to display (for large sprite sheets)',
+          description: 'Maximum number of columns to display (for large sprite sheets)',
         },
       ],
     }
@@ -104,7 +96,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(args: Record<string, any>): void {
+  updateArgs(_args: Record<string, any>): void {
     // Only update if we have loaded resources and widget exists
     if (!this.spriteSetResource?.spriteSheet || !this.spriteSheetWidget) {
       return
@@ -151,9 +143,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
 
       // 2. Verify sprite sheet was created
       if (!this.spriteSetResource.spriteSheet) {
-        throw new Error(
-          'SpriteSetResource did not create sprite sheet properly',
-        )
+        throw new Error('SpriteSetResource did not create sprite sheet properly')
       }
 
       // 4. Create the widget
@@ -161,14 +151,11 @@ export class SpriteSheetWidgetStory extends StoryWidget {
       this._updateInfoLabel()
     } catch (error) {
       console.error('Failed to load sprite sheet:', error)
-      this._info_label.set_label(
-        `Error: Failed to load sprite sheet - ${error}`,
-      )
+      this._info_label.set_label(`Error: Failed to load sprite sheet - ${error}`)
 
       // Show error message in container
       const errorLabel = new Gtk.Label({
-        label:
-          'Failed to load the Lokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
+        label: 'Failed to load the Lokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
         justify: Gtk.Justification.CENTER,
         wrap: true,
       })
@@ -188,14 +175,11 @@ export class SpriteSheetWidgetStory extends StoryWidget {
 
     try {
       // Create the widget with initial args
-      this.spriteSheetWidget = new SpriteSheetWidget(
-        this.spriteSetResource.spriteSheet,
-        {
-          scale: this.args.scale ?? 1.0,
-          showGrid: this.args.showGrid ?? true,
-          maxColumns: this.args.maxColumns ?? 16,
-        },
-      )
+      this.spriteSheetWidget = new SpriteSheetWidget(this.spriteSetResource.spriteSheet, {
+        scale: this.args.scale ?? 1.0,
+        showGrid: this.args.showGrid ?? true,
+        maxColumns: this.args.maxColumns ?? 16,
+      })
 
       // Add to container
       this._sprite_sheet_container.append(this.spriteSheetWidget)

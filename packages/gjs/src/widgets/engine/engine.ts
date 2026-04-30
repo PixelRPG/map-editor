@@ -1,15 +1,15 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-import { CanvasWebGLWidget } from '@gjsify/webgl'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
 import { Canvas2DWidget } from '@gjsify/canvas2d'
+import { CanvasWebGLWidget } from '@gjsify/webgl'
 import {
-  EditorState,
+  type EditorState,
   EngineEvent,
-  EngineEventMap,
+  type EngineEventMap,
   EngineStatus,
-  ProjectLoadOptions,
   Engine as ExcaliburEngine,
+  type ProjectLoadOptions,
 } from '@pixelrpg/engine'
 import { EventEmitter, type Subscription } from 'excalibur'
 import Template from './engine.blp'
@@ -45,7 +45,7 @@ export namespace Engine {
  * Canvas2DWidget (Cairo) if WebGL initialization fails.
  */
 export class Engine extends Adw.Bin {
-  declare private _canvasContainer: Gtk.Box
+  private declare _canvasContainer: Gtk.Box
 
   private _widget: CanvasWebGLWidget | Canvas2DWidget | null = null
   private _excalibur: ExcaliburEngine | null = null
@@ -77,7 +77,7 @@ export class Engine extends Adw.Bin {
           },
         },
       },
-      this,
+      Engine,
     )
   }
 
@@ -90,10 +90,7 @@ export class Engine extends Adw.Bin {
     this._startWithWidget(false)
   }
 
-  public async loadProject(
-    projectPath: string,
-    options?: ProjectLoadOptions,
-  ): Promise<void> {
+  public async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
     await this._waitForReady()
     await this._excalibur!.loadProject(projectPath, options)
   }
