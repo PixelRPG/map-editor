@@ -3,8 +3,6 @@
  */
 
 export * from './layer.manager'
-export * from './sprite-info.resolver.test'
 export * from './sprite-info.resolver'
-export * from './sprite.validator.test'
 export * from './sprite.validator'
 export * from './tile-graphics.manager'

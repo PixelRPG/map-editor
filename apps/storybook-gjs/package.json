@@ -7,7 +7,7 @@
   "scripts": {
     "clear": "rm -rf dist org.pixelrpg.storybook",
     "check": "yarn build:barrels && tsc",
-    "build:barrels": "barrelsby --delete --directory src src/types src/widgets",
+    "build:barrels": "barrelsby --delete --exclude '\\.test\\.' --directory src src/types src/widgets",
     "build:app": "gjsify build src/main.ts --app gjs --globals dom --shebang --outfile org.pixelrpg.storybook",
     "build": "yarn build:barrels && yarn build:app",
     "start": "gjsify run org.pixelrpg.storybook",
