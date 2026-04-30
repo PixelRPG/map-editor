@@ -8,7 +8,7 @@
   "scripts": {
     "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
     "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
-    "build:barrels": "barrelsby --delete --exclude '\\.test\\.' --directory src src/widgets src/objects",
+    "build:barrels": "barrelsby --delete --exclude '\\.test\\.' --directory src src/widgets src/objects && ../../node_modules/.bin/biome format --write src/**/index.ts",
     "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
     "build": "yarn build:resources && yarn build:barrels && yarn build:app",
     "check": "yarn build:barrels && tsc",

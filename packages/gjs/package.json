@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "check": "yarn build:barrels && tsc",
-    "build:barrels": "barrelsby --delete --exclude '\\.test\\.' --directory src/widgets/map-editor src/widgets/sprite",
+    "build:barrels": "barrelsby --delete --exclude '\\.test\\.' --directory src/widgets/map-editor src/widgets/sprite && ../../node_modules/.bin/biome format --write src/**/index.ts",
     "build": "yarn build:barrels"
   },
   "exports": {
