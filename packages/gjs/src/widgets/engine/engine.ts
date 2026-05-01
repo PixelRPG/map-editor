@@ -1,8 +1,8 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { Canvas2DWidget } from '@gjsify/canvas2d'
-import { CanvasWebGLWidget } from '@gjsify/webgl'
+import { Canvas2DBridge } from '@gjsify/canvas2d'
+import { WebGLBridge } from '@gjsify/webgl'
 import {
   type EditorState,
   EngineEvent,
@@ -40,14 +40,14 @@ export namespace Engine {
 /**
  * GJS engine widget.
  *
- * Hosts a gjsify CanvasWebGLWidget (WebGL 2, via Gtk.GLArea) and instantiates
+ * Hosts a gjsify WebGLBridge (WebGL 2, via Gtk.GLArea) and instantiates
  * the in-process Excalibur engine directly on its canvas. Falls back to
- * Canvas2DWidget (Cairo) if WebGL initialization fails.
+ * Canvas2DBridge (Cairo) if WebGL initialization fails.
  */
 export class Engine extends Adw.Bin {
   private declare _canvasContainer: Gtk.Box
 
-  private _widget: CanvasWebGLWidget | Canvas2DWidget | null = null
+  private _widget: WebGLBridge | Canvas2DBridge | null = null
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
@@ -135,7 +135,7 @@ export class Engine extends Adw.Bin {
       child = this._canvasContainer.get_first_child()
     }
 
-    const widget = useFallback ? new Canvas2DWidget() : new CanvasWebGLWidget()
+    const widget = useFallback ? new Canvas2DBridge() : new WebGLBridge()
     widget.set_hexpand(true)
     widget.set_vexpand(true)
     widget.installGlobals()
