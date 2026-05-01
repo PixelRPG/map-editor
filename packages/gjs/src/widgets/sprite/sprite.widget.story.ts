@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
-import { ControlType, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
 import { GdkSpriteSetResource } from '../../sprite'
 import { SpriteWidget } from './sprite.widget'
 
@@ -88,7 +88,7 @@ export class SpriteWidgetStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(_args: Record<string, any>): void {
+  updateArgs(_args: StoryArgs): void {
     // Only update if we have loaded resources and widget exists
     if (!this.spriteSetResource?.spriteSheet || !this.spriteWidget) {
       return
@@ -96,9 +96,11 @@ export class SpriteWidgetStory extends StoryWidget {
 
     let hasChanges = false
 
+    const scale = this.args.scale as number
+
     // Check and update scale
-    if (this.args.scale !== this.spriteWidget.scale) {
-      this.spriteWidget.scale = this.args.scale
+    if (scale !== this.spriteWidget.scale) {
+      this.spriteWidget.scale = scale
       hasChanges = true
     }
 
@@ -162,7 +164,7 @@ export class SpriteWidgetStory extends StoryWidget {
 
     try {
       // Get the sprite at the specified index
-      const spriteIndex = Math.max(0, this.args.spriteIndex ?? 0)
+      const spriteIndex = Math.max(0, (this.args.spriteIndex as number | null) ?? 0)
       const sprites = this.spriteSetResource.spriteSheet.sprites
       const sprite = sprites[Math.min(spriteIndex, sprites.length - 1)]
 
@@ -171,7 +173,7 @@ export class SpriteWidgetStory extends StoryWidget {
       }
 
       // Create the widget with initial args
-      this.spriteWidget = new SpriteWidget(sprite, this.args.scale ?? 2.0)
+      this.spriteWidget = new SpriteWidget(sprite, (this.args.scale as number | null) ?? 2.0)
 
       // Add to container
       this._sprite_container.append(this.spriteWidget)
@@ -189,7 +191,7 @@ export class SpriteWidgetStory extends StoryWidget {
       return
     }
 
-    const spriteIndex = Math.max(0, this.args.spriteIndex ?? 0)
+    const spriteIndex = Math.max(0, (this.args.spriteIndex as number | null) ?? 0)
     const sprites = this.spriteSetResource.spriteSheet.sprites
     const sprite = sprites[Math.min(spriteIndex, sprites.length - 1)]
 

@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { StoryMeta } from '../types/story'
+import type { StoryArgs, StoryMeta } from '../types/story'
 
 import Template from './story.widget.blp'
 
@@ -9,7 +9,7 @@ export namespace StoryWidget {
   export interface ConstructorProps {
     meta: StoryMeta
     story: string
-    args: Record<string, any>
+    args: StoryArgs
   }
 }
 
@@ -22,7 +22,7 @@ export class StoryWidget extends Adw.Bin {
   // Story name
   private _story: string
   // Story arguments
-  private _args: Record<string, any>
+  private _args: StoryArgs
 
   // UI elements
   declare _content_box: Gtk.Box
@@ -115,14 +115,14 @@ export class StoryWidget extends Adw.Bin {
   /**
    * Get the story arguments
    */
-  get args(): Record<string, any> {
+  get args(): StoryArgs {
     return this._args
   }
 
   /**
    * Set the story arguments
    */
-  set args(value: Record<string, any>) {
+  set args(value: StoryArgs) {
     if (this._args === value) return
 
     this._args = value
@@ -166,7 +166,7 @@ export class StoryWidget extends Adw.Bin {
    * Override this method in subclasses
    * @param args New arguments for the story
    */
-  updateArgs(_args: Record<string, any>): void {
+  updateArgs(_args: StoryArgs): void {
     // Implement in subclasses
   }
 

@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
-import { ControlType, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
 import { GdkSpriteSetResource } from '../../sprite'
 import { SpriteSheetWidget } from './sprite-sheet.widget'
 
@@ -96,7 +96,7 @@ export class SpriteSheetWidgetStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(_args: Record<string, any>): void {
+  updateArgs(_args: StoryArgs): void {
     // Only update if we have loaded resources and widget exists
     if (!this.spriteSetResource?.spriteSheet || !this.spriteSheetWidget) {
       return
@@ -104,21 +104,25 @@ export class SpriteSheetWidgetStory extends StoryWidget {
 
     let hasChanges = false
 
+    const scale = this.args.scale as number
+    const showGrid = this.args.showGrid as boolean
+    const maxColumns = this.args.maxColumns as number
+
     // Check and update scale
-    if (this.args.scale !== this.spriteSheetWidget.scale) {
-      this.spriteSheetWidget.updateScale(this.args.scale)
+    if (scale !== this.spriteSheetWidget.scale) {
+      this.spriteSheetWidget.updateScale(scale)
       hasChanges = true
     }
 
     // Check and update showGrid
-    if (this.args.showGrid !== this.spriteSheetWidget.showGrid) {
-      this.spriteSheetWidget.updateShowGrid(this.args.showGrid)
+    if (showGrid !== this.spriteSheetWidget.showGrid) {
+      this.spriteSheetWidget.updateShowGrid(showGrid)
       hasChanges = true
     }
 
     // Check and update maxColumns
-    if (this.args.maxColumns !== this.spriteSheetWidget.maxColumns) {
-      this.spriteSheetWidget.updateMaxColumns(this.args.maxColumns)
+    if (maxColumns !== this.spriteSheetWidget.maxColumns) {
+      this.spriteSheetWidget.updateMaxColumns(maxColumns)
       hasChanges = true
     }
 
@@ -176,9 +180,9 @@ export class SpriteSheetWidgetStory extends StoryWidget {
     try {
       // Create the widget with initial args
       this.spriteSheetWidget = new SpriteSheetWidget(this.spriteSetResource.spriteSheet, {
-        scale: this.args.scale ?? 1.0,
-        showGrid: this.args.showGrid ?? true,
-        maxColumns: this.args.maxColumns ?? 16,
+        scale: (this.args.scale as number | null) ?? 1.0,
+        showGrid: (this.args.showGrid as boolean | null) ?? true,
+        maxColumns: (this.args.maxColumns as number | null) ?? 16,
       })
 
       // Add to container

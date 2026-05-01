@@ -1,7 +1,13 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { ControlType, type StoryModule, type StoryWidget } from '@pixelrpg/story-gjs'
+import {
+  ControlType,
+  type StoryArgValue,
+  type StoryControl,
+  type StoryModule,
+  type StoryWidget,
+} from '@pixelrpg/story-gjs'
 import type { StoryRow } from '../types'
 import Template from './application-window.blp'
 
@@ -255,7 +261,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a control row for a property
    */
-  private _createControlRow(storyWidget: StoryWidget, controlConfig: any): Gtk.Box | null {
+  private _createControlRow(storyWidget: StoryWidget, controlConfig: StoryControl): Gtk.Box | null {
     const controlRow = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       margin_bottom: 15,
@@ -315,39 +321,51 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    * @param config - The control configuration
    * @returns A GTK widget for controlling the property
    */
-  private _createControl(
-    storyWidget: StoryWidget,
-    propName: string,
-    config: {
-      type: ControlType
-      min?: number
-      max?: number
-      step?: number
-      options?: any
-    },
-  ): Gtk.Widget | null {
+  private _createControl(storyWidget: StoryWidget, propName: string, config: StoryControl): Gtk.Widget | null {
     if (!config?.type) return null
 
     const currentValue = storyWidget.args[propName]
 
     switch (config.type) {
       case ControlType.TEXT:
-        return this._createTextControl(storyWidget, propName, currentValue)
+        return this._createTextControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'string' ? currentValue : undefined,
+        )
 
       case ControlType.NUMBER:
-        return this._createNumberControl(storyWidget, propName, currentValue, config)
+        return this._createNumberControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'number' ? currentValue : undefined,
+          config,
+        )
 
       case ControlType.BOOLEAN:
-        return this._createBooleanControl(storyWidget, propName, currentValue)
+        return this._createBooleanControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'boolean' ? currentValue : undefined,
+        )
 
       case ControlType.RANGE:
-        return this._createRangeControl(storyWidget, propName, currentValue, config)
+        return this._createRangeControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'number' ? currentValue : undefined,
+          config,
+        )
 
       case ControlType.SELECT:
-        return this._createSelectControl(storyWidget, propName, currentValue, config)
+        return this._createSelectControl(storyWidget, propName, currentValue ?? undefined, config)
 
       case ControlType.COLOR:
-        return this._createColorControl(storyWidget, propName, currentValue)
+        return this._createColorControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'string' ? currentValue : undefined,
+        )
 
       default:
         console.warn(`Unsupported control type: ${config.type}`)
@@ -358,7 +376,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a text input control
    */
-  private _createTextControl(storyWidget: StoryWidget, propName: string, currentValue: any): Gtk.Entry {
+  private _createTextControl(storyWidget: StoryWidget, propName: string, currentValue: string | undefined): Gtk.Entry {
     const entry = new Gtk.Entry({
       text: currentValue || '',
     })
@@ -379,7 +397,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   private _createNumberControl(
     storyWidget: StoryWidget,
     propName: string,
-    currentValue: any,
+    currentValue: number | undefined,
     config: { min?: number; max?: number; step?: number },
   ): Gtk.SpinButton {
     const spinButton = new Gtk.SpinButton({
@@ -404,13 +422,17 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a boolean toggle control
    */
-  private _createBooleanControl(storyWidget: StoryWidget, propName: string, currentValue: any): Gtk.Switch {
+  private _createBooleanControl(
+    storyWidget: StoryWidget,
+    propName: string,
+    currentValue: boolean | undefined,
+  ): Gtk.Switch {
     const switchControl = new Gtk.Switch({
       active: Boolean(currentValue),
       halign: Gtk.Align.START,
     })
 
-    switchControl.connect('state-set', (_: any, state: boolean) => {
+    switchControl.connect('state-set', (_source: Gtk.Switch, state: boolean) => {
       storyWidget.args = {
         ...storyWidget.args,
         [propName]: state,
@@ -427,7 +449,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   private _createRangeControl(
     storyWidget: StoryWidget,
     propName: string,
-    currentValue: any,
+    currentValue: number | undefined,
     config: { min?: number; max?: number; step?: number },
   ): Gtk.Scale {
     const step = config.step ?? 1
@@ -479,8 +501,8 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   private _createSelectControl(
     _storyWidget: StoryWidget,
     _propName: string,
-    _currentValue: any,
-    _config: { options?: any },
+    _currentValue: StoryArgValue | undefined,
+    _config: StoryControl,
   ): Gtk.Widget | null {
     // This would need to be implemented based on the options format
     // Not implemented in this refactoring
@@ -490,7 +512,11 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a color picker control
    */
-  private _createColorControl(_storyWidget: StoryWidget, _propName: string, _currentValue: any): Gtk.Widget | null {
+  private _createColorControl(
+    _storyWidget: StoryWidget,
+    _propName: string,
+    _currentValue: string | undefined,
+  ): Gtk.Widget | null {
     // This would need GTK color button implementation
     // Not implemented in this refactoring
     return null

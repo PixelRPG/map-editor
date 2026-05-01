@@ -3,6 +3,17 @@ import type GObject from '@girs/gobject-2.0'
 import type { StoryWidget } from '../widgets/story.widget'
 
 /**
+ * Value type for a single story argument — covers all six ControlTypes
+ * (TEXT/NUMBER/BOOLEAN/RANGE/SELECT/COLOR). `null` represents "not set".
+ */
+export type StoryArgValue = string | number | boolean | null
+
+/**
+ * Map of story argument name → value.
+ */
+export type StoryArgs = Record<string, StoryArgValue>
+
+/**
  * Control types available for story property editors
  */
 export enum ControlType {
@@ -53,11 +64,11 @@ export interface StoryControl {
   /** Type of the control to render */
   type: ControlType
   /** Default value for the property */
-  defaultValue?: any
+  defaultValue?: StoryArgValue
   /** Description/help text for the control */
   description?: string
   /** Options for select controls */
-  options?: Array<{ label: string; value: any }>
+  options?: Array<{ label: string; value: StoryArgValue }>
   /** Minimum value for number/range controls */
   min?: number
   /** Maximum value for number/range controls */

@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
-import { ControlType, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
 import { GdkSpriteSetResource, type GdkSpriteSheet } from '../../sprite'
 import { TilesetSelector } from './tileset-selector'
 
@@ -88,7 +88,7 @@ export class TilesetSelectorStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(_args: Record<string, any>): void {
+  updateArgs(_args: StoryArgs): void {
     // Only update if we have loaded the widget
     if (!this.tilesetSelector) {
       return
@@ -96,15 +96,18 @@ export class TilesetSelectorStory extends StoryWidget {
 
     let hasChanges = false
 
+    const scale = this.args.scale as number
+    const showGrid = this.args.showGrid as boolean
+
     // Check and update sprite scale
-    if (this.args.scale !== this.tilesetSelector.scale) {
-      this.tilesetSelector.scale = this.args.scale
+    if (scale !== this.tilesetSelector.scale) {
+      this.tilesetSelector.scale = scale
       hasChanges = true
     }
 
     // Check and update showGrid
-    if (this.args.showGrid !== this.tilesetSelector.showGrid) {
-      this.tilesetSelector.showGrid = this.args.showGrid
+    if (showGrid !== this.tilesetSelector.showGrid) {
+      this.tilesetSelector.showGrid = showGrid
       hasChanges = true
     }
 
