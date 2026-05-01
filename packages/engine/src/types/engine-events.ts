@@ -1,5 +1,5 @@
-import { EngineStatus } from './engine-status.ts'
-import { ProjectLoadOptions } from './project-options.ts'
+import type { EngineStatus } from './engine-status.ts'
+import type { ProjectLoadOptions } from './project-options.ts'
 
 /**
  * Engine event names emitted via the engine's EventEmitter.

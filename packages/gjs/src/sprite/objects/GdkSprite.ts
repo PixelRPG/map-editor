@@ -1,4 +1,4 @@
-import Gdk from '@girs/gdk-4.0'
+import type Gdk from '@girs/gdk-4.0'
 
 import { GdkSpritePaintable } from './GdkSpritePaintable.ts'
 
@@ -30,14 +30,7 @@ export class GdkSprite {
    * @param height Height of the sprite
    * @param index The index of this sprite in the sprite sheet
    */
-  constructor(
-    texture: Gdk.Texture,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    index: number = 0,
-  ) {
+  constructor(texture: Gdk.Texture, x: number, y: number, width: number, height: number, index: number = 0) {
     this._sourceTexture = texture
     this._x = x
     this._y = y
@@ -52,13 +45,7 @@ export class GdkSprite {
    */
   createPaintable(): Gdk.Paintable {
     if (!this._paintable) {
-      this._paintable = new GdkSpritePaintable(
-        this._sourceTexture,
-        this._x,
-        this._y,
-        this._width,
-        this._height,
-      )
+      this._paintable = new GdkSpritePaintable(this._sourceTexture, this._x, this._y, this._width, this._height)
     }
     return this._paintable
   }

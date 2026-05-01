@@ -1,22 +1,17 @@
 import {
-  ImageSource,
-  Sprite,
   Animation,
-  SpriteSheet,
-  AnimationStrategy,
-  Logger,
+  type AnimationStrategy,
   ImageFiltering,
+  ImageSource,
   ImageWrapping,
+  Logger,
+  type Sprite,
+  SpriteSheet,
 } from 'excalibur'
-import type {
-  SpriteSetData,
-  SpriteDataSet,
-  AnimationData,
-} from '../types'
 import { SpriteSetFormat } from '../format/SpriteSetFormat'
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
+import type { AnimationData, SpriteDataSet, SpriteSetData, SpriteSetResourceOptions } from '../types'
 import { loadTextFile, toFetchUrl } from '../utils'
-import type { SpriteSetResourceOptions } from '../types'
+import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 
 /**
  * Resource class for loading custom SpriteSet format into Excalibur
@@ -66,17 +61,13 @@ export class SpriteSetResource {
   /**
    * Creates a SpriteSheet from the sprite set data
    */
-  private createSpriteSheet(
-    imageSource: ImageSource,
-    imageId: string,
-    data: SpriteSetData,
-  ): SpriteSheet {
+  private createSpriteSheet(imageSource: ImageSource, _imageId: string, data: SpriteSetData): SpriteSheet {
     // Determine the grid dimensions based on whether we're using legacy or new format
     let rows = 0
     let columns = 0
     let tileWidth = 0
     let tileHeight = 0
-    let spacing = undefined
+    let spacing
 
     // Check if we're using the new images array
     if (data.image) {
@@ -147,7 +138,7 @@ export class SpriteSetResource {
         // If using the new format with multiple images
         if (data.image) {
           // Check if the sprite has an imageId property
-          const spriteImageId = sprite.properties?.['imageId'] as string
+          const spriteImageId = sprite.properties?.imageId as string
           if (spriteImageId && this.spriteSheets.has(spriteImageId)) {
             imageId = spriteImageId
           } else {
@@ -163,15 +154,8 @@ export class SpriteSetResource {
           return
         }
 
-        if (
-          sprite.col < 0 ||
-          sprite.row < 0 ||
-          sprite.col >= spriteSheet.columns ||
-          sprite.row >= spriteSheet.rows
-        ) {
-          this.logger.warn(
-            `Sprite ID ${sprite.id} has invalid position (${sprite.col}, ${sprite.row}). Skipping.`,
-          )
+        if (sprite.col < 0 || sprite.row < 0 || sprite.col >= spriteSheet.columns || sprite.row >= spriteSheet.rows) {
+          this.logger.warn(`Sprite ID ${sprite.id} has invalid position (${sprite.col}, ${sprite.row}). Skipping.`)
           return
         }
 
@@ -179,14 +163,10 @@ export class SpriteSetResource {
         if (spriteGraphic) {
           sprites[sprite.id] = spriteGraphic
         } else {
-          this.logger.warn(
-            `Failed to get sprite for sprite ID ${sprite.id} at position (${sprite.col}, ${sprite.row})`,
-          )
+          this.logger.warn(`Failed to get sprite for sprite ID ${sprite.id} at position (${sprite.col}, ${sprite.row})`)
         }
       } catch (error) {
-        this.logger.error(
-          `Error creating sprite for sprite ID ${sprite.id}: ${error}`,
-        )
+        this.logger.error(`Error creating sprite for sprite ID ${sprite.id}: ${error}`)
       }
     })
 
@@ -201,10 +181,7 @@ export class SpriteSetResource {
   /**
    * Creates animations from the sprite set data and sprites
    */
-  private createAnimations(
-    sprites: Record<number, Sprite>,
-    data: SpriteSetData,
-  ): Record<string, Animation> {
+  private createAnimations(sprites: Record<number, Sprite>, data: SpriteSetData): Record<string, Animation> {
     const animations: Record<string, Animation> = {}
 
     if (data.animations && data.animations.length > 0) {
@@ -215,9 +192,7 @@ export class SpriteSetResource {
             // Filter out frames with missing sprites
             const sprite = sprites[frame.spriteId]
             if (!sprite) {
-              this.logger.warn(
-                `Animation ${animation.id} references missing sprite ID ${frame.spriteId}`,
-              )
+              this.logger.warn(`Animation ${animation.id} references missing sprite ID ${frame.spriteId}`)
               return false
             }
             return true
@@ -235,9 +210,7 @@ export class SpriteSetResource {
 
         // Only create animation if it has frames
         if (frames.length > 0) {
-          this.logger.debug(
-            `Creating animation ${animation.id} with ${frames.length} frames`,
-          )
+          this.logger.debug(`Creating animation ${animation.id} with ${frames.length} frames`)
 
           // Create the animation with the frames
           animations[animation.id] = new Animation({
@@ -246,13 +219,9 @@ export class SpriteSetResource {
           })
 
           // Log the created animation for debugging
-          this.logger.debug(
-            `Animation ${animation.id} created with strategy ${animation.strategy}`,
-          )
+          this.logger.debug(`Animation ${animation.id} created with strategy ${animation.strategy}`)
         } else {
-          this.logger.warn(
-            `Animation ${animation.id} has no valid frames and will be skipped`,
-          )
+          this.logger.warn(`Animation ${animation.id} has no valid frames and will be skipped`)
         }
       })
     }
@@ -264,9 +233,7 @@ export class SpriteSetResource {
   /**
    * Loads the images for the sprite set
    */
-  private async loadImages(
-    data: SpriteSetData,
-  ): Promise<Map<string, ImageSource>> {
+  private async loadImages(data: SpriteSetData): Promise<Map<string, ImageSource>> {
     const imageLoaders = new Map<string, ImageSource>()
 
     if (data.image) {
@@ -275,10 +242,7 @@ export class SpriteSetResource {
         const imageLoader = await this.loadImage(imagePath)
         imageLoaders.set(data.image.id, imageLoader)
       } catch (error) {
-        this.logger.error(
-          `Failed to load image ${data.image.id} from: ${imagePath}`,
-          error,
-        )
+        this.logger.error(`Failed to load image ${data.image.id} from: ${imagePath}`, error)
       }
     } else {
       this.logger.warn('SpriteSet has no image defined')
@@ -314,9 +278,7 @@ export class SpriteSetResource {
       if (imageLoader.isLoaded()) {
         return imageLoader
       } else {
-        throw new Error(
-          `Image loaded but isLoaded() returned false: ${imagePath}`,
-        )
+        throw new Error(`Image loaded but isLoaded() returned false: ${imagePath}`)
       }
     } catch (error) {
       this.logger.error(`Failed to load image from: ${imagePath}`, error)
@@ -337,11 +299,7 @@ export class SpriteSetResource {
 
       // Create sprite sheets
       for (const [imageId, imageSource] of this.imageLoaders) {
-        const spriteSheet = this.createSpriteSheet(
-          imageSource,
-          imageId,
-          this.spriteSetData,
-        )
+        const spriteSheet = this.createSpriteSheet(imageSource, imageId, this.spriteSetData)
         this.spriteSheets.set(imageId, spriteSheet)
       }
 

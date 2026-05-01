@@ -1,5 +1,5 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
 import Template from './layer-selector.blp'
@@ -16,8 +16,7 @@ export class LayerSelector extends Adw.Bin {
   declare _layers_scrolled_window: Gtk.ScrolledWindow
 
   private _selectedLayerId: string | null = null
-  private _layerElements: Array<{ box: Gtk.Box; icon: Gtk.Label; layer: any }> =
-    []
+  private _layerElements: Array<{ box: Gtk.Box; icon: Gtk.Label; layer: any }> = []
 
   static {
     GObject.registerClass(
@@ -31,12 +30,8 @@ export class LayerSelector extends Adw.Bin {
           },
         },
       },
-      this,
+      LayerSelector,
     )
-  }
-
-  constructor(params: Partial<Adw.Bin.ConstructorProps>) {
-    super(params)
   }
 
   /**
@@ -150,37 +145,6 @@ export class LayerSelector extends Adw.Bin {
    */
   get selectedLayerId(): string | null {
     return this._selectedLayerId
-  }
-
-  /**
-   * Called when the widget is mapped to the screen.
-   * Sets up signal connections and starts any background processes.
-   */
-  vfunc_map(): void {
-    super.vfunc_map()
-    // Connect to any signals that need to be active while visible
-  }
-
-  /**
-   * Called when the widget is unmapped from the screen.
-   * Disconnects signal connections and stops background processes.
-   */
-  vfunc_unmap(): void {
-    // Disconnect any signals connected in vfunc_map
-    super.vfunc_unmap()
-  }
-
-  /**
-   * Called when the widget is being destroyed.
-   * Cleans up all resources and breaks references.
-   */
-  vfunc_unroot(): void {
-    // Clear layer elements to prevent memory leaks
-    this._layerElements = []
-    this._selectedLayerId = null
-
-    // Call parent unroot
-    super.vfunc_unroot()
   }
 }
 

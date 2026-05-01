@@ -1,11 +1,10 @@
 import { Logger } from 'excalibur'
 import { GameProjectFormat } from '../format/GameProjectFormat'
-import type { GameProjectData, MapData } from '../types'
+import type { GameProjectData, GameProjectResourceOptions, MapData } from '../types'
+import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { MapResource } from './MapResource'
 import { SpriteSetResource } from './SpriteSetResource'
-import { loadTextFile } from '../utils'
-import type { GameProjectResourceOptions } from '../types'
 
 /**
  * Resource class for loading a complete game project into Excalibur
@@ -31,7 +30,6 @@ export class GameProjectResource {
    */
   private mapResources: Map<string, MapResource> = new Map()
   private spriteSetResources: Map<string, SpriteSetResource> = new Map()
-  private gameProjectData!: GameProjectData
 
   /**
    * Flag to indicate if the resource is loaded
@@ -69,8 +67,7 @@ export class GameProjectResource {
     this.baseDir = options?.baseDir ?? extractDirectoryPath(path)
     this.filename = getFilename(path)
     this.preloadAllMaps = options?.preloadAllMaps ?? this.preloadAllMaps
-    this.preloadAllSpriteSets =
-      options?.preloadAllSpriteSets ?? this.preloadAllSpriteSets
+    this.preloadAllSpriteSets = options?.preloadAllSpriteSets ?? this.preloadAllSpriteSets
     this.customInitialMapId = options?.initialMapId
 
     this.logger.debug(`GameProjectResource created with path: ${path}`)
@@ -97,16 +94,13 @@ export class GameProjectResource {
    * Loads all sprite sets in the game project
    */
   protected async loadSpriteSets(): Promise<void> {
-    if (
-      !this.gameProjectData.spriteSets ||
-      this.gameProjectData.spriteSets.length === 0
-    ) {
+    if (!this.data.spriteSets || this.data.spriteSets.length === 0) {
       this.logger.warn('No sprite sets found in game project')
       return
     }
 
     // Process each sprite set
-    for (const spriteSet of this.gameProjectData.spriteSets) {
+    for (const spriteSet of this.data.spriteSets) {
       try {
         // Handle external sprite set reference
         const fullPath = joinPaths(this.baseDir, spriteSet.path)
@@ -131,13 +125,13 @@ export class GameProjectResource {
    * @returns Promise that resolves when all maps are loaded
    */
   protected async loadMaps(): Promise<void> {
-    if (!this.gameProjectData.maps || this.gameProjectData.maps.length === 0) {
+    if (!this.data.maps || this.data.maps.length === 0) {
       this.logger.warn('No maps found in game project')
       return
     }
 
     // Process each map
-    for (const map of this.gameProjectData.maps) {
+    for (const map of this.data.maps) {
       try {
         await this._loadMap(map.id)
       } catch (error) {
@@ -153,7 +147,7 @@ export class GameProjectResource {
    * Loads a single map by ID
    */
   private async _loadMap(mapId: string): Promise<MapResource> {
-    const mapEntry = this.gameProjectData.maps.find((map) => map.id === mapId)
+    const mapEntry = this.data.maps.find((map) => map.id === mapId)
     if (!mapEntry) {
       throw new Error(`Map with ID ${mapId} not found in game project`)
     }
@@ -183,12 +177,10 @@ export class GameProjectResource {
     try {
       // Load the game project data
       const fullPath = joinPaths(this.baseDir, this.filename)
-      this.gameProjectData = await this.loadGameProjectData(fullPath)
-      this.data = this.gameProjectData
+      this.data = await this.loadGameProjectData(fullPath)
 
       // Determine initial map ID
-      const initialMapId =
-        this.customInitialMapId || this.gameProjectData.startup.initialMapId
+      const initialMapId = this.customInitialMapId || this.data.startup.initialMapId
 
       // Load sprite sets if configured to preload
       if (this.preloadAllSpriteSets) {
@@ -204,11 +196,9 @@ export class GameProjectResource {
       await this.loadMap(initialMapId)
 
       this._isLoaded = true
-      this.logger.info(
-        `Game project "${this.gameProjectData.name}" loaded successfully`,
-      )
+      this.logger.info(`Game project "${this.data.name}" loaded successfully`)
 
-      return this.gameProjectData
+      return this.data
     } catch (error) {
       this.logger.error(`Failed to load game project: ${error}`)
       throw error
@@ -244,7 +234,7 @@ export class GameProjectResource {
     try {
       const mapResource = await this.loadMap(id)
       return mapResource?.mapData || null
-    } catch (error) {
+    } catch (_error) {
       // Map not found or failed to load
       return null
     }
@@ -283,16 +273,10 @@ export class GameProjectResource {
    */
   debugInfo(): void {
     this.logger.debug('====== Game Project Debug Info ======')
-    this.logger.debug(
-      `Project: ${this.gameProjectData.name} (ID: ${this.gameProjectData.id})`,
-    )
-    this.logger.debug(`Version: ${this.gameProjectData.version}`)
-    this.logger.debug(
-      `Maps: ${this.mapResources.size}/${this.gameProjectData.maps.length} loaded`,
-    )
-    this.logger.debug(
-      `Sprite Sets: ${this.spriteSetResources.size}/${this.gameProjectData.spriteSets.length} loaded`,
-    )
+    this.logger.debug(`Project: ${this.data.name} (ID: ${this.data.id})`)
+    this.logger.debug(`Version: ${this.data.version}`)
+    this.logger.debug(`Maps: ${this.mapResources.size}/${this.data.maps.length} loaded`)
+    this.logger.debug(`Sprite Sets: ${this.spriteSetResources.size}/${this.data.spriteSets.length} loaded`)
     this.logger.debug('======================================')
   }
 }

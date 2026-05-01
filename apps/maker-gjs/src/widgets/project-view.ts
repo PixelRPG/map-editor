@@ -1,12 +1,10 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
-import Gtk from '@girs/gtk-4.0'
-
-import { Engine, GdkSpriteSetResource, type GdkSpriteSheet } from '@pixelrpg/gjs'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
 import { EngineEvent, type EngineStatus } from '@pixelrpg/engine'
-import { Sidebar } from './sidebar.ts'
-
+import { Engine, GdkSpriteSetResource, type GdkSpriteSheet, SignalScope } from '@pixelrpg/gjs'
 import Template from './project-view.blp'
+import type { Sidebar } from './sidebar.ts'
 
 GObject.type_ensure(Engine.$gtype)
 
@@ -17,62 +15,55 @@ export class ProjectView extends Adw.Bin {
   declare _showSidebarButton: Gtk.ToggleButton | undefined
 
   private _previewSpriteSheets = new Map<string, GdkSpriteSheet>()
+  private signals = new SignalScope()
+  private _sidebarConnected = false
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'ProjectView',
         Template,
-        InternalChildren: [
-          'sidebar',
-          'engine',
-          'splitView',
-          'showSidebarButton',
-        ],
+        InternalChildren: ['sidebar', 'engine', 'splitView', 'showSidebarButton'],
         Signals: {
           ready: {},
         },
       },
-      this,
+      ProjectView,
     )
   }
 
-  constructor() {
-    super()
+  vfunc_map(): void {
+    super.vfunc_map()
 
-    this._engine?.connect(
-      EngineEvent.STATUS_CHANGED,
-      (_source: Engine, status: EngineStatus) => {
+    if (this._engine) {
+      this.signals.connect(this._engine, EngineEvent.STATUS_CHANGED, (_source: Engine, status: EngineStatus) => {
         console.log('[ProjectView] Engine status changed:', status)
-      },
-    )
+      })
 
-    this._engine?.connect(
-      EngineEvent.PROJECT_LOADED,
-      async (_source: Engine, projectId: string) => {
+      this.signals.connect(this._engine, EngineEvent.PROJECT_LOADED, async (_source: Engine, projectId: string) => {
         console.log('[ProjectView] Project loaded:', projectId)
-      },
-    )
+      })
 
-    this._engine?.connect(
-      EngineEvent.MAP_LOADED,
-      async (_source: Engine, mapId: string) => {
+      this.signals.connect(this._engine, EngineEvent.MAP_LOADED, async (_source: Engine, mapId: string) => {
         console.log('[ProjectView] Map loaded:', mapId)
         await this._onMapLoaded(mapId)
-      },
-    )
+      })
 
-    this._engine?.connect(
-      EngineEvent.ERROR,
-      (_source: Engine, message: string) => {
+      this.signals.connect(this._engine, EngineEvent.ERROR, (_source: Engine, message: string) => {
         console.error('[ProjectView] Engine error:', message)
-      },
-    )
+      })
 
-    this._engine?.connect('ready', () => {
-      console.log('[ProjectView] Ready')
-      this.emit('ready')
-    })
+      this.signals.connect(this._engine, 'ready', () => {
+        console.log('[ProjectView] Ready')
+        this.emit('ready')
+      })
+    }
+  }
+
+  vfunc_unmap(): void {
+    this.signals.disconnectAll()
+    this._sidebarConnected = false
+    super.vfunc_unmap()
   }
 
   get engine(): Engine | undefined {
@@ -107,9 +98,7 @@ export class ProjectView extends Adw.Bin {
             // absolute path instead of re-resolving against the project root.
             const engineSet = await resource.getSpriteSet(spriteSetRef.id)
             if (!engineSet) {
-              console.warn(
-                `[ProjectView] Engine has no sprite set for ${spriteSetRef.id}`,
-              )
+              console.warn(`[ProjectView] Engine has no sprite set for ${spriteSetRef.id}`)
               continue
             }
             const setResource = await GdkSpriteSetResource.fromEngineResource(engineSet)
@@ -120,10 +109,7 @@ export class ProjectView extends Adw.Bin {
           }
           if (sheet) spriteSheets.push(sheet)
         } catch (error) {
-          console.warn(
-            `[ProjectView] Failed to load sprite set ${spriteSetRef.id}:`,
-            error,
-          )
+          console.warn(`[ProjectView] Failed to load sprite set ${spriteSetRef.id}:`, error)
         }
       }
     }
@@ -146,17 +132,18 @@ export class ProjectView extends Adw.Bin {
   }
 
   private _connectSidebarSignals(): void {
-    if (!this._sidebar || !this._engine) return
+    if (!this._sidebar || !this._engine || this._sidebarConnected) return
+    this._sidebarConnected = true
 
-    this._sidebar.connect('tile-selected', (_sidebar, tileId) => {
+    this.signals.connect(this._sidebar, 'tile-selected', (_sidebar: Sidebar, tileId: number) => {
       this._engine!.setEditorState({ tileId })
     })
 
-    this._sidebar.connect('tool-changed', (_sidebar, tool) => {
+    this.signals.connect(this._sidebar, 'tool-changed', (_sidebar: Sidebar, tool: string) => {
       this._engine!.setEditorState({ tool: tool as 'brush' | 'eraser' })
     })
 
-    this._sidebar.connect('layer-selected', (_sidebar, layerId) => {
+    this.signals.connect(this._sidebar, 'layer-selected', (_sidebar: Sidebar, layerId: string) => {
       this._engine!.setEditorState({ layerId })
     })
   }

@@ -1,17 +1,11 @@
-import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
-
 import Gio from '@girs/gio-2.0'
-import { StoryWidget, StoryMeta, StoryModule } from '@pixelrpg/story-gjs'
-import { MapEditorPanel } from './map-editor-panel'
-import { GdkSpriteSetResource, GdkSpriteSheet } from '../../sprite'
+import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
+import { type GameProjectData, GameProjectFormat, type MapData, MapFormat } from '@pixelrpg/engine'
+import { type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { GdkSpriteSetResource, type GdkSpriteSheet } from '../../sprite'
 import { loadTextFile } from '../../sprite/utils/file'
-import {
-  type GameProjectData,
-  type MapData,
-  GameProjectFormat,
-  MapFormat,
-} from '@pixelrpg/engine'
+import { MapEditorPanel } from './map-editor-panel'
 
 // Import story template
 import MapEditorPanelStoryTemplate from './map-editor-panel.story.blp'
@@ -36,7 +30,7 @@ export class MapEditorPanelStory extends StoryWidget {
         Template: MapEditorPanelStoryTemplate,
         InternalChildren: ['info_label', 'mapEditorPanel'],
       },
-      this,
+      MapEditorPanelStory,
     )
   }
 
@@ -54,8 +48,7 @@ export class MapEditorPanelStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Map Editor/Map Editor Panel',
-      description:
-        'Interactive panel for map editing with multiple tilesets and layer selection',
+      description: 'Interactive panel for map editing with multiple tilesets and layer selection',
       component: MapEditorPanel.$gtype,
       tags: ['autodocs', 'ui', 'map-editor', 'panel'],
       controls: [],
@@ -74,7 +67,7 @@ export class MapEditorPanelStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(args: Record<string, any>): void {
+  updateArgs(_args: Record<string, any>): void {
     // No dynamic controls to update
   }
 
@@ -102,8 +95,7 @@ export class MapEditorPanelStory extends StoryWidget {
       if (this.currentMapData.spriteSets) {
         for (const spriteSetRef of this.currentMapData.spriteSets) {
           const mapDir = Gio.File.new_for_path(mapPath).get_parent()
-          const spriteSetPath =
-            mapDir?.get_child(spriteSetRef.path).get_path() || spriteSetRef.path
+          const spriteSetPath = mapDir?.get_child(spriteSetRef.path).get_path() || spriteSetRef.path
           const spriteSetResource = await GdkSpriteSetResource.fromPath(spriteSetPath)
           if (spriteSetResource.spriteSheet) {
             this.loadedSpriteSheets.push(spriteSetResource.spriteSheet)
@@ -117,9 +109,7 @@ export class MapEditorPanelStory extends StoryWidget {
       this._updateInfoLabel()
     } catch (error) {
       console.error('Failed to load project and map:', error)
-      this._info_label.set_label(
-        `Error: Failed to load project and map - ${error}`,
-      )
+      this._info_label.set_label(`Error: Failed to load project and map - ${error}`)
 
       this._createErrorPlaceholder()
     }
@@ -135,15 +125,10 @@ export class MapEditorPanelStory extends StoryWidget {
       }
 
       // Use the new initializeMapData method
-      this._mapEditorPanel.initializeMapData(
-        this.currentMapData,
-        this.loadedSpriteSheets,
-      )
+      this._mapEditorPanel.initializeMapData(this.currentMapData, this.loadedSpriteSheets)
     } catch (error) {
       console.error('Failed to initialize MapEditorPanel:', error)
-      this._info_label.set_label(
-        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      )
+      this._info_label.set_label(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -166,10 +151,7 @@ export class MapEditorPanelStory extends StoryWidget {
     }
 
     const spriteSheetCount = this.loadedSpriteSheets.length
-    const totalSprites = this.loadedSpriteSheets.reduce(
-      (sum, spriteSheet) => sum + spriteSheet.sprites.length,
-      0,
-    )
+    const totalSprites = this.loadedSpriteSheets.reduce((sum, spriteSheet) => sum + spriteSheet.sprites.length, 0)
     const layerCount = this.currentMapData.layers.length
 
     const info = [

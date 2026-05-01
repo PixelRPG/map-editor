@@ -1,6 +1,6 @@
-import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
+import { SignalScope } from '@pixelrpg/gjs'
 
 import { Layer } from '../objects/layer.ts'
 
@@ -10,8 +10,7 @@ export class LayerRowWidget extends Adw.ActionRow {
   // GObject properties
   declare _layer: Layer | null
 
-  // Signal management
-  private _signalHandlers: number[] = []
+  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -19,16 +18,10 @@ export class LayerRowWidget extends Adw.ActionRow {
         GTypeName: 'LayerRowWidget',
         Template,
         Properties: {
-          layer: GObject.ParamSpec.object(
-            'layer',
-            'Layer',
-            'Layer for the row',
-            GObject.ParamFlags.READWRITE as any,
-            Layer,
-          ),
+          layer: GObject.ParamSpec.object('layer', 'Layer', 'Layer for the row', GObject.ParamFlags.READWRITE, Layer),
         },
       },
-      this,
+      LayerRowWidget,
     )
   }
 
@@ -44,33 +37,13 @@ export class LayerRowWidget extends Adw.ActionRow {
     console.log('[LayerRowWidget] Activated layer:', row._layer)
   }
 
-  /**
-   * Connect signals when widget becomes visible (GTK 4 lifecycle pattern)
-   */
   vfunc_map(): void {
     super.vfunc_map()
-
-    if (this._signalHandlers.length === 0) {
-      // Connect activated signal
-      const activatedId = this.connect('activated', this.onActivated)
-      this._signalHandlers.push(activatedId)
-    }
+    this.signals.connect(this, 'activated', this.onActivated.bind(this))
   }
 
-  /**
-   * Disconnect signals when widget becomes invisible (GC-safe cleanup)
-   */
   vfunc_unmap(): void {
-    if (this._signalHandlers.length > 0) {
-      // Disconnect all signal handlers
-      for (const handlerId of this._signalHandlers) {
-        if (handlerId > 0) {
-          this.disconnect(handlerId)
-        }
-      }
-      this._signalHandlers = []
-    }
-
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 }

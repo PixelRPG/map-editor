@@ -2,9 +2,10 @@
 // bitmap font as source-level imports; esbuild needs a loader entry per
 // extension. `process.env.__EX_VERSION` + `NODE_ENV` are read by the fork
 // at bundle time, so bake them via `define`.
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+
 import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))

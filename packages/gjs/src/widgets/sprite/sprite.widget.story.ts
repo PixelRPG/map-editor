@@ -1,15 +1,9 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import Adw from '@girs/adw-1'
 
-import {
-  StoryWidget,
-  StoryMeta,
-  ControlType,
-  StoryModule,
-} from '@pixelrpg/story-gjs'
-import { SpriteWidget } from './sprite.widget'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
 import { GdkSpriteSetResource } from '../../sprite'
+import { SpriteWidget } from './sprite.widget'
 
 // Import story template
 import SpriteStoryTemplate from './sprite.widget.story.blp'
@@ -33,7 +27,7 @@ export class SpriteWidgetStory extends StoryWidget {
         Template: SpriteStoryTemplate,
         InternalChildren: ['info_label', 'sprite_container'],
       },
-      this,
+      SpriteWidgetStory,
     )
   }
 
@@ -54,8 +48,7 @@ export class SpriteWidgetStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'UI/Sprite Widget',
-      description:
-        'Display individual sprites from a sprite sheet with configurable scaling',
+      description: 'Display individual sprites from a sprite sheet with configurable scaling',
       component: SpriteWidget.$gtype,
       tags: ['autodocs', 'ui', 'graphics'],
       controls: [
@@ -95,7 +88,7 @@ export class SpriteWidgetStory extends StoryWidget {
    * Update the story arguments
    * @param args - New arguments for the story
    */
-  updateArgs(args: Record<string, any>): void {
+  updateArgs(_args: StoryArgs): void {
     // Only update if we have loaded resources and widget exists
     if (!this.spriteSetResource?.spriteSheet || !this.spriteWidget) {
       return
@@ -103,9 +96,11 @@ export class SpriteWidgetStory extends StoryWidget {
 
     let hasChanges = false
 
+    const scale = this.args.scale as number
+
     // Check and update scale
-    if (this.args.scale !== this.spriteWidget.scale) {
-      this.spriteWidget.scale = this.args.scale
+    if (scale !== this.spriteWidget.scale) {
+      this.spriteWidget.scale = scale
       hasChanges = true
     }
 
@@ -137,9 +132,7 @@ export class SpriteWidgetStory extends StoryWidget {
 
       // 2. Verify sprite sheet was created
       if (!this.spriteSetResource.spriteSheet) {
-        throw new Error(
-          'SpriteSetResource did not create sprite sheet properly',
-        )
+        throw new Error('SpriteSetResource did not create sprite sheet properly')
       }
 
       // 3. Create the widget
@@ -147,14 +140,11 @@ export class SpriteWidgetStory extends StoryWidget {
       this._updateInfoLabel()
     } catch (error) {
       console.error('Failed to load sprite sheet:', error)
-      this._info_label.set_label(
-        `Error: Failed to load sprite sheet - ${error}`,
-      )
+      this._info_label.set_label(`Error: Failed to load sprite sheet - ${error}`)
 
       // Show error message in container
       const errorLabel = new Gtk.Label({
-        label:
-          'Failed to load the Lokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
+        label: 'Failed to load the Lokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
         justify: Gtk.Justification.CENTER,
         wrap: true,
       })
@@ -174,7 +164,7 @@ export class SpriteWidgetStory extends StoryWidget {
 
     try {
       // Get the sprite at the specified index
-      const spriteIndex = Math.max(0, this.args.spriteIndex ?? 0)
+      const spriteIndex = Math.max(0, (this.args.spriteIndex as number | null) ?? 0)
       const sprites = this.spriteSetResource.spriteSheet.sprites
       const sprite = sprites[Math.min(spriteIndex, sprites.length - 1)]
 
@@ -183,7 +173,7 @@ export class SpriteWidgetStory extends StoryWidget {
       }
 
       // Create the widget with initial args
-      this.spriteWidget = new SpriteWidget(sprite, this.args.scale ?? 2.0)
+      this.spriteWidget = new SpriteWidget(sprite, (this.args.scale as number | null) ?? 2.0)
 
       // Add to container
       this._sprite_container.append(this.spriteWidget)
@@ -201,7 +191,7 @@ export class SpriteWidgetStory extends StoryWidget {
       return
     }
 
-    const spriteIndex = Math.max(0, this.args.spriteIndex ?? 0)
+    const spriteIndex = Math.max(0, (this.args.spriteIndex as number | null) ?? 0)
     const sprites = this.spriteSetResource.spriteSheet.sprites
     const sprite = sprites[Math.min(spriteIndex, sprites.length - 1)]
 
@@ -231,7 +221,7 @@ export class SpriteWidgetStory extends StoryWidget {
       return
     }
 
-    const data = this.spriteSetResource.data
+    const _data = this.spriteSetResource.data
     const sprite = this.spriteWidget.sprite
     const spriteIndex = this._getCurrentSpriteIndex()
     const scale = this.args.scale ?? 2.0

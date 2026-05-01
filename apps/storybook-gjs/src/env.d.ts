@@ -12,26 +12,26 @@ declare const __GJS_CONSOLE__: string
 declare const __PKGDATADIR__: string
 
 declare module '*?raw' {
-    const textContent: string
-    export default textContent
+  const textContent: string
+  export default textContent
 }
 
 declare module '*?url' {
-    const url: string
-    export default url
+  const url: string
+  export default url
 }
 
 declare module '*.css' {
-    const content: string
-    export default content
+  const content: string
+  export default content
 }
 
 declare module '*.css?inline' {
-    const style: string
-    export default style
+  const style: string
+  export default style
 }
 
 declare module '*.blp' {
-    const content: string
-    export default content
+  const content: string
+  export default content
 }

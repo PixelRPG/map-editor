@@ -54,11 +54,8 @@ export function isSpriteDataBase(obj: unknown): obj is SpriteDataBase {
   return (
     typeof obj === 'object' &&
     obj !== null &&
-    (typeof (obj as SpriteDataBase).solid === 'boolean' ||
-      (obj as SpriteDataBase).solid === undefined) &&
-    ((obj as SpriteDataBase).properties === undefined ||
-      typeof (obj as SpriteDataBase).properties === 'object') &&
-    ((obj as SpriteDataBase).colliders === undefined ||
-      Array.isArray((obj as SpriteDataBase).colliders))
+    (typeof (obj as SpriteDataBase).solid === 'boolean' || (obj as SpriteDataBase).solid === undefined) &&
+    ((obj as SpriteDataBase).properties === undefined || typeof (obj as SpriteDataBase).properties === 'object') &&
+    ((obj as SpriteDataBase).colliders === undefined || Array.isArray((obj as SpriteDataBase).colliders))
   )
 }

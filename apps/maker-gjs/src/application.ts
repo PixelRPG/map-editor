@@ -1,17 +1,11 @@
-import GObject from '@girs/gobject-2.0'
-import Gio from '@girs/gio-2.0'
-import Gdk from '@girs/gdk-4.0'
-import Gtk from '@girs/gtk-4.0'
 import Adw from '@girs/adw-1'
-
-import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
-import {
-  APPLICATION_ID,
-  RESOURCES_PATH,
-  PACKAGE_VERSION,
-} from './constants.ts'
-
+import Gdk from '@girs/gdk-4.0'
+import Gio from '@girs/gio-2.0'
+import GObject from '@girs/gobject-2.0'
+import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
+import { APPLICATION_ID, PACKAGE_VERSION, RESOURCES_PATH } from './constants.ts'
+import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
 export class Application extends Adw.Application {
   static {
@@ -19,7 +13,7 @@ export class Application extends Adw.Application {
       {
         GTypeName: 'Application',
       },
-      this,
+      Application,
     )
   }
 
@@ -48,11 +42,7 @@ export class Application extends Adw.Application {
       return
     }
 
-    Gtk.StyleContext.add_provider_for_display(
-      display,
-      provider,
-      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-    )
+    Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
   }
 
   initActions() {

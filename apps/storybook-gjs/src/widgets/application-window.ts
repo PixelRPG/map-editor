@@ -1,8 +1,14 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { ControlType, StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
-import { StoryRow } from '../types'
+import {
+  ControlType,
+  type StoryArgValue,
+  type StoryControl,
+  type StoryModule,
+  type StoryWidget,
+} from '@pixelrpg/story-gjs'
+import type { StoryRow } from '../types'
 import Template from './application-window.blp'
 
 /**
@@ -10,9 +16,6 @@ import Template from './application-window.blp'
  * Displays story modules in a sidebar and selected stories in the main content area
  */
 export class StorybookWindow extends Adw.ApplicationWindow {
-  /** Currently displayed story widget */
-  private currentStory: StoryWidget | null = null
-
   // GObject internal children from template
   declare _sidebar_list: Gtk.ListBox
   declare _content_area: Gtk.Box
@@ -37,7 +40,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
           'main_split_view',
         ],
       },
-      this,
+      StorybookWindow,
     )
   }
 
@@ -51,10 +54,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
     this._sidebar_list.connect('row-selected', this._onStorySelected.bind(this))
 
     // Connect toggle button for controls sidebar
-    this._show_controls_button.connect(
-      'toggled',
-      this._onToggleControls.bind(this),
-    )
+    this._show_controls_button.connect('toggled', this._onToggleControls.bind(this))
 
     // Set initial state for controls visibility
     this._controls_split_view.set_show_sidebar(true)
@@ -79,9 +79,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
 
     // Verify that modules have instances
     if (!storyModules.some((module) => module.instances?.length)) {
-      console.error(
-        'Story modules do not have instances. Call createStoryInstances first.',
-      )
+      console.error('Story modules do not have instances. Call createStoryInstances first.')
       return
     }
 
@@ -110,9 +108,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Group stories from modules by their category
    */
-  private _groupStoriesByCategory(
-    storyModules: StoryModule[],
-  ): Map<string, StoryWidget[]> {
+  private _groupStoriesByCategory(storyModules: StoryModule[]): Map<string, StoryWidget[]> {
     const categories = new Map<string, StoryWidget[]>()
 
     storyModules.forEach((storyModule) => {
@@ -181,10 +177,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Handles the selection of a story in the sidebar
    */
-  private _onStorySelected(
-    _listbox: Gtk.ListBox,
-    row: Gtk.ListBoxRow | null,
-  ): void {
+  private _onStorySelected(_listbox: Gtk.ListBox, row: Gtk.ListBoxRow | null): void {
     if (!row) return
 
     const storyRow = row as StoryRow
@@ -204,12 +197,8 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    * @param storyWidget - The story widget to display
    */
   private _showStory(storyWidget: StoryWidget): void {
-    this.currentStory = storyWidget
-
     // Update title
-    this._preview_title.set_title(
-      `${storyWidget.meta.title} - ${storyWidget.story}`,
-    )
+    this._preview_title.set_title(`${storyWidget.meta.title} - ${storyWidget.story}`)
 
     // Clear content area
     this._clearContentArea()
@@ -243,7 +232,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
     // Create controls for each property
     if (storyWidget.meta.controls && Array.isArray(storyWidget.meta.controls)) {
       storyWidget.meta.controls.forEach((control) => {
-        if (control && control.name && control.type) {
+        if (control?.name && control.type) {
           const controlRow = this._createControlRow(storyWidget, control)
           if (controlRow) {
             this._control_panel.append(controlRow)
@@ -272,28 +261,18 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a control row for a property
    */
-  private _createControlRow(
-    storyWidget: StoryWidget,
-    controlConfig: any,
-  ): Gtk.Box | null {
+  private _createControlRow(storyWidget: StoryWidget, controlConfig: StoryControl): Gtk.Box | null {
     const controlRow = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       margin_bottom: 15,
     })
 
     // Label with description
-    const labelBox = this._createPropertyLabelBox(
-      controlConfig.name,
-      controlConfig.description,
-    )
+    const labelBox = this._createPropertyLabelBox(controlConfig.name, controlConfig.description)
     controlRow.append(labelBox)
 
     // Create the control based on the type
-    const control = this._createControl(
-      storyWidget,
-      controlConfig.name,
-      controlConfig,
-    )
+    const control = this._createControl(storyWidget, controlConfig.name, controlConfig)
     if (control) {
       controlRow.append(control)
       return controlRow
@@ -305,10 +284,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a label box for a property
    */
-  private _createPropertyLabelBox(
-    propName: string,
-    description?: string,
-  ): Gtk.Box {
+  private _createPropertyLabelBox(propName: string, description?: string): Gtk.Box {
     const labelBox = new Gtk.Box({
       orientation: Gtk.Orientation.HORIZONTAL,
       margin_bottom: 5,
@@ -345,54 +321,51 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    * @param config - The control configuration
    * @returns A GTK widget for controlling the property
    */
-  private _createControl(
-    storyWidget: StoryWidget,
-    propName: string,
-    config: {
-      type: ControlType
-      min?: number
-      max?: number
-      step?: number
-      options?: any
-    },
-  ): Gtk.Widget | null {
-    if (!config || !config.type) return null
+  private _createControl(storyWidget: StoryWidget, propName: string, config: StoryControl): Gtk.Widget | null {
+    if (!config?.type) return null
 
     const currentValue = storyWidget.args[propName]
 
     switch (config.type) {
       case ControlType.TEXT:
-        return this._createTextControl(storyWidget, propName, currentValue)
+        return this._createTextControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'string' ? currentValue : undefined,
+        )
 
       case ControlType.NUMBER:
         return this._createNumberControl(
           storyWidget,
           propName,
-          currentValue,
+          typeof currentValue === 'number' ? currentValue : undefined,
           config,
         )
 
       case ControlType.BOOLEAN:
-        return this._createBooleanControl(storyWidget, propName, currentValue)
+        return this._createBooleanControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'boolean' ? currentValue : undefined,
+        )
 
       case ControlType.RANGE:
         return this._createRangeControl(
           storyWidget,
           propName,
-          currentValue,
+          typeof currentValue === 'number' ? currentValue : undefined,
           config,
         )
 
       case ControlType.SELECT:
-        return this._createSelectControl(
-          storyWidget,
-          propName,
-          currentValue,
-          config,
-        )
+        return this._createSelectControl(storyWidget, propName, currentValue ?? undefined, config)
 
       case ControlType.COLOR:
-        return this._createColorControl(storyWidget, propName, currentValue)
+        return this._createColorControl(
+          storyWidget,
+          propName,
+          typeof currentValue === 'string' ? currentValue : undefined,
+        )
 
       default:
         console.warn(`Unsupported control type: ${config.type}`)
@@ -403,11 +376,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   /**
    * Creates a text input control
    */
-  private _createTextControl(
-    storyWidget: StoryWidget,
-    propName: string,
-    currentValue: any,
-  ): Gtk.Entry {
+  private _createTextControl(storyWidget: StoryWidget, propName: string, currentValue: string | undefined): Gtk.Entry {
     const entry = new Gtk.Entry({
       text: currentValue || '',
     })
@@ -428,7 +397,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   private _createNumberControl(
     storyWidget: StoryWidget,
     propName: string,
-    currentValue: any,
+    currentValue: number | undefined,
     config: { min?: number; max?: number; step?: number },
   ): Gtk.SpinButton {
     const spinButton = new Gtk.SpinButton({
@@ -456,14 +425,14 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   private _createBooleanControl(
     storyWidget: StoryWidget,
     propName: string,
-    currentValue: any,
+    currentValue: boolean | undefined,
   ): Gtk.Switch {
     const switchControl = new Gtk.Switch({
       active: Boolean(currentValue),
       halign: Gtk.Align.START,
     })
 
-    switchControl.connect('state-set', (_: any, state: boolean) => {
+    switchControl.connect('state-set', (_source: Gtk.Switch, state: boolean) => {
       storyWidget.args = {
         ...storyWidget.args,
         [propName]: state,
@@ -480,12 +449,11 @@ export class StorybookWindow extends Adw.ApplicationWindow {
   private _createRangeControl(
     storyWidget: StoryWidget,
     propName: string,
-    currentValue: any,
+    currentValue: number | undefined,
     config: { min?: number; max?: number; step?: number },
   ): Gtk.Scale {
     const step = config.step ?? 1
-    const shouldRoundToInteger =
-      Number.isInteger(step) && Number.isInteger(currentValue ?? 0)
+    const shouldRoundToInteger = Number.isInteger(step) && Number.isInteger(currentValue ?? 0)
 
     const adjustment = new Gtk.Adjustment({
       lower: config.min ?? 0,
@@ -531,10 +499,10 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    * Creates a select dropdown control
    */
   private _createSelectControl(
-    storyWidget: StoryWidget,
-    propName: string,
-    currentValue: any,
-    config: { options?: any },
+    _storyWidget: StoryWidget,
+    _propName: string,
+    _currentValue: StoryArgValue | undefined,
+    _config: StoryControl,
   ): Gtk.Widget | null {
     // This would need to be implemented based on the options format
     // Not implemented in this refactoring
@@ -545,9 +513,9 @@ export class StorybookWindow extends Adw.ApplicationWindow {
    * Creates a color picker control
    */
   private _createColorControl(
-    storyWidget: StoryWidget,
-    propName: string,
-    currentValue: any,
+    _storyWidget: StoryWidget,
+    _propName: string,
+    _currentValue: string | undefined,
   ): Gtk.Widget | null {
     // This would need GTK color button implementation
     // Not implemented in this refactoring

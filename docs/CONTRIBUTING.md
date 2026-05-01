@@ -94,9 +94,14 @@ yarn workspace @pixelrpg/<pkg> run check
 # Type-check + build everything
 yarn workspaces foreach -A run check
 yarn build
-```
 
-There is currently no project-wide test runner or formatter — tests and formatting are areas slated for future work.
+# Run the engine unit tests
+yarn workspace @pixelrpg/engine run test
+
+# Auto-format and lint via Biome
+yarn format     # rewrites files in place (applies safe + unsafe fixes)
+yarn lint       # check-only; fails on lint errors
+```
 
 ## 🏗️ Architecture Guidelines
 
@@ -195,14 +200,34 @@ function calculateDistance(point1: Point, point2: Point): number {
 
 ## 🧪 Testing
 
-There is currently no automated test infrastructure. Verification is done manually:
+### Automated tests
+
+`packages/engine` runs Vitest. Unit tests live next to the source they cover (`foo.ts` + `foo.test.ts`).
+
+```bash
+yarn workspace @pixelrpg/engine run test          # one-shot
+yarn workspace @pixelrpg/engine run test:watch    # watch mode
+```
+
+The other workspaces (`packages/gjs`, `apps/*`) are GTK-bound and currently lack a test harness — extend the engine's pure-function coverage first; widget tests come later.
+
+### Manual verification
 
 - **Type-check**: `yarn workspaces foreach -A run check`
 - **Build**: `yarn build` — must succeed for all packages
 - **Smoke-test the editor**: `yarn workspace @pixelrpg/maker-gjs start` — open a map, try the brush/eraser tools
 - **Smoke-test the storybook**: `yarn workspace @pixelrpg/storybook-gjs start` — render widget stories
 
-Test infrastructure (unit tests, integration tests) is planned but not yet in place. When adding tests, colocate them next to the source they cover (`foo.ts` + `foo.test.ts`).
+### Linting & formatting
+
+Biome handles both linting and formatting (Prettier and ESLint are not used).
+
+```bash
+yarn lint     # report lint issues
+yarn format   # auto-fix and reformat in place
+```
+
+A `husky` pre-commit hook runs `yarn format` before each commit. VS Code is configured (`.vscode/settings.json`) to format on save with `biomejs.biome`.
 
 ## 📚 Documentation
 
@@ -296,8 +321,10 @@ Add screenshots of UI changes.
 All PRs must pass:
 - TypeScript compilation (`yarn workspaces foreach -A run check`)
 - Build process (`yarn build`)
+- Lint (`yarn lint` — Biome)
+- Engine unit tests (`yarn workspace @pixelrpg/engine run test`)
 
-Linting and automated testing are not yet wired up — see the [Testing](#-testing) section.
+Widget-level tests for the GJS packages and apps are not yet in place; see the [Testing](#-testing) section.
 
 ## 🆘 Getting Help
 

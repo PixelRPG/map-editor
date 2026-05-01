@@ -1,20 +1,20 @@
-import {
-  Engine as ExcaliburEngine,
-  DisplayMode,
-  EventEmitter,
-  Loader,
-  Color,
-  Logger,
-} from 'excalibur'
-import {
-  EngineStatus,
-  EngineEvent,
-  EngineEventMap,
-  EditorState,
-  ProjectLoadOptions,
-} from './types/index.ts'
+import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger } from 'excalibur'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
+import {
+  type EditorState,
+  EngineEvent,
+  type EngineEventMap,
+  EngineStatus,
+  type ProjectLoadOptions,
+} from './types/index.ts'
+
+interface LoaderEventMap {
+  progress: { progress: number }
+  error: unknown
+  complete: undefined
+  afterload: undefined
+}
 
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
@@ -22,7 +22,6 @@ export class Engine {
 
   public readonly excalibur: ExcaliburEngine
   private _gameProjectResource: GameProjectResource | null = null
-  private mapScene: MapScene | null = null
   private logger = Logger.getInstance()
 
   /** Currently loaded project resource (null until loadProject completes). */
@@ -63,10 +62,7 @@ export class Engine {
     this.setStatus(EngineStatus.READY)
   }
 
-  async loadProject(
-    projectPath: string,
-    options?: ProjectLoadOptions,
-  ): Promise<void> {
+  async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
     this.setStatus(EngineStatus.LOADING)
     this.logger.info(`[Engine] Loading project: ${projectPath}`)
 
@@ -76,15 +72,15 @@ export class Engine {
     })
 
     const loader = new Loader([this._gameProjectResource])
+    // Excalibur's `Loader` exposes events via an untyped `on` method; we wrap
+    // it in a narrow interface so each handler receives a typed payload.
     const loaderEvents = loader as unknown as {
-      on(name: string, handler: (payload: any) => void): void
+      on<E extends keyof LoaderEventMap>(name: E, handler: (payload: LoaderEventMap[E]) => void): void
     }
 
     loaderEvents.on('progress', (event) => {
-      if (event && typeof event.progress === 'number') {
-        this.logger.debug(
-          `Loading progress: ${Math.round(event.progress * 100)}%`,
-        )
+      if (typeof event?.progress === 'number') {
+        this.logger.debug(`Loading progress: ${Math.round(event.progress * 100)}%`)
       }
     })
 
@@ -132,12 +128,7 @@ export class Engine {
     this.logger.info(`Loading map: ${mapId}`)
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
-    const newMapScene = new MapScene(
-      mapResource,
-      this.events,
-      () => this.getEditorState(),
-    )
-    this.mapScene = newMapScene
+    const newMapScene = new MapScene(mapResource, this.events, () => this.getEditorState())
 
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)

@@ -16,7 +16,7 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 ## General (all code)
 
-[TS] |explicit types on public APIs |no `any` → use `unknown`+type guards |JSDoc public APIs |`is`-style guards for runtime checks |generics for inference |nullability via `?.`/`??`
+[TS] |explicit types on public APIs |no `any` → use `unknown`+type guards (enforced by Biome `noExplicitAny: error`) |JSDoc public APIs |`is`-style guards for runtime checks |generics for inference |nullability via `?.`/`??`
 [Files] |one class/file |types in `types/`, impl elsewhere |barrel exports via index |PascalCase (class files), kebab-case (others), UPPERCASE (constants)
 [Errors] |validate inputs |proper error types not bare `Error` |warn on non-critical |explicit edge cases |try/catch around risky ops
 [Events] |prefer `ex.EventEmitter` (Excalibur) for engine-side events |GObject signals for GTK widgets |typed event maps, no raw string literals
@@ -26,14 +26,14 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 [Types] |unknown+guards never any |interface=object shapes, type=unions/intersections/mapped |discriminated unions w/ explicit type prop |string enums for fixed sets (enum > string literal)
 [Functional] |pure fns preferred |array methods > loops |no param mutation
-[Arch] |SOLID, composition > inheritance, layer separation |immutability first: `readonly`, `as const`, functional updates |fn: <20 exec lines, ≤4 params, verb-first |class: <200 lines, <10 public methods, <10 props, single responsibility |naming: PascalCase class, camelCase var/method, kebab-case file, UPPERCASE const |constructor DI for testability |reactive/event-driven flow, state machines for complex state
+[Arch] |SOLID, composition > inheritance, layer separation |immutability first: `readonly`, `as const`, functional updates |fn: <20 exec lines, ≤4 params, verb-first |class: <200 lines, <10 public methods, <10 props, single responsibility |naming: PascalCase class, camelCase var/method, kebab-case file, UPPERCASE const |constructor DI for testability |reactive/event-driven flow, state machines for complex state |stateless utilities → module functions, not static-only classes
 [Deps] add via `yarn workspace @pixelrpg/<pkg> add <name>`
 
 ## Package-specific rules
 
-[`packages/engine/**/*.ts`] |Excalibur-based ECS: state in `Component`s, behavior in `System`s, orchestration via `Resource`s |MapFormat/MapResource own data shape; Components own runtime state (e.g. [MapEditorComponent](packages/engine/src/components/map-editor.component.ts) for selection/hover/sprite-refs) |runtime-indep where possible (runs in GJS and browser via game-browser) |error hierarchies + factory fns |prefer `ex.EventEmitter` over custom event systems
+[`packages/engine/**/*.ts`] |Excalibur-based ECS: state in `Component`s, behavior in `System`s, orchestration via `Resource`s |MapFormat/MapResource own data shape; Components own runtime state (e.g. [MapEditorComponent](packages/engine/src/components/map-editor.component.ts) for selection/hover/sprite-refs) |runtime-indep where possible (runs in GJS and browser via game-browser) |services/ exports module functions, not static-only classes |sprite-set consumers in services accept `SpriteIndex` (structural, works for both Excalibur `SpriteSetResource` and GTK `GdkSpriteSetResource`) |error hierarchies + factory fns |prefer `ex.EventEmitter` over custom event systems |unit-tested via Vitest (colocate `foo.test.ts` next to `foo.ts`)
 
-[`packages/gjs/**/*.ts`, `apps/maker-gjs/**/*.ts`, `apps/storybook-gjs/**/*.ts`] |GObject classes, GNOME naming, composite templates |GObject properties > plain fields |emit signals > accept callbacks |Blueprint for declarative UI |GNOME HIG |GTK preview pipeline (`Gdk.Texture`/Gsk-snapshot for sprite widgets) is distinct from Excalibur's canvas pipeline — both coexist intentionally
+[`packages/gjs/**/*.ts`, `apps/maker-gjs/**/*.ts`, `apps/storybook-gjs/**/*.ts`] |GObject classes, GNOME naming, composite templates |GObject properties > plain fields |emit signals > accept callbacks |Blueprint for declarative UI |GNOME HIG |GTK preview pipeline (`Gdk.Texture`/Gsk-snapshot for sprite widgets) is distinct from Excalibur's canvas pipeline — both coexist intentionally |signal lifecycle: use `SignalScope` from `@pixelrpg/gjs` (connect in `vfunc_map`, `disconnectAll()` in `vfunc_unmap`) — don't track handler IDs by hand
 
 [`packages/story-gjs/**/*.ts`] |StoryRegistry/StoryModule/StoryWidget framework for GTK widget stories |consumed by both `packages/gjs` (defines stories) and `apps/storybook-gjs` (renders them) |controls via `ControlType` enum
 
@@ -78,7 +78,7 @@ refs: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/css-variables
 
 ## Validation & commits
 
-[Pre-commit] |`yarn build` all pkgs |`yarn workspaces foreach -A run check` for full type check (slow) |per-pkg: `yarn workspace @pixelrpg/<pkg> run {check,build}` |fix all errors+warnings before commit
+[Pre-commit] |husky hook runs `yarn format` (Biome auto-fix) before each commit |`yarn lint` (Biome check) for the lint gate |`yarn build` all pkgs |`yarn workspaces foreach -A run check` for full type check (slow) |`yarn workspace @pixelrpg/engine run test` for engine unit tests |per-pkg: `yarn workspace @pixelrpg/<pkg> run {check,build}` |fix all errors+warnings before commit
 
 [Commits] |atomic, one logical change |conventional: `<type>[scope]: <description>` (feat|fix|docs|refactor|test|chore) |imperative, subject ≤50 chars, include scope |working state every commit |check `git log --oneline -10` to match project style |commit at milestones for large tasks, not just end
 

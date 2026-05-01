@@ -1,4 +1,4 @@
-import { FileReference } from './FileReference'
+import type { FileReference } from './FileReference'
 
 /**
  * Represents a reference to a sprite set file

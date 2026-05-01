@@ -1,24 +1,20 @@
 import {
-  EventEmitter,
-  Engine,
-  Scene,
+  type Engine,
+  type EventEmitter,
+  type Scene,
   System,
   SystemType,
-  Tile,
+  type Tile,
   TileMap,
-  Vector,
-  World,
+  type Vector,
   vec,
+  type World,
 } from 'excalibur'
-import {
-  EditorState,
-  EngineEvent,
-  EngineEventMap,
-} from '../types/index.ts'
 import { MapEditorComponent } from '../components/index.ts'
-import { LayerManager } from '../services/index.ts'
+import type { MapScene } from '../scenes/map.scene.ts'
+import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/index.ts'
+import { type EditorState, EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
-import { MapScene } from '../scenes/map.scene.ts'
 
 interface TileHit {
   tileMap: TileMap
@@ -104,20 +100,12 @@ export class TileEditorSystem extends System {
     return null
   }
 
-  private toTileCoords(
-    tileMap: TileMap,
-    worldPos: Vector,
-  ): { x: number; y: number } | null {
+  private toTileCoords(tileMap: TileMap, worldPos: Vector): { x: number; y: number } | null {
     const localX = worldPos.x - tileMap.pos.x
     const localY = worldPos.y - tileMap.pos.y
     const tileX = Math.floor(localX / tileMap.tileWidth)
     const tileY = Math.floor(localY / tileMap.tileHeight)
-    if (
-      tileX < 0 ||
-      tileY < 0 ||
-      tileX >= tileMap.columns ||
-      tileY >= tileMap.rows
-    ) {
+    if (tileX < 0 || tileY < 0 || tileX >= tileMap.columns || tileY >= tileMap.rows) {
       return null
     }
     return { x: tileX, y: tileY }
@@ -142,25 +130,14 @@ export class TileEditorSystem extends System {
 
     if (tool === 'brush') {
       if (state.tileId === null || state.tileId === undefined) return
-      LayerManager.addSpriteToTileForLayer(
-        hit.tileMap,
-        mapResource,
-        hit.tile,
-        layerId,
-        state.tileId,
-      )
+      addSpriteToTileForLayer(hit.tileMap, mapResource, hit.tile, layerId, state.tileId)
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
         tileId: state.tileId,
         layerId,
       })
     } else if (tool === 'eraser') {
-      LayerManager.removeSpritesFromTileForLayer(
-        hit.tileMap,
-        mapResource,
-        hit.tile,
-        layerId,
-      )
+      removeSpritesFromTileForLayer(hit.tileMap, mapResource, hit.tile, layerId)
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
         tileId: 0,
@@ -177,8 +154,6 @@ export class TileEditorSystem extends System {
   private resolveLayerId(layerId: string | null): string | null {
     if (layerId) return layerId
     const mapResource = (this.scene as MapScene | undefined)?.mapResource
-    return (
-      mapResource?.getFirstLayerId?.() ?? EDITOR_CONSTANTS.DEFAULT_LAYER_NAME
-    )
+    return mapResource?.getFirstLayerId?.() ?? EDITOR_CONSTANTS.DEFAULT_LAYER_NAME
   }
 }

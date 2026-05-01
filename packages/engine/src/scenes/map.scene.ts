@@ -1,11 +1,7 @@
-import { EventEmitter, Logger, Scene } from 'excalibur'
-import { MapResource } from '../resource/MapResource.ts'
-import { EditorState, EngineEventMap } from '../types/index.ts'
-
-import {
-  CameraControlSystem,
-  TileEditorSystem,
-} from '../systems/index.ts'
+import { type EventEmitter, Logger, Scene } from 'excalibur'
+import type { MapResource } from '../resource/MapResource.ts'
+import { CameraControlSystem, TileEditorSystem } from '../systems/index.ts'
+import type { EditorState, EngineEventMap } from '../types/index.ts'
 
 export class MapScene extends Scene {
   private logger = Logger.getInstance()

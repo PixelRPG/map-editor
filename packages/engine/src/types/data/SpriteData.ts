@@ -85,10 +85,8 @@ export function isSpriteDataMap(obj: unknown): obj is SpriteDataMap {
     typeof (obj as SpriteDataMap).y === 'number' &&
     typeof (obj as SpriteDataMap).spriteSetId === 'string' &&
     typeof (obj as SpriteDataMap).spriteId === 'number' &&
-    ((obj as SpriteDataMap).animationId === undefined ||
-      typeof (obj as SpriteDataMap).animationId === 'string') &&
-    ((obj as SpriteDataMap).zIndex === undefined ||
-      typeof (obj as SpriteDataMap).zIndex === 'number')
+    ((obj as SpriteDataMap).animationId === undefined || typeof (obj as SpriteDataMap).animationId === 'string') &&
+    ((obj as SpriteDataMap).zIndex === undefined || typeof (obj as SpriteDataMap).zIndex === 'number')
   )
 }
 

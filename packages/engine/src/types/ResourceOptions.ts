@@ -1,3 +1,3 @@
 export interface ResourceOptions {
-    baseDir?: string;
+  baseDir?: string
 }

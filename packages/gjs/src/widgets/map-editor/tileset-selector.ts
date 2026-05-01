@@ -1,9 +1,8 @@
-import GObject from '@girs/gobject-2.0'
 import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-
+import type { GdkSpriteSheet } from '../../sprite'
 import { SpriteSheetWidget } from '../sprite/sprite-sheet.widget'
-import { GdkSpriteSheet } from '../../sprite'
 
 import Template from './tileset-selector.blp'
 
@@ -60,7 +59,7 @@ export class TilesetSelector extends Adw.Bin {
           },
         },
       },
-      this,
+      TilesetSelector,
     )
   }
 
@@ -163,11 +162,7 @@ export class TilesetSelector extends Adw.Bin {
   /**
    * Add a sprite sheet widget to the container
    */
-  private _addSpriteSheetWidget(
-    spriteSheet: GdkSpriteSheet,
-    index: number,
-    name?: string,
-  ): void {
+  private _addSpriteSheetWidget(spriteSheet: GdkSpriteSheet, index: number, name?: string): void {
     const spriteSheetWidget = new SpriteSheetWidget(spriteSheet, {
       scale: this._scale,
       showGrid: this._showGrid,
@@ -175,7 +170,7 @@ export class TilesetSelector extends Adw.Bin {
     })
 
     // Connect sprite selection signal
-    spriteSheetWidget.connect('sprite-selected', (widget, sprite) => {
+    spriteSheetWidget.connect('sprite-selected', (_widget, sprite) => {
       this.emit('sprite-selected', sprite, index)
     })
 
@@ -274,41 +269,6 @@ export class TilesetSelector extends Adw.Bin {
     this._spriteSheetWidgets.forEach((widget) => {
       widget.clearSelection()
     })
-  }
-
-  /**
-   * Called when the widget is mapped to the screen.
-   * Sets up signal connections and starts any background processes.
-   */
-  vfunc_map(): void {
-    super.vfunc_map()
-    // Connect to any signals that need to be active while visible
-    // This is where you would connect to external signals or start timers
-  }
-
-  /**
-   * Called when the widget is unmapped from the screen.
-   * Disconnects signal connections and stops background processes.
-   */
-  vfunc_unmap(): void {
-    // Disconnect any signals connected in vfunc_map
-    // Stop any timers or background processes
-    super.vfunc_unmap()
-  }
-
-  /**
-   * Called when the widget is being destroyed.
-   * Cleans up all resources and breaks references.
-   */
-  vfunc_unroot(): void {
-    // Clear widget references to prevent memory leaks
-    this._spriteSheetWidgets = []
-
-    // Clear tilesets array
-    this._tilesets = []
-
-    // Call parent unroot
-    super.vfunc_unroot()
   }
 }
 

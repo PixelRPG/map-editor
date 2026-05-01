@@ -1,8 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-
+import type { GdkSprite, GdkSpriteSheet } from '../../sprite'
 import { SpriteWidget } from './sprite.widget'
-import { GdkSpriteSheet, GdkSprite } from '../../sprite'
 
 import Template from './sprite-sheet.widget.blp'
 
@@ -67,13 +66,10 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
           },
         },
       },
-      this,
+      SpriteSheetWidget,
     )
   }
-  constructor(
-    spriteSheet?: GdkSpriteSheet,
-    options: { scale?: number; showGrid?: boolean; maxColumns?: number } = {},
-  ) {
+  constructor(spriteSheet?: GdkSpriteSheet, options: { scale?: number; showGrid?: boolean; maxColumns?: number } = {}) {
     // Layout properties are configured in the Blueprint template
     super()
 
@@ -228,15 +224,12 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
    * @param parent - The FlowBox that contains the selected child
    * @param flowBoxChild - The selected FlowBoxChild
    */
-  onSelected(parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
+  onSelected(_parent: Gtk.FlowBox, flowBoxChild: Gtk.FlowBoxChild) {
     const spriteWidget = flowBoxChild.child as SpriteWidget
     const sprite = spriteWidget.sprite
 
     if (sprite) {
-      console.log(
-        'Selected sprite:',
-        `GdkSprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`,
-      )
+      console.log('Selected sprite:', `GdkSprite at (${sprite.x}, ${sprite.y}) - ${sprite.width}x${sprite.height}`)
       // Emit the sprite-selected signal for external listeners
       this.emit('sprite-selected', sprite)
     }
@@ -282,10 +275,7 @@ export class SpriteSheetWidget extends Gtk.ScrolledWindow {
 
     if (this._signalHandlers.length === 0) {
       // Connect child-activated signal
-      const handlerId = this._flowBox.connect(
-        'child-activated',
-        this.onSelected,
-      )
+      const handlerId = this._flowBox.connect('child-activated', this.onSelected)
       this._signalHandlers.push(handlerId)
     }
   }

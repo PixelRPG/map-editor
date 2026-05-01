@@ -11,9 +11,7 @@ export interface SpriteGridPosition {
  * Build a lookup from sprite-ID to grid position.
  * Shared between engine SpriteSetResource and GdkSpriteSetResource.
  */
-export function buildSpriteIdMap(
-  data: SpriteSetData,
-): Map<number, SpriteGridPosition> {
+export function buildSpriteIdMap(data: SpriteSetData): Map<number, SpriteGridPosition> {
   const map = new Map<number, SpriteGridPosition>()
   for (const sprite of data.sprites) {
     const index = sprite.row * data.columns + sprite.col
@@ -38,9 +36,7 @@ export interface SpriteGridCell {
  * Uses `spriteWidth`/`spriteHeight` from the SpriteSetData JSON as the
  * authoritative tile dimensions.
  */
-export function* iterateSpriteGrid(
-  data: SpriteSetData,
-): Generator<SpriteGridCell> {
+export function* iterateSpriteGrid(data: SpriteSetData): Generator<SpriteGridCell> {
   const spriteWidth = data.spriteWidth
   const spriteHeight = data.spriteHeight
   for (let row = 0; row < data.rows; row++) {

@@ -1,12 +1,11 @@
-import Gio from '@girs/gio-2.0'
 import Gdk from '@girs/gdk-4.0'
 import type GdkPixbuf from '@girs/gdkpixbuf-2.0'
-import type { SpriteSetData } from '@pixelrpg/engine'
+import Gio from '@girs/gio-2.0'
+import type { SpriteSetData, SpriteSetResource } from '@pixelrpg/engine'
 import { SpriteSetFormat } from '@pixelrpg/engine'
-import type { SpriteSetResource } from '@pixelrpg/engine'
+import { type GdkSprite, GdkSpriteSheet } from '../objects/index.ts'
 import { loadTextFile } from '../utils'
 import { GdkImageTexture } from './GdkImageTexture.ts'
-import { GdkSpriteSheet, GdkSprite } from '../objects/index.ts'
 
 /**
  * GTK-side SpriteSet resource. Produces `GdkSpriteSheet`/`GdkSprite`s for
@@ -42,9 +41,7 @@ export class GdkSpriteSetResource {
    * converts it to a `Gdk.Texture` — no second disk read. Falls back to
    * loading from disk if the pixbuf is not available.
    */
-  static async fromEngineResource(
-    engineResource: SpriteSetResource,
-  ): Promise<GdkSpriteSetResource> {
+  static async fromEngineResource(engineResource: SpriteSetResource): Promise<GdkSpriteSetResource> {
     const r = new GdkSpriteSetResource(engineResource.data, engineResource.path)
     await r._buildFromEngineResource(engineResource)
     return r
@@ -68,27 +65,21 @@ export class GdkSpriteSetResource {
    * convert it to a Gdk.Texture. Falls back to disk load if the pixbuf
    * is not available (e.g. in non-gjsify environments).
    */
-  private async _buildFromEngineResource(
-    engineResource: SpriteSetResource,
-  ): Promise<void> {
+  private async _buildFromEngineResource(engineResource: SpriteSetResource): Promise<void> {
     if (!this._data.image) return
 
     const imageSource = engineResource.getImageSource(this._data.image.id)
     // _pixbuf is protected on gjsify's HTMLImageElement — access via cast.
-    const pixbuf = (imageSource?.data as any)?._pixbuf as
-      | GdkPixbuf.Pixbuf
-      | undefined
+    const pixbuf = (imageSource?.data as any)?._pixbuf as GdkPixbuf.Pixbuf | undefined
 
     if (pixbuf) {
       // Ensure RGBA — GdkPixbuf may be RGB-only for JPEG sources.
-      const rgbaPixbuf = pixbuf.get_has_alpha()
-        ? pixbuf
-        : (pixbuf.add_alpha(false, 0, 0, 0) ?? pixbuf)
+      const rgbaPixbuf = pixbuf.get_has_alpha() ? pixbuf : (pixbuf.add_alpha(false, 0, 0, 0) ?? pixbuf)
 
       // GTK4-native: explicit format avoids the deprecated
       // Gdk.Texture.new_for_pixbuf() and its colour-space/alpha ambiguity.
       // GdkPixbuf stores pixels as R, G, B, A bytes = MemoryFormat.R8G8B8A8.
-      const texture = Gdk.MemoryTexture['new'](
+      const texture = Gdk.MemoryTexture.new(
         rgbaPixbuf.get_width(),
         rgbaPixbuf.get_height(),
         Gdk.MemoryFormat.R8G8B8A8,
@@ -132,12 +123,7 @@ export class GdkSpriteSetResource {
 
   private _resolveImagePath(relativePath: string): string {
     if (relativePath.startsWith('/')) return relativePath
-    return (
-      Gio.File.new_for_path(this._path)
-        .get_parent()
-        ?.get_child(relativePath)
-        .get_path() || relativePath
-    )
+    return Gio.File.new_for_path(this._path).get_parent()?.get_child(relativePath).get_path() || relativePath
   }
 
   get data(): SpriteSetData {

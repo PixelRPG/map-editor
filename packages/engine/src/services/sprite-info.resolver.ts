@@ -1,111 +1,67 @@
-import { MapResource } from '../resource/MapResource.ts'
-import { SpriteValidator } from './sprite.validator'
+import type { MapResource } from '../resource/MapResource.ts'
+import type { SpriteIndex } from '../types/SpriteIndex.ts'
+import { isValidTileId } from './sprite.validator.ts'
+
+function getSpriteCount(spriteSetResource: SpriteIndex): number {
+  const sprites = spriteSetResource.sprites
+  const ids = Object.keys(sprites).map((id) => Number.parseInt(id, 10))
+  return ids.length > 0 ? Math.max(...ids) + 1 : 0
+}
+
+function spriteExists(spriteSetResource: SpriteIndex, spriteId: number): boolean {
+  return !!spriteSetResource.sprites[spriteId]
+}
+
+interface SpriteSetReferenceLike {
+  id?: string
+  firstGid?: number
+}
 
 /**
- * Resolver for finding sprite information from tile IDs and resources
+ * Find sprite set ID and sprite ID for a given global tile ID.
+ *
+ * @param mapResource The MapResource to search
+ * @param tileId The global tile ID to find
+ * @returns Object with spriteSetId and spriteId, or null if not found
  */
-export class SpriteInfoResolver {
-  /**
-   * Get sprite count from sprite set resource
-   */
-  private static getSpriteCount(spriteSetResource: any): number {
-    if (!spriteSetResource?.sprites) return 0
+export function findSpriteInfoForTileId(
+  mapResource: MapResource,
+  tileId: number,
+): { spriteSetId: string; spriteId: number } | null {
+  if (!isValidTileId(tileId)) return null
 
-    if (Array.isArray(spriteSetResource.sprites)) {
-      // Excalibur format: sprites is an array
-      return spriteSetResource.sprites.length
-    } else if (typeof spriteSetResource.sprites === 'object') {
-      // GJS format: sprites is a Record<number, Sprite>
-      const spriteIds = Object.keys(spriteSetResource.sprites).map((id) =>
-        parseInt(id),
-      )
-      return spriteIds.length > 0 ? Math.max(...spriteIds) + 1 : 0
-    }
+  const spriteSetResources = mapResource.getAllSpriteSetResources()
+  const mapData = mapResource.mapData
 
-    return 0
+  if (!mapData?.spriteSets) {
+    console.warn('[SpriteInfoResolver] Invalid map resource data')
+    return null
   }
 
-  /**
-   * Check if sprite exists in sprite set resource
-   */
-  private static spriteExists(
-    spriteSetResource: any,
-    spriteId: number,
-  ): boolean {
-    if (!spriteSetResource?.sprites) return false
-
-    if (Array.isArray(spriteSetResource.sprites)) {
-      // Excalibur format
-      return !!spriteSetResource.sprites[spriteId]
-    } else if (typeof spriteSetResource.sprites === 'object') {
-      // GJS format
-      return !!spriteSetResource.sprites[spriteId]
+  for (const [spriteSetId, spriteSetResource] of spriteSetResources) {
+    const spriteSetRef = mapData.spriteSets.find((ref: SpriteSetReferenceLike) => ref?.id === spriteSetId) as
+      | SpriteSetReferenceLike
+      | undefined
+    if (!spriteSetRef?.firstGid || typeof spriteSetRef.firstGid !== 'number') {
+      continue
     }
 
-    return false
-  }
+    const firstGid = spriteSetRef.firstGid
+    const spriteCount = getSpriteCount(spriteSetResource)
+    const lastGid = firstGid + spriteCount - 1
 
-  /**
-   * Find sprite set ID and sprite ID for a given global tile ID
-   * @param mapResource The MapResource to search
-   * @param tileId The global tile ID to find
-   * @returns Object with spriteSetId and spriteId, or null if not found
-   */
-  static findSpriteInfoForTileId(
-    mapResource: MapResource,
-    tileId: number,
-  ): { spriteSetId: string; spriteId: number } | null {
-    // Validate input parameters
-    if (!SpriteValidator.isValidMapResource(mapResource)) return null
-    if (!SpriteValidator.isValidTileId(tileId)) return null
+    if (tileId >= firstGid && tileId <= lastGid) {
+      const localSpriteId = tileId - firstGid
 
-    try {
-      const spriteSetResources = mapResource.getAllSpriteSetResources()
-      const mapData = mapResource.mapData
-
-      if (!spriteSetResources || !mapData?.spriteSets) {
-        console.warn('[SpriteInfoResolver] Invalid map resource data')
-        return null
-      }
-
-      // Iterate through sprite sets to find the one containing this tile ID
-      for (const [spriteSetId, spriteSetResource] of spriteSetResources) {
-        if (!SpriteValidator.isValidSpriteSetId(spriteSetId)) continue
-
-        const spriteSetRef = mapData.spriteSets.find(
-          (ref: any) => ref?.id === spriteSetId,
-        )
-        if (
-          !spriteSetRef?.firstGid ||
-          typeof spriteSetRef.firstGid !== 'number'
-        ) {
-          continue
-        }
-
-        const firstGid = spriteSetRef.firstGid
-        const spriteCount = this.getSpriteCount(spriteSetResource)
-        const lastGid = firstGid + spriteCount - 1
-
-        // Check if the tile ID falls within this sprite set's range
-        if (tileId >= firstGid && tileId <= lastGid) {
-          const localSpriteId = tileId - firstGid
-
-          if (this.spriteExists(spriteSetResource, localSpriteId)) {
-            return {
-              spriteSetId: spriteSetId,
-              spriteId: localSpriteId,
-            }
-          }
+      if (spriteExists(spriteSetResource, localSpriteId)) {
+        return {
+          spriteSetId: spriteSetId,
+          spriteId: localSpriteId,
         }
       }
-
-      console.warn(
-        `[SpriteInfoResolver] Could not find sprite info for tileId ${tileId} in any sprite set`,
-      )
-      return null
-    } catch (error) {
-      console.warn('[SpriteInfoResolver] Error finding sprite info:', error)
-      return null
     }
   }
+
+  console.warn(`[SpriteInfoResolver] Could not find sprite info for tileId ${tileId} in any sprite set`)
+  return null
 }

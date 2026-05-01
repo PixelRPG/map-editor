@@ -1,12 +1,4 @@
-import {
-  Engine,
-  Scene,
-  System,
-  SystemType,
-  World,
-  vec,
-  Vector,
-} from 'excalibur'
+import { type Engine, type Scene, System, SystemType, type Vector, vec, type World } from 'excalibur'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
 /**
