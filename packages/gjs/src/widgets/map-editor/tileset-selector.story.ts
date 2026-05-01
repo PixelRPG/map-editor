@@ -196,8 +196,8 @@ export class TilesetSelectorStory extends StoryWidget {
       this.tilesetSelector = new TilesetSelector()
 
       // Set properties after creation
-      this.tilesetSelector.scale = this.args.scale ?? 1.0
-      this.tilesetSelector.showGrid = this.args.showGrid ?? true
+      this.tilesetSelector.scale = (this.args.scale as number | null) ?? 1.0
+      this.tilesetSelector.showGrid = (this.args.showGrid as boolean | null) ?? true
 
       // Set all loaded tilesets
       for (const tileset of this.loadedTilesets) {
@@ -253,34 +253,6 @@ export class TilesetSelectorStory extends StoryWidget {
     if (!this.tilesetSelector) {
       this.initialize()
     }
-  }
-
-  /**
-   * Called when the widget is unmapped from the screen.
-   * Disconnects signal connections and stops background processes.
-   */
-  vfunc_unmap(): void {
-    // Disconnect any signals connected in vfunc_map
-    super.vfunc_unmap()
-  }
-
-  /**
-   * Called when the widget is being destroyed.
-   * Cleans up all resources and breaks references.
-   */
-  vfunc_unroot(): void {
-    // Clear widget references to prevent memory leaks
-    if (this.tilesetSelector) {
-      this._tileset_selector_container.remove(this.tilesetSelector)
-      this.tilesetSelector = null
-    }
-
-    // Clear resource references
-    this.spriteSetResources = []
-    this.loadedTilesets = []
-
-    // Call parent unroot
-    super.vfunc_unroot()
   }
 }
 

@@ -270,41 +270,6 @@ export class TilesetSelector extends Adw.Bin {
       widget.clearSelection()
     })
   }
-
-  /**
-   * Called when the widget is mapped to the screen.
-   * Sets up signal connections and starts any background processes.
-   */
-  vfunc_map(): void {
-    super.vfunc_map()
-    // Connect to any signals that need to be active while visible
-    // This is where you would connect to external signals or start timers
-  }
-
-  /**
-   * Called when the widget is unmapped from the screen.
-   * Disconnects signal connections and stops background processes.
-   */
-  vfunc_unmap(): void {
-    // Disconnect any signals connected in vfunc_map
-    // Stop any timers or background processes
-    super.vfunc_unmap()
-  }
-
-  /**
-   * Called when the widget is being destroyed.
-   * Cleans up all resources and breaks references.
-   */
-  vfunc_unroot(): void {
-    // Clear widget references to prevent memory leaks
-    this._spriteSheetWidgets = []
-
-    // Clear tilesets array
-    this._tilesets = []
-
-    // Call parent unroot
-    super.vfunc_unroot()
-  }
 }
 
 GObject.type_ensure(TilesetSelector.$gtype)

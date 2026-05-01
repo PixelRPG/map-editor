@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { MapData } from '@pixelrpg/engine'
 import type { GdkSpriteSheet } from '../../sprite'
+import { SignalScope } from '../../utils/signal-scope'
 import type { LayerSelector } from './layer-selector'
 import Template from './map-editor-panel.blp'
 import type { TilesetSelector } from './tileset-selector'
@@ -20,7 +21,7 @@ export class MapEditorPanel extends Adw.Bin {
   private _mapData: MapData | null = null
 
   // Signal management
-  private _signalHandlers: number[] = []
+  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -69,11 +70,6 @@ export class MapEditorPanel extends Adw.Bin {
 
     // Set the map data in the layer selector
     this._layerSelector.setMapData(mapData)
-
-    // Connect layer selector signal to forward it
-    this._layerSelector.connect('layer-selected', (_: LayerSelector, layerId: string) => {
-      this.emit('layer-selected', layerId)
-    })
   }
 
   /**
@@ -186,42 +182,19 @@ export class MapEditorPanel extends Adw.Bin {
   vfunc_map(): void {
     super.vfunc_map()
 
-    if (this._signalHandlers.length === 0) {
-      // Connect tileset selector signal
-      const tilesetHandlerId = this._tilesetSelector.connect('sprite-selected', this._onSpriteSelected.bind(this))
-      this._signalHandlers.push(tilesetHandlerId)
-
-      // Connect tool button signals
-      const brushHandlerId = this._brushButton.connect('toggled', this._onBrushToggled.bind(this))
-      this._signalHandlers.push(brushHandlerId)
-
-      const eraserHandlerId = this._eraserButton.connect('toggled', this._onEraserToggled.bind(this))
-      this._signalHandlers.push(eraserHandlerId)
-    }
+    this.signals.connect(this._tilesetSelector, 'sprite-selected', this._onSpriteSelected.bind(this))
+    this.signals.connect(this._brushButton, 'toggled', this._onBrushToggled.bind(this))
+    this.signals.connect(this._eraserButton, 'toggled', this._onEraserToggled.bind(this))
+    this.signals.connect(this._layerSelector, 'layer-selected', (_: LayerSelector, layerId: string) => {
+      this.emit('layer-selected', layerId)
+    })
   }
 
   /**
    * Disconnect signals when widget becomes invisible (GC-safe cleanup)
    */
   vfunc_unmap(): void {
-    if (this._signalHandlers.length > 0) {
-      // Disconnect all signal handlers
-      // Note: We need to disconnect from the correct widgets
-      // The first handler is for tileset selector
-      if (this._signalHandlers[0] > 0) {
-        this._tilesetSelector.disconnect(this._signalHandlers[0])
-      }
-      // The second handler is for brush button
-      if (this._signalHandlers[1] > 0) {
-        this._brushButton.disconnect(this._signalHandlers[1])
-      }
-      // The third handler is for eraser button
-      if (this._signalHandlers[2] > 0) {
-        this._eraserButton.disconnect(this._signalHandlers[2])
-      }
-      this._signalHandlers = []
-    }
-
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 }
