@@ -1,7 +1,7 @@
 /* Workaround: gjsify's rolldown css-as-string plugin (via lightningcss
  * bundleAsync) does not resolve npm-package specifiers from @import.
- * Tracked upstream in gjsify — once the lightningcss bundler accepts a
- * custom resolver, replace with @import "@pixelrpg/gjs/index.css". */
+ * Fixed upstream in gjsify/gjsify#227 — revert once @gjsify/cli >= 0.4.16
+ * is published and we can use @import "@pixelrpg/gjs/index.css". */
 @import "../../../packages/gjs/src/index.css";
 
 /* Storybook-specific styles can go here. */
