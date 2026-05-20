@@ -49,28 +49,41 @@ The maker stays GJS-only. Exported games target multiple platforms — Browser i
 
 ## Quickstart
 
-Prerequisites: Node 18+, Yarn 4, a GNOME development environment with GJS, GTK 4, libadwaita, and `blueprint-compiler`.
+Prerequisites: [`@gjsify/cli`](https://github.com/gjsify/gjsify) (install with `curl -fsSL https://raw.githubusercontent.com/gjsify/gjsify/main/install.mjs | gjs -m -`) and a GNOME development environment with GJS, GTK 4, libadwaita, and `blueprint-compiler`. No Node or Yarn required.
 
 ```bash
 git clone https://github.com/PixelRPG/map-editor.git
 cd map-editor
 
-yarn install
-yarn build
-yarn workspace @pixelrpg/maker-gjs start
+gjsify install
+gjsify run build
+gjsify workspace @pixelrpg/maker-gjs start
 ```
 
 ## Development
 
 ```bash
-yarn workspaces foreach -A run check          # type-check all packages
-yarn build                                     # build all packages
-yarn workspace @pixelrpg/maker-gjs start       # run the editor
-yarn workspace @pixelrpg/storybook-gjs start   # run the widget storybook
-yarn workspace @pixelrpg/game-browser build    # build the browser-runtime template
+gjsify foreach check -v -t                         # type-check all packages (topological)
+gjsify foreach build -v -t                         # build all packages
+gjsify workspace @pixelrpg/maker-gjs start         # run the editor
+gjsify workspace @pixelrpg/storybook-gjs start     # run the widget storybook
+gjsify workspace @pixelrpg/game-browser build      # build the browser-runtime template
+gjsify fix                                         # format + safe-lint-fix (Biome via gjsify)
+gjsify lint                                        # lint-only
+gjsify foreach test -v -p --include @pixelrpg/engine   # engine unit tests (Vitest)
 ```
 
-Per-package scripts use the same names: `build`, `check`, `start`.
+Per-package scripts use the same names: `build`, `check`, `start`. Run them with `gjsify run <script>` from within the package directory.
+
+### Flatpak (`apps/maker-gjs`)
+
+The manifest, MetaInfo and `.desktop` file are generated from `apps/maker-gjs/package.json#gjsify.flatpak`:
+
+```bash
+gjsify run flatpak:init     # regenerate manifest + AppStream assets
+gjsify run flatpak:check    # appstreamcli + flatpak-builder-lint
+gjsify run flatpak:build    # flatpak-builder + install + bundle .flatpak
+```
 
 For development conventions (commit style, ECS patterns, Blueprint UI, GTK4 lifecycle hooks), see [AGENTS.md](AGENTS.md).
 
@@ -80,7 +93,7 @@ For development conventions (commit style, ECS patterns, Blueprint UI, GTK4 life
 - [GJS](https://gjs.guide/) — JavaScript bindings for GNOME
 - [GTK 4](https://gtk.org/) + [libadwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/) — desktop UI
 - [Blueprint](https://jwestman.pages.gitlab.gnome.org/blueprint-compiler/) — declarative UI markup
-- [gjsify](https://github.com/gjsify/gjsify) — TypeScript build tooling for GJS
+- [gjsify](https://github.com/gjsify/gjsify) — full toolchain (builder, formatter, linter, package manager, Flatpak packaging, Node/Web/DOM APIs on GJS)
 
 ## License
 

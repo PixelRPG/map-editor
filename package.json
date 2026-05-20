@@ -6,21 +6,22 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "yarn workspaces foreach -v -W -t run build",
-    "check": "yarn workspaces foreach -v -W -t run check",
-    "check:barrels-clean": "yarn workspaces foreach -v -W -t run build:barrels && git diff --exit-code -- '**/index.ts'",
-    "format:barrels": "yarn workspaces foreach -v -W -t run build:barrels && biome format --write .",
-    "test": "yarn workspaces foreach -v -W --include @pixelrpg/engine run test",
-    "start": "yarn workspace @pixelrpg/maker-gjs run start",
-    "clear": "yarn workspaces foreach -v --parallel -W run clear",
-    "format": "yarn format:barrels && biome check . --write --unsafe",
-    "lint": "biome check .",
-    "prepare": "husky",
-    "git:merge-upstream": "yarn workspaces foreach -v --parallel -A run git:merge-upstream"
+    "build": "gjsify foreach build -v -t",
+    "check": "gjsify foreach check -v -t",
+    "check:barrels-clean": "gjsify foreach check:barrels -v -t",
+    "test": "gjsify foreach test -v -p --include @pixelrpg/engine",
+    "start": "gjsify workspace @pixelrpg/maker-gjs start",
+    "start:storybook": "gjsify workspace @pixelrpg/storybook-gjs start",
+    "clear": "gjsify foreach clear -v -p",
+    "format": "gjsify fix",
+    "lint": "gjsify lint",
+    "check:format": "gjsify format --check",
+    "flatpak:init": "gjsify workspace @pixelrpg/maker-gjs flatpak:init",
+    "flatpak:check": "gjsify workspace @pixelrpg/maker-gjs flatpak:check",
+    "flatpak:build": "gjsify workspace @pixelrpg/maker-gjs flatpak:build"
   },
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
-  "packageManager": "yarn@4.13.0",
   "workspaces": [
     "packages/*",
     "apps/*",
@@ -28,16 +29,6 @@
   ],
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
-    "barrelsby": "^2.8.1",
-    "husky": "^9.1.7",
     "typescript": "^6.0.3"
-  },
-  "dependencies": {
-    "@girs/gtksource-5": "^5.20.0-4.0.0-rc.9"
-  },
-  "dependenciesMeta": {
-    "@gjsify/webgl@0.1.11": {
-      "unplugged": true
-    }
   }
 }
