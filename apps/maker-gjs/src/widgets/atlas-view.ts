@@ -86,6 +86,9 @@ export class AtlasView extends Adw.Bin {
         Signals: {
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
+          'scene-moved': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
+          },
           'mode-changed': { param_types: [GObject.TYPE_STRING] },
         },
       },
@@ -168,6 +171,9 @@ export class AtlasView extends Adw.Bin {
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {
       this.emit('scene-opened', id)
+    })
+    this.signals.connect(this._atlas, 'scene-moved', (_a: AtlasCanvas, id: string, x: number, y: number) => {
+      this.emit('scene-moved', id, x, y)
     })
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
       this.emit('mode-changed', mode as EditorMode)

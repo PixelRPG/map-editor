@@ -3,6 +3,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { MapFormat } from '@pixelrpg/engine'
 import { Engine, SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
@@ -78,6 +79,45 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-selected', (_v: AtlasView, id: string) => {
       this._lastAtlasSelection = id
     })
+    this.signals.connect(
+      this._atlas_view,
+      'scene-moved',
+      (_v: AtlasView, id: string, x: number, y: number) => {
+        void this._persistAtlasPosition(id, x, y)
+      },
+    )
+  }
+
+  /**
+   * Write the atlas coordinates the user just dragged back into the
+   * map's source JSON via `MapFormat.serialize`. Best-effort — failures
+   * surface as a toast but the in-memory state still updates so the
+   * card position is preserved within the session.
+   */
+  private async _persistAtlasPosition(mapId: string, x: number, y: number): Promise<void> {
+    const project = this._loadedProject
+    if (!project) return
+    const mapResource = project.resource.maps.get(mapId)
+    if (!mapResource?.mapData) return
+    const editor = (mapResource.mapData.editorData ?? {}) as Record<string, unknown>
+    editor.atlasX = x
+    editor.atlasY = y
+    ;(mapResource.mapData as { editorData?: Record<string, unknown> }).editorData = editor
+    try {
+      const json = MapFormat.serialize(mapResource.mapData)
+      const file = Gio.File.new_for_path(mapResource.sourcePath)
+      const [success] = file.replace_contents(
+        new TextEncoder().encode(json),
+        null,
+        false,
+        Gio.FileCreateFlags.NONE,
+        null,
+      )
+      if (!success) this._showToast(_('Could not save atlas position'))
+    } catch (error) {
+      console.warn('[ApplicationWindow] Failed to persist atlas position:', error)
+      this._showToast(_('Could not save atlas position'))
+    }
   }
 
   vfunc_unmap(): void {

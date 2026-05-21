@@ -25,7 +25,6 @@ Conventions:
 
 ## Atlas / world
 
-- **Atlas position persistence (write-back)** — `project-loader.ts` reads `mapData.editorData.atlasX/atlasY` already; drag-to-move updates the in-memory `SampleScene.x/y`. The missing piece is **saving** the new positions back to the project file. *owner: maker + format*
 - **Real scene-card thumbnails for very large maps** — `MapPreview` works but a 176×148 map renders ~26k snapshot ops. Acceptable today; if it becomes a bottleneck cap the max ops per preview (downsample, every Nth tile). *owner: gjs (MapPreview)*
 
 ## Welcome / project lifecycle

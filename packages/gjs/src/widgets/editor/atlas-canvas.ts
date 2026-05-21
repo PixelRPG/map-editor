@@ -60,6 +60,9 @@ export class AtlasCanvas extends Adw.Bin {
         Signals: {
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
+          'scene-moved': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
+          },
         },
       },
       AtlasCanvas,
@@ -161,11 +164,14 @@ export class AtlasCanvas extends Adw.Bin {
     card.connect('scene-drag-end', (_c: SceneCard, dx: number, dy: number) => {
       const scene = this._scenes.find((s) => s.id === sceneId)
       if (!scene) return
-      scene.x = Math.max(0, originX + dx)
-      scene.y = Math.max(0, originY + dy)
-      this._surface.move(card, scene.x, scene.y)
+      const nextX = Math.max(0, Math.round(originX + dx))
+      const nextY = Math.max(0, Math.round(originY + dy))
+      scene.x = nextX
+      scene.y = nextY
+      this._surface.move(card, nextX, nextY)
       this._sizeSurface()
       this._teleports.setWorld(this._scenes, this._teleportData, 1)
+      this.emit('scene-moved', sceneId, nextX, nextY)
     })
   }
 
