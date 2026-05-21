@@ -190,7 +190,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   private _setView(name: ViewName): void {
+    // Dispose the engine when leaving the scene editor. The gjs Engine
+    // widget nulls out its internal Excalibur instance in
+    // `vfunc_unmap` (so we don't leak GL contexts when the scene
+    // editor is off-screen), which leaves our cached reference
+    // pointing at a dead wrapper. Forcing a fresh engine on re-entry
+    // sidesteps that.
+    const current = this._stack.get_visible_child_name()
+    if (current === 'scene-editor' && name !== 'scene-editor') {
+      this._disposeEngine()
+    }
     this._stack.set_visible_child_name(name)
+  }
+
+  private _disposeEngine(): void {
+    if (!this._engine) return
+    this._scene_editor_view.setEngineWidget(null)
+    this._engine = null
+    this._engineProjectPath = null
+    this._engineMapId = null
+    this._engineZoomHookAttached = false
   }
 
   private _showAtlas(): void {
@@ -236,6 +255,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   private async _ensureEngineForMap(projectPath: string, mapId: string): Promise<void> {
+    // Defensive: if the gjs Engine wrapper exists but its underlying
+    // Excalibur instance is gone (e.g. the widget was unmapped at some
+    // point), dispose and recreate.
+    if (this._engine && !this._engine.excalibur) {
+      this._disposeEngine()
+    }
+
     if (!this._engine) {
       this._engine = new Engine()
       this._scene_editor_view.setEngineWidget(this._engine, this._engine)
