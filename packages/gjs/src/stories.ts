@@ -6,19 +6,8 @@
 import GObject from '@girs/gobject-2.0'
 import type { StoryModule } from '@pixelrpg/story-gjs'
 
-// Legacy stories (sprite + old map-editor panel).
-import { LayerSelector } from './widgets/map-editor/layer-selector'
-import { MapEditorPanel } from './widgets/map-editor/map-editor-panel'
-import { MapEditorPanelStories } from './widgets/map-editor/map-editor-panel.story'
-import { TilesetSelector } from './widgets/map-editor/tileset-selector'
-import { TilesetSelectorStories } from './widgets/map-editor/tileset-selector.story'
 import { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
-// SpriteSheetWidgetStories intentionally omitted — its role is being
-// folded into `Editor/Tile Palette · Lokiri Forest`. The widget itself
-// still exists because MapEditorPanel uses it; it gets removed together
-// with MapEditorPanel in Phase 4.
 
-// Adwaita-redesigned editor stories.
 import { AtlasCanvas } from './widgets/editor/atlas-canvas'
 import { AtlasCanvasStories } from './widgets/editor/atlas-canvas.story'
 import { ContextChip } from './widgets/editor/context-chip'
@@ -50,9 +39,6 @@ import { TilesTab } from './widgets/editor/tiles-tab'
 
 // Force widget registration up-front so any composite template that
 // references one of these by GTypeName resolves at template-parse time.
-GObject.type_ensure(TilesetSelector.$gtype)
-GObject.type_ensure(LayerSelector.$gtype)
-GObject.type_ensure(MapEditorPanel.$gtype)
 GObject.type_ensure(ProjectHeroIcon.$gtype)
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(MiniMap.$gtype)
@@ -74,8 +60,6 @@ GObject.type_ensure(SceneEditor.$gtype)
 /** All story modules available in the UI-GJS package. */
 export const UIStories: StoryModule[] = [
   SpriteWidgetStories,
-  MapEditorPanelStories,
-  TilesetSelectorStories,
   ProjectHeroIconStories,
   ModeRailStories,
   TilePaletteStories,
@@ -89,8 +73,6 @@ export const UIStories: StoryModule[] = [
   SceneEditorStories,
 ]
 
-export { MapEditorPanelStories } from './widgets/map-editor/map-editor-panel.story'
-export { TilesetSelectorStories } from './widgets/map-editor/tileset-selector.story'
 export { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
 export {
   AtlasCanvasStories,

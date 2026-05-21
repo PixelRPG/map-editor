@@ -35,8 +35,6 @@ Conventions:
 
 ## Cleanup / debt
 
-- **`packages/gjs/src/widgets/{map-editor,sprite/sprite-sheet.widget*}`** — legacy widgets retained because no consumer used them after the redesign. Verify with `grep -r "MapEditorPanel\|TilesetSelector\|LayerSelector\|SpriteSheetWidget"` and delete. *owner: gjs*
-- **Old `apps/maker-gjs/src/objects/layer.ts`** — `Layer` GObject orphaned. Delete. *owner: maker*
 - **`mockups/PixelRPGEditor_01.pdf`** — design PDF, untracked. Decide whether to commit (under `design/`?) or `.gitignore`. *owner: human*
 
 ## Storybook

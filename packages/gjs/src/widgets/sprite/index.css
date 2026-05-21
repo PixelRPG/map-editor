@@ -1,1 +1,2 @@
-@import "./sprite-sheet.widget.css";
+/* sprite-sheet.widget.css removed alongside SpriteSheetWidget; the
+   remaining sprite stories don't need package-level CSS. */

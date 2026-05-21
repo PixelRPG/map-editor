@@ -8,8 +8,8 @@
   "scripts": {
     "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
     "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
-    "build:barrels": "gjsify barrels src src/widgets src/objects",
-    "check:barrels": "gjsify barrels --check src src/widgets src/objects",
+    "build:barrels": "gjsify barrels src src/widgets",
+    "check:barrels": "gjsify barrels --check src src/widgets",
     "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
     "build": "gjsify run build:resources && gjsify run build:barrels && gjsify run build:app",
     "check": "gjsify run build:barrels && tsc",
