@@ -38,7 +38,9 @@ template $PixelRpgSceneCard : Gtk.Button {
         orientation: horizontal;
       }
 
-      $PixelRpgMiniMap map {}
+      Adw.Bin preview_slot {
+        child: $PixelRpgMiniMap map {};
+      }
     };
 
     [overlay]

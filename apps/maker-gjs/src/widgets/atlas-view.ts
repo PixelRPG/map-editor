@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type { GameProjectResource } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
 import {
   AtlasCanvas,
@@ -44,6 +45,7 @@ export class AtlasView extends Adw.Bin {
   private _collapsed = false
   private _showLibrary = true
   private _showInspector = true
+  private _projectResource: GameProjectResource | null = null
 
   static {
     GObject.registerClass(
@@ -140,19 +142,28 @@ export class AtlasView extends Adw.Bin {
     this.notify('show-inspector')
   }
 
-  /** Replace the demo world with a real project's data. */
-  setWorld(scenes: SampleScene[], teleports: SampleTeleport[]): void {
+  /**
+   * Replace the demo world with a real project's data. Optionally pass
+   * the loaded `GameProjectResource` so atlas cards + the scene
+   * inspector can render real tile previews of each map.
+   */
+  setWorld(
+    scenes: SampleScene[],
+    teleports: SampleTeleport[],
+    projectResource: GameProjectResource | null = null,
+  ): void {
     this._scenes = scenes
     this._teleports = teleports
-    this._atlas.setWorld(scenes, teleports)
-    this._inspector.setScene(null, scenes, teleports)
+    this._projectResource = projectResource
+    this._atlas.setWorld(scenes, teleports, projectResource)
+    this._inspector.setScene(null, scenes, teleports, projectResource)
   }
 
   vfunc_map(): void {
     super.vfunc_map()
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
       const scene = this._scenes.find((s) => s.id === id) ?? null
-      this._inspector.setScene(scene, this._scenes, this._teleports)
+      this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
       this.emit('scene-selected', id)
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {

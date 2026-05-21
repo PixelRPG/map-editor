@@ -1,12 +1,15 @@
 import Adw from '@girs/adw-1'
+import type { GameProjectResource } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
+import { MapPreview } from './map-preview'
 import { MiniMap } from './mini-map'
 
 import Template from './scene-inspector.blp'
 
 GObject.type_ensure(MiniMap.$gtype)
+GObject.type_ensure(MapPreview.$gtype)
 
 interface SceneStats {
   npcs: number
@@ -45,7 +48,8 @@ export class SceneInspector extends Adw.Bin {
   declare _body: Gtk.Box
 
   private _scene: SampleScene | null = null
-  private _preview: MiniMap | null = null
+  private _preview: Gtk.Widget | null = null
+  private _projectResource: GameProjectResource | null = null
   private _statRows: Gtk.Widget[] = []
   private _teleportRows: Adw.ActionRow[] = []
 
@@ -99,13 +103,20 @@ export class SceneInspector extends Adw.Bin {
     )
   }
 
-  /** Set the inspected scene and the full teleport list for the world. */
+  /**
+   * Set the inspected scene and the full teleport list for the world.
+   * Optionally pass the loaded `GameProjectResource` so the preview can
+   * render the scene's real tile data via {@link MapPreview} instead
+   * of the synthetic mini-map placeholder.
+   */
   setScene(
     scene: SampleScene | null,
     allScenes: SampleScene[] = [],
     teleports: SampleTeleport[] = [],
+    projectResource: GameProjectResource | null = null,
   ): void {
     this._scene = scene
+    this._projectResource = projectResource
     this._refreshPreview()
     this._refreshStats(scene, teleports)
     this._refreshTeleports(scene, allScenes, teleports)
@@ -149,6 +160,18 @@ export class SceneInspector extends Adw.Bin {
     const desiredHeight = 180
     const tilePx = Math.max(1, Math.floor(Math.min(desiredWidth / cols, desiredHeight / rows)))
 
+    // Real-project path: render the scene's tile data via MapPreview.
+    if (this._projectResource && this._projectResource.maps.has(this._scene.id)) {
+      const preview = new MapPreview()
+      preview.accentColor = this._scene.previewColor ?? '#3a3a40'
+      preview.set_size_request(desiredWidth, desiredHeight)
+      this._preview_slot.set_child(preview)
+      this._preview = preview
+      void preview.setFromResource(this._projectResource, this._scene.id)
+      return
+    }
+
+    // Sample-data path: fall back to the existing MiniMap.
     const map = new MiniMap({ tilePx })
     if (this._scene.rows.length) {
       map.setRows(this._scene.rows)

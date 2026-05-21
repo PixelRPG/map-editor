@@ -1,7 +1,9 @@
 import Adw from '@girs/adw-1'
+import type { GameProjectResource } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
+import { MapPreview } from './map-preview'
 import { SceneCard } from './scene-card'
 import { TeleportOverlay } from './teleport-overlay'
 
@@ -9,6 +11,7 @@ import Template from './atlas-canvas.blp'
 
 GObject.type_ensure(SceneCard.$gtype)
 GObject.type_ensure(TeleportOverlay.$gtype)
+GObject.type_ensure(MapPreview.$gtype)
 
 const SURFACE_PADDING = 180
 
@@ -37,6 +40,7 @@ export class AtlasCanvas extends Adw.Bin {
   private _teleportData: SampleTeleport[] = []
   private _cards: Map<string, SceneCard> = new Map()
   private _selectedId: string | null = null
+  private _projectResource: GameProjectResource | null = null
 
   static {
     GObject.registerClass(
@@ -62,10 +66,19 @@ export class AtlasCanvas extends Adw.Bin {
     )
   }
 
-  /** Populate the canvas from sample-world descriptors. */
-  setWorld(scenes: SampleScene[], teleports: SampleTeleport[]): void {
+  /**
+   * Populate the canvas from sample-world descriptors. Pass the loaded
+   * `GameProjectResource` to render real `MapPreview`s in each card
+   * instead of the synthetic mini-map placeholder.
+   */
+  setWorld(
+    scenes: SampleScene[],
+    teleports: SampleTeleport[],
+    projectResource: GameProjectResource | null = null,
+  ): void {
     this._scenes = scenes
     this._teleportData = teleports
+    this._projectResource = projectResource
     this._rebuildCards()
     this._teleports.setWorld(scenes, teleports, 1)
     this._sizeSurface()
@@ -93,6 +106,7 @@ export class AtlasCanvas extends Adw.Bin {
     for (const scene of this._scenes) {
       const card = new SceneCard()
       card.setScene(scene)
+      this._injectPreviewIfAvailable(card, scene)
       card.connect('clicked', () => {
         if (card.isDragging) return
         this.selectedId = scene.id
@@ -105,6 +119,26 @@ export class AtlasCanvas extends Adw.Bin {
       this._cards.set(scene.id, card)
       this._surface.put(card, scene.x, scene.y)
     }
+  }
+
+  /**
+   * For real projects (where the host passed us a `GameProjectResource`),
+   * swap the card's default mini-map placeholder for a `MapPreview`
+   * that paints the scene's actual tile data. Falls through to the
+   * default placeholder if the resource has no matching map.
+   */
+  private _injectPreviewIfAvailable(card: SceneCard, scene: SampleScene): void {
+    if (!this._projectResource) return
+    if (!this._projectResource.maps.has(scene.id)) return
+
+    const cols = scene.cols ?? 0
+    const previewRows = scene.previewRows ?? 0
+    if (!cols || !previewRows) return
+
+    const preview = new MapPreview()
+    preview.set_size_request(cols * scene.tilePx, previewRows * scene.tilePx)
+    card.setPreviewWidget(preview)
+    void preview.setFromResource(this._projectResource, scene.id)
   }
 
   private _wireDrag(sceneId: string, card: SceneCard): void {

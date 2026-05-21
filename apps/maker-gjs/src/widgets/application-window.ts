@@ -327,7 +327,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._loadedProject = project
       this._atlas_view.projectName = project.projectName
       this._scene_editor_view.projectName = project.projectName
-      this._atlas_view.setWorld(project.scenes, project.teleports)
+      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenesById = new Map(project.scenes.map((s) => [s.id, s]))
       // Force the engine to reload its project on the next scene-editor entry.
       this._engineProjectPath = null

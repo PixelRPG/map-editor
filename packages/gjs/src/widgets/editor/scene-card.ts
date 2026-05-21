@@ -1,3 +1,4 @@
+import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene } from '../../__demo__/world-sample'
@@ -24,6 +25,7 @@ GObject.type_ensure(MiniMap.$gtype)
  */
 export class SceneCard extends Gtk.Button {
   declare _map: MiniMap
+  declare _preview_slot: Adw.Bin
 
   private _sceneName = ''
   private _cols = 0
@@ -40,7 +42,7 @@ export class SceneCard extends Gtk.Button {
       {
         GTypeName: 'PixelRpgSceneCard',
         Template,
-        InternalChildren: ['map'],
+        InternalChildren: ['map', 'preview_slot'],
         Properties: {
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
@@ -158,6 +160,17 @@ export class SceneCard extends Gtk.Button {
     this.notify('size-text')
     this.notify('events-text')
     this.notify('has-events')
+  }
+
+  /**
+   * Swap the default `MiniMap` preview out for a host-provided widget
+   * — typically a `MapPreview` rendering the scene's actual tiles for
+   * real projects loaded from disk. Passing `null` reverts to the
+   * built-in `MiniMap` (sample-data path).
+   */
+  setPreviewWidget(widget: Gtk.Widget | null): void {
+    if (!this._preview_slot) return
+    this._preview_slot.set_child(widget ?? this._map)
   }
 
   get sceneName(): string {

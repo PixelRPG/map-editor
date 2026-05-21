@@ -1,5 +1,5 @@
 import Gdk from '@girs/gdk-4.0'
-import { GameProjectResource } from '@pixelrpg/engine'
+import { GameProjectResource, type MapData } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
@@ -77,9 +77,13 @@ export class MapPreview extends Gtk.Widget {
   }
 
   /**
-   * Load a project + its first map. Resolves once the preview is ready
-   * to paint, even if loading failed (in which case the widget renders
-   * the accent placeholder).
+   * Load a project + its first map from disk. Resolves once the
+   * preview is ready to paint, even if loading failed (in which case
+   * the widget renders the accent placeholder).
+   *
+   * Used by the welcome view, where each template card owns its own
+   * fetch. Atlas/inspector previews reuse the already-loaded resource
+   * via {@link setFromResource}.
    */
   async loadProject(projectPath: string): Promise<void> {
     try {
@@ -93,37 +97,64 @@ export class MapPreview extends Gtk.Widget {
         this._loaded = true
         return
       }
-
-      const ranges = await this._collectSheets(resource, firstMap.spriteSets ?? [])
-      this._mapWidth = firstMap.columns * firstMap.tileWidth
-      this._mapHeight = firstMap.rows * firstMap.tileHeight
-
-      const ops: DrawOp[] = []
-      for (const layer of firstMap.layers ?? []) {
-        if (layer.type !== 'tile' || !layer.visible || !layer.sprites) continue
-        for (const tile of layer.sprites) {
-          const ranges_resolved = this._resolveSpriteByLocalId(ranges, tile.spriteSetId, tile.spriteId)
-          if (!ranges_resolved) continue
-          ops.push({
-            texture: ranges_resolved.texture,
-            sx: ranges_resolved.x,
-            sy: ranges_resolved.y,
-            sw: ranges_resolved.width,
-            sh: ranges_resolved.height,
-            tx: tile.x * firstMap.tileWidth,
-            ty: tile.y * firstMap.tileHeight,
-            tw: firstMap.tileWidth,
-            th: firstMap.tileHeight,
-          })
-        }
-      }
-      this._ops = ops
-      this._loaded = true
-      this.queue_draw()
+      await this._populateFromMap(firstMap, await this._collectSheets(resource, firstMap.spriteSets ?? []))
     } catch (error) {
       console.warn('[MapPreview] Failed to render preview:', error)
       this._loaded = true
     }
+  }
+
+  /**
+   * Render the preview from an **already-loaded** project resource.
+   * Avoids a second filesystem trip when the host (atlas view, scene
+   * inspector) has already parsed the project file.
+   *
+   * Pass a specific `mapId` to render a non-default map; otherwise
+   * the project's first map is used.
+   */
+  async setFromResource(resource: GameProjectResource, mapId?: string): Promise<void> {
+    try {
+      const mapData = mapId
+        ? resource.maps.get(mapId)?.mapData
+        : Array.from(resource.maps.values())[0]?.mapData
+      if (!mapData) {
+        this._loaded = true
+        this.queue_draw()
+        return
+      }
+      await this._populateFromMap(mapData, await this._collectSheets(resource, mapData.spriteSets ?? []))
+    } catch (error) {
+      console.warn('[MapPreview] Failed to render preview:', error)
+      this._loaded = true
+    }
+  }
+
+  private async _populateFromMap(mapData: MapData, ranges: SheetRange[]): Promise<void> {
+    this._mapWidth = mapData.columns * mapData.tileWidth
+    this._mapHeight = mapData.rows * mapData.tileHeight
+
+    const ops: DrawOp[] = []
+    for (const layer of mapData.layers ?? []) {
+      if (layer.type !== 'tile' || !layer.visible || !layer.sprites) continue
+      for (const tile of layer.sprites) {
+        const resolved = this._resolveSpriteByLocalId(ranges, tile.spriteSetId, tile.spriteId)
+        if (!resolved) continue
+        ops.push({
+          texture: resolved.texture,
+          sx: resolved.x,
+          sy: resolved.y,
+          sw: resolved.width,
+          sh: resolved.height,
+          tx: tile.x * mapData.tileWidth,
+          ty: tile.y * mapData.tileHeight,
+          tw: mapData.tileWidth,
+          th: mapData.tileHeight,
+        })
+      }
+    }
+    this._ops = ops
+    this._loaded = true
+    this.queue_draw()
   }
 
   vfunc_snapshot(snapshot: Gtk.Snapshot): void {
