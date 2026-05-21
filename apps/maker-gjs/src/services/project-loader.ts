@@ -19,17 +19,15 @@ export interface LoadedProject {
   projectName: string
   /** Atlas scene cards derived from the project's map list. */
   scenes: SampleScene[]
-  /** Teleports between scenes (empty until project format gains them). */
+  /** Teleports between scenes, sourced from the project's `teleports[]` array. */
   teleports: SampleTeleport[]
   /** Underlying engine resource — reuse for sprite-set / map lookups. */
   resource: GameProjectResource
 }
 
 /**
- * Auto-layout helper: place each map on a 3×N grid in atlas space using
- * a per-map gap derived from the largest preview dimensions. Until we
- * have persisted atlas coordinates in `editorData`, this gives a
- * reasonable default.
+ * Auto-layout helper: place each map on a 3×N grid in atlas space.
+ * Used when a map has no `editorData.atlasX/atlasY` persisted yet.
  */
 function laidOutPosition(index: number): { x: number; y: number } {
   const col = index % 3
@@ -49,16 +47,15 @@ function placeholderColor(id: string): string {
 
 /**
  * Load a `game-project.json` and convert every referenced map into an
- * atlas {@link SampleScene}. Teleports are empty until the project
- * format gains explicit teleport metadata.
+ * atlas {@link SampleScene}, plus the project-level `teleports[]`
+ * into {@link SampleTeleport}s for the atlas overlay.
  *
- * Card previews are intentionally solid colours: the real tile-rendered
- * thumbnails require sprite-set decoding which is heavy enough that it
- * should live behind a tileset preview cache (future).
+ * Atlas positions come from `mapData.editorData.atlasX/atlasY` when
+ * the project has them; otherwise the loader falls back to a 3-column
+ * auto-layout (`laidOutPosition`).
  *
- * The returned {@link LoadedProject.resource} is the loaded
- * `GameProjectResource`; downstream code can pull sprite sets, layers,
- * and map metadata from it without re-parsing files.
+ * Tile previews on the atlas cards reuse the loaded
+ * `GameProjectResource` — no separate filesystem pass.
  */
 export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedProject> {
   const resource = new GameProjectResource(projectPath, {
@@ -77,7 +74,13 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
     const cols = data.columns
     const rows = data.rows
     const tilePx = Math.max(2, Math.min(8, Math.floor(180 / Math.max(cols, 1))))
-    const pos = laidOutPosition(index)
+    // Respect persisted atlas coordinates when available — falls back
+    // to a stable auto-layout otherwise. `editorData` is loose-typed,
+    // so guard the lookup.
+    const editor = (data.editorData ?? {}) as { atlasX?: unknown; atlasY?: unknown }
+    const fallback = laidOutPosition(index)
+    const x = typeof editor.atlasX === 'number' ? editor.atlasX : fallback.x
+    const y = typeof editor.atlasY === 'number' ? editor.atlasY : fallback.y
     scenes.push({
       id: data.id,
       name: data.name ?? data.id,
@@ -85,12 +88,27 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
       cols,
       previewRows: rows,
       previewColor: placeholderColor(data.id),
-      x: pos.x,
-      y: pos.y,
+      x,
+      y,
       tilePx,
       events: data.layers?.filter((l) => l.type === 'object').length ?? 0,
     })
   })
 
-  return { projectPath, projectName, scenes, teleports: [], resource }
+  const teleports: SampleTeleport[] = (resource.data?.teleports ?? []).flatMap((t) => {
+    if (!t?.from?.mapId || !t?.to?.mapId) return []
+    return [
+      {
+        from: t.from.mapId,
+        fx: t.from.x,
+        fy: t.from.y,
+        to: t.to.mapId,
+        tx: t.to.x,
+        ty: t.to.y,
+        label: t.label ?? '',
+      },
+    ]
+  })
+
+  return { projectPath, projectName, scenes, teleports, resource }
 }

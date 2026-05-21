@@ -1,6 +1,6 @@
 {
-  "id": "overworld-scene",
-  "name": "Open Field",
+  "id": "cozy-town",
+  "name": "Cozy Town Square",
   "version": "1.0.0",
   "tileWidth": 16,
   "tileHeight": 16,
@@ -8,8 +8,8 @@
   "rows": 16,
   "spriteSets": [
     {
-      "id": "shared-minimalist",
-      "path": "../../_shared-minimalist/tileset.json",
+      "id": "minimalist",
+      "path": "../spritesets/minimalist.json",
       "type": "spriteset",
       "firstGid": 1
     }
@@ -25,2305 +25,2305 @@
           "x": 0,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 0,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 1,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 2,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 3,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 13,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 3,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 13,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 3,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 13,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 3,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 13,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 3,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 13,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 3,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 13,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 3,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 4,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 4,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 4,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 4,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 4,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 4,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 4,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 5,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 5,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 5,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 5,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 5,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 5,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 5,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 6,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 6,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 6,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 6,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 6,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 6,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 12,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 6,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 6,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 7,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 7,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 7,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 7,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 7,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 7,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 7,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 7,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 7,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 8,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 8,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 8,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 8,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 8,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 8,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 8,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 9,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 9,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 9,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 9,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 9,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 9,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 9,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 10,
-          "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 10,
-          "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 10,
-          "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 10,
-          "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 10,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 10,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 10,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 10,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 10,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 11,
-          "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 2,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 3,
+          "y": 11,
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 4,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 5,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 6,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 7,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 8,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 9,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 10,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 11,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 12,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 13,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 14,
+          "y": 11,
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 15,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 16,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 17,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 18,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 19,
+          "y": 11,
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 20,
+          "y": 11,
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 21,
+          "y": 11,
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 22,
+          "y": 11,
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 23,
+          "y": 11,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 0,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 1,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 2,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 3,
+          "y": 12,
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 4,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 5,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 6,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 7,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 8,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 9,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 10,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 11,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 12,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 13,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 14,
+          "y": 12,
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 15,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 16,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 17,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 18,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 19,
+          "y": 12,
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 20,
+          "y": 12,
           "spriteId": 5,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
-          "x": 2,
-          "y": 11,
+          "x": 21,
+          "y": 12,
           "spriteId": 5,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 3,
-          "y": 11,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 4,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 5,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 6,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 7,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 8,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 9,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 10,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 11,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 12,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 13,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 14,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 15,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 16,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 17,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 18,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 19,
-          "y": 11,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 20,
-          "y": 11,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 21,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 23,
-          "y": 11,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 0,
           "y": 12,
           "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 23,
+          "y": 12,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 0,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
-          "y": 12,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 2,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 3,
+          "y": 13,
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 4,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 5,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 6,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 7,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 8,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 9,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 10,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 11,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 12,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 13,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 14,
+          "y": 13,
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 15,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 16,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 17,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 18,
+          "y": 13,
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
+        },
+        {
+          "x": 19,
+          "y": 13,
           "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
-          "x": 2,
-          "y": 12,
+          "x": 20,
+          "y": 13,
           "spriteId": 4,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 3,
-          "y": 12,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 4,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 5,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 6,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 7,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 8,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 9,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 10,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 11,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 12,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 13,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 14,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 15,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 16,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 17,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 18,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 19,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 20,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 21,
-          "y": 12,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 22,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 23,
-          "y": 12,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 0,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 1,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 2,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 3,
-          "y": 13,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 4,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 5,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 6,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 7,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 8,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 9,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 10,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 11,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 12,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 13,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 14,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 15,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 16,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 17,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 18,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 19,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 20,
-          "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 13,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 13,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 4,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 13,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 14,
           "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 14,
-          "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 8,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 14,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 14,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 0,
           "y": 15,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 1,
           "y": 15,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 2,
           "y": 15,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 3,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 4,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 7,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 8,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 9,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 10,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 11,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 12,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 13,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 14,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 15,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 17,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 18,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 19,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 20,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 21,
           "y": 15,
-          "spriteId": 8,
-          "spriteSetId": "shared-minimalist"
+          "spriteId": 0,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 22,
           "y": 15,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 23,
           "y": 15,
           "spriteId": 0,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         }
       ]
     },
@@ -2334,84 +2334,52 @@
       "visible": true,
       "sprites": [
         {
-          "x": 2,
-          "y": 1,
-          "spriteId": 1,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 10,
-          "y": 1,
-          "spriteId": 3,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 17,
-          "y": 1,
-          "spriteId": 1,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
           "x": 5,
-          "y": 2,
-          "spriteId": 2,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 17,
-          "y": 2,
-          "spriteId": 3,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 3,
-          "y": 3,
+          "y": 1,
           "spriteId": 1,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 16,
-          "y": 3,
+          "y": 1,
           "spriteId": 1,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
-          "x": 1,
-          "y": 8,
-          "spriteId": 2,
-          "spriteSetId": "shared-minimalist"
+          "x": 8,
+          "y": 6,
+          "spriteId": 11,
+          "spriteSetId": "minimalist"
         },
         {
           "x": 6,
-          "y": 10,
-          "spriteId": 3,
-          "spriteSetId": "shared-minimalist"
-        },
-        {
-          "x": 12,
-          "y": 10,
+          "y": 9,
           "spriteId": 2,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
-          "x": 2,
-          "y": 13,
+          "x": 16,
+          "y": 9,
           "spriteId": 3,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         },
         {
           "x": 5,
-          "y": 13,
-          "spriteId": 1,
-          "spriteSetId": "shared-minimalist"
+          "y": 12,
+          "spriteId": 3,
+          "spriteSetId": "minimalist"
         },
         {
-          "x": 18,
-          "y": 13,
+          "x": 16,
+          "y": 14,
           "spriteId": 3,
-          "spriteSetId": "shared-minimalist"
+          "spriteSetId": "minimalist"
         }
       ]
     }
-  ]
+  ],
+  "editorData": {
+    "atlasX": 30,
+    "atlasY": 320
+  }
 }

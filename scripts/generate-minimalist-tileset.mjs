@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 /**
- * Generates `games/_shared-minimalist/tileset.png` + `tileset.json`.
+ * Generates the minimalist-starter template's tileset:
+ *   `games/minimalist-starter/spritesets/minimalist.{png,json}`
  *
- * Run manually (once) when the minimalist tileset spec changes:
+ * Run manually (once) when the tile spec changes:
  *
  *     node scripts/generate-minimalist-tileset.mjs
  *
@@ -12,11 +13,10 @@
  * `GameProjectResource`. Pure-Node — uses only built-in `zlib` + `fs`
  * so no extra workspace dependency.
  *
- * The tile vocabulary is intentionally small (16 entries — grass,
- * tree, water, …) and the look is procedural blocky-pixel art so the
- * `overworld-starter`, `dungeon-starter`, and `cozy-town-starter`
- * templates can compose recognisable scenes without bespoke art per
- * template.
+ * The minimalist-starter template uses this tileset across all of its
+ * scenes (overworld / dungeon / cozy town) — the goal is one
+ * recognisable starter that demos multi-map + teleport editing
+ * without commissioning per-scene art.
  */
 
 import { deflateSync } from 'node:zlib'
@@ -25,7 +25,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const OUTPUT_DIR = resolve(__dirname, '..', 'games', '_shared-minimalist')
+const OUTPUT_DIR = resolve(__dirname, '..', 'games', 'minimalist-starter', 'spritesets')
 const TILE_SIZE = 16
 const COLUMNS = 4
 const ROWS = 4
@@ -235,7 +235,7 @@ const idat = deflateSync(filtered)
 const png = Buffer.concat([signature, chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))])
 
 mkdirSync(OUTPUT_DIR, { recursive: true })
-writeFileSync(resolve(OUTPUT_DIR, 'tileset.png'), png)
+writeFileSync(resolve(OUTPUT_DIR, 'minimalist.png'), png)
 
 // ---- Sprite-set JSON ---------------------------------------------------------
 // Schema mirrors `games/zelda-like/spritesets/lokiri-forest.json` (the
@@ -243,11 +243,11 @@ writeFileSync(resolve(OUTPUT_DIR, 'tileset.png'), png)
 // Image must declare its own id + type; sprites carry col/row.
 const spriteSet = {
   version: '1.0.0',
-  id: 'shared-minimalist',
+  id: 'minimalist',
   name: 'Minimalist starter tileset',
   image: {
     id: 'main',
-    path: 'tileset.png',
+    path: 'minimalist.png',
     type: 'image',
   },
   spriteWidth: TILE_SIZE,
@@ -264,9 +264,9 @@ const spriteSet = {
   })),
 }
 
-writeFileSync(resolve(OUTPUT_DIR, 'tileset.json'), `${JSON.stringify(spriteSet, null, 2)}\n`)
+writeFileSync(resolve(OUTPUT_DIR, 'minimalist.json'), `${JSON.stringify(spriteSet, null, 2)}\n`)
 
 // Print a short summary so the runner can sanity-check.
 console.log(`Wrote ${SHEET_W}×${SHEET_H}px tileset (${TILE_COUNT} tiles) to`)
-console.log(`  ${resolve(OUTPUT_DIR, 'tileset.png')}`)
-console.log(`  ${resolve(OUTPUT_DIR, 'tileset.json')}`)
+console.log(`  ${resolve(OUTPUT_DIR, 'minimalist.png')}`)
+console.log(`  ${resolve(OUTPUT_DIR, 'minimalist.json')}`)

@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
-  "id": "shared-minimalist",
+  "id": "minimalist",
   "name": "Minimalist starter tileset",
   "image": {
     "id": "main",
-    "path": "tileset.png",
+    "path": "minimalist.png",
     "type": "image"
   },
   "spriteWidth": 16,

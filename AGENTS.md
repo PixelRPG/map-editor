@@ -20,6 +20,8 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 [File format] In `@pixelrpg/engine`'s `format/` modules. **Pre-release; breaking changes explicitly allowed.** No users yet, no migration shims. When a schema change lands, update every consumer in the workspace in the same PR — every `games/*` template, the maker, the game-browser seed, the engine tests.
 
+[Deferred work] `TODO.md` at the workspace root is the single source of truth for everything intentionally not built yet. Keep it pruned — terse one-line entries grouped by surface, no "done" section (use `git log` for that). Append new entries whenever you punt something during a session; remove the entry in the same commit that resolves it. PRs whose work creates or resolves a TODO MUST update `TODO.md` in the same commit.
+
 ## General (all code)
 
 [TS] |explicit types on public APIs |no `any` → use `unknown`+type guards (enforced by Biome `noExplicitAny: error`) |JSDoc public APIs |`is`-style guards for runtime checks |generics for inference |nullability via `?.`/`??`
