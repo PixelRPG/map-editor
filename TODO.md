@@ -29,7 +29,6 @@ Conventions:
 
 ## Welcome / project lifecycle
 
-- **Recent Projects list** — `Adw.ActionRow` placeholder ("No recent projects"). Needs a persistence layer (`GSettings` "org.pixelrpg.maker.recents" or `XDG_DATA_HOME/pixelrpg/recent-projects.json`) + welcome-view binding. *owner: maker*
 - **Template thumbnail caching** — every welcome show currently reloads each template's project + sprite-sets to render previews. Cache rendered previews in a `WeakMap<projectPath, Gdk.Texture>` once the first paint lands. *owner: maker / gjs*
 
 ## Cleanup / debt

@@ -7,6 +7,7 @@ import { MapFormat } from '@pixelrpg/engine'
 import { Engine, SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
+import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
@@ -72,6 +73,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._welcome_view, 'template-selected', (_v: WelcomeView, templateId: string) => {
       this._onTemplateSelected(templateId)
     })
+    this.signals.connect(this._welcome_view, 'recent-selected', (_v: WelcomeView, path: string) => {
+      void this._loadProjectFromPath(path)
+    })
+
+    // Render the user's persisted recent-projects list on every map.
+    // Cheap enough (synchronous JSON read) that we don't bother caching.
+    this._welcome_view.setRecentProjects(loadRecentProjects())
 
     this.signals.connect(this._atlas_view, 'scene-opened', (_v: AtlasView, id: string) => {
       this._showSceneEditor(id)
@@ -402,6 +410,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // Force the engine to reload its project on the next scene-editor entry.
       this._engineProjectPath = null
       this._engineMapId = null
+      // Record success in the recent-projects store + refresh the
+      // welcome list so backing out of the project shows the project we
+      // just opened at the top.
+      const caption = (project.resource.data?.properties?.description as string | undefined) ?? ''
+      recordRecentProject({ path: projectPath, name: project.projectName, caption })
+      this._welcome_view.setRecentProjects(loadRecentProjects())
       this._showAtlas()
     } catch (error) {
       console.error('[ApplicationWindow] Failed to load project:', error)

@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { MapPreview, ProjectHeroIcon, SignalScope } from '@pixelrpg/gjs'
+import type { RecentProject } from '../services/recent-projects.ts'
 import { STARTER_TEMPLATES } from '../services/templates.ts'
 
 import Template from './welcome-view.blp'
@@ -31,6 +32,10 @@ export class WelcomeView extends Adw.Bin {
   declare _browse_button: Gtk.Button
   declare _tour_button: Gtk.Button
   declare _templates_grid: Gtk.Grid
+  declare _recents_list: Gtk.ListBox
+  declare _empty_recents_row: Adw.ActionRow
+
+  private _recentRows: Gtk.Widget[] = []
 
   private signals = new SignalScope()
 
@@ -46,6 +51,8 @@ export class WelcomeView extends Adw.Bin {
           'browse_button',
           'tour_button',
           'templates_grid',
+          'recents_list',
+          'empty_recents_row',
         ],
         Signals: {
           'create-project': {},
@@ -53,6 +60,7 @@ export class WelcomeView extends Adw.Bin {
           'browse-projects': {},
           'take-tour': {},
           'template-selected': { param_types: [GObject.TYPE_STRING] },
+          'recent-selected': { param_types: [GObject.TYPE_STRING] },
         },
       },
       WelcomeView,
@@ -75,6 +83,35 @@ export class WelcomeView extends Adw.Bin {
   vfunc_unmap(): void {
     this.signals.disconnectAll()
     super.vfunc_unmap()
+  }
+
+  /**
+   * Populate the recent-projects list. Passing an empty array (or
+   * never calling this) keeps the built-in "No recent projects"
+   * placeholder visible.
+   */
+  setRecentProjects(recents: RecentProject[]): void {
+    for (const row of this._recentRows) this._recents_list.remove(row)
+    this._recentRows = []
+
+    if (!recents.length) {
+      this._empty_recents_row.set_visible(true)
+      return
+    }
+    this._empty_recents_row.set_visible(false)
+
+    for (const recent of recents) {
+      const row = new Adw.ActionRow({
+        title: recent.name,
+        subtitle: recent.caption || recent.path,
+        activatable: true,
+      })
+      row.add_prefix(new Gtk.Image({ icon_name: 'folder-symbolic', pixel_size: 22 }))
+      row.add_suffix(new Gtk.Image({ icon_name: 'go-next-symbolic', pixel_size: 12 }))
+      row.connect('activated', () => this.emit('recent-selected', recent.path))
+      this._recents_list.append(row)
+      this._recentRows.push(row)
+    }
   }
 
   private _buildTemplateGrid(): void {
