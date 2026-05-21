@@ -1,0 +1,29 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgFloatingHistory : Adw.Bin {
+  halign: start;
+  valign: start;
+  margin-top: 12;
+  margin-start: 12;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 2;
+    styles ["toolbar", "osd"]
+
+    Gtk.Button undo_button {
+      icon-name: "edit-undo-symbolic";
+      action-name: "win.undo";
+      tooltip-text: _("Undo");
+      styles ["flat"]
+    }
+
+    Gtk.Button redo_button {
+      icon-name: "edit-redo-symbolic";
+      action-name: "win.redo";
+      tooltip-text: _("Redo");
+      styles ["flat"]
+    }
+  }
+}

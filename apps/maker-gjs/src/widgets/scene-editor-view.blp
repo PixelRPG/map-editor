@@ -71,22 +71,6 @@ template $SceneEditorView : Adw.Bin {
         }
 
         [end]
-        Gtk.Button redo_button {
-          action-name: "win.redo";
-          icon-name: "edit-redo-symbolic";
-          tooltip-text: _("Redo");
-          styles ["flat"]
-        }
-
-        [end]
-        Gtk.Button undo_button {
-          action-name: "win.undo";
-          icon-name: "edit-undo-symbolic";
-          tooltip-text: _("Undo");
-          styles ["flat"]
-        }
-
-        [end]
         Gtk.MenuButton menu_button {
           icon-name: "open-menu-symbolic";
           menu-model: scene_editor_menu;

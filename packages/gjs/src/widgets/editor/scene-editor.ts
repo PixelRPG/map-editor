@@ -2,12 +2,14 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { ContextChip } from './context-chip'
+import { FloatingHistory } from './floating-history'
 import { FloatingToolRail } from './floating-tool-rail'
 import { FloatingZoom } from './floating-zoom'
 
 import Template from './scene-editor.blp'
 
 GObject.type_ensure(FloatingToolRail.$gtype)
+GObject.type_ensure(FloatingHistory.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
 GObject.type_ensure(ContextChip.$gtype)
 
@@ -26,6 +28,7 @@ export class SceneEditor extends Adw.Bin {
   declare _overlay: Gtk.Overlay
   declare _engine_holder: Gtk.Box
   declare _tool_rail: FloatingToolRail
+  declare _history_osd: FloatingHistory
   declare _zoom_osd: FloatingZoom
   declare _context_chip: ContextChip
 
@@ -36,7 +39,14 @@ export class SceneEditor extends Adw.Bin {
       {
         GTypeName: 'PixelRpgSceneEditor',
         Template,
-        InternalChildren: ['overlay', 'engine_holder', 'tool_rail', 'zoom_osd', 'context_chip'],
+        InternalChildren: [
+          'overlay',
+          'engine_holder',
+          'tool_rail',
+          'history_osd',
+          'zoom_osd',
+          'context_chip',
+        ],
       },
       SceneEditor,
     )
@@ -64,6 +74,10 @@ export class SceneEditor extends Adw.Bin {
 
   get contextChip(): ContextChip {
     return this._context_chip
+  }
+
+  get historyOsd(): FloatingHistory {
+    return this._history_osd
   }
 }
 
