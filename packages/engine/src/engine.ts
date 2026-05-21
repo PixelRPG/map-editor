@@ -51,7 +51,10 @@ export class Engine {
       // which are not available here.
       displayMode: DisplayMode.FitContainerAndFill,
       pixelArt: true,
-      backgroundColor: this.resolveBackgroundColor(),
+      // Fully transparent background so the editor's diagonal-stripe
+      // scratchpad backdrop (and any future themed fill) shows through
+      // wherever the map doesn't cover the canvas.
+      backgroundColor: Color.Transparent,
       enableCanvasTransparency: true,
       enableCanvasContextMenu: true,
     })
@@ -162,18 +165,4 @@ export class Engine {
     this.events.emit(EngineEvent.STATUS_CHANGED, { status })
   }
 
-  private resolveBackgroundColor(): Color {
-    try {
-      if (
-        typeof globalThis !== 'undefined' &&
-        typeof globalThis.matchMedia === 'function' &&
-        globalThis.matchMedia('(prefers-color-scheme: dark)').matches
-      ) {
-        return Color.Black
-      }
-    } catch {
-      // matchMedia unavailable — fall through to default
-    }
-    return Color.White
-  }
 }
