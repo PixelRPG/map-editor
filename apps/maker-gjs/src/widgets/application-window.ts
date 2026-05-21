@@ -5,16 +5,12 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { Engine, SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
-import { PREFIX } from '../constants.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
+import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
-
-// PREFIX points at apps/maker-gjs/. The demo project lives at the
-// workspace root's `games/zelda-like/` directory.
-const DEMO_PROJECT_PATH = `${PREFIX}/../../games/zelda-like/game-project.json`
 
 type ViewName = 'welcome' | 'atlas' | 'scene-editor'
 
@@ -137,12 +133,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     closeProjectAction.connect('activate', () => this._setView('welcome'))
     winActions.add_action(closeProjectAction)
 
-    // Convenience action — wires the same path used by the welcome
-    // view's CTAs so tooling / scripts can drive the demo flow without
-    // synthesizing button clicks.
-    const loadDemoAction = new Gio.SimpleAction({ name: 'load-demo-project' })
-    loadDemoAction.connect('activate', () => void this._loadDemoProject())
-    winActions.add_action(loadDemoAction)
+    // Convenience action — drives the file picker so tooling / scripts
+    // can exercise the same path as the welcome view's "Open Project".
+    const openProjectAction = new Gio.SimpleAction({ name: 'open-project' })
+    openProjectAction.connect('activate', () => this._onOpenProject())
+    winActions.add_action(openProjectAction)
 
     const openSceneByIdAction = Gio.SimpleAction.new('open-scene-by-id', GLib.VariantType.new('s'))
     openSceneByIdAction.connect('activate', (_a, parameter) => {
@@ -276,55 +271,59 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
   }
 
-  private _onTemplateSelected(_templateId: string): void {
-    // Templates aren't backed by real scaffolding yet — for now they
-    // route to the demo project so the editor surfaces something.
-    void this._loadDemoProject()
+  private _onTemplateSelected(templateId: string): void {
+    const template = findTemplateById(templateId)
+    if (!template) {
+      this._showToast(_('Template not found'))
+      return
+    }
+    void this._loadProjectFromPath(template.projectPath)
   }
 
+  /** "New Project" → open the blank starter template. The user can
+   * customise + save-as from there. */
   private _onCreateProject(): void {
-    const dialog = new Adw.MessageDialog({
-      heading: _('Create New Project'),
-      body: _('Enter a name for your new project:'),
-      transient_for: this,
-      modal: true,
-    })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('create', _('Create'))
-    dialog.set_response_appearance('create', Adw.ResponseAppearance.SUGGESTED)
+    const blank = findBlankTemplate()
+    if (!blank) {
+      this._showToast(_('No blank template available'))
+      return
+    }
+    void this._loadProjectFromPath(blank.projectPath)
+  }
 
-    const entry = new Gtk.Entry({
-      placeholder_text: _('Project name'),
-      margin_top: 12,
-      margin_bottom: 12,
-      margin_start: 12,
-      margin_end: 12,
-    })
-    dialog.set_extra_child(entry)
-    dialog.connect('response', (d, response) => {
-      if (response === 'create') {
-        const projectName = entry.get_text()
-        if (projectName) {
-          this._atlas_view.projectName = projectName
-          this._scene_editor_view.projectName = projectName
-          this._showAtlas()
-        } else {
-          this._showToast(_('Please enter a project name'))
+  /** "Open Project" → real file picker (Gtk.FileDialog). Filter to
+   * `game-project.json`-style files; any project file in the workspace
+   * (including the starter templates) works. */
+  private _onOpenProject(): void {
+    const dialog = new Gtk.FileDialog({ title: _('Open Project'), modal: true })
+
+    const filter = new Gtk.FileFilter()
+    filter.set_name(_('PixelRPG Project (game-project.json)'))
+    filter.add_pattern('game-project.json')
+    filter.add_pattern('*.json')
+    const filters = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype })
+    filters.append(filter)
+    dialog.set_filters(filters)
+    dialog.set_default_filter(filter)
+
+    dialog.open(this, null, (_d, result) => {
+      try {
+        const file = dialog.open_finish(result)
+        const path = file?.get_path()
+        if (path) void this._loadProjectFromPath(path)
+      } catch (error) {
+        // User cancelled or dialog failed — ignore.
+        if (error instanceof Error && !error.message.includes('Dismissed')) {
+          console.warn('[ApplicationWindow] Open dialog failed:', error)
         }
       }
-      d.destroy()
     })
-    dialog.present()
   }
 
-  private _onOpenProject(): void {
-    void this._loadDemoProject()
-  }
-
-  private async _loadDemoProject(): Promise<void> {
+  private async _loadProjectFromPath(projectPath: string): Promise<void> {
     this._showToast(_('Loading project…'))
     try {
-      const project = await loadProjectAsAtlas(DEMO_PROJECT_PATH)
+      const project = await loadProjectAsAtlas(projectPath)
       this._loadedProject = project
       this._atlas_view.projectName = project.projectName
       this._scene_editor_view.projectName = project.projectName
