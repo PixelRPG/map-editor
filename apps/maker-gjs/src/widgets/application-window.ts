@@ -226,7 +226,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     try {
       await this._ensureEngineForMap(project.projectPath, sceneId)
     } catch (error) {
-      console.error('[ApplicationWindow] Failed to bring up engine:', error)
+      const details =
+        error instanceof Error
+          ? `${error.name}: ${error.message}\n${error.stack ?? ''}`
+          : `${typeof error} ${JSON.stringify(error)}`
+      console.error('[ApplicationWindow] Failed to bring up engine:', details)
       this._showToast(_('Failed to load map'))
     }
   }
