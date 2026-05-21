@@ -171,6 +171,15 @@ export class Engine extends Adw.Bin {
     const widget = useFallback ? new Canvas2DBridge() : new WebGLBridge()
     widget.set_hexpand(true)
     widget.set_vexpand(true)
+    // The WebGL bridge is a `Gtk.GLArea`, which defaults to an opaque
+    // framebuffer. Excalibur clears with `Color.Transparent`, but
+    // without `has-alpha` the alpha channel is dropped by GLArea
+    // before composition — the GTK widgets behind the canvas (the
+    // editor scratchpad backdrop) stay invisible. Opting into alpha
+    // here lets the canvas composite against the GTK background.
+    if (typeof (widget as { set_has_alpha?: (v: boolean) => void }).set_has_alpha === 'function') {
+      (widget as unknown as { set_has_alpha: (v: boolean) => void }).set_has_alpha(true)
+    }
     widget.installGlobals()
     this._canvasContainer.append(widget)
     this._widget = widget
