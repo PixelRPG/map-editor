@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 
@@ -18,6 +19,7 @@ export class ContextChip extends Adw.Bin {
   declare _layer_button: Gtk.MenuButton
   declare _tile_name: Gtk.Label
   declare _layer_name: Gtk.Label
+  declare _tile_swatch: Gtk.Image
 
   private _tileName = ''
   private _layerName = ''
@@ -27,7 +29,7 @@ export class ContextChip extends Adw.Bin {
       {
         GTypeName: 'PixelRpgContextChip',
         Template,
-        InternalChildren: ['tile_button', 'layer_button', 'tile_name', 'layer_name'],
+        InternalChildren: ['tile_button', 'layer_button', 'tile_name', 'layer_name', 'tile_swatch'],
         Properties: {
           'tile-name': GObject.ParamSpec.string(
             'tile-name',
@@ -71,6 +73,19 @@ export class ContextChip extends Adw.Bin {
 
   setTilePopover(popover: Gtk.Popover): void {
     this._tile_button.set_popover(popover)
+  }
+
+  /**
+   * Replace the active-tile swatch icon with a `Gdk.Paintable` rendering
+   * of the currently-selected tile. Falls back to the generic
+   * `view-grid-symbolic` icon when called with `null` (no tileset yet).
+   */
+  setTilePaintable(paintable: Gdk.Paintable | null): void {
+    if (paintable) {
+      this._tile_swatch.set_from_paintable(paintable)
+    } else {
+      this._tile_swatch.set_from_icon_name('view-grid-symbolic')
+    }
   }
 
   setLayerPopover(popover: Gtk.Popover): void {

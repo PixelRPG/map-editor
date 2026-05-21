@@ -234,12 +234,15 @@ export class SceneEditorView extends Adw.Bin {
    *
    * Always re-syncs both surfaces (inspector palette + context chip)
    * so the user can change selection from either entry point and see
-   * it reflected in the other.
+   * it reflected in the other. Also pushes the tile's paintable into
+   * the chip so the swatch is a live preview instead of a static icon.
    */
   private _setActiveTile(tileId: number, tileName?: string): void {
     if (this._activeTileId === tileId) return
     this._activeTileId = tileId
     this._editor.contextChip.tileName = tileName ?? `Tile ${tileId}`
+    const tile = this._tiles.find((t) => t.id === tileId)
+    this._editor.contextChip.setTilePaintable(tile?.paintable ?? null)
     const globalTileId = tileId + this._tilesetFirstGid
     this._engine?.setEditorState({ tileId: globalTileId })
     // Mirror selection back to the inspector palette in case the change
