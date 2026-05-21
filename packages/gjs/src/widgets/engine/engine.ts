@@ -177,9 +177,24 @@ export class Engine extends Adw.Bin {
     // before composition — the GTK widgets behind the canvas (the
     // editor scratchpad backdrop) stay invisible. Opting into alpha
     // here lets the canvas composite against the GTK background.
+    //
+    // `set_has_alpha` MUST happen before the area is realized; doing
+    // it right after construction (and before `append`) keeps the
+    // ordering safe.
     if (typeof (widget as { set_has_alpha?: (v: boolean) => void }).set_has_alpha === 'function') {
-      (widget as unknown as { set_has_alpha: (v: boolean) => void }).set_has_alpha(true)
+      ;(widget as unknown as { set_has_alpha: (v: boolean) => void }).set_has_alpha(true)
+    } else {
+      // Fallback for GIR bindings that expose the GObject property
+      // directly instead of the explicit setter.
+      try {
+        ;(widget as unknown as { has_alpha?: boolean }).has_alpha = true
+      } catch {
+        // Property may not be settable in this binding; ignore.
+      }
     }
+    // The Canvas2D fallback isn't a GLArea — paint over a transparent
+    // CSS background so it composites the same way.
+    widget.add_css_class('engine-canvas')
     widget.installGlobals()
     this._canvasContainer.append(widget)
     this._widget = widget

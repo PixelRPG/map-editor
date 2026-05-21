@@ -1,0 +1,9 @@
+/* The bridge widget (Gtk.GLArea or Gtk.DrawingArea) hosts the Excalibur
+   canvas. Make sure the widget itself paints no opaque background
+   behind the canvas — the engine clears the GL framebuffer to
+   `Color.Transparent`, and we want the host's scratchpad backdrop to
+   show through wherever the map doesn't cover the area. */
+.engine-canvas {
+  background-color: transparent;
+  background-image: none;
+}
