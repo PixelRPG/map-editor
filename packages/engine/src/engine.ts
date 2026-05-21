@@ -46,10 +46,12 @@ export class Engine {
       suppressMinimumBrowserFeatureDetection: true,
       suppressConsoleBootMessage: true,
       suppressPlayButton: true,
-      // `FitContainerAndFill` is what gjsify widgets expect (no "screen" in
-      // GJS). FillScreen tries to resize against window.innerWidth/Height,
-      // which are not available here.
-      displayMode: DisplayMode.FitContainerAndFill,
+      // `FillContainer` — the game resolution tracks the host widget's
+      // pixel size, so resizing the GTK widget reveals more (or less)
+      // of the world at the same tile pixel size, without distorting
+      // the rendered tiles. `FillScreen` would be wrong here — it
+      // reads `window.innerWidth/Height`, which don't exist in GJS.
+      displayMode: DisplayMode.FillContainer,
       pixelArt: true,
       // Fully transparent background so the editor's diagonal-stripe
       // scratchpad backdrop (and any future themed fill) shows through
