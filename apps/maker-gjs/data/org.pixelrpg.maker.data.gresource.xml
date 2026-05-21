@@ -2,7 +2,7 @@
 <gresources>
   <gresource prefix="/org/pixelrpg/maker">
     <file preprocess="xml-stripblanks">icons/scalable/actions/tileset-symbolic.svg</file>
-    <!-- <file preprocess="xml-stripblanks">icons/scalable/actions/layers-symbolic.svg</file> -->
     <file preprocess="xml-stripblanks">icons/scalable/actions/pencil-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">metainfo/org.pixelrpg.maker.metainfo.xml</file>
   </gresource>
 </gresources>

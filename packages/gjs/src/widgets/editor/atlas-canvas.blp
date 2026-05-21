@@ -1,0 +1,22 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgAtlasCanvas : Adw.Bin {
+  Gtk.ScrolledWindow scroller {
+    hexpand: true;
+    vexpand: true;
+    hscrollbar-policy: automatic;
+    vscrollbar-policy: automatic;
+
+    child: Gtk.Overlay overlay {
+      [overlay]
+      $PixelRpgTeleportOverlay teleports {}
+
+      child: Gtk.Fixed surface {
+        styles ["atlas-surface"]
+        hexpand: true;
+        vexpand: true;
+      };
+    };
+  }
+}

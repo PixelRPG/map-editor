@@ -1,0 +1,15 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgTilePalette : Adw.Bin {
+  Gtk.FlowBox flow {
+    homogeneous: true;
+    min-children-per-line: 5;
+    max-children-per-line: 5;
+    column-spacing: 6;
+    row-spacing: 6;
+    selection-mode: single;
+    activate-on-single-click: true;
+    styles ["tile-palette"]
+  }
+}

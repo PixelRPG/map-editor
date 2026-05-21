@@ -1,0 +1,7 @@
+.mode-rail {
+  background-color: @sidebar_bg_color;
+}
+
+.mode-rail-hero label.title-2 {
+  font-weight: 800;
+}

@@ -128,6 +128,39 @@ export class Engine extends Adw.Bin {
     return this._excalibur
   }
 
+  /** Current camera zoom, or `null` if the engine isn't running yet. */
+  public getCameraZoom(): number | null {
+    const camera = this._excalibur?.excalibur?.currentScene?.camera
+    return camera ? camera.zoom : null
+  }
+
+  /** Set the camera zoom (no-op if the engine isn't running yet). */
+  public setCameraZoom(zoom: number): void {
+    const camera = this._excalibur?.excalibur?.currentScene?.camera
+    if (camera) camera.zoom = zoom
+  }
+
+  /**
+   * Subscribe to camera-zoom changes. The callback fires after every
+   * engine update tick. Returns `true` if the subscription was
+   * registered, `false` if the engine wasn't running yet.
+   *
+   * Subscriptions are auto-tracked alongside the other engine
+   * subscriptions; no caller-side unsubscribe is needed within the
+   * engine's lifetime.
+   */
+  public onCameraZoomChanged(cb: (zoom: number) => void): boolean {
+    const excalibur = this._excalibur?.excalibur
+    if (!excalibur) return false
+    this._excaliburSubscriptions.push(
+      excalibur.on('postupdate', () => {
+        const zoom = excalibur.currentScene?.camera?.zoom
+        if (typeof zoom === 'number') cb(zoom)
+      }),
+    )
+    return true
+  }
+
   private _startWithWidget(useFallback: boolean): void {
     let child = this._canvasContainer.get_first_child()
     while (child) {

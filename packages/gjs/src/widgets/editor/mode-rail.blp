@@ -1,0 +1,185 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgModeRail : Adw.Bin {
+  styles ["mode-rail"]
+
+  Gtk.Box {
+    orientation: vertical;
+    hexpand: true;
+
+    Gtk.Box hero {
+      orientation: vertical;
+      halign: fill;
+      margin-top: 28;
+      margin-bottom: 18;
+      margin-start: 20;
+      margin-end: 20;
+      spacing: 6;
+      styles ["mode-rail-hero"]
+
+      $PixelRpgProjectHeroIcon hero_icon {
+        size: 64;
+        halign: center;
+      }
+
+      Gtk.Label project_name {
+        label: bind template.project-name;
+        halign: center;
+        styles ["title-2"]
+      }
+
+      Gtk.Label project_tagline {
+        label: bind template.project-tagline;
+        halign: center;
+        styles ["caption", "dim-label"]
+      }
+    }
+
+    Adw.PreferencesGroup mode_group {
+      margin-start: 12;
+      margin-end: 12;
+
+      Adw.ActionRow row_world {
+        title: _("World");
+        subtitle: _("Atlas of scenes");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'world'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "applications-games-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow row_cast {
+        title: _("Cast");
+        subtitle: _("Heroes and NPCs");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'cast'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "avatar-default-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow row_tiles {
+        title: _("Tiles");
+        subtitle: _("Tilesets and stamps");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'tiles'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "view-grid-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow row_audio {
+        title: _("Audio");
+        subtitle: _("Music and SFX");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'audio'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "audio-speakers-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow row_data {
+        title: _("Data");
+        subtitle: _("Project and save format");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'data'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "drive-harddisk-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+    }
+
+    Gtk.Box {
+      vexpand: true;
+    }
+
+    Gtk.Box footer {
+      orientation: vertical;
+      margin-start: 12;
+      margin-end: 12;
+      margin-top: 12;
+      margin-bottom: 16;
+      spacing: 4;
+
+      Gtk.Button {
+        label: _("Recent projects…");
+        action-name: "win.open-recent-projects";
+        styles ["flat"]
+        halign: fill;
+
+        child: Gtk.Label {
+          label: _("Recent projects…");
+          halign: start;
+          margin-start: 6;
+          margin-end: 6;
+        };
+      }
+
+      Gtk.Button {
+        label: _("Settings");
+        action-name: "app.preferences";
+        styles ["flat"]
+        halign: fill;
+
+        child: Gtk.Label {
+          label: _("Settings");
+          halign: start;
+          margin-start: 6;
+          margin-end: 6;
+        };
+      }
+    }
+  }
+}

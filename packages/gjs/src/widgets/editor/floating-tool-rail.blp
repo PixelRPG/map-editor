@@ -1,0 +1,81 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgFloatingToolRail : Adw.Bin {
+  halign: start;
+  valign: center;
+  margin-start: 12;
+
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 2;
+    styles ["toolbar", "osd"]
+
+    Gtk.ToggleButton btn_pencil {
+      icon-name: "document-edit-symbolic";
+      tooltip-text: _("Pencil");
+      action-name: "win.set-tool";
+      action-target: "'pencil'";
+    }
+
+    Gtk.ToggleButton btn_bucket {
+      icon-name: "format-justify-fill-symbolic";
+      tooltip-text: _("Bucket");
+      action-name: "win.set-tool";
+      action-target: "'bucket'";
+      group: btn_pencil;
+    }
+
+    Gtk.ToggleButton btn_rect {
+      icon-name: "view-paged-symbolic";
+      tooltip-text: _("Rectangle");
+      action-name: "win.set-tool";
+      action-target: "'rect'";
+      group: btn_pencil;
+    }
+
+    Gtk.ToggleButton btn_eraser {
+      icon-name: "edit-clear-all-symbolic";
+      tooltip-text: _("Eraser");
+      action-name: "win.set-tool";
+      action-target: "'eraser'";
+      group: btn_pencil;
+    }
+
+    Gtk.ToggleButton btn_eyedropper {
+      icon-name: "color-select-symbolic";
+      tooltip-text: _("Eyedropper");
+      action-name: "win.set-tool";
+      action-target: "'eyedropper'";
+      group: btn_pencil;
+    }
+
+    Gtk.Separator {
+      orientation: horizontal;
+    }
+
+    Gtk.ToggleButton btn_select {
+      icon-name: "selection-mode-symbolic";
+      tooltip-text: _("Select");
+      action-name: "win.set-tool";
+      action-target: "'select'";
+      group: btn_pencil;
+    }
+
+    Gtk.ToggleButton btn_stamp {
+      icon-name: "object-flip-horizontal-symbolic";
+      tooltip-text: _("Stamp");
+      action-name: "win.set-tool";
+      action-target: "'stamp'";
+      group: btn_pencil;
+    }
+
+    Gtk.ToggleButton btn_event {
+      icon-name: "system-run-symbolic";
+      tooltip-text: _("Event");
+      action-name: "win.set-tool";
+      action-target: "'event'";
+      group: btn_pencil;
+    }
+  }
+}

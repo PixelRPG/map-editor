@@ -1,0 +1,41 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgSceneEditor : Adw.Bin {
+  Gtk.Overlay overlay {
+    [overlay]
+    $PixelRpgFloatingToolRail tool_rail {}
+
+    [overlay]
+    $PixelRpgFloatingZoom zoom_osd {}
+
+    [overlay]
+    $PixelRpgContextChip context_chip {}
+
+    child: Gtk.ScrolledWindow scroller {
+      hexpand: true;
+      vexpand: true;
+      hscrollbar-policy: automatic;
+      vscrollbar-policy: automatic;
+
+      child: Adw.Bin backdrop {
+        styles ["editor-backdrop"]
+        hexpand: true;
+        vexpand: true;
+
+        child: Gtk.Box engine_holder {
+          orientation: vertical;
+          halign: fill;
+          valign: fill;
+          hexpand: true;
+          vexpand: true;
+          margin-top: 36;
+          margin-bottom: 36;
+          margin-start: 36;
+          margin-end: 36;
+          styles ["scene-editor-canvas-shadow"]
+        };
+      };
+    };
+  }
+}

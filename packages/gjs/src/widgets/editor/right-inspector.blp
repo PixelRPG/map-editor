@@ -1,0 +1,48 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgRightInspector : Adw.Bin {
+  styles ["right-inspector"]
+
+  Adw.ToolbarView {
+    content: Gtk.ScrolledWindow {
+      hexpand: true;
+      vexpand: true;
+      hscrollbar-policy: never;
+
+      child: Adw.ViewStack stack {
+        vexpand: true;
+
+        Adw.ViewStackPage {
+          name: "tiles";
+          title: _("Tiles");
+          icon-name: "view-grid-symbolic";
+
+          child: $PixelRpgTilesTab tiles_tab {};
+        }
+
+        Adw.ViewStackPage {
+          name: "layers";
+          title: _("Layers");
+          icon-name: "view-list-symbolic";
+
+          child: $PixelRpgLayersTab layers_tab {};
+        }
+
+        Adw.ViewStackPage {
+          name: "props";
+          title: _("Props");
+          icon-name: "document-properties-symbolic";
+
+          child: $PixelRpgPropsTab props_tab {};
+        }
+      };
+    };
+
+    [bottom]
+    Adw.ViewSwitcherBar {
+      stack: stack;
+      reveal: true;
+    }
+  }
+}

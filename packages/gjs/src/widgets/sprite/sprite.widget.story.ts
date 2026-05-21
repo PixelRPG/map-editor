@@ -47,7 +47,7 @@ export class SpriteWidgetStory extends StoryWidget {
    */
   static getMetadata(): StoryMeta {
     return {
-      title: 'UI/Sprite Widget',
+      title: 'Primitives/Sprite Widget',
       description: 'Display individual sprites from a sprite sheet with configurable scaling',
       component: SpriteWidget.$gtype,
       tags: ['autodocs', 'ui', 'graphics'],

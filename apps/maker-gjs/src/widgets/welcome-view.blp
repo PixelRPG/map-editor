@@ -1,39 +1,184 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $WelcomeView: Adw.Bin {
+template $WelcomeView : Adw.Bin {
   Adw.ToolbarView {
     [top]
     Adw.HeaderBar {
       show-title: false;
-
+      styles ["flat"]
     }
 
-    content: Adw.StatusPage {
-      title: _("Welcome to PixelRPG Maker");
-      description: _("Create or open a project to get started");
-      icon-name: "applications-games-symbolic";
+    content: Adw.Clamp {
+      maximum-size: 980;
+      tightening-threshold: 720;
+      hexpand: true;
       vexpand: true;
 
-      Box {
-        orientation: vertical;
-        spacing: 12;
-        halign: center;
-        margin-top: 24;
+      child: Gtk.Box outer {
+        orientation: horizontal;
+        spacing: 0;
+        margin-top: 12;
+        margin-bottom: 36;
+        margin-start: 36;
+        margin-end: 36;
 
-        Button createButton {
-          label: _("Create New Project");
-          halign: center;
-          margin-bottom: 12;
-          styles ["suggested-action", "pill"]
+        Gtk.Box hero_column {
+          orientation: vertical;
+          spacing: 0;
+          hexpand: true;
+          halign: fill;
+          valign: center;
+
+          $PixelRpgProjectHeroIcon hero_icon {
+            size: 96;
+            halign: center;
+          }
+
+          Gtk.Label welcome_title {
+            label: _("Welcome to Pixel RPG Editor");
+            halign: center;
+            margin-top: 24;
+            margin-bottom: 6;
+            styles ["title-1"]
+          }
+
+          Gtk.Label welcome_subtitle {
+            label: _("Draw maps from tilesets, place a hero and NPCs, hook scenes together with teleports, and script events.");
+            halign: center;
+            wrap: true;
+            justify: center;
+            max-width-chars: 48;
+            margin-bottom: 24;
+            styles ["dim-label"]
+          }
+
+          Gtk.Box cta_box {
+            orientation: horizontal;
+            halign: center;
+            spacing: 8;
+            margin-bottom: 36;
+
+            Gtk.Button create_button {
+              label: _("New Project…");
+              styles ["suggested-action", "pill"]
+            }
+
+            Gtk.Button open_button {
+              label: _("Open Project…");
+              styles ["pill"]
+            }
+          }
+
+          Gtk.Label templates_heading {
+            label: _("Start from a template");
+            halign: center;
+            margin-bottom: 10;
+            styles ["caption-heading", "dim-label"]
+          }
+
+          Gtk.Grid templates_grid {
+            row-spacing: 10;
+            column-spacing: 10;
+            column-homogeneous: true;
+            halign: center;
+            margin-bottom: 12;
+          }
         }
 
-        Button openButton {
-          label: _("Open Project");
-          halign: center;
-          styles ["pill"]
+        Gtk.Separator {
+          orientation: vertical;
+          margin-start: 36;
+          margin-end: 36;
         }
-      }
+
+        Gtk.Box recents_column {
+          orientation: vertical;
+          width-request: 320;
+          spacing: 12;
+          valign: fill;
+
+          Gtk.Box recents_header {
+            orientation: horizontal;
+            spacing: 6;
+
+            Gtk.Label {
+              label: _("Recent Projects");
+              halign: start;
+              hexpand: true;
+              styles ["heading"]
+            }
+
+            Gtk.Button browse_button {
+              label: _("Browse all…");
+              styles ["flat"]
+            }
+          }
+
+          Gtk.ListBox recents_list {
+            selection-mode: none;
+            styles ["boxed-list"]
+
+            Adw.ActionRow empty_recents_row {
+              title: _("No recent projects");
+              subtitle: _("Open a project to populate this list.");
+              activatable: false;
+
+              [prefix]
+              Gtk.Image {
+                icon-name: "folder-open-symbolic";
+                pixel-size: 22;
+              }
+            }
+          }
+
+          Gtk.Box {
+            vexpand: true;
+          }
+
+          Gtk.Button tour_button {
+            styles ["card"]
+            halign: fill;
+
+            child: Gtk.Box {
+              spacing: 12;
+              margin-top: 8;
+              margin-bottom: 8;
+              margin-start: 12;
+              margin-end: 12;
+
+              Gtk.Image {
+                icon-name: "media-playback-start-symbolic";
+                pixel-size: 18;
+                styles ["accent"]
+              }
+
+              Gtk.Box {
+                orientation: vertical;
+                hexpand: true;
+                halign: start;
+
+                Gtk.Label {
+                  label: _("Take the tour");
+                  halign: start;
+                  styles ["heading"]
+                }
+
+                Gtk.Label {
+                  label: _("Three-minute walkthrough of the editor.");
+                  halign: start;
+                  styles ["caption", "dim-label"]
+                }
+              }
+
+              Gtk.Image {
+                icon-name: "go-next-symbolic";
+                styles ["dim-label"]
+              }
+            };
+          }
+        }
+      };
     };
   }
-} 
+}

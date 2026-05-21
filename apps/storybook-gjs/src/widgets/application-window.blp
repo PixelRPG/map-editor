@@ -5,9 +5,9 @@ template $StorybookWindow : Adw.ApplicationWindow {
   default-width: 1200;
   default-height: 800;
   title: _("PixelRPG Storybook");
-  width-request: 400;
-  height-request: 300;
-  
+  width-request: 360;
+  height-request: 320;
+
   Adw.Breakpoint {
     condition ("max-width: 720sp")
 
@@ -18,6 +18,9 @@ template $StorybookWindow : Adw.ApplicationWindow {
   }
 
   content: Adw.NavigationSplitView main_split_view {
+    min-sidebar-width: 220;
+    max-sidebar-width: 320;
+
     sidebar: Adw.NavigationPage {
       title: _("Stories");
       tag: "stories";
@@ -29,11 +32,11 @@ template $StorybookWindow : Adw.ApplicationWindow {
           };
           show-end-title-buttons: false;
         }
-        
+
         content: Gtk.ScrolledWindow {
           hexpand: true;
           vexpand: true;
-          
+
           child: Gtk.ListBox sidebar_list {
             selection-mode: single;
             styles ["navigation-sidebar"]
@@ -41,7 +44,7 @@ template $StorybookWindow : Adw.ApplicationWindow {
         };
       };
     };
-    
+
     content: Adw.NavigationPage {
       title: _("Preview");
       tag: "preview";
@@ -51,7 +54,7 @@ template $StorybookWindow : Adw.ApplicationWindow {
           title-widget: Adw.WindowTitle preview_title {
             title: _("Preview");
           };
-          
+
           [end]
           ToggleButton show_controls_button {
             icon-name: "sidebar-show-right-symbolic";
@@ -59,52 +62,30 @@ template $StorybookWindow : Adw.ApplicationWindow {
             active: true;
           }
         }
-        
+
         content: Adw.OverlaySplitView controls_split_view {
           show-sidebar: true;
           sidebar-position: end;
-          
+          min-sidebar-width: 280;
+          max-sidebar-width: 360;
+
           content: Gtk.ScrolledWindow {
             hexpand: true;
             vexpand: true;
-            
-            child: Gtk.Box content_area {
-              orientation: vertical;
-              halign: center;
-              valign: center;
-              margin-top: 20;
-              margin-bottom: 20;
-              margin-start: 20;
-              margin-end: 20;
+
+            child: Adw.Bin content_area {
               hexpand: true;
               vexpand: true;
             };
           };
-          
+
           sidebar: Gtk.ScrolledWindow {
-            width-request: 300;
             hexpand: false;
             vexpand: true;
-            
-            child: Gtk.Box {
-              orientation: vertical;
-              
-              Gtk.Label {
-                label: _("<b>Controls</b>");
-                use-markup: true;
-                halign: start;
-                margin-top: 12;
-                margin-bottom: 12;
-                margin-start: 12;
-                margin-end: 12;
-              }
-              
-              Gtk.Box control_panel {
-                orientation: vertical;
-                margin-top: 6;
-                margin-bottom: 12;
-                margin-start: 12;
-                margin-end: 12;
+
+            child: Adw.PreferencesPage {
+              Adw.PreferencesGroup control_panel {
+                title: _("Controls");
               }
             };
           };
@@ -112,4 +93,4 @@ template $StorybookWindow : Adw.ApplicationWindow {
       };
     };
   };
-} 
+}

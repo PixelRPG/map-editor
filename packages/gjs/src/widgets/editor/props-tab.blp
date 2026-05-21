@@ -1,0 +1,57 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgPropsTab : Adw.Bin {
+  Adw.PreferencesGroup props_group {
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Adw.EntryRow name_row {
+      title: _("Name");
+    }
+
+    Adw.ActionRow size_row {
+      title: _("Size");
+      subtitle: bind template.size-text;
+    }
+
+    Adw.ActionRow tile_size_row {
+      title: _("Tile size");
+      subtitle: bind template.tile-size-text;
+    }
+
+    Adw.EntryRow music_row {
+      title: _("Music");
+    }
+
+    Adw.EntryRow battle_bg_row {
+      title: _("Battle BG");
+    }
+
+    Adw.ActionRow encounters_row {
+      title: _("Encounters");
+      subtitle: bind template.encounters-text;
+      activatable: true;
+
+      [suffix]
+      Gtk.Image {
+        icon-name: "go-next-symbolic";
+        styles ["dim-label"]
+      }
+    }
+
+    Adw.ActionRow on_enter_row {
+      title: _("On Enter");
+      subtitle: bind template.on-enter-text;
+      activatable: true;
+
+      [suffix]
+      Gtk.Image {
+        icon-name: "go-next-symbolic";
+        styles ["dim-label"]
+      }
+    }
+  }
+}
