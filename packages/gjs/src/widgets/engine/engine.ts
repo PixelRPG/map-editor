@@ -11,8 +11,18 @@ import {
   Engine as ExcaliburEngine,
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
-import { EventEmitter, type Subscription } from 'excalibur'
+import { Color, EventEmitter, type Subscription } from 'excalibur'
 import Template from './engine.blp'
+
+/**
+ * Scratchpad backdrop colors from the design's `adwaita/theme.css`
+ * `--scratchpad-b` token (the lighter of the two stripe colours, used
+ * as a solid fallback while GLArea alpha compositing is unreliable on
+ * this stack). Re-paint inside the Excalibur clear so the area around
+ * the map matches the editor scratchpad instead of opaque white.
+ */
+const SCRATCHPAD_BG_LIGHT = Color.fromHex('#ededed')
+const SCRATCHPAD_BG_DARK = Color.fromHex('#232328')
 
 function describeError(err: unknown): string {
   if (err instanceof Error) {
@@ -161,6 +171,29 @@ export class Engine extends Adw.Bin {
     return true
   }
 
+  /**
+   * Repaint the Excalibur clear colour to match the current Adwaita
+   * dark / light setting. Listens for `notify::dark` on the global
+   * `Adw.StyleManager` so flipping the OS theme updates the canvas
+   * background live.
+   */
+  private _applyScratchpadBackground(): void {
+    const styleManager = Adw.StyleManager.get_default()
+    const update = () => {
+      const dark = styleManager.dark
+      const colour = dark ? SCRATCHPAD_BG_DARK : SCRATCHPAD_BG_LIGHT
+      const excalibur = this._excalibur?.excalibur
+      if (excalibur) excalibur.backgroundColor = colour
+    }
+    update()
+    // Track future theme switches; clean up via the existing
+    // disconnect helper on unmap.
+    const handlerId = styleManager.connect('notify::dark', update)
+    this._styleManagerHandlerId = handlerId
+  }
+
+  private _styleManagerHandlerId = 0
+
   private _startWithWidget(useFallback: boolean): void {
     let child = this._canvasContainer.get_first_child()
     while (child) {
@@ -219,6 +252,12 @@ export class Engine extends Adw.Bin {
         this._forwardEvents(engine)
         this._excalibur = engine
         await engine.initialize()
+        // Apply the scratchpad backdrop colour as the engine clear
+        // colour. With GLArea alpha compositing being unreliable on
+        // this stack, painting the backdrop INSIDE the canvas is the
+        // robust fallback — the empty area around the map matches the
+        // editor scratchpad instead of showing through as opaque white.
+        this._applyScratchpadBackground()
         this._ready = true
         this.emit('ready')
       } catch (err) {
@@ -279,6 +318,15 @@ export class Engine extends Adw.Bin {
       }
     }
     this._excaliburSubscriptions = []
+
+    if (this._styleManagerHandlerId) {
+      try {
+        Adw.StyleManager.get_default().disconnect(this._styleManagerHandlerId)
+      } catch {
+        // already disposed
+      }
+      this._styleManagerHandlerId = 0
+    }
 
     try {
       this._excalibur?.stop()
