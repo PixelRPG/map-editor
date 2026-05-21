@@ -1,0 +1,11 @@
+{
+  "name": "@pixelrpg/games-cozy-town-starter",
+  "version": "0.0.1",
+  "description": "Cozy-town starter template — grass with a path, small house, and a pond. Uses the shared minimalist tileset.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./*",
+    "./maps/*": "./maps/*"
+  }
+}

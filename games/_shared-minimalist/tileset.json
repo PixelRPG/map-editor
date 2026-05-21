@@ -1,0 +1,114 @@
+{
+  "version": "1.0.0",
+  "id": "shared-minimalist",
+  "name": "Minimalist starter tileset",
+  "image": {
+    "id": "main",
+    "path": "tileset.png",
+    "type": "image"
+  },
+  "spriteWidth": 16,
+  "spriteHeight": 16,
+  "columns": 4,
+  "rows": 4,
+  "margin": 0,
+  "spacing": 0,
+  "sprites": [
+    {
+      "id": 0,
+      "col": 0,
+      "row": 0,
+      "name": "Grass"
+    },
+    {
+      "id": 1,
+      "col": 1,
+      "row": 0,
+      "name": "Tree"
+    },
+    {
+      "id": 2,
+      "col": 2,
+      "row": 0,
+      "name": "Flower"
+    },
+    {
+      "id": 3,
+      "col": 3,
+      "row": 0,
+      "name": "Bush"
+    },
+    {
+      "id": 4,
+      "col": 0,
+      "row": 1,
+      "name": "Water"
+    },
+    {
+      "id": 5,
+      "col": 1,
+      "row": 1,
+      "name": "Deep Water"
+    },
+    {
+      "id": 6,
+      "col": 2,
+      "row": 1,
+      "name": "Sand"
+    },
+    {
+      "id": 7,
+      "col": 3,
+      "row": 1,
+      "name": "Pond"
+    },
+    {
+      "id": 8,
+      "col": 0,
+      "row": 2,
+      "name": "Path"
+    },
+    {
+      "id": 9,
+      "col": 1,
+      "row": 2,
+      "name": "Stone"
+    },
+    {
+      "id": 10,
+      "col": 2,
+      "row": 2,
+      "name": "Wall"
+    },
+    {
+      "id": 11,
+      "col": 3,
+      "row": 2,
+      "name": "Door"
+    },
+    {
+      "id": 12,
+      "col": 0,
+      "row": 3,
+      "name": "House Wall"
+    },
+    {
+      "id": 13,
+      "col": 1,
+      "row": 3,
+      "name": "House Roof"
+    },
+    {
+      "id": 14,
+      "col": 2,
+      "row": 3,
+      "name": "Torch"
+    },
+    {
+      "id": 15,
+      "col": 3,
+      "row": 3,
+      "name": "Crystal"
+    }
+  ]
+}

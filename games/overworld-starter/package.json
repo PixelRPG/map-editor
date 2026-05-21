@@ -1,0 +1,11 @@
+{
+  "name": "@pixelrpg/games-overworld-starter",
+  "version": "0.0.1",
+  "description": "Overworld starter template — grass with a winding path and a small pond. Uses the shared minimalist tileset.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./*",
+    "./maps/*": "./maps/*"
+  }
+}

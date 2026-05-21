@@ -44,11 +44,32 @@ export const STARTER_TEMPLATES: ProjectTemplate[] = [
     isBlank: true,
   },
   {
+    id: 'overworld-starter',
+    name: 'Overworld',
+    caption: 'Grass · path · pond',
+    projectPath: `${TEMPLATES_ROOT}/overworld-starter/game-project.json`,
+    accentColor: '#5fb04c',
+  },
+  {
+    id: 'dungeon-starter',
+    name: 'Dungeon',
+    caption: 'Stone · torch · door',
+    projectPath: `${TEMPLATES_ROOT}/dungeon-starter/game-project.json`,
+    accentColor: '#4a4a4f',
+  },
+  {
+    id: 'cozy-town-starter',
+    name: 'Cozy Town',
+    caption: 'Path · house · pond',
+    projectPath: `${TEMPLATES_ROOT}/cozy-town-starter/game-project.json`,
+    accentColor: '#c6a576',
+  },
+  {
     id: 'kokiri-forest',
     name: 'Kokiri Forest',
-    caption: 'Zelda-like overworld demo',
+    caption: 'Zelda-like demo (full art)',
     projectPath: `${TEMPLATES_ROOT}/zelda-like/game-project.json`,
-    accentColor: '#5fb04c',
+    accentColor: '#3d6b3a',
   },
 ]
 

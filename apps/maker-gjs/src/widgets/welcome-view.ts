@@ -78,7 +78,10 @@ export class WelcomeView extends Adw.Bin {
   }
 
   private _buildTemplateGrid(): void {
-    const cols = 2
+    // Five templates ship today; three columns keep the grid to two rows
+    // and the cards small enough that the toast overlay isn't forced
+    // outside the window's vertical allocation.
+    const cols = 3
     STARTER_TEMPLATES.forEach((template, index) => {
       const button = this._buildTemplateCard(template)
       this._templates_grid.attach(button, index % cols, Math.floor(index / cols), 1, 1)
@@ -98,7 +101,7 @@ export class WelcomeView extends Adw.Bin {
 
     const preview = new MapPreview()
     preview.accentColor = template.accentColor
-    preview.set_size_request(180, 100)
+    preview.set_size_request(150, 88)
     preview.add_css_class('engine-canvas')
     // Defer the load to the next tick so the grid lays out first and
     // the four previews don't all block the main loop in a row.

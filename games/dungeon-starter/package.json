@@ -1,0 +1,11 @@
+{
+  "name": "@pixelrpg/games-dungeon-starter",
+  "version": "0.0.1",
+  "description": "Dungeon starter template — walled stone chamber with corridors, torches, and a door. Uses the shared minimalist tileset.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./*",
+    "./maps/*": "./maps/*"
+  }
+}
