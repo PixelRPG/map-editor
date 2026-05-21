@@ -5,14 +5,14 @@
   "main": "src/index.ts",
   "scripts": {
     "check": "tsc",
-    "build": "yarn build:blueprints",
     "build:blueprints": "blueprint-compiler compile src/widgets/story.widget.blp --output src/widgets/story.widget.ui",
+    "build": "gjsify run build:blueprints",
     "watch": "tsc -w"
   },
   "dependencies": {
-    "@girs/adw-1": "^1.10.0-4.0.0-rc.9",
-    "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.9",
-    "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.9"
+    "@girs/adw-1": "^1.10.0-4.0.0-rc.15",
+    "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.15",
+    "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.15"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

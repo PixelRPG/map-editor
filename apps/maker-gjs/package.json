@@ -8,12 +8,16 @@
   "scripts": {
     "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
     "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
-    "build:barrels": "barrelsby --delete --singleQuotes --noSemicolon --exclude '\\.test\\.' --directory src src/widgets src/objects",
+    "build:barrels": "gjsify barrels src src/widgets src/objects",
+    "check:barrels": "gjsify barrels --check src src/widgets src/objects",
     "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
-    "build": "yarn build:resources && yarn build:barrels && yarn build:app",
-    "check": "yarn build:barrels && tsc",
+    "build": "gjsify run build:resources && gjsify run build:barrels && gjsify run build:app",
+    "check": "gjsify run build:barrels && tsc",
     "start": "gjsify run org.pixelrpg.maker",
-    "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker"
+    "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker",
+    "flatpak:init": "gjsify flatpak init --force",
+    "flatpak:check": "gjsify flatpak check",
+    "flatpak:build": "gjsify flatpak build org.pixelrpg.maker.json --install --repo repo --bundle org.pixelrpg.maker.flatpak --install-deps-from flathub"
   },
   "keywords": [
     "pixelrpg",
@@ -24,31 +28,65 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@gjsify/cli": "^0.1.15",
-    "barrelsby": "^2.8.1",
+    "@gjsify/cli": "^0.4.16",
     "typescript": "^6.0.3"
   },
-  "dependenciesMeta": {
-    "@gjsify/webgl": {
-      "unplugged": true
-    }
-  },
   "dependencies": {
-    "@girs/adw-1": "^1.10.0-4.0.0-rc.9",
-    "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.9",
-    "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.9",
-    "@girs/gio-2.0": "^2.88.0-4.0.0-rc.9",
-    "@girs/gjs": "^4.0.0-rc.9",
-    "@girs/glib-2.0": "^2.88.0-4.0.0-rc.9",
-    "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.9",
-    "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.9",
-    "@gjsify/canvas2d": "^0.1.15",
-    "@gjsify/dom-elements": "^0.1.15",
-    "@gjsify/event-bridge": "^0.1.15",
-    "@gjsify/webgl": "^0.1.15",
-    "@gjsify/xmlhttprequest": "^0.1.15",
+    "@girs/adw-1": "^1.10.0-4.0.0-rc.15",
+    "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.15",
+    "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.15",
+    "@girs/gio-2.0": "^2.88.0-4.0.0-rc.15",
+    "@girs/gjs": "^4.0.0-rc.15",
+    "@girs/glib-2.0": "^2.88.0-4.0.0-rc.15",
+    "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.15",
+    "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.15",
+    "@gjsify/canvas2d": "^0.4.16",
+    "@gjsify/dom-elements": "^0.4.16",
+    "@gjsify/event-bridge": "^0.4.16",
+    "@gjsify/webgl": "^0.4.16",
+    "@gjsify/xmlhttprequest": "^0.4.16",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
     "excalibur": "^0.32.0"
+  },
+  "gjsify": {
+    "flatpak": {
+      "appId": "org.pixelrpg.maker",
+      "kind": "app",
+      "name": "PixelRPG Maker",
+      "runtime": "gnome",
+      "runtimeVersion": "50",
+      "command": "org.pixelrpg.maker",
+      "finishArgs": [
+        "--device=dri",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--filesystem=home"
+      ],
+      "developer": {
+        "id": "studio.artandcode",
+        "name": "Pascal Garber",
+        "email": "pascal@artandcode.studio"
+      },
+      "summary": "Experimental tile-based map editor",
+      "description": [
+        {
+          "p": "PixelRPG Maker is an experimental tile-based map editor for retro-style RPGs."
+        },
+        {
+          "p": "Built with Excalibur.js running natively in GJS through gjsify's Web/DOM compatibility layer, and a GTK4/libadwaita UI."
+        }
+      ],
+      "license": {
+        "metadata": "CC0-1.0",
+        "project": "GPL-3.0"
+      },
+      "categories": [
+        "Development",
+        "Game"
+      ],
+      "icon": "data/icons/hicolor/scalable/apps/org.pixelrpg.maker.svg"
+    }
   }
 }

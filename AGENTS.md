@@ -1,6 +1,8 @@
 # AGENTS.md
 
-PixelRPG Map Editor — Yarn monorepo. Single-process GTK4/libadwaita app with Excalibur.js running directly in GJS via gjsify. Tile-based RPG map editor for the GNOME platform; exported games target multiple platforms (browser-runtime seeded under `apps/game-browser`).
+PixelRPG Map Editor — gjsify-native monorepo (no Yarn, no Node-only build tooling). Single-process GTK4/libadwaita app with Excalibur.js running directly in GJS via gjsify. Tile-based RPG map editor for the GNOME platform; exported games target multiple platforms (browser-runtime seeded under `apps/game-browser`).
+
+Toolchain: `gjsify install` (replaces yarn), `gjsify build` (replaces esbuild/vite), `gjsify barrels` (replaces barrelsby), `gjsify format` / `gjsify lint` / `gjsify fix` (wraps Biome), `gjsify foreach` / `gjsify workspace` (replaces `yarn workspaces foreach`), `gjsify flatpak` for `apps/maker-gjs` packaging. Lockfile: `gjsify-lock.json` (no `yarn.lock`).
 
 IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for PixelRPG tasks. Read files under `packages/` and `apps/` before assuming behavior.
 
@@ -27,11 +29,11 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 [Types] |unknown+guards never any |interface=object shapes, type=unions/intersections/mapped |discriminated unions w/ explicit type prop |string enums for fixed sets (enum > string literal)
 [Functional] |pure fns preferred |array methods > loops |no param mutation
 [Arch] |SOLID, composition > inheritance, layer separation |immutability first: `readonly`, `as const`, functional updates |fn: <20 exec lines, ≤4 params, verb-first |class: <200 lines, <10 public methods, <10 props, single responsibility |naming: PascalCase class, camelCase var/method, kebab-case file, UPPERCASE const |constructor DI for testability |reactive/event-driven flow, state machines for complex state |stateless utilities → module functions, not static-only classes
-[Deps] add via `yarn workspace @pixelrpg/<pkg> add <name>`
+[Deps] add via `cd <pkg-dir> && gjsify install <name>` (single-package install, writes to that workspace's `package.json`)
 
 ## Package-specific rules
 
-[`packages/engine/**/*.ts`] |Excalibur-based ECS: state in `Component`s, behavior in `System`s, orchestration via `Resource`s |MapFormat/MapResource own data shape; Components own runtime state (e.g. [MapEditorComponent](packages/engine/src/components/map-editor.component.ts) for selection/hover/sprite-refs) |runtime-indep where possible (runs in GJS and browser via game-browser) |services/ exports module functions, not static-only classes |sprite-set consumers in services accept `SpriteIndex` (structural, works for both Excalibur `SpriteSetResource` and GTK `GdkSpriteSetResource`) |error hierarchies + factory fns |prefer `ex.EventEmitter` over custom event systems |unit-tested via Vitest (colocate `foo.test.ts` next to `foo.ts`)
+[`packages/engine/**/*.ts`] |Excalibur-based ECS: state in `Component`s, behavior in `System`s, orchestration via `Resource`s |MapFormat/MapResource own data shape; Components own runtime state (e.g. [MapEditorComponent](packages/engine/src/components/map-editor.component.ts) for selection/hover/sprite-refs) |runtime-indep where possible (runs in GJS and browser via game-browser) |services/ exports module functions, not static-only classes |sprite-set consumers in services accept `SpriteIndex` (structural, works for both Excalibur `SpriteSetResource` and GTK `GdkSpriteSetResource`) |error hierarchies + factory fns |prefer `ex.EventEmitter` over custom event systems |unit-tested via Vitest (colocate `foo.test.ts` next to `foo.ts`) — future migration to `@gjsify/unit` would unify with the rest of the gjsify-native stack but is not blocking
 
 [`packages/gjs/**/*.ts`, `apps/maker-gjs/**/*.ts`, `apps/storybook-gjs/**/*.ts`] |GObject classes, GNOME naming, composite templates |GObject properties > plain fields |emit signals > accept callbacks |Blueprint for declarative UI |GNOME HIG |GTK preview pipeline (`Gdk.Texture`/Gsk-snapshot for sprite widgets) is distinct from Excalibur's canvas pipeline — both coexist intentionally |signal lifecycle: use `SignalScope` from `@pixelrpg/gjs` (connect in `vfunc_map`, `disconnectAll()` in `vfunc_unmap`) — don't track handler IDs by hand
 
@@ -72,13 +74,21 @@ refs: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/css-variables
 
 |stories = GObject GTK widgets in central `StoryRegistry` |instances created only when GTK ready |extend `StoryWidget` (Adw.Bin); abstract base + variant subclasses |register classes (not instances) via `StoryModule` |title format: `'Category/Name'` |per-component `.story.ts`, per-variant `.story.blp` inheriting `$StoryWidget` |static `getMetadata()` → `StoryMeta{title,description,component:.$gtype,tags,controls}` |ctor `{story,args,meta}` |override `initialize()` once, `updateArgs()` on control change |`GObject.type_ensure()` after class def |controls: use `ControlType` enum (not strings); `min`/`max`/`step`; select options `{label,value}` |`.blp` imported directly (Vite plugin)
 
-## Yarn workspaces
+## Workspaces (gjsify-native)
 
-|internal deps → workspace refs (`workspace:^` or `workspace:*`) |external deps → exact versions |script names: `build`, `check` (tsc), `start` (apps only) |add deps: `yarn workspace @pixelrpg/<pkg> add <name>`
+|internal deps → workspace refs (`workspace:^` or `workspace:*`); `gjsify install` symlinks each child's `node_modules/@pixelrpg/*` → sibling workspace source |external deps → exact versions, hoisted into root `node_modules/` |script names per package: `build`, `check` (tsc), `build:barrels` / `check:barrels` (gjsify barrels), `start` (apps only), `test` (engine only) |add deps: `cd <pkg-dir> && gjsify install <name>` (writes the spec into that workspace's package.json) |root: `gjsify install` rehoists + relinks; `gjsify install --immutable` for CI
+
+## Build / format / lint / test (root-level scripts)
+
+|`gjsify foreach build -v -t` — topological build (root `build`) |`gjsify foreach check -v -t` — type-check + barrel regen across all packages |`gjsify foreach check:barrels -v -t` — drift guard (CI: any stale barrel exits non-zero) |`gjsify foreach test -v -p --include @pixelrpg/engine` — engine unit tests (Vitest) |`gjsify workspace @pixelrpg/maker-gjs start` — run the editor (root `start`) |`gjsify fix` / `gjsify lint` / `gjsify format --check` — Biome wrappers (read project's `biome.json`)
+
+## Flatpak (maker-gjs)
+
+App-ID `org.pixelrpg.maker`. Manifest + MetaInfo + .desktop generated from `apps/maker-gjs/package.json#gjsify.flatpak` via `gjsify flatpak init`. Commands at root (delegate to `gjsify workspace @pixelrpg/maker-gjs <script>`): `flatpak:init` (regenerate assets) | `flatpak:check` (lint via appstreamcli + flatpak-builder-lint) | `flatpak:build` (`flatpak-builder` + install + bundle .flatpak).
 
 ## Validation & commits
 
-[Pre-commit] |husky hook runs `yarn format` (Biome auto-fix) before each commit |`yarn lint` (Biome check) for the lint gate |`yarn build` all pkgs |`yarn workspaces foreach -A run check` for full type check (slow) |`yarn workspace @pixelrpg/engine run test` for engine unit tests |per-pkg: `yarn workspace @pixelrpg/<pkg> run {check,build}` |fix all errors+warnings before commit
+[Pre-commit] |no automated hook — devs run `gjsify fix && gjsify lint` manually before committing (CI runs `gjsify format --check && gjsify lint` on PRs) |`gjsify foreach build -v -t` builds all packages |`gjsify foreach check -v -t` full type check (slow) |`gjsify workspace @pixelrpg/engine test` for engine unit tests |per-pkg: `cd <pkg> && gjsify run {check,build}` |fix all errors+warnings before commit
 
 [Commits] |atomic, one logical change |conventional: `<type>[scope]: <description>` (feat|fix|docs|refactor|test|chore) |imperative, subject ≤50 chars, include scope |working state every commit |check `git log --oneline -10` to match project style |commit at milestones for large tasks, not just end
 
@@ -90,7 +100,7 @@ refs: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/css-variables
 
 1. analyze: review code, targeted debug, root-cause
 2. implement: minimal targeted changes, error handling, existing patterns
-3. test: scenarios+edge cases, `yarn check && yarn build`
+3. test: scenarios+edge cases, `gjsify run check && gjsify run build` (or root `gjsify foreach check -v -t`)
 4. smoke-test where applicable (run the editor / storybook)
 5. user confirms BEFORE committing large changes
 6. atomic conventional commits

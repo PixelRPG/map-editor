@@ -9,7 +9,7 @@
     "check": "tsc --noEmit",
     "build:bundle": "gjsify build src/main.ts --app browser --outfile dist/main.js",
     "build:static": "mkdir -p dist && cp public/index.html dist/index.html",
-    "build": "yarn build:bundle && yarn build:static",
+    "build": "gjsify run build:bundle && gjsify run build:static",
     "start": "http-server ../.. -c-1 -o /apps/game-browser/dist/index.html"
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "excalibur": "^0.32.0"
   },
   "devDependencies": {
-    "@gjsify/cli": "^0.1.15",
+    "@gjsify/cli": "^0.4.16",
     "http-server": "^14.1.1",
     "typescript": "^6.0.3"
   }

@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    name: yarn check + build
+    name: gjsify check + build
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +27,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
+            gjs \
             libglib2.0-bin \
             libgirepository1.0-dev \
             libgtk-4-dev \
@@ -52,13 +53,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'yarn'
 
-      - name: Install dependencies
-        run: yarn install --immutable
+      - name: Install @gjsify/cli globally
+        run: npm install -g @gjsify/cli
+
+      - name: Install dependencies (gjsify install --immutable)
+        run: gjsify install --immutable
 
       - name: Type-check workspace
-        run: yarn check
+        run: gjsify foreach check -v -t
 
       - name: Build workspace
-        run: yarn build
+        run: gjsify foreach build -v -t
+
+      - name: Verify barrel files are not stale
+        run: gjsify foreach check:barrels -v -t
