@@ -1,4 +1,6 @@
 export * from './constants.ts'
 export * from './file.ts'
+export * from './session-state.ts'
 export * from './sprite-set.utils.ts'
+export * from './subscription-registry.ts'
 export * from './url.ts'
