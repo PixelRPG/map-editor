@@ -1,5 +1,5 @@
 import type { SpriteSetReference } from '../reference/index'
-import type { LayerData, Properties } from './index'
+import type { LayerData, ObjectPlacement, Properties } from './index'
 
 /**
  * Represents the core data structure for a tile-based map
@@ -67,6 +67,17 @@ export interface MapData {
    * - Object/trigger layers
    */
   layers: LayerData[]
+
+  /**
+   * Object instances on this map — NPCs, teleports, items, spawn
+   * points, events. Each placement is tile-snapped and references
+   * either a project-level `ObjectDefinition` (via `defId`) or
+   * carries the full definition inline.
+   *
+   * See `docs/concepts/object-system.md`. Replaces the legacy
+   * `LayerData.objects[]` array in PR 2 of the rollout.
+   */
+  objectPlacements?: ObjectPlacement[]
 
   /**
    * Optional custom properties for the map

@@ -1,4 +1,5 @@
 import type { MapData } from '../types'
+import { isObjectPlacement } from '../types/data/ObjectPlacement'
 
 /**
  * Error thrown when map data validation fails.
@@ -135,6 +136,44 @@ export class MapFormat {
         )
       }
     })
+
+    // Validate object placements. Optional — missing / empty array
+    // means the map has no objects yet (NPCs, items, teleports, …).
+    if (data.objectPlacements !== undefined) {
+      if (!Array.isArray(data.objectPlacements)) {
+        throw new MapValidationError(
+          'objectPlacements must be an array',
+          'objectPlacements',
+          data.objectPlacements,
+        )
+      }
+      const seenIds = new Set<string>()
+      const layerIds = new Set(data.layers.map((l) => l.id))
+      data.objectPlacements.forEach((placement, index) => {
+        if (!isObjectPlacement(placement)) {
+          throw new MapValidationError(
+            `Invalid object placement at index ${index}`,
+            `objectPlacements[${index}]`,
+            placement,
+          )
+        }
+        if (seenIds.has(placement.id)) {
+          throw new MapValidationError(
+            `Duplicate object placement id "${placement.id}"`,
+            `objectPlacements[${index}].id`,
+            placement.id,
+          )
+        }
+        seenIds.add(placement.id)
+        if (!layerIds.has(placement.layerId)) {
+          throw new MapValidationError(
+            `Object placement "${placement.id}" references unknown layer "${placement.layerId}"`,
+            `objectPlacements[${index}].layerId`,
+            placement.layerId,
+          )
+        }
+      })
+    }
   }
 
   /**

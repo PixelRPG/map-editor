@@ -1,4 +1,5 @@
 import type { GameProjectData } from '../types'
+import { isObjectDefinition } from '../types/data/ObjectDefinition'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -52,6 +53,24 @@ export class GameProjectFormat {
     const initialMapExists = data.maps.some((map) => map.id === data.startup.initialMapId)
     if (!initialMapExists) {
       throw new Error(`Initial map with id '${data.startup.initialMapId}' not found in maps`)
+    }
+
+    // Validate object library — every entry must be a well-formed
+    // ObjectDefinition. Optional field: missing / empty array is fine.
+    if (data.objectLibrary !== undefined) {
+      if (!Array.isArray(data.objectLibrary)) {
+        throw new Error('Game project objectLibrary must be an array')
+      }
+      const seenIds = new Set<string>()
+      data.objectLibrary.forEach((def, index) => {
+        if (!isObjectDefinition(def)) {
+          throw new Error(`Invalid object definition at objectLibrary[${index}]`)
+        }
+        if (seenIds.has(def.id)) {
+          throw new Error(`Duplicate object definition id "${def.id}" in objectLibrary`)
+        }
+        seenIds.add(def.id)
+      })
     }
 
     return true

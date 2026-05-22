@@ -1,4 +1,5 @@
 import type { SpriteSetData } from '../types'
+import { isTileProperties } from '../types/data/TileProperties'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class SpriteSetFormat {
@@ -29,6 +30,15 @@ export class SpriteSetFormat {
     if (!Array.isArray(data.sprites)) {
       throw new Error('Sprites must be an array')
     }
+
+    // Validate per-sprite tileProperties (gameplay: walkable, surface,
+    // footstep sound, encounter table). Optional field — missing means
+    // the engine falls back to sensible defaults.
+    data.sprites.forEach((sprite, index) => {
+      if (sprite.tileProperties !== undefined && !isTileProperties(sprite.tileProperties)) {
+        throw new Error(`Invalid tileProperties on sprite at index ${index}`)
+      }
+    })
 
     // Validate version
     if (!data.version) {
