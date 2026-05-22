@@ -2,9 +2,12 @@
 
 export * from './collision.component'
 export * from './custom-data.component'
+export * from './editor-mode.component'
+export * from './ghost-spawn.component'
 export * from './item.component'
 export * from './map-editor.component'
 export * from './npc.component'
+export * from './runtime-mode.component'
 export * from './spawn-point.component'
 export * from './sprite-ref.component'
 export * from './teleport.component'
