@@ -1,9 +1,11 @@
 /**
- * Current editor-side state: which tool is active, which tile/layer is selected.
- * Held on the engine instance and updated directly (no RPC).
+ * Editor-side state still held on the engine instance — `tileId` and
+ * `layerId` for tile painting. `tool` was migrated to
+ * {@link ActiveToolComponent} on the session-singleton entity (see
+ * `docs/concepts/editor-architecture.md` Phase 2). The remaining
+ * fields follow in Phase 3.
  */
 export interface EditorState {
-  tool: 'brush' | 'eraser' | 'fill' | null
   tileId: number | null
   layerId: string | null
 }

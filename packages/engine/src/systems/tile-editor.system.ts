@@ -10,11 +10,12 @@ import {
   vec,
   type World,
 } from 'excalibur'
-import { MapEditorComponent } from '../components/index.ts'
+import { ActiveToolComponent, type EditorTool, MapEditorComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/index.ts'
 import { type EditorState, EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { SessionState } from '../utils/session-state.ts'
 
 interface TileHit {
   tileMap: TileMap
@@ -121,7 +122,9 @@ export class TileEditorSystem extends System {
 
   private applyClick(hit: TileHit): void {
     const state = this.getEditorState()
-    const tool = state.tool ?? 'brush'
+    const tool: EditorTool = this.scene
+      ? (SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'brush')
+      : 'brush'
     const layerId = this.resolveLayerId(state.layerId)
     if (!layerId) return
 

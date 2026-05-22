@@ -1,4 +1,5 @@
 import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger } from 'excalibur'
+import { ActiveToolComponent, type EditorTool } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import {
@@ -8,6 +9,7 @@ import {
   EngineStatus,
   type ProjectLoadOptions,
 } from './types/index.ts'
+import { SessionState } from './utils/session-state.ts'
 
 interface LoaderEventMap {
   progress: { progress: number }
@@ -30,7 +32,6 @@ export class Engine {
   }
 
   private editorState: EditorState = {
-    tool: null,
     tileId: null,
     layerId: null,
   }
@@ -159,6 +160,29 @@ export class Engine {
 
   getEditorState(): EditorState {
     return { ...this.editorState }
+  }
+
+  /**
+   * Set the active editor tool. Writes to the session-singleton on
+   * the currently-active `MapScene` so the `TileEditorSystem` reads
+   * it directly via `SessionState.get`. No-op when no `MapScene` is
+   * active yet.
+   *
+   * Replaces the legacy `setEditorState({ tool })` call — the `tool`
+   * field moved out of `EditorState` per
+   * `docs/concepts/editor-architecture.md` Phase 2.
+   */
+  setActiveTool(tool: EditorTool): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    SessionState.set(scene, new ActiveToolComponent(tool))
+  }
+
+  /** Read the currently-active editor tool from the session-singleton. */
+  getActiveTool(): EditorTool | null {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return null
+    return SessionState.get(scene, ActiveToolComponent)?.tool ?? null
   }
 
   private setStatus(status: EngineStatus): void {
