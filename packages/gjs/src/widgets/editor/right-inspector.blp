@@ -30,6 +30,14 @@ template $PixelRpgRightInspector : Adw.Bin {
         }
 
         Adw.ViewStackPage {
+          name: "objects";
+          title: _("Objects");
+          icon-name: "preferences-system-symbolic";
+
+          child: $PixelRpgObjectsTab objects_tab {};
+        }
+
+        Adw.ViewStackPage {
           name: "props";
           title: _("Props");
           icon-name: "document-properties-symbolic";

@@ -1,0 +1,68 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgObjectsTab : Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 6;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Gtk.Box empty_state {
+      orientation: vertical;
+      spacing: 6;
+      visible: true;
+      halign: center;
+      valign: center;
+      vexpand: true;
+      margin-top: 24;
+      margin-bottom: 24;
+
+      Gtk.Image {
+        icon-name: "view-grid-symbolic";
+        pixel-size: 32;
+        styles ["dim-label"]
+      }
+
+      Gtk.Label {
+        label: _("No objects yet");
+        styles ["heading", "dim-label"]
+      }
+
+      Gtk.Label {
+        label: _("Place NPCs, teleports, items, and events on any layer.");
+        wrap: true;
+        justify: center;
+        max-width-chars: 30;
+        styles ["caption", "dim-label"]
+      }
+    }
+
+    Gtk.ListBox list {
+      selection-mode: single;
+      visible: false;
+      styles ["boxed-list"]
+    }
+
+    Gtk.Button new_object_button {
+      label: _("New object");
+      action-name: "win.new-object";
+      styles ["flat"]
+      margin-top: 6;
+
+      child: Gtk.Box {
+        spacing: 6;
+
+        Gtk.Image {
+          icon-name: "list-add-symbolic";
+        }
+
+        Gtk.Label {
+          label: _("New object");
+        }
+      };
+    }
+  }
+}

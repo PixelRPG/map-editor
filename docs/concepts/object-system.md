@@ -294,7 +294,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 4 | `ObjectSpawnSystem` + `PlayerSpawnSystem` | **landed** |
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
-| 7 | Editor UI — library tab, object tool, inspector tab, atlas-from-placements | planned |
+| 7 | Editor UI — inspector "Objects" tab (read-only) + atlas-from-placements (atlas auto-aggregates in PR 2). Library mode + object-tool drag-to-place remain follow-ups (tracked in TODO.md). | **landed** (partial) |
 
 ## Where this is implemented
 

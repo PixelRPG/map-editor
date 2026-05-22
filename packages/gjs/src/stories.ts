@@ -20,6 +20,7 @@ import { LayerRow } from './widgets/editor/layer-row'
 import { LayerRowStories } from './widgets/editor/layer-row.story'
 import { LayersTab } from './widgets/editor/layers-tab'
 import { MiniMap } from './widgets/editor/mini-map'
+import { ObjectsTab } from './widgets/editor/objects-tab'
 import { ModeRail } from './widgets/editor/mode-rail'
 import { ModeRailStories } from './widgets/editor/mode-rail.story'
 import { ProjectHeroIcon } from './widgets/editor/project-hero-icon'
@@ -46,6 +47,7 @@ GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(LayerRow.$gtype)
 GObject.type_ensure(TilesTab.$gtype)
 GObject.type_ensure(LayersTab.$gtype)
+GObject.type_ensure(ObjectsTab.$gtype)
 GObject.type_ensure(PropsTab.$gtype)
 GObject.type_ensure(RightInspector.$gtype)
 GObject.type_ensure(FloatingToolRail.$gtype)

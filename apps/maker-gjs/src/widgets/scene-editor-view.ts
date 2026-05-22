@@ -178,10 +178,18 @@ export class SceneEditorView extends Adw.Bin {
       tilePx: mapData.tileWidth,
     })
 
+    // Tile-count per layer now counts both the layer's own sprites and
+    // the object placements that reference it via `layerId` — that's
+    // the new "what's on this layer" metric since objects no longer
+    // live inside `LayerData`.
+    const placementsByLayer = new Map<string, number>()
+    for (const p of mapData.objectPlacements ?? []) {
+      placementsByLayer.set(p.layerId, (placementsByLayer.get(p.layerId) ?? 0) + 1)
+    }
     const layers: LayerDescriptor[] = (mapData.layers ?? []).map((layer) => ({
       id: layer.id,
       name: layer.name,
-      tileCount: layer.type === 'tile' ? (layer.sprites?.length ?? 0) : (layer.objects?.length ?? 0),
+      tileCount: (layer.sprites?.length ?? 0) + (placementsByLayer.get(layer.id) ?? 0),
       visible: layer.visible ?? true,
       locked: false,
     }))
@@ -191,6 +199,25 @@ export class SceneEditorView extends Adw.Bin {
       this._inspector.layersTab.selectLayer(layers[0].id)
       this._setActiveLayer(layers[0].id)
     }
+
+    // Surface the map's object placements in the Objects tab. Each
+    // placement resolves its display name from the inline definition
+    // (when present) or from the project's `objectLibrary` (when
+    // referenced by `defId`); falling back to the placement id keeps
+    // the row labelled even if the library lookup misses.
+    const library = project.resource.data?.objectLibrary ?? []
+    const placements = (mapData.objectPlacements ?? []).map((p) => {
+      const def = p.inline ?? library.find((d) => d.id === p.defId) ?? null
+      return {
+        id: p.id,
+        name: def?.name ?? p.id,
+        kind: def?.kind ?? 'custom',
+        tileX: p.tileX,
+        tileY: p.tileY,
+        layerId: p.layerId,
+      }
+    })
+    this._inspector.objectsTab.setObjects(placements)
 
     // Pick the first sprite set referenced by *this map* — that's the
     // one whose `firstGid` we need to offset against. Fall back to the
