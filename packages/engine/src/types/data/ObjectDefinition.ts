@@ -152,9 +152,11 @@ export interface ItemProperties {
   itemId: string
   /** How many of this item the pickup grants. Defaults to 1. */
   qty?: number
-  /** Disable re-pickup after the first consume in this scene. */
-  oncePerScene?: boolean
   pickupSound?: string
+  // No `oncePerScene` — use `TriggerSpec.once: true` on the parent
+  // definition instead. The trigger never re-fires, so the pickup
+  // can't re-run; a separate `oncePerScene` field would be dead
+  // state. See `docs/concepts/object-system.md`.
 }
 
 export interface NpcProperties {

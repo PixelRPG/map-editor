@@ -127,8 +127,11 @@ interface TeleportProperties {
 interface ItemProperties {
   itemId: string
   qty?: number
-  oncePerScene?: boolean
   pickupSound?: string
+  // No `oncePerScene` field — use `trigger.once: true` instead.
+  // `TriggerSpec.once` already prevents re-firing the trigger that
+  // calls `ItemPickupSystem`; a second `oncePerScene` field would be
+  // dead-state on top.
 }
 
 interface NpcProperties {
@@ -166,6 +169,22 @@ interface ObjectPlacement {
 }
 ```
 
+#### Override semantics — every field replaces wholesale
+
+`overrides` is **not** deep-merged. Each override field replaces the corresponding base-definition field in its entirety:
+
+| Field | Override behaviour |
+|---|---|
+| `name`, `blocking` | Scalar replace |
+| `sprite` | Whole object replace (no per-field merge of `spriteSetId` / `spriteId` / `animationId`) |
+| `trigger` | Whole object replace |
+| `properties` | Whole object replace (no per-field merge inside, even for the discriminated kind-specific shape) |
+| `editorData` | Whole object replace |
+
+If a user wants "same as library but with a different `label`", they put the **entire** `properties` block in `overrides.properties` with the new label included. Deterministic behaviour beats convenience for the editor's mutation surface.
+
+`kind` cannot be overridden — that would change which kind-specific component the spawn system attaches, which would invalidate every system query that relied on the original kind. The type signature (`Partial<Omit<ObjectDefinition, 'id' | 'kind'>>`) enforces this at compile time.
+
 ### Layer changes
 
 ```ts
@@ -196,7 +215,7 @@ Each object placement becomes one Excalibur `Entity` composed of components. Til
 | `TriggerComponent` | on, once?, scriptId? | Def.trigger + overrides |
 | `CollisionComponent` | shape: 'tile' (single-tile, future-extensible to 'rect'/'circle') | added whenever `Def.blocking === true` |
 | `TeleportComponent` | targetMapId, targetTileX, targetTileY, facing? | Def.properties (kind: teleport) |
-| `ItemComponent` | itemId, qty, oncePerScene?, pickupSound? | Def.properties (kind: item) |
+| `ItemComponent` | itemId, qty, pickupSound? | Def.properties (kind: item) |
 | `NpcComponent` | dialogueId?, route?, facing? | Def.properties (kind: npc) |
 | `SpawnPointComponent` | spawnId, facing? | Def.properties (kind: spawn-point) |
 | `CustomDataComponent` | bag: Record<string, unknown> | Def.properties.custom |
@@ -240,11 +259,23 @@ Component rule: data only. No methods that mutate state, no references to system
 | `ObjectSpawnSystem` | On scene activate: walk `map.objectPlacements`, resolve each via library lookup + override merge, construct entities with the right component composition. Runs once per scene visit. |
 | `TriggerSystem` | Each tick: detect player walk-onto / action-button-while-facing against entities with `TriggerComponent`. Emits `engine.events.emit('trigger-fired', { entity, by: 'walk-onto' \| 'action-button' \| 'auto' })`. |
 | `TeleportSystem` | Listens for `trigger-fired`. If the firing entity has a `TeleportComponent`, switch to `targetMapId` and place the player at `targetTileX/Y` with the requested facing. |
-| `ItemPickupSystem` | Listens for `trigger-fired`. If the entity has an `ItemComponent`: add to inventory, play pickup sound, remove entity (or mark `oncePerScene`). |
+| `ItemPickupSystem` | Listens for `trigger-fired`. If the entity has an `ItemComponent`: emit `item-picked-up`, play pickup sound, remove the entity. `TriggerComponent.once` already guarantees re-pickup is impossible in the same scene visit (the trigger never re-fires) so there is no separate "once per scene" check here. |
 | `WalkOnTileSystem` | On player tile-step: look up the tile cell in `TileMap`, resolve the `SpriteData.properties` via the sprite-set, emit `engine.events.emit('walked-onto-tile', { tileX, tileY, properties })`. Other systems (audio, encounter, blocker) listen on this. |
 | `PlayerSpawnSystem` | On scene activate, find the entity with `SpawnPointComponent { spawnId: 'player' }` and either move the existing player entity there or instantiate one. |
 
 System rule: no state beyond per-tick scratch buffers. All persistent state lives in components on entities, or in scene-attached resources.
+
+### Layer z-ordering between tiles and objects
+
+Tiles render through Excalibur's batched `TileMap` (one draw call per tile-layer). Object placements render as individual `Actor` entities. To keep them visually consistent with the layer they reference via `layerId`, the spawn system derives the actor's z-index from the layer's position in `MapData.layers`:
+
+```ts
+actor.z = layerIndex(placement.layerId) * Z_LAYER_STRIDE + Z_OBJECTS_WITHIN_LAYER
+```
+
+Where `Z_LAYER_STRIDE` is a wide enough integer (e.g. `1000`) that all object placements on layer N stack between the tiles of layer N and the tiles of layer N+1, and `Z_OBJECTS_WITHIN_LAYER` is a small offset within that band so objects sit just on top of their layer's tiles. Tile-layer z is `layerIndex * Z_LAYER_STRIDE`.
+
+Practical consequence: objects on the "events" layer appear in front of "ground" tiles and behind "overhead" tiles — which is what every RPG-style level wants. Per-placement fine-tuning is possible by adding a `zOffset?: number` to `ObjectPlacement` later; not in v1 since none of the canonical recipes need it.
 
 ### Cross-system communication
 
@@ -294,7 +325,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 4 | `ObjectSpawnSystem` + `PlayerSpawnSystem` | **landed** |
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
-| 7 | Editor UI — library tab, object tool, inspector tab, atlas-from-placements | planned |
+| 7 | Editor UI — inspector "Objects" tab (read-only) + atlas-from-placements (atlas auto-aggregates in PR 2). Library mode + object-tool drag-to-place remain follow-ups (tracked in TODO.md). | **landed** (partial) |
 
 ## Where this is implemented
 
@@ -318,8 +349,26 @@ These citations update as the work lands. Anything referenced here must exist in
 - Systems: `packages/engine/src/systems/`
 - Editor UI: `apps/maker-gjs/src/widgets/` + `packages/gjs/src/widgets/editor/`
 
+## What's NOT on the table
+
+Decisions captured here so future PRs don't re-litigate them:
+
+- **No animation playback** in the spawn pipeline today. `SpriteRef.animationId` is **stored** and round-trips through save/load, but `ObjectSpawnSystem` does not yet instantiate an `Animation` graphic — it only attaches the static sprite at `spriteId`. Animation playback lands as a follow-up `AnimationComponent` + tick system; see Open questions.
+- **No deep merge** in `overrides`. Reiterated from the override-semantics table above — every override field replaces wholesale.
+- **No `kind` override.** Per the type signature.
+- **No deferred placements / lazy spawn.** All objects on a map spawn on scene activate. Streaming-style "spawn when within N tiles of player" can come later; not needed for current scene sizes.
+- **No per-instance script overrides** beyond what `overrides.trigger.scriptId` already covers. Scripts attach to definitions, not placements, in v1.
+
+## Related concepts
+
+- [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (library mode, object tool, inspector tab) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.objectLibrary` (project data), not on the session-singleton.
+- [`runtime-modes.md`](runtime-modes.md) — `TriggerSystem` and the kind-specific systems gate on `RuntimeModeComponent` so they fire effects only while runtime is active. In pure editor mode the placements render but do nothing.
+- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — stable identifiers (`ObjectPlacement.id`, `ObjectDefinition.id`, `LayerData.id`) are the load-bearing primitive for op-log payloads. The transport-compatibility constraint applies to all future schema changes: stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere.
+
 ## Open questions
 
 - **Tile property project-overrides**: do we need a `GameProjectData.tilePropertyOverrides` map for projects that want "water without splash sound"? Defer until a real use case shows up.
 - **Script system**: `TriggerSpec.scriptId` points at a registered handler. We haven't picked a script representation yet (TypeScript? a small custom DSL? Lua via a sandbox?). Out of scope for v1 — `kind: 'event'` placements with `scriptId` are inert until that lands.
-- **Animated objects**: `SpriteRef.animationId` exists in the type but `ObjectSpawnSystem` doesn't yet build a frame cycler. Phase 3 should add an `AnimationComponent` + tick system.
+- **Animated objects**: `SpriteRef.animationId` exists in the type but `ObjectSpawnSystem` doesn't yet build a frame cycler. Phase 3 follow-up — an `AnimationComponent` + tick system.
+- **Placement-id stability vs runtime entity-id** — `ObjectPlacement.id` is the user-stable identifier (used for selection, save-state, undo references). Excalibur's `Entity.id` is a runtime-assigned integer that resets per scene load. Save / load systems must map between the two; the natural carrier is a `PlacementIdComponent { id: string }` attached during spawn. Not in v1 — wait until inventory / save-state lands and there's a real consumer.
+- **Atlas teleport-curve aggregation cost** — the atlas walks every map in the project, every placement, looking for `kind: 'teleport'`. For a 100-map project with ~50 placements each, that's 5000 iterations per atlas refresh. Acceptable today; revisit with caching if the atlas-refresh becomes user-perceptible (>16 ms).

@@ -1,0 +1,140 @@
+import Adw from '@girs/adw-1'
+import GObject from '@girs/gobject-2.0'
+import Gtk from '@girs/gtk-4.0'
+
+import Template from './objects-tab.blp'
+
+/** Editor-side description of a single object placement. */
+export interface ObjectDescriptor {
+  /** Placement id (unique within the map). */
+  id: string
+  /** Display name — comes from the resolved definition. */
+  name: string
+  /** Object kind — drives the row icon. */
+  kind: 'event' | 'teleport' | 'item' | 'npc' | 'spawn-point' | 'custom'
+  /** Tile-grid position, surfaced as a "(x, y)" caption. */
+  tileX: number
+  tileY: number
+  /** Layer the placement is sorted under — shown as a tag. */
+  layerId: string
+}
+
+/**
+ * Icon lookup per object kind. The editor uses Adwaita symbolic
+ * icons that ship with every Linux desktop so we don't need to
+ * package custom artwork.
+ */
+const KIND_ICONS: Record<ObjectDescriptor['kind'], string> = {
+  event: 'preferences-system-symbolic',
+  teleport: 'mail-forward-symbolic',
+  item: 'starred-symbolic',
+  npc: 'avatar-default-symbolic',
+  'spawn-point': 'go-home-symbolic',
+  custom: 'view-grid-symbolic',
+}
+
+/**
+ * Inspector's "Objects" tab.
+ *
+ * Read-only for now — renders one `Adw.ActionRow` per object
+ * placement on the active scene with the kind icon, name, and
+ * tile coordinates. Selection emits `object-selected::<id>` so
+ * downstream UI (a future placement editor) can react.
+ *
+ * The empty state ("No objects yet") shows when the active scene
+ * has no placements — the editor's first-run experience until the
+ * user drops an object onto the map.
+ *
+ * Drag-to-create is a follow-up (see TODO.md). For now the
+ * footer's "New object" button is wired to `win.new-object`
+ * which the application can hook up when the placement flow lands.
+ */
+export class ObjectsTab extends Adw.Bin {
+  declare _list: Gtk.ListBox
+  declare _empty_state: Gtk.Box
+  declare _new_object_button: Gtk.Button
+
+  private _activeId: string | null = null
+
+  static {
+    GObject.registerClass(
+      {
+        GTypeName: 'PixelRpgObjectsTab',
+        Template,
+        InternalChildren: ['list', 'empty_state', 'new_object_button'],
+        Signals: {
+          'object-selected': { param_types: [GObject.TYPE_STRING] },
+        },
+      },
+      ObjectsTab,
+    )
+  }
+
+  constructor() {
+    super()
+    this._list.connect('row-selected', (_list, row) => {
+      if (!row) return
+      const id = (row as Gtk.ListBoxRow & { objectId?: string }).objectId
+      if (!id || id === this._activeId) return
+      this._activeId = id
+      this.emit('object-selected', id)
+    })
+  }
+
+  /**
+   * Replace the rendered list with `placements`. Switches the
+   * empty-state ↔ list visibility based on length. Selection is
+   * cleared — callers wanting to restore the previously-selected
+   * id should call {@link selectObject} afterwards.
+   */
+  setObjects(placements: ObjectDescriptor[]): void {
+    // Remove all existing rows. ListBox doesn't have a clear() so
+    // we walk children explicitly.
+    let row = this._list.get_first_child()
+    while (row) {
+      const next = row.get_next_sibling()
+      this._list.remove(row)
+      row = next
+    }
+    this._activeId = null
+
+    const hasItems = placements.length > 0
+    this._empty_state.set_visible(!hasItems)
+    this._list.set_visible(hasItems)
+
+    for (const placement of placements) {
+      const row = new Adw.ActionRow({
+        title: placement.name,
+        subtitle: `(${placement.tileX}, ${placement.tileY}) · ${placement.layerId}`,
+        activatable: true,
+      })
+      row.add_prefix(
+        new Gtk.Image({
+          icon_name: KIND_ICONS[placement.kind] ?? KIND_ICONS.custom,
+          pixel_size: 18,
+        }),
+      )
+      ;(row as Adw.ActionRow & { objectId?: string }).objectId = placement.id
+      this._list.append(row)
+    }
+  }
+
+  /** Programmatically set the active object. No-op if id not present. */
+  selectObject(id: string | null): void {
+    if (id === this._activeId) return
+    let row = this._list.get_first_child()
+    while (row) {
+      const objId = (row as Gtk.ListBoxRow & { objectId?: string }).objectId
+      if (objId === id) {
+        this._list.select_row(row as Gtk.ListBoxRow)
+        this._activeId = id
+        return
+      }
+      row = row.get_next_sibling()
+    }
+    this._list.unselect_all()
+    this._activeId = null
+  }
+}
+
+GObject.type_ensure(ObjectsTab.$gtype)
