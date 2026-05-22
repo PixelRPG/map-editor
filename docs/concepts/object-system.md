@@ -69,10 +69,12 @@ interface ObjectDefinition {
   trigger?: TriggerSpec
   /**
    * Whether the player can walk *through* this object. Orthogonal to
-   * `kind` — an NPC can be blocking-or-not, a chest can be
-   * blocking-or-not, a teleport is normally non-blocking. Default
-   * varies by kind (see table in `ObjectKind` docs). Overridable per
-   * placement.
+   * `kind`: an NPC can be blocking-or-not, a chest can be
+   * blocking-or-not, a teleport is normally non-blocking, a
+   * Zelda-stone item is blocking even though it's `kind: 'item'`.
+   * Editor uses a kind-driven default for new library entries but
+   * the user / per-placement override has the final say. See the
+   * "Common combinations" table below for canonical recipes.
    */
   blocking?: boolean
   properties?: ObjectProperties  // kind-specific; discriminated union
@@ -199,18 +201,35 @@ Each object placement becomes one Excalibur `Entity` composed of components. Til
 | `SpawnPointComponent` | spawnId, facing? | Def.properties (kind: spawn-point) |
 | `CustomDataComponent` | bag: Record<string, unknown> | Def.properties.custom |
 
-### `blocking` defaults by kind
+### `blocking` defaults
 
-Set by the editor when a new placement is created. Library entries can override; per-placement `overrides.blocking` can override again.
+`blocking` is independent of `kind` — collision lives in physics-space, kind lives in gameplay-space. The editor sets a sensible default per kind for a *new* library entry, but the user is always one click away from flipping it. Per-placement `overrides.blocking` is the final word.
 
-| `kind` | Default `blocking` | Reason |
+| `kind` | Default | Why this default and not the opposite |
 |---|---|---|
-| `event` | `false` | Trigger zones usually want walk-through |
-| `teleport` | `false` | Player must reach the tile to warp |
-| `item` | `false` | Walk-onto pickup is the most common pattern |
-| `npc` | `true` | NPCs are physical entities |
-| `spawn-point` | `false` | Pure marker — no gameplay collision |
-| `custom` | `false` | Conservative default |
+| `npc` | `true` | NPCs almost always block the player physically |
+| `spawn-point` | `false` | Marker only — gameplay collision would defeat its purpose |
+| `event`, `teleport`, `item`, `custom` | `false` | Conservative — `false` only restricts movement on opt-in. User toggles per object. |
+
+The `item` default is `false` (apples, coins, walk-onto pickups), but plenty of legitimate items block: Zelda-style stones the player can lift and carry, push-blocks, chests. These are the same `kind: 'item'`, just with `blocking: true` flipped in the library entry. The combination `trigger: { on: 'action-button' }` + `blocking: true` is the canonical "pick up by pressing the action button from an adjacent tile" pattern.
+
+### Common combinations
+
+The trigger mode plus blocking flag covers most gameplay shapes. A few canonical recipes:
+
+| Gameplay pattern | `kind` | `trigger.on` | `blocking` |
+|---|---|---|---|
+| Apple on the ground (walk over to collect) | `item` | `walk-onto` | `false` |
+| Zelda-style stone (stand adjacent, press A to lift) | `item` | `action-button` | `true` |
+| Push-block puzzle piece | `item` | `action-button` | `true` |
+| Treasure chest (stand in front, press A to open) | `event` | `action-button` | `true` |
+| Sign / lore plaque | `event` | `action-button` | `true` |
+| Teleport pad / doorway | `teleport` | `walk-onto` | `false` |
+| Damage tile (lava, spikes) | `event` | `walk-onto` | `false` |
+| Invisible wall | `custom` | `none` | `true` |
+| Cuttable grass clump | `item` | `walk-onto` *or none* | `false` |
+| NPC walking around | `npc` | `action-button` | `true` |
+| Map start position | `spawn-point` | `none` | `false` |
 
 Component rule: data only. No methods that mutate state, no references to systems. Components are serialisable.
 
