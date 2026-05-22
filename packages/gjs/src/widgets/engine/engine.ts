@@ -4,7 +4,6 @@ import type Gtk from '@girs/gtk-4.0'
 import { Canvas2DBridge } from '@gjsify/canvas2d'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
-  type EditorState,
   EngineEvent,
   type EngineEventMap,
   EngineStatus,
@@ -120,22 +119,19 @@ export class Engine extends Adw.Bin {
     await this._excalibur!.stop()
   }
 
-  public setEditorState(state: Partial<EditorState>): void {
-    this._excalibur?.setEditorState(state)
-  }
-
-  public getEditorState(): EditorState {
-    return (
-      this._excalibur?.getEditorState() ?? {
-        tileId: null,
-        layerId: null,
-      }
-    )
-  }
-
   /** Forward to `Engine.setActiveTool` — writes to the session-singleton. */
   public setActiveTool(tool: string): void {
     this._excalibur?.setActiveTool(tool)
+  }
+
+  /** Forward to `Engine.setActiveTile` — writes the global sprite id (with `firstGid`) to the singleton. */
+  public setActiveTile(spriteId: number): void {
+    this._excalibur?.setActiveTile(spriteId)
+  }
+
+  /** Forward to `Engine.setActiveLayer` — sets the layer used for tile painting. */
+  public setActiveLayer(layerId: string): void {
+    this._excalibur?.setActiveLayer(layerId)
   }
 
   public get excalibur(): ExcaliburEngine | null {

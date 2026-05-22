@@ -1,5 +1,4 @@
 export * from './data/index.ts'
-export * from './editor-state.ts'
 export * from './engine-events.ts'
 export * from './engine-status.ts'
 

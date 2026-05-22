@@ -10,10 +10,16 @@ import {
   vec,
   type World,
 } from 'excalibur'
-import { ActiveToolComponent, type EditorTool, MapEditorComponent } from '../components/index.ts'
+import {
+  ActiveLayerComponent,
+  ActiveTileComponent,
+  ActiveToolComponent,
+  type EditorTool,
+  MapEditorComponent,
+} from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/index.ts'
-import { type EditorState, EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
 
@@ -40,10 +46,7 @@ export class TileEditorSystem extends System {
   private engine?: Engine
   private scene?: Scene
 
-  constructor(
-    private readonly events: EventEmitter<EngineEventMap>,
-    private readonly getEditorState: () => EditorState,
-  ) {
+  constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
   }
 
@@ -121,22 +124,22 @@ export class TileEditorSystem extends System {
   }
 
   private applyClick(hit: TileHit): void {
-    const state = this.getEditorState()
-    const tool: EditorTool = this.scene
-      ? (SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'brush')
-      : 'brush'
-    const layerId = this.resolveLayerId(state.layerId)
+    if (!this.scene) return
+    const tool: EditorTool = SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'brush'
+    const tileId = SessionState.get(this.scene, ActiveTileComponent)?.spriteId ?? null
+    const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
+    const layerId = this.resolveLayerId(explicitLayerId)
     if (!layerId) return
 
     const mapResource = (this.scene as MapScene | undefined)?.mapResource
     if (!mapResource) return
 
     if (tool === 'brush') {
-      if (state.tileId === null || state.tileId === undefined) return
-      addSpriteToTileForLayer(hit.tileMap, mapResource, hit.tile, layerId, state.tileId)
+      if (tileId === null) return
+      addSpriteToTileForLayer(hit.tileMap, mapResource, hit.tile, layerId, tileId)
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
-        tileId: state.tileId,
+        tileId,
         layerId,
       })
     } else if (tool === 'eraser') {

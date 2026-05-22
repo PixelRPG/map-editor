@@ -145,9 +145,9 @@ export class SceneEditorView extends Adw.Bin {
     // before the engine was instantiated. Tile id needs the gid offset.
     if (this._engine) {
       if (this._activeTileId != null) {
-        this._engine.setEditorState({ tileId: this._activeTileId + this._tilesetFirstGid })
+        this._engine.setActiveTile(this._activeTileId + this._tilesetFirstGid)
       }
-      if (this._activeLayerId != null) this._engine.setEditorState({ layerId: this._activeLayerId })
+      if (this._activeLayerId != null) this._engine.setActiveLayer(this._activeLayerId)
     }
   }
 
@@ -271,7 +271,7 @@ export class SceneEditorView extends Adw.Bin {
     const tile = this._tiles.find((t) => t.id === tileId)
     this._editor.contextChip.setTilePaintable(tile?.paintable ?? null)
     const globalTileId = tileId + this._tilesetFirstGid
-    this._engine?.setEditorState({ tileId: globalTileId })
+    this._engine?.setActiveTile(globalTileId)
     // Mirror selection back to the inspector palette in case the change
     // came from the context-chip popover.
     this._inspector.tilesTab.selectTile(tileId)
@@ -282,7 +282,7 @@ export class SceneEditorView extends Adw.Bin {
     this._activeLayerId = layerId
     const layer = this._layers.find((l) => l.id === layerId)
     this._editor.contextChip.layerName = layer?.name ?? layerId
-    this._engine?.setEditorState({ layerId })
+    this._engine?.setActiveLayer(layerId)
     // Mirror selection back to the inspector layers tab.
     this._inspector.layersTab.selectLayer(layerId)
   }
