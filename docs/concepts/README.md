@@ -35,3 +35,4 @@ Rules:
 | File | Status | What it covers |
 |---|---|---|
 | [`object-system.md`](object-system.md) | planning | The Definition/Placement model for tiles, objects, NPCs, items, teleports, and spawn points — plus how they map onto Excalibur's ECS |
+| [`runtime-modes.md`](runtime-modes.md) | planning | Editor / Full Run / Live Run — composable mode markers + ghost-spawn for Mario-Maker-style edit-while-playing |
