@@ -153,14 +153,29 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(toolAction)
 
-    for (const name of [
-      'undo',
-      'redo',
-      'play',
-      'switch-tileset',
-      'new-layer',
-      'open-recent-projects',
-    ]) {
+    // Undo / redo route through the engine's command stack
+    // (\`docs/concepts/editor-architecture.md\` § Phase 5). The engine
+    // mutates the active scene's `UndoStackComponent` and applies /
+    // reverts the recorded `PaintTileCommand` / `EraseTileCommand`s
+    // built by `TileEditorSystem`.
+    const undoAction = new Gio.SimpleAction({ name: 'undo' })
+    undoAction.connect('activate', () => {
+      this._engineCtl.engine?.undo()
+    })
+    winActions.add_action(undoAction)
+
+    const redoAction = new Gio.SimpleAction({ name: 'redo' })
+    redoAction.connect('activate', () => {
+      this._engineCtl.engine?.redo()
+    })
+    winActions.add_action(redoAction)
+
+    // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo.
+    const app = this.get_application() as Adw.Application | null
+    app?.set_accels_for_action('win.undo', ['<Primary>z'])
+    app?.set_accels_for_action('win.redo', ['<Primary><Shift>z', '<Primary>y'])
+
+    for (const name of ['play', 'switch-tileset', 'new-layer', 'open-recent-projects']) {
       winActions.add_action(new Gio.SimpleAction({ name }))
     }
 

@@ -144,6 +144,24 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.getSelectedPlacements() ?? []
   }
 
+  /** Undo the most recent editor command. Returns `false` if nothing to undo. */
+  public undo(): boolean {
+    return this._excalibur?.undo() ?? false
+  }
+
+  /** Redo the next command in the stack. Returns `false` if nothing to redo. */
+  public redo(): boolean {
+    return this._excalibur?.redo() ?? false
+  }
+
+  public canUndo(): boolean {
+    return this._excalibur?.canUndo() ?? false
+  }
+
+  public canRedo(): boolean {
+    return this._excalibur?.canRedo() ?? false
+  }
+
   public get excalibur(): ExcaliburEngine | null {
     return this._excalibur
   }

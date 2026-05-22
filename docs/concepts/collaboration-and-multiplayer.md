@@ -251,9 +251,9 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 
 | # | Scope | Status |
 |---|---|---|
-| 0 | **Substrate constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | active (folded into editor-architecture phases 2–5) |
-| 1 | Op-log skeleton in `packages/engine/src/sync/op-log.ts` — `Operation`-shape, local sequencer, applier registry. Solo mode only (no wire). | planned |
-| 2 | Editor op vocabulary + applier registry. Hook into `editor-architecture.md` Phase 5 (Undo) so the op-log IS the undo log. | planned |
+| 0 | **Substrate constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | **landed (substrate)** (folded into editor-architecture Phases 2–5) |
+| 1 | Op-log skeleton in `packages/engine/src/commands/types.ts` — `Operation`-shape, local sequencer (`UndoStackComponent.cursor`), `Command` applier. Solo mode only (no wire). | **landed** |
+| 2 | Editor op vocabulary — `PaintTileCommand` + `EraseTileCommand` are the first entries; the op-log IS the undo log via `Engine.executeCommand` + `undo` + `redo`. Hook into `editor-architecture.md` Phase 5 is now bi-directional reference. | **landed** (initial vocab; grows as more editor mutations land) |
 | 3 | WebRTC transport + minimal signalling. Host detection. Op-broadcast. | planned |
 | 4 | Editor awareness layer — live cursors, presence, per-peer selection outlines. Rides on the unreliable channel. | planned |
 | 5 | `InputSourceComponent` runtime + local split-screen support. | planned |

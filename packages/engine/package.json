@@ -7,8 +7,8 @@
   "private": true,
   "scripts": {
     "clear": "rm -rf dist tsconfig.tsbuildinfo",
-    "build:barrels": "gjsify barrels src/systems src/components src/services src/scenes src/format src/resource",
-    "check:barrels": "gjsify barrels --check src/systems src/components src/services src/scenes src/format src/resource",
+    "build:barrels": "gjsify barrels src/systems src/components src/services src/scenes src/format src/resource src/commands",
+    "check:barrels": "gjsify barrels --check src/systems src/components src/services src/scenes src/format src/resource src/commands",
     "build": "gjsify run build:barrels && tsc --noEmit",
     "check": "gjsify run build:barrels && tsc --noEmit",
     "test": "vitest run",

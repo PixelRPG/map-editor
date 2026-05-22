@@ -10,15 +10,16 @@ import {
   vec,
   type World,
 } from 'excalibur'
+import { EraseTileCommand, PaintTileCommand } from '../commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
   MapEditorComponent,
+  UndoStackComponent,
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
-import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -131,19 +132,42 @@ export class TileEditorSystem extends System {
     const layerId = this.resolveLayerId(explicitLayerId)
     if (!layerId) return
 
-    const mapResource = (this.scene as MapScene | undefined)?.mapResource
-    if (!mapResource) return
+    // Capture the previous sprites on this (tile, layer) so the command
+    // can revert. `MapEditorComponent` holds the shadow-state — pull
+    // from there before mutating.
+    const editor = hit.tileMap.get(MapEditorComponent)
+    const previousSprites = (editor?.getSpritesForTileAndLayer(hit.tile, layerId) ?? []).map((ref) => ({
+      spriteSetId: ref.spriteSetId,
+      spriteId: ref.spriteId,
+      zIndex: ref.zIndex,
+      animationId: ref.animationId,
+    }))
 
     if (tool === 'brush') {
       if (tileId === null) return
-      addSpriteToTileForLayer(hit.tileMap, mapResource, hit.tile, layerId, tileId)
+      this.dispatchCommand(
+        new PaintTileCommand({
+          layerId,
+          tileX: hit.coords.x,
+          tileY: hit.coords.y,
+          spriteId: tileId,
+          previousSprites,
+        }),
+      )
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
         tileId,
         layerId,
       })
     } else if (tool === 'eraser') {
-      removeSpritesFromTileForLayer(hit.tileMap, mapResource, hit.tile, layerId)
+      this.dispatchCommand(
+        new EraseTileCommand({
+          layerId,
+          tileX: hit.coords.x,
+          tileY: hit.coords.y,
+          previousSprites,
+        }),
+      )
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
         tileId: 0,
@@ -155,6 +179,23 @@ export class TileEditorSystem extends System {
       coords: hit.coords,
       tileMapId: hit.tileMap.id.toString(),
     })
+  }
+
+  /**
+   * Execute a tile-mutating command and push it onto the
+   * session-singleton's undo stack. Mirrors `Engine.executeCommand`
+   * but inline because the system already has the `scene` reference
+   * and we want to avoid the indirection through the engine class
+   * for hot paths (one paint per click).
+   */
+  private dispatchCommand(command: PaintTileCommand | EraseTileCommand): void {
+    if (!this.scene) return
+    command.apply(this.scene)
+    const stack = SessionState.get(this.scene, UndoStackComponent) ?? new UndoStackComponent()
+    stack.commands = stack.commands.slice(0, stack.cursor)
+    stack.commands.push(command)
+    stack.cursor = stack.commands.length
+    SessionState.set(this.scene, stack)
   }
 
   private resolveLayerId(layerId: string | null): string | null {

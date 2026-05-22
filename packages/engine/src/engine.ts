@@ -1,10 +1,12 @@
 import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger } from 'excalibur'
+import type { Command } from './commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
   SelectedPlacementsComponent,
+  UndoStackComponent,
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
@@ -218,6 +220,73 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return []
     return SessionState.get(scene, SelectedPlacementsComponent)?.placementIds ?? []
+  }
+
+  /**
+   * Execute a {@link Command} against the current scene and push it
+   * onto the undo stack. If the user previously undid and the cursor
+   * is mid-stack, the redo tail is truncated (the abandoned branch
+   * cannot be re-redone).
+   *
+   * No-op when no `MapScene` is active.
+   */
+  executeCommand(command: Command): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    command.apply(scene)
+
+    const stack = SessionState.get(scene, UndoStackComponent) ?? new UndoStackComponent()
+    stack.commands = stack.commands.slice(0, stack.cursor)
+    stack.commands.push(command)
+    stack.cursor = stack.commands.length
+    SessionState.set(scene, stack)
+  }
+
+  /**
+   * Undo the most recent applied command. Reverts the command, drops
+   * the cursor by one, fires the `notifyMutation` so subscribers
+   * refresh button enabled-states. No-op when `!canUndo()`.
+   */
+  undo(): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    const stack = SessionState.get(scene, UndoStackComponent)
+    if (!stack || !stack.canUndo) return false
+    const command = stack.commands[stack.cursor - 1]
+    if (!command) return false
+    command.revert(scene)
+    stack.cursor -= 1
+    SessionState.notifyMutation(scene, stack)
+    return true
+  }
+
+  /**
+   * Redo the next command in the stack (if any). Re-applies the
+   * command and advances the cursor. No-op when `!canRedo()`.
+   */
+  redo(): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    const stack = SessionState.get(scene, UndoStackComponent)
+    if (!stack || !stack.canRedo) return false
+    const command = stack.commands[stack.cursor]
+    if (!command) return false
+    command.apply(scene)
+    stack.cursor += 1
+    SessionState.notifyMutation(scene, stack)
+    return true
+  }
+
+  canUndo(): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    return SessionState.get(scene, UndoStackComponent)?.canUndo ?? false
+  }
+
+  canRedo(): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    return SessionState.get(scene, UndoStackComponent)?.canRedo ?? false
   }
 
   private setStatus(status: EngineStatus): void {
