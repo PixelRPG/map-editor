@@ -22,6 +22,10 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 [Deferred work] `TODO.md` at the workspace root is the single source of truth for everything intentionally not built yet. Keep it pruned — terse one-line entries grouped by surface, no "done" section (use `git log` for that). Append new entries whenever you punt something during a session; remove the entry in the same commit that resolves it. PRs whose work creates or resolves a TODO MUST update `TODO.md` in the same commit.
 
+[Conceptual decisions] `docs/concepts/` holds living docs for cross-cutting design decisions — data models, ECS patterns, runtime contracts, file-format reasoning. Anything two-or-more packages share a mental model on lives here, not in per-package READMEs. **Keep these docs current**: update the concept file in the same commit that changes the underlying code or schema; delete sections that describe superseded approaches (use `git log` for history). Each doc carries a `Status:` header (planning / active / superseded) plus the date of the last meaningful change. Index + maintenance rules in `docs/concepts/README.md`. Drift between a concept doc and the implementation = blocked PR.
+
+[Engine patterns — ECS] Excalibur Components/Systems. Components are pure data (serialisable, no methods that mutate state). Systems are pure logic (no persistent state beyond per-tick scratch buffers; state lives in components or scene resources). Cross-system communication goes through the engine event bus (`engine.events.emit / .on`), not direct method calls between systems. Class-hierarchy entities (e.g. `Player extends Actor`) only with a written justification in the PR description — default is composition. See `docs/concepts/object-system.md` for the canonical event names + spawn flow.
+
 ## General (all code)
 
 [TS] |explicit types on public APIs |no `any` → use `unknown`+type guards (enforced by Biome `noExplicitAny: error`) |JSDoc public APIs |`is`-style guards for runtime checks |generics for inference |nullability via `?.`/`??`

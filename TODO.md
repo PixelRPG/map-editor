@@ -17,8 +17,7 @@ Conventions:
 
 ## Engine / runtime
 
-- **Teleport execution** — `TeleportData` lives in `@pixelrpg/engine` and the atlas already draws teleport curves between maps, but stepping onto a `from` tile does **not** warp the player to `to`. Needs an engine-side system (`TileEditorSystem` neighbour: `TeleportSystem`) that watches for player position and triggers a scene switch + position update. *owner: engine*
-- **Teleport editing UI** — atlas view shows teleports read-only. Drag-to-create (pick source tile in scene A, then dest tile in scene B), inline label edit, delete. Currently teleports come from the project file only. *owner: maker + gjs*
+- **Object-system implementation** — full schema agreed in [`docs/concepts/object-system.md`](docs/concepts/object-system.md). Replaces the planned standalone teleport-engine + teleport-editing-UI items with one unified Definition/Placement model covering teleports, NPCs, items, spawn points, events, and colliders. Six implementation phases (schema/migration → components → spawn → trigger → kind-specific systems → editor UI). *owner: engine + maker, why: cross-cutting, deserves its own PR series*
 - **Scratchpad stripes inside Excalibur** — backdrop is currently a solid `--scratchpad-b` color (theme-aware). Bring back the diagonal stripes from the design via a tiled scratchpad actor in the editor scene. *owner: engine — needs an `EditorBackgroundLayer` actor*
 - **Engine canvas transparency** — `Gtk.GLArea` `has_alpha(true)` + `Color.Transparent` clear + `.engine-canvas` CSS — all three failed on this stack. Report filed at `../../gjsify/docs/reports/webgl-bridge-resize-observer.md` (also covers the resize issue). *owner: gjsify, blocked: external release*
 - **`FillContainer` resize** — switching to `DisplayMode.FillContainer` is in but Excalibur's `ResizeObserver(parent)` never fires on this stack. Same handoff report. *owner: gjsify, blocked: external release*
