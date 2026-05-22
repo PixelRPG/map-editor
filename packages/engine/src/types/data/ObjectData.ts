@@ -3,6 +3,12 @@ import type { ColliderShape, Properties } from './index'
 /**
  * Represents a game object within an object layer
  * Used for non-tile entities like triggers, spawners, or custom game objects
+ *
+ * @deprecated Superseded by the {@link ObjectDefinition} +
+ * {@link ObjectPlacement} pair. The new model is tile-snapped (no
+ * pixel positions / widths / heights), supports library reuse, and
+ * fits the ECS spawn flow. Removed in PR 2 of the object-system
+ * rollout. See `docs/concepts/object-system.md`.
  */
 export interface ObjectData {
   /**

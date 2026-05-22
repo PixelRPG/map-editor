@@ -288,23 +288,35 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 
 | # | Scope | Status |
 |---|---|---|
-| 1 | Schema + types in `@pixelrpg/engine`, format validator, migration script, all `games/*` migrated | planned |
-| 2 | Components (pure data) — `TileTransform`, `SpriteRef`, `Trigger`, `Teleport`, `Item`, `Npc`, `SpawnPoint`, `CustomData` | planned |
-| 3 | `ObjectSpawnSystem` + `PlayerSpawnSystem` | planned |
-| 4 | `TriggerSystem` + event-bus contract | planned |
-| 5 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | planned |
-| 6 | Editor UI — library tab, object tool, inspector tab, atlas-from-placements | planned |
+| 1 | Schema + types in `@pixelrpg/engine` (additive, old fields kept + `@deprecated`), format validators accept new fields, vitest coverage | **landed** |
+| 2 | Migration script + all `games/*` migrated to the new schema + old fields removed | planned |
+| 3 | Components (pure data) — `TileTransform`, `SpriteRef`, `Trigger`, `Teleport`, `Item`, `Npc`, `SpawnPoint`, `CustomData` | planned |
+| 4 | `ObjectSpawnSystem` + `PlayerSpawnSystem` | planned |
+| 5 | `TriggerSystem` + event-bus contract | planned |
+| 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | planned |
+| 7 | Editor UI — library tab, object tool, inspector tab, atlas-from-placements | planned |
 
 ## Where this is implemented
 
 These citations update as the work lands. Anything referenced here must exist in the tree at the cited path.
 
-- Schema types: `packages/engine/src/types/data/` (`ObjectDefinition`, `ObjectPlacement`, `SpriteData.properties`, `LayerData` updates)
-- Format validators: `packages/engine/src/format/`
-- Components: `packages/engine/src/components/` (new files per component)
-- Systems: `packages/engine/src/systems/`
+**Phase 1 (additive schema) — landed:**
+- `packages/engine/src/types/data/TileProperties.ts` — gameplay properties on a sprite-set entry
+- `packages/engine/src/types/data/ObjectDefinition.ts` — library entries + `ObjectKind`, `SpriteRef`, `TriggerSpec`, kind-specific properties shapes
+- `packages/engine/src/types/data/ObjectPlacement.ts` — map-level instances with defId/inline mutual exclusion
+- `packages/engine/src/types/data/SpriteDataSet.ts` — `tileProperties?: TileProperties` field
+- `packages/engine/src/types/data/GameProjectData.ts` — `objectLibrary?: ObjectDefinition[]` field; `teleports[]` marked `@deprecated`
+- `packages/engine/src/types/data/MapData.ts` — `objectPlacements?: ObjectPlacement[]` field
+- `packages/engine/src/types/data/LayerData.ts` — `type` + `objects[]` fields marked `@deprecated`
+- `packages/engine/src/types/data/ObjectData.ts`, `TeleportData.ts` — interfaces marked `@deprecated`
+- `packages/engine/src/format/{GameProjectFormat,MapFormat,SpriteSetFormat}.ts` — validators accept new fields, reject malformed shapes, catch orphaned layer refs + duplicate ids
+- `packages/engine/src/types/data/object-system.test.ts`, `packages/engine/src/format/object-system-validation.test.ts` — vitest coverage
+
+**Pending phases:**
 - Migration script: `scripts/migrate-objects-and-teleports.mjs`
-- Editor UI: `apps/maker-gjs/src/widgets/` (library mode, object tool, inspector "Objects" tab) + `packages/gjs/src/widgets/editor/`
+- Components: `packages/engine/src/components/` (one file per component)
+- Systems: `packages/engine/src/systems/`
+- Editor UI: `apps/maker-gjs/src/widgets/` + `packages/gjs/src/widgets/editor/`
 
 ## Open questions
 

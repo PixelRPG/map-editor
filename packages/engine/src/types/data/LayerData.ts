@@ -19,6 +19,12 @@ export interface LayerData {
    * Type of layer:
    * - 'tile': Contains tile-based graphics and collisions
    * - 'object': Contains game objects, colliders, or other entities
+   *
+   * @deprecated Every layer is a tile layer in the new object
+   * system; objects live in `MapData.objectPlacements[]` and
+   * reference any `LayerData.id` for sort/visibility grouping.
+   * Removed in PR 2 of the object-system rollout. See
+   * `docs/concepts/object-system.md`.
    */
   type: 'tile' | 'object'
 
@@ -43,7 +49,11 @@ export interface LayerData {
   sprites?: SpriteDataMap[]
 
   /**
-   * Array of objects in this layer (only for type='object')
+   * Array of objects in this layer (only for type='object').
+   *
+   * @deprecated Objects move to the per-map `MapData.objectPlacements[]`
+   * array with `layerId` referencing this layer. Removed in PR 2 of
+   * the object-system rollout. See `docs/concepts/object-system.md`.
    */
   objects?: ObjectData[]
 
