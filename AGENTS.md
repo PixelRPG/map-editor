@@ -8,13 +8,23 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 ## Structure
 
-[Workspaces] |root: ./ |packages/{engine,gjs,story-gjs} |apps/{maker-gjs,storybook-gjs,game-browser} |games/{zelda-like} |docs/
+[Workspaces] |root: ./ |packages/{engine,gjs,story-gjs} |apps/{maker-gjs,storybook-gjs,game-browser} |games/{zelda-like,blank-starter} |docs/
 
 [Packages] |`engine`: Excalibur-based engine + editor logic (Resources, Components, Systems, MapFormat); platform-indep core, runs in GJS or browser |`gjs`: GTK4/libadwaita widgets that host the engine + Gdk-side preview pipeline (Sprite/SpriteSheet/ImageTexture for Gsk-snapshot rendering) |`story-gjs`: Storybook-style framework for GTK widget stories (StoryRegistry, StoryWidget, StoryModule, ControlType)
 
 [Apps] |`maker-gjs`: the map editor (primary) |`storybook-gjs`: widget playground for `packages/gjs` |`game-browser`: browser-runtime template — seed for multi-platform game export
 
-[Architecture] Single-process GTK4 app. No WebView, no RPC. Excalibur runs directly in GJS via gjsify. Engine is hosted as a GTK widget alongside Adwaita UI panels.
+[Games / starter templates] every `games/<id>/` is a workspace package (`@pixelrpg/games-<id>`) containing a real `game-project.json` + `maps/` + `spritesets/`. The welcome view's "Start from Template" cards list them and render a live map preview via `@pixelrpg/gjs`'s `MapPreview`. New Project = open the `blank-starter` template; Open Project = real `Gtk.FileDialog` selecting any `game-project.json` (including a template).
+
+[Architecture] Single-process GTK4 app. No WebView, no RPC. **gjsify merges three worlds in-process** — GNOME / GTK widgets, Node.js APIs, and Web/DOM APIs. Excalibur runs directly in GJS through this; reach for it freely for rendering pipelines (preview rendering, runtime, etc.) instead of pre-rendering to PNG or shelling out.
+
+[File format] In `@pixelrpg/engine`'s `format/` modules. **Pre-release; breaking changes explicitly allowed.** No users yet, no migration shims. When a schema change lands, update every consumer in the workspace in the same PR — every `games/*` template, the maker, the game-browser seed, the engine tests.
+
+[Deferred work] `TODO.md` at the workspace root is the single source of truth for everything intentionally not built yet. Keep it pruned — terse one-line entries grouped by surface, no "done" section (use `git log` for that). Append new entries whenever you punt something during a session; remove the entry in the same commit that resolves it. PRs whose work creates or resolves a TODO MUST update `TODO.md` in the same commit.
+
+[Conceptual decisions] `docs/concepts/` holds living docs for cross-cutting design decisions — data models, ECS patterns, runtime contracts, file-format reasoning. Anything two-or-more packages share a mental model on lives here, not in per-package READMEs. **Keep these docs current**: update the concept file in the same commit that changes the underlying code or schema; delete sections that describe superseded approaches (use `git log` for history). Each doc carries a `Status:` header (planning / active / superseded) plus the date of the last meaningful change. Index + maintenance rules in `docs/concepts/README.md`. Drift between a concept doc and the implementation = blocked PR.
+
+[Engine patterns — ECS] Excalibur Components/Systems. Components are pure data (serialisable, no methods that mutate state). Systems are pure logic (no persistent state beyond per-tick scratch buffers; state lives in components or scene resources). Cross-system communication goes through the engine event bus (`engine.events.emit / .on`), not direct method calls between systems. Class-hierarchy entities (e.g. `Player extends Actor`) only with a written justification in the PR description — default is composition. See `docs/concepts/object-system.md` for the canonical event names + spawn flow.
 
 ## General (all code)
 

@@ -1,0 +1,36 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgSceneEditor : Adw.Bin {
+  Gtk.Overlay overlay {
+    [overlay]
+    $PixelRpgFloatingToolRail tool_rail {}
+
+    [overlay]
+    $PixelRpgFloatingHistory history_osd {}
+
+    [overlay]
+    $PixelRpgFloatingZoom zoom_osd {}
+
+    [overlay]
+    $PixelRpgContextChip context_chip {}
+
+    child: Adw.Bin backdrop {
+      // Diagonal-stripe scratchpad — visible wherever the engine canvas
+      // doesn't cover the area. The map fills as much as possible; the
+      // stripes only show through transparent regions of the canvas
+      // (outside map bounds) and beyond it.
+      styles ["editor-backdrop"]
+      hexpand: true;
+      vexpand: true;
+
+      child: Gtk.Box engine_holder {
+        orientation: vertical;
+        halign: fill;
+        valign: fill;
+        hexpand: true;
+        vexpand: true;
+      };
+    };
+  }
+}

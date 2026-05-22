@@ -1,0 +1,67 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgSceneCard : Gtk.Button {
+  styles ["scene-card", "flat"]
+
+  child: Gtk.Overlay overlay {
+    child: Gtk.Box body {
+      orientation: vertical;
+      spacing: 0;
+      overflow: hidden;
+      styles ["card"]
+
+      Gtk.Box title_bar {
+        orientation: horizontal;
+        spacing: 6;
+        margin-top: 5;
+        margin-bottom: 5;
+        margin-start: 10;
+        margin-end: 9;
+
+        Gtk.Label name_label {
+          label: bind template.scene-name;
+          halign: start;
+          hexpand: true;
+          ellipsize: end;
+          styles ["caption-heading"]
+        }
+
+        Gtk.Label size_label {
+          label: bind template.size-text;
+          halign: end;
+          styles ["caption", "dim-label", "numeric"]
+        }
+      }
+
+      Gtk.Separator {
+        orientation: horizontal;
+      }
+
+      Adw.Bin preview_slot {
+        child: $PixelRpgMiniMap map {};
+      }
+    };
+
+    [overlay]
+    Gtk.Box event_badge {
+      halign: end;
+      valign: start;
+      margin-top: 4;
+      margin-end: 4;
+      spacing: 4;
+      visible: bind template.has-events;
+      styles ["scene-card-badge", "osd"]
+
+      Gtk.Image {
+        icon-name: "starred-symbolic";
+        pixel-size: 10;
+      }
+
+      Gtk.Label {
+        label: bind template.events-text;
+        styles ["caption-heading", "numeric"]
+      }
+    }
+  };
+}

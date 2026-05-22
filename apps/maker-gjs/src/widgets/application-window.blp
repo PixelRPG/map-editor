@@ -1,39 +1,44 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $ApplicationWindow: Adw.ApplicationWindow {
+template $ApplicationWindow : Adw.ApplicationWindow {
   name: "application-window";
-  default-width: 800;
-  default-height: 600;
+  default-width: 1280;
+  default-height: 800;
   width-request: 360;
   height-request: 480;
 
   Adw.Breakpoint {
-    condition ("max-width: 400sp")
+    condition ("max-width: 768sp")
 
     setters {
-      // splitView.collapsed: true;
-      // showSidebarButton.visible: true;
+      atlas_view.collapsed: true;
+      scene_editor_view.collapsed: true;
     }
   }
 
-  content: Adw.ToastOverlay toastOverlay {
+  content: Adw.ToastOverlay toast_overlay {
     child: Adw.ViewStack stack {
       vexpand: true;
       hexpand: true;
 
       Adw.ViewStackPage {
-        name: "welcome-view";
+        name: "welcome";
         title: _("Welcome");
-        child: $WelcomeView welcomeView {};
+        child: $WelcomeView welcome_view {};
       }
 
       Adw.ViewStackPage {
-        name: "project-view";
-        title: _("Project");
-        child: $ProjectView projectView {};
+        name: "atlas";
+        title: _("Atlas");
+        child: $AtlasView atlas_view {};
+      }
+
+      Adw.ViewStackPage {
+        name: "scene-editor";
+        title: _("Scene Editor");
+        child: $SceneEditorView scene_editor_view {};
       }
     };
   };
 }
-

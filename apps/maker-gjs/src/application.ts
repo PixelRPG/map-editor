@@ -4,7 +4,7 @@ import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
-import { APPLICATION_ID, PACKAGE_VERSION, RESOURCES_PATH } from './constants.ts'
+import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
 export class Application extends Adw.Application {
@@ -28,7 +28,20 @@ export class Application extends Adw.Application {
   }
 
   protected onStartup(): void {
+    this.initResources()
     this.initStyles()
+  }
+
+  /** Load + register the bundled GResource so app metainfo, icons, etc.
+   * resolve under `/org/pixelrpg/maker/…`. */
+  protected initResources(): void {
+    try {
+      const path = `${PKGDATADIR}/${APPLICATION_ID}.data.gresource`
+      const resource = Gio.Resource.load(path)
+      Gio.resources_register(resource)
+    } catch (error) {
+      console.warn(`[Application] Failed to register gresource: ${error}`)
+    }
   }
 
   /** Load the stylesheet in a CssProvider and add it to the Gtk.StyleContext */
@@ -68,10 +81,14 @@ export class Application extends Adw.Application {
       //   copyright: '© 2024 Pascal Garber',
       // }
       // const aboutWindow = new Adw.AboutWindow(aboutParams)
+      // Pass `null` as the release version until the metainfo has
+      // proper <release> entries; libadwaita falls back to the latest
+      // release block (or just the app metadata if there are none).
       const aboutDialog = Adw.AboutDialog.new_from_appdata(
         `${RESOURCES_PATH}/metainfo/${APPLICATION_ID}.metainfo.xml`,
-        PACKAGE_VERSION,
+        null,
       )
+      aboutDialog.set_version(PACKAGE_VERSION)
       aboutDialog.present(this.get_active_window())
       // aboutWindow.present()
     })

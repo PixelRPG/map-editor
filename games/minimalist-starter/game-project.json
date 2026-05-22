@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "id": "minimalist-starter",
+  "name": "Minimalist Starter",
+  "startup": {
+    "initialMapId": "overworld",
+    "initialX": 0,
+    "initialY": 0,
+    "initialDirection": "down"
+  },
+  "maps": [
+    {
+      "id": "overworld",
+      "name": "Open Field",
+      "path": "./maps/overworld.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "dungeon",
+      "name": "Stone Chamber",
+      "path": "./maps/dungeon.json",
+      "type": "map",
+      "category": "dungeon"
+    },
+    {
+      "id": "cozy-town",
+      "name": "Cozy Town Square",
+      "path": "./maps/cozy-town.json",
+      "type": "map",
+      "category": "town"
+    }
+  ],
+  "mapCategories": [
+    {
+      "id": "overworld",
+      "name": "Overworld"
+    },
+    {
+      "id": "dungeon",
+      "name": "Dungeon"
+    },
+    {
+      "id": "town",
+      "name": "Town"
+    }
+  ],
+  "spriteSets": [
+    {
+      "id": "minimalist",
+      "path": "./spritesets/minimalist.json",
+      "type": "spriteset",
+      "category": "tiles"
+    }
+  ],
+  "teleports": [
+    {
+      "id": "overworld-to-dungeon",
+      "label": "Cave Entrance",
+      "from": {
+        "mapId": "overworld",
+        "x": 13,
+        "y": 7
+      },
+      "to": {
+        "mapId": "dungeon",
+        "x": 9,
+        "y": 12
+      }
+    },
+    {
+      "id": "dungeon-to-overworld",
+      "label": "Exit",
+      "from": {
+        "mapId": "dungeon",
+        "x": 9,
+        "y": 12
+      },
+      "to": {
+        "mapId": "overworld",
+        "x": 13,
+        "y": 7
+      }
+    },
+    {
+      "id": "overworld-to-town",
+      "label": "Town Path",
+      "from": {
+        "mapId": "overworld",
+        "x": 21,
+        "y": 15
+      },
+      "to": {
+        "mapId": "cozy-town",
+        "x": 3,
+        "y": 7
+      }
+    },
+    {
+      "id": "town-to-overworld",
+      "label": "Open Field",
+      "from": {
+        "mapId": "cozy-town",
+        "x": 3,
+        "y": 7
+      },
+      "to": {
+        "mapId": "overworld",
+        "x": 21,
+        "y": 15
+      }
+    }
+  ],
+  "properties": {
+    "gameTitle": "Minimalist Starter",
+    "author": "",
+    "version": "0.1.0",
+    "description": "Three connected scenes (overworld · dungeon · cozy town) built from a shared minimalist tileset.",
+    "defaultTileSize": 16
+  },
+  "editorData": {
+    "template": "minimalist-starter"
+  }
+}

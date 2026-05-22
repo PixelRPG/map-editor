@@ -35,6 +35,12 @@ export class MapResource implements Loadable<TileMap> {
     return this._mapData
   }
 
+  /** Absolute filesystem path to the source JSON. Useful for editors
+   * that want to persist `editorData` changes back to disk. */
+  public get sourcePath(): string {
+    return joinPaths(this.basePath, this.filename)
+  }
+
   constructor(path: string, options?: MapResourceOptions) {
     this.headless = options?.headless ?? this.headless
     this.basePath = extractDirectoryPath(path)

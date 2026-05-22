@@ -46,12 +46,17 @@ export class Engine {
       suppressMinimumBrowserFeatureDetection: true,
       suppressConsoleBootMessage: true,
       suppressPlayButton: true,
-      // `FitContainerAndFill` is what gjsify widgets expect (no "screen" in
-      // GJS). FillScreen tries to resize against window.innerWidth/Height,
-      // which are not available here.
-      displayMode: DisplayMode.FitContainerAndFill,
+      // `FillContainer` — the game resolution tracks the host widget's
+      // pixel size, so resizing the GTK widget reveals more (or less)
+      // of the world at the same tile pixel size, without distorting
+      // the rendered tiles. `FillScreen` would be wrong here — it
+      // reads `window.innerWidth/Height`, which don't exist in GJS.
+      displayMode: DisplayMode.FillContainer,
       pixelArt: true,
-      backgroundColor: this.resolveBackgroundColor(),
+      // Fully transparent background so the editor's diagonal-stripe
+      // scratchpad backdrop (and any future themed fill) shows through
+      // wherever the map doesn't cover the canvas.
+      backgroundColor: Color.Transparent,
       enableCanvasTransparency: true,
       enableCanvasContextMenu: true,
     })
@@ -162,18 +167,4 @@ export class Engine {
     this.events.emit(EngineEvent.STATUS_CHANGED, { status })
   }
 
-  private resolveBackgroundColor(): Color {
-    try {
-      if (
-        typeof globalThis !== 'undefined' &&
-        typeof globalThis.matchMedia === 'function' &&
-        globalThis.matchMedia('(prefers-color-scheme: dark)').matches
-      ) {
-        return Color.Black
-      }
-    } catch {
-      // matchMedia unavailable — fall through to default
-    }
-    return Color.White
-  }
 }

@@ -1,7 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { GameProjectEditorMetadata, Properties } from './index'
+import type { GameProjectEditorMetadata, Properties, TeleportData } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -48,6 +48,13 @@ export interface GameProjectData {
    * Optional game-wide properties
    */
   properties?: Properties
+
+  /**
+   * Teleports stitching map tiles to other map tiles. Currently
+   * surfaced by the editor's atlas view only — engine-side warping is
+   * a deferred TODO.
+   */
+  teleports?: TeleportData[]
 
   /**
    * Optional editor-specific data

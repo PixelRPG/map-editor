@@ -11,8 +11,18 @@ import {
   Engine as ExcaliburEngine,
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
-import { EventEmitter, type Subscription } from 'excalibur'
+import { Color, EventEmitter, type Subscription } from 'excalibur'
 import Template from './engine.blp'
+
+/**
+ * Scratchpad backdrop colors from the design's `adwaita/theme.css`
+ * `--scratchpad-b` token (the lighter of the two stripe colours, used
+ * as a solid fallback while GLArea alpha compositing is unreliable on
+ * this stack). Re-paint inside the Excalibur clear so the area around
+ * the map matches the editor scratchpad instead of opaque white.
+ */
+const SCRATCHPAD_BG_LIGHT = Color.fromHex('#ededed')
+const SCRATCHPAD_BG_DARK = Color.fromHex('#232328')
 
 function describeError(err: unknown): string {
   if (err instanceof Error) {
@@ -128,6 +138,62 @@ export class Engine extends Adw.Bin {
     return this._excalibur
   }
 
+  /** Current camera zoom, or `null` if the engine isn't running yet. */
+  public getCameraZoom(): number | null {
+    const camera = this._excalibur?.excalibur?.currentScene?.camera
+    return camera ? camera.zoom : null
+  }
+
+  /** Set the camera zoom (no-op if the engine isn't running yet). */
+  public setCameraZoom(zoom: number): void {
+    const camera = this._excalibur?.excalibur?.currentScene?.camera
+    if (camera) camera.zoom = zoom
+  }
+
+  /**
+   * Subscribe to camera-zoom changes. The callback fires after every
+   * engine update tick. Returns `true` if the subscription was
+   * registered, `false` if the engine wasn't running yet.
+   *
+   * Subscriptions are auto-tracked alongside the other engine
+   * subscriptions; no caller-side unsubscribe is needed within the
+   * engine's lifetime.
+   */
+  public onCameraZoomChanged(cb: (zoom: number) => void): boolean {
+    const excalibur = this._excalibur?.excalibur
+    if (!excalibur) return false
+    this._excaliburSubscriptions.push(
+      excalibur.on('postupdate', () => {
+        const zoom = excalibur.currentScene?.camera?.zoom
+        if (typeof zoom === 'number') cb(zoom)
+      }),
+    )
+    return true
+  }
+
+  /**
+   * Repaint the Excalibur clear colour to match the current Adwaita
+   * dark / light setting. Listens for `notify::dark` on the global
+   * `Adw.StyleManager` so flipping the OS theme updates the canvas
+   * background live.
+   */
+  private _applyScratchpadBackground(): void {
+    const styleManager = Adw.StyleManager.get_default()
+    const update = () => {
+      const dark = styleManager.dark
+      const colour = dark ? SCRATCHPAD_BG_DARK : SCRATCHPAD_BG_LIGHT
+      const excalibur = this._excalibur?.excalibur
+      if (excalibur) excalibur.backgroundColor = colour
+    }
+    update()
+    // Track future theme switches; clean up via the existing
+    // disconnect helper on unmap.
+    const handlerId = styleManager.connect('notify::dark', update)
+    this._styleManagerHandlerId = handlerId
+  }
+
+  private _styleManagerHandlerId = 0
+
   private _startWithWidget(useFallback: boolean): void {
     let child = this._canvasContainer.get_first_child()
     while (child) {
@@ -138,11 +204,35 @@ export class Engine extends Adw.Bin {
     const widget = useFallback ? new Canvas2DBridge() : new WebGLBridge()
     widget.set_hexpand(true)
     widget.set_vexpand(true)
+    // The WebGL bridge is a `Gtk.GLArea`, which defaults to an opaque
+    // framebuffer. Excalibur clears with `Color.Transparent`, but
+    // without `has-alpha` the alpha channel is dropped by GLArea
+    // before composition — the GTK widgets behind the canvas (the
+    // editor scratchpad backdrop) stay invisible. Opting into alpha
+    // here lets the canvas composite against the GTK background.
+    //
+    // `set_has_alpha` MUST happen before the area is realized; doing
+    // it right after construction (and before `append`) keeps the
+    // ordering safe.
+    if (typeof (widget as { set_has_alpha?: (v: boolean) => void }).set_has_alpha === 'function') {
+      ;(widget as unknown as { set_has_alpha: (v: boolean) => void }).set_has_alpha(true)
+    } else {
+      // Fallback for GIR bindings that expose the GObject property
+      // directly instead of the explicit setter.
+      try {
+        ;(widget as unknown as { has_alpha?: boolean }).has_alpha = true
+      } catch {
+        // Property may not be settable in this binding; ignore.
+      }
+    }
+    // The Canvas2D fallback isn't a GLArea — paint over a transparent
+    // CSS background so it composites the same way.
+    widget.add_css_class('engine-canvas')
     widget.installGlobals()
     this._canvasContainer.append(widget)
     this._widget = widget
 
-    widget.onReady(async (canvas: any) => {
+    widget.onReady(async (canvas: HTMLCanvasElement) => {
       widget.grab_focus()
       canvas.width = widget.get_allocated_width() || 800
       canvas.height = widget.get_allocated_height() || 600
@@ -162,6 +252,12 @@ export class Engine extends Adw.Bin {
         this._forwardEvents(engine)
         this._excalibur = engine
         await engine.initialize()
+        // Apply the scratchpad backdrop colour as the engine clear
+        // colour. With GLArea alpha compositing being unreliable on
+        // this stack, painting the backdrop INSIDE the canvas is the
+        // robust fallback — the empty area around the map matches the
+        // editor scratchpad instead of showing through as opaque white.
+        this._applyScratchpadBackground()
         this._ready = true
         this.emit('ready')
       } catch (err) {
@@ -222,6 +318,15 @@ export class Engine extends Adw.Bin {
       }
     }
     this._excaliburSubscriptions = []
+
+    if (this._styleManagerHandlerId) {
+      try {
+        Adw.StyleManager.get_default().disconnect(this._styleManagerHandlerId)
+      } catch {
+        // already disposed
+      }
+      this._styleManagerHandlerId = 0
+    }
 
     try {
       this._excalibur?.stop()

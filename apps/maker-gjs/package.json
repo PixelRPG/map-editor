@@ -8,8 +8,8 @@
   "scripts": {
     "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
     "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
-    "build:barrels": "gjsify barrels src src/widgets src/objects",
-    "check:barrels": "gjsify barrels --check src src/widgets src/objects",
+    "build:barrels": "gjsify barrels src src/widgets",
+    "check:barrels": "gjsify barrels --check src src/widgets",
     "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
     "build": "gjsify run build:resources && gjsify run build:barrels && gjsify run build:app",
     "check": "gjsify run build:barrels && tsc",
@@ -28,7 +28,7 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@gjsify/cli": "^0.4.16",
+    "@gjsify/cli": "^0.4.21",
     "typescript": "^6.0.3"
   },
   "dependencies": {
@@ -40,11 +40,11 @@
     "@girs/glib-2.0": "^2.88.0-4.0.0-rc.15",
     "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.15",
     "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.15",
-    "@gjsify/canvas2d": "^0.4.16",
-    "@gjsify/dom-elements": "^0.4.16",
-    "@gjsify/event-bridge": "^0.4.16",
-    "@gjsify/webgl": "^0.4.16",
-    "@gjsify/xmlhttprequest": "^0.4.16",
+    "@gjsify/canvas2d": "^0.4.21",
+    "@gjsify/dom-elements": "^0.4.21",
+    "@gjsify/event-bridge": "^0.4.21",
+    "@gjsify/webgl": "^0.4.21",
+    "@gjsify/xmlhttprequest": "^0.4.21",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
     "excalibur": "^0.32.0"

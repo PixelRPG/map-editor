@@ -99,17 +99,18 @@ export class MapFormat {
       throw new MapValidationError('Map must have at least one layer', 'layers')
     }
 
-    // Validate sprite sets
-    if (!data.spriteSets || !Array.isArray(data.spriteSets)) {
+    // Validate sprite sets — optional. Empty / missing means the map has
+    // no painted tiles yet (e.g. the blank-starter template). Layers
+    // can still exist and accept paint operations once a sprite set is
+    // added through the editor.
+    if (data.spriteSets != null && !Array.isArray(data.spriteSets)) {
       throw new MapValidationError('Sprite sets must be an array', 'spriteSets', data.spriteSets)
     }
 
-    if (data.spriteSets.length === 0) {
-      throw new MapValidationError('Map must have at least one sprite set', 'spriteSets')
-    }
+    const spriteSets = data.spriteSets ?? []
 
     // Validate each sprite set reference
-    data.spriteSets.forEach((spriteSet, index) => {
+    spriteSets.forEach((spriteSet, index) => {
       if (!spriteSet.id || typeof spriteSet.id !== 'string') {
         throw new MapValidationError(
           `Sprite set at index ${index} must have a valid id`,

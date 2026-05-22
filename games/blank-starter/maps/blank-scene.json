@@ -1,0 +1,19 @@
+{
+  "id": "blank-scene",
+  "name": "Blank Scene",
+  "version": "1.0.0",
+  "tileWidth": 16,
+  "tileHeight": 16,
+  "columns": 20,
+  "rows": 14,
+  "spriteSets": [],
+  "layers": [
+    {
+      "id": "layer_0",
+      "name": "Background",
+      "type": "tile",
+      "visible": true,
+      "sprites": []
+    }
+  ]
+}

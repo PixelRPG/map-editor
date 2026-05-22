@@ -1,0 +1,45 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgLayerRow : Adw.Bin {
+  styles ["layer-row"]
+
+  Gtk.Box body {
+    orientation: horizontal;
+    spacing: 8;
+    margin-top: 4;
+    margin-bottom: 4;
+    margin-start: 6;
+    margin-end: 6;
+
+    Gtk.ToggleButton visibility_button {
+      icon-name: bind template.visibility-icon;
+      tooltip-text: _("Toggle layer visibility");
+      active: bind template.visible bidirectional;
+      styles ["flat", "circular"]
+      valign: center;
+    }
+
+    Gtk.Label name_label {
+      label: bind template.layer-name;
+      halign: start;
+      hexpand: true;
+      ellipsize: end;
+    }
+
+    Gtk.Label count_label {
+      label: bind template.tile-count-text;
+      halign: end;
+      valign: center;
+      styles ["caption", "numeric", "dim-label"]
+    }
+
+    Gtk.ToggleButton lock_button {
+      icon-name: bind template.lock-icon;
+      tooltip-text: _("Lock layer");
+      active: bind template.locked bidirectional;
+      styles ["flat", "circular"]
+      valign: center;
+    }
+  }
+}

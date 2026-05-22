@@ -1,0 +1,84 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgContextChip : Adw.Bin {
+  halign: end;
+  valign: start;
+  margin-top: 12;
+  margin-end: 12;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 2;
+    styles ["toolbar", "osd"]
+
+    Gtk.MenuButton tile_button {
+      tooltip-text: _("Active tile");
+      styles ["flat"]
+
+      child: Gtk.Box {
+        spacing: 8;
+        margin-start: 6;
+        margin-end: 6;
+
+        // Gtk.Picture (not Gtk.Image) — Picture is the GTK4-recommended
+        // host for arbitrary paintables. Gtk.Image's pixel-size only
+        // applies to icon sources, so set_from_paintable() yielded an
+        // unsized cell that fell back to the grid icon.
+        //
+        // `can-shrink: false` is load-bearing: by default Gtk.Picture
+        // allows shrinking below the paintable's intrinsic size, which
+        // collapsed the swatch to 1px inside the OSD chip's horizontal
+        // Box. With `can-shrink: false` the width / height requests
+        // become hard floors.
+        Gtk.Picture tile_swatch {
+          content-fit: contain;
+          can-shrink: false;
+          width-request: 22;
+          height-request: 22;
+          hexpand: false;
+          vexpand: false;
+        }
+
+        Gtk.Label tile_name {
+          label: bind template.tile-name;
+        }
+
+        Gtk.Image {
+          icon-name: "pan-down-symbolic";
+          styles ["dim-label"]
+        }
+      };
+    }
+
+    Gtk.Separator {
+      orientation: vertical;
+    }
+
+    Gtk.MenuButton layer_button {
+      tooltip-text: _("Active layer");
+      styles ["flat"]
+
+      child: Gtk.Box {
+        spacing: 8;
+        margin-start: 6;
+        margin-end: 6;
+
+        Gtk.Image {
+          icon-name: "view-list-symbolic";
+          pixel-size: 14;
+          styles ["accent"]
+        }
+
+        Gtk.Label layer_name {
+          label: bind template.layer-name;
+        }
+
+        Gtk.Image {
+          icon-name: "pan-down-symbolic";
+          styles ["dim-label"]
+        }
+      };
+    }
+  }
+}

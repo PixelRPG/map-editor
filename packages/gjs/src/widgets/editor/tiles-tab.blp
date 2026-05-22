@@ -1,0 +1,40 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgTilesTab : Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Gtk.SearchEntry search {
+      placeholder-text: _("Search tiles…");
+    }
+
+    Gtk.Box header {
+      orientation: horizontal;
+      spacing: 6;
+
+      Gtk.Label tileset_label {
+        label: bind template.tileset-name;
+        halign: start;
+        hexpand: true;
+        styles ["heading", "dim-label"]
+      }
+
+      Gtk.Button switch_button {
+        label: _("Switch…");
+        action-name: "win.switch-tileset";
+        styles ["flat"]
+      }
+    }
+
+    $PixelRpgTilePalette palette {
+      tile-size: 42;
+      columns: 5;
+    }
+  }
+}

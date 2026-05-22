@@ -1,0 +1,37 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgLayersTab : Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 6;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Gtk.ListBox list {
+      selection-mode: single;
+      styles ["boxed-list"]
+    }
+
+    Gtk.Button new_layer_button {
+      label: _("New layer");
+      action-name: "win.new-layer";
+      styles ["flat"]
+      margin-top: 6;
+
+      child: Gtk.Box {
+        spacing: 6;
+
+        Gtk.Image {
+          icon-name: "list-add-symbolic";
+        }
+
+        Gtk.Label {
+          label: _("New layer");
+        }
+      };
+    }
+  }
+}

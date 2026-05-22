@@ -1,0 +1,53 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgFloatingZoom : Adw.Bin {
+  halign: center;
+  valign: end;
+  margin-bottom: 12;
+
+  Gtk.Box {
+    orientation: horizontal;
+    spacing: 2;
+    styles ["toolbar", "osd"]
+
+    Gtk.Button zoom_out_button {
+      icon-name: "zoom-out-symbolic";
+      action-name: "win.zoom-out";
+      tooltip-text: _("Zoom out");
+      styles ["flat"]
+    }
+
+    Gtk.Button zoom_reset_button {
+      action-name: "win.zoom-reset";
+      tooltip-text: _("Reset zoom");
+      styles ["flat"]
+
+      child: Gtk.Label zoom_label {
+        label: bind template.zoom-label;
+        styles ["numeric"]
+        width-chars: 5;
+      };
+    }
+
+    Gtk.Button zoom_in_button {
+      icon-name: "zoom-in-symbolic";
+      action-name: "win.zoom-in";
+      tooltip-text: _("Zoom in");
+      styles ["flat"]
+    }
+
+    Gtk.Separator {
+      orientation: vertical;
+      visible: bind template.show-cursor;
+    }
+
+    Gtk.Label cursor_label {
+      label: bind template.cursor-label;
+      visible: bind template.show-cursor;
+      styles ["caption", "numeric"]
+      margin-start: 8;
+      margin-end: 8;
+    }
+  }
+}

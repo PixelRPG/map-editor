@@ -5,8 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "check": "tsc",
-    "build:blueprints": "blueprint-compiler compile src/widgets/story.widget.blp --output src/widgets/story.widget.ui",
-    "build": "gjsify run build:blueprints",
+    "build": "tsc --noEmit",
     "watch": "tsc -w"
   },
   "dependencies": {

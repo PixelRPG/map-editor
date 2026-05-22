@@ -39,7 +39,7 @@ export function findSpriteInfoForTileId(
   }
 
   for (const [spriteSetId, spriteSetResource] of spriteSetResources) {
-    const spriteSetRef = mapData.spriteSets.find((ref: SpriteSetReferenceLike) => ref?.id === spriteSetId) as
+    const spriteSetRef = mapData.spriteSets?.find((ref: SpriteSetReferenceLike) => ref?.id === spriteSetId) as
       | SpriteSetReferenceLike
       | undefined
     if (!spriteSetRef?.firstGid || typeof spriteSetRef.firstGid !== 'number') {

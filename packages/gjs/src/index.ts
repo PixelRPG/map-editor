@@ -1,3 +1,4 @@
+export * from './__demo__/world-sample.ts'
 export * from './sprite/index.ts'
 export * from './stories.ts'
 export * from './utils/index.ts'

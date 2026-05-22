@@ -1,7 +1,76 @@
-/* CSS Variables for testing */
+/* PixelRPG design tokens.
+ *
+ * Adwaita already exposes its semantic colors as @define-color names
+ * (window_bg_color, view_bg_color, headerbar_bg_color, sidebar_bg_color,
+ * secondary_sidebar_bg_color, card_bg_color, accent_bg_color,
+ * accent_fg_color, shade_color, …) — consume those directly via
+ * @theme_color or by reading the parallel CSS custom-property mirrors
+ * (--accent-bg-color, --window-bg-color, …) that libadwaita publishes.
+ *
+ * This file defines the editor-specific tokens that aren't part of
+ * Adwaita's palette, plus the sprite-preview tokens consumed by the
+ * sprite + sprite-sheet widgets.
+ *
+ * Source: design handoff README §"Design Tokens"; theme.css extras.
+ */
+
 :root {
+  /* Sprite preview tokens (sprite-sheet.widget.css). */
   --sprite-selection-color: #3584e4;
   --sprite-selection-width: 2px;
   --sprite-hover-opacity: 0.5;
   --sprite-transition-duration: 0.15s;
+
+  /* Atlas surface ("design canvas" backdrop in the prototype). */
+  --dc-bg: #ebebed;
+  --dc-dot: rgba(0, 0, 6, 0.1);
+
+  /* Scene-editor scratchpad (45° diagonal stripes behind the map). */
+  --scratchpad-a: #ededed;
+  --scratchpad-b: #f6f5f4;
+  --scratchpad-shadow: rgba(0, 0, 0, 0.18);
+
+  /* Floating OSD chrome (tool rail, zoom pill, context chip). */
+  --osd-bg: rgba(20, 20, 24, 0.78);
+  --osd-fg: #ffffff;
+
+  /* Light hairline used inside cards and around the scratchpad. */
+  --card-shade-color: rgba(0, 0, 6, 0.07);
+}
+
+/* Libadwaita toggles `.dark` on the root when the dark style preference
+ * is active. */
+.dark {
+  --dc-bg: #1d1d20;
+  --dc-dot: rgba(255, 255, 255, 0.07);
+
+  --scratchpad-a: #1a1a1d;
+  --scratchpad-b: #232328;
+  --scratchpad-shadow: rgba(0, 0, 0, 0.5);
+
+  --osd-bg: rgba(40, 40, 46, 0.85);
+  --osd-fg: #ffffff;
+
+  --card-shade-color: rgba(0, 0, 6, 0.25);
+}
+
+/* Editor backdrops shared by widgets in this package. */
+.editor-backdrop {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--scratchpad-a) 0,
+    var(--scratchpad-a) 8px,
+    var(--scratchpad-b) 8px,
+    var(--scratchpad-b) 16px
+  );
+}
+
+.atlas-surface {
+  background-color: var(--dc-bg);
+  background-image: radial-gradient(circle, var(--dc-dot) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+.atlas-surface.small-dots {
+  background-size: 16px 16px;
 }

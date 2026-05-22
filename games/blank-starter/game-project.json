@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "id": "blank-starter",
+  "name": "Untitled Project",
+  "startup": {
+    "initialMapId": "blank-scene",
+    "initialX": 0,
+    "initialY": 0,
+    "initialDirection": "down"
+  },
+  "maps": [
+    {
+      "id": "blank-scene",
+      "name": "Blank Scene",
+      "path": "./maps/blank-scene.json",
+      "type": "map",
+      "category": "overworld"
+    }
+  ],
+  "mapCategories": [
+    {
+      "id": "overworld",
+      "name": "Overworld"
+    }
+  ],
+  "spriteSets": [],
+  "properties": {
+    "gameTitle": "Untitled Project",
+    "author": "",
+    "version": "0.1.0",
+    "description": "Created from the blank starter template",
+    "defaultTileSize": 16
+  },
+  "editorData": {
+    "template": "blank-starter"
+  }
+}

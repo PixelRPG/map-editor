@@ -1,0 +1,12 @@
+{
+  "name": "@pixelrpg/games-minimalist-starter",
+  "version": "0.0.1",
+  "description": "Minimalist starter template — three connected scenes (overworld · dungeon · cozy town) wired together with teleports, built on a single procedural tileset.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./*",
+    "./maps/*": "./maps/*",
+    "./spritesets/*": "./spritesets/*"
+  }
+}

@@ -1,0 +1,75 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgSceneInspector : Adw.Bin {
+  styles ["scene-inspector"]
+  width-request: 300;
+
+  Gtk.ScrolledWindow {
+    hscrollbar-policy: never;
+    vscrollbar-policy: automatic;
+
+    child: Gtk.Box body {
+      orientation: vertical;
+      spacing: 12;
+      margin-top: 16;
+      margin-bottom: 16;
+      margin-start: 16;
+      margin-end: 16;
+
+      Gtk.Frame preview_frame {
+        styles ["card"]
+        halign: center;
+        margin-bottom: 4;
+
+        child: Adw.Bin preview_slot {
+          halign: center;
+          valign: center;
+          margin-top: 12;
+          margin-bottom: 12;
+          margin-start: 12;
+          margin-end: 12;
+        };
+      }
+
+      Gtk.Label name_label {
+        label: bind template.scene-name;
+        halign: start;
+        styles ["title-3"]
+      }
+
+      Gtk.Label subtitle_label {
+        label: bind template.subtitle-text;
+        halign: start;
+        styles ["caption", "dim-label"]
+      }
+
+      Gtk.Grid stats_grid {
+        column-homogeneous: true;
+        column-spacing: 6;
+        row-spacing: 6;
+        margin-top: 6;
+      }
+
+      Adw.PreferencesGroup teleports_group {
+        title: _("Teleports");
+        visible: bind template.has-teleports;
+      }
+
+      Gtk.Button open_button {
+        label: _("Open Scene");
+        action-name: "win.open-scene";
+        halign: fill;
+        styles ["suggested-action", "pill"]
+        margin-top: 8;
+      }
+
+      Adw.StatusPage empty_state {
+        visible: bind template.empty;
+        icon-name: "view-paged-symbolic";
+        title: _("No scene selected");
+        description: _("Pick a scene from the atlas to inspect it.");
+      }
+    };
+  }
+}

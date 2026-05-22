@@ -67,37 +67,39 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
       return
     }
 
-    // Create a rectangle for the target area (where to render)
-    const targetRect = new Graphene.Rect()
-    targetRect.init(0, 0, width, height)
-
     // Clip to target area
     const clipRect = new Graphene.Rect()
     clipRect.init(0, 0, width, height)
     snapshot.push_clip(clipRect)
 
-    // Save transformation state
     snapshot.save()
 
-    // Calculate the scale factor needed to make the sprite region fill our target area
-    const textureToTargetScale = width / this._width
+    // Use independent X / Y scale factors. Earlier code derived a single
+    // `width / this._width` scale and applied it to both axes — that
+    // worked only when the target rect matched the sprite's aspect
+    // ratio. Once a consumer allocated a non-square cell (e.g. the
+    // chip popover's FlowBox sizing tiles 32×64), the y-scale ended up
+    // larger than the target, so the texture region BELOW the target
+    // sprite leaked through inside the clip — visually merging two
+    // tiles into one cell.
+    const scaleX = width / this._width
+    const scaleY = height / this._height
 
-    // Translate so our sprite region appears at origin
     const translatePoint = new Graphene.Point()
-    translatePoint.x = -this._x * textureToTargetScale
-    translatePoint.y = -this._y * textureToTargetScale
+    translatePoint.x = -this._x * scaleX
+    translatePoint.y = -this._y * scaleY
     snapshot.translate(translatePoint)
 
-    // Create rectangle for the entire texture scaled to the right size
     const scaledTextureRect = new Graphene.Rect()
     scaledTextureRect.init(
       0,
       0,
-      this._sourceTexture.get_width() * textureToTargetScale,
-      this._sourceTexture.get_height() * textureToTargetScale,
+      this._sourceTexture.get_width() * scaleX,
+      this._sourceTexture.get_height() * scaleY,
     )
 
-    // Use append_scaled_texture with NEAREST filtering for pixel-perfect sprites
+    // NEAREST filtering keeps pixel-art crisp at both integer and
+    // fractional scales.
     snapshot.append_scaled_texture(this._sourceTexture, Gsk.ScalingFilter.NEAREST, scaledTextureRect)
 
     snapshot.restore()

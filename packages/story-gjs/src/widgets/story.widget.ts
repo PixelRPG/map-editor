@@ -1,9 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import type { StoryArgs, StoryMeta } from '../types/story'
-
-import Template from './story.widget.blp'
 
 export namespace StoryWidget {
   export interface ConstructorProps {
@@ -14,27 +12,31 @@ export namespace StoryWidget {
 }
 
 /**
- * Base class for GJS story widgets
+ * Base class for GJS story widgets.
+ *
+ * Provides a default chrome — a centered `Adw.PreferencesPage` /
+ * `Adw.PreferencesGroup` with title + description above a content slot —
+ * built programmatically (no `Template`). This lets simple stories
+ * compose their preview by calling {@link addContent}, while still
+ * allowing more elaborate subclasses to override the layout by
+ * providing their own composite template.
+ *
+ * Subclasses that DO provide a `Template` have full control over the
+ * layout; {@link addContent} is a no-op for them (no `_story_content`
+ * slot is created).
  */
 export class StoryWidget extends Adw.Bin {
-  // Story metadata
-  private _meta: StoryMeta
-  // Story name
-  private _story: string
-  // Story arguments
-  private _args: StoryArgs
+  private _meta!: StoryMeta
+  private _story = ''
+  private _args!: StoryArgs
 
-  // UI elements
-  declare _content_box: Gtk.Box
-  declare _story_title: Gtk.Label
-  declare _story_description: Gtk.Label
-  declare _story_content: Gtk.Box
+  private _storyContent: Gtk.Box | null = null
+  private _group: Adw.PreferencesGroup | null = null
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'StoryWidget',
-        Template,
         Properties: {
           meta: GObject.ParamSpec.object(
             'meta',
@@ -52,18 +54,11 @@ export class StoryWidget extends Adw.Bin {
             GObject.Object,
           ),
         },
-        InternalChildren: ['content_box', 'story_title', 'story_description', 'story_content'],
       },
       StoryWidget,
     )
   }
 
-  /**
-   * Create a new story widget
-   * @param meta Story metadata
-   * @param name Story name
-   * @param args Story arguments
-   */
   constructor(params: StoryWidget.ConstructorProps, adwParams: Partial<Adw.Bin.ConstructorProps> = {}) {
     super(adwParams)
 
@@ -71,121 +66,96 @@ export class StoryWidget extends Adw.Bin {
     this._story = params.story
     this._args = params.args
 
-    this._updateTitle()
-    this._updateDescription()
+    if (this.get_child() == null) this._installDefaultChrome()
   }
 
-  /**
-   * Get the story metadata
-   */
   get meta(): StoryMeta {
     return this._meta
   }
 
-  /**
-   * Set the story metadata
-   */
   set meta(value: StoryMeta) {
     if (this._meta === value) return
-
     this._meta = value
     this.notify('meta')
-    this._updateTitle()
-    this._updateDescription()
+    this._refreshChromeText()
   }
 
-  /**
-   * Get the story name
-   */
   get story(): string {
     return this._story
   }
 
-  /**
-   * Set the story name
-   */
   set story(value: string) {
     if (this._story === value) return
-
     this._story = value
     this.notify('story')
-    this._updateTitle()
+    this._refreshChromeText()
   }
 
-  /**
-   * Get the story arguments
-   */
   get args(): StoryArgs {
     return this._args
   }
 
-  /**
-   * Set the story arguments
-   */
   set args(value: StoryArgs) {
     if (this._args === value) return
-
     this._args = value
     this.notify('args')
     this.updateArgs(value)
   }
 
-  /**
-   * Update the story title
-   */
-  private _updateTitle(): void {
-    if (this._story_title && this._meta) {
-      this._story_title.set_label(`${this._meta.title} - ${this._story}`)
-    }
-  }
+  /** Override in subclasses. */
+  initialize(): void {}
+
+  /** Override in subclasses. */
+  updateArgs(_args: StoryArgs): void {}
 
   /**
-   * Update the story description
-   */
-  private _updateDescription(): void {
-    if (this._story_description && this._meta) {
-      if (this._meta.description) {
-        this._story_description.set_label(this._meta.description)
-        this._story_description.set_visible(true)
-      } else {
-        this._story_description.set_visible(false)
-      }
-    }
-  }
-
-  /**
-   * Initialize the story
-   * Override this method in subclasses
-   */
-  initialize(): void {
-    // Implement in subclasses
-  }
-
-  /**
-   * Update the story arguments
-   * Override this method in subclasses
-   * @param args New arguments for the story
-   */
-  updateArgs(_args: StoryArgs): void {
-    // Implement in subclasses
-  }
-
-  /**
-   * Add a widget to the story content area
-   * @param widget Widget to add
+   * Add a widget to the default story preview slot. No-op if the
+   * subclass installed its own composite template.
    */
   addContent(widget: Gtk.Widget): void {
-    // Clear existing content
-    let child = this._story_content.get_first_child()
+    if (!this._storyContent) return
+
+    let child = this._storyContent.get_first_child()
     while (child) {
       child.unparent()
-      child = this._story_content.get_first_child()
+      child = this._storyContent.get_first_child()
     }
+    this._storyContent.append(widget)
+  }
 
-    // Add new content
-    this._story_content.append(widget)
+  private _installDefaultChrome(): void {
+    const page = new Adw.PreferencesPage()
+    const group = new Adw.PreferencesGroup()
+    const content = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      halign: Gtk.Align.CENTER,
+      valign: Gtk.Align.CENTER,
+      margin_top: 12,
+      margin_bottom: 12,
+      spacing: 12,
+      hexpand: true,
+    })
+
+    group.add(content)
+    page.add(group)
+    this.set_child(page)
+
+    this._group = group
+    this._storyContent = content
+    this._refreshChromeText()
+  }
+
+  private _refreshChromeText(): void {
+    if (!this._group) return
+    const title = this._meta
+      ? this._story
+        ? `${this._meta.title} — ${this._story}`
+        : this._meta.title
+      : this._story
+    const description = this._meta?.description ?? ''
+    this._group.set_title(title)
+    this._group.set_description(description)
   }
 }
 
-// Ensure the type is registered
 GObject.type_ensure(StoryWidget.$gtype)

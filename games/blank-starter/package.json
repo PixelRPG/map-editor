@@ -1,0 +1,11 @@
+{
+  "name": "@pixelrpg/games-blank-starter",
+  "version": "0.0.1",
+  "description": "Empty starter template — single 20×14 scene with no tiles. The 'New Project' default.",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./*": "./*",
+    "./maps/*": "./maps/*"
+  }
+}

@@ -1,0 +1,20 @@
+.scene-card {
+  padding: 0;
+  border-radius: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.scene-card > .card {
+  border-radius: 12px;
+  background-color: @card_bg_color;
+}
+
+.scene-card.selected > .card {
+  box-shadow: 0 0 0 2px @accent_bg_color;
+}
+
+.scene-card-badge {
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
