@@ -34,6 +34,7 @@ Conventions:
 ## Cleanup / debt
 
 - **`mockups/PixelRPGEditor_01.pdf`** — design PDF, untracked. Decide whether to commit (under `design/`?) or `.gitignore`. *owner: human*
+- **`overrides: { execa: ^9.6.1 }` in root `package.json`** — workaround for a `gjsify install 0.4.21` bug that over-installs devDeps of transitive deps + dedups `execa` to v5 (CJS), which breaks `@gjsify/vite-plugin-blueprint`'s `import { execa }`. Report at `../../gjsify/docs/reports/install-devdeps-and-execa-dedup.md`. Remove the override once gjsify's install no longer pulls extraneous devDeps. *owner: gjsify, blocked: external release*
 
 ## Storybook
 
