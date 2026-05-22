@@ -5,6 +5,7 @@ import {
   ObjectSpawnSystem,
   PlayerSpawnSystem,
   TileEditorSystem,
+  TriggerSystem,
 } from '../systems/index.ts'
 import type { EditorState, EngineEventMap, ObjectDefinition } from '../types/index.ts'
 
@@ -36,6 +37,7 @@ export class MapScene extends Scene {
     this.world.add(new TileEditorSystem(events, getEditorState))
     this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))
     this.world.add(new PlayerSpawnSystem(events))
+    this.world.add(new TriggerSystem(events))
 
     mapResource.addToScene(this)
     this.logger.debug('MapScene initialized')

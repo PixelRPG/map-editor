@@ -14,6 +14,8 @@ export enum EngineEvent {
   TILE_HOVERED = 'tile-hovered',
   TILE_PLACED = 'tile-placed',
   PLAYER_SPAWNED = 'player-spawned',
+  PLAYER_TILE_CHANGED = 'player-tile-changed',
+  PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
   WALKED_ONTO_TILE = 'walked-onto-tile',
 }
@@ -32,6 +34,28 @@ export interface EngineEventMap {
    * if no spawn point exists.
    */
   [EngineEvent.PLAYER_SPAWNED]: { tileX: number; tileY: number; facing?: Facing }
+  /**
+   * Emitted by the (future) player-movement system whenever the
+   * player crosses a tile boundary. `TriggerSystem` listens on
+   * this to fire walk-onto / walk-off triggers.
+   *
+   * Decoupled from sprite-pixel position — game-specific
+   * movement code (smooth sliding, jumping, grid-snapped) can all
+   * emit this exactly when the *logical* tile changes.
+   */
+  [EngineEvent.PLAYER_TILE_CHANGED]: {
+    tileX: number
+    tileY: number
+    /** Previous tile, or `null` if this is the initial spawn. */
+    previous: { tileX: number; tileY: number } | null
+    facing?: Facing
+  }
+  /**
+   * Emitted by the (future) input system when the player presses
+   * the action button. `facing` resolves the adjacent tile that the
+   * `TriggerSystem` scans for `action-button`-mode triggers.
+   */
+  [EngineEvent.PLAYER_ACTION_PRESSED]: { tileX: number; tileY: number; facing: Facing }
   /**
    * Emitted by `TriggerSystem` when a trigger condition is met.
    * Listeners narrow by component (TeleportComponent / ItemComponent
