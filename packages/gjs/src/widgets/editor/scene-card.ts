@@ -1,5 +1,6 @@
 import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
+import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene } from '../../__demo__/world-sample'
 import { MiniMap } from './mini-map'
@@ -33,9 +34,16 @@ export class SceneCard extends Gtk.Button {
   private _events = 0
   private _lastClickMs = 0
   private _selected = false
-  private _dragStartX = 0
-  private _dragStartY = 0
   private _dragging = false
+  // Press point in widget-local coords (captured at drag-begin) and the
+  // same point translated into the parent (atlas Fixed) coordinate
+  // space. We compute deltas in *parent* space so that moving the card
+  // during drag-update doesn't shift the widget-local origin and cause
+  // the gesture to oscillate between positions. Without this trick a
+  // big card visibly flickers between its old and new position on
+  // every mouse motion event.
+  private _pressLocal: Graphene.Point | null = null
+  private _pressInParent: Graphene.Point | null = null
 
   static {
     GObject.registerClass(
@@ -93,33 +101,68 @@ export class SceneCard extends Gtk.Button {
     // intercept presses before the button's own click handling.
     const drag = new Gtk.GestureDrag()
     drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-    drag.connect('drag-begin', (_g, _x, _y) => {
-      this._dragStartX = 0
-      this._dragStartY = 0
+    drag.connect('drag-begin', (_g, x, y) => {
       this._dragging = false
+      this._pressLocal = new Graphene.Point()
+      this._pressLocal.init(x, y)
+      this._pressInParent = this._toParent(this._pressLocal)
     })
-    drag.connect('drag-update', (_g, x, y) => {
-      const dist = Math.hypot(x, y)
+    drag.connect('drag-update', (_g, dx, dy) => {
+      const dist = Math.hypot(dx, dy)
       if (!this._dragging && dist > 4) {
         this._dragging = true
         this.emit('scene-drag-begin')
       }
-      if (this._dragging) {
-        this._dragStartX = x
-        this._dragStartY = y
-        this.emit('scene-drag-update', x, y)
-      }
+      if (!this._dragging || !this._pressLocal || !this._pressInParent) return
+      // Resolve the current cursor position in PARENT space:
+      //   current_widget_local = press_local + drag_offset (gesture-provided)
+      //   current_in_parent     = compute_point(current_widget_local → parent)
+      // Then the delta against the captured press_in_parent is stable —
+      // it doesn't depend on the card's current fixed-position.
+      const currentLocal = new Graphene.Point()
+      currentLocal.init(this._pressLocal.x + dx, this._pressLocal.y + dy)
+      const currentInParent = this._toParent(currentLocal)
+      if (!currentInParent) return
+      this.emit(
+        'scene-drag-update',
+        currentInParent.x - this._pressInParent.x,
+        currentInParent.y - this._pressInParent.y,
+      )
     })
-    drag.connect('drag-end', (_g, x, y) => {
-      if (this._dragging) {
-        this.emit('scene-drag-end', x, y)
+    drag.connect('drag-end', (_g, dx, dy) => {
+      if (this._dragging && this._pressLocal && this._pressInParent) {
+        const currentLocal = new Graphene.Point()
+        currentLocal.init(this._pressLocal.x + dx, this._pressLocal.y + dy)
+        const currentInParent = this._toParent(currentLocal)
+        if (currentInParent) {
+          this.emit(
+            'scene-drag-end',
+            currentInParent.x - this._pressInParent.x,
+            currentInParent.y - this._pressInParent.y,
+          )
+        }
         // Suppress the trailing `clicked` that GtkButton would otherwise
         // fire after a drag finishes.
         this._lastClickMs = 0
       }
       this._dragging = false
+      this._pressLocal = null
+      this._pressInParent = null
     })
     this.add_controller(drag)
+  }
+
+  /**
+   * Translate a widget-local point to the immediate parent's coordinate
+   * space. Returns `null` if there is no parent yet or the GTK
+   * transform query failed (shouldn't happen for a realised, parented
+   * widget).
+   */
+  private _toParent(point: Graphene.Point): Graphene.Point | null {
+    const parent = this.get_parent()
+    if (!parent) return null
+    const [ok, result] = this.compute_point(parent, point)
+    return ok ? result : null
   }
 
   get isDragging(): boolean {
