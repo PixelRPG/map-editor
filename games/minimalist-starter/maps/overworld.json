@@ -2412,10 +2412,58 @@
           "spriteSetId": "minimalist"
         }
       ]
+    },
+    {
+      "id": "events",
+      "name": "Events",
+      "visible": true,
+      "sprites": []
     }
   ],
   "editorData": {
     "atlasX": 30,
     "atlasY": 40
-  }
+  },
+  "objectPlacements": [
+    {
+      "id": "p-overworld-to-dungeon",
+      "layerId": "events",
+      "tileX": 13,
+      "tileY": 7,
+      "inline": {
+        "id": "def-overworld-to-dungeon",
+        "kind": "teleport",
+        "name": "Cave Entrance",
+        "trigger": {
+          "on": "walk-onto"
+        },
+        "properties": {
+          "targetMapId": "dungeon",
+          "targetTileX": 9,
+          "targetTileY": 12,
+          "label": "Cave Entrance"
+        }
+      }
+    },
+    {
+      "id": "p-overworld-to-town",
+      "layerId": "events",
+      "tileX": 21,
+      "tileY": 15,
+      "inline": {
+        "id": "def-overworld-to-town",
+        "kind": "teleport",
+        "name": "Town Path",
+        "trigger": {
+          "on": "walk-onto"
+        },
+        "properties": {
+          "targetMapId": "cozy-town",
+          "targetTileX": 3,
+          "targetTileY": 7,
+          "label": "Town Path"
+        }
+      }
+    }
+  ]
 }

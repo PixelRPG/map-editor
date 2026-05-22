@@ -135,7 +135,7 @@ export class MapPreview extends Gtk.Widget {
 
     const ops: DrawOp[] = []
     for (const layer of mapData.layers ?? []) {
-      if (layer.type !== 'tile' || !layer.visible || !layer.sprites) continue
+      if (!layer.visible || !layer.sprites) continue
       for (const tile of layer.sprites) {
         const resolved = this._resolveSpriteByLocalId(ranges, tile.spriteSetId, tile.spriteId)
         if (!resolved) continue

@@ -27,7 +27,7 @@ function makeMap(overrides: Partial<MapData> = {}): MapData {
     tileHeight: 16,
     columns: 4,
     rows: 4,
-    layers: [{ id: 'l1', name: 'Layer 1', type: 'tile', visible: true, sprites: [] }],
+    layers: [{ id: 'l1', name: 'Layer 1', visible: true, sprites: [] }],
     spriteSets: [{ id: 's', path: '../spritesets/s.json', type: 'spriteset', firstGid: 1 }],
     ...overrides,
   }

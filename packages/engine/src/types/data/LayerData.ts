@@ -1,64 +1,37 @@
-import type { ObjectData, Properties, SpriteDataMap } from './index'
+import type { Properties, SpriteDataMap } from './index'
 
 /**
- * Represents a single layer within a tile map
- * Layers can contain either tiles or objects
+ * One layer within a tile map. Every layer is a tile layer in the
+ * object-system schema; the legacy `type: 'tile' | 'object'` split
+ * is gone. Objects live in {@link MapData}.objectPlacements and
+ * reference any layer's `id` via `layerId` for sort/visibility
+ * grouping.
+ *
+ * See `docs/concepts/object-system.md`.
  */
 export interface LayerData {
-  /**
-   * Unique identifier for the layer
-   */
+  /** Unique identifier for the layer */
   id: string
 
-  /**
-   * Display name of the layer
-   */
+  /** Display name of the layer */
   name: string
 
-  /**
-   * Type of layer:
-   * - 'tile': Contains tile-based graphics and collisions
-   * - 'object': Contains game objects, colliders, or other entities
-   *
-   * @deprecated Every layer is a tile layer in the new object
-   * system; objects live in `MapData.objectPlacements[]` and
-   * reference any `LayerData.id` for sort/visibility grouping.
-   * Removed in PR 2 of the object-system rollout. See
-   * `docs/concepts/object-system.md`.
-   */
-  type: 'tile' | 'object'
-
-  /**
-   * Whether the layer should be rendered
-   */
+  /** Whether the layer should be rendered */
   visible: boolean
 
-  /**
-   * Optional opacity value (0-1)
-   */
+  /** Optional opacity value (0-1) */
   opacity?: number
 
-  /**
-   * Optional z-index for layer ordering
-   */
+  /** Optional z-index for layer ordering */
   zIndex?: number
 
   /**
-   * Array of sprites in this layer (only for type='tile')
+   * Tile sprites placed on this layer. Empty / missing for layers
+   * that purely host object placements via `layerId` (e.g. a
+   * convention "events" layer).
    */
   sprites?: SpriteDataMap[]
 
-  /**
-   * Array of objects in this layer (only for type='object').
-   *
-   * @deprecated Objects move to the per-map `MapData.objectPlacements[]`
-   * array with `layerId` referencing this layer. Removed in PR 2 of
-   * the object-system rollout. See `docs/concepts/object-system.md`.
-   */
-  objects?: ObjectData[]
-
-  /**
-   * Optional custom properties for the layer
-   */
+  /** Optional custom properties for the layer */
   properties?: Properties
 }

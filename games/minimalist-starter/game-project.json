@@ -53,64 +53,6 @@
       "category": "tiles"
     }
   ],
-  "teleports": [
-    {
-      "id": "overworld-to-dungeon",
-      "label": "Cave Entrance",
-      "from": {
-        "mapId": "overworld",
-        "x": 13,
-        "y": 7
-      },
-      "to": {
-        "mapId": "dungeon",
-        "x": 9,
-        "y": 12
-      }
-    },
-    {
-      "id": "dungeon-to-overworld",
-      "label": "Exit",
-      "from": {
-        "mapId": "dungeon",
-        "x": 9,
-        "y": 12
-      },
-      "to": {
-        "mapId": "overworld",
-        "x": 13,
-        "y": 7
-      }
-    },
-    {
-      "id": "overworld-to-town",
-      "label": "Town Path",
-      "from": {
-        "mapId": "overworld",
-        "x": 21,
-        "y": 15
-      },
-      "to": {
-        "mapId": "cozy-town",
-        "x": 3,
-        "y": 7
-      }
-    },
-    {
-      "id": "town-to-overworld",
-      "label": "Open Field",
-      "from": {
-        "mapId": "cozy-town",
-        "x": 3,
-        "y": 7
-      },
-      "to": {
-        "mapId": "overworld",
-        "x": 21,
-        "y": 15
-      }
-    }
-  ],
   "properties": {
     "gameTitle": "Minimalist Starter",
     "author": "",

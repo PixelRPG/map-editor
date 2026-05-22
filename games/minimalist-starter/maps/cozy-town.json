@@ -2376,10 +2376,38 @@
           "spriteSetId": "minimalist"
         }
       ]
+    },
+    {
+      "id": "events",
+      "name": "Events",
+      "visible": true,
+      "sprites": []
     }
   ],
   "editorData": {
     "atlasX": 30,
     "atlasY": 320
-  }
+  },
+  "objectPlacements": [
+    {
+      "id": "p-town-to-overworld",
+      "layerId": "events",
+      "tileX": 3,
+      "tileY": 7,
+      "inline": {
+        "id": "def-town-to-overworld",
+        "kind": "teleport",
+        "name": "Open Field",
+        "trigger": {
+          "on": "walk-onto"
+        },
+        "properties": {
+          "targetMapId": "overworld",
+          "targetTileX": 21,
+          "targetTileY": 15,
+          "label": "Open Field"
+        }
+      }
+    }
+  ]
 }
