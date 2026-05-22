@@ -69,8 +69,10 @@ export class GdkSpriteSetResource {
     if (!this._data.image) return
 
     const imageSource = engineResource.getImageSource(this._data.image.id)
-    // _pixbuf is protected on gjsify's HTMLImageElement — access via cast.
-    const pixbuf = (imageSource?.data as any)?._pixbuf as GdkPixbuf.Pixbuf | undefined
+    // `_pixbuf` is protected on gjsify's HTMLImageElement; the Excalibur
+    // `ImageSource.data` field is typed as `HTMLImageElement` so reach
+    // through that narrow shape rather than `any`.
+    const pixbuf = (imageSource?.data as unknown as { _pixbuf?: GdkPixbuf.Pixbuf })?._pixbuf
 
     if (pixbuf) {
       // Ensure RGBA — GdkPixbuf may be RGB-only for JPEG sources.

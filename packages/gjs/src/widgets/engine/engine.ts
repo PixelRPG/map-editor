@@ -232,7 +232,7 @@ export class Engine extends Adw.Bin {
     this._canvasContainer.append(widget)
     this._widget = widget
 
-    widget.onReady(async (canvas: any) => {
+    widget.onReady(async (canvas: HTMLCanvasElement) => {
       widget.grab_focus()
       canvas.width = widget.get_allocated_width() || 800
       canvas.height = widget.get_allocated_height() || 600
