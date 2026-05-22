@@ -4,8 +4,9 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { MapFormat } from '@pixelrpg/engine'
-import { Engine, SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
+import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
+import { EngineController } from '../services/engine-controller.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
@@ -42,11 +43,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private signals = new SignalScope()
   private _scenesById = new Map<string, SampleScene>(SAMPLE_SCENES.map((s) => [s.id, s]))
   private _loadedProject: LoadedProject | null = null
-  private _engine: Engine | null = null
-  private _engineProjectPath: string | null = null
-  private _engineMapId: string | null = null
-  private _engineZoomHookAttached = false
-  private _lastReportedZoom = 1
+  private _engineCtl = new EngineController((engine) => {
+    if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
+    else this._scene_editor_view.setEngineWidget(null)
+  })
 
   static {
     GObject.registerClass(
@@ -62,6 +62,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   constructor(application: Adw.Application) {
     super({ application })
     this._installActions()
+    // Mirror engine-driven zoom (scroll-wheel + Ctrl+= etc.) into the OSD label.
+    this._engineCtl.onZoomChanged((zoom) => this._scene_editor_view.setZoom(zoom))
   }
 
   vfunc_map(): void {
@@ -158,7 +160,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // back to those until the engine grows the full set.
       const mappedTool: 'brush' | 'eraser' | null =
         tool === 'eraser' ? 'eraser' : tool === 'pencil' || tool === 'bucket' || tool === 'rect' ? 'brush' : null
-      if (mappedTool && this._engine) this._engine.setEditorState({ tool: mappedTool })
+      if (mappedTool) this._engineCtl.engine?.setEditorState({ tool: mappedTool })
     })
     winActions.add_action(toolAction)
 
@@ -246,18 +248,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // sidesteps that.
     const current = this._stack.get_visible_child_name()
     if (current === 'scene-editor' && name !== 'scene-editor') {
-      this._disposeEngine()
+      this._engineCtl.dispose()
     }
     this._stack.set_visible_child_name(name)
-  }
-
-  private _disposeEngine(): void {
-    if (!this._engine) return
-    this._scene_editor_view.setEngineWidget(null)
-    this._engine = null
-    this._engineProjectPath = null
-    this._engineMapId = null
-    this._engineZoomHookAttached = false
   }
 
   private _showAtlas(): void {
@@ -291,7 +284,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     }
 
     try {
-      await this._ensureEngineForMap(project.projectPath, sceneId)
+      await this._engineCtl.ensureForMap(project.projectPath, sceneId)
     } catch (error) {
       const details =
         error instanceof Error
@@ -302,52 +295,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     }
   }
 
-  private async _ensureEngineForMap(projectPath: string, mapId: string): Promise<void> {
-    // Defensive: if the gjs Engine wrapper exists but its underlying
-    // Excalibur instance is gone (e.g. the widget was unmapped at some
-    // point), dispose and recreate.
-    if (this._engine && !this._engine.excalibur) {
-      this._disposeEngine()
-    }
-
-    if (!this._engine) {
-      this._engine = new Engine()
-      this._scene_editor_view.setEngineWidget(this._engine, this._engine)
-      await this._engine.initialize()
-    } else {
-      // Engine already exists — make sure it lives in the current scene
-      // editor view (the slot is cleared on each switch).
-      this._scene_editor_view.setEngineWidget(this._engine, this._engine)
-    }
-
-    if (this._engineProjectPath !== projectPath) {
-      await this._engine.loadProject(projectPath)
-      this._engineProjectPath = projectPath
-      this._engineMapId = null
-    }
-    if (this._engineMapId !== mapId) {
-      await this._engine.loadMap(mapId)
-      this._engineMapId = mapId
-    }
-
-    // Default editor state — pencil tool so the user can paint
-    // immediately. Tile / layer come from `populateFromProject`.
-    this._engine.setEditorState({ tool: 'brush' })
-
-    this._attachEngineZoomHook()
-  }
-
-  /** Once the engine has an active scene, subscribe to its postupdate
-   * tick so we can mirror camera zoom changes (including the engine's
-   * own scroll-wheel zoom) into the floating OSD. */
-  private _attachEngineZoomHook(): void {
-    if (this._engineZoomHookAttached || !this._engine) return
-    this._engineZoomHookAttached = this._engine.onCameraZoomChanged((zoom) => {
-      if (Math.abs(zoom - this._lastReportedZoom) < 0.01) return
-      this._lastReportedZoom = zoom
-      this._scene_editor_view.setZoom(zoom)
-    })
-  }
 
   private _onTemplateSelected(templateId: string): void {
     const template = findTemplateById(templateId)
@@ -408,8 +355,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenesById = new Map(project.scenes.map((s) => [s.id, s]))
       // Force the engine to reload its project on the next scene-editor entry.
-      this._engineProjectPath = null
-      this._engineMapId = null
+      this._engineCtl.invalidateCache()
       // Record success in the recent-projects store + refresh the
       // welcome list so backing out of the project shows the project we
       // just opened at the top.
@@ -427,20 +373,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._toast_overlay.add_toast(new Adw.Toast({ title: message, timeout: 3 }))
   }
 
-  /** Move the engine camera zoom in 0.2 steps, matching the wheel-zoom in
-   * `camera-control.system.ts`. The engine is the source of truth — the
-   * floating zoom OSD is driven from it via `postupdate`. */
+  /** Bump the engine camera zoom and mirror the new value into the OSD. */
   private _stepZoom(delta: number): void {
-    const current = this._engine?.getCameraZoom()
-    if (current == null) return
-    const next = Math.max(0.1, Math.min(4, Math.round((current + delta) * 10) / 10))
-    this._engine?.setCameraZoom(next)
-    this._scene_editor_view.setZoom(next)
+    this._engineCtl.stepZoom(delta)
+    const next = this._engineCtl.getCameraZoom()
+    if (next != null) this._scene_editor_view.setZoom(next)
   }
 
+  /** Set the engine camera to an absolute zoom value and mirror into the OSD. */
   private _applyZoom(zoom: number): void {
-    if (this._engine?.getCameraZoom() == null) return
-    this._engine.setCameraZoom(zoom)
+    this._engineCtl.applyZoom(zoom)
     this._scene_editor_view.setZoom(zoom)
   }
 }
