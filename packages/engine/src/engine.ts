@@ -133,7 +133,8 @@ export class Engine {
     this.logger.info(`Loading map: ${mapId}`)
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
-    const newMapScene = new MapScene(mapResource, this.events, () => this.getEditorState())
+    const objectLibrary = this._gameProjectResource.data?.objectLibrary ?? []
+    const newMapScene = new MapScene(mapResource, this.events, () => this.getEditorState(), objectLibrary)
 
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)
