@@ -28,6 +28,8 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 [Engine patterns — ECS] Excalibur Components/Systems. Components are pure data (serialisable, no methods that mutate state). Systems are pure logic (no persistent state beyond per-tick scratch buffers; state lives in components or scene resources). Cross-system communication goes through the engine event bus (`engine.events.emit / .on`), not direct method calls between systems. Class-hierarchy entities (e.g. `Player extends Actor`) only with a written justification in the PR description — default is composition. See `docs/concepts/object-system.md` for the canonical event names + spawn flow.
 
+[Anti-parallel-state migration] When a PR migrates a piece of state to a new home (e.g. `SceneEditorView._activeTileId` field → `ActiveTileComponent` on the session-singleton, or any future move from instance-field to ECS-component), the **same PR removes the old field entirely**. No transitional period where both representations exist. Reason: every mutating code path otherwise has to choose which one to update; forgotten branches produce silent drift that's expensive to debug. Atomic flip forces every consumer to adopt the new source in the same review. Applies symmetrically when collapsing duplicate state in either direction.
+
 ## General (all code)
 
 [TS] |explicit types on public APIs |no `any` → use `unknown`+type guards (enforced by Biome `noExplicitAny: error`) |JSDoc public APIs |`is`-style guards for runtime checks |generics for inference |nullability via `?.`/`??`

@@ -107,6 +107,18 @@ Transitions are user-driven and atomic. The maker UI owns them; the engine expos
 
 Crucially: re-entering edit after live-run **doesn't undo gameplay state changes**. If the user opened a chest in live mode (`ItemPickupSystem` removed the entity), the chest stays gone for that session. To get a "fresh" runtime, the user removes + re-adds the `RuntimeMode` marker, which triggers a scene reload from the map data — that's the equivalent of Mario Maker's "reset" button.
 
+### Scene-switch behaviour
+
+The session-singleton lives **per scene** — when the user switches maps, the active scene's world (and its singleton) is destroyed, the new scene constructs a fresh one. Mode markers don't auto-carry. The maker reconstructs them on every scene-activate from an app-level source of truth:
+
+- `EditorMode` is restored automatically (the user is still "in the editor" — that's a window-level state, not scene-level).
+- `RuntimeMode` is **not** restored. Switching scenes from inside Live Run drops you back into pure-editor on the new scene. If the user wants to play again, they hit "Play here" again on the new scene. Matches Mario-Maker behaviour where leaving a course always returns to edit mode.
+- `GhostSpawn` is not restored. The ghost was anchored to the previous scene's camera focus; on the new scene it makes no sense.
+
+The app-level source of truth lives on `Application` (the GJS `Adw.Application` singleton) — `Application._editorActive: boolean` is the bit that determines whether `EditorMode` is added when constructing each `MapScene`. The maker mutates that bit when the user enters/exits the editor entirely (e.g. closes the project).
+
+This decision is part of the broader editor architecture in [`editor-architecture.md`](editor-architecture.md) § "Migration strategy" — Phase 1's singleton lifetime + app-level state-restoration helper is the same machinery used here.
+
 ## Windowing (Full Run only)
 
 Live Run + Test Run reuse the **same** `Gtk.GLArea` widget the maker already hosts — no extra window, that's the whole point of the seamless flow.
@@ -166,6 +178,11 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 
 **Phase 5 — Future-proofing for in-game editor (deferred)**:
 - Tracked here as a design constraint, not a build target. Confirm the mode-marker API survives the GTK-outside → Excalibur-outside inversion before committing to it.
+
+## Related concepts
+
+- [`editor-architecture.md`](editor-architecture.md) — defines the session-singleton entity that hosts the mode markers, the `SessionState` subscription API the maker UI uses to react to mode changes, and the per-scene singleton lifetime that this doc references. Read first if you want to understand *how* mode changes propagate to the GTK widgets.
+- [`object-system.md`](object-system.md) — `TriggerSystem` and the kind-specific systems (teleport, item-pickup, walk-on-tile) gate themselves on `RuntimeModeComponent`. In pure editor mode they render placements but don't execute effects. In Live Run / Test Run / Full Run they fire normally.
 
 ## Open questions
 

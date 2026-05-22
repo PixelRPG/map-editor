@@ -100,30 +100,136 @@ New systems landing as tools / features grow:
 
 We do **not** try to model the widget tree as entities. GTK does that well; ECS doesn't add value at the render layer.
 
-### The subscription bridge
+### The session-singleton lifetime
 
-Widgets observe component mutations through a small bridge living on the engine controller (or a sibling helper):
+The singleton lives **per scene**. Each `MapScene` constructs its own Excalibur `World`; the singleton is added during scene construction and dies with the scene. Mode markers (`EditorMode`, `RuntimeMode`, `GhostSpawn`), active-tool/tile/layer, selection state — all attach to that per-scene singleton.
+
+Cross-scene continuity is the **maker's** job, not the singleton's. The maker carries an app-level `EditorActive: boolean` bit on `Application` and re-applies `EditorModeComponent` whenever a new `MapScene` activates. Markers that *shouldn't* persist (`RuntimeMode`, `GhostSpawn`) are intentionally not restored on scene-switch — leaving Live Run by switching maps drops you back into pure-editor on the new map. See [`runtime-modes.md`](runtime-modes.md) § "Scene-switch behaviour" for the user-facing rules.
+
+This separation — singleton lives per scene, mode-restoration policy lives on the app — keeps each layer responsible for what it can see. Singletons don't try to communicate across scenes; the app coordinates.
+
+### The `SessionState` API
+
+A small helper in `packages/engine/src/utils/session-state.ts` owns the singleton's lifecycle and exposes a typed subscription surface. Pseudo-TypeScript:
 
 ```ts
-// Pseudo-API
-class SessionState {
-  subscribe<C extends Component>(
-    componentCtor: ComponentCtor<C>,
+import type { Component, ComponentCtor, Entity, Scene } from 'excalibur'
+
+export type SubscriptionHandle = () => void   // call to disconnect
+
+export class SessionState {
+  /** Stable name for the singleton entity. */
+  static readonly SINGLETON_NAME = 'session-state'
+
+  /**
+   * Get-or-create the singleton on the given scene. Called by the
+   * maker during scene construction; idempotent on subsequent calls.
+   */
+  static ensure(scene: Scene): Entity { /* … */ }
+
+  /** Read the current value of a component, or `null` if not present. */
+  static get<C extends Component>(scene: Scene, ctor: ComponentCtor<C>): C | null { /* … */ }
+
+  /** Add or replace a component. Triggers subscribers. */
+  static set<C extends Component>(scene: Scene, component: C): void { /* … */ }
+
+  /** Remove a component by type. Triggers subscribers with `null`. */
+  static unset<C extends Component>(scene: Scene, ctor: ComponentCtor<C>): void { /* … */ }
+
+  /**
+   * Subscribe to add/remove/mutate of a specific component on the
+   * singleton. The callback fires:
+   * - immediately with the current value (or `null`) at subscribe time
+   * - on add — Excalibur's `componentAdded$` observable
+   * - on remove — Excalibur's `componentRemoved$` observable
+   * - on mutate — when a system calls `SessionState.notifyMutation(scene, component)`
+   */
+  static subscribe<C extends Component>(
+    scene: Scene,
+    ctor: ComponentCtor<C>,
     listener: (component: C | null) => void,
-  ): Disconnect
+  ): SubscriptionHandle { /* … */ }
+
+  /**
+   * Notify subscribers that the component's fields changed in place.
+   * Systems call this after mutating components. Excalibur has no
+   * built-in per-field reactivity; this is an explicit, lint-friendly
+   * fence around mutations — see the "Notification" open question.
+   */
+  static notifyMutation<C extends Component>(scene: Scene, component: C): void { /* … */ }
 }
 
-// In ContextChip.vfunc_map:
-const disconnect = sessionState.subscribe(ActiveTileComponent, (active) => {
-  this.setTilePaintable(active ? this.resolvePaintable(active) : null)
-})
-this._disposables.push(disconnect)
+// Usage in a widget:
+//
+// vfunc_map() {
+//   const dispose = SessionState.subscribe(this.scene, ActiveTileComponent, (active) => {
+//     this.setTilePaintable(active ? this.resolvePaintable(active) : null)
+//   })
+//   this._disposables.add(dispose)
+// }
+//
+// vfunc_unmap() { this._disposables.dispose() }
 ```
 
-Implementation notes:
-- The bridge listens to the entity's component-added / component-removed signals (Excalibur exposes these) + a per-component "mutated" notification (we'd add `notifyMutation()` calls in the setters when systems update the data).
-- `vfunc_unmap` / `vfunc_dispose` releases the subscriptions to avoid leaks.
-- A central `SessionState` helper is the only place that knows about the singleton entity — every widget asks the controller, not the world directly.
+`_disposables` is the same lifecycle bag the maker uses for `SignalScope`-style GObject signal cleanup (see `apps/maker-gjs/src/widgets/application-window.ts`). The subscription handles plug into the same scope.
+
+### Anti-parallel-state migration rule
+
+Every migration phase (2 → `ActiveTool`, 3 → `ActiveTile`/`ActiveLayer`, 4 → `Selection`) **must remove the old field in the same PR that introduces the component**. No transitional period where both representations exist.
+
+Reason: if both representations co-exist for a release cycle, every mutating code path has to choose which one to update. Forgotten ones produce silent drift. Cleaner to flip atomically and force every consumer to adopt the new source in the same PR.
+
+This is also recorded in `AGENTS.md` under the migration governance rules so reviewers can call it out automatically.
+
+### `Command` shape for Phase 5 (Undo)
+
+When `UndoSystem` lands, every mutating editor operation emits a `Command` that captures enough information to apply and revert without referencing runtime entity IDs.
+
+```ts
+export interface Command {
+  /** User-facing label shown in the Undo menu / status bar. */
+  readonly label: string
+
+  /** Apply the mutation. Called once on the original action + on redo. */
+  apply(world: World): void
+
+  /** Reverse the mutation. Called on undo. */
+  revert(world: World): void
+}
+
+// Example — every paint stroke captures the previous sprite for revert.
+export class PaintTileCommand implements Command {
+  constructor(
+    private readonly layerId: string,
+    private readonly tileX: number,
+    private readonly tileY: number,
+    private readonly newSpriteId: number,
+    private readonly previousSpriteId: number | null,
+  ) {}
+  get label() { return `Paint tile (${this.tileX}, ${this.tileY})` }
+  apply(world: World) { /* set sprite on the map data + redraw */ }
+  revert(world: World) { /* restore previousSpriteId, or clear if null */ }
+}
+
+// And on UndoStackComponent:
+export class UndoStackComponent extends Component {
+  public commands: Command[] = []
+  public cursor: number = 0   // index of next command to apply on redo
+}
+```
+
+Stability rule: commands reference **stable identifiers** (`layerId`, tile coords, `ObjectPlacement.id`) — **never** Excalibur runtime entity IDs. Entity IDs reset per scene load; placement / layer IDs are stable across save/load. This keeps the undo stack serialisable for future "session restore" or collaborative-edit replay.
+
+### Performance + error-handling open questions
+
+(Tracked here so the helper API doesn't paint us into a corner.)
+
+- **Query frequency** — every `SessionState.subscribe` call wraps an Excalibur `world.queryManager.createQuery([Ctor])`. Excalibur caches queries by component-type-set; repeated subscribes for the same component reuse the same query. Should be O(1) amortised. Verify with a benchmark once Phase 1 lands.
+- **Subscribe-before-singleton** — the maker constructs widgets before the scene is realised. If `SessionState.subscribe` is called when the singleton doesn't exist yet, the subscribe registers and fires `null`; once `SessionState.ensure(scene)` runs, the singleton appears and component-add events propagate. The helper must handle this gracefully — race-free.
+- **Memory leaks on scene-switch** — disposing a widget releases its subscriptions, but the singleton + its components themselves are garbage when the scene's world disposes. Verify with the GJS heap profiler after Phase 2 lands.
+- **Component-mutation fence** — systems that mutate components in place must call `SessionState.notifyMutation(scene, component)`. Forgetting it = silent stale UI. Mitigation: every component constructor / setter pattern documented, plus an eventual lint rule (`@notifies-mutation` JSDoc that the lint enforces) once we have a real example.
+
+The first three are testable in Phase 2 with the `ActiveToolComponent` migration; the fourth becomes a recurring discipline.
 
 ## What's NOT on the table
 
@@ -189,6 +295,15 @@ Phase tracker — fill in as PRs land.
 | 5 | `UndoStackComponent` + `UndoSystem` | planned |
 
 **Subscription bridge implementation** — Phase 1 includes the `SessionState.subscribe` helper. Until that's built, widgets can read the components directly (no notifications on mutation, requires explicit re-render call). The bridge upgrades them to push-based.
+
+## Related concepts
+
+- [`runtime-modes.md`](runtime-modes.md) — Phase 1's session-singleton is the same entity that hosts the mode markers (`EditorMode`, `RuntimeMode`, `GhostSpawn`). Both docs describe one half of the same machinery; this doc owns the lifecycle + subscription API, runtime-modes owns the mode-marker semantics.
+- [`object-system.md`](object-system.md) — the editor UI for the object library (Library mode-rail, Object tool, Inspector tab) is built on the subscription bridge here. The data model itself lives in the project file (`GameProjectData.objectLibrary` + `MapData.objectPlacements`), so the in-memory project is not on the session-singleton — only the *editor state about which object is selected* is.
+
+## Cross-references to `AGENTS.md`
+
+- `[Engine patterns — ECS]` (line ~27) is the workspace-wide rule that systems are pure logic, components are pure data, communication via event bus. This doc operationalises it for the editor side: GTK is the third leg of the tripod (View), and the helper API formalises how the leg communicates with the other two.
 
 ## Open questions
 

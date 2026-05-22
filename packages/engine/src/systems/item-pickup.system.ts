@@ -1,15 +1,17 @@
 import { type EventEmitter, Logger, type Scene, System, SystemType, type World } from 'excalibur'
-import { ItemComponent, TriggerComponent } from '../components/index.ts'
+import { ItemComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 
 /**
  * Consumes `trigger-fired` events on entities with an
  * {@link ItemComponent} — emits a `item-picked-up` event with the
  * resolved \`itemId\`/\`qty\`, plays the optional pickup sound via
- * the audio bus, and removes the entity from the scene unless
- * `oncePerScene` is set (in which case the entity persists with
- * \`TriggerComponent.fired = true\` and re-walking onto it is a
- * no-op until the scene reloads).
+ * the audio bus, and removes the entity from the scene.
+ *
+ * Re-pickup prevention is the *trigger's* job: setting
+ * `TriggerSpec.once: true` on the parent definition keeps
+ * `TriggerSystem` from re-firing the trigger after the first
+ * pickup. No additional state is needed on this system.
  *
  * Engine stays inventory-agnostic: the `item-picked-up` event
  * carries the bag of pickup data and project code decides what
@@ -53,16 +55,6 @@ export class ItemPickupSystem extends System {
       pickupSound: item.pickupSound,
     })
     this.logger.info(`[ItemPickupSystem] picked up ${item.qty}× ${item.itemId}`)
-
-    if (item.oncePerScene) {
-      // Leave the entity in place but mark its trigger spent — it
-      // already is via TriggerSystem, but keeping the entity also
-      // lets the editor highlight "already-collected" placements
-      // when save-state lands.
-      const trigger = entity.get(TriggerComponent)
-      if (trigger) trigger.fired = true
-      return
-    }
     this.scene.world.entityManager.removeEntity(entity)
   }
 }

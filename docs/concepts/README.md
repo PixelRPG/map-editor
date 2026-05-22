@@ -32,8 +32,23 @@ Rules:
 
 ## Index
 
+Ordered by dependency — read top-to-bottom for the cleanest mental sequence. Each doc builds on the ones above it.
+
 | File | Status | What it covers |
 |---|---|---|
-| [`editor-architecture.md`](editor-architecture.md) | planning | Three-layer split — GTK View, ECS Components as Model, ECS Systems as Controller. Session state on a singleton entity. Foundation for runtime-modes + future console-port path |
-| [`object-system.md`](object-system.md) | planning | The Definition/Placement model for tiles, objects, NPCs, items, teleports, and spawn points — plus how they map onto Excalibur's ECS |
-| [`runtime-modes.md`](runtime-modes.md) | planning | Editor / Full Run / Live Run — composable mode markers + ghost-spawn for Mario-Maker-style edit-while-playing |
+| [`editor-architecture.md`](editor-architecture.md) | planning | **Foundation** — Three-layer split (GTK View, ECS Components as Model, ECS Systems as Controller), the session-singleton entity, the `SessionState` subscription API. Everything else lives on top. |
+| [`runtime-modes.md`](runtime-modes.md) | planning | **Mode markers** — `EditorMode` / `RuntimeMode` / `GhostSpawn` components on the session-singleton. Composes the Editor / Full Run / Live Run / Test Run user-visible modes, Mario-Maker-inspired. |
+| [`object-system.md`](object-system.md) | planning | **What's in the world** — Definition/Placement model for tiles, objects, NPCs, items, teleports, spawn points. Maps placements to ECS entities via `ObjectSpawnSystem`. |
+
+## Glossary
+
+Terms used across multiple docs.
+
+- **Session-singleton** — a single `ex.Entity` named `session-state` in each `MapScene`'s world. Holds editor-state and mode-marker components. Lifetime: per-scene. Lifecycle helper: `SessionState` in `packages/engine/src/utils/session-state.ts`.
+- **Mode marker** — a component on the session-singleton whose mere presence flips a mode on (`EditorModeComponent`, `RuntimeModeComponent`, `GhostSpawnComponent`). Adding/removing the component is the mode transition.
+- **Placement** — one instance of an object on a map at `(tileX, tileY)` on a referenced `layerId`. Carries either a `defId` (library reference) or an `inline` definition. Lives in `MapData.objectPlacements`.
+- **Definition** — the reusable shape an object instance refers to: `kind`, optional `sprite`, optional `trigger`, optional `blocking`, kind-specific `properties`. Library entries live in `GameProjectData.objectLibrary`.
+- **Library** — `GameProjectData.objectLibrary[]`, the project-level pool of reusable `ObjectDefinition`s. Editing one entry updates every placement that references it via `defId`.
+- **Kind** — the semantic discriminator on an `ObjectDefinition`: `event | teleport | item | npc | spawn-point | custom`. Drives editor UX (library category, default trigger mode, default `blocking`) and component composition at spawn time.
+- **Ghost spawn** — a runtime-only override of where the player spawns, used by Live Run. Stored in `GhostSpawnComponent` on the singleton; does **not** modify the map data.
+- **Subscription bridge** — the `SessionState.subscribe(scene, ComponentCtor, listener)` helper that lets GTK widgets observe singleton-component changes (add, remove, in-place mutation via `notifyMutation`).

@@ -153,7 +153,7 @@ export class ObjectSpawnSystem extends System {
       case 'item': {
         const p = def.properties as ItemProperties | undefined
         if (p?.itemId) {
-          entity.addComponent(new ItemComponent(p.itemId, p.qty ?? 1, p.oncePerScene ?? false, p.pickupSound))
+          entity.addComponent(new ItemComponent(p.itemId, p.qty ?? 1, p.pickupSound))
         }
         break
       }
