@@ -399,6 +399,16 @@ export class SceneEditorView extends Adw.Bin {
     layers.connect('layer-selected', (_l: LayersTab, id: string) => {
       this._setActiveLayer(id)
     })
+
+    // Object placements: forward inspector selection into the engine's
+    // session-singleton via `setSelectedPlacements`. Single-select only
+    // for now — marquee/multi-select rides on the same component
+    // (`SelectedPlacementsComponent` accepts an array) once a Selection
+    // tool lands.
+    const objects = this._inspector.objectsTab
+    objects.connect('object-selected', (_o: typeof objects, placementId: string) => {
+      this._engine?.setSelectedPlacements([placementId])
+    })
   }
 
   get projectName(): string {

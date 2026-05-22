@@ -134,6 +134,16 @@ export class Engine extends Adw.Bin {
     this._excalibur?.setActiveLayer(layerId)
   }
 
+  /** Forward to `Engine.setSelectedPlacements`. */
+  public setSelectedPlacements(placementIds: readonly string[]): void {
+    this._excalibur?.setSelectedPlacements(placementIds)
+  }
+
+  /** Forward to `Engine.getSelectedPlacements`. */
+  public getSelectedPlacements(): string[] {
+    return this._excalibur?.getSelectedPlacements() ?? []
+  }
+
   public get excalibur(): ExcaliburEngine | null {
     return this._excalibur
   }
