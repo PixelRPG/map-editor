@@ -83,7 +83,7 @@ export class EngineController {
 
     // Default editor state — pencil tool so the user can paint
     // immediately. Tile / layer come from `populateFromProject`.
-    this._engine.setEditorState({ tool: 'brush' })
+    this._engine.setActiveTool('brush')
 
     this._attachZoomHook()
   }

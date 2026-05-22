@@ -127,11 +127,15 @@ export class Engine extends Adw.Bin {
   public getEditorState(): EditorState {
     return (
       this._excalibur?.getEditorState() ?? {
-        tool: null,
         tileId: null,
         layerId: null,
       }
     )
+  }
+
+  /** Forward to `Engine.setActiveTool` — writes to the session-singleton. */
+  public setActiveTool(tool: string): void {
+    this._excalibur?.setActiveTool(tool)
   }
 
   public get excalibur(): ExcaliburEngine | null {

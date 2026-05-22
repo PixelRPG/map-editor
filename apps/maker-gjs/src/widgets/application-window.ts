@@ -143,10 +143,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       action.set_state(value!)
       const tool = value!.get_string()[0]
       // Engine accepts 'brush' | 'eraser' today — map the new tool ids
-      // back to those until the engine grows the full set.
-      const mappedTool: 'brush' | 'eraser' | null =
-        tool === 'eraser' ? 'eraser' : tool === 'pencil' || tool === 'bucket' || tool === 'rect' ? 'brush' : null
-      if (mappedTool) this._engineCtl.engine?.setEditorState({ tool: mappedTool })
+      // back to those until the engine grows the full set. The
+      // `ActiveToolComponent` accepts any string, so we pass the raw
+      // tool id through; the engine's `TileEditorSystem` short-circuits
+      // on tools it doesn't understand yet.
+      const mappedTool: string =
+        tool === 'eraser' ? 'eraser' : tool === 'pencil' || tool === 'bucket' || tool === 'rect' ? 'brush' : tool
+      this._engineCtl.engine?.setActiveTool(mappedTool)
     })
     winActions.add_action(toolAction)
 
