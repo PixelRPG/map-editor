@@ -28,6 +28,7 @@ Rules:
 - **Status header** at the top of each concept doc: `Status: planning | active | superseded`, plus the date of the last meaningful change.
 - **Cross-link**: every concept doc cites the package(s) and file path(s) where the concept is implemented. When you refactor, update the citations.
 - **One concept per file.** If two concepts are getting tangled, split them.
+- **In-doc trackers are TODOs.** When a doc carries a rollout / phase table, an "Open questions" section, or a "Where this is implemented" list, those are first-class tasks — update them in the same commit that lands the implementation. Flip `planned → landed`, strike resolved open questions, refresh citations to point at real files. The same rule that governs the workspace-level `TODO.md` (no drift, update in the same commit, no "done" archive) applies inside concept docs.
 
 ## Index
 
