@@ -293,7 +293,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 3 | Components (pure data) — `TileTransform`, `SpriteRef`, `Trigger`, `Collision`, `Teleport`, `Item`, `Npc`, `SpawnPoint`, `CustomData` | **landed** |
 | 4 | `ObjectSpawnSystem` + `PlayerSpawnSystem` | **landed** |
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
-| 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | planned |
+| 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
 | 7 | Editor UI — library tab, object tool, inspector tab, atlas-from-placements | planned |
 
 ## Where this is implemented
