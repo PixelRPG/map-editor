@@ -21,9 +21,14 @@ template $PixelRpgContextChip : Adw.Bin {
         margin-start: 6;
         margin-end: 6;
 
-        Gtk.Image tile_swatch {
-          icon-name: "view-grid-symbolic";
-          pixel-size: 22;
+        // Gtk.Picture (not Gtk.Image) — Picture is the GTK4-recommended
+        // host for arbitrary paintables. Gtk.Image's pixel-size only
+        // applies to icon sources, so set_from_paintable() yielded an
+        // unsized cell that fell back to the grid icon.
+        Gtk.Picture tile_swatch {
+          content-fit: contain;
+          width-request: 22;
+          height-request: 22;
         }
 
         Gtk.Label tile_name {

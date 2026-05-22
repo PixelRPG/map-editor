@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 
 import Template from './context-chip.blp'
 
@@ -19,7 +19,8 @@ export class ContextChip extends Adw.Bin {
   declare _layer_button: Gtk.MenuButton
   declare _tile_name: Gtk.Label
   declare _layer_name: Gtk.Label
-  declare _tile_swatch: Gtk.Image
+  declare _tile_swatch: Gtk.Picture
+  private _placeholderIcon: Gtk.IconPaintable | null = null
 
   private _tileName = ''
   private _layerName = ''
@@ -76,16 +77,35 @@ export class ContextChip extends Adw.Bin {
   }
 
   /**
-   * Replace the active-tile swatch icon with a `Gdk.Paintable` rendering
-   * of the currently-selected tile. Falls back to the generic
-   * `view-grid-symbolic` icon when called with `null` (no tileset yet).
+   * Replace the active-tile swatch with a `Gdk.Paintable` rendering of
+   * the currently-selected tile. Falls back to a `view-grid-symbolic`
+   * icon paintable when called with `null` (no tileset yet).
+   *
+   * The swatch is a `Gtk.Picture`, not a `Gtk.Image`: Image's
+   * `pixel-size` only applies to icon sources, so paintables landed
+   * unsized and rendered nothing. Picture honours the BLP's
+   * width/height-request + `content-fit: contain`.
    */
   setTilePaintable(paintable: Gdk.Paintable | null): void {
     if (paintable) {
-      this._tile_swatch.set_from_paintable(paintable)
-    } else {
-      this._tile_swatch.set_from_icon_name('view-grid-symbolic')
+      this._tile_swatch.set_paintable(paintable)
+      return
     }
+    this._tile_swatch.set_paintable(this._loadPlaceholderIcon())
+  }
+
+  /**
+   * Lazily resolve the `view-grid-symbolic` icon as a paintable so we
+   * can hand it to `Gtk.Picture`. Cached for reuse — the icon theme is
+   * stable for the widget's lifetime.
+   */
+  private _loadPlaceholderIcon(): Gtk.IconPaintable {
+    if (this._placeholderIcon) return this._placeholderIcon
+    const display = this.get_display()
+    const theme = Gtk.IconTheme.get_for_display(display)
+    const scale = this.get_scale_factor()
+    this._placeholderIcon = theme.lookup_icon('view-grid-symbolic', null, 22, scale, Gtk.TextDirection.NONE, 0)
+    return this._placeholderIcon
   }
 
   setLayerPopover(popover: Gtk.Popover): void {
