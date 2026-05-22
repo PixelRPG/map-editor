@@ -52,6 +52,22 @@ export class ContextChip extends Adw.Bin {
     )
   }
 
+  constructor() {
+    super()
+    // Belt-and-suspenders: enforce the swatch dimensions / no-shrink
+    // policy in code. Blueprint sets the same properties but in
+    // practice GTK / Adw negotiated us down to ~1px wide inside the
+    // chip's horizontal box, so set them again on a freshly-bound
+    // InternalChild where the call order is deterministic.
+    this._tile_swatch.set_can_shrink(false)
+    this._tile_swatch.set_content_fit(Gtk.ContentFit.FILL)
+    this._tile_swatch.set_size_request(22, 22)
+    this._tile_swatch.set_hexpand(false)
+    this._tile_swatch.set_vexpand(false)
+    this._tile_swatch.set_halign(Gtk.Align.CENTER)
+    this._tile_swatch.set_valign(Gtk.Align.CENTER)
+  }
+
   get tileName(): string {
     return this._tileName ?? ''
   }
