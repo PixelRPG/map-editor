@@ -288,11 +288,11 @@ Phase tracker — fill in as PRs land.
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Mode markers + session-singleton (folds into runtime-modes PR series) | planned |
-| 2 | `ActiveToolComponent` + system migration | planned |
-| 3 | `ActiveTileComponent` + `ActiveLayerComponent` migration | planned |
-| 4 | `SelectionComponent` + `SelectionSystem` | planned |
-| 5 | `UndoStackComponent` + `UndoSystem` | planned |
+| 1 | Mode markers + session-singleton (folds into runtime-modes PR series) | **landed** |
+| 2 | `ActiveToolComponent` + system migration | **landed** |
+| 3 | `ActiveTileComponent` + `ActiveLayerComponent` migration | **landed** |
+| 4 | `SelectedPlacementsComponent` (foundation; marquee `SelectionSystem` is Phase 4b) | **landed** |
+| 5 | `UndoStackComponent` + `Command` interface + paint/erase commands + Engine `executeCommand` / `undo` / `redo` | **landed** |
 
 **Subscription bridge implementation** — Phase 1 includes the `SessionState.subscribe` helper. Until that's built, widgets can read the components directly (no notifications on mutation, requires explicit re-render call). The bridge upgrades them to push-based.
 
