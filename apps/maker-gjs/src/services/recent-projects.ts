@@ -1,5 +1,6 @@
 import GLib from '@girs/glib-2.0'
 import Gio from '@girs/gio-2.0'
+import { writeJsonFile } from './file-io.ts'
 
 /**
  * One entry in the recent-projects list — minimum needed to identify
@@ -21,8 +22,7 @@ const STORE_FILE_NAME = 'recent-projects.json'
 const MAX_RECENTS = 8
 
 function storePath(): string {
-  const userData = GLib.get_user_data_dir()
-  return GLib.build_filenamev([userData, STORE_DIR_NAME, STORE_FILE_NAME])
+  return GLib.build_filenamev([GLib.get_user_data_dir(), STORE_DIR_NAME, STORE_FILE_NAME])
 }
 
 /**
@@ -60,20 +60,7 @@ export function loadRecentProjects(): RecentProject[] {
  * persist shouldn't break opening a project).
  */
 export function recordRecentProject(entry: Omit<RecentProject, 'openedAt'>): void {
-  try {
-    const current = loadRecentProjects().filter((r) => r.path !== entry.path)
-    const updated: RecentProject[] = [{ ...entry, openedAt: Date.now() }, ...current].slice(0, MAX_RECENTS)
-    const dir = Gio.File.new_for_path(GLib.build_filenamev([GLib.get_user_data_dir(), STORE_DIR_NAME]))
-    if (!dir.query_exists(null)) dir.make_directory_with_parents(null)
-    const file = Gio.File.new_for_path(storePath())
-    file.replace_contents(
-      new TextEncoder().encode(`${JSON.stringify(updated, null, 2)}\n`),
-      null,
-      false,
-      Gio.FileCreateFlags.NONE,
-      null,
-    )
-  } catch (error) {
-    console.warn('[RecentProjects] Failed to write:', error)
-  }
+  const current = loadRecentProjects().filter((r) => r.path !== entry.path)
+  const updated: RecentProject[] = [{ ...entry, openedAt: Date.now() }, ...current].slice(0, MAX_RECENTS)
+  writeJsonFile(storePath(), updated)
 }

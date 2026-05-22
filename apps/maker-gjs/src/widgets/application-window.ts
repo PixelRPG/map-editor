@@ -7,6 +7,7 @@ import { MapFormat } from '@pixelrpg/engine'
 import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { EngineController } from '../services/engine-controller.ts'
+import { writeTextFile } from '../services/file-io.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
@@ -93,7 +94,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._atlas_view,
       'scene-moved',
       (_v: AtlasView, id: string, x: number, y: number) => {
-        void this._persistAtlasPosition(id, x, y)
+        this._persistAtlasPosition(id, x, y)
       },
     )
   }
@@ -104,30 +105,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * surface as a toast but the in-memory state still updates so the
    * card position is preserved within the session.
    */
-  private async _persistAtlasPosition(mapId: string, x: number, y: number): Promise<void> {
-    const project = this._loadedProject
-    if (!project) return
-    const mapResource = project.resource.maps.get(mapId)
+  private _persistAtlasPosition(mapId: string, x: number, y: number): void {
+    const mapResource = this._loadedProject?.resource.maps.get(mapId)
     if (!mapResource?.mapData) return
     const editor = (mapResource.mapData.editorData ?? {}) as Record<string, unknown>
     editor.atlasX = x
     editor.atlasY = y
     ;(mapResource.mapData as { editorData?: Record<string, unknown> }).editorData = editor
-    try {
-      const json = MapFormat.serialize(mapResource.mapData)
-      const file = Gio.File.new_for_path(mapResource.sourcePath)
-      const [success] = file.replace_contents(
-        new TextEncoder().encode(json),
-        null,
-        false,
-        Gio.FileCreateFlags.NONE,
-        null,
-      )
-      if (!success) this._showToast(_('Could not save atlas position'))
-    } catch (error) {
-      console.warn('[ApplicationWindow] Failed to persist atlas position:', error)
-      this._showToast(_('Could not save atlas position'))
-    }
+    const ok = writeTextFile(mapResource.sourcePath, MapFormat.serialize(mapResource.mapData))
+    if (!ok) this._showToast(_('Could not save atlas position'))
   }
 
   vfunc_unmap(): void {
