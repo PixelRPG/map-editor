@@ -25,10 +25,19 @@ template $PixelRpgContextChip : Adw.Bin {
         // host for arbitrary paintables. Gtk.Image's pixel-size only
         // applies to icon sources, so set_from_paintable() yielded an
         // unsized cell that fell back to the grid icon.
+        //
+        // `can-shrink: false` is load-bearing: by default Gtk.Picture
+        // allows shrinking below the paintable's intrinsic size, which
+        // collapsed the swatch to 1px inside the OSD chip's horizontal
+        // Box. With `can-shrink: false` the width / height requests
+        // become hard floors.
         Gtk.Picture tile_swatch {
           content-fit: contain;
+          can-shrink: false;
           width-request: 22;
           height-request: 22;
+          hexpand: false;
+          vexpand: false;
         }
 
         Gtk.Label tile_name {
