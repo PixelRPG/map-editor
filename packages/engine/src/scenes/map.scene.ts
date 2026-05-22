@@ -11,7 +11,7 @@ import {
   TriggerSystem,
   WalkOnTileSystem,
 } from '../systems/index.ts'
-import type { EditorState, EngineEventMap, ObjectDefinition } from '../types/index.ts'
+import type { EngineEventMap, ObjectDefinition } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
@@ -41,12 +41,11 @@ export class MapScene extends Scene {
   constructor(
     public readonly mapResource: MapResource,
     events: EventEmitter<EngineEventMap>,
-    getEditorState: () => EditorState,
     objectLibrary: readonly ObjectDefinition[] = [],
   ) {
     super()
     this.world.add(new CameraControlSystem())
-    this.world.add(new TileEditorSystem(events, getEditorState))
+    this.world.add(new TileEditorSystem(events))
     this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))
     this.world.add(new PlayerSpawnSystem(events))
     this.world.add(new TriggerSystem(events))

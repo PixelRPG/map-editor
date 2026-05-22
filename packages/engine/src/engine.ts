@@ -1,14 +1,13 @@
 import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger } from 'excalibur'
-import { ActiveToolComponent, type EditorTool } from './components/index.ts'
+import {
+  ActiveLayerComponent,
+  ActiveTileComponent,
+  ActiveToolComponent,
+  type EditorTool,
+} from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
-import {
-  type EditorState,
-  EngineEvent,
-  type EngineEventMap,
-  EngineStatus,
-  type ProjectLoadOptions,
-} from './types/index.ts'
+import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
 
 interface LoaderEventMap {
@@ -29,11 +28,6 @@ export class Engine {
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
     return this._gameProjectResource
-  }
-
-  private editorState: EditorState = {
-    tileId: null,
-    layerId: null,
   }
 
   constructor(canvas: HTMLCanvasElement) {
@@ -135,7 +129,7 @@ export class Engine {
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
     const objectLibrary = this._gameProjectResource.data?.objectLibrary ?? []
-    const newMapScene = new MapScene(mapResource, this.events, () => this.getEditorState(), objectLibrary)
+    const newMapScene = new MapScene(mapResource, this.events, objectLibrary)
 
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)
@@ -154,23 +148,11 @@ export class Engine {
     this.setStatus(EngineStatus.READY)
   }
 
-  setEditorState(state: Partial<EditorState>): void {
-    this.editorState = { ...this.editorState, ...state }
-  }
-
-  getEditorState(): EditorState {
-    return { ...this.editorState }
-  }
-
   /**
    * Set the active editor tool. Writes to the session-singleton on
    * the currently-active `MapScene` so the `TileEditorSystem` reads
    * it directly via `SessionState.get`. No-op when no `MapScene` is
    * active yet.
-   *
-   * Replaces the legacy `setEditorState({ tool })` call — the `tool`
-   * field moved out of `EditorState` per
-   * `docs/concepts/editor-architecture.md` Phase 2.
    */
   setActiveTool(tool: EditorTool): void {
     const scene = this.excalibur.currentScene
@@ -183,6 +165,35 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return null
     return SessionState.get(scene, ActiveToolComponent)?.tool ?? null
+  }
+
+  /**
+   * Set the active tile sprite id (global = local sprite index +
+   * sprite-set's `firstGid`). Lives on the session-singleton.
+   */
+  setActiveTile(spriteId: number): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    SessionState.set(scene, new ActiveTileComponent(spriteId))
+  }
+
+  getActiveTile(): number | null {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return null
+    return SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null
+  }
+
+  /** Set the active layer for tile painting. Matches a `LayerData.id`. */
+  setActiveLayer(layerId: string): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    SessionState.set(scene, new ActiveLayerComponent(layerId))
+  }
+
+  getActiveLayer(): string | null {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return null
+    return SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null
   }
 
   private setStatus(status: EngineStatus): void {
