@@ -214,9 +214,21 @@ const TELEPORTS = [
   },
 ]
 
+// Group teleports by source map so we can attach them as object
+// placements when we write each map JSON. Each teleport becomes an
+// inline ObjectPlacement on an "events" sort-layer.
+const TELEPORTS_BY_SOURCE_MAP = new Map()
+for (const t of TELEPORTS) {
+  const list = TELEPORTS_BY_SOURCE_MAP.get(t.from.mapId) ?? []
+  list.push(t)
+  TELEPORTS_BY_SOURCE_MAP.set(t.from.mapId, list)
+}
+
 // --- Write the three map JSONs ----------------------------------------------
 const mapsDir = resolve(TEMPLATE_DIR, 'maps')
 mkdirSync(mapsDir, { recursive: true })
+
+const EVENTS_LAYER_ID = 'events'
 
 for (const scene of SCENES) {
   const mapData = gridToMap({ id: scene.id, name: scene.name, grid: scene.grid })
@@ -224,9 +236,37 @@ for (const scene of SCENES) {
   // out. The engine ignores `editorData`; this just round-trips with
   // the format so dragging cards in the atlas can persist later.
   mapData.editorData = { atlasX: scene.atlasX, atlasY: scene.atlasY }
+
+  // Attach a dedicated "events" sort-layer + inline teleport placements
+  // (one per teleport whose source matches this scene). Object-system
+  // schema: placements live in MapData.objectPlacements, layer is just
+  // for visibility / z-ordering.
+  const sourceTeleports = TELEPORTS_BY_SOURCE_MAP.get(scene.id) ?? []
+  if (sourceTeleports.length > 0) {
+    mapData.layers.push({ id: EVENTS_LAYER_ID, name: 'Events', visible: true, sprites: [] })
+    mapData.objectPlacements = sourceTeleports.map((t) => ({
+      id: `p-${t.id}`,
+      layerId: EVENTS_LAYER_ID,
+      tileX: t.from.x,
+      tileY: t.from.y,
+      inline: {
+        id: `def-${t.id}`,
+        kind: 'teleport',
+        name: t.label,
+        trigger: { on: 'walk-onto' },
+        properties: {
+          targetMapId: t.to.mapId,
+          targetTileX: t.to.x,
+          targetTileY: t.to.y,
+          label: t.label,
+        },
+      },
+    }))
+  }
+
   const outPath = resolve(mapsDir, `${scene.id}.json`)
   writeFileSync(outPath, `${JSON.stringify(mapData, null, 2)}\n`)
-  console.log(`Wrote ${outPath} (${scene.grid[0].length}×${scene.grid.length}, ${mapData.layers.reduce((n, l) => n + l.sprites.length, 0)} sprites)`)
+  console.log(`Wrote ${outPath} (${scene.grid[0].length}×${scene.grid.length}, ${mapData.layers.reduce((n, l) => n + (l.sprites?.length ?? 0), 0)} sprites, ${sourceTeleports.length} teleports)`)
 }
 
 // --- Write the project file --------------------------------------------------
@@ -260,7 +300,6 @@ const project = {
       category: 'tiles',
     },
   ],
-  teleports: TELEPORTS,
   properties: {
     gameTitle: 'Minimalist Starter',
     author: '',
@@ -275,4 +314,4 @@ const project = {
 
 const projectPath = resolve(TEMPLATE_DIR, 'game-project.json')
 writeFileSync(projectPath, `${JSON.stringify(project, null, 2)}\n`)
-console.log(`Wrote ${projectPath} (${SCENES.length} maps, ${TELEPORTS.length} teleports)`)
+console.log(`Wrote ${projectPath} (${SCENES.length} maps, ${TELEPORTS.length} teleport placements distributed across source maps)`)

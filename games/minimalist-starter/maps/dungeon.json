@@ -1746,10 +1746,38 @@
           "spriteSetId": "minimalist"
         }
       ]
+    },
+    {
+      "id": "events",
+      "name": "Events",
+      "visible": true,
+      "sprites": []
     }
   ],
   "editorData": {
     "atlasX": 320,
     "atlasY": 40
-  }
+  },
+  "objectPlacements": [
+    {
+      "id": "p-dungeon-to-overworld",
+      "layerId": "events",
+      "tileX": 9,
+      "tileY": 12,
+      "inline": {
+        "id": "def-dungeon-to-overworld",
+        "kind": "teleport",
+        "name": "Exit",
+        "trigger": {
+          "on": "walk-onto"
+        },
+        "properties": {
+          "targetMapId": "overworld",
+          "targetTileX": 13,
+          "targetTileY": 7,
+          "label": "Exit"
+        }
+      }
+    }
+  ]
 }

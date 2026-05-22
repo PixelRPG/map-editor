@@ -289,7 +289,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | # | Scope | Status |
 |---|---|---|
 | 1 | Schema + types in `@pixelrpg/engine` (additive, old fields kept + `@deprecated`), format validators accept new fields, vitest coverage | **landed** |
-| 2 | Migration script + all `games/*` migrated to the new schema + old fields removed | planned |
+| 2 | Migration script + all `games/*` migrated to the new schema + old fields removed | **landed** |
 | 3 | Components (pure data) — `TileTransform`, `SpriteRef`, `Trigger`, `Teleport`, `Item`, `Npc`, `SpawnPoint`, `CustomData` | planned |
 | 4 | `ObjectSpawnSystem` + `PlayerSpawnSystem` | planned |
 | 5 | `TriggerSystem` + event-bus contract | planned |
