@@ -4,6 +4,7 @@ import {
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
+  SelectedPlacementsComponent,
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
@@ -194,6 +195,29 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return null
     return SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null
+  }
+
+  /**
+   * Replace the current placement selection. Passing an empty array
+   * (or never calling this) means "nothing selected". Callers don't
+   * need to distinguish between absent component and empty array —
+   * `getSelectedPlacements()` collapses both to `[]`.
+   */
+  setSelectedPlacements(placementIds: readonly string[]): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    if (placementIds.length === 0) {
+      SessionState.unset(scene, SelectedPlacementsComponent)
+      return
+    }
+    SessionState.set(scene, new SelectedPlacementsComponent([...placementIds]))
+  }
+
+  /** Current placement-selection. Empty array when no selection. */
+  getSelectedPlacements(): string[] {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return []
+    return SessionState.get(scene, SelectedPlacementsComponent)?.placementIds ?? []
   }
 
   private setStatus(status: EngineStatus): void {
