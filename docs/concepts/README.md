@@ -34,5 +34,6 @@ Rules:
 
 | File | Status | What it covers |
 |---|---|---|
+| [`editor-architecture.md`](editor-architecture.md) | planning | Three-layer split — GTK View, ECS Components as Model, ECS Systems as Controller. Session state on a singleton entity. Foundation for runtime-modes + future console-port path |
 | [`object-system.md`](object-system.md) | planning | The Definition/Placement model for tiles, objects, NPCs, items, teleports, and spawn points — plus how they map onto Excalibur's ECS |
 | [`runtime-modes.md`](runtime-modes.md) | planning | Editor / Full Run / Live Run — composable mode markers + ghost-spawn for Mario-Maker-style edit-while-playing |

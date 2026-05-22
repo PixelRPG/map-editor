@@ -7,6 +7,8 @@ The maker is **both** an editor and a runtime host. Three orthogonal modes — *
 
 The composition rule is the load-bearing idea: modes are **ECS marker components on a session-singleton entity**. Systems gate themselves on those markers. No mode dispatcher, no state machine — just composition.
 
+The session-singleton is the same entity described in [`editor-architecture.md`](editor-architecture.md) — that doc owns the broader Model/View/Controller split. This one only covers the **mode markers** that live on the singleton.
+
 ## Why this exists
 
 In a traditional editor, "test the game" means closing the editor, launching the game build, navigating back to the map you were just on, and walking to the position you were editing. Mario Maker proved that closing the loop — *play right where you are, right now* — collapses the iteration time from minutes to seconds and is the single biggest UX win in level-design tools.
