@@ -91,23 +91,40 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
       x,
       y,
       tilePx,
-      events: data.layers?.filter((l) => l.type === 'object').length ?? 0,
+      // Event count is the number of object placements on the map —
+      // every kind counts (NPCs, items, teleports, …). Pre-migration
+      // code counted the legacy `type: 'object'` layers; that field
+      // is gone and placements are the new source of truth.
+      events: data.objectPlacements?.length ?? 0,
     })
   })
 
-  const teleports: SampleTeleport[] = (resource.data?.teleports ?? []).flatMap((t) => {
-    if (!t?.from?.mapId || !t?.to?.mapId) return []
-    return [
-      {
-        from: t.from.mapId,
-        fx: t.from.x,
-        fy: t.from.y,
-        to: t.to.mapId,
-        tx: t.to.x,
-        ty: t.to.y,
-        label: t.label ?? '',
-      },
-    ]
+  // Aggregate teleports for the atlas overlay by walking every map's
+  // `objectPlacements` and picking out `kind: 'teleport'` entries.
+  // This replaces the legacy project-level `teleports[]` array that
+  // PR 2 of the object-system rollout removed.
+  const teleports: SampleTeleport[] = maps.flatMap((mapResource) => {
+    const data = mapResource.mapData
+    const placements = data?.objectPlacements ?? []
+    return placements.flatMap((placement) => {
+      const def = placement.inline // PR 2 always inlined teleports; library refs are an editor concern
+      if (def?.kind !== 'teleport') return []
+      const props = def.properties as
+        | { targetMapId?: string; targetTileX?: number; targetTileY?: number; label?: string }
+        | undefined
+      if (!props?.targetMapId || typeof props.targetTileX !== 'number' || typeof props.targetTileY !== 'number') return []
+      return [
+        {
+          from: data.id,
+          fx: placement.tileX,
+          fy: placement.tileY,
+          to: props.targetMapId,
+          tx: props.targetTileX,
+          ty: props.targetTileY,
+          label: props.label ?? def.name ?? '',
+        },
+      ]
+    })
   })
 
   return { projectPath, projectName, scenes, teleports, resource }

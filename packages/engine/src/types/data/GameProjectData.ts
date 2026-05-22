@@ -1,12 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type {
-  GameProjectEditorMetadata,
-  ObjectDefinition,
-  Properties,
-  TeleportData,
-} from './index'
+import type { GameProjectEditorMetadata, ObjectDefinition, Properties } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -63,16 +58,6 @@ export interface GameProjectData {
    * model and the canonical pattern table.
    */
   objectLibrary?: ObjectDefinition[]
-
-  /**
-   * @deprecated Use {@link ObjectDefinition} placements with
-   * `kind: 'teleport'` in each map's `objectPlacements[]` array.
-   * The migration to the new object system removes this field in PR 2
-   * of the rollout — see `docs/concepts/object-system.md`. Kept on
-   * the type for one cycle so the maker can read legacy project
-   * files while the migration script lands.
-   */
-  teleports?: TeleportData[]
 
   /**
    * Optional editor-specific data

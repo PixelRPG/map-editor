@@ -106,11 +106,13 @@ export class MapResource implements Loadable<TileMap> {
       return zIndexA - zIndexB
     })
 
-    const tileLayers = sortedLayers.filter((layer) => layer.type === 'tile' && layer.visible)
-    tileLayers.forEach((layer) => this.processTileLayer(tileMap, layer))
-
-    const objectLayers = sortedLayers.filter((layer) => layer.type === 'object' && layer.visible)
-    objectLayers.forEach((layer) => this.processObjectLayer(tileMap, layer))
+    // Every layer is a tile layer in the object-system schema. Object
+    // placements (NPCs, items, teleports, …) live on
+    // `MapData.objectPlacements` and are spawned by the engine's
+    // `ObjectSpawnSystem`, not at resource-load time.
+    sortedLayers
+      .filter((layer) => layer.visible)
+      .forEach((layer) => this.processTileLayer(tileMap, layer))
   }
 
   private processTileLayer(tileMap: TileMap, layer: LayerData): void {
@@ -149,57 +151,6 @@ export class MapResource implements Loadable<TileMap> {
         spriteId: spriteData.spriteId,
         animationId: spriteData.animationId,
         zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
-        layerId: layer.id,
-      })
-      this.initialSprites.set(tile, existingRefs)
-    }
-  }
-
-  private processObjectLayer(tileMap: TileMap, layer: LayerData): void {
-    if (!layer.objects || !Array.isArray(layer.objects) || layer.objects.length === 0) {
-      return
-    }
-
-    const layerZIndex = layer.properties?.z !== undefined ? Number(layer.properties.z) : 0
-
-    for (const obj of layer.objects) {
-      if (obj.type !== 'sprite' || obj.spriteId === undefined || !obj.spriteSetId) {
-        continue
-      }
-
-      const tileX = Math.floor(obj.x / tileMap.tileWidth)
-      const tileY = Math.floor(obj.y / tileMap.tileHeight)
-
-      if (tileX < 0 || tileX >= tileMap.columns || tileY < 0 || tileY >= tileMap.rows) {
-        continue
-      }
-
-      const objData = {
-        id: obj.id,
-        name: obj.name,
-        type: obj.type,
-        x: obj.x,
-        y: obj.y,
-        width: obj.width,
-        height: obj.height,
-        properties: obj.properties,
-        spriteId: obj.spriteId,
-        spriteSetId: obj.spriteSetId,
-        animationId: obj.animationId,
-      }
-
-      const tile = tileMap.getTile(tileX, tileY)
-      if (!tile) continue
-
-      tile.data.set('object', objData)
-
-      const existingRefs = this.initialSprites.get(tile) || []
-      const zIndex = obj.zIndex !== undefined ? obj.zIndex : layerZIndex
-      existingRefs.push({
-        spriteSetId: obj.spriteSetId,
-        spriteId: obj.spriteId,
-        animationId: obj.animationId,
-        zIndex,
         layerId: layer.id,
       })
       this.initialSprites.set(tile, existingRefs)
@@ -270,7 +221,7 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   getAvailableLayerIds(): string[] {
-    return this._mapData.layers.filter((layer) => layer.type === 'tile' && layer.visible).map((layer) => layer.id)
+    return this._mapData.layers.filter((layer) => layer.visible).map((layer) => layer.id)
   }
 
   getFirstLayerId(): string | null {

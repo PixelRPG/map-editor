@@ -47,24 +47,40 @@ function hex(h) {
  * overlays (an array of `{ x, y, color }`, both coords 0..15). Use
  * `darken` / `lighten` for shading.
  */
+// `tileProperties` rides along with each entry so the generator
+// emits the new sprite-data schema directly. See
+// `docs/concepts/object-system.md` § "Tile properties live on the
+// sprite".
 const TILES = [
   // Row 0 — overworld foliage / earth
-  { id: 'grass',      name: 'Grass',        base: '#5fb04c', detail: scatter(8, '#6cc457', '#4d9b3a', 0x42) },
-  { id: 'tree',       name: 'Tree',         base: '#2d6a25', detail: blob('#3b8f30', 4)    .concat(blob('#1c4517', 1)) },
-  { id: 'flower',     name: 'Flower',       base: '#5fb04c', detail: scatter(4, '#f0a85c', '#e056fd', 0x77).concat(scatter(2, '#ffffff', '#ffd166', 0x33)) },
-  { id: 'bush',       name: 'Bush',         base: '#5fb04c', detail: roundish('#3d6b3a', 6).concat(roundish('#2d4b2a', 2)) },
+  { id: 'grass',      name: 'Grass',        base: '#5fb04c', detail: scatter(8, '#6cc457', '#4d9b3a', 0x42),
+    tileProperties: { surface: 'grass' } },
+  { id: 'tree',       name: 'Tree',         base: '#2d6a25', detail: blob('#3b8f30', 4)    .concat(blob('#1c4517', 1)),
+    tileProperties: { walkable: false, surface: 'wood' } },
+  { id: 'flower',     name: 'Flower',       base: '#5fb04c', detail: scatter(4, '#f0a85c', '#e056fd', 0x77).concat(scatter(2, '#ffffff', '#ffd166', 0x33)),
+    tileProperties: { surface: 'grass' } },
+  { id: 'bush',       name: 'Bush',         base: '#5fb04c', detail: roundish('#3d6b3a', 6).concat(roundish('#2d4b2a', 2)),
+    tileProperties: { walkable: false, surface: 'wood' } },
 
   // Row 1 — water + sand
-  { id: 'water',      name: 'Water',        base: '#5db9d6', detail: scatter(6, '#7ed1e6', '#4198b0', 0x55).concat(stripes('#9adfee', 3, 4)) },
-  { id: 'deep-water', name: 'Deep Water',   base: '#2b6783', detail: scatter(4, '#3d8aab', '#1d4659', 0x33).concat(stripes('#5da6c7', 2, 5)) },
-  { id: 'sand',       name: 'Sand',         base: '#f0d995', detail: scatter(6, '#ecca6d', '#d6b562', 0x55) },
-  { id: 'pond',       name: 'Pond',         base: '#5fb04c', detail: roundish('#5db9d6', 8).concat(roundish('#7ed1e6', 4)) },
+  { id: 'water',      name: 'Water',        base: '#5db9d6', detail: scatter(6, '#7ed1e6', '#4198b0', 0x55).concat(stripes('#9adfee', 3, 4)),
+    tileProperties: { walkable: false, surface: 'water' } },
+  { id: 'deep-water', name: 'Deep Water',   base: '#2b6783', detail: scatter(4, '#3d8aab', '#1d4659', 0x33).concat(stripes('#5da6c7', 2, 5)),
+    tileProperties: { walkable: false, surface: 'water' } },
+  { id: 'sand',       name: 'Sand',         base: '#f0d995', detail: scatter(6, '#ecca6d', '#d6b562', 0x55),
+    tileProperties: { surface: 'sand' } },
+  { id: 'pond',       name: 'Pond',         base: '#5fb04c', detail: roundish('#5db9d6', 8).concat(roundish('#7ed1e6', 4)),
+    tileProperties: { walkable: false, surface: 'water' } },
 
   // Row 2 — paths / stone / dungeon
-  { id: 'path',       name: 'Path',         base: '#c6a576', detail: scatter(6, '#d6b58a', '#a8895f', 0x44) },
-  { id: 'stone',      name: 'Stone',        base: '#6a6a6f', detail: scatter(6, '#7c7c81', '#535358', 0x55) },
-  { id: 'wall',       name: 'Wall',         base: '#4a4a4f', detail: stripes('#5a5a5f', 2, 4).concat(stripes('#3a3a3f', 1, 8)) },
-  { id: 'door',       name: 'Door',         base: '#4a2e1e', detail: stripes('#5e3a25', 1, 5).concat([{ x: 12, y: 8, color: '#ffd166' }]) },
+  { id: 'path',       name: 'Path',         base: '#c6a576', detail: scatter(6, '#d6b58a', '#a8895f', 0x44),
+    tileProperties: { surface: 'sand' } },
+  { id: 'stone',      name: 'Stone',        base: '#6a6a6f', detail: scatter(6, '#7c7c81', '#535358', 0x55),
+    tileProperties: { surface: 'stone' } },
+  { id: 'wall',       name: 'Wall',         base: '#4a4a4f', detail: stripes('#5a5a5f', 2, 4).concat(stripes('#3a3a3f', 1, 8)),
+    tileProperties: { walkable: false, surface: 'stone' } },
+  { id: 'door',       name: 'Door',         base: '#4a2e1e', detail: stripes('#5e3a25', 1, 5).concat([{ x: 12, y: 8, color: '#ffd166' }]),
+    tileProperties: { surface: 'wood' } },
 
   // Row 3 — town / accents
   { id: 'house-wall', name: 'House Wall',   base: '#8b6240', detail: bricks('#7a5536', '#9a6f4a') },
@@ -261,6 +277,7 @@ const spriteSet = {
     col: index % COLUMNS,
     row: Math.floor(index / COLUMNS),
     name: tile.name,
+    ...(tile.tileProperties ? { tileProperties: tile.tileProperties } : {}),
   })),
 }
 

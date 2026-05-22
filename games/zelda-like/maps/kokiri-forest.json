@@ -24,7 +24,6 @@
     {
       "id": "layer_8",
       "name": "Map Layer 0",
-      "type": "tile",
       "visible": true,
       "sprites": [
         {
@@ -3062,46 +3061,7 @@
     {
       "id": "layer_11",
       "name": "Water",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "10",
-          "name": "",
-          "type": "custom",
-          "x": 992,
-          "y": 432,
-          "width": 0,
-          "height": 0
-        },
-        {
-          "id": "11",
-          "name": "",
-          "type": "custom",
-          "x": 976,
-          "y": 608,
-          "width": 0,
-          "height": 0
-        },
-        {
-          "id": "15",
-          "name": "",
-          "type": "custom",
-          "x": 1440,
-          "y": 528,
-          "width": 0,
-          "height": 0
-        },
-        {
-          "id": "16",
-          "name": "",
-          "type": "custom",
-          "x": 1296,
-          "y": 640,
-          "width": 0,
-          "height": 0
-        }
-      ],
       "properties": {
         "unity:IsTrigger": true,
         "z": 1
@@ -3110,7 +3070,6 @@
     {
       "id": "layer_1",
       "name": "Map Layer 1",
-      "type": "tile",
       "visible": true,
       "sprites": [
         {
@@ -99716,46 +99675,7 @@
     {
       "id": "layer_10",
       "name": "Manual Boundaries",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "5",
-          "name": "",
-          "type": "custom",
-          "x": 904,
-          "y": 1024,
-          "width": 8,
-          "height": 96
-        },
-        {
-          "id": "6",
-          "name": "",
-          "type": "custom",
-          "x": 992,
-          "y": 1024,
-          "width": 8,
-          "height": 96
-        },
-        {
-          "id": "7",
-          "name": "",
-          "type": "custom",
-          "x": 1304,
-          "y": 464,
-          "width": 8,
-          "height": 32
-        },
-        {
-          "id": "8",
-          "name": "",
-          "type": "custom",
-          "x": 1344,
-          "y": 464,
-          "width": 8,
-          "height": 32
-        }
-      ],
       "properties": {
         "z": 3
       }
@@ -99763,1957 +99683,7 @@
     {
       "id": "layer_12",
       "name": "Grass",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "17",
-          "name": "",
-          "type": "sprite",
-          "x": 608,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "18",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "19",
-          "name": "",
-          "type": "sprite",
-          "x": 640,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "20",
-          "name": "",
-          "type": "sprite",
-          "x": 656,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "21",
-          "name": "",
-          "type": "sprite",
-          "x": 672,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "22",
-          "name": "",
-          "type": "sprite",
-          "x": 672,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "23",
-          "name": "",
-          "type": "sprite",
-          "x": 688,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "24",
-          "name": "",
-          "type": "sprite",
-          "x": 688,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "25",
-          "name": "",
-          "type": "sprite",
-          "x": 704,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "26",
-          "name": "",
-          "type": "sprite",
-          "x": 672,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "27",
-          "name": "",
-          "type": "sprite",
-          "x": 656,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "28",
-          "name": "",
-          "type": "sprite",
-          "x": 656,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "29",
-          "name": "",
-          "type": "sprite",
-          "x": 640,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "30",
-          "name": "",
-          "type": "sprite",
-          "x": 640,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "31",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "32",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "33",
-          "name": "",
-          "type": "sprite",
-          "x": 608,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "34",
-          "name": "",
-          "type": "sprite",
-          "x": 608,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "35",
-          "name": "",
-          "type": "sprite",
-          "x": 592,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "36",
-          "name": "",
-          "type": "sprite",
-          "x": 576,
-          "y": 912,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "37",
-          "name": "",
-          "type": "sprite",
-          "x": 592,
-          "y": 896,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "38",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 1136,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "39",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 1136,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "40",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "41",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "42",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "43",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "44",
-          "name": "",
-          "type": "sprite",
-          "x": 352,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "45",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "46",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "47",
-          "name": "",
-          "type": "sprite",
-          "x": 400,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "48",
-          "name": "",
-          "type": "sprite",
-          "x": 416,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "53",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "54",
-          "name": "",
-          "type": "sprite",
-          "x": 352,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "55",
-          "name": "",
-          "type": "sprite",
-          "x": 336,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "56",
-          "name": "",
-          "type": "sprite",
-          "x": 336,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "57",
-          "name": "",
-          "type": "sprite",
-          "x": 320,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "58",
-          "name": "",
-          "type": "sprite",
-          "x": 320,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "59",
-          "name": "",
-          "type": "sprite",
-          "x": 304,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "60",
-          "name": "",
-          "type": "sprite",
-          "x": 304,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "61",
-          "name": "",
-          "type": "sprite",
-          "x": 304,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "62",
-          "name": "",
-          "type": "sprite",
-          "x": 304,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "63",
-          "name": "",
-          "type": "sprite",
-          "x": 320,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "64",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 832,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "65",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 848,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "66",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 848,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "67",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 864,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "68",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 864,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "69",
-          "name": "",
-          "type": "sprite",
-          "x": 384,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "70",
-          "name": "",
-          "type": "sprite",
-          "x": 368,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "71",
-          "name": "",
-          "type": "sprite",
-          "x": 352,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "72",
-          "name": "",
-          "type": "sprite",
-          "x": 336,
-          "y": 880,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "73",
-          "name": "",
-          "type": "sprite",
-          "x": 336,
-          "y": 864,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "74",
-          "name": "",
-          "type": "sprite",
-          "x": 352,
-          "y": 864,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "75",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 576,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "76",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "77",
-          "name": "",
-          "type": "sprite",
-          "x": 608,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "78",
-          "name": "",
-          "type": "sprite",
-          "x": 816,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "79",
-          "name": "",
-          "type": "sprite",
-          "x": 832,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "80",
-          "name": "",
-          "type": "sprite",
-          "x": 848,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "81",
-          "name": "",
-          "type": "sprite",
-          "x": 864,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "82",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "83",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "84",
-          "name": "",
-          "type": "sprite",
-          "x": 864,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "85",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "86",
-          "name": "",
-          "type": "sprite",
-          "x": 896,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "87",
-          "name": "",
-          "type": "sprite",
-          "x": 896,
-          "y": 496,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "88",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 496,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "89",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "90",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "91",
-          "name": "",
-          "type": "sprite",
-          "x": 896,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "92",
-          "name": "",
-          "type": "sprite",
-          "x": 896,
-          "y": 448,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "93",
-          "name": "",
-          "type": "sprite",
-          "x": 896,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "94",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 496,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "95",
-          "name": "",
-          "type": "sprite",
-          "x": 864,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "96",
-          "name": "",
-          "type": "sprite",
-          "x": 848,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "97",
-          "name": "",
-          "type": "sprite",
-          "x": 832,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "98",
-          "name": "",
-          "type": "sprite",
-          "x": 816,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "99",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "100",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "101",
-          "name": "",
-          "type": "sprite",
-          "x": 880,
-          "y": 1200,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "102",
-          "name": "",
-          "type": "sprite",
-          "x": 896,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "103",
-          "name": "",
-          "type": "sprite",
-          "x": 1024,
-          "y": 944,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "104",
-          "name": "",
-          "type": "sprite",
-          "x": 1040,
-          "y": 944,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "105",
-          "name": "",
-          "type": "sprite",
-          "x": 992,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "106",
-          "name": "",
-          "type": "sprite",
-          "x": 976,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "107",
-          "name": "",
-          "type": "sprite",
-          "x": 960,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "108",
-          "name": "",
-          "type": "sprite",
-          "x": 944,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "109",
-          "name": "",
-          "type": "sprite",
-          "x": 928,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "110",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "111",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 272,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "112",
-          "name": "",
-          "type": "sprite",
-          "x": 848,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "113",
-          "name": "",
-          "type": "sprite",
-          "x": 832,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "114",
-          "name": "",
-          "type": "sprite",
-          "x": 832,
-          "y": 256,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "115",
-          "name": "",
-          "type": "sprite",
-          "x": 816,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "116",
-          "name": "",
-          "type": "sprite",
-          "x": 832,
-          "y": 224,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "117",
-          "name": "",
-          "type": "sprite",
-          "x": 816,
-          "y": 224,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "118",
-          "name": "",
-          "type": "sprite",
-          "x": 800,
-          "y": 224,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "119",
-          "name": "",
-          "type": "sprite",
-          "x": 800,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "120",
-          "name": "",
-          "type": "sprite",
-          "x": 784,
-          "y": 224,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "121",
-          "name": "",
-          "type": "sprite",
-          "x": 784,
-          "y": 208,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "122",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 208,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "123",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 192,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "124",
-          "name": "",
-          "type": "sprite",
-          "x": 992,
-          "y": 1200,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "125",
-          "name": "",
-          "type": "sprite",
-          "x": 976,
-          "y": 1200,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "126",
-          "name": "",
-          "type": "sprite",
-          "x": 1376,
-          "y": 1232,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "127",
-          "name": "",
-          "type": "sprite",
-          "x": 1392,
-          "y": 1216,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "128",
-          "name": "",
-          "type": "sprite",
-          "x": 1408,
-          "y": 1200,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "129",
-          "name": "",
-          "type": "sprite",
-          "x": 1424,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "130",
-          "name": "",
-          "type": "sprite",
-          "x": 1440,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "131",
-          "name": "",
-          "type": "sprite",
-          "x": 1456,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "132",
-          "name": "",
-          "type": "sprite",
-          "x": 1472,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "133",
-          "name": "",
-          "type": "sprite",
-          "x": 1472,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "134",
-          "name": "",
-          "type": "sprite",
-          "x": 1488,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "135",
-          "name": "",
-          "type": "sprite",
-          "x": 1488,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "136",
-          "name": "",
-          "type": "sprite",
-          "x": 1504,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "137",
-          "name": "",
-          "type": "sprite",
-          "x": 2096,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "138",
-          "name": "",
-          "type": "sprite",
-          "x": 2112,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "139",
-          "name": "",
-          "type": "sprite",
-          "x": 2112,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "140",
-          "name": "",
-          "type": "sprite",
-          "x": 2128,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "141",
-          "name": "",
-          "type": "sprite",
-          "x": 2128,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "142",
-          "name": "",
-          "type": "sprite",
-          "x": 2144,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "143",
-          "name": "",
-          "type": "sprite",
-          "x": 2160,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "144",
-          "name": "",
-          "type": "sprite",
-          "x": 2160,
-          "y": 448,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "145",
-          "name": "",
-          "type": "sprite",
-          "x": 2144,
-          "y": 448,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "146",
-          "name": "",
-          "type": "sprite",
-          "x": 2144,
-          "y": 432,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "147",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 320,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "148",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 320,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "149",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 320,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "150",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 336,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "151",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 336,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "152",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 336,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "153",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "154",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "155",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "156",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 368,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "157",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 368,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "158",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 368,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "159",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 384,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "160",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 384,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "161",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 384,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "162",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 368,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "163",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 400,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "164",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 416,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "165",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 432,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "166",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 448,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "167",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 448,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "168",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "169",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 464,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "170",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "171",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "172",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 480,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "173",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 496,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "174",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 496,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "175",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 496,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "176",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "177",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 512,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "178",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "179",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "236",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1632,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "237",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1616,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "238",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 1616,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "239",
-          "name": "",
-          "type": "sprite",
-          "x": 736,
-          "y": 1616,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "240",
-          "name": "",
-          "type": "sprite",
-          "x": 736,
-          "y": 1600,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "241",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1600,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "242",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 1600,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "243",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 1584,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "244",
-          "name": "",
-          "type": "sprite",
-          "x": 736,
-          "y": 1584,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "245",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1584,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "246",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1568,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "247",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 1568,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "248",
-          "name": "",
-          "type": "sprite",
-          "x": 736,
-          "y": 1568,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "249",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1552,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "250",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 1552,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "251",
-          "name": "",
-          "type": "sprite",
-          "x": 736,
-          "y": 1552,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "252",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 1536,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "312",
-          "name": "",
-          "type": "sprite",
-          "x": 688,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 339,
-          "spriteSetId": "lokiri-forest"
-        }
-      ],
       "properties": {
         "z": 4
       }
@@ -101721,945 +99691,7 @@
     {
       "id": "layer_13",
       "name": "Shrubs",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "180",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "181",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "182",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 576,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "183",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "184",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 608,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "185",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "186",
-          "name": "",
-          "type": "sprite",
-          "x": 2048,
-          "y": 640,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "187",
-          "name": "",
-          "type": "sprite",
-          "x": 2064,
-          "y": 640,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "188",
-          "name": "",
-          "type": "sprite",
-          "x": 2064,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "189",
-          "name": "",
-          "type": "sprite",
-          "x": 2080,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "190",
-          "name": "",
-          "type": "sprite",
-          "x": 2080,
-          "y": 640,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "191",
-          "name": "",
-          "type": "sprite",
-          "x": 2080,
-          "y": 656,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "192",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 672,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "193",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 656,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "194",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 656,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "195",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 640,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "196",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 640,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "197",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "198",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "199",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 608,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "200",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 608,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "201",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "202",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 640,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "203",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "204",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 608,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "205",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "206",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "207",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 576,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "208",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 576,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "209",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "210",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "211",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "212",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 528,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "213",
-          "name": "",
-          "type": "sprite",
-          "x": 1200,
-          "y": 704,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "214",
-          "name": "",
-          "type": "sprite",
-          "x": 1344,
-          "y": 992,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "215",
-          "name": "",
-          "type": "sprite",
-          "x": 1328,
-          "y": 1008,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "216",
-          "name": "",
-          "type": "sprite",
-          "x": 1312,
-          "y": 992,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "217",
-          "name": "",
-          "type": "sprite",
-          "x": 1296,
-          "y": 1008,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "218",
-          "name": "",
-          "type": "sprite",
-          "x": 1296,
-          "y": 1216,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "219",
-          "name": "",
-          "type": "sprite",
-          "x": 1280,
-          "y": 1216,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "220",
-          "name": "",
-          "type": "sprite",
-          "x": 1280,
-          "y": 1200,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "221",
-          "name": "",
-          "type": "sprite",
-          "x": 640,
-          "y": 1088,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "222",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 1088,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "223",
-          "name": "",
-          "type": "sprite",
-          "x": 608,
-          "y": 1072,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "224",
-          "name": "",
-          "type": "sprite",
-          "x": 576,
-          "y": 1088,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "225",
-          "name": "",
-          "type": "sprite",
-          "x": 704,
-          "y": 1088,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "226",
-          "name": "",
-          "type": "sprite",
-          "x": 704,
-          "y": 1056,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "227",
-          "name": "",
-          "type": "sprite",
-          "x": 352,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "228",
-          "name": "",
-          "type": "sprite",
-          "x": 336,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "229",
-          "name": "",
-          "type": "sprite",
-          "x": 336,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "230",
-          "name": "",
-          "type": "sprite",
-          "x": 432,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "231",
-          "name": "",
-          "type": "sprite",
-          "x": 448,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "232",
-          "name": "",
-          "type": "sprite",
-          "x": 656,
-          "y": 1664,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "233",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 1872,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "234",
-          "name": "",
-          "type": "sprite",
-          "x": 928,
-          "y": 1872,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "235",
-          "name": "",
-          "type": "sprite",
-          "x": 944,
-          "y": 1872,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "253",
-          "name": "",
-          "type": "sprite",
-          "x": 496,
-          "y": 1472,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "254",
-          "name": "",
-          "type": "sprite",
-          "x": 800,
-          "y": 320,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "255",
-          "name": "",
-          "type": "sprite",
-          "x": 800,
-          "y": 336,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "257",
-          "name": "",
-          "type": "sprite",
-          "x": 800,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "258",
-          "name": "",
-          "type": "sprite",
-          "x": 784,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "259",
-          "name": "",
-          "type": "sprite",
-          "x": 768,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "273",
-          "name": "",
-          "type": "sprite",
-          "x": 1152,
-          "y": 1024,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "274",
-          "name": "",
-          "type": "sprite",
-          "x": 1152,
-          "y": 1040,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "275",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 352,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "276",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 336,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "277",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 320,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "278",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 304,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "279",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 304,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "280",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "281",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 288,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "282",
-          "name": "",
-          "type": "sprite",
-          "x": 2560,
-          "y": 272,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "283",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 272,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "284",
-          "name": "",
-          "type": "sprite",
-          "x": 2544,
-          "y": 256,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "285",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 256,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "286",
-          "name": "",
-          "type": "sprite",
-          "x": 2528,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "287",
-          "name": "",
-          "type": "sprite",
-          "x": 2512,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "288",
-          "name": "",
-          "type": "sprite",
-          "x": 2496,
-          "y": 240,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "300",
-          "name": "",
-          "type": "sprite",
-          "x": 544,
-          "y": 1056,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "301",
-          "name": "",
-          "type": "sprite",
-          "x": 512,
-          "y": 1072,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "302",
-          "name": "",
-          "type": "sprite",
-          "x": 496,
-          "y": 1088,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "308",
-          "name": "",
-          "type": "sprite",
-          "x": 464,
-          "y": 720,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "309",
-          "name": "",
-          "type": "sprite",
-          "x": 464,
-          "y": 736,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "310",
-          "name": "",
-          "type": "sprite",
-          "x": 448,
-          "y": 736,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "311",
-          "name": "",
-          "type": "sprite",
-          "x": 432,
-          "y": 736,
-          "width": 16,
-          "height": 16,
-          "spriteId": 372,
-          "spriteSetId": "lokiri-forest"
-        }
-      ],
       "properties": {
         "z": 5
       }
@@ -102667,186 +99699,7 @@
     {
       "id": "layer_14",
       "name": "Rocks",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "260",
-          "name": "",
-          "type": "sprite",
-          "x": 544,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "261",
-          "name": "",
-          "type": "sprite",
-          "x": 720,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "262",
-          "name": "",
-          "type": "sprite",
-          "x": 704,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "263",
-          "name": "",
-          "type": "sprite",
-          "x": 720,
-          "y": 656,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "264",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 672,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "265",
-          "name": "",
-          "type": "sprite",
-          "x": 784,
-          "y": 656,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "266",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "267",
-          "name": "",
-          "type": "sprite",
-          "x": 752,
-          "y": 576,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "268",
-          "name": "",
-          "type": "sprite",
-          "x": 784,
-          "y": 592,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "269",
-          "name": "",
-          "type": "sprite",
-          "x": 800,
-          "y": 624,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "270",
-          "name": "",
-          "type": "sprite",
-          "x": 688,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "271",
-          "name": "",
-          "type": "sprite",
-          "x": 1184,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "272",
-          "name": "",
-          "type": "sprite",
-          "x": 1136,
-          "y": 1024,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "305",
-          "name": "",
-          "type": "sprite",
-          "x": 496,
-          "y": 1152,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "306",
-          "name": "",
-          "type": "sprite",
-          "x": 496,
-          "y": 1136,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "307",
-          "name": "",
-          "type": "sprite",
-          "x": 288,
-          "y": 976,
-          "width": 16,
-          "height": 16,
-          "spriteId": 371,
-          "spriteSetId": "lokiri-forest"
-        }
-      ],
       "properties": {
         "z": 6
       }
@@ -102854,153 +99707,7 @@
     {
       "id": "layer_15",
       "name": "Signs",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "289",
-          "name": "",
-          "type": "sprite",
-          "x": 1568,
-          "y": 672,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "290",
-          "name": "",
-          "type": "sprite",
-          "x": 1184,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "291",
-          "name": "",
-          "type": "sprite",
-          "x": 1280,
-          "y": 544,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "292",
-          "name": "",
-          "type": "sprite",
-          "x": 1424,
-          "y": 1024,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "293",
-          "name": "",
-          "type": "sprite",
-          "x": 912,
-          "y": 1168,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "294",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 560,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "295",
-          "name": "",
-          "type": "sprite",
-          "x": 1248,
-          "y": 1072,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "296",
-          "name": "",
-          "type": "sprite",
-          "x": 624,
-          "y": 1184,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "297",
-          "name": "",
-          "type": "sprite",
-          "x": 352,
-          "y": 1072,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "298",
-          "name": "",
-          "type": "sprite",
-          "x": 304,
-          "y": 704,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "299",
-          "name": "",
-          "type": "sprite",
-          "x": 560,
-          "y": 192,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "303",
-          "name": "",
-          "type": "sprite",
-          "x": 496,
-          "y": 992,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        },
-        {
-          "id": "304",
-          "name": "",
-          "type": "sprite",
-          "x": 960,
-          "y": 1808,
-          "width": 16,
-          "height": 16,
-          "spriteId": 402,
-          "spriteSetId": "lokiri-forest"
-        }
-      ],
       "properties": {
         "z": 7
       }
@@ -103008,7 +99715,6 @@
     {
       "id": "layer_2",
       "name": "Map Layer 2",
-      "type": "tile",
       "visible": true,
       "sprites": [
         {
@@ -122196,19 +118902,7 @@
     {
       "id": "layer_16",
       "name": "Camera Boundaries",
-      "type": "object",
       "visible": true,
-      "objects": [
-        {
-          "id": "314",
-          "name": "Camera Boundaries",
-          "type": "custom",
-          "x": 80,
-          "y": 0,
-          "width": 0,
-          "height": 0
-        }
-      ],
       "properties": {
         "z": 9
       }
@@ -122218,5 +118912,3307 @@
     "infinite": true,
     "originalMinX": -64,
     "originalMinY": -48
-  }
+  },
+  "objectPlacements": [
+    {
+      "id": "p-layer_11-10",
+      "layerId": "layer_11",
+      "tileX": 62,
+      "tileY": 27,
+      "inline": {
+        "id": "def-layer_11-10",
+        "kind": "custom",
+        "name": "Object 10"
+      }
+    },
+    {
+      "id": "p-layer_11-11",
+      "layerId": "layer_11",
+      "tileX": 61,
+      "tileY": 38,
+      "inline": {
+        "id": "def-layer_11-11",
+        "kind": "custom",
+        "name": "Object 11"
+      }
+    },
+    {
+      "id": "p-layer_11-15",
+      "layerId": "layer_11",
+      "tileX": 90,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_11-15",
+        "kind": "custom",
+        "name": "Object 15"
+      }
+    },
+    {
+      "id": "p-layer_11-16",
+      "layerId": "layer_11",
+      "tileX": 81,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_11-16",
+        "kind": "custom",
+        "name": "Object 16"
+      }
+    },
+    {
+      "id": "p-layer_10-5",
+      "layerId": "layer_10",
+      "tileX": 57,
+      "tileY": 64,
+      "inline": {
+        "id": "def-layer_10-5",
+        "kind": "custom",
+        "name": "Object 5"
+      }
+    },
+    {
+      "id": "p-layer_10-6",
+      "layerId": "layer_10",
+      "tileX": 62,
+      "tileY": 64,
+      "inline": {
+        "id": "def-layer_10-6",
+        "kind": "custom",
+        "name": "Object 6"
+      }
+    },
+    {
+      "id": "p-layer_10-7",
+      "layerId": "layer_10",
+      "tileX": 82,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_10-7",
+        "kind": "custom",
+        "name": "Object 7"
+      }
+    },
+    {
+      "id": "p-layer_10-8",
+      "layerId": "layer_10",
+      "tileX": 84,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_10-8",
+        "kind": "custom",
+        "name": "Object 8"
+      }
+    },
+    {
+      "id": "p-layer_12-17",
+      "layerId": "layer_12",
+      "tileX": 38,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-17",
+        "kind": "custom",
+        "name": "Object 17"
+      }
+    },
+    {
+      "id": "p-layer_12-18",
+      "layerId": "layer_12",
+      "tileX": 39,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-18",
+        "kind": "custom",
+        "name": "Object 18"
+      }
+    },
+    {
+      "id": "p-layer_12-19",
+      "layerId": "layer_12",
+      "tileX": 40,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-19",
+        "kind": "custom",
+        "name": "Object 19"
+      }
+    },
+    {
+      "id": "p-layer_12-20",
+      "layerId": "layer_12",
+      "tileX": 41,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-20",
+        "kind": "custom",
+        "name": "Object 20"
+      }
+    },
+    {
+      "id": "p-layer_12-21",
+      "layerId": "layer_12",
+      "tileX": 42,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-21",
+        "kind": "custom",
+        "name": "Object 21"
+      }
+    },
+    {
+      "id": "p-layer_12-22",
+      "layerId": "layer_12",
+      "tileX": 42,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-22",
+        "kind": "custom",
+        "name": "Object 22"
+      }
+    },
+    {
+      "id": "p-layer_12-23",
+      "layerId": "layer_12",
+      "tileX": 43,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-23",
+        "kind": "custom",
+        "name": "Object 23"
+      }
+    },
+    {
+      "id": "p-layer_12-24",
+      "layerId": "layer_12",
+      "tileX": 43,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-24",
+        "kind": "custom",
+        "name": "Object 24"
+      }
+    },
+    {
+      "id": "p-layer_12-25",
+      "layerId": "layer_12",
+      "tileX": 44,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-25",
+        "kind": "custom",
+        "name": "Object 25"
+      }
+    },
+    {
+      "id": "p-layer_12-26",
+      "layerId": "layer_12",
+      "tileX": 42,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-26",
+        "kind": "custom",
+        "name": "Object 26"
+      }
+    },
+    {
+      "id": "p-layer_12-27",
+      "layerId": "layer_12",
+      "tileX": 41,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-27",
+        "kind": "custom",
+        "name": "Object 27"
+      }
+    },
+    {
+      "id": "p-layer_12-28",
+      "layerId": "layer_12",
+      "tileX": 41,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-28",
+        "kind": "custom",
+        "name": "Object 28"
+      }
+    },
+    {
+      "id": "p-layer_12-29",
+      "layerId": "layer_12",
+      "tileX": 40,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-29",
+        "kind": "custom",
+        "name": "Object 29"
+      }
+    },
+    {
+      "id": "p-layer_12-30",
+      "layerId": "layer_12",
+      "tileX": 40,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-30",
+        "kind": "custom",
+        "name": "Object 30"
+      }
+    },
+    {
+      "id": "p-layer_12-31",
+      "layerId": "layer_12",
+      "tileX": 39,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-31",
+        "kind": "custom",
+        "name": "Object 31"
+      }
+    },
+    {
+      "id": "p-layer_12-32",
+      "layerId": "layer_12",
+      "tileX": 39,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-32",
+        "kind": "custom",
+        "name": "Object 32"
+      }
+    },
+    {
+      "id": "p-layer_12-33",
+      "layerId": "layer_12",
+      "tileX": 38,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-33",
+        "kind": "custom",
+        "name": "Object 33"
+      }
+    },
+    {
+      "id": "p-layer_12-34",
+      "layerId": "layer_12",
+      "tileX": 38,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-34",
+        "kind": "custom",
+        "name": "Object 34"
+      }
+    },
+    {
+      "id": "p-layer_12-35",
+      "layerId": "layer_12",
+      "tileX": 37,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-35",
+        "kind": "custom",
+        "name": "Object 35"
+      }
+    },
+    {
+      "id": "p-layer_12-36",
+      "layerId": "layer_12",
+      "tileX": 36,
+      "tileY": 57,
+      "inline": {
+        "id": "def-layer_12-36",
+        "kind": "custom",
+        "name": "Object 36"
+      }
+    },
+    {
+      "id": "p-layer_12-37",
+      "layerId": "layer_12",
+      "tileX": 37,
+      "tileY": 56,
+      "inline": {
+        "id": "def-layer_12-37",
+        "kind": "custom",
+        "name": "Object 37"
+      }
+    },
+    {
+      "id": "p-layer_12-38",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 71,
+      "inline": {
+        "id": "def-layer_12-38",
+        "kind": "custom",
+        "name": "Object 38"
+      }
+    },
+    {
+      "id": "p-layer_12-39",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 71,
+      "inline": {
+        "id": "def-layer_12-39",
+        "kind": "custom",
+        "name": "Object 39"
+      }
+    },
+    {
+      "id": "p-layer_12-40",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_12-40",
+        "kind": "custom",
+        "name": "Object 40"
+      }
+    },
+    {
+      "id": "p-layer_12-41",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_12-41",
+        "kind": "custom",
+        "name": "Object 41"
+      }
+    },
+    {
+      "id": "p-layer_12-42",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-42",
+        "kind": "custom",
+        "name": "Object 42"
+      }
+    },
+    {
+      "id": "p-layer_12-43",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-43",
+        "kind": "custom",
+        "name": "Object 43"
+      }
+    },
+    {
+      "id": "p-layer_12-44",
+      "layerId": "layer_12",
+      "tileX": 22,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-44",
+        "kind": "custom",
+        "name": "Object 44"
+      }
+    },
+    {
+      "id": "p-layer_12-45",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-45",
+        "kind": "custom",
+        "name": "Object 45"
+      }
+    },
+    {
+      "id": "p-layer_12-46",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-46",
+        "kind": "custom",
+        "name": "Object 46"
+      }
+    },
+    {
+      "id": "p-layer_12-47",
+      "layerId": "layer_12",
+      "tileX": 25,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-47",
+        "kind": "custom",
+        "name": "Object 47"
+      }
+    },
+    {
+      "id": "p-layer_12-48",
+      "layerId": "layer_12",
+      "tileX": 26,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-48",
+        "kind": "custom",
+        "name": "Object 48"
+      }
+    },
+    {
+      "id": "p-layer_12-53",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-53",
+        "kind": "custom",
+        "name": "Object 53"
+      }
+    },
+    {
+      "id": "p-layer_12-54",
+      "layerId": "layer_12",
+      "tileX": 22,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-54",
+        "kind": "custom",
+        "name": "Object 54"
+      }
+    },
+    {
+      "id": "p-layer_12-55",
+      "layerId": "layer_12",
+      "tileX": 21,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-55",
+        "kind": "custom",
+        "name": "Object 55"
+      }
+    },
+    {
+      "id": "p-layer_12-56",
+      "layerId": "layer_12",
+      "tileX": 21,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-56",
+        "kind": "custom",
+        "name": "Object 56"
+      }
+    },
+    {
+      "id": "p-layer_12-57",
+      "layerId": "layer_12",
+      "tileX": 20,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-57",
+        "kind": "custom",
+        "name": "Object 57"
+      }
+    },
+    {
+      "id": "p-layer_12-58",
+      "layerId": "layer_12",
+      "tileX": 20,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_12-58",
+        "kind": "custom",
+        "name": "Object 58"
+      }
+    },
+    {
+      "id": "p-layer_12-59",
+      "layerId": "layer_12",
+      "tileX": 19,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_12-59",
+        "kind": "custom",
+        "name": "Object 59"
+      }
+    },
+    {
+      "id": "p-layer_12-60",
+      "layerId": "layer_12",
+      "tileX": 19,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_12-60",
+        "kind": "custom",
+        "name": "Object 60"
+      }
+    },
+    {
+      "id": "p-layer_12-61",
+      "layerId": "layer_12",
+      "tileX": 19,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-61",
+        "kind": "custom",
+        "name": "Object 61"
+      }
+    },
+    {
+      "id": "p-layer_12-62",
+      "layerId": "layer_12",
+      "tileX": 19,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-62",
+        "kind": "custom",
+        "name": "Object 62"
+      }
+    },
+    {
+      "id": "p-layer_12-63",
+      "layerId": "layer_12",
+      "tileX": 20,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-63",
+        "kind": "custom",
+        "name": "Object 63"
+      }
+    },
+    {
+      "id": "p-layer_12-64",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 52,
+      "inline": {
+        "id": "def-layer_12-64",
+        "kind": "custom",
+        "name": "Object 64"
+      }
+    },
+    {
+      "id": "p-layer_12-65",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 53,
+      "inline": {
+        "id": "def-layer_12-65",
+        "kind": "custom",
+        "name": "Object 65"
+      }
+    },
+    {
+      "id": "p-layer_12-66",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 53,
+      "inline": {
+        "id": "def-layer_12-66",
+        "kind": "custom",
+        "name": "Object 66"
+      }
+    },
+    {
+      "id": "p-layer_12-67",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 54,
+      "inline": {
+        "id": "def-layer_12-67",
+        "kind": "custom",
+        "name": "Object 67"
+      }
+    },
+    {
+      "id": "p-layer_12-68",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 54,
+      "inline": {
+        "id": "def-layer_12-68",
+        "kind": "custom",
+        "name": "Object 68"
+      }
+    },
+    {
+      "id": "p-layer_12-69",
+      "layerId": "layer_12",
+      "tileX": 24,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-69",
+        "kind": "custom",
+        "name": "Object 69"
+      }
+    },
+    {
+      "id": "p-layer_12-70",
+      "layerId": "layer_12",
+      "tileX": 23,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-70",
+        "kind": "custom",
+        "name": "Object 70"
+      }
+    },
+    {
+      "id": "p-layer_12-71",
+      "layerId": "layer_12",
+      "tileX": 22,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-71",
+        "kind": "custom",
+        "name": "Object 71"
+      }
+    },
+    {
+      "id": "p-layer_12-72",
+      "layerId": "layer_12",
+      "tileX": 21,
+      "tileY": 55,
+      "inline": {
+        "id": "def-layer_12-72",
+        "kind": "custom",
+        "name": "Object 72"
+      }
+    },
+    {
+      "id": "p-layer_12-73",
+      "layerId": "layer_12",
+      "tileX": 21,
+      "tileY": 54,
+      "inline": {
+        "id": "def-layer_12-73",
+        "kind": "custom",
+        "name": "Object 73"
+      }
+    },
+    {
+      "id": "p-layer_12-74",
+      "layerId": "layer_12",
+      "tileX": 22,
+      "tileY": 54,
+      "inline": {
+        "id": "def-layer_12-74",
+        "kind": "custom",
+        "name": "Object 74"
+      }
+    },
+    {
+      "id": "p-layer_12-75",
+      "layerId": "layer_12",
+      "tileX": 39,
+      "tileY": 36,
+      "inline": {
+        "id": "def-layer_12-75",
+        "kind": "custom",
+        "name": "Object 75"
+      }
+    },
+    {
+      "id": "p-layer_12-76",
+      "layerId": "layer_12",
+      "tileX": 39,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_12-76",
+        "kind": "custom",
+        "name": "Object 76"
+      }
+    },
+    {
+      "id": "p-layer_12-77",
+      "layerId": "layer_12",
+      "tileX": 38,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_12-77",
+        "kind": "custom",
+        "name": "Object 77"
+      }
+    },
+    {
+      "id": "p-layer_12-78",
+      "layerId": "layer_12",
+      "tileX": 51,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-78",
+        "kind": "custom",
+        "name": "Object 78"
+      }
+    },
+    {
+      "id": "p-layer_12-79",
+      "layerId": "layer_12",
+      "tileX": 52,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-79",
+        "kind": "custom",
+        "name": "Object 79"
+      }
+    },
+    {
+      "id": "p-layer_12-80",
+      "layerId": "layer_12",
+      "tileX": 53,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-80",
+        "kind": "custom",
+        "name": "Object 80"
+      }
+    },
+    {
+      "id": "p-layer_12-81",
+      "layerId": "layer_12",
+      "tileX": 54,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-81",
+        "kind": "custom",
+        "name": "Object 81"
+      }
+    },
+    {
+      "id": "p-layer_12-82",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-82",
+        "kind": "custom",
+        "name": "Object 82"
+      }
+    },
+    {
+      "id": "p-layer_12-83",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_12-83",
+        "kind": "custom",
+        "name": "Object 83"
+      }
+    },
+    {
+      "id": "p-layer_12-84",
+      "layerId": "layer_12",
+      "tileX": 54,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_12-84",
+        "kind": "custom",
+        "name": "Object 84"
+      }
+    },
+    {
+      "id": "p-layer_12-85",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-85",
+        "kind": "custom",
+        "name": "Object 85"
+      }
+    },
+    {
+      "id": "p-layer_12-86",
+      "layerId": "layer_12",
+      "tileX": 56,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-86",
+        "kind": "custom",
+        "name": "Object 86"
+      }
+    },
+    {
+      "id": "p-layer_12-87",
+      "layerId": "layer_12",
+      "tileX": 56,
+      "tileY": 31,
+      "inline": {
+        "id": "def-layer_12-87",
+        "kind": "custom",
+        "name": "Object 87"
+      }
+    },
+    {
+      "id": "p-layer_12-88",
+      "layerId": "layer_12",
+      "tileX": 57,
+      "tileY": 31,
+      "inline": {
+        "id": "def-layer_12-88",
+        "kind": "custom",
+        "name": "Object 88"
+      }
+    },
+    {
+      "id": "p-layer_12-89",
+      "layerId": "layer_12",
+      "tileX": 57,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-89",
+        "kind": "custom",
+        "name": "Object 89"
+      }
+    },
+    {
+      "id": "p-layer_12-90",
+      "layerId": "layer_12",
+      "tileX": 57,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-90",
+        "kind": "custom",
+        "name": "Object 90"
+      }
+    },
+    {
+      "id": "p-layer_12-91",
+      "layerId": "layer_12",
+      "tileX": 56,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-91",
+        "kind": "custom",
+        "name": "Object 91"
+      }
+    },
+    {
+      "id": "p-layer_12-92",
+      "layerId": "layer_12",
+      "tileX": 56,
+      "tileY": 28,
+      "inline": {
+        "id": "def-layer_12-92",
+        "kind": "custom",
+        "name": "Object 92"
+      }
+    },
+    {
+      "id": "p-layer_12-93",
+      "layerId": "layer_12",
+      "tileX": 56,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-93",
+        "kind": "custom",
+        "name": "Object 93"
+      }
+    },
+    {
+      "id": "p-layer_12-94",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 31,
+      "inline": {
+        "id": "def-layer_12-94",
+        "kind": "custom",
+        "name": "Object 94"
+      }
+    },
+    {
+      "id": "p-layer_12-95",
+      "layerId": "layer_12",
+      "tileX": 54,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-95",
+        "kind": "custom",
+        "name": "Object 95"
+      }
+    },
+    {
+      "id": "p-layer_12-96",
+      "layerId": "layer_12",
+      "tileX": 53,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-96",
+        "kind": "custom",
+        "name": "Object 96"
+      }
+    },
+    {
+      "id": "p-layer_12-97",
+      "layerId": "layer_12",
+      "tileX": 52,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-97",
+        "kind": "custom",
+        "name": "Object 97"
+      }
+    },
+    {
+      "id": "p-layer_12-98",
+      "layerId": "layer_12",
+      "tileX": 51,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-98",
+        "kind": "custom",
+        "name": "Object 98"
+      }
+    },
+    {
+      "id": "p-layer_12-99",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-99",
+        "kind": "custom",
+        "name": "Object 99"
+      }
+    },
+    {
+      "id": "p-layer_12-100",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-100",
+        "kind": "custom",
+        "name": "Object 100"
+      }
+    },
+    {
+      "id": "p-layer_12-101",
+      "layerId": "layer_12",
+      "tileX": 55,
+      "tileY": 75,
+      "inline": {
+        "id": "def-layer_12-101",
+        "kind": "custom",
+        "name": "Object 101"
+      }
+    },
+    {
+      "id": "p-layer_12-102",
+      "layerId": "layer_12",
+      "tileX": 56,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-102",
+        "kind": "custom",
+        "name": "Object 102"
+      }
+    },
+    {
+      "id": "p-layer_12-103",
+      "layerId": "layer_12",
+      "tileX": 64,
+      "tileY": 59,
+      "inline": {
+        "id": "def-layer_12-103",
+        "kind": "custom",
+        "name": "Object 103"
+      }
+    },
+    {
+      "id": "p-layer_12-104",
+      "layerId": "layer_12",
+      "tileX": 65,
+      "tileY": 59,
+      "inline": {
+        "id": "def-layer_12-104",
+        "kind": "custom",
+        "name": "Object 104"
+      }
+    },
+    {
+      "id": "p-layer_12-105",
+      "layerId": "layer_12",
+      "tileX": 62,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_12-105",
+        "kind": "custom",
+        "name": "Object 105"
+      }
+    },
+    {
+      "id": "p-layer_12-106",
+      "layerId": "layer_12",
+      "tileX": 61,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_12-106",
+        "kind": "custom",
+        "name": "Object 106"
+      }
+    },
+    {
+      "id": "p-layer_12-107",
+      "layerId": "layer_12",
+      "tileX": 60,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_12-107",
+        "kind": "custom",
+        "name": "Object 107"
+      }
+    },
+    {
+      "id": "p-layer_12-108",
+      "layerId": "layer_12",
+      "tileX": 59,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_12-108",
+        "kind": "custom",
+        "name": "Object 108"
+      }
+    },
+    {
+      "id": "p-layer_12-109",
+      "layerId": "layer_12",
+      "tileX": 58,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_12-109",
+        "kind": "custom",
+        "name": "Object 109"
+      }
+    },
+    {
+      "id": "p-layer_12-110",
+      "layerId": "layer_12",
+      "tileX": 57,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_12-110",
+        "kind": "custom",
+        "name": "Object 110"
+      }
+    },
+    {
+      "id": "p-layer_12-111",
+      "layerId": "layer_12",
+      "tileX": 57,
+      "tileY": 17,
+      "inline": {
+        "id": "def-layer_12-111",
+        "kind": "custom",
+        "name": "Object 111"
+      }
+    },
+    {
+      "id": "p-layer_12-112",
+      "layerId": "layer_12",
+      "tileX": 53,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_12-112",
+        "kind": "custom",
+        "name": "Object 112"
+      }
+    },
+    {
+      "id": "p-layer_12-113",
+      "layerId": "layer_12",
+      "tileX": 52,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_12-113",
+        "kind": "custom",
+        "name": "Object 113"
+      }
+    },
+    {
+      "id": "p-layer_12-114",
+      "layerId": "layer_12",
+      "tileX": 52,
+      "tileY": 16,
+      "inline": {
+        "id": "def-layer_12-114",
+        "kind": "custom",
+        "name": "Object 114"
+      }
+    },
+    {
+      "id": "p-layer_12-115",
+      "layerId": "layer_12",
+      "tileX": 51,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_12-115",
+        "kind": "custom",
+        "name": "Object 115"
+      }
+    },
+    {
+      "id": "p-layer_12-116",
+      "layerId": "layer_12",
+      "tileX": 52,
+      "tileY": 14,
+      "inline": {
+        "id": "def-layer_12-116",
+        "kind": "custom",
+        "name": "Object 116"
+      }
+    },
+    {
+      "id": "p-layer_12-117",
+      "layerId": "layer_12",
+      "tileX": 51,
+      "tileY": 14,
+      "inline": {
+        "id": "def-layer_12-117",
+        "kind": "custom",
+        "name": "Object 117"
+      }
+    },
+    {
+      "id": "p-layer_12-118",
+      "layerId": "layer_12",
+      "tileX": 50,
+      "tileY": 14,
+      "inline": {
+        "id": "def-layer_12-118",
+        "kind": "custom",
+        "name": "Object 118"
+      }
+    },
+    {
+      "id": "p-layer_12-119",
+      "layerId": "layer_12",
+      "tileX": 50,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_12-119",
+        "kind": "custom",
+        "name": "Object 119"
+      }
+    },
+    {
+      "id": "p-layer_12-120",
+      "layerId": "layer_12",
+      "tileX": 49,
+      "tileY": 14,
+      "inline": {
+        "id": "def-layer_12-120",
+        "kind": "custom",
+        "name": "Object 120"
+      }
+    },
+    {
+      "id": "p-layer_12-121",
+      "layerId": "layer_12",
+      "tileX": 49,
+      "tileY": 13,
+      "inline": {
+        "id": "def-layer_12-121",
+        "kind": "custom",
+        "name": "Object 121"
+      }
+    },
+    {
+      "id": "p-layer_12-122",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 13,
+      "inline": {
+        "id": "def-layer_12-122",
+        "kind": "custom",
+        "name": "Object 122"
+      }
+    },
+    {
+      "id": "p-layer_12-123",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 12,
+      "inline": {
+        "id": "def-layer_12-123",
+        "kind": "custom",
+        "name": "Object 123"
+      }
+    },
+    {
+      "id": "p-layer_12-124",
+      "layerId": "layer_12",
+      "tileX": 62,
+      "tileY": 75,
+      "inline": {
+        "id": "def-layer_12-124",
+        "kind": "custom",
+        "name": "Object 124"
+      }
+    },
+    {
+      "id": "p-layer_12-125",
+      "layerId": "layer_12",
+      "tileX": 61,
+      "tileY": 75,
+      "inline": {
+        "id": "def-layer_12-125",
+        "kind": "custom",
+        "name": "Object 125"
+      }
+    },
+    {
+      "id": "p-layer_12-126",
+      "layerId": "layer_12",
+      "tileX": 86,
+      "tileY": 77,
+      "inline": {
+        "id": "def-layer_12-126",
+        "kind": "custom",
+        "name": "Object 126"
+      }
+    },
+    {
+      "id": "p-layer_12-127",
+      "layerId": "layer_12",
+      "tileX": 87,
+      "tileY": 76,
+      "inline": {
+        "id": "def-layer_12-127",
+        "kind": "custom",
+        "name": "Object 127"
+      }
+    },
+    {
+      "id": "p-layer_12-128",
+      "layerId": "layer_12",
+      "tileX": 88,
+      "tileY": 75,
+      "inline": {
+        "id": "def-layer_12-128",
+        "kind": "custom",
+        "name": "Object 128"
+      }
+    },
+    {
+      "id": "p-layer_12-129",
+      "layerId": "layer_12",
+      "tileX": 89,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-129",
+        "kind": "custom",
+        "name": "Object 129"
+      }
+    },
+    {
+      "id": "p-layer_12-130",
+      "layerId": "layer_12",
+      "tileX": 90,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-130",
+        "kind": "custom",
+        "name": "Object 130"
+      }
+    },
+    {
+      "id": "p-layer_12-131",
+      "layerId": "layer_12",
+      "tileX": 91,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-131",
+        "kind": "custom",
+        "name": "Object 131"
+      }
+    },
+    {
+      "id": "p-layer_12-132",
+      "layerId": "layer_12",
+      "tileX": 92,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_12-132",
+        "kind": "custom",
+        "name": "Object 132"
+      }
+    },
+    {
+      "id": "p-layer_12-133",
+      "layerId": "layer_12",
+      "tileX": 92,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-133",
+        "kind": "custom",
+        "name": "Object 133"
+      }
+    },
+    {
+      "id": "p-layer_12-134",
+      "layerId": "layer_12",
+      "tileX": 93,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_12-134",
+        "kind": "custom",
+        "name": "Object 134"
+      }
+    },
+    {
+      "id": "p-layer_12-135",
+      "layerId": "layer_12",
+      "tileX": 93,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_12-135",
+        "kind": "custom",
+        "name": "Object 135"
+      }
+    },
+    {
+      "id": "p-layer_12-136",
+      "layerId": "layer_12",
+      "tileX": 94,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_12-136",
+        "kind": "custom",
+        "name": "Object 136"
+      }
+    },
+    {
+      "id": "p-layer_12-137",
+      "layerId": "layer_12",
+      "tileX": 131,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-137",
+        "kind": "custom",
+        "name": "Object 137"
+      }
+    },
+    {
+      "id": "p-layer_12-138",
+      "layerId": "layer_12",
+      "tileX": 132,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-138",
+        "kind": "custom",
+        "name": "Object 138"
+      }
+    },
+    {
+      "id": "p-layer_12-139",
+      "layerId": "layer_12",
+      "tileX": 132,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-139",
+        "kind": "custom",
+        "name": "Object 139"
+      }
+    },
+    {
+      "id": "p-layer_12-140",
+      "layerId": "layer_12",
+      "tileX": 133,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-140",
+        "kind": "custom",
+        "name": "Object 140"
+      }
+    },
+    {
+      "id": "p-layer_12-141",
+      "layerId": "layer_12",
+      "tileX": 133,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-141",
+        "kind": "custom",
+        "name": "Object 141"
+      }
+    },
+    {
+      "id": "p-layer_12-142",
+      "layerId": "layer_12",
+      "tileX": 134,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-142",
+        "kind": "custom",
+        "name": "Object 142"
+      }
+    },
+    {
+      "id": "p-layer_12-143",
+      "layerId": "layer_12",
+      "tileX": 135,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-143",
+        "kind": "custom",
+        "name": "Object 143"
+      }
+    },
+    {
+      "id": "p-layer_12-144",
+      "layerId": "layer_12",
+      "tileX": 135,
+      "tileY": 28,
+      "inline": {
+        "id": "def-layer_12-144",
+        "kind": "custom",
+        "name": "Object 144"
+      }
+    },
+    {
+      "id": "p-layer_12-145",
+      "layerId": "layer_12",
+      "tileX": 134,
+      "tileY": 28,
+      "inline": {
+        "id": "def-layer_12-145",
+        "kind": "custom",
+        "name": "Object 145"
+      }
+    },
+    {
+      "id": "p-layer_12-146",
+      "layerId": "layer_12",
+      "tileX": 134,
+      "tileY": 27,
+      "inline": {
+        "id": "def-layer_12-146",
+        "kind": "custom",
+        "name": "Object 146"
+      }
+    },
+    {
+      "id": "p-layer_12-147",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 20,
+      "inline": {
+        "id": "def-layer_12-147",
+        "kind": "custom",
+        "name": "Object 147"
+      }
+    },
+    {
+      "id": "p-layer_12-148",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 20,
+      "inline": {
+        "id": "def-layer_12-148",
+        "kind": "custom",
+        "name": "Object 148"
+      }
+    },
+    {
+      "id": "p-layer_12-149",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 20,
+      "inline": {
+        "id": "def-layer_12-149",
+        "kind": "custom",
+        "name": "Object 149"
+      }
+    },
+    {
+      "id": "p-layer_12-150",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 21,
+      "inline": {
+        "id": "def-layer_12-150",
+        "kind": "custom",
+        "name": "Object 150"
+      }
+    },
+    {
+      "id": "p-layer_12-151",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 21,
+      "inline": {
+        "id": "def-layer_12-151",
+        "kind": "custom",
+        "name": "Object 151"
+      }
+    },
+    {
+      "id": "p-layer_12-152",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 21,
+      "inline": {
+        "id": "def-layer_12-152",
+        "kind": "custom",
+        "name": "Object 152"
+      }
+    },
+    {
+      "id": "p-layer_12-153",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_12-153",
+        "kind": "custom",
+        "name": "Object 153"
+      }
+    },
+    {
+      "id": "p-layer_12-154",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_12-154",
+        "kind": "custom",
+        "name": "Object 154"
+      }
+    },
+    {
+      "id": "p-layer_12-155",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_12-155",
+        "kind": "custom",
+        "name": "Object 155"
+      }
+    },
+    {
+      "id": "p-layer_12-156",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 23,
+      "inline": {
+        "id": "def-layer_12-156",
+        "kind": "custom",
+        "name": "Object 156"
+      }
+    },
+    {
+      "id": "p-layer_12-157",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 23,
+      "inline": {
+        "id": "def-layer_12-157",
+        "kind": "custom",
+        "name": "Object 157"
+      }
+    },
+    {
+      "id": "p-layer_12-158",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 23,
+      "inline": {
+        "id": "def-layer_12-158",
+        "kind": "custom",
+        "name": "Object 158"
+      }
+    },
+    {
+      "id": "p-layer_12-159",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 24,
+      "inline": {
+        "id": "def-layer_12-159",
+        "kind": "custom",
+        "name": "Object 159"
+      }
+    },
+    {
+      "id": "p-layer_12-160",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 24,
+      "inline": {
+        "id": "def-layer_12-160",
+        "kind": "custom",
+        "name": "Object 160"
+      }
+    },
+    {
+      "id": "p-layer_12-161",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 24,
+      "inline": {
+        "id": "def-layer_12-161",
+        "kind": "custom",
+        "name": "Object 161"
+      }
+    },
+    {
+      "id": "p-layer_12-162",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 23,
+      "inline": {
+        "id": "def-layer_12-162",
+        "kind": "custom",
+        "name": "Object 162"
+      }
+    },
+    {
+      "id": "p-layer_12-163",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 25,
+      "inline": {
+        "id": "def-layer_12-163",
+        "kind": "custom",
+        "name": "Object 163"
+      }
+    },
+    {
+      "id": "p-layer_12-164",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 26,
+      "inline": {
+        "id": "def-layer_12-164",
+        "kind": "custom",
+        "name": "Object 164"
+      }
+    },
+    {
+      "id": "p-layer_12-165",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 27,
+      "inline": {
+        "id": "def-layer_12-165",
+        "kind": "custom",
+        "name": "Object 165"
+      }
+    },
+    {
+      "id": "p-layer_12-166",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 28,
+      "inline": {
+        "id": "def-layer_12-166",
+        "kind": "custom",
+        "name": "Object 166"
+      }
+    },
+    {
+      "id": "p-layer_12-167",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 28,
+      "inline": {
+        "id": "def-layer_12-167",
+        "kind": "custom",
+        "name": "Object 167"
+      }
+    },
+    {
+      "id": "p-layer_12-168",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-168",
+        "kind": "custom",
+        "name": "Object 168"
+      }
+    },
+    {
+      "id": "p-layer_12-169",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 29,
+      "inline": {
+        "id": "def-layer_12-169",
+        "kind": "custom",
+        "name": "Object 169"
+      }
+    },
+    {
+      "id": "p-layer_12-170",
+      "layerId": "layer_12",
+      "tileX": 160,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-170",
+        "kind": "custom",
+        "name": "Object 170"
+      }
+    },
+    {
+      "id": "p-layer_12-171",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-171",
+        "kind": "custom",
+        "name": "Object 171"
+      }
+    },
+    {
+      "id": "p-layer_12-172",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 30,
+      "inline": {
+        "id": "def-layer_12-172",
+        "kind": "custom",
+        "name": "Object 172"
+      }
+    },
+    {
+      "id": "p-layer_12-173",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 31,
+      "inline": {
+        "id": "def-layer_12-173",
+        "kind": "custom",
+        "name": "Object 173"
+      }
+    },
+    {
+      "id": "p-layer_12-174",
+      "layerId": "layer_12",
+      "tileX": 159,
+      "tileY": 31,
+      "inline": {
+        "id": "def-layer_12-174",
+        "kind": "custom",
+        "name": "Object 174"
+      }
+    },
+    {
+      "id": "p-layer_12-175",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 31,
+      "inline": {
+        "id": "def-layer_12-175",
+        "kind": "custom",
+        "name": "Object 175"
+      }
+    },
+    {
+      "id": "p-layer_12-176",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-176",
+        "kind": "custom",
+        "name": "Object 176"
+      }
+    },
+    {
+      "id": "p-layer_12-177",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 32,
+      "inline": {
+        "id": "def-layer_12-177",
+        "kind": "custom",
+        "name": "Object 177"
+      }
+    },
+    {
+      "id": "p-layer_12-178",
+      "layerId": "layer_12",
+      "tileX": 158,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-178",
+        "kind": "custom",
+        "name": "Object 178"
+      }
+    },
+    {
+      "id": "p-layer_12-179",
+      "layerId": "layer_12",
+      "tileX": 157,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_12-179",
+        "kind": "custom",
+        "name": "Object 179"
+      }
+    },
+    {
+      "id": "p-layer_12-236",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 102,
+      "inline": {
+        "id": "def-layer_12-236",
+        "kind": "custom",
+        "name": "Object 236"
+      }
+    },
+    {
+      "id": "p-layer_12-237",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 101,
+      "inline": {
+        "id": "def-layer_12-237",
+        "kind": "custom",
+        "name": "Object 237"
+      }
+    },
+    {
+      "id": "p-layer_12-238",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 101,
+      "inline": {
+        "id": "def-layer_12-238",
+        "kind": "custom",
+        "name": "Object 238"
+      }
+    },
+    {
+      "id": "p-layer_12-239",
+      "layerId": "layer_12",
+      "tileX": 46,
+      "tileY": 101,
+      "inline": {
+        "id": "def-layer_12-239",
+        "kind": "custom",
+        "name": "Object 239"
+      }
+    },
+    {
+      "id": "p-layer_12-240",
+      "layerId": "layer_12",
+      "tileX": 46,
+      "tileY": 100,
+      "inline": {
+        "id": "def-layer_12-240",
+        "kind": "custom",
+        "name": "Object 240"
+      }
+    },
+    {
+      "id": "p-layer_12-241",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 100,
+      "inline": {
+        "id": "def-layer_12-241",
+        "kind": "custom",
+        "name": "Object 241"
+      }
+    },
+    {
+      "id": "p-layer_12-242",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 100,
+      "inline": {
+        "id": "def-layer_12-242",
+        "kind": "custom",
+        "name": "Object 242"
+      }
+    },
+    {
+      "id": "p-layer_12-243",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 99,
+      "inline": {
+        "id": "def-layer_12-243",
+        "kind": "custom",
+        "name": "Object 243"
+      }
+    },
+    {
+      "id": "p-layer_12-244",
+      "layerId": "layer_12",
+      "tileX": 46,
+      "tileY": 99,
+      "inline": {
+        "id": "def-layer_12-244",
+        "kind": "custom",
+        "name": "Object 244"
+      }
+    },
+    {
+      "id": "p-layer_12-245",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 99,
+      "inline": {
+        "id": "def-layer_12-245",
+        "kind": "custom",
+        "name": "Object 245"
+      }
+    },
+    {
+      "id": "p-layer_12-246",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 98,
+      "inline": {
+        "id": "def-layer_12-246",
+        "kind": "custom",
+        "name": "Object 246"
+      }
+    },
+    {
+      "id": "p-layer_12-247",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 98,
+      "inline": {
+        "id": "def-layer_12-247",
+        "kind": "custom",
+        "name": "Object 247"
+      }
+    },
+    {
+      "id": "p-layer_12-248",
+      "layerId": "layer_12",
+      "tileX": 46,
+      "tileY": 98,
+      "inline": {
+        "id": "def-layer_12-248",
+        "kind": "custom",
+        "name": "Object 248"
+      }
+    },
+    {
+      "id": "p-layer_12-249",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 97,
+      "inline": {
+        "id": "def-layer_12-249",
+        "kind": "custom",
+        "name": "Object 249"
+      }
+    },
+    {
+      "id": "p-layer_12-250",
+      "layerId": "layer_12",
+      "tileX": 48,
+      "tileY": 97,
+      "inline": {
+        "id": "def-layer_12-250",
+        "kind": "custom",
+        "name": "Object 250"
+      }
+    },
+    {
+      "id": "p-layer_12-251",
+      "layerId": "layer_12",
+      "tileX": 46,
+      "tileY": 97,
+      "inline": {
+        "id": "def-layer_12-251",
+        "kind": "custom",
+        "name": "Object 251"
+      }
+    },
+    {
+      "id": "p-layer_12-252",
+      "layerId": "layer_12",
+      "tileX": 47,
+      "tileY": 96,
+      "inline": {
+        "id": "def-layer_12-252",
+        "kind": "custom",
+        "name": "Object 252"
+      }
+    },
+    {
+      "id": "p-layer_12-312",
+      "layerId": "layer_12",
+      "tileX": 43,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_12-312",
+        "kind": "custom",
+        "name": "Object 312"
+      }
+    },
+    {
+      "id": "p-layer_13-180",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_13-180",
+        "kind": "custom",
+        "name": "Object 180"
+      }
+    },
+    {
+      "id": "p-layer_13-181",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_13-181",
+        "kind": "custom",
+        "name": "Object 181"
+      }
+    },
+    {
+      "id": "p-layer_13-182",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 36,
+      "inline": {
+        "id": "def-layer_13-182",
+        "kind": "custom",
+        "name": "Object 182"
+      }
+    },
+    {
+      "id": "p-layer_13-183",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_13-183",
+        "kind": "custom",
+        "name": "Object 183"
+      }
+    },
+    {
+      "id": "p-layer_13-184",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 38,
+      "inline": {
+        "id": "def-layer_13-184",
+        "kind": "custom",
+        "name": "Object 184"
+      }
+    },
+    {
+      "id": "p-layer_13-185",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-185",
+        "kind": "custom",
+        "name": "Object 185"
+      }
+    },
+    {
+      "id": "p-layer_13-186",
+      "layerId": "layer_13",
+      "tileX": 128,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_13-186",
+        "kind": "custom",
+        "name": "Object 186"
+      }
+    },
+    {
+      "id": "p-layer_13-187",
+      "layerId": "layer_13",
+      "tileX": 129,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_13-187",
+        "kind": "custom",
+        "name": "Object 187"
+      }
+    },
+    {
+      "id": "p-layer_13-188",
+      "layerId": "layer_13",
+      "tileX": 129,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-188",
+        "kind": "custom",
+        "name": "Object 188"
+      }
+    },
+    {
+      "id": "p-layer_13-189",
+      "layerId": "layer_13",
+      "tileX": 130,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-189",
+        "kind": "custom",
+        "name": "Object 189"
+      }
+    },
+    {
+      "id": "p-layer_13-190",
+      "layerId": "layer_13",
+      "tileX": 130,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_13-190",
+        "kind": "custom",
+        "name": "Object 190"
+      }
+    },
+    {
+      "id": "p-layer_13-191",
+      "layerId": "layer_13",
+      "tileX": 130,
+      "tileY": 41,
+      "inline": {
+        "id": "def-layer_13-191",
+        "kind": "custom",
+        "name": "Object 191"
+      }
+    },
+    {
+      "id": "p-layer_13-192",
+      "layerId": "layer_13",
+      "tileX": 157,
+      "tileY": 42,
+      "inline": {
+        "id": "def-layer_13-192",
+        "kind": "custom",
+        "name": "Object 192"
+      }
+    },
+    {
+      "id": "p-layer_13-193",
+      "layerId": "layer_13",
+      "tileX": 157,
+      "tileY": 41,
+      "inline": {
+        "id": "def-layer_13-193",
+        "kind": "custom",
+        "name": "Object 193"
+      }
+    },
+    {
+      "id": "p-layer_13-194",
+      "layerId": "layer_13",
+      "tileX": 158,
+      "tileY": 41,
+      "inline": {
+        "id": "def-layer_13-194",
+        "kind": "custom",
+        "name": "Object 194"
+      }
+    },
+    {
+      "id": "p-layer_13-195",
+      "layerId": "layer_13",
+      "tileX": 158,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_13-195",
+        "kind": "custom",
+        "name": "Object 195"
+      }
+    },
+    {
+      "id": "p-layer_13-196",
+      "layerId": "layer_13",
+      "tileX": 157,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_13-196",
+        "kind": "custom",
+        "name": "Object 196"
+      }
+    },
+    {
+      "id": "p-layer_13-197",
+      "layerId": "layer_13",
+      "tileX": 157,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-197",
+        "kind": "custom",
+        "name": "Object 197"
+      }
+    },
+    {
+      "id": "p-layer_13-198",
+      "layerId": "layer_13",
+      "tileX": 158,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-198",
+        "kind": "custom",
+        "name": "Object 198"
+      }
+    },
+    {
+      "id": "p-layer_13-199",
+      "layerId": "layer_13",
+      "tileX": 158,
+      "tileY": 38,
+      "inline": {
+        "id": "def-layer_13-199",
+        "kind": "custom",
+        "name": "Object 199"
+      }
+    },
+    {
+      "id": "p-layer_13-200",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 38,
+      "inline": {
+        "id": "def-layer_13-200",
+        "kind": "custom",
+        "name": "Object 200"
+      }
+    },
+    {
+      "id": "p-layer_13-201",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-201",
+        "kind": "custom",
+        "name": "Object 201"
+      }
+    },
+    {
+      "id": "p-layer_13-202",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 40,
+      "inline": {
+        "id": "def-layer_13-202",
+        "kind": "custom",
+        "name": "Object 202"
+      }
+    },
+    {
+      "id": "p-layer_13-203",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_13-203",
+        "kind": "custom",
+        "name": "Object 203"
+      }
+    },
+    {
+      "id": "p-layer_13-204",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 38,
+      "inline": {
+        "id": "def-layer_13-204",
+        "kind": "custom",
+        "name": "Object 204"
+      }
+    },
+    {
+      "id": "p-layer_13-205",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_13-205",
+        "kind": "custom",
+        "name": "Object 205"
+      }
+    },
+    {
+      "id": "p-layer_13-206",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_13-206",
+        "kind": "custom",
+        "name": "Object 206"
+      }
+    },
+    {
+      "id": "p-layer_13-207",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 36,
+      "inline": {
+        "id": "def-layer_13-207",
+        "kind": "custom",
+        "name": "Object 207"
+      }
+    },
+    {
+      "id": "p-layer_13-208",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 36,
+      "inline": {
+        "id": "def-layer_13-208",
+        "kind": "custom",
+        "name": "Object 208"
+      }
+    },
+    {
+      "id": "p-layer_13-209",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_13-209",
+        "kind": "custom",
+        "name": "Object 209"
+      }
+    },
+    {
+      "id": "p-layer_13-210",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_13-210",
+        "kind": "custom",
+        "name": "Object 210"
+      }
+    },
+    {
+      "id": "p-layer_13-211",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_13-211",
+        "kind": "custom",
+        "name": "Object 211"
+      }
+    },
+    {
+      "id": "p-layer_13-212",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 33,
+      "inline": {
+        "id": "def-layer_13-212",
+        "kind": "custom",
+        "name": "Object 212"
+      }
+    },
+    {
+      "id": "p-layer_13-213",
+      "layerId": "layer_13",
+      "tileX": 75,
+      "tileY": 44,
+      "inline": {
+        "id": "def-layer_13-213",
+        "kind": "custom",
+        "name": "Object 213"
+      }
+    },
+    {
+      "id": "p-layer_13-214",
+      "layerId": "layer_13",
+      "tileX": 84,
+      "tileY": 62,
+      "inline": {
+        "id": "def-layer_13-214",
+        "kind": "custom",
+        "name": "Object 214"
+      }
+    },
+    {
+      "id": "p-layer_13-215",
+      "layerId": "layer_13",
+      "tileX": 83,
+      "tileY": 63,
+      "inline": {
+        "id": "def-layer_13-215",
+        "kind": "custom",
+        "name": "Object 215"
+      }
+    },
+    {
+      "id": "p-layer_13-216",
+      "layerId": "layer_13",
+      "tileX": 82,
+      "tileY": 62,
+      "inline": {
+        "id": "def-layer_13-216",
+        "kind": "custom",
+        "name": "Object 216"
+      }
+    },
+    {
+      "id": "p-layer_13-217",
+      "layerId": "layer_13",
+      "tileX": 81,
+      "tileY": 63,
+      "inline": {
+        "id": "def-layer_13-217",
+        "kind": "custom",
+        "name": "Object 217"
+      }
+    },
+    {
+      "id": "p-layer_13-218",
+      "layerId": "layer_13",
+      "tileX": 81,
+      "tileY": 76,
+      "inline": {
+        "id": "def-layer_13-218",
+        "kind": "custom",
+        "name": "Object 218"
+      }
+    },
+    {
+      "id": "p-layer_13-219",
+      "layerId": "layer_13",
+      "tileX": 80,
+      "tileY": 76,
+      "inline": {
+        "id": "def-layer_13-219",
+        "kind": "custom",
+        "name": "Object 219"
+      }
+    },
+    {
+      "id": "p-layer_13-220",
+      "layerId": "layer_13",
+      "tileX": 80,
+      "tileY": 75,
+      "inline": {
+        "id": "def-layer_13-220",
+        "kind": "custom",
+        "name": "Object 220"
+      }
+    },
+    {
+      "id": "p-layer_13-221",
+      "layerId": "layer_13",
+      "tileX": 40,
+      "tileY": 68,
+      "inline": {
+        "id": "def-layer_13-221",
+        "kind": "custom",
+        "name": "Object 221"
+      }
+    },
+    {
+      "id": "p-layer_13-222",
+      "layerId": "layer_13",
+      "tileX": 39,
+      "tileY": 68,
+      "inline": {
+        "id": "def-layer_13-222",
+        "kind": "custom",
+        "name": "Object 222"
+      }
+    },
+    {
+      "id": "p-layer_13-223",
+      "layerId": "layer_13",
+      "tileX": 38,
+      "tileY": 67,
+      "inline": {
+        "id": "def-layer_13-223",
+        "kind": "custom",
+        "name": "Object 223"
+      }
+    },
+    {
+      "id": "p-layer_13-224",
+      "layerId": "layer_13",
+      "tileX": 36,
+      "tileY": 68,
+      "inline": {
+        "id": "def-layer_13-224",
+        "kind": "custom",
+        "name": "Object 224"
+      }
+    },
+    {
+      "id": "p-layer_13-225",
+      "layerId": "layer_13",
+      "tileX": 44,
+      "tileY": 68,
+      "inline": {
+        "id": "def-layer_13-225",
+        "kind": "custom",
+        "name": "Object 225"
+      }
+    },
+    {
+      "id": "p-layer_13-226",
+      "layerId": "layer_13",
+      "tileX": 44,
+      "tileY": 66,
+      "inline": {
+        "id": "def-layer_13-226",
+        "kind": "custom",
+        "name": "Object 226"
+      }
+    },
+    {
+      "id": "p-layer_13-227",
+      "layerId": "layer_13",
+      "tileX": 22,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_13-227",
+        "kind": "custom",
+        "name": "Object 227"
+      }
+    },
+    {
+      "id": "p-layer_13-228",
+      "layerId": "layer_13",
+      "tileX": 21,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_13-228",
+        "kind": "custom",
+        "name": "Object 228"
+      }
+    },
+    {
+      "id": "p-layer_13-229",
+      "layerId": "layer_13",
+      "tileX": 21,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_13-229",
+        "kind": "custom",
+        "name": "Object 229"
+      }
+    },
+    {
+      "id": "p-layer_13-230",
+      "layerId": "layer_13",
+      "tileX": 27,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_13-230",
+        "kind": "custom",
+        "name": "Object 230"
+      }
+    },
+    {
+      "id": "p-layer_13-231",
+      "layerId": "layer_13",
+      "tileX": 28,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_13-231",
+        "kind": "custom",
+        "name": "Object 231"
+      }
+    },
+    {
+      "id": "p-layer_13-232",
+      "layerId": "layer_13",
+      "tileX": 41,
+      "tileY": 104,
+      "inline": {
+        "id": "def-layer_13-232",
+        "kind": "custom",
+        "name": "Object 232"
+      }
+    },
+    {
+      "id": "p-layer_13-233",
+      "layerId": "layer_13",
+      "tileX": 57,
+      "tileY": 117,
+      "inline": {
+        "id": "def-layer_13-233",
+        "kind": "custom",
+        "name": "Object 233"
+      }
+    },
+    {
+      "id": "p-layer_13-234",
+      "layerId": "layer_13",
+      "tileX": 58,
+      "tileY": 117,
+      "inline": {
+        "id": "def-layer_13-234",
+        "kind": "custom",
+        "name": "Object 234"
+      }
+    },
+    {
+      "id": "p-layer_13-235",
+      "layerId": "layer_13",
+      "tileX": 59,
+      "tileY": 117,
+      "inline": {
+        "id": "def-layer_13-235",
+        "kind": "custom",
+        "name": "Object 235"
+      }
+    },
+    {
+      "id": "p-layer_13-253",
+      "layerId": "layer_13",
+      "tileX": 31,
+      "tileY": 92,
+      "inline": {
+        "id": "def-layer_13-253",
+        "kind": "custom",
+        "name": "Object 253"
+      }
+    },
+    {
+      "id": "p-layer_13-254",
+      "layerId": "layer_13",
+      "tileX": 50,
+      "tileY": 20,
+      "inline": {
+        "id": "def-layer_13-254",
+        "kind": "custom",
+        "name": "Object 254"
+      }
+    },
+    {
+      "id": "p-layer_13-255",
+      "layerId": "layer_13",
+      "tileX": 50,
+      "tileY": 21,
+      "inline": {
+        "id": "def-layer_13-255",
+        "kind": "custom",
+        "name": "Object 255"
+      }
+    },
+    {
+      "id": "p-layer_13-257",
+      "layerId": "layer_13",
+      "tileX": 50,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_13-257",
+        "kind": "custom",
+        "name": "Object 257"
+      }
+    },
+    {
+      "id": "p-layer_13-258",
+      "layerId": "layer_13",
+      "tileX": 49,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_13-258",
+        "kind": "custom",
+        "name": "Object 258"
+      }
+    },
+    {
+      "id": "p-layer_13-259",
+      "layerId": "layer_13",
+      "tileX": 48,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_13-259",
+        "kind": "custom",
+        "name": "Object 259"
+      }
+    },
+    {
+      "id": "p-layer_13-273",
+      "layerId": "layer_13",
+      "tileX": 72,
+      "tileY": 64,
+      "inline": {
+        "id": "def-layer_13-273",
+        "kind": "custom",
+        "name": "Object 273"
+      }
+    },
+    {
+      "id": "p-layer_13-274",
+      "layerId": "layer_13",
+      "tileX": 72,
+      "tileY": 65,
+      "inline": {
+        "id": "def-layer_13-274",
+        "kind": "custom",
+        "name": "Object 274"
+      }
+    },
+    {
+      "id": "p-layer_13-275",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 22,
+      "inline": {
+        "id": "def-layer_13-275",
+        "kind": "custom",
+        "name": "Object 275"
+      }
+    },
+    {
+      "id": "p-layer_13-276",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 21,
+      "inline": {
+        "id": "def-layer_13-276",
+        "kind": "custom",
+        "name": "Object 276"
+      }
+    },
+    {
+      "id": "p-layer_13-277",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 20,
+      "inline": {
+        "id": "def-layer_13-277",
+        "kind": "custom",
+        "name": "Object 277"
+      }
+    },
+    {
+      "id": "p-layer_13-278",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 19,
+      "inline": {
+        "id": "def-layer_13-278",
+        "kind": "custom",
+        "name": "Object 278"
+      }
+    },
+    {
+      "id": "p-layer_13-279",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 19,
+      "inline": {
+        "id": "def-layer_13-279",
+        "kind": "custom",
+        "name": "Object 279"
+      }
+    },
+    {
+      "id": "p-layer_13-280",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_13-280",
+        "kind": "custom",
+        "name": "Object 280"
+      }
+    },
+    {
+      "id": "p-layer_13-281",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 18,
+      "inline": {
+        "id": "def-layer_13-281",
+        "kind": "custom",
+        "name": "Object 281"
+      }
+    },
+    {
+      "id": "p-layer_13-282",
+      "layerId": "layer_13",
+      "tileX": 160,
+      "tileY": 17,
+      "inline": {
+        "id": "def-layer_13-282",
+        "kind": "custom",
+        "name": "Object 282"
+      }
+    },
+    {
+      "id": "p-layer_13-283",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 17,
+      "inline": {
+        "id": "def-layer_13-283",
+        "kind": "custom",
+        "name": "Object 283"
+      }
+    },
+    {
+      "id": "p-layer_13-284",
+      "layerId": "layer_13",
+      "tileX": 159,
+      "tileY": 16,
+      "inline": {
+        "id": "def-layer_13-284",
+        "kind": "custom",
+        "name": "Object 284"
+      }
+    },
+    {
+      "id": "p-layer_13-285",
+      "layerId": "layer_13",
+      "tileX": 158,
+      "tileY": 16,
+      "inline": {
+        "id": "def-layer_13-285",
+        "kind": "custom",
+        "name": "Object 285"
+      }
+    },
+    {
+      "id": "p-layer_13-286",
+      "layerId": "layer_13",
+      "tileX": 158,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_13-286",
+        "kind": "custom",
+        "name": "Object 286"
+      }
+    },
+    {
+      "id": "p-layer_13-287",
+      "layerId": "layer_13",
+      "tileX": 157,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_13-287",
+        "kind": "custom",
+        "name": "Object 287"
+      }
+    },
+    {
+      "id": "p-layer_13-288",
+      "layerId": "layer_13",
+      "tileX": 156,
+      "tileY": 15,
+      "inline": {
+        "id": "def-layer_13-288",
+        "kind": "custom",
+        "name": "Object 288"
+      }
+    },
+    {
+      "id": "p-layer_13-300",
+      "layerId": "layer_13",
+      "tileX": 34,
+      "tileY": 66,
+      "inline": {
+        "id": "def-layer_13-300",
+        "kind": "custom",
+        "name": "Object 300"
+      }
+    },
+    {
+      "id": "p-layer_13-301",
+      "layerId": "layer_13",
+      "tileX": 32,
+      "tileY": 67,
+      "inline": {
+        "id": "def-layer_13-301",
+        "kind": "custom",
+        "name": "Object 301"
+      }
+    },
+    {
+      "id": "p-layer_13-302",
+      "layerId": "layer_13",
+      "tileX": 31,
+      "tileY": 68,
+      "inline": {
+        "id": "def-layer_13-302",
+        "kind": "custom",
+        "name": "Object 302"
+      }
+    },
+    {
+      "id": "p-layer_13-308",
+      "layerId": "layer_13",
+      "tileX": 29,
+      "tileY": 45,
+      "inline": {
+        "id": "def-layer_13-308",
+        "kind": "custom",
+        "name": "Object 308"
+      }
+    },
+    {
+      "id": "p-layer_13-309",
+      "layerId": "layer_13",
+      "tileX": 29,
+      "tileY": 46,
+      "inline": {
+        "id": "def-layer_13-309",
+        "kind": "custom",
+        "name": "Object 309"
+      }
+    },
+    {
+      "id": "p-layer_13-310",
+      "layerId": "layer_13",
+      "tileX": 28,
+      "tileY": 46,
+      "inline": {
+        "id": "def-layer_13-310",
+        "kind": "custom",
+        "name": "Object 310"
+      }
+    },
+    {
+      "id": "p-layer_13-311",
+      "layerId": "layer_13",
+      "tileX": 27,
+      "tileY": 46,
+      "inline": {
+        "id": "def-layer_13-311",
+        "kind": "custom",
+        "name": "Object 311"
+      }
+    },
+    {
+      "id": "p-layer_14-260",
+      "layerId": "layer_14",
+      "tileX": 34,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_14-260",
+        "kind": "custom",
+        "name": "Object 260"
+      }
+    },
+    {
+      "id": "p-layer_14-261",
+      "layerId": "layer_14",
+      "tileX": 45,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_14-261",
+        "kind": "custom",
+        "name": "Object 261"
+      }
+    },
+    {
+      "id": "p-layer_14-262",
+      "layerId": "layer_14",
+      "tileX": 44,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_14-262",
+        "kind": "custom",
+        "name": "Object 262"
+      }
+    },
+    {
+      "id": "p-layer_14-263",
+      "layerId": "layer_14",
+      "tileX": 45,
+      "tileY": 41,
+      "inline": {
+        "id": "def-layer_14-263",
+        "kind": "custom",
+        "name": "Object 263"
+      }
+    },
+    {
+      "id": "p-layer_14-264",
+      "layerId": "layer_14",
+      "tileX": 47,
+      "tileY": 42,
+      "inline": {
+        "id": "def-layer_14-264",
+        "kind": "custom",
+        "name": "Object 264"
+      }
+    },
+    {
+      "id": "p-layer_14-265",
+      "layerId": "layer_14",
+      "tileX": 49,
+      "tileY": 41,
+      "inline": {
+        "id": "def-layer_14-265",
+        "kind": "custom",
+        "name": "Object 265"
+      }
+    },
+    {
+      "id": "p-layer_14-266",
+      "layerId": "layer_14",
+      "tileX": 47,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_14-266",
+        "kind": "custom",
+        "name": "Object 266"
+      }
+    },
+    {
+      "id": "p-layer_14-267",
+      "layerId": "layer_14",
+      "tileX": 47,
+      "tileY": 36,
+      "inline": {
+        "id": "def-layer_14-267",
+        "kind": "custom",
+        "name": "Object 267"
+      }
+    },
+    {
+      "id": "p-layer_14-268",
+      "layerId": "layer_14",
+      "tileX": 49,
+      "tileY": 37,
+      "inline": {
+        "id": "def-layer_14-268",
+        "kind": "custom",
+        "name": "Object 268"
+      }
+    },
+    {
+      "id": "p-layer_14-269",
+      "layerId": "layer_14",
+      "tileX": 50,
+      "tileY": 39,
+      "inline": {
+        "id": "def-layer_14-269",
+        "kind": "custom",
+        "name": "Object 269"
+      }
+    },
+    {
+      "id": "p-layer_14-270",
+      "layerId": "layer_14",
+      "tileX": 43,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_14-270",
+        "kind": "custom",
+        "name": "Object 270"
+      }
+    },
+    {
+      "id": "p-layer_14-271",
+      "layerId": "layer_14",
+      "tileX": 74,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_14-271",
+        "kind": "custom",
+        "name": "Object 271"
+      }
+    },
+    {
+      "id": "p-layer_14-272",
+      "layerId": "layer_14",
+      "tileX": 71,
+      "tileY": 64,
+      "inline": {
+        "id": "def-layer_14-272",
+        "kind": "custom",
+        "name": "Object 272"
+      }
+    },
+    {
+      "id": "p-layer_14-305",
+      "layerId": "layer_14",
+      "tileX": 31,
+      "tileY": 72,
+      "inline": {
+        "id": "def-layer_14-305",
+        "kind": "custom",
+        "name": "Object 305"
+      }
+    },
+    {
+      "id": "p-layer_14-306",
+      "layerId": "layer_14",
+      "tileX": 31,
+      "tileY": 71,
+      "inline": {
+        "id": "def-layer_14-306",
+        "kind": "custom",
+        "name": "Object 306"
+      }
+    },
+    {
+      "id": "p-layer_14-307",
+      "layerId": "layer_14",
+      "tileX": 18,
+      "tileY": 61,
+      "inline": {
+        "id": "def-layer_14-307",
+        "kind": "custom",
+        "name": "Object 307"
+      }
+    },
+    {
+      "id": "p-layer_15-289",
+      "layerId": "layer_15",
+      "tileX": 98,
+      "tileY": 42,
+      "inline": {
+        "id": "def-layer_15-289",
+        "kind": "custom",
+        "name": "Object 289"
+      }
+    },
+    {
+      "id": "p-layer_15-290",
+      "layerId": "layer_15",
+      "tileX": 74,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_15-290",
+        "kind": "custom",
+        "name": "Object 290"
+      }
+    },
+    {
+      "id": "p-layer_15-291",
+      "layerId": "layer_15",
+      "tileX": 80,
+      "tileY": 34,
+      "inline": {
+        "id": "def-layer_15-291",
+        "kind": "custom",
+        "name": "Object 291"
+      }
+    },
+    {
+      "id": "p-layer_15-292",
+      "layerId": "layer_15",
+      "tileX": 89,
+      "tileY": 64,
+      "inline": {
+        "id": "def-layer_15-292",
+        "kind": "custom",
+        "name": "Object 292"
+      }
+    },
+    {
+      "id": "p-layer_15-293",
+      "layerId": "layer_15",
+      "tileX": 57,
+      "tileY": 73,
+      "inline": {
+        "id": "def-layer_15-293",
+        "kind": "custom",
+        "name": "Object 293"
+      }
+    },
+    {
+      "id": "p-layer_15-294",
+      "layerId": "layer_15",
+      "tileX": 39,
+      "tileY": 35,
+      "inline": {
+        "id": "def-layer_15-294",
+        "kind": "custom",
+        "name": "Object 294"
+      }
+    },
+    {
+      "id": "p-layer_15-295",
+      "layerId": "layer_15",
+      "tileX": 78,
+      "tileY": 67,
+      "inline": {
+        "id": "def-layer_15-295",
+        "kind": "custom",
+        "name": "Object 295"
+      }
+    },
+    {
+      "id": "p-layer_15-296",
+      "layerId": "layer_15",
+      "tileX": 39,
+      "tileY": 74,
+      "inline": {
+        "id": "def-layer_15-296",
+        "kind": "custom",
+        "name": "Object 296"
+      }
+    },
+    {
+      "id": "p-layer_15-297",
+      "layerId": "layer_15",
+      "tileX": 22,
+      "tileY": 67,
+      "inline": {
+        "id": "def-layer_15-297",
+        "kind": "custom",
+        "name": "Object 297"
+      }
+    },
+    {
+      "id": "p-layer_15-298",
+      "layerId": "layer_15",
+      "tileX": 19,
+      "tileY": 44,
+      "inline": {
+        "id": "def-layer_15-298",
+        "kind": "custom",
+        "name": "Object 298"
+      }
+    },
+    {
+      "id": "p-layer_15-299",
+      "layerId": "layer_15",
+      "tileX": 35,
+      "tileY": 12,
+      "inline": {
+        "id": "def-layer_15-299",
+        "kind": "custom",
+        "name": "Object 299"
+      }
+    },
+    {
+      "id": "p-layer_15-303",
+      "layerId": "layer_15",
+      "tileX": 31,
+      "tileY": 62,
+      "inline": {
+        "id": "def-layer_15-303",
+        "kind": "custom",
+        "name": "Object 303"
+      }
+    },
+    {
+      "id": "p-layer_15-304",
+      "layerId": "layer_15",
+      "tileX": 60,
+      "tileY": 113,
+      "inline": {
+        "id": "def-layer_15-304",
+        "kind": "custom",
+        "name": "Object 304"
+      }
+    },
+    {
+      "id": "p-layer_16-314",
+      "layerId": "layer_16",
+      "tileX": 5,
+      "tileY": 0,
+      "inline": {
+        "id": "def-layer_16-314",
+        "kind": "custom",
+        "name": "Camera Boundaries"
+      }
+    }
+  ]
 }
