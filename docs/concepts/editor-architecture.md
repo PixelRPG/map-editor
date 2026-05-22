@@ -300,6 +300,7 @@ Phase tracker — fill in as PRs land.
 
 - [`runtime-modes.md`](runtime-modes.md) — Phase 1's session-singleton is the same entity that hosts the mode markers (`EditorMode`, `RuntimeMode`, `GhostSpawn`). Both docs describe one half of the same machinery; this doc owns the lifecycle + subscription API, runtime-modes owns the mode-marker semantics.
 - [`object-system.md`](object-system.md) — the editor UI for the object library (Library mode-rail, Object tool, Inspector tab) is built on the subscription bridge here. The data model itself lives in the project file (`GameProjectData.objectLibrary` + `MapData.objectPlacements`), so the in-memory project is not on the session-singleton — only the *editor state about which object is selected* is.
+- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — the operation-oriented mutation API + the `Command` interface defined here **is** the editor op vocabulary in the multi-peer sync layer. Phase 5 (Undo) IS the editor op-log. The two docs describe the same mechanism from different angles: this one for single-user UX, the collab doc for multi-peer ordering.
 
 ## Cross-references to `AGENTS.md`
 

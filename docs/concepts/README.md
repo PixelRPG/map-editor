@@ -39,6 +39,7 @@ Ordered by dependency — read top-to-bottom for the cleanest mental sequence. E
 | [`editor-architecture.md`](editor-architecture.md) | planning | **Foundation** — Three-layer split (GTK View, ECS Components as Model, ECS Systems as Controller), the session-singleton entity, the `SessionState` subscription API. Everything else lives on top. |
 | [`runtime-modes.md`](runtime-modes.md) | planning | **Mode markers** — `EditorMode` / `RuntimeMode` / `GhostSpawn` components on the session-singleton. Composes the Editor / Full Run / Live Run / Test Run user-visible modes, Mario-Maker-inspired. |
 | [`object-system.md`](object-system.md) | planning | **What's in the world** — Definition/Placement model for tiles, objects, NPCs, items, teleports, spawn points. Maps placements to ECS entities via `ObjectSpawnSystem`. |
+| [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) | planning | **Multi-peer sync** — Op-Log with Host-Sequencer (Player 1) for both collaborative editing and networked multiplayer. Single mechanism, two op vocabularies. Solo edits work locally; collab requires a host. |
 
 ## Glossary
 
@@ -52,3 +53,6 @@ Terms used across multiple docs.
 - **Kind** — the semantic discriminator on an `ObjectDefinition`: `event | teleport | item | npc | spawn-point | custom`. Drives editor UX (library category, default trigger mode, default `blocking`) and component composition at spawn time.
 - **Ghost spawn** — a runtime-only override of where the player spawns, used by Live Run. Stored in `GhostSpawnComponent` on the singleton; does **not** modify the map data.
 - **Subscription bridge** — the `SessionState.subscribe(scene, ComponentCtor, listener)` helper that lets GTK widgets observe singleton-component changes (add, remove, in-place mutation via `notifyMutation`).
+- **Operation (Op)** — a typed mutation message in the form `{ kind, payload, peerId, seq }`. The unit of synchronisation in the op-log + host-sequencer model. Editor mutations, game events, and undo commands are all ops.
+- **Op-log** — the sequence of operations applied to a session, in host-assigned order. Both the editor and game flows multiplex over the same op-log mechanism with different op vocabularies.
+- **Host / Sequencer** — Player 1, the peer who opened the project. Receives ops from all peers, validates + assigns `seq`, broadcasts. Only one host per session.

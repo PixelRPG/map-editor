@@ -183,6 +183,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 
 - [`editor-architecture.md`](editor-architecture.md) — defines the session-singleton entity that hosts the mode markers, the `SessionState` subscription API the maker UI uses to react to mode changes, and the per-scene singleton lifetime that this doc references. Read first if you want to understand *how* mode changes propagate to the GTK widgets.
 - [`object-system.md`](object-system.md) — `TriggerSystem` and the kind-specific systems (teleport, item-pickup, walk-on-tile) gate themselves on `RuntimeModeComponent`. In pure editor mode they render placements but don't execute effects. In Live Run / Test Run / Full Run they fire normally.
+- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — Full Run with multiplayer is where the game op-log machinery activates. Player 1 hosts and the engine's per-tick state changes (player movement, trigger effects, item pickups) become broadcast ops. Live Run and Test Run share a single peer's simulation — they're not multiplayer-aware. Mode markers (`EditorMode` / `RuntimeMode` / `GhostSpawn`) are local-only and never replicate.
 
 ## Open questions
 

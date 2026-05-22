@@ -363,6 +363,7 @@ Decisions captured here so future PRs don't re-litigate them:
 
 - [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (library mode, object tool, inspector tab) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.objectLibrary` (project data), not on the session-singleton.
 - [`runtime-modes.md`](runtime-modes.md) — `TriggerSystem` and the kind-specific systems gate on `RuntimeModeComponent` so they fire effects only while runtime is active. In pure editor mode the placements render but do nothing.
+- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — stable identifiers (`ObjectPlacement.id`, `ObjectDefinition.id`, `LayerData.id`) are the load-bearing primitive for op-log payloads. The transport-compatibility constraint applies to all future schema changes: stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere.
 
 ## Open questions
 
