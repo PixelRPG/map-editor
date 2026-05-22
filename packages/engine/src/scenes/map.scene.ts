@@ -2,10 +2,13 @@ import { type EventEmitter, Logger, Scene } from 'excalibur'
 import type { MapResource } from '../resource/MapResource.ts'
 import {
   CameraControlSystem,
+  ItemPickupSystem,
   ObjectSpawnSystem,
   PlayerSpawnSystem,
+  TeleportSystem,
   TileEditorSystem,
   TriggerSystem,
+  WalkOnTileSystem,
 } from '../systems/index.ts'
 import type { EditorState, EngineEventMap, ObjectDefinition } from '../types/index.ts'
 
@@ -38,6 +41,9 @@ export class MapScene extends Scene {
     this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))
     this.world.add(new PlayerSpawnSystem(events))
     this.world.add(new TriggerSystem(events))
+    this.world.add(new TeleportSystem(events))
+    this.world.add(new ItemPickupSystem(events))
+    this.world.add(new WalkOnTileSystem(mapResource, events))
 
     mapResource.addToScene(this)
     this.logger.debug('MapScene initialized')

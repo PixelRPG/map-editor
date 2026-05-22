@@ -18,6 +18,8 @@ export enum EngineEvent {
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
   WALKED_ONTO_TILE = 'walked-onto-tile',
+  TELEPORT_REQUESTED = 'teleport-requested',
+  ITEM_PICKED_UP = 'item-picked-up',
 }
 
 export interface EngineEventMap {
@@ -71,5 +73,27 @@ export interface EngineEventMap {
     tileX: number
     tileY: number
     properties: Record<string, unknown>
+  }
+  /**
+   * Emitted by `TeleportSystem` when a teleport entity is
+   * triggered. The host engine listens for this and performs the
+   * scene-switch + player re-position (engine has no reference to
+   * the player itself, project code resolves which actor to move).
+   */
+  [EngineEvent.TELEPORT_REQUESTED]: {
+    targetMapId: string
+    targetTileX: number
+    targetTileY: number
+    facing?: Facing
+  }
+  /**
+   * Emitted by `ItemPickupSystem` when a player triggers an
+   * item-bearing entity. The project layer's inventory system
+   * listens for this and adds the item.
+   */
+  [EngineEvent.ITEM_PICKED_UP]: {
+    itemId: string
+    qty: number
+    pickupSound?: string
   }
 }
