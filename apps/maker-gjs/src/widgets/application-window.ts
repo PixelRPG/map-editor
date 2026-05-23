@@ -209,6 +209,35 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // Ctrl+Z is a no-op but the UI affordance suggests otherwise.
     undoAction.set_enabled(false)
     redoAction.set_enabled(false)
+
+    // Sidebar toggle actions. PropertyAction wraps the
+    // SceneEditorView's boolean `show-library` / `show-inspector`
+    // properties bi-directionally — the floating OSD toggle buttons
+    // (FloatingHistory's library_toggle on the left, ContextChip's
+    // inspector_toggle on the right) drive these actions via
+    // `action-name`, and the action state follows the property
+    // automatically if the split-view changes the property through
+    // any other path (swipe-to-close on collapsed mobile, etc.).
+    //
+    // Pre-refactor these toggles were `Gtk.ToggleButton`s in the
+    // central headerbar with direct `bind template.show-library`
+    // bindings. Moving them into widgets in a different package
+    // (`packages/gjs`) means the template binding can no longer
+    // reach across — PropertyAction is the action-shaped bridge.
+    winActions.add_action(
+      new Gio.PropertyAction({
+        name: 'toggle-library',
+        object: this._scene_editor_view,
+        property_name: 'show-library',
+      }),
+    )
+    winActions.add_action(
+      new Gio.PropertyAction({
+        name: 'toggle-inspector',
+        object: this._scene_editor_view,
+        property_name: 'show-inspector',
+      }),
+    )
     this._engineCtl.onUndoChanged(({ canUndo, canRedo }) => {
       undoAction.set_enabled(canUndo)
       redoAction.set_enabled(canRedo)

@@ -15,6 +15,7 @@ import Template from './context-chip.blp'
  * scene editor) controls their contents.
  */
 export class ContextChip extends Adw.Bin {
+  declare _inspector_toggle: Gtk.ToggleButton
   declare _tile_button: Gtk.MenuButton
   declare _layer_button: Gtk.MenuButton
   declare _tile_name: Gtk.Label
@@ -30,7 +31,7 @@ export class ContextChip extends Adw.Bin {
       {
         GTypeName: 'PixelRpgContextChip',
         Template,
-        InternalChildren: ['tile_button', 'layer_button', 'tile_name', 'layer_name', 'tile_swatch'],
+        InternalChildren: ['inspector_toggle', 'tile_button', 'layer_button', 'tile_name', 'layer_name', 'tile_swatch'],
         Properties: {
           'tile-name': GObject.ParamSpec.string(
             'tile-name',

@@ -5,6 +5,22 @@ template $PixelRpgRightInspector : Adw.Bin {
   styles ["right-inspector"]
 
   Adw.ToolbarView {
+    top-bar-style: flat;
+
+    // Thin flat header just to host the window-close X button +
+    // act as a drag region. Without it, the central canvas's
+    // headerbar reaches across the whole window width (its X
+    // ends up overlapping the inspector's first row — search
+    // field + Switch button get hidden). Moving the X here keeps
+    // it on the inspector's edge where it belongs.
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+      show-start-title-buttons: false;
+      show-end-title-buttons: true;
+      styles ["flat"]
+    }
+
     content: Gtk.ScrolledWindow {
       hexpand: true;
       vexpand: true;

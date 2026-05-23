@@ -8,24 +8,32 @@ template $PixelRpgModeRail : Adw.Bin {
     orientation: vertical;
     hexpand: true;
 
-    Gtk.Box hero_header {
-      orientation: horizontal;
-      margin-top: 12;
-      margin-start: 12;
-      margin-end: 12;
-      spacing: 4;
+    // Drag handle for the whole window — Gtk.WindowHandle treats any
+    // empty space inside as click-and-drag-to-move. The hamburger
+    // sits in the row but a stretching Box next to it leaves enough
+    // empty area to grab. Visually identical to the rest of the
+    // sidebar — no chrome / no separator, just the menu button
+    // floating against the sidebar background.
+    Gtk.WindowHandle {
+      child: Gtk.Box hero_header {
+        orientation: horizontal;
+        margin-top: 12;
+        margin-start: 12;
+        margin-end: 12;
+        spacing: 4;
 
-      Gtk.Box {
-        hexpand: true;
-      }
+        Gtk.Box {
+          hexpand: true;
+        }
 
-      Gtk.MenuButton menu_button {
-        icon-name: "open-menu-symbolic";
-        menu-model: primary_menu;
-        tooltip-text: _("Main Menu");
-        valign: start;
-        styles ["flat"]
-      }
+        Gtk.MenuButton menu_button {
+          icon-name: "open-menu-symbolic";
+          menu-model: primary_menu;
+          tooltip-text: _("Main Menu");
+          valign: start;
+          styles ["flat"]
+        }
+      };
     }
 
     Gtk.Box hero {
