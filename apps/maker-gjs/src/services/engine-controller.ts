@@ -1,4 +1,7 @@
+import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
 import { Engine } from '@pixelrpg/gjs'
+
+type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 
 /**
  * Slot the engine widget gets attached to once it's been (re)created.
@@ -36,6 +39,8 @@ export class EngineController {
   private _zoomListener: ((zoom: number) => void) | null = null
   private _undoHookAttached = false
   private _undoListener: ((state: { canUndo: boolean; canRedo: boolean }) => void) | null = null
+  private _tilePickedHookAttached = false
+  private _tilePickedListener: ((payload: TilePickedPayload) => void) | null = null
 
   constructor(private readonly slot: EngineSlot) {}
 
@@ -66,6 +71,23 @@ export class EngineController {
    */
   onUndoChanged(listener: (state: { canUndo: boolean; canRedo: boolean }) => void): void {
     this._undoListener = listener
+  }
+
+  /**
+   * Register a listener for the engine's `TILE_PICKED` event (emitted
+   * by `TileEditorSystem` when the user clicks while the eyedropper
+   * tool is active). Mirrors {@link onZoomChanged} — listener is
+   * stored once on the controller and re-attached lazily after each
+   * `ensureForMap` via {@link _attachTilePickedHook}.
+   *
+   * The host typically responds by routing the picked tile through
+   * its existing tile-palette state (so palette highlight + context
+   * chip + engine `ActiveTileComponent` all stay in sync) and by
+   * switching the tool action back to `pencil` for a Tiled-style
+   * "pick then immediately paint" workflow.
+   */
+  onTilePicked(listener: (payload: TilePickedPayload) => void): void {
+    this._tilePickedListener = listener
   }
 
   /**
@@ -103,6 +125,7 @@ export class EngineController {
 
     this._attachZoomHook()
     this._attachUndoHook()
+    this._attachTilePickedHook()
   }
 
   /**
@@ -124,6 +147,7 @@ export class EngineController {
     this._mapId = null
     this._zoomHookAttached = false
     this._undoHookAttached = false
+    this._tilePickedHookAttached = false
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
     // last loaded scene reported.
@@ -167,5 +191,16 @@ export class EngineController {
     this._undoHookAttached = this._engine.onUndoStackChanged((state) => {
       this._undoListener?.(state)
     })
+  }
+
+  private _attachTilePickedHook(): void {
+    if (this._tilePickedHookAttached || !this._engine) return
+    // The gjs Engine widget owns the EventEmitter; on dispose the
+    // widget is dropped and its emitter is GC'd along with this
+    // closure, so we don't track an explicit Subscription handle.
+    this._engine.events.on(EngineEvent.TILE_PICKED, (payload) => {
+      this._tilePickedListener?.(payload)
+    })
+    this._tilePickedHookAttached = true
   }
 }

@@ -65,3 +65,31 @@ export function findSpriteInfoForTileId(
   console.warn(`[SpriteInfoResolver] Could not find sprite info for tileId ${tileId} in any sprite set`)
   return null
 }
+
+/**
+ * Inverse of {@link findSpriteInfoForTileId}: turn a `(spriteSetId,
+ * localSpriteId)` pair back into the global tile id used by
+ * `ActiveTileComponent` / paint commands.
+ *
+ * Used by the eyedropper path: when the user clicks a tile we have
+ * the sprite ref from `MapEditorComponent` (which stores local ids
+ * + sprite-set id), and need to push it back into
+ * `ActiveTileComponent` whose `spriteId` is the *global* form.
+ *
+ * Returns `null` when the map data doesn't reference the requested
+ * sprite set, or when the sprite set's `firstGid` is missing /
+ * non-numeric (malformed project file).
+ */
+export function findTileIdForSpriteInfo(
+  mapResource: MapResource,
+  spriteSetId: string,
+  localSpriteId: number,
+): number | null {
+  const mapData = mapResource.mapData
+  if (!mapData?.spriteSets) return null
+  const ref = mapData.spriteSets.find((r: SpriteSetReferenceLike) => r?.id === spriteSetId) as
+    | SpriteSetReferenceLike
+    | undefined
+  if (typeof ref?.firstGid !== 'number') return null
+  return ref.firstGid + localSpriteId
+}

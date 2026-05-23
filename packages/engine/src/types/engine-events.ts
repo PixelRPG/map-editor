@@ -13,6 +13,7 @@ export enum EngineEvent {
   TILE_CLICKED = 'tile-clicked',
   TILE_HOVERED = 'tile-hovered',
   TILE_PLACED = 'tile-placed',
+  TILE_PICKED = 'tile-picked',
   PLAYER_SPAWNED = 'player-spawned',
   PLAYER_TILE_CHANGED = 'player-tile-changed',
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
@@ -30,6 +31,27 @@ export interface EngineEventMap {
   [EngineEvent.TILE_CLICKED]: { coords: { x: number; y: number }; tileMapId: string }
   [EngineEvent.TILE_HOVERED]: { coords: { x: number; y: number } | null; tileMapId: string }
   [EngineEvent.TILE_PLACED]: { coords: { x: number; y: number }; tileId: number; layerId: string }
+  /**
+   * Emitted by `TileEditorSystem` when the user clicks a tile with
+   * the eyedropper tool active. Carries enough info for the host to
+   * (a) push the picked sprite into `ActiveTileComponent` via its
+   * existing local→global flow and (b) optionally auto-switch back
+   * to a paint tool. Engine deliberately does NOT mutate
+   * `ActiveTileComponent` / `ActiveToolComponent` itself — the host
+   * owns the tile-palette UI sync (highlight + context chip
+   * preview) so it has to drive the write.
+   *
+   * `globalTileId` is provided for hosts that don't track the sheet's
+   * `firstGid` themselves; `spriteSetId` + `localSpriteId` for hosts
+   * that need to detect a sheet switch.
+   */
+  [EngineEvent.TILE_PICKED]: {
+    coords: { x: number; y: number }
+    layerId: string
+    spriteSetId: string
+    localSpriteId: number
+    globalTileId: number
+  }
   /**
    * Emitted by `PlayerSpawnSystem` once per scene activate after
    * resolving the player's spawn-point. `tileX/Y` default to (0, 0)

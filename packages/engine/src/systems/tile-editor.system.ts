@@ -20,6 +20,7 @@ import {
   UndoStackComponent,
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
+import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -132,6 +133,12 @@ export class TileEditorSystem extends System {
     const layerId = this.resolveLayerId(explicitLayerId)
     if (!layerId) return
 
+    // Lock guard. Apply only to mutating tools — the eyedropper is a
+    // read-only sample so it still works on locked layers (matches
+    // most tile-editor UX: you can pick from a locked layer to use
+    // its tile elsewhere, you just can't paint into it).
+    if (tool !== 'eyedropper' && this.isLayerLocked(layerId)) return
+
     // Capture the previous sprites on this (tile, layer) so the command
     // can revert. `MapEditorComponent` holds the shadow-state — pull
     // from there before mutating.
@@ -173,6 +180,23 @@ export class TileEditorSystem extends System {
         tileId: 0,
         layerId,
       })
+    } else if (tool === 'eyedropper') {
+      // Pick the **top** sprite from the active layer at this tile —
+      // sprites on a single (tile, layer) slot are stacked back-to-front,
+      // so the last entry is what the user actually sees.
+      const top = previousSprites[previousSprites.length - 1]
+      if (!top) return
+      const mapResource = (this.scene as MapScene).mapResource
+      if (!mapResource) return
+      const globalTileId = findTileIdForSpriteInfo(mapResource, top.spriteSetId, top.spriteId)
+      if (globalTileId === null) return
+      this.events.emit(EngineEvent.TILE_PICKED, {
+        coords: hit.coords,
+        layerId,
+        spriteSetId: top.spriteSetId,
+        localSpriteId: top.spriteId,
+        globalTileId,
+      })
     }
 
     this.events.emit(EngineEvent.TILE_CLICKED, {
@@ -213,5 +237,11 @@ export class TileEditorSystem extends System {
     if (layerId) return layerId
     const mapResource = (this.scene as MapScene | undefined)?.mapResource
     return mapResource?.getFirstLayerId?.() ?? EDITOR_CONSTANTS.DEFAULT_LAYER_NAME
+  }
+
+  private isLayerLocked(layerId: string): boolean {
+    const mapResource = (this.scene as MapScene | undefined)?.mapResource
+    const layer = mapResource?.mapData?.layers.find((l) => l.id === layerId)
+    return layer?.locked ?? false
   }
 }

@@ -112,6 +112,12 @@ export class SceneEditorView extends Adw.Bin {
         },
         Signals: {
           'mode-changed': { param_types: [GObject.TYPE_STRING] },
+          // Fired when the active map's `MapData` was mutated in
+          // place (e.g. user toggled a layer's visibility or lock
+          // flag) and should be serialised back to disk. The host
+          // listens because it tracks the project + scene paths
+          // needed by `MapFormat.serialize` + `writeTextFile`.
+          'persist-requested': { param_types: [] },
         },
       },
       SceneEditorView,
@@ -191,7 +197,7 @@ export class SceneEditorView extends Adw.Bin {
       name: layer.name,
       tileCount: (layer.sprites?.length ?? 0) + (placementsByLayer.get(layer.id) ?? 0),
       visible: layer.visible ?? true,
-      locked: false,
+      locked: layer.locked ?? false,
     }))
     this._layers = layers
     this._inspector.layersTab.setLayers(layers)
@@ -277,6 +283,31 @@ export class SceneEditorView extends Adw.Bin {
     this._inspector.tilesTab.selectTile(tileId)
   }
 
+  /**
+   * Push a tile id given in **global** form (the engine's
+   * `ActiveTileComponent.spriteId` shape — `firstGid` already added)
+   * into the editor's active-tile state, syncing palette + context
+   * chip in the process.
+   *
+   * Used by the eyedropper: the engine emits `TILE_PICKED` carrying
+   * the global id, and the host funnels it back through the
+   * existing local-id flow (`_setActiveTile`) so there is exactly
+   * one place that drives the palette highlight + chip preview +
+   * engine write.
+   *
+   * Returns `true` when the global id mapped to a tile in the
+   * currently-loaded sheet; `false` otherwise (cross-sheet picking
+   * would need a sheet-switch step first — out of scope for the
+   * first iteration).
+   */
+  selectTileByGlobalId(globalTileId: number): boolean {
+    const localId = globalTileId - this._tilesetFirstGid
+    const tile = this._tiles.find((t) => t.id === localId)
+    if (!tile) return false
+    this._setActiveTile(localId, tile.name)
+    return true
+  }
+
   private _setActiveLayer(layerId: string): void {
     if (this._activeLayerId === layerId) return
     this._activeLayerId = layerId
@@ -285,6 +316,24 @@ export class SceneEditorView extends Adw.Bin {
     this._engine?.setActiveLayer(layerId)
     // Mirror selection back to the inspector layers tab.
     this._inspector.layersTab.selectLayer(layerId)
+    // Sync the toolbar's editing-tool sensitivity to the new active
+    // layer's lock state. Called on every active-layer change so
+    // switching to a locked layer immediately greys out the mutating
+    // tools, and switching away restores them.
+    this._editor.toolRail.setEditingToolsEnabled(!(layer?.locked ?? false))
+  }
+
+  /**
+   * Mark the active map's `MapData` as dirty + ask the host to
+   * persist. The engine widget owns the live `MapResource` whose
+   * `mapData` was just mutated in place (by `setLayerVisible` /
+   * `setLayerLocked`); the host has the project + scene paths
+   * needed for `MapFormat.serialize` + `writeTextFile` and already
+   * runs the same flow for atlas positions, so emitting a signal
+   * keeps file I/O out of this widget.
+   */
+  private _persistMapData(): void {
+    this.emit('persist-requested')
   }
 
   /**
@@ -398,6 +447,32 @@ export class SceneEditorView extends Adw.Bin {
     const layers: LayersTab = this._inspector.layersTab
     layers.connect('layer-selected', (_l: LayersTab, id: string) => {
       this._setActiveLayer(id)
+    })
+    // Layer flag toggles. Both signals carry (layerId, newValue). We
+    // forward to the engine (which mutates MapData + triggers any
+    // necessary graphics refresh), persist via the same flow as
+    // `_persistAtlasPosition`, and emit our own re-exported signal so
+    // `ApplicationWindow` can react (specifically: locking the active
+    // layer needs to disable the editing tool actions).
+    layers.connect('layer-visibility-toggled', (_l: LayersTab, layerId: string, visible: boolean) => {
+      this._engine?.setLayerVisible(layerId, visible)
+      // Mirror the new flag into the local cache so subsequent
+      // `_setActiveLayer` reads see the up-to-date value (the
+      // inspector's own state already updated via property binding).
+      const idx = this._layers.findIndex((l) => l.id === layerId)
+      if (idx >= 0) this._layers[idx] = { ...this._layers[idx], visible }
+      this._persistMapData()
+    })
+    layers.connect('layer-lock-toggled', (_l: LayersTab, layerId: string, locked: boolean) => {
+      this._engine?.setLayerLocked(layerId, locked)
+      const idx = this._layers.findIndex((l) => l.id === layerId)
+      if (idx >= 0) this._layers[idx] = { ...this._layers[idx], locked }
+      this._persistMapData()
+      // The toolbar's editing tool buttons mirror the active layer's
+      // lock state — re-check when the toggle hits the active layer.
+      if (layerId === this._activeLayerId) {
+        this._editor.toolRail.setEditingToolsEnabled(!locked)
+      }
     })
 
     // Object placements: forward inspector selection into the engine's
