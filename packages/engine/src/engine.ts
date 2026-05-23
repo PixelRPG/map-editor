@@ -6,6 +6,7 @@ import {
   ActiveToolComponent,
   type EditorTool,
   SelectedPlacementsComponent,
+  TileMapTierComponent,
   TileTransformComponent,
   UndoStackComponent,
 } from './components/index.ts'
@@ -321,11 +322,22 @@ export class Engine {
     layer.visible = visible
     const scene = this.excalibur.currentScene as MapScene
     const mapResource = scene.mapResource
+    // Refresh only the tilemap that hosts the toggled layer — its
+    // tier alone needs the visibility filter re-applied. The other
+    // tier tilemaps don't carry the layer's sprites, so iterating
+    // them would be a no-op-with-cost.
+    const targetTier = layer.tier ?? 'ground'
     for (const entity of scene.world.entityManager.entities) {
       if (entity instanceof TileMap) {
-        refreshAllTileGraphics(entity, mapResource)
+        if (entity.get(TileMapTierComponent)?.tier === targetTier) {
+          refreshAllTileGraphics(entity, mapResource)
+        }
         continue
       }
+      // Placement actors (decoration objects spawned by
+      // `ObjectSpawnSystem`). The visibility flip is independent of
+      // tier — placements carry the canonical `layerId` on
+      // `TileTransformComponent`, so just match by layer.
       const transform = entity.get(TileTransformComponent)
       if (transform?.layerId === layerId && entity instanceof Actor) {
         entity.graphics.visible = visible

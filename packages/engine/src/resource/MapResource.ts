@@ -1,12 +1,17 @@
 import type { Loadable } from 'excalibur'
 import { Logger, type Scene, type Tile, TileMap, Vector } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
+import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import { MapFormat } from '../format/MapFormat'
-import type { LayerData, MapData, MapResourceOptions } from '../types'
+import type { LayerData, LayerTier, MapData, MapResourceOptions } from '../types'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
+
+/** All tiers a `MapResource` builds tilemaps for. Order is canonical
+ * for iteration when order doesn't otherwise matter. */
+const ALL_TIERS: readonly LayerTier[] = ['ground', 'hero', 'overlay'] as const
 
 /**
  * Resource class for loading custom Map format into Excalibur.
@@ -27,8 +32,16 @@ export class MapResource implements Loadable<TileMap> {
   private readonly _preloadedSpriteSets: Map<string, SpriteSetResource>
   private _mapData!: MapData
 
-  private tileMap!: TileMap
-  private initialSprites: Map<Tile, TileSpriteRef[]> = new Map()
+  /**
+   * One `TileMap` per {@link LayerTier} — built up-front in
+   * {@link createTileMaps} so callers can always grab the
+   * tier-matching tilemap by component lookup, even before any
+   * sprites for that tier are loaded. The `data` field (Loadable
+   * contract) points at the ground-tier tilemap for backwards
+   * compatibility with callers that don't know about tiers.
+   */
+  private tileMapsByTier: Map<LayerTier, TileMap> = new Map()
+  private initialSpritesByTier: Map<LayerTier, Map<Tile, TileSpriteRef[]>> = new Map()
 
   private logger = Logger.getInstance()
 
@@ -86,11 +99,32 @@ export class MapResource implements Loadable<TileMap> {
     this.logger.debug(`Loaded ${this.tileSetResources.size} sprite sets`)
   }
 
-  private createTileMap(data: MapData): TileMap {
+  /**
+   * Build one `TileMap` entity per tier — same dimensions across
+   * all of them, so a tile at `(x, y)` resolves to congruent tiles
+   * on every tilemap. Each gets a {@link TileMapTierComponent}
+   * marker + a stable z derived from {@link TIER_Z}.
+   *
+   * Always builds all three tiers, even when the map only has
+   * layers on one. The unused tilemaps cost a few KB of empty
+   * tile-grid memory but let `TileEditorSystem` blindly look up
+   * the tier-matching tilemap on every click without first
+   * checking "does this tier exist".
+   */
+  private createTileMaps(data: MapData): void {
     MapFormat.validate(data)
+    for (const tier of ALL_TIERS) {
+      const tilemap = this.buildSingleTileMap(data, tier)
+      tilemap.addComponent(new TileMapTierComponent(tier))
+      tilemap.z = TIER_Z[tier]
+      this.tileMapsByTier.set(tier, tilemap)
+      this.initialSpritesByTier.set(tier, new Map())
+    }
+  }
 
+  private buildSingleTileMap(data: MapData, tier: LayerTier): TileMap {
     return new TileMap({
-      name: data.name,
+      name: `${data.name}:${tier}`,
       pos: data.pos ? new Vector(data.pos.x, data.pos.y) : undefined,
       tileWidth: data.tileWidth,
       tileHeight: data.tileHeight,
@@ -100,7 +134,7 @@ export class MapResource implements Loadable<TileMap> {
     })
   }
 
-  private processLayers(tileMap: TileMap, data: MapData): void {
+  private processLayers(data: MapData): void {
     const sortedLayers = [...data.layers].sort((a, b) => {
       const zIndexA = Number(a.properties?.z ?? 0)
       const zIndexB = Number(b.properties?.z ?? 0)
@@ -118,14 +152,22 @@ export class MapResource implements Loadable<TileMap> {
     // *render* path (`applyInitialGraphics` + `rebuildAllTileGraphics`)
     // so toggling `layer.visible` at runtime is a pure graphics
     // refresh — no re-loading of sprites from the JSON.
-    sortedLayers.forEach((layer) => this.processTileLayer(tileMap, layer))
+    //
+    // Tier routing: each layer's sprites are written to the tilemap
+    // matching its `tier` (default `'ground'`). A layer's sprite
+    // positions remain global tile-coordinates — the same `(x, y)`
+    // resolves to congruent tiles on every tier's tilemap.
+    sortedLayers.forEach((layer) => this.processTileLayer(layer))
   }
 
-  private processTileLayer(tileMap: TileMap, layer: LayerData): void {
+  private processTileLayer(layer: LayerData): void {
     if (!layer.sprites || !Array.isArray(layer.sprites) || layer.sprites.length === 0) {
-      this.logger.warn(`Skipping layer ${layer.name}: No sprites found`)
       return
     }
+    const tier: LayerTier = layer.tier ?? 'ground'
+    const tileMap = this.tileMapsByTier.get(tier)
+    const initialSprites = this.initialSpritesByTier.get(tier)
+    if (!tileMap || !initialSprites) return
 
     const layerZIndex = layer.properties?.z !== undefined ? Number(layer.properties.z) : 0
 
@@ -151,7 +193,7 @@ export class MapResource implements Loadable<TileMap> {
         tile.solid = spriteData.solid
       }
 
-      const existingRefs = this.initialSprites.get(tile) || []
+      const existingRefs = initialSprites.get(tile) || []
       existingRefs.push({
         spriteSetId: spriteData.spriteSetId,
         spriteId: spriteData.spriteId,
@@ -159,7 +201,7 @@ export class MapResource implements Loadable<TileMap> {
         zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
         layerId: layer.id,
       })
-      this.initialSprites.set(tile, existingRefs)
+      initialSprites.set(tile, existingRefs)
     }
   }
 
@@ -169,14 +211,19 @@ export class MapResource implements Loadable<TileMap> {
       const mapDataText = await loadTextFile(mapDataPath)
       this._mapData = MapFormat.deserialize(mapDataText)
 
-      this.tileMap = this.createTileMap(this._mapData)
-      this.data = this.tileMap
+      this.createTileMaps(this._mapData)
+      // Loadable<TileMap> contract — point `data` at the ground
+      // tilemap. Callers that need a specific tier should walk the
+      // scene by `TileMapTierComponent` instead.
+      const groundTileMap = this.tileMapsByTier.get('ground')
+      if (!groundTileMap) throw new Error('Failed to build ground tilemap')
+      this.data = groundTileMap
 
       await this.loadSpriteSets()
 
-      this.processLayers(this.tileMap, this._mapData)
+      this.processLayers(this._mapData)
 
-      return this.tileMap
+      return groundTileMap
     } catch (error) {
       this.logger.error(`Failed to load map: ${error}`)
       throw error
@@ -184,17 +231,21 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   addToScene(scene: Scene): void {
-    if (!this.tileMap) {
+    if (this.tileMapsByTier.size === 0) {
       throw new Error('Map resource not loaded')
     }
 
-    const editorComponent = new MapEditorComponent()
-    editorComponent.setInitialSprites(this.initialSprites)
-    this.tileMap.addComponent(editorComponent)
+    for (const tier of ALL_TIERS) {
+      const tileMap = this.tileMapsByTier.get(tier)
+      const initial = this.initialSpritesByTier.get(tier)
+      if (!tileMap || !initial) continue
+      const editorComponent = new MapEditorComponent()
+      editorComponent.setInitialSprites(initial)
+      tileMap.addComponent(editorComponent)
+      scene.add(tileMap)
+    }
 
     this.applyInitialGraphics()
-
-    scene.add(this.tileMap)
   }
 
   private applyInitialGraphics(): void {
@@ -203,25 +254,57 @@ export class MapResource implements Loadable<TileMap> {
     // can't disagree on what "hidden" means.
     const hiddenLayerIds = collectHiddenLayerIds(this)
 
-    this.initialSprites.forEach((refs, tile) => {
-      const sortedRefs = [...refs].sort((a, b) => {
-        const aZ = a.zIndex ?? 0
-        const bZ = b.zIndex ?? 0
-        return aZ - bZ
-      })
+    for (const initial of this.initialSpritesByTier.values()) {
+      initial.forEach((refs, tile) => {
+        const sortedRefs = [...refs].sort((a, b) => {
+          const aZ = a.zIndex ?? 0
+          const bZ = b.zIndex ?? 0
+          return aZ - bZ
+        })
 
-      for (const ref of sortedRefs) {
-        if (hiddenLayerIds.has(ref.layerId)) continue
-        const spriteSet = this.tileSetResources.get(ref.spriteSetId)
-        if (!spriteSet) continue
+        for (const ref of sortedRefs) {
+          if (hiddenLayerIds.has(ref.layerId)) continue
+          const spriteSet = this.tileSetResources.get(ref.spriteSetId)
+          if (!spriteSet) continue
 
-        if (ref.animationId && spriteSet.animations[ref.animationId]) {
-          tile.addGraphic(spriteSet.animations[ref.animationId].clone())
-        } else if (spriteSet.sprites[ref.spriteId]) {
-          tile.addGraphic(spriteSet.sprites[ref.spriteId].clone())
+          if (ref.animationId && spriteSet.animations[ref.animationId]) {
+            tile.addGraphic(spriteSet.animations[ref.animationId].clone())
+          } else if (spriteSet.sprites[ref.spriteId]) {
+            tile.addGraphic(spriteSet.sprites[ref.spriteId].clone())
+          }
         }
-      }
-    })
+      })
+    }
+  }
+
+  /**
+   * Get the `TileMap` entity for a specific tier. Returns
+   * `undefined` only when the map hasn't been loaded yet — every
+   * loaded map has all three tiers built up-front.
+   *
+   * Use this when you have a layer (or a `LayerTier`) in hand and
+   * need to read / write its tilemap directly. For lookup from
+   * within a `Scene` without the `MapResource` in scope, look up
+   * by `TileMapTierComponent` instead.
+   */
+  getTileMapForTier(tier: LayerTier): TileMap | undefined {
+    return this.tileMapsByTier.get(tier)
+  }
+
+  /**
+   * Resolve the tilemap that owns a given layer id by routing
+   * through the layer's `tier`. Returns `undefined` if the layer
+   * id is unknown.
+   */
+  getTileMapForLayer(layerId: string): TileMap | undefined {
+    const layer = this._mapData?.layers.find((l) => l.id === layerId)
+    if (!layer) return undefined
+    return this.getTileMapForTier(layer.tier ?? 'ground')
+  }
+
+  /** Iterate every tilemap built for this map (one per tier). */
+  *tileMaps(): IterableIterator<TileMap> {
+    for (const t of this.tileMapsByTier.values()) yield t
   }
 
   getSpriteSetResource(spriteSetId: string): SpriteSetResource | undefined {
