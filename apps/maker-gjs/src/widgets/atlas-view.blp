@@ -2,6 +2,18 @@ using Gtk 4.0;
 using Adw 1;
 
 template $AtlasView : Adw.Bin {
+  // Outer split (ModeRail left) wraps another split (SceneInspector
+  // right) so both sidebars span the full window height. The central
+  // headerbar lives inside the innermost ToolbarView and only spans
+  // the canvas area between the two sidebars — title centers
+  // properly, X close stays on the inspector's own flat header.
+  //
+  // Pre-refactor SceneInspector lived inside the central
+  // ToolbarView's content (under the headerbar). User feedback:
+  // it should mirror the scene editor's layout (RightInspector at
+  // the outermost layer), which makes the title in the headerbar
+  // also centre between the sidebars instead of between the left
+  // sidebar and the window edge.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -15,43 +27,53 @@ template $AtlasView : Adw.Bin {
       project-tagline: _("Atlas view");
     };
 
-    content: Adw.ToolbarView {
-      [top]
-      Adw.HeaderBar {
-        show-end-title-buttons: true;
+    content: Adw.OverlaySplitView inner_split {
+      sidebar-position: end;
+      min-sidebar-width: 280;
+      max-sidebar-width: 320;
+      collapsed: bind template.collapsed;
+      show-sidebar: bind template.show-inspector bidirectional;
 
-        [start]
-        Gtk.ToggleButton sidebar_toggle {
-          icon-name: "sidebar-show-symbolic";
-          tooltip-text: _("Toggle library");
-          active: bind template.show-library bidirectional;
+      sidebar: $PixelRpgSceneInspector inspector {};
+
+      content: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          // X close moves to the inspector's own flat header
+          // (see scene-inspector.blp). That keeps the central
+          // headerbar's right edge clean for the inspector toggle
+          // + New Scene primary action.
+          show-end-title-buttons: false;
+
+          [start]
+          Gtk.ToggleButton sidebar_toggle {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Toggle library");
+            active: bind template.show-library bidirectional;
+          }
+
+          title-widget: Adw.WindowTitle {
+            title: bind template.project-name;
+            subtitle: _("World");
+          };
+
+          [end]
+          Gtk.ToggleButton inspector_toggle {
+            icon-name: "sidebar-show-right-symbolic";
+            tooltip-text: _("Toggle inspector");
+            active: bind template.show-inspector bidirectional;
+          }
+
+          [end]
+          Gtk.Button new_scene_button {
+            label: _("New Scene");
+            action-name: "win.new-scene";
+            styles ["suggested-action", "pill"]
+          }
         }
-
-        title-widget: Adw.WindowTitle {
-          title: bind template.project-name;
-          subtitle: _("World");
-        };
-
-        [end]
-        Gtk.Button new_scene_button {
-          label: _("New Scene");
-          action-name: "win.new-scene";
-          styles ["suggested-action", "pill"]
-        }
-      }
-
-      content: Adw.OverlaySplitView inner_split {
-        sidebar-position: end;
-        min-sidebar-width: 280;
-        max-sidebar-width: 320;
-        collapsed: bind template.collapsed;
-        show-sidebar: bind template.show-inspector bidirectional;
 
         content: $PixelRpgAtlasCanvas atlas {};
-
-        sidebar: $PixelRpgSceneInspector inspector {};
       };
     };
   }
 }
-

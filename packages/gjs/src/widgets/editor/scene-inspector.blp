@@ -5,11 +5,27 @@ template $PixelRpgSceneInspector : Adw.Bin {
   styles ["scene-inspector"]
   width-request: 300;
 
-  Gtk.ScrolledWindow {
-    hscrollbar-policy: never;
-    vscrollbar-policy: automatic;
+  Adw.ToolbarView {
+    top-bar-style: flat;
 
-    child: Gtk.Box body {
+    // Thin flat header — provides the window-close X + window drag
+    // region at the inspector's top. Mirrors the pattern set up
+    // for `RightInspector` in PR #49: the atlas-view's central
+    // headerbar now stops at the inspector's left edge, so the
+    // close button lives on the inspector itself.
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+      show-start-title-buttons: false;
+      show-end-title-buttons: true;
+      styles ["flat"]
+    }
+
+    content: Gtk.ScrolledWindow {
+      hscrollbar-policy: never;
+      vscrollbar-policy: automatic;
+
+      child: Gtk.Box body {
       orientation: vertical;
       spacing: 12;
       margin-top: 16;
@@ -70,6 +86,7 @@ template $PixelRpgSceneInspector : Adw.Bin {
         title: _("No scene selected");
         description: _("Pick a scene from the atlas to inspect it.");
       }
+      };
     };
   }
 }
