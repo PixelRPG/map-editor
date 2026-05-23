@@ -1,4 +1,5 @@
 import {
+  type Actor,
   type Engine,
   type EventEmitter,
   type Scene,
@@ -21,6 +22,7 @@ import {
   UndoStackComponent,
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
+import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import type { LayerTier } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
@@ -41,14 +43,23 @@ interface TileHit {
  *
  * Subscribes to `ex.Input.Pointer` events directly. Coexists peacefully with
  * {@link CameraControlSystem}: hover events fire during pan-drags too, but
- * there is no visual hover feedback today, so the redundancy is harmless and
- * the simpler split avoids any cross-system coordination state.
+ * the panning camera doesn't suppress hover feedback by design — the preview
+ * tracks the cursor through pan-drags so the user always sees where a click
+ * would land.
+ *
+ * Pencil hover preview is delegated to `services/pencil-preview.ts`. This
+ * system owns the actor lifecycle (create on scene init, route hover state
+ * + session-state mutations into the helper); the helper owns the visual
+ * logic.
  */
 export class TileEditorSystem extends System {
   public readonly systemType = SystemType.Update
 
   private engine?: Engine
   private scene?: Scene
+
+  private previewActor: Actor | null = null
+  private hoverContext: PencilPreviewHover | null = null
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -61,14 +72,30 @@ export class TileEditorSystem extends System {
     this.engine = scene.engine
     this.scene = scene
 
+    this.previewActor = createPencilPreviewActor()
+    scene.add(this.previewActor)
+
+    // Refresh the preview when the active tool / tile / layer changes,
+    // so the user doesn't have to wiggle the mouse to see the effect of
+    // switching tool or picking a new swatch. Subscriptions are tied
+    // to the scene's lifetime via `SessionState`'s per-scene WeakMap
+    // registry, so no explicit teardown is needed.
+    SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshPreview())
+    SessionState.subscribe(scene, ActiveTileComponent, () => this.refreshPreview())
+    SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshPreview())
+
     const pointer = this.engine.input.pointers.primary
 
     pointer.on('down', (event) => {
-      this.handlePointer(vec(event.screenPos.x, event.screenPos.y), 'down')
+      const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
+      if (hit) this.applyClick(hit)
     })
 
     pointer.on('move', (event) => {
-      this.handlePointer(vec(event.screenPos.x, event.screenPos.y), 'move')
+      const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
+      if (hit) this.applyHover(hit)
+      this.hoverContext = hit ? { tileMap: hit.tileMap, coords: hit.coords } : null
+      this.refreshPreview()
     })
   }
 
@@ -76,15 +103,9 @@ export class TileEditorSystem extends System {
     // All work is event-driven.
   }
 
-  private handlePointer(screenPos: Vector, kind: 'down' | 'move'): void {
-    const hit = this.findTileUnderPointer(screenPos)
-    if (!hit) return
-
-    if (kind === 'move') {
-      this.applyHover(hit)
-    } else {
-      this.applyClick(hit)
-    }
+  private refreshPreview(): void {
+    if (!this.previewActor || !this.scene) return
+    refreshPencilPreview(this.previewActor, this.scene, this.hoverContext)
   }
 
   private findTileUnderPointer(screenPos: Vector): TileHit | null {
@@ -163,7 +184,7 @@ export class TileEditorSystem extends System {
 
   private applyClick(hit: TileHit): void {
     if (!this.scene) return
-    const tool: EditorTool = SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'brush'
+    const tool: EditorTool = SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'pencil'
     const tileId = SessionState.get(this.scene, ActiveTileComponent)?.spriteId ?? null
     const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
     const layerId = this.resolveLayerId(explicitLayerId)
@@ -186,7 +207,7 @@ export class TileEditorSystem extends System {
       animationId: ref.animationId,
     }))
 
-    if (tool === 'brush') {
+    if (tool === 'pencil') {
       if (tileId === null) return
       this.dispatchCommand(
         new PaintTileCommand({

@@ -1,23 +1,18 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
+import type { EditorTool } from '@pixelrpg/engine'
 
 import Template from './floating-tool-rail.blp'
 
 /**
- * Enumerable name of every tool surfaced by {@link FloatingToolRail}.
- *
- * Matches the `win.set-tool` action targets bound in the BLP template.
+ * Re-export the engine's `EditorTool` union — kept as a named export
+ * here so existing UI-side imports (`from '.../floating-tool-rail'`)
+ * keep working without churn. The BLP `win.set-tool` action targets
+ * MUST match this union; adding a new tool means updating the engine
+ * union, the BLP, and the per-button declarations below.
  */
-export type EditorTool =
-  | 'pencil'
-  | 'bucket'
-  | 'rect'
-  | 'eraser'
-  | 'eyedropper'
-  | 'select'
-  | 'stamp'
-  | 'event'
+export type { EditorTool }
 
 /**
  * Vertical OSD column of editor tool toggles.

@@ -3,10 +3,10 @@ import { Logger, type Scene, type Tile, TileMap, Vector } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
 import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import { MapFormat } from '../format/MapFormat'
+import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
 import type { LayerData, LayerTier, MapData, MapResourceOptions } from '../types'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
-import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
 
 /** All tiers a `MapResource` builds tilemaps for. Order is canonical
@@ -28,7 +28,7 @@ export class MapResource implements Loadable<TileMap> {
   private readonly headless: boolean = false
   private readonly basePath: string = ''
   private readonly filename: string = ''
-  private tileSetResources: Map<string, SpriteSetResource> = new Map()
+  private spriteSetResources: Map<string, SpriteSetResource> = new Map()
   private readonly _preloadedSpriteSets: Map<string, SpriteSetResource>
   private _mapData!: MapData
 
@@ -75,7 +75,7 @@ export class MapResource implements Loadable<TileMap> {
       // Reuse pre-loaded resource if available (typically from GameProjectResource)
       const preloaded = this._preloadedSpriteSets.get(spriteSetRef.id)
       if (preloaded) {
-        this.tileSetResources.set(spriteSetRef.id, preloaded)
+        this.spriteSetResources.set(spriteSetRef.id, preloaded)
         this.logger.debug(`Reused pre-loaded sprite set: ${spriteSetRef.id}`)
         continue
       }
@@ -88,7 +88,7 @@ export class MapResource implements Loadable<TileMap> {
         })
         await resource.load()
 
-        this.tileSetResources.set(spriteSetRef.id, resource)
+        this.spriteSetResources.set(spriteSetRef.id, resource)
         this.logger.debug(`Loaded sprite set: ${spriteSetRef.id} from ${fullPath}`)
       } catch (error) {
         this.logger.error(`Failed to load sprite set ${spriteSetRef.id}: ${error}`)
@@ -96,7 +96,7 @@ export class MapResource implements Loadable<TileMap> {
       }
     }
 
-    this.logger.debug(`Loaded ${this.tileSetResources.size} sprite sets`)
+    this.logger.debug(`Loaded ${this.spriteSetResources.size} sprite sets`)
   }
 
   /**
@@ -264,7 +264,7 @@ export class MapResource implements Loadable<TileMap> {
 
         for (const ref of sortedRefs) {
           if (hiddenLayerIds.has(ref.layerId)) continue
-          const spriteSet = this.tileSetResources.get(ref.spriteSetId)
+          const spriteSet = this.spriteSetResources.get(ref.spriteSetId)
           if (!spriteSet) continue
 
           if (ref.animationId && spriteSet.animations[ref.animationId]) {
@@ -308,11 +308,11 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   getSpriteSetResource(spriteSetId: string): SpriteSetResource | undefined {
-    return this.tileSetResources.get(spriteSetId)
+    return this.spriteSetResources.get(spriteSetId)
   }
 
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {
-    return this.tileSetResources
+    return this.spriteSetResources
   }
 
   getAvailableLayerIds(): string[] {

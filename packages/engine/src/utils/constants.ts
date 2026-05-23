@@ -45,6 +45,13 @@ export const EDITOR_CONSTANTS = {
   DEFAULT_STROKE_WIDTH: 1,
   DEFAULT_FONT_SIZE: 10,
   DEFAULT_FONT_FAMILY: 'Arial',
+
+  // Brush tool hover preview — half-transparent ghost of the active
+  // tile rendered by `TileEditorSystem` at the hovered tile so the
+  // user sees what would be placed before clicking. Low enough that
+  // the underlying tile is clearly visible; high enough that the
+  // ghost is unambiguously *the* preview (not noise / glare).
+  PAINT_PREVIEW_OPACITY: 0.5,
 } as const
 
 /**

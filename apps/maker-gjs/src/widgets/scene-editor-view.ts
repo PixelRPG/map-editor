@@ -143,18 +143,20 @@ export class SceneEditorView extends Adw.Bin {
    *
    * Also remembers the engine so inspector selections (tile, layer,
    * tool) can be forwarded into `Engine.setEditorState()`.
+   *
+   * The slot fires synchronously the moment the engine widget is
+   * constructed — before its async Excalibur initialisation finishes.
+   * Don't try to push session-state writes (`setActiveTile`,
+   * `setActiveLayer`) from here: the gjs widget's forwarders no-op
+   * while `_excalibur` is null, so the writes silently disappear.
+   * The host orchestrator (`_hydrateSceneEditor`) is responsible for
+   * ordering `ensureForMap` before `populateFromProject` so the
+   * inspector's `_setActiveTile/_setActiveLayer` writes land on a
+   * live engine.
    */
   setEngineWidget(widget: Gtk.Widget | null, engine?: Engine | null): void {
     this._editor.setEngine(widget)
     this._engine = engine ?? null
-    // Replay the active tile / layer in case `populateFromProject` ran
-    // before the engine was instantiated. Tile id needs the gid offset.
-    if (this._engine) {
-      if (this._activeTileId != null) {
-        this._engine.setActiveTile(this._activeTileId + this._tilesetFirstGid)
-      }
-      if (this._activeLayerId != null) this._engine.setActiveLayer(this._activeLayerId)
-    }
   }
 
   /** Header title + the floating chips. */
@@ -308,7 +310,13 @@ export class SceneEditorView extends Adw.Bin {
    * the chip so the swatch is a live preview instead of a static icon.
    */
   private _setActiveTile(tileId: number, tileName?: string): void {
-    if (this._activeTileId === tileId) return
+    // Do NOT short-circuit on `_activeTileId === tileId`. The engine's
+    // `ActiveTileComponent` is per-scene; on map switch (or re-entry
+    // after `EngineController.dispose`) the new scene's session state
+    // starts empty even though `_activeTileId` still holds the previous
+    // scene's value. A short-circuit there would leave the engine
+    // without an active tile until the user manually picked a swatch
+    // — the same shape of bug the startup-order fix addresses.
     this._activeTileId = tileId
     this._editor.contextChip.tileName = tileName ?? `Tile ${tileId}`
     const tile = this._tiles.find((t) => t.id === tileId)
@@ -346,7 +354,11 @@ export class SceneEditorView extends Adw.Bin {
   }
 
   private _setActiveLayer(layerId: string): void {
-    if (this._activeLayerId === layerId) return
+    // No short-circuit on `_activeLayerId === layerId` — see the
+    // comment on `_setActiveTile` for the same reasoning. The engine's
+    // per-scene `ActiveLayerComponent` resets on every map load while
+    // the view-held id persists, so the populate-from-project replay
+    // must always reach the engine.
     this._activeLayerId = layerId
     const layer = this._layers.find((l) => l.id === layerId)
     this._editor.contextChip.layerName = layer?.name ?? layerId

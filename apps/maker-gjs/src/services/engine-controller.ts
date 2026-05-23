@@ -119,9 +119,11 @@ export class EngineController {
       this._mapId = mapId
     }
 
-    // Default editor state — pencil tool so the user can paint
-    // immediately. Tile / layer come from `populateFromProject`.
-    this._engine.setActiveTool('brush')
+    // Active tool / tile / layer are pushed by the host
+    // (`ApplicationWindow._hydrateSceneEditor`) so the UI's GAction
+    // stays the source of truth across map switches. The controller
+    // intentionally doesn't reset them here; doing so would force the
+    // tool back to a hardcoded default and desync from the toolbar.
 
     this._attachZoomHook()
     this._attachUndoHook()

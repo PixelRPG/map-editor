@@ -3,7 +3,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { MapFormat } from '@pixelrpg/engine'
+import { type EditorTool, MapFormat } from '@pixelrpg/engine'
 import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { EngineController } from '../services/engine-controller.ts'
@@ -44,6 +44,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private signals = new SignalScope()
   private _scenesById = new Map<string, SampleScene>(SAMPLE_SCENES.map((s) => [s.id, s]))
   private _loadedProject: LoadedProject | null = null
+  /**
+   * The `win.set-tool` GAction. Kept as a field so `_hydrateSceneEditor`
+   * can push its current state into the engine after every map load —
+   * the engine's `ActiveToolComponent` is per-scene and resets on each
+   * `loadMap`, while this GAction preserves the user's selection across
+   * scenes.
+   */
+  private _toolAction: Gio.SimpleAction | null = null
   /**
    * Which map the scene editor is currently editing. Tracks
    * `_showSceneEditor` so the persist-requested handler knows which
@@ -96,13 +104,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-selected', (_v: AtlasView, id: string) => {
       this._lastAtlasSelection = id
     })
-    this.signals.connect(
-      this._atlas_view,
-      'scene-moved',
-      (_v: AtlasView, id: string, x: number, y: number) => {
-        this._persistAtlasPosition(id, x, y)
-      },
-    )
+    this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
+      this._persistAtlasPosition(id, x, y)
+    })
 
     // Scene editor → host bridge. The inspector mutates
     // `MapResource.mapData` in place via `engine.setLayerVisible` /
@@ -171,17 +175,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     )
     toolAction.connect('change-state', (action, value) => {
       action.set_state(value!)
-      const tool = value!.get_string()[0]
-      // Engine accepts 'brush' | 'eraser' today — map the new tool ids
-      // back to those until the engine grows the full set. The
-      // `ActiveToolComponent` accepts any string, so we pass the raw
-      // tool id through; the engine's `TileEditorSystem` short-circuits
-      // on tools it doesn't understand yet.
-      const mappedTool: string =
-        tool === 'eraser' ? 'eraser' : tool === 'pencil' || tool === 'bucket' || tool === 'rect' ? 'brush' : tool
-      this._engineCtl.engine?.setActiveTool(mappedTool)
+      // Tool ids are shared with the engine's `EditorTool` union, so
+      // the GAction state string can be passed straight through.
+      // `TileEditorSystem` short-circuits on tools whose semantics
+      // it doesn't implement yet (bucket / rect / select / stamp /
+      // event) — the UI still surfaces the buttons.
+      this._engineCtl.engine?.setActiveTool(value!.get_string()[0] as EditorTool)
     })
     winActions.add_action(toolAction)
+    this._toolAction = toolAction
 
     // Undo / redo route through the engine's command stack
     // (\`docs/concepts/editor-architecture.md\` § Phase 5). The engine
@@ -352,12 +354,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const project = this._loadedProject
     if (!project) return
 
-    try {
-      await this._scene_editor_view.populateFromProject(project, sceneId)
-    } catch (error) {
-      console.warn('[ApplicationWindow] Failed to populate inspector:', error)
-    }
-
+    // Order is load-bearing: `ensureForMap` must complete before
+    // `populateFromProject` so the inspector's initial
+    // `_setActiveTile` / `_setActiveLayer` writes land on a live
+    // Excalibur engine. The reverse order leaves the engine's
+    // `ActiveTile` / `ActiveLayer` session-state null until the user
+    // manually picks a swatch, breaking the brush hover preview at
+    // startup (the slot fires before Excalibur is initialised, so the
+    // gjs widget's `setActiveTile/Layer` forwarders silently no-op
+    // — see `SceneEditorView.setEngineWidget`).
     try {
       await this._engineCtl.ensureForMap(project.projectPath, sceneId)
     } catch (error) {
@@ -367,9 +372,30 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           : `${typeof error} ${JSON.stringify(error)}`
       console.error('[ApplicationWindow] Failed to bring up engine:', details)
       this._showToast(_('Failed to load map'))
+      // Fall through: still populate the inspector so the user has a
+      // usable surface (palette / layers / objects) even when the
+      // canvas couldn't come up. `populateFromProject`'s engine writes
+      // will no-op gracefully since the controller's `_engine` stays
+      // null on a failed bring-up.
+    }
+
+    // Push the UI's current tool selection into the freshly-loaded
+    // scene's session state. The engine's `ActiveToolComponent` is
+    // per-scene and resets on every `loadMap`, while the GAction
+    // preserves the user's choice across scenes — without this sync
+    // the UI would still show e.g. "eraser" while the engine reverts
+    // to its system default and the pencil-preview helper hides.
+    const toolState = this._toolAction?.get_state()
+    if (toolState) {
+      this._engineCtl.engine?.setActiveTool(toolState.get_string()[0] as EditorTool)
+    }
+
+    try {
+      await this._scene_editor_view.populateFromProject(project, sceneId)
+    } catch (error) {
+      console.warn('[ApplicationWindow] Failed to populate inspector:', error)
     }
   }
-
 
   private _onTemplateSelected(templateId: string): void {
     const template = findTemplateById(templateId)
