@@ -235,11 +235,15 @@ export class Engine {
     if (!(scene instanceof MapScene)) return
     command.apply(scene)
 
-    const stack = SessionState.get(scene, UndoStackComponent) ?? new UndoStackComponent()
-    stack.commands = stack.commands.slice(0, stack.cursor)
-    stack.commands.push(command)
-    stack.cursor = stack.commands.length
-    SessionState.set(scene, stack)
+    const existing = SessionState.get(scene, UndoStackComponent)
+    if (existing) {
+      existing.commands = existing.commands.slice(0, existing.cursor)
+      existing.commands.push(command)
+      existing.cursor = existing.commands.length
+      SessionState.notifyMutation(scene, existing)
+    } else {
+      SessionState.set(scene, new UndoStackComponent([command], 1))
+    }
   }
 
   /**

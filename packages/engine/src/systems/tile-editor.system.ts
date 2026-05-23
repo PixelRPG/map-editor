@@ -187,15 +187,26 @@ export class TileEditorSystem extends System {
    * but inline because the system already has the `scene` reference
    * and we want to avoid the indirection through the engine class
    * for hot paths (one paint per click).
+   *
+   * Distinguishes between "first command in the scene" (create + set)
+   * and "stack already exists" (mutate + notify). Calling
+   * `SessionState.set` with the existing instance after mutation
+   * works thanks to its same-instance fast path, but the explicit
+   * branch is documentation about the intent and one fewer remove +
+   * add to handle in the engine.
    */
   private dispatchCommand(command: PaintTileCommand | EraseTileCommand): void {
     if (!this.scene) return
     command.apply(this.scene)
-    const stack = SessionState.get(this.scene, UndoStackComponent) ?? new UndoStackComponent()
-    stack.commands = stack.commands.slice(0, stack.cursor)
-    stack.commands.push(command)
-    stack.cursor = stack.commands.length
-    SessionState.set(this.scene, stack)
+    const existing = SessionState.get(this.scene, UndoStackComponent)
+    if (existing) {
+      existing.commands = existing.commands.slice(0, existing.cursor)
+      existing.commands.push(command)
+      existing.cursor = existing.commands.length
+      SessionState.notifyMutation(this.scene, existing)
+    } else {
+      SessionState.set(this.scene, new UndoStackComponent([command], 1))
+    }
   }
 
   private resolveLayerId(layerId: string | null): string | null {
