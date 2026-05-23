@@ -240,8 +240,7 @@ export class TileEditorSystem extends System {
   }
 
   private isLayerLocked(layerId: string): boolean {
-    const mapResource = (this.scene as MapScene | undefined)?.mapResource
-    const layer = mapResource?.mapData?.layers.find((l) => l.id === layerId)
+    const layer = (this.scene as MapScene | undefined)?.mapResource?.mapData?.layers.find((l) => l.id === layerId)
     return layer?.locked ?? false
   }
 }
