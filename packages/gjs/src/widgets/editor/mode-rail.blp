@@ -8,10 +8,30 @@ template $PixelRpgModeRail : Adw.Bin {
     orientation: vertical;
     hexpand: true;
 
+    Gtk.Box hero_header {
+      orientation: horizontal;
+      margin-top: 12;
+      margin-start: 12;
+      margin-end: 12;
+      spacing: 4;
+
+      Gtk.MenuButton menu_button {
+        icon-name: "open-menu-symbolic";
+        menu-model: primary_menu;
+        tooltip-text: _("Main Menu");
+        valign: start;
+        styles ["flat"]
+      }
+
+      Gtk.Box {
+        hexpand: true;
+      }
+    }
+
     Gtk.Box hero {
       orientation: vertical;
       halign: fill;
-      margin-top: 28;
+      margin-top: 4;
       margin-bottom: 18;
       margin-start: 20;
       margin-end: 20;
@@ -180,6 +200,33 @@ template $PixelRpgModeRail : Adw.Bin {
           margin-end: 6;
         };
       }
+    }
+  }
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("Open Recent");
+      action: "win.open-recent-projects";
+    }
+    item {
+      label: _("Close Project");
+      action: "win.close-project";
+    }
+  }
+  section {
+    item {
+      label: _("Preferences");
+      action: "app.preferences";
+    }
+    item {
+      label: _("Keyboard Shortcuts");
+      action: "win.show-help-overlay";
+    }
+    item {
+      label: _("About PixelRPG Maker");
+      action: "app.about";
     }
   }
 }

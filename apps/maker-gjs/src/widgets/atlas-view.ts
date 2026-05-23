@@ -36,7 +36,6 @@ export class AtlasView extends Adw.Bin {
   declare _atlas: AtlasCanvas
   declare _inspector: SceneInspector
   declare _new_scene_button: GObject.Object | undefined
-  declare _menu_button: GObject.Object | undefined
 
   private signals = new SignalScope()
   private _scenes: SampleScene[] = SAMPLE_SCENES

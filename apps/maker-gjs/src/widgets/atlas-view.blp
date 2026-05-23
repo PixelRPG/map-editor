@@ -38,13 +38,6 @@ template $AtlasView : Adw.Bin {
           action-name: "win.new-scene";
           styles ["suggested-action", "pill"]
         }
-
-        [end]
-        Gtk.MenuButton menu_button {
-          icon-name: "open-menu-symbolic";
-          menu-model: primary_menu;
-          tooltip-text: _("Main Menu");
-        }
       }
 
       content: Adw.OverlaySplitView inner_split {
@@ -62,35 +55,3 @@ template $AtlasView : Adw.Bin {
   }
 }
 
-menu primary_menu {
-  section {
-    item {
-      label: _("Inspector");
-      action: "win.toggle-inspector";
-    }
-  }
-  section {
-    item {
-      label: _("Open Recent");
-      action: "win.open-recent-projects";
-    }
-    item {
-      label: _("Close Project");
-      action: "win.close-project";
-    }
-  }
-  section {
-    item {
-      label: _("Preferences");
-      action: "app.preferences";
-    }
-    item {
-      label: _("Keyboard Shortcuts");
-      action: "win.show-help-overlay";
-    }
-    item {
-      label: _("About PixelRPG Maker");
-      action: "app.about";
-    }
-  }
-}
