@@ -19,12 +19,15 @@ template $SceneEditorView : Adw.Bin {
       [top]
       Adw.HeaderBar {
         show-end-title-buttons: true;
+        show-title: false;
+        styles ["flat", "header-osd"]
 
         [start]
         Gtk.ToggleButton sidebar_toggle {
           icon-name: "sidebar-show-symbolic";
           tooltip-text: _("Toggle library");
           active: bind template.show-library bidirectional;
+          styles ["flat"]
         }
 
         [start]
@@ -46,35 +49,12 @@ template $SceneEditorView : Adw.Bin {
           };
         }
 
-        title-widget: Adw.WindowTitle {
-          title: bind template.scene-name;
-          subtitle: bind template.project-name;
-        };
-
-        [end]
-        Gtk.Button play_button {
-          action-name: "win.play";
-          tooltip-text: _("Play");
-          styles ["suggested-action", "pill"]
-
-          child: Gtk.Box {
-            spacing: 4;
-
-            Gtk.Image {
-              icon-name: "media-playback-start-symbolic";
-            }
-
-            Gtk.Label {
-              label: _("Play");
-            }
-          };
-        }
-
         [end]
         Gtk.ToggleButton inspector_toggle {
           icon-name: "sidebar-show-right-symbolic";
           tooltip-text: _("Toggle inspector");
           active: bind template.show-inspector bidirectional;
+          styles ["flat"]
         }
       }
 

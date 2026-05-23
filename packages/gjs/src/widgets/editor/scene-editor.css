@@ -7,3 +7,27 @@
     alpha(@window_fg_color, 0.0) 16px
   );
 }
+
+/*
+ * Gradia-style transparent HeaderBar for the scene-editor canvas:
+ * the bar itself is `styles ["flat", "header-osd"]` so the bar
+ * background drops out (.flat) and the contained window-controls
+ * + buttons gain a soft OSD pill around their icons so they stay
+ * legible against the canvas's scratchpad backdrop.
+ *
+ * Pattern lifted from `refs/Gradia/data/style.css` § `.header-osd`.
+ * Only the window-control image is restyled — flat-bg + a
+ * translucent backdrop matching the other OSD chrome (history,
+ * zoom, etc.). Custom `[start] / [end]` buttons in the header
+ * already carry `styles ["flat"]` from the .blp.
+ */
+.header-osd windowcontrols button image {
+  background-color: alpha(@window_fg_color, 0.08);
+  background-image: none;
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.header-osd windowcontrols button:hover image {
+  background-color: alpha(@window_fg_color, 0.16);
+}
