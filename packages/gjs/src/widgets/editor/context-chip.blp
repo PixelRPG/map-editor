@@ -4,7 +4,10 @@ using Adw 1;
 template $PixelRpgContextChip : Adw.Bin {
   halign: end;
   valign: start;
-  margin-top: 12;
+  // Clear the transparent floating headerbar (see floating-history).
+  // Symmetrical 60 px so the chip aligns horizontally with the
+  // history pill on the opposite side.
+  margin-top: 60;
   margin-end: 12;
 
   Gtk.Box {

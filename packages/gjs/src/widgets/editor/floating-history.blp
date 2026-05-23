@@ -4,7 +4,11 @@ using Adw 1;
 template $PixelRpgFloatingHistory : Adw.Bin {
   halign: start;
   valign: start;
-  margin-top: 12;
+  // Clear the transparent floating headerbar which sits on top of
+  // the canvas now (see `Adw.ToolbarView.extend-content-to-top-edge`
+  // in `scene-editor-view.blp`). 60 px = header height + a 12 px
+  // breathing gap below it.
+  margin-top: 60;
   margin-start: 12;
 
   Gtk.Box {

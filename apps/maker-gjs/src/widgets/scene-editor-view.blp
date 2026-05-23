@@ -16,45 +16,69 @@ template $SceneEditorView : Adw.Bin {
     };
 
     content: Adw.ToolbarView {
+      // Gradia trick: let the canvas extend *behind* the headerbar so
+      // the map fills the entire frame and the header floats on top.
+      // Combined with `top-bar-style: flat` + the bar's
+      // `["flat", "header-osd"]` classes, the headerbar drops out
+      // entirely visually — only its buttons + windowcontrols
+      // remain, sitting on the canvas like the other OSD chrome.
+      top-bar-style: flat;
+      extend-content-to-top-edge: true;
+
       [top]
       Adw.HeaderBar {
         show-end-title-buttons: true;
         show-title: false;
         styles ["flat", "header-osd"]
 
+        // Left cluster: library toggle + back-to-atlas, grouped into
+        // one OSD pill so they read as a single floating widget
+        // alongside the canvas's other OSD overlays (tool rail,
+        // history, zoom). Single `Gtk.Box [start]` rather than two
+        // separate `[start]` slots — the wrapping pill IS the OSD
+        // container, the inner buttons stay borderless `flat`.
         [start]
-        Gtk.ToggleButton sidebar_toggle {
-          icon-name: "sidebar-show-symbolic";
-          tooltip-text: _("Toggle library");
-          active: bind template.show-library bidirectional;
-          styles ["flat"]
-        }
+        Gtk.Box {
+          spacing: 2;
+          styles ["toolbar", "osd"]
 
-        [start]
-        Gtk.Button back_button {
-          action-name: "win.back-to-atlas";
-          tooltip-text: _("Back to atlas");
-          styles ["flat"]
+          Gtk.ToggleButton sidebar_toggle {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Toggle library");
+            active: bind template.show-library bidirectional;
+            styles ["flat"]
+          }
 
-          child: Gtk.Box {
-            spacing: 4;
+          Gtk.Button back_button {
+            action-name: "win.back-to-atlas";
+            tooltip-text: _("Back to atlas");
+            styles ["flat"]
 
-            Gtk.Image {
-              icon-name: "go-previous-symbolic";
-            }
+            child: Gtk.Box {
+              spacing: 4;
 
-            Gtk.Label {
-              label: _("Atlas");
-            }
-          };
+              Gtk.Image {
+                icon-name: "go-previous-symbolic";
+              }
+
+              Gtk.Label {
+                label: _("Atlas");
+              }
+            };
+          }
         }
 
         [end]
-        Gtk.ToggleButton inspector_toggle {
-          icon-name: "sidebar-show-right-symbolic";
-          tooltip-text: _("Toggle inspector");
-          active: bind template.show-inspector bidirectional;
-          styles ["flat"]
+        Gtk.Box {
+          spacing: 2;
+          styles ["toolbar", "osd"]
+
+          Gtk.ToggleButton inspector_toggle {
+            icon-name: "sidebar-show-right-symbolic";
+            tooltip-text: _("Toggle inspector");
+            active: bind template.show-inspector bidirectional;
+            styles ["flat"]
+          }
         }
       }
 
