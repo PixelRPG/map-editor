@@ -99681,32 +99681,8 @@
       }
     },
     {
-      "id": "layer_12",
-      "name": "Grass",
-      "visible": true,
-      "properties": {
-        "z": 4
-      }
-    },
-    {
-      "id": "layer_13",
-      "name": "Shrubs",
-      "visible": true,
-      "properties": {
-        "z": 5
-      }
-    },
-    {
-      "id": "layer_14",
-      "name": "Rocks",
-      "visible": true,
-      "properties": {
-        "z": 6
-      }
-    },
-    {
-      "id": "layer_15",
-      "name": "Signs",
+      "id": "layer_decorations",
+      "name": "Decorations",
       "visible": true,
       "properties": {
         "z": 7
@@ -119004,3203 +118980,4367 @@
     },
     {
       "id": "p-layer_12-17",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 38,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-17",
         "kind": "custom",
-        "name": "Object 17"
+        "name": "Grass 17",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-18",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-18",
         "kind": "custom",
-        "name": "Object 18"
+        "name": "Grass 18",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-19",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 40,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-19",
         "kind": "custom",
-        "name": "Object 19"
+        "name": "Grass 19",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-20",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 41,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-20",
         "kind": "custom",
-        "name": "Object 20"
+        "name": "Grass 20",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-21",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 42,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-21",
         "kind": "custom",
-        "name": "Object 21"
+        "name": "Grass 21",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-22",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 42,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-22",
         "kind": "custom",
-        "name": "Object 22"
+        "name": "Grass 22",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-23",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 43,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-23",
         "kind": "custom",
-        "name": "Object 23"
+        "name": "Grass 23",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-24",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 43,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-24",
         "kind": "custom",
-        "name": "Object 24"
+        "name": "Grass 24",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-25",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 44,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-25",
         "kind": "custom",
-        "name": "Object 25"
+        "name": "Grass 25",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-26",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 42,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-26",
         "kind": "custom",
-        "name": "Object 26"
+        "name": "Grass 26",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-27",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 41,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-27",
         "kind": "custom",
-        "name": "Object 27"
+        "name": "Grass 27",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-28",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 41,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-28",
         "kind": "custom",
-        "name": "Object 28"
+        "name": "Grass 28",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-29",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 40,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-29",
         "kind": "custom",
-        "name": "Object 29"
+        "name": "Grass 29",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-30",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 40,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-30",
         "kind": "custom",
-        "name": "Object 30"
+        "name": "Grass 30",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-31",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-31",
         "kind": "custom",
-        "name": "Object 31"
+        "name": "Grass 31",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-32",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-32",
         "kind": "custom",
-        "name": "Object 32"
+        "name": "Grass 32",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-33",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 38,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-33",
         "kind": "custom",
-        "name": "Object 33"
+        "name": "Grass 33",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-34",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 38,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-34",
         "kind": "custom",
-        "name": "Object 34"
+        "name": "Grass 34",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-35",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 37,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-35",
         "kind": "custom",
-        "name": "Object 35"
+        "name": "Grass 35",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-36",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 36,
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-36",
         "kind": "custom",
-        "name": "Object 36"
+        "name": "Grass 36",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-37",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 37,
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-37",
         "kind": "custom",
-        "name": "Object 37"
+        "name": "Grass 37",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-38",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 71,
       "inline": {
         "id": "def-layer_12-38",
         "kind": "custom",
-        "name": "Object 38"
+        "name": "Grass 38",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-39",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 71,
       "inline": {
         "id": "def-layer_12-39",
         "kind": "custom",
-        "name": "Object 39"
+        "name": "Grass 39",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-40",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-40",
         "kind": "custom",
-        "name": "Object 40"
+        "name": "Grass 40",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-41",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-41",
         "kind": "custom",
-        "name": "Object 41"
+        "name": "Grass 41",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-42",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-42",
         "kind": "custom",
-        "name": "Object 42"
+        "name": "Grass 42",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-43",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-43",
         "kind": "custom",
-        "name": "Object 43"
+        "name": "Grass 43",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-44",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 22,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-44",
         "kind": "custom",
-        "name": "Object 44"
+        "name": "Grass 44",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-45",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-45",
         "kind": "custom",
-        "name": "Object 45"
+        "name": "Grass 45",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-46",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-46",
         "kind": "custom",
-        "name": "Object 46"
+        "name": "Grass 46",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-47",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 25,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-47",
         "kind": "custom",
-        "name": "Object 47"
+        "name": "Grass 47",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-48",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 26,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-48",
         "kind": "custom",
-        "name": "Object 48"
+        "name": "Grass 48",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-53",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-53",
         "kind": "custom",
-        "name": "Object 53"
+        "name": "Grass 53",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-54",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 22,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-54",
         "kind": "custom",
-        "name": "Object 54"
+        "name": "Grass 54",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-55",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 21,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-55",
         "kind": "custom",
-        "name": "Object 55"
+        "name": "Grass 55",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-56",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 21,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-56",
         "kind": "custom",
-        "name": "Object 56"
+        "name": "Grass 56",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-57",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 20,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-57",
         "kind": "custom",
-        "name": "Object 57"
+        "name": "Grass 57",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-58",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 20,
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-58",
         "kind": "custom",
-        "name": "Object 58"
+        "name": "Grass 58",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-59",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 19,
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-59",
         "kind": "custom",
-        "name": "Object 59"
+        "name": "Grass 59",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-60",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 19,
       "tileY": 35,
       "inline": {
         "id": "def-layer_12-60",
         "kind": "custom",
-        "name": "Object 60"
+        "name": "Grass 60",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-61",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 19,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-61",
         "kind": "custom",
-        "name": "Object 61"
+        "name": "Grass 61",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-62",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 19,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-62",
         "kind": "custom",
-        "name": "Object 62"
+        "name": "Grass 62",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-63",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 20,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-63",
         "kind": "custom",
-        "name": "Object 63"
+        "name": "Grass 63",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-64",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 52,
       "inline": {
         "id": "def-layer_12-64",
         "kind": "custom",
-        "name": "Object 64"
+        "name": "Grass 64",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-65",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 53,
       "inline": {
         "id": "def-layer_12-65",
         "kind": "custom",
-        "name": "Object 65"
+        "name": "Grass 65",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-66",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 53,
       "inline": {
         "id": "def-layer_12-66",
         "kind": "custom",
-        "name": "Object 66"
+        "name": "Grass 66",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-67",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-67",
         "kind": "custom",
-        "name": "Object 67"
+        "name": "Grass 67",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-68",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-68",
         "kind": "custom",
-        "name": "Object 68"
+        "name": "Grass 68",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-69",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 24,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-69",
         "kind": "custom",
-        "name": "Object 69"
+        "name": "Grass 69",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-70",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 23,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-70",
         "kind": "custom",
-        "name": "Object 70"
+        "name": "Grass 70",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-71",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 22,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-71",
         "kind": "custom",
-        "name": "Object 71"
+        "name": "Grass 71",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-72",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 21,
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-72",
         "kind": "custom",
-        "name": "Object 72"
+        "name": "Grass 72",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-73",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 21,
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-73",
         "kind": "custom",
-        "name": "Object 73"
+        "name": "Grass 73",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-74",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 22,
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-74",
         "kind": "custom",
-        "name": "Object 74"
+        "name": "Grass 74",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-75",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 36,
       "inline": {
         "id": "def-layer_12-75",
         "kind": "custom",
-        "name": "Object 75"
+        "name": "Grass 75",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-76",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 37,
       "inline": {
         "id": "def-layer_12-76",
         "kind": "custom",
-        "name": "Object 76"
+        "name": "Grass 76",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-77",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 38,
       "tileY": 37,
       "inline": {
         "id": "def-layer_12-77",
         "kind": "custom",
-        "name": "Object 77"
+        "name": "Grass 77",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-78",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 51,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-78",
         "kind": "custom",
-        "name": "Object 78"
+        "name": "Grass 78",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-79",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 52,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-79",
         "kind": "custom",
-        "name": "Object 79"
+        "name": "Grass 79",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-80",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 53,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-80",
         "kind": "custom",
-        "name": "Object 80"
+        "name": "Grass 80",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-81",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 54,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-81",
         "kind": "custom",
-        "name": "Object 81"
+        "name": "Grass 81",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-82",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-82",
         "kind": "custom",
-        "name": "Object 82"
+        "name": "Grass 82",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-83",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-83",
         "kind": "custom",
-        "name": "Object 83"
+        "name": "Grass 83",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-84",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 54,
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-84",
         "kind": "custom",
-        "name": "Object 84"
+        "name": "Grass 84",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-85",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-85",
         "kind": "custom",
-        "name": "Object 85"
+        "name": "Grass 85",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-86",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 56,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-86",
         "kind": "custom",
-        "name": "Object 86"
+        "name": "Grass 86",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-87",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 56,
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-87",
         "kind": "custom",
-        "name": "Object 87"
+        "name": "Grass 87",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-88",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-88",
         "kind": "custom",
-        "name": "Object 88"
+        "name": "Grass 88",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-89",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-89",
         "kind": "custom",
-        "name": "Object 89"
+        "name": "Grass 89",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-90",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-90",
         "kind": "custom",
-        "name": "Object 90"
+        "name": "Grass 90",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-91",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 56,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-91",
         "kind": "custom",
-        "name": "Object 91"
+        "name": "Grass 91",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-92",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 56,
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-92",
         "kind": "custom",
-        "name": "Object 92"
+        "name": "Grass 92",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-93",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 56,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-93",
         "kind": "custom",
-        "name": "Object 93"
+        "name": "Grass 93",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-94",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-94",
         "kind": "custom",
-        "name": "Object 94"
+        "name": "Grass 94",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-95",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 54,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-95",
         "kind": "custom",
-        "name": "Object 95"
+        "name": "Grass 95",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-96",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 53,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-96",
         "kind": "custom",
-        "name": "Object 96"
+        "name": "Grass 96",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-97",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 52,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-97",
         "kind": "custom",
-        "name": "Object 97"
+        "name": "Grass 97",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-98",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 51,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-98",
         "kind": "custom",
-        "name": "Object 98"
+        "name": "Grass 98",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-99",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-99",
         "kind": "custom",
-        "name": "Object 99"
+        "name": "Grass 99",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-100",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-100",
         "kind": "custom",
-        "name": "Object 100"
+        "name": "Grass 100",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-101",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 55,
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-101",
         "kind": "custom",
-        "name": "Object 101"
+        "name": "Grass 101",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-102",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 56,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-102",
         "kind": "custom",
-        "name": "Object 102"
+        "name": "Grass 102",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-103",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 64,
       "tileY": 59,
       "inline": {
         "id": "def-layer_12-103",
         "kind": "custom",
-        "name": "Object 103"
+        "name": "Grass 103",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-104",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 65,
       "tileY": 59,
       "inline": {
         "id": "def-layer_12-104",
         "kind": "custom",
-        "name": "Object 104"
+        "name": "Grass 104",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-105",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 62,
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-105",
         "kind": "custom",
-        "name": "Object 105"
+        "name": "Grass 105",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-106",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 61,
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-106",
         "kind": "custom",
-        "name": "Object 106"
+        "name": "Grass 106",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-107",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 60,
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-107",
         "kind": "custom",
-        "name": "Object 107"
+        "name": "Grass 107",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-108",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 59,
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-108",
         "kind": "custom",
-        "name": "Object 108"
+        "name": "Grass 108",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-109",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 58,
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-109",
         "kind": "custom",
-        "name": "Object 109"
+        "name": "Grass 109",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-110",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-110",
         "kind": "custom",
-        "name": "Object 110"
+        "name": "Grass 110",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-111",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 17,
       "inline": {
         "id": "def-layer_12-111",
         "kind": "custom",
-        "name": "Object 111"
+        "name": "Grass 111",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-112",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 53,
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-112",
         "kind": "custom",
-        "name": "Object 112"
+        "name": "Grass 112",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-113",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 52,
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-113",
         "kind": "custom",
-        "name": "Object 113"
+        "name": "Grass 113",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-114",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 52,
       "tileY": 16,
       "inline": {
         "id": "def-layer_12-114",
         "kind": "custom",
-        "name": "Object 114"
+        "name": "Grass 114",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-115",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 51,
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-115",
         "kind": "custom",
-        "name": "Object 115"
+        "name": "Grass 115",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-116",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 52,
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-116",
         "kind": "custom",
-        "name": "Object 116"
+        "name": "Grass 116",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-117",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 51,
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-117",
         "kind": "custom",
-        "name": "Object 117"
+        "name": "Grass 117",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-118",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 50,
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-118",
         "kind": "custom",
-        "name": "Object 118"
+        "name": "Grass 118",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-119",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 50,
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-119",
         "kind": "custom",
-        "name": "Object 119"
+        "name": "Grass 119",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-120",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 49,
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-120",
         "kind": "custom",
-        "name": "Object 120"
+        "name": "Grass 120",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-121",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 49,
       "tileY": 13,
       "inline": {
         "id": "def-layer_12-121",
         "kind": "custom",
-        "name": "Object 121"
+        "name": "Grass 121",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-122",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 13,
       "inline": {
         "id": "def-layer_12-122",
         "kind": "custom",
-        "name": "Object 122"
+        "name": "Grass 122",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-123",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 12,
       "inline": {
         "id": "def-layer_12-123",
         "kind": "custom",
-        "name": "Object 123"
+        "name": "Grass 123",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-124",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 62,
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-124",
         "kind": "custom",
-        "name": "Object 124"
+        "name": "Grass 124",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-125",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 61,
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-125",
         "kind": "custom",
-        "name": "Object 125"
+        "name": "Grass 125",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-126",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 86,
       "tileY": 77,
       "inline": {
         "id": "def-layer_12-126",
         "kind": "custom",
-        "name": "Object 126"
+        "name": "Grass 126",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-127",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 87,
       "tileY": 76,
       "inline": {
         "id": "def-layer_12-127",
         "kind": "custom",
-        "name": "Object 127"
+        "name": "Grass 127",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-128",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 88,
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-128",
         "kind": "custom",
-        "name": "Object 128"
+        "name": "Grass 128",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-129",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 89,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-129",
         "kind": "custom",
-        "name": "Object 129"
+        "name": "Grass 129",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-130",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 90,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-130",
         "kind": "custom",
-        "name": "Object 130"
+        "name": "Grass 130",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-131",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 91,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-131",
         "kind": "custom",
-        "name": "Object 131"
+        "name": "Grass 131",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-132",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 92,
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-132",
         "kind": "custom",
-        "name": "Object 132"
+        "name": "Grass 132",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-133",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 92,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-133",
         "kind": "custom",
-        "name": "Object 133"
+        "name": "Grass 133",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-134",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 93,
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-134",
         "kind": "custom",
-        "name": "Object 134"
+        "name": "Grass 134",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-135",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 93,
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-135",
         "kind": "custom",
-        "name": "Object 135"
+        "name": "Grass 135",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-136",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 94,
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-136",
         "kind": "custom",
-        "name": "Object 136"
+        "name": "Grass 136",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-137",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 131,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-137",
         "kind": "custom",
-        "name": "Object 137"
+        "name": "Grass 137",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-138",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 132,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-138",
         "kind": "custom",
-        "name": "Object 138"
+        "name": "Grass 138",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-139",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 132,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-139",
         "kind": "custom",
-        "name": "Object 139"
+        "name": "Grass 139",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-140",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 133,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-140",
         "kind": "custom",
-        "name": "Object 140"
+        "name": "Grass 140",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-141",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 133,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-141",
         "kind": "custom",
-        "name": "Object 141"
+        "name": "Grass 141",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-142",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 134,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-142",
         "kind": "custom",
-        "name": "Object 142"
+        "name": "Grass 142",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-143",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 135,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-143",
         "kind": "custom",
-        "name": "Object 143"
+        "name": "Grass 143",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-144",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 135,
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-144",
         "kind": "custom",
-        "name": "Object 144"
+        "name": "Grass 144",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-145",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 134,
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-145",
         "kind": "custom",
-        "name": "Object 145"
+        "name": "Grass 145",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-146",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 134,
       "tileY": 27,
       "inline": {
         "id": "def-layer_12-146",
         "kind": "custom",
-        "name": "Object 146"
+        "name": "Grass 146",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-147",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 20,
       "inline": {
         "id": "def-layer_12-147",
         "kind": "custom",
-        "name": "Object 147"
+        "name": "Grass 147",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-148",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 20,
       "inline": {
         "id": "def-layer_12-148",
         "kind": "custom",
-        "name": "Object 148"
+        "name": "Grass 148",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-149",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 20,
       "inline": {
         "id": "def-layer_12-149",
         "kind": "custom",
-        "name": "Object 149"
+        "name": "Grass 149",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-150",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 21,
       "inline": {
         "id": "def-layer_12-150",
         "kind": "custom",
-        "name": "Object 150"
+        "name": "Grass 150",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-151",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 21,
       "inline": {
         "id": "def-layer_12-151",
         "kind": "custom",
-        "name": "Object 151"
+        "name": "Grass 151",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-152",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 21,
       "inline": {
         "id": "def-layer_12-152",
         "kind": "custom",
-        "name": "Object 152"
+        "name": "Grass 152",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-153",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 22,
       "inline": {
         "id": "def-layer_12-153",
         "kind": "custom",
-        "name": "Object 153"
+        "name": "Grass 153",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-154",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 22,
       "inline": {
         "id": "def-layer_12-154",
         "kind": "custom",
-        "name": "Object 154"
+        "name": "Grass 154",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-155",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 22,
       "inline": {
         "id": "def-layer_12-155",
         "kind": "custom",
-        "name": "Object 155"
+        "name": "Grass 155",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-156",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-156",
         "kind": "custom",
-        "name": "Object 156"
+        "name": "Grass 156",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-157",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-157",
         "kind": "custom",
-        "name": "Object 157"
+        "name": "Grass 157",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-158",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-158",
         "kind": "custom",
-        "name": "Object 158"
+        "name": "Grass 158",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-159",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 24,
       "inline": {
         "id": "def-layer_12-159",
         "kind": "custom",
-        "name": "Object 159"
+        "name": "Grass 159",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-160",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 24,
       "inline": {
         "id": "def-layer_12-160",
         "kind": "custom",
-        "name": "Object 160"
+        "name": "Grass 160",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-161",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 24,
       "inline": {
         "id": "def-layer_12-161",
         "kind": "custom",
-        "name": "Object 161"
+        "name": "Grass 161",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-162",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-162",
         "kind": "custom",
-        "name": "Object 162"
+        "name": "Grass 162",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-163",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 25,
       "inline": {
         "id": "def-layer_12-163",
         "kind": "custom",
-        "name": "Object 163"
+        "name": "Grass 163",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-164",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 26,
       "inline": {
         "id": "def-layer_12-164",
         "kind": "custom",
-        "name": "Object 164"
+        "name": "Grass 164",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-165",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 27,
       "inline": {
         "id": "def-layer_12-165",
         "kind": "custom",
-        "name": "Object 165"
+        "name": "Grass 165",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-166",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-166",
         "kind": "custom",
-        "name": "Object 166"
+        "name": "Grass 166",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-167",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-167",
         "kind": "custom",
-        "name": "Object 167"
+        "name": "Grass 167",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-168",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-168",
         "kind": "custom",
-        "name": "Object 168"
+        "name": "Grass 168",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-169",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-169",
         "kind": "custom",
-        "name": "Object 169"
+        "name": "Grass 169",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-170",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-170",
         "kind": "custom",
-        "name": "Object 170"
+        "name": "Grass 170",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-171",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-171",
         "kind": "custom",
-        "name": "Object 171"
+        "name": "Grass 171",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-172",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-172",
         "kind": "custom",
-        "name": "Object 172"
+        "name": "Grass 172",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-173",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-173",
         "kind": "custom",
-        "name": "Object 173"
+        "name": "Grass 173",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-174",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-174",
         "kind": "custom",
-        "name": "Object 174"
+        "name": "Grass 174",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-175",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-175",
         "kind": "custom",
-        "name": "Object 175"
+        "name": "Grass 175",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-176",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-176",
         "kind": "custom",
-        "name": "Object 176"
+        "name": "Grass 176",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-177",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-177",
         "kind": "custom",
-        "name": "Object 177"
+        "name": "Grass 177",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-178",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-178",
         "kind": "custom",
-        "name": "Object 178"
+        "name": "Grass 178",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-179",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-179",
         "kind": "custom",
-        "name": "Object 179"
+        "name": "Grass 179",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-236",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 102,
       "inline": {
         "id": "def-layer_12-236",
         "kind": "custom",
-        "name": "Object 236"
+        "name": "Grass 236",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-237",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 101,
       "inline": {
         "id": "def-layer_12-237",
         "kind": "custom",
-        "name": "Object 237"
+        "name": "Grass 237",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-238",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 101,
       "inline": {
         "id": "def-layer_12-238",
         "kind": "custom",
-        "name": "Object 238"
+        "name": "Grass 238",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-239",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 46,
       "tileY": 101,
       "inline": {
         "id": "def-layer_12-239",
         "kind": "custom",
-        "name": "Object 239"
+        "name": "Grass 239",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-240",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 46,
       "tileY": 100,
       "inline": {
         "id": "def-layer_12-240",
         "kind": "custom",
-        "name": "Object 240"
+        "name": "Grass 240",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-241",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 100,
       "inline": {
         "id": "def-layer_12-241",
         "kind": "custom",
-        "name": "Object 241"
+        "name": "Grass 241",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-242",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 100,
       "inline": {
         "id": "def-layer_12-242",
         "kind": "custom",
-        "name": "Object 242"
+        "name": "Grass 242",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-243",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 99,
       "inline": {
         "id": "def-layer_12-243",
         "kind": "custom",
-        "name": "Object 243"
+        "name": "Grass 243",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-244",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 46,
       "tileY": 99,
       "inline": {
         "id": "def-layer_12-244",
         "kind": "custom",
-        "name": "Object 244"
+        "name": "Grass 244",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-245",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 99,
       "inline": {
         "id": "def-layer_12-245",
         "kind": "custom",
-        "name": "Object 245"
+        "name": "Grass 245",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-246",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 98,
       "inline": {
         "id": "def-layer_12-246",
         "kind": "custom",
-        "name": "Object 246"
+        "name": "Grass 246",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-247",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 98,
       "inline": {
         "id": "def-layer_12-247",
         "kind": "custom",
-        "name": "Object 247"
+        "name": "Grass 247",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-248",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 46,
       "tileY": 98,
       "inline": {
         "id": "def-layer_12-248",
         "kind": "custom",
-        "name": "Object 248"
+        "name": "Grass 248",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-249",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 97,
       "inline": {
         "id": "def-layer_12-249",
         "kind": "custom",
-        "name": "Object 249"
+        "name": "Grass 249",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-250",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 97,
       "inline": {
         "id": "def-layer_12-250",
         "kind": "custom",
-        "name": "Object 250"
+        "name": "Grass 250",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-251",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 46,
       "tileY": 97,
       "inline": {
         "id": "def-layer_12-251",
         "kind": "custom",
-        "name": "Object 251"
+        "name": "Grass 251",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-252",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 96,
       "inline": {
         "id": "def-layer_12-252",
         "kind": "custom",
-        "name": "Object 252"
+        "name": "Grass 252",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_12-312",
-      "layerId": "layer_12",
+      "layerId": "layer_decorations",
       "tileX": 43,
       "tileY": 35,
       "inline": {
         "id": "def-layer_12-312",
         "kind": "custom",
-        "name": "Object 312"
+        "name": "Grass 312",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 339
+        }
       }
     },
     {
       "id": "p-layer_13-180",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 34,
       "inline": {
         "id": "def-layer_13-180",
         "kind": "custom",
-        "name": "Object 180"
+        "name": "Shrubs 180",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-181",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 35,
       "inline": {
         "id": "def-layer_13-181",
         "kind": "custom",
-        "name": "Object 181"
+        "name": "Shrubs 181",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-182",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 36,
       "inline": {
         "id": "def-layer_13-182",
         "kind": "custom",
-        "name": "Object 182"
+        "name": "Shrubs 182",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-183",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 37,
       "inline": {
         "id": "def-layer_13-183",
         "kind": "custom",
-        "name": "Object 183"
+        "name": "Shrubs 183",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-184",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-184",
         "kind": "custom",
-        "name": "Object 184"
+        "name": "Shrubs 184",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-185",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-185",
         "kind": "custom",
-        "name": "Object 185"
+        "name": "Shrubs 185",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-186",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 128,
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-186",
         "kind": "custom",
-        "name": "Object 186"
+        "name": "Shrubs 186",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-187",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 129,
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-187",
         "kind": "custom",
-        "name": "Object 187"
+        "name": "Shrubs 187",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-188",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 129,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-188",
         "kind": "custom",
-        "name": "Object 188"
+        "name": "Shrubs 188",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-189",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 130,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-189",
         "kind": "custom",
-        "name": "Object 189"
+        "name": "Shrubs 189",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-190",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 130,
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-190",
         "kind": "custom",
-        "name": "Object 190"
+        "name": "Shrubs 190",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-191",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 130,
       "tileY": 41,
       "inline": {
         "id": "def-layer_13-191",
         "kind": "custom",
-        "name": "Object 191"
+        "name": "Shrubs 191",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-192",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 42,
       "inline": {
         "id": "def-layer_13-192",
         "kind": "custom",
-        "name": "Object 192"
+        "name": "Shrubs 192",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-193",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 41,
       "inline": {
         "id": "def-layer_13-193",
         "kind": "custom",
-        "name": "Object 193"
+        "name": "Shrubs 193",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-194",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 41,
       "inline": {
         "id": "def-layer_13-194",
         "kind": "custom",
-        "name": "Object 194"
+        "name": "Shrubs 194",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-195",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-195",
         "kind": "custom",
-        "name": "Object 195"
+        "name": "Shrubs 195",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-196",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-196",
         "kind": "custom",
-        "name": "Object 196"
+        "name": "Shrubs 196",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-197",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-197",
         "kind": "custom",
-        "name": "Object 197"
+        "name": "Shrubs 197",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-198",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-198",
         "kind": "custom",
-        "name": "Object 198"
+        "name": "Shrubs 198",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-199",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-199",
         "kind": "custom",
-        "name": "Object 199"
+        "name": "Shrubs 199",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-200",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-200",
         "kind": "custom",
-        "name": "Object 200"
+        "name": "Shrubs 200",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-201",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-201",
         "kind": "custom",
-        "name": "Object 201"
+        "name": "Shrubs 201",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-202",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-202",
         "kind": "custom",
-        "name": "Object 202"
+        "name": "Shrubs 202",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-203",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-203",
         "kind": "custom",
-        "name": "Object 203"
+        "name": "Shrubs 203",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-204",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-204",
         "kind": "custom",
-        "name": "Object 204"
+        "name": "Shrubs 204",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-205",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 37,
       "inline": {
         "id": "def-layer_13-205",
         "kind": "custom",
-        "name": "Object 205"
+        "name": "Shrubs 205",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-206",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 37,
       "inline": {
         "id": "def-layer_13-206",
         "kind": "custom",
-        "name": "Object 206"
+        "name": "Shrubs 206",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-207",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 36,
       "inline": {
         "id": "def-layer_13-207",
         "kind": "custom",
-        "name": "Object 207"
+        "name": "Shrubs 207",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-208",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 36,
       "inline": {
         "id": "def-layer_13-208",
         "kind": "custom",
-        "name": "Object 208"
+        "name": "Shrubs 208",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-209",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 35,
       "inline": {
         "id": "def-layer_13-209",
         "kind": "custom",
-        "name": "Object 209"
+        "name": "Shrubs 209",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-210",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 35,
       "inline": {
         "id": "def-layer_13-210",
         "kind": "custom",
-        "name": "Object 210"
+        "name": "Shrubs 210",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-211",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 34,
       "inline": {
         "id": "def-layer_13-211",
         "kind": "custom",
-        "name": "Object 211"
+        "name": "Shrubs 211",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-212",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 33,
       "inline": {
         "id": "def-layer_13-212",
         "kind": "custom",
-        "name": "Object 212"
+        "name": "Shrubs 212",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-213",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 75,
       "tileY": 44,
       "inline": {
         "id": "def-layer_13-213",
         "kind": "custom",
-        "name": "Object 213"
+        "name": "Shrubs 213",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-214",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 84,
       "tileY": 62,
       "inline": {
         "id": "def-layer_13-214",
         "kind": "custom",
-        "name": "Object 214"
+        "name": "Shrubs 214",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-215",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 83,
       "tileY": 63,
       "inline": {
         "id": "def-layer_13-215",
         "kind": "custom",
-        "name": "Object 215"
+        "name": "Shrubs 215",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-216",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 82,
       "tileY": 62,
       "inline": {
         "id": "def-layer_13-216",
         "kind": "custom",
-        "name": "Object 216"
+        "name": "Shrubs 216",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-217",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 81,
       "tileY": 63,
       "inline": {
         "id": "def-layer_13-217",
         "kind": "custom",
-        "name": "Object 217"
+        "name": "Shrubs 217",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-218",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 81,
       "tileY": 76,
       "inline": {
         "id": "def-layer_13-218",
         "kind": "custom",
-        "name": "Object 218"
+        "name": "Shrubs 218",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-219",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 80,
       "tileY": 76,
       "inline": {
         "id": "def-layer_13-219",
         "kind": "custom",
-        "name": "Object 219"
+        "name": "Shrubs 219",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-220",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 80,
       "tileY": 75,
       "inline": {
         "id": "def-layer_13-220",
         "kind": "custom",
-        "name": "Object 220"
+        "name": "Shrubs 220",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-221",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 40,
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-221",
         "kind": "custom",
-        "name": "Object 221"
+        "name": "Shrubs 221",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-222",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-222",
         "kind": "custom",
-        "name": "Object 222"
+        "name": "Shrubs 222",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-223",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 38,
       "tileY": 67,
       "inline": {
         "id": "def-layer_13-223",
         "kind": "custom",
-        "name": "Object 223"
+        "name": "Shrubs 223",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-224",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 36,
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-224",
         "kind": "custom",
-        "name": "Object 224"
+        "name": "Shrubs 224",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-225",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 44,
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-225",
         "kind": "custom",
-        "name": "Object 225"
+        "name": "Shrubs 225",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-226",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 44,
       "tileY": 66,
       "inline": {
         "id": "def-layer_13-226",
         "kind": "custom",
-        "name": "Object 226"
+        "name": "Shrubs 226",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-227",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 22,
       "tileY": 72,
       "inline": {
         "id": "def-layer_13-227",
         "kind": "custom",
-        "name": "Object 227"
+        "name": "Shrubs 227",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-228",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 21,
       "tileY": 72,
       "inline": {
         "id": "def-layer_13-228",
         "kind": "custom",
-        "name": "Object 228"
+        "name": "Shrubs 228",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-229",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 21,
       "tileY": 73,
       "inline": {
         "id": "def-layer_13-229",
         "kind": "custom",
-        "name": "Object 229"
+        "name": "Shrubs 229",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-230",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 27,
       "tileY": 74,
       "inline": {
         "id": "def-layer_13-230",
         "kind": "custom",
-        "name": "Object 230"
+        "name": "Shrubs 230",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-231",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 28,
       "tileY": 74,
       "inline": {
         "id": "def-layer_13-231",
         "kind": "custom",
-        "name": "Object 231"
+        "name": "Shrubs 231",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-232",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 41,
       "tileY": 104,
       "inline": {
         "id": "def-layer_13-232",
         "kind": "custom",
-        "name": "Object 232"
+        "name": "Shrubs 232",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-233",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 117,
       "inline": {
         "id": "def-layer_13-233",
         "kind": "custom",
-        "name": "Object 233"
+        "name": "Shrubs 233",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-234",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 58,
       "tileY": 117,
       "inline": {
         "id": "def-layer_13-234",
         "kind": "custom",
-        "name": "Object 234"
+        "name": "Shrubs 234",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-235",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 59,
       "tileY": 117,
       "inline": {
         "id": "def-layer_13-235",
         "kind": "custom",
-        "name": "Object 235"
+        "name": "Shrubs 235",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-253",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 31,
       "tileY": 92,
       "inline": {
         "id": "def-layer_13-253",
         "kind": "custom",
-        "name": "Object 253"
+        "name": "Shrubs 253",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-254",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 50,
       "tileY": 20,
       "inline": {
         "id": "def-layer_13-254",
         "kind": "custom",
-        "name": "Object 254"
+        "name": "Shrubs 254",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-255",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 50,
       "tileY": 21,
       "inline": {
         "id": "def-layer_13-255",
         "kind": "custom",
-        "name": "Object 255"
+        "name": "Shrubs 255",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-257",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 50,
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-257",
         "kind": "custom",
-        "name": "Object 257"
+        "name": "Shrubs 257",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-258",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 49,
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-258",
         "kind": "custom",
-        "name": "Object 258"
+        "name": "Shrubs 258",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-259",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 48,
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-259",
         "kind": "custom",
-        "name": "Object 259"
+        "name": "Shrubs 259",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-273",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 72,
       "tileY": 64,
       "inline": {
         "id": "def-layer_13-273",
         "kind": "custom",
-        "name": "Object 273"
+        "name": "Shrubs 273",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-274",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 72,
       "tileY": 65,
       "inline": {
         "id": "def-layer_13-274",
         "kind": "custom",
-        "name": "Object 274"
+        "name": "Shrubs 274",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-275",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-275",
         "kind": "custom",
-        "name": "Object 275"
+        "name": "Shrubs 275",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-276",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 21,
       "inline": {
         "id": "def-layer_13-276",
         "kind": "custom",
-        "name": "Object 276"
+        "name": "Shrubs 276",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-277",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 20,
       "inline": {
         "id": "def-layer_13-277",
         "kind": "custom",
-        "name": "Object 277"
+        "name": "Shrubs 277",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-278",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 19,
       "inline": {
         "id": "def-layer_13-278",
         "kind": "custom",
-        "name": "Object 278"
+        "name": "Shrubs 278",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-279",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 19,
       "inline": {
         "id": "def-layer_13-279",
         "kind": "custom",
-        "name": "Object 279"
+        "name": "Shrubs 279",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-280",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 18,
       "inline": {
         "id": "def-layer_13-280",
         "kind": "custom",
-        "name": "Object 280"
+        "name": "Shrubs 280",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-281",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 18,
       "inline": {
         "id": "def-layer_13-281",
         "kind": "custom",
-        "name": "Object 281"
+        "name": "Shrubs 281",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-282",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 160,
       "tileY": 17,
       "inline": {
         "id": "def-layer_13-282",
         "kind": "custom",
-        "name": "Object 282"
+        "name": "Shrubs 282",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-283",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 17,
       "inline": {
         "id": "def-layer_13-283",
         "kind": "custom",
-        "name": "Object 283"
+        "name": "Shrubs 283",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-284",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 159,
       "tileY": 16,
       "inline": {
         "id": "def-layer_13-284",
         "kind": "custom",
-        "name": "Object 284"
+        "name": "Shrubs 284",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-285",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 16,
       "inline": {
         "id": "def-layer_13-285",
         "kind": "custom",
-        "name": "Object 285"
+        "name": "Shrubs 285",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-286",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 158,
       "tileY": 15,
       "inline": {
         "id": "def-layer_13-286",
         "kind": "custom",
-        "name": "Object 286"
+        "name": "Shrubs 286",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-287",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 157,
       "tileY": 15,
       "inline": {
         "id": "def-layer_13-287",
         "kind": "custom",
-        "name": "Object 287"
+        "name": "Shrubs 287",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-288",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 156,
       "tileY": 15,
       "inline": {
         "id": "def-layer_13-288",
         "kind": "custom",
-        "name": "Object 288"
+        "name": "Shrubs 288",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-300",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 34,
       "tileY": 66,
       "inline": {
         "id": "def-layer_13-300",
         "kind": "custom",
-        "name": "Object 300"
+        "name": "Shrubs 300",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-301",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 32,
       "tileY": 67,
       "inline": {
         "id": "def-layer_13-301",
         "kind": "custom",
-        "name": "Object 301"
+        "name": "Shrubs 301",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-302",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 31,
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-302",
         "kind": "custom",
-        "name": "Object 302"
+        "name": "Shrubs 302",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-308",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 29,
       "tileY": 45,
       "inline": {
         "id": "def-layer_13-308",
         "kind": "custom",
-        "name": "Object 308"
+        "name": "Shrubs 308",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-309",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 29,
       "tileY": 46,
       "inline": {
         "id": "def-layer_13-309",
         "kind": "custom",
-        "name": "Object 309"
+        "name": "Shrubs 309",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-310",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 28,
       "tileY": 46,
       "inline": {
         "id": "def-layer_13-310",
         "kind": "custom",
-        "name": "Object 310"
+        "name": "Shrubs 310",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_13-311",
-      "layerId": "layer_13",
+      "layerId": "layer_decorations",
       "tileX": 27,
       "tileY": 46,
       "inline": {
         "id": "def-layer_13-311",
         "kind": "custom",
-        "name": "Object 311"
+        "name": "Shrubs 311",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 372
+        }
       }
     },
     {
       "id": "p-layer_14-260",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 34,
       "tileY": 35,
       "inline": {
         "id": "def-layer_14-260",
         "kind": "custom",
-        "name": "Object 260"
+        "name": "Rocks 260",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-261",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 45,
       "tileY": 37,
       "inline": {
         "id": "def-layer_14-261",
         "kind": "custom",
-        "name": "Object 261"
+        "name": "Rocks 261",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-262",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 44,
       "tileY": 39,
       "inline": {
         "id": "def-layer_14-262",
         "kind": "custom",
-        "name": "Object 262"
+        "name": "Rocks 262",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-263",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 45,
       "tileY": 41,
       "inline": {
         "id": "def-layer_14-263",
         "kind": "custom",
-        "name": "Object 263"
+        "name": "Rocks 263",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-264",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 42,
       "inline": {
         "id": "def-layer_14-264",
         "kind": "custom",
-        "name": "Object 264"
+        "name": "Rocks 264",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-265",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 49,
       "tileY": 41,
       "inline": {
         "id": "def-layer_14-265",
         "kind": "custom",
-        "name": "Object 265"
+        "name": "Rocks 265",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-266",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 39,
       "inline": {
         "id": "def-layer_14-266",
         "kind": "custom",
-        "name": "Object 266"
+        "name": "Rocks 266",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-267",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 47,
       "tileY": 36,
       "inline": {
         "id": "def-layer_14-267",
         "kind": "custom",
-        "name": "Object 267"
+        "name": "Rocks 267",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-268",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 49,
       "tileY": 37,
       "inline": {
         "id": "def-layer_14-268",
         "kind": "custom",
-        "name": "Object 268"
+        "name": "Rocks 268",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-269",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 50,
       "tileY": 39,
       "inline": {
         "id": "def-layer_14-269",
         "kind": "custom",
-        "name": "Object 269"
+        "name": "Rocks 269",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-270",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 43,
       "tileY": 72,
       "inline": {
         "id": "def-layer_14-270",
         "kind": "custom",
-        "name": "Object 270"
+        "name": "Rocks 270",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-271",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 74,
       "tileY": 73,
       "inline": {
         "id": "def-layer_14-271",
         "kind": "custom",
-        "name": "Object 271"
+        "name": "Rocks 271",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-272",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 71,
       "tileY": 64,
       "inline": {
         "id": "def-layer_14-272",
         "kind": "custom",
-        "name": "Object 272"
+        "name": "Rocks 272",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-305",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 31,
       "tileY": 72,
       "inline": {
         "id": "def-layer_14-305",
         "kind": "custom",
-        "name": "Object 305"
+        "name": "Rocks 305",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-306",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 31,
       "tileY": 71,
       "inline": {
         "id": "def-layer_14-306",
         "kind": "custom",
-        "name": "Object 306"
+        "name": "Rocks 306",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_14-307",
-      "layerId": "layer_14",
+      "layerId": "layer_decorations",
       "tileX": 18,
       "tileY": 61,
       "inline": {
         "id": "def-layer_14-307",
         "kind": "custom",
-        "name": "Object 307"
+        "name": "Rocks 307",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 371
+        }
       }
     },
     {
       "id": "p-layer_15-289",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 98,
       "tileY": 42,
       "inline": {
         "id": "def-layer_15-289",
         "kind": "custom",
-        "name": "Object 289"
+        "name": "Signs 289",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-290",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 74,
       "tileY": 35,
       "inline": {
         "id": "def-layer_15-290",
         "kind": "custom",
-        "name": "Object 290"
+        "name": "Signs 290",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-291",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 80,
       "tileY": 34,
       "inline": {
         "id": "def-layer_15-291",
         "kind": "custom",
-        "name": "Object 291"
+        "name": "Signs 291",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-292",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 89,
       "tileY": 64,
       "inline": {
         "id": "def-layer_15-292",
         "kind": "custom",
-        "name": "Object 292"
+        "name": "Signs 292",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-293",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 57,
       "tileY": 73,
       "inline": {
         "id": "def-layer_15-293",
         "kind": "custom",
-        "name": "Object 293"
+        "name": "Signs 293",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-294",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 35,
       "inline": {
         "id": "def-layer_15-294",
         "kind": "custom",
-        "name": "Object 294"
+        "name": "Signs 294",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-295",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 78,
       "tileY": 67,
       "inline": {
         "id": "def-layer_15-295",
         "kind": "custom",
-        "name": "Object 295"
+        "name": "Signs 295",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-296",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 39,
       "tileY": 74,
       "inline": {
         "id": "def-layer_15-296",
         "kind": "custom",
-        "name": "Object 296"
+        "name": "Signs 296",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-297",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 22,
       "tileY": 67,
       "inline": {
         "id": "def-layer_15-297",
         "kind": "custom",
-        "name": "Object 297"
+        "name": "Signs 297",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-298",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 19,
       "tileY": 44,
       "inline": {
         "id": "def-layer_15-298",
         "kind": "custom",
-        "name": "Object 298"
+        "name": "Signs 298",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-299",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 35,
       "tileY": 12,
       "inline": {
         "id": "def-layer_15-299",
         "kind": "custom",
-        "name": "Object 299"
+        "name": "Signs 299",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-303",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 31,
       "tileY": 62,
       "inline": {
         "id": "def-layer_15-303",
         "kind": "custom",
-        "name": "Object 303"
+        "name": "Signs 303",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
       "id": "p-layer_15-304",
-      "layerId": "layer_15",
+      "layerId": "layer_decorations",
       "tileX": 60,
       "tileY": 113,
       "inline": {
         "id": "def-layer_15-304",
         "kind": "custom",
-        "name": "Object 304"
+        "name": "Signs 304",
+        "sprite": {
+          "spriteSetId": "lokiri-forest",
+          "spriteId": 402
+        }
       }
     },
     {
