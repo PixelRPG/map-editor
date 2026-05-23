@@ -71,13 +71,6 @@ template $SceneEditorView : Adw.Bin {
         }
 
         [end]
-        Gtk.MenuButton menu_button {
-          icon-name: "open-menu-symbolic";
-          menu-model: scene_editor_menu;
-          tooltip-text: _("Main Menu");
-        }
-
-        [end]
         Gtk.ToggleButton inspector_toggle {
           icon-name: "sidebar-show-right-symbolic";
           tooltip-text: _("Toggle inspector");
@@ -100,25 +93,3 @@ template $SceneEditorView : Adw.Bin {
   }
 }
 
-menu scene_editor_menu {
-  section {
-    item {
-      label: _("Close Project");
-      action: "win.close-project";
-    }
-  }
-  section {
-    item {
-      label: _("Preferences");
-      action: "app.preferences";
-    }
-    item {
-      label: _("Keyboard Shortcuts");
-      action: "win.show-help-overlay";
-    }
-    item {
-      label: _("About PixelRPG Maker");
-      action: "app.about";
-    }
-  }
-}

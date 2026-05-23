@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
@@ -10,13 +11,21 @@ export interface ObjectDescriptor {
   id: string
   /** Display name — comes from the resolved definition. */
   name: string
-  /** Object kind — drives the row icon. */
+  /** Object kind — drives the row icon when no sprite is available. */
   kind: 'event' | 'teleport' | 'item' | 'npc' | 'spawn-point' | 'custom'
   /** Tile-grid position, surfaced as a "(x, y)" caption. */
   tileX: number
   tileY: number
   /** Layer the placement is sorted under — shown as a tag. */
   layerId: string
+  /**
+   * Optional sprite preview. When supplied, the row renders this
+   * paintable as its prefix instead of the {@link KIND_ICONS}
+   * symbolic icon — useful for decoration / NPC placements with
+   * an actual sprite attached to their definition. Falls back to
+   * the kind icon when `null` / unavailable.
+   */
+  paintable?: Gdk.Paintable | null
 }
 
 /**
@@ -108,15 +117,40 @@ export class ObjectsTab extends Adw.Bin {
         subtitle: `(${placement.tileX}, ${placement.tileY}) · ${placement.layerId}`,
         activatable: true,
       })
-      row.add_prefix(
-        new Gtk.Image({
-          icon_name: KIND_ICONS[placement.kind] ?? KIND_ICONS.custom,
-          pixel_size: 18,
-        }),
-      )
+      row.add_prefix(this._buildPrefix(placement))
       ;(row as Adw.ActionRow & { objectId?: string }).objectId = placement.id
       this._list.append(row)
     }
+  }
+
+  /**
+   * Build the prefix widget shown to the left of an object row's
+   * title. Prefers the placement's `paintable` (the resolved sprite
+   * thumbnail) and falls back to the kind icon when no paintable is
+   * available — that way placements without an attached sprite
+   * still get a recognisable kind-specific badge.
+   *
+   * The sprite is rendered through a `Gtk.Picture` sized to roughly
+   * match the kind icon's footprint so rows stay vertically aligned.
+   * Pixel-art sprites stay crisp via `content-fit: scale-down` —
+   * smaller sprites render at native size + a transparent border,
+   * larger ones scale down preserving aspect.
+   */
+  private _buildPrefix(placement: ObjectDescriptor): Gtk.Widget {
+    if (placement.paintable) {
+      const picture = new Gtk.Picture({
+        paintable: placement.paintable,
+        content_fit: Gtk.ContentFit.SCALE_DOWN,
+        width_request: 28,
+        height_request: 28,
+      })
+      picture.add_css_class('object-sprite-preview')
+      return picture
+    }
+    return new Gtk.Image({
+      icon_name: KIND_ICONS[placement.kind] ?? KIND_ICONS.custom,
+      pixel_size: 18,
+    })
   }
 
   /** Programmatically set the active object. No-op if id not present. */

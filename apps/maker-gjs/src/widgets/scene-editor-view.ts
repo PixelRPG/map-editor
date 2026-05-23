@@ -211,16 +211,53 @@ export class SceneEditorView extends Adw.Bin {
     // (when present) or from the project's `objectLibrary` (when
     // referenced by `defId`); falling back to the placement id keeps
     // the row labelled even if the library lookup misses.
+    //
+    // Placements with a `sprite` ref additionally get a `Gdk.Paintable`
+    // preview attached so the Objects tab renders the actual sprite
+    // instead of the kind-fallback icon (decorations / NPCs gain a
+    // visible thumbnail). We deduplicate sprite-set loads — most
+    // decoration objects share one set, and `getSpriteSet` is async.
     const library = project.resource.data?.objectLibrary ?? []
-    const placements = (mapData.objectPlacements ?? []).map((p) => {
-      const def = p.inline ?? library.find((d) => d.id === p.defId) ?? null
+    const resolvedDefs = (mapData.objectPlacements ?? []).map((p) => ({
+      placement: p,
+      def: p.inline ?? library.find((d) => d.id === p.defId) ?? null,
+    }))
+    const objectSpriteSetIds = new Set<string>()
+    for (const { def } of resolvedDefs) {
+      if (def?.sprite?.spriteSetId) objectSpriteSetIds.add(def.sprite.spriteSetId)
+    }
+    const gdkSheets = new Map<string, GdkSpriteSheet | null>()
+    await Promise.all(
+      Array.from(objectSpriteSetIds).map(async (setId) => {
+        try {
+          const engineSet = await project.resource.getSpriteSet(setId)
+          if (!engineSet) {
+            gdkSheets.set(setId, null)
+            return
+          }
+          const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
+          gdkSheets.set(setId, gdkSet.spriteSheet ?? null)
+        } catch (error) {
+          console.warn(`[SceneEditorView] Failed to load sprite set "${setId}" for objects tab:`, error)
+          gdkSheets.set(setId, null)
+        }
+      }),
+    )
+    const placements = resolvedDefs.map(({ placement, def }) => {
+      let paintable = null
+      if (def?.sprite) {
+        const sheet = gdkSheets.get(def.sprite.spriteSetId)
+        const sprite = sheet?.sprites[def.sprite.spriteId]
+        paintable = sprite?.createPaintable() ?? null
+      }
       return {
-        id: p.id,
-        name: def?.name ?? p.id,
+        id: placement.id,
+        name: def?.name ?? placement.id,
         kind: def?.kind ?? 'custom',
-        tileX: p.tileX,
-        tileY: p.tileY,
-        layerId: p.layerId,
+        tileX: placement.tileX,
+        tileY: placement.tileY,
+        layerId: placement.layerId,
+        paintable,
       }
     })
     this._inspector.objectsTab.setObjects(placements)
