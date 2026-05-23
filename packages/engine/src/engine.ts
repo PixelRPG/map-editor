@@ -1,4 +1,4 @@
-import { Actor, Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, TileMap } from 'excalibur'
+import { Actor, Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, TileMap, Vector } from 'excalibur'
 import type { Command } from './commands/index.ts'
 import {
   ActiveLayerComponent,
@@ -233,6 +233,41 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return []
     return SessionState.get(scene, SelectedPlacementsComponent)?.placementIds ?? []
+  }
+
+  /**
+   * Smoothly pan the camera so the tile centre of the placement
+   * with id `placementId` becomes the viewport centre. Uses
+   * Excalibur's `Camera.move` with `EaseInOutCubic` easing — the
+   * default duration of 400ms reads as a clear "the editor moved
+   * me" cue without dragging on long enough to be annoying when
+   * stepping through a list of objects.
+   *
+   * No-op (returns `false`) when there's no active `MapScene`, no
+   * loaded map data, or the placement id doesn't match anything in
+   * the current map. Returned promise resolves `true` when the
+   * pan completes (or `false` if Excalibur's `move()` rejects, e.g.
+   * because the camera is currently following an actor).
+   */
+  async focusOnPlacement(placementId: string, durationMs = 400): Promise<boolean> {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    const mapData = scene.mapResource?.mapData
+    if (!mapData) return false
+    const placement = mapData.objectPlacements?.find((p) => p.id === placementId)
+    if (!placement) return false
+    const tileWidth = mapData.tileWidth ?? 16
+    const tileHeight = mapData.tileHeight ?? 16
+    const target = new Vector(
+      placement.tileX * tileWidth + tileWidth / 2,
+      placement.tileY * tileHeight + tileHeight / 2,
+    )
+    try {
+      await scene.camera.move(target, durationMs)
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**
