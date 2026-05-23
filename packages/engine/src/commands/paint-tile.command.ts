@@ -2,6 +2,7 @@ import { type Scene, TileMap } from 'excalibur'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import { MapScene } from '../scenes/map.scene.ts'
 import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/layer.manager.ts'
+import { rebuildAllTileGraphics, updateTileMapZIndex } from '../services/tile-graphics.manager.ts'
 import type { Command } from './types.ts'
 
 /**
@@ -56,15 +57,7 @@ export class PaintTileCommand implements Command<PaintTilePayload> {
     if (!ctx) return
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
-    if (this.payload.previousSprites.length === 0) {
-      removeSpritesFromTileForLayer(ctx.tileMap, ctx.mapResource, tile, this.payload.layerId)
-      return
-    }
-    const editor = ctx.tileMap.get(MapEditorComponent)
-    if (!editor) return
-    editor.setSpritesForTileAndLayer(tile, this.payload.layerId, this.payload.previousSprites)
-    // Refresh graphics so the restored sprites render.
-    ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
+    restorePreviousSprites(ctx, tile, this.payload.layerId, this.payload.previousSprites)
   }
 }
 
@@ -96,11 +89,41 @@ export class EraseTileCommand implements Command<Omit<PaintTilePayload, 'spriteI
     if (!ctx) return
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
-    if (this.payload.previousSprites.length === 0) return
-    const editor = ctx.tileMap.get(MapEditorComponent)
-    if (!editor) return
-    editor.setSpritesForTileAndLayer(tile, this.payload.layerId, this.payload.previousSprites)
+    restorePreviousSprites(ctx, tile, this.payload.layerId, this.payload.previousSprites)
   }
+}
+
+/**
+ * Shared revert helper for paint + erase commands.
+ *
+ * If `previousSprites` is empty the tile was empty before the
+ * mutation — go through the `removeSpritesFromTileForLayer` helper
+ * which both clears the shadow state and triggers the graphics
+ * rebuild + z-index refresh.
+ *
+ * Otherwise we restore the captured shadow-state directly via
+ * `MapEditorComponent.setSpritesForTileAndLayer` (the public-API
+ * helpers can only add a single sprite or clear all, not "set this
+ * exact array of sprites"), then **manually** call the two graphics
+ * refresh helpers. Forgetting the rebuild call was a real bug: the
+ * shadow state updated but the canvas kept showing the painted
+ * sprite. Undo *appeared* to do nothing.
+ */
+function restorePreviousSprites(
+  ctx: { tileMap: import('excalibur').TileMap; mapResource: import('../resource/MapResource.ts').MapResource },
+  tile: import('excalibur').Tile,
+  layerId: string,
+  previousSprites: PaintTilePayload['previousSprites'],
+): void {
+  if (previousSprites.length === 0) {
+    removeSpritesFromTileForLayer(ctx.tileMap, ctx.mapResource, tile, layerId)
+    return
+  }
+  const editor = ctx.tileMap.get(MapEditorComponent)
+  if (!editor) return
+  editor.setSpritesForTileAndLayer(tile, layerId, previousSprites)
+  rebuildAllTileGraphics(ctx.tileMap, ctx.mapResource, tile)
+  updateTileMapZIndex(ctx.tileMap, ctx.mapResource)
 }
 
 /**
