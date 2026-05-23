@@ -25,5 +25,16 @@ template $PixelRpgFloatingHistory : Adw.Bin {
       tooltip-text: _("Redo");
       styles ["flat"]
     }
+
+    Gtk.Separator {
+      orientation: vertical;
+    }
+
+    Gtk.ToggleButton grid_button {
+      icon-name: "view-grid-symbolic";
+      action-name: "win.toggle-grid";
+      tooltip-text: _("Toggle grid view");
+      styles ["flat"]
+    }
   }
 }
