@@ -45,6 +45,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _scenesById = new Map<string, SampleScene>(SAMPLE_SCENES.map((s) => [s.id, s]))
   private _loadedProject: LoadedProject | null = null
   /**
+   * The `win.set-tool` GAction. Kept as a field so `_hydrateSceneEditor`
+   * can push its current state into the engine after every map load —
+   * the engine's `ActiveToolComponent` is per-scene and resets on each
+   * `loadMap`, while this GAction preserves the user's selection across
+   * scenes.
+   */
+  private _toolAction: Gio.SimpleAction | null = null
+  /**
    * Which map the scene editor is currently editing. Tracks
    * `_showSceneEditor` so the persist-requested handler knows which
    * MapResource to serialise.
@@ -175,6 +183,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._engineCtl.engine?.setActiveTool(value!.get_string()[0] as EditorTool)
     })
     winActions.add_action(toolAction)
+    this._toolAction = toolAction
 
     // Undo / redo route through the engine's command stack
     // (\`docs/concepts/editor-architecture.md\` § Phase 5). The engine
@@ -368,6 +377,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // canvas couldn't come up. `populateFromProject`'s engine writes
       // will no-op gracefully since the controller's `_engine` stays
       // null on a failed bring-up.
+    }
+
+    // Push the UI's current tool selection into the freshly-loaded
+    // scene's session state. The engine's `ActiveToolComponent` is
+    // per-scene and resets on every `loadMap`, while the GAction
+    // preserves the user's choice across scenes — without this sync
+    // the UI would still show e.g. "eraser" while the engine reverts
+    // to its system default and the pencil-preview helper hides.
+    const toolState = this._toolAction?.get_state()
+    if (toolState) {
+      this._engineCtl.engine?.setActiveTool(toolState.get_string()[0] as EditorTool)
     }
 
     try {
