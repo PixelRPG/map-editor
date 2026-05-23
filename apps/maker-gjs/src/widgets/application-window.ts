@@ -345,12 +345,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const project = this._loadedProject
     if (!project) return
 
-    try {
-      await this._scene_editor_view.populateFromProject(project, sceneId)
-    } catch (error) {
-      console.warn('[ApplicationWindow] Failed to populate inspector:', error)
-    }
-
+    // Order is load-bearing: `ensureForMap` must complete before
+    // `populateFromProject` so the inspector's initial
+    // `_setActiveTile` / `_setActiveLayer` writes land on a live
+    // Excalibur engine. The reverse order leaves the engine's
+    // `ActiveTile` / `ActiveLayer` session-state null until the user
+    // manually picks a swatch, breaking the brush hover preview at
+    // startup (the slot fires before Excalibur is initialised, so the
+    // gjs widget's `setActiveTile/Layer` forwarders silently no-op
+    // — see `SceneEditorView.setEngineWidget`).
     try {
       await this._engineCtl.ensureForMap(project.projectPath, sceneId)
     } catch (error) {
@@ -360,6 +363,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           : `${typeof error} ${JSON.stringify(error)}`
       console.error('[ApplicationWindow] Failed to bring up engine:', details)
       this._showToast(_('Failed to load map'))
+      // Fall through: still populate the inspector so the user has a
+      // usable surface (palette / layers / objects) even when the
+      // canvas couldn't come up. `populateFromProject`'s engine writes
+      // will no-op gracefully since the controller's `_engine` stays
+      // null on a failed bring-up.
+    }
+
+    try {
+      await this._scene_editor_view.populateFromProject(project, sceneId)
+    } catch (error) {
+      console.warn('[ApplicationWindow] Failed to populate inspector:', error)
     }
   }
 

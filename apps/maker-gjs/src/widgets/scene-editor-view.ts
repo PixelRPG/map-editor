@@ -143,18 +143,20 @@ export class SceneEditorView extends Adw.Bin {
    *
    * Also remembers the engine so inspector selections (tile, layer,
    * tool) can be forwarded into `Engine.setEditorState()`.
+   *
+   * The slot fires synchronously the moment the engine widget is
+   * constructed — before its async Excalibur initialisation finishes.
+   * Don't try to push session-state writes (`setActiveTile`,
+   * `setActiveLayer`) from here: the gjs widget's forwarders no-op
+   * while `_excalibur` is null, so the writes silently disappear.
+   * The host orchestrator (`_hydrateSceneEditor`) is responsible for
+   * ordering `ensureForMap` before `populateFromProject` so the
+   * inspector's `_setActiveTile/_setActiveLayer` writes land on a
+   * live engine.
    */
   setEngineWidget(widget: Gtk.Widget | null, engine?: Engine | null): void {
     this._editor.setEngine(widget)
     this._engine = engine ?? null
-    // Replay the active tile / layer in case `populateFromProject` ran
-    // before the engine was instantiated. Tile id needs the gid offset.
-    if (this._engine) {
-      if (this._activeTileId != null) {
-        this._engine.setActiveTile(this._activeTileId + this._tilesetFirstGid)
-      }
-      if (this._activeLayerId != null) this._engine.setActiveLayer(this._activeLayerId)
-    }
   }
 
   /** Header title + the floating chips. */
