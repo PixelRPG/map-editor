@@ -52,6 +52,17 @@ export const EDITOR_CONSTANTS = {
   // the underlying tile is clearly visible; high enough that the
   // ghost is unambiguously *the* preview (not noise / glare).
   PAINT_PREVIEW_OPACITY: 0.5,
+
+  // Object-placement selection highlight (`SelectionHighlightSystem`).
+  // Bright orange ring drawn on top of the selected placement actor
+  // so the user can tell which entry in the Objects inspector list
+  // corresponds to which on-map sprite. Colour picked for contrast
+  // against the typical green / brown RPG palette and against the
+  // kind-marker outlines (cyan / yellow / green / purple / teal /
+  // salmon) so a selected functional placement still reads as
+  // "selected" rather than "another marker".
+  SELECTION_HIGHLIGHT_COLOR: '#ff8800',
+  SELECTION_HIGHLIGHT_LINE_WIDTH: 2,
 } as const
 
 /**
