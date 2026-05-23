@@ -17,10 +17,12 @@ import {
   ActiveToolComponent,
   type EditorTool,
   MapEditorComponent,
+  TileMapTierComponent,
   UndoStackComponent,
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
+import type { LayerTier } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -89,19 +91,53 @@ export class TileEditorSystem extends System {
     if (!this.scene?.engine) return null
 
     const worldPos = this.scene.engine.screen.screenToWorldCoordinates(screenPos)
+    // The active layer's tier determines which of the (typically
+    // three) tilemaps in the scene this click should land on. All
+    // tier tilemaps share identical dimensions + position, so we can
+    // compute tile coords from whichever tilemap we look up — the
+    // result resolves congruent tiles on every tier.
+    const tier = this.resolveActiveTier()
+    const tileMap = this.findTileMapForTier(tier)
+    if (!tileMap) return null
 
+    const editor = tileMap.get(MapEditorComponent)
+    if (!editor?.isEditable) return null
+
+    const coords = this.toTileCoords(tileMap, worldPos)
+    if (!coords) return null
+
+    const tile = tileMap.getTile(coords.x, coords.y)
+    if (!tile) return null
+
+    return { tileMap, tile, coords, editor }
+  }
+
+  /**
+   * Resolve which tier the active layer maps to. Falls back to
+   * `'ground'` when no active layer has been picked yet (typical
+   * for a freshly-loaded map before any inspector interaction) or
+   * when the active layer id no longer exists in the map data.
+   */
+  private resolveActiveTier(): LayerTier {
+    if (!this.scene) return 'ground'
+    const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
+    const layerId = this.resolveLayerId(explicitLayerId)
+    if (!layerId) return 'ground'
+    const mapResource = (this.scene as MapScene).mapResource
+    const layer = mapResource?.mapData?.layers.find((l) => l.id === layerId)
+    return layer?.tier ?? 'ground'
+  }
+
+  /**
+   * Walk the scene's entities looking for the `TileMap` carrying a
+   * `TileMapTierComponent` for the requested tier. There's one per
+   * tier per `MapScene` so the first hit is authoritative.
+   */
+  private findTileMapForTier(tier: LayerTier): TileMap | null {
+    if (!this.scene) return null
     for (const entity of this.scene.world.entityManager.entities) {
       if (!(entity instanceof TileMap)) continue
-      const editor = entity.get(MapEditorComponent)
-      if (!editor?.isEditable) continue
-
-      const coords = this.toTileCoords(entity, worldPos)
-      if (!coords) continue
-
-      const tile = entity.getTile(coords.x, coords.y)
-      if (!tile) continue
-
-      return { tileMap: entity, tile, coords, editor }
+      if (entity.get(TileMapTierComponent)?.tier === tier) return entity
     }
     return null
   }

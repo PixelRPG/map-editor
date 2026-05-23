@@ -1,5 +1,6 @@
 import type { Animation, Graphic, Sprite, Tile, TileMap } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
+import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { collectHiddenLayerIds } from './layer-visibility.ts'
 
@@ -92,34 +93,37 @@ export function rebuildAllTileGraphics(tileMap: TileMap, mapResource: MapResourc
   }
 }
 
+/**
+ * Pin a tilemap's z to its declared tier. The tilemap's z is set
+ * once on creation by {@link MapResource.createTileMaps} and
+ * doesn't change at runtime, so this function is now a noop for
+ * tilemaps that already carry a {@link TileMapTierComponent} —
+ * kept exported because it's part of {@link refreshAllTileGraphics}'s
+ * pair contract.
+ *
+ * Pre-refactor this set `tileMap.z = max(layer.z, sprite.z) + 100`,
+ * which forced the monolithic tilemap *above* every actor in the
+ * scene. That offset is the bug the tier system replaces — actors
+ * (placements, the future player) now interleave with tilemaps at
+ * their tier's z, not flat-stacked behind one tilemap z=109.
+ *
+ * `mapResource` is retained in the signature so call sites don't
+ * change, and so we can fall back to its first layer's z if a
+ * tilemap somehow lacks the tier marker (defensive only — every
+ * `MapResource`-built tilemap has one).
+ */
 export function updateTileMapZIndex(tileMap: TileMap, mapResource: MapResource): void {
-  const editorComponent = tileMap.get(MapEditorComponent)
-  if (!editorComponent) return
-
-  let maxZIndex = 0
-
-  for (const layer of mapResource.mapData?.layers ?? []) {
-    if (layer.properties?.z) {
-      const layerZ = Number(layer.properties.z)
-      if (layerZ > maxZIndex) {
-        maxZIndex = layerZ
-      }
-    }
+  const tierComponent = tileMap.get(TileMapTierComponent)
+  if (tierComponent) {
+    tileMap.z = TIER_Z[tierComponent.tier]
+    return
   }
-
-  for (let x = 0; x < tileMap.columns; x++) {
-    for (let y = 0; y < tileMap.rows; y++) {
-      const tile = tileMap.getTile(x, y)
-      if (!tile) continue
-      for (const sprite of editorComponent.getSpritesForTileAndLayer(tile)) {
-        if (sprite?.zIndex && sprite.zIndex > maxZIndex) {
-          maxZIndex = sprite.zIndex
-        }
-      }
-    }
-  }
-
-  tileMap.z = maxZIndex + 100
+  // Defensive fallback for tilemaps not built by MapResource — pin
+  // them to the ground tier so they at least don't overpaint
+  // actors. mapResource access here is just to keep the signature
+  // stable for any external caller; not used.
+  void mapResource
+  tileMap.z = TIER_Z.ground
 }
 
 /**

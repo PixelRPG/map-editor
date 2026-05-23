@@ -22,9 +22,10 @@
   ],
   "layers": [
     {
-      "id": "layer_8",
-      "name": "Map Layer 0",
+      "id": "layer_ground",
+      "name": "Ground",
       "visible": true,
+      "tier": "ground",
       "sprites": [
         {
           "x": 61,
@@ -3051,27 +3052,7 @@
           "y": 53,
           "spriteId": 25,
           "spriteSetId": "water"
-        }
-      ],
-      "properties": {
-        "unity:SortingLayer": "Map Layer 0",
-        "z": 0
-      }
-    },
-    {
-      "id": "layer_11",
-      "name": "Water",
-      "visible": true,
-      "properties": {
-        "unity:IsTrigger": true,
-        "z": 1
-      }
-    },
-    {
-      "id": "layer_1",
-      "name": "Map Layer 1",
-      "visible": true,
-      "sprites": [
+        },
         {
           "x": 5,
           "y": 0,
@@ -99666,19 +99647,7 @@
           "spriteId": 232,
           "spriteSetId": "lokiri-forest"
         }
-      ],
-      "properties": {
-        "unity:SortingLayer": "Map Layer 1",
-        "z": 2
-      }
-    },
-    {
-      "id": "layer_10",
-      "name": "Manual Boundaries",
-      "visible": true,
-      "properties": {
-        "z": 3
-      }
+      ]
     },
     {
       "id": "layer_decorations",
@@ -99686,12 +99655,14 @@
       "visible": true,
       "properties": {
         "z": 7
-      }
+      },
+      "tier": "hero"
     },
     {
-      "id": "layer_2",
-      "name": "Map Layer 2",
+      "id": "layer_overlay",
+      "name": "Overlay",
       "visible": true,
+      "tier": "overlay",
       "sprites": [
         {
           "x": 13,
@@ -118869,19 +118840,12 @@
           "spriteId": 590,
           "spriteSetId": "lokiri-forest"
         }
-      ],
-      "properties": {
-        "unity:SortingLayer": "Map Layer 2",
-        "z": 8
-      }
+      ]
     },
     {
-      "id": "layer_16",
-      "name": "Camera Boundaries",
-      "visible": true,
-      "properties": {
-        "z": 9
-      }
+      "id": "layer_functional",
+      "name": "Functional",
+      "visible": false
     }
   ],
   "properties": {
@@ -118892,7 +118856,7 @@
   "objectPlacements": [
     {
       "id": "p-layer_11-10",
-      "layerId": "layer_11",
+      "layerId": "layer_functional",
       "tileX": 62,
       "tileY": 27,
       "inline": {
@@ -118903,7 +118867,7 @@
     },
     {
       "id": "p-layer_11-11",
-      "layerId": "layer_11",
+      "layerId": "layer_functional",
       "tileX": 61,
       "tileY": 38,
       "inline": {
@@ -118914,7 +118878,7 @@
     },
     {
       "id": "p-layer_11-15",
-      "layerId": "layer_11",
+      "layerId": "layer_functional",
       "tileX": 90,
       "tileY": 33,
       "inline": {
@@ -118925,7 +118889,7 @@
     },
     {
       "id": "p-layer_11-16",
-      "layerId": "layer_11",
+      "layerId": "layer_functional",
       "tileX": 81,
       "tileY": 40,
       "inline": {
@@ -118936,7 +118900,7 @@
     },
     {
       "id": "p-layer_10-5",
-      "layerId": "layer_10",
+      "layerId": "layer_functional",
       "tileX": 57,
       "tileY": 64,
       "inline": {
@@ -118947,7 +118911,7 @@
     },
     {
       "id": "p-layer_10-6",
-      "layerId": "layer_10",
+      "layerId": "layer_functional",
       "tileX": 62,
       "tileY": 64,
       "inline": {
@@ -118958,7 +118922,7 @@
     },
     {
       "id": "p-layer_10-7",
-      "layerId": "layer_10",
+      "layerId": "layer_functional",
       "tileX": 82,
       "tileY": 29,
       "inline": {
@@ -118969,7 +118933,7 @@
     },
     {
       "id": "p-layer_10-8",
-      "layerId": "layer_10",
+      "layerId": "layer_functional",
       "tileX": 84,
       "tileY": 29,
       "inline": {
@@ -123345,7 +123309,7 @@
     },
     {
       "id": "p-layer_16-314",
-      "layerId": "layer_16",
+      "layerId": "layer_functional",
       "tileX": 5,
       "tileY": 0,
       "inline": {

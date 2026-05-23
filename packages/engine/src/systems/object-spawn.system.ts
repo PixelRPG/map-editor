@@ -10,6 +10,7 @@ import {
   TileTransformComponent,
   TriggerComponent,
 } from '../components/index.ts'
+import { TIER_Z } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
 import type {
@@ -20,24 +21,6 @@ import type {
   SpawnPointProperties,
   TeleportProperties,
 } from '../types/data/index.ts'
-
-/**
- * Base z-index for placement actors. Placed well above the
- * tilemap's z (currently `maxLayerZ + 100`, capped in practice at
- * ~109 across our maps) so decorations always render *over* the
- * tilemap rather than peeking through transparent tile gaps.
- *
- * The actor's per-instance z stacks the layer's own `z` on top of
- * this base, so two decoration layers with different `properties.z`
- * still stack against each other.
- *
- * Pre-refactor decorations spawned at z=0 (Actor default) which
- * put them *behind* the entire tilemap. The visual was misleading
- * — rocks only appeared because nearby tiles were transparent,
- * and toggling overlapping tile layers seemed to "delete" them
- * even though their actor entities were still present.
- */
-const PLACEMENT_BASE_Z = 200
 
 /**
  * Walks `MapData.objectPlacements` on first scene activate and
@@ -150,11 +133,13 @@ export class ObjectSpawnSystem extends System {
       entity.addComponent(new SpriteRefComponent(def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId))
       const actor = entity as Actor
       this.attachSpriteGraphic(actor, def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId)
-      // Stack the layer's own `z` on top of the placement base so
-      // multiple decoration layers still order against each other.
+      // Z is driven by the layer's tier — placement actors render at
+      // the same render depth as their tier's tilemap, so e.g.
+      // decoration actors on the 'hero' tier interleave with the
+      // hero-tier tilemap rather than overdrawing the entire map.
+      // Default 'ground' matches the LayerData fallback.
       const layer = mapData?.layers.find((l) => l.id === placement.layerId)
-      const layerZ = layer?.properties?.z !== undefined ? Number(layer.properties.z) : 0
-      actor.z = PLACEMENT_BASE_Z + layerZ
+      actor.z = TIER_Z[layer?.tier ?? 'ground']
       // Respect the layer's visibility flag at spawn. Runtime
       // toggles re-sync via `Engine.setLayerVisible`.
       if (!isLayerVisible(this.mapResource, placement.layerId)) {
