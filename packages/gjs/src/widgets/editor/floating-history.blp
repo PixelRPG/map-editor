@@ -4,17 +4,49 @@ using Adw 1;
 template $PixelRpgFloatingHistory : Adw.Bin {
   halign: start;
   valign: start;
-  // Clear the transparent floating headerbar which sits on top of
-  // the canvas now (see `Adw.ToolbarView.extend-content-to-top-edge`
-  // in `scene-editor-view.blp`). 60 px = header height + a 12 px
-  // breathing gap below it.
-  margin-top: 60;
+  margin-top: 12;
   margin-start: 12;
 
+  // Single top-left OSD cluster covering all navigation + history
+  // controls. Previously navigation (library toggle + back-to-atlas)
+  // lived in the central headerbar's [start] OSD pill and history
+  // (undo / redo / grid) lived here — two stacked pills at the
+  // top-left that didn't visually align. Consolidated so only one
+  // pill renders, matching the Gradia "controls float over canvas"
+  // pattern.
   Gtk.Box {
     orientation: horizontal;
     spacing: 2;
     styles ["toolbar", "osd"]
+
+    Gtk.ToggleButton library_toggle {
+      icon-name: "sidebar-show-symbolic";
+      action-name: "win.toggle-library";
+      tooltip-text: _("Toggle library");
+      styles ["flat"]
+    }
+
+    Gtk.Button back_button {
+      action-name: "win.back-to-atlas";
+      tooltip-text: _("Back to atlas");
+      styles ["flat"]
+
+      child: Gtk.Box {
+        spacing: 4;
+
+        Gtk.Image {
+          icon-name: "go-previous-symbolic";
+        }
+
+        Gtk.Label {
+          label: _("Atlas");
+        }
+      };
+    }
+
+    Gtk.Separator {
+      orientation: vertical;
+    }
 
     Gtk.Button undo_button {
       icon-name: "edit-undo-symbolic";

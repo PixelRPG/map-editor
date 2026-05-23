@@ -16,6 +16,8 @@ import Template from './floating-history.blp'
  * actions and decides what they do.
  */
 export class FloatingHistory extends Adw.Bin {
+  declare _library_toggle: Gtk.ToggleButton
+  declare _back_button: Gtk.Button
   declare _undo_button: Gtk.Button
   declare _redo_button: Gtk.Button
   declare _grid_button: Gtk.ToggleButton
@@ -25,7 +27,7 @@ export class FloatingHistory extends Adw.Bin {
       {
         GTypeName: 'PixelRpgFloatingHistory',
         Template,
-        InternalChildren: ['undo_button', 'redo_button', 'grid_button'],
+        InternalChildren: ['library_toggle', 'back_button', 'undo_button', 'redo_button', 'grid_button'],
       },
       FloatingHistory,
     )

@@ -27,59 +27,16 @@ template $SceneEditorView : Adw.Bin {
 
       [top]
       Adw.HeaderBar {
-        show-end-title-buttons: true;
+        // Central headerbar is intentionally empty — all controls
+        // moved into floating OSD widgets (FloatingHistory on the
+        // left, ContextChip on the right). The bar stays in the
+        // template as a Gtk.WindowHandle-providing drag region so
+        // the user can still grab the canvas-top to move the window.
+        // Window controls (X close) live on the right inspector's
+        // own flat header (see `right-inspector.blp`).
+        show-end-title-buttons: false;
         show-title: false;
-        styles ["flat", "header-osd"]
-
-        // Left cluster: library toggle + back-to-atlas, grouped into
-        // one OSD pill so they read as a single floating widget
-        // alongside the canvas's other OSD overlays (tool rail,
-        // history, zoom). Single `Gtk.Box [start]` rather than two
-        // separate `[start]` slots — the wrapping pill IS the OSD
-        // container, the inner buttons stay borderless `flat`.
-        [start]
-        Gtk.Box {
-          spacing: 2;
-          styles ["toolbar", "osd"]
-
-          Gtk.ToggleButton sidebar_toggle {
-            icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Toggle library");
-            active: bind template.show-library bidirectional;
-            styles ["flat"]
-          }
-
-          Gtk.Button back_button {
-            action-name: "win.back-to-atlas";
-            tooltip-text: _("Back to atlas");
-            styles ["flat"]
-
-            child: Gtk.Box {
-              spacing: 4;
-
-              Gtk.Image {
-                icon-name: "go-previous-symbolic";
-              }
-
-              Gtk.Label {
-                label: _("Atlas");
-              }
-            };
-          }
-        }
-
-        [end]
-        Gtk.Box {
-          spacing: 2;
-          styles ["toolbar", "osd"]
-
-          Gtk.ToggleButton inspector_toggle {
-            icon-name: "sidebar-show-right-symbolic";
-            tooltip-text: _("Toggle inspector");
-            active: bind template.show-inspector bidirectional;
-            styles ["flat"]
-          }
-        }
+        styles ["flat"]
       }
 
       content: Adw.OverlaySplitView inner_split {

@@ -4,16 +4,33 @@ using Adw 1;
 template $PixelRpgContextChip : Adw.Bin {
   halign: end;
   valign: start;
-  // Clear the transparent floating headerbar (see floating-history).
-  // Symmetrical 60 px so the chip aligns horizontally with the
-  // history pill on the opposite side.
-  margin-top: 60;
+  // Symmetrical 12 px with FloatingHistory so both top pills sit on
+  // the same row over the canvas. Previously sat at 60 to clear the
+  // central headerbar's `[end]` cluster; that cluster moves into this
+  // chip now (inspector_toggle below) so the chip can rise to 12.
+  margin-top: 12;
   margin-end: 12;
 
   Gtk.Box {
     orientation: horizontal;
     spacing: 2;
     styles ["toolbar", "osd"]
+
+    // Library-mirror on the right edge — toggles the right inspector.
+    // Lives here (in the canvas's OSD cluster, not the inspector's
+    // own header) so the user can re-open the inspector after
+    // hiding it; if the toggle lived inside the inspector itself
+    // it would vanish along with everything else when hidden.
+    Gtk.ToggleButton inspector_toggle {
+      icon-name: "sidebar-show-right-symbolic";
+      action-name: "win.toggle-inspector";
+      tooltip-text: _("Toggle inspector");
+      styles ["flat"]
+    }
+
+    Gtk.Separator {
+      orientation: vertical;
+    }
 
     Gtk.MenuButton tile_button {
       tooltip-text: _("Active tile");
