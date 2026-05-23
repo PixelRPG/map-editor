@@ -74,17 +74,19 @@ export class SessionState {
    * field on an existing component in place, call
    * {@link notifyMutation} after the mutation.
    *
-   * **Same-instance fast path**: when the caller passes the exact
-   * same instance that's already attached (common when systems do
-   * `get → mutate → set` to push the change through), skip the
-   * `removeComponent` + `addComponent` round-trip. Excalibur's
-   * component removal is partially deferred and re-adding the same
-   * instance in the same tick can leave the component half-removed
-   * by the next frame — observably "every second click silently
-   * drops the new state". Treating same-instance as "just notify"
-   * is both faster and dodges that lifecycle hazard. Callers doing
-   * in-place updates should still prefer {@link notifyMutation};
-   * this fast path is a belt for the suspenders.
+   * **Synchronous removal is critical.** Excalibur's
+   * `entity.removeComponent(ctor)` is *deferred* by default — it
+   * pushes onto a `_componentsToRemove` queue that runs at
+   * end-of-frame. Doing the obvious `removeComponent + addComponent`
+   * pair within the same tick adds the new component immediately
+   * and then the queued removal silently eats it. Observable
+   * effect: subscribers fire on the new value, but next-frame reads
+   * find nothing there. We pass `force = true` to make the removal
+   * synchronous so the new component survives.
+   *
+   * **Same-instance fast path** sits in front of the remove/add to
+   * cover callers that did `get → mutate → set`; for them, no
+   * lifecycle churn is needed at all.
    */
   static set<C extends Component>(scene: Scene, component: C): void {
     const entity = SessionState.ensure(scene)
@@ -96,7 +98,7 @@ export class SessionState {
       return
     }
 
-    if (existing) entity.removeComponent(ctor)
+    if (existing) entity.removeComponent(ctor, true)
     entity.addComponent(component)
     getRegistry(scene).notify(ctor as ComponentCtor<Component>, component)
   }
@@ -104,12 +106,14 @@ export class SessionState {
   /**
    * Remove a component from the singleton if present. Fires
    * subscribers with `null`. No-op when the component isn't
-   * attached.
+   * attached. `force = true` is required so removal is synchronous;
+   * deferred removal can race against a same-tick `set` of the
+   * same component type (see {@link set} JSDoc).
    */
   static unset<C extends Component>(scene: Scene, ctor: ComponentCtor<C>): void {
     const entity = SessionState._find(scene)
     if (!entity?.get(ctor)) return
-    entity.removeComponent(ctor)
+    entity.removeComponent(ctor, true)
     getRegistry(scene).notify(ctor as ComponentCtor<Component>, null)
   }
 
