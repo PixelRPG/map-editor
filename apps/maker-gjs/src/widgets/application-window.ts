@@ -170,6 +170,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(redoAction)
 
+    // Default both to disabled — they switch on once a map is loaded
+    // and the engine reports `canUndo` / `canRedo` (see the
+    // `_engineCtl.onUndoChanged` registration below). Without this
+    // they would be enabled on the welcome view, where pressing
+    // Ctrl+Z is a no-op but the UI affordance suggests otherwise.
+    undoAction.set_enabled(false)
+    redoAction.set_enabled(false)
+    this._engineCtl.onUndoChanged(({ canUndo, canRedo }) => {
+      undoAction.set_enabled(canUndo)
+      redoAction.set_enabled(canRedo)
+    })
+
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo.
     const app = this.get_application() as Adw.Application | null
     app?.set_accels_for_action('win.undo', ['<Primary>z'])

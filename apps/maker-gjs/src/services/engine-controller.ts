@@ -34,6 +34,8 @@ export class EngineController {
   private _zoomHookAttached = false
   private _lastReportedZoom = 1
   private _zoomListener: ((zoom: number) => void) | null = null
+  private _undoHookAttached = false
+  private _undoListener: ((state: { canUndo: boolean; canRedo: boolean }) => void) | null = null
 
   constructor(private readonly slot: EngineSlot) {}
 
@@ -50,6 +52,20 @@ export class EngineController {
    */
   onZoomChanged(listener: (zoom: number) => void): void {
     this._zoomListener = listener
+  }
+
+  /**
+   * Register a listener that fires whenever the active scene's
+   * undo-stack mutates (paint / erase / undo / redo). Mirrors
+   * {@link onZoomChanged} — the listener is invoked once
+   * synchronously with the current `{ canUndo, canRedo }` snapshot
+   * once an engine + map are loaded, then again on every stack
+   * change. The maker uses this to keep `win.undo` / `win.redo`
+   * `GAction.enabled` in sync so the OSD buttons + Ctrl+Z grey out
+   * at stack boundaries.
+   */
+  onUndoChanged(listener: (state: { canUndo: boolean; canRedo: boolean }) => void): void {
+    this._undoListener = listener
   }
 
   /**
@@ -86,6 +102,7 @@ export class EngineController {
     this._engine.setActiveTool('brush')
 
     this._attachZoomHook()
+    this._attachUndoHook()
   }
 
   /**
@@ -106,6 +123,11 @@ export class EngineController {
     this._projectPath = null
     this._mapId = null
     this._zoomHookAttached = false
+    this._undoHookAttached = false
+    // Drop the cached undo state on the host side too — without an
+    // engine, both actions should be disabled regardless of what the
+    // last loaded scene reported.
+    this._undoListener?.({ canUndo: false, canRedo: false })
   }
 
   /** Read the current camera zoom (1 = 100%) or `null` if no engine. */
@@ -137,6 +159,13 @@ export class EngineController {
       if (Math.abs(zoom - this._lastReportedZoom) < 0.01) return
       this._lastReportedZoom = zoom
       this._zoomListener?.(zoom)
+    })
+  }
+
+  private _attachUndoHook(): void {
+    if (this._undoHookAttached || !this._engine) return
+    this._undoHookAttached = this._engine.onUndoStackChanged((state) => {
+      this._undoListener?.(state)
     })
   }
 }
