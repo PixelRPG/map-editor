@@ -1,6 +1,7 @@
-import type { Tile, TileMap } from 'excalibur'
-import { MapEditorComponent } from '../components/map-editor.component.ts'
+import type { Animation, Graphic, Sprite, Tile, TileMap } from 'excalibur'
+import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import { collectHiddenLayerIds } from './layer-visibility.ts'
 
 /**
  * Tile graphics operations and sprite rendering.
@@ -9,32 +10,55 @@ import type { MapResource } from '../resource/MapResource.ts'
  * The TileMap's `MapEditorComponent` is added when the MapResource enters a
  * scene; calling these functions before that point is a programmer error and
  * surfaces as an early return + warning.
+ *
+ * **Cloning is load-bearing.** Excalibur's `Sprite` / `Animation`
+ * instances track per-draw state (transform matrices, current frame
+ * counter for animations). Adding the same instance to multiple
+ * tiles via `tile.addGraphic` causes visual corruption when one
+ * tile's render mutates state another tile is about to read in the
+ * same frame. We clone every graphic before attaching — mirroring
+ * the pattern that `MapResource.applyInitialGraphics` has always
+ * used. Forgetting this is the bug that produced
+ * "rocks vanish after toggling layer visibility": initial render
+ * cloned, runtime rebuild reused references, and the subsequent
+ * toggle's rebuild collided with the shared state.
  */
 
-export function getSpriteFromResource(
-  mapResource: MapResource,
-  spriteInfo: { spriteSetId: string; spriteId: number },
-): unknown | null {
-  const spriteSetResource = mapResource.getSpriteSetResource(spriteInfo.spriteSetId)
-  if (!spriteSetResource) return null
-  return spriteSetResource.sprites[spriteInfo.spriteId] ?? null
+/**
+ * Resolve a `TileSpriteRef` into a fresh, ready-to-attach
+ * Excalibur graphic. Returns `null` when the sprite set isn't
+ * loaded or the requested sprite / animation isn't in it.
+ *
+ * Animations take precedence over static sprites — matches
+ * `MapResource.applyInitialGraphics` (animated tiles fall back to
+ * the static sprite only when the animation id is missing or
+ * unknown).
+ */
+function resolveTileGraphic(mapResource: MapResource, ref: TileSpriteRef): Graphic | null {
+  const spriteSet = mapResource.getSpriteSetResource(ref.spriteSetId)
+  if (!spriteSet) return null
+  if (ref.animationId) {
+    const anim: Animation | undefined = spriteSet.animations[ref.animationId]
+    if (anim) return anim.clone()
+  }
+  const sprite: Sprite | undefined = spriteSet.sprites[ref.spriteId]
+  return sprite ? sprite.clone() : null
 }
 
 /**
- * Build the set of layer ids whose `visible` flag is explicitly
- * `false` on the supplied resource. `undefined` counts as visible
- * (matches the old default + the `LayerDescriptor`'s `visible ?? true`
- * fallback used by the inspector).
- *
- * Cached as a `Set` because the caller is typically inside a per-tile
- * loop and a linear `.find()` per sprite would scale badly.
+ * @deprecated Internal helper retained for backwards-compatibility
+ * with any external caller that imported it before the refactor.
+ * Use {@link resolveTileGraphic} for new code — it accepts a
+ * `TileSpriteRef` (so it can pick animations) and always clones.
  */
-function collectHiddenLayerIds(mapResource: MapResource): Set<string> {
-  const hidden = new Set<string>()
-  for (const layer of mapResource.mapData?.layers ?? []) {
-    if (layer.visible === false) hidden.add(layer.id)
-  }
-  return hidden
+export function getSpriteFromResource(
+  mapResource: MapResource,
+  spriteInfo: { spriteSetId: string; spriteId: number },
+): Graphic | null {
+  const spriteSet = mapResource.getSpriteSetResource(spriteInfo.spriteSetId)
+  if (!spriteSet) return null
+  const sprite = spriteSet.sprites[spriteInfo.spriteId]
+  return sprite ? sprite.clone() : null
 }
 
 export function rebuildAllTileGraphics(tileMap: TileMap, mapResource: MapResource, tile: Tile): void {
@@ -51,45 +75,21 @@ export function rebuildAllTileGraphics(tileMap: TileMap, mapResource: MapResourc
 
   tile.clearGraphics()
 
-  for (const spriteInfo of sortedSprites) {
-    if (spriteInfo?.spriteSetId && typeof spriteInfo.spriteId === 'number') {
-      const graphic = getSpriteFromResource(mapResource, spriteInfo)
-      if (graphic) {
-        try {
-          tile.addGraphic(graphic as Parameters<Tile['addGraphic']>[0])
-        } catch (error) {
-          // Single-sprite failure shouldn't abort the whole rebuild; log with
-          // enough context to debug, then continue.
-          console.error(
-            `[TileGraphicsManager] Failed to add graphic ${spriteInfo.spriteSetId}#${spriteInfo.spriteId} to tile:`,
-            error,
-          )
-        }
-      }
+  for (const ref of sortedSprites) {
+    if (!ref?.spriteSetId || typeof ref.spriteId !== 'number') continue
+    const graphic = resolveTileGraphic(mapResource, ref)
+    if (!graphic) continue
+    try {
+      tile.addGraphic(graphic)
+    } catch (error) {
+      // Single-sprite failure shouldn't abort the whole rebuild; log with
+      // enough context to debug, then continue.
+      console.error(
+        `[TileGraphicsManager] Failed to add graphic ${ref.spriteSetId}#${ref.spriteId} to tile:`,
+        error,
+      )
     }
   }
-}
-
-/**
- * Rebuild graphics on every tile in the supplied `TileMap`. Used after
- * a global state change that affects rendering for many tiles at once
- * — currently: toggling `layer.visible` on a layer. Pairs the per-tile
- * rebuild with a single z-index pass at the end so the maximum
- * z-index of the tilemap reflects all (visible) sprites.
- *
- * Hot for huge maps — O(columns × rows) tiles, each iterating its
- * sprite list — but called only on explicit user toggles, not per
- * frame.
- */
-export function refreshAllTileGraphics(tileMap: TileMap, mapResource: MapResource): void {
-  for (let x = 0; x < tileMap.columns; x++) {
-    for (let y = 0; y < tileMap.rows; y++) {
-      const tile = tileMap.getTile(x, y)
-      if (!tile) continue
-      rebuildAllTileGraphics(tileMap, mapResource, tile)
-    }
-  }
-  updateTileMapZIndex(tileMap, mapResource)
 }
 
 export function updateTileMapZIndex(tileMap: TileMap, mapResource: MapResource): void {
@@ -120,4 +120,25 @@ export function updateTileMapZIndex(tileMap: TileMap, mapResource: MapResource):
   }
 
   tileMap.z = maxZIndex + 100
+}
+
+/**
+ * Rebuild graphics on every tile in the supplied `TileMap`. Used after
+ * a global state change that affects rendering for many tiles at once
+ * — currently: toggling `layer.visible` on a layer. Pairs the per-tile
+ * rebuild with a single z-index pass at the end so the maximum
+ * z-index of the tilemap reflects all (visible) sprites.
+ *
+ * Hot for huge maps — O(columns × rows × sprites-per-tile) — but
+ * called only on explicit user toggles, not per frame.
+ */
+export function refreshAllTileGraphics(tileMap: TileMap, mapResource: MapResource): void {
+  for (let x = 0; x < tileMap.columns; x++) {
+    for (let y = 0; y < tileMap.rows; y++) {
+      const tile = tileMap.getTile(x, y)
+      if (!tile) continue
+      rebuildAllTileGraphics(tileMap, mapResource, tile)
+    }
+  }
+  updateTileMapZIndex(tileMap, mapResource)
 }

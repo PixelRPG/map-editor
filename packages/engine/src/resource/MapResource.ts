@@ -5,6 +5,7 @@ import { MapFormat } from '../format/MapFormat'
 import type { LayerData, MapData, MapResourceOptions } from '../types'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
+import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
 
 /**
@@ -197,12 +198,10 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   private applyInitialGraphics(): void {
-    // Cache layer visibility so we don't .find() per sprite — for a
-    // large map this is the hot loop on first render.
-    const hiddenLayerIds = new Set<string>()
-    for (const layer of this._mapData?.layers ?? []) {
-      if (layer.visible === false) hiddenLayerIds.add(layer.id)
-    }
+    // Hot loop on first render — collect once, branch in the inner
+    // loop. Shared with `rebuildAllTileGraphics` so the two paths
+    // can't disagree on what "hidden" means.
+    const hiddenLayerIds = collectHiddenLayerIds(this)
 
     this.initialSprites.forEach((refs, tile) => {
       const sortedRefs = [...refs].sort((a, b) => {

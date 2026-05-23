@@ -11,6 +11,7 @@ import {
   TriggerComponent,
 } from '../components/index.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import { isLayerVisible } from '../services/layer-visibility.ts'
 import type {
   ItemProperties,
   NpcProperties,
@@ -19,6 +20,24 @@ import type {
   SpawnPointProperties,
   TeleportProperties,
 } from '../types/data/index.ts'
+
+/**
+ * Base z-index for placement actors. Placed well above the
+ * tilemap's z (currently `maxLayerZ + 100`, capped in practice at
+ * ~109 across our maps) so decorations always render *over* the
+ * tilemap rather than peeking through transparent tile gaps.
+ *
+ * The actor's per-instance z stacks the layer's own `z` on top of
+ * this base, so two decoration layers with different `properties.z`
+ * still stack against each other.
+ *
+ * Pre-refactor decorations spawned at z=0 (Actor default) which
+ * put them *behind* the entire tilemap. The visual was misleading
+ * — rocks only appeared because nearby tiles were transparent,
+ * and toggling overlapping tile layers seemed to "delete" them
+ * even though their actor entities were still present.
+ */
+const PLACEMENT_BASE_Z = 200
 
 /**
  * Walks `MapData.objectPlacements` on first scene activate and
@@ -129,14 +148,17 @@ export class ObjectSpawnSystem extends System {
 
     if (def.sprite) {
       entity.addComponent(new SpriteRefComponent(def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId))
-      this.attachSpriteGraphic(entity as Actor, def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId)
-      // Respect the layer's visibility flag at spawn — placements on a
-      // hidden layer come up invisible. Runtime toggles on
-      // `layer.visible` re-sync via `Engine.setLayerVisible`, which
-      // walks the scene and flips matching actors' `graphics.visible`.
+      const actor = entity as Actor
+      this.attachSpriteGraphic(actor, def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId)
+      // Stack the layer's own `z` on top of the placement base so
+      // multiple decoration layers still order against each other.
       const layer = mapData?.layers.find((l) => l.id === placement.layerId)
-      if (layer?.visible === false) {
-        ;(entity as Actor).graphics.visible = false
+      const layerZ = layer?.properties?.z !== undefined ? Number(layer.properties.z) : 0
+      actor.z = PLACEMENT_BASE_Z + layerZ
+      // Respect the layer's visibility flag at spawn. Runtime
+      // toggles re-sync via `Engine.setLayerVisible`.
+      if (!isLayerVisible(this.mapResource, placement.layerId)) {
+        actor.graphics.visible = false
       }
     }
 

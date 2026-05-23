@@ -299,30 +299,28 @@ export class Engine {
    * Toggle a layer's `visible` flag on the active map. Persists the
    * change in-memory only (the host is responsible for serialising
    * `MapResource.mapData` back to disk via `MapFormat.serialize`),
-   * then re-builds the tile graphics on every tile in the map so the
-   * change is visible on the canvas immediately.
+   * then refreshes everything that renders from the layer:
+   *
+   * - **Tile graphics** on every `TileMap` in the scene — sprites
+   *   painted on the tilemap rebuild via `refreshAllTileGraphics`
+   *   which already filters hidden layers.
+   * - **Object placements** — actors spawned by `ObjectSpawnSystem`
+   *   for `MapData.objectPlacements` get their `graphics.visible`
+   *   flipped. A single layer can carry both, so both surfaces
+   *   have to flip together.
    *
    * Returns `true` on success, `false` if there is no active
    * `MapScene` / no layer matches the id.
    *
-   * The graphics rebuild is O(columns × rows × sprites-per-tile) so
-   * keep this off any hot path — it's only called on explicit user
-   * toggles.
+   * O(columns × rows × sprites-per-tile + placements) — only
+   * called on explicit user toggles, not per frame.
    */
   setLayerVisible(layerId: string, visible: boolean): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
-    const mapResource = scene.mapResource
-    if (!mapResource?.mapData) return false
-    const layer = mapResource.mapData.layers.find((l) => l.id === layerId)
-    if (!layer) return false
-    if (layer.visible === visible) return true
+    const layer = this._findLayer(layerId)
+    if (!layer || layer.visible === visible) return layer != null
     layer.visible = visible
-    // Two refresh passes: tile graphics (sprite tiles painted on the
-    // tilemap) and object-placement actors (entities spawned by
-    // `ObjectSpawnSystem` for `MapData.objectPlacements`). A single
-    // layer can carry both — Grass tiles + Grass decoration objects —
-    // so both surfaces have to flip together.
+    const scene = this.excalibur.currentScene as MapScene
+    const mapResource = scene.mapResource
     for (const entity of scene.world.entityManager.entities) {
       if (entity instanceof TileMap) {
         refreshAllTileGraphics(entity, mapResource)
@@ -347,13 +345,8 @@ export class Engine {
    * `MapScene` / no layer matches the id.
    */
   setLayerLocked(layerId: string, locked: boolean): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
-    const mapResource = scene.mapResource
-    if (!mapResource?.mapData) return false
-    const layer = mapResource.mapData.layers.find((l) => l.id === layerId)
-    if (!layer) return false
-    if ((layer.locked ?? false) === locked) return true
+    const layer = this._findLayer(layerId)
+    if (!layer || (layer.locked ?? false) === locked) return layer != null
     layer.locked = locked
     return true
   }
@@ -367,10 +360,20 @@ export class Engine {
    * `TileEditorSystem`'s own checks).
    */
   isLayerLocked(layerId: string): boolean {
+    return this._findLayer(layerId)?.locked ?? false
+  }
+
+  /**
+   * Resolve a `LayerData` on the active `MapScene` by id. Returns
+   * `null` when there is no active `MapScene`, no loaded map data,
+   * or the layer id doesn't match anything in the current map.
+   * Centralised so the three `setLayer…` / `isLayer…` methods agree
+   * on what "active map" means.
+   */
+  private _findLayer(layerId: string) {
     const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
-    const layer = scene.mapResource?.mapData?.layers.find((l) => l.id === layerId)
-    return layer?.locked ?? false
+    if (!(scene instanceof MapScene)) return null
+    return scene.mapResource?.mapData?.layers.find((l) => l.id === layerId) ?? null
   }
 
   /**
