@@ -62,7 +62,21 @@ export function getSpriteFromResource(
   return sprite ? sprite.clone() : null
 }
 
-export function rebuildAllTileGraphics(tileMap: TileMap, mapResource: MapResource, tile: Tile): void {
+/**
+ * Optional per-sprite opacity hook. When supplied, the returned
+ * value is written to the cloned graphic's `opacity` before it's
+ * attached to the tile. Used by the editor view mode (grid mode
+ * dims non-active-layer sprites) — runtime / play paths leave it
+ * undefined to keep everything fully opaque.
+ */
+export type TileGraphicOpacityProvider = (ref: TileSpriteRef) => number
+
+export function rebuildAllTileGraphics(
+  tileMap: TileMap,
+  mapResource: MapResource,
+  tile: Tile,
+  opacityFor?: TileGraphicOpacityProvider,
+): void {
   const editorComponent = tileMap.get(MapEditorComponent)
   if (!editorComponent) return
 
@@ -80,6 +94,7 @@ export function rebuildAllTileGraphics(tileMap: TileMap, mapResource: MapResourc
     if (!ref?.spriteSetId || typeof ref.spriteId !== 'number') continue
     const graphic = resolveTileGraphic(mapResource, ref)
     if (!graphic) continue
+    if (opacityFor) graphic.opacity = opacityFor(ref)
     try {
       tile.addGraphic(graphic)
     } catch (error) {
@@ -136,12 +151,16 @@ export function updateTileMapZIndex(tileMap: TileMap, mapResource: MapResource):
  * Hot for huge maps — O(columns × rows × sprites-per-tile) — but
  * called only on explicit user toggles, not per frame.
  */
-export function refreshAllTileGraphics(tileMap: TileMap, mapResource: MapResource): void {
+export function refreshAllTileGraphics(
+  tileMap: TileMap,
+  mapResource: MapResource,
+  opacityFor?: TileGraphicOpacityProvider,
+): void {
   for (let x = 0; x < tileMap.columns; x++) {
     for (let y = 0; y < tileMap.rows; y++) {
       const tile = tileMap.getTile(x, y)
       if (!tile) continue
-      rebuildAllTileGraphics(tileMap, mapResource, tile)
+      rebuildAllTileGraphics(tileMap, mapResource, tile, opacityFor)
     }
   }
   updateTileMapZIndex(tileMap, mapResource)

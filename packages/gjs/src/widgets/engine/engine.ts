@@ -184,6 +184,27 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.setLayerVisible(layerId, visible) ?? false
   }
 
+  /** Forward to `Engine.setEditorViewMode` — toggles editor's grid view. */
+  public setEditorViewMode(mode: 'normal' | 'grid'): void {
+    this._excalibur?.setEditorViewMode(mode)
+  }
+
+  /** Forward to `Engine.getEditorViewMode`. */
+  public getEditorViewMode(): 'normal' | 'grid' {
+    return this._excalibur?.getEditorViewMode() ?? 'normal'
+  }
+
+  /**
+   * Subscribe to view-mode changes. Disposer is captured into
+   * {@link _excaliburSubscriptions} so unmap releases it.
+   */
+  public onEditorViewModeChanged(cb: (mode: 'normal' | 'grid') => void): boolean {
+    if (!this._excalibur) return false
+    const dispose = this._excalibur.onEditorViewModeChanged(cb)
+    this._excaliburSubscriptions.push({ close: dispose })
+    return true
+  }
+
   /** Forward to `Engine.setLayerLocked` — toggles editor lock; no render change. */
   public setLayerLocked(layerId: string, locked: boolean): boolean {
     return this._excalibur?.setLayerLocked(layerId, locked) ?? false

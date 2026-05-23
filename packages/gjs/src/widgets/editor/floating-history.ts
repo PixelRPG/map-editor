@@ -18,13 +18,14 @@ import Template from './floating-history.blp'
 export class FloatingHistory extends Adw.Bin {
   declare _undo_button: Gtk.Button
   declare _redo_button: Gtk.Button
+  declare _grid_button: Gtk.ToggleButton
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgFloatingHistory',
         Template,
-        InternalChildren: ['undo_button', 'redo_button'],
+        InternalChildren: ['undo_button', 'redo_button', 'grid_button'],
       },
       FloatingHistory,
     )

@@ -5,6 +5,8 @@ import {
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
+  type EditorViewMode,
+  EditorViewModeComponent,
   SelectedPlacementsComponent,
   TileMapTierComponent,
   TileTransformComponent,
@@ -12,6 +14,7 @@ import {
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
+import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -194,6 +197,13 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return
     SessionState.set(scene, new ActiveLayerComponent(layerId))
+    // Grid mode dims non-active layers — switching the active layer
+    // changes which layer's content stays at full opacity. No-op when
+    // grid mode is off (the helper short-circuits on `mode === 'normal'`
+    // by returning 1.0 from its opacity provider).
+    if (SessionState.get(scene, EditorViewModeComponent)?.mode === 'grid') {
+      applyEditorViewMode(scene)
+    }
   }
 
   getActiveLayer(): string | null {
@@ -386,6 +396,97 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return null
     return scene.mapResource?.mapData?.layers.find((l) => l.id === layerId) ?? null
+  }
+
+  /**
+   * Switch the editor view mode on the active `MapScene`.
+   *
+   * `'normal'` — render like the game would (no grid lines, full
+   * opacity).
+   * `'grid'`   — debug grid lines on every tilemap + non-active
+   * layers dimmed to {@link GRID_MODE_DIM_OPACITY}. The dimming
+   * follows {@link setActiveLayer} automatically.
+   *
+   * Excalibur's debug renderer carries the grid; we configure
+   * `engine.debug.tilemap.showGrid` true + every other debug
+   * visualisation off so the editor doesn't accidentally show
+   * physics colliders.
+   *
+   * No-op if the active scene isn't a `MapScene`.
+   */
+  setEditorViewMode(mode: EditorViewMode): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    const current = SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
+    if (current === mode) return
+    SessionState.set(scene, new EditorViewModeComponent(mode))
+    this._configureExcaliburDebugForViewMode(mode)
+    applyEditorViewMode(scene)
+  }
+
+  getEditorViewMode(): EditorViewMode {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return 'normal'
+    return SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
+  }
+
+  /**
+   * Subscribe to view-mode changes. Fires once synchronously with
+   * the current value (or `'normal'` when no scene is active), then
+   * again on every `setEditorViewMode` call. Rebinds across map
+   * switches like {@link onUndoStackChanged}.
+   */
+  onEditorViewModeChanged(cb: (mode: EditorViewMode) => void): () => void {
+    let inner: (() => void) | null = null
+    const rebind = () => {
+      inner?.()
+      inner = null
+      const scene = this.excalibur.currentScene
+      if (!(scene instanceof MapScene)) {
+        cb('normal')
+        return
+      }
+      inner = SessionState.subscribe(scene, EditorViewModeComponent, (component) => {
+        cb(component?.mode ?? 'normal')
+      })
+    }
+    rebind()
+    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
+    return () => {
+      inner?.()
+      mapSub.close()
+    }
+  }
+
+  /**
+   * Tweak Excalibur's debug-render config + flip the global debug
+   * flag depending on whether the editor wants the grid drawn.
+   *
+   * Disables every debug visualisation that isn't the tilemap grid
+   * so the editor surface stays clean — no collider boxes, no
+   * camera viewport rectangles. Done as a single block (rather
+   * than scattered field touches) so toggling between modes is a
+   * predictable reset, not a sticky-accumulating set of debug
+   * flags from prior toggles.
+   */
+  private _configureExcaliburDebugForViewMode(mode: EditorViewMode): void {
+    if (mode === 'grid') {
+      const debug = this.excalibur.debug
+      debug.tilemap.showAll = false
+      debug.tilemap.showGrid = true
+      debug.tilemap.gridColor = Color.fromHex('#ffffff66')
+      debug.tilemap.gridWidth = 1
+      debug.tilemap.showSolidBounds = false
+      debug.tilemap.showColliderGeometry = false
+      // Other categories: hard off — we only want the tilemap grid.
+      debug.entity.showAll = false
+      debug.collider.showAll = false
+      debug.body.showAll = false
+      debug.camera.showAll = false
+      this.excalibur.showDebug(true)
+    } else {
+      this.excalibur.showDebug(false)
+    }
   }
 
   /**

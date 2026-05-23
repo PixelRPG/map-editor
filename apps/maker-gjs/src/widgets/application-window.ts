@@ -224,10 +224,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       toolAction.change_state(GLib.Variant.new_string('pencil'))
     })
 
-    // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo.
+    // Editor view-mode toggle (`'normal'` ↔ `'grid'`). Stateful
+    // action so the toggle button reflects the current state via its
+    // own `Gtk.ToggleButton` binding — the change-state handler
+    // forwards the chosen mode to the engine, which mutates the
+    // session-singleton's `EditorViewModeComponent` and re-applies
+    // the rendering.
+    const gridAction = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
+    gridAction.connect('change-state', (action, value) => {
+      action.set_state(value!)
+      const grid = value!.get_boolean()
+      this._engineCtl.engine?.setEditorViewMode(grid ? 'grid' : 'normal')
+    })
+    winActions.add_action(gridAction)
+
+    // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
+    // Ctrl+G = toggle grid.
     const app = this.get_application() as Adw.Application | null
     app?.set_accels_for_action('win.undo', ['<Primary>z'])
     app?.set_accels_for_action('win.redo', ['<Primary><Shift>z', '<Primary>y'])
+    app?.set_accels_for_action('win.toggle-grid', ['<Primary>g'])
 
     for (const name of ['play', 'switch-tileset', 'new-layer', 'open-recent-projects']) {
       winActions.add_action(new Gio.SimpleAction({ name }))
