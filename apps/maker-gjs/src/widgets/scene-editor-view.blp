@@ -15,41 +15,32 @@ template $SceneEditorView : Adw.Bin {
       project-tagline: _("Scene editor");
     };
 
-    content: Adw.ToolbarView {
-      // Gradia trick: let the canvas extend *behind* the headerbar so
-      // the map fills the entire frame and the header floats on top.
-      // Combined with `top-bar-style: flat` + the bar's
-      // `["flat", "header-osd"]` classes, the headerbar drops out
-      // entirely visually — only its buttons + windowcontrols
-      // remain, sitting on the canvas like the other OSD chrome.
-      top-bar-style: flat;
-      extend-content-to-top-edge: true;
+    // No central headerbar — even an empty `Adw.HeaderBar` with
+    // `extend-content-to-top-edge: true` is a click-eater above the
+    // canvas: it sits in front of the SceneEditor's `Gtk.Overlay`
+    // children and silently swallows pointer events for the top
+    // ~46 px, which is exactly where `FloatingHistory` (top-left)
+    // and `ContextChip` (top-right) live now. Buttons inside those
+    // floating pills became un-clickable.
+    //
+    // Drag-the-window is still available from the left sidebar's
+    // `Gtk.WindowHandle` (ModeRail hero_header) and the right
+    // sidebar's own flat headerbar (RightInspector), so dropping the
+    // central bar costs nothing functionally — the canvas just
+    // takes over the whole content area.
+    //
+    // The window-close X already moved to the right inspector's
+    // header in PR #49.
+    content: Adw.OverlaySplitView inner_split {
+      sidebar-position: end;
+      min-sidebar-width: 280;
+      max-sidebar-width: 320;
+      collapsed: bind template.collapsed;
+      show-sidebar: bind template.show-inspector bidirectional;
 
-      [top]
-      Adw.HeaderBar {
-        // Central headerbar is intentionally empty — all controls
-        // moved into floating OSD widgets (FloatingHistory on the
-        // left, ContextChip on the right). The bar stays in the
-        // template as a Gtk.WindowHandle-providing drag region so
-        // the user can still grab the canvas-top to move the window.
-        // Window controls (X close) live on the right inspector's
-        // own flat header (see `right-inspector.blp`).
-        show-end-title-buttons: false;
-        show-title: false;
-        styles ["flat"]
-      }
+      content: $PixelRpgSceneEditor editor {};
 
-      content: Adw.OverlaySplitView inner_split {
-        sidebar-position: end;
-        min-sidebar-width: 280;
-        max-sidebar-width: 320;
-        collapsed: bind template.collapsed;
-        show-sidebar: bind template.show-inspector bidirectional;
-
-        content: $PixelRpgSceneEditor editor {};
-
-        sidebar: $PixelRpgRightInspector inspector {};
-      };
+      sidebar: $PixelRpgRightInspector inspector {};
     };
   }
 }
