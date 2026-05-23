@@ -73,11 +73,29 @@ export class SessionState {
    * mode marker / state component to the singleton — for editing a
    * field on an existing component in place, call
    * {@link notifyMutation} after the mutation.
+   *
+   * **Same-instance fast path**: when the caller passes the exact
+   * same instance that's already attached (common when systems do
+   * `get → mutate → set` to push the change through), skip the
+   * `removeComponent` + `addComponent` round-trip. Excalibur's
+   * component removal is partially deferred and re-adding the same
+   * instance in the same tick can leave the component half-removed
+   * by the next frame — observably "every second click silently
+   * drops the new state". Treating same-instance as "just notify"
+   * is both faster and dodges that lifecycle hazard. Callers doing
+   * in-place updates should still prefer {@link notifyMutation};
+   * this fast path is a belt for the suspenders.
    */
   static set<C extends Component>(scene: Scene, component: C): void {
     const entity = SessionState.ensure(scene)
     const ctor = component.constructor as ComponentCtor<C>
     const existing = entity.get(ctor)
+
+    if (existing === component) {
+      getRegistry(scene).notify(ctor as ComponentCtor<Component>, component)
+      return
+    }
+
     if (existing) entity.removeComponent(ctor)
     entity.addComponent(component)
     getRegistry(scene).notify(ctor as ComponentCtor<Component>, component)
