@@ -293,6 +293,42 @@ export class Engine {
     return SessionState.get(scene, UndoStackComponent)?.canRedo ?? false
   }
 
+  /**
+   * Subscribe to undo-stack changes on the **currently-active** scene.
+   * Fires once synchronously with the present `canUndo` / `canRedo`
+   * snapshot (or `false, false` when no `MapScene` is active yet), and
+   * again on every stack mutation. Also rebinds across map switches —
+   * subscribers do not need to re-register after a `loadMap` call.
+   *
+   * Returns a disposer that drops both the inner `SessionState`
+   * subscription and the `MAP_LOADED` listener.
+   *
+   * Use case: keeping `win.undo` / `win.redo` `GAction.enabled` in
+   * sync with the stack so the OSD buttons + accelerator keys grey
+   * out at the boundaries.
+   */
+  onUndoStackChanged(cb: (state: { canUndo: boolean; canRedo: boolean }) => void): () => void {
+    let inner: (() => void) | null = null
+    const rebind = () => {
+      inner?.()
+      inner = null
+      const scene = this.excalibur.currentScene
+      if (!(scene instanceof MapScene)) {
+        cb({ canUndo: false, canRedo: false })
+        return
+      }
+      inner = SessionState.subscribe(scene, UndoStackComponent, (stack) => {
+        cb({ canUndo: stack?.canUndo ?? false, canRedo: stack?.canRedo ?? false })
+      })
+    }
+    rebind()
+    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
+    return () => {
+      inner?.()
+      mapSub.close()
+    }
+  }
+
   private setStatus(status: EngineStatus): void {
     if (this.status === status) return
     this.logger.info(`Engine status changed from ${this.status} to ${status}`)

@@ -162,6 +162,23 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.canRedo() ?? false
   }
 
+  /**
+   * Subscribe to undo-stack changes on the underlying engine. The
+   * disposer is added to {@link _excaliburSubscriptions} so it is
+   * automatically released on `vfunc_unmap` alongside the other
+   * engine-scoped subscriptions; callers do not need to track it.
+   *
+   * Returns `true` when the subscription was attached, `false` when
+   * the engine is not running yet (caller should retry once the
+   * engine is ready).
+   */
+  public onUndoStackChanged(cb: (state: { canUndo: boolean; canRedo: boolean }) => void): boolean {
+    if (!this._excalibur) return false
+    const dispose = this._excalibur.onUndoStackChanged(cb)
+    this._excaliburSubscriptions.push({ close: dispose })
+    return true
+  }
+
   public get excalibur(): ExcaliburEngine | null {
     return this._excalibur
   }
