@@ -6,6 +6,7 @@ import {
   ItemPickupSystem,
   ObjectSpawnSystem,
   PlayerSpawnSystem,
+  SelectionHighlightSystem,
   TeleportSystem,
   TileEditorSystem,
   TriggerSystem,
@@ -46,6 +47,7 @@ export class MapScene extends Scene {
     super()
     this.world.add(new CameraControlSystem())
     this.world.add(new TileEditorSystem(events))
+    this.world.add(new SelectionHighlightSystem())
     this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))
     this.world.add(new PlayerSpawnSystem(events))
     this.world.add(new TriggerSystem(events))

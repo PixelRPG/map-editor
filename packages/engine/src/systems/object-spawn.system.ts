@@ -1,9 +1,10 @@
-import { Actor, Color, Entity, Rectangle, type Scene, System, SystemType, vec, type World } from 'excalibur'
+import { Actor, Color, type Entity, Rectangle, type Scene, System, SystemType, vec, type World } from 'excalibur'
 import {
   CollisionComponent,
   CustomDataComponent,
   ItemComponent,
   NpcComponent,
+  PlacementIdComponent,
   SpawnPointComponent,
   SpriteRefComponent,
   TeleportComponent,
@@ -146,6 +147,7 @@ export class ObjectSpawnSystem extends System {
     const entity: Entity = actor
 
     actor.addComponent(new TileTransformComponent(placement.tileX, placement.tileY, placement.layerId))
+    actor.addComponent(new PlacementIdComponent(placement.id))
 
     if (def.sprite) {
       actor.addComponent(new SpriteRefComponent(def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId))
@@ -227,9 +229,7 @@ export class ObjectSpawnSystem extends System {
   private attachSpriteGraphic(actor: Actor, spriteSetId: string, spriteId: number, animationId?: string): void {
     const spriteSet = this.mapResource.getSpriteSetResource(spriteSetId)
     if (!spriteSet) return
-    const graphic = animationId
-      ? spriteSet.animations[animationId]?.clone()
-      : spriteSet.sprites[spriteId]?.clone()
+    const graphic = animationId ? spriteSet.animations[animationId]?.clone() : spriteSet.sprites[spriteId]?.clone()
     if (!graphic) return
     // Center anchor so positioning by tile centre matches the tilemap layout.
     actor.graphics.use(graphic)
