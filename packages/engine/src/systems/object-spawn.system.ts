@@ -1,4 +1,4 @@
-import { Actor, Entity, type Scene, System, SystemType, vec, type World } from 'excalibur'
+import { Actor, Color, Entity, Rectangle, type Scene, System, SystemType, vec, type World } from 'excalibur'
 import {
   CollisionComponent,
   CustomDataComponent,
@@ -21,6 +21,23 @@ import type {
   SpawnPointProperties,
   TeleportProperties,
 } from '../types/data/index.ts'
+
+/**
+ * Outline marker colours per object kind for sprite-less
+ * placements. Picked to be visually distinct without clashing
+ * with typical RPG tile palettes — light, saturated tones
+ * against the natural greens / browns of a tilemap. Updates
+ * to the kind set should add an entry here too; the `custom`
+ * entry is the documented fallback for unknown kinds.
+ */
+const KIND_MARKER_COLORS: Record<ObjectDefinition['kind'], string> = {
+  teleport: '#66ccff',
+  item: '#ffcc33',
+  npc: '#66cc66',
+  'spawn-point': '#cc66ff',
+  event: '#66ffcc',
+  custom: '#ff9966',
+}
 
 /**
  * Walks `MapData.objectPlacements` on first scene activate and
@@ -113,38 +130,41 @@ export class ObjectSpawnSystem extends System {
     const tileWidth = mapData?.tileWidth ?? 16
     const tileHeight = mapData?.tileHeight ?? 16
 
-    // Visible entities are Actors so we can hand the Excalibur graphics
-    // pipeline a sprite directly; invisible markers stay as bare
-    // Entities to skip the actor overhead.
-    const visible = def.sprite != null
-    const entity: Entity = visible
-      ? new Actor({
-          name: `${def.kind}:${placement.id}`,
-          x: placement.tileX * tileWidth + tileWidth / 2,
-          y: placement.tileY * tileHeight + tileHeight / 2,
-          width: tileWidth,
-          height: tileHeight,
-        })
-      : new Entity({ name: `${def.kind}:${placement.id}` })
+    // Every placement is an `Actor` now — sprite-less ones (functional
+    // markers, sprite-less teleports / events / spawn points) get a
+    // coloured outline marker so they're discoverable on the map.
+    // Pre-refactor they were bare `Entity`s with no graphics, which
+    // made them invisible in the editor and impossible to locate
+    // without inspecting JSON.
+    const actor = new Actor({
+      name: `${def.kind}:${placement.id}`,
+      x: placement.tileX * tileWidth + tileWidth / 2,
+      y: placement.tileY * tileHeight + tileHeight / 2,
+      width: tileWidth,
+      height: tileHeight,
+    })
+    const entity: Entity = actor
 
-    entity.addComponent(new TileTransformComponent(placement.tileX, placement.tileY, placement.layerId))
+    actor.addComponent(new TileTransformComponent(placement.tileX, placement.tileY, placement.layerId))
 
     if (def.sprite) {
-      entity.addComponent(new SpriteRefComponent(def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId))
-      const actor = entity as Actor
+      actor.addComponent(new SpriteRefComponent(def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId))
       this.attachSpriteGraphic(actor, def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId)
-      // Z is driven by the layer's tier — placement actors render at
-      // the same render depth as their tier's tilemap, so e.g.
-      // decoration actors on the 'hero' tier interleave with the
-      // hero-tier tilemap rather than overdrawing the entire map.
-      // Default 'ground' matches the LayerData fallback.
-      const layer = mapData?.layers.find((l) => l.id === placement.layerId)
-      actor.z = TIER_Z[layer?.tier ?? 'ground']
-      // Respect the layer's visibility flag at spawn. Runtime
-      // toggles re-sync via `Engine.setLayerVisible`.
-      if (!isLayerVisible(this.mapResource, placement.layerId)) {
-        actor.graphics.visible = false
-      }
+    } else {
+      this.attachOutlineMarker(actor, def.kind, tileWidth, tileHeight)
+    }
+
+    // Z is driven by the layer's tier — placement actors render at
+    // the same render depth as their tier's tilemap, so e.g.
+    // decoration actors on the 'hero' tier interleave with the
+    // hero-tier tilemap rather than overdrawing the entire map.
+    // Default 'ground' matches the LayerData fallback.
+    const layer = mapData?.layers.find((l) => l.id === placement.layerId)
+    actor.z = TIER_Z[layer?.tier ?? 'ground']
+    // Respect the layer's visibility flag at spawn. Runtime
+    // toggles re-sync via `Engine.setLayerVisible`.
+    if (!isLayerVisible(this.mapResource, placement.layerId)) {
+      actor.graphics.visible = false
     }
 
     if (def.trigger) {
@@ -213,6 +233,33 @@ export class ObjectSpawnSystem extends System {
     if (!graphic) return
     // Center anchor so positioning by tile centre matches the tilemap layout.
     actor.graphics.use(graphic)
+    actor.graphics.anchor = vec(0.5, 0.5)
+  }
+
+  /**
+   * Attach a colour-coded outline rectangle to a sprite-less
+   * placement actor. Used for functional markers (boundaries /
+   * water triggers / camera anchors) and any other placement
+   * whose `ObjectDefinition` doesn't carry a `sprite` ref —
+   * without this they spawn invisibly and the user can't
+   * discover them on the map.
+   *
+   * The rectangle covers one tile, stroked in the kind's colour,
+   * with a transparent fill so the underlying tilemap stays
+   * readable through the marker. Pre-refactor sprite-less
+   * placements were bare `Entity`s with no graphics, which made
+   * functional layers unusable without inspecting JSON.
+   */
+  private attachOutlineMarker(actor: Actor, kind: ObjectDefinition['kind'], width: number, height: number): void {
+    const colorHex = KIND_MARKER_COLORS[kind] ?? KIND_MARKER_COLORS.custom
+    const rect = new Rectangle({
+      width,
+      height,
+      color: Color.Transparent,
+      strokeColor: Color.fromHex(colorHex),
+      lineWidth: 1,
+    })
+    actor.graphics.use(rect)
     actor.graphics.anchor = vec(0.5, 0.5)
   }
 }

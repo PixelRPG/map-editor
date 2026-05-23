@@ -520,6 +520,12 @@ export class SceneEditorView extends Adw.Bin {
     const objects = this._inspector.objectsTab
     objects.connect('object-selected', (_o: typeof objects, placementId: string) => {
       this._engine?.setSelectedPlacements([placementId])
+      // Smoothly pan the canvas to the picked object. Fire-and-forget —
+      // we don't care about the promise here, the engine resolves it
+      // when the camera move ends (or rejects on an interrupted move,
+      // e.g. the user picked a second object before the first pan
+      // finished — also fine, the new pan supersedes).
+      void this._engine?.focusOnPlacement(placementId)
     })
   }
 

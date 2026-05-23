@@ -144,6 +144,11 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.getSelectedPlacements() ?? []
   }
 
+  /** Forward to `Engine.focusOnPlacement` — smoothly pans the camera. */
+  public focusOnPlacement(placementId: string, durationMs?: number): Promise<boolean> {
+    return this._excalibur?.focusOnPlacement(placementId, durationMs) ?? Promise.resolve(false)
+  }
+
   /** Undo the most recent editor command. Returns `false` if nothing to undo. */
   public undo(): boolean {
     return this._excalibur?.undo() ?? false
