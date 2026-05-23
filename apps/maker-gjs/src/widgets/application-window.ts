@@ -3,7 +3,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { MapFormat } from '@pixelrpg/engine'
+import { type EditorTool, MapFormat } from '@pixelrpg/engine'
 import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { EngineController } from '../services/engine-controller.ts'
@@ -96,13 +96,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-selected', (_v: AtlasView, id: string) => {
       this._lastAtlasSelection = id
     })
-    this.signals.connect(
-      this._atlas_view,
-      'scene-moved',
-      (_v: AtlasView, id: string, x: number, y: number) => {
-        this._persistAtlasPosition(id, x, y)
-      },
-    )
+    this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
+      this._persistAtlasPosition(id, x, y)
+    })
 
     // Scene editor → host bridge. The inspector mutates
     // `MapResource.mapData` in place via `engine.setLayerVisible` /
@@ -171,15 +167,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     )
     toolAction.connect('change-state', (action, value) => {
       action.set_state(value!)
-      const tool = value!.get_string()[0]
-      // Engine accepts 'brush' | 'eraser' today — map the new tool ids
-      // back to those until the engine grows the full set. The
-      // `ActiveToolComponent` accepts any string, so we pass the raw
-      // tool id through; the engine's `TileEditorSystem` short-circuits
-      // on tools it doesn't understand yet.
-      const mappedTool: string =
-        tool === 'eraser' ? 'eraser' : tool === 'pencil' || tool === 'bucket' || tool === 'rect' ? 'brush' : tool
-      this._engineCtl.engine?.setActiveTool(mappedTool)
+      // Tool ids are shared with the engine's `EditorTool` union, so
+      // the GAction state string can be passed straight through.
+      // `TileEditorSystem` short-circuits on tools whose semantics
+      // it doesn't implement yet (bucket / rect / select / stamp /
+      // event) — the UI still surfaces the buttons.
+      this._engineCtl.engine?.setActiveTool(value!.get_string()[0] as EditorTool)
     })
     winActions.add_action(toolAction)
 
@@ -369,7 +362,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._showToast(_('Failed to load map'))
     }
   }
-
 
   private _onTemplateSelected(templateId: string): void {
     const template = findTemplateById(templateId)

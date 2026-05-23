@@ -9,7 +9,7 @@ Conventions:
 
 ## Editor / tooling
 
-- **Tool semantics in `@pixelrpg/engine`** — currently `bucket`/`rect`/`select`/`stamp`/`event` all map to `brush` in `ApplicationWindow._installActions` (search `mappedTool`). Implement proper behavior per tool in `packages/engine/src/systems/tile-editor.system.ts`. *owner: engine, why: bigger ECS-side change per tool, deserves its own PR series*
+- **Tool semantics in `@pixelrpg/engine`** — `bucket` / `rect` / `select` / `stamp` / `event` are accepted by `TileEditorSystem` but short-circuit (no behaviour). Implement proper per-tool behaviour in `packages/engine/src/systems/tile-editor.system.ts`. *owner: engine, why: bigger ECS-side change per tool, deserves its own PR series*
 - **File-picker "Save as new project"** — `_onCreateProject` opens the blank template in-place rather than scaffolding a new project file in a user-chosen directory. Needs a save-as flow + `editorData.templateOrigin` tracking. *owner: maker*
 - **"Switch tileset" action** — `win.switch-tileset` is registered but no handler. Tiles tab "Switch…" button does nothing. *owner: maker*
 - **"New layer" action** — `win.new-layer` registered, no handler. Layers tab "New layer" footer button does nothing. *owner: maker*

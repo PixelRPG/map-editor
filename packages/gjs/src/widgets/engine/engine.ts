@@ -4,6 +4,8 @@ import type Gtk from '@girs/gtk-4.0'
 import { Canvas2DBridge } from '@gjsify/canvas2d'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
+  type EditorTool,
+  type EditorViewMode,
   EngineEvent,
   type EngineEventMap,
   EngineStatus,
@@ -120,7 +122,7 @@ export class Engine extends Adw.Bin {
   }
 
   /** Forward to `Engine.setActiveTool` — writes to the session-singleton. */
-  public setActiveTool(tool: string): void {
+  public setActiveTool(tool: EditorTool): void {
     this._excalibur?.setActiveTool(tool)
   }
 
@@ -190,12 +192,12 @@ export class Engine extends Adw.Bin {
   }
 
   /** Forward to `Engine.setEditorViewMode` — toggles editor's grid view. */
-  public setEditorViewMode(mode: 'normal' | 'grid'): void {
+  public setEditorViewMode(mode: EditorViewMode): void {
     this._excalibur?.setEditorViewMode(mode)
   }
 
   /** Forward to `Engine.getEditorViewMode`. */
-  public getEditorViewMode(): 'normal' | 'grid' {
+  public getEditorViewMode(): EditorViewMode {
     return this._excalibur?.getEditorViewMode() ?? 'normal'
   }
 
@@ -203,7 +205,7 @@ export class Engine extends Adw.Bin {
    * Subscribe to view-mode changes. Disposer is captured into
    * {@link _excaliburSubscriptions} so unmap releases it.
    */
-  public onEditorViewModeChanged(cb: (mode: 'normal' | 'grid') => void): boolean {
+  public onEditorViewModeChanged(cb: (mode: EditorViewMode) => void): boolean {
     if (!this._excalibur) return false
     const dispose = this._excalibur.onEditorViewModeChanged(cb)
     this._excaliburSubscriptions.push({ close: dispose })

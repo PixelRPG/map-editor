@@ -3,6 +3,7 @@
 export * from './editor-view'
 export * from './layer-visibility'
 export * from './layer.manager'
+export * from './pencil-preview'
 export * from './sprite-info.resolver'
 export * from './sprite.validator'
 export * from './tile-graphics.manager'
