@@ -130,6 +130,14 @@ export class ObjectSpawnSystem extends System {
     if (def.sprite) {
       entity.addComponent(new SpriteRefComponent(def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId))
       this.attachSpriteGraphic(entity as Actor, def.sprite.spriteSetId, def.sprite.spriteId, def.sprite.animationId)
+      // Respect the layer's visibility flag at spawn — placements on a
+      // hidden layer come up invisible. Runtime toggles on
+      // `layer.visible` re-sync via `Engine.setLayerVisible`, which
+      // walks the scene and flips matching actors' `graphics.visible`.
+      const layer = mapData?.layers.find((l) => l.id === placement.layerId)
+      if (layer?.visible === false) {
+        ;(entity as Actor).graphics.visible = false
+      }
     }
 
     if (def.trigger) {

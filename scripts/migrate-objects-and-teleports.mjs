@@ -119,6 +119,21 @@ function migrateMap(mapPath) {
         const blocking = legacyTypeImpliesBlocking(obj.type) ? true : undefined
         const tileX = Math.round((obj.x ?? 0) / tileWidth)
         const tileY = Math.round((obj.y ?? 0) / tileHeight)
+        // Legacy `type: 'sprite'` objects carry `spriteSetId` +
+        // `spriteId` (and sometimes `animationId`). Forward them to
+        // the inline definition's `sprite` field so the engine's
+        // `ObjectSpawnSystem` can attach a graphic at spawn. Dropping
+        // these fields here is the bug that produced the kokiri-forest
+        // grass/rocks regression — restored on disk, kept fixed here
+        // so any future re-run of this script preserves the link.
+        const sprite =
+          obj.spriteId !== undefined && obj.spriteSetId !== undefined
+            ? {
+                spriteSetId: obj.spriteSetId,
+                spriteId: obj.spriteId,
+                ...(obj.animationId !== undefined ? { animationId: obj.animationId } : {}),
+              }
+            : undefined
         const placement = {
           id: `p-${layer.id}-${obj.id ?? counter}`,
           layerId: layer.id,
@@ -128,6 +143,7 @@ function migrateMap(mapPath) {
             id: `def-${layer.id}-${obj.id ?? counter}`,
             kind,
             name: obj.name || `Object ${obj.id ?? counter}`,
+            ...(sprite ? { sprite } : {}),
             ...(blocking !== undefined ? { blocking } : {}),
             ...(obj.properties ? { properties: { ...obj.properties } } : {}),
           },

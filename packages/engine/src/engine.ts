@@ -1,4 +1,4 @@
-import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, TileMap } from 'excalibur'
+import { Actor, Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, TileMap } from 'excalibur'
 import type { Command } from './commands/index.ts'
 import {
   ActiveLayerComponent,
@@ -6,6 +6,7 @@ import {
   ActiveToolComponent,
   type EditorTool,
   SelectedPlacementsComponent,
+  TileTransformComponent,
   UndoStackComponent,
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
@@ -317,9 +318,19 @@ export class Engine {
     if (!layer) return false
     if (layer.visible === visible) return true
     layer.visible = visible
+    // Two refresh passes: tile graphics (sprite tiles painted on the
+    // tilemap) and object-placement actors (entities spawned by
+    // `ObjectSpawnSystem` for `MapData.objectPlacements`). A single
+    // layer can carry both — Grass tiles + Grass decoration objects —
+    // so both surfaces have to flip together.
     for (const entity of scene.world.entityManager.entities) {
       if (entity instanceof TileMap) {
         refreshAllTileGraphics(entity, mapResource)
+        continue
+      }
+      const transform = entity.get(TileTransformComponent)
+      if (transform?.layerId === layerId && entity instanceof Actor) {
+        entity.graphics.visible = visible
       }
     }
     return true
