@@ -1,4 +1,4 @@
-import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger } from 'excalibur'
+import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, TileMap } from 'excalibur'
 import type { Command } from './commands/index.ts'
 import {
   ActiveLayerComponent,
@@ -10,6 +10,7 @@ import {
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
+import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
 
@@ -291,6 +292,74 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return false
     return SessionState.get(scene, UndoStackComponent)?.canRedo ?? false
+  }
+
+  /**
+   * Toggle a layer's `visible` flag on the active map. Persists the
+   * change in-memory only (the host is responsible for serialising
+   * `MapResource.mapData` back to disk via `MapFormat.serialize`),
+   * then re-builds the tile graphics on every tile in the map so the
+   * change is visible on the canvas immediately.
+   *
+   * Returns `true` on success, `false` if there is no active
+   * `MapScene` / no layer matches the id.
+   *
+   * The graphics rebuild is O(columns × rows × sprites-per-tile) so
+   * keep this off any hot path — it's only called on explicit user
+   * toggles.
+   */
+  setLayerVisible(layerId: string, visible: boolean): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    const mapResource = scene.mapResource
+    if (!mapResource?.mapData) return false
+    const layer = mapResource.mapData.layers.find((l) => l.id === layerId)
+    if (!layer) return false
+    if (layer.visible === visible) return true
+    layer.visible = visible
+    for (const entity of scene.world.entityManager.entities) {
+      if (entity instanceof TileMap) {
+        refreshAllTileGraphics(entity, mapResource)
+      }
+    }
+    return true
+  }
+
+  /**
+   * Toggle a layer's `locked` flag on the active map. Pure editor
+   * state — no graphics rebuild needed because rendering doesn't
+   * care about lock. Consumers (host + `TileEditorSystem`) check the
+   * flag at the start of their edit paths and short-circuit when
+   * the active layer is locked.
+   *
+   * Returns `true` on success, `false` if there is no active
+   * `MapScene` / no layer matches the id.
+   */
+  setLayerLocked(layerId: string, locked: boolean): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    const mapResource = scene.mapResource
+    if (!mapResource?.mapData) return false
+    const layer = mapResource.mapData.layers.find((l) => l.id === layerId)
+    if (!layer) return false
+    if ((layer.locked ?? false) === locked) return true
+    layer.locked = locked
+    return true
+  }
+
+  /**
+   * Read the `locked` flag on a specific layer. Used by the host to
+   * decide whether to enable the editing tool actions in response to
+   * an `ActiveLayerComponent` change. Returns `false` on missing
+   * layer / scene — "treat as editable" is the safer default for an
+   * unknown id (the paint path will then no-op via
+   * `TileEditorSystem`'s own checks).
+   */
+  isLayerLocked(layerId: string): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    const layer = scene.mapResource?.mapData?.layers.find((l) => l.id === layerId)
+    return layer?.locked ?? false
   }
 
   /**

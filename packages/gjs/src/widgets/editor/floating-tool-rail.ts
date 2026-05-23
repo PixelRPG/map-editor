@@ -74,6 +74,27 @@ export class FloatingToolRail extends Adw.Bin {
     }
     map[tool].set_active(true)
   }
+
+  /**
+   * Enable / disable the **mutating** editing tools (pencil, bucket,
+   * rect, eraser). Non-mutating tools — eyedropper, select, stamp,
+   * event — stay enabled because they're either read-only or
+   * concern higher-level placements rather than tile sprites, and
+   * thus aren't blocked by a locked layer.
+   *
+   * Uses `sensitive` rather than disabling the `win.set-tool` action,
+   * because the action is shared by all buttons and we only want a
+   * subset greyed out. The buttons keep their radio-group membership
+   * — so disabling the active button while it's selected leaves it
+   * visually pressed (Gtk behavior) until the host switches to
+   * another tool.
+   */
+  setEditingToolsEnabled(enabled: boolean): void {
+    this._btn_pencil.set_sensitive(enabled)
+    this._btn_bucket.set_sensitive(enabled)
+    this._btn_rect.set_sensitive(enabled)
+    this._btn_eraser.set_sensitive(enabled)
+  }
 }
 
 GObject.type_ensure(FloatingToolRail.$gtype)

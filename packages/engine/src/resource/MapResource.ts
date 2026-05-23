@@ -110,9 +110,14 @@ export class MapResource implements Loadable<TileMap> {
     // placements (NPCs, items, teleports, …) live on
     // `MapData.objectPlacements` and are spawned by the engine's
     // `ObjectSpawnSystem`, not at resource-load time.
-    sortedLayers
-      .filter((layer) => layer.visible)
-      .forEach((layer) => this.processTileLayer(tileMap, layer))
+    //
+    // We process ALL layers (even invisible ones) so the editor's
+    // shadow-state (`MapEditorComponent`) holds a complete picture of
+    // every layer's content. The visibility filter has moved to the
+    // *render* path (`applyInitialGraphics` + `rebuildAllTileGraphics`)
+    // so toggling `layer.visible` at runtime is a pure graphics
+    // refresh — no re-loading of sprites from the JSON.
+    sortedLayers.forEach((layer) => this.processTileLayer(tileMap, layer))
   }
 
   private processTileLayer(tileMap: TileMap, layer: LayerData): void {
@@ -192,6 +197,13 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   private applyInitialGraphics(): void {
+    // Cache layer visibility so we don't .find() per sprite — for a
+    // large map this is the hot loop on first render.
+    const hiddenLayerIds = new Set<string>()
+    for (const layer of this._mapData?.layers ?? []) {
+      if (layer.visible === false) hiddenLayerIds.add(layer.id)
+    }
+
     this.initialSprites.forEach((refs, tile) => {
       const sortedRefs = [...refs].sort((a, b) => {
         const aZ = a.zIndex ?? 0
@@ -200,6 +212,7 @@ export class MapResource implements Loadable<TileMap> {
       })
 
       for (const ref of sortedRefs) {
+        if (hiddenLayerIds.has(ref.layerId)) continue
         const spriteSet = this.tileSetResources.get(ref.spriteSetId)
         if (!spriteSet) continue
 

@@ -179,6 +179,21 @@ export class Engine extends Adw.Bin {
     return true
   }
 
+  /** Forward to `Engine.setLayerVisible` — toggles render visibility + triggers a graphics rebuild. */
+  public setLayerVisible(layerId: string, visible: boolean): boolean {
+    return this._excalibur?.setLayerVisible(layerId, visible) ?? false
+  }
+
+  /** Forward to `Engine.setLayerLocked` — toggles editor lock; no render change. */
+  public setLayerLocked(layerId: string, locked: boolean): boolean {
+    return this._excalibur?.setLayerLocked(layerId, locked) ?? false
+  }
+
+  /** Read whether a specific layer is locked on the active map. */
+  public isLayerLocked(layerId: string): boolean {
+    return this._excalibur?.isLayerLocked(layerId) ?? false
+  }
+
   public get excalibur(): ExcaliburEngine | null {
     return this._excalibur
   }
@@ -345,6 +360,9 @@ export class Engine extends Adw.Bin {
       }),
       engine.events.on(EngineEvent.TILE_PLACED, (p) => {
         this.events.emit(EngineEvent.TILE_PLACED, p)
+      }),
+      engine.events.on(EngineEvent.TILE_PICKED, (p) => {
+        this.events.emit(EngineEvent.TILE_PICKED, p)
       }),
     )
   }

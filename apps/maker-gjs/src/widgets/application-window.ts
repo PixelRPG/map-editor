@@ -44,6 +44,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private signals = new SignalScope()
   private _scenesById = new Map<string, SampleScene>(SAMPLE_SCENES.map((s) => [s.id, s]))
   private _loadedProject: LoadedProject | null = null
+  /**
+   * Which map the scene editor is currently editing. Tracks
+   * `_showSceneEditor` so the persist-requested handler knows which
+   * MapResource to serialise.
+   */
+  private _currentSceneId: string | null = null
   private _engineCtl = new EngineController((engine) => {
     if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
     else this._scene_editor_view.setEngineWidget(null)
@@ -97,6 +103,30 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         this._persistAtlasPosition(id, x, y)
       },
     )
+
+    // Scene editor → host bridge. The inspector mutates
+    // `MapResource.mapData` in place via `engine.setLayerVisible` /
+    // `setLayerLocked`, then asks the host to persist. Mirrors the
+    // existing `scene-moved` → `_persistAtlasPosition` flow.
+    this.signals.connect(this._scene_editor_view, 'persist-requested', () => {
+      this._persistCurrentMap()
+    })
+  }
+
+  /**
+   * Serialise the currently-edited map's `MapData` back to disk.
+   * Called by the scene editor's `persist-requested` signal after
+   * an in-place mutation (layer visibility, layer lock — and any
+   * future inspector-driven map mutation). Toasts on failure but
+   * keeps the in-memory state so the user can retry.
+   */
+  private _persistCurrentMap(): void {
+    const sceneId = this._currentSceneId
+    if (!sceneId) return
+    const mapResource = this._loadedProject?.resource.maps.get(sceneId)
+    if (!mapResource?.mapData) return
+    const ok = writeTextFile(mapResource.sourcePath, MapFormat.serialize(mapResource.mapData))
+    if (!ok) this._showToast(_('Could not save layer changes'))
   }
 
   /**
@@ -180,6 +210,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._engineCtl.onUndoChanged(({ canUndo, canRedo }) => {
       undoAction.set_enabled(canUndo)
       redoAction.set_enabled(canRedo)
+    })
+
+    // Eyedropper: the engine's `TileEditorSystem` emits `TILE_PICKED`
+    // when the user clicks a tile while the eyedropper tool is
+    // active. We route the picked tile back through the
+    // scene-editor's existing local-id flow (so palette highlight +
+    // context chip + engine's `ActiveTileComponent` stay in lock-step)
+    // and then flip the tool action back to `pencil` for a Tiled-style
+    // "pick → paint immediately" workflow.
+    this._engineCtl.onTilePicked(({ globalTileId }) => {
+      this._scene_editor_view.selectTileByGlobalId(globalTileId)
+      toolAction.change_state(GLib.Variant.new_string('pencil'))
     })
 
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo.
@@ -279,6 +321,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._showToast(_('Scene not found'))
       return
     }
+    this._currentSceneId = sceneId
     this._scene_editor_view.setScene(scene)
     this._setView('scene-editor')
 

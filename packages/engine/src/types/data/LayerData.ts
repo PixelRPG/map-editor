@@ -19,6 +19,18 @@ export interface LayerData {
   /** Whether the layer should be rendered */
   visible: boolean
 
+  /**
+   * Whether the layer is locked against editing. When true, tile
+   * paint / erase commands targeting this layer are rejected by
+   * `TileEditorSystem`, and the host's editing tools (pencil /
+   * eraser / bucket / rect) grey out when this is the active layer.
+   * Pure editor concern — runtime systems ignore the flag.
+   *
+   * Optional + defaults to false so existing project files without
+   * the field continue to work.
+   */
+  locked?: boolean
+
   /** Optional opacity value (0-1) */
   opacity?: number
 
