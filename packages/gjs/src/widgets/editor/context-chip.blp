@@ -16,22 +16,6 @@ template $PixelRpgContextChip : Adw.Bin {
     spacing: 2;
     styles ["toolbar", "osd"]
 
-    // Library-mirror on the right edge — toggles the right inspector.
-    // Lives here (in the canvas's OSD cluster, not the inspector's
-    // own header) so the user can re-open the inspector after
-    // hiding it; if the toggle lived inside the inspector itself
-    // it would vanish along with everything else when hidden.
-    Gtk.ToggleButton inspector_toggle {
-      icon-name: "sidebar-show-right-symbolic";
-      action-name: "win.toggle-inspector";
-      tooltip-text: _("Toggle inspector");
-      styles ["flat"]
-    }
-
-    Gtk.Separator {
-      orientation: vertical;
-    }
-
     Gtk.MenuButton tile_button {
       tooltip-text: _("Active tile");
       styles ["flat"]
@@ -99,6 +83,26 @@ template $PixelRpgContextChip : Adw.Bin {
           styles ["dim-label"]
         }
       };
+    }
+
+    Gtk.Separator {
+      orientation: vertical;
+    }
+
+    // Inspector toggle pinned to the far-right of the pill. The
+    // rule across the editor chrome: the right-sidebar toggle
+    // always sits at the rightmost slot of whatever floating
+    // toolbar hosts it, so its position on screen visually maps
+    // to the side it controls. Mirror in atlas-view.blp.
+    //
+    // Toggle lives in the canvas-side OSD (not inside the
+    // inspector itself) so re-opening a hidden inspector remains
+    // possible without keyboard shortcuts.
+    Gtk.ToggleButton inspector_toggle {
+      icon-name: "sidebar-show-right-symbolic";
+      action-name: "win.toggle-inspector";
+      tooltip-text: _("Toggle inspector");
+      styles ["flat"]
     }
   }
 }
