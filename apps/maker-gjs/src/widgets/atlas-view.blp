@@ -2,18 +2,13 @@ using Gtk 4.0;
 using Adw 1;
 
 template $AtlasView : Adw.Bin {
-  // Outer split (ModeRail left) wraps another split (SceneInspector
-  // right) so both sidebars span the full window height. The central
-  // headerbar lives inside the innermost ToolbarView and only spans
-  // the canvas area between the two sidebars — title centers
-  // properly, X close stays on the inspector's own flat header.
-  //
-  // Pre-refactor SceneInspector lived inside the central
-  // ToolbarView's content (under the headerbar). User feedback:
-  // it should mirror the scene editor's layout (RightInspector at
-  // the outermost layer), which makes the title in the headerbar
-  // also centre between the sidebars instead of between the left
-  // sidebar and the window edge.
+  // Two-level OverlaySplitView mirrors `scene-editor-view.blp` —
+  // ModeRail (left) + SceneInspector (right) both span the full
+  // window height, with the canvas content in the middle. No
+  // central headerbar — chrome lives entirely in floating OSD
+  // widgets over the canvas. Matches the Gradia-pattern decision
+  // from the scene editor side: every editor surface uses the
+  // same chrome vocabulary.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -36,43 +31,80 @@ template $AtlasView : Adw.Bin {
 
       sidebar: $PixelRpgSceneInspector inspector {};
 
-      content: Adw.ToolbarView {
-        [top]
-        Adw.HeaderBar {
-          // X close moves to the inspector's own flat header
-          // (see scene-inspector.blp). That keeps the central
-          // headerbar's right edge clean for the inspector toggle
-          // + New Scene primary action.
-          show-end-title-buttons: false;
+      // Canvas surface with floating OSD chrome — no toolbar
+      // wrapper, no headerbar. Sidebar toggles pinned to the far
+      // edges (library left, inspector right), primary action
+      // "New Scene" at the bottom-right (mirrors `FloatingPlay`
+      // in the scene editor).
+      content: Gtk.Overlay {
+        [overlay]
+        Adw.Bin {
+          halign: start;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
 
-          [start]
-          Gtk.ToggleButton sidebar_toggle {
-            icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Toggle library");
-            active: bind template.show-library bidirectional;
-          }
+          child: Gtk.Box {
+            orientation: horizontal;
+            spacing: 2;
+            styles ["toolbar", "osd"]
 
-          title-widget: Adw.WindowTitle {
-            title: bind template.project-name;
-            subtitle: _("World");
+            // Left-sidebar toggle at the far-left slot. Direct
+            // template-property binding rather than a GAction —
+            // this widget lives inline in atlas-view.blp so it
+            // can reach `template.show-library` directly; no
+            // cross-package GAction bridge needed.
+            Gtk.ToggleButton library_toggle {
+              icon-name: "sidebar-show-symbolic";
+              tooltip-text: _("Toggle library");
+              active: bind template.show-library bidirectional;
+              styles ["flat"]
+            }
           };
+        }
 
-          [end]
-          Gtk.ToggleButton inspector_toggle {
-            icon-name: "sidebar-show-right-symbolic";
-            tooltip-text: _("Toggle inspector");
-            active: bind template.show-inspector bidirectional;
-          }
+        [overlay]
+        Adw.Bin {
+          halign: end;
+          valign: start;
+          margin-top: 12;
+          margin-end: 12;
 
-          [end]
-          Gtk.Button new_scene_button {
+          child: Gtk.Box {
+            orientation: horizontal;
+            spacing: 2;
+            styles ["toolbar", "osd"]
+
+            // Right-sidebar toggle at the far-right slot. Same
+            // direct-binding pattern as library_toggle above.
+            Gtk.ToggleButton inspector_toggle {
+              icon-name: "sidebar-show-right-symbolic";
+              tooltip-text: _("Toggle inspector");
+              active: bind template.show-inspector bidirectional;
+              styles ["flat"]
+            }
+          };
+        }
+
+        [overlay]
+        Adw.Bin {
+          halign: end;
+          valign: end;
+          margin-end: 12;
+          margin-bottom: 12;
+
+          // Primary "New Scene" action — bottom-right pill
+          // matching `FloatingPlay`'s position in the scene
+          // editor so primary actions feel consistent across
+          // both editor surfaces.
+          child: Gtk.Button new_scene_button {
             label: _("New Scene");
             action-name: "win.new-scene";
             styles ["suggested-action", "pill"]
-          }
+          };
         }
 
-        content: $PixelRpgAtlasCanvas atlas {};
+        child: $PixelRpgAtlasCanvas atlas {};
       };
     };
   }
