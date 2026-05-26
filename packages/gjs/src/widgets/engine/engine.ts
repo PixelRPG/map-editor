@@ -333,6 +333,20 @@ export class Engine extends Adw.Bin {
       canvas.height = widget.get_allocated_height() || 600
 
       widget.onResize((w: number, h: number) => {
+        // Defend against transient 0 × 0 allocations during the
+        // mobile breakpoint reflow. When the OverlaySplitView
+        // switches its sidebar from persistent → overlay-drawer mode,
+        // the canvas widget's allocation briefly passes through 0 in
+        // one axis before settling on the new layout. Assigning
+        // `canvas.width = 0` resets the WebGL framebuffer to a 0-px
+        // viewport — Excalibur's render passes silently no-op against
+        // that, and the framebuffer doesn't recover when a subsequent
+        // positive allocation arrives (the GL context's draw state
+        // ends up stale). User-visible: map disappears entirely on
+        // resize to mobile, only the scratchpad backdrop remains.
+        // Skipping the 0-allocation lets the canvas keep its last
+        // valid size until the layout settles.
+        if (w === 0 || h === 0) return
         canvas.width = w
         canvas.height = h
         try {
