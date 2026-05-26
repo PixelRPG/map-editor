@@ -36,6 +36,8 @@ export class WelcomeView extends Adw.Bin {
   declare _empty_recents_row: Adw.ActionRow
 
   private _recentRows: Gtk.Widget[] = []
+  private _inspectorCollapsed = false
+  private _showInspector = false
 
   private signals = new SignalScope()
 
@@ -54,6 +56,25 @@ export class WelcomeView extends Adw.Bin {
           'recents_list',
           'empty_recents_row',
         ],
+        Properties: {
+          // Mirror SceneEditorView + AtlasView so the same
+          // breakpoint setters in application-window.blp apply
+          // uniformly across all three views.
+          'inspector-collapsed': GObject.ParamSpec.boolean(
+            'inspector-collapsed',
+            'Inspector Collapsed',
+            'Whether the recents sidebar collapses to a drawer (set by the window breakpoint)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          'show-inspector': GObject.ParamSpec.boolean(
+            'show-inspector',
+            'Show inspector',
+            'Whether the right-side recent-projects panel is visible',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
         Signals: {
           'create-project': {},
           'open-project': {},
@@ -65,6 +86,26 @@ export class WelcomeView extends Adw.Bin {
       },
       WelcomeView,
     )
+  }
+
+  get inspectorCollapsed(): boolean {
+    return this._inspectorCollapsed ?? false
+  }
+
+  set inspectorCollapsed(value: boolean) {
+    if (this._inspectorCollapsed === value) return
+    this._inspectorCollapsed = value
+    this.notify('inspector-collapsed')
+  }
+
+  get showInspector(): boolean {
+    return this._showInspector ?? false
+  }
+
+  set showInspector(value: boolean) {
+    if (this._showInspector === value) return
+    this._showInspector = value
+    this.notify('show-inspector')
   }
 
   constructor() {

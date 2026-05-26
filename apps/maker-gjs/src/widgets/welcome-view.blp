@@ -2,182 +2,241 @@ using Gtk 4.0;
 using Adw 1;
 
 template $WelcomeView : Adw.Bin {
-  Adw.ToolbarView {
-    [top]
-    Adw.HeaderBar {
-      show-title: false;
-      styles ["flat"]
-    }
+  // Same chrome pattern as AtlasView + SceneEditorView: outermost
+  // Adw.OverlaySplitView wraps the recents panel as a right sidebar.
+  // Both views' breakpoint setters apply uniformly (mobile collapses
+  // the drawer, tablet too — recents isn't the primary content
+  // surface and shouldn't burn screen real-estate when the welcome
+  // hero is the main thing).
+  Adw.OverlaySplitView outer_split {
+    sidebar-position: end;
+    min-sidebar-width: 280;
+    max-sidebar-width: 360;
+    sidebar-width-fraction: 0.7;
+    collapsed: bind template.inspector-collapsed;
+    show-sidebar: bind template.show-inspector bidirectional;
 
-    content: Adw.Clamp {
-      maximum-size: 980;
-      tightening-threshold: 720;
-      hexpand: true;
-      vexpand: true;
+    sidebar: Adw.ToolbarView {
+      top-bar-style: flat;
 
-      child: Gtk.Box outer {
-        orientation: horizontal;
-        spacing: 0;
+      // Thin flat header — hosts the window-close X + acts as a
+      // drag region, mirroring `right-inspector.blp` + the atlas
+      // `scene-inspector.blp` patterns established in PRs #49 + #51.
+      [top]
+      Adw.HeaderBar {
+        show-title: false;
+        show-start-title-buttons: false;
+        show-end-title-buttons: true;
+        styles ["flat"]
+      }
+
+      // Empty pixels in the recents body pick up window-drag —
+      // matching the right-inspector treatment from PR #54.
+      content: Gtk.WindowHandle {
+        child: Gtk.ScrolledWindow {
+          hscrollbar-policy: never;
+          vscrollbar-policy: automatic;
+          // Detach the inner column's natural width from propagating
+          // upward (same trick `atlas-canvas.blp` uses for the
+          // scene-card surface — without it, the recents Box's
+          // 320 px natural was bubbling up to the ApplicationWindow
+          // and blocking the mobile breakpoint at 768 sp).
+          min-content-width: 1;
+
+          child: Gtk.Box recents_column {
+            orientation: vertical;
+            spacing: 12;
+            margin-top: 16;
+            margin-bottom: 16;
+            margin-start: 16;
+            margin-end: 16;
+
+            Gtk.Box recents_header {
+              orientation: horizontal;
+              spacing: 6;
+
+              Gtk.Label {
+                label: _("Recent Projects");
+                halign: start;
+                hexpand: true;
+                styles ["heading"]
+              }
+
+              Gtk.Button browse_button {
+                label: _("Browse all…");
+                styles ["flat"]
+              }
+            }
+
+            Gtk.ListBox recents_list {
+              selection-mode: none;
+              styles ["boxed-list"]
+
+              Adw.ActionRow empty_recents_row {
+                title: _("No recent projects");
+                subtitle: _("Open a project to populate this list.");
+                activatable: false;
+
+                [prefix]
+                Gtk.Image {
+                  icon-name: "folder-open-symbolic";
+                  pixel-size: 22;
+                }
+              }
+            }
+
+            Gtk.Box {
+              vexpand: true;
+            }
+
+            Gtk.Button tour_button {
+              styles ["card"]
+              halign: fill;
+
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 12;
+                margin-end: 12;
+
+                Gtk.Image {
+                  icon-name: "media-playback-start-symbolic";
+                  pixel-size: 18;
+                  styles ["accent"]
+                }
+
+                Gtk.Box {
+                  orientation: vertical;
+                  hexpand: true;
+                  halign: start;
+
+                  Gtk.Label {
+                    label: _("Take the tour");
+                    halign: start;
+                    styles ["heading"]
+                  }
+
+                  Gtk.Label {
+                    label: _("Three-minute walkthrough of the editor.");
+                    halign: start;
+                    styles ["caption", "dim-label"]
+                  }
+                }
+
+                Gtk.Image {
+                  icon-name: "go-next-symbolic";
+                  styles ["dim-label"]
+                }
+              };
+            }
+          };
+        };
+      };
+    };
+
+    // Content area: hero + CTA + templates strip + a floating
+    // toggle pill (top-right) for the recents drawer. No central
+    // headerbar — chrome lives entirely in the inspector sidebar +
+    // the floating toggle, matching atlas + scene-editor.
+    content: Gtk.Overlay {
+      [overlay]
+      Adw.Bin {
+        halign: end;
+        valign: start;
         margin-top: 12;
-        margin-bottom: 36;
-        margin-start: 36;
-        margin-end: 36;
+        margin-end: 12;
 
-        Gtk.Box hero_column {
-          orientation: vertical;
-          spacing: 0;
-          hexpand: true;
-          halign: fill;
-          valign: center;
-
-          $PixelRpgProjectHeroIcon hero_icon {
-            size: 96;
-            halign: center;
-          }
-
-          Gtk.Label welcome_title {
-            label: _("Welcome to Pixel RPG Editor");
-            halign: center;
-            margin-top: 24;
-            margin-bottom: 6;
-            styles ["title-1"]
-          }
-
-          Gtk.Label welcome_subtitle {
-            label: _("Draw maps from tilesets, place a hero and NPCs, hook scenes together with teleports, and script events.");
-            halign: center;
-            wrap: true;
-            justify: center;
-            max-width-chars: 48;
-            margin-bottom: 24;
-            styles ["dim-label"]
-          }
-
-          Gtk.Box cta_box {
+        child: Gtk.WindowHandle {
+          child: Gtk.Box {
             orientation: horizontal;
-            halign: center;
-            spacing: 8;
-            margin-bottom: 36;
+            spacing: 2;
+            styles ["toolbar", "osd"]
 
-            Gtk.Button create_button {
-              label: _("New Project…");
-              styles ["suggested-action", "pill"]
-            }
-
-            Gtk.Button open_button {
-              label: _("Open Project…");
-              styles ["pill"]
-            }
-          }
-
-          Gtk.Label templates_heading {
-            label: _("Start from a template");
-            halign: center;
-            margin-bottom: 10;
-            styles ["caption-heading", "dim-label"]
-          }
-
-          Gtk.Grid templates_grid {
-            row-spacing: 10;
-            column-spacing: 10;
-            column-homogeneous: true;
-            halign: center;
-            margin-bottom: 12;
-          }
-        }
-
-        Gtk.Separator {
-          orientation: vertical;
-          margin-start: 36;
-          margin-end: 36;
-        }
-
-        Gtk.Box recents_column {
-          orientation: vertical;
-          width-request: 320;
-          spacing: 12;
-          valign: fill;
-
-          Gtk.Box recents_header {
-            orientation: horizontal;
-            spacing: 6;
-
-            Gtk.Label {
-              label: _("Recent Projects");
-              halign: start;
-              hexpand: true;
-              styles ["heading"]
-            }
-
-            Gtk.Button browse_button {
-              label: _("Browse all…");
+            // Direct template-property binding (no GAction bridge
+            // needed — widget lives inline in this template).
+            Gtk.ToggleButton inspector_toggle {
+              icon-name: "sidebar-show-right-symbolic";
+              tooltip-text: _("Toggle recent projects");
+              active: bind template.show-inspector bidirectional;
               styles ["flat"]
             }
-          }
+          };
+        };
+      }
 
-          Gtk.ListBox recents_list {
-            selection-mode: none;
-            styles ["boxed-list"]
+      child: Gtk.WindowHandle {
+        child: Adw.Clamp {
+          maximum-size: 720;
+          tightening-threshold: 480;
+          hexpand: true;
+          vexpand: true;
 
-            Adw.ActionRow empty_recents_row {
-              title: _("No recent projects");
-              subtitle: _("Open a project to populate this list.");
-              activatable: false;
+          child: Gtk.Box hero_column {
+            orientation: vertical;
+            spacing: 0;
+            valign: center;
+            margin-top: 12;
+            margin-bottom: 36;
+            margin-start: 24;
+            margin-end: 24;
 
-              [prefix]
-              Gtk.Image {
-                icon-name: "folder-open-symbolic";
-                pixel-size: 22;
+            $PixelRpgProjectHeroIcon hero_icon {
+              size: 96;
+              halign: center;
+            }
+
+            Gtk.Label welcome_title {
+              label: _("Welcome to Pixel RPG Editor");
+              halign: center;
+              margin-top: 24;
+              margin-bottom: 6;
+              styles ["title-1"]
+            }
+
+            Gtk.Label welcome_subtitle {
+              label: _("Draw maps from tilesets, place a hero and NPCs, hook scenes together with teleports, and script events.");
+              halign: center;
+              wrap: true;
+              justify: center;
+              max-width-chars: 48;
+              margin-bottom: 24;
+              styles ["dim-label"]
+            }
+
+            Gtk.Box cta_box {
+              orientation: horizontal;
+              halign: center;
+              spacing: 8;
+              margin-bottom: 36;
+
+              Gtk.Button create_button {
+                label: _("New Project…");
+                styles ["suggested-action", "pill"]
+              }
+
+              Gtk.Button open_button {
+                label: _("Open Project…");
+                styles ["pill"]
               }
             }
-          }
 
-          Gtk.Box {
-            vexpand: true;
-          }
+            Gtk.Label templates_heading {
+              label: _("Start from a template");
+              halign: center;
+              margin-bottom: 10;
+              styles ["caption-heading", "dim-label"]
+            }
 
-          Gtk.Button tour_button {
-            styles ["card"]
-            halign: fill;
-
-            child: Gtk.Box {
-              spacing: 12;
-              margin-top: 8;
-              margin-bottom: 8;
-              margin-start: 12;
-              margin-end: 12;
-
-              Gtk.Image {
-                icon-name: "media-playback-start-symbolic";
-                pixel-size: 18;
-                styles ["accent"]
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-                hexpand: true;
-                halign: start;
-
-                Gtk.Label {
-                  label: _("Take the tour");
-                  halign: start;
-                  styles ["heading"]
-                }
-
-                Gtk.Label {
-                  label: _("Three-minute walkthrough of the editor.");
-                  halign: start;
-                  styles ["caption", "dim-label"]
-                }
-              }
-
-              Gtk.Image {
-                icon-name: "go-next-symbolic";
-                styles ["dim-label"]
-              }
-            };
-          }
-        }
+            Gtk.Grid templates_grid {
+              row-spacing: 10;
+              column-spacing: 10;
+              column-homogeneous: true;
+              halign: center;
+              margin-bottom: 12;
+            }
+          };
+        };
       };
     };
   }
