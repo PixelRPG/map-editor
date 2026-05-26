@@ -198,16 +198,31 @@ template $WelcomeView : Adw.Bin {
               label: _("Draw maps from tilesets, place a hero and NPCs, hook scenes together with teleports, and script events.");
               halign: center;
               wrap: true;
+              wrap-mode: word_char;
               justify: center;
-              max-width-chars: 48;
+              // No `max-width-chars` here — at narrow widths it
+              // would clamp the label's min to ~48 characters,
+              // forcing the whole hero column wider than the
+              // mobile breakpoint can accommodate. With just
+              // `wrap: true` the label flows to whatever
+              // allocation it gets.
               margin-bottom: 24;
               styles ["dim-label"]
             }
 
-            Gtk.Box cta_box {
+            // FlowBox (not Box) so the two CTA pills stack
+            // vertically once the available width drops below
+            // their combined natural width — mobile-friendly
+            // without a JS-driven orientation switch.
+            Gtk.FlowBox cta_box {
               orientation: horizontal;
               halign: center;
-              spacing: 8;
+              selection-mode: none;
+              min-children-per-line: 1;
+              max-children-per-line: 2;
+              column-spacing: 8;
+              row-spacing: 8;
+              homogeneous: false;
               margin-bottom: 36;
 
               Gtk.Button create_button {
@@ -228,11 +243,21 @@ template $WelcomeView : Adw.Bin {
               styles ["caption-heading", "dim-label"]
             }
 
-            Gtk.Grid templates_grid {
-              row-spacing: 10;
+            // FlowBox replaces the previous fixed 3-column Grid so
+            // template cards reflow per available width:
+            // ~3 cards / row at the desktop clamp maximum (720),
+            // 2 cards mid-width, 1 card at narrow mobile widths.
+            // `homogeneous: true` keeps every visible card the
+            // same size; the JS side just appends children, no
+            // row/col math.
+            Gtk.FlowBox templates_grid {
+              halign: fill;
+              selection-mode: none;
+              min-children-per-line: 1;
+              max-children-per-line: 3;
               column-spacing: 10;
-              column-homogeneous: true;
-              halign: center;
+              row-spacing: 10;
+              homogeneous: true;
               margin-bottom: 12;
             }
           };

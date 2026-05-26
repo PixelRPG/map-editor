@@ -31,7 +31,7 @@ export class WelcomeView extends Adw.Bin {
   declare _open_button: Gtk.Button
   declare _browse_button: Gtk.Button
   declare _tour_button: Gtk.Button
-  declare _templates_grid: Gtk.Grid
+  declare _templates_grid: Gtk.FlowBox
   declare _recents_list: Gtk.ListBox
   declare _empty_recents_row: Adw.ActionRow
 
@@ -156,14 +156,15 @@ export class WelcomeView extends Adw.Bin {
   }
 
   private _buildTemplateGrid(): void {
-    // Five templates ship today; three columns keep the grid to two rows
-    // and the cards small enough that the toast overlay isn't forced
-    // outside the window's vertical allocation.
-    const cols = 3
-    STARTER_TEMPLATES.forEach((template, index) => {
+    // FlowBox handles the row/col math itself — cards reflow per
+    // allocated width thanks to the `max-children-per-line: 3` cap
+    // (see welcome-view.blp). `append` puts each card at the next
+    // flow position; no manual index → (row, col) translation
+    // needed.
+    for (const template of STARTER_TEMPLATES) {
       const button = this._buildTemplateCard(template)
-      this._templates_grid.attach(button, index % cols, Math.floor(index / cols), 1, 1)
-    })
+      this._templates_grid.append(button)
+    }
   }
 
   private _buildTemplateCard(template: { id: string; name: string; caption: string; projectPath: string; accentColor: string }): Gtk.Button {
