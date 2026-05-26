@@ -20,7 +20,11 @@ const GJS_CONSOLE = process.env.GJS_CONSOLE || '/usr/bin/env -S gjs'
 const PKGDATADIR = process.env.PKGDATADIR || DATADIR
 
 export default {
-  esbuild: {
+  // gjsify renamed the `esbuild` config key to `bundler` (typed as
+  // RolldownOptions) ahead of the 0.5.0 engine swap from esbuild
+  // to Rolldown. The `define` + `loader` keys are stable across
+  // the rename — gjsify's plugin layer translates them either way.
+  bundler: {
     define: {
       __APPLICATION_ID__: JSON.stringify(APPLICATION_ID),
       __RESOURCES_PATH__: JSON.stringify(RESOURCES_PATH),
