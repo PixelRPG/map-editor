@@ -4,18 +4,18 @@ using Adw 1;
 template $PixelRpgModeRail : Adw.Bin {
   styles ["mode-rail"]
 
-  Gtk.Box {
-    orientation: vertical;
-    hexpand: true;
+  // The whole sidebar is a drag handle for the window — Gtk.WindowHandle
+  // passes clicks on real widgets (the menu button, the mode action
+  // rows, the footer buttons) straight to them, and treats every
+  // empty pixel between them as click-and-drag-to-move. Pre-refactor
+  // only the hero_header row carried a WindowHandle, so most of the
+  // sidebar was a dead zone for window movement.
+  Gtk.WindowHandle {
+    child: Gtk.Box {
+      orientation: vertical;
+      hexpand: true;
 
-    // Drag handle for the whole window — Gtk.WindowHandle treats any
-    // empty space inside as click-and-drag-to-move. The hamburger
-    // sits in the row but a stretching Box next to it leaves enough
-    // empty area to grab. Visually identical to the rest of the
-    // sidebar — no chrome / no separator, just the menu button
-    // floating against the sidebar background.
-    Gtk.WindowHandle {
-      child: Gtk.Box hero_header {
+      Gtk.Box hero_header {
         orientation: horizontal;
         margin-top: 12;
         margin-start: 12;
@@ -33,10 +33,9 @@ template $PixelRpgModeRail : Adw.Bin {
           valign: start;
           styles ["flat"]
         }
-      };
-    }
+      }
 
-    Gtk.Box hero {
+      Gtk.Box hero {
       orientation: vertical;
       halign: fill;
       margin-top: 4;
@@ -209,6 +208,7 @@ template $PixelRpgModeRail : Adw.Bin {
         };
       }
     }
+    };
   }
 }
 

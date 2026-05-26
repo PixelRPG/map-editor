@@ -51,7 +51,8 @@ export class SceneEditorView extends Adw.Bin {
   private signals = new SignalScope()
   private _projectName = "Aria's Quest"
   private _sceneName = ''
-  private _collapsed = false
+  private _libraryCollapsed = false
+  private _inspectorCollapsed = false
   private _showLibrary = true
   private _showInspector = true
   private _engine: Engine | null = null
@@ -88,26 +89,43 @@ export class SceneEditorView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          collapsed: GObject.ParamSpec.boolean(
-            'collapsed',
-            'Collapsed',
-            'Whether both split views collapse to overlays (driven by the window breakpoint)',
+          // Per-sidebar collapse flags so the window breakpoint can
+          // independently switch each into overlay-drawer mode. The
+          // tablet preset wants the library overlay + inspector
+          // persistent — impossible to express with a single shared
+          // `collapsed` property.
+          'library-collapsed': GObject.ParamSpec.boolean(
+            'library-collapsed',
+            'Library Collapsed',
+            'Whether the left library sidebar collapses to an overlay (set by the window breakpoint)',
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          'inspector-collapsed': GObject.ParamSpec.boolean(
+            'inspector-collapsed',
+            'Inspector Collapsed',
+            'Whether the right inspector sidebar collapses to an overlay (set by the window breakpoint)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          // Both sidebars default to *closed*. On desktop the user
+          // opens them on demand from the floating toggle pills; on
+          // mobile / tablet the breakpoint-driven `collapsed` makes
+          // them drawer-style, so `show-…: false` means the drawer
+          // is hidden at startup.
           'show-library': GObject.ParamSpec.boolean(
             'show-library',
             'Show library',
             'Whether the library mode rail is visible',
             GObject.ParamFlags.READWRITE,
-            true,
+            false,
           ),
           'show-inspector': GObject.ParamSpec.boolean(
             'show-inspector',
             'Show inspector',
             'Whether the right-side inspector is visible',
             GObject.ParamFlags.READWRITE,
-            true,
+            false,
           ),
         },
         Signals: {
@@ -562,18 +580,28 @@ export class SceneEditorView extends Adw.Bin {
     this.notify('scene-name')
   }
 
-  get collapsed(): boolean {
-    return this._collapsed ?? false
+  get libraryCollapsed(): boolean {
+    return this._libraryCollapsed ?? false
   }
 
-  set collapsed(value: boolean) {
-    if (this._collapsed === value) return
-    this._collapsed = value
-    this.notify('collapsed')
+  set libraryCollapsed(value: boolean) {
+    if (this._libraryCollapsed === value) return
+    this._libraryCollapsed = value
+    this.notify('library-collapsed')
+  }
+
+  get inspectorCollapsed(): boolean {
+    return this._inspectorCollapsed ?? false
+  }
+
+  set inspectorCollapsed(value: boolean) {
+    if (this._inspectorCollapsed === value) return
+    this._inspectorCollapsed = value
+    this.notify('inspector-collapsed')
   }
 
   get showLibrary(): boolean {
-    return this._showLibrary ?? true
+    return this._showLibrary ?? false
   }
 
   set showLibrary(value: boolean) {
@@ -583,7 +611,7 @@ export class SceneEditorView extends Adw.Bin {
   }
 
   get showInspector(): boolean {
-    return this._showInspector ?? true
+    return this._showInspector ?? false
   }
 
   set showInspector(value: boolean) {

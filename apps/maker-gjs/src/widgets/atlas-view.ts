@@ -40,9 +40,10 @@ export class AtlasView extends Adw.Bin {
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
   private _projectName = SAMPLE_SCENES.length ? "Aria's Quest" : 'New Project'
-  private _collapsed = false
-  private _showLibrary = true
-  private _showInspector = true
+  private _libraryCollapsed = false
+  private _inspectorCollapsed = false
+  private _showLibrary = false
+  private _showInspector = false
   private _projectResource: GameProjectResource | null = null
 
   static {
@@ -59,10 +60,20 @@ export class AtlasView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             'New Project',
           ),
-          collapsed: GObject.ParamSpec.boolean(
-            'collapsed',
-            'Collapsed',
-            'Whether both split views collapse to overlays (driven by the window breakpoint)',
+          // Per-sidebar collapse flags so the window breakpoint
+          // can independently switch each into drawer mode. See
+          // `scene-editor-view.ts` for the rationale.
+          'library-collapsed': GObject.ParamSpec.boolean(
+            'library-collapsed',
+            'Library Collapsed',
+            'Whether the left library sidebar collapses to an overlay (set by the window breakpoint)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          'inspector-collapsed': GObject.ParamSpec.boolean(
+            'inspector-collapsed',
+            'Inspector Collapsed',
+            'Whether the right scene-inspector sidebar collapses to an overlay (set by the window breakpoint)',
             GObject.ParamFlags.READWRITE,
             false,
           ),
@@ -71,14 +82,14 @@ export class AtlasView extends Adw.Bin {
             'Show library',
             'Whether the library mode rail is visible',
             GObject.ParamFlags.READWRITE,
-            true,
+            false,
           ),
           'show-inspector': GObject.ParamSpec.boolean(
             'show-inspector',
             'Show inspector',
             'Whether the right-side scene inspector is visible',
             GObject.ParamFlags.READWRITE,
-            true,
+            false,
           ),
         },
         Signals: {
@@ -113,18 +124,28 @@ export class AtlasView extends Adw.Bin {
     this.notify('project-name')
   }
 
-  get collapsed(): boolean {
-    return this._collapsed ?? false
+  get libraryCollapsed(): boolean {
+    return this._libraryCollapsed ?? false
   }
 
-  set collapsed(value: boolean) {
-    if (this._collapsed === value) return
-    this._collapsed = value
-    this.notify('collapsed')
+  set libraryCollapsed(value: boolean) {
+    if (this._libraryCollapsed === value) return
+    this._libraryCollapsed = value
+    this.notify('library-collapsed')
+  }
+
+  get inspectorCollapsed(): boolean {
+    return this._inspectorCollapsed ?? false
+  }
+
+  set inspectorCollapsed(value: boolean) {
+    if (this._inspectorCollapsed === value) return
+    this._inspectorCollapsed = value
+    this.notify('inspector-collapsed')
   }
 
   get showLibrary(): boolean {
-    return this._showLibrary ?? true
+    return this._showLibrary ?? false
   }
 
   set showLibrary(value: boolean) {
@@ -134,7 +155,7 @@ export class AtlasView extends Adw.Bin {
   }
 
   get showInspector(): boolean {
-    return this._showInspector ?? true
+    return this._showInspector ?? false
   }
 
   set showInspector(value: boolean) {
@@ -165,6 +186,11 @@ export class AtlasView extends Adw.Bin {
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
       const scene = this._scenes.find((s) => s.id === id) ?? null
       this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
+      // Auto-show the inspector on selection — user-attention event.
+      // Atlas sidebars default to closed; tapping a scene card
+      // reveals its metadata without a manual toggle. Idempotent
+      // on a re-tap (property change is a no-op when already true).
+      this.showInspector = true
       this.emit('scene-selected', id)
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {

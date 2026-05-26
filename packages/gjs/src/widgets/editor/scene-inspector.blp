@@ -21,11 +21,15 @@ template $PixelRpgSceneInspector : Adw.Bin {
       styles ["flat"]
     }
 
-    content: Gtk.ScrolledWindow {
-      hscrollbar-policy: never;
-      vscrollbar-policy: automatic;
+    // Drag region — empty space inside the inspector body moves
+    // the window. Interactive widgets (Open Scene pill, teleport
+    // rows) intercept clicks normally.
+    content: Gtk.WindowHandle {
+      child: Gtk.ScrolledWindow {
+        hscrollbar-policy: never;
+        vscrollbar-policy: automatic;
 
-      child: Gtk.Box body {
+        child: Gtk.Box body {
       orientation: vertical;
       spacing: 12;
       margin-top: 16;
@@ -86,6 +90,7 @@ template $PixelRpgSceneInspector : Adw.Bin {
         title: _("No scene selected");
         description: _("Pick a scene from the atlas to inspect it.");
       }
+      };
       };
     };
   }
