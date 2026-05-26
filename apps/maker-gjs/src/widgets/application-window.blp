@@ -8,9 +8,10 @@ template $ApplicationWindow : Adw.ApplicationWindow {
   width-request: 360;
   height-request: 480;
 
-  // Mobile (<768sp): both sidebars collapse into overlay drawers.
-  // User opens them via the floating library / inspector toggle
-  // pills (which sit on the canvas in both views).
+  // Mobile (<768sp): every sidebar collapses into an overlay
+  // drawer. User opens them via the floating library / inspector
+  // toggle pills (which sit on the canvas / welcome content in
+  // every view).
   Adw.Breakpoint {
     condition ("max-width: 768sp")
 
@@ -19,6 +20,7 @@ template $ApplicationWindow : Adw.ApplicationWindow {
       atlas_view.inspector-collapsed: true;
       scene_editor_view.library-collapsed: true;
       scene_editor_view.inspector-collapsed: true;
+      welcome_view.inspector-collapsed: true;
     }
   }
 
@@ -28,7 +30,10 @@ template $ApplicationWindow : Adw.ApplicationWindow {
   // metadata + edits properties — making it a drawer would hide
   // their current context every time they tap outside.
   //
-  // Desktop (≥1024sp) uses the template defaults — both sidebars
+  // Welcome view's recents panel also stays persistent at tablet
+  // — it's the user's primary continue-work surface.
+  //
+  // Desktop (≥1024sp) uses the template defaults — every sidebar
   // persistent — so no third breakpoint needed.
   Adw.Breakpoint {
     condition ("min-width: 768sp and max-width: 1023sp")
