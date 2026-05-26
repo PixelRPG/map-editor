@@ -11,7 +11,11 @@ template $PixelRpgContextChip : Adw.Bin {
   margin-top: 12;
   margin-end: 12;
 
-  Gtk.Box {
+  // WindowHandle wrap — empty padding inside the OSD pill (between
+  // buttons + outer margins) accepts window-drag, matching
+  // FloatingHistory on the other side.
+  Gtk.WindowHandle {
+  child: Gtk.Box {
     orientation: horizontal;
     spacing: 2;
     styles ["toolbar", "osd"]
@@ -104,5 +108,6 @@ template $PixelRpgContextChip : Adw.Bin {
       tooltip-text: _("Toggle inspector");
       styles ["flat"]
     }
+  };
   }
 }

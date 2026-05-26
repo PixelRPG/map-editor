@@ -5,10 +5,19 @@ template $Engine : Adw.Bin {
   vexpand: true;
   hexpand: true;
   visible: true;
+  // Force a 1-px floor so the engine never inherits a wider minimum
+  // from the WebGL/Canvas2D bridge widget appended at runtime. Without
+  // this the canvas's natural size (whatever GLArea reports) becomes
+  // the min-content-width chain bubbling up to the application
+  // window, blocking the mobile breakpoint from firing.
+  width-request: 1;
+  height-request: 1;
 
   Gtk.Box canvasContainer {
     vexpand: true;
     hexpand: true;
     orientation: vertical;
+    width-request: 1;
+    height-request: 1;
   }
 }

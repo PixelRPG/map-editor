@@ -3,7 +3,10 @@ using Adw 1;
 
 template $PixelRpgSceneInspector : Adw.Bin {
   styles ["scene-inspector"]
-  width-request: 300;
+  // No hard width-request — the inner ScrolledWindow handles
+  // overflow, and a hard floor here would block the window from
+  // shrinking past it (~1085 px on test runs), preventing the
+  // mobile breakpoint (768sp) from ever firing.
 
   Adw.ToolbarView {
     top-bar-style: flat;

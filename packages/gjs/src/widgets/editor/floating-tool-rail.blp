@@ -6,7 +6,10 @@ template $PixelRpgFloatingToolRail : Adw.Bin {
   valign: center;
   margin-start: 12;
 
-  Gtk.Box {
+  // WindowHandle wrap — empty space between the tool toggles + the
+  // separator gap accepts window-drag, matching the other floats.
+  Gtk.WindowHandle {
+  child: Gtk.Box {
     orientation: vertical;
     spacing: 2;
     styles ["toolbar", "osd"]
@@ -77,5 +80,6 @@ template $PixelRpgFloatingToolRail : Adw.Bin {
       action-target: "'event'";
       group: btn_pencil;
     }
+  };
   }
 }

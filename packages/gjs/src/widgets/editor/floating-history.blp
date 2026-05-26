@@ -14,7 +14,13 @@ template $PixelRpgFloatingHistory : Adw.Bin {
   // top-left that didn't visually align. Consolidated so only one
   // pill renders, matching the Gradia "controls float over canvas"
   // pattern.
-  Gtk.Box {
+  //
+  // `Gtk.WindowHandle` wrap: empty spacing between buttons + the
+  // OSD pill's outer padding pick up window-drag gestures, so the
+  // user can grab the toolbar to move the window. Button clicks
+  // bypass the handle automatically (Gtk widget event semantics).
+  Gtk.WindowHandle {
+  child: Gtk.Box {
     orientation: horizontal;
     spacing: 2;
     styles ["toolbar", "osd"]
@@ -72,5 +78,6 @@ template $PixelRpgFloatingHistory : Adw.Bin {
       tooltip-text: _("Toggle grid view");
       styles ["flat"]
     }
+  };
   }
 }
