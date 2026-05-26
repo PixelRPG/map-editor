@@ -14,7 +14,7 @@ template $AtlasView : Adw.Bin {
     min-sidebar-width: 220;
     max-sidebar-width: 260;
     sidebar-width-fraction: 0.7;
-    collapsed: bind template.collapsed;
+    collapsed: bind template.library-collapsed;
     show-sidebar: bind template.show-library bidirectional;
 
     sidebar: $PixelRpgModeRail mode_rail {
@@ -26,7 +26,7 @@ template $AtlasView : Adw.Bin {
       sidebar-position: end;
       min-sidebar-width: 280;
       max-sidebar-width: 320;
-      collapsed: bind template.collapsed;
+      collapsed: bind template.inspector-collapsed;
       show-sidebar: bind template.show-inspector bidirectional;
 
       sidebar: $PixelRpgSceneInspector inspector {};

@@ -21,12 +21,18 @@ template $PixelRpgRightInspector : Adw.Bin {
       styles ["flat"]
     }
 
-    content: Gtk.ScrolledWindow {
-      hexpand: true;
-      vexpand: true;
-      hscrollbar-policy: never;
+    // Whole inspector body acts as a drag region for the window —
+    // empty space between rows / below the active tab's content
+    // grabs the window-drag; interactive widgets (list rows, the
+    // search entry, scrollbars) consume their clicks normally and
+    // bypass the WindowHandle.
+    content: Gtk.WindowHandle {
+      child: Gtk.ScrolledWindow {
+        hexpand: true;
+        vexpand: true;
+        hscrollbar-policy: never;
 
-      child: Adw.ViewStack stack {
+        child: Adw.ViewStack stack {
         vexpand: true;
 
         Adw.ViewStackPage {
@@ -60,6 +66,7 @@ template $PixelRpgRightInspector : Adw.Bin {
 
           child: $PixelRpgPropsTab props_tab {};
         }
+        };
       };
     };
 
