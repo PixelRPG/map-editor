@@ -43,6 +43,15 @@ template $ApplicationWindow : Adw.ApplicationWindow {
     child: Adw.ViewStack stack {
       vexpand: true;
       hexpand: true;
+      // Default is `true`, which measures every page and uses the
+      // max as the stack's size. With the scene editor's WebGL
+      // canvas reporting a large natural width (~1200 px), that
+      // bubbled up as the application window's minimum even while
+      // the atlas view was shown — blocking the mobile breakpoint
+      // from firing at <768 sp. Setting both to false makes the
+      // stack track only the visible page's measurement.
+      hhomogeneous: false;
+      vhomogeneous: false;
 
       Adw.ViewStackPage {
         name: "welcome";

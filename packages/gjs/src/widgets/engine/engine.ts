@@ -292,6 +292,14 @@ export class Engine extends Adw.Bin {
     const widget = useFallback ? new Canvas2DBridge() : new WebGLBridge()
     widget.set_hexpand(true)
     widget.set_vexpand(true)
+    // Force a 1-px floor on the GLArea / Canvas2D widget itself. Without
+    // this it reports the canvas's natural framebuffer width (e.g.,
+    // 1202 px on kokiri-forest) as its minimum, which propagates up
+    // through the canvasContainer Box → engine widget → ToolbarView →
+    // ApplicationWindow and blocks the mobile breakpoint. The widget
+    // still fills its hexpand/vexpand allocation; we're only releasing
+    // the *minimum*, not the natural target.
+    widget.set_size_request(1, 1)
     // The WebGL bridge is a `Gtk.GLArea`, which defaults to an opaque
     // framebuffer. Excalibur clears with `Color.Transparent`, but
     // without `has-alpha` the alpha channel is dropped by GLArea
