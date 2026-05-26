@@ -5,19 +5,35 @@ template $Engine : Adw.Bin {
   vexpand: true;
   hexpand: true;
   visible: true;
-  // Force a 1-px floor so the engine never inherits a wider minimum
-  // from the WebGL/Canvas2D bridge widget appended at runtime. Without
-  // this the canvas's natural size (whatever GLArea reports) becomes
-  // the min-content-width chain bubbling up to the application
-  // window, blocking the mobile breakpoint from firing.
-  width-request: 1;
-  height-request: 1;
 
-  Gtk.Box canvasContainer {
-    vexpand: true;
+  // The WebGL/Canvas2D bridge widget appended at runtime reports the
+  // canvas's natural framebuffer size as its minimum, which would
+  // bubble up to the application window and block the mobile
+  // breakpoint from firing. Wrapping in a Gtk.ScrolledWindow with
+  // `min-content-{width,height}: 1` detaches the child's min from
+  // the parent chain — the ScrolledWindow itself reports 1×1 as
+  // its minimum and lets its child take whatever allocation it
+  // gets (hexpand/vexpand both true on the canvasContainer Box).
+  //
+  // `hscrollbar-policy: external` + `vscrollbar-policy: external`
+  // mean the ScrolledWindow never actually shows scrollbars or
+  // intercepts wheel scroll — it's used purely as a size-detach
+  // wrapper. The canvas always gets `min(allocation, natural)` of
+  // space; if the window shrinks below the canvas's natural,
+  // GTK clips the canvas (preserving the rest of the chrome)
+  // instead of refusing to shrink.
+  Gtk.ScrolledWindow {
     hexpand: true;
-    orientation: vertical;
-    width-request: 1;
-    height-request: 1;
+    vexpand: true;
+    min-content-width: 1;
+    min-content-height: 1;
+    hscrollbar-policy: external;
+    vscrollbar-policy: external;
+
+    child: Gtk.Box canvasContainer {
+      vexpand: true;
+      hexpand: true;
+      orientation: vertical;
+    };
   }
 }
