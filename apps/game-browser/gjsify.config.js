@@ -11,9 +11,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8'))
 
 export default {
-  // gjsify renamed `esbuild` → `bundler` (RolldownOptions) ahead
-  // of the 0.5.0 engine swap. `define` + `loader` carry over.
-  bundler: {
+  // Sticking with `esbuild` legacy key — see the corresponding
+  // comment in `apps/maker-gjs/gjsify.config.js`. Naive rename to
+  // `bundler` breaks `define` substitution (lives under
+  // `transform.define` in RolldownOptions) and drops `loader`
+  // entries. Migrate when gjsify 0.5.0 lands with concrete
+  // migration notes.
+  esbuild: {
     define: {
       'process.env.__EX_VERSION': JSON.stringify(pkg.version),
       'process.env.NODE_ENV': JSON.stringify('production'),

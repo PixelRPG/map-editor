@@ -20,11 +20,17 @@ const GJS_CONSOLE = process.env.GJS_CONSOLE || '/usr/bin/env -S gjs'
 const PKGDATADIR = process.env.PKGDATADIR || DATADIR
 
 export default {
-  // gjsify renamed the `esbuild` config key to `bundler` (typed as
-  // RolldownOptions) ahead of the 0.5.0 engine swap from esbuild
-  // to Rolldown. The `define` + `loader` keys are stable across
-  // the rename — gjsify's plugin layer translates them either way.
-  bundler: {
+  // Sticking with the legacy `esbuild` config key on purpose —
+  // gjsify will rename it to `bundler` (RolldownOptions) in 0.5.0,
+  // but the new schema nests `define` under `transform.define` and
+  // silently discards `loader` (Rolldown infers module types from
+  // extensions). A naive flat rename breaks `__APPLICATION_ID__`
+  // resolution at runtime + drops the .glsl/.png loader hints
+  // Excalibur needs. We accept the deprecation warning until
+  // gjsify 0.5.0 ships with documented migration notes for both
+  // pieces. See `refs/gjsify/packages/infra/cli/src/utils/
+  // normalize-bundler-options.ts` for the current mapping.
+  esbuild: {
     define: {
       __APPLICATION_ID__: JSON.stringify(APPLICATION_ID),
       __RESOURCES_PATH__: JSON.stringify(RESOURCES_PATH),
