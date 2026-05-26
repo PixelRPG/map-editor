@@ -7,6 +7,18 @@ template $PixelRpgAtlasCanvas : Adw.Bin {
     vexpand: true;
     hscrollbar-policy: automatic;
     vscrollbar-policy: automatic;
+    // The `surface` Gtk.Fixed inside gets `set_size_request(W, H)` to
+    // size the world to the union of all scene cards' bboxes (see
+    // `atlas-canvas.ts:_sizeSurface`). Without explicit min-content
+    // overrides, GTK propagates that as the ScrolledWindow's min,
+    // which then bubbles up to the application window — making it
+    // impossible to shrink the window below the atlas's natural
+    // width (kokiri-forest pushes this to ~1200 px). Pinning both
+    // min-content axes to a tiny value detaches the ScrolledWindow's
+    // min from its child, restoring window-shrink behaviour while
+    // letting the scrollbars handle the larger natural world inside.
+    min-content-width: 1;
+    min-content-height: 1;
 
     child: Gtk.Overlay overlay {
       [overlay]

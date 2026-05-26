@@ -44,22 +44,27 @@ template $AtlasView : Adw.Bin {
           margin-top: 12;
           margin-start: 12;
 
-          child: Gtk.Box {
-            orientation: horizontal;
-            spacing: 2;
-            styles ["toolbar", "osd"]
+          // WindowHandle wrap on every floating OSD — empty padding
+          // between buttons + outer pill margins accept window-drag,
+          // matching the other top floats across the editor.
+          child: Gtk.WindowHandle {
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 2;
+              styles ["toolbar", "osd"]
 
-            // Left-sidebar toggle at the far-left slot. Direct
-            // template-property binding rather than a GAction —
-            // this widget lives inline in atlas-view.blp so it
-            // can reach `template.show-library` directly; no
-            // cross-package GAction bridge needed.
-            Gtk.ToggleButton library_toggle {
-              icon-name: "sidebar-show-symbolic";
-              tooltip-text: _("Toggle library");
-              active: bind template.show-library bidirectional;
-              styles ["flat"]
-            }
+              // Left-sidebar toggle at the far-left slot. Direct
+              // template-property binding rather than a GAction —
+              // this widget lives inline in atlas-view.blp so it
+              // can reach `template.show-library` directly; no
+              // cross-package GAction bridge needed.
+              Gtk.ToggleButton library_toggle {
+                icon-name: "sidebar-show-symbolic";
+                tooltip-text: _("Toggle library");
+                active: bind template.show-library bidirectional;
+                styles ["flat"]
+              }
+            };
           };
         }
 
@@ -70,19 +75,21 @@ template $AtlasView : Adw.Bin {
           margin-top: 12;
           margin-end: 12;
 
-          child: Gtk.Box {
-            orientation: horizontal;
-            spacing: 2;
-            styles ["toolbar", "osd"]
+          child: Gtk.WindowHandle {
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 2;
+              styles ["toolbar", "osd"]
 
-            // Right-sidebar toggle at the far-right slot. Same
-            // direct-binding pattern as library_toggle above.
-            Gtk.ToggleButton inspector_toggle {
-              icon-name: "sidebar-show-right-symbolic";
-              tooltip-text: _("Toggle inspector");
-              active: bind template.show-inspector bidirectional;
-              styles ["flat"]
-            }
+              // Right-sidebar toggle at the far-right slot. Same
+              // direct-binding pattern as library_toggle above.
+              Gtk.ToggleButton inspector_toggle {
+                icon-name: "sidebar-show-right-symbolic";
+                tooltip-text: _("Toggle inspector");
+                active: bind template.show-inspector bidirectional;
+                styles ["flat"]
+              }
+            };
           };
         }
 

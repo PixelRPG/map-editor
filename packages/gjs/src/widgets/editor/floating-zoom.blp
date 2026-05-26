@@ -6,7 +6,10 @@ template $PixelRpgFloatingZoom : Adw.Bin {
   valign: end;
   margin-bottom: 12;
 
-  Gtk.Box {
+  // WindowHandle wrap — pill padding + the cursor label area pick
+  // up window-drag gestures.
+  Gtk.WindowHandle {
+  child: Gtk.Box {
     orientation: horizontal;
     spacing: 2;
     styles ["toolbar", "osd"]
@@ -49,5 +52,6 @@ template $PixelRpgFloatingZoom : Adw.Bin {
       margin-start: 8;
       margin-end: 8;
     }
+  };
   }
 }
