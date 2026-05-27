@@ -215,6 +215,56 @@ its own DisplayMode logic runs.
 
 ---
 
+## Engine widget lifecycle — `unmap` ≠ destroy
+
+`packages/gjs/src/widgets/engine/engine.ts` — `vfunc_unroot`.
+
+GTK4 fires `unmap` on **transient** invisibility too, not only on
+destroy. The OverlaySplitView's tablet-breakpoint reflow unmaps the
+scene-editor host's children mid-animation; the same happens during
+view switches (atlas ↔ scene editor) while the outgoing view fades
+out. Anything you tear down in `vfunc_unmap` runs once per transient
+hide.
+
+The Excalibur game loop in particular **never recovers** from a
+teardown — `excalibur.stop()` calls `cancelAnimationFrame(id)` which
+nulls the bridge's pending frame callback. Once the loop is dead it
+stays dead until the next `excalibur.start()`. The visible symptom
+is "map disappears at the tablet breakpoint and stays gone forever,
+even when the window grows back" (PR #66).
+
+Rules:
+
+1. **Teardown belongs in `vfunc_unroot`, not `vfunc_unmap`.** `unroot`
+   fires on true removal from the widget tree (`parent.remove()`,
+   `window.destroy()`), not on transient visibility flips. Same
+   teardown logic; correct trigger.
+2. **Stay out of `vfunc_dispose`.** `dispose` runs during GObject GC.
+   Disconnecting signal handlers / cancelling sources from there
+   triggers `"Attempting to run a JS callback during garbage
+   collection"` criticals on app exit.
+3. **Don't try to "save" state in `unmap` and restore in `map`** for
+   expensive-init widgets like a WebGL game loop. The unmap can fire
+   mid-frame; the re-init is racy and far slower than just keeping
+   the engine running across transient hides. GTK's frame clock will
+   pause render signals on the unmapped widget anyway — Excalibur's
+   loop ticks on idle, no wasted GPU work.
+
+If the underlying engine pause-on-hide really IS desired (e.g. for
+battery), use `notify::mapped` to call a custom `pause()` / `resume()`
+that ONLY toggles a flag — never call `excalibur.stop()` outside
+final teardown.
+
+(Companion bug in gjsify itself: `WebGLBridge.cancelAnimationFrame`
+used to be a no-op-with-side-effect that always cleared the pending
+frame callback regardless of id, so even a stale cancel from
+anywhere killed the loop. gjsify#330 makes it spec-compliant
+per-id; once gjsify is bumped to a release containing it, the
+hostile-API edge is closed and the only remaining risk is your own
+teardown firing too early — which the `unroot` rule above handles.)
+
+---
+
 ## Sidebar drag regions
 
 `Gtk.WindowHandle` wraps every sidebar's content so empty pixels
@@ -280,6 +330,14 @@ dragging wouldn't be discoverable anyway.
   is the equivalent, and Rolldown's auto-inferred module types
   don't match esbuild's per-extension loaders. Stay on `esbuild:`
   until gjsify 0.5.0 ships migration notes (PR #58).
+- **Tearing the engine down in `vfunc_unmap`** looks correct
+  (mirror the "I'm going away" hook) but kills the Excalibur
+  game loop on every transient breakpoint reflow — the canvas
+  goes blank and stays blank because `excalibur.stop()` is
+  permanent (PR #66). Move teardown to `vfunc_unroot` (true tree
+  detach) instead. See the "Engine widget lifecycle" section
+  above for the full lifecycle map and why GObject GC criticals
+  rule out `vfunc_dispose` as well.
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller
