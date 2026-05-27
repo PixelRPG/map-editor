@@ -37,6 +37,7 @@ Ordered by dependency — read top-to-bottom for the cleanest mental sequence. E
 | File | Status | What it covers |
 |---|---|---|
 | [`editor-architecture.md`](editor-architecture.md) | planning | **Foundation** — Three-layer split (GTK View, ECS Components as Model, ECS Systems as Controller), the session-singleton entity, the `SessionState` subscription API. Everything else lives on top. |
+| [`responsive-chrome.md`](responsive-chrome.md) | landed | **View-layer chrome** — Breakpoints (mobile / tablet / desktop), sidebar layout patterns, floating-OSD vs regular-headerbar treatment, size-propagation hazards, engine-resize handling. The "how does the UI fit on every screen" map. |
 | [`runtime-modes.md`](runtime-modes.md) | planning | **Mode markers** — `EditorMode` / `RuntimeMode` / `GhostSpawn` components on the session-singleton. Composes the Editor / Full Run / Live Run / Test Run user-visible modes, Mario-Maker-inspired. |
 | [`object-system.md`](object-system.md) | planning | **What's in the world** — Definition/Placement model for tiles, objects, NPCs, items, teleports, spawn points. Maps placements to ECS entities via `ObjectSpawnSystem`. |
 | [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) | planning | **Multi-peer sync** — Op-Log with Host-Sequencer (Player 1) for both collaborative editing and networked multiplayer. Single mechanism, two op vocabularies. Solo edits work locally; collab requires a host. |

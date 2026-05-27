@@ -210,20 +210,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     undoAction.set_enabled(false)
     redoAction.set_enabled(false)
 
-    // Sidebar toggle actions. PropertyAction wraps the
+    // Sidebar toggle actions. `Gio.PropertyAction` wraps the
     // SceneEditorView's boolean `show-library` / `show-inspector`
-    // properties bi-directionally — the floating OSD toggle buttons
-    // (FloatingHistory's library_toggle on the left, ContextChip's
-    // inspector_toggle on the right) drive these actions via
-    // `action-name`, and the action state follows the property
-    // automatically if the split-view changes the property through
-    // any other path (swipe-to-close on collapsed mobile, etc.).
-    //
-    // Pre-refactor these toggles were `Gtk.ToggleButton`s in the
-    // central headerbar with direct `bind template.show-library`
-    // bindings. Moving them into widgets in a different package
-    // (`packages/gjs`) means the template binding can no longer
-    // reach across — PropertyAction is the action-shaped bridge.
+    // properties bi-directionally — the OSD toggle buttons that
+    // live in `packages/gjs` widgets (FloatingHistory's
+    // library_toggle, ContextChip's inspector_toggle) can't reach
+    // a cross-package template binding, so PropertyAction is the
+    // action-shaped bridge. Atlas + welcome stay inline + use
+    // direct `bind template.show-…` bindings because their toggles
+    // live in the same template. See `docs/concepts/responsive-chrome.md`.
     winActions.add_action(
       new Gio.PropertyAction({
         name: 'toggle-library',

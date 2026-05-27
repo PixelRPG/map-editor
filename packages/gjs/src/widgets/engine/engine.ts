@@ -304,13 +304,13 @@ export class Engine extends Adw.Bin {
     const widget = useFallback ? new Canvas2DBridge() : new WebGLBridge()
     widget.set_hexpand(true)
     widget.set_vexpand(true)
-    // Removed: explicit set_size_request(1, 1) was causing the WebGL
-    // canvas to render blank at tablet width — the bridge's allocation
-    // collapsed to its minimum during certain layout passes, and the
-    // map disappeared until the user resized back to full-width.
-    // Size propagation is now handled by the ScrolledWindow wrap
-    // around `canvasContainer` in `engine.blp`, which detaches the
-    // child's min from bubbling up without clamping the bridge itself.
+    // Size-propagation note: the bridge widget's natural width can be
+    // wide (matches the WebGL framebuffer). The ScrolledWindow wrap
+    // around `canvasContainer` in `engine.blp` detaches that min
+    // from bubbling up to the ApplicationWindow — see
+    // `docs/concepts/responsive-chrome.md` § "Size-propagation
+    // hazards" for the full chain.
+    //
     // The WebGL bridge is a `Gtk.GLArea`, which defaults to an opaque
     // framebuffer. Excalibur clears with `Color.Transparent`, but
     // without `has-alpha` the alpha channel is dropped by GLArea
