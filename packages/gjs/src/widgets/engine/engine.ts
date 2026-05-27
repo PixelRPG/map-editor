@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { Canvas2DBridge } from '@gjsify/canvas2d'
@@ -62,6 +63,17 @@ export class Engine extends Adw.Bin {
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
+  /**
+   * Pending resize state — the latest (w, h) the GLArea has reported
+   * since the last time we actually pushed it into the canvas /
+   * Excalibur viewport. We frame-throttle resize handling because
+   * each `canvas.width = …` / `applyResolutionAndViewport()` pair
+   * is expensive (framebuffer reallocation + GL state reset), and
+   * Gtk fires resize events ~60/s while the user drags a window
+   * edge or the Adw.OverlaySplitView animates its sidebar in/out.
+   */
+  private _pendingResize: { w: number; h: number } | null = null
+  private _resizeTimeoutId: number | null = null
 
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -347,13 +359,30 @@ export class Engine extends Adw.Bin {
         // Skipping the 0-allocation lets the canvas keep its last
         // valid size until the layout settles.
         if (w === 0 || h === 0) return
-        canvas.width = w
-        canvas.height = h
-        try {
-          this._excalibur?.excalibur.screen.applyResolutionAndViewport()
-        } catch {
-          // screen not ready yet — ignore
-        }
+        // Frame-throttle the expensive part — Gtk emits resize
+        // events ~60 / second while the user drags a window edge,
+        // and each `canvas.width = …` reallocates the WebGL
+        // framebuffer + `applyResolutionAndViewport()` rebuilds
+        // the Excalibur viewport state. Running both per event
+        // makes window-drag + sidebar-toggle visibly stutter.
+        // Coalescing to ~33 ms (≈ 30 fps) keeps things responsive
+        // without burning a full GL reset on every layout tick.
+        this._pendingResize = { w, h }
+        if (this._resizeTimeoutId != null) return
+        this._resizeTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 33, () => {
+          this._resizeTimeoutId = null
+          const pending = this._pendingResize
+          this._pendingResize = null
+          if (!pending) return GLib.SOURCE_REMOVE
+          canvas.width = pending.w
+          canvas.height = pending.h
+          try {
+            this._excalibur?.excalibur.screen.applyResolutionAndViewport()
+          } catch {
+            // screen not ready yet — ignore
+          }
+          return GLib.SOURCE_REMOVE
+        })
       })
 
       try {
@@ -430,6 +459,19 @@ export class Engine extends Adw.Bin {
       }
     }
     this._excaliburSubscriptions = []
+
+    // Drop the pending resize-throttle timer so it doesn't fire
+    // after the engine is torn down and try to write into a
+    // null `_excalibur`.
+    if (this._resizeTimeoutId != null) {
+      try {
+        GLib.source_remove(this._resizeTimeoutId)
+      } catch {
+        // source may already have fired or been removed
+      }
+      this._resizeTimeoutId = null
+      this._pendingResize = null
+    }
 
     if (this._styleManagerHandlerId) {
       try {
