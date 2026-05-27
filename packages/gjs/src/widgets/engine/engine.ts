@@ -354,20 +354,12 @@ export class Engine extends Adw.Bin {
         // or AdwOverlaySplitView animates its sidebar; coalescing
         // to ~33 ms keeps the per-frame work bounded.
         //
-        // Why both `screen.resolution = …` AND
-        // `applyResolutionAndViewport()`: Excalibur's
-        // `FillContainer` DisplayMode normally recalculates its
-        // resolution from the parent element via a `ResizeObserver`
-        // — but in GJS the ResizeObserver doesn't see Gtk
-        // allocation changes, so Excalibur never learns the
-        // canvas has been resized. Setting `screen.resolution`
-        // explicitly here gives it the new dimensions; the
-        // subsequent `applyResolutionAndViewport()` propagates
-        // them into the canvas backing store + WebGL viewport.
-        // Without the explicit resolution write, the apply call
-        // keeps reconfiguring at the initial size and the
-        // user sees a blank canvas at every resize except the
-        // first paint.
+        // Excalibur's `FillContainer` DisplayMode recomputes its
+        // resolution from `canvas.offsetWidth/Height` on every
+        // `ResizeObserver` fire — gjsify >=0.4.29 returns the live
+        // GTK allocation from both the canvas's own override and
+        // the ancestor cache written by `notifyElementResize()`, so
+        // a plain `applyResolutionAndViewport()` is enough.
         this._pendingResize = { w, h }
         if (this._resizeTimeoutId != null) return
         this._resizeTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 33, () => {
@@ -378,7 +370,6 @@ export class Engine extends Adw.Bin {
           const screen = this._excalibur?.excalibur.screen
           if (!screen) return GLib.SOURCE_REMOVE
           try {
-            screen.resolution = { width: pending.w, height: pending.h }
             screen.applyResolutionAndViewport()
           } catch {
             // screen not ready yet — ignore
@@ -448,11 +439,20 @@ export class Engine extends Adw.Bin {
   }
 
   // Tear down the Excalibur engine + its event bridge before GJS starts
-  // reclaiming the widget. Running this in `vfunc_unmap` (not in dispose)
-  // keeps us off the GC path, which would otherwise trigger
-  // "Attempting to run a JS callback during garbage collection" criticals
-  // on app exit.
-  vfunc_unmap(): void {
+  // reclaiming the widget. We hook `vfunc_unroot` (widget detached from
+  // the widget tree) rather than `vfunc_unmap` (widget transiently
+  // hidden), because Adw.Breakpoint reflow unmaps the engine widget when
+  // the OverlaySplitView collapses past the tablet breakpoint — `unmap`
+  // fired teardown would stop the Excalibur game loop on every shrink
+  // and the canvas would go blank for the rest of the session
+  // (Excalibur.stop() → cancelAnimationFrame → frame callback cleared →
+  // never recovers). `unroot` only fires on true removal from the tree
+  // (parent.remove() / window.destroy()), which is what we want.
+  //
+  // Keeping the work out of `vfunc_dispose` avoids the
+  // "Attempting to run a JS callback during garbage collection"
+  // criticals on app exit.
+  vfunc_unroot(): void {
     for (const subscription of this._excaliburSubscriptions) {
       try {
         subscription.close()
@@ -492,7 +492,7 @@ export class Engine extends Adw.Bin {
     this._excalibur?.events.clear()
     this._excalibur = null
 
-    super.vfunc_unmap()
+    super.vfunc_unroot()
   }
 
   private async _waitForReady(): Promise<void> {
