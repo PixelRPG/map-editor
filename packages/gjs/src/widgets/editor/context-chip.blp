@@ -104,7 +104,20 @@ template $PixelRpgContextChip : Adw.Bin {
     // possible without keyboard shortcuts.
     Gtk.ToggleButton inspector_toggle {
       icon-name: "sidebar-show-right-symbolic";
-      action-name: "win.toggle-inspector";
+      // Toggle drives the inspector visibility directly via this
+      // bidirectional bind on the host `show-inspector` property —
+      // NO `action-name: "win.toggle-inspector"` here. Wiring both
+      // paths made the button fight itself: the bind opened the
+      // inspector on click while the action handler in
+      // `ApplicationWindow` immediately toggled it back closed,
+      // requiring a second click to actually settle in the open
+      // state. Atlas-view uses the same bind-only pattern in its
+      // inspector_toggle for the same reason. The
+      // `win.toggle-inspector` action still exists for non-button
+      // triggers (e.g. keyboard shortcuts) and writes through to
+      // `SceneEditorView.show-inspector` directly, which then
+      // propagates back to the button's `active` via this bind.
+      active: bind template.show-inspector bidirectional;
       tooltip-text: _("Toggle inspector");
       styles ["flat"]
     }
