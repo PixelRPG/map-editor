@@ -17,7 +17,7 @@
     "excalibur": "^0.32.0"
   },
   "devDependencies": {
-    "@gjsify/cli": "^0.4.21",
+    "@gjsify/cli": "^0.4.29",
     "http-server": "^14.1.1",
     "typescript": "^6.0.3"
   }
