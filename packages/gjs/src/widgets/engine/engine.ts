@@ -332,18 +332,31 @@ export class Engine extends Adw.Bin {
       canvas.width = widget.get_allocated_width() || 800
       canvas.height = widget.get_allocated_height() || 600
 
-      // No app-side resize handling: Excalibur's `FillContainer`
-      // DisplayMode owns the canvas backing store via its own
-      // `ResizeObserver` on `canvas.parentElement`. With gjsify
-      // >=0.4.29 returning the live GTK allocation from
-      // `HTMLElement.{offset,client}Width/Height` (canvas override +
-      // ancestor cache written by `notifyElementResize()`), every
-      // bridge resize signal fires Excalibur's observer in the
-      // following microtask, which recomputes the resolution and
-      // calls `applyResolutionAndViewport()` itself. Our previous
-      // 33 ms throttle layered a second apply call on top, which is
-      // redundant; removing it simplifies the widget without
-      // changing observable behaviour.
+      widget.onResize((w: number, h: number) => {
+        // Sync the Excalibur viewport with the new GTK allocation
+        // IMMEDIATELY — before the next GLArea render. Excalibur's
+        // own `FillContainer` ResizeObserver also fires on every
+        // notifyElementResize, but it dispatches via a microtask
+        // (W3C spec — ResizeObserver batches entries through the
+        // "deliver resize loop notifications" cycle). If GTK's next
+        // render signal fires before that microtask flushes, the
+        // freshly-allocated edge pixels show their initial GL state
+        // (pure blue / uninitialized memory) for one frame — visible
+        // as a bright flash during fast drags. Pushing the
+        // resolution write synchronously here closes the gap: the
+        // next render clears the entire new area with Excalibur's
+        // backgroundColor (the scratchpad dark from
+        // `_applyScratchpadBackground()`), not the GL default.
+        if (w === 0 || h === 0) return
+        const screen = this._excalibur?.excalibur.screen
+        if (!screen) return
+        try {
+          screen.resolution = { width: w, height: h }
+          screen.applyResolutionAndViewport()
+        } catch {
+          // screen not ready yet — ignore; observer microtask will catch up
+        }
+      })
 
       try {
         const engine = new ExcaliburEngine(canvas)
