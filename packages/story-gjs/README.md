@@ -43,6 +43,6 @@ The host application collects modules via `registry` and renders them. See [`app
 ## Build
 
 ```bash
-yarn workspace @pixelrpg/story-gjs run build
-yarn workspace @pixelrpg/story-gjs run check
+gjsify workspace @pixelrpg/story-gjs build
+gjsify workspace @pixelrpg/story-gjs check
 ```

@@ -7,11 +7,11 @@ Single-process: the [`@pixelrpg/engine`](../../packages/engine) (Excalibur.js) r
 ## Run
 
 ```bash
-yarn workspace @pixelrpg/maker-gjs build
-yarn workspace @pixelrpg/maker-gjs start
+gjsify workspace @pixelrpg/maker-gjs build
+gjsify workspace @pixelrpg/maker-gjs start
 
 # With GTK Inspector for debugging
-yarn workspace @pixelrpg/maker-gjs start:debug
+gjsify workspace @pixelrpg/maker-gjs start:debug
 ```
 
 Application ID: `org.pixelrpg.maker`. Resources are bundled into a GResource file (`org.pixelrpg.maker.data.gresource`) at build time.
@@ -43,7 +43,7 @@ UI is defined declaratively in Blueprint (`.blp`) files; widget classes wire sig
 
 ## Build pipeline
 
-`yarn build` runs three steps:
+`gjsify run build` runs three steps:
 
 1. `build:resources` — `gjsify gresource` packs Blueprint UI + CSS + assets into the `.gresource` file
 2. `build:barrels` — `barrelsby` regenerates `index.ts` barrel exports

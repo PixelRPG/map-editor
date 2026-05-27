@@ -42,13 +42,13 @@ git clone https://github.com/your-username/pixelrpg-map-editor.git
 cd pixelrpg-map-editor
 
 # Install dependencies
-yarn install
+gjsify install
 
 # Build all packages
-yarn build
+gjsify run build
 
 # Verify everything works
-yarn check
+gjsify run check
 ```
 
 ## 🔄 Development Workflow
@@ -83,24 +83,24 @@ git checkout -b docs/update-readme
 
 ```bash
 # Run the editor
-yarn workspace @pixelrpg/maker-gjs start
+gjsify workspace @pixelrpg/maker-gjs start
 
 # Run the storybook
-yarn workspace @pixelrpg/storybook-gjs start
+gjsify workspace @pixelrpg/storybook-gjs start
 
 # Type-check a single package
-yarn workspace @pixelrpg/<pkg> run check
+gjsify workspace @pixelrpg/<pkg> check
 
 # Type-check + build everything
-yarn workspaces foreach -A run check
-yarn build
+gjsify foreach check
+gjsify run build
 
 # Run the engine unit tests
-yarn workspace @pixelrpg/engine run test
+gjsify workspace @pixelrpg/engine test
 
 # Auto-format and lint via Biome
-yarn format     # rewrites files in place (applies safe + unsafe fixes)
-yarn lint       # check-only; fails on lint errors
+gjsify format   # rewrites files in place (applies safe + unsafe fixes)
+gjsify lint     # check-only; fails on lint errors
 ```
 
 ## 🏗️ Architecture Guidelines
@@ -205,29 +205,29 @@ function calculateDistance(point1: Point, point2: Point): number {
 `packages/engine` runs Vitest. Unit tests live next to the source they cover (`foo.ts` + `foo.test.ts`).
 
 ```bash
-yarn workspace @pixelrpg/engine run test          # one-shot
-yarn workspace @pixelrpg/engine run test:watch    # watch mode
+gjsify workspace @pixelrpg/engine test            # one-shot
+gjsify workspace @pixelrpg/engine test:watch      # watch mode
 ```
 
 The other workspaces (`packages/gjs`, `apps/*`) are GTK-bound and currently lack a test harness — extend the engine's pure-function coverage first; widget tests come later.
 
 ### Manual verification
 
-- **Type-check**: `yarn workspaces foreach -A run check`
-- **Build**: `yarn build` — must succeed for all packages
-- **Smoke-test the editor**: `yarn workspace @pixelrpg/maker-gjs start` — open a map, try the brush/eraser tools
-- **Smoke-test the storybook**: `yarn workspace @pixelrpg/storybook-gjs start` — render widget stories
+- **Type-check**: `gjsify foreach check`
+- **Build**: `gjsify run build` — must succeed for all packages
+- **Smoke-test the editor**: `gjsify workspace @pixelrpg/maker-gjs start` — open a map, try the brush/eraser tools
+- **Smoke-test the storybook**: `gjsify workspace @pixelrpg/storybook-gjs start` — render widget stories
 
 ### Linting & formatting
 
 Biome handles both linting and formatting (Prettier and ESLint are not used).
 
 ```bash
-yarn lint     # report lint issues
-yarn format   # auto-fix and reformat in place
+gjsify lint   # report lint issues
+gjsify format # auto-fix and reformat in place
 ```
 
-A `husky` pre-commit hook runs `yarn format` before each commit. VS Code is configured (`.vscode/settings.json`) to format on save with `biomejs.biome`.
+A `husky` pre-commit hook runs `gjsify format` before each commit. VS Code is configured (`.vscode/settings.json`) to format on save with `biomejs.biome`.
 
 ## 📚 Documentation
 
@@ -319,10 +319,10 @@ Add screenshots of UI changes.
 ### Automated Checks
 
 All PRs must pass:
-- TypeScript compilation (`yarn workspaces foreach -A run check`)
-- Build process (`yarn build`)
-- Lint (`yarn lint` — Biome)
-- Engine unit tests (`yarn workspace @pixelrpg/engine run test`)
+- TypeScript compilation (`gjsify foreach check`)
+- Build process (`gjsify run build`)
+- Lint (`gjsify lint` — Biome)
+- Engine unit tests (`gjsify workspace @pixelrpg/engine test`)
 
 Widget-level tests for the GJS packages and apps are not yet in place; see the [Testing](#-testing) section.
 
@@ -338,7 +338,7 @@ Widget-level tests for the GJS packages and apps are not yet in place; see the [
 
 - [Project README](../README.md) — overview, architecture, workspace layout
 - [AGENTS.md](../AGENTS.md) — coding conventions, ECS patterns, Blueprint, GTK4 lifecycle
-- Storybook: `yarn workspace @pixelrpg/storybook-gjs start`
+- Storybook: `gjsify workspace @pixelrpg/storybook-gjs start`
 
 ## 🎉 Recognition
 

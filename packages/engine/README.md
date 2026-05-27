@@ -34,6 +34,6 @@ In GJS, the canvas comes from the GTK Engine widget in [`@pixelrpg/gjs`](../gjs)
 ## Build
 
 ```bash
-yarn workspace @pixelrpg/engine run build
-yarn workspace @pixelrpg/engine run check
+gjsify workspace @pixelrpg/engine build
+gjsify workspace @pixelrpg/engine check
 ```
