@@ -346,36 +346,32 @@ export class Engine extends Adw.Bin {
 
       widget.onResize((w: number, h: number) => {
         // Defend against transient 0 × 0 allocations during the
-        // mobile breakpoint reflow. When the OverlaySplitView
-        // switches its sidebar from persistent → overlay-drawer mode,
-        // the canvas widget's allocation briefly passes through 0 in
-        // one axis before settling on the new layout. Assigning
-        // `canvas.width = 0` resets the WebGL framebuffer to a 0-px
-        // viewport — Excalibur's render passes silently no-op against
-        // that, and the framebuffer doesn't recover when a subsequent
-        // positive allocation arrives (the GL context's draw state
-        // ends up stale). User-visible: map disappears entirely on
-        // resize to mobile, only the scratchpad backdrop remains.
-        // Skipping the 0-allocation lets the canvas keep its last
-        // valid size until the layout settles.
+        // mobile breakpoint reflow — Excalibur's screen API would
+        // happily reconfigure to a 0 px viewport.
         if (w === 0 || h === 0) return
-        // Frame-throttle the expensive part — Gtk emits resize
-        // events ~60 / second while the user drags a window edge,
-        // and each `canvas.width = …` reallocates the WebGL
-        // framebuffer + `applyResolutionAndViewport()` rebuilds
-        // the Excalibur viewport state. Running both per event
-        // makes window-drag + sidebar-toggle visibly stutter.
-        // Coalescing to ~33 ms (≈ 30 fps) keeps things responsive
-        // without burning a full GL reset on every layout tick.
+        // Frame-throttle the viewport recalc. Gtk emits resize
+        // events ~60 / second while the user drags a window edge
+        // or AdwOverlaySplitView animates its sidebar; coalescing
+        // to ~33 ms keeps the per-frame work bounded.
+        //
+        // Critically, we no longer write `canvas.width = w` /
+        // `canvas.height = h` ourselves. Setting those properties
+        // discards the WebGL context's framebuffer + clears all
+        // bound shader / texture state (browser semantics — and
+        // gjsify's canvas wrapper follows it). Excalibur's
+        // initialised GL handles become dangling pointers into a
+        // recreated context; subsequent draw calls silently no-op
+        // and the user sees a blank canvas that doesn't recover
+        // when they grow the window back. Excalibur's
+        // `FillContainer` DisplayMode + `applyResolutionAndViewport`
+        // already manage the canvas backing store internally, so
+        // our job here is just to nudge that recalc after the
+        // outer widget's allocation settles.
         this._pendingResize = { w, h }
         if (this._resizeTimeoutId != null) return
         this._resizeTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 33, () => {
           this._resizeTimeoutId = null
-          const pending = this._pendingResize
           this._pendingResize = null
-          if (!pending) return GLib.SOURCE_REMOVE
-          canvas.width = pending.w
-          canvas.height = pending.h
           try {
             this._excalibur?.excalibur.screen.applyResolutionAndViewport()
           } catch {
