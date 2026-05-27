@@ -143,6 +143,16 @@ export class EngineController {
   /** Tear the engine down. Idempotent. */
   dispose(): void {
     if (!this._engine) return
+    // Tear the Excalibur engine + bridge subscriptions down BEFORE
+    // detaching the widget from its parent. The widget's own
+    // `vfunc_unroot` can't be overridden to do this work because
+    // GTK widget destruction kicks off a GC pass and GJS blocks
+    // any JS-side vfunc call that fires during GC (the
+    // `Attempting to run a JS callback during garbage collection`
+    // critical). Calling `Engine.dispose()` synchronously here keeps
+    // teardown in a user-action context where JS callbacks run
+    // freely.
+    this._engine.dispose()
     this.slot(null)
     this._engine = null
     this._projectPath = null
