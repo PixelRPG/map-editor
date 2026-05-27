@@ -354,26 +354,32 @@ export class Engine extends Adw.Bin {
         // or AdwOverlaySplitView animates its sidebar; coalescing
         // to ~33 ms keeps the per-frame work bounded.
         //
-        // Critically, we no longer write `canvas.width = w` /
-        // `canvas.height = h` ourselves. Setting those properties
-        // discards the WebGL context's framebuffer + clears all
-        // bound shader / texture state (browser semantics — and
-        // gjsify's canvas wrapper follows it). Excalibur's
-        // initialised GL handles become dangling pointers into a
-        // recreated context; subsequent draw calls silently no-op
-        // and the user sees a blank canvas that doesn't recover
-        // when they grow the window back. Excalibur's
-        // `FillContainer` DisplayMode + `applyResolutionAndViewport`
-        // already manage the canvas backing store internally, so
-        // our job here is just to nudge that recalc after the
-        // outer widget's allocation settles.
+        // Why both `screen.resolution = …` AND
+        // `applyResolutionAndViewport()`: Excalibur's
+        // `FillContainer` DisplayMode normally recalculates its
+        // resolution from the parent element via a `ResizeObserver`
+        // — but in GJS the ResizeObserver doesn't see Gtk
+        // allocation changes, so Excalibur never learns the
+        // canvas has been resized. Setting `screen.resolution`
+        // explicitly here gives it the new dimensions; the
+        // subsequent `applyResolutionAndViewport()` propagates
+        // them into the canvas backing store + WebGL viewport.
+        // Without the explicit resolution write, the apply call
+        // keeps reconfiguring at the initial size and the
+        // user sees a blank canvas at every resize except the
+        // first paint.
         this._pendingResize = { w, h }
         if (this._resizeTimeoutId != null) return
         this._resizeTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 33, () => {
           this._resizeTimeoutId = null
+          const pending = this._pendingResize
           this._pendingResize = null
+          if (!pending) return GLib.SOURCE_REMOVE
+          const screen = this._excalibur?.excalibur.screen
+          if (!screen) return GLib.SOURCE_REMOVE
           try {
-            this._excalibur?.excalibur.screen.applyResolutionAndViewport()
+            screen.resolution = { width: pending.w, height: pending.h }
+            screen.applyResolutionAndViewport()
           } catch {
             // screen not ready yet — ignore
           }
