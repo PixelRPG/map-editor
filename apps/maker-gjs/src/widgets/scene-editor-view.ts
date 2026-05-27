@@ -53,8 +53,28 @@ export class SceneEditorView extends Adw.Bin {
   private _sceneName = ''
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
-  private _showLibrary = true
-  private _showInspector = true
+  // Same reasoning as `_showInspector` below: the `OverlaySplitView`
+  // settles on `show-sidebar=false` for the first frame, so starting
+  // this property `true` would cause the same multi-step desync where
+  // the first click of the library toggle pill is consumed
+  // resyncing button↔state and only the second click actually opens
+  // the rail. ParamSpec default + class field both `false` keeps every
+  // end of the chain consistent.
+  private _showLibrary = false
+  // Initial inspector visibility matches the `OverlaySplitView`'s own
+  // post-layout state. Starting this `true` while the
+  // `OverlaySplitView` ends up showing `show-sidebar=false` for the
+  // first frame caused a multi-step desync on view-show: the
+  // bidirectional bind from `inner_split.show-sidebar` would write
+  // `false` back into this property AFTER `bind_property` already
+  // synced `true` into `ContextChip.show-inspector`. The button's
+  // `active` ended up `true` while the inspector was visually closed,
+  // so the first user click toggled `active` back to `false` (closing
+  // again) and only the second click opened it. Keeping this `false`
+  // from the start keeps all four ends (this property, the
+  // OverlaySplitView, the ContextChip's mirror, the button's
+  // `active`) consistent.
+  private _showInspector = false
   private _engine: Engine | null = null
   private _layers: LayerDescriptor[] = []
   private _tiles: TileDescriptor[] = []
@@ -147,6 +167,23 @@ export class SceneEditorView extends Adw.Bin {
     this._mode_rail.projectName = this._projectName
     this._mode_rail.projectTagline = 'Scene editor'
     this._wireInspectorSignals()
+    // Round-trip the ContextChip's inspector_toggle pressed state with
+    // this view's `show-inspector`. Without this, the toggle button is
+    // only wired to the stateless `win.toggle-inspector` action and its
+    // visual `active` never matches the sidebar's actual visibility on
+    // first show — the first click is consumed resyncing the button and
+    // the inspector only opens on the second click. The atlas-view's
+    // inspector_toggle uses the same `bind template.show-inspector
+    // bidirectional` pattern directly in its template; we have to do it
+    // in code here because ContextChip is a packaged widget two levels
+    // down from SceneEditorView and the blueprint binding can't reach
+    // up through that nesting.
+    this.bind_property(
+      'show-inspector',
+      this._editor.contextChip,
+      'show-inspector',
+      GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL,
+    )
   }
 
   /** Forward the current zoom level to the floating zoom OSD. */

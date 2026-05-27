@@ -62,6 +62,8 @@ export class Engine extends Adw.Bin {
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
+  private _closeRequestHandlerId = 0
+  private _teardownComplete = false
 
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -418,21 +420,80 @@ export class Engine extends Adw.Bin {
     )
   }
 
-  // Tear down the Excalibur engine + its event bridge before GJS starts
-  // reclaiming the widget. We hook `vfunc_unroot` (widget detached from
-  // the widget tree) rather than `vfunc_unmap` (widget transiently
-  // hidden), because Adw.Breakpoint reflow unmaps the engine widget when
-  // the OverlaySplitView collapses past the tablet breakpoint — `unmap`
-  // fired teardown would stop the Excalibur game loop on every shrink
-  // and the canvas would go blank for the rest of the session
-  // (Excalibur.stop() → cancelAnimationFrame → frame callback cleared →
-  // never recovers). `unroot` only fires on true removal from the tree
-  // (parent.remove() / window.destroy()), which is what we want.
+  // Engine teardown is hooked at TWO points to cover the two paths a
+  // widget can leave the tree:
   //
-  // Keeping the work out of `vfunc_dispose` avoids the
-  // "Attempting to run a JS callback during garbage collection"
-  // criticals on app exit.
-  vfunc_unroot(): void {
+  //   1. App exit — the user closes the window. GTK fires
+  //      `close-request` on the GtkWindow BEFORE starting widget
+  //      destruction. We catch that and run teardown synchronously,
+  //      well before the GC pass that the destruction kicks off.
+  //      Without this hook the same teardown would fire from
+  //      `vfunc_unroot` mid-GC, which prints
+  //      `Attempting to run a JS callback during garbage collection`
+  //      (GJS blocks the callback so it's harmless but noisy).
+  //
+  //   2. Reparent / view swap (no app exit) — the widget is removed
+  //      from its parent while the window stays alive. No
+  //      `close-request` fires; `vfunc_unroot` is the only signal.
+  //      We run teardown there as the fallback.
+  //
+  // Both call the same `_teardown()` method, which is idempotent
+  // (`_teardownComplete` guard), so the app-exit path runs
+  // teardown once via `close-request` and then no-ops in
+  // `vfunc_unroot`.
+  //
+  // We deliberately do NOT use `vfunc_unmap` because Adw.Breakpoint
+  // reflow unmaps the engine widget when the OverlaySplitView
+  // collapses past the tablet breakpoint — `unmap`-fired teardown
+  // would stop the Excalibur game loop on every shrink and the
+  // canvas would go blank for the rest of the session
+  // (Excalibur.stop() → cancelAnimationFrame → frame callback
+  // cleared → never recovers). We also avoid `vfunc_dispose`
+  // because that always runs mid-GC.
+  vfunc_root(): void {
+    super.vfunc_root()
+    const root = this.get_root() as Gtk.Window | null
+    if (!root || typeof (root as unknown as { connect?: unknown }).connect !== 'function') return
+    this._closeRequestHandlerId = root.connect('close-request', () => {
+      this._teardown()
+      return false
+    })
+  }
+
+  /**
+   * Public teardown entry point for callers that destroy the widget
+   * outside of the window-close path (e.g. `EngineController.dispose()`
+   * when leaving the scene editor view). Idempotent — calling it
+   * twice is a no-op. Must run BEFORE the widget is removed from its
+   * parent, otherwise the C-side `unroot` happens first and we lose
+   * the chance to stop Excalibur cleanly in a non-GC context.
+   *
+   * We deliberately do NOT override `vfunc_unroot` for this — GJS
+   * blocks any JS-side vfunc invocation that fires during GC (the
+   * widget destruction pass that follows `gtk_window_destroy()`
+   * synchronously triggers GC pressure), so an override there would
+   * print `Attempting to run a JS callback during garbage collection`
+   * even if its body just delegated back to `super`. The C-side
+   * default `unroot` handles the GTK-internal bookkeeping; we just
+   * need to make sure our teardown happened first.
+   */
+  dispose(): void {
+    this._teardown()
+  }
+
+  private _teardown(): void {
+    if (this._teardownComplete) return
+    this._teardownComplete = true
+
+    if (this._closeRequestHandlerId !== 0) {
+      try {
+        ;(this.get_root() as Gtk.Window | null)?.disconnect(this._closeRequestHandlerId)
+      } catch {
+        // root may already be disposed
+      }
+      this._closeRequestHandlerId = 0
+    }
+
     for (const subscription of this._excaliburSubscriptions) {
       try {
         subscription.close()
@@ -458,8 +519,6 @@ export class Engine extends Adw.Bin {
     }
     this._excalibur?.events.clear()
     this._excalibur = null
-
-    super.vfunc_unroot()
   }
 
   private async _waitForReady(): Promise<void> {

@@ -25,6 +25,7 @@ export class ContextChip extends Adw.Bin {
 
   private _tileName = ''
   private _layerName = ''
+  private _showInspector = false
 
   static {
     GObject.registerClass(
@@ -46,6 +47,22 @@ export class ContextChip extends Adw.Bin {
             'Name of the active layer',
             GObject.ParamFlags.READWRITE,
             '',
+          ),
+          // Mirrors the rest of the editor chrome: the inspector
+          // toggle's `active` state has to round-trip with whatever
+          // drives the sidebar's visibility (the host
+          // `SceneEditorView.show-inspector`), otherwise the first
+          // click on a freshly-painted chrome is wasted resyncing
+          // button↔state and the user has to click twice. Atlas-view
+          // wires the same pattern directly in its blueprint; here we
+          // expose the property so SceneEditorView's constructor can
+          // bind into the chip from above.
+          'show-inspector': GObject.ParamSpec.boolean(
+            'show-inspector',
+            'Show Inspector',
+            'Whether the right inspector sidebar is currently visible',
+            GObject.ParamFlags.READWRITE,
+            false,
           ),
         },
       },
@@ -87,6 +104,16 @@ export class ContextChip extends Adw.Bin {
     if (this._layerName === value) return
     this._layerName = value
     this.notify('layer-name')
+  }
+
+  get showInspector(): boolean {
+    return this._showInspector
+  }
+
+  set showInspector(value: boolean) {
+    if (this._showInspector === value) return
+    this._showInspector = value
+    this.notify('show-inspector')
   }
 
   setTilePopover(popover: Gtk.Popover): void {
