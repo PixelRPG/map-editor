@@ -1,5 +1,4 @@
 import Adw from '@girs/adw-1'
-import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { Canvas2DBridge } from '@gjsify/canvas2d'
@@ -63,17 +62,6 @@ export class Engine extends Adw.Bin {
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
-  /**
-   * Pending resize state — the latest (w, h) the GLArea has reported
-   * since the last time we actually pushed it into the canvas /
-   * Excalibur viewport. We frame-throttle resize handling because
-   * each `canvas.width = …` / `applyResolutionAndViewport()` pair
-   * is expensive (framebuffer reallocation + GL state reset), and
-   * Gtk fires resize events ~60/s while the user drags a window
-   * edge or the Adw.OverlaySplitView animates its sidebar in/out.
-   */
-  private _pendingResize: { w: number; h: number } | null = null
-  private _resizeTimeoutId: number | null = null
 
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -344,39 +332,18 @@ export class Engine extends Adw.Bin {
       canvas.width = widget.get_allocated_width() || 800
       canvas.height = widget.get_allocated_height() || 600
 
-      widget.onResize((w: number, h: number) => {
-        // Defend against transient 0 × 0 allocations during the
-        // mobile breakpoint reflow — Excalibur's screen API would
-        // happily reconfigure to a 0 px viewport.
-        if (w === 0 || h === 0) return
-        // Frame-throttle the viewport recalc. Gtk emits resize
-        // events ~60 / second while the user drags a window edge
-        // or AdwOverlaySplitView animates its sidebar; coalescing
-        // to ~33 ms keeps the per-frame work bounded.
-        //
-        // Excalibur's `FillContainer` DisplayMode recomputes its
-        // resolution from `canvas.offsetWidth/Height` on every
-        // `ResizeObserver` fire — gjsify >=0.4.29 returns the live
-        // GTK allocation from both the canvas's own override and
-        // the ancestor cache written by `notifyElementResize()`, so
-        // a plain `applyResolutionAndViewport()` is enough.
-        this._pendingResize = { w, h }
-        if (this._resizeTimeoutId != null) return
-        this._resizeTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 33, () => {
-          this._resizeTimeoutId = null
-          const pending = this._pendingResize
-          this._pendingResize = null
-          if (!pending) return GLib.SOURCE_REMOVE
-          const screen = this._excalibur?.excalibur.screen
-          if (!screen) return GLib.SOURCE_REMOVE
-          try {
-            screen.applyResolutionAndViewport()
-          } catch {
-            // screen not ready yet — ignore
-          }
-          return GLib.SOURCE_REMOVE
-        })
-      })
+      // No app-side resize handling: Excalibur's `FillContainer`
+      // DisplayMode owns the canvas backing store via its own
+      // `ResizeObserver` on `canvas.parentElement`. With gjsify
+      // >=0.4.29 returning the live GTK allocation from
+      // `HTMLElement.{offset,client}Width/Height` (canvas override +
+      // ancestor cache written by `notifyElementResize()`), every
+      // bridge resize signal fires Excalibur's observer in the
+      // following microtask, which recomputes the resolution and
+      // calls `applyResolutionAndViewport()` itself. Our previous
+      // 33 ms throttle layered a second apply call on top, which is
+      // redundant; removing it simplifies the widget without
+      // changing observable behaviour.
 
       try {
         const engine = new ExcaliburEngine(canvas)
@@ -461,19 +428,6 @@ export class Engine extends Adw.Bin {
       }
     }
     this._excaliburSubscriptions = []
-
-    // Drop the pending resize-throttle timer so it doesn't fire
-    // after the engine is torn down and try to write into a
-    // null `_excalibur`.
-    if (this._resizeTimeoutId != null) {
-      try {
-        GLib.source_remove(this._resizeTimeoutId)
-      } catch {
-        // source may already have fired or been removed
-      }
-      this._resizeTimeoutId = null
-      this._pendingResize = null
-    }
 
     if (this._styleManagerHandlerId) {
       try {
