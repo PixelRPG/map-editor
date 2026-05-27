@@ -7,8 +7,8 @@ This app is the **seed for multi-platform game export**: the long-term plan is f
 ## Run
 
 ```bash
-yarn workspace @pixelrpg/game-browser build
-yarn workspace @pixelrpg/game-browser start
+gjsify workspace @pixelrpg/game-browser build
+gjsify workspace @pixelrpg/game-browser start
 ```
 
 - `build` runs `gjsify build --app browser` for `src/main.ts` into `dist/main.js`, then copies `public/index.html` into `dist/`.

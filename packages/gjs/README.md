@@ -28,8 +28,8 @@ CSS: import `@pixelrpg/gjs/index.css` from your application's stylesheet. Loweri
 ## Build
 
 ```bash
-yarn workspace @pixelrpg/gjs run build
-yarn workspace @pixelrpg/gjs run check
+gjsify workspace @pixelrpg/gjs build
+gjsify workspace @pixelrpg/gjs check
 ```
 
 ## Related

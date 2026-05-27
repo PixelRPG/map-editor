@@ -28,23 +28,23 @@ This application provides an interactive environment for developing and testing 
 
 ```bash
 # Install dependencies
-yarn install
+gjsify install
 ```
 
 ### Development Commands
 
 ```bash
 # Build the application
-yarn build
+gjsify run build
 
 # Start the application
-yarn start
+gjsify run start
 
 # Start with GTK debugging enabled
-yarn start:debug
+gjsify run start:debug
 
 # Type checking
-yarn check
+gjsify run check
 ```
 
 ## Project Structure
@@ -78,7 +78,7 @@ For interactive debugging:
 
 ```bash
 # Start with GTK debugging enabled
-yarn start:debug
+gjsify run start:debug
 ```
 
 This will open the GTK Inspector alongside the application, allowing you to:
