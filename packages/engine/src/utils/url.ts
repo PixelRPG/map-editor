@@ -36,7 +36,7 @@ export function extractDirectoryPath(filePath: string): string {
  * @param path The path to normalize
  * @returns Normalized path with trailing slash if it had one
  */
-export function normalizePath(path: string): string {
+function normalizePath(path: string): string {
   // Special handling for URLs with protocol to preserve double slash
   if (path.match(/^https?:\/\//)) {
     const urlParts = path.split('://')

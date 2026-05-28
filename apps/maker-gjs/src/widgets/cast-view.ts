@@ -65,7 +65,7 @@ export class CastView extends Adw.Bin {
   private _activeAnimationId: string | null = null
   private _spriteSet: GdkSpriteSetResource | null = null
   private _galleryRowsById = new Map<string, Adw.ActionRow>()
-  private _signals = new SignalScope()
+  private signals = new SignalScope()
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
@@ -139,23 +139,23 @@ export class CastView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
-    this._signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
+    this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
-    this._signals.connect(this._anim_list, 'animation-selected', (_v: AnimationList, animId: string) => {
+    this.signals.connect(this._anim_list, 'animation-selected', (_v: AnimationList, animId: string) => {
       this._activeAnimationId = animId
       this._inspector.setAnimation(this._currentAnimation())
     })
-    this._signals.connect(this._inspector, 'name-changed', (_v: CastInspector, name: string) => {
+    this.signals.connect(this._inspector, 'name-changed', (_v: CastInspector, name: string) => {
       if (this._activeCharacterId) this._onRenameRequested?.(this._activeCharacterId, name)
     })
-    this._signals.connect(this._inspector, 'player-changed', (_v: CastInspector, isPlayer: boolean) => {
+    this.signals.connect(this._inspector, 'player-changed', (_v: CastInspector, isPlayer: boolean) => {
       if (this._activeCharacterId) this._onSetPlayerRequested?.(this._activeCharacterId, isPlayer)
     })
-    this._signals.connect(this._inspector, 'speed-changed', (_v: CastInspector, tilesPerSec: number) => {
+    this.signals.connect(this._inspector, 'speed-changed', (_v: CastInspector, tilesPerSec: number) => {
       if (this._activeCharacterId) this._onSetSpeedRequested?.(this._activeCharacterId, tilesPerSec)
     })
-    this._signals.connect(this._inspector, 'duration-changed', (_v: CastInspector, ms: number) => {
+    this.signals.connect(this._inspector, 'duration-changed', (_v: CastInspector, ms: number) => {
       if (this._activeCharacterId && this._activeAnimationId) {
         this._onSetDurationRequested?.(this._activeCharacterId, this._activeAnimationId, ms)
       }
@@ -314,7 +314,7 @@ export class CastView extends Adw.Bin {
   }
 
   vfunc_unmap(): void {
-    this._signals.disconnectAll()
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 }
