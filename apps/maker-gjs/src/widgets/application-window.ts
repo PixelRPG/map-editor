@@ -4,7 +4,7 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { type EditorTool, MapFormat } from '@pixelrpg/engine'
-import { type SampleScene, SignalScope } from '@pixelrpg/gjs'
+import { type EditorMode, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
@@ -225,33 +225,39 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * Serialise the currently-edited map's `MapData` back to disk.
    * Called by the scene editor's `persist-requested` signal after
    * an in-place mutation (layer visibility, layer lock — and any
-   * future inspector-driven map mutation). Toasts on failure but
-   * keeps the in-memory state so the user can retry.
+   * future inspector-driven map mutation).
    */
   private _persistCurrentMap(): void {
-    const sceneId = this._currentSceneId
-    if (!sceneId) return
-    const mapResource = this._loadedProject?.resource.maps.get(sceneId)
-    if (!mapResource?.mapData) return
-    const ok = writeTextFile(mapResource.sourcePath, MapFormat.serialize(mapResource.mapData))
-    if (!ok) this._showToast(_('Could not save layer changes'))
+    if (!this._currentSceneId) return
+    this._persistMap(this._currentSceneId, _('Could not save layer changes'))
   }
 
   /**
    * Write the atlas coordinates the user just dragged back into the
-   * map's source JSON via `MapFormat.serialize`. Best-effort — failures
-   * surface as a toast but the in-memory state still updates so the
-   * card position is preserved within the session.
+   * map's source JSON. In-memory state always updates so the card
+   * position survives the session even if the disk write fails.
    */
   private _persistAtlasPosition(mapId: string, x: number, y: number): void {
     const mapResource = this._loadedProject?.resource.maps.get(mapId)
     if (!mapResource?.mapData) return
-    const editor = (mapResource.mapData.editorData ?? {}) as Record<string, unknown>
-    editor.atlasX = x
-    editor.atlasY = y
-    ;(mapResource.mapData as { editorData?: Record<string, unknown> }).editorData = editor
+    const editorData = (mapResource.mapData.editorData ?? {}) as Record<string, unknown>
+    editorData.atlasX = x
+    editorData.atlasY = y
+    mapResource.mapData.editorData = editorData
+    this._persistMap(mapId, _('Could not save atlas position'))
+  }
+
+  /**
+   * Write a map's `MapData` back to its source JSON. Best-effort —
+   * a failure toasts but the in-memory mutation stays so the user
+   * sees their change in the editor even when persistence fails.
+   * Shared between `_persistCurrentMap` and `_persistAtlasPosition`.
+   */
+  private _persistMap(mapId: string, errorMessage: string): void {
+    const mapResource = this._loadedProject?.resource.maps.get(mapId)
+    if (!mapResource?.mapData) return
     const ok = writeTextFile(mapResource.sourcePath, MapFormat.serialize(mapResource.mapData))
-    if (!ok) this._showToast(_('Could not save atlas position'))
+    if (!ok) this._showToast(errorMessage)
   }
 
   vfunc_unmap(): void {
@@ -497,7 +503,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // active row matches what's on screen. `welcome` doesn't have a
     // mode — leave the action where it was so going welcome → back-to-
     // atlas restores the previous mode highlight.
-    const modeForView: Record<ViewName, string | null> = {
+    const modeForView: Record<ViewName, EditorMode | null> = {
       welcome: null,
       atlas: 'world',
       cast: 'cast',
@@ -525,7 +531,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * Pushing to ALL rails (not just the active view's) keeps state in
    * sync for any future toggle to a different view.
    */
-  private _syncModeRails(mode: string): void {
+  private _syncModeRails(mode: EditorMode): void {
     this._atlas_view.syncActiveMode(mode)
     this._cast_view.syncActiveMode(mode)
     this._tiles_view.syncActiveMode(mode)

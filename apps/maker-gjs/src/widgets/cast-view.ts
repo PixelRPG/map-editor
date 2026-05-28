@@ -6,6 +6,7 @@ import {
   AnimationList,
   CastInspector,
   CharacterPreview,
+  type EditorMode,
   type GdkSpriteSetResource,
   type ModeRail,
   SignalScope,
@@ -252,8 +253,8 @@ export class CastView extends Adw.Bin {
    * `win.mode` routes here so the view can keep its ModeRail's
    * `activeMode` in sync with the wider app state.
    */
-  syncActiveMode(mode: string): void {
-    this._mode_rail.activeMode = mode as 'world' | 'cast' | 'tiles' | 'audio' | 'data'
+  syncActiveMode(mode: EditorMode): void {
+    this._mode_rail.activeMode = mode
   }
 
   private _rebuildGallery(): void {

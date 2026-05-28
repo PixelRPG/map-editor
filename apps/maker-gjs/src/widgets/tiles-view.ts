@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource, SpriteDataSet, SpriteSetResource } from '@pixelrpg/engine'
 import {
+  type EditorMode,
   GdkSpriteSetResource,
   type ModeRail,
   SignalScope,
@@ -244,8 +245,8 @@ export class TilesView extends Adw.Bin {
   }
 
   /** Sync the ModeRail's active mode (called when the host changes view). */
-  syncActiveMode(mode: string): void {
-    this._mode_rail.activeMode = mode as 'world' | 'cast' | 'tiles' | 'audio' | 'data'
+  syncActiveMode(mode: EditorMode): void {
+    this._mode_rail.activeMode = mode
   }
 
   private _populateCombo(ids: string[]): void {

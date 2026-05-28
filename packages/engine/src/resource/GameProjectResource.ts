@@ -79,10 +79,9 @@ export class GameProjectResource {
    */
   protected async loadGameProjectData(path: string): Promise<GameProjectData> {
     try {
-      console.log('Loading game project data from:', path)
+      this.logger.debug(`Loading game project data from: ${path}`)
       const json = await loadTextFile(path)
       const data = GameProjectFormat.deserialize(json)
-
       this.logger.debug(`Loaded game project: ${data.name} (ID: ${data.id})`)
       return data
     } catch (error) {

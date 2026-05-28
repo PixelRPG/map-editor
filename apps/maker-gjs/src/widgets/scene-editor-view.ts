@@ -613,8 +613,8 @@ export class SceneEditorView extends Adw.Bin {
   }
 
   /** Push the active mode-rail row from the host on every view switch. */
-  syncActiveMode(mode: string): void {
-    this._mode_rail.activeMode = mode as 'world' | 'cast' | 'tiles' | 'audio' | 'data'
+  syncActiveMode(mode: EditorMode): void {
+    this._mode_rail.activeMode = mode
   }
 
   get sceneName(): string {
