@@ -7,6 +7,7 @@ import {
   ItemPickupSystem,
   ObjectSpawnSystem,
   PlayerSystem,
+  PointerGestureSystem,
   SelectionHighlightSystem,
   TeleportSystem,
   TileEditorSystem,
@@ -48,7 +49,13 @@ export class MapScene extends Scene {
     playerSpriteSet?: SpriteSetResource,
   ) {
     super()
-    this.world.add(new CameraControlSystem())
+    // PointerGestureSystem must run before any consumer subscribes
+    // to its events — it owns the raw `pointer.on('down/move/up')`
+    // listeners that drive `POINTER_TAP` / `POINTER_DRAG_*`. Add
+    // first so its `initialize` registers the producers ahead of the
+    // tile-editor / camera consumers.
+    this.world.add(new PointerGestureSystem(events))
+    this.world.add(new CameraControlSystem(events))
     this.world.add(new TileEditorSystem(events))
     this.world.add(new SelectionHighlightSystem())
     this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))

@@ -1,24 +1,30 @@
-import { type Engine, type Scene, System, SystemType, type Vector, vec, type World } from 'excalibur'
+import { type Engine, type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
+import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
 /**
  * Camera pan and zoom for the editor scene.
  *
- * Subscribes directly to `ex.Input.Pointer` events. Holds its own pan-anchor
- * state — pan is purely a camera concern, no shared component needed.
+ * Pan rides on the high-level drag gestures from
+ * {@link PointerGestureSystem} (`POINTER_DRAG_{START,MOVE,END}`) so a
+ * left-click-and-release on a tile no longer drifts into a pan — the
+ * gesture system only emits `POINTER_DRAG_START` after the pointer
+ * has crossed the drag threshold, by which point the press is
+ * already disambiguated from a tap. `TileEditorSystem` listens to
+ * the complementary `POINTER_TAP` for paint, so the two never
+ * compete for the same press.
  *
- * GTK-quirk note: `@gjsify/event-bridge` historically reports pointer-down
- * coordinates in widget-local space and pointer-move coordinates in
- * surface-local space, so we deliberately *don't* trust the down-position.
- * The first move-after-down sets the anchor, subsequent moves pan from there
- * — keeping everything inside a single coordinate frame.
+ * Zoom still rides on raw `pointer.on('wheel')` since the wheel
+ * doesn't participate in tap/drag negotiation.
  */
 export class CameraControlSystem extends System {
   public readonly systemType = SystemType.Update
 
   private engine?: Engine
-  private isDown = false
-  private dragAnchor: Vector | null = null
+
+  constructor(private readonly events: EventEmitter<EngineEventMap>) {
+    super()
+  }
 
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) {
@@ -27,38 +33,14 @@ export class CameraControlSystem extends System {
 
     this.engine = scene.engine
 
-    const pointer = this.engine.input.pointers.primary
-
-    pointer.on('down', () => {
-      this.isDown = true
-      this.dragAnchor = null
-    })
-
-    pointer.on('move', (event) => {
-      if (!this.isDown || !this.engine) return
-      const screenPos = vec(event.screenPos.x, event.screenPos.y)
-      if (!this.dragAnchor) {
-        this.dragAnchor = screenPos
-        return
-      }
+    this.events.on(EngineEvent.POINTER_DRAG_MOVE, ({ deltaX, deltaY }) => {
+      if (!this.engine) return
       const zoom = this.engine.currentScene.camera.zoom || 1
-      const deltaX = (screenPos.x - this.dragAnchor.x) / zoom
-      const deltaY = (screenPos.y - this.dragAnchor.y) / zoom
-      this.engine.currentScene.camera.x -= deltaX
-      this.engine.currentScene.camera.y -= deltaY
-      this.dragAnchor = screenPos
+      this.engine.currentScene.camera.x -= deltaX / zoom
+      this.engine.currentScene.camera.y -= deltaY / zoom
     })
 
-    pointer.on('up', () => {
-      this.isDown = false
-      this.dragAnchor = null
-    })
-
-    pointer.on('cancel', () => {
-      this.isDown = false
-      this.dragAnchor = null
-    })
-
+    const pointer = this.engine.input.pointers.primary
     pointer.on('wheel', (event) => {
       if (!this.engine) return
       const direction = event.deltaY > 0 ? -1 : 1
