@@ -124,6 +124,9 @@ function restorePreviousSprites(
   editor.setSpritesForTileAndLayer(tile, layerId, previousSprites)
   rebuildAllTileGraphics(ctx.tileMap, ctx.mapResource, tile)
   updateTileMapZIndex(ctx.tileMap, ctx.mapResource)
+  // Undo can swap solid → walkable (or vice-versa); recompute so
+  // collision matches what the user just saw return.
+  ctx.mapResource.refreshTileSolidFromEditor(ctx.tileMap, tile)
 }
 
 /**

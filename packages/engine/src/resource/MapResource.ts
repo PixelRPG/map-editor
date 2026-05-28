@@ -354,59 +354,70 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Re-apply solid state for every tile referencing `(spriteSetId,
-   * spriteId)`. Called after the user toggles `solid` on a sprite
-   * definition via the Tiles tab so the change takes effect without
-   * a full map reload.
+   * Re-apply solid state for every placement of a sprite definition.
+   * Called when the user toggles `solid` on a sprite via the Tiles
+   * tab — every tile currently showing that sprite needs to flip
+   * its `tile.solid` immediately, without a full map reload.
    *
-   * A tile is solid if ANY layer's sprite at its position is solid
-   * (per-placement override > per-sprite-set default). The accumulator
-   * walks all layers/sprites at each touched position to re-derive
-   * the verdict — same logic as `processTileLayer` but scoped to the
-   * affected sprite definition.
+   * Reads the live editor-shadow (`MapEditorComponent`) on every
+   * tilemap rather than the JSON-backed `mapData.layers[].sprites[]`.
+   * Paint/erase during playtest only mutates the shadow; mapData is
+   * stale until save. Anchoring on the shadow keeps Tiles-tab
+   * toggles and runtime paints consistent with each other.
    */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
-    if (!this._mapData) return
-    const touched = new Set<string>()
-    for (const layer of this._mapData.layers) {
-      const sprites = layer.sprites ?? []
-      for (const sprite of sprites) {
-        if (sprite.spriteSetId === spriteSetId && sprite.spriteId === spriteId) {
-          touched.add(`${sprite.x},${sprite.y}`)
-        }
+    for (const tilemap of this.tileMapsByTier.values()) {
+      const editor = tilemap.get(MapEditorComponent)
+      if (!editor) continue
+      for (const tile of editor.getAllTilesWithSprites()) {
+        const refs = editor.getSpritesForTileAndLayer(tile)
+        const containsTarget = refs.some(
+          (ref) => ref.spriteSetId === spriteSetId && ref.spriteId === spriteId,
+        )
+        if (containsTarget) this._recomputeTileSolid(tilemap, tile)
       }
-    }
-    for (const key of touched) {
-      const [xStr, yStr] = key.split(',')
-      const x = Number.parseInt(xStr, 10)
-      const y = Number.parseInt(yStr, 10)
-      this._recomputeTileSolid(x, y)
     }
   }
 
   /**
-   * Walk the full layer stack at `(x, y)` and re-derive `tile.solid`
-   * from the topmost solid-flagged sprite. Used by
-   * {@link refreshTileSolidsForSprite}; not on the per-frame path.
+   * Recompute `tile.solid` on `tilemap`'s tile from the live editor
+   * shadow state. Called from `layer.manager.ts` after every paint /
+   * erase so collision tracks edits in real time.
+   *
+   * A tile is solid iff at least one sprite currently placed on it
+   * has `def.solid === true` or `def.tileProperties.walkable === false`.
+   * Stops at the first hit — multi-sprite stacks pick the strict
+   * verdict (one wall is enough; non-solid layers under it don't
+   * unblock).
    */
-  private _recomputeTileSolid(x: number, y: number): void {
+  refreshTileSolidFromEditor(tilemap: TileMap, tile: Tile): void {
+    this._recomputeTileSolid(tilemap, tile)
+  }
+
+  /**
+   * Per-tilemap, per-tile recompute. Walks the editor-shadow sprites
+   * on this tile and resolves the effective solidity from each
+   * sprite's definition.
+   */
+  private _recomputeTileSolid(tilemap: TileMap, tile: Tile): void {
+    const editor = tilemap.get(MapEditorComponent)
+    if (!editor) return
+    const refs = editor.getSpritesForTileAndLayer(tile)
     let solid = false
-    for (const layer of this._mapData.layers) {
-      const sprite = layer.sprites?.find((s) => s.x === x && s.y === y)
-      if (!sprite) continue
+    for (const ref of refs) {
       const def = this.spriteSetResources
-        .get(sprite.spriteSetId)
-        ?.data?.sprites.find((s) => s.id === sprite.spriteId)
-      const effective = effectiveSolidity(sprite, def)
-      if (effective === true) {
+        .get(ref.spriteSetId)
+        ?.data?.sprites.find((s) => s.id === ref.spriteId)
+      if (def?.solid === true) {
+        solid = true
+        break
+      }
+      if (def?.tileProperties?.walkable === false) {
         solid = true
         break
       }
     }
-    for (const tilemap of this.tileMapsByTier.values()) {
-      const tile = tilemap.getTile(x, y)
-      if (tile) tile.solid = solid
-    }
+    tile.solid = solid
   }
 
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {

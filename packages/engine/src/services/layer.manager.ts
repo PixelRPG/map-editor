@@ -53,6 +53,12 @@ export function addSpriteToTileForLayer(
 
   rebuildAllTileGraphics(tileMap, mapResource, tile)
   updateTileMapZIndex(tileMap, mapResource)
+  // Re-derive `tile.solid` from the new sprite stack so live paints
+  // during playtest immediately flip collision (was a bug: visual
+  // updated but collision stayed at the load-time verdict, so
+  // walking onto a freshly-painted floor on top of a solid tile
+  // still blocked).
+  mapResource.refreshTileSolidFromEditor(tileMap, tile)
 }
 
 export function removeSpritesFromTileForLayer(
@@ -71,4 +77,8 @@ export function removeSpritesFromTileForLayer(
 
   rebuildAllTileGraphics(tileMap, mapResource, tile)
   updateTileMapZIndex(tileMap, mapResource)
+  // Erase may have removed the layer's only solid sprite at this
+  // tile — re-derive from whatever's left so the player can walk
+  // through gaps the erase opened up.
+  mapResource.refreshTileSolidFromEditor(tileMap, tile)
 }
