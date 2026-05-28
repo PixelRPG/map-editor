@@ -4,7 +4,7 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { type EditorTool, MapFormat } from '@pixelrpg/engine'
-import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
+import { type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
@@ -53,7 +53,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _toast_overlay: Adw.ToastOverlay
 
   private signals = new SignalScope()
-  private _scenesById = new Map<string, SampleScene>(SAMPLE_SCENES.map((s) => [s.id, s]))
+  // Populated by `_loadProjectFromPath` from the project's atlas
+  // scenes. Empty until a project is opened — `_showSceneEditor`
+  // is only reachable from the atlas, which itself only renders
+  // once a project loaded, so the empty initial state is fine.
+  private _scenesById = new Map<string, SampleScene>()
   private _loadedProject: LoadedProject | null = null
   /**
    * The `win.set-tool` GAction. Kept as a field so `_hydrateSceneEditor`

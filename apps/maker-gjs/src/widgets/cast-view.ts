@@ -47,14 +47,11 @@ export namespace CastView {
  * the host has applied the mutation.
  */
 export class CastView extends Adw.Bin {
-  declare _outer_split: Adw.OverlaySplitView
-  declare _inner_split: Adw.OverlaySplitView
   declare _mode_rail: ModeRail
   declare _inspector: CastInspector
   declare _preview: CharacterPreview
   declare _anim_list: AnimationList
   declare _gallery_group: Adw.PreferencesGroup
-  declare _header_label: Gtk.Label
 
   private _projectName = ''
   private _showLibrary = true
@@ -81,16 +78,7 @@ export class CastView extends Adw.Bin {
       {
         GTypeName: 'CastView',
         Template,
-        InternalChildren: [
-          'outer_split',
-          'inner_split',
-          'mode_rail',
-          'inspector',
-          'preview',
-          'anim_list',
-          'gallery_group',
-          'header_label',
-        ],
+        InternalChildren: ['mode_rail', 'inspector', 'preview', 'anim_list', 'gallery_group'],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',

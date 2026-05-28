@@ -30,8 +30,6 @@ GObject.type_ensure(TileInspector.$gtype)
  * host-supplied callback so the host owns the file-IO path.
  */
 export class TilesView extends Adw.Bin {
-  declare _outer_split: Adw.OverlaySplitView
-  declare _inner_split: Adw.OverlaySplitView
   declare _mode_rail: ModeRail
   declare _inspector: TileInspector
   declare _palette: TilePalette
@@ -58,7 +56,7 @@ export class TilesView extends Adw.Bin {
       {
         GTypeName: 'TilesView',
         Template,
-        InternalChildren: ['outer_split', 'inner_split', 'mode_rail', 'inspector', 'palette', 'tileset_combo'],
+        InternalChildren: ['mode_rail', 'inspector', 'palette', 'tileset_combo'],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',

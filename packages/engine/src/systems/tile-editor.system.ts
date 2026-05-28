@@ -122,7 +122,7 @@ export class TileEditorSystem extends System {
     if (!tileMap) return null
 
     const editor = tileMap.get(MapEditorComponent)
-    if (!editor?.isEditable) return null
+    if (!editor) return null
 
     const coords = this.toTileCoords(tileMap, worldPos)
     if (!coords) return null
@@ -175,7 +175,6 @@ export class TileEditorSystem extends System {
   }
 
   private applyHover(hit: TileHit): void {
-    hit.editor.hoverTileCoords = hit.coords
     this.events.emit(EngineEvent.TILE_HOVERED, {
       coords: hit.coords,
       tileMapId: hit.tileMap.id.toString(),
