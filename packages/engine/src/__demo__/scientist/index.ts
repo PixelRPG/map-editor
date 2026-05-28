@@ -47,7 +47,10 @@ export const BUILT_IN_SCIENTIST: CharacterDefinition = {
   kind: 'hero',
   isPlayer: true,
   spriteSetId: BUILT_IN_SCIENTIST_SPRITESET_ID,
-  speedTilesPerSec: 4,
+  // 3 tiles/sec balances "reads as walking, not jogging" with
+  // "doesn't drag at small map zoom". Tweak via the Cast inspector
+  // per-character if a hero/NPC needs a different pace.
+  speedTilesPerSec: 3,
   defaultAnimation: 'idle-down',
   // Frame mapping derives from the original Aseprite frame tags:
   //   back / back-walk (0–4) → idle-up / walk-up

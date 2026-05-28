@@ -10,6 +10,12 @@ template $PixelRpgFloatingPlay : Adw.Bin {
   Gtk.Button play_button {
     action-name: "win.play";
     tooltip-text: _("Play");
+    // Don't steal keyboard focus from the engine canvas — without
+    // this, clicking Play moves focus to the button and arrow keys
+    // / WASD stop reaching Excalibur until the user tabs back to
+    // the canvas. The button still works (action fires on click),
+    // it just doesn't grab the focus ring.
+    focus-on-click: false;
     styles ["suggested-action", "pill"]
 
     child: Gtk.Box {

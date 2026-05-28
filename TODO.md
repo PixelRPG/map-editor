@@ -14,6 +14,8 @@ Conventions:
 - **"Switch tileset" action** — `win.switch-tileset` is registered but no handler. Tiles tab "Switch…" button does nothing. *owner: maker*
 - **"New layer" action** — `win.new-layer` registered, no handler. Layers tab "New layer" footer button does nothing. *owner: maker*
 - **"New scene" action** — Atlas header "New Scene" button registered as `win.new-scene` but the handler is a placeholder toast. Needs a scene-creation dialog + map scaffolding. *owner: maker*
+- **Per-tile collision-shape editor** — Tiles view exposes only a binary Solid switch today. The Tiled `.tsx` porter (`scripts/port-tiled-collision.mjs`) already writes shape-accurate `colliders: ColliderShape[]` (rectangle / polygon / circle) into the sprite-set JSON, but the engine + UI only consume the binary `solid` flag. Build a mini in-place collider editor (draw rectangles / polygons onto the tile preview) and have `MapResource` translate `colliders[]` into per-tile custom Excalibur collider geometry so slopes / corners / partial obstacles work. *owner: gjs + engine, why: needs canvas drawing UX + a collider-translation layer above `tile.solid`*
+- **Cast / Character editor polish** — Phase-3 ships a Cast view that displays heroes + NPCs and lets the user edit name / player-flag / movement-speed / per-animation duration. Still missing: (a) "+ New character" / "+ Add custom animation" actually CRUD, (b) frame-timeline drag-to-reorder + frame-picker popover (use the existing `tile-palette` widget in popover mode), (c) frame-by-frame thumbnail preview on each animation row, (d) import-from-Aseprite-JSON wizard, (e) per-NPC dialogue + route inspector. *owner: maker + gjs*
 
 ## Engine / runtime
 
