@@ -107,6 +107,18 @@ export class TilesView extends Adw.Bin {
 
   constructor() {
     super()
+  }
+
+  /**
+   * Signals wire in `vfunc_map` (not the constructor) so they
+   * re-connect on every (re)map — `vfunc_unmap` does
+   * `SignalScope.disconnectAll`. Without this, navigating away from
+   * the Tiles view and back left the `tile-selected` connection
+   * disconnected, so clicking a tile no longer refreshed the
+   * inspector preview (the user-reported bug from image #53).
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
     this._signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })

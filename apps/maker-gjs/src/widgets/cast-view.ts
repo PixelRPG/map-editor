@@ -139,6 +139,17 @@ export class CastView extends Adw.Bin {
 
   constructor() {
     super()
+  }
+
+  /**
+   * Signals wire in `vfunc_map` (not the constructor) so they
+   * re-connect on every (re)map — `vfunc_unmap` does
+   * `SignalScope.disconnectAll`. Constructor-wired signals would
+   * only connect ONCE and stay disconnected after the first navigate-
+   * away (see tiles-view for the same fix).
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
     this._signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
