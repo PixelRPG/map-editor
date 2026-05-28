@@ -1,0 +1,82 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgCastInspector : Adw.Bin {
+  styles ["cast-inspector"]
+
+  Adw.ToolbarView {
+    top-bar-style: flat;
+
+    // Flat header for window-drag + close-button real estate, mirrors
+    // the right-inspector pattern in the scene editor.
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+      show-start-title-buttons: false;
+      show-end-title-buttons: true;
+      styles ["flat"]
+    }
+
+    content: Gtk.WindowHandle {
+      child: Gtk.ScrolledWindow {
+        hexpand: true;
+        vexpand: true;
+        hscrollbar-policy: never;
+
+        child: Gtk.Box {
+          orientation: vertical;
+          margin-top: 12;
+          margin-bottom: 12;
+          margin-start: 12;
+          margin-end: 12;
+          spacing: 12;
+
+          Adw.PreferencesGroup props_group {
+            title: _("Character");
+
+            Adw.EntryRow name_row {
+              title: _("Name");
+            }
+
+            Adw.SwitchRow player_row {
+              title: _("Player character");
+              subtitle: _("Spawns at the map's player spawn-point and obeys keyboard input.");
+            }
+
+            Adw.SpinRow speed_row {
+              title: _("Movement speed");
+              subtitle: _("Tiles per second");
+              adjustment: Gtk.Adjustment {
+                lower: 1;
+                upper: 16;
+                step-increment: 1;
+                value: 4;
+              };
+            }
+          }
+
+          Adw.PreferencesGroup duration_group {
+            title: _("Selected animation");
+            description: _("Edit duration; frame editing lands in the next pass.");
+
+            Adw.ActionRow selected_anim_row {
+              title: _("Animation");
+              subtitle: _("(none selected)");
+            }
+
+            Adw.SpinRow duration_row {
+              title: _("Frame duration");
+              subtitle: _("Milliseconds");
+              adjustment: Gtk.Adjustment {
+                lower: 30;
+                upper: 2000;
+                step-increment: 10;
+                value: 200;
+              };
+            }
+          }
+        };
+      };
+    };
+  }
+}

@@ -214,6 +214,11 @@ export class SceneEditorView extends Adw.Bin {
     this._engine = engine ?? null
   }
 
+  /** Reflect the `win.play` action's runtime state on the FloatingPlay button. */
+  setPlaying(playing: boolean): void {
+    this._editor.floatingPlay.playing = playing
+  }
+
   /** Header title + the floating chips. */
   setScene(scene: SampleScene): void {
     this.sceneName = scene.name

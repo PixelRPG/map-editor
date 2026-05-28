@@ -1,18 +1,19 @@
 import { type EventEmitter, Logger, Scene } from 'excalibur'
 import { EditorModeComponent } from '../components/index.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import {
   CameraControlSystem,
   ItemPickupSystem,
   ObjectSpawnSystem,
-  PlayerSpawnSystem,
+  PlayerSystem,
   SelectionHighlightSystem,
   TeleportSystem,
   TileEditorSystem,
   TriggerSystem,
   WalkOnTileSystem,
 } from '../systems/index.ts'
-import type { EngineEventMap, ObjectDefinition } from '../types/index.ts'
+import type { CharacterDefinition, EngineEventMap, ObjectDefinition } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
@@ -23,18 +24,18 @@ import { SessionState } from '../utils/session-state.ts'
  * - {@link TileEditorSystem} (editor) — tile painting / erasing
  * - {@link ObjectSpawnSystem} (runtime) — spawn entities from
  *   `MapData.objectPlacements`
- * - {@link PlayerSpawnSystem} (runtime) — resolve player spawn-point
+ * - {@link PlayerSystem} (runtime) — spawn + drive the player actor
  *
  * Spawn-system order matters: `ObjectSpawnSystem` runs first so the
- * spawn-point entity exists in the world before `PlayerSpawnSystem`
+ * spawn-point entity exists in the world before `PlayerSystem`
  * queries for it.
  *
  * Session-state: each scene gets its own session-singleton entity
  * via `SessionState.ensure(this)` plus an `EditorModeComponent`
- * marker by default. The maker (or the future runtime entry point)
- * mutates these markers to toggle Live Run / Test Run / Full Run.
- * See `docs/concepts/runtime-modes.md` and
- * `docs/concepts/editor-architecture.md`.
+ * marker by default. The maker toggles `EditorModeComponent` ↔
+ * `RuntimeModeComponent` via `Engine.setRuntimeMode()` to switch
+ * between edit and playtest. See `docs/concepts/runtime-modes.md`
+ * and `docs/concepts/editor-architecture.md`.
  */
 export class MapScene extends Scene {
   private logger = Logger.getInstance()
@@ -43,13 +44,15 @@ export class MapScene extends Scene {
     public readonly mapResource: MapResource,
     events: EventEmitter<EngineEventMap>,
     objectLibrary: readonly ObjectDefinition[] = [],
+    playerCharacter?: CharacterDefinition,
+    playerSpriteSet?: SpriteSetResource,
   ) {
     super()
     this.world.add(new CameraControlSystem())
     this.world.add(new TileEditorSystem(events))
     this.world.add(new SelectionHighlightSystem())
     this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))
-    this.world.add(new PlayerSpawnSystem(events))
+    this.world.add(new PlayerSystem(mapResource, events, playerCharacter, playerSpriteSet))
     this.world.add(new TriggerSystem(events))
     this.world.add(new TeleportSystem(events))
     this.world.add(new ItemPickupSystem(events))

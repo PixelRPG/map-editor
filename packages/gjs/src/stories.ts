@@ -8,6 +8,10 @@ import type { StoryModule } from '@pixelrpg/story-gjs'
 
 import { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
 
+import { AnimationList } from './widgets/cast/animation-list'
+import { CastInspector } from './widgets/cast/cast-inspector'
+import { CharacterPreview } from './widgets/cast/character-preview'
+import { TileInspector } from './widgets/tiles/tile-inspector'
 import { AtlasCanvas } from './widgets/editor/atlas-canvas'
 import { AtlasCanvasStories } from './widgets/editor/atlas-canvas.story'
 import { ContextChip } from './widgets/editor/context-chip'
@@ -58,6 +62,10 @@ GObject.type_ensure(TeleportOverlay.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(SceneInspector.$gtype)
 GObject.type_ensure(SceneEditor.$gtype)
+GObject.type_ensure(CharacterPreview.$gtype)
+GObject.type_ensure(AnimationList.$gtype)
+GObject.type_ensure(CastInspector.$gtype)
+GObject.type_ensure(TileInspector.$gtype)
 
 /** All story modules available in the UI-GJS package. */
 export const UIStories: StoryModule[] = [

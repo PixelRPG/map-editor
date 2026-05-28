@@ -5,8 +5,10 @@ import {
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
+  EditorModeComponent,
   type EditorViewMode,
   EditorViewModeComponent,
+  RuntimeModeComponent,
   SelectedPlacementsComponent,
   TileMapTierComponent,
   TileTransformComponent,
@@ -138,7 +140,27 @@ export class Engine {
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
     const objectLibrary = this._gameProjectResource.data?.objectLibrary ?? []
-    const newMapScene = new MapScene(mapResource, this.events, objectLibrary)
+    // `GameProjectResource._registerBuiltIns` auto-seeds the scientist
+    // when the project has no `characters[]` configured, so this is
+    // populated for every loaded project. Cast view edits flow through
+    // the same data → next `loadMap` picks up the new player.
+    const playerCharacter = this._gameProjectResource.data?.characters?.find((c) => c.isPlayer)
+    // Resolve the player's sprite-set directly from the project. We
+    // cannot rely on `MapResource.getSpriteSetResource` because that
+    // map only copies in the sprite-sets the map JSON references —
+    // the scientist (and any other character-only sprite-set) is on
+    // the project but not on the map. Look it up at the project
+    // level and pass it through.
+    const playerSpriteSet = playerCharacter
+      ? this._gameProjectResource.spriteSets.get(playerCharacter.spriteSetId)
+      : undefined
+    const newMapScene = new MapScene(
+      mapResource,
+      this.events,
+      objectLibrary,
+      playerCharacter,
+      playerSpriteSet,
+    )
 
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)
@@ -463,6 +485,54 @@ export class Engine {
     const scene = this.excalibur.currentScene
     if (!(scene instanceof MapScene)) return 'normal'
     return SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
+  }
+
+  /**
+   * Toggle between editor and runtime mode on the active `MapScene`.
+   *
+   * - `active === true`  — remove `EditorModeComponent`, set
+   *   `RuntimeModeComponent`. `PlayerSystem` reveals the player Actor,
+   *   reads input each frame, and locks the camera to follow.
+   * - `active === false` — opposite. Player hidden, camera unlocked,
+   *   editor tool systems run again.
+   *
+   * Position state is continuous across toggles — the player actor
+   * stays at its last position, so re-entering runtime feels seamless.
+   *
+   * No-op when no `MapScene` is active.
+   */
+  setRuntimeMode(active: boolean): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    if (active) {
+      SessionState.unset(scene, EditorModeComponent)
+      SessionState.set(scene, new RuntimeModeComponent())
+    } else {
+      SessionState.unset(scene, RuntimeModeComponent)
+      SessionState.set(scene, new EditorModeComponent())
+    }
+  }
+
+  /** Current runtime-mode state on the active scene (`false` if no scene). */
+  isRuntimeMode(): boolean {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return false
+    return SessionState.get(scene, RuntimeModeComponent) !== null
+  }
+
+  /**
+   * Re-apply `tile.solid` for every placement of a sprite definition
+   * on the active map. Called by the host (Tiles tab Solid toggle) so
+   * that flipping a sprite's `solid` flag in the sprite-set takes
+   * effect immediately — no engine reload, no scene rebuild. Without
+   * this the change only matters on the next map load.
+   *
+   * No-op when no `MapScene` is active.
+   */
+  refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
+    const scene = this.excalibur.currentScene
+    if (!(scene instanceof MapScene)) return
+    scene.mapResource.refreshTileSolidsForSprite(spriteSetId, spriteId)
   }
 
   /**

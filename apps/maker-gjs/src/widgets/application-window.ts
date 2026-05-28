@@ -3,8 +3,8 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { type EditorTool, MapFormat } from '@pixelrpg/engine'
-import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
+import { type EditorTool, GameProjectFormat, MapFormat, SpriteSetFormat } from '@pixelrpg/engine'
+import { GdkSpriteSetResource, SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
@@ -13,10 +13,17 @@ import { loadRecentProjects, recordRecentProject } from '../services/recent-proj
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
+import { CastView } from './cast-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
+import { TilesView } from './tiles-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
-type ViewName = 'welcome' | 'atlas' | 'scene-editor'
+// Force registration so the `$CastView` / `$TilesView` references in
+// the blueprint resolve at template-parse time.
+GObject.type_ensure(CastView.$gtype)
+GObject.type_ensure(TilesView.$gtype)
+
+type ViewName = 'welcome' | 'atlas' | 'cast' | 'tiles' | 'scene-editor'
 
 /**
  * Top-level window.
@@ -37,6 +44,8 @@ type ViewName = 'welcome' | 'atlas' | 'scene-editor'
 export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _welcome_view: WelcomeView
   declare _atlas_view: AtlasView
+  declare _cast_view: CastView
+  declare _tiles_view: TilesView
   declare _scene_editor_view: SceneEditorView
   declare _stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
@@ -53,6 +62,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _toolAction: Gio.SimpleAction | null = null
   /**
+   * The `win.play` GAction. Stateful boolean — true when the editor
+   * is in runtime (playtest) mode. Held as a field so `_setView` can
+   * reset it back to `false` when the user leaves the scene editor,
+   * since leaving disposes the engine and we don't want a stale
+   * "playing" state to require an extra click on re-entry.
+   */
+  private _playAction: Gio.SimpleAction | null = null
+  /**
+   * The `win.mode` GAction. Stateful string — `'world'` / `'cast'` /
+   * `'tiles'` / `'audio'` / `'data'`. The change-state handler routes
+   * the ViewStack so clicking a mode-rail row navigates to the
+   * matching view.
+   */
+  private _modeAction: Gio.SimpleAction | null = null
+  /**
    * Which map the scene editor is currently editing. Tracks
    * `_showSceneEditor` so the persist-requested handler knows which
    * MapResource to serialise.
@@ -68,7 +92,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       {
         GTypeName: 'ApplicationWindow',
         Template,
-        InternalChildren: ['welcome_view', 'atlas_view', 'scene_editor_view', 'stack', 'toast_overlay'],
+        InternalChildren: ['welcome_view', 'atlas_view', 'cast_view', 'tiles_view', 'scene_editor_view', 'stack', 'toast_overlay'],
       },
       ApplicationWindow,
     )
@@ -107,6 +131,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._persistAtlasPosition(id, x, y)
     })
+    // Atlas + scene-editor views forward their mode-rail's
+    // `mode-changed` signal at the view level. Re-route both through
+    // the central `win.mode` action so navigation is consistent — the
+    // action's change-state handler picks the right ViewStack page.
+    this.signals.connect(this._atlas_view, 'mode-changed', (_v: AtlasView, mode: string) => {
+      this._modeAction?.change_state(GLib.Variant.new_string(mode))
+    })
+    this.signals.connect(this._scene_editor_view, 'mode-changed', (_v: SceneEditorView, mode: string) => {
+      this._modeAction?.change_state(GLib.Variant.new_string(mode))
+    })
 
     // Scene editor → host bridge. The inspector mutates
     // `MapResource.mapData` in place via `engine.setLayerVisible` /
@@ -115,6 +149,243 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._scene_editor_view, 'persist-requested', () => {
       this._persistCurrentMap()
     })
+
+    // Cast view → host bridge. Mode-rail navigation comes through
+    // the cast-view's signal forwarder; cast mutations go through
+    // the bound callbacks which mutate project data + persist.
+    this.signals.connect(this._cast_view, 'mode-changed', (_v: CastView, mode: string) => {
+      this._modeAction?.change_state(GLib.Variant.new_string(mode))
+    })
+    this._cast_view.bindCallbacks({
+      rename: (charId, name) => this._renameCharacter(charId, name),
+      setPlayer: (charId, isPlayer) => this._setCharacterPlayer(charId, isPlayer),
+      setSpeed: (charId, tilesPerSec) => this._setCharacterSpeed(charId, tilesPerSec),
+      setDuration: (charId, animId, durationMs) =>
+        this._setAnimationDuration(charId, animId, durationMs),
+    })
+
+    // Tiles view → host bridge. Same shape as cast: mode-rail forwarder
+    // + tile-property mutation callbacks that mutate the in-memory
+    // sprite-set, push the engine's tile.solid map, and persist the
+    // sprite-set JSON to disk.
+    this.signals.connect(this._tiles_view, 'mode-changed', (_v: TilesView, mode: string) => {
+      this._modeAction?.change_state(GLib.Variant.new_string(mode))
+    })
+    this._tiles_view.bindCallbacks({
+      setSolid: (spriteSetId, spriteId, solid) =>
+        this._setSpriteSolid(spriteSetId, spriteId, solid),
+      setSurface: (spriteSetId, spriteId, surface) =>
+        this._setSpriteSurface(spriteSetId, spriteId, surface),
+    })
+  }
+
+  /**
+   * Route a mode-rail mode change. `world` returns to the atlas;
+   * `cast` opens the new Cast view (Phase 3); other modes still toast
+   * "Coming soon" until their respective views are built.
+   */
+  private _onModeChanged(mode: string): void {
+    switch (mode) {
+      case 'world':
+        // Only switch if we're not already showing the atlas. From the
+        // welcome view, the user has to "Open Project" first; we don't
+        // want clicking the mode rail in atlas/cast/scene-editor to
+        // bounce them back to the welcome.
+        if (this._loadedProject) this._setView('atlas')
+        break
+      case 'cast':
+        if (this._loadedProject) {
+          this._hydrateCastView()
+          this._setView('cast')
+        }
+        break
+      case 'tiles':
+        if (this._loadedProject) {
+          this._hydrateTilesView()
+          this._setView('tiles')
+        }
+        break
+      case 'audio':
+      case 'data':
+        this._showToast(_('Coming soon — this mode is not yet implemented'))
+        // Reset back to whichever view we were on; the action state
+        // already advanced to the new mode but no view exists.
+        const current = this._stack.get_visible_child_name()
+        const fallback = current === 'cast' ? 'cast' : current === 'tiles' ? 'tiles' : 'world'
+        this._modeAction?.set_state(GLib.Variant.new_string(fallback))
+        break
+    }
+  }
+
+  /**
+   * Push the project's characters + player sprite-set into the cast
+   * view so it can render the gallery + preview. Called when the user
+   * navigates into the Cast tab or when project data changes.
+   */
+  private async _hydrateCastView(): Promise<void> {
+    const engine = this._engineCtl.engine
+    const project = engine?.excalibur?.gameProjectResource
+    const characters = project?.data?.characters ?? []
+    this._cast_view.projectName = project?.data?.name ?? _('New Project')
+
+    // Resolve the player character's sprite-set as a Gdk paintable
+    // source so the CharacterPreview can animate it. Returns null when
+    // the engine hasn't loaded a project yet (e.g. the user clicked
+    // Cast without opening a project first — toast above prevents
+    // that, but be defensive).
+    let spriteSet: GdkSpriteSetResource | null = null
+    const playerCharacter = characters.find((c) => c.isPlayer)
+    if (playerCharacter && project) {
+      const engineSpriteSet = await project.getSpriteSet(playerCharacter.spriteSetId)
+      if (engineSpriteSet) {
+        try {
+          spriteSet = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
+        } catch (err) {
+          console.warn('[ApplicationWindow] Failed to wrap sprite set for cast preview:', err)
+        }
+      }
+    }
+    this._cast_view.setCharacters(characters, spriteSet)
+  }
+
+  /**
+   * Rename a character in the project + persist. Mutations write to
+   * the in-memory `GameProjectData` directly (matching the existing
+   * pattern for `objectLibrary` edits) then serialise back to
+   * `game-project.json`. Cast view re-renders after each mutation.
+   */
+  private _renameCharacter(charId: string, name: string): void {
+    if (!this._mutateCharacter(charId, (c) => { c.name = name })) return
+    this._persistProject()
+  }
+
+  private _setCharacterPlayer(charId: string, isPlayer: boolean): void {
+    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
+    if (!project?.data?.characters) return
+    // Enforce one-of: setting a character to player unsets every other.
+    if (isPlayer) {
+      for (const character of project.data.characters) {
+        character.isPlayer = character.id === charId
+      }
+    } else {
+      const target = project.data.characters.find((c) => c.id === charId)
+      if (target) target.isPlayer = false
+    }
+    this._persistProject()
+    this._hydrateCastView()
+  }
+
+  private _setCharacterSpeed(charId: string, tilesPerSec: number): void {
+    if (!this._mutateCharacter(charId, (c) => { c.speedTilesPerSec = tilesPerSec })) return
+    this._persistProject()
+  }
+
+  private _setAnimationDuration(charId: string, animId: string, durationMs: number): void {
+    const ok = this._mutateCharacter(charId, (c) => {
+      const anim = c.animations.find((a) => a.id === animId)
+      if (anim) anim.durationMs = durationMs
+    })
+    if (!ok) return
+    this._persistProject()
+    this._hydrateCastView()
+  }
+
+  /**
+   * Mutate one character in-place via the given mutator. Returns
+   * `true` when the character was found + mutated, `false` otherwise.
+   * Used as the building block for all cast CRUD so we don't repeat
+   * the gameProjectResource null-check + character lookup boilerplate.
+   */
+  private _mutateCharacter(charId: string, mutator: (c: import('@pixelrpg/engine').CharacterDefinition) => void): boolean {
+    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
+    const character = project?.data?.characters?.find((c) => c.id === charId)
+    if (!character) return false
+    mutator(character)
+    return true
+  }
+
+  /**
+   * Push project state into the Tiles view. Same pattern as
+   * `_hydrateCastView` — the view pulls everything it needs from the
+   * engine's `GameProjectResource`, including the sprite-set
+   * resources used to render the tile palette + per-tile preview.
+   */
+  private _hydrateTilesView(): void {
+    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
+    void this._tiles_view.setProject(project ?? null)
+  }
+
+  /**
+   * Toggle a sprite's `solid` flag in the project's sprite-set.
+   * Mirrors `_setCharacterPlayer`: mutate in-memory data, push live
+   * to Excalibur's TileMap so the change is immediate in playtest,
+   * then serialise the sprite-set JSON to disk. The Tiles view's
+   * inspector re-reads after persistence so the switch reflects the
+   * stored state.
+   */
+  private _setSpriteSolid(spriteSetId: string, spriteId: number, solid: boolean): void {
+    const spriteSet = this._engineCtl.engine?.excalibur?.gameProjectResource?.spriteSets.get(spriteSetId)
+    const def = spriteSet?.data?.sprites.find((s) => s.id === spriteId)
+    if (!spriteSet || !def) return
+    def.solid = solid
+    this._engineCtl.engine?.refreshTileSolidsForSprite(spriteSetId, spriteId)
+    this._persistSpriteSet(spriteSet)
+    this._tiles_view.refreshInspectorForSelection()
+  }
+
+  /**
+   * Set the sprite's `tileProperties.surface` key (or clear it when
+   * `surface` is `null`). Re-uses the same engine refresh path so
+   * `MapResource.effectiveSolidity` can react if the surface implied
+   * walkability (e.g. setting `surface: 'water'` paired with
+   * `walkable: false` upstream blocks the tile).
+   */
+  private _setSpriteSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
+    const spriteSet = this._engineCtl.engine?.excalibur?.gameProjectResource?.spriteSets.get(spriteSetId)
+    const def = spriteSet?.data?.sprites.find((s) => s.id === spriteId)
+    if (!spriteSet || !def) return
+    if (surface) {
+      def.tileProperties = { ...(def.tileProperties ?? {}), surface }
+    } else if (def.tileProperties?.surface !== undefined) {
+      const next = { ...def.tileProperties }
+      delete next.surface
+      def.tileProperties = Object.keys(next).length === 0 ? undefined : next
+    }
+    this._engineCtl.engine?.refreshTileSolidsForSprite(spriteSetId, spriteId)
+    this._persistSpriteSet(spriteSet)
+    this._tiles_view.refreshInspectorForSelection()
+  }
+
+  /**
+   * Serialise a sprite-set's data back to its `.json` source.
+   * Best-effort — failures toast but the in-memory mutation stays
+   * so the UI doesn't flicker between persisted and current state.
+   */
+  private _persistSpriteSet(spriteSet: { path: string; data: import('@pixelrpg/engine').SpriteSetData }): void {
+    try {
+      const ok = writeTextFile(spriteSet.path, SpriteSetFormat.serialize(spriteSet.data))
+      if (!ok) this._showToast(_('Could not save tile properties'))
+    } catch (err) {
+      console.warn('[ApplicationWindow] Failed to persist sprite-set:', err)
+      this._showToast(_('Could not save tile properties'))
+    }
+  }
+
+  /**
+   * Serialise the in-memory project data back to `game-project.json`.
+   * Best-effort — failures toast but the in-memory state still
+   * updates, so the user sees consistent UI even if the save fails.
+   */
+  private _persistProject(): void {
+    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
+    if (!project?.data) return
+    try {
+      const ok = writeTextFile(project.path, GameProjectFormat.serialize(project.data))
+      if (!ok) this._showToast(_('Could not save project'))
+    } catch (err) {
+      console.warn('[ApplicationWindow] Failed to persist project:', err)
+      this._showToast(_('Could not save project'))
+    }
   }
 
   /**
@@ -165,8 +436,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     )
     modeAction.connect('change-state', (action, value) => {
       action.set_state(value!)
+      const mode = value!.get_string()[0]
+      this._onModeChanged(mode)
     })
     winActions.add_action(modeAction)
+    this._modeAction = modeAction
 
     const toolAction = Gio.SimpleAction.new_stateful(
       'set-tool',
@@ -264,14 +538,43 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(gridAction)
 
+    // Play / playtest toggle. Stateful boolean — clicking the
+    // FloatingPlay button (action-name="win.play") activates the
+    // action; the activate handler flips the state, the
+    // change-state handler forwards into the engine to swap
+    // `EditorModeComponent` ↔ `RuntimeModeComponent` on the active
+    // scene. The engine's `PlayerSystem` reveals + drives the
+    // player actor in runtime, hides it again on editor mode.
+    const playAction = Gio.SimpleAction.new_stateful('play', null, GLib.Variant.new_boolean(false))
+    playAction.connect('activate', () => {
+      const current = playAction.get_state()?.get_boolean() ?? false
+      playAction.change_state(GLib.Variant.new_boolean(!current))
+    })
+    playAction.connect('change-state', (action, value) => {
+      action.set_state(value!)
+      const isPlaying = value!.get_boolean()
+      // Save unsaved tile edits before entering runtime so a crash
+      // mid-playtest can't lose work. Best-effort — failures surface
+      // as a toast but the playtest still proceeds.
+      if (isPlaying) this._persistCurrentMap()
+      this._engineCtl.engine?.setRuntimeMode(isPlaying)
+      // Visual feedback on the FloatingPlay pill: icon + label swap
+      // to "pause" while in playtest mode so it's clear what the
+      // button will do on the next click.
+      this._scene_editor_view.setPlaying(isPlaying)
+    })
+    winActions.add_action(playAction)
+    this._playAction = playAction
+
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
-    // Ctrl+G = toggle grid.
+    // Ctrl+G = toggle grid, F5 = play / pause playtest.
     const app = this.get_application() as Adw.Application | null
     app?.set_accels_for_action('win.undo', ['<Primary>z'])
     app?.set_accels_for_action('win.redo', ['<Primary><Shift>z', '<Primary>y'])
     app?.set_accels_for_action('win.toggle-grid', ['<Primary>g'])
+    app?.set_accels_for_action('win.play', ['F5'])
 
-    for (const name of ['play', 'switch-tileset', 'new-layer', 'open-recent-projects']) {
+    for (const name of ['switch-tileset', 'new-layer', 'open-recent-projects']) {
       winActions.add_action(new Gio.SimpleAction({ name }))
     }
 
@@ -349,8 +652,31 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const current = this._stack.get_visible_child_name()
     if (current === 'scene-editor' && name !== 'scene-editor') {
       this._engineCtl.dispose()
+      // Reset play state — the engine is gone; re-entering the scene
+      // editor starts a fresh MapScene defaulted to editor mode. Without
+      // this the stateful action would still report "playing" and the
+      // first click would have to flip to false before actually playing.
+      this._playAction?.change_state(GLib.Variant.new_boolean(false))
     }
     this._stack.set_visible_child_name(name)
+
+    // Keep `win.mode` in sync with the visible view so the mode rail's
+    // active row matches what's on screen. `welcome` doesn't have a
+    // mode — leave the action where it was so going welcome → back-to-
+    // atlas restores the previous mode highlight.
+    const modeForView: Record<ViewName, string | null> = {
+      welcome: null,
+      atlas: 'world',
+      cast: 'cast',
+      tiles: 'tiles',
+      'scene-editor': 'world',
+    }
+    const targetMode = modeForView[name]
+    if (targetMode && this._modeAction?.get_state()?.get_string()[0] !== targetMode) {
+      // Use set_state (not change_state) to avoid recursing through
+      // `_onModeChanged` — the view is already being set explicitly.
+      this._modeAction.set_state(GLib.Variant.new_string(targetMode))
+    }
   }
 
   private _showAtlas(): void {

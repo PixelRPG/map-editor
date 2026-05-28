@@ -1,0 +1,12 @@
+.character-preview-frame {
+  background-color: alpha(@card_shade_color, 0.5);
+}
+
+.character-preview-frame picture {
+  /* The scientist sprite is 16×32 pixels; without explicit scale the
+   * frame leaves it tiny in the centre. Scale via image-rendering on
+   * GdkPaintable would be ideal but Picture handles fit-to-frame, so
+   * we just give it room. */
+  min-width: 96px;
+  min-height: 96px;
+}

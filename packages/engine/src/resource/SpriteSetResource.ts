@@ -14,6 +14,14 @@ import { loadTextFile, toFetchUrl } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 
 /**
+ * Whether `path` is already a fully-qualified URL (or data URL) that
+ * should NOT be re-joined against a base directory.
+ */
+function isAbsoluteOrUrl(path: string): boolean {
+  return /^(https?|file|data|blob):/i.test(path)
+}
+
+/**
  * Resource class for loading custom SpriteSet format into Excalibur
  */
 export class SpriteSetResource {
@@ -28,6 +36,7 @@ export class SpriteSetResource {
   private readonly headless: boolean = false
   private readonly basePath: string = ''
   private readonly filename: string = ''
+  private readonly inlineData?: SpriteSetData
 
   /**
    * Resource data
@@ -49,6 +58,7 @@ export class SpriteSetResource {
     this.headless = options?.headless ?? this.headless
     this.basePath = extractDirectoryPath(path)
     this.filename = getFilename(path)
+    this.inlineData = options?.inlineData
   }
 
   /**
@@ -237,7 +247,16 @@ export class SpriteSetResource {
     const imageLoaders = new Map<string, ImageSource>()
 
     if (data.image) {
-      const imagePath = joinPaths(this.basePath, data.image.path)
+      // `data:` URLs (used by engine-bundled assets like the scientist
+      // starter PNG) skip `joinPaths` — that helper splits on `/` and
+      // collapses double-slashes via `normalizePath`, which corrupts
+      // the base64 payload. http(s) URLs and `file://` URLs are also
+      // already-fully-qualified, so we let `loadImage` handle them
+      // as-is. Only relative paths go through `joinPaths` for
+      // basePath resolution.
+      const imagePath = isAbsoluteOrUrl(data.image.path)
+        ? data.image.path
+        : joinPaths(this.basePath, data.image.path)
       try {
         const imageLoader = await this.loadImage(imagePath)
         imageLoaders.set(data.image.id, imageLoader)
@@ -288,11 +307,21 @@ export class SpriteSetResource {
 
   async load(): Promise<SpriteSetData> {
     try {
-      // Load the sprite set data
-      const spriteSetPath = joinPaths(this.basePath, this.filename)
-      const spriteSetText = await loadTextFile(spriteSetPath)
-      this.spriteSetData = SpriteSetFormat.deserialize(spriteSetText)
-      this.data = this.spriteSetData
+      // Inline-data mode: the bundled scientist (and any other
+      // engine-provided asset) skips the JSON load entirely and feeds
+      // pre-built data into the same downstream pipeline. The
+      // `image.path` is typically a `data:` URL, which `toFetchUrl`
+      // passes through unchanged so `ImageSource` can fetch it.
+      if (this.inlineData) {
+        this.spriteSetData = this.inlineData
+        this.data = this.spriteSetData
+      } else {
+        // Load the sprite set data
+        const spriteSetPath = joinPaths(this.basePath, this.filename)
+        const spriteSetText = await loadTextFile(spriteSetPath)
+        this.spriteSetData = SpriteSetFormat.deserialize(spriteSetText)
+        this.data = this.spriteSetData
+      }
 
       // Load all images
       this.imageLoaders = await this.loadImages(this.spriteSetData)

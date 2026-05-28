@@ -1,0 +1,60 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgCharacterPreview : Adw.Bin {
+  styles ["character-preview"]
+
+  Gtk.Box {
+    orientation: vertical;
+    halign: center;
+    valign: center;
+    spacing: 12;
+
+    Gtk.Frame frame {
+      halign: center;
+      width-request: 160;
+      height-request: 160;
+      styles ["card", "character-preview-frame"]
+
+      child: Gtk.Picture picture {
+        content-fit: contain;
+        halign: center;
+        valign: center;
+        can-shrink: false;
+        margin-top: 8;
+        margin-bottom: 8;
+        margin-start: 8;
+        margin-end: 8;
+      };
+    }
+
+    Gtk.Box direction_pad {
+      orientation: horizontal;
+      halign: center;
+      spacing: 4;
+      styles ["toolbar", "linked"]
+
+      Gtk.ToggleButton btn_up {
+        icon-name: "go-up-symbolic";
+        tooltip-text: _("Walk up");
+      }
+      Gtk.ToggleButton btn_left {
+        icon-name: "go-previous-symbolic";
+        tooltip-text: _("Walk left");
+      }
+      Gtk.ToggleButton btn_down {
+        icon-name: "go-down-symbolic";
+        tooltip-text: _("Walk down");
+      }
+      Gtk.ToggleButton btn_right {
+        icon-name: "go-next-symbolic";
+        tooltip-text: _("Walk right");
+      }
+    }
+
+    Gtk.Label role_label {
+      label: bind template.role-label;
+      styles ["caption", "dim-label"]
+    }
+  }
+}

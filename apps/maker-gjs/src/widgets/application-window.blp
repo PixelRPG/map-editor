@@ -18,6 +18,10 @@ template $ApplicationWindow : Adw.ApplicationWindow {
     setters {
       atlas_view.library-collapsed: true;
       atlas_view.inspector-collapsed: true;
+      cast_view.library-collapsed: true;
+      cast_view.inspector-collapsed: true;
+      tiles_view.library-collapsed: true;
+      tiles_view.inspector-collapsed: true;
       scene_editor_view.library-collapsed: true;
       scene_editor_view.inspector-collapsed: true;
       welcome_view.inspector-collapsed: true;
@@ -40,6 +44,8 @@ template $ApplicationWindow : Adw.ApplicationWindow {
 
     setters {
       atlas_view.library-collapsed: true;
+      cast_view.library-collapsed: true;
+      tiles_view.library-collapsed: true;
       scene_editor_view.library-collapsed: true;
     }
   }
@@ -68,6 +74,18 @@ template $ApplicationWindow : Adw.ApplicationWindow {
         name: "atlas";
         title: _("Atlas");
         child: $AtlasView atlas_view {};
+      }
+
+      Adw.ViewStackPage {
+        name: "cast";
+        title: _("Cast");
+        child: $CastView cast_view {};
+      }
+
+      Adw.ViewStackPage {
+        name: "tiles";
+        title: _("Tiles");
+        child: $TilesView tiles_view {};
       }
 
       Adw.ViewStackPage {

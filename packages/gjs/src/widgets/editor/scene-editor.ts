@@ -83,6 +83,10 @@ export class SceneEditor extends Adw.Bin {
   get historyOsd(): FloatingHistory {
     return this._history_osd
   }
+
+  get floatingPlay(): FloatingPlay {
+    return this._floating_play
+  }
 }
 
 GObject.type_ensure(SceneEditor.$gtype)
