@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { ProjectHeroIcon } from './project-hero-icon'
@@ -37,6 +38,12 @@ export class ModeRail extends Adw.Bin {
   private _activeMode: EditorMode = 'world'
   private _projectName = ''
   private _projectTagline = ''
+  /** Handler id of the `win.mode` action's `notify::state` connection,
+   * stored so we can disconnect on `unroot`. Zero when not connected. */
+  private _modeActionHandlerId = 0
+  /** Cached reference so disconnect uses the exact action we connected
+   * to (lookup_action returns a different proxy on each call). */
+  private _observedModeAction: Gio.SimpleAction | null = null
 
   static {
     GObject.registerClass(
@@ -160,6 +167,46 @@ export class ModeRail extends Adw.Bin {
       } else {
         row.remove_css_class('accent')
       }
+    }
+  }
+
+  // Mode-rail instances are hosted by Atlas / Cast / Tiles / Scene
+  // editor views — each gets its OWN ModeRail. Without an observer
+  // here, a navigation that doesn't pass through the rail's own row
+  // click (e.g. opening a scene from the atlas, or a programmatic
+  // `_setView` from the host) would leave every other rail's
+  // `_activeMode` stale, so all rails kept showing "World" as active.
+  //
+  // Observing `win.mode` directly closes the loop without any
+  // routing-side awareness — every rail in any window stays in sync
+  // with whichever mode the window's action group currently advertises.
+  vfunc_root(): void {
+    super.vfunc_root()
+    const root = this.get_root() as (Gtk.Window & { lookup_action?: (name: string) => Gio.Action | null }) | null
+    const action = root?.lookup_action?.('mode') as Gio.SimpleAction | null
+    if (!action) return
+    this._observedModeAction = action
+    this._syncFromAction(action)
+    this._modeActionHandlerId = action.connect('notify::state', () => {
+      if (this._observedModeAction) this._syncFromAction(this._observedModeAction)
+    })
+  }
+
+  vfunc_unroot(): void {
+    if (this._observedModeAction && this._modeActionHandlerId !== 0) {
+      this._observedModeAction.disconnect(this._modeActionHandlerId)
+    }
+    this._modeActionHandlerId = 0
+    this._observedModeAction = null
+    super.vfunc_unroot()
+  }
+
+  private _syncFromAction(action: Gio.SimpleAction): void {
+    const state = action.get_state()
+    if (!state) return
+    const value = state.get_string()[0] as EditorMode | undefined
+    if (value && MODE_ORDER.includes(value)) {
+      this.activeMode = value
     }
   }
 }

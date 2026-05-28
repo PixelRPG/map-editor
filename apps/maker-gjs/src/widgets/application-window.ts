@@ -221,22 +221,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * Push the project's characters + player sprite-set into the cast
    * view so it can render the gallery + preview. Called when the user
    * navigates into the Cast tab or when project data changes.
+   *
+   * Reads from `_loadedProject.resource` — the project resource that
+   * `loadProjectAsAtlas` creates the moment the user opens a project
+   * (from welcome). The engine's own `GameProjectResource` only comes
+   * into existence on scene-editor entry, so we can't depend on it for
+   * Cast / Tiles views that the user might visit BEFORE opening any
+   * scene. Both resources auto-seed the bundled scientist via
+   * `_registerBuiltIns`, so the data layer is identical for our
+   * purposes.
    */
   private async _hydrateCastView(): Promise<void> {
-    const engine = this._engineCtl.engine
-    const project = engine?.excalibur?.gameProjectResource
-    const characters = project?.data?.characters ?? []
-    this._cast_view.projectName = project?.data?.name ?? _('New Project')
+    const resource = this._loadedProject?.resource
+    if (!resource) return
+    const characters = resource.data?.characters ?? []
+    this._cast_view.projectName = resource.data?.name ?? _('New Project')
 
-    // Resolve the player character's sprite-set as a Gdk paintable
-    // source so the CharacterPreview can animate it. Returns null when
-    // the engine hasn't loaded a project yet (e.g. the user clicked
-    // Cast without opening a project first — toast above prevents
-    // that, but be defensive).
     let spriteSet: GdkSpriteSetResource | null = null
     const playerCharacter = characters.find((c) => c.isPlayer)
-    if (playerCharacter && project) {
-      const engineSpriteSet = await project.getSpriteSet(playerCharacter.spriteSetId)
+    if (playerCharacter) {
+      const engineSpriteSet = await resource.getSpriteSet(playerCharacter.spriteSetId)
       if (engineSpriteSet) {
         try {
           spriteSet = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
@@ -260,15 +264,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   private _setCharacterPlayer(charId: string, isPlayer: boolean): void {
-    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
-    if (!project?.data?.characters) return
+    const resource = this._loadedProject?.resource
+    if (!resource?.data?.characters) return
     // Enforce one-of: setting a character to player unsets every other.
     if (isPlayer) {
-      for (const character of project.data.characters) {
+      for (const character of resource.data.characters) {
         character.isPlayer = character.id === charId
       }
     } else {
-      const target = project.data.characters.find((c) => c.id === charId)
+      const target = resource.data.characters.find((c) => c.id === charId)
       if (target) target.isPlayer = false
     }
     this._persistProject()
@@ -294,25 +298,24 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * Mutate one character in-place via the given mutator. Returns
    * `true` when the character was found + mutated, `false` otherwise.
    * Used as the building block for all cast CRUD so we don't repeat
-   * the gameProjectResource null-check + character lookup boilerplate.
+   * the project null-check + character lookup boilerplate.
    */
   private _mutateCharacter(charId: string, mutator: (c: import('@pixelrpg/engine').CharacterDefinition) => void): boolean {
-    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
-    const character = project?.data?.characters?.find((c) => c.id === charId)
+    const character = this._loadedProject?.resource?.data?.characters?.find((c) => c.id === charId)
     if (!character) return false
     mutator(character)
     return true
   }
 
   /**
-   * Push project state into the Tiles view. Same pattern as
-   * `_hydrateCastView` — the view pulls everything it needs from the
-   * engine's `GameProjectResource`, including the sprite-set
-   * resources used to render the tile palette + per-tile preview.
+   * Push project state into the Tiles view. Pulls from
+   * `_loadedProject.resource` for the same reason as
+   * `_hydrateCastView`: the engine's project resource only exists once
+   * a scene is open, and we want the Tiles editor to work immediately
+   * after opening a project.
    */
   private _hydrateTilesView(): void {
-    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
-    void this._tiles_view.setProject(project ?? null)
+    void this._tiles_view.setProject(this._loadedProject?.resource ?? null)
   }
 
   /**
@@ -324,10 +327,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * stored state.
    */
   private _setSpriteSolid(spriteSetId: string, spriteId: number, solid: boolean): void {
-    const spriteSet = this._engineCtl.engine?.excalibur?.gameProjectResource?.spriteSets.get(spriteSetId)
+    const spriteSet = this._loadedProject?.resource?.spriteSets.get(spriteSetId)
     const def = spriteSet?.data?.sprites.find((s) => s.id === spriteId)
     if (!spriteSet || !def) return
     def.solid = solid
+    // Live-refresh ONLY when the engine is running (i.e. user is in
+    // the scene-editor with an active MapScene). From the Tiles view
+    // the engine is disposed — but it'll re-read project state from
+    // disk on the next scene-editor entry, so disk-persist is enough.
     this._engineCtl.engine?.refreshTileSolidsForSprite(spriteSetId, spriteId)
     this._persistSpriteSet(spriteSet)
     this._tiles_view.refreshInspectorForSelection()
@@ -335,13 +342,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   /**
    * Set the sprite's `tileProperties.surface` key (or clear it when
-   * `surface` is `null`). Re-uses the same engine refresh path so
-   * `MapResource.effectiveSolidity` can react if the surface implied
-   * walkability (e.g. setting `surface: 'water'` paired with
-   * `walkable: false` upstream blocks the tile).
+   * `surface` is `null`). Live-refresh is conditional on the engine
+   * actually running — see `_setSpriteSolid`.
    */
   private _setSpriteSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
-    const spriteSet = this._engineCtl.engine?.excalibur?.gameProjectResource?.spriteSets.get(spriteSetId)
+    const spriteSet = this._loadedProject?.resource?.spriteSets.get(spriteSetId)
     const def = spriteSet?.data?.sprites.find((s) => s.id === spriteId)
     if (!spriteSet || !def) return
     if (surface) {
@@ -377,10 +382,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * updates, so the user sees consistent UI even if the save fails.
    */
   private _persistProject(): void {
-    const project = this._engineCtl.engine?.excalibur?.gameProjectResource
-    if (!project?.data) return
+    const resource = this._loadedProject?.resource
+    if (!resource?.data) return
     try {
-      const ok = writeTextFile(project.path, GameProjectFormat.serialize(project.data))
+      const ok = writeTextFile(resource.path, GameProjectFormat.serialize(resource.data))
       if (!ok) this._showToast(_('Could not save project'))
     } catch (err) {
       console.warn('[ApplicationWindow] Failed to persist project:', err)
