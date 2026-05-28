@@ -4,32 +4,10 @@ import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor
 import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import { MapFormat } from '../format/MapFormat'
 import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
-import type { LayerData, LayerTier, MapData, MapResourceOptions, SpriteDataMap, SpriteDataSet } from '../types'
+import type { LayerData, LayerTier, MapData, MapResourceOptions } from '../types'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { SpriteSetResource } from './SpriteSetResource.ts'
-
-/**
- * Derive the effective solidity for a sprite placement, combining
- * placement-level overrides, sprite-set defaults, and the semantic
- * `tileProperties.walkable` flag.
- *
- * Returns:
- *   - `true` — explicit solid (placement or sprite-set says wall, or
- *     `tileProperties.walkable === false`)
- *   - `false` — explicit non-solid (placement.solid === false or
- *     sprite-set def.solid === false explicitly)
- *   - `undefined` — no opinion (leaves the existing tile.solid alone)
- */
-function effectiveSolidity(
-  placement: SpriteDataMap,
-  def: SpriteDataSet | undefined,
-): boolean | undefined {
-  if (placement.solid !== undefined) return placement.solid
-  if (def?.solid !== undefined) return def.solid
-  if (def?.tileProperties?.walkable === false) return true
-  return undefined
-}
 
 /** All tiers a `MapResource` builds tilemaps for. Order is canonical
  * for iteration when order doesn't otherwise matter. */
@@ -211,28 +189,11 @@ export class MapResource implements Loadable<TileMap> {
         })
       }
 
-      // Resolve effective solidity in priority order:
-      //   1. Per-placement `spriteData.solid` (explicit override on
-      //      a specific tile placement).
-      //   2. Per-sprite-set `def.solid` (the "this tile is a wall"
-      //      authoring flag — set via TilesTab's Solid switch or
-      //      ported from Tiled `<objectgroup>` colliders).
-      //   3. Per-sprite-set `def.tileProperties.walkable === false`
-      //      (the semantic "you can't walk here" path — carries
-      //      richer info like `surface: 'water'` for audio + encounter
-      //      systems via `WalkOnTileSystem`).
-      // The tile is solid if ANY layer's sprite at this position is
-      // solid — first solid encountered wins, otherwise the last
-      // explicit non-solid wins. Stacked layers with mixed solidity
-      // pick the maximum (solid > non-solid).
-      const def = this.spriteSetResources
-        .get(spriteData.spriteSetId)
-        ?.data?.sprites.find((s) => s.id === spriteData.spriteId)
-      const effectiveSolid = effectiveSolidity(spriteData, def)
-      if (effectiveSolid === true) {
+      // A tile becomes solid as soon as any layer's sprite at this
+      // position contributes solidity. Sticky — once true on this
+      // load pass we don't let later non-solid sprites unset it.
+      if (this._isSolidRef(spriteData.spriteSetId, spriteData.spriteId, spriteData.solid)) {
         tile.solid = true
-      } else if (effectiveSolid === false && !tile.solid) {
-        tile.solid = false
       }
 
       const existingRefs = initialSprites.get(tile) || []
@@ -354,16 +315,16 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Re-apply solid state for every placement of a sprite definition.
-   * Called when the user toggles `solid` on a sprite via the Tiles
-   * tab — every tile currently showing that sprite needs to flip
-   * its `tile.solid` immediately, without a full map reload.
+   * Re-apply `tile.solid` for every tile currently displaying a
+   * sprite with id `(spriteSetId, spriteId)`. Called when the user
+   * toggles `solid` on a sprite definition from the Tiles view so
+   * every placement of that sprite flips collision immediately.
    *
-   * Reads the live editor-shadow (`MapEditorComponent`) on every
-   * tilemap rather than the JSON-backed `mapData.layers[].sprites[]`.
-   * Paint/erase during playtest only mutates the shadow; mapData is
-   * stale until save. Anchoring on the shadow keeps Tiles-tab
-   * toggles and runtime paints consistent with each other.
+   * Walks the live editor shadow (`MapEditorComponent`) on every
+   * tilemap rather than `mapData.layers[].sprites[]` — paint/erase
+   * during playtest only mutates the shadow; mapData stays stale
+   * until save. Anchoring on the shadow keeps Tiles-tab toggles and
+   * runtime paints consistent.
    */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
     for (const tilemap of this.tileMapsByTier.values()) {
@@ -371,53 +332,52 @@ export class MapResource implements Loadable<TileMap> {
       if (!editor) continue
       for (const tile of editor.getAllTilesWithSprites()) {
         const refs = editor.getSpritesForTileAndLayer(tile)
-        const containsTarget = refs.some(
-          (ref) => ref.spriteSetId === spriteSetId && ref.spriteId === spriteId,
-        )
-        if (containsTarget) this._recomputeTileSolid(tilemap, tile)
+        if (refs.some((r) => r.spriteSetId === spriteSetId && r.spriteId === spriteId)) {
+          this.refreshTileSolidFromEditor(tilemap, tile)
+        }
       }
     }
   }
 
   /**
    * Recompute `tile.solid` on `tilemap`'s tile from the live editor
-   * shadow state. Called from `layer.manager.ts` after every paint /
-   * erase so collision tracks edits in real time.
-   *
-   * A tile is solid iff at least one sprite currently placed on it
-   * has `def.solid === true` or `def.tileProperties.walkable === false`.
-   * Stops at the first hit — multi-sprite stacks pick the strict
-   * verdict (one wall is enough; non-solid layers under it don't
-   * unblock).
+   * shadow state. Called by `layer.manager.ts` after every paint /
+   * erase so collision tracks edits in real time. A tile is solid
+   * iff at least one sprite currently placed on it contributes
+   * solidity per {@link _isSolidRef}.
    */
   refreshTileSolidFromEditor(tilemap: TileMap, tile: Tile): void {
-    this._recomputeTileSolid(tilemap, tile)
-  }
-
-  /**
-   * Per-tilemap, per-tile recompute. Walks the editor-shadow sprites
-   * on this tile and resolves the effective solidity from each
-   * sprite's definition.
-   */
-  private _recomputeTileSolid(tilemap: TileMap, tile: Tile): void {
     const editor = tilemap.get(MapEditorComponent)
     if (!editor) return
     const refs = editor.getSpritesForTileAndLayer(tile)
-    let solid = false
-    for (const ref of refs) {
-      const def = this.spriteSetResources
-        .get(ref.spriteSetId)
-        ?.data?.sprites.find((s) => s.id === ref.spriteId)
-      if (def?.solid === true) {
-        solid = true
-        break
-      }
-      if (def?.tileProperties?.walkable === false) {
-        solid = true
-        break
-      }
-    }
-    tile.solid = solid
+    tile.solid = refs.some((r) => this._isSolidRef(r.spriteSetId, r.spriteId))
+  }
+
+  /**
+   * Resolve whether a single sprite reference makes a tile solid.
+   *
+   * Priority:
+   *   1. `placementSolid` — explicit per-placement override (only the
+   *      load-time path carries this; live edits via
+   *      `MapEditorComponent` lose the field — pre-existing
+   *      limitation, no UI for placement-level overrides yet).
+   *   2. `def.solid` — sprite-set wall flag (TilesTab Solid switch
+   *      + Tiled `<objectgroup>` porter).
+   *   3. `def.tileProperties.walkable === false` — semantic
+   *      "can't walk here" path that carries surface metadata.
+   *
+   * Returns `false` when none of the above declare solidity — the
+   * tile stays whatever it was. Caller can union across stacked
+   * refs to get "any sprite blocks" semantics.
+   */
+  private _isSolidRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): boolean {
+    if (placementSolid !== undefined) return placementSolid
+    const def = this.spriteSetResources
+      .get(spriteSetId)
+      ?.data?.sprites.find((s) => s.id === spriteId)
+    if (def?.solid === true) return true
+    if (def?.solid === false) return false
+    return def?.tileProperties?.walkable === false
   }
 
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {

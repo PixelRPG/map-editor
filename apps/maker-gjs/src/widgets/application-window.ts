@@ -3,14 +3,16 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { type EditorTool, GameProjectFormat, MapFormat, SpriteSetFormat } from '@pixelrpg/engine'
-import { GdkSpriteSetResource, SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
+import { type EditorTool, MapFormat } from '@pixelrpg/engine'
+import { SAMPLE_SCENES, type SampleScene, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
+import { CastController } from '../services/cast-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
+import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
@@ -86,6 +88,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
     else this._scene_editor_view.setEngineWidget(null)
   })
+  /**
+   * Per-mode controllers — own their view's data + mutation +
+   * persistence path so this window stays a thin coordinator. Both
+   * are constructed in `vfunc_map` once the template-instantiated
+   * views are reachable.
+   */
+  private _castCtl: CastController | null = null
+  private _tilesCtl: TilesController | null = null
 
   static {
     GObject.registerClass(
@@ -150,33 +160,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._persistCurrentMap()
     })
 
-    // Cast view → host bridge. Mode-rail navigation comes through
-    // the cast-view's signal forwarder; cast mutations go through
-    // the bound callbacks which mutate project data + persist.
+    // Cast + Tiles views — mode-rail navigation forwarded centrally.
+    // Mutation handling + persistence belongs to the per-mode
+    // controllers (constructed below); view-side stays presentational.
     this.signals.connect(this._cast_view, 'mode-changed', (_v: CastView, mode: string) => {
       this._modeAction?.change_state(GLib.Variant.new_string(mode))
     })
-    this._cast_view.bindCallbacks({
-      rename: (charId, name) => this._renameCharacter(charId, name),
-      setPlayer: (charId, isPlayer) => this._setCharacterPlayer(charId, isPlayer),
-      setSpeed: (charId, tilesPerSec) => this._setCharacterSpeed(charId, tilesPerSec),
-      setDuration: (charId, animId, durationMs) =>
-        this._setAnimationDuration(charId, animId, durationMs),
-    })
-
-    // Tiles view → host bridge. Same shape as cast: mode-rail forwarder
-    // + tile-property mutation callbacks that mutate the in-memory
-    // sprite-set, push the engine's tile.solid map, and persist the
-    // sprite-set JSON to disk.
     this.signals.connect(this._tiles_view, 'mode-changed', (_v: TilesView, mode: string) => {
       this._modeAction?.change_state(GLib.Variant.new_string(mode))
     })
-    this._tiles_view.bindCallbacks({
-      setSolid: (spriteSetId, spriteId, solid) =>
-        this._setSpriteSolid(spriteSetId, spriteId, solid),
-      setSurface: (spriteSetId, spriteId, surface) =>
-        this._setSpriteSurface(spriteSetId, spriteId, surface),
-    })
+
+    if (!this._castCtl) {
+      this._castCtl = new CastController(this._cast_view, (msg) => this._showToast(msg))
+    }
+    if (!this._tilesCtl) {
+      this._tilesCtl = new TilesController(
+        this._tiles_view,
+        () => this._engineCtl.engine,
+        (msg) => this._showToast(msg),
+      )
+    }
   }
 
   /**
@@ -195,15 +198,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         break
       case 'cast':
         if (this._loadedProject) {
-          this._hydrateCastView()
+          void this._castCtl?.refresh()
           this._setView('cast')
         }
         break
       case 'tiles':
-        if (this._loadedProject) {
-          this._hydrateTilesView()
-          this._setView('tiles')
-        }
+        if (this._loadedProject) this._setView('tiles')
         break
       case 'audio':
       case 'data':
@@ -214,182 +214,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         const fallback = current === 'cast' ? 'cast' : current === 'tiles' ? 'tiles' : 'world'
         this._modeAction?.set_state(GLib.Variant.new_string(fallback))
         break
-    }
-  }
-
-  /**
-   * Push the project's characters + player sprite-set into the cast
-   * view so it can render the gallery + preview. Called when the user
-   * navigates into the Cast tab or when project data changes.
-   *
-   * Reads from `_loadedProject.resource` — the project resource that
-   * `loadProjectAsAtlas` creates the moment the user opens a project
-   * (from welcome). The engine's own `GameProjectResource` only comes
-   * into existence on scene-editor entry, so we can't depend on it for
-   * Cast / Tiles views that the user might visit BEFORE opening any
-   * scene. Both resources auto-seed the bundled scientist via
-   * `_registerBuiltIns`, so the data layer is identical for our
-   * purposes.
-   */
-  private async _hydrateCastView(): Promise<void> {
-    const resource = this._loadedProject?.resource
-    if (!resource) return
-    const characters = resource.data?.characters ?? []
-    this._cast_view.projectName = resource.data?.name ?? _('New Project')
-
-    let spriteSet: GdkSpriteSetResource | null = null
-    const playerCharacter = characters.find((c) => c.isPlayer)
-    if (playerCharacter) {
-      const engineSpriteSet = await resource.getSpriteSet(playerCharacter.spriteSetId)
-      if (engineSpriteSet) {
-        try {
-          spriteSet = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
-        } catch (err) {
-          console.warn('[ApplicationWindow] Failed to wrap sprite set for cast preview:', err)
-        }
-      }
-    }
-    this._cast_view.setCharacters(characters, spriteSet)
-  }
-
-  /**
-   * Rename a character in the project + persist. Mutations write to
-   * the in-memory `GameProjectData` directly (matching the existing
-   * pattern for `objectLibrary` edits) then serialise back to
-   * `game-project.json`. Cast view re-renders after each mutation.
-   */
-  private _renameCharacter(charId: string, name: string): void {
-    if (!this._mutateCharacter(charId, (c) => { c.name = name })) return
-    this._persistProject()
-  }
-
-  private _setCharacterPlayer(charId: string, isPlayer: boolean): void {
-    const resource = this._loadedProject?.resource
-    if (!resource?.data?.characters) return
-    // Enforce one-of: setting a character to player unsets every other.
-    if (isPlayer) {
-      for (const character of resource.data.characters) {
-        character.isPlayer = character.id === charId
-      }
-    } else {
-      const target = resource.data.characters.find((c) => c.id === charId)
-      if (target) target.isPlayer = false
-    }
-    this._persistProject()
-    this._hydrateCastView()
-  }
-
-  private _setCharacterSpeed(charId: string, tilesPerSec: number): void {
-    if (!this._mutateCharacter(charId, (c) => { c.speedTilesPerSec = tilesPerSec })) return
-    this._persistProject()
-  }
-
-  private _setAnimationDuration(charId: string, animId: string, durationMs: number): void {
-    const ok = this._mutateCharacter(charId, (c) => {
-      const anim = c.animations.find((a) => a.id === animId)
-      if (anim) anim.durationMs = durationMs
-    })
-    if (!ok) return
-    this._persistProject()
-    this._hydrateCastView()
-  }
-
-  /**
-   * Mutate one character in-place via the given mutator. Returns
-   * `true` when the character was found + mutated, `false` otherwise.
-   * Used as the building block for all cast CRUD so we don't repeat
-   * the project null-check + character lookup boilerplate.
-   */
-  private _mutateCharacter(charId: string, mutator: (c: import('@pixelrpg/engine').CharacterDefinition) => void): boolean {
-    const character = this._loadedProject?.resource?.data?.characters?.find((c) => c.id === charId)
-    if (!character) return false
-    mutator(character)
-    return true
-  }
-
-  /**
-   * Push project state into the Tiles view. Pulls from
-   * `_loadedProject.resource` for the same reason as
-   * `_hydrateCastView`: the engine's project resource only exists once
-   * a scene is open, and we want the Tiles editor to work immediately
-   * after opening a project.
-   */
-  private _hydrateTilesView(): void {
-    void this._tiles_view.setProject(this._loadedProject?.resource ?? null)
-  }
-
-  /**
-   * Toggle a sprite's `solid` flag in the project's sprite-set.
-   * Mirrors `_setCharacterPlayer`: mutate in-memory data, push live
-   * to Excalibur's TileMap so the change is immediate in playtest,
-   * then serialise the sprite-set JSON to disk. The Tiles view's
-   * inspector re-reads after persistence so the switch reflects the
-   * stored state.
-   */
-  private _setSpriteSolid(spriteSetId: string, spriteId: number, solid: boolean): void {
-    const spriteSet = this._loadedProject?.resource?.spriteSets.get(spriteSetId)
-    const def = spriteSet?.data?.sprites.find((s) => s.id === spriteId)
-    if (!spriteSet || !def) return
-    def.solid = solid
-    // Live-refresh ONLY when the engine is running (i.e. user is in
-    // the scene-editor with an active MapScene). From the Tiles view
-    // the engine is disposed — but it'll re-read project state from
-    // disk on the next scene-editor entry, so disk-persist is enough.
-    this._engineCtl.engine?.refreshTileSolidsForSprite(spriteSetId, spriteId)
-    this._persistSpriteSet(spriteSet)
-    this._tiles_view.refreshInspectorForSelection()
-  }
-
-  /**
-   * Set the sprite's `tileProperties.surface` key (or clear it when
-   * `surface` is `null`). Live-refresh is conditional on the engine
-   * actually running — see `_setSpriteSolid`.
-   */
-  private _setSpriteSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
-    const spriteSet = this._loadedProject?.resource?.spriteSets.get(spriteSetId)
-    const def = spriteSet?.data?.sprites.find((s) => s.id === spriteId)
-    if (!spriteSet || !def) return
-    if (surface) {
-      def.tileProperties = { ...(def.tileProperties ?? {}), surface }
-    } else if (def.tileProperties?.surface !== undefined) {
-      const next = { ...def.tileProperties }
-      delete next.surface
-      def.tileProperties = Object.keys(next).length === 0 ? undefined : next
-    }
-    this._engineCtl.engine?.refreshTileSolidsForSprite(spriteSetId, spriteId)
-    this._persistSpriteSet(spriteSet)
-    this._tiles_view.refreshInspectorForSelection()
-  }
-
-  /**
-   * Serialise a sprite-set's data back to its `.json` source.
-   * Best-effort — failures toast but the in-memory mutation stays
-   * so the UI doesn't flicker between persisted and current state.
-   */
-  private _persistSpriteSet(spriteSet: { path: string; data: import('@pixelrpg/engine').SpriteSetData }): void {
-    try {
-      const ok = writeTextFile(spriteSet.path, SpriteSetFormat.serialize(spriteSet.data))
-      if (!ok) this._showToast(_('Could not save tile properties'))
-    } catch (err) {
-      console.warn('[ApplicationWindow] Failed to persist sprite-set:', err)
-      this._showToast(_('Could not save tile properties'))
-    }
-  }
-
-  /**
-   * Serialise the in-memory project data back to `game-project.json`.
-   * Best-effort — failures toast but the in-memory state still
-   * updates, so the user sees consistent UI even if the save fails.
-   */
-  private _persistProject(): void {
-    const resource = this._loadedProject?.resource
-    if (!resource?.data) return
-    try {
-      const ok = writeTextFile(resource.path, GameProjectFormat.serialize(resource.data))
-      if (!ok) this._showToast(_('Could not save project'))
-    } catch (err) {
-      console.warn('[ApplicationWindow] Failed to persist project:', err)
-      this._showToast(_('Could not save project'))
     }
   }
 
@@ -830,6 +654,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._scene_editor_view.projectName = project.projectName
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenesById = new Map(project.scenes.map((s) => [s.id, s]))
+      // Per-mode controllers own the cast + tiles data path; tell them
+      // about the new project so their views can hydrate.
+      this._castCtl?.setProject(project)
+      this._tilesCtl?.setProject(project)
       // Force the engine to reload its project on the next scene-editor entry.
       this._engineCtl.invalidateCache()
       // Record success in the recent-projects store + refresh the
