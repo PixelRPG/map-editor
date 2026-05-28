@@ -85,13 +85,22 @@ export class TileEditorSystem extends System {
     SessionState.subscribe(scene, ActiveTileComponent, () => this.refreshPreview())
     SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshPreview())
 
-    const pointer = this.engine.input.pointers.primary
-
-    pointer.on('down', (event) => {
-      const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
+    // Paint fires on the high-level `POINTER_TAP` from
+    // `PointerGestureSystem`, NOT on raw `pointer.on('down')` — the
+    // raw down would paint on every left-click-drag pan attempt
+    // because the user has to press to start the camera drag.
+    // `pointer-tap` only fires when press + release happened without
+    // crossing the drag threshold, mirroring `Gtk.GestureClick`'s
+    // negotiation with `Gtk.GestureDrag`.
+    this.events.on(EngineEvent.POINTER_TAP, ({ screenPos }) => {
+      const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
       if (hit) this.applyClick(hit)
     })
 
+    // Hover preview still rides on raw `move` — it is independent of
+    // any press/drag state (the user hovers over a tile to see what
+    // would be placed, with or without a button held).
+    const pointer = this.engine.input.pointers.primary
     pointer.on('move', (event) => {
       const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
       if (hit) this.applyHover(hit)

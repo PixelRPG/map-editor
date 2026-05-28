@@ -20,6 +20,10 @@ export enum EngineEvent {
   WALKED_ONTO_TILE = 'walked-onto-tile',
   TELEPORT_REQUESTED = 'teleport-requested',
   ITEM_PICKED_UP = 'item-picked-up',
+  POINTER_TAP = 'pointer-tap',
+  POINTER_DRAG_START = 'pointer-drag-start',
+  POINTER_DRAG_MOVE = 'pointer-drag-move',
+  POINTER_DRAG_END = 'pointer-drag-end',
 }
 
 export interface EngineEventMap {
@@ -111,4 +115,41 @@ export interface EngineEventMap {
     qty: number
     pickupSound?: string
   }
+  /**
+   * High-level "click without drag" emitted by `PointerGestureSystem`
+   * on pointer-up when the press never crossed the drag threshold.
+   * Consumers (e.g. `TileEditorSystem`'s paint trigger) should NOT
+   * listen to raw `pointer.on('down')` — that fires before drag
+   * intent is known and would paint on every camera-pan attempt.
+   *
+   * `screenPos` is the original press position (not the release
+   * position) so the tap lands where the user pressed, even if a
+   * sub-threshold finger wobble shifted the release slightly.
+   */
+  [EngineEvent.POINTER_TAP]: { screenPos: { x: number; y: number } }
+  /**
+   * Drag intent confirmed — the pointer crossed the drag threshold
+   * after a press. `screenPos` is the ORIGINAL press position (the
+   * anchor), not where the threshold was crossed, so pan/select
+   * gestures can compute their delta from a stable origin.
+   */
+  [EngineEvent.POINTER_DRAG_START]: { screenPos: { x: number; y: number } }
+  /**
+   * Subsequent pointer-move while a drag is in progress. `deltaX` /
+   * `deltaY` are the screen-space delta since the previous
+   * `pointer-drag-{start,move}` event (NOT the cumulative delta from
+   * the anchor) — matches how `CameraControlSystem` already chains
+   * incremental pans. `screenPos` is the current pointer position.
+   */
+  [EngineEvent.POINTER_DRAG_MOVE]: {
+    screenPos: { x: number; y: number }
+    deltaX: number
+    deltaY: number
+  }
+  /**
+   * Drag finished or was cancelled (pointer-up, pointer-cancel,
+   * focus-loss). Consumers should treat both the same — clean up
+   * drag state, no further deltas will arrive.
+   */
+  [EngineEvent.POINTER_DRAG_END]: { screenPos: { x: number; y: number } }
 }
