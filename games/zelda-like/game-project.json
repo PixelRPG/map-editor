@@ -63,7 +63,7 @@
       "kind": "hero",
       "isPlayer": true,
       "spriteSetId": "built-in:scientist",
-      "speedTilesPerSec": 2,
+      "speedTilesPerSec": 6,
       "defaultAnimation": "idle-down",
       "animations": [
         {

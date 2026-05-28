@@ -37,7 +37,7 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 const DEFAULT_FACING: Facing = 'down'
-const DEFAULT_SPEED_TILES_PER_SEC = 2
+const DEFAULT_SPEED_TILES_PER_SEC = 6
 const FOOT_COLLIDER_MAX_WIDTH = 12
 const FOOT_COLLIDER_HEIGHT = 8
 

@@ -47,12 +47,12 @@ export const BUILT_IN_SCIENTIST: CharacterDefinition = {
   kind: 'hero',
   isPlayer: true,
   spriteSetId: BUILT_IN_SCIENTIST_SPRITESET_ID,
-  // 2 tiles/sec ≈ classic top-down RPG walk pace (Pokémon, Zelda
-  // overworld). At lokiri-forest's 16 px tiles that's 32 px/sec,
-  // about half a tile per frame at 60 fps — reads as deliberate
-  // movement, not jogging. Tweak via the Cast inspector if a
-  // specific hero/NPC needs a different pace.
-  speedTilesPerSec: 2,
+  // 6 tiles/sec ≈ snappy top-down RPG walk pace. At lokiri-forest's
+  // 16 px tiles that's 96 px/sec — feels purposeful without crossing
+  // into "jogging." Lower (2–4) feels deliberate but draggy; higher
+  // (10+) feels chaotic on a 16 px grid. Tweak per-character via the
+  // Cast inspector when a specific hero/NPC needs a different pace.
+  speedTilesPerSec: 6,
   defaultAnimation: 'idle-down',
   // Frame mapping derives from the original Aseprite frame tags:
   //   back / back-walk (0–4) → idle-up / walk-up

@@ -57,11 +57,11 @@ export class CastInspector extends Adw.Bin {
       if (character) {
         this._name_row.set_text(character.name)
         this._player_row.set_active(character.isPlayer === true)
-        this._speed_row.set_value(character.speedTilesPerSec ?? 2)
+        this._speed_row.set_value(character.speedTilesPerSec ?? 6)
       } else {
         this._name_row.set_text('')
         this._player_row.set_active(false)
-        this._speed_row.set_value(2)
+        this._speed_row.set_value(6)
       }
     } finally {
       this._silentUpdate = false
