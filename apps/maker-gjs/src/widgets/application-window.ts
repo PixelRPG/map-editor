@@ -682,6 +682,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // `_onModeChanged` — the view is already being set explicitly.
       this._modeAction.set_state(GLib.Variant.new_string(targetMode))
     }
+    if (targetMode) this._syncModeRails(targetMode)
+  }
+
+  /**
+   * Push the active mode into every view's ModeRail instance. Each
+   * view owns its own ModeRail (atlas / cast / tiles / scene-editor),
+   * and the rails only auto-update on their OWN row clicks. Without
+   * this push, navigating via a path that bypasses a rail's click
+   * (e.g. opening a scene from the atlas, or a programmatic
+   * `_setView`) would leave the destination view's rail showing a
+   * stale active row — the user-visible bug from #71's first review.
+   *
+   * Pushing to ALL rails (not just the active view's) keeps state in
+   * sync for any future toggle to a different view.
+   */
+  private _syncModeRails(mode: string): void {
+    this._atlas_view.syncActiveMode(mode)
+    this._cast_view.syncActiveMode(mode)
+    this._tiles_view.syncActiveMode(mode)
+    this._scene_editor_view.syncActiveMode(mode)
   }
 
   private _showAtlas(): void {

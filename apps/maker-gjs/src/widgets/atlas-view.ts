@@ -124,6 +124,11 @@ export class AtlasView extends Adw.Bin {
     this.notify('project-name')
   }
 
+  /** Push the active mode-rail row from the host on every view switch. */
+  syncActiveMode(mode: string): void {
+    this._mode_rail.activeMode = mode as 'world' | 'cast' | 'tiles' | 'audio' | 'data'
+  }
+
   get libraryCollapsed(): boolean {
     return this._libraryCollapsed ?? false
   }
