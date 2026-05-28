@@ -186,15 +186,15 @@ export class Engine {
    * active yet.
    */
   setActiveTool(tool: EditorTool): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     SessionState.set(scene, new ActiveToolComponent(tool))
   }
 
   /** Read the currently-active editor tool from the session-singleton. */
   getActiveTool(): EditorTool | null {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return null
+    const scene = this._activeMapScene()
+    if (!scene) return null
     return SessionState.get(scene, ActiveToolComponent)?.tool ?? null
   }
 
@@ -203,21 +203,21 @@ export class Engine {
    * sprite-set's `firstGid`). Lives on the session-singleton.
    */
   setActiveTile(spriteId: number): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     SessionState.set(scene, new ActiveTileComponent(spriteId))
   }
 
   getActiveTile(): number | null {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return null
+    const scene = this._activeMapScene()
+    if (!scene) return null
     return SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null
   }
 
   /** Set the active layer for tile painting. Matches a `LayerData.id`. */
   setActiveLayer(layerId: string): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     SessionState.set(scene, new ActiveLayerComponent(layerId))
     // Grid mode dims non-active layers — switching the active layer
     // changes which layer's content stays at full opacity. No-op when
@@ -229,8 +229,8 @@ export class Engine {
   }
 
   getActiveLayer(): string | null {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return null
+    const scene = this._activeMapScene()
+    if (!scene) return null
     return SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null
   }
 
@@ -241,8 +241,8 @@ export class Engine {
    * `getSelectedPlacements()` collapses both to `[]`.
    */
   setSelectedPlacements(placementIds: readonly string[]): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     if (placementIds.length === 0) {
       SessionState.unset(scene, SelectedPlacementsComponent)
       return
@@ -252,8 +252,8 @@ export class Engine {
 
   /** Current placement-selection. Empty array when no selection. */
   getSelectedPlacements(): string[] {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return []
+    const scene = this._activeMapScene()
+    if (!scene) return []
     return SessionState.get(scene, SelectedPlacementsComponent)?.placementIds ?? []
   }
 
@@ -272,8 +272,8 @@ export class Engine {
    * because the camera is currently following an actor).
    */
   async focusOnPlacement(placementId: string, durationMs = 400): Promise<boolean> {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
     const mapData = scene.mapResource?.mapData
     if (!mapData) return false
     const placement = mapData.objectPlacements?.find((p) => p.id === placementId)
@@ -301,8 +301,8 @@ export class Engine {
    * No-op when no `MapScene` is active.
    */
   executeCommand(command: Command): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     command.apply(scene)
 
     const existing = SessionState.get(scene, UndoStackComponent)
@@ -322,8 +322,8 @@ export class Engine {
    * refresh button enabled-states. No-op when `!canUndo()`.
    */
   undo(): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
     const stack = SessionState.get(scene, UndoStackComponent)
     if (!stack || !stack.canUndo) return false
     const command = stack.commands[stack.cursor - 1]
@@ -339,8 +339,8 @@ export class Engine {
    * command and advances the cursor. No-op when `!canRedo()`.
    */
   redo(): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
     const stack = SessionState.get(scene, UndoStackComponent)
     if (!stack || !stack.canRedo) return false
     const command = stack.commands[stack.cursor]
@@ -352,14 +352,14 @@ export class Engine {
   }
 
   canUndo(): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
     return SessionState.get(scene, UndoStackComponent)?.canUndo ?? false
   }
 
   canRedo(): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
     return SessionState.get(scene, UndoStackComponent)?.canRedo ?? false
   }
 
@@ -387,7 +387,10 @@ export class Engine {
     const layer = this._findLayer(layerId)
     if (!layer || layer.visible === visible) return layer != null
     layer.visible = visible
-    const scene = this.excalibur.currentScene as MapScene
+    // `_findLayer` succeeded above, which only returns non-null when a
+    // MapScene is active — so this lookup is guaranteed to hit.
+    const scene = this._activeMapScene()
+    if (!scene) return false
     const mapResource = scene.mapResource
     // Refresh only the tilemap that hosts the toggled layer — its
     // tier alone needs the visibility filter re-applied. The other
@@ -450,9 +453,20 @@ export class Engine {
    * on what "active map" means.
    */
   private _findLayer(layerId: string) {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return null
+    const scene = this._activeMapScene()
+    if (!scene) return null
     return scene.mapResource?.mapData?.layers.find((l) => l.id === layerId) ?? null
+  }
+
+  /**
+   * Active `MapScene` or `null` if Excalibur's current scene isn't
+   * a map (boot screen, loader, etc.). Centralises the
+   * `instanceof MapScene` narrowing so consumers can early-out on
+   * a single line and TypeScript sees a fully-narrowed scene.
+   */
+  private _activeMapScene(): MapScene | null {
+    const scene = this.excalibur.currentScene
+    return scene instanceof MapScene ? scene : null
   }
 
   /**
@@ -472,8 +486,8 @@ export class Engine {
    * No-op if the active scene isn't a `MapScene`.
    */
   setEditorViewMode(mode: EditorViewMode): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     const current = SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
     if (current === mode) return
     SessionState.set(scene, new EditorViewModeComponent(mode))
@@ -482,8 +496,8 @@ export class Engine {
   }
 
   getEditorViewMode(): EditorViewMode {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return 'normal'
+    const scene = this._activeMapScene()
+    if (!scene) return 'normal'
     return SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
   }
 
@@ -502,8 +516,8 @@ export class Engine {
    * No-op when no `MapScene` is active.
    */
   setRuntimeMode(active: boolean): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     if (active) {
       SessionState.unset(scene, EditorModeComponent)
       SessionState.set(scene, new RuntimeModeComponent())
@@ -515,8 +529,8 @@ export class Engine {
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */
   isRuntimeMode(): boolean {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
     return SessionState.get(scene, RuntimeModeComponent) !== null
   }
 
@@ -530,8 +544,8 @@ export class Engine {
    * No-op when no `MapScene` is active.
    */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
-    const scene = this.excalibur.currentScene
-    if (!(scene instanceof MapScene)) return
+    const scene = this._activeMapScene()
+    if (!scene) return
     scene.mapResource.refreshTileSolidsForSprite(spriteSetId, spriteId)
   }
 
@@ -546,8 +560,8 @@ export class Engine {
     const rebind = () => {
       inner?.()
       inner = null
-      const scene = this.excalibur.currentScene
-      if (!(scene instanceof MapScene)) {
+      const scene = this._activeMapScene()
+      if (!scene) {
         cb('normal')
         return
       }
@@ -613,8 +627,8 @@ export class Engine {
     const rebind = () => {
       inner?.()
       inner = null
-      const scene = this.excalibur.currentScene
-      if (!(scene instanceof MapScene)) {
+      const scene = this._activeMapScene()
+      if (!scene) {
         cb({ canUndo: false, canRedo: false })
         return
       }

@@ -196,10 +196,10 @@ export class TileEditorSystem extends System {
     if (tool !== 'eyedropper' && this.isLayerLocked(layerId)) return
 
     // Capture the previous sprites on this (tile, layer) so the command
-    // can revert. `MapEditorComponent` holds the shadow-state — pull
-    // from there before mutating.
-    const editor = hit.tileMap.get(MapEditorComponent)
-    const previousSprites = (editor?.getSpritesForTileAndLayer(hit.tile, layerId) ?? []).map((ref) => ({
+    // can revert. The hit already carries the `MapEditorComponent`
+    // resolved by `findTileUnderPointer` — reuse it instead of a
+    // second `tileMap.get(MapEditorComponent)` lookup.
+    const previousSprites = hit.editor.getSpritesForTileAndLayer(hit.tile, layerId).map((ref) => ({
       spriteSetId: ref.spriteSetId,
       spriteId: ref.spriteId,
       zIndex: ref.zIndex,
