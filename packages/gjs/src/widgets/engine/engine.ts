@@ -402,36 +402,34 @@ export class Engine extends Adw.Bin {
   }
 
   private _forwardEvents(engine: ExcaliburEngine): void {
+    // Relays each event to the widget's own EventEmitter (typed payload
+    // for engine-aware consumers) and — if `gobjectArg` is provided —
+    // also emits a GObject signal carrying a single extracted field
+    // for Blueprint bindings + classic signal handlers.
+    const fwd = <K extends keyof EngineEventMap>(
+      event: K,
+      gobjectArg?: (payload: EngineEventMap[K]) => unknown,
+    ) =>
+      engine.events.on(event, (p) => {
+        this.events.emit(event, p)
+        if (gobjectArg) this.emit(event, gobjectArg(p))
+      })
+
     this._excaliburSubscriptions.push(
       engine.events.on(EngineEvent.STATUS_CHANGED, (p) => {
+        // STATUS_CHANGED additionally drives `this.status` (a GObject
+        // property), so it stays out of the `fwd` factory.
         this.status = p.status
         this.events.emit(EngineEvent.STATUS_CHANGED, p)
         this.emit(EngineEvent.STATUS_CHANGED, p.status)
       }),
-      engine.events.on(EngineEvent.PROJECT_LOADED, (p) => {
-        this.events.emit(EngineEvent.PROJECT_LOADED, p)
-        this.emit(EngineEvent.PROJECT_LOADED, p.projectPath)
-      }),
-      engine.events.on(EngineEvent.MAP_LOADED, (p) => {
-        this.events.emit(EngineEvent.MAP_LOADED, p)
-        this.emit(EngineEvent.MAP_LOADED, p.mapId)
-      }),
-      engine.events.on(EngineEvent.ERROR, (p) => {
-        this.events.emit(EngineEvent.ERROR, p)
-        this.emit(EngineEvent.ERROR, p.message)
-      }),
-      engine.events.on(EngineEvent.TILE_CLICKED, (p) => {
-        this.events.emit(EngineEvent.TILE_CLICKED, p)
-      }),
-      engine.events.on(EngineEvent.TILE_HOVERED, (p) => {
-        this.events.emit(EngineEvent.TILE_HOVERED, p)
-      }),
-      engine.events.on(EngineEvent.TILE_PLACED, (p) => {
-        this.events.emit(EngineEvent.TILE_PLACED, p)
-      }),
-      engine.events.on(EngineEvent.TILE_PICKED, (p) => {
-        this.events.emit(EngineEvent.TILE_PICKED, p)
-      }),
+      fwd(EngineEvent.PROJECT_LOADED, (p) => p.projectPath),
+      fwd(EngineEvent.MAP_LOADED, (p) => p.mapId),
+      fwd(EngineEvent.ERROR, (p) => p.message),
+      fwd(EngineEvent.TILE_CLICKED),
+      fwd(EngineEvent.TILE_HOVERED),
+      fwd(EngineEvent.TILE_PLACED),
+      fwd(EngineEvent.TILE_PICKED),
     )
   }
 
