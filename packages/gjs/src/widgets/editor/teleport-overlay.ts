@@ -4,11 +4,23 @@ import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
-import PangoCairo from '@girs/pangocairo-1.0'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 
 const TITLE_BAR_HEIGHT = 24
 const ACCENT_FALLBACK = '#3584e4'
+
+const CURVE_OFFSET_MAX = 80
+const CURVE_OFFSET_FACTOR = 0.25
+const STROKE_WIDTH = 2
+const STROKE_DASH: [number, number] = [6, 4]
+const OPACITY_NORMAL = 0.85
+const OPACITY_DIMMED = 0.25
+const SOURCE_RING_RADIUS = 5
+const SOURCE_CORE_RADIUS = 3.2
+const DEST_RADIUS = 4
+const LABEL_FONT_SIZE_PT = 10
+const LABEL_PADDING_X = 8
+const LABEL_PADDING_Y = 2
 
 interface Endpoint {
   x: number
@@ -79,53 +91,53 @@ export class TeleportOverlay extends Gtk.Widget {
     for (const s of this._scenes) byId.set(s.id, s)
 
     const accent = this._lookupAccent()
-    const whiteRgba = new Gdk.RGBA()
-    whiteRgba.parse('#ffffff')
+    const white = new Gdk.RGBA()
+    white.parse('#ffffff')
 
-    const stroke = new Gsk.Stroke(2)
-    stroke.set_dash([6, 4])
+    const stroke = new Gsk.Stroke(STROKE_WIDTH)
+    stroke.set_dash(STROKE_DASH)
     stroke.set_line_cap(Gsk.LineCap.ROUND)
 
     for (const t of this._teleports) {
       const a = this._endpoint(byId, t.from, t.fx, t.fy)
       const b = this._endpoint(byId, t.to, t.tx, t.ty)
       if (!a || !b) continue
-
-      const involves = this._selectedId
-        ? t.from === this._selectedId || t.to === this._selectedId
-        : true
-      const dimmed = this._selectedId != null && !involves
-
-      const mx = (a.x + b.x) / 2
-      const my = (a.y + b.y) / 2
-      const dx = b.x - a.x
-      const dy = b.y - a.y
-      const len = Math.hypot(dx, dy) || 1
-      const off = Math.min(80, len * 0.25)
-      const c1x = mx - (dy / len) * off
-      const c1y = my + (dx / len) * off
-
-      snapshot.push_opacity(dimmed ? 0.25 : 0.85)
-
-      // Dashed bezier curve.
-      const builder = new Gsk.PathBuilder()
-      builder.move_to(a.x, a.y)
-      builder.quad_to(c1x, c1y, b.x, b.y)
-      const path = builder.to_path()
-      snapshot.push_stroke(path, stroke)
-      snapshot.append_color(accent, this._coverRect())
-      snapshot.pop()
-
-      // Source marker (white core, accent ring).
-      this._drawDisc(snapshot, a.x, a.y, 5, accent)
-      this._drawDisc(snapshot, a.x, a.y, 3.2, whiteRgba)
-      // Dest marker (filled accent).
-      this._drawDisc(snapshot, b.x, b.y, 4, accent)
-
-      if (!dimmed) this._drawLabel(snapshot, c1x, c1y, t.label, accent, whiteRgba)
-
-      snapshot.pop()
+      this._drawTeleport(snapshot, t, a, b, stroke, accent, white)
     }
+  }
+
+  /** Render one teleport (curve + markers + optional label) into the snapshot. */
+  private _drawTeleport(
+    snapshot: Gtk.Snapshot,
+    t: SampleTeleport,
+    a: Endpoint,
+    b: Endpoint,
+    stroke: Gsk.Stroke,
+    accent: Gdk.RGBA,
+    white: Gdk.RGBA,
+  ): void {
+    const involves = this._selectedId ? t.from === this._selectedId || t.to === this._selectedId : true
+    const dimmed = this._selectedId != null && !involves
+    const control = controlPoint(a, b)
+
+    snapshot.push_opacity(dimmed ? OPACITY_DIMMED : OPACITY_NORMAL)
+
+    // Dashed quadratic Bézier from source to dest.
+    const builder = new Gsk.PathBuilder()
+    builder.move_to(a.x, a.y)
+    builder.quad_to(control.x, control.y, b.x, b.y)
+    snapshot.push_stroke(builder.to_path(), stroke)
+    snapshot.append_color(accent, this._coverRect())
+    snapshot.pop()
+
+    // Source: white core + accent ring. Dest: solid accent disc.
+    this._drawDisc(snapshot, a.x, a.y, SOURCE_RING_RADIUS, accent)
+    this._drawDisc(snapshot, a.x, a.y, SOURCE_CORE_RADIUS, white)
+    this._drawDisc(snapshot, b.x, b.y, DEST_RADIUS, accent)
+
+    if (!dimmed) this._drawLabel(snapshot, control.x, control.y, t.label, accent, white)
+
+    snapshot.pop()
   }
 
   private _endpoint(
@@ -168,33 +180,34 @@ export class TeleportOverlay extends Gtk.Widget {
     bg: Gdk.RGBA,
     fg: Gdk.RGBA,
   ): void {
-    const ctx = this.get_pango_context()
-    const layout = Pango.Layout.new(ctx)
-    const attrList = Pango.AttrList.new()
-    const fontDesc = ctx.get_font_description()?.copy() ?? Pango.FontDescription.new()
-    fontDesc.set_size(10 * Pango.SCALE)
-    fontDesc.set_weight(Pango.Weight.BOLD)
-    layout.set_font_description(fontDesc)
-    layout.set_text(text, -1)
-    layout.set_attributes(attrList)
+    const layout = this._layoutFor(text)
     const [w, h] = layout.get_pixel_size()
-    const paddingX = 8
-    const paddingY = 2
-    const pillW = w + paddingX * 2
-    const pillH = h + paddingY * 2
+    const pillW = w + LABEL_PADDING_X * 2
+    const pillH = h + LABEL_PADDING_Y * 2
     const pillRect = new Graphene.Rect()
     pillRect.init(cx - pillW / 2, cy - pillH / 2, pillW, pillH)
     const rounded = new Gsk.RoundedRect()
     rounded.init_from_rect(pillRect, pillH / 2)
+
     snapshot.push_rounded_clip(rounded)
     snapshot.append_color(bg, pillRect)
     snapshot.pop()
+
     snapshot.save()
     snapshot.translate(new Graphene.Point({ x: cx - w / 2, y: cy - h / 2 }))
     snapshot.append_layout(layout, fg)
     snapshot.restore()
-    // Suppress unused-import warning at build time.
-    void PangoCairo
+  }
+
+  private _layoutFor(text: string): Pango.Layout {
+    const ctx = this.get_pango_context()
+    const layout = Pango.Layout.new(ctx)
+    const fontDesc = ctx.get_font_description()?.copy() ?? Pango.FontDescription.new()
+    fontDesc.set_size(LABEL_FONT_SIZE_PT * Pango.SCALE)
+    fontDesc.set_weight(Pango.Weight.BOLD)
+    layout.set_font_description(fontDesc)
+    layout.set_text(text, -1)
+    return layout
   }
 
   private _lookupAccent(): Gdk.RGBA {
@@ -210,6 +223,21 @@ export class TeleportOverlay extends Gtk.Widget {
     }
     return this._accentColor
   }
+}
+
+/**
+ * Quadratic-Bézier control point biased perpendicular to the segment
+ * midpoint — `offset = min(80, length × 0.25)`. Mirrors the curve math
+ * from the original design exports (`option-g-synthesis.jsx`).
+ */
+function controlPoint(a: Endpoint, b: Endpoint): Endpoint {
+  const mx = (a.x + b.x) / 2
+  const my = (a.y + b.y) / 2
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len = Math.hypot(dx, dy) || 1
+  const off = Math.min(CURVE_OFFSET_MAX, len * CURVE_OFFSET_FACTOR)
+  return { x: mx - (dy / len) * off, y: my + (dx / len) * off }
 }
 
 GObject.type_ensure(TeleportOverlay.$gtype)

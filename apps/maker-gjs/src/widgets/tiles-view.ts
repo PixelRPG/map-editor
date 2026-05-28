@@ -42,7 +42,7 @@ export class TilesView extends Adw.Bin {
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
 
-  private _signals = new SignalScope()
+  private signals = new SignalScope()
   private _spriteSets: { id: string; resource: SpriteSetResource; gdk: GdkSpriteSetResource | null }[] = []
   private _activeSpriteSetIdx = 0
   private _selectedSpriteId: number | null = null
@@ -118,25 +118,25 @@ export class TilesView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
-    this._signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
+    this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
-    this._signals.connect(this._tileset_combo, 'notify::selected', () => {
+    this.signals.connect(this._tileset_combo, 'notify::selected', () => {
       if (this._suppressComboNotify) return
       const idx = this._tileset_combo.get_selected()
       this._activeSpriteSetIdx = idx
       this._loadActivePalette()
     })
-    this._signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
+    this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
       this._selectedSpriteId = tileId
       this._refreshInspector()
     })
-    this._signals.connect(this._inspector, 'solid-changed', (_v: TileInspector, solid: boolean) => {
+    this.signals.connect(this._inspector, 'solid-changed', (_v: TileInspector, solid: boolean) => {
       const active = this._activeSpriteSet()
       if (!active || this._selectedSpriteId == null) return
       this._onSolidChanged?.(active.id, this._selectedSpriteId, solid)
     })
-    this._signals.connect(this._inspector, 'surface-changed', (_v: TileInspector, surface: string) => {
+    this.signals.connect(this._inspector, 'surface-changed', (_v: TileInspector, surface: string) => {
       const active = this._activeSpriteSet()
       if (!active || this._selectedSpriteId == null) return
       this._onSurfaceChanged?.(active.id, this._selectedSpriteId, surface === '' ? null : surface)
@@ -316,7 +316,7 @@ export class TilesView extends Adw.Bin {
   }
 
   vfunc_unmap(): void {
-    this._signals.disconnectAll()
+    this.signals.disconnectAll()
     super.vfunc_unmap()
   }
 }

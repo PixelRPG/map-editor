@@ -18,6 +18,7 @@ import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
+import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
 
@@ -317,20 +318,32 @@ export class Engine {
   }
 
   /**
+   * Resolve `(scene, stack)` for the active map, or `null` when there
+   * is no active map scene or no undo stack on it. Callers gate on a
+   * single tuple lookup instead of duplicating the scene + component
+   * fetch across every undo/redo entry point.
+   */
+  private _undoContext(): { scene: MapScene; stack: UndoStackComponent } | null {
+    const scene = this._activeMapScene()
+    if (!scene) return null
+    const stack = SessionState.get(scene, UndoStackComponent)
+    if (!stack) return null
+    return { scene, stack }
+  }
+
+  /**
    * Undo the most recent applied command. Reverts the command, drops
    * the cursor by one, fires the `notifyMutation` so subscribers
    * refresh button enabled-states. No-op when `!canUndo()`.
    */
   undo(): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const stack = SessionState.get(scene, UndoStackComponent)
-    if (!stack || !stack.canUndo) return false
-    const command = stack.commands[stack.cursor - 1]
+    const ctx = this._undoContext()
+    if (!ctx || !ctx.stack.canUndo) return false
+    const command = ctx.stack.commands[ctx.stack.cursor - 1]
     if (!command) return false
-    command.revert(scene)
-    stack.cursor -= 1
-    SessionState.notifyMutation(scene, stack)
+    command.revert(ctx.scene)
+    ctx.stack.cursor -= 1
+    SessionState.notifyMutation(ctx.scene, ctx.stack)
     return true
   }
 
@@ -339,28 +352,22 @@ export class Engine {
    * command and advances the cursor. No-op when `!canRedo()`.
    */
   redo(): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const stack = SessionState.get(scene, UndoStackComponent)
-    if (!stack || !stack.canRedo) return false
-    const command = stack.commands[stack.cursor]
+    const ctx = this._undoContext()
+    if (!ctx || !ctx.stack.canRedo) return false
+    const command = ctx.stack.commands[ctx.stack.cursor]
     if (!command) return false
-    command.apply(scene)
-    stack.cursor += 1
-    SessionState.notifyMutation(scene, stack)
+    command.apply(ctx.scene)
+    ctx.stack.cursor += 1
+    SessionState.notifyMutation(ctx.scene, ctx.stack)
     return true
   }
 
   canUndo(): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    return SessionState.get(scene, UndoStackComponent)?.canUndo ?? false
+    return this._undoContext()?.stack.canUndo ?? false
   }
 
   canRedo(): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    return SessionState.get(scene, UndoStackComponent)?.canRedo ?? false
+    return this._undoContext()?.stack.canRedo ?? false
   }
 
   /**
@@ -396,7 +403,7 @@ export class Engine {
     // tier alone needs the visibility filter re-applied. The other
     // tier tilemaps don't carry the layer's sprites, so iterating
     // them would be a no-op-with-cost.
-    const targetTier = layer.tier ?? 'ground'
+    const targetTier = layer.tier ?? DEFAULT_LAYER_TIER
     for (const entity of scene.world.entityManager.entities) {
       if (entity instanceof TileMap) {
         if (entity.get(TileMapTierComponent)?.tier === targetTier) {

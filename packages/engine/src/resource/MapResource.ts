@@ -5,13 +5,10 @@ import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.compone
 import { MapFormat } from '../format/MapFormat'
 import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
 import type { LayerData, LayerTier, MapData, MapResourceOptions } from '../types'
+import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { SpriteSetResource } from './SpriteSetResource.ts'
-
-/** All tiers a `MapResource` builds tilemaps for. Order is canonical
- * for iteration when order doesn't otherwise matter. */
-const ALL_TIERS: readonly LayerTier[] = ['ground', 'hero', 'overlay'] as const
 
 /**
  * Resource class for loading custom Map format into Excalibur.
@@ -113,7 +110,7 @@ export class MapResource implements Loadable<TileMap> {
    */
   private createTileMaps(data: MapData): void {
     MapFormat.validate(data)
-    for (const tier of ALL_TIERS) {
+    for (const tier of LAYER_TIERS) {
       const tilemap = this.buildSingleTileMap(data, tier)
       tilemap.addComponent(new TileMapTierComponent(tier))
       tilemap.z = TIER_Z[tier]
@@ -166,7 +163,7 @@ export class MapResource implements Loadable<TileMap> {
     if (!layer.sprites || !Array.isArray(layer.sprites) || layer.sprites.length === 0) {
       return
     }
-    const tier: LayerTier = layer.tier ?? 'ground'
+    const tier: LayerTier = layer.tier ?? DEFAULT_LAYER_TIER
     const tileMap = this.tileMapsByTier.get(tier)
     const initialSprites = this.initialSpritesByTier.get(tier)
     if (!tileMap || !initialSprites) return
@@ -220,7 +217,7 @@ export class MapResource implements Loadable<TileMap> {
       // Loadable<TileMap> contract — point `data` at the ground
       // tilemap. Callers that need a specific tier should walk the
       // scene by `TileMapTierComponent` instead.
-      const groundTileMap = this.tileMapsByTier.get('ground')
+      const groundTileMap = this.tileMapsByTier.get(DEFAULT_LAYER_TIER)
       if (!groundTileMap) throw new Error('Failed to build ground tilemap')
       this.data = groundTileMap
 
@@ -240,7 +237,7 @@ export class MapResource implements Loadable<TileMap> {
       throw new Error('Map resource not loaded')
     }
 
-    for (const tier of ALL_TIERS) {
+    for (const tier of LAYER_TIERS) {
       const tileMap = this.tileMapsByTier.get(tier)
       const initial = this.initialSpritesByTier.get(tier)
       if (!tileMap || !initial) continue
@@ -304,7 +301,7 @@ export class MapResource implements Loadable<TileMap> {
   getTileMapForLayer(layerId: string): TileMap | undefined {
     const layer = this._mapData?.layers.find((l) => l.id === layerId)
     if (!layer) return undefined
-    return this.getTileMapForTier(layer.tier ?? 'ground')
+    return this.getTileMapForTier(layer.tier ?? DEFAULT_LAYER_TIER)
   }
 
   /** Iterate every tilemap built for this map (one per tier). */

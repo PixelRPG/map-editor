@@ -1,112 +1,34 @@
 /**
- * Constants used throughout the map editor system
+ * Constants used throughout the map editor system.
+ *
+ * Only entries with a live consumer in `packages/` or `apps/` live
+ * here. Each entry's call site is documented inline to surface stale
+ * entries as the codebase evolves — if a site disappears, prune the
+ * constant rather than leaving it as orphaned configuration.
  */
-
 export const EDITOR_CONSTANTS = {
-  // Zoom settings
+  // `CameraControlSystem.handleZoomEvent`: per-wheel-notch zoom delta
+  // and the absolute floor the camera clamps to (avoid an inverted /
+  // imperceptibly-small viewport).
   ZOOM_STEP: 0.2,
   MIN_ZOOM: 0.1,
-  DEFAULT_ZOOM: 1.0,
 
-  // System priorities
-  EDITOR_SYSTEM_PRIORITY: 10,
-
-  // Tile dimensions validation
-  MIN_TILE_WIDTH: 1,
-  MIN_TILE_HEIGHT: 1,
-  MAX_TILE_WIDTH: 1024,
-  MAX_TILE_HEIGHT: 1024,
-
-  // Coordinate validation
-  MIN_COORDINATE: -999999,
-  MAX_COORDINATE: 999999,
-
-  // Fallback colors for tiles
-  FALLBACK_COLORS: [
-    '#FF0000', // Red
-    '#00FF00', // Green
-    '#0000FF', // Blue
-    '#FFFF00', // Yellow
-    '#FF00FF', // Magenta
-    '#00FFFF', // Cyan
-    '#800080', // Purple
-    '#FFA500', // Orange
-  ] as const,
-
-  // Default layer name when no layer is specified
+  // `TileEditorSystem.resolveLayerId`: fallback id when the active
+  // layer is unset and the map has no `layers[0]` to fall back on.
+  // Newly-created maps from the blank template still ship at least
+  // one layer, so this is the cold-start safety net only.
   DEFAULT_LAYER_NAME: 'default',
 
-  // Sprite validation
-  MIN_SPRITE_INDEX: 0,
-  MIN_TILE_ID: 0,
-  MIN_FIRST_GID: 0,
-
-  // Canvas settings
-  DEFAULT_STROKE_WIDTH: 1,
-  DEFAULT_FONT_SIZE: 10,
-  DEFAULT_FONT_FAMILY: 'Arial',
-
-  // Brush tool hover preview — half-transparent ghost of the active
-  // tile rendered by `TileEditorSystem` at the hovered tile so the
-  // user sees what would be placed before clicking. Low enough that
-  // the underlying tile is clearly visible; high enough that the
-  // ghost is unambiguously *the* preview (not noise / glare).
+  // `pencil-preview.applyHoverPreview`: opacity of the brush ghost
+  // rendered at the hovered tile. Low enough that the underlying tile
+  // stays clearly visible, high enough that the ghost still reads as
+  // *the* preview rather than noise.
   PAINT_PREVIEW_OPACITY: 0.5,
 
-  // Object-placement selection highlight (`SelectionHighlightSystem`).
-  // Bright orange ring drawn on top of the selected placement actor
-  // so the user can tell which entry in the Objects inspector list
-  // corresponds to which on-map sprite. Colour picked for contrast
-  // against the typical green / brown RPG palette and against the
-  // kind-marker outlines (cyan / yellow / green / purple / teal /
-  // salmon) so a selected functional placement still reads as
-  // "selected" rather than "another marker".
+  // `selection-highlight.attachSelectionRing`: bright-orange ring on
+  // top of the selected placement actor. Colour picked for contrast
+  // against the typical green / brown RPG palette and the kind-marker
+  // outlines (cyan / yellow / green / purple / teal / salmon).
   SELECTION_HIGHLIGHT_COLOR: '#ff8800',
   SELECTION_HIGHLIGHT_LINE_WIDTH: 2,
 } as const
-
-/**
- * Get a fallback color based on an index
- * @param index The index to get color for
- * @returns A color string
- */
-export function getFallbackColor(index: number): string {
-  const safeIndex = Math.abs(index) % EDITOR_CONSTANTS.FALLBACK_COLORS.length
-  return EDITOR_CONSTANTS.FALLBACK_COLORS[safeIndex] || EDITOR_CONSTANTS.FALLBACK_COLORS[0]
-}
-
-/**
- * Validate tile dimensions
- * @param width Tile width
- * @param height Tile height
- * @returns True if dimensions are valid
- */
-export function areTileDimensionsValid(width: number, height: number): boolean {
-  return (
-    typeof width === 'number' &&
-    typeof height === 'number' &&
-    width >= EDITOR_CONSTANTS.MIN_TILE_WIDTH &&
-    height >= EDITOR_CONSTANTS.MIN_TILE_HEIGHT &&
-    width <= EDITOR_CONSTANTS.MAX_TILE_WIDTH &&
-    height <= EDITOR_CONSTANTS.MAX_TILE_HEIGHT
-  )
-}
-
-/**
- * Validate coordinates
- * @param x X coordinate
- * @param y Y coordinate
- * @returns True if coordinates are valid
- */
-export function areCoordinatesValid(x: number, y: number): boolean {
-  return (
-    typeof x === 'number' &&
-    typeof y === 'number' &&
-    x >= EDITOR_CONSTANTS.MIN_COORDINATE &&
-    y >= EDITOR_CONSTANTS.MIN_COORDINATE &&
-    x <= EDITOR_CONSTANTS.MAX_COORDINATE &&
-    y <= EDITOR_CONSTANTS.MAX_COORDINATE &&
-    Number.isFinite(x) &&
-    Number.isFinite(y)
-  )
-}
