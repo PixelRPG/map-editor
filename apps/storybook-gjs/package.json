@@ -15,21 +15,21 @@
     "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.storybook"
   },
   "dependencies": {
-    "@girs/adw-1": "^1.10.0-4.0.0-rc.15",
-    "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.15",
-    "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.0-rc.15",
-    "@girs/gio-2.0": "^2.88.0-4.0.0-rc.15",
-    "@girs/gjs": "^4.0.0-rc.15",
-    "@girs/glib-2.0": "^2.88.0-4.0.0-rc.15",
-    "@girs/gobject-2.0": "^2.88.0-4.0.0-rc.15",
-    "@girs/gtk-4.0": "^4.23.0-4.0.0-rc.15",
-    "@gjsify/dom-elements": "^0.4.29",
+    "@girs/adw-1": "^1.10.0-4.0.4",
+    "@girs/gdk-4.0": "^4.0.0-4.0.4",
+    "@girs/gdkpixbuf-2.0": "^2.0.0-4.0.4",
+    "@girs/gio-2.0": "^2.88.0-4.0.4",
+    "@girs/gjs": "^4.0.4",
+    "@girs/glib-2.0": "^2.88.0-4.0.4",
+    "@girs/gobject-2.0": "^2.88.0-4.0.4",
+    "@girs/gtk-4.0": "^4.23.0-4.0.4",
+    "@gjsify/dom-elements": "^0.4.31",
     "@pixelrpg/games-zelda-like": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
     "@pixelrpg/story-gjs": "workspace:^"
   },
   "devDependencies": {
-    "@gjsify/cli": "^0.4.29",
+    "@gjsify/cli": "^0.4.31",
     "typescript": "^6.0.3"
   }
 }
