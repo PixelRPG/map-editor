@@ -157,7 +157,9 @@ export class MapResource implements Loadable<TileMap> {
     // matching its `tier` (default `'ground'`). A layer's sprite
     // positions remain global tile-coordinates — the same `(x, y)`
     // resolves to congruent tiles on every tier's tilemap.
-    sortedLayers.forEach((layer) => this.processTileLayer(layer))
+    for (const layer of sortedLayers) {
+      this.processTileLayer(layer)
+    }
   }
 
   private processTileLayer(layer: LayerData): void {

@@ -210,7 +210,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         if (this._loadedProject) this._setView('tiles')
         break
       case 'audio':
-      case 'data':
+      case 'data': {
         this._showToast(_('Coming soon — this mode is not yet implemented'))
         // Reset back to whichever view we were on; the action state
         // already advanced to the new mode but no view exists.
@@ -218,6 +218,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         const fallback = current === 'cast' ? 'cast' : current === 'tiles' ? 'tiles' : 'world'
         this._modeAction?.set_state(GLib.Variant.new_string(fallback))
         break
+      }
     }
   }
 
