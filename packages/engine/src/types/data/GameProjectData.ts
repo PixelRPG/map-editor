@@ -1,7 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { GameProjectEditorMetadata, ObjectDefinition, Properties } from './index'
+import type { CharacterDefinition, GameProjectEditorMetadata, ObjectDefinition, Properties } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -58,6 +58,18 @@ export interface GameProjectData {
    * model and the canonical pattern table.
    */
   objectLibrary?: ObjectDefinition[]
+
+  /**
+   * Project-level cast — heroes and NPCs as reusable definitions.
+   * Exactly one entry should carry `isPlayer: true` for `PlayerSystem`
+   * to resolve. NPC placements reference a definition via
+   * `NpcProperties.characterId` to inherit its sprite + animations.
+   *
+   * Optional — projects without configured characters fall back to a
+   * procedural placeholder hero in playtest (see
+   * `runtime/placeholder-character.ts`).
+   */
+  characters?: CharacterDefinition[]
 
   /**
    * Optional editor-specific data

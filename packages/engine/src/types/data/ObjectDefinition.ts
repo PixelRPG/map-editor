@@ -164,6 +164,13 @@ export interface NpcProperties {
   /** Tile-space waypoints the NPC patrols between. */
   route?: Array<{ tileX: number; tileY: number }>
   facing?: Facing
+  /**
+   * Optional reference to a {@link CharacterDefinition} in
+   * `GameProjectData.characters`. When set, the NPC borrows the
+   * character's sprite + animations; without it, the placement's
+   * inline `sprite: SpriteRef` is used (legacy fallback).
+   */
+  characterId?: string
 }
 
 export interface SpawnPointProperties {

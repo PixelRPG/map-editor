@@ -1,4 +1,4 @@
-import type { Tile, TileMap } from 'excalibur'
+import type { Tile } from 'excalibur'
 import { Component } from 'excalibur'
 
 export interface TileSpriteRef {
@@ -10,45 +10,19 @@ export interface TileSpriteRef {
 }
 
 /**
- * ECS Component that enables a TileMap entity to be edited.
+ * Per-tilemap editor shadow state. Holds the active list of sprite
+ * references on each tile (grouped by layer) so the editor can read
+ * + mutate without round-tripping through `mapData.layers[].sprites[]`
+ * (which is the JSON-backed source of truth and gets synced on save,
+ * not on every paint).
  *
- * Owns per-tile sprite references (the editor's shadow-state for which sprites
- * live on which (tile, layer)) and the current hover coordinates. The
- * `CameraControlSystem` and `TileEditorSystem` read/write this component;
- * services (e.g. `LayerManager`) update sprite refs through it.
+ * Pure data + Map-backed accessors — no lifecycle hooks. Services
+ * (`LayerManager`, `TileEditorSystem`) read/write via the public
+ * methods; `MapResource.processTileLayer` seeds the initial state
+ * via `setInitialSprites`.
  */
 export class MapEditorComponent extends Component {
-  public isEditable: boolean = true
-
-  public hoverTileCoords: { x: number; y: number } | null = null
-
   private readonly sprites = new Map<Tile, TileSpriteRef[]>()
-
-  private tileMap: TileMap | null = null
-
-  public onAdd(owner: TileMap): void {
-    this.tileMap = owner
-  }
-
-  public onRemove(): void {
-    this.tileMap = null
-    this.hoverTileCoords = null
-    this.sprites.clear()
-  }
-
-  public enableEditing(): void {
-    this.isEditable = true
-  }
-
-  public disableEditing(): void {
-    this.isEditable = false
-    this.hoverTileCoords = null
-  }
-
-  public getHoveredTile(): Tile | null {
-    if (!this.tileMap || !this.hoverTileCoords) return null
-    return this.tileMap.getTile(this.hoverTileCoords.x, this.hoverTileCoords.y)
-  }
 
   public setInitialSprites(sprites: Map<Tile, TileSpriteRef[]>): void {
     this.sprites.clear()
@@ -68,12 +42,6 @@ export class MapEditorComponent extends Component {
     const otherLayerSprites = existingSprites.filter((sprite) => sprite.layerId !== layerId)
     const newSprites = sprites.map((sprite) => ({ ...sprite, layerId }))
     this.sprites.set(tile, [...otherLayerSprites, ...newSprites])
-  }
-
-  public clearSpritesForTileAndLayer(tile: Tile, layerId: string): void {
-    const existingSprites = this.sprites.get(tile) || []
-    const remainingSprites = existingSprites.filter((sprite) => sprite.layerId !== layerId)
-    this.sprites.set(tile, remainingSprites)
   }
 
   public getAllTilesWithSprites(): IterableIterator<Tile> {

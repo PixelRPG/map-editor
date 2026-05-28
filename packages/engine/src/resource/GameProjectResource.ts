@@ -1,4 +1,5 @@
 import { Logger } from 'excalibur'
+import { BUILT_IN_SCIENTIST, BUILT_IN_SCIENTIST_SPRITESET, BUILT_IN_SCIENTIST_SPRITESET_ID } from '../__demo__/scientist/index'
 import { GameProjectFormat } from '../format/GameProjectFormat'
 import type { GameProjectData, GameProjectResourceOptions, MapData } from '../types'
 import { loadTextFile } from '../utils'
@@ -78,10 +79,9 @@ export class GameProjectResource {
    */
   protected async loadGameProjectData(path: string): Promise<GameProjectData> {
     try {
-      console.log('Loading game project data from:', path)
+      this.logger.debug(`Loading game project data from: ${path}`)
       const json = await loadTextFile(path)
       const data = GameProjectFormat.deserialize(json)
-
       this.logger.debug(`Loaded game project: ${data.name} (ID: ${data.id})`)
       return data
     } catch (error) {
@@ -187,6 +187,12 @@ export class GameProjectResource {
         await this.loadSpriteSets()
       }
 
+      // Register engine-bundled assets (e.g. the built-in scientist
+      // starter character). Done before map loading so map placements
+      // that reference `characterId` resolve cleanly. See
+      // `__demo__/scientist/index.ts` for the bundled definition.
+      await this._registerBuiltIns()
+
       // Load all maps if configured to preload
       if (this.preloadAllMaps) {
         await this.loadMaps()
@@ -266,6 +272,50 @@ export class GameProjectResource {
    */
   get path(): string {
     return joinPaths(this.baseDir, this.filename)
+  }
+
+  /**
+   * Register engine-bundled assets onto the freshly loaded project.
+   *
+   * Two things happen here, both idempotent:
+   *
+   *   1. The built-in scientist sprite-set is registered in
+   *      `spriteSetResources` under its stable id. The sprite-set
+   *      lives as a TS literal + base64-encoded PNG in
+   *      `__demo__/scientist/`, so no file system access; the
+   *      `inlineData` path on `SpriteSetResource` consumes it
+   *      directly.
+   *
+   *   2. If the project's `characters[]` is empty / missing, the
+   *      bundled scientist character is auto-seeded as the player.
+   *      This keeps "open project → click Play → walk around" working
+   *      without any Cast-editor setup (Mario-Maker convenience).
+   *      Existing projects with their own characters configured are
+   *      left untouched.
+   *
+   * In-memory only — the project file on disk is not modified. Once
+   * the user customises the cast via the Cast view, their characters
+   * persist through the normal save path.
+   */
+  private async _registerBuiltIns(): Promise<void> {
+    if (!this.spriteSetResources.has(BUILT_IN_SCIENTIST_SPRITESET_ID)) {
+      try {
+        const resource = new SpriteSetResource('', {
+          headless: this.headless,
+          inlineData: BUILT_IN_SCIENTIST_SPRITESET,
+        })
+        await resource.load()
+        this.spriteSetResources.set(BUILT_IN_SCIENTIST_SPRITESET_ID, resource)
+        this.logger.debug(`Registered built-in sprite set: ${BUILT_IN_SCIENTIST_SPRITESET_ID}`)
+      } catch (error) {
+        this.logger.error(`Failed to register built-in scientist sprite set: ${error}`)
+      }
+    }
+
+    if (!this.data.characters || this.data.characters.length === 0) {
+      this.data.characters = [{ ...BUILT_IN_SCIENTIST }]
+      this.logger.debug('Auto-seeded built-in scientist as project player character')
+    }
   }
 
   /**

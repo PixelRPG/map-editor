@@ -2,6 +2,8 @@
 
 export * from './application-window'
 export * from './atlas-view'
+export * from './cast-view'
 export * from './preferences-dialog'
 export * from './scene-editor-view'
+export * from './tiles-view'
 export * from './welcome-view'

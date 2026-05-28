@@ -203,6 +203,21 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.getEditorViewMode() ?? 'normal'
   }
 
+  /** Forward to `Engine.setRuntimeMode` — toggles editor ↔ playtest. */
+  public setRuntimeMode(active: boolean): void {
+    this._excalibur?.setRuntimeMode(active)
+  }
+
+  /** Forward to `Engine.isRuntimeMode`. */
+  public isRuntimeMode(): boolean {
+    return this._excalibur?.isRuntimeMode() ?? false
+  }
+
+  /** Forward — refreshes `tile.solid` on every placement of a sprite definition. */
+  public refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
+    this._excalibur?.refreshTileSolidsForSprite(spriteSetId, spriteId)
+  }
+
   /**
    * Subscribe to view-mode changes. Disposer is captured into
    * {@link _excaliburSubscriptions} so unmap releases it.

@@ -1,0 +1,126 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $TilesView : Adw.Bin {
+  // Same outer/inner OverlaySplitView shell as cast-view + atlas-view
+  // + scene-editor-view — ModeRail (left) + tile inspector (right),
+  // central content panel in the middle.
+  Adw.OverlaySplitView outer_split {
+    sidebar-position: start;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.7;
+    collapsed: bind template.library-collapsed;
+    show-sidebar: bind template.show-library bidirectional;
+
+    sidebar: $PixelRpgModeRail mode_rail {
+      project-name: _("New Project");
+      project-tagline: _("Tiles view");
+    };
+
+    content: Adw.OverlaySplitView inner_split {
+      sidebar-position: end;
+      min-sidebar-width: 280;
+      max-sidebar-width: 360;
+      collapsed: bind template.inspector-collapsed;
+      show-sidebar: bind template.show-inspector bidirectional;
+
+      sidebar: $PixelRpgTileInspector inspector {};
+
+      content: Gtk.Overlay {
+        // Library + inspector sidebar toggle pills (mirror the other
+        // views).
+        [overlay]
+        Adw.Bin {
+          halign: start;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
+
+          child: Gtk.WindowHandle {
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 2;
+              styles ["toolbar", "osd"]
+
+              Gtk.ToggleButton library_toggle {
+                icon-name: "sidebar-show-symbolic";
+                tooltip-text: _("Toggle library");
+                active: bind template.show-library bidirectional;
+                styles ["flat"]
+              }
+            };
+          };
+        }
+
+        [overlay]
+        Adw.Bin {
+          halign: end;
+          valign: start;
+          margin-top: 12;
+          margin-end: 12;
+
+          child: Gtk.WindowHandle {
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 2;
+              styles ["toolbar", "osd"]
+
+              Gtk.ToggleButton inspector_toggle {
+                icon-name: "sidebar-show-right-symbolic";
+                tooltip-text: _("Toggle inspector");
+                active: bind template.show-inspector bidirectional;
+                styles ["flat"]
+              }
+            };
+          };
+        }
+
+        child: Gtk.Box content_box {
+          orientation: vertical;
+          spacing: 16;
+          margin-top: 64;
+          margin-bottom: 24;
+          margin-start: 24;
+          margin-end: 24;
+
+          Gtk.Label header_label {
+            label: _("Tiles");
+            halign: start;
+            styles ["title-1"]
+          }
+
+          Adw.PreferencesGroup tileset_group {
+            title: _("Tileset");
+            description: _("Pick a sprite-set; configure each of its tiles in the right inspector.");
+
+            Adw.ComboRow tileset_combo {
+              title: _("Active tileset");
+              sensitive: false;
+            }
+          }
+
+          // Dedicated ScrolledWindow around just the palette so it can
+          // scroll horizontally + vertically when the sheet's native
+          // grid is wider than the viewport (lokiri-forest is 32 cols
+          // × ~32 px ≈ 1024 px, broader than most containers). The
+          // outer header / combo stay fixed at the top.
+          Gtk.ScrolledWindow palette_scroller {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: automatic;
+            vscrollbar-policy: automatic;
+
+            child: $PixelRpgTilePalette palette {
+              halign: start;
+              valign: start;
+              hexpand: false;
+              vexpand: false;
+              tile-size: 32;
+            };
+          }
+        };
+      };
+    };
+  }
+}

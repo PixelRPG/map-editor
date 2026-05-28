@@ -1,0 +1,110 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $CastView : Adw.Bin {
+  // Two-level OverlaySplitView, same pattern as atlas-view / scene-
+  // editor-view: ModeRail (left) + CastInspector (right) bracket the
+  // canvas content. Consistency across editor surfaces.
+  Adw.OverlaySplitView outer_split {
+    sidebar-position: start;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.7;
+    collapsed: bind template.library-collapsed;
+    show-sidebar: bind template.show-library bidirectional;
+
+    sidebar: $PixelRpgModeRail mode_rail {
+      project-name: _("New Project");
+      project-tagline: _("Cast view");
+    };
+
+    content: Adw.OverlaySplitView inner_split {
+      sidebar-position: end;
+      min-sidebar-width: 280;
+      max-sidebar-width: 360;
+      collapsed: bind template.inspector-collapsed;
+      show-sidebar: bind template.show-inspector bidirectional;
+
+      sidebar: $PixelRpgCastInspector inspector {};
+
+      content: Gtk.Overlay {
+        // Sidebar toggle pills mirror atlas-view + scene-editor-view.
+        [overlay]
+        Adw.Bin {
+          halign: start;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
+
+          child: Gtk.WindowHandle {
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 2;
+              styles ["toolbar", "osd"]
+
+              Gtk.ToggleButton library_toggle {
+                icon-name: "sidebar-show-symbolic";
+                tooltip-text: _("Toggle library");
+                active: bind template.show-library bidirectional;
+                styles ["flat"]
+              }
+            };
+          };
+        }
+
+        [overlay]
+        Adw.Bin {
+          halign: end;
+          valign: start;
+          margin-top: 12;
+          margin-end: 12;
+
+          child: Gtk.WindowHandle {
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 2;
+              styles ["toolbar", "osd"]
+
+              Gtk.ToggleButton inspector_toggle {
+                icon-name: "sidebar-show-right-symbolic";
+                tooltip-text: _("Toggle inspector");
+                active: bind template.show-inspector bidirectional;
+                styles ["flat"]
+              }
+            };
+          };
+        }
+
+        child: Gtk.ScrolledWindow {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: never;
+
+          child: Gtk.Box content_box {
+            orientation: vertical;
+            spacing: 16;
+            margin-top: 64;
+            margin-bottom: 24;
+            margin-start: 24;
+            margin-end: 24;
+
+            Gtk.Label header_label {
+              label: _("Cast");
+              halign: start;
+              styles ["title-1"]
+            }
+
+            Adw.PreferencesGroup gallery_group {
+              title: _("Characters");
+              description: _("Heroes and NPCs in this project. The character marked as player spawns at the map's player spawn-point.");
+            }
+
+            $PixelRpgCharacterPreview preview {}
+
+            $PixelRpgAnimationList anim_list {}
+          };
+        };
+      };
+    };
+  }
+}

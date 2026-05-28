@@ -1,0 +1,35 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgAnimationList : Adw.Bin {
+  Gtk.ScrolledWindow {
+    hexpand: true;
+    vexpand: true;
+    hscrollbar-policy: never;
+
+    child: Gtk.Box {
+      orientation: vertical;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+      spacing: 12;
+
+      Adw.PreferencesGroup group {
+        title: _("Animations");
+        description: _("Frame indices into the character's sprite-set. Required roles are marked with a checkmark.");
+      }
+
+      Gtk.Box footer {
+        orientation: horizontal;
+        halign: center;
+        spacing: 8;
+
+        Gtk.Button add_button {
+          label: _("Add custom animation…");
+          styles ["pill"]
+        }
+      }
+    };
+  }
+}

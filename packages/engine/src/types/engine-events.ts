@@ -14,7 +14,6 @@ export enum EngineEvent {
   TILE_HOVERED = 'tile-hovered',
   TILE_PLACED = 'tile-placed',
   TILE_PICKED = 'tile-picked',
-  PLAYER_SPAWNED = 'player-spawned',
   PLAYER_TILE_CHANGED = 'player-tile-changed',
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
@@ -53,19 +52,13 @@ export interface EngineEventMap {
     globalTileId: number
   }
   /**
-   * Emitted by `PlayerSpawnSystem` once per scene activate after
-   * resolving the player's spawn-point. `tileX/Y` default to (0, 0)
-   * if no spawn point exists.
-   */
-  [EngineEvent.PLAYER_SPAWNED]: { tileX: number; tileY: number; facing?: Facing }
-  /**
-   * Emitted by the (future) player-movement system whenever the
-   * player crosses a tile boundary. `TriggerSystem` listens on
-   * this to fire walk-onto / walk-off triggers.
+   * Emitted by {@link PlayerSystem} whenever the player crosses a
+   * tile boundary. `TriggerSystem` listens on this to fire walk-onto /
+   * walk-off triggers, `WalkOnTileSystem` to resolve tile properties.
    *
-   * Decoupled from sprite-pixel position — game-specific
-   * movement code (smooth sliding, jumping, grid-snapped) can all
-   * emit this exactly when the *logical* tile changes.
+   * Decoupled from sprite-pixel position — game-specific movement code
+   * (smooth sliding, jumping, grid-snapped) can all emit this exactly
+   * when the *logical* tile changes.
    */
   [EngineEvent.PLAYER_TILE_CHANGED]: {
     tileX: number
@@ -75,9 +68,9 @@ export interface EngineEventMap {
     facing?: Facing
   }
   /**
-   * Emitted by the (future) input system when the player presses
-   * the action button. `facing` resolves the adjacent tile that the
-   * `TriggerSystem` scans for `action-button`-mode triggers.
+   * Emitted by {@link PlayerSystem} when the player presses the action
+   * button. `facing` resolves the adjacent tile that the `TriggerSystem`
+   * scans for `action-button`-mode triggers.
    */
   [EngineEvent.PLAYER_ACTION_PRESSED]: { tileX: number; tileY: number; facing: Facing }
   /**

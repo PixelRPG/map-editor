@@ -1,0 +1,88 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgTileInspector : Adw.Bin {
+  styles ["tile-inspector"]
+
+  Adw.ToolbarView {
+    top-bar-style: flat;
+
+    // Flat header for window-drag + close-button real estate, mirrors
+    // RightInspector / CastInspector.
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+      show-start-title-buttons: false;
+      show-end-title-buttons: true;
+      styles ["flat"]
+    }
+
+    content: Gtk.WindowHandle {
+      child: Gtk.ScrolledWindow {
+        hexpand: true;
+        vexpand: true;
+        hscrollbar-policy: never;
+
+        child: Gtk.Box {
+          orientation: vertical;
+          margin-top: 12;
+          margin-bottom: 12;
+          margin-start: 12;
+          margin-end: 12;
+          spacing: 12;
+
+          Gtk.Frame preview_frame {
+            halign: center;
+            width-request: 96;
+            height-request: 96;
+            styles ["card"]
+
+            child: Gtk.Picture preview {
+              content-fit: fill;
+              halign: center;
+              valign: center;
+              can-shrink: false;
+              width-request: 80;
+              height-request: 80;
+              margin-top: 8;
+              margin-bottom: 8;
+              margin-start: 8;
+              margin-end: 8;
+            };
+          }
+
+          Gtk.Label title_label {
+            label: _("No tile selected");
+            halign: center;
+            styles ["title-4"]
+          }
+
+          Adw.PreferencesGroup collision_group {
+            title: _("Collision");
+            description: _("How the player interacts with this tile during playtest.");
+
+            Adw.SwitchRow solid_row {
+              title: _("Solid");
+              subtitle: _("Blocks the player. Every placement of this tile on every map inherits the flag.");
+              sensitive: false;
+            }
+          }
+
+          Adw.PreferencesGroup properties_group {
+            title: _("Tile properties");
+            description: _("Semantic metadata consumed by gameplay systems (audio, encounters, surface effects).");
+
+            Adw.ComboRow surface_row {
+              title: _("Surface");
+              subtitle: _("Influences footstep sounds + encounter tables.");
+              sensitive: false;
+              model: Gtk.StringList {
+                strings [_("None"), _("Grass"), _("Dirt"), _("Stone"), _("Wood"), _("Water"), _("Sand"), _("Snow")]
+              };
+            }
+          }
+        };
+      };
+    };
+  }
+}

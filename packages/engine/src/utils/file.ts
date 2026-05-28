@@ -15,23 +15,16 @@ export function toFetchUrl(path: string): string {
 }
 
 /**
- * Load a text file using fetch
- * @param path Path to the file
- * @returns The file contents as a string
+ * Load a text file using fetch. Caller is responsible for log /
+ * progress reporting — this helper is the low-level transport.
  */
 export async function loadTextFile(path: string): Promise<string> {
   const url = toFetchUrl(path)
-  try {
-    console.log('Loading text file:', url)
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`Failed to load file: ${url} (${response.status})`)
-    }
-    return await response.text()
-  } catch (error) {
-    console.error(`Error loading file: ${error}`)
-    throw error
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to load file: ${url} (${response.status})`)
   }
+  return await response.text()
 }
 
 /**
