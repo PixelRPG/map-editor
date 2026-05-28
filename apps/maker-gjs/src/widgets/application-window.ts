@@ -145,16 +145,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._persistAtlasPosition(id, x, y)
     })
-    // Atlas + scene-editor views forward their mode-rail's
-    // `mode-changed` signal at the view level. Re-route both through
-    // the central `win.mode` action so navigation is consistent — the
-    // action's change-state handler picks the right ViewStack page.
-    this.signals.connect(this._atlas_view, 'mode-changed', (_v: AtlasView, mode: string) => {
+    // Every view's mode-rail forwards `mode-changed` at the view
+    // level. Re-route all four through the central `win.mode` action
+    // so navigation is consistent — the action's change-state handler
+    // picks the right ViewStack page. Mutation handling + persistence
+    // belongs to the per-mode controllers (constructed below);
+    // view-side stays presentational.
+    const setMode = (mode: string) =>
       this._modeAction?.change_state(GLib.Variant.new_string(mode))
-    })
-    this.signals.connect(this._scene_editor_view, 'mode-changed', (_v: SceneEditorView, mode: string) => {
-      this._modeAction?.change_state(GLib.Variant.new_string(mode))
-    })
+    this.signals.connect(this._atlas_view, 'mode-changed', (_v: AtlasView, mode: string) => setMode(mode))
+    this.signals.connect(this._scene_editor_view, 'mode-changed', (_v: SceneEditorView, mode: string) =>
+      setMode(mode),
+    )
+    this.signals.connect(this._cast_view, 'mode-changed', (_v: CastView, mode: string) => setMode(mode))
+    this.signals.connect(this._tiles_view, 'mode-changed', (_v: TilesView, mode: string) => setMode(mode))
 
     // Scene editor → host bridge. The inspector mutates
     // `MapResource.mapData` in place via `engine.setLayerVisible` /
@@ -162,16 +166,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // existing `scene-moved` → `_persistAtlasPosition` flow.
     this.signals.connect(this._scene_editor_view, 'persist-requested', () => {
       this._persistCurrentMap()
-    })
-
-    // Cast + Tiles views — mode-rail navigation forwarded centrally.
-    // Mutation handling + persistence belongs to the per-mode
-    // controllers (constructed below); view-side stays presentational.
-    this.signals.connect(this._cast_view, 'mode-changed', (_v: CastView, mode: string) => {
-      this._modeAction?.change_state(GLib.Variant.new_string(mode))
-    })
-    this.signals.connect(this._tiles_view, 'mode-changed', (_v: TilesView, mode: string) => {
-      this._modeAction?.change_state(GLib.Variant.new_string(mode))
     })
 
     if (!this._castCtl) {
