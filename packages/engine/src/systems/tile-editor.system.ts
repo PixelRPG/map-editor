@@ -25,6 +25,7 @@ import type { MapScene } from '../scenes/map.scene.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import type { LayerTier } from '../types/data/index.ts'
+import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -135,18 +136,19 @@ export class TileEditorSystem extends System {
 
   /**
    * Resolve which tier the active layer maps to. Falls back to
-   * `'ground'` when no active layer has been picked yet (typical
-   * for a freshly-loaded map before any inspector interaction) or
-   * when the active layer id no longer exists in the map data.
+   * `DEFAULT_LAYER_TIER` when no active layer has been picked yet
+   * (typical for a freshly-loaded map before any inspector
+   * interaction) or when the active layer id no longer exists in
+   * the map data.
    */
   private resolveActiveTier(): LayerTier {
-    if (!this.scene) return 'ground'
+    if (!this.scene) return DEFAULT_LAYER_TIER
     const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
     const layerId = this.resolveLayerId(explicitLayerId)
-    if (!layerId) return 'ground'
+    if (!layerId) return DEFAULT_LAYER_TIER
     const mapResource = (this.scene as MapScene).mapResource
     const layer = mapResource?.mapData?.layers.find((l) => l.id === layerId)
-    return layer?.tier ?? 'ground'
+    return layer?.tier ?? DEFAULT_LAYER_TIER
   }
 
   /**

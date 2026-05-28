@@ -14,6 +14,7 @@ import {
 import { TIER_Z } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
+import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 import type {
   ItemProperties,
   NpcProperties,
@@ -160,9 +161,8 @@ export class ObjectSpawnSystem extends System {
     // the same render depth as their tier's tilemap, so e.g.
     // decoration actors on the 'hero' tier interleave with the
     // hero-tier tilemap rather than overdrawing the entire map.
-    // Default 'ground' matches the LayerData fallback.
     const layer = mapData?.layers.find((l) => l.id === placement.layerId)
-    actor.z = TIER_Z[layer?.tier ?? 'ground']
+    actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]
     // Respect the layer's visibility flag at spawn. Runtime
     // toggles re-sync via `Engine.setLayerVisible`.
     if (!isLayerVisible(this.mapResource, placement.layerId)) {

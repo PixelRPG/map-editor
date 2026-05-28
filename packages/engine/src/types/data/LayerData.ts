@@ -25,6 +25,16 @@ import type { Properties, SpriteDataMap } from './index'
  */
 export type LayerTier = 'ground' | 'hero' | 'overlay'
 
+/** All `LayerTier` values in render order (low → high z). */
+export const LAYER_TIERS: readonly LayerTier[] = ['ground', 'hero', 'overlay'] as const
+
+/**
+ * Fallback tier when `LayerData.tier` is missing — matches the
+ * pre-tier-model rendering (everything on the ground-plane tilemap)
+ * so legacy project files continue to work.
+ */
+export const DEFAULT_LAYER_TIER: LayerTier = 'ground'
+
 /**
  * One layer within a tile map. Every layer is a tile layer in the
  * object-system schema; the legacy `type: 'tile' | 'object'` split

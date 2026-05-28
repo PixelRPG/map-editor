@@ -18,6 +18,7 @@ import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
+import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
 
@@ -402,7 +403,7 @@ export class Engine {
     // tier alone needs the visibility filter re-applied. The other
     // tier tilemaps don't carry the layer's sprites, so iterating
     // them would be a no-op-with-cost.
-    const targetTier = layer.tier ?? 'ground'
+    const targetTier = layer.tier ?? DEFAULT_LAYER_TIER
     for (const entity of scene.world.entityManager.entities) {
       if (entity instanceof TileMap) {
         if (entity.get(TileMapTierComponent)?.tier === targetTier) {
