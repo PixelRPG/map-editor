@@ -121,9 +121,12 @@ export async function startLanHostServer(opts: LanHostServerOptions): Promise<La
 
   // Resolve the actually-bound port — when the caller passed 0, the
   // OS picked one; advertise that real value through the handle so
-  // the Avahi TXT record + the joiner can find us.
+  // the Avahi TXT record + the joiner can find us. `wss.address()`
+  // returns `string` for AF_UNIX sockets (we never use those) so
+  // narrow to the AddressInfo shape before reading `.port`.
   const boundAddress = wss.address()
-  const boundPort = boundAddress?.port ?? opts.port
+  const boundPort =
+    boundAddress && typeof boundAddress !== 'string' ? boundAddress.port : opts.port
 
   let activePeer: WebSocket | null = null
 

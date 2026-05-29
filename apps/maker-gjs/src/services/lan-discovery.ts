@@ -73,7 +73,10 @@ export class LanPublisher {
     if (!this.process) return
     try {
       // SIGINT is the documented exit signal for avahi-publish-service.
-      this.process.send_signal(GLib.SIGINT ?? 2)
+      // SIGINT (2) is the documented graceful-shutdown signal for
+      // avahi-publish-service. The number is hard-coded — `GLib.SIGINT`
+      // is not exposed through the @girs typings.
+      this.process.send_signal(2)
     } catch {
       // Process may already be gone — best-effort.
     }
