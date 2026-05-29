@@ -1,3 +1,4 @@
+import type { Command } from '../commands/types.ts'
 import type { Facing } from './data/index.ts'
 import type { EngineStatus } from './engine-status.ts'
 import type { ProjectLoadOptions } from './project-options.ts'
@@ -24,6 +25,7 @@ export enum EngineEvent {
   POINTER_DRAG_START = 'pointer-drag-start',
   POINTER_DRAG_MOVE = 'pointer-drag-move',
   POINTER_DRAG_END = 'pointer-drag-end',
+  COMMAND_EXECUTED = 'command-executed',
 }
 
 export interface EngineEventMap {
@@ -152,4 +154,12 @@ export interface EngineEventMap {
    * drag state, no further deltas will arrive.
    */
   [EngineEvent.POINTER_DRAG_END]: { screenPos: { x: number; y: number } }
+  /**
+   * Fired by `Engine.executeCommand` after a local command applies
+   * + lands on the undo stack. The {@link SessionController} listens
+   * here to relay the command as an `Operation` over the active
+   * peer session. **Not** fired for remote commands applied via
+   * `Engine.applyRemoteCommand` — that would create a feedback loop.
+   */
+  [EngineEvent.COMMAND_EXECUTED]: { command: Command }
 }
