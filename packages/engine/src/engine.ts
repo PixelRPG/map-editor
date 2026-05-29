@@ -315,6 +315,30 @@ export class Engine {
     } else {
       SessionState.set(scene, new UndoStackComponent([command], 1))
     }
+
+    // Tell collab consumers (SessionController) so they can relay this
+    // local command as an `Operation` to peers. Note: remote commands
+    // applied via `applyRemoteCommand` deliberately skip this emit to
+    // avoid a feedback loop.
+    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+  }
+
+  /**
+   * Apply a command that arrived from a remote peer over a
+   * `PeerSession`. Mirrors {@link executeCommand}'s apply step
+   * but deliberately
+   *
+   *  - does NOT push to the undo stack (each peer owns its own
+   *    undo history; remote commands are not undoable locally), and
+   *  - does NOT emit `COMMAND_EXECUTED` (would relay the command
+   *    back through `SessionController` and bounce indefinitely).
+   *
+   * No-op when no `MapScene` is active.
+   */
+  applyRemoteCommand(command: Command): void {
+    const scene = this._activeMapScene()
+    if (!scene) return
+    command.apply(scene)
   }
 
   /**
