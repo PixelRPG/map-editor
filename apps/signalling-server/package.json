@@ -13,16 +13,15 @@
     "build": "gjsify run build:barrels && gjsify run build:app",
     "check": "gjsify run build:barrels && tsc --noEmit",
     "start": "gjsify run org.pixelrpg.signalling-server",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "gjsify test"
   },
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {
     "@gjsify/cli": "^0.4.32",
+    "@gjsify/unit": "^0.4.32",
     "@types/ws": "^8.5.12",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.7",
     "ws": "^8.18.0"
   },
   "dependencies": {
