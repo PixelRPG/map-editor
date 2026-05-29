@@ -108,8 +108,9 @@ export interface LanHostServerHandle {
  * stalling on a dead negotiation.
  */
 export async function startLanHostServer(opts: LanHostServerOptions): Promise<LanHostServerHandle> {
+  const host = opts.host ?? '127.0.0.1'
   const wss: WsServer = new WebSocketServer({
-    host: opts.host ?? '127.0.0.1',
+    host,
     port: opts.port,
   })
 
@@ -117,6 +118,12 @@ export async function startLanHostServer(opts: LanHostServerOptions): Promise<La
     wss.once('listening', resolve)
     wss.once('error', reject)
   })
+
+  // Resolve the actually-bound port — when the caller passed 0, the
+  // OS picked one; advertise that real value through the handle so
+  // the Avahi TXT record + the joiner can find us.
+  const boundAddress = wss.address()
+  const boundPort = boundAddress?.port ?? opts.port
 
   let activePeer: WebSocket | null = null
 
@@ -133,7 +140,7 @@ export async function startLanHostServer(opts: LanHostServerOptions): Promise<La
   })
 
   return {
-    address: { host: opts.host ?? '127.0.0.1', port: opts.port },
+    address: { host, port: boundPort },
     async close() {
       await new Promise<void>((resolve) => wss.close(() => resolve()))
     },
