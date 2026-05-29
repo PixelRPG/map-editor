@@ -37,6 +37,22 @@ export function parsePixelrpgUrl(url: string): PixelrpgIntent | null {
 }
 
 /**
+ * Build the canonical `pixelrpg://join/<roomid>` URL. Inverse of
+ * {@link parsePixelrpgUrl} for the join form — used by the share
+ * dialog to render the copy-and-paste link.
+ *
+ * Throws on a roomId that wouldn't survive a parse round-trip, so
+ * callers don't accidentally publish a link that joiners can't
+ * open.
+ */
+export function buildPixelrpgJoinUrl(roomId: string): string {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(roomId)) {
+    throw new Error(`buildPixelrpgJoinUrl: invalid roomId ${JSON.stringify(roomId)}`)
+  }
+  return `pixelrpg://join/${roomId}`
+}
+
+/**
  * Scan an argv array for the first valid `pixelrpg://` URL and
  * return the parsed intent, or `null` when nothing matches. Used by
  * `main.ts` on startup; the Application's `command-line` signal

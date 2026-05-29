@@ -26,6 +26,18 @@ template $PixelRpgModeRail : Adw.Bin {
           hexpand: true;
         }
 
+        // Share-session action — opens the maker's Share dialog.
+        // The window registers `win.share-session`; when it isn't
+        // installed (e.g. embedded in Storybook) the button auto-
+        // hides via action-state propagation.
+        Gtk.Button share_button {
+          icon-name: "emblem-shared-symbolic";
+          tooltip-text: _("Share session");
+          action-name: "win.share-session";
+          valign: start;
+          styles ["flat"]
+        }
+
         Gtk.MenuButton menu_button {
           icon-name: "open-menu-symbolic";
           menu-model: primary_menu;

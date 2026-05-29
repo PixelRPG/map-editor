@@ -11,6 +11,7 @@ import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { LanSessionBackend } from '../services/lan-session-backend.ts'
+import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { generatePeerId, SessionService } from '../services/session-service.ts'
@@ -20,6 +21,7 @@ import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
+import { ShareDialog } from './share-dialog.ts'
 import { TilesView } from './tiles-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
@@ -110,6 +112,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * until an engine is available.
    */
   private _sessionSvc: SessionService | null = null
+  /**
+   * Modal Share dialog. One instance reused across opens — the
+   * `closed` signal lets us re-present it without leaking widgets.
+   * Wired to the SessionService on first build.
+   */
+  private _shareDialog: ShareDialog | null = null
+  /**
+   * Stateful `win.share-session` action. Disabled when no project is
+   * loaded so the mode-rail share button greys out.
+   */
+  private _shareAction: Gio.SimpleAction | null = null
 
   static {
     GObject.registerClass(
@@ -262,6 +275,77 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     } catch (err) {
       this._showToast(_(`Could not join: ${(err as Error).message}`))
     }
+  }
+
+  /**
+   * Open the Share dialog, building it lazily on first call. The
+   * dialog stays alive for the window's lifetime — re-presenting it
+   * after a `closed` is a no-op, since `present(parent)` only takes
+   * effect when the dialog isn't currently mapped.
+   */
+  private _onShareSession(): void {
+    if (!this._loadedProject) {
+      this._showToast(_('Open a project before sharing it.'))
+      return
+    }
+    if (!this._sessionSvc) return
+    this._setupShareDialog()
+    this._shareDialog?.syncWithSession(this._sessionSvc.getState(), buildPixelrpgJoinUrl)
+    this._shareDialog?.present(this)
+  }
+
+  private _setupShareDialog(): void {
+    if (this._shareDialog || !this._sessionSvc) return
+
+    const dialog = new ShareDialog()
+    const svc = this._sessionSvc
+
+    dialog.connect('share-requested', () => {
+      void this._startShare()
+    })
+    dialog.connect('stop-requested', () => {
+      void this._stopShare()
+    })
+    dialog.connect('copy-link-requested', () => {
+      const display = this.get_display()
+      if (!display) return
+      if (dialog.copyShareUrlToClipboard(display)) {
+        this._showToast(_('Share link copied to clipboard.'))
+      }
+    })
+
+    // Mirror SessionService state into the dialog so the user sees
+    // hosting transitions live (URL appears the moment startHosting
+    // resolves; status row swaps to "Editing with peer" on connect).
+    this._sessionUnsubscribes.push(
+      svc.on('state-changed', (state) => dialog.syncWithSession(state, buildPixelrpgJoinUrl)),
+    )
+
+    this._shareDialog = dialog
+  }
+
+  private async _startShare(): Promise<void> {
+    if (!this._sessionSvc || !this._loadedProject) return
+    try {
+      const roomId = await this._sessionSvc.startHosting({
+        sessionName: this._loadedProject.projectName,
+        projectName: this._loadedProject.projectName,
+        // Static display name — replaced by a GSettings-backed
+        // value once the user can pick one in preferences.
+        hostDisplayName: GLib.get_user_name() ?? 'host',
+      })
+      this._showToast(_(`Sharing as room ${roomId}.`))
+    } catch (err) {
+      this._showToast(_(`Could not start sharing: ${(err as Error).message}`))
+    }
+  }
+
+  private async _stopShare(): Promise<void> {
+    if (!this._sessionSvc) return
+    await this._sessionSvc.stopHosting()
+    // syncWithSession will flip the dialog back to its idle page via
+    // the state-changed subscription wired in _setupShareDialog.
+    this._showToast(_('Stopped sharing.'))
   }
 
   /**
@@ -507,6 +591,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     closeProjectAction.connect('activate', () => this._setView('welcome'))
     winActions.add_action(closeProjectAction)
 
+    // Share-session — opens the Share dialog. Disabled until a
+    // project loads; the mode-rail's share button binds to this
+    // GAction so it greys out at the same time.
+    const shareAction = new Gio.SimpleAction({ name: 'share-session' })
+    shareAction.set_enabled(false)
+    shareAction.connect('activate', () => this._onShareSession())
+    winActions.add_action(shareAction)
+    this._shareAction = shareAction
+    app?.set_accels_for_action('win.share-session', ['<Primary><Shift>s'])
+
     // Convenience action — drives the file picker so tooling / scripts
     // can exercise the same path as the welcome view's "Open Project".
     const openProjectAction = new Gio.SimpleAction({ name: 'open-project' })
@@ -742,6 +836,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     try {
       const project = await loadProjectAsAtlas(projectPath)
       this._loadedProject = project
+      this._shareAction?.set_enabled(true)
       this._atlas_view.projectName = project.projectName
       this._scene_editor_view.projectName = project.projectName
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)

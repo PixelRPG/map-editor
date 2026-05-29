@@ -1,0 +1,143 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ShareDialog : Adw.Dialog {
+  title: _("Share Session");
+  content-width: 460;
+  content-height: 320;
+  follows-content-size: true;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-end-title-buttons: true;
+      show-start-title-buttons: false;
+    }
+
+    content: Gtk.Stack state_stack {
+      transition-type: crossfade;
+      transition-duration: 180;
+      hhomogeneous: false;
+      vhomogeneous: false;
+
+      // Idle — no project open or hosting not yet started.
+      Gtk.StackPage {
+        name: "idle";
+        child: Gtk.Box idle_page {
+          orientation: vertical;
+          spacing: 16;
+          margin-top: 18;
+          margin-bottom: 18;
+          margin-start: 18;
+          margin-end: 18;
+
+          Gtk.Image {
+            icon-name: "emblem-shared-symbolic";
+            pixel-size: 56;
+            margin-top: 6;
+            styles ["accent"]
+          }
+
+          Gtk.Label {
+            label: _("Share this project");
+            halign: center;
+            styles ["title-2"]
+          }
+
+          Gtk.Label idle_subtitle {
+            label: _("Invite a friend to edit this project with you in real time.");
+            halign: center;
+            justify: center;
+            wrap: true;
+            wrap-mode: word_char;
+            styles ["dim-label"]
+          }
+
+          Gtk.Box {
+            vexpand: true;
+          }
+
+          Gtk.Button share_button {
+            label: _("Start Sharing");
+            halign: center;
+            styles ["suggested-action", "pill"]
+          }
+        };
+      }
+
+      // Hosting — link ready, optionally a peer connected.
+      Gtk.StackPage {
+        name: "hosting";
+        child: Gtk.Box hosting_page {
+          orientation: vertical;
+          spacing: 14;
+          margin-top: 14;
+          margin-bottom: 14;
+          margin-start: 14;
+          margin-end: 14;
+
+          Gtk.Box hosting_status_row {
+            orientation: horizontal;
+            spacing: 8;
+            halign: center;
+
+            Gtk.Image hosting_status_icon {
+              icon-name: "network-transmit-receive-symbolic";
+              pixel-size: 22;
+              styles ["accent"]
+            }
+
+            Gtk.Label hosting_status_label {
+              label: _("Waiting for a peer to join…");
+              styles ["heading"]
+            }
+          }
+
+          Adw.PreferencesGroup link_group {
+            title: _("Share link");
+            description: _("Send this to a friend. Anyone with the link can join.");
+
+            Adw.EntryRow share_link_row {
+              title: _("Join URL");
+              editable: false;
+
+              [suffix]
+              Gtk.Button copy_link_button {
+                icon-name: "edit-copy-symbolic";
+                valign: center;
+                tooltip-text: _("Copy link");
+                styles ["flat"]
+              }
+            }
+          }
+
+          Adw.PreferencesGroup local_group {
+            title: _("On this network");
+            description: _("Peers on the same Wi-Fi or LAN see this session automatically.");
+
+            Adw.ActionRow lan_status_row {
+              title: _("Local discovery");
+              subtitle: _("Advertised via Avahi/mDNS");
+
+              [prefix]
+              Gtk.Image {
+                icon-name: "network-workgroup-symbolic";
+                pixel-size: 22;
+              }
+            }
+          }
+
+          Gtk.Box {
+            vexpand: true;
+          }
+
+          Gtk.Button stop_button {
+            label: _("Stop Sharing");
+            halign: center;
+            styles ["destructive-action", "pill"]
+          }
+        };
+      }
+    };
+  };
+}
