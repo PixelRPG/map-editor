@@ -15,6 +15,7 @@
     "check": "gjsify run build:barrels && tsc",
     "start": "gjsify run org.pixelrpg.maker",
     "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker",
+    "test": "vitest run",
     "flatpak:init": "gjsify flatpak init --force",
     "flatpak:check": "gjsify flatpak check",
     "flatpak:build": "gjsify flatpak build org.pixelrpg.maker.json --install --repo repo --bundle org.pixelrpg.maker.flatpak --install-deps-from flathub"
@@ -29,7 +30,8 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@gjsify/cli": "^0.4.32",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
   },
   "dependencies": {
     "@girs/adw-1": "^1.10.0-4.0.4",
