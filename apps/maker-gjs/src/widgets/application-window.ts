@@ -9,8 +9,11 @@ import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
+import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
+import { LanSessionBackend } from '../services/lan-session-backend.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
+import { generatePeerId, SessionService } from '../services/session-service.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
@@ -100,6 +103,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _castCtl: CastController | null = null
   private _tilesCtl: TilesController | null = null
+  /**
+   * Pair-Editing orchestration. Constructed once in `vfunc_map` with
+   * a lazy engine provider — Welcome-view discovery flows work
+   * without a loaded project, and `joinLan` / `joinByRoomId` reject
+   * until an engine is available.
+   */
+  private _sessionSvc: SessionService | null = null
 
   static {
     GObject.registerClass(
@@ -177,6 +187,80 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         () => this._engineCtl.engine,
         (msg) => this._showToast(msg),
       )
+    }
+    if (!this._sessionSvc) {
+      // The `@pixelrpg/gjs` Engine widget proxies the core Engine
+      // but doesn't expose `executeCommand` / `applyRemoteCommand`
+      // yet. Once the widget grows those (planned alongside the
+      // op-broadcast UI wiring), this cast disappears. For now
+      // discovery flows (browse / share) work fine because they
+      // don't touch the engine; the join path will throw a typed
+      // error until the proxy methods exist.
+      const engineProvider = () => (this._engineCtl.engine ?? null) as unknown as import('@pixelrpg/engine').Engine | null
+      this._sessionSvc = new SessionService(engineProvider, new LanSessionBackend(), generatePeerId())
+    }
+
+    // Welcome view ↔ SessionService bridge. The window owns the
+    // service (it spans the lifetime of every view), the Welcome
+    // view is just the visual surface for browse + join. Start /
+    // stop browsing tied to whether the welcome page is visible —
+    // mDNS pings every couple of seconds and we don't want to
+    // burn the network while the user is editing.
+    this.signals.connect(this._welcome_view, 'session-selected', (_v: WelcomeView, service: DiscoveredService) => {
+      void this._onJoinLanSession(service)
+    })
+    this.signals.connect(this._welcome_view, 'join-by-code', (_v: WelcomeView, roomId: string) => {
+      void this._onJoinByRoomId(roomId)
+    })
+    // SessionService is not a GObject — use its typed `.on` instead
+    // of `this.signals`. The unsubscribe closures live in
+    // `_sessionUnsubscribes` so vfunc_unmap can tear them down
+    // symmetrically.
+    const svc = this._sessionSvc
+    this._sessionUnsubscribes = [
+      svc.on('service-discovered', (service) => this._welcome_view.addDiscoveredService(service)),
+      svc.on('service-gone', (name) => this._welcome_view.removeDiscoveredService(name)),
+      svc.on('error', (err) => this._showToast(_(`Session error: ${err.message}`))),
+    ]
+
+    // Start browsing whenever the welcome view is the visible page.
+    this._refreshSessionBrowsing()
+    this.signals.connect(this._stack, 'notify::visible-child-name', () => this._refreshSessionBrowsing())
+  }
+
+  /** Active subscriptions to {@link SessionService} events — torn down on unmap. */
+  private _sessionUnsubscribes: Array<() => void> = []
+
+  private _refreshSessionBrowsing(): void {
+    if (!this._sessionSvc) return
+    const visible = this._stack.get_visible_child_name()
+    if (visible === 'welcome') this._sessionSvc.startBrowsing()
+    else this._sessionSvc.stopBrowsing()
+  }
+
+  private async _onJoinLanSession(service: DiscoveredService): Promise<void> {
+    if (!this._loadedProject) {
+      this._showToast(_('Open a project before joining a session.'))
+      return
+    }
+    try {
+      await this._sessionSvc?.joinLan(service)
+      this._showToast(_(`Joined ${service.txt.project ?? service.name}`))
+    } catch (err) {
+      this._showToast(_(`Could not join: ${(err as Error).message}`))
+    }
+  }
+
+  private async _onJoinByRoomId(roomId: string): Promise<void> {
+    if (!this._loadedProject) {
+      this._showToast(_('Open a project before joining a session.'))
+      return
+    }
+    try {
+      await this._sessionSvc?.joinByRoomId(roomId)
+      this._showToast(_(`Joined room ${roomId}`))
+    } catch (err) {
+      this._showToast(_(`Could not join: ${(err as Error).message}`))
     }
   }
 
@@ -257,6 +341,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   vfunc_unmap(): void {
     this.signals.disconnectAll()
+    for (const dispose of this._sessionUnsubscribes) dispose()
+    this._sessionUnsubscribes = []
+    this._sessionSvc?.stopBrowsing()
     super.vfunc_unmap()
   }
 

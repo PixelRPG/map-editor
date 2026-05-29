@@ -84,13 +84,13 @@ function makeEngineStub(): Engine {
 export default async () => {
   await describe('SessionService — state machine', async () => {
     await it('starts in idle', async () => {
-      const service = new SessionService(makeEngineStub(), new MockBackend(), 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), new MockBackend(), 'peer-test')
       expect(service.getState().kind).toBe('idle')
     })
 
     await it('startBrowsing → browsing; stopBrowsing → idle', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
       const states: string[] = []
       service.on('state-changed', (s) => states.push(s.kind))
 
@@ -106,7 +106,7 @@ export default async () => {
 
     await it('forwards LAN discovery events as service-discovered / service-gone', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       const discovered: string[] = []
       const gone: string[] = []
@@ -128,7 +128,7 @@ export default async () => {
   await describe('SessionService — hosting', async () => {
     await it('startHosting publishes via the backend, transitions to hosting', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       const roomId = await service.startHosting({
         sessionName: 'Test Session',
@@ -147,7 +147,7 @@ export default async () => {
 
     await it('rejects starting a second hosting flow while one is active', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       await service.startHosting({ sessionName: 'A', projectName: 'A', hostDisplayName: 'A' })
       let threw = false
@@ -161,7 +161,7 @@ export default async () => {
 
     await it('stopHosting tears down the publisher + WS server; returns to idle', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       await service.startHosting({ sessionName: 'A', projectName: 'A', hostDisplayName: 'A' })
       await service.stopHosting()
@@ -172,7 +172,7 @@ export default async () => {
 
     await it('stopHosting returns to browsing when browsing was on', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       service.startBrowsing()
       await service.startHosting({ sessionName: 'A', projectName: 'A', hostDisplayName: 'A' })
@@ -190,7 +190,7 @@ export default async () => {
     // exercised by PeerSession's own spec.
     await it('joinLan calls backend.connectLan with the service address + port', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       service.on('error', () => {})
       try {
@@ -211,7 +211,7 @@ export default async () => {
 
     await it('joinByRoomId calls backend.connectRelay with the room id', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(makeEngineStub(), backend, 'peer-test')
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
 
       service.on('error', () => {})
       try {

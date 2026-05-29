@@ -88,8 +88,15 @@ export class SessionService {
   private hostingHandle: HostingHandle | null = null
   private wasBrowsing = false
 
+  /**
+   * @param engineProvider Lazy resolver returning the active engine,
+   *   or `null` when no project is loaded yet. Discovery flows
+   *   (`startBrowsing` / `service-discovered`) work without an
+   *   engine — only `openSession` (the host/join "connect"
+   *   transition) requires one and will reject otherwise.
+   */
   constructor(
-    private readonly engine: Engine,
+    private readonly engineProvider: () => Engine | null,
     private readonly backend: SessionBackend,
     /** Stable id for this peer — stamped onto every emitted Operation. */
     private readonly peerId: string,
@@ -227,8 +234,17 @@ export class SessionService {
   // ────────────────────────────────────────────────────────────
 
   private async openSession(role: PeerRole, roomId: string, transport: SignallingTransport): Promise<void> {
+    const engine = this.engineProvider()
+    if (!engine) {
+      try {
+        transport.close()
+      } catch {
+        /* best-effort */
+      }
+      throw new Error('SessionService: no engine available — load a project before opening a session')
+    }
     const collab = new CollabSession({
-      engine: this.engine,
+      engine,
       role,
       signalling: transport,
       peerId: this.peerId,

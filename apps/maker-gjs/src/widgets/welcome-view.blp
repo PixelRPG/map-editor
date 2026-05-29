@@ -62,6 +62,61 @@ template $WelcomeView : Adw.Bin {
           }
         }
 
+        Gtk.Box sessions_header {
+          orientation: horizontal;
+          spacing: 6;
+          margin-top: 18;
+
+          Gtk.Label {
+            label: _("Sessions on this network");
+            halign: start;
+            hexpand: true;
+            styles ["heading"]
+          }
+        }
+
+        // List rebuilt dynamically by `welcome-view.ts` from
+        // SessionService's `service-discovered` / `service-gone`
+        // events. Empty state stays visible until the first
+        // service resolves.
+        Gtk.ListBox sessions_list {
+          selection-mode: none;
+          styles ["boxed-list"]
+
+          Adw.ActionRow empty_sessions_row {
+            title: _("No sessions found");
+            subtitle: _("Hosts on the same network will appear here.");
+            activatable: false;
+
+            [prefix]
+            Gtk.Image {
+              icon-name: "network-workgroup-symbolic";
+              pixel-size: 22;
+            }
+          }
+        }
+
+        // Paste-link / room-code entry — the cross-internet
+        // counterpart of the LAN discovery list above. The single
+        // field accepts both `pixelrpg://join/<roomid>` URLs and
+        // bare room codes; the welcome-view normalises before
+        // emitting `join-by-code`.
+        Adw.PreferencesGroup join_link_group {
+          margin-top: 12;
+
+          Adw.EntryRow join_link_row {
+            title: _("Join session by code or link");
+
+            [suffix]
+            Gtk.Button join_link_button {
+              icon-name: "go-next-symbolic";
+              valign: center;
+              tooltip-text: _("Join session");
+              styles ["flat"]
+            }
+          }
+        }
+
         Gtk.Box {
           vexpand: true;
         }
