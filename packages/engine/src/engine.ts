@@ -675,6 +675,55 @@ export class Engine {
     }
   }
 
+  /**
+   * Subscribe to the primary pointer's world-space position.
+   *
+   * Used by the awareness layer to broadcast the local user's cursor
+   * to remote peers. Fires on every Excalibur `pointermove` — the
+   * caller is expected to throttle (the {@link AwarenessManager}
+   * does, via `cursorThrottleMs`).
+   *
+   * Payload carries the **scene-local world coordinates** (already
+   * camera/zoom-resolved by Excalibur's `screenToWorldCoordinates`)
+   * plus the `sceneId` (== map id) so the receiver can drop frames
+   * for scenes it is not currently viewing.
+   *
+   * Returns the disposer; calling it disconnects the `pointer.on`
+   * subscription. No-op when no scene is active yet (the
+   * subscription rebinds via `MAP_LOADED` so a caller that
+   * subscribes before the first map loads still gets events once
+   * one does).
+   */
+  onPointerMoved(
+    cb: (event: { sceneId: string; worldX: number; worldY: number }) => void,
+  ): () => void {
+    let disposeMove: (() => void) | null = null
+    const rebind = () => {
+      disposeMove?.()
+      disposeMove = null
+      const pointer = this.excalibur?.input?.pointers?.primary
+      if (!pointer) return
+      const handler = (event: { screenPos: { x: number; y: number } }) => {
+        const scene = this._activeMapScene()
+        if (!scene) return
+        const sceneId = scene.mapResource.mapData.id
+        if (!sceneId) return
+        const world = this.excalibur.screen.screenToWorldCoordinates(
+          new Vector(event.screenPos.x, event.screenPos.y),
+        )
+        cb({ sceneId, worldX: world.x, worldY: world.y })
+      }
+      pointer.on('move', handler)
+      disposeMove = () => pointer.off('move', handler)
+    }
+    rebind()
+    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
+    return () => {
+      disposeMove?.()
+      mapSub.close()
+    }
+  }
+
   private setStatus(status: EngineStatus): void {
     if (this.status === status) return
     this.logger.info(`Engine status changed from ${this.status} to ${status}`)

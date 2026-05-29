@@ -38,8 +38,11 @@ export class CollabSession {
   public readonly awareness: AwarenessManager
   private closed = false
   private awarenessUnsubscribe: (() => void) | null = null
+  private cursorUnsubscribe: (() => void) | null = null
+  private readonly engine: Engine
 
   constructor(opts: CollabSessionOptions) {
+    this.engine = opts.engine
     this.peer = new PeerSession({
       role: opts.role,
       signalling: opts.signalling,
@@ -96,6 +99,12 @@ export class CollabSession {
       announceOnConnect.close()
       prevUnsub?.()
     }
+    // Bridge engine pointer → awareness cursor stream. The engine
+    // hook fires on every Excalibur `pointermove`; the manager
+    // throttles to ~33 Hz so the unreliable channel doesn't flood.
+    this.cursorUnsubscribe = this.engine.onPointerMoved(({ sceneId, worldX, worldY }) => {
+      this.awareness.sendCursor({ sceneId, x: worldX, y: worldY })
+    })
   }
 
   /** Tear down. Idempotent. */
@@ -110,6 +119,8 @@ export class CollabSession {
     } catch {
       /* channel may already be torn down */
     }
+    this.cursorUnsubscribe?.()
+    this.cursorUnsubscribe = null
     this.awarenessUnsubscribe?.()
     this.awarenessUnsubscribe = null
     this.controller.close()
