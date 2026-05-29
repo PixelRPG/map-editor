@@ -1,5 +1,11 @@
 import type { AwarenessPeerInfo, Engine, SignallingTransport } from '@pixelrpg/engine'
-import { AwarenessManager, PeerSession, type PeerRole, SessionController } from '@pixelrpg/engine'
+import {
+  AwarenessManager,
+  PeerSession,
+  type PeerRole,
+  RemoteCursorRenderer,
+  SessionController,
+} from '@pixelrpg/engine'
 
 export interface CollabSessionOptions {
   engine: Engine
@@ -36,6 +42,7 @@ export class CollabSession {
   public readonly peer: PeerSession
   public readonly controller: SessionController
   public readonly awareness: AwarenessManager
+  public readonly cursorRenderer: RemoteCursorRenderer
   private closed = false
   private awarenessUnsubscribe: (() => void) | null = null
   private cursorUnsubscribe: (() => void) | null = null
@@ -71,6 +78,10 @@ export class CollabSession {
       this.awareness.handleInbound(data)
     })
     this.awarenessUnsubscribe = () => dispose.close()
+    // Render remote peers' cursors in-canvas via Excalibur actors.
+    // Constructed up-front so a remote `peer-changed` arriving
+    // before `start()` resolves still produces a dot.
+    this.cursorRenderer = new RemoteCursorRenderer(opts.engine, this.awareness)
   }
 
   /**
@@ -123,6 +134,7 @@ export class CollabSession {
     this.cursorUnsubscribe = null
     this.awarenessUnsubscribe?.()
     this.awarenessUnsubscribe = null
+    this.cursorRenderer.close()
     this.controller.close()
     this.peer.close(reason)
   }
