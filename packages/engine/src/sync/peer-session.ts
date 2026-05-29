@@ -7,7 +7,7 @@ import {
   type PeerRole,
   type PeerSessionEventMap,
   type RTCPeerConnectionFactory,
-  type SessionState,
+  type PeerSessionState,
   type SignallingMessage,
   type SignallingTransport,
 } from './types.ts'
@@ -66,7 +66,7 @@ export class PeerSession {
   private readonly pc: RTCPeerConnection
   private opChannel: RTCDataChannel | null = null
   private awarenessChannel: RTCDataChannel | null = null
-  private state: SessionState = 'idle'
+  private state: PeerSessionState = 'idle'
   private closed = false
 
   constructor(opts: PeerSessionOptions) {
@@ -184,7 +184,7 @@ export class PeerSession {
   }
 
   /** Current session state — handy for UI / tests without listening on the event. */
-  getState(): SessionState {
+  getState(): PeerSessionState {
     return this.state
   }
 
@@ -272,7 +272,7 @@ export class PeerSession {
     }
   }
 
-  private transitionTo(state: SessionState): void {
+  private transitionTo(state: PeerSessionState): void {
     if (this.state === state) return
     this.state = state
     this.events.emit('state-changed', { state })

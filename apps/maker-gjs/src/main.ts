@@ -1,4 +1,5 @@
 import '@gjsify/dom-elements/register'
+import '@gjsify/webrtc/register'
 
 import system from 'system'
 
