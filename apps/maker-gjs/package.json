@@ -46,6 +46,8 @@
     "@gjsify/dom-elements": "^0.4.32",
     "@gjsify/event-bridge": "^0.4.32",
     "@gjsify/webgl": "^0.4.32",
+    "@gjsify/webrtc": "^0.4.33",
+    "@gjsify/ws": "^0.4.33",
     "@gjsify/xmlhttprequest": "^0.4.32",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
