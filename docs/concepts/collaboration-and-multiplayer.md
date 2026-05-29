@@ -1,7 +1,7 @@
 # Collaboration & Multiplayer — Op-Log with Host-Sequencer
 
 > Status: **planning** — design captured before implementation so the architectural constraints inform earlier PRs.
-> Last meaningful change: 2026-05-22.
+> Last meaningful change: 2026-05-29 (UX section for v1 Pair-Editing + discovery / signalling specifications).
 
 The editor will eventually let multiple users edit the same project simultaneously ("collaborative editing"). The game will eventually support **split-screen** and **networked multiplayer**. Both flows are real-time multi-peer state synchronisation. This doc commits to **one unified mechanism** for both: an **Operation Log with a host-sequencer (Player 1)**.
 
@@ -63,7 +63,7 @@ Both flows run over WebRTC data channels:
 - Reliable + ordered channels for op-log (mutations must arrive + apply in order)
 - Unreliable channel reserved for awareness data (presence, cursors — losing one update is fine)
 
-Initial signalling: the only place a server-like component exists. Options remain open — own tiny signalling endpoint, public service, or QR-code copy/paste for full-no-server LAN play.
+Initial signalling: see [§ 6 Discovery + signalling](#6-discovery--signalling) below — LAN sessions discover peers via Avahi mDNS (zero infra), cross-network sessions broker SDP via a workspace-owned `apps/signalling-server/` (GJS-runnable via gjsify, also serves as a dogfood test of `@gjsify/{ws,http}`).
 
 ### 4. Awareness layer (presence, cursors)
 
@@ -93,6 +93,42 @@ type InputSource =
 The `InputSystem` reads from whichever source the player's component declares. **Local controller-2 and a remote peer's input frames look identical to the rest of the engine** — they both end up as an "intent vector" on the player entity each tick.
 
 This is the load-bearing piece that lets multiplayer be incremental — once `InputSourceComponent` exists, "support multiplayer" is "add the `remote` variant + a snapshot-sync layer" rather than "rewrite movement".
+
+### 6. Discovery + signalling
+
+Two-layer service discovery, shared verbatim between editor sessions and (future) multiplayer game lobbies. Same code path, different `kind` tag.
+
+**Layer A — LAN auto-discovery via Avahi (mDNS).** Hosts publish `_pixelrpg._tcp.local` on the local subnet using `@girs/avahi-0.6` (the GIR for the Avahi client library, available on every GNOME / systemd system). The Welcome view browses the same service type and renders any found sessions inline ("Bob's Project · pair-editing · 2/4 peers"). Click → joiner connects directly to the host's local WebRTC offer endpoint with no public relay involved.
+
+The TXT-record schema is the contract:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `version` | `1` | Protocol revision. Bumped breaking. |
+| `kind` | `edit` \| `play` | What this session is — pair-editing or multiplayer game. UI filters by kind. |
+| `room` | `<random-8-char>` | Stable room identifier. Same value the cross-internet `pixelrpg://join/<room>` URL carries. |
+| `host` | `<display-name>` | Human-readable host name (machine username by default; editable per session). |
+| `project` | `<project-name>` | Display label for the project being edited / played. |
+| `peers` | `<n>/<max>` | Current vs allowed peer count. |
+| `started` | `<unix-ts>` | When the session opened. |
+
+A future `gameMode=coop|versus|...` field can extend the `kind=play` variant without touching the editor flow.
+
+**Layer B — Cross-network signalling.** When the joiner clicks a `pixelrpg://join/<room>` URL from outside the LAN, both peers connect to a small WebSocket relay (`apps/signalling-server/`, GJS-runnable via gjsify) keyed by `<room>`. The relay only forwards opaque SDP / ICE-candidate messages between the two peers — once they have each other's offer + answer, they direct-connect via WebRTC and the relay drops to idle. The relay never sees session content (end-to-end via the WebRTC DTLS layer).
+
+Server contract:
+
+```
+WS upgrade @ /room/<roomid>?role=host|joiner
+  → server creates the room on first message, expires after 5 min idle
+  → messages: { type: 'sdp' | 'ice-candidate' | 'bye'; payload: unknown }
+  → server fans each message to the OTHER role in the room (not back to sender)
+  → on disconnect: drop room if both peers left
+```
+
+No persistence, no auth, no per-room state beyond the live socket pair. ~50 lines of TypeScript using `@gjsify/ws` + `@gjsify/http`. Deployed as a stand-alone GJS bundle; doubles as an integration test for the gjsify Soup-backed HTTP / WebSocket server APIs.
+
+**URL scheme.** `pixelrpg://join/<roomid>` is registered as an `x-scheme-handler/pixelrpg` Desktop entry pointing at the maker binary. Clicking a join link in any browser / chat client launches the maker (or focuses the existing instance) and feeds the room id into `SessionController`. Joiner first probes Layer A — if the room is mDNS-reachable, skip the relay; otherwise fall back to Layer B.
 
 ## The op-log protocol
 
@@ -245,6 +281,53 @@ Three transitions matter:
 
 Failure mode: **host drops mid-edit**. Non-host peers see a "host disconnected" toast. Their local state is intact. They can: (a) save the current state as a new project, (b) wait for host to rejoin (the same peer reclaims host, ops resume from the next seq), or (c) one of the remaining peers becomes the new host (host migration; complex, deferred to a later phase).
 
+## Pair-Editing UX (v1)
+
+v1 ships the simplest collaboration shape: **ad-hoc pair-editing**, optimised for "I'm working on something, come look + edit with me." Inspired by the Figma flow but kept minimal — no Discord, no permission roles, no voice. Two flows:
+
+### Host invites
+
+1. User has a project open in the maker. Window header gains an **Avatar + "Share"** button next to the existing actions.
+2. Click "Share" → a popover opens with:
+   - A 6-char room code (`a3f2-bb91`) and a copyable `pixelrpg://join/a3f2-bb91` link
+   - The host's display name (editable; defaults to `$USER`)
+   - A toast confirming "LAN discovery active" — peers on the same network see this session in their Welcome view without needing the link.
+3. The maker starts the local WebRTC offer endpoint, publishes the Avahi mDNS service, and (optionally, behind a "Allow internet joiners" toggle in the popover) opens a websocket to the signalling-server keyed by the room id.
+
+### Joiner joins
+
+Three entry points, all converging on the same `SessionController.join(roomId)` call:
+
+1. **LAN auto-discovery** — Welcome view has a "Sessions on this network" pane below "Recent projects". Renders any `_pixelrpg._tcp.local` services found, one row per session. Click → join.
+2. **Paste link in Welcome view** — a "Join session" entry field accepts the full `pixelrpg://join/<roomid>` URL or just the bare room id.
+3. **Click a `pixelrpg://join/...` URL** in any browser / chat client → the `x-scheme-handler/pixelrpg` Desktop entry launches the maker (or focuses the existing instance) and pre-fills the room id.
+
+On join, the joiner's current project (if any) is closed with a save prompt; the host's project supersedes (matches the "Solo → Collab (as joiner)" transition rule above).
+
+### During the session
+
+- **Header avatar bubbles** — up to 5 peer avatars + "+N" overflow. Each is colour-coded to that peer's id; the colour also tints their cursor + selection-highlight on the map. Click a bubble → camera jumps to that peer's current viewport.
+- **Live cursors** — every peer's pointer position renders as a labelled arrow on the map and (less prominently) on the atlas / cast / tiles views. Awareness-channel only (unreliable, throttled to 10 Hz per peer per § "Awareness payload size" open question).
+- **Selection highlights** — the tile / placement another peer has selected gets a coloured ring in their avatar colour, so two users don't simultaneously edit the same thing without knowing.
+- **No soft-locks, no approval prompts** — anyone can paint anything. Concurrent-edit conflicts on the same tile resolve via host-sequencer ordering, with a brief toast `[PeerName] painted here first` to the loser so the snap-back is explained.
+- **No voice, no chat** — out of scope for v1. The unreliable channel is reserved for awareness only.
+
+### Leaving
+
+- **Joiner closes** the window or hits "Leave session" → the session continues on the host's side. The joiner's local state at the last-applied seq is offered as a save-as.
+- **Host closes** → all joiners get a "session ended" toast + save-as prompt. Local maker instances continue in solo mode.
+- **Host crashes / drops** → joiners see "host disconnected" toast. State preserved locally. v1 does NOT auto-promote a joiner to host (Phase 8 — host migration, explicitly deferred).
+
+### Out of v1 scope
+
+| Feature | When |
+|---|---|
+| Permission roles (Owner / Editor / Viewer) | Future doc revision; today everyone who joins can edit |
+| Per-scene soft-locks | Future, after first heuristic study of real-world conflicts |
+| Voice / text chat | Future, behind a toggle — uses the same WebRTC connection |
+| Comment pins / async annotations | Future — that's persistent-session territory, not ad-hoc pair-editing |
+| Multi-room (one peer in N sessions) | Future — v1 enforces single-session-per-maker |
+
 ## Phase plan
 
 Most "shared substrate" work happens *implicitly* as we land the earlier object-system and editor-architecture phases (constraint enforcement at PR-review time). The dedicated phases are the actual collab + multiplayer features.
@@ -254,7 +337,11 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 | 0 | **Substrate constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | **landed (substrate)** (folded into editor-architecture Phases 2–5) |
 | 1 | Op-log skeleton in `packages/engine/src/commands/types.ts` — `Operation`-shape, local sequencer (`UndoStackComponent.cursor`), `Command` applier. Solo mode only (no wire). | **landed** |
 | 2 | Editor op vocabulary — `PaintTileCommand` + `EraseTileCommand` are the first entries; the op-log IS the undo log via `Engine.executeCommand` + `undo` + `redo`. Hook into `editor-architecture.md` Phase 5 is now bi-directional reference. | **landed** (initial vocab; grows as more editor mutations land) |
-| 3 | WebRTC transport + minimal signalling. Host detection. Op-broadcast. | planned |
+| 3a | **`apps/signalling-server/`** — GJS-runnable WebSocket relay built on `@gjsify/{ws,http}`. Stateless, room-keyed, ~50 lines. Doubles as a gjsify Soup-backed-server integration test. | planned |
+| 3b | **`packages/engine/src/sync/`** — `PeerSession` class wrapping `@gjsify/webrtc` `RTCPeerConnection` + `RTCDataChannel`. Reliable + unreliable channels open per § 3. Platform-indep so `game-browser` can reuse it. | planned |
+| 3c | **`apps/maker-gjs/src/services/lan-discovery.ts`** — Avahi publish + browse via `@girs/avahi-0.6`. Welcome-view "Sessions on this network" pane. Window-header Share button. | planned |
+| 3d | **Op-log broadcast** — wire `Engine.executeCommand` to also push the operation onto `PeerSession`; receive-side feeds remote ops back through the same applier. End-to-end Pair-Editing on LAN. | planned |
+| 3e | **`pixelrpg://join/<roomid>`** URL scheme via `x-scheme-handler/pixelrpg` Desktop entry + cross-internet signalling via Phase 3a relay. | planned |
 | 4 | Editor awareness layer — live cursors, presence, per-peer selection outlines. Rides on the unreliable channel. | planned |
 | 5 | `InputSourceComponent` runtime + local split-screen support. | planned |
 | 6 | Game op vocabulary + host-authoritative simulation + snapshot-on-join. | planned |
