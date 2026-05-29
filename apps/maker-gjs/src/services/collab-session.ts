@@ -1,5 +1,5 @@
-import type { Engine, SignallingTransport } from '@pixelrpg/engine'
-import { PeerSession, type PeerRole, SessionController } from '@pixelrpg/engine'
+import type { AwarenessPeerInfo, Engine, SignallingTransport } from '@pixelrpg/engine'
+import { AwarenessManager, PeerSession, type PeerRole, SessionController } from '@pixelrpg/engine'
 
 export interface CollabSessionOptions {
   engine: Engine
@@ -7,6 +7,13 @@ export interface CollabSessionOptions {
   signalling: SignallingTransport
   /** Stable id for this peer — stamped onto every emitted Operation. */
   peerId: string
+  /**
+   * Display info broadcast on session start so the peer's UI can
+   * render our cursor + name. Default colours are picked from the
+   * Adwaita accent palette so peers without explicit config still
+   * land on a recognisable hue.
+   */
+  localInfo?: AwarenessPeerInfo
 }
 
 /**
@@ -28,7 +35,9 @@ export interface CollabSessionOptions {
 export class CollabSession {
   public readonly peer: PeerSession
   public readonly controller: SessionController
+  public readonly awareness: AwarenessManager
   private closed = false
+  private awarenessUnsubscribe: (() => void) | null = null
 
   constructor(opts: CollabSessionOptions) {
     this.peer = new PeerSession({
@@ -40,21 +49,69 @@ export class CollabSession {
       session: this.peer,
       peerId: opts.peerId,
     })
+    // Default display info — caller can override via `localInfo`.
+    // The placeholder colour matches the Adwaita "blue-3" accent so
+    // a default-styled peer still sits cleanly on either the light
+    // or dark scratchpad backdrop.
+    const localInfo: AwarenessPeerInfo = opts.localInfo ?? {
+      displayName: opts.peerId,
+      color: '#1c71d8',
+    }
+    this.awareness = new AwarenessManager({
+      localPeerId: opts.peerId,
+      localInfo,
+      send: (message) => this.peer.sendAwareness(message),
+    })
+    // Inbound awareness frames arrive via the unreliable channel and
+    // are dispatched through the typed peer-events bus.
+    const dispose = this.peer.events.on('awareness-received', ({ data }) => {
+      this.awareness.handleInbound(data)
+    })
+    this.awarenessUnsubscribe = () => dispose.close()
   }
 
   /**
    * Drive the WebRTC handshake. Resolves once ICE gathering kicks
    * off; full "connected" status lands on `peer.events('state-
    * changed')`.
+   *
+   * Once `connected`, an initial `presence` frame goes out so the
+   * remote peer's roster + cursor UI populate immediately. Repeat
+   * announces are cheap — the receiver dedupes by comparing against
+   * its tracked state.
    */
   async start(): Promise<void> {
     await this.peer.connect()
+    const announceOnConnect = this.peer.events.on('state-changed', ({ state }) => {
+      if (state === 'connected') this.awareness.announce()
+    })
+    // If we already raced past `connecting`, fire once immediately so
+    // late wires don't lose the first presence frame.
+    if (this.peer.getState() === 'connected') this.awareness.announce()
+    // The handle is dropped on close — wrap the existing tear-down so
+    // we don't leak the listener if connect() resolved before any
+    // state transition fired.
+    const prevUnsub = this.awarenessUnsubscribe
+    this.awarenessUnsubscribe = () => {
+      announceOnConnect.close()
+      prevUnsub?.()
+    }
   }
 
   /** Tear down. Idempotent. */
   close(reason = 'closed'): void {
     if (this.closed) return
     this.closed = true
+    // Best-effort leave — if the channel is still open the peer
+    // drops our cursor immediately; otherwise PeerSession's 'closed'
+    // event is the fallback.
+    try {
+      this.awareness.leave()
+    } catch {
+      /* channel may already be torn down */
+    }
+    this.awarenessUnsubscribe?.()
+    this.awarenessUnsubscribe = null
     this.controller.close()
     this.peer.close(reason)
   }
