@@ -33,6 +33,7 @@ export class ModeRail extends Adw.Bin {
   declare _row_tiles: Adw.ActionRow
   declare _row_audio: Adw.ActionRow
   declare _row_data: Adw.ActionRow
+  declare _share_button: Gtk.Button
 
   private _activeMode: EditorMode = 'world'
   private _projectName = ''
@@ -52,6 +53,7 @@ export class ModeRail extends Adw.Bin {
           'row_tiles',
           'row_audio',
           'row_data',
+          'share_button',
         ],
         Properties: {
           'project-name': GObject.ParamSpec.string(

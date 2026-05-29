@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { parsePixelrpgUrl, pickPixelrpgIntent } from './pixelrpg-url.ts'
+import { buildPixelrpgJoinUrl, parsePixelrpgUrl, pickPixelrpgIntent } from './pixelrpg-url.ts'
 
 export default async () => {
   await describe('parsePixelrpgUrl', async () => {
@@ -38,6 +38,23 @@ export default async () => {
       expect(parsePixelrpgUrl('')).toBeNull()
       expect(parsePixelrpgUrl('pixelrpg://')).toBeNull()
       expect(parsePixelrpgUrl('pixelrpg://abc')).toBeNull()
+    })
+  })
+
+  await describe('buildPixelrpgJoinUrl', async () => {
+    await it('builds the canonical join URL', async () => {
+      expect(buildPixelrpgJoinUrl('a3f2bb91')).toBe('pixelrpg://join/a3f2bb91')
+    })
+
+    await it('round-trips through parsePixelrpgUrl', async () => {
+      const roomId = 'room-7c-abc_4'
+      expect(parsePixelrpgUrl(buildPixelrpgJoinUrl(roomId))).toStrictEqual({ kind: 'join', roomId })
+    })
+
+    await it('throws on a roomId the parser would reject', async () => {
+      expect(() => buildPixelrpgJoinUrl('')).toThrow()
+      expect(() => buildPixelrpgJoinUrl('has spaces')).toThrow()
+      expect(() => buildPixelrpgJoinUrl('weird.dot')).toThrow()
     })
   })
 
