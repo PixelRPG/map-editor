@@ -8,14 +8,14 @@
   "scripts": {
     "clear": "rm -rf dist org.pixelrpg.maker data/org.pixelrpg.maker.data.gresource",
     "build:resources": "gjsify gresource data/org.pixelrpg.maker.data.gresource.xml",
-    "build:barrels": "gjsify barrels src src/widgets",
-    "check:barrels": "gjsify barrels --check src src/widgets",
+    "build:barrels": "gjsify barrels src src/widgets --exclude '\\.spec\\.' --exclude '\\.test\\.' --exclude '\\.test-data\\.' --exclude '^test\\.mts$'",
+    "check:barrels": "gjsify barrels --check src src/widgets --exclude '\\.spec\\.' --exclude '\\.test\\.' --exclude '\\.test-data\\.' --exclude '^test\\.mts$'",
     "build:app": "gjsify build src/main.ts --app gjs --globals auto,dom --shebang --outfile org.pixelrpg.maker",
     "build": "gjsify run build:resources && gjsify run build:barrels && gjsify run build:app",
     "check": "gjsify run build:barrels && tsc",
     "start": "gjsify run org.pixelrpg.maker",
     "start:debug": "GTK_DEBUG=interactive gjsify run org.pixelrpg.maker",
-    "test": "vitest run",
+    "test": "gjsify test",
     "flatpak:init": "gjsify flatpak init --force",
     "flatpak:check": "gjsify flatpak check",
     "flatpak:build": "gjsify flatpak build org.pixelrpg.maker.json --install --repo repo --bundle org.pixelrpg.maker.flatpak --install-deps-from flathub"
@@ -30,8 +30,8 @@
   "license": "GPL-3.0",
   "devDependencies": {
     "@gjsify/cli": "^0.4.32",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "@gjsify/unit": "^0.4.32",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@girs/adw-1": "^1.10.0-4.0.4",
