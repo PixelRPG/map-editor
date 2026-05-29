@@ -32,6 +32,7 @@
   </kudos>
   <provides>
     <binary>org.pixelrpg.maker</binary>
+    <mediatype>x-scheme-handler/pixelrpg</mediatype>
   </provides>
   <categories>
     <category>Development</category>

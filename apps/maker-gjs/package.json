@@ -90,7 +90,12 @@
         "Development",
         "Game"
       ],
-      "icon": "data/icons/hicolor/scalable/apps/org.pixelrpg.maker.svg"
+      "icon": "data/icons/hicolor/scalable/apps/org.pixelrpg.maker.svg",
+      "provides": {
+        "mimetypes": [
+          "x-scheme-handler/pixelrpg"
+        ]
+      }
     }
   }
 }
