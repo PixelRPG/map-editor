@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=PixelRPG Maker
+Comment=Experimental tile-based map editor
+Exec=org.pixelrpg.maker %U
+Icon=org.pixelrpg.maker
+Terminal=false
+Type=Application
+Categories=Development;Game;
+MimeType=x-scheme-handler/pixelrpg;
+StartupNotify=true
+StartupWMClass=org.pixelrpg.maker
