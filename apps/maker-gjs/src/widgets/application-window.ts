@@ -202,14 +202,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       )
     }
     if (!this._sessionSvc) {
-      // The `@pixelrpg/gjs` Engine widget proxies the core Engine
-      // but doesn't expose `executeCommand` / `applyRemoteCommand`
-      // yet. Once the widget grows those (planned alongside the
-      // op-broadcast UI wiring), this cast disappears. For now
-      // discovery flows (browse / share) work fine because they
-      // don't touch the engine; the join path will throw a typed
-      // error until the proxy methods exist.
-      const engineProvider = () => (this._engineCtl.engine ?? null) as unknown as import('@pixelrpg/engine').Engine | null
+      // Resolve the core `@pixelrpg/engine` instance through the GJS
+      // Engine widget — `widget.excalibur` is the same Engine class
+      // (`executeCommand` / `applyRemoteCommand` / op-log etc.) that
+      // CollabSession expects, so this is just an unwrap, not a
+      // cross-API cast. Returns `null` until a project is loaded;
+      // discovery flows work regardless.
+      const engineProvider = () => this._engineCtl.engine?.excalibur ?? null
       this._sessionSvc = new SessionService(engineProvider, new LanSessionBackend(), generatePeerId())
     }
 
