@@ -5,13 +5,28 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
 import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
+import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
 export class Application extends Adw.Application {
+  /**
+   * Intent extracted from a `pixelrpg://...` URL invocation on launch
+   * (or any subsequent `command-line` activation while a single
+   * instance is already running). Initially null; consumers — the
+   * Welcome view today, future SessionService integration tomorrow
+   * — call `consumePendingIntent()` once they're ready to act on it
+   * so the intent isn't applied twice if the user re-presents the
+   * window.
+   */
+  private pendingIntent: PixelrpgIntent | null = null
+
   static {
     GObject.registerClass(
       {
         GTypeName: 'Application',
+        Signals: {
+          'pixelrpg-intent': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
+        },
       },
       Application,
     )
@@ -20,7 +35,12 @@ export class Application extends Adw.Application {
   constructor() {
     super({
       applicationId: APPLICATION_ID,
-      flags: Gio.ApplicationFlags.DEFAULT_FLAGS,
+      // HANDLES_COMMAND_LINE so the `x-scheme-handler/pixelrpg`
+      // .desktop entry can re-dispatch to the running instance
+      // when the user clicks `pixelrpg://join/<roomid>` in a
+      // browser / chat. `vfunc_command_line` below parses argv
+      // for the URL and emits `pixelrpg-intent`.
+      flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
     })
     this.onStartup = this.onStartup.bind(this)
     this.connect('startup', this.onStartup)
@@ -108,5 +128,40 @@ export class Application extends Adw.Application {
     if (!active_window) active_window = new ApplicationWindow(this)
 
     active_window.present()
+  }
+
+  /**
+   * Handle command-line activations — both the initial launch and
+   * any subsequent invocation while the app's already running (the
+   * single-instance contract under `Gio.ApplicationFlags
+   * .HANDLES_COMMAND_LINE`).
+   *
+   * Scans argv for a `pixelrpg://join/<roomid>` URL via
+   * {@link pickPixelrpgIntent}; if found, stashes it on the
+   * Application + emits the `pixelrpg-intent` signal so any wired
+   * UI surface (Welcome view's "Join session" entry, future
+   * SessionService integration) can react. Always activates the
+   * window afterwards so the user sees a focused maker either way.
+   */
+  vfunc_command_line(cmdline: Gio.ApplicationCommandLine): number {
+    const argv = cmdline.get_arguments() ?? []
+    const intent = pickPixelrpgIntent(argv)
+    if (intent) {
+      this.pendingIntent = intent
+      this.emit('pixelrpg-intent', intent.kind, intent.roomId)
+    }
+    this.activate()
+    return 0
+  }
+
+  /**
+   * Atomically read + clear the pending intent. Call this from the
+   * consumer (UI / SessionService) once you're ready to act on the
+   * join; the intent is one-shot.
+   */
+  consumePendingIntent(): PixelrpgIntent | null {
+    const intent = this.pendingIntent
+    this.pendingIntent = null
+    return intent
   }
 }
