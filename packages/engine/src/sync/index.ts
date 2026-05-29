@@ -2,5 +2,6 @@
 
 export * from './awareness'
 export * from './peer-session'
+export * from './remote-cursor-renderer'
 export * from './session-controller'
 export * from './types'
