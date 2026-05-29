@@ -3,5 +3,4 @@
 export * from './main'
 export * from './room-manager'
 export * from './server'
-export * from './test'
 export * from './types'

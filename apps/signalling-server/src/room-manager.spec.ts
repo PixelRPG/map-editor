@@ -109,7 +109,7 @@ export default async () => {
     })
 
     await it('logs each high-level event with the room + role context', async () => {
-      const log = spy<(event: RoomEvent) => void>()
+      const log = spy((_event: RoomEvent): void => {})
       const rm = new RoomManager({ log })
 
       rm.join('a', 'host', new FakePeer())

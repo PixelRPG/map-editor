@@ -11,8 +11,7 @@
     "check:barrels": "gjsify barrels --check src/systems src/components src/services src/scenes src/format src/resource src/commands src/sync",
     "build": "gjsify run build:barrels && tsc --noEmit",
     "check": "gjsify run build:barrels && tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "gjsify test"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -21,8 +20,8 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "@gjsify/unit": "^0.4.32",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "excalibur": "^0.32.0"
