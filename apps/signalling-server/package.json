@@ -1,0 +1,31 @@
+{
+  "name": "@pixelrpg/signalling-server",
+  "version": "0.0.1",
+  "description": "Stateless WebSocket relay for PixelRPG cross-network pair-editing + multiplayer signalling. Runs as a GJS bundle via gjsify.",
+  "main": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "clear": "rm -rf dist org.pixelrpg.signalling-server",
+    "build:barrels": "gjsify barrels src",
+    "check:barrels": "gjsify barrels --check src",
+    "build:app": "gjsify build src/main.ts --app gjs --globals auto --shebang --outfile org.pixelrpg.signalling-server",
+    "build": "gjsify run build:barrels && gjsify run build:app",
+    "check": "gjsify run build:barrels && tsc --noEmit",
+    "start": "gjsify run org.pixelrpg.signalling-server",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "author": "Pascal Garber <pascal@artandcode.studio>",
+  "license": "MIT",
+  "devDependencies": {
+    "@gjsify/cli": "^0.4.32",
+    "@types/ws": "^8.5.12",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7",
+    "ws": "^8.18.0"
+  },
+  "dependencies": {
+    "@gjsify/ws": "^0.4.32"
+  }
+}
