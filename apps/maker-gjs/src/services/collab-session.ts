@@ -1,5 +1,3 @@
-import '@gjsify/webrtc/register'
-
 import type { Engine, SignallingTransport } from '@pixelrpg/engine'
 import { PeerSession, type PeerRole, SessionController } from '@pixelrpg/engine'
 
@@ -21,10 +19,11 @@ export interface CollabSessionOptions {
  * relay client (Phase 3e) plugs in here without touching the
  * collab class itself.
  *
- * Side-effect: imports `@gjsify/webrtc/register` so `globalThis
- * .RTCPeerConnection` is wired before the underlying `PeerSession`
- * tries to construct one. Top-level import keeps the side effect
- * out of the constructor (the register module is idempotent).
+ * Side-effect: the maker's entrypoint (`src/main.ts`) is responsible
+ * for importing `@gjsify/webrtc/register` so `globalThis.RTCPeerConnection`
+ * is wired before the first session opens. The register module is
+ * GJS-only (imports `gi://Gst`, etc.) — keeping the import out of
+ * this module keeps the Node test bundle building cleanly.
  */
 export class CollabSession {
   public readonly peer: PeerSession

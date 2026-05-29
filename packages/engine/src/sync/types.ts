@@ -60,7 +60,7 @@ export type RTCPeerConnectionFactory = new (config?: RTCConfiguration) => RTCPee
  * "disconnected") and gates op + awareness emits — a half-open
  * session must buffer or drop, never `throw`.
  */
-export type SessionState = 'idle' | 'negotiating' | 'connected' | 'closed' | 'error'
+export type PeerSessionState = 'idle' | 'negotiating' | 'connected' | 'closed' | 'error'
 
 /**
  * Typed events `PeerSession` emits via its EventEmitter. Consumers
@@ -69,7 +69,7 @@ export type SessionState = 'idle' | 'negotiating' | 'connected' | 'closed' | 'er
  */
 export interface PeerSessionEventMap {
   /** Emitted when both reliable + unreliable channels are open. */
-  'state-changed': { state: SessionState }
+  'state-changed': { state: PeerSessionState }
   /** Reliable channel delivered a frame. Payload is the inner op. */
   'op-received': { op: unknown }
   /** Unreliable channel delivered a frame. Payload is the awareness data. */
