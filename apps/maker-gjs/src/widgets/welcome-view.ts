@@ -43,7 +43,7 @@ export class WelcomeView extends Adw.Bin {
 
   private _recentRows: Gtk.Widget[] = []
   /** `name` → row, so `service-gone` events can remove the right entry. */
-  private _sessionRows = new Map<string, Gtk.ListBoxRow>()
+  private _sessionRows = new Map<string, Adw.ActionRow>()
   private _inspectorCollapsed = false
   private _showInspector = false
 
@@ -182,8 +182,12 @@ export class WelcomeView extends Adw.Bin {
   /**
    * Add a row to the "Sessions on this network" list. Idempotent —
    * a second call with the same `service.name` updates the existing
-   * row instead of duplicating it (Avahi can re-resolve a service
-   * if its TXT or address changes mid-session).
+   * row instead of duplicating it.
+   *
+   * Avahi resolves the same service once per network interface ×
+   * protocol (e.g. lo+eth0+wlan0 × IPv4+IPv6), so a single peer
+   * normally fires 3-6 `service-discovered` events with identical
+   * `name`. Dedup-by-name collapses them to a single visible row.
    */
   addDiscoveredService(service: DiscoveredService): void {
     const existing = this._sessionRows.get(service.name)
@@ -204,10 +208,13 @@ export class WelcomeView extends Adw.Bin {
     action.connect('activated', () => this.emit('session-selected', service))
     this._sessions_list.append(action)
 
-    // Adw.ActionRow wraps itself in a Gtk.ListBoxRow when appended
-    // to a list; grab the wrapper so service-gone can remove it.
-    const wrapper = action.get_parent()
-    if (wrapper instanceof Gtk.ListBoxRow) this._sessionRows.set(service.name, wrapper)
+    // Adw.ActionRow IS a Gtk.ListBoxRow (via Adw.PreferencesRow) —
+    // no Gtk.ListBoxRow wrapper is created on append. The earlier
+    // `action.get_parent() instanceof Gtk.ListBoxRow` check returned
+    // false for that reason, so the map never got populated and the
+    // dedup at the top silently failed — every Avahi resolve event
+    // accumulated a fresh row. Store the action directly.
+    this._sessionRows.set(service.name, action)
   }
 
   /** Remove a row previously added via {@link addDiscoveredService}. */
