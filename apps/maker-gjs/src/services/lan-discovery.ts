@@ -10,6 +10,19 @@ import { type DiscoveredService, type LanDiscoveryEvent, parseAvahiBrowseLine } 
  */
 export const SERVICE_TYPE = '_pixelrpg._tcp'
 
+/**
+ * Argv for the long-running `avahi-browse` subprocess. Exported as
+ * a constant so unit tests can lock in the contract: NO `-t` flag
+ * (terminate after initial dump) — without that guard the browser
+ * exits after its first scan and the LanBrowser stops receiving
+ * events for hosts that publish later.
+ *
+ * Flags:
+ *   -r   resolve every appeared service (gives us address + TXT)
+ *   -p   parseable line-oriented output (one event per line)
+ */
+export const AVAHI_BROWSE_ARGS: readonly string[] = ['avahi-browse', '-r', '-p', SERVICE_TYPE] as const
+
 export interface SessionAdvertisement {
   /** Human-readable session label shown in the joiner's UI. */
   name: string
@@ -108,7 +121,8 @@ export class LanBrowser {
     if (this.process) throw new Error('LanBrowser: already running')
     this.onEvent = onEvent
 
-    const args = ['avahi-browse', '-r', '-p', '-t', SERVICE_TYPE]
+    const args = [...AVAHI_BROWSE_ARGS]
+    console.log(`[lan-discovery] starting browser: ${args.join(' ')}`)
     try {
       this.process = Gio.Subprocess.new(
         args,

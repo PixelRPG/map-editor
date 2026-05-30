@@ -1,5 +1,7 @@
 import { run } from '@gjsify/unit'
 
+import lanDiscoverySuite from './services/lan-discovery.spec.js'
+import lanDiscoveryIntegrationSuite from './services/lan-discovery-integration.gjs.spec.js'
 import lanDiscoveryParseSuite from './services/lan-discovery-parse.spec.js'
 import lanSignallingIntegrationSuite from './services/lan-signalling-integration.spec.js'
 import lanSignallingSuite from './services/lan-signalling.spec.js'
@@ -9,6 +11,8 @@ import sandboxPathSuite from './services/sandbox-path.spec.js'
 import sessionServiceSuite from './services/session-service.spec.js'
 
 run({
+  lanDiscoverySuite,
+  lanDiscoveryIntegrationSuite,
   lanDiscoveryParseSuite,
   lanSignallingIntegrationSuite,
   lanSignallingSuite,
