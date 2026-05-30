@@ -105,8 +105,75 @@ export function serializeProjectSnapshot(snapshot: ProjectSnapshot): string {
 }
 
 /**
+ * Reject path strings that could escape a sandbox directory or
+ * smuggle filesystem control characters.
+ *
+ * The snapshot wire format carries paths supplied by a REMOTE peer
+ * over WebRTC — a malicious / compromised peer must not be able to
+ * make the receiver write to `../../etc/passwd`,
+ * `C:\Windows\system32\foo`, or `/dev/null`. All path attacks here
+ * are filesystem-write attacks; there's no read leakage to worry
+ * about because the only operation the snapshot drives is
+ * `writeFile`.
+ *
+ * Rules:
+ *
+ *  - Reject empty paths.
+ *  - Reject absolute paths: POSIX leading `/`, Windows leading
+ *    `\\` (UNC), or `<drive>:` prefixes.
+ *  - Reject any `..` segment after splitting on `/` or `\` — this
+ *    is the simple parent-directory escape.
+ *  - Reject any NUL byte (`\0`) — some filesystem APIs truncate at
+ *    NUL, so a string like `"safe.json\0/etc/passwd"` could land
+ *    in the wrong place depending on the writer.
+ *  - Reject backslashes entirely. We always emit `/` separators
+ *    on the wire (POSIX-style), so a `\` is either an attempt to
+ *    smuggle a Windows path or a parser quirk we don't want to
+ *    inherit.
+ *
+ *  Throws on rejection with a path-tagged message so callers can
+ *  surface "snapshot rejected: unsafe path …" cleanly.
+ */
+function assertSafeRelativePath(path: string, field: string): void {
+  if (typeof path !== 'string' || path.length === 0) {
+    throw new Error(`parseProjectSnapshot: ${field} must be a non-empty string`)
+  }
+  if (path.includes('\0')) {
+    throw new Error(`parseProjectSnapshot: ${field} contains a NUL byte`)
+  }
+  if (path.includes('\\')) {
+    throw new Error(`parseProjectSnapshot: ${field} contains a backslash`)
+  }
+  if (path.startsWith('/')) {
+    throw new Error(`parseProjectSnapshot: ${field} must be relative, got absolute "${path}"`)
+  }
+  if (/^[A-Za-z]:/.test(path)) {
+    throw new Error(`parseProjectSnapshot: ${field} must be relative, got drive-letter "${path}"`)
+  }
+  const segments = path.split('/')
+  for (const segment of segments) {
+    if (segment === '..') {
+      throw new Error(`parseProjectSnapshot: ${field} contains a parent-directory segment ("${path}")`)
+    }
+  }
+}
+
+/**
+ * `projectFilename` carries the entry point — it MUST be a single
+ * path component, no separators at all. The docstring on
+ * `ProjectSnapshot.projectFilename` already says "filename"; this
+ * enforces that contract instead of trusting the wire.
+ */
+function assertProjectFilename(filename: string): void {
+  assertSafeRelativePath(filename, 'projectFilename')
+  if (filename.includes('/')) {
+    throw new Error(`parseProjectSnapshot: projectFilename must be a single segment, got "${filename}"`)
+  }
+}
+
+/**
  * Parse + validate a snapshot received from the wire. Throws on
- * malformed shape or unknown version.
+ * malformed shape, unknown version, or path-traversal attempts.
  */
 export function parseProjectSnapshot(raw: string): ProjectSnapshot {
   let parsed: unknown
@@ -124,9 +191,10 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
       `parseProjectSnapshot: unsupported version ${String(obj.version)} (expected ${PROJECT_SNAPSHOT_VERSION})`,
     )
   }
-  if (typeof obj.projectFilename !== 'string' || obj.projectFilename.length === 0) {
+  if (typeof obj.projectFilename !== 'string') {
     throw new Error('parseProjectSnapshot: missing projectFilename')
   }
+  assertProjectFilename(obj.projectFilename)
   if (!obj.project || typeof obj.project !== 'object') {
     throw new Error('parseProjectSnapshot: missing project')
   }
@@ -137,6 +205,7 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
     if (!m || typeof m !== 'object' || typeof m.path !== 'string' || !m.data) {
       throw new Error('parseProjectSnapshot: malformed maps entry')
     }
+    assertSafeRelativePath(m.path, `maps[].path`)
   }
   return obj as ProjectSnapshot
 }
@@ -163,6 +232,15 @@ export type SnapshotPathJoin = (...segments: string[]) => string
  * After this resolves, the caller can hand `targetDir` to
  * `engine.loadProject(targetDir/projectFilename)` to actually load
  * the sandbox project.
+ *
+ * Defence-in-depth: `parseProjectSnapshot` already rejected unsafe
+ * paths on the wire, but the snapshot may also be constructed in-
+ * process (caller passes a literal). Re-validate here so EVERY
+ * `writeFile` call is guaranteed safe regardless of how the
+ * snapshot reached us. The caller-supplied `joinPath` is also re-
+ * inspected with the same rules in case it returns something that
+ * normalises to outside `targetDir` (e.g. naive `${a}/${b}` with
+ * `b = "../etc/passwd"`).
  */
 export async function applyProjectSnapshot(
   snapshot: ProjectSnapshot,
@@ -170,14 +248,47 @@ export async function applyProjectSnapshot(
   writeFile: SnapshotWriteFile,
   joinPath: SnapshotPathJoin,
 ): Promise<void> {
+  // Pre-flight: the snapshot may have been constructed locally
+  // (parseProjectSnapshot wouldn't have run), so re-assert every
+  // path is sandbox-safe BEFORE any I/O.
+  assertProjectFilename(snapshot.projectFilename)
+  for (const entry of snapshot.maps) {
+    assertSafeRelativePath(entry.path, 'maps[].path')
+  }
+
   // Project descriptor first — it's the entry point the engine
   // loads, and writing it last would leave a half-state if a map
   // write fails mid-loop.
   const projectPath = joinPath(targetDir, snapshot.projectFilename)
+  assertStaysInside(targetDir, projectPath, 'projectFilename')
   await writeFile(projectPath, GameProjectFormat.serialize(snapshot.project))
 
   for (const entry of snapshot.maps) {
     const mapPath = joinPath(targetDir, entry.path)
+    assertStaysInside(targetDir, mapPath, `maps[${entry.path}]`)
     await writeFile(mapPath, MapFormat.serialize(entry.data))
+  }
+}
+
+/**
+ * Verify `joinedPath` is still under `targetDir`. Catches a buggy
+ * or hostile `joinPath` callback that produces a path-traversal
+ * even from a sandbox-safe relative input.
+ *
+ * Comparison is **string-prefix** with a trailing-separator
+ * guard — both inputs are normalised to use `/` separators and
+ * the targetDir gets a trailing `/` appended if missing. This is
+ * weaker than a fully-resolved-on-disk check but matches what we
+ * can do in a platform-agnostic engine layer (no `realpath`, no
+ * `Gio.File`). The CALLER is expected to use a sensible joinPath
+ * — this is the last-ditch tripwire for the case where they don't.
+ */
+function assertStaysInside(targetDir: string, joinedPath: string, field: string): void {
+  const normTarget = targetDir.replace(/\\/g, '/').replace(/\/+$/, '') + '/'
+  const normJoined = joinedPath.replace(/\\/g, '/')
+  if (!normJoined.startsWith(normTarget)) {
+    throw new Error(
+      `applyProjectSnapshot: ${field} resolved outside targetDir (target="${targetDir}", got="${joinedPath}")`,
+    )
   }
 }

@@ -81,6 +81,118 @@ export default async () => {
     })
   })
 
+  await describe('parseProjectSnapshot — path-traversal defence', async () => {
+    const wireWithFilename = (filename: string): string =>
+      JSON.stringify({ ...FAKE_SNAPSHOT, projectFilename: filename })
+
+    const wireWithMapPath = (mapPath: string): string =>
+      JSON.stringify({
+        ...FAKE_SNAPSHOT,
+        maps: [{ path: mapPath, data: FAKE_MAP_DATA }],
+      })
+
+    await it('rejects projectFilename with parent-directory segments', async () => {
+      expect(() => parseProjectSnapshot(wireWithFilename('../bad.json'))).toThrow()
+    })
+
+    await it('rejects projectFilename containing path separators', async () => {
+      // The contract is a single segment — even a benign-looking subdir is a contract violation.
+      expect(() => parseProjectSnapshot(wireWithFilename('subdir/game-project.json'))).toThrow()
+    })
+
+    await it('rejects absolute projectFilename', async () => {
+      expect(() => parseProjectSnapshot(wireWithFilename('/etc/passwd'))).toThrow()
+    })
+
+    await it('rejects Windows-drive projectFilename', async () => {
+      expect(() => parseProjectSnapshot(wireWithFilename('C:foo'))).toThrow()
+    })
+
+    await it('rejects projectFilename with a NUL byte', async () => {
+      expect(() => parseProjectSnapshot(wireWithFilename('safe.json\0/etc/passwd'))).toThrow()
+    })
+
+    await it('rejects projectFilename containing a backslash', async () => {
+      expect(() => parseProjectSnapshot(wireWithFilename('safe\\windows.json'))).toThrow()
+    })
+
+    await it('rejects maps[].path with parent-directory segments', async () => {
+      expect(() => parseProjectSnapshot(wireWithMapPath('../../etc/passwd'))).toThrow()
+      expect(() => parseProjectSnapshot(wireWithMapPath('maps/../../etc/passwd'))).toThrow()
+    })
+
+    await it('rejects absolute maps[].path', async () => {
+      expect(() => parseProjectSnapshot(wireWithMapPath('/etc/passwd'))).toThrow()
+    })
+
+    await it('rejects maps[].path with a NUL byte', async () => {
+      expect(() => parseProjectSnapshot(wireWithMapPath('safe\0/etc/passwd'))).toThrow()
+    })
+
+    await it('accepts harmless relative subpaths for maps[].path', async () => {
+      // Sanity check the validator does not over-reject — `maps/foo.json`
+      // is the normal shape produced by gjsify init scaffolding.
+      const snap = parseProjectSnapshot(wireWithMapPath('maps/dungeon.json'))
+      expect(snap.maps[0].path).toBe('maps/dungeon.json')
+    })
+  })
+
+  await describe('applyProjectSnapshot — sandbox containment', async () => {
+    /** Small helper: assert an async function throws. The unit matcher
+     * surface here is sync-only (`expect(fn).toThrow()`), so we hand-
+     * roll the async equivalent. */
+    const expectAsyncThrow = async (
+      run: () => Promise<unknown>,
+      description: string,
+    ): Promise<void> => {
+      let caught: unknown = null
+      try {
+        await run()
+      } catch (err) {
+        caught = err
+      }
+      if (!caught) throw new Error(`expected ${description} to throw, but it resolved`)
+    }
+
+    await it('rejects an in-memory snapshot with a traversing projectFilename', async () => {
+      const evil: ProjectSnapshot = { ...FAKE_SNAPSHOT, projectFilename: '../escape.json' }
+      let writes = 0
+      await expectAsyncThrow(
+        () =>
+          applyProjectSnapshot(
+            evil,
+            '/sandbox/x',
+            async () => {
+              writes++
+            },
+            (...segments) => segments.join('/'),
+          ),
+        'applyProjectSnapshot(evil filename)',
+      )
+      expect(writes).toBe(0)
+    })
+
+    await it('rejects when the caller-supplied joinPath escapes targetDir', async () => {
+      // Even with a "safe" relative path, a hostile / buggy joinPath
+      // (e.g. one that strips the targetDir prefix) must be caught.
+      let writes = 0
+      await expectAsyncThrow(
+        () =>
+          applyProjectSnapshot(
+            FAKE_SNAPSHOT,
+            '/sandbox/x',
+            async () => {
+              writes++
+            },
+            // Hostile joiner: drops targetDir, returns absolute path.
+            (_target, file) => `/etc/${file}`,
+          ),
+        'applyProjectSnapshot(hostile joinPath)',
+      )
+      expect(writes).toBe(0)
+    })
+  })
+
   await describe('applyProjectSnapshot', async () => {
     await it('writes the project descriptor + every map', async () => {
       const writes: Array<{ path: string; contents: string }> = []
