@@ -42,10 +42,40 @@ export const LAN_CONNECT_TIMEOUT_MS = 5_000
  * Adapter that wraps a single `ws.WebSocket` instance as a
  * `SignallingTransport`. Used by both the host (one per accepted
  * peer) and the joiner (its own outgoing connection).
+ *
+ * Buffering invariant — load-bearing:
+ *
+ *   `ws.on('message', ...)` is registered SYNCHRONOUSLY when this
+ *   function runs, but `inboundHandler` only becomes non-null when
+ *   the caller invokes `transport.onMessage(handler)`. Between
+ *   those two events, any inbound message would be lost — and on
+ *   the joiner side those microseconds are real: `wrapWebSocket`
+ *   resolves out of the `await connectLanJoinerTransport(...)`
+ *   call site, control returns to `SessionService.openSession`,
+ *   which creates a `CollabSession`, which creates a `PeerSession`,
+ *   whose constructor finally calls `signalling.onMessage(...)`.
+ *   Meanwhile on the host side, `wss.on('connection')` fires the
+ *   instant the joiner's WS handshake completes; the host's
+ *   `PeerSession.connect()` proceeds straight to `createOffer` +
+ *   `setLocalDescription` + `signalling.send(sdp)` — frequently
+ *   FASTER than the joiner can wire its handler.
+ *
+ *   The 2026-05-30 hand-test caught exactly this race: joiner's
+ *   `[peer-session/joiner] waiting for host SDP offer` confirmed
+ *   the handler was wired, host's `sending SDP offer (sdp.length=
+ *   1437)` confirmed the send, but no `received SDP offer` ever
+ *   appeared on the joiner — because the SDP was delivered to the
+ *   `ws.on('message')` callback while `inboundHandler === null`
+ *   and was silently dropped.
+ *
+ *   Fix: buffer parsed inbound messages in `pendingInbound` until
+ *   `onMessage` is called, then drain. Anything that arrives after
+ *   the handler is wired goes straight through.
  */
 export function wrapWebSocket(ws: Pick<WebSocket, 'send' | 'close' | 'on'>): SignallingTransport {
   let inboundHandler: ((msg: SignallingMessage) => void) | null = null
   let closed = false
+  const pendingInbound: SignallingMessage[] = []
 
   ws.on('message', (raw: Buffer | string, isBinary?: boolean) => {
     if (isBinary === true) return
@@ -58,7 +88,12 @@ export function wrapWebSocket(ws: Pick<WebSocket, 'send' | 'close' | 'on'>): Sig
       return
     }
     if (!isSignallingMessage(parsed)) return
-    inboundHandler?.(parsed)
+    if (inboundHandler) {
+      inboundHandler(parsed)
+    } else {
+      // Race-window buffering — see invariant in the doc comment.
+      pendingInbound.push(parsed)
+    }
   })
 
   ws.on('close', () => {
@@ -76,6 +111,12 @@ export function wrapWebSocket(ws: Pick<WebSocket, 'send' | 'close' | 'on'>): Sig
     },
     onMessage(handler: (message: SignallingMessage) => void): void {
       inboundHandler = handler
+      // Drain anything that arrived during the race window. The
+      // queue is FIFO so SDP/ICE ordering is preserved.
+      if (pendingInbound.length > 0) {
+        const drain = pendingInbound.splice(0)
+        for (const message of drain) handler(message)
+      }
     },
     close(): void {
       if (closed) return
