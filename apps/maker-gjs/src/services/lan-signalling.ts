@@ -159,14 +159,25 @@ export async function connectLanJoinerTransport(
   hostAddress: string,
   port: number,
 ): Promise<SignallingTransport> {
-  const ws = new WebSocket(`ws://${hostAddress}:${port}/`)
+  // IPv6 literal addresses must be bracketed inside a URL —
+  // `ws://::1:8089/` is ambiguous (port? part of address?), only
+  // `ws://[::1]:8089/` parses. Avahi resolves on IPv6 too, so
+  // the joiner can receive a `::1` / `fe80::…` address.
+  const target = hostAddress.includes(':') && !hostAddress.startsWith('[')
+    ? `[${hostAddress}]`
+    : hostAddress
+  const url = `ws://${target}:${port}/`
+  console.log(`[lan-signalling] joiner connecting to ${url}`)
+  const ws = new WebSocket(url)
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error) => {
       ws.off('open', onOpen)
+      console.warn(`[lan-signalling] joiner connect failed for ${url}: ${err.message ?? err}`)
       reject(err)
     }
     const onOpen = () => {
       ws.off('error', onError)
+      console.log(`[lan-signalling] joiner connected to ${url}`)
       resolve()
     }
     ws.once('open', onOpen)
