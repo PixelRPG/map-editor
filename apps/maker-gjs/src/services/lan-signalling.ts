@@ -8,6 +8,25 @@ import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
 const log = scopedLogger('lan-signalling')
 
 /**
+ * Mirror of the engine's `__PIXELRPG_PEER_DEBUG` gate so wire-
+ * level diagnostics (every raw WS frame in/out, every send error)
+ * land in the same hand-test log stream as the SDP/ICE traces. Off
+ * by default; the maker's main.ts flips it on for the v1 cycle.
+ */
+function wireDebugEnabled(): boolean {
+  const g = globalThis as { __PIXELRPG_PEER_DEBUG?: unknown }
+  return Boolean(g.__PIXELRPG_PEER_DEBUG)
+}
+
+function wlog(role: string, message: string): void {
+  if (wireDebugEnabled()) {
+    console.log(`[lan-signalling/${role}] ${message}`)
+  }
+}
+
+let wrapCounter = 0
+
+/**
  * Default deadline for the joiner-side WebSocket open handshake. Five
  * seconds is generous for LAN — the WS upgrade typically completes
  * within tens of ms — but short enough that a misconfigured host
@@ -76,43 +95,71 @@ export function wrapWebSocket(ws: Pick<WebSocket, 'send' | 'close' | 'on'>): Sig
   let inboundHandler: ((msg: SignallingMessage) => void) | null = null
   let closed = false
   const pendingInbound: SignallingMessage[] = []
+  const wrapId = `#${++wrapCounter}`
+  let rawFrameCount = 0
+  let sendCount = 0
+
+  wlog(wrapId, 'wrapped (handler-null; buffering)')
 
   ws.on('message', (raw: Buffer | string, isBinary?: boolean) => {
+    rawFrameCount++
+    // Pre-filter raw log: surfaces EVERY frame that hits the WS,
+    // regardless of binary/JSON-validity/type. If the user sees
+    // this line, the WS layer IS delivering frames; if not, the
+    // problem is at the @gjsify/ws or libsoup level (and we'd
+    // hand the regression off to @gjsify/ws).
+    if (wireDebugEnabled()) {
+      const head = typeof raw === 'string' ? raw : Buffer.isBuffer(raw) ? raw.toString('utf-8') : String(raw)
+      console.log(
+        `[lan-signalling/${wrapId}] raw frame #${rawFrameCount} ` +
+          `(binary=${isBinary === true}, len=${head.length}): ${head.slice(0, 200)}${head.length > 200 ? '…' : ''}`,
+      )
+    }
     if (isBinary === true) return
     const text = typeof raw === 'string' ? raw : raw.toString()
     let parsed: unknown
     try {
       parsed = JSON.parse(text)
-    } catch {
-      // Drop malformed frames silently — the relay drops them too.
+    } catch (err) {
+      wlog(wrapId, `dropped malformed JSON frame: ${err instanceof Error ? err.message : String(err)}`)
       return
     }
-    if (!isSignallingMessage(parsed)) return
+    if (!isSignallingMessage(parsed)) {
+      wlog(wrapId, `dropped non-signalling frame: type=${(parsed as { type?: unknown })?.type}`)
+      return
+    }
     if (inboundHandler) {
+      wlog(wrapId, `→ deliver to handler (type=${parsed.type})`)
       inboundHandler(parsed)
     } else {
-      // Race-window buffering — see invariant in the doc comment.
+      wlog(wrapId, `→ buffer (handler not wired yet, type=${parsed.type})`)
       pendingInbound.push(parsed)
     }
   })
 
   ws.on('close', () => {
+    wlog(wrapId, `ws closed (delivered ${rawFrameCount} frames, sent ${sendCount}, ${pendingInbound.length} unflushed in buffer)`)
     closed = true
   })
 
   return {
     send(message: SignallingMessage): void {
-      if (closed) return
+      if (closed) {
+        wlog(wrapId, `send(${message.type}) called after close — dropped`)
+        return
+      }
+      sendCount++
       try {
-        ws.send(JSON.stringify(message))
-      } catch {
-        /* peer may have closed mid-send — best-effort */
+        const json = JSON.stringify(message)
+        wlog(wrapId, `send #${sendCount} (type=${message.type}, len=${json.length})`)
+        ws.send(json)
+      } catch (err) {
+        wlog(wrapId, `send(${message.type}) THREW: ${err instanceof Error ? err.message : String(err)}`)
       }
     },
     onMessage(handler: (message: SignallingMessage) => void): void {
+      wlog(wrapId, `onMessage handler installed (draining ${pendingInbound.length} buffered)`)
       inboundHandler = handler
-      // Drain anything that arrived during the race window. The
-      // queue is FIFO so SDP/ICE ordering is preserved.
       if (pendingInbound.length > 0) {
         const drain = pendingInbound.splice(0)
         for (const message of drain) handler(message)
@@ -121,6 +168,7 @@ export function wrapWebSocket(ws: Pick<WebSocket, 'send' | 'close' | 'on'>): Sig
     close(): void {
       if (closed) return
       closed = true
+      wlog(wrapId, `close() called`)
       try {
         ws.close(1000, 'closed-by-host')
       } catch {
