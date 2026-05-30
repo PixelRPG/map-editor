@@ -1,8 +1,9 @@
 import type { Engine, PeerRole, SignallingTransport } from '@pixelrpg/engine'
 
 import { CollabSession } from './collab-session.ts'
-import { generateRoomId } from './relay-signalling.ts'
 import type { DiscoveredService, LanDiscoveryEvent } from './lan-discovery-parse.ts'
+import { generateRoomId } from './relay-signalling.ts'
+import { writeSnapshotToSandbox } from './sandbox-path.ts'
 
 /**
  * Pluggable backend the {@link SessionService} drives.
@@ -46,12 +47,42 @@ export type SessionState =
   | { kind: 'browsing' }
   | { kind: 'hosting'; roomId: string; port: number }
   | { kind: 'connecting' }
+  /**
+   * Joiner-only: the peer connection is up, the snapshot has been
+   * pulled + written to `sandboxProjectPath`, but the engine is
+   * not yet attached. The caller (ApplicationWindow) is expected
+   * to load the project at `sandboxProjectPath` and then call
+   * `attachEngineToCurrentSession(engine)` — at which point the
+   * state transitions to `connected`.
+   */
+  | {
+      kind: 'awaiting-engine'
+      role: PeerRole
+      roomId: string
+      collab: CollabSession
+      sandboxProjectPath: string
+    }
   | { kind: 'connected'; role: PeerRole; roomId: string; collab: CollabSession }
 
 export interface SessionEvents {
   'state-changed': SessionState
   'service-discovered': DiscoveredService
   'service-gone': string
+  /**
+   * Joiner-only: the sandbox project has been written to disk +
+   * is ready to load. Listener is expected to open the project
+   * at `sandboxProjectPath` via the existing project-loader and
+   * then call `sessionService.attachEngineToCurrentSession(engine)`.
+   *
+   * Payload includes `collab` so the caller can attach the engine
+   * directly without round-tripping through SessionService if
+   * preferred.
+   */
+  'sandbox-project-ready': {
+    roomId: string
+    sandboxProjectPath: string
+    collab: CollabSession
+  }
   error: Error
 }
 
@@ -90,16 +121,25 @@ export class SessionService {
 
   /**
    * @param engineProvider Lazy resolver returning the active engine,
-   *   or `null` when no project is loaded yet. Discovery flows
-   *   (`startBrowsing` / `service-discovered`) work without an
-   *   engine — only `openSession` (the host/join "connect"
-   *   transition) requires one and will reject otherwise.
+   *   or `null` when no project is loaded yet. The HOST flow requires
+   *   it (you can't share something you don't have); the JOINER flow
+   *   no longer requires it — joiners pull the host's snapshot into a
+   *   sandbox directory first, the ApplicationWindow loads the
+   *   sandbox project, and then attaches the engine via
+   *   `attachEngineToCurrentSession`.
    */
   constructor(
     private readonly engineProvider: () => Engine | null,
     private readonly backend: SessionBackend,
     /** Stable id for this peer — stamped onto every emitted Operation. */
     private readonly peerId: string,
+    /**
+     * Override the joiner-side snapshot timeout. Production
+     * default is 10 s (CollabSession's own default). Tests pass
+     * a small value to avoid blocking the test runner when the
+     * mock peer never responds.
+     */
+    private readonly snapshotTimeoutMs?: number,
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -170,9 +210,7 @@ export class SessionService {
   // ────────────────────────────────────────────────────────────
 
   async joinLan(service: DiscoveredService): Promise<void> {
-    if (this.state.kind === 'connecting' || this.state.kind === 'connected') {
-      throw new Error(`SessionService: cannot join from state "${this.state.kind}"`)
-    }
+    this.requireIdleForJoin()
     this.setState({ kind: 'connecting' })
     try {
       const transport = await this.backend.connectLan(service.address, service.port)
@@ -186,9 +224,7 @@ export class SessionService {
   }
 
   async joinByRoomId(roomId: string): Promise<void> {
-    if (this.state.kind === 'connecting' || this.state.kind === 'connected') {
-      throw new Error(`SessionService: cannot join from state "${this.state.kind}"`)
-    }
+    this.requireIdleForJoin()
     this.setState({ kind: 'connecting' })
     try {
       const transport = await this.backend.connectRelay(roomId, 'joiner')
@@ -200,15 +236,47 @@ export class SessionService {
     }
   }
 
+  /**
+   * Joiner-side: complete the session by attaching the freshly-
+   * loaded engine to the existing CollabSession. Call this from
+   * the `sandbox-project-ready` event handler once the
+   * ApplicationWindow has the engine + the sandbox project
+   * loaded.
+   *
+   * Throws when called outside the `awaiting-engine` state — the
+   * caller is expected to listen to `state-changed` to know when
+   * this is valid.
+   */
+  attachEngineToCurrentSession(engine: Engine): void {
+    if (this.state.kind !== 'awaiting-engine') {
+      throw new Error(
+        `SessionService: attachEngineToCurrentSession called in state "${this.state.kind}" — expected "awaiting-engine"`,
+      )
+    }
+    const { role, roomId, collab } = this.state
+    collab.attachEngine(engine)
+    this.setState({ kind: 'connected', role, roomId, collab })
+  }
+
+  private requireIdleForJoin(): void {
+    const blocking: SessionState['kind'][] = ['connecting', 'awaiting-engine', 'connected']
+    if (blocking.includes(this.state.kind)) {
+      throw new Error(`SessionService: cannot join from state "${this.state.kind}"`)
+    }
+  }
+
   // ────────────────────────────────────────────────────────────
   // Leave
   // ────────────────────────────────────────────────────────────
 
   async leaveSession(reason = 'user-left'): Promise<void> {
-    if (this.state.kind !== 'connected') return
-    this.state.collab.close(reason)
-    await this.stopHosting()
-    this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+    if (this.state.kind === 'connected' || this.state.kind === 'awaiting-engine') {
+      this.state.collab.close(reason)
+    }
+    if (this.state.kind === 'connected' || this.state.kind === 'awaiting-engine' || this.state.kind === 'hosting') {
+      await this.stopHosting()
+      this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+    }
   }
 
   // ────────────────────────────────────────────────────────────
@@ -234,29 +302,73 @@ export class SessionService {
   // ────────────────────────────────────────────────────────────
 
   private async openSession(role: PeerRole, roomId: string, transport: SignallingTransport): Promise<void> {
-    const engine = this.engineProvider()
-    if (!engine) {
-      try {
-        transport.close()
-      } catch {
-        /* best-effort */
+    if (role === 'host') {
+      const engine = this.engineProvider()
+      if (!engine) {
+        try {
+          transport.close()
+        } catch {
+          /* best-effort */
+        }
+        throw new Error('SessionService: no engine available — load a project before hosting')
       }
-      throw new Error('SessionService: no engine available — load a project before opening a session')
+      const collab = new CollabSession({
+        engine,
+        role,
+        signalling: transport,
+        peerId: this.peerId,
+        roomId,
+      })
+      await collab.start()
+      this.wireCollabClose(collab)
+      this.setState({ kind: 'connected', role, roomId, collab })
+      return
     }
+
+    // role === 'joiner': sandbox flow. Construct the CollabSession
+    // WITHOUT an engine, request the host's project state, write it
+    // to a per-room sandbox directory, then surface a
+    // `sandbox-project-ready` event for the UI layer to open the
+    // sandbox project + attach the engine.
     const collab = new CollabSession({
-      engine,
       role,
       signalling: transport,
       peerId: this.peerId,
+      roomId,
+      // engine deliberately omitted — attached after sandbox load.
     })
-    await collab.start()
+    try {
+      await collab.start()
+      const snapshot = await collab.requestSnapshot(this.snapshotTimeoutMs)
+      const sandboxProjectPath = await writeSnapshotToSandbox(snapshot, roomId)
+      this.wireCollabClose(collab)
+      this.setState({ kind: 'awaiting-engine', role, roomId, collab, sandboxProjectPath })
+      this.emit('sandbox-project-ready', { roomId, sandboxProjectPath, collab })
+    } catch (err) {
+      try {
+        collab.close('join-failed')
+      } catch {
+        /* best-effort */
+      }
+      throw err
+    }
+  }
+
+  /**
+   * Subscribe to the peer's `closed` event so a remote disconnect
+   * automatically transitions the session back to its pre-join
+   * state (idle / browsing). Shared between host + joiner paths.
+   */
+  private wireCollabClose(collab: CollabSession): void {
     collab.peer.events.on('closed', () => {
-      if (this.state.kind === 'connected' && this.state.collab === collab) {
+      if (
+        (this.state.kind === 'connected' || this.state.kind === 'awaiting-engine') &&
+        this.state.collab === collab
+      ) {
         void this.stopHosting()
         this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
       }
     })
-    this.setState({ kind: 'connected', role, roomId, collab })
   }
 
   private setState(state: SessionState): void {

@@ -190,7 +190,10 @@ export default async () => {
     // exercised by PeerSession's own spec.
     await it('joinLan calls backend.connectLan with the service address + port', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
+      // Short snapshot timeout so the joiner flow rejects quickly
+      // without blocking the test runner (the mock peer never
+      // responds to the snapshot request).
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
 
       service.on('error', () => {})
       try {
@@ -202,7 +205,10 @@ export default async () => {
           txt: { room: 'r1' },
         })
       } catch {
-        /* expected on Node */
+        /* Node: throws on PeerSession constructor (no RTCPeerConnection).
+         * GJS: throws on snapshot-request timeout. Either way the
+         * backend assertion below still holds because connectLan
+         * was called before the throw. */
       }
 
       expect(backend.lanConnectArgs?.host).toBe('10.0.0.1')
@@ -211,13 +217,14 @@ export default async () => {
 
     await it('joinByRoomId calls backend.connectRelay with the room id', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test')
+      // Short snapshot timeout — see joinLan test above for context.
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
 
       service.on('error', () => {})
       try {
         await service.joinByRoomId('a3f2bb91')
       } catch {
-        /* expected on Node */
+        /* Same throw conditions as the LAN sibling above. */
       }
 
       expect(backend.relayConnectArgs?.roomId).toBe('a3f2bb91')

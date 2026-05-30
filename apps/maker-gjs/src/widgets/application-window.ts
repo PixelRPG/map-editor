@@ -233,6 +233,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       svc.on('service-discovered', (service) => this._welcome_view.addDiscoveredService(service)),
       svc.on('service-gone', (name) => this._welcome_view.removeDiscoveredService(name)),
       svc.on('error', (err) => this._showToast(_(`Session error: ${err.message}`))),
+      // Joiner sandbox flow: host's project has been pulled into
+      // a per-room sandbox directory. Open it as the active project
+      // and once the engine is ready, attach it back to the
+      // CollabSession so command sync + cursor rendering start.
+      svc.on('sandbox-project-ready', (event) => {
+        void this._loadSandboxProject(event.sandboxProjectPath)
+      }),
     ]
 
     // Start browsing whenever the welcome view is the visible page.
@@ -251,28 +258,47 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   private async _onJoinLanSession(service: DiscoveredService): Promise<void> {
-    if (!this._loadedProject) {
-      this._showToast(_('Open a project before joining a session.'))
-      return
-    }
+    // Joiner no longer requires a local project — SessionService
+    // pulls the host's snapshot into a sandbox directory and
+    // emits `sandbox-project-ready` which we load below.
+    this._showToast(_(`Joining ${service.txt.project ?? service.name}…`))
     try {
       await this._sessionSvc?.joinLan(service)
-      this._showToast(_(`Joined ${service.txt.project ?? service.name}`))
     } catch (err) {
       this._showToast(_(`Could not join: ${(err as Error).message}`))
     }
   }
 
   private async _onJoinByRoomId(roomId: string): Promise<void> {
-    if (!this._loadedProject) {
-      this._showToast(_('Open a project before joining a session.'))
-      return
-    }
+    this._showToast(_(`Joining room ${roomId}…`))
     try {
       await this._sessionSvc?.joinByRoomId(roomId)
-      this._showToast(_(`Joined room ${roomId}`))
     } catch (err) {
       this._showToast(_(`Could not join: ${(err as Error).message}`))
+    }
+  }
+
+  /**
+   * Load a shared-session sandbox project at the given path and,
+   * once the engine has booted, attach it to the active
+   * CollabSession. Triggered by the SessionService's
+   * `sandbox-project-ready` event.
+   *
+   * On failure the session stays in the `awaiting-engine` state —
+   * the user can leave the session via the existing controls.
+   */
+  private async _loadSandboxProject(projectPath: string): Promise<void> {
+    try {
+      await this._loadProjectFromPath(projectPath)
+      const engine = this._engineCtl.engine?.excalibur
+      if (!engine) {
+        this._showToast(_('Sandbox project loaded but engine is not ready — try Play to open it.'))
+        return
+      }
+      this._sessionSvc?.attachEngineToCurrentSession(engine)
+      this._showToast(_('Joined shared session — editing the synced copy.'))
+    } catch (err) {
+      this._showToast(_(`Could not open shared session: ${(err as Error).message}`))
     }
   }
 
