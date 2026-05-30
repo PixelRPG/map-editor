@@ -23,13 +23,23 @@
  *
  *   1. carry our service type (`_pixelrpg._tcp`) in their
  *      command line, AND
- *   2. have been re-parented to PID 1 — i.e. their original
- *      parent (the maker) is dead.
+ *   2. have been re-parented to a SYSTEM REAPER process — i.e.
+ *      their original parent (the maker) is dead. On modern
+ *      systemd-user setups the reaper is the per-user systemd
+ *      instance (typically PID != 1), NOT init. We treat
+ *      `PPid == 1` AND `parent comm == 'systemd'` AS reaped.
  *
  * Kill those with SIGTERM. Cross-user safety is automatic (Linux
  * refuses cross-uid kills). Two co-existing makers on the same
- * user are also safe — each publisher's parent is its own maker,
- * neither has ppid=1.
+ * user are also safe — each publisher's parent is its own
+ * (alive) maker `gjs` process, not systemd.
+ *
+ * Why systemd-user matters: A previous version of this scan only
+ * killed publishers with `PPid == 1`, which missed every orphan
+ * on modern desktops where systemd-user is the orphan reaper. A
+ * hand-test on 2026-05-30 found a 3-hour-old orphan with
+ * `PPid == 6308` (the user's systemd-user PID) that the cleanup
+ * silently skipped. This revision targets BOTH reaper kinds.
  *
  * Long-term: a Vala bridge that wraps `avahi_entry_group_add_
  * service` directly would skip the subprocess entirely; or a
@@ -45,6 +55,7 @@ import { SERVICE_TYPE } from './lan-discovery.ts'
 
 const PROC_ROOT = '/proc'
 const COMM_NAME = 'avahi-publish-service'
+const REAPER_COMMS = new Set(['systemd', 'init'])
 
 /**
  * Walk `/proc`, find every orphaned `avahi-publish-service`
@@ -88,33 +99,67 @@ export function cleanupOrphanedPublishers(): { scanned: number; killed: number; 
 
 /**
  * Return true when `pid` is an `avahi-publish-service` running
- * `_pixelrpg._tcp` with a dead parent (ppid === 1). Reads
- * `/proc/<pid>/comm`, `/proc/<pid>/cmdline`, and `/proc/<pid>/
- * status` to make the determination. Any I/O failure returns
- * false — we'd rather miss an orphan than kill the wrong
- * process.
+ * `_pixelrpg._tcp` whose parent looks like a system reaper —
+ * meaning the original maker that spawned it is gone. Reads
+ * `/proc/<pid>/comm`, `/proc/<pid>/cmdline`, `/proc/<pid>/
+ * status`, and `/proc/<parent-pid>/comm` to make the
+ * determination. Any I/O failure returns false — we'd rather
+ * miss an orphan than kill the wrong process.
+ *
+ * Exported for unit-testing via the `readers` injection hook —
+ * production passes the file-system-backed defaults; tests pass
+ * in-memory fixtures so the cleanup logic can be exercised
+ * without a real /proc tree.
  */
-function isOrphanedPixelrpgPublisher(pid: number): boolean {
-  const comm = readSmallFile(`${PROC_ROOT}/${pid}/comm`)
-  if (!comm || !comm.trim().includes(COMM_NAME.slice(0, 15))) {
+export function isOrphanedPixelrpgPublisher(
+  pid: number,
+  readers: ProcReaders = DEFAULT_PROC_READERS,
+): boolean {
+  const comm = readers.readComm(pid)
+  if (!comm) return false
+  if (!comm.trim().startsWith(COMM_NAME.slice(0, 15))) {
     // `/proc/.../comm` is truncated at 15 chars; check the
     // prefix instead of the full string.
     return false
   }
-  const cmdline = readSmallFile(`${PROC_ROOT}/${pid}/cmdline`)
-  if (!cmdline) return false
-  // `cmdline` is NUL-separated argv. Split on `\0` so we can
-  // tolerate args that include spaces (the service name often
-  // does, e.g. "Pixel RPG Adventure").
-  const args = cmdline.split('\0').filter((a) => a.length > 0)
-  if (!args.includes(SERVICE_TYPE)) return false
-  const status = readSmallFile(`${PROC_ROOT}/${pid}/status`)
-  if (!status) return false
-  // /proc/<pid>/status — one field per line, e.g. `PPid:\t1234`.
-  const ppidMatch = status.match(/^PPid:\s*(\d+)/m)
-  if (!ppidMatch) return false
-  const ppid = Number.parseInt(ppidMatch[1], 10)
-  return ppid === 1
+  const args = readers.readCmdlineArgs(pid)
+  if (!args || !args.includes(SERVICE_TYPE)) return false
+  const ppid = readers.readPpid(pid)
+  if (ppid == null) return false
+  // PID 1 = traditional init. Some systems (Fedora's containers,
+  // early-boot, embedded) still use it as the orphan reaper.
+  if (ppid === 1) return true
+  // systemd-user — the per-user systemd instance is the reaper
+  // for orphaned user-session processes on modern desktops. Check
+  // the parent process's comm; if it's "systemd" (or "init",
+  // historically), the publisher was reaped → orphan.
+  const parentComm = readers.readComm(ppid)
+  if (!parentComm) return false
+  return REAPER_COMMS.has(parentComm.trim())
+}
+
+/** Reader bundle — injected for tests; production uses {@link DEFAULT_PROC_READERS}. */
+export interface ProcReaders {
+  readComm(pid: number): string | null
+  readCmdlineArgs(pid: number): string[] | null
+  readPpid(pid: number): number | null
+}
+
+export const DEFAULT_PROC_READERS: ProcReaders = {
+  readComm: (pid) => readSmallFile(`${PROC_ROOT}/${pid}/comm`),
+  readCmdlineArgs: (pid) => {
+    const cmdline = readSmallFile(`${PROC_ROOT}/${pid}/cmdline`)
+    if (!cmdline) return null
+    return cmdline.split('\0').filter((a) => a.length > 0)
+  },
+  readPpid: (pid) => {
+    const status = readSmallFile(`${PROC_ROOT}/${pid}/status`)
+    if (!status) return null
+    const match = status.match(/^PPid:\s*(\d+)/m)
+    if (!match) return null
+    const value = Number.parseInt(match[1], 10)
+    return Number.isFinite(value) ? value : null
+  },
 }
 
 function readSmallFile(path: string): string | null {
