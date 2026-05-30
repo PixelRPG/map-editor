@@ -7,6 +7,7 @@ import type {
 import {
   AwarenessManager,
   captureProjectSnapshot,
+  isSessionProtocolOp,
   PeerSession,
   type PeerRole,
   RemoteCursorRenderer,
@@ -15,7 +16,19 @@ import {
 } from '@pixelrpg/engine'
 
 export interface CollabSessionOptions {
-  engine: Engine
+  /**
+   * Optional — when omitted the session starts in an "engine-
+   * less" state: handshake + awareness work, snapshot requests
+   * work, but op-sync + cursor render don't until
+   * {@link CollabSession.attachEngine} is called. The sandbox
+   * joiner flow uses this: connect first, pull the host's
+   * snapshot, write it to a sandbox directory, load the engine,
+   * THEN attach.
+   *
+   * Host paths always pass it up-front; joiner paths attach
+   * after the sandbox project loads.
+   */
+  engine?: Engine
   role: PeerRole
   signalling: SignallingTransport
   /** Stable id for this peer — stamped onto every emitted Operation. */
@@ -38,12 +51,19 @@ export interface CollabSessionOptions {
 /**
  * Top-level glue holding the active Pair-Editing session together.
  *
- * Owns one `PeerSession` (raw WebRTC + signalling) plus the
- * `SessionController` that bridges it to the local `Engine`. The
- * caller supplies the `SignallingTransport` — `LanHostServer` /
- * `connectLanJoinerTransport` cover LAN today; the cross-internet
- * relay client (Phase 3e) plugs in here without touching the
- * collab class itself.
+ * Owns one `PeerSession` (raw WebRTC + signalling) and lazily
+ * builds the engine-dependent pieces (`SessionController`,
+ * `RemoteCursorRenderer`, engine pointer-source) when an `Engine`
+ * is provided — either via the constructor option or via
+ * {@link attachEngine} after construction.
+ *
+ * Three lifetimes coexist:
+ *
+ *   - **Always**: `PeerSession`, `AwarenessManager`,
+ *     `SnapshotExchange`. These work without an engine.
+ *   - **Once engine attached**: `SessionController` (commands
+ *     in/out), `RemoteCursorRenderer` (paints peers' cursors in
+ *     the canvas), local pointer-source (broadcasts our cursor).
  *
  * Side-effect: the maker's entrypoint (`src/main.ts`) is responsible
  * for importing `@gjsify/webrtc/register` so `globalThis.RTCPeerConnection`
@@ -53,43 +73,26 @@ export interface CollabSessionOptions {
  */
 export class CollabSession {
   public readonly peer: PeerSession
-  public readonly controller: SessionController
   public readonly awareness: AwarenessManager
-  public readonly cursorRenderer: RemoteCursorRenderer
   public readonly snapshotExchange: SnapshotExchange
+  /** Set once {@link attachEngine} runs. `null` in the joiner-pre-snapshot phase. */
+  public controller: SessionController | null = null
+  public cursorRenderer: RemoteCursorRenderer | null = null
   private closed = false
-  private awarenessUnsubscribe: (() => void) | null = null
-  private cursorUnsubscribe: (() => void) | null = null
-  private readonly engine: Engine
+  private engine: Engine | null = null
+  private readonly peerId: string
   private readonly roomId: string
+  private readonly subscriptions: Array<() => void> = []
+  private startedAt: number | null = null
 
   constructor(opts: CollabSessionOptions) {
-    this.engine = opts.engine
+    this.peerId = opts.peerId
     this.roomId = opts.roomId ?? ''
     this.peer = new PeerSession({
       role: opts.role,
       signalling: opts.signalling,
     })
-    this.controller = new SessionController({
-      engine: opts.engine,
-      session: this.peer,
-      peerId: opts.peerId,
-      onSessionProtocol: (op) => this.snapshotExchange.handle(op),
-    })
-    // Snapshot exchange — host responds to joiner requests by
-    // capturing its current project state; joiner uses
-    // `requestSnapshot()` to pull it. Constructed after the
-    // controller so the `onSessionProtocol` hook above resolves
-    // to a fully-initialised exchange by the time the first
-    // protocol message arrives.
-    this.snapshotExchange = new SnapshotExchange({
-      controller: this.controller,
-      // Returns null when the engine hasn't loaded a project yet
-      // (host hasn't opened anything) — the requester sees a
-      // timeout, which the UI surfaces as "host has no project to
-      // share yet".
-      captureSnapshot: () => captureProjectSnapshot(this.engine),
-    })
+
     // Default display info — caller can override via `localInfo`.
     // The placeholder colour matches the Adwaita "blue-3" accent so
     // a default-styled peer still sits cleanly on either the light
@@ -103,16 +106,74 @@ export class CollabSession {
       localInfo,
       send: (message) => this.peer.sendAwareness(message),
     })
-    // Inbound awareness frames arrive via the unreliable channel and
-    // are dispatched through the typed peer-events bus.
-    const dispose = this.peer.events.on('awareness-received', ({ data }) => {
+    // Inbound awareness frames arrive via the unreliable channel.
+    const awarenessSub = this.peer.events.on('awareness-received', ({ data }) => {
       this.awareness.handleInbound(data)
     })
-    this.awarenessUnsubscribe = () => dispose.close()
-    // Render remote peers' cursors in-canvas via Excalibur actors.
-    // Constructed up-front so a remote `peer-changed` arriving
-    // before `start()` resolves still produces a dot.
-    this.cursorRenderer = new RemoteCursorRenderer(opts.engine, this.awareness)
+    this.subscriptions.push(() => awarenessSub.close())
+
+    // Snapshot exchange is engine-independent — uses raw `sendOp`
+    // for the protocol frames + a captureSnapshot closure that
+    // returns null when no engine is attached. CollabSession
+    // routes inbound session-protocol ops here directly (the
+    // command-path filter in SessionController also skips them,
+    // but works even when the controller hasn't been built yet).
+    this.snapshotExchange = new SnapshotExchange({
+      peerId: opts.peerId,
+      send: (op) => this.peer.sendOp(op),
+      captureSnapshot: () => (this.engine ? captureProjectSnapshot(this.engine) : null),
+    })
+    const opSub = this.peer.events.on('op-received', ({ op }) => {
+      if (isSessionProtocolOp(op)) this.snapshotExchange.handle(op)
+    })
+    this.subscriptions.push(() => opSub.close())
+
+    if (opts.engine) this.attachEngine(opts.engine)
+  }
+
+  /**
+   * Wire the engine-dependent layers — command sync via
+   * SessionController, remote-cursor rendering, local cursor
+   * pointer-source. Call EXACTLY once; throws on second attach.
+   *
+   * Typical sandbox-joiner flow:
+   *
+   *   1. `new CollabSession({ engine: undefined, ... })`
+   *   2. `await session.start()`            ← handshake + presence
+   *   3. `await session.requestSnapshot()`  ← pull host's state
+   *   4. write snapshot to sandbox dir; load engine from there
+   *   5. `session.attachEngine(engine)`     ← commands + cursors start flowing
+   *
+   * Host flow remains unchanged: pass `engine` in the constructor;
+   * attach happens implicitly.
+   *
+   * NOTE: ops received between `start()` and `attachEngine()` are
+   * dropped (no command target). For the sandbox window this is
+   * acceptable — the host typically isn't editing while it
+   * services a snapshot request — but a future PR could add a
+   * pre-attach buffer for stricter consistency.
+   */
+  attachEngine(engine: Engine): void {
+    if (this.closed) throw new Error('CollabSession: attachEngine called after close()')
+    if (this.engine) throw new Error('CollabSession: engine already attached')
+    this.engine = engine
+    this.controller = new SessionController({
+      engine,
+      session: this.peer,
+      peerId: this.peerId,
+      // CollabSession already routes session-protocol ops to the
+      // exchange (see `op-received` subscription in the constructor).
+      // SessionController's own filter drops them via the no-hook
+      // path; we deliberately don't double-route through here.
+    })
+    this.cursorRenderer = new RemoteCursorRenderer(engine, this.awareness)
+    // Bridge engine pointer → awareness cursor stream. The engine
+    // hook fires on every Excalibur `pointermove`; the manager
+    // throttles to ~33 Hz so the unreliable channel doesn't flood.
+    const cursorDispose = engine.onPointerMoved(({ sceneId, worldX, worldY }) => {
+      this.awareness.sendCursor({ sceneId, x: worldX, y: worldY })
+    })
+    this.subscriptions.push(() => cursorDispose())
   }
 
   /**
@@ -126,6 +187,7 @@ export class CollabSession {
    * its tracked state.
    */
   async start(): Promise<void> {
+    this.startedAt = Date.now()
     await this.peer.connect()
     const announceOnConnect = this.peer.events.on('state-changed', ({ state }) => {
       if (state === 'connected') this.awareness.announce()
@@ -133,20 +195,7 @@ export class CollabSession {
     // If we already raced past `connecting`, fire once immediately so
     // late wires don't lose the first presence frame.
     if (this.peer.getState() === 'connected') this.awareness.announce()
-    // The handle is dropped on close — wrap the existing tear-down so
-    // we don't leak the listener if connect() resolved before any
-    // state transition fired.
-    const prevUnsub = this.awarenessUnsubscribe
-    this.awarenessUnsubscribe = () => {
-      announceOnConnect.close()
-      prevUnsub?.()
-    }
-    // Bridge engine pointer → awareness cursor stream. The engine
-    // hook fires on every Excalibur `pointermove`; the manager
-    // throttles to ~33 Hz so the unreliable channel doesn't flood.
-    this.cursorUnsubscribe = this.engine.onPointerMoved(({ sceneId, worldX, worldY }) => {
-      this.awareness.sendCursor({ sceneId, x: worldX, y: worldY })
-    })
+    this.subscriptions.push(() => announceOnConnect.close())
   }
 
   /**
@@ -158,9 +207,23 @@ export class CollabSession {
    * Times out after `timeoutMs` (default 10 s) — long enough for
    * a fat snapshot over a slow LAN, short enough to surface a
    * stalled host before the user gives up.
+   *
+   * Engine-independent: works in the pre-attach phase. The host
+   * peer responds from its own captureProjectSnapshot regardless
+   * of whether the joiner has an engine yet.
    */
   requestSnapshot(timeoutMs?: number): Promise<ProjectSnapshot> {
     return this.snapshotExchange.request(this.roomId, timeoutMs)
+  }
+
+  /** Whether `attachEngine` has been called yet. */
+  hasEngine(): boolean {
+    return this.engine !== null
+  }
+
+  /** Whether the underlying peer connection is currently connected. */
+  isConnected(): boolean {
+    return this.peer.getState() === 'connected'
   }
 
   /** Tear down. Idempotent. */
@@ -175,18 +238,20 @@ export class CollabSession {
     } catch {
       /* channel may already be torn down */
     }
-    this.cursorUnsubscribe?.()
-    this.cursorUnsubscribe = null
-    this.awarenessUnsubscribe?.()
-    this.awarenessUnsubscribe = null
-    this.cursorRenderer.close()
+    for (const dispose of this.subscriptions) {
+      try {
+        dispose()
+      } catch {
+        /* best-effort */
+      }
+    }
+    this.subscriptions.length = 0
+    this.cursorRenderer?.close()
+    this.cursorRenderer = null
     this.snapshotExchange.dispose()
-    this.controller.close()
+    this.controller?.close()
+    this.controller = null
     this.peer.close(reason)
-  }
-
-  /** Whether the underlying peer connection is currently connected. */
-  isConnected(): boolean {
-    return this.peer.getState() === 'connected'
+    void this.startedAt
   }
 }

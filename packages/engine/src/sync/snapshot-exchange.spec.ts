@@ -3,26 +3,26 @@
  *
  * Drives the full path against `createConnectedSessionPair`:
  *
- *    host SessionController + SnapshotExchange ↔ FakeRTCPeerConnection
+ *    host PeerSession + SnapshotExchange ↔ FakeRTCPeerConnection
  *      ↑ ↓ wire (cross-wired data channels)
- *    joiner SessionController + SnapshotExchange ↔ FakeRTCPeerConnection
+ *    joiner PeerSession + SnapshotExchange ↔ FakeRTCPeerConnection
  *
- * The actual `Engine` is replaced with a tiny duck-typed stub so
- * the test doesn't need to boot Excalibur (heavy + irrelevant to
- * the protocol). The protocol primitives (request/response
- * envelopes, controller filter, exchange state machine) are all
- * real.
+ * No `SessionController` (and therefore no Engine) needed — the
+ * exchange takes raw `send` + `captureSnapshot` callbacks, which
+ * is exactly what enables the joiner sandbox flow: connect →
+ * requestSnapshot → write-to-disk → THEN load engine.
+ *
+ * Production CollabSession wires `send` to `peer.sendOp` and
+ * inbound routing via `peer.events.on('op-received')` filtered by
+ * `isSessionProtocolOp`. This spec mirrors that wiring directly.
  */
 
 import { describe, expect, it } from '@gjsify/unit'
 
-import type { Engine } from '../engine.ts'
-import { EngineEvent, type EngineEventMap } from '../types/index.ts'
-import { EventEmitter } from 'excalibur'
-
 import { createConnectedSessionPair, flushMicrotasks } from './in-memory-transport.ts'
-import { PROJECT_SNAPSHOT_VERSION, type ProjectSnapshot } from './project-snapshot.ts'
-import { SessionController } from './session-controller.ts'
+import type { ProjectSnapshot } from './project-snapshot.ts'
+import { PROJECT_SNAPSHOT_VERSION } from './project-snapshot.ts'
+import { isSessionProtocolOp } from './session-protocol.ts'
 import { SnapshotExchange } from './snapshot-exchange.ts'
 
 const FAKE_SNAPSHOT: ProjectSnapshot = {
@@ -55,15 +55,25 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
 }
 
 /**
- * Minimal Engine stand-in. SessionController only touches
- * `events.on(EngineEvent.COMMAND_EXECUTED)` + `applyRemoteCommand`
- * — and for this protocol test neither path fires.
+ * Build a SnapshotExchange wired to one side of a connected
+ * peer pair — inbound routing via the peer's `op-received` event
+ * (filtered to session-protocol kinds), outbound via `peer.sendOp`.
+ * Mirrors how `CollabSession` composes the exchange in production.
  */
-function makeFakeEngine(): Engine {
-  return {
-    events: new EventEmitter<EngineEventMap>(),
-    applyRemoteCommand: () => {},
-  } as unknown as Engine
+function exchangeFor(
+  peer: import('./peer-session.ts').PeerSession,
+  peerId: string,
+  captureSnapshot: () => ProjectSnapshot | null,
+): SnapshotExchange {
+  const exchange = new SnapshotExchange({
+    peerId,
+    send: (op) => peer.sendOp(op),
+    captureSnapshot,
+  })
+  peer.events.on('op-received', ({ op }) => {
+    if (isSessionProtocolOp(op)) exchange.handle(op)
+  })
+  return exchange
 }
 
 export default async () => {
@@ -71,34 +81,12 @@ export default async () => {
     await it('host receives the joiner request and sends back its captured snapshot', async () => {
       const sessions = await createConnectedSessionPair()
       try {
-        const hostEngine = makeFakeEngine()
-        const joinerEngine = makeFakeEngine()
-
         let captureCount = 0
-        const hostController = new SessionController({
-          engine: hostEngine,
-          session: sessions.host,
-          peerId: 'host-1',
-          onSessionProtocol: (op) => hostExchange.handle(op),
+        const hostExchange = exchangeFor(sessions.host, 'host-1', () => {
+          captureCount++
+          return FAKE_SNAPSHOT
         })
-        const hostExchange = new SnapshotExchange({
-          controller: hostController,
-          captureSnapshot: () => {
-            captureCount++
-            return FAKE_SNAPSHOT
-          },
-        })
-
-        const joinerController = new SessionController({
-          engine: joinerEngine,
-          session: sessions.joiner,
-          peerId: 'joiner-1',
-          onSessionProtocol: (op) => joinerExchange.handle(op),
-        })
-        const joinerExchange = new SnapshotExchange({
-          controller: joinerController,
-          captureSnapshot: () => null, // joiner doesn't host its own snapshot
-        })
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-1', () => null)
 
         const received = await joinerExchange.request('room-abc', 2_000)
 
@@ -110,8 +98,6 @@ export default async () => {
 
         hostExchange.dispose()
         joinerExchange.dispose()
-        hostController.close()
-        joinerController.close()
       } finally {
         sessions.close()
       }
@@ -120,30 +106,8 @@ export default async () => {
     await it('joiner times out when the host refuses (captureSnapshot returns null)', async () => {
       const sessions = await createConnectedSessionPair()
       try {
-        const hostEngine = makeFakeEngine()
-        const joinerEngine = makeFakeEngine()
-
-        const hostController = new SessionController({
-          engine: hostEngine,
-          session: sessions.host,
-          peerId: 'host-2',
-          onSessionProtocol: (op) => hostExchange.handle(op),
-        })
-        const hostExchange = new SnapshotExchange({
-          controller: hostController,
-          captureSnapshot: () => null,
-        })
-
-        const joinerController = new SessionController({
-          engine: joinerEngine,
-          session: sessions.joiner,
-          peerId: 'joiner-2',
-          onSessionProtocol: (op) => joinerExchange.handle(op),
-        })
-        const joinerExchange = new SnapshotExchange({
-          controller: joinerController,
-          captureSnapshot: () => null,
-        })
+        const hostExchange = exchangeFor(sessions.host, 'host-2', () => null)
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-2', () => null)
 
         // 50 ms timeout — keeps the test fast.
         let thrown: Error | null = null
@@ -157,8 +121,6 @@ export default async () => {
 
         hostExchange.dispose()
         joinerExchange.dispose()
-        hostController.close()
-        joinerController.close()
       } finally {
         sessions.close()
       }
@@ -167,22 +129,9 @@ export default async () => {
     await it('rejects a second request while the first is in flight', async () => {
       const sessions = await createConnectedSessionPair()
       try {
-        const hostController = new SessionController({
-          engine: makeFakeEngine(),
-          session: sessions.host,
-          peerId: 'host-3',
-        })
-        // No-op host exchange so the joiner request never resolves.
-        const joinerController = new SessionController({
-          engine: makeFakeEngine(),
-          session: sessions.joiner,
-          peerId: 'joiner-3',
-          onSessionProtocol: (op) => joinerExchange.handle(op),
-        })
-        const joinerExchange = new SnapshotExchange({
-          controller: joinerController,
-          captureSnapshot: () => null,
-        })
+        // Host doesn't respond — so the first request never resolves.
+        const hostExchange = exchangeFor(sessions.host, 'host-3', () => null)
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-3', () => null)
 
         const first = joinerExchange.request('room-1', 2_000)
         let secondError: Error | null = null
@@ -205,8 +154,7 @@ export default async () => {
         }
         expect(firstError?.message).toContain('disposed')
 
-        hostController.close()
-        joinerController.close()
+        hostExchange.dispose()
       } finally {
         sessions.close()
       }
@@ -215,21 +163,8 @@ export default async () => {
     await it('dispose cancels in-flight requests', async () => {
       const sessions = await createConnectedSessionPair()
       try {
-        const hostController = new SessionController({
-          engine: makeFakeEngine(),
-          session: sessions.host,
-          peerId: 'host-4',
-        })
-        const joinerController = new SessionController({
-          engine: makeFakeEngine(),
-          session: sessions.joiner,
-          peerId: 'joiner-4',
-          onSessionProtocol: (op) => joinerExchange.handle(op),
-        })
-        const joinerExchange = new SnapshotExchange({
-          controller: joinerController,
-          captureSnapshot: () => null,
-        })
+        const hostExchange = exchangeFor(sessions.host, 'host-4', () => null)
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-4', () => null)
 
         const pending = joinerExchange.request('room-x', 2_000)
         joinerExchange.dispose()
@@ -244,50 +179,37 @@ export default async () => {
         // Idempotent: second dispose is a no-op.
         joinerExchange.dispose()
 
-        hostController.close()
-        joinerController.close()
+        hostExchange.dispose()
       } finally {
         sessions.close()
       }
     })
-  })
 
-  await describe('SessionController.onSessionProtocol — protocol routing', async () => {
-    await it('routes a session-protocol op to the hook instead of the command registry', async () => {
+    await it('stamps each outgoing envelope with the configured peerId + monotonic seq', async () => {
       const sessions = await createConnectedSessionPair()
       try {
-        const hostEngine = makeFakeEngine()
-        let commandsApplied = 0
-        // Spy: count command apply calls so we can prove the protocol hook DIDN'T trigger one.
-        hostEngine.applyRemoteCommand = () => {
-          commandsApplied++
-        }
-        const protocolReceived: unknown[] = []
-        const hostController = new SessionController({
-          engine: hostEngine,
-          session: sessions.host,
-          peerId: 'host-5',
-          onSessionProtocol: (op) => protocolReceived.push(op),
-        })
-        // Joiner-side controller exists only as a sender.
-        const joinerController = new SessionController({
-          engine: makeFakeEngine(),
-          session: sessions.joiner,
-          peerId: 'joiner-5',
-        })
+        const hostExchange = exchangeFor(sessions.host, 'host-5', () => FAKE_SNAPSHOT)
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-5', () => null)
 
-        joinerController.sendSessionProtocol({
-          kind: '__session/snapshot-request',
-          payload: { roomId: 'room' },
-        } as unknown as Parameters<typeof joinerController.sendSessionProtocol>[0])
-
+        await joinerExchange.request('room-stamp', 2_000)
         await flushMicrotasks()
 
-        expect(protocolReceived.length).toBe(1)
-        expect(commandsApplied).toBe(0)
+        // The joiner sent one request — assert peerId + seq stamping.
+        // The host's first sentFrames entry on the op channel is the request that arrived.
+        const joinerSentFrames = sessions.joinerOpChannel.sentFrames
+        expect(joinerSentFrames.length).toBeGreaterThan(0)
+        const joinerSent = joinerSentFrames.map((f) => JSON.parse(f) as { peerId?: string; seq?: number })
+        expect(joinerSent[0].peerId).toBe('joiner-5')
+        expect(joinerSent[0].seq).toBe(0)
 
-        hostController.close()
-        joinerController.close()
+        const hostSentFrames = sessions.hostOpChannel.sentFrames
+        const hostSent = hostSentFrames.map((f) => JSON.parse(f) as { peerId?: string; seq?: number })
+        // Host's first response is the snapshot reply.
+        expect(hostSent[0].peerId).toBe('host-5')
+        expect(hostSent[0].seq).toBe(0)
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
       } finally {
         sessions.close()
       }

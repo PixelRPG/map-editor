@@ -24,7 +24,6 @@
  */
 
 import type { ProjectSnapshot } from './project-snapshot.ts'
-import type { SessionController } from './session-controller.ts'
 import {
   createSnapshotRequestOp,
   createSnapshotResponseOp,
@@ -34,13 +33,28 @@ import {
 } from './session-protocol.ts'
 
 export interface SnapshotExchangeOptions {
-  /** The SessionController to bind to — provides send + receive. */
-  controller: SessionController
+  /**
+   * Stable id stamped onto every outgoing protocol envelope.
+   * Receivers don't use it for routing (single pending request at
+   * a time) but it shows up in wire-level diagnostics.
+   */
+  peerId: string
+  /**
+   * Transport callback. The exchange hands fully-stamped session-
+   * protocol ops; the callback's only job is "put this on the
+   * reliable channel" — typically `(op) => peerSession.sendOp(op)`.
+   *
+   * Decoupled from `SessionController` so the snapshot flow works
+   * even before an engine is attached (joiner sandbox flow: connect
+   * → request snapshot → write to disk → THEN load engine).
+   */
+  send: (op: SessionProtocolOp) => void
   /**
    * Producer for the local project state. Called when the peer
    * sends a snapshot-request. Return `null` to refuse (the
-   * requester will see a timeout). v1 always returns the current
-   * `engine.captureProjectSnapshot()`.
+   * requester will see a timeout). Hosts pass
+   * `() => captureProjectSnapshot(engine)`; joiners typically
+   * return null (they don't host their own state).
    */
   captureSnapshot: () => ProjectSnapshot | null
   /**
@@ -58,16 +72,23 @@ interface PendingRequest {
 }
 
 export class SnapshotExchange {
-  private readonly controller: SessionController
+  private readonly peerId: string
+  private readonly send: (op: SessionProtocolOp) => void
   private readonly captureSnapshot: () => ProjectSnapshot | null
   private readonly defaultTimeoutMs: number
   private pending: PendingRequest | null = null
+  private localSeq = 0
   private disposed = false
 
   constructor(opts: SnapshotExchangeOptions) {
-    this.controller = opts.controller
+    this.peerId = opts.peerId
+    this.send = opts.send
     this.captureSnapshot = opts.captureSnapshot
     this.defaultTimeoutMs = opts.defaultTimeoutMs ?? 10_000
+  }
+
+  private nextSeq(): number {
+    return this.localSeq++
   }
 
   /**
@@ -122,8 +143,8 @@ export class SnapshotExchange {
       // synchronous-handler test scenario (where the response
       // arrives before sendOp returns) can't race past the
       // assignment.
-      this.controller.sendSessionProtocol(
-        createSnapshotRequestOp({ peerId: '', seq: 0, roomId }),
+      this.send(
+        createSnapshotRequestOp({ peerId: this.peerId, seq: this.nextSeq(), roomId }),
       )
     })
   }
@@ -152,11 +173,10 @@ export class SnapshotExchange {
       // layer via the awareness presence channel.
       return
     }
-    // Tag roomId for symmetry / diagnostics — the controller
-    // overwrites peerId+seq anyway.
+    // roomId echoed for diagnostics; not load-bearing in v1.
     void roomId
-    this.controller.sendSessionProtocol(
-      createSnapshotResponseOp({ peerId: '', seq: 0, snapshot }),
+    this.send(
+      createSnapshotResponseOp({ peerId: this.peerId, seq: this.nextSeq(), snapshot }),
     )
   }
 
