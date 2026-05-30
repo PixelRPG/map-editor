@@ -1,10 +1,13 @@
 import type { SignallingTransport } from '@pixelrpg/engine'
 
+import { scopedLogger } from './collab-log.ts'
 import type { LanDiscoveryEvent } from './lan-discovery-parse.ts'
 import { LanBrowser, LanPublisher, type SessionTxt } from './lan-discovery.ts'
 import { connectLanJoinerTransport, startLanHostServer } from './lan-signalling.ts'
 import { connectRelaySignalling, defaultRelayUrl } from './relay-signalling.ts'
 import type { HostingHandle, HostingOptions, SessionBackend } from './session-service.ts'
+
+const log = scopedLogger('lan-session-backend')
 
 /**
  * Production wiring of the {@link SessionBackend} contract.
@@ -79,14 +82,11 @@ export class LanSessionBackend implements SessionBackend {
       },
     })
     // Diagnostic: hand-test users have asked us to surface what
-    // port we actually bound on vs what we advertised. One line
-    // each; cheap to read in `dbus-run-session` two-instance
-    // smoke tests, easy to remove later when the wiring is
-    // proven solid.
-    console.log(
-      `[lan-session-backend] hosting session "${opts.sessionName}"`,
-      `\n  bound on ${server.address.host}:${server.address.port}`,
-      `\n  Avahi-advertised port: ${server.address.port}`,
+    // port we actually bound on vs what we advertised. Easy to read
+    // in `dbus-run-session` two-instance smoke tests.
+    log.info(
+      `hosting session "${opts.sessionName}" bound on ${server.address.host}:${server.address.port} ` +
+        `(Avahi-advertised port: ${server.address.port})`,
     )
 
     const publisher = new LanPublisher()

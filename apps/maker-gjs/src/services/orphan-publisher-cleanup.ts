@@ -51,8 +51,10 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 
+import { scopedLogger } from './collab-log.ts'
 import { SERVICE_TYPE } from './lan-discovery.ts'
 
+const log = scopedLogger('orphan-cleanup')
 const PROC_ROOT = '/proc'
 const COMM_NAME = 'avahi-publish-service'
 const REAPER_COMMS = new Set(['systemd', 'init'])
@@ -82,17 +84,17 @@ export function cleanupOrphanedPublishers(): { scanned: number; killed: number; 
         if (!isOrphanedPixelrpgPublisher(pid)) continue
         if (sendSigterm(pid)) {
           killed++
-          console.log(`[orphan-cleanup] killed leftover avahi-publish-service pid=${pid}`)
+          log.info(`killed leftover avahi-publish-service pid=${pid}`)
         }
       } catch (err) {
         errors++
-        console.warn(`[orphan-cleanup] error inspecting pid=${pid}:`, err)
+        log.warn(`error inspecting pid=${pid}`, err)
       }
     }
     enumerator.close(null)
   } catch (err) {
     errors++
-    console.warn('[orphan-cleanup] failed to scan /proc:', err)
+    log.warn('failed to scan /proc', err)
   }
   return { scanned, killed, errors }
 }
@@ -188,7 +190,7 @@ function sendSigterm(pid: number): boolean {
     proc.wait(null)
     return proc.get_successful()
   } catch (err) {
-    console.warn(`[orphan-cleanup] kill -TERM ${pid} failed:`, err)
+    log.warn(`kill -TERM ${pid} failed`, err)
     return false
   }
 }

@@ -1,9 +1,12 @@
 import type { Engine, PeerRole, SignallingTransport } from '@pixelrpg/engine'
 
+import { scopedLogger } from './collab-log.ts'
 import { CollabSession } from './collab-session.ts'
 import type { DiscoveredService, LanDiscoveryEvent } from './lan-discovery-parse.ts'
 import { generateRoomId } from './relay-signalling.ts'
 import { writeSnapshotToSandbox } from './sandbox-path.ts'
+
+const log = scopedLogger('session-service')
 
 /**
  * Pluggable backend the {@link SessionService} drives.
@@ -152,6 +155,15 @@ export class SessionService {
      * mock peer never responds.
      */
     private readonly snapshotTimeoutMs?: number,
+    /**
+     * Override the WebRTC negotiation deadline that gates
+     * {@link CollabSession.start}. Production default is 15 s
+     * (CollabSession's `PEER_CONNECT_TIMEOUT_MS`). Tests pass a
+     * small value so a `MockTransport` that never carries SDP
+     * fails fast rather than blocking the test runner. Forwarded
+     * verbatim to every CollabSession this service constructs.
+     */
+    private readonly peerConnectTimeoutMs?: number,
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -217,11 +229,18 @@ export class SessionService {
       // Wrap openSession's rejection in an explicit `.catch` so
       // hand-test users get a typed error instead of GJS's
       // generic "Unhandled promise rejection" stack-only warning.
+      // {@link handleError} both logs (via the centralised collab
+      // logger) AND emits the typed `'error'` event — the welcome-
+      // view toast handler subscribes to that event, so the user
+      // sees the actual failure reason instead of a stack trace
+      // they can't act on.
       this.openSession('host', roomId, transport).catch((err) => {
-        const message = err instanceof Error ? err.message : String(err)
-        console.warn(`[session-service] host-side openSession failed: ${message}`)
-        if (err instanceof Error && err.stack) console.warn(err.stack)
+        log.warn('host-side openSession failed', err)
         this.handleError(err)
+        // Host-path failures leave the session in `hosting` state
+        // (the server is still bound; a new joiner could try again).
+        // Don't reset state here — only the user pressing "Stop
+        // sharing" should do that.
       })
     })
     this.setState({ kind: 'hosting', roomId, port: handle.port })
@@ -363,6 +382,7 @@ export class SessionService {
         signalling: transport,
         peerId: this.peerId,
         roomId,
+        peerConnectTimeoutMs: this.peerConnectTimeoutMs,
       })
       await collab.start()
       this.wireCollabClose(collab)
@@ -380,6 +400,7 @@ export class SessionService {
       signalling: transport,
       peerId: this.peerId,
       roomId,
+      peerConnectTimeoutMs: this.peerConnectTimeoutMs,
       // engine deliberately omitted — attached after sandbox load.
     })
     try {
