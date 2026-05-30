@@ -5,6 +5,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
 import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
+import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
@@ -50,6 +51,18 @@ export class Application extends Adw.Application {
   protected onStartup(): void {
     this.initResources()
     this.initStyles()
+    // Defensive: kill any `avahi-publish-service` subprocess left
+    // behind by a previous maker that crashed without invoking
+    // `LanPublisher.close()`. Skipped when the scan returns
+    // `killed=0` so a clean startup is silent; logged when we
+    // actually drop a ghost.
+    const cleanup = cleanupOrphanedPublishers()
+    if (cleanup.killed > 0) {
+      console.log(
+        `[Application] cleaned up ${cleanup.killed} orphaned avahi-publish-service subprocess(es) ` +
+          `from a previous run (scanned ${cleanup.scanned} pids, ${cleanup.errors} errors)`,
+      )
+    }
   }
 
   /** Load + register the bundled GResource so app metainfo, icons, etc.

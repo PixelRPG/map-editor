@@ -230,6 +230,104 @@ export default async () => {
       expect(backend.relayConnectArgs?.roomId).toBe('a3f2bb91')
       expect(backend.relayConnectArgs?.role).toBe('joiner')
     })
+
+    await it('joinByRoomId shortcuts through LAN when the room is discovered locally', async () => {
+      // Regression for the hand-test bug user reported on 2026-05-30:
+      // pasting `pixelrpg://join/<roomid>` for a same-LAN host hit
+      // `Gio.ResolverError: signalling.pixelrpg.example` — the relay
+      // URL is a placeholder. Same-LAN joins should never touch the
+      // relay; they have a working LAN path right there.
+      const backend = new MockBackend()
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      service.on('error', () => {})
+
+      // Start browsing + deliver a fake LAN service that advertises
+      // room id "abc". The service's connect target is irrelevant —
+      // we just want SessionService to file it under the room id.
+      service.startBrowsing()
+      backend.browseListener?.({
+        kind: 'resolved',
+        service: {
+          name: "Bob's",
+          host: 'bob.local',
+          address: '127.0.0.1',
+          port: 9999,
+          txt: { room: 'abc', project: 'Demo' },
+        },
+      })
+
+      try {
+        await service.joinByRoomId('abc')
+      } catch {
+        /* Snapshot times out after the 50ms ceiling; backend args
+         * are recorded before the throw. */
+      }
+
+      // LAN path was taken — connectLan called with the discovered
+      // service's address/port, connectRelay NOT called.
+      expect(backend.lanConnectArgs?.host).toBe('127.0.0.1')
+      expect(backend.lanConnectArgs?.port).toBe(9999)
+      expect(backend.relayConnectArgs).toBeNull()
+    })
+
+    await it('joinByRoomId falls back to relay when the room is NOT in the LAN discovery cache', async () => {
+      const backend = new MockBackend()
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      service.on('error', () => {})
+
+      // Start browsing but DON'T deliver any service with the room
+      // we're about to join.
+      service.startBrowsing()
+      backend.browseListener?.({
+        kind: 'resolved',
+        service: {
+          name: "Bob's",
+          host: 'bob.local',
+          address: '127.0.0.1',
+          port: 9999,
+          txt: { room: 'OTHER_ROOM' },
+        },
+      })
+
+      try {
+        await service.joinByRoomId('abc')
+      } catch {
+        /* relay attempt fails synthetically via mock */
+      }
+
+      expect(backend.relayConnectArgs?.roomId).toBe('abc')
+      expect(backend.lanConnectArgs).toBeNull()
+    })
+
+    await it('joinByRoomId falls back to relay when the LAN service has gone away', async () => {
+      const backend = new MockBackend()
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      service.on('error', () => {})
+
+      service.startBrowsing()
+      backend.browseListener?.({
+        kind: 'resolved',
+        service: {
+          name: "Bob's",
+          host: 'bob.local',
+          address: '127.0.0.1',
+          port: 9999,
+          txt: { room: 'abc' },
+        },
+      })
+      // Bob's session withdraws — the LAN cache entry must clear so
+      // the next join falls through to the relay path.
+      backend.browseListener?.({ kind: 'gone', serviceName: "Bob's" })
+
+      try {
+        await service.joinByRoomId('abc')
+      } catch {
+        /* relay attempt fails synthetically via mock */
+      }
+
+      expect(backend.relayConnectArgs?.roomId).toBe('abc')
+      expect(backend.lanConnectArgs).toBeNull()
+    })
   })
 
   await describe('generatePeerId', async () => {

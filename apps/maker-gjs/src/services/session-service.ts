@@ -89,6 +89,16 @@ export interface SessionEvents {
 type Listener<T> = (payload: T) => void
 
 /**
+ * Discovered LAN services keyed by their `txt.room` field — the
+ * room id the host advertises. Lets `joinByRoomId` shortcut to
+ * the LAN path when the same room is reachable on this network,
+ * skipping the relay (which currently points at a placeholder
+ * `signalling.pixelrpg.example` and would fail with
+ * `Gio.ResolverError`).
+ */
+type DiscoveredByRoom = Map<string, DiscoveredService>
+
+/**
  * Orchestrates the Pair-Editing lifecycle on top of the platform-
  * specific pieces (LAN discovery, LAN signalling, relay signalling)
  * + the engine-side {@link CollabSession}.
@@ -118,6 +128,8 @@ export class SessionService {
   private state: SessionState = { kind: 'idle' }
   private hostingHandle: HostingHandle | null = null
   private wasBrowsing = false
+  /** Updated as `service-discovered` / `service-gone` events flow. */
+  private readonly discoveredByRoom: DiscoveredByRoom = new Map()
 
   /**
    * @param engineProvider Lazy resolver returning the active engine,
@@ -150,8 +162,21 @@ export class SessionService {
     if (this.state.kind !== 'idle' && this.state.kind !== 'browsing') return
     if (this.state.kind === 'browsing') return
     this.backend.startBrowsing((event) => {
-      if (event.kind === 'resolved') this.emit('service-discovered', event.service)
-      else this.emit('service-gone', event.serviceName)
+      if (event.kind === 'resolved') {
+        // Index by room id so a paste-link join can short-circuit
+        // through LAN when the room is actually reachable here.
+        const room = event.service.txt.room
+        if (room) this.discoveredByRoom.set(room, event.service)
+        this.emit('service-discovered', event.service)
+      } else {
+        // service-gone carries a service NAME, not a room id; walk
+        // the room map to evict any entries whose service-name
+        // matches.
+        for (const [room, service] of this.discoveredByRoom) {
+          if (service.name === event.serviceName) this.discoveredByRoom.delete(room)
+        }
+        this.emit('service-gone', event.serviceName)
+      }
     })
     this.wasBrowsing = true
     this.setState({ kind: 'browsing' })
@@ -225,6 +250,18 @@ export class SessionService {
 
   async joinByRoomId(roomId: string): Promise<void> {
     this.requireIdleForJoin()
+    // Prefer the LAN path when the room is reachable on this
+    // network — the relay default URL is a placeholder today
+    // (`signalling.pixelrpg.example`) and fails with
+    // `Gio.ResolverError` for users who haven't deployed their
+    // own. Same-machine + same-LAN pair-editing therefore goes
+    // through Avahi → direct WebSocket without ever touching
+    // the relay.
+    const lanMatch = this.discoveredByRoom.get(roomId)
+    if (lanMatch) {
+      await this.joinLan(lanMatch)
+      return
+    }
     this.setState({ kind: 'connecting' })
     try {
       const transport = await this.backend.connectRelay(roomId, 'joiner')
