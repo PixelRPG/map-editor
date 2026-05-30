@@ -188,7 +188,14 @@ export class CollabSession {
    */
   async start(): Promise<void> {
     this.startedAt = Date.now()
-    await this.peer.connect()
+    try {
+      await this.peer.connect()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(`[collab-session] peer.connect() failed: ${message}`)
+      if (err instanceof Error && err.stack) console.warn(err.stack)
+      throw err
+    }
     const announceOnConnect = this.peer.events.on('state-changed', ({ state }) => {
       if (state === 'connected') this.awareness.announce()
     })

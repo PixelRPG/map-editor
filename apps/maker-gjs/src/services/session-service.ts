@@ -214,7 +214,15 @@ export class SessionService {
     })
     this.hostingHandle = handle
     handle.onPeerConnected((transport) => {
-      void this.openSession('host', roomId, transport)
+      // Wrap openSession's rejection in an explicit `.catch` so
+      // hand-test users get a typed error instead of GJS's
+      // generic "Unhandled promise rejection" stack-only warning.
+      this.openSession('host', roomId, transport).catch((err) => {
+        const message = err instanceof Error ? err.message : String(err)
+        console.warn(`[session-service] host-side openSession failed: ${message}`)
+        if (err instanceof Error && err.stack) console.warn(err.stack)
+        this.handleError(err)
+      })
     })
     this.setState({ kind: 'hosting', roomId, port: handle.port })
     return roomId

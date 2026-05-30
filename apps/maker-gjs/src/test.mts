@@ -1,5 +1,6 @@
 import { run } from '@gjsify/unit'
 
+import collabSessionE2eSuite from './services/collab-session-e2e.spec.js'
 import lanDiscoverySuite from './services/lan-discovery.spec.js'
 import lanDiscoveryIntegrationSuite from './services/lan-discovery-integration.gjs.spec.js'
 import lanDiscoveryParseSuite from './services/lan-discovery-parse.spec.js'
@@ -12,6 +13,7 @@ import sandboxPathSuite from './services/sandbox-path.spec.js'
 import sessionServiceSuite from './services/session-service.spec.js'
 
 run({
+  collabSessionE2eSuite,
   lanDiscoverySuite,
   lanDiscoveryIntegrationSuite,
   lanDiscoveryParseSuite,
