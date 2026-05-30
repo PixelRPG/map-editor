@@ -61,12 +61,33 @@ export class LanSessionBackend implements SessionBackend {
 
     const peerCallbacks: Array<(t: SignallingTransport) => void> = []
 
+    // Bind on 0.0.0.0 (all interfaces) instead of the previous
+    // 127.0.0.1 default. Two same-machine instances over `dbus-run-
+    // session` can talk over loopback either way, but Avahi-
+    // resolution on a LAN interface (eth0 / wlan0) returns the
+    // network IP — connecting to 127.0.0.1 from the joiner failed
+    // when the resolution path picked the LAN interface even on the
+    // same machine. Binding all-interfaces makes the published
+    // port reachable regardless of which interface Avahi resolved
+    // on. The privacy cost is real (the WS server is now reachable
+    // from the LAN), but Pair-Editing is LAN-only by design.
     const server = await startLanHostServer({
       port: 0,
+      host: '0.0.0.0',
       onPeerConnected: (transport) => {
         for (const cb of peerCallbacks) cb(transport)
       },
     })
+    // Diagnostic: hand-test users have asked us to surface what
+    // port we actually bound on vs what we advertised. One line
+    // each; cheap to read in `dbus-run-session` two-instance
+    // smoke tests, easy to remove later when the wiring is
+    // proven solid.
+    console.log(
+      `[lan-session-backend] hosting session "${opts.sessionName}"`,
+      `\n  bound on ${server.address.host}:${server.address.port}`,
+      `\n  Avahi-advertised port: ${server.address.port}`,
+    )
 
     const publisher = new LanPublisher()
     const txt: SessionTxt = {
