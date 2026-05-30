@@ -4,6 +4,7 @@ import type { Engine } from '../engine.ts'
 import { EngineEvent } from '../types/index.ts'
 
 import type { PeerSession } from './peer-session.ts'
+import { isSessionProtocolOp, type SessionProtocolOp } from './session-protocol.ts'
 
 export interface SessionControllerOptions {
   engine: Engine
@@ -12,6 +13,17 @@ export interface SessionControllerOptions {
   peerId: string
   /** Override the built-in command registry (e.g. to register custom commands). */
   registry?: CommandRegistry
+  /**
+   * Hook for session-protocol messages (`__session/*` kinds — see
+   * {@link SessionProtocolOp}). The CollabSession layer uses this
+   * to react to snapshot requests / responses without polluting
+   * the command path with non-mutation traffic.
+   *
+   * Optional — when undefined, session-protocol messages are
+   * silently dropped (matches the behaviour of an unknown command
+   * kind, but without the noisy warn).
+   */
+  onSessionProtocol?: (op: SessionProtocolOp) => void
 }
 
 /**
@@ -39,6 +51,7 @@ export class SessionController {
   private readonly session: PeerSession
   private readonly peerId: string
   private readonly registry: CommandRegistry
+  private readonly onSessionProtocol: ((op: SessionProtocolOp) => void) | null
   private localSeq = 0
   private commandSub: { close(): void } | null = null
   private sessionSub: { close(): void } | null = null
@@ -49,6 +62,7 @@ export class SessionController {
     this.session = opts.session
     this.peerId = opts.peerId
     this.registry = opts.registry ?? BUILT_IN_COMMANDS
+    this.onSessionProtocol = opts.onSessionProtocol ?? null
 
     // Local → wire
     this.commandSub = this.engine.events.on(EngineEvent.COMMAND_EXECUTED, ({ command }) => {
@@ -61,6 +75,22 @@ export class SessionController {
       if (this.closed) return
       this.applyInbound(op)
     })
+  }
+
+  /**
+   * Send a session-protocol message (e.g. snapshot-request /
+   * snapshot-response). Stamps `peerId` + `seq` so the receiver
+   * can deduplicate the same way it does for commands; the
+   * envelope rides the existing reliable op channel.
+   */
+  sendSessionProtocol(op: Omit<SessionProtocolOp, 'peerId' | 'seq'>): void {
+    if (this.closed) return
+    const stamped = {
+      ...op,
+      peerId: this.peerId,
+      seq: this.localSeq++,
+    } as SessionProtocolOp
+    this.session.sendOp(stamped)
   }
 
   /**
@@ -98,6 +128,13 @@ export class SessionController {
     }
     if (op.peerId === this.peerId) {
       // Defence against a malformed peer echoing our own ops back.
+      return
+    }
+    // Session-protocol messages (snapshot-request / -response, etc.)
+    // ride the same op channel for transport convenience but are
+    // NOT commands — route them around the command registry.
+    if (isSessionProtocolOp(rawOp)) {
+      this.onSessionProtocol?.(rawOp)
       return
     }
     const factory = this.registry[op.kind]

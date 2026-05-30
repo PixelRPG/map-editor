@@ -18,6 +18,8 @@ import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
 import peerSessionSuite from './sync/peer-session.spec.js'
 import projectSnapshotSuite from './sync/project-snapshot.spec.js'
 import sessionControllerSuite from './sync/session-controller.spec.js'
+import sessionProtocolSuite from './sync/session-protocol.spec.js'
+import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
 import spriteSetUtilsSuite from './utils/sprite-set.utils.spec.js'
 import subscriptionRegistrySuite from './utils/subscription-registry.spec.js'
@@ -33,6 +35,8 @@ run({
   peerSessionSuite,
   projectSnapshotSuite,
   sessionControllerSuite,
+  sessionProtocolSuite,
+  snapshotExchangeSuite,
   objectSystemSuite,
   spriteSetUtilsSuite,
   subscriptionRegistrySuite,

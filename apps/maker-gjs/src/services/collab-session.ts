@@ -1,10 +1,17 @@
-import type { AwarenessPeerInfo, Engine, SignallingTransport } from '@pixelrpg/engine'
+import type {
+  AwarenessPeerInfo,
+  Engine,
+  ProjectSnapshot,
+  SignallingTransport,
+} from '@pixelrpg/engine'
 import {
   AwarenessManager,
+  captureProjectSnapshot,
   PeerSession,
   type PeerRole,
   RemoteCursorRenderer,
   SessionController,
+  SnapshotExchange,
 } from '@pixelrpg/engine'
 
 export interface CollabSessionOptions {
@@ -20,6 +27,12 @@ export interface CollabSessionOptions {
    * land on a recognisable hue.
    */
   localInfo?: AwarenessPeerInfo
+  /**
+   * Stable id for the session — used as the `roomId` tag on
+   * snapshot requests. Defaults to `''` when omitted (single
+   * pair session per process; tagging is diagnostic).
+   */
+  roomId?: string
 }
 
 /**
@@ -43,13 +56,16 @@ export class CollabSession {
   public readonly controller: SessionController
   public readonly awareness: AwarenessManager
   public readonly cursorRenderer: RemoteCursorRenderer
+  public readonly snapshotExchange: SnapshotExchange
   private closed = false
   private awarenessUnsubscribe: (() => void) | null = null
   private cursorUnsubscribe: (() => void) | null = null
   private readonly engine: Engine
+  private readonly roomId: string
 
   constructor(opts: CollabSessionOptions) {
     this.engine = opts.engine
+    this.roomId = opts.roomId ?? ''
     this.peer = new PeerSession({
       role: opts.role,
       signalling: opts.signalling,
@@ -58,6 +74,21 @@ export class CollabSession {
       engine: opts.engine,
       session: this.peer,
       peerId: opts.peerId,
+      onSessionProtocol: (op) => this.snapshotExchange.handle(op),
+    })
+    // Snapshot exchange — host responds to joiner requests by
+    // capturing its current project state; joiner uses
+    // `requestSnapshot()` to pull it. Constructed after the
+    // controller so the `onSessionProtocol` hook above resolves
+    // to a fully-initialised exchange by the time the first
+    // protocol message arrives.
+    this.snapshotExchange = new SnapshotExchange({
+      controller: this.controller,
+      // Returns null when the engine hasn't loaded a project yet
+      // (host hasn't opened anything) — the requester sees a
+      // timeout, which the UI surfaces as "host has no project to
+      // share yet".
+      captureSnapshot: () => captureProjectSnapshot(this.engine),
     })
     // Default display info — caller can override via `localInfo`.
     // The placeholder colour matches the Adwaita "blue-3" accent so
@@ -118,6 +149,20 @@ export class CollabSession {
     })
   }
 
+  /**
+   * Joiner-side convenience: pull the host's current project state.
+   * Resolves with the parsed {@link ProjectSnapshot}; the caller
+   * (typically the maker's sandbox-write step) is responsible for
+   * landing it on disk + opening it as the active project.
+   *
+   * Times out after `timeoutMs` (default 10 s) — long enough for
+   * a fat snapshot over a slow LAN, short enough to surface a
+   * stalled host before the user gives up.
+   */
+  requestSnapshot(timeoutMs?: number): Promise<ProjectSnapshot> {
+    return this.snapshotExchange.request(this.roomId, timeoutMs)
+  }
+
   /** Tear down. Idempotent. */
   close(reason = 'closed'): void {
     if (this.closed) return
@@ -135,6 +180,7 @@ export class CollabSession {
     this.awarenessUnsubscribe?.()
     this.awarenessUnsubscribe = null
     this.cursorRenderer.close()
+    this.snapshotExchange.dispose()
     this.controller.close()
     this.peer.close(reason)
   }
