@@ -19,6 +19,32 @@ if (debugPeerEnv !== '0' && debugPeerEnv !== 'false') {
   ;(globalThis as { __PIXELRPG_PEER_DEBUG?: boolean }).__PIXELRPG_PEER_DEBUG = true
 }
 
+// TEMPORARY SHIM — install `globalThis.reportError` so EventTarget's
+// listener-exception catch (in @gjsify/dom-events) delegates here
+// instead of falling back to `console.error(err)`. The fallback
+// path renders Error objects as `{}` via `@gjsify/console`'s
+// `_formatArgs` JSON.stringify pass (Error's enumerable property
+// set is empty), which is why hand-test logs showed mysterious
+// bare `{}` lines with no message + no stack — see PR gjsify#426
+// for the root-cause fix in @gjsify/dom-events itself.
+//
+// Once @gjsify ≥0.4.36 lands and this app bumps its dep, the
+// shim becomes redundant (the upstream fix delegates to reportError
+// natively when wired) and this block can be deleted.
+//
+// SpiderMonkey's `Error.stack` is frames-only — no name+message
+// embedded at the top — so the formatter always prepends them.
+if (typeof (globalThis as { reportError?: unknown }).reportError !== 'function') {
+  ;(globalThis as { reportError: (err: unknown) => void }).reportError = (err) => {
+    if (err instanceof Error) {
+      const head = `${err.name}: ${err.message}`
+      console.warn(`[unhandled listener exception] ${err.stack ? `${head}\n${err.stack}` : head}`)
+    } else {
+      console.warn(`[unhandled listener exception] ${String(err)}`)
+    }
+  }
+}
+
 export function main(argv: string[]) {
   const application = new Application()
   return application.runAsync(argv)
