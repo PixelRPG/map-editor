@@ -14,6 +14,7 @@ import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import awarenessSuite from './sync/awareness.spec.js'
+import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
 import peerSessionSuite from './sync/peer-session.spec.js'
 import projectSnapshotSuite from './sync/project-snapshot.spec.js'
 import sessionControllerSuite from './sync/session-controller.spec.js'
@@ -28,6 +29,7 @@ run({
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   awarenessSuite,
+  inMemoryTransportSuite,
   peerSessionSuite,
   projectSnapshotSuite,
   sessionControllerSuite,
