@@ -58,6 +58,32 @@ export interface PeerSessionOptions {
  * runtime's event loop; this class re-emits them through its own
  * `EventEmitter` after collapsing to the typed surface.
  */
+/**
+ * Diagnostic-logging gate. Set `globalThis.__PIXELRPG_PEER_DEBUG`
+ * to a truthy value to enable verbose `[peer-session]` logs (SDP
+ * exchange, ICE candidate flow, channel + state transitions).
+ *
+ * Off by default so production logs stay readable. The pair-edit
+ * hand-test workflow flips it on:
+ *
+ *   globalThis.__PIXELRPG_PEER_DEBUG = true
+ *
+ * before constructing the session, or set it in main.ts behind a
+ * `PIXELRPG_DEBUG_PEER` env var. We deliberately stay below the
+ * scoped-logger machinery in `@pixelrpg/maker-gjs` because the
+ * engine is platform-independent (no maker imports allowed).
+ */
+function peerDebugEnabled(): boolean {
+  const g = globalThis as { __PIXELRPG_PEER_DEBUG?: unknown }
+  return Boolean(g.__PIXELRPG_PEER_DEBUG)
+}
+
+function plog(role: PeerRole, message: string): void {
+  if (peerDebugEnabled()) {
+    console.log(`[peer-session/${role}] ${message}`)
+  }
+}
+
 export class PeerSession {
   public readonly events = new EventEmitter<PeerSessionEventMap>()
 
@@ -68,6 +94,8 @@ export class PeerSession {
   private awarenessChannel: RTCDataChannel | null = null
   private state: PeerSessionState = 'idle'
   private closed = false
+  private iceLocalCount = 0
+  private iceRemoteCount = 0
 
   constructor(opts: PeerSessionOptions) {
     this.role = opts.role
@@ -109,9 +137,17 @@ export class PeerSession {
     }
 
     this.pc.onicecandidate = (event) => {
-      this.signalling.send({ type: 'ice-candidate', payload: event.candidate?.toJSON() ?? null })
+      const json = event.candidate?.toJSON() ?? null
+      if (json === null) {
+        plog(this.role, `ICE local: end-of-candidates (sent ${this.iceLocalCount} so far)`)
+      } else {
+        this.iceLocalCount++
+        plog(this.role, `ICE local #${this.iceLocalCount}: ${json.candidate ?? '<no candidate string>'}`)
+      }
+      this.signalling.send({ type: 'ice-candidate', payload: json })
     }
     this.pc.onconnectionstatechange = () => {
+      plog(this.role, `pc.connectionState → ${this.pc.connectionState}`)
       switch (this.pc.connectionState) {
         case 'failed':
           this.fail(new Error('peer connection failed'))
@@ -132,18 +168,26 @@ export class PeerSession {
    */
   async connect(): Promise<void> {
     if (this.state !== 'idle') return
+    plog(this.role, `connect() starting (state ${this.state} → negotiating)`)
     this.transitionTo('negotiating')
     try {
       if (this.role === 'host') {
+        plog('host', 'createOffer()…')
         const offer = await this.pc.createOffer()
+        plog('host', `createOffer OK (sdp.length=${offer.sdp?.length ?? 0})`)
         await this.pc.setLocalDescription(offer)
+        plog('host', 'setLocalDescription(offer) OK')
         // `pc.localDescription` reflects the actual SDP after
         // ICE-restart adjustments; prefer it over the offer object.
         const local = this.pc.localDescription ?? offer
+        plog('host', `sending SDP offer over signalling (sdp.length=${local.sdp?.length ?? 0})`)
         this.signalling.send({ type: 'sdp', payload: { type: local.type, sdp: local.sdp ?? undefined } })
+      } else {
+        plog('joiner', 'waiting for host SDP offer over signalling')
       }
       // Joiner waits for the host's offer; arrives via `handleSignal`.
     } catch (err) {
+      plog(this.role, `connect() threw: ${err instanceof Error ? err.message : String(err)}`)
       this.fail(err instanceof Error ? err : new Error(String(err)))
     }
   }
@@ -204,8 +248,12 @@ export class PeerSession {
   }
 
   private wireChannel(channel: RTCDataChannel): void {
-    channel.onopen = () => this.maybeMarkConnected()
+    channel.onopen = () => {
+      plog(this.role, `channel "${channel.label}" → open`)
+      this.maybeMarkConnected()
+    }
     channel.onclose = () => {
+      plog(this.role, `channel "${channel.label}" → close`)
       if (!this.closed) this.close(`channel-${channel.label}-closed`)
     }
     channel.onerror = (event) => {
@@ -236,11 +284,17 @@ export class PeerSession {
     try {
       switch (msg.type) {
         case 'sdp': {
+          plog(this.role, `received SDP ${msg.payload.type} (sdp.length=${msg.payload.sdp?.length ?? 0})`)
           await this.pc.setRemoteDescription(msg.payload)
+          plog(this.role, `setRemoteDescription(${msg.payload.type}) OK`)
           if (this.role === 'joiner') {
+            plog('joiner', 'createAnswer()…')
             const answer = await this.pc.createAnswer()
+            plog('joiner', `createAnswer OK (sdp.length=${answer.sdp?.length ?? 0})`)
             await this.pc.setLocalDescription(answer)
+            plog('joiner', 'setLocalDescription(answer) OK')
             const local = this.pc.localDescription ?? answer
+            plog('joiner', `sending SDP answer over signalling (sdp.length=${local.sdp?.length ?? 0})`)
             this.signalling.send({
               type: 'sdp',
               payload: { type: local.type, sdp: local.sdp ?? undefined },
@@ -251,16 +305,21 @@ export class PeerSession {
         case 'ice-candidate': {
           if (msg.payload === null) {
             // Null candidate marks end-of-candidates per W3C spec.
+            plog(this.role, `ICE remote: end-of-candidates (received ${this.iceRemoteCount} so far)`)
             return
           }
+          this.iceRemoteCount++
+          plog(this.role, `ICE remote #${this.iceRemoteCount}: ${msg.payload.candidate ?? '<no candidate string>'}`)
           await this.pc.addIceCandidate(msg.payload)
           break
         }
         case 'bye':
+          plog(this.role, `received bye: ${msg.payload?.reason ?? '<no reason>'}`)
           this.close(msg.payload?.reason ?? 'peer-bye')
           break
       }
     } catch (err) {
+      plog(this.role, `handleSignal(${msg.type}) threw: ${err instanceof Error ? err.message : String(err)}`)
       this.fail(err instanceof Error ? err : new Error(String(err)))
     }
   }
@@ -274,6 +333,7 @@ export class PeerSession {
 
   private transitionTo(state: PeerSessionState): void {
     if (this.state === state) return
+    plog(this.role, `state ${this.state} → ${state}`)
     this.state = state
     this.events.emit('state-changed', { state })
   }

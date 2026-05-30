@@ -81,15 +81,38 @@ export interface PeerSessionEventMap {
 }
 
 /**
- * Default ICE-server configuration. Single public STUN server is
- * sufficient for cross-internet connectivity behind most NATs
- * without a relay; symmetric / carrier-grade NATs that need TURN
- * are out of v1 scope (the signalling-server doc § "Open questions"
- * tracks adding a TURN allowlist later).
+ * Default ICE-server configuration — **empty by design**.
+ *
+ * Pair-Editing v1 is LAN-only: host + joiner are on the same
+ * local network (same machine via `dbus-run-session`, or two
+ * machines reached over Avahi). For that topology, **host ICE
+ * candidates alone are sufficient** — both peers see each other
+ * as 127.0.0.1 / 192.168.x.x without ever needing a reflexive
+ * (`srflx`) candidate from STUN.
+ *
+ * The cost of configuring a STUN server when we don't need one
+ * is high: setting `stun_server` on GStreamer's `webrtcbin` makes
+ * libnice (the underlying ICE library) initialise its full NAT-
+ * traversal pipeline, which includes **UPnP IGD discovery** via
+ * gupnp-control-point. If the router doesn't respond promptly to
+ * `GET <ip>:49000/igddesc.xml` (~10 s typical) the joiner-side
+ * `state === 'connected'` transition is delayed past
+ * {@link CollabSession}'s 15 s timeout. The 2026-05-30 hand-test
+ * regression was exactly this — both peers timed out at 15 s with
+ * gupnp-control-point WARNINGS retrying the IGD fetch in the
+ * background.
+ *
+ * Empty array → libnice short-circuits UPnP/STUN/TURN entirely,
+ * ICE gathering completes with host candidates in ~50 ms,
+ * peer connection reaches `connected` immediately.
+ *
+ * **For cross-internet sessions (post-v1)** the caller will pass
+ * `iceServers` explicitly via {@link PeerSessionOptions.iceServers}
+ * — most likely fetched from the signalling server's room-config
+ * endpoint so the STUN / TURN credentials can be rotated without
+ * a client-side rebuild.
  */
-export const DEFAULT_ICE_SERVERS: readonly RTCIceServer[] = [
-  { urls: ['stun:stun.l.google.com:19302'] },
-] as const
+export const DEFAULT_ICE_SERVERS: readonly RTCIceServer[] = [] as const
 
 /**
  * Channel labels — `op` is reliable+ordered (mutations must arrive
