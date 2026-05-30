@@ -10,10 +10,32 @@ import {
   isSessionProtocolOp,
   PeerSession,
   type PeerRole,
+  type PeerSessionState,
   RemoteCursorRenderer,
   SessionController,
   SnapshotExchange,
 } from '@pixelrpg/engine'
+
+import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
+
+const log = scopedLogger('collab-session')
+
+/**
+ * Default deadline for the WebRTC handshake — from the moment
+ * `peer.connect()` is called to the moment both data channels open
+ * and the peer's state transitions to `'connected'`. Generous to
+ * accommodate slow ICE on busy networks, but short enough to fail
+ * fast on a misconfigured relay or a network-unreachable peer.
+ *
+ * Pre-2026-05-30 there was no deadline here at all. The joiner-side
+ * `collab.start()` would resolve as soon as ICE GATHERING started
+ * (PeerSession's `connect()` contract) and `requestSnapshot()` would
+ * await the host's response — which never arrived if the actual SDP
+ * round-trip silently failed. Symptom: "joiner WS connects but
+ * nothing else happens." Now: the joiner times out after 15s with
+ * a typed CollabTimeoutError naming the unmet condition.
+ */
+export const PEER_CONNECT_TIMEOUT_MS = 15_000
 
 export interface CollabSessionOptions {
   /**
@@ -46,6 +68,22 @@ export interface CollabSessionOptions {
    * pair session per process; tagging is diagnostic).
    */
   roomId?: string
+  /**
+   * Override the WebRTC negotiation deadline. Production default is
+   * {@link PEER_CONNECT_TIMEOUT_MS}; tests pass small values so a
+   * `FakeRTCPeerConnection` that never opens its channels fails
+   * fast.
+   */
+  peerConnectTimeoutMs?: number
+  /**
+   * Inject a custom {@link RTCPeerConnection} factory — forwarded
+   * verbatim to {@link PeerSession}. Production omits this so the
+   * shared `globalThis.RTCPeerConnection` (wired by `main.ts`'s
+   * `@gjsify/webrtc/register` import) handles the negotiation. Tests
+   * pass `rtcFactoryFor(new FakeRTCPeerConnection())` so the WebRTC
+   * layer can be exercised without GStreamer.
+   */
+  rtcFactory?: ConstructorParameters<typeof PeerSession>[0]['rtcFactory']
 }
 
 /**
@@ -82,15 +120,18 @@ export class CollabSession {
   private engine: Engine | null = null
   private readonly peerId: string
   private readonly roomId: string
+  private readonly peerConnectTimeoutMs: number
   private readonly subscriptions: Array<() => void> = []
   private startedAt: number | null = null
 
   constructor(opts: CollabSessionOptions) {
     this.peerId = opts.peerId
     this.roomId = opts.roomId ?? ''
+    this.peerConnectTimeoutMs = opts.peerConnectTimeoutMs ?? PEER_CONNECT_TIMEOUT_MS
     this.peer = new PeerSession({
       role: opts.role,
       signalling: opts.signalling,
+      rtcFactory: opts.rtcFactory,
     })
 
     // Default display info — caller can override via `localInfo`.
@@ -177,32 +218,88 @@ export class CollabSession {
   }
 
   /**
-   * Drive the WebRTC handshake. Resolves once ICE gathering kicks
-   * off; full "connected" status lands on `peer.events('state-
-   * changed')`.
+   * Drive the WebRTC handshake to a fully-connected state.
    *
-   * Once `connected`, an initial `presence` frame goes out so the
+   * Resolves once the underlying {@link PeerSession} transitions to
+   * `'connected'` — i.e. both data channels are open and ready for
+   * traffic. Rejects with a {@link CollabTimeoutError} if the
+   * negotiation doesn't reach `'connected'` within
+   * {@link PEER_CONNECT_TIMEOUT_MS} (or the override passed via
+   * {@link CollabSessionOptions.peerConnectTimeoutMs}).
+   *
+   * Why wait for `'connected'`, not just `peer.connect()`?
+   * `PeerSession.connect()` resolves once ICE gathering kicks off —
+   * which happens almost immediately for the host, and instantly
+   * for the joiner (its role is to wait for the host's offer).
+   * Without an extra wait, callers (notably {@link requestSnapshot})
+   * would start sending traffic on still-closed channels.
+   *
+   * Once `'connected'`, an initial `presence` frame goes out so the
    * remote peer's roster + cursor UI populate immediately. Repeat
    * announces are cheap — the receiver dedupes by comparing against
    * its tracked state.
    */
   async start(): Promise<void> {
     this.startedAt = Date.now()
-    try {
-      await this.peer.connect()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      console.warn(`[collab-session] peer.connect() failed: ${message}`)
-      if (err instanceof Error && err.stack) console.warn(err.stack)
-      throw err
-    }
     const announceOnConnect = this.peer.events.on('state-changed', ({ state }) => {
       if (state === 'connected') this.awareness.announce()
     })
-    // If we already raced past `connecting`, fire once immediately so
-    // late wires don't lose the first presence frame.
-    if (this.peer.getState() === 'connected') this.awareness.announce()
     this.subscriptions.push(() => announceOnConnect.close())
+
+    try {
+      await withTimeout(
+        'CollabSession peer.connect',
+        this.peerConnectTimeoutMs,
+        this.peer.connect(),
+      )
+      // peer.connect() resolves on ICE-gather-started, not connected.
+      // Wait for the actual `'connected'` state under the same deadline
+      // (minus what peer.connect() already consumed — we don't track
+      // elapsed precisely; the remaining budget is approximately
+      // `timeout - 0`, which is fine for the typical sub-second LAN).
+      await withTimeout(
+        'CollabSession reach connected state',
+        this.peerConnectTimeoutMs,
+        this.waitForConnected(),
+      )
+    } catch (err) {
+      log.warn('start() failed during peer negotiation', err)
+      throw err
+    }
+    // If `waitForConnected` resolved synchronously (already connected
+    // before we subscribed), the announce-on-connect listener never
+    // fired. Fire once immediately so late wires don't lose the
+    // first presence frame.
+    if (this.peer.getState() === 'connected') this.awareness.announce()
+  }
+
+  /**
+   * Resolve once {@link PeerSession} state is `'connected'`; reject
+   * on any terminal state (`'closed'`, `'error'`). Used by
+   * {@link start} to gate on the actual handshake completion rather
+   * than ICE-gather-started.
+   */
+  private waitForConnected(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const current = this.peer.getState()
+      if (current === 'connected') {
+        resolve()
+        return
+      }
+      if (current === 'closed' || current === 'error') {
+        reject(new Error(`CollabSession: peer is already "${current}"`))
+        return
+      }
+      const sub = this.peer.events.on('state-changed', ({ state }: { state: PeerSessionState }) => {
+        if (state === 'connected') {
+          sub.close()
+          resolve()
+        } else if (state === 'closed' || state === 'error') {
+          sub.close()
+          reject(new Error(`CollabSession: peer transitioned to "${state}" before connect`))
+        }
+      })
+    })
   }
 
   /**

@@ -3,6 +3,19 @@ import { WebSocket, type WebSocketServer as WsServer } from 'ws'
 
 import { WebSocketServer } from 'ws'
 
+import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
+
+const log = scopedLogger('lan-signalling')
+
+/**
+ * Default deadline for the joiner-side WebSocket open handshake. Five
+ * seconds is generous for LAN — the WS upgrade typically completes
+ * within tens of ms — but short enough that a misconfigured host
+ * surfaces an explicit `CollabTimeoutError` instead of leaving the
+ * user staring at a stalled UI.
+ */
+export const LAN_CONNECT_TIMEOUT_MS = 5_000
+
 /**
  * LAN signalling — one host accepts one joiner over a plain
  * WebSocket. Routes SDP / ICE / bye frames bidirectionally without
@@ -152,12 +165,23 @@ export async function startLanHostServer(opts: LanHostServerOptions): Promise<La
 
 /**
  * Open a `WebSocket` to a discovered host and wrap it as a
- * `SignallingTransport`. Throws if the connect handshake fails;
- * caller decides whether to retry / surface to UI.
+ * `SignallingTransport`. Rejects with the underlying WS error on
+ * handshake failure or with a {@link CollabTimeoutError} if the
+ * upgrade hasn't completed within `timeoutMs` (default
+ * {@link LAN_CONNECT_TIMEOUT_MS}). Caller decides whether to retry /
+ * surface to UI.
+ *
+ * The timeout matters: pre-2026-05-30 the joiner had no deadline and
+ * would sit indefinitely if the WS upgrade silently stalled mid-
+ * handshake (kernel-level TCP weirdness, kernel firewall accepting
+ * SYN but dropping data, …). Symptom was "joiner connects but nothing
+ * happens." Post-fix the joiner surfaces a typed timeout the welcome
+ * view can toast.
  */
 export async function connectLanJoinerTransport(
   hostAddress: string,
   port: number,
+  timeoutMs: number = LAN_CONNECT_TIMEOUT_MS,
 ): Promise<SignallingTransport> {
   // IPv6 literal addresses must be bracketed inside a URL —
   // `ws://::1:8089/` is ambiguous (port? part of address?), only
@@ -167,21 +191,36 @@ export async function connectLanJoinerTransport(
     ? `[${hostAddress}]`
     : hostAddress
   const url = `ws://${target}:${port}/`
-  console.log(`[lan-signalling] joiner connecting to ${url}`)
+  log.info(`joiner connecting to ${url}`)
   const ws = new WebSocket(url)
-  await new Promise<void>((resolve, reject) => {
+  const handshake = new Promise<void>((resolve, reject) => {
     const onError = (err: Error) => {
       ws.off('open', onOpen)
-      console.warn(`[lan-signalling] joiner connect failed for ${url}: ${err.message ?? err}`)
       reject(err)
     }
     const onOpen = () => {
       ws.off('error', onError)
-      console.log(`[lan-signalling] joiner connected to ${url}`)
       resolve()
     }
     ws.once('open', onOpen)
     ws.once('error', onError)
   })
+  try {
+    await withTimeout('LAN signalling connect', timeoutMs, handshake, url)
+  } catch (err) {
+    log.warn(`joiner connect failed for ${url}`, err)
+    // If the underlying socket is still pending when we time out,
+    // close it so the OS reclaims the FD and the joiner-side state
+    // machine doesn't leak a half-open connection.
+    if (err instanceof CollabTimeoutError) {
+      try {
+        ws.close()
+      } catch {
+        /* already gone */
+      }
+    }
+    throw err
+  }
+  log.info(`joiner connected to ${url}`)
   return wrapWebSocket(ws)
 }

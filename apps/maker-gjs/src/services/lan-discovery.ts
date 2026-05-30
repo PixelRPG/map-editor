@@ -1,7 +1,10 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 
+import { scopedLogger } from './collab-log.ts'
 import { type DiscoveredService, type LanDiscoveryEvent, parseAvahiBrowseLine } from './lan-discovery-parse.ts'
+
+const log = scopedLogger('lan-discovery')
 
 /**
  * mDNS service type the editor + future multiplayer both advertise.
@@ -122,7 +125,7 @@ export class LanBrowser {
     this.onEvent = onEvent
 
     const args = [...AVAHI_BROWSE_ARGS]
-    console.log(`[lan-discovery] starting browser: ${args.join(' ')}`)
+    log.info(`starting browser: ${args.join(' ')}`)
     try {
       this.process = Gio.Subprocess.new(
         args,

@@ -1,7 +1,18 @@
 import type { SignallingTransport } from '@pixelrpg/engine'
 import { WebSocket } from 'ws'
 
+import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
 import { wrapWebSocket } from './lan-signalling.ts'
+
+const log = scopedLogger('relay-signalling')
+
+/**
+ * Default deadline for the relay WebSocket upgrade. Ten seconds is
+ * longer than {@link LAN_CONNECT_TIMEOUT_MS} because the relay is
+ * typically reached over the public internet (DNS lookup, TLS
+ * handshake, multi-hop routing).
+ */
+export const RELAY_CONNECT_TIMEOUT_MS = 10_000
 
 /**
  * Cross-network signalling — both peers connect to the workspace's
@@ -26,14 +37,22 @@ export interface RelayConnectOptions {
 
 /**
  * Open a WebSocket to the relay's `/room/<roomid>?role=…` endpoint
- * and wrap it as a `SignallingTransport`. Throws if the upgrade
- * handshake fails — caller surfaces gracefully ("could not reach
- * relay" toast).
+ * and wrap it as a `SignallingTransport`. Rejects on upgrade failure
+ * (caller surfaces "could not reach relay" toast) or on
+ * {@link CollabTimeoutError} after `timeoutMs` (default
+ * {@link RELAY_CONNECT_TIMEOUT_MS}). The timeout exists for the same
+ * reason as in the LAN path — a stalled TLS handshake or HTTP/1.1
+ * upgrade that never completes would otherwise leave the joiner UI
+ * frozen indefinitely.
  */
-export async function connectRelaySignalling(opts: RelayConnectOptions): Promise<SignallingTransport> {
+export async function connectRelaySignalling(
+  opts: RelayConnectOptions,
+  timeoutMs: number = RELAY_CONNECT_TIMEOUT_MS,
+): Promise<SignallingTransport> {
   const url = `${opts.relayUrl.replace(/\/$/, '')}/room/${encodeURIComponent(opts.roomId)}?role=${opts.role}`
+  log.info(`${opts.role} connecting to ${url}`)
   const ws = new WebSocket(url)
-  await new Promise<void>((resolve, reject) => {
+  const handshake = new Promise<void>((resolve, reject) => {
     const onError = (err: Error) => {
       ws.off('open', onOpen)
       reject(err)
@@ -45,6 +64,20 @@ export async function connectRelaySignalling(opts: RelayConnectOptions): Promise
     ws.once('open', onOpen)
     ws.once('error', onError)
   })
+  try {
+    await withTimeout('relay signalling connect', timeoutMs, handshake, url)
+  } catch (err) {
+    log.warn(`${opts.role} connect failed for ${url}`, err)
+    if (err instanceof CollabTimeoutError) {
+      try {
+        ws.close()
+      } catch {
+        /* already gone */
+      }
+    }
+    throw err
+  }
+  log.info(`${opts.role} connected to ${url}`)
   return wrapWebSocket(ws)
 }
 

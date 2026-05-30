@@ -179,6 +179,57 @@ export default async () => {
       await service.stopHosting()
       expect(service.getState().kind).toBe('browsing')
     })
+
+    await it('REGRESSION (2026-05-30): host-side openSession failure surfaces an error event', async () => {
+      // Pre-fix: when the joiner connected but openSession then
+      // rejected (e.g. engine no longer available), the maker user
+      // saw a generic GJS "Unhandled promise rejection" with a stack
+      // trace but no message — actionable only if you can read
+      // SpiderMonkey stacks. Post-fix: the .catch in startHosting
+      // routes the rejection through `handleError`, which emits the
+      // typed `'error'` event. The maker's welcome-view toast handler
+      // subscribes to this event, so the user sees the actual reason.
+      //
+      // This test pins the contract: an engine-null failure during
+      // onPeerConnected MUST emit exactly one error event whose
+      // message names the underlying cause.
+      const backend = new MockBackend()
+      // Engine provider returns null — the host can't fulfil
+      // openSession because there's nothing to share. The session-
+      // service path is responsible for catching this + emitting it
+      // as an event rather than letting it bubble as unhandled.
+      const service = new SessionService(() => null, backend, 'peer-test')
+      await service.startHosting({ sessionName: 'A', projectName: 'A', hostDisplayName: 'A' })
+
+      const errors: Error[] = []
+      service.on('error', (err) => errors.push(err))
+
+      // Simulate the joiner connecting. The backend's onPeerConnected
+      // callback is the production wiring point; we invoke it
+      // directly with a fake transport.
+      const fakeTransport = new MockTransport()
+      for (const cb of backend.peerCallbacks) cb(fakeTransport)
+
+      // Drain the promise chain (`openSession` is async; its `.catch`
+      // runs on microtask flush).
+      await new Promise<void>((r) => setTimeout(r, 0))
+      await new Promise<void>((r) => setTimeout(r, 0))
+
+      expect(errors).toHaveLength(1)
+      // The actual cause: "no engine available — load a project
+      // before hosting". The test doesn't pin the exact phrasing
+      // (that's UX copy that may evolve) but pins that the message
+      // is non-empty and mentions the underlying noun.
+      expect(errors[0].message.length).toBeGreaterThan(0)
+      expect(errors[0].message.toLowerCase()).toContain('engine')
+      // And it didn't reduce to the regression we're guarding
+      // against — `JSON.stringify(errors[0])` would once have been
+      // `{}` because Error's props are non-enumerable.
+      expect(errors[0].message).not.toBe('{}')
+      // Transport should also have been closed in the engine-null
+      // branch (best-effort cleanup so the FD doesn't leak).
+      expect(fakeTransport.closed).toBe(true)
+    })
   })
 
   await describe('SessionService — joining (transport selection)', async () => {
@@ -193,7 +244,7 @@ export default async () => {
       // Short snapshot timeout so the joiner flow rejects quickly
       // without blocking the test runner (the mock peer never
       // responds to the snapshot request).
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50, 50)
 
       service.on('error', () => {})
       try {
@@ -218,7 +269,7 @@ export default async () => {
     await it('joinByRoomId calls backend.connectRelay with the room id', async () => {
       const backend = new MockBackend()
       // Short snapshot timeout — see joinLan test above for context.
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50, 50)
 
       service.on('error', () => {})
       try {
@@ -238,7 +289,7 @@ export default async () => {
       // URL is a placeholder. Same-LAN joins should never touch the
       // relay; they have a working LAN path right there.
       const backend = new MockBackend()
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50, 50)
       service.on('error', () => {})
 
       // Start browsing + deliver a fake LAN service that advertises
@@ -272,7 +323,7 @@ export default async () => {
 
     await it('joinByRoomId falls back to relay when the room is NOT in the LAN discovery cache', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50, 50)
       service.on('error', () => {})
 
       // Start browsing but DON'T deliver any service with the room
@@ -301,7 +352,7 @@ export default async () => {
 
     await it('joinByRoomId falls back to relay when the LAN service has gone away', async () => {
       const backend = new MockBackend()
-      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50)
+      const service = new SessionService(() => makeEngineStub(), backend, 'peer-test', 50, 50)
       service.on('error', () => {})
 
       service.startBrowsing()
