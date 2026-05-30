@@ -181,7 +181,12 @@ export class AwarenessManager {
   private readonly now: () => number
   private readonly cursorThrottleMs: number
 
-  private lastCursorSentMs = 0
+  // `-Infinity` so the FIRST call always passes the throttle check
+  // — regardless of where the wall-clock starts. A literal `0` would
+  // accidentally throttle the first frame when `now()` itself returns
+  // something close to 0 (test clocks, monotonic clocks reset at
+  // process start, etc.).
+  private lastCursorSentMs = -Infinity
   private pendingCursor: AwarenessCursor | null = null
 
   constructor(private readonly opts: AwarenessManagerOptions) {
