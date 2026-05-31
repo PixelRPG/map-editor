@@ -29,8 +29,8 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@gjsify/cli": "^0.4.35",
-    "@gjsify/unit": "^0.4.35",
+    "@gjsify/cli": "^0.4.36",
+    "@gjsify/unit": "^0.4.36",
     "typescript": "^6.0.3"
   },
   "dependencies": {
@@ -42,13 +42,13 @@
     "@girs/glib-2.0": "^2.88.0-4.0.4",
     "@girs/gobject-2.0": "^2.88.0-4.0.4",
     "@girs/gtk-4.0": "^4.23.0-4.0.4",
-    "@gjsify/canvas2d": "^0.4.35",
-    "@gjsify/dom-elements": "^0.4.35",
-    "@gjsify/event-bridge": "^0.4.35",
-    "@gjsify/webgl": "^0.4.35",
-    "@gjsify/webrtc": "^0.4.35",
-    "@gjsify/ws": "^0.4.35",
-    "@gjsify/xmlhttprequest": "^0.4.35",
+    "@gjsify/canvas2d": "^0.4.36",
+    "@gjsify/dom-elements": "^0.4.36",
+    "@gjsify/event-bridge": "^0.4.36",
+    "@gjsify/webgl": "^0.4.36",
+    "@gjsify/webrtc": "^0.4.36",
+    "@gjsify/ws": "^0.4.36",
+    "@gjsify/xmlhttprequest": "^0.4.36",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
     "excalibur": "^0.32.0"
