@@ -137,9 +137,35 @@ export function wrapWebSocket(ws: Pick<WebSocket, 'send' | 'close' | 'on'>): Sig
     }
   })
 
-  ws.on('close', () => {
-    wlog(wrapId, `ws closed (delivered ${rawFrameCount} frames, sent ${sendCount}, ${pendingInbound.length} unflushed in buffer)`)
+  // @gjsify/ws's `ws.on('close', cb)` callback signature is
+  // `cb(code: number, reason: Buffer)` per node `ws` semantics —
+  // surface them so we can distinguish "normal 1000 close" from
+  // "abnormal 1006 / protocol error 1002 / message-too-big 1009 /
+  // policy 1008". The 2026-05-31 hand-test showed the host-side WS
+  // closing immediately after a 1534-byte SDP frame was sent (12
+  // ICE candidates went through cleanly first), with no close-code
+  // surfaced.
+  ws.on('close', (code?: number, reason?: Buffer | string) => {
+    const reasonText =
+      reason && typeof reason !== 'number'
+        ? Buffer.isBuffer(reason)
+          ? reason.toString('utf-8') || '<empty>'
+          : String(reason) || '<empty>'
+        : '<no reason>'
+    wlog(
+      wrapId,
+      `ws closed (code=${code ?? '<none>'}, reason="${reasonText}", ` +
+        `delivered ${rawFrameCount} frames, sent ${sendCount}, ${pendingInbound.length} unflushed in buffer)`,
+    )
     closed = true
+  })
+
+  // The ws library exposes 'error' as a separate event from 'close'.
+  // On @gjsify/ws over Soup, an error before / during the close
+  // sequence (e.g. SoupWebsocketConnection emitted its `error`
+  // signal with a GError) lands here.
+  ws.on('error', (err: Error) => {
+    wlog(wrapId, `ws error: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`)
   })
 
   return {
