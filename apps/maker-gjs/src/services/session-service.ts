@@ -164,6 +164,16 @@ export class SessionService {
      * verbatim to every CollabSession this service constructs.
      */
     private readonly peerConnectTimeoutMs?: number,
+    /**
+     * Inject the RTCPeerConnection factory used by every
+     * CollabSession this service constructs — forwarded as-is to
+     * {@link CollabSession}. Production omits this so the shared
+     * `globalThis.RTCPeerConnection` (wired by `main.ts`'s
+     * `@gjsify/webrtc/register` import) is used. Tests pass a
+     * paired `rtcFactoryFor(new FakeRTCPeerConnection())` so the
+     * full join flow can be exercised without GStreamer.
+     */
+    private readonly rtcFactory?: ConstructorParameters<typeof CollabSession>[0]['rtcFactory'],
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -383,6 +393,7 @@ export class SessionService {
         peerId: this.peerId,
         roomId,
         peerConnectTimeoutMs: this.peerConnectTimeoutMs,
+        rtcFactory: this.rtcFactory,
       })
       await collab.start()
       this.wireCollabClose(collab)
@@ -401,16 +412,31 @@ export class SessionService {
       peerId: this.peerId,
       roomId,
       peerConnectTimeoutMs: this.peerConnectTimeoutMs,
+      rtcFactory: this.rtcFactory,
       // engine deliberately omitted — attached after sandbox load.
     })
     try {
+      log.info(`joiner: collab.start() awaiting peer-connect…`)
       await collab.start()
+      log.info(`joiner: peer connected; requesting snapshot (timeout=${this.snapshotTimeoutMs ?? 'default'})…`)
       const snapshot = await collab.requestSnapshot(this.snapshotTimeoutMs)
+      log.info(
+        `joiner: snapshot received (project="${snapshot.project?.name ?? '<no name>'}", maps=${snapshot.maps?.length ?? 0}); writing sandbox…`,
+      )
       const sandboxProjectPath = await writeSnapshotToSandbox(snapshot, roomId)
+      log.info(`joiner: sandbox written to ${sandboxProjectPath}`)
       this.wireCollabClose(collab)
       this.setState({ kind: 'awaiting-engine', role, roomId, collab, sandboxProjectPath })
       this.emit('sandbox-project-ready', { roomId, sandboxProjectPath, collab })
     } catch (err) {
+      // Critical: the ONLY place `bye: join-failed` is sent is the
+      // collab.close('join-failed') line below. If you see that bye
+      // on the host side without a typed error logged here, this
+      // catch was hit but the error swallowed — never happen. The
+      // log + handleError emit BOTH so the operator sees it in the
+      // terminal AND the UI gets a toast.
+      log.warn('joiner: openSession failed (sending bye: join-failed)', err)
+      this.handleError(err)
       try {
         collab.close('join-failed')
       } catch {

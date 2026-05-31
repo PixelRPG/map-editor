@@ -238,13 +238,24 @@ export class PeerSession {
       // A drop on ops would mean state divergence; surface so the
       // caller can retry or escalate.
       if (kind === 'op') {
+        plog(
+          this.role,
+          `sendOp DROPPED: op channel not open (state=${channel?.readyState ?? 'absent'})`,
+        )
         this.events.emit('error', {
           error: new Error(`PeerSession.sendOp: op channel not open (state=${channel?.readyState ?? 'absent'})`),
         })
+      } else {
+        plog(this.role, `sendAwareness DROPPED: channel not open (state=${channel?.readyState ?? 'absent'})`)
       }
       return
     }
-    channel.send(JSON.stringify(payload))
+    const json = JSON.stringify(payload)
+    plog(
+      this.role,
+      `→ channel "${channel.label}" send ${kind} (len=${json.length}, kind=${(payload as { kind?: string })?.kind ?? '<no kind>'})`,
+    )
+    channel.send(json)
   }
 
   private wireChannel(channel: RTCDataChannel): void {
@@ -265,15 +276,24 @@ export class PeerSession {
     }
     channel.onmessage = (event) => {
       const raw = typeof event.data === 'string' ? event.data : ''
+      plog(this.role, `← channel "${channel.label}" recv frame (len=${raw.length})`)
       let parsed: unknown
       try {
         parsed = JSON.parse(raw)
-      } catch {
+      } catch (err) {
+        plog(
+          this.role,
+          `channel "${channel.label}" dropped malformed JSON: ${err instanceof Error ? err.message : String(err)}`,
+        )
         this.events.emit('error', {
           error: new Error(`PeerSession: dropped malformed frame on ${channel.label}`),
         })
         return
       }
+      plog(
+        this.role,
+        `channel "${channel.label}" delivered (kind=${(parsed as { kind?: string })?.kind ?? '<no kind>'})`,
+      )
       if (channel.label === CHANNEL_OP) this.events.emit('op-received', { op: parsed })
       else if (channel.label === CHANNEL_AWARENESS) this.events.emit('awareness-received', { data: parsed })
     }

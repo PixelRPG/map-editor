@@ -14,6 +14,7 @@ import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
 import relaySignallingSuite from './services/relay-signalling.spec.js'
 import sandboxPathSuite from './services/sandbox-path.spec.js'
 import sessionServiceSuite from './services/session-service.spec.js'
+import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 
 run({
   collabLogSuite,
@@ -30,4 +31,5 @@ run({
   relaySignallingSuite,
   sandboxPathSuite,
   sessionServiceSuite,
+  sessionServiceE2eSuite,
 })
