@@ -153,6 +153,20 @@ export class CollabSession {
     })
     this.subscriptions.push(() => awarenessSub.close())
 
+    // Subscribe to peer error events so any failure inside
+    // PeerSession (malformed JSON on wire, channel-send while not
+    // open, sdp/ice processing throw, RTC connectionState 'failed')
+    // lands in the operator-visible log AS A TYPED MESSAGE instead
+    // of going through the upstream @gjsify/dom-events EventTarget
+    // catch and rendering as `{}`. Adding the subscription also
+    // satisfies the standard "error events should have a listener"
+    // invariant — PeerSession's emitter is silent when no listener
+    // is registered (no implicit fallback to console).
+    const peerErrorSub = this.peer.events.on('error', ({ error }) => {
+      log.warn('peer emitted error', error)
+    })
+    this.subscriptions.push(() => peerErrorSub.close())
+
     // Snapshot exchange is engine-independent — uses raw `sendOp`
     // for the protocol frames + a captureSnapshot closure that
     // returns null when no engine is attached. CollabSession
