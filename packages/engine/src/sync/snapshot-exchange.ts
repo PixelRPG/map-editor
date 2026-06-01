@@ -25,12 +25,39 @@
 
 import type { ProjectSnapshot } from './project-snapshot.ts'
 import {
+  createSnapshotChunkOp,
   createSnapshotRequestOp,
   createSnapshotResponseOp,
   type SessionProtocolOp,
+  SNAPSHOT_CHUNK_KIND,
   SNAPSHOT_REQUEST_KIND,
   SNAPSHOT_RESPONSE_KIND,
 } from './session-protocol.ts'
+
+/**
+ * Per-chunk payload size in bytes. The envelope around each chunk
+ * (`{kind,payload:{chunkIndex,totalChunks,data},peerId,seq}`)
+ * adds ~120 bytes of overhead; 16 KiB of `data` keeps every wire
+ * frame well under the WebRTC SCTP `max-message-size` default of
+ * 64 KiB (RFC 8841 § 6.1). Going larger than the SCTP ceiling
+ * silently drops the message on GStreamer webrtcbin — verified in
+ * the 2026-06-01 pixel-rpg/map-editor hand-test, where a 1.27 MB
+ * single-message snapshot response never reached the joiner while
+ * 109-byte awareness frames and the 106-byte snapshot-request op
+ * traversed the same channel fine.
+ *
+ * 16 KiB chunks produce ~80 sends for a 1.2 MB snapshot — well
+ * within ordered-reliable SCTP throughput limits.
+ */
+const SNAPSHOT_CHUNK_BYTES = 16 * 1024
+
+/**
+ * Public reference to the canonical chunk-size used by
+ * {@link SnapshotExchange} — exported so tests can assert against
+ * the same constant and consumers that wrap the exchange (e.g. for
+ * a HTTP-fallback transport) can match the boundary exactly.
+ */
+export const SNAPSHOT_CHUNK_SIZE_BYTES = SNAPSHOT_CHUNK_BYTES
 
 export interface SnapshotExchangeOptions {
   /**
@@ -63,6 +90,13 @@ export interface SnapshotExchangeOptions {
    * without waiting in real time.
    */
   defaultTimeoutMs?: number
+  /**
+   * Override the per-chunk payload size. Production omits this
+   * and uses {@link SNAPSHOT_CHUNK_SIZE_BYTES} (16 KiB). Tests
+   * pass a small value (e.g. 64 bytes) so the chunking path is
+   * exercised without needing a megabyte of fixture data.
+   */
+  chunkSizeBytes?: number
 }
 
 interface PendingRequest {
@@ -71,12 +105,27 @@ interface PendingRequest {
   timer: ReturnType<typeof setTimeout> | null
 }
 
+/**
+ * Buffer for an in-flight chunked snapshot response. Sized at
+ * `totalChunks` once the first chunk arrives; `chunks[i]` holds
+ * each chunk's UTF-8 substring or `undefined` while still in
+ * transit. `received` counts the populated slots so we don't
+ * have to re-scan the array per arrival.
+ */
+interface ChunkBuffer {
+  chunks: Array<string | undefined>
+  totalChunks: number
+  received: number
+}
+
 export class SnapshotExchange {
   private readonly peerId: string
   private readonly send: (op: SessionProtocolOp) => void
   private readonly captureSnapshot: () => ProjectSnapshot | null
   private readonly defaultTimeoutMs: number
+  private readonly chunkSizeBytes: number
   private pending: PendingRequest | null = null
+  private chunkBuffer: ChunkBuffer | null = null
   private localSeq = 0
   private disposed = false
 
@@ -85,6 +134,7 @@ export class SnapshotExchange {
     this.send = opts.send
     this.captureSnapshot = opts.captureSnapshot
     this.defaultTimeoutMs = opts.defaultTimeoutMs ?? 10_000
+    this.chunkSizeBytes = opts.chunkSizeBytes ?? SNAPSHOT_CHUNK_BYTES
   }
 
   private nextSeq(): number {
@@ -104,7 +154,13 @@ export class SnapshotExchange {
         this.respondToRequest(op.payload.roomId)
         return
       case SNAPSHOT_RESPONSE_KIND:
+        // Legacy single-message path — still accepted so a peer
+        // running an older client (or sending a snapshot that
+        // fits in one frame and bypasses chunking) interops.
         this.resolveResponse(op.payload.snapshot)
+        return
+      case SNAPSHOT_CHUNK_KIND:
+        this.handleChunk(op.payload)
         return
     }
   }
@@ -156,6 +212,7 @@ export class SnapshotExchange {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    this.chunkBuffer = null
     if (this.pending) {
       const p = this.pending
       this.pending = null
@@ -175,9 +232,103 @@ export class SnapshotExchange {
     }
     // roomId echoed for diagnostics; not load-bearing in v1.
     void roomId
-    this.send(
-      createSnapshotResponseOp({ peerId: this.peerId, seq: this.nextSeq(), snapshot }),
-    )
+
+    // Serialise once, then chunk by configured byte boundary. We
+    // always chunk (even for tiny snapshots that fit in 1 chunk)
+    // so the receiver has a single code-path to handle. Sending
+    // as a sequence of `SNAPSHOT_CHUNK_KIND` ops keeps every wire
+    // frame below the WebRTC SCTP `max-message-size` ceiling —
+    // the 2026-06-01 hand-test bug was that single-message sends
+    // larger than 64 KiB were silently dropped by GStreamer
+    // webrtcbin (RFC 8841 default).
+    const json = JSON.stringify(snapshot)
+    const totalChunks = Math.max(1, Math.ceil(json.length / this.chunkSizeBytes))
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * this.chunkSizeBytes
+      const end = Math.min(start + this.chunkSizeBytes, json.length)
+      this.send(
+        createSnapshotChunkOp({
+          peerId: this.peerId,
+          seq: this.nextSeq(),
+          chunkIndex: i,
+          totalChunks,
+          data: json.slice(start, end),
+        }),
+      )
+    }
+  }
+
+  private handleChunk(payload: { chunkIndex: number; totalChunks: number; data: string }): void {
+    if (!this.pending) {
+      // Unsolicited chunk — drop. A host that streams without
+      // a matching request is misbehaving.
+      return
+    }
+    // Defensive: a buggy peer could send `totalChunks` of 0 or a
+    // negative `chunkIndex`. Reject the whole batch (which fails
+    // the pending request) rather than corrupt our state.
+    if (
+      !Number.isInteger(payload.totalChunks) ||
+      payload.totalChunks <= 0 ||
+      !Number.isInteger(payload.chunkIndex) ||
+      payload.chunkIndex < 0 ||
+      payload.chunkIndex >= payload.totalChunks
+    ) {
+      this.failPending(
+        new Error(
+          `SnapshotExchange: invalid chunk envelope (chunkIndex=${payload.chunkIndex}, totalChunks=${payload.totalChunks})`,
+        ),
+      )
+      return
+    }
+
+    // Allocate buffer on first chunk. A subsequent chunk that
+    // disagrees on `totalChunks` is a protocol violation — fail.
+    if (!this.chunkBuffer) {
+      this.chunkBuffer = {
+        chunks: new Array<string | undefined>(payload.totalChunks),
+        totalChunks: payload.totalChunks,
+        received: 0,
+      }
+    } else if (this.chunkBuffer.totalChunks !== payload.totalChunks) {
+      this.failPending(
+        new Error(
+          `SnapshotExchange: chunk batch size changed mid-stream ` +
+            `(saw totalChunks=${this.chunkBuffer.totalChunks}, then ${payload.totalChunks})`,
+        ),
+      )
+      return
+    }
+
+    if (this.chunkBuffer.chunks[payload.chunkIndex] !== undefined) {
+      // Duplicate chunk index — ordered+reliable channel shouldn't
+      // produce these, but be defensive.
+      return
+    }
+    this.chunkBuffer.chunks[payload.chunkIndex] = payload.data
+    this.chunkBuffer.received++
+
+    if (this.chunkBuffer.received < this.chunkBuffer.totalChunks) {
+      return
+    }
+
+    // Last chunk arrived — reassemble + parse + resolve.
+    const json = this.chunkBuffer.chunks.join('')
+    this.chunkBuffer = null
+    let snapshot: ProjectSnapshot
+    try {
+      snapshot = JSON.parse(json) as ProjectSnapshot
+    } catch (err) {
+      this.failPending(
+        new Error(
+          `SnapshotExchange: failed to parse reassembled snapshot (json.length=${json.length}): ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        ),
+      )
+      return
+    }
+    this.resolveResponse(snapshot)
   }
 
   private resolveResponse(snapshot: ProjectSnapshot): void {
@@ -189,7 +340,18 @@ export class SnapshotExchange {
     }
     const p = this.pending
     this.pending = null
+    this.chunkBuffer = null
     if (p.timer) clearTimeout(p.timer)
     p.resolve(snapshot)
+  }
+
+  /** Reject the pending request and clear any partial buffer. */
+  private failPending(err: Error): void {
+    this.chunkBuffer = null
+    if (!this.pending) return
+    const p = this.pending
+    this.pending = null
+    if (p.timer) clearTimeout(p.timer)
+    p.reject(err)
   }
 }
