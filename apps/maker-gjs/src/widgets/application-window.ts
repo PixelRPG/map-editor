@@ -279,26 +279,62 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * Load a shared-session sandbox project at the given path and,
-   * once the engine has booted, attach it to the active
-   * CollabSession. Triggered by the SessionService's
-   * `sandbox-project-ready` event.
+   * Load a shared-session sandbox project at the given path. Engine
+   * attachment is **deferred** — `_hydrateSceneEditor`'s post-
+   * `ensureForMap` hook (see {@link _maybeAttachEngineToSession})
+   * actually wires the `CollabSession` to the engine once the user
+   * navigates to a scene.
    *
-   * On failure the session stays in the `awaiting-engine` state —
-   * the user can leave the session via the existing controls.
+   * Triggered by the SessionService's `sandbox-project-ready` event.
+   *
+   * Why deferred? The atlas view loads BEFORE any scene-editor
+   * navigation, so `engineCtl.engine` is `null` at this point on the
+   * joiner's first session. Pre-fix code attempted to attach here
+   * and silently bailed when the engine was null — that left the
+   * `SessionController` un-attached, so the joiner's own paints
+   * never fired `COMMAND_EXECUTED`-driven `op` sends AND incoming
+   * `tile.paint` ops from the host had no `applyInbound` to route
+   * through. Bidirectional sync was structurally dead from the
+   * joiner's perspective, even when the wire transport worked.
+   *
+   * On failure (project-load throws) the session stays in the
+   * `awaiting-engine` state — the user can leave the session via
+   * the existing controls.
    */
   private async _loadSandboxProject(projectPath: string): Promise<void> {
     try {
       await this._loadProjectFromPath(projectPath)
-      const engine = this._engineCtl.engine?.excalibur
-      if (!engine) {
-        this._showToast(_('Sandbox project loaded but engine is not ready — try Play to open it.'))
-        return
-      }
-      this._sessionSvc?.attachEngineToCurrentSession(engine)
-      this._showToast(_('Joined shared session — editing the synced copy.'))
+      this._showToast(_('Joined shared session — open a scene to start editing.'))
     } catch (err) {
       this._showToast(_(`Could not open shared session: ${(err as Error).message}`))
+    }
+  }
+
+  /**
+   * Attach the active engine to the current `CollabSession` if (and
+   * only if) the session is waiting for one. Called from
+   * `_hydrateSceneEditor` immediately after `ensureForMap` resolves,
+   * which guarantees `_engineCtl.engine?.excalibur` is non-null.
+   *
+   * Idempotent / safe to call on every scene-editor entry:
+   *   - no session              → no-op (`_sessionSvc` is undefined or state ≠ awaiting-engine)
+   *   - host / already attached → no-op (state is `connected`, not `awaiting-engine`)
+   *   - joiner waiting          → attach + flip state to `connected`
+   *
+   * Failures are toasted but don't reset the session — the user can
+   * leave via the existing controls.
+   */
+  private _maybeAttachEngineToSession(): void {
+    if (!this._sessionSvc) return
+    if (this._sessionSvc.getState().kind !== 'awaiting-engine') return
+    const engine = this._engineCtl.engine?.excalibur
+    if (!engine) return
+    try {
+      this._sessionSvc.attachEngineToCurrentSession(engine)
+      this._showToast(_('Live editing — your changes sync with the host.'))
+    } catch (err) {
+      console.warn('[ApplicationWindow] attachEngineToCurrentSession failed:', err)
+      this._showToast(_('Could not start live sync — see logs.'))
     }
   }
 
@@ -799,6 +835,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (toolState) {
       this._engineCtl.engine?.setActiveTool(toolState.get_string()[0] as EditorTool)
     }
+
+    // If we joined a shared session before any scene was open, the
+    // engine was null at `_loadSandboxProject` time and the collab
+    // wiring was deferred. Now that `ensureForMap` has booted the
+    // engine, attach it so commands start flowing both ways.
+    // No-op when there's no awaiting-engine session.
+    this._maybeAttachEngineToSession()
 
     try {
       await this._scene_editor_view.populateFromProject(project, sceneId)
