@@ -285,6 +285,14 @@ export class TileEditorSystem extends System {
    * works thanks to its same-instance fast path, but the explicit
    * branch is documentation about the intent and one fewer remove +
    * add to handle in the engine.
+   *
+   * Emits `COMMAND_EXECUTED` at the end so the collab layer's
+   * `SessionController` can relay the paint as an `Operation` to
+   * connected peers. Without this emit the paint applies locally
+   * but never reaches the wire — the 2026-06-01 hand-test bug
+   * (joiner sees the snapshot but no live edits) traced back to
+   * this missing call (the matching emit in `Engine.executeCommand`
+   * was correct; this inline hot-path forgot to mirror it).
    */
   private dispatchCommand(command: PaintTileCommand | EraseTileCommand): void {
     if (!this.scene) return
@@ -298,6 +306,7 @@ export class TileEditorSystem extends System {
     } else {
       SessionState.set(this.scene, new UndoStackComponent([command], 1))
     }
+    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
   }
 
   private resolveLayerId(layerId: string | null): string | null {
