@@ -1,4 +1,20 @@
 /**
+ * Whether `path` is already a fully-qualified URL (or `data:` URL)
+ * that should NOT be re-joined against a base directory or read
+ * from local disk. Matches `http(s)://`, `file://`, `data:`, and
+ * `blob:` prefixes case-insensitively.
+ *
+ * Used by `SpriteSetResource.loadImages` to decide whether to
+ * `joinPaths` a sprite-set's `image.path` against its base
+ * directory, and by `captureProjectSnapshot` to skip the on-disk
+ * read for engine-bundled data-URL assets (e.g. the scientist
+ * starter sprite).
+ */
+export function isAbsoluteOrUrl(path: string): boolean {
+  return /^(https?|file|data|blob):/i.test(path)
+}
+
+/**
  * Extracts the directory path from a file path.
  * Validates input and handles edge cases properly.
  *

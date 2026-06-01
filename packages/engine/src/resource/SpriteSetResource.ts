@@ -11,15 +11,7 @@ import {
 import { SpriteSetFormat } from '../format/SpriteSetFormat'
 import type { AnimationData, SpriteDataSet, SpriteSetData, SpriteSetResourceOptions } from '../types'
 import { loadTextFile, toFetchUrl } from '../utils'
-import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
-
-/**
- * Whether `path` is already a fully-qualified URL (or data URL) that
- * should NOT be re-joined against a base directory.
- */
-function isAbsoluteOrUrl(path: string): boolean {
-  return /^(https?|file|data|blob):/i.test(path)
-}
+import { extractDirectoryPath, getFilename, isAbsoluteOrUrl, joinPaths } from '../utils/url'
 
 /**
  * Resource class for loading custom SpriteSet format into Excalibur
@@ -66,6 +58,23 @@ export class SpriteSetResource {
    */
   get path(): string {
     return joinPaths(this.basePath, this.filename)
+  }
+
+  /**
+   * Directory the sprite-set's image paths are resolved against.
+   *
+   * Exposed for the snapshot layer (`captureProjectSnapshot`) so
+   * it can read the on-disk PNG bytes and embed them in the wire
+   * snapshot — a joiner without a local copy of the project needs
+   * the binary asset to render anything.
+   *
+   * `data.image.path` may be a `data:`/`http(s)://`/`file://` URL,
+   * in which case the absolute path doesn't exist on disk and
+   * callers should detect the URL form via `isAbsoluteOrUrl` and
+   * skip the read.
+   */
+  get imageBasePath(): string {
+    return this.basePath
   }
 
   /**

@@ -184,7 +184,7 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
 function exchangeFor(
   peer: import('@pixelrpg/engine').PeerSession,
   peerId: string,
-  captureSnapshot: () => ProjectSnapshot | null,
+  captureSnapshot: () => ProjectSnapshot | null | Promise<ProjectSnapshot | null>,
 ): SnapshotExchange {
   const exchange = new SnapshotExchange({
     peerId,

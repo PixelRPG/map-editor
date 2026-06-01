@@ -1,3 +1,4 @@
+export * from './base64.ts'
 export * from './constants.ts'
 export * from './file.ts'
 export * from './session-state.ts'
