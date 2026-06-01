@@ -26,7 +26,8 @@
 import type { Engine } from '../engine.ts'
 import { GameProjectFormat } from '../format/GameProjectFormat.ts'
 import { MapFormat } from '../format/MapFormat.ts'
-import type { GameProjectData, MapData } from '../types/index.ts'
+import { SpriteSetFormat } from '../format/SpriteSetFormat.ts'
+import type { GameProjectData, MapData, SpriteSetData } from '../types/index.ts'
 
 export const PROJECT_SNAPSHOT_VERSION = 1
 
@@ -48,6 +49,25 @@ export interface ProjectSnapshot {
    * `data` to `${targetDir}/${path}`.
    */
   maps: Array<{ path: string; data: MapData }>
+  /**
+   * Per-sprite-set JSON payload keyed by the `path` field of the
+   * matching `SpriteSetReference` inside `project.spriteSets[]`.
+   * Caller writes each `data` to `${targetDir}/${path}`.
+   *
+   * Optional for wire-format backwards compatibility — older hosts
+   * (pre-2026-06-01) didn't include sprite-sets in the snapshot,
+   * which left the joiner's sandbox project broken because every
+   * map references sprite-sets that the joiner couldn't load
+   * (`/spritesets/<id>.json` 404 on disk). 2026-06-01 hand-test:
+   *
+   *   [Error]: Failed to load sprite set: FetchError: request to
+   *            file:///…/shared/<roomId>/spritesets/<id>.json failed,
+   *            reason: GLib.FileError: … nicht gefunden
+   *
+   * The receiver path treats missing `spriteSets` as `[]` for
+   * old-host compatibility; the writer path always emits it.
+   */
+  spriteSets: Array<{ path: string; data: SpriteSetData }>
 }
 
 /**
@@ -82,11 +102,37 @@ export function captureProjectSnapshot(engine: Engine): ProjectSnapshot | null {
     maps.push({ path: ref.path, data: mapResource.mapData })
   }
 
+  // Per-spriteset JSON. Every entry from `project.spriteSets[]`
+  // MUST resolve through the resource map — a missing entry means
+  // the host hasn't loaded its own project yet (sprite-sets are
+  // loaded eagerly at project-open time) and shipping the snapshot
+  // would leave the joiner with broken sandbox references. The
+  // 2026-06-01 hand-test failed exactly here: snapshot arrived
+  // without sprite-sets, joiner's `loadProject` choked on a
+  // `FetchError: spritesets/<id>.json … nicht gefunden`.
+  //
+  // `engine.gameProjectResource.spriteSets` is the in-memory
+  // Map<id, SpriteSetResource> populated by `loadProject`. Use
+  // its sync access (the `getSpriteSet(id)` async wrapper exists
+  // for callers that want a Promise — we already have the Map).
+  const spriteSets: ProjectSnapshot['spriteSets'] = []
+  for (const ref of project.spriteSets) {
+    const spriteSetResource = resource.spriteSets.get(ref.id)
+    if (!spriteSetResource) {
+      throw new Error(
+        `captureProjectSnapshot: sprite-set "${ref.id}" referenced by project but not loaded — ` +
+          `call engine.loadProject(...) first or check the project file for stale references.`,
+      )
+    }
+    spriteSets.push({ path: ref.path, data: spriteSetResource.data })
+  }
+
   return {
     version: PROJECT_SNAPSHOT_VERSION,
     projectFilename: 'game-project.json',
     project,
     maps,
+    spriteSets,
   }
 }
 
@@ -101,6 +147,7 @@ export function serializeProjectSnapshot(snapshot: ProjectSnapshot): string {
     projectFilename: snapshot.projectFilename,
     project: snapshot.project,
     maps: snapshot.maps,
+    spriteSets: snapshot.spriteSets,
   })
 }
 
@@ -207,6 +254,22 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
     }
     assertSafeRelativePath(m.path, `maps[].path`)
   }
+  // `spriteSets` is required on the wire format from 2026-06-01
+  // onward, but missing on older snapshots — treat as an empty
+  // array to stay backwards-compatible with hosts running a
+  // pre-fix engine. A new host always emits it.
+  if (obj.spriteSets === undefined) {
+    obj.spriteSets = []
+  } else if (!Array.isArray(obj.spriteSets)) {
+    throw new Error('parseProjectSnapshot: spriteSets must be an array (or omitted)')
+  } else {
+    for (const s of obj.spriteSets) {
+      if (!s || typeof s !== 'object' || typeof s.path !== 'string' || !s.data) {
+        throw new Error('parseProjectSnapshot: malformed spriteSets entry')
+      }
+      assertSafeRelativePath(s.path, `spriteSets[].path`)
+    }
+  }
   return obj as ProjectSnapshot
 }
 
@@ -255,10 +318,15 @@ export async function applyProjectSnapshot(
   for (const entry of snapshot.maps) {
     assertSafeRelativePath(entry.path, 'maps[].path')
   }
+  for (const entry of snapshot.spriteSets ?? []) {
+    assertSafeRelativePath(entry.path, 'spriteSets[].path')
+  }
 
   // Project descriptor first — it's the entry point the engine
   // loads, and writing it last would leave a half-state if a map
-  // write fails mid-loop.
+  // write fails mid-loop. The caller is responsible for not
+  // initiating the engine load until this function's promise
+  // resolves — at that point sprite-sets + maps are on disk too.
   const projectPath = joinPath(targetDir, snapshot.projectFilename)
   assertStaysInside(targetDir, projectPath, 'projectFilename')
   await writeFile(projectPath, GameProjectFormat.serialize(snapshot.project))
@@ -267,6 +335,18 @@ export async function applyProjectSnapshot(
     const mapPath = joinPath(targetDir, entry.path)
     assertStaysInside(targetDir, mapPath, `maps[${entry.path}]`)
     await writeFile(mapPath, MapFormat.serialize(entry.data))
+  }
+
+  // Sprite-sets after maps. Without these, every map's tile
+  // graphics fail to resolve at engine-load time (2026-06-01
+  // hand-test: `FetchError: spritesets/<id>.json … nicht
+  // gefunden`). Pre-fix the snapshot only included maps;
+  // post-fix the host emits the full set + the receiver writes
+  // them alongside.
+  for (const entry of snapshot.spriteSets ?? []) {
+    const spriteSetPath = joinPath(targetDir, entry.path)
+    assertStaysInside(targetDir, spriteSetPath, `spriteSets[${entry.path}]`)
+    await writeFile(spriteSetPath, SpriteSetFormat.serialize(entry.data))
   }
 }
 

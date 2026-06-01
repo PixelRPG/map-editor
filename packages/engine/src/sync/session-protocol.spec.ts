@@ -15,6 +15,7 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
   projectFilename: 'game-project.json',
   project: { id: 'p', name: 'P', version: '1', spriteSets: [], maps: [], startup: { initialMapId: 'm' } } as unknown as ProjectSnapshot['project'],
   maps: [],
+  spriteSets: [],
 }
 
 export default async () => {

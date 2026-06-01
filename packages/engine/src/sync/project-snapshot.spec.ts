@@ -36,6 +36,7 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
   projectFilename: 'game-project.json',
   project: FAKE_PROJECT,
   maps: [{ path: 'maps/dungeon.json', data: FAKE_MAP_DATA }],
+  spriteSets: [],
 }
 
 export default async () => {

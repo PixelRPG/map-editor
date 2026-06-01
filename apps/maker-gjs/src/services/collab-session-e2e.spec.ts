@@ -178,6 +178,7 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
       } as unknown as ProjectSnapshot['maps'][number]['data'],
     },
   ],
+  spriteSets: [],
 }
 
 function exchangeFor(
