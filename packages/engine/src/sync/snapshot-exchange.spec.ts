@@ -22,7 +22,11 @@ import { describe, expect, it } from '@gjsify/unit'
 import { createConnectedSessionPair, flushMicrotasks } from './in-memory-transport.ts'
 import type { ProjectSnapshot } from './project-snapshot.ts'
 import { PROJECT_SNAPSHOT_VERSION } from './project-snapshot.ts'
-import { isSessionProtocolOp } from './session-protocol.ts'
+import {
+  type SessionProtocolOp,
+  SNAPSHOT_CHUNK_KIND,
+  isSessionProtocolOp,
+} from './session-protocol.ts'
 import { SnapshotExchange } from './snapshot-exchange.ts'
 
 const FAKE_SNAPSHOT: ProjectSnapshot = {
@@ -207,6 +211,220 @@ export default async () => {
         // Host's first response is the snapshot reply.
         expect(hostSent[0].peerId).toBe('host-5')
         expect(hostSent[0].seq).toBe(0)
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+  })
+
+  await describe('SnapshotExchange — chunked transfer (2026-06-01 regression)', async () => {
+    // Pre-fix: the host called `peer.sendOp(SnapshotResponseOp)` with
+    // the entire serialised snapshot in one frame. Real-project
+    // snapshots routinely run 1.2+ MiB; GStreamer webrtcbin silently
+    // dropped sends over its SCTP max-message-size ceiling (RFC 8841
+    // default 64 KiB), and the joiner's 10 s SnapshotExchange timeout
+    // fired without any wire diagnostic. Post-fix: the host splits
+    // into `SNAPSHOT_CHUNK_KIND` ops and the joiner reassembles —
+    // every wire frame stays ~16 KiB.
+
+    await it('host always sends chunk ops (1+ chunks); joiner reassembles', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        const hostExchange = exchangeFor(sessions.host, 'host-c1', () => FAKE_SNAPSHOT)
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-c1', () => null)
+
+        const received = await joinerExchange.request('room-chunk-default', 2_000)
+        expect(received.project.id).toBe('shared')
+
+        // Inspect what the host actually sent on the wire — at least
+        // ONE frame should be a SNAPSHOT_CHUNK_KIND (never the legacy
+        // single-message SNAPSHOT_RESPONSE_KIND).
+        const hostSent = sessions.hostOpChannel.sentFrames.map(
+          (f) => JSON.parse(f) as SessionProtocolOp,
+        )
+        const chunks = hostSent.filter((op) => op.kind === SNAPSHOT_CHUNK_KIND)
+        expect(chunks.length).toBeGreaterThanOrEqual(1)
+        // Sanity: chunk envelopes carry coherent `totalChunks` and
+        // monotonic 0..N-1 indices.
+        const totalChunks = (chunks[0] as { payload: { totalChunks: number } }).payload.totalChunks
+        expect(chunks.length).toBe(totalChunks)
+        for (let i = 0; i < chunks.length; i++) {
+          const payload = (chunks[i] as { payload: { chunkIndex: number; totalChunks: number; data: string } }).payload
+          expect(payload.chunkIndex).toBe(i)
+          expect(payload.totalChunks).toBe(totalChunks)
+          expect(typeof payload.data).toBe('string')
+        }
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('REGRESSION (2026-06-01): large snapshot is split into multiple chunks under the configured byte budget', async () => {
+      // Force chunking by setting an absurdly small per-chunk budget
+      // — the FAKE_SNAPSHOT serialises to several hundred bytes, so
+      // 64-byte chunks produces ~10 chunks. This pins the chunking
+      // path without needing a megabyte of fixture data.
+      const sessions = await createConnectedSessionPair()
+      try {
+        const hostExchange = new SnapshotExchange({
+          peerId: 'host-c2',
+          send: (op) => sessions.host.sendOp(op),
+          captureSnapshot: () => FAKE_SNAPSHOT,
+          chunkSizeBytes: 64,
+        })
+        sessions.host.events.on('op-received', ({ op }) => {
+          if (isSessionProtocolOp(op)) hostExchange.handle(op)
+        })
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-c2', () => null)
+
+        const received = await joinerExchange.request('room-large', 2_000)
+        expect(received.project.name).toBe('Shared Project')
+        expect(received.maps.length).toBe(1)
+
+        const hostSent = sessions.hostOpChannel.sentFrames.map(
+          (f) => JSON.parse(f) as SessionProtocolOp,
+        )
+        const chunks = hostSent.filter((op) => op.kind === SNAPSHOT_CHUNK_KIND)
+        // FAKE_SNAPSHOT JSON is ~430 bytes — 64-byte chunks → 7 chunks
+        expect(chunks.length).toBeGreaterThan(3)
+        // Each chunk's data slice must be ≤ chunkSizeBytes
+        for (const op of chunks) {
+          const payload = (op as { payload: { data: string } }).payload
+          expect(payload.data.length).toBeLessThanOrEqual(64)
+        }
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('joiner accepts a legacy single-message SNAPSHOT_RESPONSE_KIND (backwards compat)', async () => {
+      // Stay interop-friendly with peers running an older client
+      // that still sends the pre-chunking response shape.
+      const sessions = await createConnectedSessionPair()
+      try {
+        // Host bypasses the chunking helper and crafts a legacy
+        // response op directly, via the raw peer.sendOp path. The
+        // joiner-side handle(...) MUST still resolve.
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-c3', () => null)
+        const pending = joinerExchange.request('room-legacy', 2_000)
+
+        await flushMicrotasks()
+        sessions.host.sendOp({
+          kind: '__session/snapshot-response',
+          payload: { snapshot: FAKE_SNAPSHOT },
+          peerId: 'legacy-host',
+          seq: 0,
+        })
+
+        const received = await pending
+        expect(received.project.id).toBe('shared')
+
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('rejects mid-stream change in totalChunks (protocol violation)', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-c4', () => null)
+        const pending = joinerExchange.request('room-bad-batch', 2_000)
+        await flushMicrotasks()
+
+        // Send chunk 0 of 3, then chunk 1 of 5 — protocol violation.
+        sessions.host.sendOp({
+          kind: SNAPSHOT_CHUNK_KIND,
+          payload: { chunkIndex: 0, totalChunks: 3, data: '{"x":1' },
+          peerId: 'bad-host',
+          seq: 0,
+        })
+        sessions.host.sendOp({
+          kind: SNAPSHOT_CHUNK_KIND,
+          payload: { chunkIndex: 1, totalChunks: 5, data: ',"y":2' },
+          peerId: 'bad-host',
+          seq: 1,
+        })
+
+        let caught: Error | null = null
+        try {
+          await pending
+        } catch (err) {
+          caught = err as Error
+        }
+        expect(caught).not.toBeNull()
+        expect(caught?.message).toContain('chunk batch size changed mid-stream')
+
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('rejects invalid chunk envelopes (negative index, totalChunks=0)', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-c5', () => null)
+        const pending = joinerExchange.request('room-bad-envelope', 2_000)
+        await flushMicrotasks()
+
+        sessions.host.sendOp({
+          kind: SNAPSHOT_CHUNK_KIND,
+          payload: { chunkIndex: -1, totalChunks: 3, data: 'x' },
+          peerId: 'bad-host',
+          seq: 0,
+        })
+
+        let caught: Error | null = null
+        try {
+          await pending
+        } catch (err) {
+          caught = err as Error
+        }
+        expect(caught?.message).toContain('invalid chunk envelope')
+
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('handles a snapshot that JSON-serialises to exactly chunkSizeBytes (boundary)', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        const hostExchange = new SnapshotExchange({
+          peerId: 'host-c6',
+          send: (op) => sessions.host.sendOp(op),
+          captureSnapshot: () => FAKE_SNAPSHOT,
+          // Pick a chunk size that's larger than the full snapshot
+          // so it fits in exactly ONE chunk — the smallest non-
+          // chunked path.
+          chunkSizeBytes: 1_000_000,
+        })
+        sessions.host.events.on('op-received', ({ op }) => {
+          if (isSessionProtocolOp(op)) hostExchange.handle(op)
+        })
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-c6', () => null)
+
+        const received = await joinerExchange.request('room-1chunk', 2_000)
+        expect(received.project.id).toBe('shared')
+
+        const hostSent = sessions.hostOpChannel.sentFrames.map(
+          (f) => JSON.parse(f) as SessionProtocolOp,
+        )
+        const chunks = hostSent.filter((op) => op.kind === SNAPSHOT_CHUNK_KIND)
+        // Single chunk: totalChunks === 1
+        expect(chunks.length).toBe(1)
+        expect((chunks[0] as { payload: { totalChunks: number } }).payload.totalChunks).toBe(1)
 
         hostExchange.dispose()
         joinerExchange.dispose()
