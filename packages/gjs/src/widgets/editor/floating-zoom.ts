@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
 
 import Template from './floating-zoom.blp'
 
@@ -92,6 +93,31 @@ export class FloatingZoom extends Adw.Bin {
 
   get showCursor(): boolean {
     return this._cursorX != null && this._cursorY != null
+  }
+
+  /**
+   * Defensive snapshot guard.
+   *
+   * GTK4 emits `Trying to snapshot <widget> without a current
+   * allocation` when the compositor's snapshot pass reaches a
+   * widget whose `allocated_{width,height}` are both 0. For the
+   * FloatingZoom that happens in bursts coincident with engine-
+   * canvas redraws (60 FPS): the overlay walks its children for
+   * snapshot on every GLArea render tick, and for reasons that
+   * don't reproduce in isolation (suspected interaction between
+   * Gtk.WindowHandle's internal allocation state and the
+   * overlay's snapshot iterator) FloatingZoom is sometimes
+   * walked between its size-allocate and its first draw.
+   *
+   * Short-circuiting on zero allocation is semantically correct
+   * — a zero-sized widget renders nothing visible anyway — and
+   * silences the warning spam without affecting the widget's
+   * normal lifecycle. The next valid snapshot pass (after the
+   * next size-allocate) draws the widget as usual.
+   */
+  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
+    if (this.get_allocated_width() === 0 && this.get_allocated_height() === 0) return
+    super.vfunc_snapshot(snapshot)
   }
 }
 
