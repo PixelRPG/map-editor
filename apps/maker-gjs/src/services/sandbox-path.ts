@@ -32,7 +32,7 @@ import GLib from '@girs/glib-2.0'
 import { applyProjectSnapshot, type ProjectSnapshot } from '@pixelrpg/engine'
 
 import { scopedLogger } from './collab-log.ts'
-import { writeTextFile } from './file-io.ts'
+import { writeBinaryFile, writeTextFile } from './file-io.ts'
 
 const log = scopedLogger('sandbox-path')
 
@@ -83,6 +83,11 @@ export async function writeSnapshotToSandbox(
       if (!ok) throw new Error(`writeSnapshotToSandbox: failed to write ${absolutePath}`)
     },
     (...segments) => GLib.build_filenamev(segments),
+    async (absolutePath, bytes) => {
+      const ok = writeBinaryFile(absolutePath, bytes)
+      if (!ok) throw new Error(`writeSnapshotToSandbox: failed to write binary ${absolutePath}`)
+    },
+    (path) => GLib.path_get_dirname(path),
   )
   return GLib.build_filenamev([dir, snapshot.projectFilename])
 }

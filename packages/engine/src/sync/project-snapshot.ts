@@ -2,14 +2,23 @@
  * Project-snapshot wire shape — what the host transmits to a joiner
  * so it can edit the same project without having a local copy.
  *
- * The snapshot is **schema-only**: it carries the JSON describing
- * the project + each map, but NOT the binary assets (sprite-set
- * PNGs, audio, etc.). v1 assumes both peers have the same baseline
- * asset bundle available (the built-in scientist sprite + any
- * standard assets shipped with the maker). When the joiner opens
- * the snapshot and a referenced asset is missing, the engine logs
- * a warning + falls back to placeholder graphics — the edit
- * session still works, only the visuals degrade.
+ * The snapshot carries the JSON describing the project + each map
+ * + each sprite-set, AND the binary sprite-set images (PNGs) the
+ * sprite-sets reference, base64-encoded inline in the JSON wire
+ * frame. `data:` / `http(s)://` / `file://` URL refs (e.g. the
+ * engine-bundled scientist starter, which uses an inline data
+ * URL) skip the on-disk read — both peers already have the value
+ * via the bundled JSON itself.
+ *
+ * Pre-2026-06-01 the snapshot was schema-only and assumed both
+ * peers shared a baseline asset bundle. For LAN Pair-Editing the
+ * assumption is wrong — the joiner has no local copy of the host's
+ * project — so the missing PNGs surfaced as: (a) silent fetch
+ * failures inside Excalibur's `ImageSource`, (b) libxml2
+ * `Entity: line 14: parser error : Extra content at the end of the
+ * document` noise on stderr (GdkPixbuf's format-detector retried
+ * the 404 body as SVG, librsvg parsed it as XML, found JSON), and
+ * (c) a hung joiner UI with no visible toast.
  *
  * Why a separate snapshot type instead of "open the project's
  * folder over the wire"? The wire shape is a plain object with
@@ -28,6 +37,9 @@ import { GameProjectFormat } from '../format/GameProjectFormat.ts'
 import { MapFormat } from '../format/MapFormat.ts'
 import { SpriteSetFormat } from '../format/SpriteSetFormat.ts'
 import type { GameProjectData, MapData, SpriteSetData } from '../types/index.ts'
+import { base64ToBytes, bytesToBase64 } from '../utils/base64.ts'
+import { loadBinaryFile } from '../utils/file.ts'
+import { isAbsoluteOrUrl, joinPaths } from '../utils/url.ts'
 
 export const PROJECT_SNAPSHOT_VERSION = 1
 
@@ -50,24 +62,33 @@ export interface ProjectSnapshot {
    */
   maps: Array<{ path: string; data: MapData }>
   /**
-   * Per-sprite-set JSON payload keyed by the `path` field of the
-   * matching `SpriteSetReference` inside `project.spriteSets[]`.
-   * Caller writes each `data` to `${targetDir}/${path}`.
+   * Per-sprite-set entry: the JSON descriptor plus any binary
+   * images the descriptor references (typically the single PNG
+   * pointed at by `data.image.path`).
+   *
+   * `path` — the sprite-set JSON's location relative to the
+   * project root, matching the `SpriteSetReference.path` field
+   * inside `project.spriteSets[]`. Caller writes `data` to
+   * `${targetDir}/${path}`.
+   *
+   * `images` — base64-encoded binaries. Each entry's `path` is
+   * the on-disk path RELATIVE TO THE SPRITE-SET JSON's directory
+   * (matching `data.image.path` verbatim) so the receiver can
+   * reconstruct the same on-disk layout. Empty / absent for
+   * sprite-sets whose `data.image.path` is a `data:`/URL ref —
+   * those carry the bytes inline in the JSON itself and don't
+   * need a separate transfer.
    *
    * Optional for wire-format backwards compatibility — older hosts
-   * (pre-2026-06-01) didn't include sprite-sets in the snapshot,
-   * which left the joiner's sandbox project broken because every
-   * map references sprite-sets that the joiner couldn't load
-   * (`/spritesets/<id>.json` 404 on disk). 2026-06-01 hand-test:
-   *
-   *   [Error]: Failed to load sprite set: FetchError: request to
-   *            file:///…/shared/<roomId>/spritesets/<id>.json failed,
-   *            reason: GLib.FileError: … nicht gefunden
-   *
-   * The receiver path treats missing `spriteSets` as `[]` for
-   * old-host compatibility; the writer path always emits it.
+   * (pre-2026-06-01) didn't include sprite-sets at all, then
+   * didn't include images. A new receiver treats both missing
+   * fields as empty arrays.
    */
-  spriteSets: Array<{ path: string; data: SpriteSetData }>
+  spriteSets: Array<{
+    path: string
+    data: SpriteSetData
+    images?: Array<{ path: string; base64: string }>
+  }>
 }
 
 /**
@@ -81,7 +102,7 @@ export interface ProjectSnapshot {
  * before mutating (or `JSON.parse(JSON.stringify(...))` if a true
  * snapshot semantics is needed).
  */
-export function captureProjectSnapshot(engine: Engine): ProjectSnapshot | null {
+export async function captureProjectSnapshot(engine: Engine): Promise<ProjectSnapshot | null> {
   const resource = engine.gameProjectResource
   if (!resource) return null
   const project = resource.data
@@ -102,19 +123,27 @@ export function captureProjectSnapshot(engine: Engine): ProjectSnapshot | null {
     maps.push({ path: ref.path, data: mapResource.mapData })
   }
 
-  // Per-spriteset JSON. Every entry from `project.spriteSets[]`
-  // MUST resolve through the resource map — a missing entry means
-  // the host hasn't loaded its own project yet (sprite-sets are
-  // loaded eagerly at project-open time) and shipping the snapshot
-  // would leave the joiner with broken sandbox references. The
-  // 2026-06-01 hand-test failed exactly here: snapshot arrived
-  // without sprite-sets, joiner's `loadProject` choked on a
-  // `FetchError: spritesets/<id>.json … nicht gefunden`.
+  // Per-spriteset JSON + binary images. Every entry from
+  // `project.spriteSets[]` MUST resolve through the resource map
+  // — a missing entry means the host hasn't loaded its own
+  // project yet (sprite-sets are loaded eagerly at project-open
+  // time) and shipping the snapshot would leave the joiner with
+  // broken sandbox references.
+  //
+  // For each loaded sprite-set we ALSO read the referenced PNG
+  // off disk and base64-encode it inline. Without the binary the
+  // joiner's sandbox has the JSON descriptor but no pixels — the
+  // 2026-06-01 hand-test surfaced this as a hang on the joiner
+  // (Excalibur's `ImageSource.load()` plus GdkPixbuf's SVG-fallback
+  // path on the 404 body).
+  //
+  // `data:`/`http(s)://`/`file://` URLs in `data.image.path` are
+  // skipped — the bytes are already inside the JSON (engine-
+  // bundled scientist sprite via data URL) or reachable over the
+  // network from any peer.
   //
   // `engine.gameProjectResource.spriteSets` is the in-memory
-  // Map<id, SpriteSetResource> populated by `loadProject`. Use
-  // its sync access (the `getSpriteSet(id)` async wrapper exists
-  // for callers that want a Promise — we already have the Map).
+  // Map<id, SpriteSetResource> populated by `loadProject`.
   const spriteSets: ProjectSnapshot['spriteSets'] = []
   for (const ref of project.spriteSets) {
     const spriteSetResource = resource.spriteSets.get(ref.id)
@@ -124,7 +153,27 @@ export function captureProjectSnapshot(engine: Engine): ProjectSnapshot | null {
           `call engine.loadProject(...) first or check the project file for stale references.`,
       )
     }
-    spriteSets.push({ path: ref.path, data: spriteSetResource.data })
+    const data = spriteSetResource.data
+    const images: Array<{ path: string; base64: string }> = []
+    if (data.image && !isAbsoluteOrUrl(data.image.path)) {
+      const imageDiskPath = joinPaths(spriteSetResource.imageBasePath, data.image.path)
+      try {
+        const bytes = await loadBinaryFile(imageDiskPath)
+        images.push({ path: data.image.path, base64: bytesToBase64(bytes) })
+      } catch (err) {
+        // Failure here is fatal for the snapshot — the joiner cannot
+        // render this sprite-set without the bytes. Surface a typed
+        // error so the host-side `respondToRequest` can decline the
+        // request cleanly (timeout on the joiner) rather than ship
+        // a half-state snapshot.
+        const msg = err instanceof Error ? err.message : String(err)
+        throw new Error(
+          `captureProjectSnapshot: failed to read sprite-set image "${imageDiskPath}" ` +
+            `for sprite-set "${ref.id}": ${msg}`,
+        )
+      }
+    }
+    spriteSets.push({ path: ref.path, data, images })
   }
 
   return {
@@ -268,6 +317,31 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
         throw new Error('parseProjectSnapshot: malformed spriteSets entry')
       }
       assertSafeRelativePath(s.path, `spriteSets[].path`)
+      // Binary images: optional. Validate shape + path safety + that
+      // base64 looks like base64 (cheap surface check — full decode
+      // happens at apply time). Receiver-side strictness keeps a
+      // malicious or buggy host from smuggling absolute paths or
+      // non-base64 garbage through.
+      if (s.images === undefined) {
+        s.images = []
+      } else if (!Array.isArray(s.images)) {
+        throw new Error('parseProjectSnapshot: spriteSets[].images must be an array (or omitted)')
+      } else {
+        for (const img of s.images) {
+          if (!img || typeof img !== 'object' || typeof img.path !== 'string' || typeof img.base64 !== 'string') {
+            throw new Error('parseProjectSnapshot: malformed spriteSets[].images entry')
+          }
+          assertSafeRelativePath(img.path, `spriteSets[].images[].path`)
+          // base64 alphabet check — RFC 4648 standard `[A-Za-z0-9+/=]`.
+          // An empty string is allowed (corner case: a zero-byte
+          // image), but any other invalid character fails fast.
+          if (img.base64.length > 0 && !/^[A-Za-z0-9+/=]+$/.test(img.base64)) {
+            throw new Error(
+              `parseProjectSnapshot: spriteSets[].images[].base64 contains non-base64 characters`,
+            )
+          }
+        }
+      }
     }
   }
   return obj as ProjectSnapshot
@@ -281,12 +355,43 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
 export type SnapshotWriteFile = (absolutePath: string, contents: string) => Promise<void>
 
 /**
+ * Function the caller supplies for writing a binary file. Used by
+ * the sprite-set image transfer path — applyProjectSnapshot
+ * decodes the base64 payload and hands the raw bytes here. Caller
+ * is responsible for creating parent directories.
+ *
+ * Optional on {@link applyProjectSnapshot}: a snapshot with no
+ * `images` entries (older host, or all sprite-sets use
+ * `data:`/URL refs) can be applied with text-only writers. When
+ * `images` ARE present and `writeBinaryFile` is omitted,
+ * applyProjectSnapshot throws — silent skip would leave the
+ * joiner with the same missing-PNG state that motivated this
+ * field in the first place.
+ */
+export type SnapshotWriteBinaryFile = (absolutePath: string, bytes: Uint8Array) => Promise<void>
+
+/**
  * Path-joiner the caller supplies. Decoupled from a specific I/O
  * binding so this module stays platform-agnostic — the maker (GJS)
  * passes `Gio.File`-based composition; tests pass a POSIX
  * stringifier.
  */
 export type SnapshotPathJoin = (...segments: string[]) => string
+
+/**
+ * Path-dirname the caller supplies. Used to resolve a sprite-set
+ * image's on-disk location: the image's `path` field is relative
+ * to the sprite-set JSON's directory, so we need `dirname(spriteSetPath)`
+ * plus `image.path` to get the absolute target. Default
+ * implementation strips the last `/`-separated segment — sufficient
+ * for the snapshot's normalised wire paths (always `/`).
+ */
+export type SnapshotPathDirname = (path: string) => string
+
+function defaultDirname(path: string): string {
+  const idx = path.replace(/\\/g, '/').lastIndexOf('/')
+  return idx === -1 ? '' : path.slice(0, idx)
+}
 
 /**
  * Write every file in the snapshot to `targetDir`. Mutates nothing
@@ -310,6 +415,8 @@ export async function applyProjectSnapshot(
   targetDir: string,
   writeFile: SnapshotWriteFile,
   joinPath: SnapshotPathJoin,
+  writeBinaryFile?: SnapshotWriteBinaryFile,
+  dirname: SnapshotPathDirname = defaultDirname,
 ): Promise<void> {
   // Pre-flight: the snapshot may have been constructed locally
   // (parseProjectSnapshot wouldn't have run), so re-assert every
@@ -320,6 +427,18 @@ export async function applyProjectSnapshot(
   }
   for (const entry of snapshot.spriteSets ?? []) {
     assertSafeRelativePath(entry.path, 'spriteSets[].path')
+    for (const img of entry.images ?? []) {
+      assertSafeRelativePath(img.path, 'spriteSets[].images[].path')
+    }
+  }
+  // Fail fast if the snapshot carries binary payloads but no
+  // binary writer was provided — silently skipping would
+  // reproduce the pre-fix "joiner has JSON but no PNG" bug.
+  const needsBinary = (snapshot.spriteSets ?? []).some((s) => (s.images ?? []).length > 0)
+  if (needsBinary && !writeBinaryFile) {
+    throw new Error(
+      'applyProjectSnapshot: snapshot has binary images but no writeBinaryFile callback was supplied',
+    )
   }
 
   // Project descriptor first — it's the entry point the engine
@@ -347,6 +466,24 @@ export async function applyProjectSnapshot(
     const spriteSetPath = joinPath(targetDir, entry.path)
     assertStaysInside(targetDir, spriteSetPath, `spriteSets[${entry.path}]`)
     await writeFile(spriteSetPath, SpriteSetFormat.serialize(entry.data))
+
+    // Binary images sit alongside the sprite-set JSON; the path
+    // recorded in `images[].path` is RELATIVE to the JSON's
+    // directory (mirrors `data.image.path`), so join with the
+    // JSON's dirname rather than `targetDir` directly.
+    const spriteSetDir = dirname(spriteSetPath)
+    for (const img of entry.images ?? []) {
+      const imagePath = joinPath(spriteSetDir, img.path)
+      assertStaysInside(targetDir, imagePath, `spriteSets[${entry.path}].images[${img.path}]`)
+      // base64 decode happens at apply time; parseProjectSnapshot
+      // already validated the alphabet, but a base64 with the
+      // right characters can still mis-decode (e.g. wrong padding)
+      // — let any throw bubble up so the joiner aborts the open.
+      const bytes = base64ToBytes(img.base64)
+      // The needsBinary precheck above guarantees writeBinaryFile
+      // is defined when images.length > 0.
+      await writeBinaryFile!(imagePath, bytes)
+    }
   }
 }
 

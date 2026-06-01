@@ -80,10 +80,17 @@ export interface SnapshotExchangeOptions {
    * Producer for the local project state. Called when the peer
    * sends a snapshot-request. Return `null` to refuse (the
    * requester will see a timeout). Hosts pass
-   * `() => captureProjectSnapshot(engine)`; joiners typically
-   * return null (they don't host their own state).
+   * `() => captureProjectSnapshot(engine)` (async — reads
+   * sprite-set PNGs off disk for the binary-asset transfer);
+   * joiners typically return null synchronously (they don't host
+   * their own state).
+   *
+   * Supports both sync (`ProjectSnapshot | null`) and async
+   * (`Promise<ProjectSnapshot | null>`) return values so test
+   * callers can pass a literal without juggling promises while
+   * production callers can do I/O during capture.
    */
-  captureSnapshot: () => ProjectSnapshot | null
+  captureSnapshot: () => ProjectSnapshot | null | Promise<ProjectSnapshot | null>
   /**
    * Default timeout for an outgoing request, ms. Defaults to
    * 10 s. Tests pass a small value to cover the timeout path
@@ -121,7 +128,7 @@ interface ChunkBuffer {
 export class SnapshotExchange {
   private readonly peerId: string
   private readonly send: (op: SessionProtocolOp) => void
-  private readonly captureSnapshot: () => ProjectSnapshot | null
+  private readonly captureSnapshot: () => ProjectSnapshot | null | Promise<ProjectSnapshot | null>
   private readonly defaultTimeoutMs: number
   private readonly chunkSizeBytes: number
   private pending: PendingRequest | null = null
@@ -222,40 +229,62 @@ export class SnapshotExchange {
   }
 
   private respondToRequest(roomId: string): void {
-    const snapshot = this.captureSnapshot()
-    if (!snapshot) {
-      // Nothing to send — let the requester time out. Logging
-      // here would be noisy in tests; production callers can
-      // surface "host has no project loaded yet" through the UI
-      // layer via the awareness presence channel.
+    // Resolve `captureSnapshot` as a promise so the same code-path
+    // handles both sync (`return literal`) and async (`async () =>
+    // captureProjectSnapshot(engine)`) producers. Errors during
+    // capture (e.g. a sprite-set PNG missing on the host's disk)
+    // are logged but otherwise swallowed — the requester sees a
+    // request timeout and retries / surfaces an error. We don't
+    // have a wire-level "request rejected" op yet.
+    let resolved: Promise<ProjectSnapshot | null>
+    try {
+      const result = this.captureSnapshot()
+      resolved = Promise.resolve(result)
+    } catch (err) {
+      console.warn('[SnapshotExchange] captureSnapshot threw synchronously:', err)
       return
     }
-    // roomId echoed for diagnostics; not load-bearing in v1.
-    void roomId
+    void resolved
+      .then((snapshot) => {
+        if (this.disposed) return
+        if (!snapshot) {
+          // Nothing to send — let the requester time out. Logging
+          // here would be noisy in tests; production callers can
+          // surface "host has no project loaded yet" through the
+          // UI layer via the awareness presence channel.
+          return
+        }
+        // roomId echoed for diagnostics; not load-bearing in v1.
+        void roomId
 
-    // Serialise once, then chunk by configured byte boundary. We
-    // always chunk (even for tiny snapshots that fit in 1 chunk)
-    // so the receiver has a single code-path to handle. Sending
-    // as a sequence of `SNAPSHOT_CHUNK_KIND` ops keeps every wire
-    // frame below the WebRTC SCTP `max-message-size` ceiling —
-    // the 2026-06-01 hand-test bug was that single-message sends
-    // larger than 64 KiB were silently dropped by GStreamer
-    // webrtcbin (RFC 8841 default).
-    const json = JSON.stringify(snapshot)
-    const totalChunks = Math.max(1, Math.ceil(json.length / this.chunkSizeBytes))
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * this.chunkSizeBytes
-      const end = Math.min(start + this.chunkSizeBytes, json.length)
-      this.send(
-        createSnapshotChunkOp({
-          peerId: this.peerId,
-          seq: this.nextSeq(),
-          chunkIndex: i,
-          totalChunks,
-          data: json.slice(start, end),
-        }),
-      )
-    }
+        // Serialise once, then chunk by configured byte boundary.
+        // We always chunk (even for tiny snapshots that fit in 1
+        // chunk) so the receiver has a single code-path to
+        // handle. Sending as a sequence of `SNAPSHOT_CHUNK_KIND`
+        // ops keeps every wire frame below the WebRTC SCTP
+        // `max-message-size` ceiling — the 2026-06-01 hand-test
+        // bug was that single-message sends larger than 64 KiB
+        // were silently dropped by GStreamer webrtcbin (RFC 8841
+        // default).
+        const json = JSON.stringify(snapshot)
+        const totalChunks = Math.max(1, Math.ceil(json.length / this.chunkSizeBytes))
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * this.chunkSizeBytes
+          const end = Math.min(start + this.chunkSizeBytes, json.length)
+          this.send(
+            createSnapshotChunkOp({
+              peerId: this.peerId,
+              seq: this.nextSeq(),
+              chunkIndex: i,
+              totalChunks,
+              data: json.slice(start, end),
+            }),
+          )
+        }
+      })
+      .catch((err) => {
+        console.warn('[SnapshotExchange] captureSnapshot rejected:', err)
+      })
   }
 
   private handleChunk(payload: { chunkIndex: number; totalChunks: number; data: string }): void {

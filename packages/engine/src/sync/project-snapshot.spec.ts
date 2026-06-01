@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import type { GameProjectData, MapData } from '../types/index.ts'
+import { bytesToBase64 } from '../utils/base64.ts'
 
 import {
   applyProjectSnapshot,
@@ -251,6 +252,188 @@ export default async () => {
       const reparsed = JSON.parse(projectContent ?? '{}') as GameProjectData
       expect(reparsed.id).toBe('demo')
       expect(reparsed.name).toBe('Demo Project')
+    })
+  })
+
+  // ----- Binary sprite-set image transfer ---------------------------------
+
+  // 1x1 transparent PNG — the smallest valid binary asset, ideal for
+  // a wire-format round-trip test (avoids fixture bloat while still
+  // exercising the base64 + Uint8Array + writeBinaryFile path).
+  const TINY_PNG_BYTES = new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+    0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+    0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+    0x42, 0x60, 0x82,
+  ])
+  // Derive the base64 form at runtime from the canonical bytes so
+  // any hand-typed transcription error fails-fast at base64 encode,
+  // not at byte mismatch during apply.
+  const TINY_PNG_BASE64 = bytesToBase64(TINY_PNG_BYTES)
+
+  const FAKE_SPRITESET_DATA = {
+    version: '1.0.0',
+    id: 'tiles',
+    name: 'Tiles',
+    image: { id: 'main', path: 'tiles.png', type: 'image' as const },
+    spriteWidth: 16,
+    spriteHeight: 16,
+    columns: 1,
+    rows: 1,
+    margin: 0,
+    spacing: 0,
+    sprites: [{ id: 0, col: 0, row: 0 }],
+  } as unknown as ProjectSnapshot['spriteSets'][number]['data']
+
+  const SNAPSHOT_WITH_IMAGES: ProjectSnapshot = {
+    ...FAKE_SNAPSHOT,
+    spriteSets: [
+      {
+        path: 'spritesets/tiles.json',
+        data: FAKE_SPRITESET_DATA,
+        images: [{ path: 'tiles.png', base64: TINY_PNG_BASE64 }],
+      },
+    ],
+  }
+
+  await describe('parseProjectSnapshot — binary images validation', async () => {
+    await it('accepts a snapshot whose sprite-set carries one PNG', async () => {
+      const wire = serializeProjectSnapshot(SNAPSHOT_WITH_IMAGES)
+      const back = parseProjectSnapshot(wire)
+      expect(back.spriteSets[0].images?.length).toBe(1)
+      expect(back.spriteSets[0].images?.[0].path).toBe('tiles.png')
+      expect(back.spriteSets[0].images?.[0].base64).toBe(TINY_PNG_BASE64)
+    })
+
+    await it('treats omitted spriteSets[].images as []', async () => {
+      const wire = JSON.stringify({
+        ...FAKE_SNAPSHOT,
+        spriteSets: [{ path: 'spritesets/tiles.json', data: FAKE_SPRITESET_DATA }],
+      })
+      const back = parseProjectSnapshot(wire)
+      expect(back.spriteSets[0].images?.length).toBe(0)
+    })
+
+    await it('rejects spriteSets[].images that is not an array', async () => {
+      const wire = JSON.stringify({
+        ...FAKE_SNAPSHOT,
+        spriteSets: [{ path: 'spritesets/tiles.json', data: FAKE_SPRITESET_DATA, images: 'oops' }],
+      })
+      expect(() => parseProjectSnapshot(wire)).toThrow()
+    })
+
+    await it('rejects a malformed images entry', async () => {
+      const wire = JSON.stringify({
+        ...FAKE_SNAPSHOT,
+        spriteSets: [
+          { path: 'spritesets/tiles.json', data: FAKE_SPRITESET_DATA, images: [{ path: 42, base64: 'AA==' }] },
+        ],
+      })
+      expect(() => parseProjectSnapshot(wire)).toThrow()
+    })
+
+    await it('rejects a path-traversing image path', async () => {
+      const wire = JSON.stringify({
+        ...FAKE_SNAPSHOT,
+        spriteSets: [
+          {
+            path: 'spritesets/tiles.json',
+            data: FAKE_SPRITESET_DATA,
+            images: [{ path: '../../etc/passwd', base64: 'AA==' }],
+          },
+        ],
+      })
+      expect(() => parseProjectSnapshot(wire)).toThrow()
+    })
+
+    await it('rejects non-base64 alphabet in the binary payload', async () => {
+      const wire = JSON.stringify({
+        ...FAKE_SNAPSHOT,
+        spriteSets: [
+          {
+            path: 'spritesets/tiles.json',
+            data: FAKE_SPRITESET_DATA,
+            images: [{ path: 'tiles.png', base64: 'not valid base64 ❌' }],
+          },
+        ],
+      })
+      expect(() => parseProjectSnapshot(wire)).toThrow()
+    })
+  })
+
+  await describe('applyProjectSnapshot — binary sprite-set images', async () => {
+    await it('writes each image alongside its sprite-set JSON, bytes-faithful', async () => {
+      const textWrites = new Map<string, string>()
+      const binaryWrites = new Map<string, Uint8Array>()
+      await applyProjectSnapshot(
+        SNAPSHOT_WITH_IMAGES,
+        '/sandbox/room-abc',
+        async (path, contents) => {
+          textWrites.set(path, contents)
+        },
+        (...segments) => segments.join('/'),
+        async (path, bytes) => {
+          binaryWrites.set(path, bytes)
+        },
+      )
+
+      // Sprite-set JSON landed at the descriptor's path.
+      expect(textWrites.has('/sandbox/room-abc/spritesets/tiles.json')).toBeTruthy()
+      // The image landed alongside (dirname(spritesets/tiles.json) + image.path).
+      expect(binaryWrites.has('/sandbox/room-abc/spritesets/tiles.png')).toBeTruthy()
+      const written = binaryWrites.get('/sandbox/room-abc/spritesets/tiles.png')
+      expect(written?.length).toBe(TINY_PNG_BYTES.length)
+      // Compare byte-by-byte — a base64 round-trip that drops a byte
+      // would silently corrupt the PNG (libpng would refuse to render).
+      // Computing the base64 from the canonical bytes via
+      // `bytesToBase64` at fixture-build time pins the encode side
+      // too — a regression in either direction surfaces here.
+      let identical = !!written && written.length === TINY_PNG_BYTES.length
+      if (written) {
+        for (let i = 0; i < TINY_PNG_BYTES.length; i++) {
+          if (written[i] !== TINY_PNG_BYTES[i]) {
+            identical = false
+            break
+          }
+        }
+      }
+      expect(identical).toBeTruthy()
+    })
+
+    await it('throws when images are present but writeBinaryFile is omitted', async () => {
+      let caught: unknown = null
+      try {
+        await applyProjectSnapshot(
+          SNAPSHOT_WITH_IMAGES,
+          '/sandbox/x',
+          async () => {
+            /* text writer accepts */
+          },
+          (...segments) => segments.join('/'),
+          // writeBinaryFile intentionally omitted
+        )
+      } catch (err) {
+        caught = err
+      }
+      // Silent skip would resurrect the missing-PNG joiner-hang bug.
+      expect(caught).toBeTruthy()
+    })
+
+    await it('writes nothing through writeBinaryFile when no images are present', async () => {
+      let binaryCalls = 0
+      await applyProjectSnapshot(
+        FAKE_SNAPSHOT,
+        '/sandbox/y',
+        async () => {
+          /* ignore */
+        },
+        (...segments) => segments.join('/'),
+        async () => {
+          binaryCalls++
+        },
+      )
+      expect(binaryCalls).toBe(0)
     })
   })
 }

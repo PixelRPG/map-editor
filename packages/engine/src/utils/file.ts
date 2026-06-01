@@ -36,3 +36,24 @@ export async function loadJsonFile<T>(path: string): Promise<T> {
   const content = await loadTextFile(path)
   return JSON.parse(content) as T
 }
+
+/**
+ * Load a binary file as a Uint8Array via fetch — used by the
+ * snapshot layer to embed sprite-set PNGs (and other binary
+ * assets) inside the wire snapshot so a joiner without a local
+ * project copy can still render the host's scene.
+ *
+ * Counterpart to {@link loadTextFile}: same `toFetchUrl`
+ * normalisation, same error semantics (throws on non-2xx). Uses
+ * `response.arrayBuffer()` so it stays cross-runtime (browser /
+ * Node / GJS via `@gjsify/fetch`).
+ */
+export async function loadBinaryFile(path: string): Promise<Uint8Array> {
+  const url = toFetchUrl(path)
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to load file: ${url} (${response.status})`)
+  }
+  const buf = await response.arrayBuffer()
+  return new Uint8Array(buf)
+}

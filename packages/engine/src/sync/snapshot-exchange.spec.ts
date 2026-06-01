@@ -68,7 +68,7 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
 function exchangeFor(
   peer: import('./peer-session.ts').PeerSession,
   peerId: string,
-  captureSnapshot: () => ProjectSnapshot | null,
+  captureSnapshot: () => ProjectSnapshot | null | Promise<ProjectSnapshot | null>,
 ): SnapshotExchange {
   const exchange = new SnapshotExchange({
     peerId,
@@ -426,6 +426,90 @@ export default async () => {
         // Single chunk: totalChunks === 1
         expect(chunks.length).toBe(1)
         expect((chunks[0] as { payload: { totalChunks: number } }).payload.totalChunks).toBe(1)
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+  })
+
+  await describe('SnapshotExchange — async captureSnapshot (binary asset path)', async () => {
+    // captureSnapshot may return a Promise — covers the production
+    // path where the host reads sprite-set PNGs off disk + base64-
+    // encodes them inside `captureProjectSnapshot`. The host's
+    // chunking + send wiring must wait for the promise to resolve
+    // before any wire frames go out.
+
+    await it('host awaits an async capture before chunking + sending', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        let captureCalls = 0
+        let resolvedFirst = false
+        const hostExchange = exchangeFor(sessions.host, 'host-async', async () => {
+          captureCalls++
+          // Yield to the microtask queue so the wire is provably
+          // empty before we resolve — a sync-only code path
+          // would send chunks before this `await` returns.
+          await Promise.resolve()
+          resolvedFirst = true
+          return FAKE_SNAPSHOT
+        })
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-async', () => null)
+
+        const received = await joinerExchange.request('room-async', 2_000)
+        expect(captureCalls).toBe(1)
+        expect(resolvedFirst).toBeTruthy()
+        expect(received.project.id).toBe('shared')
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('joiner times out when the host async captureSnapshot resolves to null', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        const hostExchange = exchangeFor(sessions.host, 'host-async-null', async () => null)
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-async-null', () => null)
+
+        let thrown: Error | null = null
+        try {
+          await joinerExchange.request('room-async-null', 50)
+        } catch (err) {
+          thrown = err as Error
+        }
+        expect(thrown?.message).toContain('timed out')
+
+        hostExchange.dispose()
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('joiner times out when async captureSnapshot rejects', async () => {
+      // A real-world cause: the host's sprite-set PNG was deleted
+      // mid-session, so `loadBinaryFile` throws inside
+      // `captureProjectSnapshot`. SnapshotExchange swallows + logs
+      // — joiner sees a timeout rather than a half-snapshot.
+      const sessions = await createConnectedSessionPair()
+      try {
+        const hostExchange = exchangeFor(sessions.host, 'host-async-rej', async () => {
+          throw new Error('synthetic: image read failed')
+        })
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-async-rej', () => null)
+
+        let thrown: Error | null = null
+        try {
+          await joinerExchange.request('room-async-rej', 50)
+        } catch (err) {
+          thrown = err as Error
+        }
+        expect(thrown?.message).toContain('timed out')
 
         hostExchange.dispose()
         joinerExchange.dispose()
