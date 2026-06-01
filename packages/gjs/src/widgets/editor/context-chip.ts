@@ -84,6 +84,16 @@ export class ContextChip extends Adw.Bin {
     this._tile_swatch.set_vexpand(false)
     this._tile_swatch.set_halign(Gtk.Align.CENTER)
     this._tile_swatch.set_valign(Gtk.Align.CENTER)
+    // Eagerly install the grid-icon placeholder so the Picture
+    // always has a paintable for measure() — without this, the
+    // first measure() (before `setTilePaintable` ever runs) sees
+    // an empty Picture, returns `natural=1, min=16`, and GTK4
+    // logs `GtkPicture reported min width 16 and natural width 1
+    // in measure()`. The placeholder is the same one we fall back
+    // to for `setTilePaintable(null)`, so this is purely a
+    // measure-time guarantee — `setTilePaintable(real)` replaces
+    // it without any visual flash.
+    this._tile_swatch.set_paintable(this._loadPlaceholderIcon())
   }
 
   get tileName(): string {

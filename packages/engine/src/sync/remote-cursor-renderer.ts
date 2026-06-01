@@ -92,6 +92,11 @@ export class RemoteCursorRenderer {
       this.removeActor(peer.peerId)
       return
     }
+    if (debugEnabled()) {
+      console.log(
+        `[cursor-debug] recv peer="${peer.peerId}" world=(${peer.cursor.x.toFixed(1)},${peer.cursor.y.toFixed(1)}) sceneId="${peer.cursor.sceneId}"`,
+      )
+    }
     const existing = this.actors.get(peer.peerId)
     if (existing) {
       existing.pos = new Vector(peer.cursor.x, peer.cursor.y)
@@ -136,6 +141,25 @@ export class RemoteCursorRenderer {
     actor.kill()
     this.actors.delete(peerId)
   }
+}
+
+/**
+ * Receiver-side counterpart to the sender-side debug flag in
+ * `Engine.onPointerMoved` — set
+ * `globalThis.__PIXELRPG_CURSOR_DEBUG = true` to log every inbound
+ * cursor update with the peer's reported world coord. Paired with
+ * the sender's log, the two together cover the full round-trip:
+ *
+ *   sender:   screen → world (joiner-side)
+ *   receiver: world arrived (host-side)
+ *
+ * If a peer's `world` here matches the joiner's logged value, the
+ * wire is faithful and the visible offset is camera/zoom/render
+ * geometry. If the values diverge, the wire serialiser / awareness
+ * frame layout is the culprit.
+ */
+function debugEnabled(): boolean {
+  return (globalThis as { __PIXELRPG_CURSOR_DEBUG?: boolean }).__PIXELRPG_CURSOR_DEBUG === true
 }
 
 /**

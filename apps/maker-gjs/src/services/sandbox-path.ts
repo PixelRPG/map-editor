@@ -31,10 +31,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import { applyProjectSnapshot, type ProjectSnapshot } from '@pixelrpg/engine'
 
-import { scopedLogger } from './collab-log.ts'
 import { writeBinaryFile, writeTextFile } from './file-io.ts'
-
-const log = scopedLogger('sandbox-path')
 
 /** Subdirectory under `XDG_DATA_HOME` where every shared-session sandbox lives. */
 export const SANDBOX_ROOT_SEGMENTS = ['pixelrpg-maker', 'shared'] as const
