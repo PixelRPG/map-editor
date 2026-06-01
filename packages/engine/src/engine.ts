@@ -711,6 +711,25 @@ export class Engine {
         const world = this.excalibur.screen.screenToWorldCoordinates(
           new Vector(event.screenPos.x, event.screenPos.y),
         )
+        // Opt-in coord trace — set
+        // `globalThis.__PIXELRPG_CURSOR_DEBUG = true` in DevTools /
+        // a debugger session to dump screen→world conversions. Used
+        // to investigate the 2026-06-01 "remote cursor is ~3 tiles
+        // off" report — both paint (POINTER_TAP) and cursor (this
+        // handler) read `event.screenPos` from the same source AND
+        // call `screenToWorldCoordinates` identically, so if the
+        // logged worldX/worldY here match the painted tile the
+        // offset is on the receiver / actor render side; if they
+        // mismatch, the offset is in `pointer.on('move')` vs
+        // `pointer.on('down/up')` screenPos divergence.
+        if ((globalThis as { __PIXELRPG_CURSOR_DEBUG?: boolean }).__PIXELRPG_CURSOR_DEBUG === true) {
+          const cam = this.excalibur.currentScene?.camera
+          console.log(
+            `[cursor-debug] screen=(${event.screenPos.x.toFixed(1)},${event.screenPos.y.toFixed(1)})` +
+              ` → world=(${world.x.toFixed(1)},${world.y.toFixed(1)})` +
+              ` camera=(${cam?.x.toFixed(1) ?? '?'},${cam?.y.toFixed(1) ?? '?'},zoom=${cam?.zoom.toFixed(2) ?? '?'})`,
+          )
+        }
         cb({ sceneId, worldX: world.x, worldY: world.y })
       }
       pointer.on('move', handler)

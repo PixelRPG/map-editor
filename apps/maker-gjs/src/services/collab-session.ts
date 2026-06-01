@@ -122,7 +122,6 @@ export class CollabSession {
   private readonly roomId: string
   private readonly peerConnectTimeoutMs: number
   private readonly subscriptions: Array<() => void> = []
-  private startedAt: number | null = null
 
   constructor(opts: CollabSessionOptions) {
     this.peerId = opts.peerId
@@ -254,7 +253,6 @@ export class CollabSession {
    * its tracked state.
    */
   async start(): Promise<void> {
-    this.startedAt = Date.now()
     const announceOnConnect = this.peer.events.on('state-changed', ({ state }) => {
       if (state === 'connected') this.awareness.announce()
     })
@@ -370,6 +368,5 @@ export class CollabSession {
     this.controller?.close()
     this.controller = null
     this.peer.close(reason)
-    void this.startedAt
   }
 }

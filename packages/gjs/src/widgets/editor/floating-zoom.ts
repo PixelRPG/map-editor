@@ -56,11 +56,27 @@ export class FloatingZoom extends Adw.Bin {
     this.notify('zoom-label')
   }
 
+  /**
+   * Update the cursor caption. Dedupe-heavy by design: this is the
+   * hot path during pointer hover (the maker pipes pointermove → here
+   * at engine framerate). Without dedupe, every move queues a GTK
+   * relayout + snapshot pass, which races against the overlay's own
+   * continuous engine-canvas redraws and surfaces as
+   *
+   *   GtkWidget snapshot called without a current allocation
+   *
+   * bursts. Skipping unchanged coords + only emitting `show-cursor`
+   * when the boolean actually flips drops the notify pressure to
+   * "first move + visibility transitions only".
+   */
   setCursor(x: number | null, y: number | null): void {
+    if (this._cursorX === x && this._cursorY === y) return
+    const wasVisible = this._cursorX != null && this._cursorY != null
     this._cursorX = x
     this._cursorY = y
     this.notify('cursor-label')
-    this.notify('show-cursor')
+    const nowVisible = x != null && y != null
+    if (nowVisible !== wasVisible) this.notify('show-cursor')
   }
 
   get zoomLabel(): string {
