@@ -41,6 +41,10 @@ export class EngineController {
   private _undoListener: ((state: { canUndo: boolean; canRedo: boolean }) => void) | null = null
   private _tilePickedHookAttached = false
   private _tilePickedListener: ((payload: TilePickedPayload) => void) | null = null
+  private _pointerTileHookAttached = false
+  private _pointerTileListener:
+    | ((payload: { sceneId: string; tileX: number; tileY: number }) => void)
+    | null = null
 
   constructor(private readonly slot: EngineSlot) {}
 
@@ -91,6 +95,20 @@ export class EngineController {
   }
 
   /**
+   * Register a listener fired once per pointer tile-transition over
+   * the active map. The host uses this to drive the floating-zoom
+   * OSD's coord readout (the label that reads e.g. `12, 7` next to
+   * the zoom buttons). Mirrors {@link onZoomChanged} — listener is
+   * stored once and re-attached lazily after each `ensureForMap`
+   * via {@link _attachPointerTileHook}.
+   */
+  onPointerTileChanged(
+    listener: (payload: { sceneId: string; tileX: number; tileY: number }) => void,
+  ): void {
+    this._pointerTileListener = listener
+  }
+
+  /**
    * Ensure the engine is alive, attached to the host slot, and has the
    * requested project + map loaded. Recreates the engine if the
    * cached wrapper has lost its Excalibur instance.
@@ -128,6 +146,7 @@ export class EngineController {
     this._attachZoomHook()
     this._attachUndoHook()
     this._attachTilePickedHook()
+    this._attachPointerTileHook()
   }
 
   /**
@@ -160,6 +179,7 @@ export class EngineController {
     this._zoomHookAttached = false
     this._undoHookAttached = false
     this._tilePickedHookAttached = false
+    this._pointerTileHookAttached = false
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
     // last loaded scene reported.
@@ -214,5 +234,12 @@ export class EngineController {
       this._tilePickedListener?.(payload)
     })
     this._tilePickedHookAttached = true
+  }
+
+  private _attachPointerTileHook(): void {
+    if (this._pointerTileHookAttached || !this._engine) return
+    this._pointerTileHookAttached = this._engine.onPointerTileChanged((payload) => {
+      this._pointerTileListener?.(payload)
+    })
   }
 }
