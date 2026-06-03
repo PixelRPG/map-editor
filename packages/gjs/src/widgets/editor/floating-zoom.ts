@@ -1,6 +1,5 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
 
 import Template from './floating-zoom.blp'
 
@@ -58,17 +57,14 @@ export class FloatingZoom extends Adw.Bin {
   }
 
   /**
-   * Update the cursor caption. Dedupe-heavy by design: this is the
-   * hot path during pointer hover (the maker pipes pointermove → here
-   * at engine framerate). Without dedupe, every move queues a GTK
-   * relayout + snapshot pass, which races against the overlay's own
-   * continuous engine-canvas redraws and surfaces as
-   *
-   *   GtkWidget snapshot called without a current allocation
-   *
-   * bursts. Skipping unchanged coords + only emitting `show-cursor`
-   * when the boolean actually flips drops the notify pressure to
-   * "first move + visibility transitions only".
+   * Update the cursor caption. The engine already dedupes at the
+   * tile-transition layer (`Engine.onPointerTileChanged`), so this
+   * normally fires only once per actual tile crossing. The
+   * widget-side dedupe is kept as belt-and-braces for static
+   * callers (e.g. stories) that don't go through the engine
+   * pipeline. The bound display widget is a `Gtk.Inscription` (not
+   * `Gtk.Label`) so even repeated text changes do not queue_resize
+   * the parent — see the comment in `floating-zoom.blp`.
    */
   setCursor(x: number | null, y: number | null): void {
     if (this._cursorX === x && this._cursorY === y) return
@@ -93,31 +89,6 @@ export class FloatingZoom extends Adw.Bin {
 
   get showCursor(): boolean {
     return this._cursorX != null && this._cursorY != null
-  }
-
-  /**
-   * Defensive snapshot guard.
-   *
-   * GTK4 emits `Trying to snapshot <widget> without a current
-   * allocation` when the compositor's snapshot pass reaches a
-   * widget whose `allocated_{width,height}` are both 0. For the
-   * FloatingZoom that happens in bursts coincident with engine-
-   * canvas redraws (60 FPS): the overlay walks its children for
-   * snapshot on every GLArea render tick, and for reasons that
-   * don't reproduce in isolation (suspected interaction between
-   * Gtk.WindowHandle's internal allocation state and the
-   * overlay's snapshot iterator) FloatingZoom is sometimes
-   * walked between its size-allocate and its first draw.
-   *
-   * Short-circuiting on zero allocation is semantically correct
-   * — a zero-sized widget renders nothing visible anyway — and
-   * silences the warning spam without affecting the widget's
-   * normal lifecycle. The next valid snapshot pass (after the
-   * next size-allocate) draws the widget as usual.
-   */
-  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
-    if (this.get_allocated_width() === 0 && this.get_allocated_height() === 0) return
-    super.vfunc_snapshot(snapshot)
   }
 }
 

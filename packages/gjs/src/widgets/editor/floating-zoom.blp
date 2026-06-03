@@ -45,19 +45,32 @@ template $PixelRpgFloatingZoom : Adw.Bin {
       visible: bind template.show-cursor;
     }
 
-    Gtk.Label cursor_label {
-      label: bind template.cursor-label;
+    // Inscription, NOT Label. `Gtk.Label.set_label()` internally
+    // calls `gtk_widget_queue_resize()` whenever the new text would
+    // change the natural measure — the resize bubbles up through
+    // every ancestor and briefly zeroes their allocations, which
+    // produces both
+    //
+    //   Gtk-WARNING: Trying to snapshot PixelRpgFloatingZoom
+    //   ... without a current allocation
+    //
+    // bursts in stdout AND a visible flicker of the whole OSD pill
+    // (the parent snapshot pass walks past the zero-allocated child
+    // before the next resize completes). `Gtk.Inscription` is GTK4's
+    // dedicated fixed-size text widget — its `measure()` returns
+    // `nat-chars` regardless of text content, so a text change
+    // doesn't invalidate parent layout. `width-chars` on Label
+    // alone isn't enough: Label still re-measures when text
+    // straddles `width-chars` boundaries, and `numeric` tabular
+    // figures only fix per-glyph widths inside the string.
+    Gtk.Inscription cursor_label {
+      text: bind template.cursor-label;
       visible: bind template.show-cursor;
       styles ["caption", "numeric"]
       margin-start: 8;
       margin-end: 8;
-      // Pin width to "XXX, YYY" so the pill stays stable as the
-      // pointer crosses tiles and the digit count changes (`9, 9`
-      // → `10, 10` → `123, 45`). Without this the whole toolbar
-      // reflows per tile and visibly flickers; with `numeric`
-      // tabular figures + a fixed `width-chars` the label is a
-      // fixed-width slot.
-      width-chars: 8;
+      min-chars: 8;
+      nat-chars: 8;
       xalign: 0.0;
     }
   };
