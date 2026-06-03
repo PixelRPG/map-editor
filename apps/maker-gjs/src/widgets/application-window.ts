@@ -140,6 +140,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._installActions()
     // Mirror engine-driven zoom (scroll-wheel + Ctrl+= etc.) into the OSD label.
     this._engineCtl.onZoomChanged((zoom) => this._scene_editor_view.setZoom(zoom))
+    // Same idea for the cursor coord readout on the OSD pill —
+    // each tile-crossing of the pointer over the canvas updates the
+    // `12, 7`-style label next to the zoom buttons. Engine handles
+    // screen → world → tile + per-tile dedupe; we just forward.
+    this._engineCtl.onPointerTileChanged(({ tileX, tileY }) => {
+      this._scene_editor_view.setCursorTile(tileX, tileY)
+    })
   }
 
   vfunc_map(): void {

@@ -277,6 +277,23 @@ export class Engine extends Adw.Bin {
   }
 
   /**
+   * Subscribe to tile-granular pointer-position changes. Fires once
+   * per tile crossing — see {@link ExcaliburEngine.onPointerTileChanged}
+   * for semantics. Returns `true` if subscribed, `false` if the engine
+   * hasn't started yet. Auto-cleaned alongside the other engine
+   * subscriptions.
+   */
+  public onPointerTileChanged(
+    cb: (event: { sceneId: string; tileX: number; tileY: number }) => void,
+  ): boolean {
+    const excalibur = this._excalibur
+    if (!excalibur) return false
+    const dispose = excalibur.onPointerTileChanged(cb)
+    this._excaliburSubscriptions.push({ close: dispose })
+    return true
+  }
+
+  /**
    * Repaint the Excalibur clear colour to match the current Adwaita
    * dark / light setting. Listens for `notify::dark` on the global
    * `Adw.StyleManager` so flipping the OS theme updates the canvas

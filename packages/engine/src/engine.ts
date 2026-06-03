@@ -743,6 +743,69 @@ export class Engine {
     }
   }
 
+  /**
+   * Subscribe to the primary pointer's tile-space position over the
+   * active map.
+   *
+   * Like {@link onPointerMoved} but deduped at tile granularity: the
+   * callback fires only when the pointer crosses a tile boundary
+   * (`floor(world/tileSize)` change), which is the right cadence for
+   * the OSD coord readout — once per actual tile transition rather
+   * than once per pixel of motion.
+   *
+   * Payload carries `{ sceneId, tileX, tileY }`. `tileX/tileY` can be
+   * negative or beyond `mapData.columns/rows`: we do **not** clamp,
+   * because the editor sometimes wants to know the pointer is just
+   * past the map's edge (cursor-clearing on out-of-canvas is handled
+   * by the caller).
+   *
+   * Rebinds across `MAP_LOADED` (same lifecycle as
+   * {@link onPointerMoved}). Disposer detaches the pointer + map
+   * listeners.
+   */
+  onPointerTileChanged(
+    cb: (event: { sceneId: string; tileX: number; tileY: number }) => void,
+  ): () => void {
+    let disposeMove: (() => void) | null = null
+    let lastTileX: number | null = null
+    let lastTileY: number | null = null
+    const rebind = () => {
+      disposeMove?.()
+      disposeMove = null
+      lastTileX = null
+      lastTileY = null
+      const pointer = this.excalibur?.input?.pointers?.primary
+      if (!pointer) return
+      const handler = (event: { screenPos: { x: number; y: number } }) => {
+        const scene = this._activeMapScene()
+        if (!scene) return
+        const mapData = scene.mapResource?.mapData
+        if (!mapData) return
+        const sceneId = mapData.id
+        if (!sceneId) return
+        const tileWidth = mapData.tileWidth || 16
+        const tileHeight = mapData.tileHeight || 16
+        const world = this.excalibur.screen.screenToWorldCoordinates(
+          new Vector(event.screenPos.x, event.screenPos.y),
+        )
+        const tileX = Math.floor(world.x / tileWidth)
+        const tileY = Math.floor(world.y / tileHeight)
+        if (tileX === lastTileX && tileY === lastTileY) return
+        lastTileX = tileX
+        lastTileY = tileY
+        cb({ sceneId, tileX, tileY })
+      }
+      pointer.on('move', handler)
+      disposeMove = () => pointer.off('move', handler)
+    }
+    rebind()
+    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
+    return () => {
+      disposeMove?.()
+      mapSub.close()
+    }
+  }
+
   private setStatus(status: EngineStatus): void {
     if (this.status === status) return
     this.logger.info(`Engine status changed from ${this.status} to ${status}`)

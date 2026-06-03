@@ -225,7 +225,21 @@ export class SceneEditorView extends Adw.Bin {
     this._editor.contextChip.tileName = 'Tile 0'
     this._editor.contextChip.layerName = 'Background'
     this._editor.zoomOsd.setZoom(1)
-    this._editor.zoomOsd.setCursor(0, 0)
+    // Cursor is hidden until the first pointer-move arrives over the
+    // canvas — see `setCursorTile`. Calling `setCursor(0, 0)` here
+    // would stick a misleading `0, 0` readout on the OSD before the
+    // user has even moved the mouse.
+    this._editor.zoomOsd.setCursor(null, null)
+  }
+
+  /**
+   * Push the tile under the pointer to the floating-zoom OSD's coord
+   * label. Pass `null, null` to clear the readout (pointer left the
+   * canvas / map switched). The OSD widget itself dedupes consecutive
+   * identical values — this is just the forwarder.
+   */
+  setCursorTile(tileX: number | null, tileY: number | null): void {
+    this._editor.zoomOsd.setCursor(tileX, tileY)
   }
 
   /**

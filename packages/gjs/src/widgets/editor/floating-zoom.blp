@@ -51,6 +51,14 @@ template $PixelRpgFloatingZoom : Adw.Bin {
       styles ["caption", "numeric"]
       margin-start: 8;
       margin-end: 8;
+      // Pin width to "XXX, YYY" so the pill stays stable as the
+      // pointer crosses tiles and the digit count changes (`9, 9`
+      // → `10, 10` → `123, 45`). Without this the whole toolbar
+      // reflows per tile and visibly flickers; with `numeric`
+      // tabular figures + a fixed `width-chars` the label is a
+      // fixed-width slot.
+      width-chars: 8;
+      xalign: 0.0;
     }
   };
   }
