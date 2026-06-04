@@ -3,6 +3,7 @@ import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor
 import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { collectHiddenLayerIds } from './layer-visibility.ts'
+import { getSpritesAt } from './map-editor-shadow.service.ts'
 
 /**
  * Tile graphics operations and sprite rendering.
@@ -81,7 +82,7 @@ export function rebuildAllTileGraphics(
   if (!editorComponent) return
 
   const hiddenLayerIds = collectHiddenLayerIds(mapResource)
-  const allSprites = editorComponent.getSpritesForTileAndLayer(tile)
+  const allSprites = getSpritesAt(editorComponent, tile.x, tile.y)
   // Filter out sprites whose layer is hidden — they stay in the
   // shadow state (so toggling visibility back on is a pure graphics
   // rebuild without re-loading from JSON) but we skip them at render.

@@ -21,6 +21,7 @@ import {
   TileMapTierComponent,
 } from '../components/index.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
+import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
@@ -225,7 +226,7 @@ export class TileEditorSystem extends System {
     // can revert. The hit already carries the `MapEditorComponent`
     // resolved by `findTileUnderPointer` — reuse it instead of a
     // second `tileMap.get(MapEditorComponent)` lookup.
-    const previousSprites = hit.editor.getSpritesForTileAndLayer(hit.tile, layerId).map((ref) => ({
+    const previousSprites = getSpritesAt(hit.editor, hit.coords.x, hit.coords.y, layerId).map((ref) => ({
       spriteSetId: ref.spriteSetId,
       spriteId: ref.spriteId,
       zIndex: ref.zIndex,
