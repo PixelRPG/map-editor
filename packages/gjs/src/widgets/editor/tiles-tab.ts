@@ -69,7 +69,7 @@ export class TilesTab extends Adw.Bin {
   }
 
   /** Visually highlight a tile in the inner palette, used to mirror an
-   * external selection (e.g. via the context-chip popover). */
+   * external selection (e.g. via the top-bar tile popover). */
   selectTile(id: number): void {
     this._palette.selectTile(id)
   }

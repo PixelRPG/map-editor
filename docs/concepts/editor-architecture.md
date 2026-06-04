@@ -53,7 +53,7 @@ Editor-state components, all on the session-singleton entity:
 
 | Component | Purpose | Today's home (pre-migration) |
 |---|---|---|
-| `ActiveToolComponent` | `{ tool: 'brush' \| 'eraser' \| 'bucket' \| 'rect' \| 'select' \| 'stamp' \| 'event' }` | `engine.setEditorState({ tool })` callback |
+| `ActiveToolComponent` | `{ tool: 'pencil' \| 'eraser' \| 'eyedropper' }` (see note below) | `engine.setEditorState({ tool })` callback |
 | `ActiveTileComponent` | `{ spriteSetId, spriteId }` | `SceneEditorView._activeTileId` field |
 | `ActiveLayerComponent` | `{ layerId }` | `SceneEditorView._activeLayerId` field |
 | `SelectionComponent` | `{ entityIds: number[] }` | doesn't exist yet — would land here |
@@ -63,6 +63,8 @@ Editor-state components, all on the session-singleton entity:
 | `GhostSpawnComponent` | `{ tileX, tileY }` | see [`runtime-modes.md`](runtime-modes.md) |
 
 The set is intentionally small — anything that doesn't qualify (see below) stays in its natural home.
+
+> **Note on the tool union:** the shipped set is just `pencil | eraser | eyedropper`. Bucket-fill, rect, select, stamp, and event tools were deferred — they're tracked as future tools but not implemented. Any future tool drops in via the tool MenuButton inside `FloatingTopBar` (see `_buildToolMenu`), by extending the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts`.
 
 ### In ECS systems (controller)
 
@@ -84,6 +86,8 @@ New systems landing as tools / features grow:
 | `UndoSystem` | once we have command-shaped operations |
 | `BucketFillSystem` | when bucket-fill tool lands |
 | `MarqueeSelectSystem` | when rect-select tool lands |
+
+> `BucketFillSystem` and `MarqueeSelectSystem` are not currently shipped — they land alongside their respective tools (bucket-fill, rect-select), which are deferred from the shipped `EditorTool` union above.
 
 ### In GTK (the view) — what stays
 
@@ -252,15 +256,15 @@ This is the **minimum** for the architecture to be real. Nothing migrates yet; w
 
 ### Phase 2 — `ActiveToolComponent`
 
-Replaces the `engine.setEditorState({ tool })` callback with component mutation. `TileEditorSystem` queries the session singleton instead. The maker's tool-rail click handlers mutate the component. Smallest possible migration to validate the subscription bridge.
+Replaces the `engine.setEditorState({ tool })` callback with component mutation. `TileEditorSystem` queries the session singleton instead. The tool MenuButton inside `FloatingTopBar` (popover-driven) mutates the component on selection. Smallest possible migration to validate the subscription bridge.
 
 ### Phase 3 — `ActiveTileComponent` + `ActiveLayerComponent`
 
-`SceneEditorView._activeTileId` and `_activeLayerId` move to components. The context-chip + inspector subscribe. `TileEditorSystem` consumes them.
+`SceneEditorView._activeTileId` and `_activeLayerId` move to components. The active-tile + active-layer chip inside `FloatingTopBar` + the inspector subscribe. `TileEditorSystem` consumes them.
 
 ### Phase 4 — `SelectionComponent` + `SelectionSystem`
 
-First **new** feature built directly on the new architecture. Marquee-select tool, multi-tile clipboard, group-move. No legacy state to migrate — built fresh in the ECS-first style.
+First **new** feature built directly on the new architecture. The foundation component (`SelectedPlacementsComponent`) has shipped; the marquee-select tool itself — together with multi-tile clipboard and group-move — is deferred to a future phase (`SelectionSystem` lands alongside it). No legacy state to migrate — built fresh in the ECS-first style.
 
 ### Phase 5 — `UndoStackComponent` + `UndoSystem`
 
@@ -276,7 +280,7 @@ The killer feature. Once all mutating operations (paint, erase, place-object, mo
 The future "in-game editor on consoles" target ([`runtime-modes.md`](runtime-modes.md) § Future) requires the editor to run **inside** Excalibur (no GTK). Under the hybrid:
 
 - Components and systems are reusable verbatim. They never touched GTK.
-- The View layer gets re-implemented: instead of GTK widgets, Excalibur `ScreenElement` actors render the palette / inspector / tool rail on top of the game canvas.
+- The View layer gets re-implemented: instead of GTK widgets, Excalibur `ScreenElement` actors render the palette / inspector / floating chrome on top of the game canvas.
 - Subscriptions flip from GObject signals to whatever event mechanism the Excalibur-UI framework exposes.
 - Same controller, same model, different rendering host. Standard MVC payoff.
 

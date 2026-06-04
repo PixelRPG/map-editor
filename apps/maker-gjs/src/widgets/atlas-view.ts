@@ -191,11 +191,10 @@ export class AtlasView extends Adw.Bin {
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
       const scene = this._scenes.find((s) => s.id === id) ?? null
       this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
-      // Auto-show the inspector on selection — user-attention event.
-      // Atlas sidebars default to closed; tapping a scene card
-      // reveals its metadata without a manual toggle. Idempotent
-      // on a re-tap (property change is a no-op when already true).
-      this.showInspector = true
+      // Inspector visibility is shared at the window level and persists
+      // across view switches — don't force it open on scene-select.
+      // The user opens chrome via the floating toggles when they want
+      // it; auto-opening here would override their saved-closed state.
       this.emit('scene-selected', id)
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {

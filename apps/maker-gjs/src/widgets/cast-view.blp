@@ -10,6 +10,7 @@ template $CastView : Adw.Bin {
     min-sidebar-width: 220;
     max-sidebar-width: 260;
     sidebar-width-fraction: 0.7;
+    pin-sidebar: true;
     collapsed: bind template.library-collapsed;
     show-sidebar: bind template.show-library bidirectional;
 
@@ -22,6 +23,7 @@ template $CastView : Adw.Bin {
       sidebar-position: end;
       min-sidebar-width: 280;
       max-sidebar-width: 360;
+      pin-sidebar: true;
       collapsed: bind template.inspector-collapsed;
       show-sidebar: bind template.show-inspector bidirectional;
 

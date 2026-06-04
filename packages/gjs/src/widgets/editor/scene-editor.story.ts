@@ -47,13 +47,8 @@ export class SceneEditorStory extends StoryWidget {
           type: ControlType.SELECT,
           options: [
             { label: 'Pencil', value: 'pencil' },
-            { label: 'Bucket', value: 'bucket' },
-            { label: 'Rectangle', value: 'rect' },
             { label: 'Eraser', value: 'eraser' },
             { label: 'Eyedropper', value: 'eyedropper' },
-            { label: 'Select', value: 'select' },
-            { label: 'Stamp', value: 'stamp' },
-            { label: 'Event', value: 'event' },
           ],
         },
         { name: 'zoom', label: 'Zoom %', type: ControlType.RANGE, min: 25, max: 400, step: 25 },
@@ -99,9 +94,9 @@ export class SceneEditorStory extends StoryWidget {
     const scene = SAMPLE_SCENES.find((s) => s.id === sceneId) ?? SAMPLE_SCENES[0]
     const tilePx = typeof this.args.mapPx === 'number' ? this.args.mapPx : 16
 
-    this._editor.contextChip.tileName = `Grass A — ${scene.name}`
-    this._editor.contextChip.layerName = 'Background'
-    this._editor.toolRail.setActiveTool((this.args.tool as 'pencil') ?? 'pencil')
+    this._editor.topBar.tileName = `Grass A — ${scene.name}`
+    this._editor.topBar.layerName = 'Background'
+    this._editor.topBar.setActiveTool((this.args.tool as 'pencil') ?? 'pencil')
 
     const zoomPercent = typeof this.args.zoom === 'number' ? this.args.zoom : 100
     this._editor.zoomOsd.setZoom(zoomPercent / 100)

@@ -23,7 +23,7 @@ import type { Command } from '../commands/types.ts'
  *
  * `notifyMutation` is the right signal channel for "stack changed"
  * updates — listeners (Undo/Redo button enabled-state in the
- * floating-history widget) subscribe to the component and observe
+ * floating-top-bar widget) subscribe to the component and observe
  * the cursor + length via the same payload they get on add.
  */
 export class UndoStackComponent extends Component {

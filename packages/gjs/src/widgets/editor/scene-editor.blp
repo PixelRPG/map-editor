@@ -2,18 +2,16 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgSceneEditor : Adw.Bin {
+  // Responsive density is handled by FloatingTopBar's own internal
+  // `Adw.BreakpointBin` — it watches its own allocated width and
+  // toggles between split (≥880sp) and merged-with-disclosure
+  // (<880sp) without any external property chain.
   Gtk.Overlay overlay {
     [overlay]
-    $PixelRpgFloatingToolRail tool_rail {}
-
-    [overlay]
-    $PixelRpgFloatingHistory history_osd {}
+    $PixelRpgFloatingTopBar top_bar {}
 
     [overlay]
     $PixelRpgFloatingZoom zoom_osd {}
-
-    [overlay]
-    $PixelRpgContextChip context_chip {}
 
     [overlay]
     $PixelRpgFloatingPlay floating_play {}

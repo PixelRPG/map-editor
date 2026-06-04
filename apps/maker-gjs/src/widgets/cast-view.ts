@@ -55,7 +55,12 @@ export class CastView extends Adw.Bin {
   declare _gallery_group: Adw.PreferencesGroup
 
   private _projectName = ''
-  private _showLibrary = true
+  // Sidebar visibility starts CLOSED — the actual value is overwritten
+  // by `ApplicationWindow._shareSidebarState`'s SYNC_CREATE bind on
+  // window construction. Keeping the default `false` here means the
+  // very first frame (before the bind fires) doesn't briefly show an
+  // open sidebar against the user's saved-closed state.
+  private _showLibrary = false
   private _showInspector = false
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
@@ -70,9 +75,7 @@ export class CastView extends Adw.Bin {
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
   private _onSetSpeedRequested: ((charId: string, tilesPerSec: number) => void) | null = null
-  private _onSetDurationRequested:
-    | ((charId: string, animId: string, durationMs: number) => void)
-    | null = null
+  private _onSetDurationRequested: ((charId: string, animId: string, durationMs: number) => void) | null = null
 
   static {
     GObject.registerClass(

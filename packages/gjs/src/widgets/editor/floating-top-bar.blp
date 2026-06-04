@@ -1,0 +1,416 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgFloatingTopBar : Adw.Bin {
+  halign: fill;
+  valign: start;
+  margin-top: 12;
+  margin-start: 12;
+  margin-end: 12;
+
+  // Self-contained responsive logic: an `Adw.BreakpointBin` watches
+  // THIS bar's own allocated width. Breakpoints toggle widget
+  // visibility directly — no external property chain.
+  //
+  // CRITICAL: Adw.BreakpointBin activates exactly ONE breakpoint at
+  // a time (see `adw-breakpoint-bin.c:421-428` — reverse iteration,
+  // break on first match; transitions restore properties to their
+  // pre-breakpoint value). Setters DO NOT stack across breakpoints.
+  // Each breakpoint below therefore declares the FULL visible-state
+  // for its width range. Reverse iteration means the LAST matching
+  // breakpoint wins — putting them in ascending min-width order lets
+  // the highest matching one carry the most-permissive visibility
+  // set.
+  //
+  // Stages (BLP defaults are the < 460sp "minimum" state):
+  //   ≥ 880sp  → split (desktop) layout: two `toolbar.osd` pills
+  //              with a spacer between them, every button visible
+  //   ≥ 740sp  → merged pill + history + grid + back + chip labels
+  //   ≥ 620sp  → merged pill + history + grid + back (overflow empty)
+  //   ≥ 540sp  → merged pill + history + grid
+  //   ≥ 460sp  → merged pill + history (undo/redo)
+  //   < 460sp  → defaults: lib + overflow + tool + tile-icon + layer-icon + inspector
+  Adw.BreakpointBin {
+    width-request: 1;
+    height-request: 1;
+
+    Adw.Breakpoint {
+      condition ("min-width: 460sp")
+
+      setters {
+        undo_button_merged.visible: true;
+        redo_button_merged.visible: true;
+      }
+    }
+
+    Adw.Breakpoint {
+      condition ("min-width: 540sp")
+
+      setters {
+        undo_button_merged.visible: true;
+        redo_button_merged.visible: true;
+        grid_button_merged.visible: true;
+      }
+    }
+
+    Adw.Breakpoint {
+      condition ("min-width: 620sp")
+
+      setters {
+        undo_button_merged.visible: true;
+        redo_button_merged.visible: true;
+        grid_button_merged.visible: true;
+        back_button_merged.visible: true;
+        overflow_button_merged.visible: false;
+      }
+    }
+
+    Adw.Breakpoint {
+      condition ("min-width: 740sp")
+
+      setters {
+        undo_button_merged.visible: true;
+        redo_button_merged.visible: true;
+        grid_button_merged.visible: true;
+        back_button_merged.visible: true;
+        overflow_button_merged.visible: false;
+        merged_tile_label.visible: true;
+        merged_layer_label.visible: true;
+      }
+    }
+
+    Adw.Breakpoint {
+      condition ("min-width: 880sp")
+
+      setters {
+        split_root.visible: true;
+        merged_root.visible: false;
+      }
+    }
+
+    child: Gtk.WindowHandle {
+      child: Gtk.Box {
+        orientation: horizontal;
+        spacing: 0;
+
+        // ============================================================
+        // SPLIT LAYOUT — two `toolbar.osd` pills with central spacer.
+        // Default hidden; raised by the ≥880sp breakpoint.
+        // ============================================================
+        Gtk.Box split_root {
+          visible: false;
+          hexpand: true;
+          orientation: horizontal;
+          spacing: 0;
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 2;
+            styles ["toolbar", "osd"]
+
+            Gtk.ToggleButton library_toggle_split {
+              icon-name: "sidebar-show-symbolic";
+              action-name: "win.toggle-library";
+              tooltip-text: _("Toggle library");
+              styles ["flat"]
+            }
+
+            Gtk.Button back_button_split {
+              action-name: "win.back-to-atlas";
+              tooltip-text: _("Back to atlas");
+              styles ["flat"]
+
+              child: Gtk.Box {
+                spacing: 4;
+
+                Gtk.Image {
+                  icon-name: "go-previous-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("Atlas");
+                }
+              };
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            Gtk.Button undo_button_split {
+              icon-name: "edit-undo-symbolic";
+              action-name: "win.undo";
+              tooltip-text: _("Undo");
+              styles ["flat"]
+            }
+
+            Gtk.Button redo_button_split {
+              icon-name: "edit-redo-symbolic";
+              action-name: "win.redo";
+              tooltip-text: _("Redo");
+              styles ["flat"]
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            Gtk.ToggleButton grid_button_split {
+              icon-name: "view-grid-symbolic";
+              action-name: "win.toggle-grid";
+              tooltip-text: _("Toggle grid view");
+              styles ["flat"]
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            Gtk.MenuButton tool_button_split {
+              icon-name: "document-edit-symbolic";
+              tooltip-text: _("Tool");
+              styles ["flat"]
+            }
+          }
+
+          Gtk.Box {
+            hexpand: true;
+          }
+
+          Gtk.Box {
+            orientation: horizontal;
+            spacing: 2;
+            styles ["toolbar", "osd"]
+
+            Gtk.MenuButton tile_button_split {
+              tooltip-text: _("Active tile");
+              styles ["flat"]
+
+              child: Gtk.Box {
+                spacing: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Picture tile_swatch_split {
+                  content-fit: contain;
+                  can-shrink: false;
+                  width-request: 22;
+                  height-request: 22;
+                  hexpand: false;
+                  vexpand: false;
+                }
+
+                Gtk.Label {
+                  label: bind template.tile-name;
+                }
+
+                Gtk.Image {
+                  icon-name: "pan-down-symbolic";
+                  styles ["dim-label"]
+                }
+              };
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            Gtk.MenuButton layer_button_split {
+              tooltip-text: _("Active layer");
+              styles ["flat"]
+
+              child: Gtk.Box {
+                spacing: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
+                  icon-name: "view-list-symbolic";
+                  pixel-size: 14;
+                  styles ["accent"]
+                }
+
+                Gtk.Label {
+                  label: bind template.layer-name;
+                }
+
+                Gtk.Image {
+                  icon-name: "pan-down-symbolic";
+                  styles ["dim-label"]
+                }
+              };
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            Gtk.ToggleButton inspector_toggle_split {
+              icon-name: "sidebar-show-right-symbolic";
+              active: bind template.show-inspector bidirectional;
+              tooltip-text: _("Toggle inspector");
+              styles ["flat"]
+            }
+          }
+        }
+
+        // ============================================================
+        // MERGED LAYOUT — single full-width pill. Default visible;
+        // hidden by the ≥880sp breakpoint. Secondary buttons default
+        // hidden and are surfaced by the disclosure breakpoints above.
+        // ============================================================
+        Gtk.Box merged_root {
+          visible: true;
+          hexpand: true;
+          orientation: horizontal;
+          spacing: 2;
+          styles ["toolbar", "osd"]
+
+          Gtk.ToggleButton library_toggle_merged {
+            icon-name: "sidebar-show-symbolic";
+            action-name: "win.toggle-library";
+            tooltip-text: _("Toggle library");
+            styles ["flat"]
+          }
+
+          Gtk.Button back_button_merged {
+            visible: false;
+            action-name: "win.back-to-atlas";
+            tooltip-text: _("Back to atlas");
+            styles ["flat"]
+
+            child: Gtk.Box {
+              spacing: 4;
+
+              Gtk.Image {
+                icon-name: "go-previous-symbolic";
+              }
+
+              Gtk.Label {
+                label: _("Atlas");
+              }
+            };
+          }
+
+          Gtk.Button undo_button_merged {
+            visible: false;
+            icon-name: "edit-undo-symbolic";
+            action-name: "win.undo";
+            tooltip-text: _("Undo");
+            styles ["flat"]
+          }
+
+          Gtk.Button redo_button_merged {
+            visible: false;
+            icon-name: "edit-redo-symbolic";
+            action-name: "win.redo";
+            tooltip-text: _("Redo");
+            styles ["flat"]
+          }
+
+          Gtk.ToggleButton grid_button_merged {
+            visible: false;
+            icon-name: "view-grid-symbolic";
+            action-name: "win.toggle-grid";
+            tooltip-text: _("Toggle grid view");
+            styles ["flat"]
+          }
+
+          // Overflow visibility is set by the ≥620sp breakpoint
+          // (hides once every collapsable button is promoted).
+          // Contents are rebuilt in TS so the menu never duplicates
+          // a visible button.
+          Gtk.MenuButton overflow_button_merged {
+            icon-name: "view-more-symbolic";
+            tooltip-text: _("More actions");
+            styles ["flat"]
+          }
+
+          Gtk.MenuButton tool_button_merged {
+            icon-name: "document-edit-symbolic";
+            tooltip-text: _("Tool");
+            styles ["flat"]
+          }
+
+          // Hexpand spacer — pushes the context cluster + inspector
+          // toggle to the right edge.
+          Gtk.Box {
+            hexpand: true;
+          }
+
+          Gtk.MenuButton tile_button_merged {
+            tooltip-text: _("Active tile");
+            styles ["flat"]
+
+            child: Gtk.Box {
+              spacing: 4;
+              margin-start: 4;
+              margin-end: 2;
+
+              Gtk.Picture tile_swatch_merged {
+                content-fit: contain;
+                can-shrink: false;
+                width-request: 22;
+                height-request: 22;
+                hexpand: false;
+                vexpand: false;
+              }
+
+              Gtk.Label merged_tile_label {
+                visible: false;
+                label: bind template.tile-name;
+              }
+
+              Gtk.Image {
+                icon-name: "pan-down-symbolic";
+                styles ["dim-label"]
+              }
+            };
+          }
+
+          Gtk.Separator {
+            orientation: vertical;
+          }
+
+          Gtk.MenuButton layer_button_merged {
+            tooltip-text: _("Active layer");
+            styles ["flat"]
+
+            child: Gtk.Box {
+              spacing: 4;
+              margin-start: 4;
+              margin-end: 2;
+
+              Gtk.Image {
+                icon-name: "view-list-symbolic";
+                pixel-size: 14;
+                styles ["accent"]
+              }
+
+              Gtk.Label merged_layer_label {
+                visible: false;
+                label: bind template.layer-name;
+              }
+
+              Gtk.Image {
+                icon-name: "pan-down-symbolic";
+                styles ["dim-label"]
+              }
+            };
+          }
+
+          Gtk.Separator {
+            orientation: vertical;
+          }
+
+          Gtk.ToggleButton inspector_toggle_merged {
+            icon-name: "sidebar-show-right-symbolic";
+            active: bind template.show-inspector bidirectional;
+            tooltip-text: _("Toggle inspector");
+            styles ["flat"]
+          }
+        }
+      };
+    };
+  }
+}

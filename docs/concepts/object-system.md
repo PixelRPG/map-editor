@@ -293,7 +293,7 @@ Canonical events (names match the `EngineEvent` enum in `packages/engine/src/typ
 ## How the editor surfaces this
 
 - **Library Mode-Rail row** ("Objects") with the project's `objectLibrary` browsable as cards by `editorData.category`
-- **Object tool** in the floating tool rail — paint placements like tiles, with a kind/library picker in the context chip
+- **Object tool** surfaced via FloatingTopBar's tool MenuButton — paint placements like tiles, with a kind/library picker exposed either in the library sidebar (when an Objects mode is active) or inline in FloatingTopBar alongside the active-tile chip.
 - **Inspector "Objects" tab** — list placements on the current map; selecting one shows the merged definition + overrides editor
 - **Sprite-set editor** (future) — edit `TileProperties` on each sprite directly in the sprite-set view; changes persist to the sprite-set JSON
 - **Atlas teleport curves** — built by aggregating `kind: 'teleport'` placements across all maps in the project (replaces today's projectwide `teleports[]`)

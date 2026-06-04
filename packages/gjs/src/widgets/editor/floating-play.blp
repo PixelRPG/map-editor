@@ -7,28 +7,32 @@ template $PixelRpgFloatingPlay : Adw.Bin {
   margin-end: 12;
   margin-bottom: 12;
 
-  Gtk.Button play_button {
-    action-name: "win.play";
-    tooltip-text: _("Play");
-    // Don't steal keyboard focus from the engine canvas — without
-    // this, clicking Play moves focus to the button and arrow keys
-    // / WASD stop reaching Excalibur until the user tabs back to
-    // the canvas. The button still works (action fires on click),
-    // it just doesn't grab the focus ring.
-    focus-on-click: false;
-    styles ["suggested-action", "pill"]
-
+  // `toolbar.osd` Box stays as the layout host (same outer geometry,
+  // padding, window-drag behaviour as every other floating chrome
+  // widget), but the wrapper background is overridden to transparent
+  // via `floating-play-frame` in scene-editor.css so only the inner
+  // accent-coloured button is visible.
+  Gtk.WindowHandle {
     child: Gtk.Box {
-      spacing: 4;
-      margin-start: 4;
-      margin-end: 4;
+      orientation: horizontal;
+      spacing: 2;
+      styles ["toolbar", "osd", "floating-play-frame"]
 
-      Gtk.Image icon {
-        icon-name: "media-playback-start-symbolic";
-      }
+      Gtk.Button play_button {
+        action-name: "win.play";
+        tooltip-text: _("Play");
+        // Don't steal keyboard focus from the engine canvas — without
+        // this, clicking Play moves focus to the button and arrow keys
+        // / WASD stop reaching Excalibur until the user tabs back to
+        // the canvas. The button still works (action fires on click),
+        // it just doesn't grab the focus ring.
+        focus-on-click: false;
+        styles ["suggested-action"]
 
-      Gtk.Label label {
-        label: _("Play");
+        child: Adw.ButtonContent button_content {
+          icon-name: "media-playback-start-symbolic";
+          label: _("Play");
+        };
       }
     };
   }

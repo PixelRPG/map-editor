@@ -66,7 +66,7 @@ export class CharacterPreview extends Adw.Bin {
     // field initialisers), so `_roleLabel` is briefly `undefined` —
     // GObject then refuses the value because the ParamSpec is typed
     // as string ("Wrong type undefined; string expected"). Matches
-    // the pattern in `mode-rail.ts` / `context-chip.ts`.
+    // the pattern in `mode-rail.ts` / `floating-top-bar.ts`.
     return this._roleLabel ?? ''
   }
 

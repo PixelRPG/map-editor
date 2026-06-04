@@ -31,7 +31,7 @@ Combinations are first-class. Each user-facing button picks a marker set:
 |---|---|---|
 | Default (open editor) | `EditorMode` | Pure editor — tools work, nothing moves, triggers are visualised but don't execute |
 | **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `GhostSpawn{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. |
-| **Test run** (no edit) | `RuntimeMode` + `GhostSpawn` | Same in-editor window, but the tool rail is hidden and the inspector goes read-only — clean run-through. Esc / Stop → drops the runtime marker, back to editor. |
+| **Test run** (no edit) | `RuntimeMode` + `GhostSpawn` | Same in-editor window, but the floating top-bar's tool affordances are hidden and the inspector goes read-only — clean run-through. Esc / Stop → drops the runtime marker, back to editor. |
 | **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + `kind: 'spawn-point'` placement. No editor chrome. This is what shipping looks like. |
 
 **Why marker components instead of an enum:** "Live Run" isn't a separate mode from "Editor" — it's `Editor && Runtime`. Modelling each as a separate boolean marker lets the systems independently observe their own concern without anyone owning a giant `Mode` enum that needs a switch statement everywhere.

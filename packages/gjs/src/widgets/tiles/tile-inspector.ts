@@ -54,7 +54,7 @@ export class TileInspector extends Adw.Bin {
     // GTK / Adw negotiates the Picture down to ~1 px wide inside the
     // surrounding Frame / ScrolledWindow on first allocation
     // (observed: preview = 1 px in #48). Mirrors the same fix in
-    // `context-chip.ts`'s tile_swatch constructor.
+    // `floating-top-bar.ts`'s tile_swatch constructor.
     this._preview.set_can_shrink(false)
     this._preview.set_content_fit(Gtk.ContentFit.FILL)
     this._preview.set_size_request(80, 80)
