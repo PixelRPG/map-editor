@@ -19,8 +19,8 @@ import {
   type EditorTool,
   MapEditorComponent,
   TileMapTierComponent,
-  UndoStackComponent,
 } from '../components/index.ts'
+import { executeCommandOnScene } from '../services/command-dispatch.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
@@ -61,6 +61,15 @@ export class TileEditorSystem extends System {
 
   private previewActor: Actor | null = null
   private hoverContext: PencilPreviewHover | null = null
+
+  /**
+   * Lazy cache of the per-tier `TileMap`s. Populated on first lookup
+   * (initialize runs before `MapResource.processTileLayer` adds tilemaps
+   * for some scenes, so we cannot fill this eagerly). Each `MapScene` is
+   * constructed fresh per `Engine.loadMap`, so the cache lives for one
+   * map and dies with the system instance.
+   */
+  private tileMapsByTier: Map<LayerTier, TileMap> | null = null
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -161,17 +170,23 @@ export class TileEditorSystem extends System {
   }
 
   /**
-   * Walk the scene's entities looking for the `TileMap` carrying a
-   * `TileMapTierComponent` for the requested tier. There's one per
-   * tier per `MapScene` so the first hit is authoritative.
+   * Resolve the per-tier `TileMap` for a pointer interaction. There's one
+   * `TileMap` per tier per `MapScene`, fixed for the scene's lifetime, so
+   * we walk the scene entities exactly once (on first lookup) and cache
+   * the `tier → TileMap` mapping. Subsequent pointer moves are O(1).
    */
   private findTileMapForTier(tier: LayerTier): TileMap | null {
     if (!this.scene) return null
-    for (const entity of this.scene.world.entityManager.entities) {
-      if (!(entity instanceof TileMap)) continue
-      if (entity.get(TileMapTierComponent)?.tier === tier) return entity
+    if (!this.tileMapsByTier) {
+      const cache = new Map<LayerTier, TileMap>()
+      for (const entity of this.scene.world.entityManager.entities) {
+        if (!(entity instanceof TileMap)) continue
+        const t = entity.get(TileMapTierComponent)?.tier
+        if (t) cache.set(t, entity)
+      }
+      this.tileMapsByTier = cache
     }
-    return null
+    return this.tileMapsByTier.get(tier) ?? null
   }
 
   private toTileCoords(tileMap: TileMap, worldPos: Vector): { x: number; y: number } | null {
@@ -273,40 +288,17 @@ export class TileEditorSystem extends System {
   }
 
   /**
-   * Execute a tile-mutating command and push it onto the
-   * session-singleton's undo stack. Mirrors `Engine.executeCommand`
-   * but inline because the system already has the `scene` reference
-   * and we want to avoid the indirection through the engine class
-   * for hot paths (one paint per click).
-   *
-   * Distinguishes between "first command in the scene" (create + set)
-   * and "stack already exists" (mutate + notify). Calling
-   * `SessionState.set` with the existing instance after mutation
-   * works thanks to its same-instance fast path, but the explicit
-   * branch is documentation about the intent and one fewer remove +
-   * add to handle in the engine.
-   *
-   * Emits `COMMAND_EXECUTED` at the end so the collab layer's
-   * `SessionController` can relay the paint as an `Operation` to
-   * connected peers. Without this emit the paint applies locally
-   * but never reaches the wire — the 2026-06-01 hand-test bug
-   * (joiner sees the snapshot but no live edits) traced back to
-   * this missing call (the matching emit in `Engine.executeCommand`
-   * was correct; this inline hot-path forgot to mirror it).
+   * Route every paint through the shared {@link executeCommandOnScene}
+   * helper so apply + undo-stack push + `COMMAND_EXECUTED` emit stay
+   * single-source-of-truth. An earlier inline copy of that body in this
+   * system silently dropped the `COMMAND_EXECUTED` emit once (2026-06-01
+   * hand-test: joiner saw the initial snapshot but no live edits) — the
+   * collab path then broke until the mirror was restored. One owner of
+   * the command flow eliminates that class of bug.
    */
   private dispatchCommand(command: PaintTileCommand | EraseTileCommand): void {
     if (!this.scene) return
-    command.apply(this.scene)
-    const existing = SessionState.get(this.scene, UndoStackComponent)
-    if (existing) {
-      existing.commands = existing.commands.slice(0, existing.cursor)
-      existing.commands.push(command)
-      existing.cursor = existing.commands.length
-      SessionState.notifyMutation(this.scene, existing)
-    } else {
-      SessionState.set(this.scene, new UndoStackComponent([command], 1))
-    }
-    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+    executeCommandOnScene(this.scene, this.events, command)
   }
 
   private resolveLayerId(layerId: string | null): string | null {

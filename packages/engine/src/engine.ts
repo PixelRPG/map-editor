@@ -16,6 +16,7 @@ import {
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
+import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
@@ -304,23 +305,7 @@ export class Engine {
   executeCommand(command: Command): void {
     const scene = this._activeMapScene()
     if (!scene) return
-    command.apply(scene)
-
-    const existing = SessionState.get(scene, UndoStackComponent)
-    if (existing) {
-      existing.commands = existing.commands.slice(0, existing.cursor)
-      existing.commands.push(command)
-      existing.cursor = existing.commands.length
-      SessionState.notifyMutation(scene, existing)
-    } else {
-      SessionState.set(scene, new UndoStackComponent([command], 1))
-    }
-
-    // Tell collab consumers (SessionController) so they can relay this
-    // local command as an `Operation` to peers. Note: remote commands
-    // applied via `applyRemoteCommand` deliberately skip this emit to
-    // avoid a feedback loop.
-    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+    executeCommandOnScene(scene, this.events, command)
   }
 
   /**
