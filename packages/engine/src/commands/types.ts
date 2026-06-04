@@ -50,6 +50,16 @@ export interface Command<P = unknown> {
  * + payload + the host-assigned sequence number used by the future
  * collab op-log. For local-only solo editing, `peerId === 'self'`
  * and `seq` is locally monotonic.
+ *
+ * `direction` is the apply/revert discriminator used by the
+ * undo/redo replication path:
+ *   - `'apply'` (default when missing) — receiver runs `command.apply`.
+ *     Emitted by initial command execution + redo.
+ *   - `'revert'` — receiver runs `command.revert`. Emitted by undo.
+ *
+ * Older peers (pre-direction-field) sent operations without the
+ * field; receivers default to `'apply'` so existing wire traffic
+ * continues to work unchanged.
  */
 export interface Operation<K extends string = string, P = unknown> {
   kind: K
@@ -57,6 +67,7 @@ export interface Operation<K extends string = string, P = unknown> {
   peerId: string
   seq: number
   localId?: string
+  direction?: 'apply' | 'revert'
 }
 
 /**

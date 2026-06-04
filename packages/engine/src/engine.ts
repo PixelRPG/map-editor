@@ -328,6 +328,23 @@ export class Engine {
   }
 
   /**
+   * Revert a command that arrived from a remote peer (with
+   * `Operation.direction === 'revert'`). Mirrors
+   * {@link applyRemoteCommand}'s shape — same no-stack-push +
+   * no-emit guarantees — but routes to the command's `revert`
+   * method instead of `apply`. The originating peer already
+   * popped its local undo cursor and emitted `COMMAND_REVERTED`,
+   * which the collab `SessionController` relayed here.
+   *
+   * No-op when no `MapScene` is active.
+   */
+  applyRemoteRevert(command: Command): void {
+    const scene = this._activeMapScene()
+    if (!scene) return
+    command.revert(scene)
+  }
+
+  /**
    * Resolve `(scene, stack)` for the active map, or `null` when there
    * is no active map scene or no undo stack on it. Callers gate on a
    * single tuple lookup instead of duplicating the scene + component
@@ -345,6 +362,12 @@ export class Engine {
    * Undo the most recent applied command. Reverts the command, drops
    * the cursor by one, fires the `notifyMutation` so subscribers
    * refresh button enabled-states. No-op when `!canUndo()`.
+   *
+   * Emits `COMMAND_REVERTED` so the collab `SessionController` can
+   * relay the revert to peers (with `Operation.direction = 'revert'`),
+   * mirroring the local undo on every connected peer. Without this
+   * emit, a peer's undo of their own paint would leave the host
+   * showing the paint forever.
    */
   undo(): boolean {
     const ctx = this._undoContext()
@@ -354,12 +377,18 @@ export class Engine {
     command.revert(ctx.scene)
     ctx.stack.cursor -= 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
+    this.events.emit(EngineEvent.COMMAND_REVERTED, { command })
     return true
   }
 
   /**
    * Redo the next command in the stack (if any). Re-applies the
    * command and advances the cursor. No-op when `!canRedo()`.
+   *
+   * Emits `COMMAND_EXECUTED` so peers re-apply the command too.
+   * Bypasses `executeCommandOnScene` because the command is already
+   * in the local undo stack — we only need the apply + relay halves,
+   * not the stack push.
    */
   redo(): boolean {
     const ctx = this._undoContext()
@@ -369,6 +398,7 @@ export class Engine {
     command.apply(ctx.scene)
     ctx.stack.cursor += 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
+    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
     return true
   }
 
