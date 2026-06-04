@@ -7,6 +7,12 @@ template $SceneEditorView : Adw.Bin {
     min-sidebar-width: 220;
     max-sidebar-width: 260;
     sidebar-width-fraction: 0.7;
+    // `pin-sidebar: true` disables libadwaita's auto-`show-sidebar :=
+    // !collapsed` flip during breakpoint transitions (see
+    // `adw-overlay-split-view.c:1457-1458`). Without this, resizing
+    // from a mobile/tablet width up to desktop would force the sidebar
+    // open even when the user had it closed.
+    pin-sidebar: true;
     collapsed: bind template.library-collapsed;
     show-sidebar: bind template.show-library bidirectional;
 
@@ -19,9 +25,9 @@ template $SceneEditorView : Adw.Bin {
     // `extend-content-to-top-edge: true` is a click-eater above the
     // canvas: it sits in front of the SceneEditor's `Gtk.Overlay`
     // children and silently swallows pointer events for the top
-    // ~46 px, which is exactly where `FloatingHistory` (top-left)
-    // and `ContextChip` (top-right) live now. Buttons inside those
-    // floating pills became un-clickable.
+    // ~46 px, which is exactly where `FloatingTopBar` (merged top
+    // OSD) lives now. Buttons inside the floating pill became
+    // un-clickable.
     //
     // Drag-the-window is still available from the left sidebar's
     // `Gtk.WindowHandle` (ModeRail hero_header) and the right
@@ -35,6 +41,7 @@ template $SceneEditorView : Adw.Bin {
       sidebar-position: end;
       min-sidebar-width: 280;
       max-sidebar-width: 320;
+      pin-sidebar: true;
       collapsed: bind template.inspector-collapsed;
       show-sidebar: bind template.show-inspector bidirectional;
 

@@ -24,7 +24,7 @@ export interface TileDescriptor {
 /**
  * 5-column FlowBox of tile swatches. Emits `tile-selected::<id>` when a
  * swatch is activated. Used by `tiles-tab` and the active-tile popover
- * inside `context-chip`.
+ * surfaced inside `floating-top-bar`.
  *
  * The swatch size is configurable; default 42px matches the design
  * handoff §"Tiles tab" spec.
@@ -52,7 +52,7 @@ export class TilePalette extends Adw.Bin {
             128,
             42,
           ),
-          'columns': GObject.ParamSpec.int(
+          columns: GObject.ParamSpec.int(
             'columns',
             'Columns',
             'Number of swatches per row',

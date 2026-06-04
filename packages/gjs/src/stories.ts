@@ -14,10 +14,8 @@ import { CharacterPreview } from './widgets/cast/character-preview'
 import { TileInspector } from './widgets/tiles/tile-inspector'
 import { AtlasCanvas } from './widgets/editor/atlas-canvas'
 import { AtlasCanvasStories } from './widgets/editor/atlas-canvas.story'
-import { ContextChip } from './widgets/editor/context-chip'
-import { ContextChipStories } from './widgets/editor/context-chip.story'
-import { FloatingToolRail } from './widgets/editor/floating-tool-rail'
-import { FloatingToolRailStories } from './widgets/editor/floating-tool-rail.story'
+import { FloatingTopBar } from './widgets/editor/floating-top-bar'
+import { FloatingTopBarStories } from './widgets/editor/floating-top-bar.story'
 import { FloatingZoom } from './widgets/editor/floating-zoom'
 import { FloatingZoomStories } from './widgets/editor/floating-zoom.story'
 import { LayerRow } from './widgets/editor/layer-row'
@@ -54,9 +52,8 @@ GObject.type_ensure(LayersTab.$gtype)
 GObject.type_ensure(ObjectsTab.$gtype)
 GObject.type_ensure(PropsTab.$gtype)
 GObject.type_ensure(RightInspector.$gtype)
-GObject.type_ensure(FloatingToolRail.$gtype)
+GObject.type_ensure(FloatingTopBar.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
-GObject.type_ensure(ContextChip.$gtype)
 GObject.type_ensure(SceneCard.$gtype)
 GObject.type_ensure(TeleportOverlay.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
@@ -75,9 +72,8 @@ export const UIStories: StoryModule[] = [
   TilePaletteStories,
   LayerRowStories,
   RightInspectorStories,
-  FloatingToolRailStories,
+  FloatingTopBarStories,
   FloatingZoomStories,
-  ContextChipStories,
   AtlasCanvasStories,
   SceneInspectorStories,
   SceneEditorStories,
@@ -86,8 +82,7 @@ export const UIStories: StoryModule[] = [
 export { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
 export {
   AtlasCanvasStories,
-  ContextChipStories,
-  FloatingToolRailStories,
+  FloatingTopBarStories,
   FloatingZoomStories,
   LayerRowStories,
   ModeRailStories,

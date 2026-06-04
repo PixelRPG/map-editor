@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import type { EditorTool } from '@pixelrpg/engine'
 import {
   type EditorMode,
   type Engine,
@@ -37,7 +38,7 @@ GObject.type_ensure(RightInspector.$gtype)
  * Owns the tile / layer state synced between three surfaces:
  *
  * 1. The inspector tabs (sidebar)
- * 2. The OSD {@link ContextChip} popovers
+ * 2. The OSD {@link FloatingTopBar} popovers (tile + layer chips)
  * 3. The engine via `Engine.setEditorState({ tileId, layerId })`
  *
  * `tileId` is sent to the engine as a global tile id
@@ -67,12 +68,12 @@ export class SceneEditorView extends Adw.Bin {
   // first frame caused a multi-step desync on view-show: the
   // bidirectional bind from `inner_split.show-sidebar` would write
   // `false` back into this property AFTER `bind_property` already
-  // synced `true` into `ContextChip.show-inspector`. The button's
+  // synced `true` into `FloatingTopBar.show-inspector`. The button's
   // `active` ended up `true` while the inspector was visually closed,
   // so the first user click toggled `active` back to `false` (closing
   // again) and only the second click opened it. Keeping this `false`
   // from the start keeps all four ends (this property, the
-  // OverlaySplitView, the ContextChip's mirror, the button's
+  // OverlaySplitView, the FloatingTopBar's mirror, the button's
   // `active`) consistent.
   private _showInspector = false
   private _engine: Engine | null = null
@@ -147,6 +148,11 @@ export class SceneEditorView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          // Top-bar density (compact / show-back / show-history /
+          // show-grid / show-chip-labels) is driven by an
+          // `Adw.BreakpointBin` inside `scene-editor.blp` so it
+          // tracks the canvas allocation rather than window width;
+          // no passthrough properties needed here.
         },
         Signals: {
           'mode-changed': { param_types: [GObject.TYPE_STRING] },
@@ -167,7 +173,7 @@ export class SceneEditorView extends Adw.Bin {
     this._mode_rail.projectName = this._projectName
     this._mode_rail.projectTagline = 'Scene editor'
     this._wireInspectorSignals()
-    // Round-trip the ContextChip's inspector_toggle pressed state with
+    // Round-trip the top bar's inspector_toggle pressed state with
     // this view's `show-inspector`. Without this, the toggle button is
     // only wired to the stateless `win.toggle-inspector` action and its
     // visual `active` never matches the sidebar's actual visibility on
@@ -175,12 +181,12 @@ export class SceneEditorView extends Adw.Bin {
     // the inspector only opens on the second click. The atlas-view's
     // inspector_toggle uses the same `bind template.show-inspector
     // bidirectional` pattern directly in its template; we have to do it
-    // in code here because ContextChip is a packaged widget two levels
-    // down from SceneEditorView and the blueprint binding can't reach
-    // up through that nesting.
+    // in code here because FloatingTopBar is a packaged widget two
+    // levels down from SceneEditorView and the blueprint binding can't
+    // reach up through that nesting.
     this.bind_property(
       'show-inspector',
-      this._editor.contextChip,
+      this._editor.topBar,
       'show-inspector',
       GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL,
     )
@@ -219,11 +225,20 @@ export class SceneEditorView extends Adw.Bin {
     this._editor.floatingPlay.playing = playing
   }
 
+  /**
+   * Forward the active editor tool to the top bar so its tool
+   * MenuButton's icon mirrors the selection. The host calls this
+   * from the `win.set-tool` action's change-state handler.
+   */
+  setActiveTool(tool: EditorTool): void {
+    this._editor.topBar.setActiveTool(tool)
+  }
+
   /** Header title + the floating chips. */
   setScene(scene: SampleScene): void {
     this.sceneName = scene.name
-    this._editor.contextChip.tileName = 'Tile 0'
-    this._editor.contextChip.layerName = 'Background'
+    this._editor.topBar.tileName = 'Tile 0'
+    this._editor.topBar.layerName = 'Background'
     this._editor.zoomOsd.setZoom(1)
     // Cursor is hidden until the first pointer-move arrives over the
     // canvas — see `setCursorTile`. Calling `setCursor(0, 0)` here
@@ -392,13 +407,13 @@ export class SceneEditorView extends Adw.Bin {
     // without an active tile until the user manually picked a swatch
     // — the same shape of bug the startup-order fix addresses.
     this._activeTileId = tileId
-    this._editor.contextChip.tileName = tileName ?? `Tile ${tileId}`
+    this._editor.topBar.tileName = tileName ?? `Tile ${tileId}`
     const tile = this._tiles.find((t) => t.id === tileId)
-    this._editor.contextChip.setTilePaintable(tile?.paintable ?? null)
+    this._editor.topBar.setTilePaintable(tile?.paintable ?? null)
     const globalTileId = tileId + this._tilesetFirstGid
     this._engine?.setActiveTile(globalTileId)
     // Mirror selection back to the inspector palette in case the change
-    // came from the context-chip popover.
+    // came from the top-bar tile popover.
     this._inspector.tilesTab.selectTile(tileId)
   }
 
@@ -435,15 +450,10 @@ export class SceneEditorView extends Adw.Bin {
     // must always reach the engine.
     this._activeLayerId = layerId
     const layer = this._layers.find((l) => l.id === layerId)
-    this._editor.contextChip.layerName = layer?.name ?? layerId
+    this._editor.topBar.layerName = layer?.name ?? layerId
     this._engine?.setActiveLayer(layerId)
     // Mirror selection back to the inspector layers tab.
     this._inspector.layersTab.selectLayer(layerId)
-    // Sync the toolbar's editing-tool sensitivity to the new active
-    // layer's lock state. Called on every active-layer change so
-    // switching to a locked layer immediately greys out the mutating
-    // tools, and switching away restores them.
-    this._editor.toolRail.setEditingToolsEnabled(!(layer?.locked ?? false))
   }
 
   /**
@@ -464,8 +474,8 @@ export class SceneEditorView extends Adw.Bin {
    * top-right context chip with the currently loaded tiles + layers.
    */
   private _refreshContextPopovers(): void {
-    this._editor.contextChip.setTilePopover(this._buildTilePopover())
-    this._editor.contextChip.setLayerPopover(this._buildLayerPopover())
+    this._editor.topBar.setTilePopover(this._buildTilePopover())
+    this._editor.topBar.setLayerPopover(this._buildLayerPopover())
   }
 
   private _buildTilePopover(): Gtk.Popover {
@@ -559,7 +569,7 @@ export class SceneEditorView extends Adw.Bin {
   }
 
   private _wireInspectorSignals(): void {
-    // Inspector → context-chip + engine sync. Connected once per view
+    // Inspector → top-bar + engine sync. Connected once per view
     // lifetime; the inspector tabs themselves persist across scene
     // switches, so re-connecting in vfunc_map would double-fire.
     const tiles: TilesTab = this._inspector.tilesTab
@@ -591,11 +601,6 @@ export class SceneEditorView extends Adw.Bin {
       const idx = this._layers.findIndex((l) => l.id === layerId)
       if (idx >= 0) this._layers[idx] = { ...this._layers[idx], locked }
       this._persistMapData()
-      // The toolbar's editing tool buttons mirror the active layer's
-      // lock state — re-check when the toggle hits the active layer.
-      if (layerId === this._activeLayerId) {
-        this._editor.toolRail.setEditingToolsEnabled(!locked)
-      }
     })
 
     // Object placements: forward inspector selection into the engine's

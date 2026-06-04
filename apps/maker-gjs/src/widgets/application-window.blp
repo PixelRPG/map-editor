@@ -50,6 +50,12 @@ template $ApplicationWindow : Adw.ApplicationWindow {
     }
   }
 
+  // Top OSD bar density (compact mode + progressive button
+  // disclosure) lives in `scene-editor.blp`'s own `Adw.BreakpointBin`
+  // — the canvas can shrink far below the window when both sidebars
+  // are open, so the breakpoints HAVE to be scoped to the canvas
+  // allocation, not the window width.
+
   content: Adw.ToastOverlay toast_overlay {
     child: Adw.ViewStack stack {
       vexpand: true;

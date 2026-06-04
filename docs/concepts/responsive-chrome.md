@@ -2,7 +2,7 @@
 
 > Status: **landed** — describes the chrome architecture as it
 > ships in `apps/maker-gjs` today (PRs #48 – #64).
-> Last meaningful change: 2026-05-27.
+> Last meaningful change: 2026-06-04.
 
 The editor has three top-level views (welcome, atlas, scene-editor)
 and one window-level chrome system that has to render acceptably
@@ -46,11 +46,16 @@ persistent — impossible to express with a single shared
 
 ### Defaults
 
-`show-library` + `show-inspector` both default to `false` across
-all views. Desktop users open the sidebars they want from the
-toggle pills (floating-OSD on canvas views; in the headerbar on
-welcome). The atlas view auto-opens the inspector on scene-card
-selection — a "user-attention" event (PR #53).
+`show-library` + `show-inspector` now live on the
+**ApplicationWindow** (both default `false`) and are bound
+**bidirectionally** to each view's same-named property — so the
+state is **shared across view switches** (toggle the inspector
+open in the atlas, switch to the scene editor, it stays open).
+Desktop users open the sidebars they want from the toggle pills
+(floating-OSD on canvas views; in the headerbar on welcome). The
+atlas view's old auto-show-inspector-on-scene-card-selection
+behaviour was **removed** — surprise sidebar pop-outs fought the
+shared-state model.
 
 ---
 
@@ -70,18 +75,27 @@ whole content area with chrome floating on top.
 Layout shape:
 
 ```
-Adw.OverlaySplitView outer_split
+Adw.OverlaySplitView outer_split   (pin-sidebar: true)
 ├─ sidebar (start): ModeRail  (or no sidebar in atlas's case)
-└─ content: Adw.OverlaySplitView inner_split
+└─ content: Adw.OverlaySplitView inner_split   (pin-sidebar: true)
    ├─ sidebar (end): RightInspector / SceneInspector
    │     (its own thin flat HeaderBar carries the window-close X)
    └─ content: Gtk.Overlay
-      ├─ [overlay] FloatingHistory (top-left)
-      ├─ [overlay] ContextChip (top-right)
-      ├─ [overlay] FloatingZoom (bottom-center)
+      ├─ [overlay] FloatingTopBar (top, spans full width)
+      │     — absorbed the former FloatingHistory + ContextChip +
+      │       FloatingToolRail roles: undo/redo/grid, active-tool
+      │       MenuButton, active-tile + active-layer context chip,
+      │       sidebar toggles
+      ├─ [overlay] FloatingZoom (bottom-LEFT)
       ├─ [overlay] FloatingPlay (bottom-right)
       └─ child: canvas / scene-card area
 ```
+
+`pin-sidebar: true` is **load-bearing** on both OverlaySplitViews:
+without it, libadwaita auto-resets `show-sidebar` to `false` as
+part of the collapsed↔persistent transition — which defeats the
+ApplicationWindow's persistent `show-library` / `show-inspector`
+state every time you cross the tablet/mobile breakpoint.
 
 The window-close X **always** lives on the right sidebar's flat
 header (never on the canvas's overlay). It's the only piece of
@@ -114,8 +128,11 @@ Adw.OverlaySplitView outer_split
 
 ## The OSD pill pattern (canvas views)
 
-Repeated 5× across `FloatingHistory`, `FloatingZoom`, `ContextChip`,
-`FloatingToolRail`, the atlas's two inline toggle pills.
+Repeated across `FloatingTopBar`, `FloatingZoom`, `FloatingPlay`,
+and the atlas's two inline toggle pills. `FloatingTopBar` is a
+single pill that contains the history controls + active-tool
+MenuButton + context chip + sidebar toggles internally — not five
+separate pills sitting next to each other.
 
 ```blp
 Adw.Bin {
@@ -143,13 +160,49 @@ Conventions:
 - **Sidebar toggle position**: the right-sidebar toggle (`inspector_toggle`)
   always sits at the **rightmost** slot of whatever pill hosts it
   (PR #52). Position on screen visually maps to the side it
-  controls. Same rule for the left-sidebar toggle if it ever
-  joins an OSD pill — leftmost.
+  controls. The same rule applies to the `library_toggle`, which
+  now sits at the **leftmost** slot of `FloatingTopBar`.
 - **No `FloatingPlay` WindowHandle wrap**: it's a single big
   button, no empty pixels to drag from. Other pills wrap.
 - **Margins**: 12 px from the nearest edge. Top pills + bottom
   pills clear each other; left + right clear the sidebars when
   the sidebars are persistent.
+
+---
+
+## FloatingTopBar's internal breakpoint cascade
+
+Unlike the rest of the chrome — which reacts to
+`ApplicationWindow`-level breakpoints — `FloatingTopBar` carries
+its **own** `Adw.BreakpointBin` watching its **own allocated
+width**, not the window width. This is necessary because the
+amount of horizontal space the top bar actually gets is
+`window width − persistent sidebars` (variable across
+breakpoints and across the user's show-library / show-inspector
+state). Watching the window would mis-estimate the room available
+by hundreds of pixels.
+
+The cascade:
+
+| Threshold        | Behaviour                                                            |
+|------------------|----------------------------------------------------------------------|
+| ≥ 880sp          | **split**: history + tools + chip + toggles laid out as one row      |
+| < 880sp          | **merged**: collapsed into a more compact layout                     |
+| < 740sp          | progressive disclosure step 1 (drops the lowest-priority cluster)    |
+| < 620sp          | progressive disclosure step 2                                        |
+| < 540sp          | progressive disclosure step 3                                        |
+| < 460sp          | progressive disclosure step 4 (most compact form)                    |
+
+The **critical gotcha**: `Adw.BreakpointBin` activates **one**
+breakpoint at a time. It iterates its breakpoints in **reverse**,
+breaks on the first match, and applies only that breakpoint's
+setters (see `adw-breakpoint-bin.c:421-428` in the libadwaita
+source — the loop reads `for (i = priv->breakpoints->len; i-- > 0;)`
+and `break`s once one matches). That means any setter you want
+applied at, say, 540sp must **also** be present on the 460sp
+breakpoint — they don't stack. The setters for each range have to
+be written **cumulatively**, listing every property that should
+be in effect at that width and below.
 
 ---
 
@@ -295,9 +348,14 @@ dragging wouldn't be discoverable anyway.
 3. If content-only, follow the welcome-view template (one
    OverlaySplitView + an Adw.ToolbarView with a regular
    HeaderBar on the content side).
-4. Expose `library-collapsed` (if applicable) +
-   `inspector-collapsed` + `show-library` + `show-inspector`
-   GObject properties with `false` defaults.
+4. Expose `library-collapsed` + `inspector-collapsed` +
+   `show-library` + `show-inspector` GObject properties with
+   `false` defaults, and set `pin-sidebar: true` on every
+   `Adw.OverlaySplitView` in the view. `ApplicationWindow`'s
+   constructor binds its own `show-library` / `show-inspector`
+   bidirectionally to each view's same-named properties — so as
+   long as the names match, the persistent shared state wires up
+   automatically.
 5. Add breakpoint setters for the new view in
    `application-window.blp` — mirror the existing per-view
    blocks.

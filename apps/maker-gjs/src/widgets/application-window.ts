@@ -129,7 +129,42 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       {
         GTypeName: 'ApplicationWindow',
         Template,
-        InternalChildren: ['welcome_view', 'atlas_view', 'cast_view', 'tiles_view', 'scene_editor_view', 'stack', 'toast_overlay'],
+        InternalChildren: [
+          'welcome_view',
+          'atlas_view',
+          'cast_view',
+          'tiles_view',
+          'scene_editor_view',
+          'stack',
+          'toast_overlay',
+        ],
+        Properties: {
+          // Single source of truth for sidebar visibility. Each view's
+          // own `show-library` / `show-inspector` is bound bidirectionally
+          // to these in the constructor, so toggling the library in
+          // atlas keeps it visible after navigating to scene-editor (or
+          // vice-versa). Before, each view held an independent state +
+          // had different defaults, so a fresh sidebar would auto-open
+          // on view switch every time.
+          //
+          // Defaults closed: the user opens what they want from the
+          // floating toggles. Removing the auto-open avoids the "wait
+          // why did the inspector appear" surprise the user flagged.
+          'show-library': GObject.ParamSpec.boolean(
+            'show-library',
+            'Show library',
+            'Whether the left library sidebar is visible (shared across all views)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          'show-inspector': GObject.ParamSpec.boolean(
+            'show-inspector',
+            'Show inspector',
+            'Whether the right inspector sidebar is visible (shared across all views)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
       },
       ApplicationWindow,
     )
@@ -138,6 +173,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   constructor(application: Adw.Application) {
     super({ application })
     this._installActions()
+    this._shareSidebarState()
     // Mirror engine-driven zoom (scroll-wheel + Ctrl+= etc.) into the OSD label.
     this._engineCtl.onZoomChanged((zoom) => this._scene_editor_view.setZoom(zoom))
     // Same idea for the cursor coord readout on the OSD pill —
@@ -181,12 +217,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // picks the right ViewStack page. Mutation handling + persistence
     // belongs to the per-mode controllers (constructed below);
     // view-side stays presentational.
-    const setMode = (mode: string) =>
-      this._modeAction?.change_state(GLib.Variant.new_string(mode))
+    const setMode = (mode: string) => this._modeAction?.change_state(GLib.Variant.new_string(mode))
     this.signals.connect(this._atlas_view, 'mode-changed', (_v: AtlasView, mode: string) => setMode(mode))
-    this.signals.connect(this._scene_editor_view, 'mode-changed', (_v: SceneEditorView, mode: string) =>
-      setMode(mode),
-    )
+    this.signals.connect(this._scene_editor_view, 'mode-changed', (_v: SceneEditorView, mode: string) => setMode(mode))
     this.signals.connect(this._cast_view, 'mode-changed', (_v: CastView, mode: string) => setMode(mode))
     this.signals.connect(this._tiles_view, 'mode-changed', (_v: TilesView, mode: string) => setMode(mode))
 
@@ -499,6 +532,23 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     super.vfunc_unmap()
   }
 
+  /**
+   * Bidirectionally bind this window's `show-library` / `show-inspector`
+   * to every view's own pair. Effect: the sidebars retain their state
+   * across view switches — opening the library in atlas keeps it open
+   * after navigating to scene-editor, and closing it stays closed when
+   * the user goes back. Welcome's library-less layout binds only the
+   * inspector.
+   */
+  private _shareSidebarState(): void {
+    const flags = GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL
+    for (const view of [this._atlas_view, this._cast_view, this._tiles_view, this._scene_editor_view]) {
+      this.bind_property('show-library', view, 'show-library', flags)
+      this.bind_property('show-inspector', view, 'show-inspector', flags)
+    }
+    this.bind_property('show-inspector', this._welcome_view, 'show-inspector', flags)
+  }
+
   private _installActions(): void {
     const winActions = new Gio.SimpleActionGroup()
 
@@ -522,12 +572,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     )
     toolAction.connect('change-state', (action, value) => {
       action.set_state(value!)
+      const tool = value!.get_string()[0] as EditorTool
       // Tool ids are shared with the engine's `EditorTool` union, so
       // the GAction state string can be passed straight through.
-      // `TileEditorSystem` short-circuits on tools whose semantics
-      // it doesn't implement yet (bucket / rect / select / stamp /
-      // event) — the UI still surfaces the buttons.
-      this._engineCtl.engine?.setActiveTool(value!.get_string()[0] as EditorTool)
+      this._engineCtl.engine?.setActiveTool(tool)
+      // Refresh the top-bar tool MenuButton's icon to match. The
+      // popover-menu inside it already auto-updates its checkmark
+      // from the stateful action; only the collapsed icon needs us.
+      this._scene_editor_view.setActiveTool(tool)
     })
     winActions.add_action(toolAction)
     this._toolAction = toolAction
@@ -560,8 +612,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // Sidebar toggle actions. `Gio.PropertyAction` wraps the
     // SceneEditorView's boolean `show-library` / `show-inspector`
     // properties bi-directionally — the OSD toggle buttons that
-    // live in `packages/gjs` widgets (FloatingHistory's
-    // library_toggle, ContextChip's inspector_toggle) can't reach
+    // live in the cross-package `FloatingTopBar` widget can't reach
     // a cross-package template binding, so PropertyAction is the
     // action-shaped bridge. Atlas + welcome stay inline + use
     // direct `bind template.show-…` bindings because their toggles
@@ -569,14 +620,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(
       new Gio.PropertyAction({
         name: 'toggle-library',
-        object: this._scene_editor_view,
+        object: this,
         property_name: 'show-library',
       }),
     )
     winActions.add_action(
       new Gio.PropertyAction({
         name: 'toggle-inspector',
-        object: this._scene_editor_view,
+        object: this,
         property_name: 'show-inspector',
       }),
     )

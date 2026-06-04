@@ -7,14 +7,15 @@ import Template from './floating-play.blp'
 
 /**
  * Bottom-right floating "Play" pill — the editor's primary
- * Call-to-Action moved out of the header into the canvas overlay.
+ * Call-to-Action over the canvas overlay.
  *
- * Wraps a single `Gtk.Button` bound to `win.play`. Lives as an
- * `[overlay]` child on the scene editor's `Gtk.Overlay` alongside
- * the other OSD chrome (tool rail, history, zoom, context chip)
- * so the editor's main canvas surface stays headerbar-light —
- * the Gradia-style "no chrome, just controls floating over the
- * artwork" feel.
+ * A `Gtk.Button` bound to `win.play`, wrapped in the same
+ * `toolbar` + `osd` Box every other floating chrome widget uses,
+ * so the pill inherits identical height / padding / radius /
+ * shadow. `floating-play-frame` overrides the OSD background to a
+ * translucent accent color, and `floating-play-button` strips the
+ * inner button's own background so the whole pill reads as one
+ * accent surface — see `scene-editor.css`.
  *
  * Bottom-right intentionally: top-right would clash with the
  * window-close button's visual gravity; bottom-right is the
@@ -28,8 +29,7 @@ import Template from './floating-play.blp'
  */
 export class FloatingPlay extends Adw.Bin {
   declare _play_button: Gtk.Button
-  declare _icon: Gtk.Image
-  declare _label: Gtk.Label
+  declare _button_content: Adw.ButtonContent
 
   private _playing = false
 
@@ -38,7 +38,7 @@ export class FloatingPlay extends Adw.Bin {
       {
         GTypeName: 'PixelRpgFloatingPlay',
         Template,
-        InternalChildren: ['play_button', 'icon', 'label'],
+        InternalChildren: ['play_button', 'button_content'],
         Properties: {
           playing: GObject.ParamSpec.boolean(
             'playing',
@@ -60,8 +60,8 @@ export class FloatingPlay extends Adw.Bin {
   set playing(value: boolean) {
     if (this._playing === value) return
     this._playing = value
-    this._icon.set_from_icon_name(value ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic')
-    this._label.set_label(value ? _('Pause') : _('Play'))
+    this._button_content.set_icon_name(value ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic')
+    this._button_content.set_label(value ? _('Pause') : _('Play'))
     this._play_button.set_tooltip_text(value ? _('Pause playtest') : _('Play'))
     this.notify('playing')
   }

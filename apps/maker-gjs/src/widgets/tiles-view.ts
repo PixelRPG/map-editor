@@ -37,7 +37,11 @@ export class TilesView extends Adw.Bin {
   declare _tileset_combo: Adw.ComboRow
 
   private _projectName = ''
-  private _showLibrary = true
+  // Sidebar visibility starts CLOSED — overwritten on window
+  // construction by `ApplicationWindow._shareSidebarState`'s
+  // SYNC_CREATE bind, so the actual sidebar state follows whatever
+  // the user last left it across views.
+  private _showLibrary = false
   private _showInspector = false
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
@@ -308,9 +312,7 @@ export class TilesView extends Adw.Bin {
       this._inspector.setSprite(null, null)
       return
     }
-    const def: SpriteDataSet | undefined = active.resource.data?.sprites.find(
-      (s) => s.id === this._selectedSpriteId,
-    )
+    const def: SpriteDataSet | undefined = active.resource.data?.sprites.find((s) => s.id === this._selectedSpriteId)
     const sprite = active.gdk?.getSprite(this._selectedSpriteId)
     this._inspector.setSprite(def ?? null, sprite?.createPaintable() ?? null)
   }
