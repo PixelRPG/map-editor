@@ -1,4 +1,4 @@
-import { type Engine, type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
+import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
@@ -16,11 +16,13 @@ import { EDITOR_CONSTANTS } from '../utils/constants.ts'
  *
  * Zoom still rides on raw `pointer.on('wheel')` since the wheel
  * doesn't participate in tap/drag negotiation.
+ *
+ * Stateless system — the scene + engine references stay captured in
+ * the subscription closures installed at `initialize`, never on the
+ * system instance.
  */
 export class CameraControlSystem extends System {
   public readonly systemType = SystemType.Update
-
-  private engine?: Engine
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -31,25 +33,24 @@ export class CameraControlSystem extends System {
       super.initialize(world, scene)
     }
 
-    this.engine = scene.engine
+    const engine = scene.engine
 
     this.events.on(EngineEvent.POINTER_DRAG_MOVE, ({ deltaX, deltaY }) => {
-      if (!this.engine) return
-      const zoom = this.engine.currentScene.camera.zoom || 1
-      this.engine.currentScene.camera.x -= deltaX / zoom
-      this.engine.currentScene.camera.y -= deltaY / zoom
+      const camera = engine.currentScene.camera
+      const zoom = camera.zoom || 1
+      camera.x -= deltaX / zoom
+      camera.y -= deltaY / zoom
     })
 
-    const pointer = this.engine.input.pointers.primary
-    pointer.on('wheel', (event) => {
-      if (!this.engine) return
+    engine.input.pointers.primary.on('wheel', (event) => {
+      const camera = engine.currentScene.camera
       const direction = event.deltaY > 0 ? -1 : 1
-      let zoom = this.engine.currentScene.camera.zoom
+      let zoom = camera.zoom
       zoom += direction * EDITOR_CONSTANTS.ZOOM_STEP
       if (zoom <= EDITOR_CONSTANTS.MIN_ZOOM) {
         zoom = EDITOR_CONSTANTS.MIN_ZOOM
       }
-      this.engine.currentScene.camera.zoom = Math.round(zoom * 10) / 10
+      camera.zoom = Math.round(zoom * 10) / 10
     })
   }
 
