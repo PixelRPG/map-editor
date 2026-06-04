@@ -281,14 +281,14 @@ Practical consequence: objects on the "events" layer appear in front of "ground"
 
 Systems talk **only via the engine event bus** — `engine.events.emit(…)` / `.on(…)`. No direct method calls between systems, no shared mutable globals. This keeps systems independently testable and replaceable.
 
-Canonical events:
+Canonical events (names match the `EngineEvent` enum in `packages/engine/src/types/engine-events.ts`):
 
 | Event | Payload | Emitter | Listeners |
 |---|---|---|---|
-| `trigger-fired` | `{ entity, by }` | `TriggerSystem` | `TeleportSystem`, `ItemPickupSystem`, script-runner (future) |
-| `walked-onto-tile` | `{ tileX, tileY, properties }` | `WalkOnTileSystem` | audio system, encounter system, blocker system |
-| `scene-switching` | `{ fromMapId, toMapId, atTileX, atTileY }` | `TeleportSystem` | save-state, transition animator |
-| `entity-removed` | `{ entityId }` | various | UI / save-state |
+| `trigger-fired` | `{ entityId, by }` | `TriggerSystem` | `TeleportSystem`, `ItemPickupSystem`, script-runner (future) |
+| `walked-onto-tile` | `{ tileX, tileY, properties }` | `WalkOnTileSystem` | audio / encounter / blocker (host-side, not in engine) |
+| `teleport-requested` | `{ targetMapId, targetTileX, targetTileY, facing? }` | `TeleportSystem` | host engine (calls `Engine.loadMap` + repositions player) — not yet wired |
+| `item-picked-up` | `{ itemId, qty, pickupSound? }` | `ItemPickupSystem` | host inventory — not yet wired |
 
 ## How the editor surfaces this
 
