@@ -1,7 +1,7 @@
 import { Component } from 'excalibur'
 
 /** How an object activates. Mirrors `TriggerSpec.on` from the data layer. */
-export type TriggerMode = 'walk-onto' | 'walk-off' | 'action-button' | 'auto' | 'none'
+type TriggerMode = 'walk-onto' | 'walk-off' | 'action-button' | 'auto' | 'none'
 
 /**
  * Activation rules for an object entity. The {@link TriggerSystem}

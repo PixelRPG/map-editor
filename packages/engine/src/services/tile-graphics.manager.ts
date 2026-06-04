@@ -69,7 +69,7 @@ export function getSpriteFromResource(
  * dims non-active-layer sprites) — runtime / play paths leave it
  * undefined to keep everything fully opaque.
  */
-export type TileGraphicOpacityProvider = (ref: TileSpriteRef) => number
+type TileGraphicOpacityProvider = (ref: TileSpriteRef) => number
 
 export function rebuildAllTileGraphics(
   tileMap: TileMap,

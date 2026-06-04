@@ -6,7 +6,7 @@ import { EngineEvent } from '../types/index.ts'
 import type { PeerSession } from './peer-session.ts'
 import { isSessionProtocolOp, type SessionProtocolOp } from './session-protocol.ts'
 
-export interface SessionControllerOptions {
+interface SessionControllerOptions {
   engine: Engine
   session: PeerSession
   /** This peer's stable id — stamped onto every emitted `Operation`. */
