@@ -17,6 +17,7 @@ import { isLayerVisible } from '../services/layer-visibility.ts'
 import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 import type {
   ItemProperties,
+  LayerData,
   NpcProperties,
   ObjectDefinition,
   ObjectPlacement,
@@ -92,10 +93,14 @@ export class ObjectSpawnSystem extends System {
     const mapData = this.mapResource.mapData
     if (!mapData?.objectPlacements?.length) return
 
+    // Cache layers by id once so buildEntity() doesn't re-scan
+    // `mapData.layers` per placement (was O(N · L); now O(N + L)).
+    const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
+
     for (const placement of mapData.objectPlacements) {
       const def = this.resolveDefinition(placement)
       if (!def) continue
-      const entity = this.buildEntity(placement, def, scene)
+      const entity = this.buildEntity(placement, def, layersById)
       scene.add(entity)
     }
   }
@@ -127,7 +132,11 @@ export class ObjectSpawnSystem extends System {
     }
   }
 
-  private buildEntity(placement: ObjectPlacement, def: ObjectDefinition, _scene: Scene): Entity {
+  private buildEntity(
+    placement: ObjectPlacement,
+    def: ObjectDefinition,
+    layersById: ReadonlyMap<string, LayerData>,
+  ): Entity {
     const mapData = this.mapResource.mapData
     const tileWidth = mapData?.tileWidth ?? 16
     const tileHeight = mapData?.tileHeight ?? 16
@@ -161,7 +170,7 @@ export class ObjectSpawnSystem extends System {
     // the same render depth as their tier's tilemap, so e.g.
     // decoration actors on the 'hero' tier interleave with the
     // hero-tier tilemap rather than overdrawing the entire map.
-    const layer = mapData?.layers.find((l) => l.id === placement.layerId)
+    const layer = layersById.get(placement.layerId)
     actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]
     // Respect the layer's visibility flag at spawn. Runtime
     // toggles re-sync via `Engine.setLayerVisible`.
