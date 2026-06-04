@@ -26,10 +26,12 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
   //   ≥ 880sp  → split (desktop) layout: two `toolbar.osd` pills
   //              with a spacer between them, every button visible
   //   ≥ 740sp  → merged pill + history + grid + back + chip labels
-  //   ≥ 620sp  → merged pill + history + grid + back (overflow empty)
-  //   ≥ 540sp  → merged pill + history + grid
-  //   ≥ 460sp  → merged pill + history (undo/redo)
+  //   ≥ 540sp  → merged pill + history + grid + back (overflow empty)
+  //   ≥ 460sp  → merged pill + history (overflow holds back + grid)
   //   < 460sp  → defaults: lib + overflow + tool + tile-icon + layer-icon + inspector
+  //
+  // Grid + back surface together at 540sp so the overflow never
+  // holds a single item — a "⋯" containing one action is silly UX.
   Adw.BreakpointBin {
     width-request: 1;
     height-request: 1;
@@ -43,18 +45,13 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
       }
     }
 
+    // Grid + back-to-atlas surface together. Promoting them in a
+    // single step avoids a 1-item overflow state (back alone would
+    // be silly under a "⋯" affordance — it's a single action, not a
+    // menu) and matches the rule "overflow holds ≥ 2 entries or
+    // disappears".
     Adw.Breakpoint {
       condition ("min-width: 540sp")
-
-      setters {
-        undo_button_merged.visible: true;
-        redo_button_merged.visible: true;
-        grid_button_merged.visible: true;
-      }
-    }
-
-    Adw.Breakpoint {
-      condition ("min-width: 620sp")
 
       setters {
         undo_button_merged.visible: true;
@@ -368,10 +365,11 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
             };
           }
 
-          Gtk.Separator {
-            orientation: vertical;
-          }
-
+          // No inter-button separators in the merged pill: the
+          // hexpand spacer above already divides the left action
+          // cluster from the right context cluster. Internal
+          // separators just add visual noise at the smartphone
+          // widths where the merged pill is most useful.
           Gtk.MenuButton layer_button_merged {
             tooltip-text: _("Active layer");
             styles ["flat"]
@@ -397,10 +395,6 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
                 styles ["dim-label"]
               }
             };
-          }
-
-          Gtk.Separator {
-            orientation: vertical;
           }
 
           Gtk.ToggleButton inspector_toggle_merged {
