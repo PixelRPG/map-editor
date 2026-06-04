@@ -120,6 +120,13 @@ export async function captureProjectSnapshot(engine: Engine): Promise<ProjectSna
           `call engine.loadMap(id) first or check the project file for stale references.`,
       )
     }
+    // Fold the live editor shadow (MapEditorComponent.sprites) on
+    // every tier's tilemap back into mapData.layers[].sprites[].
+    // Paints mutate the shadow only — without this sync, the
+    // snapshot would ship the load-time state and a late-joining
+    // peer would see the map as it was when the host opened it,
+    // missing every paint applied since.
+    mapResource.syncShadowToMapData()
     maps.push({ path: ref.path, data: mapResource.mapData })
   }
 
