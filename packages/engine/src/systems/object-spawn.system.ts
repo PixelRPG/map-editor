@@ -69,7 +69,6 @@ const KIND_MARKER_COLORS: Record<ObjectDefinition['kind'], string> = {
  */
 export class ObjectSpawnSystem extends System {
   public readonly systemType = SystemType.Update
-  private hasRun = false
 
   constructor(
     private readonly mapResource: MapResource,
@@ -80,8 +79,9 @@ export class ObjectSpawnSystem extends System {
 
   public initialize(_world: World, scene: Scene): void {
     if (super.initialize) super.initialize(_world, scene)
-    if (this.hasRun) return
-    this.hasRun = true
+    // Excalibur calls `initialize` exactly once per system lifetime
+    // (a fresh MapScene + fresh system instance per `Engine.loadMap`),
+    // so the spawn pass runs implicitly once with no guard flag needed.
     this.spawnAll(scene)
   }
 
