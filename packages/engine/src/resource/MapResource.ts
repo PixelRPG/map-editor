@@ -10,7 +10,7 @@ import {
   setInitialSprites,
   shadowCoordKey,
 } from '../services/map-editor-shadow.service.ts'
-import type { LayerData, LayerTier, MapData, MapResourceOptions } from '../types'
+import type { LayerData, LayerTier, MapData, MapResourceOptions, SpriteDataMap } from '../types'
 import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
@@ -340,6 +340,66 @@ export class MapResource implements Loadable<TileMap> {
    * until save. Anchoring on the shadow keeps Tiles-tab toggles and
    * runtime paints consistent.
    */
+  /**
+   * Fold the live editor shadow (`MapEditorComponent.sprites`) on
+   * every tier's tilemap back into `mapData.layers[].sprites[]`.
+   *
+   * Paints mutate the shadow only — `mapData.layers` stays at the
+   * load-time snapshot until something explicitly syncs it. Callers
+   * that need a current view of the map (disk persist, project
+   * snapshot for a late-joining peer) MUST call this first.
+   *
+   * Per-layer sprite arrays are rebuilt deterministically from the
+   * shadow (sorted by `(y, x, zIndex)`) so wire bytes are stable
+   * across runs of the host and friendly to diff tools when the
+   * file lands on disk.
+   *
+   * Per-placement `properties` + `solid` overrides on
+   * `SpriteDataMap` entries are lost during this fold — the shadow
+   * tracks only the gameplay-loaded fields (spriteSetId, spriteId,
+   * animationId, zIndex, layerId). This matches the pre-existing
+   * limitation called out by `_isSolidRef`: live edits already
+   * dropped the per-placement `solid` override. Same caveat applies
+   * now to the persisted shape.
+   *
+   * Returns true when at least one layer was updated, false when
+   * `mapData` is unloaded (no-op safe to call mid-load).
+   */
+  syncShadowToMapData(): boolean {
+    if (!this._mapData) return false
+
+    const spritesPerLayer = new Map<string, SpriteDataMap[]>()
+    for (const tileMap of this.tileMapsByTier.values()) {
+      const editor = tileMap.get(MapEditorComponent)
+      if (!editor) continue
+      for (const [key, refs] of Object.entries(editor.sprites)) {
+        const comma = key.indexOf(',')
+        const tileX = Number(key.slice(0, comma))
+        const tileY = Number(key.slice(comma + 1))
+        for (const ref of refs) {
+          const list = spritesPerLayer.get(ref.layerId) ?? []
+          const entry: SpriteDataMap = {
+            x: tileX,
+            y: tileY,
+            spriteSetId: ref.spriteSetId,
+            spriteId: ref.spriteId,
+          }
+          if (ref.animationId !== undefined) entry.animationId = ref.animationId
+          if (ref.zIndex !== undefined) entry.zIndex = ref.zIndex
+          list.push(entry)
+          spritesPerLayer.set(ref.layerId, list)
+        }
+      }
+    }
+
+    for (const layer of this._mapData.layers) {
+      const sprites = spritesPerLayer.get(layer.id) ?? []
+      sprites.sort((a, b) => a.y - b.y || a.x - b.x || (a.zIndex ?? 0) - (b.zIndex ?? 0))
+      layer.sprites = sprites
+    }
+    return true
+  }
+
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
     for (const tilemap of this.tileMapsByTier.values()) {
       const editor = tilemap.get(MapEditorComponent)

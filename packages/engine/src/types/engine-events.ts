@@ -26,6 +26,7 @@ export enum EngineEvent {
   POINTER_DRAG_MOVE = 'pointer-drag-move',
   POINTER_DRAG_END = 'pointer-drag-end',
   COMMAND_EXECUTED = 'command-executed',
+  COMMAND_REVERTED = 'command-reverted',
 }
 
 export interface EngineEventMap {
@@ -156,10 +157,21 @@ export interface EngineEventMap {
   [EngineEvent.POINTER_DRAG_END]: { screenPos: { x: number; y: number } }
   /**
    * Fired by `Engine.executeCommand` after a local command applies
-   * + lands on the undo stack. The {@link SessionController} listens
+   * + lands on the undo stack, AND by `Engine.redo` after the local
+   * apply + cursor advance. The {@link SessionController} listens
    * here to relay the command as an `Operation` over the active
-   * peer session. **Not** fired for remote commands applied via
-   * `Engine.applyRemoteCommand` — that would create a feedback loop.
+   * peer session (direction `'apply'`). **Not** fired for remote
+   * commands applied via `Engine.applyRemoteCommand` — that would
+   * create a feedback loop.
    */
   [EngineEvent.COMMAND_EXECUTED]: { command: Command }
+  /**
+   * Fired by `Engine.undo` after the local command reverts + cursor
+   * decrement. The {@link SessionController} relays the command as
+   * an `Operation` with `direction: 'revert'` so the receiving peer
+   * runs `command.revert` (mirroring the originator's undo).
+   * **Not** fired for remote reverts applied via
+   * `Engine.revertRemoteCommand`.
+   */
+  [EngineEvent.COMMAND_REVERTED]: { command: Command }
 }
