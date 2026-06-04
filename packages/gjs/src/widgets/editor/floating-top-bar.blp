@@ -368,10 +368,11 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
             };
           }
 
-          Gtk.Separator {
-            orientation: vertical;
-          }
-
+          // No inter-button separators in the merged pill: the
+          // hexpand spacer above already divides the left action
+          // cluster from the right context cluster. Internal
+          // separators just add visual noise at the smartphone
+          // widths where the merged pill is most useful.
           Gtk.MenuButton layer_button_merged {
             tooltip-text: _("Active layer");
             styles ["flat"]
@@ -397,10 +398,6 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
                 styles ["dim-label"]
               }
             };
-          }
-
-          Gtk.Separator {
-            orientation: vertical;
           }
 
           Gtk.ToggleButton inspector_toggle_merged {
