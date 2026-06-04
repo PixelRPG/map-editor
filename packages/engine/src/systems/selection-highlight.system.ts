@@ -1,5 +1,5 @@
-import { type Actor, type Scene, System, SystemType, type World } from 'excalibur'
-import { SelectedPlacementsComponent } from '../components/index.ts'
+import { type Scene, System, SystemType, type World } from 'excalibur'
+import { SelectedPlacementsComponent, SelectionHighlightPoolComponent } from '../components/index.ts'
 import { refreshSelectionHighlights, syncSelectionHighlightPositions } from '../services/selection-highlight.ts'
 import { SessionState } from '../utils/session-state.ts'
 
@@ -10,11 +10,12 @@ import { SessionState } from '../utils/session-state.ts'
  * position every tick so future drag-to-move flows update
  * automatically without re-syncing this system.
  *
- * Lifecycle: pool keyed by stable placement id (`PlacementIdComponent.id`)
- * persists across selection mutations so the same actor's ring is
- * reused if the user deselects + reselects it within one session.
- * The pool is dropped together with the scene when `MapScene` is
- * disposed (entries are scene-local).
+ * Lifecycle: the overlay pool keyed by stable placement id
+ * (`PlacementIdComponent.id`) lives on the session-singleton via
+ * {@link SelectionHighlightPoolComponent} so the cross-tick state
+ * sits on a scene-attached component, not the system instance
+ * (AGENTS.md doctrine). Drops together with the scene when
+ * `MapScene` is disposed.
  *
  * Stays decoupled from {@link TileEditorSystem} — selection-vs-paint
  * tooling concerns are independent and the systems mutate disjoint
@@ -24,11 +25,16 @@ export class SelectionHighlightSystem extends System {
   public readonly systemType = SystemType.Update
 
   private scene?: Scene
-  private readonly pool = new Map<string, { ring: Actor; target: Actor }>()
 
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) super.initialize(world, scene)
     this.scene = scene
+
+    // Seed the pool component on the session-singleton so subsequent
+    // reads via SessionState.get return a stable instance.
+    if (!SessionState.get(scene, SelectionHighlightPoolComponent)) {
+      SessionState.set(scene, new SelectionHighlightPoolComponent())
+    }
 
     // Initial fire primes the (empty) pool; subsequent mutations
     // through `Engine.setSelectedPlacements` re-fire the subscription
@@ -37,13 +43,16 @@ export class SelectionHighlightSystem extends System {
   }
 
   public update(_elapsed: number): void {
-    if (this.pool.size === 0) return
-    syncSelectionHighlightPositions(this.pool)
+    const pool = this.scene && SessionState.get(this.scene, SelectionHighlightPoolComponent)
+    if (!pool || pool.pool.size === 0) return
+    syncSelectionHighlightPositions(pool.pool)
   }
 
   private refresh(): void {
     if (!this.scene) return
+    const poolComponent = SessionState.get(this.scene, SelectionHighlightPoolComponent)
+    if (!poolComponent) return
     const selected = SessionState.get(this.scene, SelectedPlacementsComponent)?.placementIds ?? []
-    refreshSelectionHighlights(this.scene, this.pool, selected)
+    refreshSelectionHighlights(this.scene, poolComponent.pool, selected)
   }
 }

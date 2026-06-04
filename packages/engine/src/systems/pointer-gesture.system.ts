@@ -1,5 +1,7 @@
-import { type Engine, type EventEmitter, type Scene, System, SystemType, type Vector, vec, type World } from 'excalibur'
+import { type Engine, type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
+import { PointerGestureSessionComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { SessionState } from '../utils/session-state.ts'
 
 /**
  * Screen-space distance (px) a pointer must travel while pressed
@@ -48,21 +50,12 @@ const DRAG_THRESHOLD_PX = 5
  * hover (e.g. `TileEditorSystem`'s hover-preview), `pointer.on('wheel')`
  * for zoom, etc. Only the press/release/drag triad is consolidated.
  *
- * Must run before any system that listens to the high-level events,
- * but since both producer and consumers register on the same engine
- * event bus during `initialize()`, ordering is only structural —
- * pointer events themselves fire after the whole world is up.
+ * Gesture state lives on {@link PointerGestureSessionComponent} so
+ * the system instance is stateless beyond the engine ref captured
+ * at `initialize()`.
  */
 export class PointerGestureSystem extends System {
   public readonly systemType = SystemType.Update
-
-  private engine?: Engine
-  /** Press anchor — null when no press is active. */
-  private pressPos: Vector | null = null
-  /** Previous pointer position for incremental delta on drag-move. */
-  private lastPos: Vector | null = null
-  /** Whether the current sequence has been reinterpreted as a drag. */
-  private dragging = false
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -72,73 +65,91 @@ export class PointerGestureSystem extends System {
     if (super.initialize) {
       super.initialize(world, scene)
     }
-    this.engine = scene.engine
-    const pointer = this.engine.input.pointers.primary
+    if (!SessionState.get(scene, PointerGestureSessionComponent)) {
+      SessionState.set(scene, new PointerGestureSessionComponent())
+    }
+
+    const engine: Engine = scene.engine
+    const pointer = engine.input.pointers.primary
+    const events = this.events
+    const sessionFor = () => SessionState.get(scene, PointerGestureSessionComponent)
 
     pointer.on('down', (event) => {
-      const p = vec(event.screenPos.x, event.screenPos.y)
-      this.pressPos = p
-      this.lastPos = p
-      this.dragging = false
+      const session = sessionFor()
+      if (!session) return
+      session.pressX = event.screenPos.x
+      session.pressY = event.screenPos.y
+      session.lastX = event.screenPos.x
+      session.lastY = event.screenPos.y
+      session.dragging = false
     })
 
     pointer.on('move', (event) => {
-      if (!this.pressPos || !this.lastPos) return
-      const p = vec(event.screenPos.x, event.screenPos.y)
-      if (!this.dragging) {
-        if (p.distance(this.pressPos) > DRAG_THRESHOLD_PX) {
-          this.dragging = true
-          this.events.emit(EngineEvent.POINTER_DRAG_START, {
-            screenPos: { x: this.pressPos.x, y: this.pressPos.y },
+      const session = sessionFor()
+      if (!session || session.pressX === null || session.pressY === null) return
+      const x = event.screenPos.x
+      const y = event.screenPos.y
+      if (!session.dragging) {
+        const dx = x - session.pressX
+        const dy = y - session.pressY
+        if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
+          session.dragging = true
+          events.emit(EngineEvent.POINTER_DRAG_START, {
+            screenPos: { x: session.pressX, y: session.pressY },
           })
         }
       }
-      if (this.dragging) {
-        this.events.emit(EngineEvent.POINTER_DRAG_MOVE, {
-          screenPos: { x: p.x, y: p.y },
-          deltaX: p.x - this.lastPos.x,
-          deltaY: p.y - this.lastPos.y,
+      if (session.dragging) {
+        events.emit(EngineEvent.POINTER_DRAG_MOVE, {
+          screenPos: { x, y },
+          deltaX: x - session.lastX,
+          deltaY: y - session.lastY,
         })
       }
-      this.lastPos = p
+      session.lastX = x
+      session.lastY = y
     })
 
     pointer.on('up', (event) => {
-      if (this.dragging) {
-        this.events.emit(EngineEvent.POINTER_DRAG_END, {
+      const session = sessionFor()
+      if (!session) return
+      if (session.dragging) {
+        events.emit(EngineEvent.POINTER_DRAG_END, {
           screenPos: { x: event.screenPos.x, y: event.screenPos.y },
         })
-      } else if (this.pressPos) {
+      } else if (session.pressX !== null && session.pressY !== null) {
         // Tap fires at the ORIGINAL press position, not the release —
         // a sub-threshold finger wobble shouldn't shift which tile
         // gets painted.
-        this.events.emit(EngineEvent.POINTER_TAP, {
-          screenPos: { x: this.pressPos.x, y: this.pressPos.y },
+        events.emit(EngineEvent.POINTER_TAP, {
+          screenPos: { x: session.pressX, y: session.pressY },
         })
       }
-      this.reset()
+      resetSession(session)
     })
 
     pointer.on('cancel', () => {
-      if (this.dragging && this.lastPos) {
+      const session = sessionFor()
+      if (!session) return
+      if (session.dragging) {
         // Excalibur's cancel callback has no typed payload — fall back
         // to the last-known position so consumers still get a coherent
         // end position to clean up against.
-        this.events.emit(EngineEvent.POINTER_DRAG_END, {
-          screenPos: { x: this.lastPos.x, y: this.lastPos.y },
+        events.emit(EngineEvent.POINTER_DRAG_END, {
+          screenPos: { x: session.lastX, y: session.lastY },
         })
       }
-      this.reset()
+      resetSession(session)
     })
   }
 
   public update(_elapsed: number): void {
     // Gesture state is event-driven; no per-frame work.
   }
+}
 
-  private reset(): void {
-    this.pressPos = null
-    this.lastPos = null
-    this.dragging = false
-  }
+function resetSession(session: PointerGestureSessionComponent): void {
+  session.pressX = null
+  session.pressY = null
+  session.dragging = false
 }

@@ -20,12 +20,15 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
  * `Engine.loadMap(targetMapId)` + reposition the player at the
  * target tile. Until that wiring lands in the host, the system
  * logs the requested teleport for visibility.
+ *
+ * Stateless system — the world reference stays captured in the
+ * `TRIGGER_FIRED` subscription closure installed at `initialize`,
+ * never on the system instance.
  */
 export class TeleportSystem extends System {
   public readonly systemType = SystemType.Update
 
-  private world: World | null = null
-  private logger = Logger.getInstance()
+  private readonly logger = Logger.getInstance()
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -33,32 +36,27 @@ export class TeleportSystem extends System {
 
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) super.initialize(world, scene)
-    this.world = world
+    void scene
 
     this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
-      this.handleTrigger(entityId)
+      const entity = world.entityManager.getById(entityId)
+      if (!entity) return
+      const teleport = entity.get(TeleportComponent)
+      if (!teleport) return
+
+      this.events.emit(EngineEvent.TELEPORT_REQUESTED, {
+        targetMapId: teleport.targetMapId,
+        targetTileX: teleport.targetTileX,
+        targetTileY: teleport.targetTileY,
+        facing: teleport.facing,
+      })
+      this.logger.info(
+        `[TeleportSystem] teleport requested → ${teleport.targetMapId} (${teleport.targetTileX}, ${teleport.targetTileY})`,
+      )
     })
   }
 
   public update(_elapsed: number): void {
     // Reactive — work happens in the event subscription installed in initialize().
-  }
-
-  private handleTrigger(entityId: number): void {
-    if (!this.world) return
-    const entity = this.world.entityManager.getById(entityId)
-    if (!entity) return
-    const teleport = entity.get(TeleportComponent)
-    if (!teleport) return
-
-    this.events.emit(EngineEvent.TELEPORT_REQUESTED, {
-      targetMapId: teleport.targetMapId,
-      targetTileX: teleport.targetTileX,
-      targetTileY: teleport.targetTileY,
-      facing: teleport.facing,
-    })
-    this.logger.info(
-      `[TeleportSystem] teleport requested → ${teleport.targetMapId} (${teleport.targetTileX}, ${teleport.targetTileY})`,
-    )
   }
 }

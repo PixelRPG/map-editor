@@ -4,6 +4,12 @@ import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor
 import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import { MapFormat } from '../format/MapFormat'
 import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
+import {
+  getSpritesAt,
+  iterateOccupiedCoords,
+  setInitialSprites,
+  shadowCoordKey,
+} from '../services/map-editor-shadow.service.ts'
 import type { LayerData, LayerTier, MapData, MapResourceOptions } from '../types'
 import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
 import { loadTextFile } from '../utils'
@@ -38,7 +44,8 @@ export class MapResource implements Loadable<TileMap> {
    * compatibility with callers that don't know about tiers.
    */
   private tileMapsByTier: Map<LayerTier, TileMap> = new Map()
-  private initialSpritesByTier: Map<LayerTier, Map<Tile, TileSpriteRef[]>> = new Map()
+  /** Initial per-tier sprite refs, keyed by `"tileX,tileY"` per the shadow-state schema. */
+  private initialSpritesByTier: Map<LayerTier, Map<string, TileSpriteRef[]>> = new Map()
 
   private logger = Logger.getInstance()
 
@@ -195,7 +202,8 @@ export class MapResource implements Loadable<TileMap> {
         tile.solid = true
       }
 
-      const existingRefs = initialSprites.get(tile) || []
+      const key = shadowCoordKey(spriteData.x, spriteData.y)
+      const existingRefs = initialSprites.get(key) ?? []
       existingRefs.push({
         spriteSetId: spriteData.spriteSetId,
         spriteId: spriteData.spriteId,
@@ -203,7 +211,7 @@ export class MapResource implements Loadable<TileMap> {
         zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
         layerId: layer.id,
       })
-      initialSprites.set(tile, existingRefs)
+      initialSprites.set(key, existingRefs)
     }
   }
 
@@ -242,7 +250,7 @@ export class MapResource implements Loadable<TileMap> {
       const initial = this.initialSpritesByTier.get(tier)
       if (!tileMap || !initial) continue
       const editorComponent = new MapEditorComponent()
-      editorComponent.setInitialSprites(initial)
+      setInitialSprites(editorComponent, initial)
       tileMap.addComponent(editorComponent)
       scene.add(tileMap)
     }
@@ -256,13 +264,20 @@ export class MapResource implements Loadable<TileMap> {
     // can't disagree on what "hidden" means.
     const hiddenLayerIds = collectHiddenLayerIds(this)
 
-    for (const initial of this.initialSpritesByTier.values()) {
-      initial.forEach((refs, tile) => {
+    for (const [tier, initial] of this.initialSpritesByTier) {
+      const tileMap = this.tileMapsByTier.get(tier)
+      if (!tileMap) continue
+      initial.forEach((refs, key) => {
         const sortedRefs = [...refs].sort((a, b) => {
           const aZ = a.zIndex ?? 0
           const bZ = b.zIndex ?? 0
           return aZ - bZ
         })
+        const comma = key.indexOf(',')
+        const tileX = Number(key.slice(0, comma))
+        const tileY = Number(key.slice(comma + 1))
+        const tile = tileMap.getTile(tileX, tileY)
+        if (!tile) return
 
         for (const ref of sortedRefs) {
           if (hiddenLayerIds.has(ref.layerId)) continue
@@ -329,10 +344,11 @@ export class MapResource implements Loadable<TileMap> {
     for (const tilemap of this.tileMapsByTier.values()) {
       const editor = tilemap.get(MapEditorComponent)
       if (!editor) continue
-      for (const tile of editor.getAllTilesWithSprites()) {
-        const refs = editor.getSpritesForTileAndLayer(tile)
+      for (const { tileX, tileY } of iterateOccupiedCoords(editor)) {
+        const refs = getSpritesAt(editor, tileX, tileY)
         if (refs.some((r) => r.spriteSetId === spriteSetId && r.spriteId === spriteId)) {
-          this.refreshTileSolidFromEditor(tilemap, tile)
+          const tile = tilemap.getTile(tileX, tileY)
+          if (tile) this.refreshTileSolidFromEditor(tilemap, tile)
         }
       }
     }
@@ -348,7 +364,7 @@ export class MapResource implements Loadable<TileMap> {
   refreshTileSolidFromEditor(tilemap: TileMap, tile: Tile): void {
     const editor = tilemap.get(MapEditorComponent)
     if (!editor) return
-    const refs = editor.getSpritesForTileAndLayer(tile)
+    const refs = getSpritesAt(editor, tile.x, tile.y)
     tile.solid = refs.some((r) => this._isSolidRef(r.spriteSetId, r.spriteId))
   }
 

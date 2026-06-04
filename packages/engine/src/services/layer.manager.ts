@@ -1,6 +1,7 @@
 import type { Tile, TileMap } from 'excalibur'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import { setSpritesAt } from './map-editor-shadow.service.ts'
 import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
 import { rebuildAllTileGraphics, updateTileMapZIndex } from './tile-graphics.manager.ts'
 
@@ -43,7 +44,7 @@ export function addSpriteToTileForLayer(
     }
   }
 
-  editorComponent.setSpritesForTileAndLayer(tile, layerId, [
+  setSpritesAt(editorComponent, tile.x, tile.y, layerId, [
     {
       spriteSetId: spriteInfo.spriteSetId,
       spriteId: spriteInfo.spriteId,
@@ -73,7 +74,7 @@ export function removeSpritesFromTileForLayer(
     return
   }
 
-  editorComponent.setSpritesForTileAndLayer(tile, layerId, [])
+  setSpritesAt(editorComponent, tile.x, tile.y, layerId, [])
 
   rebuildAllTileGraphics(tileMap, mapResource, tile)
   updateTileMapZIndex(tileMap, mapResource)

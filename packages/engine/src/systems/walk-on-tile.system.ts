@@ -53,14 +53,22 @@ export class WalkOnTileSystem extends System {
    * first sprite found with `tileProperties` on its sprite-set
    * entry wins; if no layer has a sprite at that coord we return
    * the engine default (walkable, no surface).
+   *
+   * Hot path: called on every `PLAYER_TILE_CHANGED`. Walks the
+   * layers in reverse with a plain `for` loop to avoid the
+   * spread + filter + reverse allocation triplet on each step.
    */
   private resolveTileProperties(tileX: number, tileY: number): TileProperties {
     const mapData = this.mapResource.mapData
     if (!mapData) return { walkable: true }
 
-    const layers = [...mapData.layers].filter((l) => l.visible).reverse()
-    for (const layer of layers) {
-      const sprite = layer.sprites?.find((s) => s.x === tileX && s.y === tileY)
+    const layers = mapData.layers
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const layer = layers[i]
+      if (!layer.visible) continue
+      const sprites = layer.sprites
+      if (!sprites) continue
+      const sprite = sprites.find((s) => s.x === tileX && s.y === tileY)
       if (!sprite) continue
       const spriteSet = this.mapResource.getSpriteSetResource(sprite.spriteSetId)
       if (!spriteSet) continue

@@ -15,6 +15,7 @@ import {
 import {
   PlayerActorComponent,
   PlayerComponent,
+  PlayerSessionComponent,
   RuntimeModeComponent,
   SpawnOverrideComponent,
   SpawnPointComponent,
@@ -78,16 +79,10 @@ export class PlayerSystem extends System {
   public readonly systemType = SystemType.Update
 
   private logger = Logger.getInstance()
+  /** Cached scene + spawned player actor + component refs — populated in `initialize` and read each tick. */
   private scene: Scene | null = null
   private player: Actor | null = null
   private playerComponent: PlayerActorComponent | null = null
-  private cameraLocked = false
-  private hasInitialized = false
-  private lastTile: { tileX: number; tileY: number } | null = null
-  /** Previous-frame runtime state — drives transition detection. */
-  private wasInRuntime = false
-  /** Tracks Space/Enter held state for edge-trigger semantics. */
-  private actionWasHeld = false
 
   constructor(
     private readonly mapResource: MapResource,
@@ -101,9 +96,11 @@ export class PlayerSystem extends System {
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) super.initialize(world, scene)
     this.scene = scene
-    if (this.hasInitialized) return
-    this.hasInitialized = true
     void world
+    // Excalibur calls `initialize` exactly once per system lifetime
+    // (fresh MapScene + fresh PlayerSystem per `Engine.loadMap`), so
+    // the spawn pass runs implicitly once with no guard flag needed.
+    SessionState.set(scene, new PlayerSessionComponent())
     this.spawnPlayer(scene)
   }
 
@@ -113,9 +110,12 @@ export class PlayerSystem extends System {
     const pc = this.playerComponent
     if (!scene || !player || !pc) return
 
+    const session = SessionState.get(scene, PlayerSessionComponent)
+    if (!session) return
+
     const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
 
-    this.handleModeTransition(scene, player, pc, inRuntime)
+    this.handleModeTransition(scene, player, pc, session, inRuntime)
     player.graphics.visible = inRuntime
 
     if (!inRuntime) {
@@ -128,7 +128,7 @@ export class PlayerSystem extends System {
     if (!kb) return
 
     this.handleInput(player, pc, kb)
-    this.emitTileChangeAndAction(player, pc, kb)
+    this.emitTileChangeAndAction(player, pc, session, kb)
   }
 
   // ─────────────────────────────────────────────────────────── spawn
@@ -188,7 +188,11 @@ export class PlayerSystem extends System {
 
     this.player = actor
     this.playerComponent = pc
-    this.lastTile = { tileX: tile.tileX, tileY: tile.tileY }
+    const session = SessionState.get(scene, PlayerSessionComponent)
+    if (session) {
+      session.lastTileX = tile.tileX
+      session.lastTileY = tile.tileY
+    }
   }
 
   /** Spawn-tile resolution: override → spawn-point → camera centre → (0,0). */
@@ -253,8 +257,14 @@ export class PlayerSystem extends System {
    * camera. Position is preserved between toggles, so Pause → Play
    * with the camera elsewhere now relocates.
    */
-  private handleModeTransition(scene: Scene, player: Actor, pc: PlayerActorComponent, inRuntime: boolean): void {
-    if (inRuntime && !this.wasInRuntime) {
+  private handleModeTransition(
+    scene: Scene,
+    player: Actor,
+    pc: PlayerActorComponent,
+    session: PlayerSessionComponent,
+    inRuntime: boolean,
+  ): void {
+    if (inRuntime && !session.wasInRuntime) {
       const tile = this.resolveSpawnTile(scene)
       const tw = this.mapResource.mapData?.tileWidth ?? 16
       const th = this.mapResource.mapData?.tileHeight ?? 16
@@ -265,16 +275,17 @@ export class PlayerSystem extends System {
       const initialGraphic = pc.animationsByRole[role]
       if (initialGraphic) player.graphics.use(initialGraphic)
       pc.currentRole = role
-      this.lastTile = { tileX: tile.tileX, tileY: tile.tileY }
+      session.lastTileX = tile.tileX
+      session.lastTileY = tile.tileY
     }
-    this.wasInRuntime = inRuntime
+    session.wasInRuntime = inRuntime
 
-    if (inRuntime && !this.cameraLocked) {
+    if (inRuntime && !session.cameraLocked) {
       this.lockCamera(scene, player)
-      this.cameraLocked = true
-    } else if (!inRuntime && this.cameraLocked) {
+      session.cameraLocked = true
+    } else if (!inRuntime && session.cameraLocked) {
       scene.camera.clearAllStrategies()
-      this.cameraLocked = false
+      session.cameraLocked = false
     }
   }
 
@@ -328,25 +339,33 @@ export class PlayerSystem extends System {
    * consumed by `TriggerSystem` + `WalkOnTileSystem` to fire
    * walk-onto / action-button game events.
    */
-  private emitTileChangeAndAction(player: Actor, pc: PlayerActorComponent, kb: KeyboardLike): void {
+  private emitTileChangeAndAction(
+    player: Actor,
+    pc: PlayerActorComponent,
+    session: PlayerSessionComponent,
+    kb: KeyboardLike,
+  ): void {
     const tw = this.mapResource.mapData?.tileWidth ?? 16
     const th = this.mapResource.mapData?.tileHeight ?? 16
     const tileX = Math.floor(player.pos.x / tw)
     const tileY = Math.floor(player.pos.y / th)
 
-    if (!this.lastTile || this.lastTile.tileX !== tileX || this.lastTile.tileY !== tileY) {
-      const previous = this.lastTile ? { ...this.lastTile } : null
-      this.lastTile = { tileX, tileY }
+    const prevX = session.lastTileX
+    const prevY = session.lastTileY
+    if (prevX === null || prevY === null || prevX !== tileX || prevY !== tileY) {
+      const previous = prevX !== null && prevY !== null ? { tileX: prevX, tileY: prevY } : null
+      session.lastTileX = tileX
+      session.lastTileY = tileY
       this.events.emit(EngineEvent.PLAYER_TILE_CHANGED, { tileX, tileY, previous, facing: pc.facing })
     }
 
     if (isActionPressed(kb)) {
-      if (!this.actionWasHeld) {
-        this.actionWasHeld = true
+      if (!session.actionWasHeld) {
+        session.actionWasHeld = true
         this.events.emit(EngineEvent.PLAYER_ACTION_PRESSED, { tileX, tileY, facing: pc.facing })
       }
     } else {
-      this.actionWasHeld = false
+      session.actionWasHeld = false
     }
   }
 }

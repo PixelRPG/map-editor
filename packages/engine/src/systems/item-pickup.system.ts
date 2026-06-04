@@ -16,13 +16,15 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
  * Engine stays inventory-agnostic: the `item-picked-up` event
  * carries the bag of pickup data and project code decides what
  * "inventory" means.
+ *
+ * Stateless system — the world + scene references stay captured in
+ * the `TRIGGER_FIRED` subscription closure installed at `initialize`,
+ * never on the system instance.
  */
 export class ItemPickupSystem extends System {
   public readonly systemType = SystemType.Update
 
-  private world: World | null = null
-  private scene: Scene | null = null
-  private logger = Logger.getInstance()
+  private readonly logger = Logger.getInstance()
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -30,31 +32,24 @@ export class ItemPickupSystem extends System {
 
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) super.initialize(world, scene)
-    this.world = world
-    this.scene = scene
 
     this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
-      this.handleTrigger(entityId)
+      const entity = world.entityManager.getById(entityId)
+      if (!entity) return
+      const item = entity.get(ItemComponent)
+      if (!item) return
+
+      this.events.emit(EngineEvent.ITEM_PICKED_UP, {
+        itemId: item.itemId,
+        qty: item.qty,
+        pickupSound: item.pickupSound,
+      })
+      this.logger.info(`[ItemPickupSystem] picked up ${item.qty}× ${item.itemId}`)
+      scene.world.entityManager.removeEntity(entity)
     })
   }
 
   public update(_elapsed: number): void {
     // Reactive — work happens in the event subscription.
-  }
-
-  private handleTrigger(entityId: number): void {
-    if (!this.world || !this.scene) return
-    const entity = this.world.entityManager.getById(entityId)
-    if (!entity) return
-    const item = entity.get(ItemComponent)
-    if (!item) return
-
-    this.events.emit(EngineEvent.ITEM_PICKED_UP, {
-      itemId: item.itemId,
-      qty: item.qty,
-      pickupSound: item.pickupSound,
-    })
-    this.logger.info(`[ItemPickupSystem] picked up ${item.qty}× ${item.itemId}`)
-    this.scene.world.entityManager.removeEntity(entity)
   }
 }

@@ -31,11 +31,6 @@ export async function loadTextFile(path: string): Promise<string> {
   return decoder.decode(contents)
 }
 
-export async function loadJsonFile<T>(path: string): Promise<T> {
-  const content = await loadTextFile(path)
-  return JSON.parse(content) as T
-}
-
 export async function saveTextFile(path: string, content: string): Promise<void> {
   const file = Gio.File.new_for_path(path)
   const encoder = new TextEncoder()

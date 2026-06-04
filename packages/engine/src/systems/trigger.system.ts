@@ -1,9 +1,10 @@
-import { type Entity, type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
-import { TileTransformComponent, TriggerComponent } from '../components/index.ts'
+import { type Entity, type EventEmitter, type Query, type Scene, System, SystemType, type World } from 'excalibur'
+import { TileTransformComponent, TriggerComponent, TriggerFiredComponent } from '../components/index.ts'
 import type { Facing } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 
 type FireReason = 'walk-onto' | 'walk-off' | 'action-button' | 'auto'
+type TriggerQuery = Query<typeof TriggerComponent | typeof TileTransformComponent>
 
 /**
  * Watches for the player's logical position changes and action-button
@@ -28,13 +29,17 @@ type FireReason = 'walk-onto' | 'walk-off' | 'action-button' | 'auto'
  *   intros / scripted spawns.
  * - `none` — never fires (object renders only).
  *
- * Re-fire policy: triggers with `once: true` flip
- * `TriggerComponent.fired` after firing once and are skipped on
- * subsequent attempts within the same scene visit. Scene reload
- * resets state (new spawn = new component instances).
+ * Re-fire policy: triggers with `once: true` get a
+ * {@link TriggerFiredComponent} marker attached after firing and
+ * are skipped on subsequent attempts within the same scene visit.
+ * Scene reload resets state (new spawn = fresh entities without
+ * the marker).
  */
 export class TriggerSystem extends System {
   public readonly systemType = SystemType.Update
+
+  /** Query handle captured once at initialize — Excalibur caches by signature, but holding the handle avoids re-resolving it per event. */
+  private triggerQuery: TriggerQuery | null = null
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -43,20 +48,22 @@ export class TriggerSystem extends System {
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) super.initialize(world, scene)
 
+    this.triggerQuery = world.queryManager.createQuery([TriggerComponent, TileTransformComponent])
+
     // `auto` triggers fire once at activate.
-    this.fireAuto(world)
+    this.fireAuto()
 
     this.events.on(EngineEvent.PLAYER_TILE_CHANGED, (payload) => {
       // walk-off the previous tile first, then walk-onto the new one
       if (payload.previous) {
-        this.fireMatching(world, payload.previous.tileX, payload.previous.tileY, 'walk-off')
+        this.fireMatching(payload.previous.tileX, payload.previous.tileY, 'walk-off')
       }
-      this.fireMatching(world, payload.tileX, payload.tileY, 'walk-onto')
+      this.fireMatching(payload.tileX, payload.tileY, 'walk-onto')
     })
 
     this.events.on(EngineEvent.PLAYER_ACTION_PRESSED, ({ tileX, tileY, facing }) => {
       const adj = adjacentTile(tileX, tileY, facing)
-      this.fireMatching(world, adj.tileX, adj.tileY, 'action-button')
+      this.fireMatching(adj.tileX, adj.tileY, 'action-button')
     })
   }
 
@@ -64,33 +71,35 @@ export class TriggerSystem extends System {
     // No per-frame work — triggers fire from event-bus subscriptions.
   }
 
-  private fireAuto(world: World): void {
-    const query = world.queryManager.createQuery([TriggerComponent, TileTransformComponent])
-    for (const entity of query.entities) {
+  private fireAuto(): void {
+    if (!this.triggerQuery) return
+    for (const entity of this.triggerQuery.entities) {
       const trigger = entity.get(TriggerComponent)
-      if (trigger?.on === 'auto' && !this.isSpent(trigger)) {
+      if (trigger?.on === 'auto' && !this.isSpent(entity, trigger)) {
         this.fire(entity, trigger, 'auto')
       }
     }
   }
 
-  private fireMatching(world: World, tileX: number, tileY: number, reason: FireReason): void {
-    const query = world.queryManager.createQuery([TriggerComponent, TileTransformComponent])
-    for (const entity of query.entities) {
+  private fireMatching(tileX: number, tileY: number, reason: FireReason): void {
+    if (!this.triggerQuery) return
+    for (const entity of this.triggerQuery.entities) {
       const t = entity.get(TileTransformComponent)
       if (!t || t.tileX !== tileX || t.tileY !== tileY) continue
       const trigger = entity.get(TriggerComponent)
-      if (!trigger || trigger.on !== reason || this.isSpent(trigger)) continue
+      if (!trigger || trigger.on !== reason || this.isSpent(entity, trigger)) continue
       this.fire(entity, trigger, reason)
     }
   }
 
-  private isSpent(trigger: TriggerComponent): boolean {
-    return trigger.once && trigger.fired
+  private isSpent(entity: Entity, trigger: TriggerComponent): boolean {
+    return trigger.once && entity.has(TriggerFiredComponent)
   }
 
   private fire(entity: Entity, trigger: TriggerComponent, by: FireReason): void {
-    trigger.fired = true
+    if (trigger.once && !entity.has(TriggerFiredComponent)) {
+      entity.addComponent(new TriggerFiredComponent())
+    }
     this.events.emit(EngineEvent.TRIGGER_FIRED, { entityId: entity.id, by })
   }
 }

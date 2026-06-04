@@ -2,6 +2,7 @@ import { type Scene, TileMap } from 'excalibur'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import { MapScene } from '../scenes/map.scene.ts'
 import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/layer.manager.ts'
+import { setSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { rebuildAllTileGraphics, updateTileMapZIndex } from '../services/tile-graphics.manager.ts'
 import type { Command } from './types.ts'
 
@@ -121,7 +122,7 @@ function restorePreviousSprites(
   }
   const editor = ctx.tileMap.get(MapEditorComponent)
   if (!editor) return
-  editor.setSpritesForTileAndLayer(tile, layerId, previousSprites)
+  setSpritesAt(editor, tile.x, tile.y, layerId, previousSprites)
   rebuildAllTileGraphics(ctx.tileMap, ctx.mapResource, tile)
   updateTileMapZIndex(ctx.tileMap, ctx.mapResource)
   // Undo can swap solid → walkable (or vice-versa); recompute so

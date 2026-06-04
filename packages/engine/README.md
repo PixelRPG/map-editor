@@ -17,7 +17,7 @@ The PixelRPG engine. Wraps Excalibur.js to provide tile-based map rendering, an 
 ## Usage
 
 ```typescript
-import { Engine } from '@pixelrpg/engine'
+import { Engine, EngineEvent } from '@pixelrpg/engine'
 
 const canvas = /* HTMLCanvasElement, e.g. from a GTK widget or DOM */
 const engine = new Engine(canvas)
@@ -26,7 +26,7 @@ await engine.loadProject('/path/to/project.json')
 await engine.loadMap('overworld')
 await engine.start()
 
-engine.events.on('statusChanged', (status) => console.log(status))
+engine.events.on(EngineEvent.STATUS_CHANGED, ({ status }) => console.log(status))
 ```
 
 In GJS, the canvas comes from the GTK Engine widget in [`@pixelrpg/gjs`](../gjs). In the browser, the canvas is a regular `<canvas>` — see [`@pixelrpg/game-browser`](../../apps/game-browser).

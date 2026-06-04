@@ -16,8 +16,10 @@ import {
 } from './components/index.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
+import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
+import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -304,23 +306,7 @@ export class Engine {
   executeCommand(command: Command): void {
     const scene = this._activeMapScene()
     if (!scene) return
-    command.apply(scene)
-
-    const existing = SessionState.get(scene, UndoStackComponent)
-    if (existing) {
-      existing.commands = existing.commands.slice(0, existing.cursor)
-      existing.commands.push(command)
-      existing.cursor = existing.commands.length
-      SessionState.notifyMutation(scene, existing)
-    } else {
-      SessionState.set(scene, new UndoStackComponent([command], 1))
-    }
-
-    // Tell collab consumers (SessionController) so they can relay this
-    // local command as an `Operation` to peers. Note: remote commands
-    // applied via `applyRemoteCommand` deliberately skip this emit to
-    // avoid a feedback loop.
-    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+    executeCommandOnScene(scene, this.events, command)
   }
 
   /**
@@ -362,7 +348,7 @@ export class Engine {
    */
   undo(): boolean {
     const ctx = this._undoContext()
-    if (!ctx || !ctx.stack.canUndo) return false
+    if (!ctx || !canUndo(ctx.stack)) return false
     const command = ctx.stack.commands[ctx.stack.cursor - 1]
     if (!command) return false
     command.revert(ctx.scene)
@@ -377,7 +363,7 @@ export class Engine {
    */
   redo(): boolean {
     const ctx = this._undoContext()
-    if (!ctx || !ctx.stack.canRedo) return false
+    if (!ctx || !canRedo(ctx.stack)) return false
     const command = ctx.stack.commands[ctx.stack.cursor]
     if (!command) return false
     command.apply(ctx.scene)
@@ -387,11 +373,13 @@ export class Engine {
   }
 
   canUndo(): boolean {
-    return this._undoContext()?.stack.canUndo ?? false
+    const stack = this._undoContext()?.stack
+    return stack ? canUndo(stack) : false
   }
 
   canRedo(): boolean {
-    return this._undoContext()?.stack.canRedo ?? false
+    const stack = this._undoContext()?.stack
+    return stack ? canRedo(stack) : false
   }
 
   /**
@@ -664,7 +652,7 @@ export class Engine {
         return
       }
       inner = SessionState.subscribe(scene, UndoStackComponent, (stack) => {
-        cb({ canUndo: stack?.canUndo ?? false, canRedo: stack?.canRedo ?? false })
+        cb({ canUndo: stack ? canUndo(stack) : false, canRedo: stack ? canRedo(stack) : false })
       })
     }
     rebind()
