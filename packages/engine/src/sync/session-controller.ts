@@ -54,6 +54,7 @@ export class SessionController {
   private readonly onSessionProtocol: ((op: SessionProtocolOp) => void) | null
   private localSeq = 0
   private commandSub: { close(): void } | null = null
+  private revertSub: { close(): void } | null = null
   private sessionSub: { close(): void } | null = null
   private closed = false
 
@@ -64,10 +65,19 @@ export class SessionController {
     this.registry = opts.registry ?? BUILT_IN_COMMANDS
     this.onSessionProtocol = opts.onSessionProtocol ?? null
 
-    // Local → wire
+    // Local → wire (apply path: initial execute + redo)
     this.commandSub = this.engine.events.on(EngineEvent.COMMAND_EXECUTED, ({ command }) => {
       if (this.closed) return
-      this.session.sendOp(this.toOperation(command))
+      this.session.sendOp(this.toOperation(command, 'apply'))
+    })
+
+    // Local → wire (revert path: undo). Relayed with
+    // `Operation.direction = 'revert'` so the receiving peer
+    // runs `command.revert` instead of `apply`. Without this hook
+    // a peer's undo of their own paint would never reach peers.
+    this.revertSub = this.engine.events.on(EngineEvent.COMMAND_REVERTED, ({ command }) => {
+      if (this.closed) return
+      this.session.sendOp(this.toOperation(command, 'revert'))
     })
 
     // Wire → local
@@ -104,16 +114,19 @@ export class SessionController {
     this.closed = true
     this.commandSub?.close()
     this.commandSub = null
+    this.revertSub?.close()
+    this.revertSub = null
     this.sessionSub?.close()
     this.sessionSub = null
   }
 
-  private toOperation(command: Command): Operation {
+  private toOperation(command: Command, direction: 'apply' | 'revert'): Operation {
     return {
       kind: command.kind,
       payload: command.payload,
       peerId: this.peerId,
       seq: this.localSeq++,
+      direction,
     }
   }
 
@@ -143,6 +156,15 @@ export class SessionController {
       return
     }
     const command = factory(op.payload)
-    this.engine.applyRemoteCommand(command)
+    // `direction` defaults to 'apply' for backward compat with
+    // older peers that didn't ship the field. A 'revert' direction
+    // routes to the symmetric `applyRemoteRevert` so peer-A's undo
+    // of their own paint reverts on every connected peer (the
+    // bug this field was introduced to close).
+    if (op.direction === 'revert') {
+      this.engine.applyRemoteRevert(command)
+    } else {
+      this.engine.applyRemoteCommand(command)
+    }
   }
 }
