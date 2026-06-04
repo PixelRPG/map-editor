@@ -33,12 +33,4 @@ export class UndoStackComponent extends Component {
   ) {
     super()
   }
-
-  get canUndo(): boolean {
-    return this.cursor > 0
-  }
-
-  get canRedo(): boolean {
-    return this.cursor < this.commands.length
-  }
 }

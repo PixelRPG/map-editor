@@ -19,6 +19,7 @@ import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
+import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -347,7 +348,7 @@ export class Engine {
    */
   undo(): boolean {
     const ctx = this._undoContext()
-    if (!ctx || !ctx.stack.canUndo) return false
+    if (!ctx || !canUndo(ctx.stack)) return false
     const command = ctx.stack.commands[ctx.stack.cursor - 1]
     if (!command) return false
     command.revert(ctx.scene)
@@ -362,7 +363,7 @@ export class Engine {
    */
   redo(): boolean {
     const ctx = this._undoContext()
-    if (!ctx || !ctx.stack.canRedo) return false
+    if (!ctx || !canRedo(ctx.stack)) return false
     const command = ctx.stack.commands[ctx.stack.cursor]
     if (!command) return false
     command.apply(ctx.scene)
@@ -372,11 +373,13 @@ export class Engine {
   }
 
   canUndo(): boolean {
-    return this._undoContext()?.stack.canUndo ?? false
+    const stack = this._undoContext()?.stack
+    return stack ? canUndo(stack) : false
   }
 
   canRedo(): boolean {
-    return this._undoContext()?.stack.canRedo ?? false
+    const stack = this._undoContext()?.stack
+    return stack ? canRedo(stack) : false
   }
 
   /**
@@ -649,7 +652,7 @@ export class Engine {
         return
       }
       inner = SessionState.subscribe(scene, UndoStackComponent, (stack) => {
-        cb({ canUndo: stack?.canUndo ?? false, canRedo: stack?.canRedo ?? false })
+        cb({ canUndo: stack ? canUndo(stack) : false, canRedo: stack ? canRedo(stack) : false })
       })
     }
     rebind()
