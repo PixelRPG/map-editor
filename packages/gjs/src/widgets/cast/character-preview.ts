@@ -33,6 +33,7 @@ export class CharacterPreview extends Adw.Bin {
   private _frameIndex = 0
   private _timeoutId = 0
   private _roleLabel = ''
+  private _frameSize = 160
 
   static {
     GObject.registerClass(
@@ -47,6 +48,18 @@ export class CharacterPreview extends Adw.Bin {
             'Caption shown under the preview',
             GObject.ParamFlags.READWRITE,
             '',
+          ),
+          // Inner-frame edge length in pixels. Bound from the
+          // template so cast-view's BreakpointBin can grow the
+          // preview at desktop widths (160 mobile, 240 desktop).
+          'frame-size': GObject.ParamSpec.int(
+            'frame-size',
+            'Frame size',
+            'Width + height of the square preview frame in pixels',
+            GObject.ParamFlags.READWRITE,
+            64,
+            512,
+            160,
           ),
         },
       },
@@ -74,6 +87,16 @@ export class CharacterPreview extends Adw.Bin {
     if (this._roleLabel === value) return
     this._roleLabel = value
     this.notify('role-label')
+  }
+
+  get frameSize(): number {
+    return this._frameSize ?? 160
+  }
+
+  set frameSize(value: number) {
+    if (this._frameSize === value) return
+    this._frameSize = value
+    this.notify('frame-size')
   }
 
   /**

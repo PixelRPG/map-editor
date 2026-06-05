@@ -4,7 +4,13 @@ import Gtk from '@girs/gtk-4.0'
 import { type CharacterAnimation, type CharacterDefinition, REQUIRED_ROLES } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
+import type { GdkSpriteSetResource } from '../../sprite/index.ts'
+
 import Template from './animation-list.blp'
+
+/** Maximum number of inline frame thumbnails shown in a row's suffix slot. */
+const ROW_THUMBNAIL_CAP = 6
+const ROW_THUMBNAIL_SIZE = 24
 
 /**
  * Rendered list of a character's {@link CharacterAnimation}s. Each row
@@ -21,6 +27,7 @@ export class AnimationList extends Adw.Bin {
   declare _add_button: Gtk.Button
 
   private _character: CharacterDefinition | null = null
+  private _spriteSet: GdkSpriteSetResource | null = null
   private _rowsById = new Map<string, Adw.ActionRow>()
 
   static {
@@ -45,8 +52,9 @@ export class AnimationList extends Adw.Bin {
     })
   }
 
-  setCharacter(character: CharacterDefinition | null): void {
+  setCharacter(character: CharacterDefinition | null, spriteSet: GdkSpriteSetResource | null = null): void {
     this._character = character
+    this._spriteSet = spriteSet
     this._rebuild()
   }
 
@@ -118,19 +126,60 @@ export class AnimationList extends Adw.Bin {
       row.set_subtitle(_('Not configured'))
     }
 
-    // No `go-next-symbolic` chevron on the row suffix. The chevron
-    // reads as "navigate to a sub-page" but activating a row here
-    // only selects the animation for inline editing in the right
-    // inspector — there's no sub-page to navigate to. Removing it
-    // until a real frame / timeline editor lands (tracked in
-    // `TODO.md` under "Cast / Character editor polish") avoids
-    // promising an affordance the UI doesn't deliver.
+    // Frame thumbnails as the row suffix. Up to ROW_THUMBNAIL_CAP
+    // sprite mini-pictures rendered with the aspect-preserving
+    // paintable mode so even tall character sprites (16×32) keep
+    // proportions inside the small square cells. Anything past the
+    // cap collapses to a single "+N" badge so a long custom
+    // animation doesn't overflow the row's natural width. No-op
+    // when no sprite-set is wired yet — the previous chevron-free
+    // row stays clean.
+    if (anim && anim.frames.length > 0 && this._spriteSet) {
+      row.add_suffix(this._buildThumbnailStrip(anim))
+    }
 
     row.connect('activated', () => {
       this.emit('animation-selected', id)
     })
 
     return row
+  }
+
+  /**
+   * Build the suffix strip: an inline `Gtk.Box` carrying up to
+   * `ROW_THUMBNAIL_CAP` sprite previews of the animation's frames.
+   * When the animation has more frames than the cap, the last cell
+   * becomes a `+N` label so the strip's natural width is bounded.
+   */
+  private _buildThumbnailStrip(anim: CharacterAnimation): Gtk.Box {
+    const strip = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 4,
+      valign: Gtk.Align.CENTER,
+    })
+    const visible = Math.min(anim.frames.length, ROW_THUMBNAIL_CAP)
+    for (let i = 0; i < visible; i++) {
+      const spriteId = anim.frames[i]
+      const sprite = this._spriteSet?.getSprite(spriteId) ?? null
+      const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
+      const picture = new Gtk.Picture({
+        contentFit: Gtk.ContentFit.CONTAIN,
+        canShrink: true,
+        widthRequest: ROW_THUMBNAIL_SIZE,
+        heightRequest: ROW_THUMBNAIL_SIZE,
+      })
+      picture.set_paintable(paintable)
+      strip.append(picture)
+    }
+    if (anim.frames.length > ROW_THUMBNAIL_CAP) {
+      const overflow = new Gtk.Label({
+        label: `+${anim.frames.length - ROW_THUMBNAIL_CAP}`,
+      })
+      overflow.add_css_class('caption')
+      overflow.add_css_class('dim-label')
+      strip.append(overflow)
+    }
+    return strip
   }
 }
 

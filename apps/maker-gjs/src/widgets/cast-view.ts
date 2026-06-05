@@ -307,7 +307,7 @@ export class CastView extends Adw.Bin {
   private _refreshActive(): void {
     const character = this._currentCharacter()
     this._preview.setCharacter(character, this._spriteSet)
-    this._anim_list.setCharacter(character)
+    this._anim_list.setCharacter(character, this._spriteSet)
     this._inspector.setCharacter(character)
     this._inspector.setAnimation(this._currentAnimation())
   }

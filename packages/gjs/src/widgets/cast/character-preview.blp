@@ -12,8 +12,11 @@ template $PixelRpgCharacterPreview : Adw.Bin {
 
     Gtk.Frame frame {
       halign: center;
-      width-request: 160;
-      height-request: 160;
+      // Square frame; size bound from `template.frame-size` so the
+      // host can grow it on wider widths (cast-view flips to 240 at
+      // ≥ 800sp). Default 160 keeps the smartphone layout unchanged.
+      width-request: bind template.frame-size;
+      height-request: bind template.frame-size;
       styles ["card", "character-preview-frame"]
 
       child: Gtk.Picture picture {
