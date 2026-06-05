@@ -1,4 +1,4 @@
-import { type CharacterDefinition, GameProjectFormat } from '@pixelrpg/engine'
+import { type CharacterAnimation, type CharacterDefinition, GameProjectFormat } from '@pixelrpg/engine'
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
@@ -87,6 +87,17 @@ export class CastController {
       this._mutate(id, (c) => {
         const anim = c.animations.find((a) => a.id === animId)
         if (anim) anim.durationMs = durationMs
+      })
+      void this.refresh()
+    },
+    addAnimation: (id: string, animation: CharacterAnimation) => {
+      this._mutate(id, (c) => {
+        // Dialog-side validation already rejected duplicate ids +
+        // empty frames; this is a defensive double-check so a
+        // dialog/controller mismatch can't corrupt the project.
+        if (animation.frames.length === 0) return
+        if (c.animations.some((a) => a.id === animation.id)) return
+        c.animations.push(animation)
       })
       void this.refresh()
     },

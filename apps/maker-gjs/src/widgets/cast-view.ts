@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import {
+  AddAnimationDialog,
   AnimationList,
   CastInspector,
   CharacterPreview,
@@ -76,6 +77,7 @@ export class CastView extends Adw.Bin {
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
   private _onSetSpeedRequested: ((charId: string, tilesPerSec: number) => void) | null = null
   private _onSetDurationRequested: ((charId: string, animId: string, durationMs: number) => void) | null = null
+  private _onAddAnimationRequested: ((charId: string, animation: CharacterAnimation) => void) | null = null
 
   static {
     GObject.registerClass(
@@ -172,6 +174,34 @@ export class CastView extends Adw.Bin {
         this._onSetDurationRequested?.(this._activeCharacterId, this._activeAnimationId, ms)
       }
     })
+    this.signals.connect(this._anim_list, 'add-animation-requested', () => {
+      this._presentAddAnimationDialog()
+    })
+  }
+
+  /**
+   * Construct a fresh `AddAnimationDialog`, seed it with the
+   * currently-selected character + sprite-set, and present it
+   * against this view. The dialog manages its own lifecycle —
+   * cancel/save both call `close()`, libadwaita destroys the
+   * widget on close, so we don't track an instance reference.
+   *
+   * Save fires `animation-created` with the assembled
+   * `CharacterAnimation`; we forward it to the host's
+   * `addAnimation` callback (controller writes the new entry into
+   * `CharacterDefinition.animations` + persists). The host's
+   * follow-up `refresh()` rebuilds the animation list with the new
+   * row already present.
+   */
+  private _presentAddAnimationDialog(): void {
+    const character = this._currentCharacter()
+    if (!character) return
+    const dialog = new AddAnimationDialog()
+    dialog.setContext(character, this._spriteSet)
+    dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
+      this._onAddAnimationRequested?.(character.id, animation)
+    })
+    dialog.present(this)
   }
 
   get projectName(): string {
@@ -236,11 +266,13 @@ export class CastView extends Adw.Bin {
     setPlayer: (charId: string, isPlayer: boolean) => void
     setSpeed: (charId: string, tilesPerSec: number) => void
     setDuration: (charId: string, animId: string, durationMs: number) => void
+    addAnimation: (charId: string, animation: CharacterAnimation) => void
   }): void {
     this._onRenameRequested = callbacks.rename
     this._onSetPlayerRequested = callbacks.setPlayer
     this._onSetSpeedRequested = callbacks.setSpeed
     this._onSetDurationRequested = callbacks.setDuration
+    this._onAddAnimationRequested = callbacks.addAnimation
   }
 
   /**

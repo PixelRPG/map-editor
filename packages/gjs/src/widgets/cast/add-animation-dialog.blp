@@ -1,0 +1,211 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgAddAnimationDialog : Adw.Dialog {
+  title: _("New animation");
+  // The dialog adapts to its host: on desktop it presents as a
+  // centered modal sized to the content-width/height hints below;
+  // on smartphone widths libadwaita switches to a bottom-sheet
+  // presentation automatically. The internal layout adapts to that
+  // too via the Adw.BreakpointBin further down.
+  content-width: 760;
+  content-height: 560;
+
+  child: Adw.ToolbarView {
+    top-bar-style: flat;
+
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Gtk.Button cancel_button {
+        label: _("Cancel");
+      }
+
+      [end]
+      Gtk.Button save_button {
+        // Disabled until the user has picked at least one frame
+        // and entered a name that isn't already taken.
+        sensitive: false;
+        label: _("Save");
+        styles ["suggested-action"]
+      }
+    }
+
+    content: Adw.BreakpointBin {
+      width-request: 1;
+      height-request: 1;
+
+      // ≥ 720sp = desktop split layout: settings column (name +
+      // duration + preview + sequence strip) on the left, frame
+      // picker grid on the right. Below the breakpoint the same
+      // children stack vertically and the picker takes the bottom
+      // half — natural smartphone scroll.
+      Adw.Breakpoint {
+        condition ("min-width: 720sp")
+
+        setters {
+          split_box.orientation: horizontal;
+          settings_column.width-request: 280;
+          settings_column.hexpand: false;
+        }
+      }
+
+      child: Gtk.Box split_box {
+        orientation: vertical;
+        spacing: 16;
+        margin-top: 16;
+        margin-bottom: 16;
+        margin-start: 16;
+        margin-end: 16;
+
+        Gtk.Box settings_column {
+          orientation: vertical;
+          spacing: 16;
+          hexpand: true;
+
+          Adw.PreferencesGroup {
+            title: _("Animation");
+
+            Adw.EntryRow name_row {
+              title: _("Name");
+              // Lowercase + dashes recommended for IDs; the validation
+              // logic in `add-animation-dialog.ts` rejects spaces +
+              // the reserved walk-*/idle-* role names.
+              input-hints: lowercase;
+            }
+
+            Adw.SpinRow duration_row {
+              title: _("Frame duration");
+              subtitle: _("Milliseconds per frame");
+
+              adjustment: Gtk.Adjustment {
+                lower: 50;
+                upper: 2000;
+                step-increment: 50;
+                page-increment: 100;
+                value: 200;
+              };
+            }
+          }
+
+          // Live preview of the assembled sequence — cycles through
+          // the picked frames at the duration set above. Frame
+          // index resets on each sequence/duration mutation so the
+          // user always sees the loop from frame 0.
+          Gtk.Box preview_box {
+            orientation: vertical;
+            spacing: 8;
+            halign: center;
+
+            Gtk.Frame preview_frame {
+              halign: center;
+              width-request: 160;
+              height-request: 160;
+              styles ["card"]
+
+              child: Gtk.Picture preview_picture {
+                content-fit: contain;
+                halign: center;
+                valign: center;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 8;
+                margin-end: 8;
+              };
+            }
+
+            Gtk.Label preview_label {
+              label: _("Preview");
+              styles ["caption", "dim-label"]
+            }
+          }
+
+          // The picked-frames strip. Each thumbnail is a flat
+          // button; clicking removes the frame from the sequence
+          // (single click for now — drag-to-reorder is queued in
+          // TODO.md). Empty placeholder swaps in via the bound
+          // `empty-sequence` property when nothing's been picked.
+          Gtk.Box sequence_section {
+            orientation: vertical;
+            spacing: 6;
+
+            Gtk.Label {
+              label: _("Frame sequence");
+              halign: start;
+              styles ["caption-heading"]
+            }
+
+            Gtk.Stack sequence_stack {
+              transition-type: crossfade;
+              visible-child-name: bind template.sequence-state;
+
+              Gtk.StackPage {
+                name: "empty";
+
+                child: Gtk.Label {
+                  label: _("No frames yet. Pick from the grid →");
+                  styles ["dim-label", "caption"]
+                  margin-top: 12;
+                  margin-bottom: 12;
+                  halign: center;
+                };
+              }
+
+              Gtk.StackPage {
+                name: "populated";
+
+                child: Gtk.ScrolledWindow {
+                  hscrollbar-policy: automatic;
+                  vscrollbar-policy: never;
+                  height-request: 56;
+
+                  child: Gtk.Box sequence_strip {
+                    orientation: horizontal;
+                    spacing: 4;
+                    valign: center;
+                  };
+                };
+              }
+            }
+          }
+        }
+
+        // Frame picker — the character's sprite-set rendered as a
+        // grid; clicking a cell appends its sprite index to the
+        // sequence. Reuses `TilePalette` which already knows how
+        // to lay out the sprite-sheet as a FlowBox and emits
+        // `tile-selected::<spriteId>` on activation.
+        Gtk.Box picker_column {
+          orientation: vertical;
+          spacing: 6;
+          hexpand: true;
+          vexpand: true;
+
+          Gtk.Label {
+            label: _("Frames");
+            halign: start;
+            styles ["caption-heading"]
+          }
+
+          Gtk.ScrolledWindow {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: automatic;
+            vscrollbar-policy: automatic;
+
+            child: $PixelRpgTilePalette palette {
+              tile-size: 32;
+              halign: start;
+              valign: start;
+              hexpand: false;
+              vexpand: false;
+            };
+          }
+        }
+      };
+    };
+  };
+}
