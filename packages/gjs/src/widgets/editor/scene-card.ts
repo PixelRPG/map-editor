@@ -1,4 +1,5 @@
 import type Adw from '@girs/adw-1'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
@@ -130,7 +131,8 @@ export class SceneCard extends Gtk.Button {
       )
     })
     drag.connect('drag-end', (_g, dx, dy) => {
-      if (this._dragging && this._pressLocal && this._pressInParent) {
+      const wasRealDrag = this._dragging
+      if (wasRealDrag && this._pressLocal && this._pressInParent) {
         const currentLocal = new Graphene.Point()
         currentLocal.init(this._pressLocal.x + dx, this._pressLocal.y + dy)
         const currentInParent = this._toParent(currentLocal)
@@ -141,13 +143,29 @@ export class SceneCard extends Gtk.Button {
             currentInParent.y - this._pressInParent.y,
           )
         }
-        // Suppress the trailing `clicked` that GtkButton would otherwise
-        // fire after a drag finishes.
+        // Reset the double-click timer so the trailing click can't
+        // chain into a `scene-activated` (open) on the next press.
         this._lastClickMs = 0
       }
-      this._dragging = false
       this._pressLocal = null
       this._pressInParent = null
+      if (wasRealDrag) {
+        // Keep `_dragging` true through the trailing `GtkButton::clicked`
+        // signal. GTK fires that synchronously from the same release
+        // event when `GestureDrag` is on the CAPTURE phase, so the
+        // listeners that already guard with `if (card.isDragging)
+        // return` (atlas-canvas's `scene-selected` emit, this card's
+        // own `_onClicked`) bail without firing — no auto-open mid-
+        // reorder, no spurious `scene-activated`. Reset on the next
+        // idle tick so the suppression window doesn't leak into a
+        // subsequent real click.
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+          this._dragging = false
+          return false
+        })
+      } else {
+        this._dragging = false
+      }
     })
     this.add_controller(drag)
   }
