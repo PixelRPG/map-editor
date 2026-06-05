@@ -7,17 +7,16 @@ template $PixelRpgRightInspector : Adw.Bin {
   Adw.ToolbarView {
     top-bar-style: flat;
 
-    // Thin flat header just to host the window-close X button +
-    // act as a drag region. Without it, the central canvas's
-    // headerbar reaches across the whole window width (its X
-    // ends up overlapping the inspector's first row — search
-    // field + Switch button get hidden). Moving the X here keeps
-    // it on the inspector's edge where it belongs.
+    // Thin flat header acts as a drag region for the window. The
+    // window-close X is gone — quitting now lives in the mode-rail's
+    // primary menu (`app.quit` + `<Primary>q`). Keeping the bar means
+    // empty space above the inspector body still grabs window-drag
+    // gestures.
     [top]
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
-      show-end-title-buttons: true;
+      show-end-title-buttons: false;
       styles ["flat"]
     }
 

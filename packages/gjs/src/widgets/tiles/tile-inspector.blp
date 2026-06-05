@@ -7,13 +7,13 @@ template $PixelRpgTileInspector : Adw.Bin {
   Adw.ToolbarView {
     top-bar-style: flat;
 
-    // Flat header for window-drag + close-button real estate, mirrors
-    // RightInspector / CastInspector.
+    // Flat header for window-drag — the window-close X is gone
+    // (quitting lives in the mode-rail's primary menu now).
     [top]
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
-      show-end-title-buttons: true;
+      show-end-title-buttons: false;
       styles ["flat"]
     }
 

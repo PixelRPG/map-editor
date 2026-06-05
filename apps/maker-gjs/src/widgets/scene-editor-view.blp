@@ -35,8 +35,9 @@ template $SceneEditorView : Adw.Bin {
     // central bar costs nothing functionally — the canvas just
     // takes over the whole content area.
     //
-    // The window-close X already moved to the right inspector's
-    // header in PR #49.
+    // No window-close X anywhere on the editor surfaces — quitting
+    // lives in the mode-rail's primary menu (`app.quit` +
+    // `<Primary>q`).
     content: Adw.OverlaySplitView inner_split {
       sidebar-position: end;
       min-sidebar-width: 280;

@@ -11,16 +11,15 @@ template $PixelRpgSceneInspector : Adw.Bin {
   Adw.ToolbarView {
     top-bar-style: flat;
 
-    // Thin flat header — provides the window-close X + window drag
-    // region at the inspector's top. Mirrors the pattern set up
-    // for `RightInspector` in PR #49: the atlas-view's central
-    // headerbar now stops at the inspector's left edge, so the
-    // close button lives on the inspector itself.
+    // Thin flat header — provides a window drag region at the
+    // inspector's top. The window-close X is gone — quitting now
+    // lives in the mode-rail's primary menu (`app.quit` +
+    // `<Primary>q`).
     [top]
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
-      show-end-title-buttons: true;
+      show-end-title-buttons: false;
       styles ["flat"]
     }
 
