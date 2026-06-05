@@ -58,33 +58,56 @@ template $CastView : Adw.Bin {
           }
         }
 
+        // `Adw.Clamp` keeps the Preferences-style content readable on
+        // desktop — without it the gallery + animations groups stretch
+        // across the full window (kilometres of empty space either
+        // side of the row labels on widescreen monitors). 720 / 480
+        // matches the standard `Adw.PreferencesPage` clamp settings so
+        // narrow widths still let the content fill the viewport and
+        // wide widths centre it inside a comfortable reading column.
         content: Gtk.ScrolledWindow {
           hexpand: true;
           vexpand: true;
           hscrollbar-policy: never;
 
-          child: Gtk.Box content_box {
-            orientation: vertical;
-            spacing: 16;
-            margin-top: 24;
-            margin-bottom: 24;
-            margin-start: 24;
-            margin-end: 24;
+          child: Adw.Clamp {
+            maximum-size: 720;
+            tightening-threshold: 480;
 
-            Gtk.Label header_label {
-              label: _("Cast");
-              halign: start;
-              styles ["title-1"]
-            }
+            child: Gtk.Box content_box {
+              orientation: vertical;
+              spacing: 16;
+              margin-top: 24;
+              margin-bottom: 24;
+              margin-start: 24;
+              margin-end: 24;
 
-            Adw.PreferencesGroup gallery_group {
-              title: _("Characters");
-              description: _("Heroes and NPCs in this project. The character marked as player spawns at the map's player spawn-point.");
-            }
+              Gtk.Label header_label {
+                label: _("Cast");
+                halign: start;
+                styles ["title-1"]
+              }
 
-            $PixelRpgCharacterPreview preview {}
+              Adw.PreferencesGroup gallery_group {
+                title: _("Characters");
+                description: _("Heroes and NPCs in this project. The character marked as player spawns at the map's player spawn-point.");
 
-            $PixelRpgAnimationList anim_list {}
+                // Header-suffix slot on Adw.PreferencesGroup is the
+                // standard Adwaita spot for a group-level CTA — keeps
+                // the "+ New character" affordance discoverable
+                // without taking a row of its own.
+                header-suffix: Gtk.Button new_character_button {
+                  icon-name: "list-add-symbolic";
+                  action-name: "win.new-character";
+                  tooltip-text: _("Add a new character");
+                  styles ["flat", "circular"]
+                };
+              }
+
+              $PixelRpgCharacterPreview preview {}
+
+              $PixelRpgAnimationList anim_list {}
+            };
           };
         };
       };

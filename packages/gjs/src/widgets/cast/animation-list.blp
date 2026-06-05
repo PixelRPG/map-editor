@@ -20,13 +20,20 @@ template $PixelRpgAnimationList : Adw.Bin {
         description: _("Frame indices into the character's sprite-set. Required roles are marked with a checkmark.");
       }
 
+      // Add-custom-animation is queued under "Cast / Character
+      // editor polish" in `TODO.md` — frame-picker popover needs to
+      // land before this button has anywhere to take the user.
+      // Disabled with an explanatory tooltip rather than hidden so
+      // the feature stays visibly on the roadmap.
       Gtk.Box footer {
         orientation: horizontal;
         halign: center;
         spacing: 8;
 
         Gtk.Button add_button {
+          sensitive: false;
           label: _("Add custom animation…");
+          tooltip-text: _("Frame-picker popover needed first — tracked in TODO.md");
           styles ["pill"]
         }
       }

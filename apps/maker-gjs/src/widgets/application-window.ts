@@ -43,7 +43,7 @@ type ViewName = 'welcome' | 'atlas' | 'cast' | 'tiles' | 'scene-editor'
  * - `win.zoom-in / zoom-out / zoom-reset`
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
- * - `win.new-scene`, `win.open-recent-projects`
+ * - `win.new-scene`, `win.new-character`, `win.open-recent-projects`
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -797,6 +797,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const newSceneAction = new Gio.SimpleAction({ name: 'new-scene' })
     newSceneAction.connect('activate', () => this._showToast(_('New Scene — not yet implemented')))
     winActions.add_action(newSceneAction)
+
+    const newCharacterAction = new Gio.SimpleAction({ name: 'new-character' })
+    newCharacterAction.connect('activate', () => this._showToast(_('New character — not yet implemented')))
+    winActions.add_action(newCharacterAction)
 
     const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
     openSceneAction.connect('activate', () => {

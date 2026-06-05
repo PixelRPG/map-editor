@@ -109,17 +109,22 @@ export class AnimationList extends Adw.Bin {
     row.add_prefix(prefix)
 
     if (anim) {
-      const subtitle = anim.frames.length === 0
-        ? _('No frames')
-        : `${anim.frames.length} ${anim.frames.length === 1 ? _('frame') : _('frames')} · ${anim.durationMs} ms`
+      const subtitle =
+        anim.frames.length === 0
+          ? _('No frames')
+          : `${anim.frames.length} ${anim.frames.length === 1 ? _('frame') : _('frames')} · ${anim.durationMs} ms`
       row.set_subtitle(subtitle)
     } else {
       row.set_subtitle(_('Not configured'))
     }
 
-    const chevron = new Gtk.Image({ iconName: 'go-next-symbolic' })
-    chevron.add_css_class('dim-label')
-    row.add_suffix(chevron)
+    // No `go-next-symbolic` chevron on the row suffix. The chevron
+    // reads as "navigate to a sub-page" but activating a row here
+    // only selects the animation for inline editing in the right
+    // inspector — there's no sub-page to navigate to. Removing it
+    // until a real frame / timeline editor lands (tracked in
+    // `TODO.md` under "Cast / Character editor polish") avoids
+    // promising an affordance the UI doesn't deliver.
 
     row.connect('activated', () => {
       this.emit('animation-selected', id)
