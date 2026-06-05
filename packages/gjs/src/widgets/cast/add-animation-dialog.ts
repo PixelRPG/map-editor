@@ -76,6 +76,14 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _zoomLevel = DEFAULT_ZOOM_LEVEL
   private _zoomLabel = ''
   private _cellAspect: number | null = null
+  /**
+   * Non-null when the dialog was opened to edit an existing
+   * animation rather than create a new one. Holds the original id
+   * so the save handler can emit the right signal +
+   * `_refreshValidity` knows to allow the unchanged name through
+   * its uniqueness check.
+   */
+  private _editingId: string | null = null
 
   static {
     GObject.registerClass(
@@ -121,6 +129,11 @@ export class AddAnimationDialog extends Adw.Dialog {
         },
         Signals: {
           'animation-created': { param_types: [GObject.TYPE_JSOBJECT] },
+          // Fires on Save when the dialog was opened in edit mode.
+          // First arg is the ORIGINAL id (so the controller can find
+          // the existing entry to replace even when the name was
+          // edited); second is the updated `CharacterAnimation`.
+          'animation-edited': { param_types: [GObject.TYPE_STRING, GObject.TYPE_JSOBJECT] },
         },
       },
       AddAnimationDialog,
@@ -162,14 +175,40 @@ export class AddAnimationDialog extends Adw.Dialog {
    * the cast view before `present()`. The character drives name-
    * uniqueness validation; the sprite-set populates the picker grid
    * and renders sequence thumbnails + the preview.
+   *
+   * Pass `existingAnimation` to open the dialog in EDIT mode — name,
+   * duration, and frames pre-populate from the existing entry; the
+   * title swaps from "New animation" to "Edit animation"; required-
+   * role names are locked (renaming `walk-up` to anything else would
+   * break the role binding); and Save emits `animation-edited`
+   * instead of `animation-created`. Without `existingAnimation` the
+   * dialog opens fresh in CREATE mode.
    */
-  setContext(character: CharacterDefinition, spriteSet: GdkSpriteSetResource | null): void {
+  setContext(
+    character: CharacterDefinition,
+    spriteSet: GdkSpriteSetResource | null,
+    existingAnimation?: CharacterAnimation,
+  ): void {
     this._character = character
     this._spriteSet = spriteSet
-    this._frames = []
+    this._editingId = existingAnimation?.id ?? null
+
+    if (existingAnimation) {
+      this._frames = [...existingAnimation.frames]
+      this._name_row.set_text(existingAnimation.id)
+      this._duration_row.set_value(existingAnimation.durationMs)
+      const isRequiredRole = (REQUIRED_ROLES as readonly string[]).includes(existingAnimation.id)
+      this._name_row.set_sensitive(!isRequiredRole)
+      this.set_title(_('Edit animation'))
+    } else {
+      this._frames = []
+      this._name_row.set_text('')
+      this._duration_row.set_value(DEFAULT_DURATION_MS)
+      this._name_row.set_sensitive(true)
+      this.set_title(_('New animation'))
+    }
+
     this._previewIndex = 0
-    this._name_row.set_text('')
-    this._duration_row.set_value(DEFAULT_DURATION_MS)
     this._rebuildSequenceStrip()
     this._refreshPreview()
     this._refreshValidity()
@@ -191,7 +230,11 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._save_button.connect('clicked', () => {
       const animation = this._buildAnimation()
       if (!animation) return
-      this.emit('animation-created', animation)
+      if (this._editingId !== null) {
+        this.emit('animation-edited', this._editingId, animation)
+      } else {
+        this.emit('animation-created', animation)
+      }
       this.close()
     })
   }
@@ -393,15 +436,18 @@ export class AddAnimationDialog extends Adw.Dialog {
    * frames state. Three rules need to hold:
    *
    * 1. Name is non-empty.
-   * 2. Name doesn't collide with an existing animation on the
+   * 2. Name doesn't collide with another animation on the
    *    character — required role OR previously-added custom anim.
+   *    In edit mode the entry being edited is excluded so the user
+   *    can keep the same name.
    * 3. At least one frame is in the sequence.
    */
   private _refreshValidity(): void {
     const name = this._name_row.get_text().trim()
-    const existingIds = new Set<string>(REQUIRED_ROLES)
-    for (const anim of this._character?.animations ?? []) existingIds.add(anim.id)
-    const isValid = name.length > 0 && !existingIds.has(name) && this._frames.length > 0
+    const reserved = new Set<string>(REQUIRED_ROLES)
+    for (const anim of this._character?.animations ?? []) reserved.add(anim.id)
+    if (this._editingId !== null) reserved.delete(this._editingId)
+    const isValid = name.length > 0 && !reserved.has(name) && this._frames.length > 0
     this._save_button.set_sensitive(isValid)
   }
 

@@ -101,6 +101,31 @@ export class CastController {
       })
       void this.refresh()
     },
+    editAnimation: (id: string, originalId: string, animation: CharacterAnimation) => {
+      this._mutate(id, (c) => {
+        if (animation.frames.length === 0) return
+        const idx = c.animations.findIndex((a) => a.id === originalId)
+        if (idx === -1) {
+          // The original isn't there anymore (deleted in another
+          // session, race with file reload, …). Treat the edit as
+          // an add — the user's frames don't get lost.
+          if (!c.animations.some((a) => a.id === animation.id)) {
+            c.animations.push(animation)
+          }
+          return
+        }
+        // Renaming a custom animation has to clear any existing
+        // entry that already holds the new name (collisions are
+        // dialog-side rejected, but a stale list could still slip
+        // one through). Replace in place when the id is unchanged.
+        if (animation.id !== originalId) {
+          const collision = c.animations.findIndex((a) => a.id === animation.id)
+          if (collision !== -1 && collision !== idx) return
+        }
+        c.animations[idx] = animation
+      })
+      void this.refresh()
+    },
   }
 
   /**

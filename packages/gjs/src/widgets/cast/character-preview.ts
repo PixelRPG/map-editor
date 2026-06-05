@@ -52,6 +52,15 @@ export class CharacterPreview extends Adw.Bin {
   private _spriteSet: GdkSpriteSetResource | null = null
   private _activeDirection: DirectionRole = 'down'
   private _paused = false
+  /**
+   * When non-null, the preview plays this animation id directly
+   * instead of deriving one from direction + paused. Set by
+   * `setActiveAnimation` when handed an id outside the
+   * walk-/idle- × direction matrix (custom user-defined animations
+   * like `sword-swing`). Any direction-pad / pause-toggle click
+   * exits custom mode and resumes the walk/idle lookup.
+   */
+  private _customAnimationId: string | null = null
   private _frameIndex = 0
   private _timeoutId = 0
   private _roleLabel = ''
@@ -161,8 +170,14 @@ export class CharacterPreview extends Adw.Bin {
     this._restart()
   }
 
-  /** Derived `${kind}-${direction}` id, kept in sync via the property notify. */
+  /**
+   * Derived id of whatever the preview is currently playing. In
+   * normal mode that's `${kind}-${direction}` (walk-down,
+   * idle-left, …); in custom mode it's the user-defined animation
+   * id picked from the animation list (`sword-swing`, etc.).
+   */
   get activeAnimationId(): string {
+    if (this._customAnimationId !== null) return this._customAnimationId
     const kind: AnimationKind = this._paused ? 'idle' : 'walk'
     return `${kind}-${this._activeDirection}`
   }
@@ -170,11 +185,20 @@ export class CharacterPreview extends Adw.Bin {
   /**
    * Show this character. Restarts playback from frame 0 of the
    * current direction's active animation. Pass `null` to clear.
+   *
+   * Drops custom-animation mode — the previous character's custom
+   * ids aren't guaranteed to exist on the new one, so reverting to
+   * walk-/idle- on the active direction gives a sane preview on
+   * any character.
    */
   setCharacter(character: CharacterDefinition | null, spriteSet: GdkSpriteSetResource | null): void {
     this._character = character
     this._spriteSet = spriteSet
     this._frameIndex = 0
+    if (this._customAnimationId !== null) {
+      this._customAnimationId = null
+      this._publishAnimationState()
+    }
     this._restart()
   }
 
@@ -184,41 +208,67 @@ export class CharacterPreview extends Adw.Bin {
   }
 
   /**
-   * Drive the preview from an animation id (`walk-up`, `idle-down`,
-   * …) — used by the cast view when the animation-list row is
-   * activated. Silently no-ops on unrecognised ids (e.g. custom
-   * animations not in the walk/idle × direction matrix) so the
-   * preview keeps its existing state rather than blanking.
+   * Drive the preview from an animation id. Two routes:
    *
-   * Idempotent: no notify / restart when the parsed direction +
-   * kind already match the current state. This is what keeps the
+   * - **Required role** (matches `walk-/idle- × up/down/left/right`)
+   *   — exits custom mode if active, updates direction + paused so
+   *   the button states stay in sync, and the walk/idle lookup in
+   *   `_activeAnimation` picks the right sequence.
+   * - **Custom animation** (anything else — `sword-swing`, `wave`,
+   *   etc.) — enters custom mode: `_customAnimationId` is the new
+   *   id, the four direction toggles clear, the pause toggle
+   *   clears, and `_activeAnimation` returns the matched custom
+   *   animation directly.
+   *
+   * Idempotent: no notify / restart when the parsed state already
+   * matches. This is what keeps the
    * `list-selected → preview-notify → list-highlight` round trip
    * from looping; the second pass sees no change and exits early.
    */
   setActiveAnimation(animId: string): void {
     const match = ANIMATION_ID_PATTERN.exec(animId)
-    if (!match) return
-    const [, kind, dir] = match as unknown as [string, AnimationKind, DirectionRole]
-    const wantPaused = kind === 'idle'
-    const directionChanged = this._activeDirection !== dir
-    const pausedChanged = this._paused !== wantPaused
-    if (!directionChanged && !pausedChanged) return
+    if (match) {
+      const [, kind, dir] = match as unknown as [string, AnimationKind, DirectionRole]
+      const wantPaused = kind === 'idle'
+      const wasCustom = this._customAnimationId !== null
+      const directionChanged = this._activeDirection !== dir
+      const pausedChanged = this._paused !== wantPaused
+      if (!wasCustom && !directionChanged && !pausedChanged) return
 
-    if (pausedChanged) {
-      this._paused = wantPaused
-      this._btn_pause?.set_active(wantPaused)
-      this._refreshDirectionTooltips()
+      this._customAnimationId = null
+      if (pausedChanged) {
+        this._paused = wantPaused
+        this._btn_pause?.set_active(wantPaused)
+        this._refreshDirectionTooltips()
+      }
+      if (directionChanged || wasCustom) {
+        // `_setActive` handles button toggles + frame reset + restart +
+        // animation-id publish. We also route here on `wasCustom` so
+        // the direction toggles re-light after leaving custom mode.
+        this._setActive(dir, false)
+      } else {
+        this._frameIndex = 0
+        this._publishAnimationState()
+        this._restart()
+      }
+      return
     }
-    if (directionChanged) {
-      // `_setActive` handles button toggles + frame reset + restart +
-      // animation-id publish. When only the kind changed, fall back
-      // to `_publishAnimationState` + `_restart` ourselves.
-      this._setActive(dir, false)
-    } else {
-      this._frameIndex = 0
-      this._publishAnimationState()
-      this._restart()
-    }
+
+    // Custom animation — play by id, clear the walk/idle UI state
+    // so it's visually obvious the direction pad isn't driving the
+    // current sequence.
+    if (this._customAnimationId === animId) return
+    this._customAnimationId = animId
+    this._frameIndex = 0
+    this._btn_up.set_active(false)
+    this._btn_down.set_active(false)
+    this._btn_left.set_active(false)
+    this._btn_right.set_active(false)
+    this._btn_pause?.set_active(false)
+    this._paused = false
+    this._refreshDirectionTooltips()
+    this._publishAnimationState()
+    this._restart()
   }
 
   vfunc_unmap(): void {
@@ -232,22 +282,39 @@ export class CharacterPreview extends Adw.Bin {
   }
 
   private _wireDirectionPad(): void {
+    // Any direction click leaves custom mode behind and resumes the
+    // walk-/idle- × direction lookup so the buttons are always the
+    // canonical way back from a custom-animation selection.
     this._btn_up.connect('toggled', () => {
-      if (this._btn_up.active) this._setActive('up', false)
+      if (this._btn_up.active) {
+        this._customAnimationId = null
+        this._setActive('up', false)
+      }
     })
     this._btn_down.connect('toggled', () => {
-      if (this._btn_down.active) this._setActive('down', false)
+      if (this._btn_down.active) {
+        this._customAnimationId = null
+        this._setActive('down', false)
+      }
     })
     this._btn_left.connect('toggled', () => {
-      if (this._btn_left.active) this._setActive('left', false)
+      if (this._btn_left.active) {
+        this._customAnimationId = null
+        this._setActive('left', false)
+      }
     })
     this._btn_right.connect('toggled', () => {
-      if (this._btn_right.active) this._setActive('right', false)
+      if (this._btn_right.active) {
+        this._customAnimationId = null
+        this._setActive('right', false)
+      }
     })
   }
 
   private _wirePauseToggle(): void {
+    // Pause clears custom mode too — see the direction-pad rationale.
     this._btn_pause.connect('toggled', () => {
+      this._customAnimationId = null
       this.paused = this._btn_pause.get_active()
     })
   }
@@ -305,13 +372,21 @@ export class CharacterPreview extends Adw.Bin {
   }
 
   /**
-   * Resolve the animation to play for the current direction + paused
-   * state. Falls back across the kind boundary so a character with
-   * only walk frames (no idle, or vice versa) still previews — better
-   * to show something than blank the picture.
+   * Resolve the animation to play. Two routes:
+   *
+   * - **Custom mode**: lookup by `_customAnimationId` directly.
+   *   Returns `null` (and the picture clears) if the id no longer
+   *   exists — e.g. the user deleted it elsewhere.
+   * - **Normal mode**: walk-/idle- × direction with cross-kind
+   *   fallback so a character with only walk frames (no idle, or
+   *   vice versa) still previews — better to show something than
+   *   blank the picture.
    */
   private _activeAnimation(): CharacterAnimation | null {
     if (!this._character) return null
+    if (this._customAnimationId !== null) {
+      return this._character.animations.find((a) => a.id === this._customAnimationId) ?? null
+    }
     const primaryKind: AnimationKind = this._paused ? 'idle' : 'walk'
     const fallbackKind: AnimationKind = primaryKind === 'idle' ? 'walk' : 'idle'
     const primary = `${primaryKind}-${this._activeDirection}` as CharacterAnimationRole

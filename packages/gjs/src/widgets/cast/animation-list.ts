@@ -40,6 +40,9 @@ export class AnimationList extends Adw.Bin {
         Signals: {
           'animation-selected': { param_types: [GObject.TYPE_STRING] },
           'add-animation-requested': {},
+          // Per-row edit affordance — fires the animation id; cast
+          // view opens `AddAnimationDialog` in edit mode against it.
+          'edit-animation-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
       AnimationList,
@@ -165,6 +168,24 @@ export class AnimationList extends Adw.Bin {
     // row stays clean.
     if (anim && anim.frames.length > 0 && this._spriteSet) {
       row.add_suffix(this._buildThumbnailStrip(anim))
+    }
+
+    // Per-row edit affordance. Only shown when the row has a
+    // configured animation — empty required-role rows are
+    // "configure for the first time" territory that needs a
+    // different entry point and isn't built yet. Pencil icon +
+    // tooltip make it discoverable without taking a label slot.
+    if (anim) {
+      const editButton = new Gtk.Button({
+        iconName: 'document-edit-symbolic',
+        tooltipText: _('Edit animation'),
+        cssClasses: ['flat', 'circular'],
+        valign: Gtk.Align.CENTER,
+      })
+      editButton.connect('clicked', () => {
+        this.emit('edit-animation-requested', id)
+      })
+      row.add_suffix(editButton)
     }
 
     row.connect('activated', () => {

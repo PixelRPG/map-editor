@@ -78,6 +78,9 @@ export class CastView extends Adw.Bin {
   private _onSetSpeedRequested: ((charId: string, tilesPerSec: number) => void) | null = null
   private _onSetDurationRequested: ((charId: string, animId: string, durationMs: number) => void) | null = null
   private _onAddAnimationRequested: ((charId: string, animation: CharacterAnimation) => void) | null = null
+  private _onEditAnimationRequested:
+    | ((charId: string, originalId: string, animation: CharacterAnimation) => void)
+    | null = null
 
   static {
     GObject.registerClass(
@@ -177,6 +180,9 @@ export class CastView extends Adw.Bin {
     this.signals.connect(this._anim_list, 'add-animation-requested', () => {
       this._presentAddAnimationDialog()
     })
+    this.signals.connect(this._anim_list, 'edit-animation-requested', (_v: AnimationList, animId: string) => {
+      this._presentEditAnimationDialog(animId)
+    })
   }
 
   /**
@@ -201,6 +207,30 @@ export class CastView extends Adw.Bin {
     dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
       this._onAddAnimationRequested?.(character.id, animation)
     })
+    dialog.present(this)
+  }
+
+  /**
+   * Same dialog as {@link _presentAddAnimationDialog} but seeded
+   * with the existing animation so the user edits in place. The
+   * dialog's third `setContext` argument flips it to edit mode
+   * (title swap, name locked for required roles, save fires
+   * `animation-edited` instead of `animation-created`) — see the
+   * dialog's `setContext` doc for the full behaviour.
+   */
+  private _presentEditAnimationDialog(animId: string): void {
+    const character = this._currentCharacter()
+    if (!character) return
+    const existing = character.animations.find((a) => a.id === animId)
+    if (!existing) return
+    const dialog = new AddAnimationDialog()
+    dialog.setContext(character, this._spriteSet, existing)
+    dialog.connect(
+      'animation-edited',
+      (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
+        this._onEditAnimationRequested?.(character.id, originalId, animation)
+      },
+    )
     dialog.present(this)
   }
 
@@ -267,12 +297,14 @@ export class CastView extends Adw.Bin {
     setSpeed: (charId: string, tilesPerSec: number) => void
     setDuration: (charId: string, animId: string, durationMs: number) => void
     addAnimation: (charId: string, animation: CharacterAnimation) => void
+    editAnimation: (charId: string, originalId: string, animation: CharacterAnimation) => void
   }): void {
     this._onRenameRequested = callbacks.rename
     this._onSetPlayerRequested = callbacks.setPlayer
     this._onSetSpeedRequested = callbacks.setSpeed
     this._onSetDurationRequested = callbacks.setDuration
     this._onAddAnimationRequested = callbacks.addAnimation
+    this._onEditAnimationRequested = callbacks.editAnimation
   }
 
   /**
