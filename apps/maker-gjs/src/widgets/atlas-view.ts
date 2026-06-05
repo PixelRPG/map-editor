@@ -194,13 +194,15 @@ export class AtlasView extends Adw.Bin {
       const scene = this._scenes.find((s) => s.id === id) ?? null
       this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
       // Auto-open the right inspector when the user picks a scene —
-      // the inspector now has content to show (scene preview + meta
-      // + Open Scene CTA), so leaving it closed hides the only
-      // reason the user clicked the card. Setter is a no-op when
-      // already open, and the `inspector-collapsed` breakpoint
-      // setter on `application-window.blp` means the same write
-      // surfaces as an overlay drawer on mobile / tablet widths —
-      // no responsive branching needed here.
+      // per the project-wide policy in
+      // `docs/concepts/responsive-chrome.md`. The inspector now has
+      // content to show (scene preview + meta + Open Scene CTA), so
+      // leaving it closed hides the only reason the user clicked
+      // the card. Setter is a no-op when already open, and the
+      // `inspector-collapsed` breakpoint setter on
+      // `application-window.blp` means the same write surfaces as
+      // an overlay drawer on mobile / tablet widths — no responsive
+      // branching needed here.
       this.showInspector = true
       this.emit('scene-selected', id)
     })

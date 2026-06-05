@@ -283,6 +283,13 @@ export class CastView extends Adw.Bin {
         this._activeAnimationId = null
         this._refreshActive()
         this._refreshHighlight()
+        // Auto-open the right inspector when the user picks a
+        // character — see [right-inspector auto-open policy] in
+        // `docs/concepts/responsive-chrome.md`. The inspector now
+        // has content to show (name + isPlayer + speed + active-
+        // animation duration); leaving it closed hides the only
+        // configuration surface the click produced.
+        this.showInspector = true
       })
       this._gallery_group.add(row)
       this._galleryRowsById.set(character.id, row)

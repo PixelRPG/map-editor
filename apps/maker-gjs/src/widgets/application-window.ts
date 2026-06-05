@@ -661,8 +661,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // updates; we mirror the pick into the right-inspector's
     // objects-tab row highlight. Empty-tile clicks land here with
     // `placementId: null` and clear the row highlight.
+    //
+    // Auto-open the right inspector on a hit (per the project-wide
+    // policy in `docs/concepts/responsive-chrome.md`). Empty-tile
+    // clicks leave it alone — there's no inspector content for an
+    // empty selection, so popping the sidebar open would feel
+    // surprising. The window-level `show-inspector` setter is a no-
+    // op when already open.
     this._engineCtl.onPlacementSelected(({ placementId }) => {
       this._scene_editor_view.highlightPlacement(placementId)
+      if (placementId) this.set_property('show-inspector', true)
     })
 
     // Grid lines + non-active-layer dimming are two INDEPENDENT

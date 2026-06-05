@@ -52,10 +52,69 @@ persistent — impossible to express with a single shared
 state is **shared across view switches** (toggle the inspector
 open in the atlas, switch to the scene editor, it stays open).
 Desktop users open the sidebars they want from the toggle pills
-(floating-OSD on canvas views; in the headerbar on welcome). The
-atlas view's old auto-show-inspector-on-scene-card-selection
-behaviour was **removed** — surprise sidebar pop-outs fought the
-shared-state model.
+(headerbar buttons on atlas / cast / tiles / welcome; merged top
+OSD on the scene editor).
+
+---
+
+## Right inspector — auto-open policy
+
+The right inspector is the **context surface**: it shows
+information + settings about whatever the user just selected.
+When a selection lands and inspector content becomes available,
+the inspector **auto-opens** if it was closed.
+
+| View          | Triggering selection                                          | Inspector content                          |
+|---------------|---------------------------------------------------------------|--------------------------------------------|
+| Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
+| Cast          | Click a character row in the gallery                          | Name, isPlayer, speed, animation duration  |
+| Tiles         | Click a tile in the palette                                   | Solid switch, surface combo                |
+| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Objects-tab row highlights, props          |
+
+The rule is one line per call site: `this.showInspector = true`
+in the selection handler. The setter is a no-op when the panel is
+already open, so re-firing on every click is cheap and the user
+never sees a flicker.
+
+**Why auto-open instead of leaving it to the user toggle.** The
+inspector is the *reason* the click happened. Leaving it closed
+hides the only configuration surface the click produced — the
+user then has to discover the toggle button to see what they just
+selected. The previous policy (no auto-open, shared state across
+view switches) was abandoned because the "share inspector state
+across views" half held value but the "never auto-open" half
+created a hidden-UI dead end.
+
+**When NOT to auto-open.**
+
+- **Empty / null selection.** Clicking empty tile space with the
+  `'select'` tool clears the selection (`placementId: null`) — no
+  inspector content, no auto-open. Otherwise the sidebar would
+  pop on every stray click on the canvas.
+- **Selection that originated *inside* the inspector.** Picking a
+  row in the objects-tab list doesn't auto-open the parent
+  inspector (it can't be both the source and the target). Same
+  for animation-list / layers-tab clicks.
+- **Mutating-tool clicks.** Pencil / eraser don't select anything
+  — they paint. No inspector content emerges, so no auto-open.
+- **Eyedropper.** Auto-switches to pencil after a pick; no
+  inspector content to show.
+
+**Mobile / tablet behaviour falls out for free.** The window-level
+`inspector-collapsed` breakpoint setter (≤ 1024sp) flips the
+right `Adw.OverlaySplitView` into drawer mode. The same
+`showInspector = true` write surfaces as an overlay drawer on
+narrow widths and as a persistent panel on desktop — no
+responsive branching at the call site.
+
+**Anchored convention, not a shared widget.** The pattern is
+expressed as a single setter call per call site, not a behavioral
+mixin. A helper function or behavior class would add indirection
+without saving code (the write is one line) and would obscure
+*where* the trigger lives. The compile-time anchor is the
+view's `show-inspector` property; the design anchor is this
+section + the inline comments at each call site that point back
+here.
 
 ---
 
