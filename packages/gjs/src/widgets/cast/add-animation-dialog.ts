@@ -17,6 +17,15 @@ const SEQUENCE_THUMB_SIZE = 40
 const DEFAULT_DURATION_MS = 200
 
 /**
+ * Discrete tile-size stops for the bottom-right zoom OSD. Both the
+ * picker cells AND the preview frame use this — the on-screen sprite
+ * size matches the picker cells the user is selecting from. Index 2
+ * is the default; the OSD label shows the percentage relative to it.
+ */
+const ZOOM_LEVELS: ReadonlyArray<number> = [24, 36, 48, 72, 96]
+const DEFAULT_ZOOM_LEVEL = 2
+
+/**
  * Modal dialog for creating a custom `CharacterAnimation`. Three
  * editable surfaces inside the dialog drive one piece of state:
  *
@@ -48,6 +57,9 @@ const DEFAULT_DURATION_MS = 200
 export class AddAnimationDialog extends Adw.Dialog {
   declare _cancel_button: Gtk.Button
   declare _save_button: Gtk.Button
+  declare _zoom_out_button: Gtk.Button
+  declare _zoom_reset_button: Gtk.Button
+  declare _zoom_in_button: Gtk.Button
   declare _name_row: Adw.EntryRow
   declare _duration_row: Adw.SpinRow
   declare _preview_picture: Gtk.Picture
@@ -61,6 +73,9 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _sequenceState = 'empty'
   private _previewIndex = 0
   private _previewTimeoutId = 0
+  private _zoomLevel = DEFAULT_ZOOM_LEVEL
+  private _zoomLabel = ''
+  private _cellAspect: number | null = null
 
   static {
     GObject.registerClass(
@@ -70,6 +85,9 @@ export class AddAnimationDialog extends Adw.Dialog {
         InternalChildren: [
           'cancel_button',
           'save_button',
+          'zoom_out_button',
+          'zoom_reset_button',
+          'zoom_in_button',
           'name_row',
           'duration_row',
           'preview_picture',
@@ -90,6 +108,16 @@ export class AddAnimationDialog extends Adw.Dialog {
             GObject.ParamFlags.READWRITE,
             'empty',
           ),
+          // Bound to the OSD zoom pill's middle button so the user
+          // sees the current zoom as a percentage relative to the
+          // default tile-size. TS updates this on every zoom change.
+          'zoom-label': GObject.ParamSpec.string(
+            'zoom-label',
+            'Zoom Label',
+            'Percentage caption shown in the centre zoom button (e.g. `100%`)',
+            GObject.ParamFlags.READWRITE,
+            '100%',
+          ),
         },
         Signals: {
           'animation-created': { param_types: [GObject.TYPE_JSOBJECT] },
@@ -102,9 +130,11 @@ export class AddAnimationDialog extends Adw.Dialog {
   constructor() {
     super()
     this._wireButtons()
+    this._wireZoom()
     this._wireInputs()
     this._wirePalette()
     this._refreshValidity()
+    this._applyZoom()
   }
 
   get sequenceState(): string {
@@ -115,6 +145,16 @@ export class AddAnimationDialog extends Adw.Dialog {
     if (this._sequenceState === value) return
     this._sequenceState = value
     this.notify('sequence-state')
+  }
+
+  get zoomLabel(): string {
+    return this._zoomLabel ?? '100%'
+  }
+
+  set zoomLabel(value: string) {
+    if (this._zoomLabel === value) return
+    this._zoomLabel = value
+    this.notify('zoom-label')
   }
 
   /**
@@ -156,6 +196,72 @@ export class AddAnimationDialog extends Adw.Dialog {
     })
   }
 
+  /**
+   * Bottom-right OSD zoom pill — mirrors the scene editor's
+   * `FloatingZoom` pattern: `[-] [N%] [+]`, flat buttons inside a
+   * `toolbar.osd` Box. Clamps at the endpoints; reset jumps back to
+   * the default level.
+   */
+  private _wireZoom(): void {
+    this._zoom_out_button.connect('clicked', () => {
+      if (this._zoomLevel > 0) {
+        this._zoomLevel -= 1
+        this._applyZoom()
+      }
+    })
+    this._zoom_in_button.connect('clicked', () => {
+      if (this._zoomLevel < ZOOM_LEVELS.length - 1) {
+        this._zoomLevel += 1
+        this._applyZoom()
+      }
+    })
+    this._zoom_reset_button.connect('clicked', () => {
+      if (this._zoomLevel === DEFAULT_ZOOM_LEVEL) return
+      this._zoomLevel = DEFAULT_ZOOM_LEVEL
+      this._applyZoom()
+    })
+  }
+
+  /**
+   * Push the current zoom level to the picker (tile-size) + the
+   * preview frame (via `_refreshPreviewSize`) so the rendered sprite
+   * size is identical in both surfaces. Updates the OSD label as a
+   * percentage relative to the default level and re-greys the
+   * endpoint buttons.
+   */
+  private _applyZoom(): void {
+    const tileSize = ZOOM_LEVELS[this._zoomLevel]
+    this._palette.tileSize = tileSize
+    this._refreshPreviewSize()
+    const percent = Math.round((tileSize / ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL]) * 100)
+    this.zoomLabel = `${percent}%`
+    this._zoom_out_button.set_sensitive(this._zoomLevel > 0)
+    this._zoom_in_button.set_sensitive(this._zoomLevel < ZOOM_LEVELS.length - 1)
+  }
+
+  /**
+   * Resize the preview picture so its render rect matches the
+   * picker's swatch dimensions: `tileSize` for the longer axis and
+   * `tileSize × aspect` (or `tileSize / aspect`) for the shorter.
+   * The frame wraps to fit the picture + its 8px margins, so the
+   * on-screen character ends up at the SAME pixel size as in the
+   * picker cells the user is selecting from.
+   */
+  private _refreshPreviewSize(): void {
+    const aspect = this._cellAspect ?? 1
+    const tileSize = this._palette.tileSize
+    let w: number
+    let h: number
+    if (aspect >= 1) {
+      w = tileSize
+      h = Math.max(1, Math.round(tileSize / aspect))
+    } else {
+      w = Math.max(1, Math.round(tileSize * aspect))
+      h = tileSize
+    }
+    this._preview_picture.set_size_request(w, h)
+  }
+
   private _wireInputs(): void {
     this._name_row.connect('changed', () => {
       this._refreshValidity()
@@ -182,9 +288,18 @@ export class AddAnimationDialog extends Adw.Dialog {
     const sheet = this._spriteSet?.spriteSheet
     if (!sheet) {
       this._palette.setTiles([])
+      this._cellAspect = null
+      this._refreshPreviewSize()
       return
     }
     this._palette.setFromSpriteSheet(sheet)
+    // Capture the per-cell aspect from the first sprite — character
+    // sprite-sheets are uniform so it's representative for the whole
+    // set. Drives `_refreshPreviewSize` so the preview frame matches
+    // the picker's swatch dimensions.
+    const first = sheet.sprites[0]
+    this._cellAspect = first && first.height > 0 ? first.width / first.height : 1
+    this._refreshPreviewSize()
   }
 
   private _rebuildSequenceStrip(): void {

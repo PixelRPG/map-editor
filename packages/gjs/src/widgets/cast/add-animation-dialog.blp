@@ -34,7 +34,59 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
       }
     }
 
-    content: Adw.BreakpointBin {
+    // `Gtk.Overlay` wraps the dialog content so the zoom OSD pill
+    // can float in the bottom-right corner — the same pattern used
+    // by the scene editor's `FloatingZoom` (see
+    // `packages/gjs/src/widgets/editor/floating-zoom.blp`).
+    // Toolbar.osd styling, three flat buttons with the current
+    // tile-size in the middle. Wired in `add-animation-dialog.ts`
+    // to bump the picker's tile-size up / down through a fixed set
+    // of stops; the preview frame size derives from the same value
+    // (see `_refreshPreviewSize`) so the on-screen sprite matches
+    // the cells the user is picking from.
+    content: Gtk.Overlay {
+      [overlay]
+      Gtk.WindowHandle {
+        halign: end;
+        valign: end;
+        margin-end: 12;
+        margin-bottom: 12;
+
+        child: Gtk.Box {
+          orientation: horizontal;
+          spacing: 2;
+          styles ["toolbar", "osd"]
+
+          Gtk.Button zoom_out_button {
+            icon-name: "zoom-out-symbolic";
+            tooltip-text: _("Smaller frames");
+            styles ["flat"]
+          }
+
+          Gtk.Button zoom_reset_button {
+            tooltip-text: _("Reset zoom");
+            styles ["flat"]
+
+            child: Gtk.Inscription zoom_label {
+              text: bind template.zoom-label;
+              styles ["caption", "numeric"]
+              margin-start: 6;
+              margin-end: 6;
+              min-chars: 4;
+              nat-chars: 4;
+              xalign: 0.5;
+            };
+          }
+
+          Gtk.Button zoom_in_button {
+            icon-name: "zoom-in-symbolic";
+            tooltip-text: _("Bigger frames");
+            styles ["flat"]
+          }
+        };
+      }
+
+      child: Adw.BreakpointBin {
       width-request: 1;
       height-request: 1;
 
@@ -100,10 +152,13 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
             spacing: 8;
             halign: center;
 
+            // Frame sizes itself to fit the inner Picture + the 8px
+            // margins. The Picture's width / height-request are set
+            // from TS in `_refreshPreviewSize` so the rendered sprite
+            // matches the picker's cell size exactly — same on-screen
+            // size in both surfaces.
             Gtk.Frame preview_frame {
               halign: center;
-              width-request: 160;
-              height-request: 160;
               styles ["card"]
 
               child: Gtk.Picture preview_picture {
@@ -216,6 +271,7 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
             };
           }
         }
+      };
       };
     };
   };
