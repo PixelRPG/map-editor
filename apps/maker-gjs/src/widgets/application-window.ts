@@ -568,7 +568,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const toolAction = Gio.SimpleAction.new_stateful(
       'set-tool',
       GLib.VariantType.new('s'),
-      GLib.Variant.new_string('pencil'),
+      // Default to the read-only `'select'` tool — clicking on the
+      // canvas selects an object placement at that tile (or clears
+      // the selection on empty tiles) without mutating the map.
+      // Mutating tools (`pencil`, `eraser`) need an explicit pick
+      // from the tool menu so a misclick can't accidentally paint
+      // over existing artwork.
+      GLib.Variant.new_string('select'),
     )
     toolAction.connect('change-state', (action, value) => {
       action.set_state(value!)
@@ -646,6 +652,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._engineCtl.onTilePicked(({ globalTileId }) => {
       this._scene_editor_view.selectTileByGlobalId(globalTileId)
       toolAction.change_state(GLib.Variant.new_string('pencil'))
+    })
+
+    // Select tool: the engine's `TileEditorSystem` emits
+    // `PLACEMENT_SELECTED` when the user clicks while the select tool
+    // is active — the system already mutated
+    // `SelectedPlacementsComponent` so the canvas-side selection ring
+    // updates; we mirror the pick into the right-inspector's
+    // objects-tab row highlight. Empty-tile clicks land here with
+    // `placementId: null` and clear the row highlight.
+    this._engineCtl.onPlacementSelected(({ placementId }) => {
+      this._scene_editor_view.highlightPlacement(placementId)
     })
 
     // Editor view-mode toggle (`'normal'` ↔ `'grid'`). Stateful

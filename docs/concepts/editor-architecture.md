@@ -53,7 +53,7 @@ Editor-state components, all on the session-singleton entity:
 
 | Component | Purpose | Today's home (pre-migration) |
 |---|---|---|
-| `ActiveToolComponent` | `{ tool: 'pencil' \| 'eraser' \| 'eyedropper' }` (see note below) | `engine.setEditorState({ tool })` callback |
+| `ActiveToolComponent` | `{ tool: 'select' \| 'pencil' \| 'eraser' \| 'eyedropper' }` (see note below) | `engine.setEditorState({ tool })` callback |
 | `ActiveTileComponent` | `{ spriteSetId, spriteId }` | `SceneEditorView._activeTileId` field |
 | `ActiveLayerComponent` | `{ layerId }` | `SceneEditorView._activeLayerId` field |
 | `SelectionComponent` | `{ entityIds: number[] }` | doesn't exist yet — would land here |
@@ -64,7 +64,7 @@ Editor-state components, all on the session-singleton entity:
 
 The set is intentionally small — anything that doesn't qualify (see below) stays in its natural home.
 
-> **Note on the tool union:** the shipped set is just `pencil | eraser | eyedropper`. Bucket-fill, rect, select, stamp, and event tools were deferred — they're tracked as future tools but not implemented. Any future tool drops in via the tool MenuButton inside `FloatingTopBar` (see `_buildToolMenu`), by extending the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts`.
+> **Note on the tool union:** the shipped set is `select | pencil | eraser | eyedropper`. `select` is the default — read-only click-to-select that picks the topmost `ObjectPlacement` at the clicked tile (mutating `SelectedPlacementsComponent`) and emits `PLACEMENT_SELECTED` for inspector sync; tile-level / marquee selection is still deferred. Bucket-fill, rect, stamp, and event tools also remain deferred. Any future tool drops in via the tool MenuButton inside `FloatingTopBar` (see `_buildToolPopover`) by extending the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts`.
 
 ### In ECS systems (controller)
 

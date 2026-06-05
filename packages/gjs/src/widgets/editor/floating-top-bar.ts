@@ -12,14 +12,19 @@ import { SignalScope } from '../../utils/signal-scope'
 import Template from './floating-top-bar.blp'
 
 /** Icon used to represent each editor tool — shared between the
- * collapsed MenuButton icon and the tool popover entries. */
+ * collapsed MenuButton icon and the tool popover entries. Order in
+ * the record drives popover ordering (`Object.keys` is insertion-
+ * ordered for string keys); `'select'` is listed first because it's
+ * the default and the read-only inspection entry-point. */
 const TOOL_ICONS: Record<EditorTool, string> = {
+  select: 'edit-select-symbolic',
   pencil: 'document-edit-symbolic',
   eraser: 'edit-clear-all-symbolic',
   eyedropper: 'color-select-symbolic',
 }
 
 const TOOL_LABELS: Record<EditorTool, () => string> = {
+  select: () => _('Select'),
   pencil: () => _('Pencil'),
   eraser: () => _('Eraser'),
   eyedropper: () => _('Eyedropper'),

@@ -2,6 +2,7 @@ import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
 import { Engine } from '@pixelrpg/gjs'
 
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
+type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
 
 /**
  * Slot the engine widget gets attached to once it's been (re)created.
@@ -41,10 +42,10 @@ export class EngineController {
   private _undoListener: ((state: { canUndo: boolean; canRedo: boolean }) => void) | null = null
   private _tilePickedHookAttached = false
   private _tilePickedListener: ((payload: TilePickedPayload) => void) | null = null
+  private _placementSelectedHookAttached = false
+  private _placementSelectedListener: ((payload: PlacementSelectedPayload) => void) | null = null
   private _pointerTileHookAttached = false
-  private _pointerTileListener:
-    | ((payload: { sceneId: string; tileX: number; tileY: number }) => void)
-    | null = null
+  private _pointerTileListener: ((payload: { sceneId: string; tileX: number; tileY: number }) => void) | null = null
 
   constructor(private readonly slot: EngineSlot) {}
 
@@ -95,6 +96,23 @@ export class EngineController {
   }
 
   /**
+   * Register a listener for the engine's `PLACEMENT_SELECTED` event
+   * (emitted by `TileEditorSystem` when the user clicks while the
+   * `'select'` tool is active). Mirrors {@link onTilePicked} — listener
+   * is stored once and re-attached lazily after each `ensureForMap`
+   * via {@link _attachPlacementSelectedHook}.
+   *
+   * The host typically responds by highlighting the matching row in
+   * the right-inspector's objects-tab; the engine-side selection
+   * state (`SelectedPlacementsComponent`) is already mutated inside
+   * the system, so the visual ring on the canvas updates without
+   * host involvement.
+   */
+  onPlacementSelected(listener: (payload: PlacementSelectedPayload) => void): void {
+    this._placementSelectedListener = listener
+  }
+
+  /**
    * Register a listener fired once per pointer tile-transition over
    * the active map. The host uses this to drive the floating-zoom
    * OSD's coord readout (the label that reads e.g. `12, 7` next to
@@ -102,9 +120,7 @@ export class EngineController {
    * stored once and re-attached lazily after each `ensureForMap`
    * via {@link _attachPointerTileHook}.
    */
-  onPointerTileChanged(
-    listener: (payload: { sceneId: string; tileX: number; tileY: number }) => void,
-  ): void {
+  onPointerTileChanged(listener: (payload: { sceneId: string; tileX: number; tileY: number }) => void): void {
     this._pointerTileListener = listener
   }
 
@@ -146,6 +162,7 @@ export class EngineController {
     this._attachZoomHook()
     this._attachUndoHook()
     this._attachTilePickedHook()
+    this._attachPlacementSelectedHook()
     this._attachPointerTileHook()
   }
 
@@ -179,6 +196,7 @@ export class EngineController {
     this._zoomHookAttached = false
     this._undoHookAttached = false
     this._tilePickedHookAttached = false
+    this._placementSelectedHookAttached = false
     this._pointerTileHookAttached = false
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
@@ -234,6 +252,14 @@ export class EngineController {
       this._tilePickedListener?.(payload)
     })
     this._tilePickedHookAttached = true
+  }
+
+  private _attachPlacementSelectedHook(): void {
+    if (this._placementSelectedHookAttached || !this._engine) return
+    this._engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
+      this._placementSelectedListener?.(payload)
+    })
+    this._placementSelectedHookAttached = true
   }
 
   private _attachPointerTileHook(): void {

@@ -164,7 +164,9 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
             }
 
             Gtk.MenuButton tool_button_split {
-              icon-name: "document-edit-symbolic";
+              // Initial icon matches the default tool (`'select'`).
+              // `setActiveTool` swaps the icon on every state change.
+              icon-name: "edit-select-symbolic";
               tooltip-text: _("Tool");
               styles ["flat"]
             }
@@ -324,7 +326,9 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
           }
 
           Gtk.MenuButton tool_button_merged {
-            icon-name: "document-edit-symbolic";
+            // Initial icon matches the default tool (`'select'`).
+            // `setActiveTool` swaps the icon on every state change.
+            icon-name: "edit-select-symbolic";
             tooltip-text: _("Tool");
             styles ["flat"]
           }

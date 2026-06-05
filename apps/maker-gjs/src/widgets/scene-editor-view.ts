@@ -234,6 +234,20 @@ export class SceneEditorView extends Adw.Bin {
     this._editor.topBar.setActiveTool(tool)
   }
 
+  /**
+   * Sync the right-inspector's objects-tab row highlight with a
+   * canvas-driven selection (`PLACEMENT_SELECTED` event from the
+   * engine's select tool). Passing `null` clears the row highlight —
+   * matches what happens when the user clicks empty tile space with
+   * the select tool active. The canvas-side selection ring lives on
+   * the session-singleton's `SelectedPlacementsComponent`, mutated
+   * inside `TileEditorSystem.applySelect`, so it doesn't need to be
+   * re-applied here.
+   */
+  highlightPlacement(placementId: string | null): void {
+    this._inspector.objectsTab.selectObject(placementId)
+  }
+
   /** Header title + the floating chips. */
   setScene(scene: SampleScene): void {
     this.sceneName = scene.name

@@ -18,12 +18,18 @@ import {
   ActiveToolComponent,
   type EditorTool,
   MapEditorComponent,
+  SelectedPlacementsComponent,
   TileMapTierComponent,
 } from '../components/index.ts'
+import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
 import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
-import type { MapScene } from '../scenes/map.scene.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
+import {
+  createSelectHoverBorderActor,
+  refreshSelectHoverBorder,
+  type SelectHoverBorderContext,
+} from '../services/select-hover-border.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import type { LayerTier } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
@@ -62,6 +68,7 @@ export class TileEditorSystem extends System {
 
   private previewActor: Actor | null = null
   private hoverContext: PencilPreviewHover | null = null
+  private selectHoverBorderActor: Actor | null = null
 
   /**
    * Lazy cache of the per-tier `TileMap`s. Populated on first lookup
@@ -86,6 +93,9 @@ export class TileEditorSystem extends System {
     this.previewActor = createPencilPreviewActor()
     scene.add(this.previewActor)
 
+    this.selectHoverBorderActor = createSelectHoverBorderActor()
+    scene.add(this.selectHoverBorderActor)
+
     // Refresh the preview when the active tool / tile / layer changes,
     // so the user doesn't have to wiggle the mouse to see the effect of
     // switching tool or picking a new swatch. Subscriptions are tied
@@ -94,6 +104,11 @@ export class TileEditorSystem extends System {
     SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshPreview())
     SessionState.subscribe(scene, ActiveTileComponent, () => this.refreshPreview())
     SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshPreview())
+
+    // Tool changes also re-evaluate the select-hover border so
+    // switching to / from `'select'` doesn't strand the previous
+    // tool's overlay until the next pointer move.
+    SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshSelectHoverBorder())
 
     // Paint fires on the high-level `POINTER_TAP` from
     // `PointerGestureSystem`, NOT on raw `pointer.on('down')` — the
@@ -116,6 +131,7 @@ export class TileEditorSystem extends System {
       if (hit) this.applyHover(hit)
       this.hoverContext = hit ? { tileMap: hit.tileMap, coords: hit.coords } : null
       this.refreshPreview()
+      this.refreshSelectHoverBorder()
     })
   }
 
@@ -126,6 +142,14 @@ export class TileEditorSystem extends System {
   private refreshPreview(): void {
     if (!this.previewActor || !this.scene) return
     refreshPencilPreview(this.previewActor, this.scene, this.hoverContext)
+  }
+
+  private refreshSelectHoverBorder(): void {
+    if (!this.selectHoverBorderActor || !this.scene) return
+    const ctx: SelectHoverBorderContext | null = this.hoverContext
+      ? { tileMap: this.hoverContext.tileMap, coords: this.hoverContext.coords }
+      : null
+    refreshSelectHoverBorder(this.selectHoverBorderActor, this.scene, ctx)
   }
 
   private findTileUnderPointer(screenPos: Vector): TileHit | null {
@@ -210,7 +234,22 @@ export class TileEditorSystem extends System {
 
   private applyClick(hit: TileHit): void {
     if (!this.scene) return
-    const tool: EditorTool = SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'pencil'
+    const tool: EditorTool = SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'select'
+
+    // The `'select'` tool is a self-contained branch — it doesn't
+    // need an active tile / layer (it picks placements at the
+    // clicked coords across all layers) and doesn't care about lock
+    // (selection is read-only). Handle it first + early-return so
+    // the mutating-tool guards below stay tight.
+    if (tool === 'select') {
+      this.applySelect(hit)
+      this.events.emit(EngineEvent.TILE_CLICKED, {
+        coords: hit.coords,
+        tileMapId: hit.tileMap.id.toString(),
+      })
+      return
+    }
+
     const tileId = SessionState.get(this.scene, ActiveTileComponent)?.spriteId ?? null
     const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
     const layerId = this.resolveLayerId(explicitLayerId)
@@ -285,6 +324,37 @@ export class TileEditorSystem extends System {
     this.events.emit(EngineEvent.TILE_CLICKED, {
       coords: hit.coords,
       tileMapId: hit.tileMap.id.toString(),
+    })
+  }
+
+  /**
+   * Select-tool click handler. Scans the active map's object
+   * placements across every layer for one occupying the clicked tile
+   * coords. Picks the topmost (= last in array order, since
+   * `MapResource` renders later entries above earlier ones) so
+   * stacked placements behave the same way the eyedropper picks the
+   * topmost sprite. Mutates `SelectedPlacementsComponent` on the
+   * session-singleton (the highlight system reacts via its own
+   * subscription) and emits {@link EngineEvent.PLACEMENT_SELECTED} for
+   * the host UI to mirror in the inspector. Empty-tile clicks clear
+   * the selection by setting an empty array.
+   */
+  private applySelect(hit: TileHit): void {
+    if (!this.scene) return
+    const mapResource = (this.scene as MapScene).mapResource
+    const placements = mapResource?.mapData?.objectPlacements ?? []
+    let picked: { id: string } | null = null
+    for (let i = placements.length - 1; i >= 0; i--) {
+      const p = placements[i]
+      if (p.tileX === hit.coords.x && p.tileY === hit.coords.y) {
+        picked = { id: p.id }
+        break
+      }
+    }
+    SessionState.set(this.scene, new SelectedPlacementsComponent(picked ? [picked.id] : []))
+    this.events.emit(EngineEvent.PLACEMENT_SELECTED, {
+      placementId: picked?.id ?? null,
+      coords: hit.coords,
     })
   }
 

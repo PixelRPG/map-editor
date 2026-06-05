@@ -31,4 +31,17 @@ export const EDITOR_CONSTANTS = {
   // outlines (cyan / yellow / green / purple / teal / salmon).
   SELECTION_HIGHLIGHT_COLOR: '#ff8800',
   SELECTION_HIGHLIGHT_LINE_WIDTH: 2,
+
+  // `select-hover-border` palette — drawn at the hovered tile while
+  // the `'select'` tool is active. Two colours so the user can tell
+  // at a glance whether clicking would select an object placement or
+  // hit an empty tile cell. Both are Adwaita accent shades for
+  // consistency with the rest of the editor chrome:
+  // - tile border = Adwaita blue (accent)
+  // - object border = Adwaita yellow (warning) — distinct from the
+  //   final selection orange so hover and "committed" selection
+  //   read differently.
+  HOVER_TILE_BORDER_COLOR: '#3584e4',
+  HOVER_OBJECT_BORDER_COLOR: '#f5c211',
+  HOVER_BORDER_LINE_WIDTH: 2,
 } as const

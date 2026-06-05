@@ -15,6 +15,7 @@ export enum EngineEvent {
   TILE_HOVERED = 'tile-hovered',
   TILE_PLACED = 'tile-placed',
   TILE_PICKED = 'tile-picked',
+  PLACEMENT_SELECTED = 'placement-selected',
   PLAYER_TILE_CHANGED = 'player-tile-changed',
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
@@ -57,6 +58,21 @@ export interface EngineEventMap {
     spriteSetId: string
     localSpriteId: number
     globalTileId: number
+  }
+  /**
+   * Emitted by `TileEditorSystem` when the user clicks the canvas
+   * with the `'select'` tool active. `placementId` is the stable id
+   * of the picked object (matching `ObjectPlacement.id`) or `null`
+   * when the click landed on empty tile space — the host treats
+   * `null` as "clear the inspector selection". The component-side
+   * selection state (`SelectedPlacementsComponent`) is mutated
+   * directly by the system; this event is purely for UI sync (the
+   * objects-tab needs to highlight the matching row, the engine
+   * itself doesn't surface inspector state).
+   */
+  [EngineEvent.PLACEMENT_SELECTED]: {
+    placementId: string | null
+    coords: { x: number; y: number }
   }
   /**
    * Emitted by {@link PlayerSystem} whenever the player crosses a
