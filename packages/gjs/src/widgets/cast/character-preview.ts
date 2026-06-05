@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
+import type Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterAnimationRole, CharacterDefinition } from '@pixelrpg/engine'
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
 
@@ -162,7 +162,12 @@ export class CharacterPreview extends Adw.Bin {
     }
     const spriteId = anim.frames[this._frameIndex % anim.frames.length]
     const sprite = this._spriteSet.getSprite(spriteId)
-    const paintable = sprite?.createPaintable() ?? null
+    // Single-sprite display → opt in to aspect-preserving snapshot. The
+    // sprite-set's character cells are tall (e.g. scientist is 16×32),
+    // but the frame is square — without this the snapshot stretches
+    // the sprite horizontally and the character looks squashed (see
+    // the `keepAspectRatio` note on `GdkSpritePaintable`).
+    const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
     this._picture.set_paintable(paintable)
   }
 

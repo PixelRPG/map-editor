@@ -1,6 +1,6 @@
 import type Gdk from '@girs/gdk-4.0'
 
-import { GdkSpritePaintable } from './GdkSpritePaintable.ts'
+import { GdkSpritePaintable, type GdkSpritePaintableOptions } from './GdkSpritePaintable.ts'
 
 /**
  * A lightweight sprite data structure for sprite sheet handling, backed by a
@@ -19,6 +19,7 @@ export class GdkSprite {
   private _width: number
   private _height: number
   private _paintable: GdkSpritePaintable | null = null
+  private _aspectPaintable: GdkSpritePaintable | null = null
   private _index: number = 0
 
   /**
@@ -40,10 +41,33 @@ export class GdkSprite {
   }
 
   /**
-   * Create a Gdk.Paintable for rendering this sprite. Lazily allocates a
-   * `GdkSpritePaintable` on first call.
+   * Create a Gdk.Paintable for rendering this sprite. Lazily allocates
+   * a `GdkSpritePaintable` on first call.
+   *
+   * Pass `{ keepAspectRatio: true }` for single-sprite displays
+   * (character preview, tile-inspector preview, top-bar swatch) so
+   * the paintable's snapshot centres the sprite + preserves
+   * proportions regardless of the host widget's allocation shape —
+   * see the rationale on `GdkSpritePaintable`. The cache key is the
+   * options shape: a `keepAspectRatio: true` call yields a distinct
+   * paintable from the default-stretch one, so consumers with
+   * different needs (the same sprite in the tile-palette FlowBox vs.
+   * in the character preview) don't fight over one cached instance.
    */
-  createPaintable(): Gdk.Paintable {
+  createPaintable(options: GdkSpritePaintableOptions = {}): Gdk.Paintable {
+    if (options.keepAspectRatio) {
+      if (!this._aspectPaintable) {
+        this._aspectPaintable = new GdkSpritePaintable(
+          this._sourceTexture,
+          this._x,
+          this._y,
+          this._width,
+          this._height,
+          { keepAspectRatio: true },
+        )
+      }
+      return this._aspectPaintable
+    }
     if (!this._paintable) {
       this._paintable = new GdkSpritePaintable(this._sourceTexture, this._x, this._y, this._width, this._height)
     }
