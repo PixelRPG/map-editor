@@ -3,9 +3,8 @@ import GObject from '@girs/gobject-2.0'
 import { LayersTab } from './layers-tab'
 import { ObjectsTab } from './objects-tab'
 import { PropsTab } from './props-tab'
-import { TilesTab } from './tiles-tab'
-
 import Template from './right-inspector.blp'
+import { TilesTab } from './tiles-tab'
 
 GObject.type_ensure(TilesTab.$gtype)
 GObject.type_ensure(LayersTab.$gtype)
@@ -27,6 +26,8 @@ export class RightInspector extends Adw.Bin {
   declare _objects_tab: ObjectsTab
   declare _props_tab: PropsTab
 
+  private _collapsed = false
+
   static {
     GObject.registerClass(
       {
@@ -40,6 +41,17 @@ export class RightInspector extends Adw.Bin {
             'Name of the active tab (tiles, layers, objects, props)',
             GObject.ParamFlags.READWRITE,
             'tiles',
+          ),
+          // Mirrors the parent view's `inspector-collapsed` — drives
+          // the visibility of the in-overlay close button. See
+          // `docs/concepts/responsive-chrome.md` § "In-overlay close
+          // affordance".
+          collapsed: GObject.ParamSpec.boolean(
+            'collapsed',
+            'Collapsed',
+            'Whether the inspector is in overlay-drawer mode (narrow widths)',
+            GObject.ParamFlags.READWRITE,
+            false,
           ),
         },
       },
@@ -70,6 +82,16 @@ export class RightInspector extends Adw.Bin {
   set visiblePage(value: string) {
     this._stack.set_visible_child_name(value)
     this.notify('visible-page')
+  }
+
+  get collapsed(): boolean {
+    return this._collapsed
+  }
+
+  set collapsed(value: boolean) {
+    if (this._collapsed === value) return
+    this._collapsed = value
+    this.notify('collapsed')
   }
 }
 

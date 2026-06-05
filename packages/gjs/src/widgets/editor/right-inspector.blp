@@ -12,12 +12,29 @@ template $PixelRpgRightInspector : Adw.Bin {
     // primary menu (`app.quit` + `<Primary>q`). Keeping the bar means
     // empty space above the inspector body still grabs window-drag
     // gestures.
+    //
+    // The `[start]` close button is only visible while the inspector
+    // is in overlay-drawer mode (`collapsed: true`, driven by the
+    // window breakpoint at ≤ 1024sp). On narrow widths the drawer
+    // can be wider than the visible canvas slice, so the outside-
+    // tap-to-dismiss target shrinks to zero — the inside affordance
+    // is the only reliable way to close it. On desktop the panel is
+    // pinned so the button would be redundant + visually noisy.
     [top]
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
       show-end-title-buttons: false;
       styles ["flat"]
+
+      [start]
+      Gtk.Button {
+        visible: bind template.collapsed;
+        icon-name: "window-close-symbolic";
+        action-name: "win.toggle-inspector";
+        tooltip-text: _("Close inspector");
+        styles ["flat", "circular"]
+      }
     }
 
     // Whole inspector body acts as a drag region for the window —

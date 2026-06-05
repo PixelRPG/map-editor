@@ -99,6 +99,18 @@ created a hidden-UI dead end.
   — they paint. No inspector content emerges, so no auto-open.
 - **Eyedropper.** Auto-switches to pencil after a pick; no
   inspector content to show.
+- **Drag-start selections.** A drag-and-drop motion (atlas card
+  drag, future placement drag, etc.) DOES count as a selection
+  for content-refresh purposes — the inspector mirrors the
+  dragged item so a desktop user can read its metadata in the
+  persistent panel — but it MUST NOT trigger auto-open. On
+  smartphone widths the overlay drawer would cover the canvas
+  the moment the drag begins, blocking the gesture. Implemented
+  by emitting two distinct signals from the source widget:
+  `<thing>-selected` (click → auto-open) vs.
+  `<thing>-drag-began` (drag → content only). Atlas-canvas is
+  the reference shape; future drag-capable surfaces follow the
+  same split.
 
 **Mobile / tablet behaviour falls out for free.** The window-level
 `inspector-collapsed` breakpoint setter (≤ 1024sp) flips the
@@ -115,6 +127,43 @@ without saving code (the write is one line) and would obscure
 view's `show-inspector` property; the design anchor is this
 section + the inline comments at each call site that point back
 here.
+
+---
+
+## Right inspector — in-overlay close affordance
+
+In overlay-drawer mode (`inspector-collapsed: true`, set by the
+window breakpoint at ≤ 1024sp) the right inspector can grow
+nearly as wide as the window itself — its `max-sidebar-width`
+shrinks once content lands on it. On a 360 px-wide phone
+that leaves zero space for an "outside-tap-to-dismiss" target,
+so the only reliable way to close the drawer has to be **inside**
+the drawer.
+
+Each of the four right-inspector widgets (`RightInspector`,
+`SceneInspector`, `CastInspector`, `TileInspector`) carries a
+`collapsed: boolean` GObject property + a circular-flat close
+button in the `[start]` slot of its flat headerbar. The button
+binds `visible` to `collapsed` so:
+
+- **Desktop** (`collapsed: false`) — button hidden. The panel
+  is pinned, the toggle in the floating top OSD (scene editor)
+  or the central headerbar (atlas / cast / tiles) is the
+  expected close affordance.
+- **Tablet / mobile** (`collapsed: true`) — button visible. Click
+  closes the drawer via the existing `win.toggle-inspector`
+  `Gio.PropertyAction` (boolean property toggle, flips
+  `show-inspector` to false).
+
+The `collapsed` value is fed by a one-line `.blp` bind from each
+parent view's `inspector-collapsed` property
+(`collapsed: bind template.inspector-collapsed;`), so the close
+button tracks the breakpoint without any TS-side glue. The four
+inspector widgets are independent classes today (different
+content surfaces, different signals); when a fifth inspector
+lands, it copies the same six lines (property + getter + setter +
+binding + .blp button + headerbar comment) — small enough that a
+shared mixin would obscure more than it saves.
 
 ---
 

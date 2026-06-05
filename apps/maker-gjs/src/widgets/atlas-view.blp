@@ -37,7 +37,9 @@ template $AtlasView : Adw.Bin {
       collapsed: bind template.inspector-collapsed;
       show-sidebar: bind template.show-inspector bidirectional;
 
-      sidebar: $PixelRpgSceneInspector inspector {};
+      sidebar: $PixelRpgSceneInspector inspector {
+        collapsed: bind template.inspector-collapsed;
+      };
 
       content: Adw.ToolbarView {
         extend-content-to-top-edge: true;

@@ -188,23 +188,43 @@ export class AtlasView extends Adw.Bin {
     this._inspector.setScene(null, scenes, teleports, projectResource)
   }
 
+  /**
+   * Shared selection write — used by both `scene-selected` (click)
+   * and `scene-drag-began` (drag-start). Refreshes the inspector
+   * content + forwards the selection upward to the application
+   * window. Does NOT touch `showInspector` — auto-open is a per-
+   * call-site decision (only the click path opens; drag-start
+   * stays silent).
+   */
+  private _refreshSelectedScene(id: string): void {
+    const scene = this._scenes.find((s) => s.id === id) ?? null
+    this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
+    this.emit('scene-selected', id)
+  }
+
   vfunc_map(): void {
     super.vfunc_map()
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
-      const scene = this._scenes.find((s) => s.id === id) ?? null
-      this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
-      // Auto-open the right inspector when the user picks a scene —
+      this._refreshSelectedScene(id)
+      // Auto-open the right inspector on a CLICK-only selection —
       // per the project-wide policy in
-      // `docs/concepts/responsive-chrome.md`. The inspector now has
-      // content to show (scene preview + meta + Open Scene CTA), so
-      // leaving it closed hides the only reason the user clicked
-      // the card. Setter is a no-op when already open, and the
-      // `inspector-collapsed` breakpoint setter on
+      // `docs/concepts/responsive-chrome.md`. Drag-start selections
+      // arrive via `scene-drag-began` and intentionally skip the
+      // auto-open (the overlay drawer would cover the canvas mid-
+      // drag on smartphone widths). Setter is a no-op when already
+      // open, and the `inspector-collapsed` breakpoint setter on
       // `application-window.blp` means the same write surfaces as
       // an overlay drawer on mobile / tablet widths — no responsive
       // branching needed here.
       this.showInspector = true
-      this.emit('scene-selected', id)
+    })
+    this.signals.connect(this._atlas, 'scene-drag-began', (_a: AtlasCanvas, id: string) => {
+      // Drag-start IS a selection (the inspector content should
+      // refresh to the dragged scene so a desktop user can read
+      // its metadata in the persistent panel), but it MUST NOT
+      // trigger auto-open. Documented under "Auto-open policy →
+      // exemptions" in `docs/concepts/responsive-chrome.md`.
+      this._refreshSelectedScene(id)
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {
       this.emit('scene-opened', id)

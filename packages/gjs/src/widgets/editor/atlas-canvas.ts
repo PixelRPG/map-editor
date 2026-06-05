@@ -1,13 +1,12 @@
 import Adw from '@girs/adw-1'
-import type { GameProjectResource } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
+import type Gtk from '@girs/gtk-4.0'
+import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
+import Template from './atlas-canvas.blp'
 import { MapPreview } from './map-preview'
 import { SceneCard } from './scene-card'
 import { TeleportOverlay } from './teleport-overlay'
-
-import Template from './atlas-canvas.blp'
 
 GObject.type_ensure(SceneCard.$gtype)
 GObject.type_ensure(TeleportOverlay.$gtype)
@@ -58,7 +57,20 @@ export class AtlasCanvas extends Adw.Bin {
           ),
         },
         Signals: {
+          // Fires on a **click-only** selection (no drag). Hosts treat
+          // this as the "user wants to inspect this scene" intent —
+          // safe to auto-open the inspector against it. See
+          // `scene-drag-began` for the drag-start sibling, which
+          // selects the scene + updates inspector content but should
+          // NOT trigger auto-open.
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
+          // Fires on `scene-drag-begin`. Same `(sceneId,)` payload as
+          // `scene-selected`. Decoupling the two lets the host
+          // refresh the inspector content for the dragged scene
+          // without popping the overlay drawer mid-drag — on
+          // smartphone widths the drawer would otherwise cover the
+          // canvas the moment the drag begins.
+          'scene-drag-began': { param_types: [GObject.TYPE_STRING] },
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
@@ -153,7 +165,12 @@ export class AtlasCanvas extends Adw.Bin {
       originX = scene.x
       originY = scene.y
       this.selectedId = sceneId
-      this.emit('scene-selected', sceneId)
+      // Distinct from `scene-selected` (click): drag-begin still
+      // selects the card so the inspector can refresh its content,
+      // but the host MUST NOT auto-open the inspector here — on
+      // smartphone widths the overlay drawer would cover the
+      // canvas the moment the drag starts.
+      this.emit('scene-drag-began', sceneId)
     })
     card.connect('scene-drag-update', (_c: SceneCard, dx: number, dy: number) => {
       const x = Math.max(0, originX + dx)

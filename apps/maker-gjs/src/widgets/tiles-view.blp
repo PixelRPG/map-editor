@@ -30,7 +30,9 @@ template $TilesView : Adw.Bin {
       collapsed: bind template.inspector-collapsed;
       show-sidebar: bind template.show-inspector bidirectional;
 
-      sidebar: $PixelRpgTileInspector inspector {};
+      sidebar: $PixelRpgTileInspector inspector {
+        collapsed: bind template.inspector-collapsed;
+      };
 
       content: Adw.ToolbarView {
         top-bar-style: flat;

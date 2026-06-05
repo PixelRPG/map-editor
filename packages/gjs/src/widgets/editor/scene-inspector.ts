@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
-import type { GameProjectResource } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import { MapPreview } from './map-preview'
 import { MiniMap } from './mini-map'
@@ -52,6 +52,7 @@ export class SceneInspector extends Adw.Bin {
   private _projectResource: GameProjectResource | null = null
   private _statRows: Gtk.Widget[] = []
   private _teleportRows: Adw.ActionRow[] = []
+  private _collapsed = false
 
   static {
     GObject.registerClass(
@@ -95,6 +96,17 @@ export class SceneInspector extends Adw.Bin {
             'Has teleports',
             'Whether the teleport list group should be visible',
             GObject.ParamFlags.READABLE,
+            false,
+          ),
+          // Mirrors the parent view's `inspector-collapsed` — drives
+          // the in-overlay close button. See
+          // `docs/concepts/responsive-chrome.md` § "In-overlay close
+          // affordance".
+          collapsed: GObject.ParamSpec.boolean(
+            'collapsed',
+            'Collapsed',
+            'Whether the inspector is in overlay-drawer mode (narrow widths)',
+            GObject.ParamFlags.READWRITE,
             false,
           ),
         },
@@ -145,6 +157,16 @@ export class SceneInspector extends Adw.Bin {
 
   get hasTeleports(): boolean {
     return (this._teleportRows?.length ?? 0) > 0
+  }
+
+  get collapsed(): boolean {
+    return this._collapsed
+  }
+
+  set collapsed(value: boolean) {
+    if (this._collapsed === value) return
+    this._collapsed = value
+    this.notify('collapsed')
   }
 
   private _refreshPreview(): void {
@@ -228,11 +250,7 @@ export class SceneInspector extends Adw.Bin {
     return frame
   }
 
-  private _refreshTeleports(
-    scene: SampleScene | null,
-    allScenes: SampleScene[],
-    teleports: SampleTeleport[],
-  ): void {
+  private _refreshTeleports(scene: SampleScene | null, allScenes: SampleScene[], teleports: SampleTeleport[]): void {
     for (const row of this._teleportRows) this._teleports_group.remove(row)
     this._teleportRows = []
 

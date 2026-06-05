@@ -9,12 +9,23 @@ template $PixelRpgCastInspector : Adw.Bin {
 
     // Flat header for window-drag — the window-close X is gone
     // (quitting lives in the mode-rail's primary menu now).
+    // `[start]` close only shows in overlay-drawer mode; see
+    // `right-inspector.blp` for the rationale.
     [top]
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
       show-end-title-buttons: false;
       styles ["flat"]
+
+      [start]
+      Gtk.Button {
+        visible: bind template.collapsed;
+        icon-name: "window-close-symbolic";
+        action-name: "win.toggle-inspector";
+        tooltip-text: _("Close inspector");
+        styles ["flat", "circular"]
+      }
     }
 
     content: Gtk.WindowHandle {

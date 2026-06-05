@@ -48,7 +48,9 @@ template $SceneEditorView : Adw.Bin {
 
       content: $PixelRpgSceneEditor editor {};
 
-      sidebar: $PixelRpgRightInspector inspector {};
+      sidebar: $PixelRpgRightInspector inspector {
+        collapsed: bind template.inspector-collapsed;
+      };
     };
   }
 }

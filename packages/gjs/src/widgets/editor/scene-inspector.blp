@@ -14,13 +14,24 @@ template $PixelRpgSceneInspector : Adw.Bin {
     // Thin flat header — provides a window drag region at the
     // inspector's top. The window-close X is gone — quitting now
     // lives in the mode-rail's primary menu (`app.quit` +
-    // `<Primary>q`).
+    // `<Primary>q`). `[start]` close button only shows in overlay-
+    // drawer mode (≤ 1024sp) — see `right-inspector.blp` for the
+    // rationale.
     [top]
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
       show-end-title-buttons: false;
       styles ["flat"]
+
+      [start]
+      Gtk.Button {
+        visible: bind template.collapsed;
+        icon-name: "window-close-symbolic";
+        action-name: "win.toggle-inspector";
+        tooltip-text: _("Close inspector");
+        styles ["flat", "circular"]
+      }
     }
 
     // Drag region — empty space inside the inspector body moves

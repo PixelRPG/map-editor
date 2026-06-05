@@ -27,6 +27,7 @@ export class CastInspector extends Adw.Bin {
   private _animation: CharacterAnimation | null = null
   /** Set during host-driven refresh so input changes don't loop back. */
   private _silentUpdate = false
+  private _collapsed = false
 
   static {
     GObject.registerClass(
@@ -34,6 +35,19 @@ export class CastInspector extends Adw.Bin {
         GTypeName: 'PixelRpgCastInspector',
         Template,
         InternalChildren: ['name_row', 'player_row', 'speed_row', 'selected_anim_row', 'duration_row'],
+        Properties: {
+          // Mirrors the parent view's `inspector-collapsed` — drives
+          // the in-overlay close button. See
+          // `docs/concepts/responsive-chrome.md` § "In-overlay close
+          // affordance".
+          collapsed: GObject.ParamSpec.boolean(
+            'collapsed',
+            'Collapsed',
+            'Whether the inspector is in overlay-drawer mode (narrow widths)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
         Signals: {
           'name-changed': { param_types: [GObject.TYPE_STRING] },
           'player-changed': { param_types: [GObject.TYPE_BOOLEAN] },
@@ -43,6 +57,16 @@ export class CastInspector extends Adw.Bin {
       },
       CastInspector,
     )
+  }
+
+  get collapsed(): boolean {
+    return this._collapsed
+  }
+
+  set collapsed(value: boolean) {
+    if (this._collapsed === value) return
+    this._collapsed = value
+    this.notify('collapsed')
   }
 
   constructor() {
