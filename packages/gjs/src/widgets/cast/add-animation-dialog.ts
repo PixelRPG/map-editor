@@ -17,6 +17,21 @@ const SEQUENCE_THUMB_SIZE = 40
 const DEFAULT_DURATION_MS = 200
 
 /**
+ * Discrete zoom levels: paired preview frame size + picker
+ * tile-size. Both surfaces grow together so the user keeps a
+ * consistent sense of scale between "the preview" and "what I'm
+ * picking". Index 2 (the middle row) is the default.
+ */
+const ZOOM_LEVELS: ReadonlyArray<{ preview: number; picker: number }> = [
+  { preview: 120, picker: 24 },
+  { preview: 144, picker: 32 },
+  { preview: 168, picker: 48 },
+  { preview: 200, picker: 64 },
+  { preview: 240, picker: 80 },
+]
+const DEFAULT_ZOOM_LEVEL = 2
+
+/**
  * Modal dialog for creating a custom `CharacterAnimation`. Three
  * editable surfaces inside the dialog drive one piece of state:
  *
@@ -48,6 +63,8 @@ const DEFAULT_DURATION_MS = 200
 export class AddAnimationDialog extends Adw.Dialog {
   declare _cancel_button: Gtk.Button
   declare _save_button: Gtk.Button
+  declare _zoom_out_button: Gtk.Button
+  declare _zoom_in_button: Gtk.Button
   declare _name_row: Adw.EntryRow
   declare _duration_row: Adw.SpinRow
   declare _preview_picture: Gtk.Picture
@@ -61,6 +78,8 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _sequenceState = 'empty'
   private _previewIndex = 0
   private _previewTimeoutId = 0
+  private _zoomLevel = DEFAULT_ZOOM_LEVEL
+  private _previewSize = ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL].preview
 
   static {
     GObject.registerClass(
@@ -70,6 +89,8 @@ export class AddAnimationDialog extends Adw.Dialog {
         InternalChildren: [
           'cancel_button',
           'save_button',
+          'zoom_out_button',
+          'zoom_in_button',
           'name_row',
           'duration_row',
           'preview_picture',
@@ -90,6 +111,20 @@ export class AddAnimationDialog extends Adw.Dialog {
             GObject.ParamFlags.READWRITE,
             'empty',
           ),
+          // Preview frame edge length in pixels — bound from the BLP
+          // template so the zoom buttons can resize the frame without
+          // touching the picture/paintable. Always matches whichever
+          // `ZOOM_LEVELS[i].preview` corresponds to the current
+          // `_zoomLevel`.
+          'preview-size': GObject.ParamSpec.int(
+            'preview-size',
+            'Preview size',
+            'Width + height of the preview frame in pixels',
+            GObject.ParamFlags.READWRITE,
+            64,
+            512,
+            ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL].preview,
+          ),
         },
         Signals: {
           'animation-created': { param_types: [GObject.TYPE_JSOBJECT] },
@@ -102,9 +137,31 @@ export class AddAnimationDialog extends Adw.Dialog {
   constructor() {
     super()
     this._wireButtons()
+    this._wireZoom()
     this._wireInputs()
     this._wirePalette()
     this._refreshValidity()
+    this._applyZoom()
+  }
+
+  get sequenceState(): string {
+    return this._sequenceState ?? 'empty'
+  }
+
+  set sequenceState(value: string) {
+    if (this._sequenceState === value) return
+    this._sequenceState = value
+    this.notify('sequence-state')
+  }
+
+  get previewSize(): number {
+    return this._previewSize ?? ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL].preview
+  }
+
+  set previewSize(value: number) {
+    if (this._previewSize === value) return
+    this._previewSize = value
+    this.notify('preview-size')
   }
 
   /**
@@ -126,16 +183,6 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._populatePalette()
   }
 
-  get sequenceState(): string {
-    return this._sequenceState ?? 'empty'
-  }
-
-  set sequenceState(value: string) {
-    if (this._sequenceState === value) return
-    this._sequenceState = value
-    this.notify('sequence-state')
-  }
-
   // Lifecycle hooks — stop the preview timer when the dialog goes
   // away so the timeout source doesn't outlive the Picture it
   // updates.
@@ -154,6 +201,35 @@ export class AddAnimationDialog extends Adw.Dialog {
       this.emit('animation-created', animation)
       this.close()
     })
+  }
+
+  private _wireZoom(): void {
+    this._zoom_out_button.connect('clicked', () => {
+      if (this._zoomLevel > 0) {
+        this._zoomLevel -= 1
+        this._applyZoom()
+      }
+    })
+    this._zoom_in_button.connect('clicked', () => {
+      if (this._zoomLevel < ZOOM_LEVELS.length - 1) {
+        this._zoomLevel += 1
+        this._applyZoom()
+      }
+    })
+  }
+
+  /**
+   * Push the current `_zoomLevel`'s sizes through to the preview
+   * frame (via the `preview-size` property the BLP binds) and the
+   * picker tile-size. Sensitivity on the zoom buttons clamps at
+   * either endpoint so the user can't push past the array.
+   */
+  private _applyZoom(): void {
+    const level = ZOOM_LEVELS[this._zoomLevel]
+    this.previewSize = level.preview
+    this._palette.tileSize = level.picker
+    this._zoom_out_button.set_sensitive(this._zoomLevel > 0)
+    this._zoom_in_button.set_sensitive(this._zoomLevel < ZOOM_LEVELS.length - 1)
   }
 
   private _wireInputs(): void {

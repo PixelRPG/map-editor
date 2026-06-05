@@ -24,6 +24,27 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
         label: _("Cancel");
       }
 
+      // Zoom controls scale BOTH the preview frame + the picker
+      // tile-size so the user can see the frames at a comfortable
+      // size. Two flat buttons with `linked` style keep the header
+      // chrome tidy; sensitivity flips when the level hits an
+      // endpoint. Wired to `_applyZoom` in `add-animation-dialog.ts`.
+      [end]
+      Gtk.Box zoom_box {
+        orientation: horizontal;
+        spacing: 0;
+        styles ["linked"]
+
+        Gtk.Button zoom_out_button {
+          icon-name: "zoom-out-symbolic";
+          tooltip-text: _("Zoom out");
+        }
+        Gtk.Button zoom_in_button {
+          icon-name: "zoom-in-symbolic";
+          tooltip-text: _("Zoom in");
+        }
+      }
+
       [end]
       Gtk.Button save_button {
         // Disabled until the user has picked at least one frame
@@ -100,10 +121,13 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
             spacing: 8;
             halign: center;
 
+            // Frame size driven by `template.preview-size`, the
+            // same state the picker tile-size reads from. Both grow
+            // together when the user clicks zoom-in in the header.
             Gtk.Frame preview_frame {
               halign: center;
-              width-request: 160;
-              height-request: 160;
+              width-request: bind template.preview-size;
+              height-request: bind template.preview-size;
               styles ["card"]
 
               child: Gtk.Picture preview_picture {
@@ -197,7 +221,12 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
             vscrollbar-policy: automatic;
 
             child: $PixelRpgTilePalette palette {
-              tile-size: 32;
+              // `contain` preserves the sprite's aspect ratio so
+              // tall character sprites (16×32, etc.) keep their
+              // proportions inside the cells. Initial tile-size
+              // matches the default zoom level in `_applyZoom`.
+              aspect-mode: "contain";
+              tile-size: 48;
               halign: start;
               valign: start;
               hexpand: false;
