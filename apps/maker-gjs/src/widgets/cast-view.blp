@@ -2,9 +2,12 @@ using Gtk 4.0;
 using Adw 1;
 
 template $CastView : Adw.Bin {
-  // Two-level OverlaySplitView, same pattern as atlas-view / scene-
+  // Two-level OverlaySplitView, same pattern as atlas-view + scene-
   // editor-view: ModeRail (left) + CastInspector (right) bracket the
-  // canvas content. Consistency across editor surfaces.
+  // central content. The middle pane is a regular `Adw.ToolbarView`
+  // with a flat headerbar — Cast has no canvas underneath, so the
+  // floating-OSD chrome the canvas views need doesn't apply here.
+  // A normal headerbar reads cleaner + folds neatly into Adwaita.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -29,55 +32,31 @@ template $CastView : Adw.Bin {
 
       sidebar: $PixelRpgCastInspector inspector {};
 
-      content: Gtk.Overlay {
-        // Sidebar toggle pills mirror atlas-view + scene-editor-view.
-        [overlay]
-        Adw.Bin {
-          halign: start;
-          valign: start;
-          margin-top: 12;
-          margin-start: 12;
+      content: Adw.ToolbarView {
+        top-bar-style: flat;
 
-          child: Gtk.WindowHandle {
-            child: Gtk.Box {
-              orientation: horizontal;
-              spacing: 2;
-              styles ["toolbar", "osd"]
+        [top]
+        Adw.HeaderBar {
+          show-title: false;
+          show-start-title-buttons: false;
+          show-end-title-buttons: false;
 
-              Gtk.ToggleButton library_toggle {
-                icon-name: "sidebar-show-symbolic";
-                tooltip-text: _("Toggle library");
-                active: bind template.show-library bidirectional;
-                styles ["flat"]
-              }
-            };
-          };
+          [start]
+          Gtk.ToggleButton library_toggle {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Toggle library");
+            active: bind template.show-library bidirectional;
+          }
+
+          [end]
+          Gtk.ToggleButton inspector_toggle {
+            icon-name: "sidebar-show-right-symbolic";
+            tooltip-text: _("Toggle inspector");
+            active: bind template.show-inspector bidirectional;
+          }
         }
 
-        [overlay]
-        Adw.Bin {
-          halign: end;
-          valign: start;
-          margin-top: 12;
-          margin-end: 12;
-
-          child: Gtk.WindowHandle {
-            child: Gtk.Box {
-              orientation: horizontal;
-              spacing: 2;
-              styles ["toolbar", "osd"]
-
-              Gtk.ToggleButton inspector_toggle {
-                icon-name: "sidebar-show-right-symbolic";
-                tooltip-text: _("Toggle inspector");
-                active: bind template.show-inspector bidirectional;
-                styles ["flat"]
-              }
-            };
-          };
-        }
-
-        child: Gtk.ScrolledWindow {
+        content: Gtk.ScrolledWindow {
           hexpand: true;
           vexpand: true;
           hscrollbar-policy: never;
@@ -85,7 +64,7 @@ template $CastView : Adw.Bin {
           child: Gtk.Box content_box {
             orientation: vertical;
             spacing: 16;
-            margin-top: 64;
+            margin-top: 24;
             margin-bottom: 24;
             margin-start: 24;
             margin-end: 24;

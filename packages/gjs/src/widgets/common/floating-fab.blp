@@ -1,0 +1,41 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgFloatingFab : Adw.Bin {
+  // No halign/valign/margins on the template root — the consumer
+  // positions the FAB inside its container. Without this, an empty
+  // outer Adw.Bin wrapping the FAB (see `FloatingPlay`) would
+  // inherit the default `halign: fill` and cover the entire parent
+  // `Gtk.Overlay`, blocking pointer events to every layer underneath
+  // (canvas, FloatingTopBar, FloatingZoom). Bottom-right placement +
+  // margins live on the call-site instead.
+
+  // `toolbar.osd` Box stays as the layout host (same outer geometry,
+  // padding, window-drag behaviour as every other floating chrome
+  // widget), but the wrapper background is overridden to transparent
+  // via `floating-fab-frame` in floating-fab.css so only the inner
+  // accent-coloured button is visible.
+  Gtk.WindowHandle {
+    child: Gtk.Box {
+      orientation: horizontal;
+      spacing: 2;
+      styles ["toolbar", "osd", "floating-fab-frame"]
+
+      Gtk.Button button {
+        action-name: bind template.action-name;
+        tooltip-text: bind template.tooltip-text;
+        // Don't steal keyboard focus from anything underneath — pattern
+        // lifted from the original FloatingPlay so a click on the FAB
+        // doesn't shift the focus ring (and break canvas keyboard input
+        // in the scene editor).
+        focus-on-click: false;
+        styles ["suggested-action"]
+
+        child: Adw.ButtonContent button_content {
+          icon-name: bind template.icon-name;
+          label: bind template.label;
+        };
+      }
+    };
+  }
+}

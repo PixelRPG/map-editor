@@ -1,4 +1,5 @@
 @import "./_variables.css";
+@import "./widgets/common/index.css";
 @import "./widgets/engine/engine.css";
 @import "./widgets/sprite/index.css";
 @import "./widgets/editor/index.css";

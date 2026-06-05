@@ -4,7 +4,10 @@ using Adw 1;
 template $TilesView : Adw.Bin {
   // Same outer/inner OverlaySplitView shell as cast-view + atlas-view
   // + scene-editor-view — ModeRail (left) + tile inspector (right),
-  // central content panel in the middle.
+  // central content panel in the middle. Like cast-view, the centre
+  // is a regular `Adw.ToolbarView` with a flat headerbar: no canvas
+  // underneath, so the floating-OSD pattern the canvas views use
+  // doesn't apply here.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -29,59 +32,34 @@ template $TilesView : Adw.Bin {
 
       sidebar: $PixelRpgTileInspector inspector {};
 
-      content: Gtk.Overlay {
-        // Library + inspector sidebar toggle pills (mirror the other
-        // views).
-        [overlay]
-        Adw.Bin {
-          halign: start;
-          valign: start;
-          margin-top: 12;
-          margin-start: 12;
+      content: Adw.ToolbarView {
+        top-bar-style: flat;
 
-          child: Gtk.WindowHandle {
-            child: Gtk.Box {
-              orientation: horizontal;
-              spacing: 2;
-              styles ["toolbar", "osd"]
+        [top]
+        Adw.HeaderBar {
+          show-title: false;
+          show-start-title-buttons: false;
+          show-end-title-buttons: false;
 
-              Gtk.ToggleButton library_toggle {
-                icon-name: "sidebar-show-symbolic";
-                tooltip-text: _("Toggle library");
-                active: bind template.show-library bidirectional;
-                styles ["flat"]
-              }
-            };
-          };
+          [start]
+          Gtk.ToggleButton library_toggle {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Toggle library");
+            active: bind template.show-library bidirectional;
+          }
+
+          [end]
+          Gtk.ToggleButton inspector_toggle {
+            icon-name: "sidebar-show-right-symbolic";
+            tooltip-text: _("Toggle inspector");
+            active: bind template.show-inspector bidirectional;
+          }
         }
 
-        [overlay]
-        Adw.Bin {
-          halign: end;
-          valign: start;
-          margin-top: 12;
-          margin-end: 12;
-
-          child: Gtk.WindowHandle {
-            child: Gtk.Box {
-              orientation: horizontal;
-              spacing: 2;
-              styles ["toolbar", "osd"]
-
-              Gtk.ToggleButton inspector_toggle {
-                icon-name: "sidebar-show-right-symbolic";
-                tooltip-text: _("Toggle inspector");
-                active: bind template.show-inspector bidirectional;
-                styles ["flat"]
-              }
-            };
-          };
-        }
-
-        child: Gtk.Box content_box {
+        content: Gtk.Box content_box {
           orientation: vertical;
           spacing: 16;
-          margin-top: 64;
+          margin-top: 24;
           margin-bottom: 24;
           margin-start: 24;
           margin-end: 24;

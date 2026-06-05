@@ -1,13 +1,14 @@
 import Adw from '@girs/adw-1'
-import type { GameProjectResource } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
+import type { GameProjectResource } from '@pixelrpg/engine'
 import {
   AtlasCanvas,
   type EditorMode,
+  FloatingFab,
   ModeRail,
   SAMPLE_SCENES,
-  type SampleScene,
   SAMPLE_TELEPORTS,
+  type SampleScene,
   type SampleTeleport,
   SceneInspector,
   SignalScope,
@@ -18,6 +19,7 @@ import Template from './atlas-view.blp'
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(SceneInspector.$gtype)
+GObject.type_ensure(FloatingFab.$gtype)
 
 /**
  * Maker-app **Atlas** view — composes the mode rail, atlas canvas, and
@@ -191,10 +193,15 @@ export class AtlasView extends Adw.Bin {
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
       const scene = this._scenes.find((s) => s.id === id) ?? null
       this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
-      // Inspector visibility is shared at the window level and persists
-      // across view switches — don't force it open on scene-select.
-      // The user opens chrome via the floating toggles when they want
-      // it; auto-opening here would override their saved-closed state.
+      // Auto-open the right inspector when the user picks a scene —
+      // the inspector now has content to show (scene preview + meta
+      // + Open Scene CTA), so leaving it closed hides the only
+      // reason the user clicked the card. Setter is a no-op when
+      // already open, and the `inspector-collapsed` breakpoint
+      // setter on `application-window.blp` means the same write
+      // surfaces as an overlay drawer on mobile / tablet widths —
+      // no responsive branching needed here.
+      this.showInspector = true
       this.emit('scene-selected', id)
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {

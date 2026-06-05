@@ -31,37 +31,3 @@
 .header-osd windowcontrols button:hover image {
   background-color: alpha(@window_fg_color, 0.16);
 }
-
-/*
- * Floating Play pill — the bottom-right primary action.
- *
- * The wrapper `.toolbar.osd` Box keeps the same layout footprint
- * every other floating chrome widget uses (window-drag region,
- * outer padding) but its OSD background + drop-shadow are
- * suppressed so only the inner accent button is visible.
- *
- * Adwaita's `.toolbar button { background: none; }` rule flattens
- * inner buttons at the same specificity as `.suggested-action`, so
- * we re-apply the accent paint with higher specificity here. Hover
- * / active shading mirrors libadwaita's own CTA shade values so
- * the pill responds the same way a standalone suggested-action
- * button does.
- */
-.toolbar.osd.floating-play-frame {
-  background-color: transparent;
-  box-shadow: none;
-}
-
-.toolbar.osd.floating-play-frame button.suggested-action {
-  background-color: @accent_bg_color;
-  color: @accent_fg_color;
-}
-
-.toolbar.osd.floating-play-frame button.suggested-action:hover {
-  background-color: shade(@accent_bg_color, 1.07);
-}
-
-.toolbar.osd.floating-play-frame button.suggested-action:active,
-.toolbar.osd.floating-play-frame button.suggested-action:checked {
-  background-color: shade(@accent_bg_color, 0.94);
-}

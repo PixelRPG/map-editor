@@ -9,9 +9,9 @@ template $ApplicationWindow : Adw.ApplicationWindow {
   height-request: 480;
 
   // Mobile (<768sp): every sidebar collapses into an overlay
-  // drawer. User opens them via the floating library / inspector
-  // toggle pills (which sit on the canvas / welcome content in
-  // every view).
+  // drawer. User opens them via the headerbar toggles in atlas /
+  // cast / tiles, the merged top OSD bar in the scene editor, and
+  // the welcome view's headerbar toggle.
   Adw.Breakpoint {
     condition ("max-width: 768sp")
 

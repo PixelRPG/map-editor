@@ -2,38 +2,24 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgFloatingPlay : Adw.Bin {
+  // Bottom-right placement lives on the wrapper itself — `FloatingFab`
+  // is now positioning-agnostic so the same widget can be aligned
+  // differently by other consumers. Without these on the wrapper, an
+  // empty `Adw.Bin` defaults to `halign: fill`, fills the whole parent
+  // `Gtk.Overlay`, and silently blocks pointer events for every
+  // sibling layer underneath (canvas, FloatingTopBar, FloatingZoom).
   halign: end;
   valign: end;
   margin-end: 12;
   margin-bottom: 12;
 
-  // `toolbar.osd` Box stays as the layout host (same outer geometry,
-  // padding, window-drag behaviour as every other floating chrome
-  // widget), but the wrapper background is overridden to transparent
-  // via `floating-play-frame` in scene-editor.css so only the inner
-  // accent-coloured button is visible.
-  Gtk.WindowHandle {
-    child: Gtk.Box {
-      orientation: horizontal;
-      spacing: 2;
-      styles ["toolbar", "osd", "floating-play-frame"]
-
-      Gtk.Button play_button {
-        action-name: "win.play";
-        tooltip-text: _("Play");
-        // Don't steal keyboard focus from the engine canvas — without
-        // this, clicking Play moves focus to the button and arrow keys
-        // / WASD stop reaching Excalibur until the user tabs back to
-        // the canvas. The button still works (action fires on click),
-        // it just doesn't grab the focus ring.
-        focus-on-click: false;
-        styles ["suggested-action"]
-
-        child: Adw.ButtonContent button_content {
-          icon-name: "media-playback-start-symbolic";
-          label: _("Play");
-        };
-      }
-    };
+  // Composes the shared FloatingFab. The Play-specific logic
+  // (icon/label swap on `playing`) lives in `floating-play.ts`; the
+  // OSD pill chrome + accent paint come from the FAB.
+  $PixelRpgFloatingFab fab {
+    action-name: "win.play";
+    tooltip-text: _("Play");
+    icon-name: "media-playback-start-symbolic";
+    label: _("Play");
   }
 }
