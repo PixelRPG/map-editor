@@ -113,13 +113,6 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
       return
     }
 
-    // Clip to target area
-    const clipRect = new Graphene.Rect()
-    clipRect.init(0, 0, width, height)
-    snapshot.push_clip(clipRect)
-
-    snapshot.save()
-
     // Resolve render rect. Two modes:
     //
     // - `keepAspectRatio: false` (default — preserves existing
@@ -135,8 +128,8 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
     //   level rather than at the consumer because `Gtk.Picture`'s
     //   `content-fit: contain` has been seen to call snapshot with
     //   the full widget allocation rather than aspect-fitted dims
-    //   (the GJS aspect-ratio dispatch issue noted on
-    //   `vfunc_compute_concrete_size`). Belt-and-suspenders.
+    //   (the GJS interface-vfunc issue noted above). Belt-and-
+    //   suspenders.
     let renderX = 0
     let renderY = 0
     let renderWidth = width
@@ -152,6 +145,24 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
         renderX = (width - renderWidth) / 2
       }
     }
+
+    // Clip to the rendered sprite rect, NOT the full snapshot rect.
+    // `append_scaled_texture` lays down the WHOLE sprite-sheet scaled
+    // up — translated so the target sprite lands at (renderX, renderY).
+    // If the clip stays at (0, 0, width, height), every other sprite
+    // in the sheet that falls within the widget allocation leaks
+    // through outside the centered sprite rect (which is exactly the
+    // "three scientists side by side" bug). Clipping to the sprite
+    // rect itself confines the texture draw to the area we actually
+    // want to paint. In `keepAspectRatio: false` mode renderX/Y=0 +
+    // renderWidth/Height=width/height, so the clip degenerates to the
+    // old `(0, 0, width, height)` rect — no regression for tile-
+    // palette FlowBox cells.
+    const clipRect = new Graphene.Rect()
+    clipRect.init(renderX, renderY, renderWidth, renderHeight)
+    snapshot.push_clip(clipRect)
+
+    snapshot.save()
 
     const scaleX = renderWidth / this._width
     const scaleY = renderHeight / this._height
