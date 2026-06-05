@@ -1,12 +1,22 @@
-import { Actor, Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, TileMap, Vector } from 'excalibur'
+import {
+  Actor,
+  Color,
+  DisplayMode,
+  EventEmitter,
+  Engine as ExcaliburEngine,
+  Loader,
+  Logger,
+  TileMap,
+  Vector,
+} from 'excalibur'
 import type { Command } from './commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveTileComponent,
   ActiveToolComponent,
-  type EditorTool,
   EditorModeComponent,
-  type EditorViewMode,
+  type EditorTool,
+  type EditorViewFlags,
   EditorViewModeComponent,
   RuntimeModeComponent,
   SelectedPlacementsComponent,
@@ -19,10 +29,10 @@ import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
-import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
+import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
 
 interface LoaderEventMap {
   progress: { progress: number }
@@ -157,13 +167,7 @@ export class Engine {
     const playerSpriteSet = playerCharacter
       ? this._gameProjectResource.spriteSets.get(playerCharacter.spriteSetId)
       : undefined
-    const newMapScene = new MapScene(
-      mapResource,
-      this.events,
-      objectLibrary,
-      playerCharacter,
-      playerSpriteSet,
-    )
+    const newMapScene = new MapScene(mapResource, this.events, objectLibrary, playerCharacter, playerSpriteSet)
 
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)
@@ -222,11 +226,11 @@ export class Engine {
     const scene = this._activeMapScene()
     if (!scene) return
     SessionState.set(scene, new ActiveLayerComponent(layerId))
-    // Grid mode dims non-active layers — switching the active layer
-    // changes which layer's content stays at full opacity. No-op when
-    // grid mode is off (the helper short-circuits on `mode === 'normal'`
-    // by returning 1.0 from its opacity provider).
-    if (SessionState.get(scene, EditorViewModeComponent)?.mode === 'grid') {
+    // The `dimInactiveLayers` flag dims non-active layers — switching
+    // the active layer changes which layer's content stays at full
+    // opacity. No-op when the flag is off (the helper short-circuits
+    // on `dim === false` by returning 1.0 from its opacity provider).
+    if (SessionState.get(scene, EditorViewModeComponent)?.dimInactiveLayers) {
       applyEditorViewMode(scene)
     }
   }
@@ -519,13 +523,10 @@ export class Engine {
   }
 
   /**
-   * Switch the editor view mode on the active `MapScene`.
-   *
-   * `'normal'` — render like the game would (no grid lines, full
-   * opacity).
-   * `'grid'`   — debug grid lines on every tilemap + non-active
-   * layers dimmed to {@link GRID_MODE_DIM_OPACITY}. The dimming
-   * follows {@link setActiveLayer} automatically.
+   * Toggle Excalibur's debug grid lines on every tilemap of the
+   * active `MapScene`. Independent of {@link setDimInactiveLayers}
+   * — the user can have grid + full opacity, grid + dimming, no
+   * grid + dimming, or neither.
    *
    * Excalibur's debug renderer carries the grid; we configure
    * `engine.debug.tilemap.showGrid` true + every other debug
@@ -534,20 +535,53 @@ export class Engine {
    *
    * No-op if the active scene isn't a `MapScene`.
    */
-  setEditorViewMode(mode: EditorViewMode): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    const current = SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
-    if (current === mode) return
-    SessionState.set(scene, new EditorViewModeComponent(mode))
-    this._configureExcaliburDebugForViewMode(mode)
-    applyEditorViewMode(scene)
+  setShowGrid(showGrid: boolean): void {
+    this._updateViewFlags({ showGrid })
   }
 
-  getEditorViewMode(): EditorViewMode {
+  /**
+   * Dim non-active-layer sprites + placements to
+   * {@link GRID_MODE_DIM_OPACITY} so the active layer's content is
+   * the dominant signal. Independent of {@link setShowGrid}.
+   *
+   * The dimming follows {@link setActiveLayer} automatically — flip
+   * the active layer and the previously-dimmed layer reads at full
+   * opacity, the new non-active layers fade.
+   *
+   * No-op if the active scene isn't a `MapScene`.
+   */
+  setDimInactiveLayers(dimInactiveLayers: boolean): void {
+    this._updateViewFlags({ dimInactiveLayers })
+  }
+
+  /** Read both flags from the active scene (defaults to `{ false, false }`). */
+  getEditorViewFlags(): EditorViewFlags {
     const scene = this._activeMapScene()
-    if (!scene) return 'normal'
-    return SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
+    if (!scene) return { showGrid: false, dimInactiveLayers: false }
+    const current = SessionState.get(scene, EditorViewModeComponent)
+    return {
+      showGrid: current?.showGrid ?? false,
+      dimInactiveLayers: current?.dimInactiveLayers ?? false,
+    }
+  }
+
+  /**
+   * Merge `partial` over the current flags + re-apply the scene's
+   * render passes. Centralised so the two public setters share the
+   * same component-write + debug-config + render-refresh sequence.
+   */
+  private _updateViewFlags(partial: Partial<EditorViewFlags>): void {
+    const scene = this._activeMapScene()
+    if (!scene) return
+    const current = SessionState.get(scene, EditorViewModeComponent)
+    const next: EditorViewFlags = {
+      showGrid: partial.showGrid ?? current?.showGrid ?? false,
+      dimInactiveLayers: partial.dimInactiveLayers ?? current?.dimInactiveLayers ?? false,
+    }
+    if (current && current.showGrid === next.showGrid && current.dimInactiveLayers === next.dimInactiveLayers) return
+    SessionState.set(scene, new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers))
+    this._configureExcaliburDebugForShowGrid(next.showGrid)
+    applyEditorViewMode(scene)
   }
 
   /**
@@ -599,23 +633,26 @@ export class Engine {
   }
 
   /**
-   * Subscribe to view-mode changes. Fires once synchronously with
-   * the current value (or `'normal'` when no scene is active), then
-   * again on every `setEditorViewMode` call. Rebinds across map
+   * Subscribe to view-flag changes. Fires once synchronously with
+   * the current snapshot (or `{ false, false }` when no scene is
+   * active), then again on every flag mutation. Rebinds across map
    * switches like {@link onUndoStackChanged}.
    */
-  onEditorViewModeChanged(cb: (mode: EditorViewMode) => void): () => void {
+  onEditorViewModeChanged(cb: (flags: EditorViewFlags) => void): () => void {
     let inner: (() => void) | null = null
     const rebind = () => {
       inner?.()
       inner = null
       const scene = this._activeMapScene()
       if (!scene) {
-        cb('normal')
+        cb({ showGrid: false, dimInactiveLayers: false })
         return
       }
       inner = SessionState.subscribe(scene, EditorViewModeComponent, (component) => {
-        cb(component?.mode ?? 'normal')
+        cb({
+          showGrid: component?.showGrid ?? false,
+          dimInactiveLayers: component?.dimInactiveLayers ?? false,
+        })
       })
     }
     rebind()
@@ -633,12 +670,12 @@ export class Engine {
    * Disables every debug visualisation that isn't the tilemap grid
    * so the editor surface stays clean — no collider boxes, no
    * camera viewport rectangles. Done as a single block (rather
-   * than scattered field touches) so toggling between modes is a
-   * predictable reset, not a sticky-accumulating set of debug
-   * flags from prior toggles.
+   * than scattered field touches) so toggling is a predictable
+   * reset, not a sticky-accumulating set of debug flags from prior
+   * toggles.
    */
-  private _configureExcaliburDebugForViewMode(mode: EditorViewMode): void {
-    if (mode === 'grid') {
+  private _configureExcaliburDebugForShowGrid(showGrid: boolean): void {
+    if (showGrid) {
       const debug = this.excalibur.debug
       debug.tilemap.showAll = false
       debug.tilemap.showGrid = true
@@ -712,9 +749,7 @@ export class Engine {
    * subscribes before the first map loads still gets events once
    * one does).
    */
-  onPointerMoved(
-    cb: (event: { sceneId: string; worldX: number; worldY: number }) => void,
-  ): () => void {
+  onPointerMoved(cb: (event: { sceneId: string; worldX: number; worldY: number }) => void): () => void {
     let disposeMove: (() => void) | null = null
     const rebind = () => {
       disposeMove?.()
@@ -726,9 +761,7 @@ export class Engine {
         if (!scene) return
         const sceneId = scene.mapResource.mapData.id
         if (!sceneId) return
-        const world = this.excalibur.screen.screenToWorldCoordinates(
-          new Vector(event.screenPos.x, event.screenPos.y),
-        )
+        const world = this.excalibur.screen.screenToWorldCoordinates(new Vector(event.screenPos.x, event.screenPos.y))
         // Opt-in coord trace — set
         // `globalThis.__PIXELRPG_CURSOR_DEBUG = true` in DevTools /
         // a debugger session to dump screen→world conversions. Used
@@ -781,9 +814,7 @@ export class Engine {
    * {@link onPointerMoved}). Disposer detaches the pointer + map
    * listeners.
    */
-  onPointerTileChanged(
-    cb: (event: { sceneId: string; tileX: number; tileY: number }) => void,
-  ): () => void {
+  onPointerTileChanged(cb: (event: { sceneId: string; tileX: number; tileY: number }) => void): () => void {
     let disposeMove: (() => void) | null = null
     let lastTileX: number | null = null
     let lastTileY: number | null = null
@@ -803,9 +834,7 @@ export class Engine {
         if (!sceneId) return
         const tileWidth = mapData.tileWidth || 16
         const tileHeight = mapData.tileHeight || 16
-        const world = this.excalibur.screen.screenToWorldCoordinates(
-          new Vector(event.screenPos.x, event.screenPos.y),
-        )
+        const world = this.excalibur.screen.screenToWorldCoordinates(new Vector(event.screenPos.x, event.screenPos.y))
         const tileX = Math.floor(world.x / tileWidth)
         const tileY = Math.floor(world.y / tileHeight)
         if (tileX === lastTileX && tileY === lastTileY) return
@@ -830,5 +859,4 @@ export class Engine {
     this.status = status
     this.events.emit(EngineEvent.STATUS_CHANGED, { status })
   }
-
 }

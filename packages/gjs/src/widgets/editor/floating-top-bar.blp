@@ -45,11 +45,15 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
       }
     }
 
-    // Grid + back-to-atlas surface together. Promoting them in a
-    // single step avoids a 1-item overflow state (back alone would
-    // be silly under a "⋯" affordance — it's a single action, not a
-    // menu) and matches the rule "overflow holds ≥ 2 entries or
-    // disappears".
+    // Grid + transparency + back-to-atlas surface together.
+    // Promoting them in a single step avoids a 1-item overflow
+    // state (back alone would be silly under a "⋯" affordance —
+    // it's a single action, not a menu) and matches the rule
+    // "overflow holds ≥ 2 entries or disappears". The two view
+    // toggles (grid + transparency) sit side-by-side because
+    // they're sister flags addressing the same surface — keeping
+    // them at the same breakpoint avoids one floating alone in the
+    // overflow menu.
     Adw.Breakpoint {
       condition ("min-width: 540sp")
 
@@ -57,6 +61,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
         undo_button_merged.visible: true;
         redo_button_merged.visible: true;
         grid_button_merged.visible: true;
+        transparency_button_merged.visible: true;
         back_button_merged.visible: true;
         overflow_button_merged.visible: false;
       }
@@ -69,6 +74,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
         undo_button_merged.visible: true;
         redo_button_merged.visible: true;
         grid_button_merged.visible: true;
+        transparency_button_merged.visible: true;
         back_button_merged.visible: true;
         overflow_button_merged.visible: false;
         merged_tile_label.visible: true;
@@ -156,6 +162,13 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
               icon-name: "view-grid-symbolic";
               action-name: "win.toggle-grid";
               tooltip-text: _("Toggle grid view");
+              styles ["flat"]
+            }
+
+            Gtk.ToggleButton transparency_button_split {
+              icon-name: "view-reveal-symbolic";
+              action-name: "win.toggle-transparency";
+              tooltip-text: _("Dim other layers");
               styles ["flat"]
             }
 
@@ -312,6 +325,14 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
             icon-name: "view-grid-symbolic";
             action-name: "win.toggle-grid";
             tooltip-text: _("Toggle grid view");
+            styles ["flat"]
+          }
+
+          Gtk.ToggleButton transparency_button_merged {
+            visible: false;
+            icon-name: "view-reveal-symbolic";
+            action-name: "win.toggle-transparency";
+            tooltip-text: _("Dim other layers");
             styles ["flat"]
           }
 

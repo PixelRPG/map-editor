@@ -61,6 +61,7 @@ export class FloatingTopBar extends Adw.Bin {
   declare _undo_button_split: Gtk.Button
   declare _redo_button_split: Gtk.Button
   declare _grid_button_split: Gtk.ToggleButton
+  declare _transparency_button_split: Gtk.ToggleButton
   declare _tool_button_split: Gtk.MenuButton
   declare _tile_button_split: Gtk.MenuButton
   declare _tile_swatch_split: Gtk.Picture
@@ -73,6 +74,7 @@ export class FloatingTopBar extends Adw.Bin {
   declare _undo_button_merged: Gtk.Button
   declare _redo_button_merged: Gtk.Button
   declare _grid_button_merged: Gtk.ToggleButton
+  declare _transparency_button_merged: Gtk.ToggleButton
   declare _overflow_button_merged: Gtk.MenuButton
   declare _tool_button_merged: Gtk.MenuButton
   declare _tile_button_merged: Gtk.MenuButton
@@ -103,6 +105,7 @@ export class FloatingTopBar extends Adw.Bin {
           'undo_button_split',
           'redo_button_split',
           'grid_button_split',
+          'transparency_button_split',
           'tool_button_split',
           'tile_button_split',
           'tile_swatch_split',
@@ -113,6 +116,7 @@ export class FloatingTopBar extends Adw.Bin {
           'undo_button_merged',
           'redo_button_merged',
           'grid_button_merged',
+          'transparency_button_merged',
           'overflow_button_merged',
           'tool_button_merged',
           'tile_button_merged',
@@ -193,7 +197,12 @@ export class FloatingTopBar extends Adw.Bin {
     // visibility flips (the BLP breakpoint chain raises / lowers them);
     // also re-attach host popovers when the layout transitions between
     // split and merged.
-    for (const btn of [this._back_button_merged, this._undo_button_merged, this._grid_button_merged]) {
+    for (const btn of [
+      this._back_button_merged,
+      this._undo_button_merged,
+      this._grid_button_merged,
+      this._transparency_button_merged,
+    ]) {
       this._signals.connect(btn, 'notify::visible', () => this._updateOverflowMenu())
     }
     this._signals.connect(this._split_root, 'notify::visible', () => this._applyHostPopovers())
@@ -363,9 +372,17 @@ export class FloatingTopBar extends Adw.Bin {
       root.append_section(null, history)
     }
 
-    if (!this._grid_button_merged.get_visible()) {
+    // Grid + transparency promote at the same breakpoint, so they're
+    // either both visible (no overflow entry) or both hidden (one
+    // shared view section in the overflow). Combining them into one
+    // section keeps the "≥ 2 entries per section" rule satisfied
+    // when only one happens to be hidden during a transition tick.
+    if (!this._grid_button_merged.get_visible() || !this._transparency_button_merged.get_visible()) {
       const view = new Gio.Menu()
-      view.append(_('Show Grid'), 'win.toggle-grid')
+      if (!this._grid_button_merged.get_visible()) view.append(_('Show Grid'), 'win.toggle-grid')
+      if (!this._transparency_button_merged.get_visible()) {
+        view.append(_('Dim Other Layers'), 'win.toggle-transparency')
+      }
       root.append_section(null, view)
     }
 

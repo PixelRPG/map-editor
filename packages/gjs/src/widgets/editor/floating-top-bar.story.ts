@@ -78,6 +78,9 @@ export class FloatingTopBarStory extends StoryWidget {
     const grid = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
     grid.connect('change-state', (action, value) => action.set_state(value!))
     group.add_action(grid)
+    const transparency = Gio.SimpleAction.new_stateful('toggle-transparency', null, GLib.Variant.new_boolean(false))
+    transparency.connect('change-state', (action, value) => action.set_state(value!))
+    group.add_action(transparency)
     const tool = Gio.SimpleAction.new_stateful('set-tool', GLib.VariantType.new('s'), GLib.Variant.new_string('pencil'))
     tool.connect('change-state', (action, value) => {
       action.set_state(value!)

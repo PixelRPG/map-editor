@@ -665,19 +665,30 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._scene_editor_view.highlightPlacement(placementId)
     })
 
-    // Editor view-mode toggle (`'normal'` ↔ `'grid'`). Stateful
-    // action so the toggle button reflects the current state via its
-    // own `Gtk.ToggleButton` binding — the change-state handler
-    // forwards the chosen mode to the engine, which mutates the
-    // session-singleton's `EditorViewModeComponent` and re-applies
-    // the rendering.
+    // Grid lines + non-active-layer dimming are two INDEPENDENT
+    // editor view flags. The user can have grid on / off and the
+    // dimming on / off in any combination — they help with
+    // different tasks (grid = tile alignment, dimming = layer
+    // focus). The engine mirrors that split as `setShowGrid` +
+    // `setDimInactiveLayers` against the same session-singleton
+    // component, so each toggle drives just its own flag.
     const gridAction = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
     gridAction.connect('change-state', (action, value) => {
       action.set_state(value!)
-      const grid = value!.get_boolean()
-      this._engineCtl.engine?.setEditorViewMode(grid ? 'grid' : 'normal')
+      this._engineCtl.engine?.setShowGrid(value!.get_boolean())
     })
     winActions.add_action(gridAction)
+
+    const transparencyAction = Gio.SimpleAction.new_stateful(
+      'toggle-transparency',
+      null,
+      GLib.Variant.new_boolean(false),
+    )
+    transparencyAction.connect('change-state', (action, value) => {
+      action.set_state(value!)
+      this._engineCtl.engine?.setDimInactiveLayers(value!.get_boolean())
+    })
+    winActions.add_action(transparencyAction)
 
     // Play / playtest toggle. Stateful boolean — clicking the
     // FloatingPlay button (action-name="win.play") activates the
@@ -708,11 +719,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._playAction = playAction
 
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
-    // Ctrl+G = toggle grid, F5 = play / pause playtest.
+    // Ctrl+G = toggle grid, Ctrl+T = toggle non-active-layer
+    // transparency, F5 = play / pause playtest.
     const app = this.get_application() as Adw.Application | null
     app?.set_accels_for_action('win.undo', ['<Primary>z'])
     app?.set_accels_for_action('win.redo', ['<Primary><Shift>z', '<Primary>y'])
     app?.set_accels_for_action('win.toggle-grid', ['<Primary>g'])
+    app?.set_accels_for_action('win.toggle-transparency', ['<Primary>t'])
     app?.set_accels_for_action('win.play', ['F5'])
 
     for (const name of ['switch-tileset', 'new-layer', 'open-recent-projects']) {

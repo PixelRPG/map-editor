@@ -1,29 +1,23 @@
 import { Actor, TileMap } from 'excalibur'
-import {
-  ActiveLayerComponent,
-  EditorViewModeComponent,
-  type EditorViewMode,
-  TileTransformComponent,
-} from '../components/index.ts'
+import { ActiveLayerComponent, EditorViewModeComponent, TileTransformComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { refreshAllTileGraphics } from './tile-graphics.manager.ts'
 
 /**
  * Opacity applied to **non-active-layer** sprites + placements
- * while grid mode is on. Picked low enough that the active
- * layer's content is the clearly dominant signal, but high enough
- * that the user can still read what the dimmed layers contain so
- * they can pick a different active layer.
+ * while `dimInactiveLayers` is on. Picked low enough that the
+ * active layer's content is the clearly dominant signal, but high
+ * enough that the user can still read what the dimmed layers
+ * contain so they can pick a different active layer.
  */
 export const GRID_MODE_DIM_OPACITY = 0.25
 
 /**
- * Apply the current `EditorViewModeComponent` state to every
- * render surface on the active scene. Called whenever the view
- * mode itself changes or — when the mode is `'grid'` — whenever
- * the active layer changes, so the dimming follows the user's
- * focus.
+ * Apply the current `EditorViewModeComponent` flags to every render
+ * surface on the active scene. Called whenever a flag changes or —
+ * when `dimInactiveLayers` is on — whenever the active layer
+ * changes, so the dimming follows the user's focus.
  *
  * Two passes:
  *
@@ -38,18 +32,19 @@ export const GRID_MODE_DIM_OPACITY = 0.25
  *    `ObjectSpawnSystem` set `graphics.opacity` directly —
  *    they're per-instance actors, no clone juggling needed.
  *
- * Excalibur debug mode is toggled on the engine outside this
- * function (see `Engine.setEditorViewMode`) because the debug
- * config is engine-scoped, not scene-scoped.
+ * Excalibur's debug renderer (grid lines) is toggled on the engine
+ * outside this function (see `Engine.setShowGrid`) because the
+ * debug config is engine-scoped, not scene-scoped.
  */
 export function applyEditorViewMode(scene: MapScene): void {
-  const mode: EditorViewMode = SessionState.get(scene, EditorViewModeComponent)?.mode ?? 'normal'
+  const flags = SessionState.get(scene, EditorViewModeComponent)
+  const dim = flags?.dimInactiveLayers ?? false
   const activeLayerId = SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null
   const mapResource = scene.mapResource
   if (!mapResource) return
 
   const opacityFor = (refLayerId: string): number => {
-    if (mode !== 'grid' || activeLayerId === null) return 1
+    if (!dim || activeLayerId === null) return 1
     return refLayerId === activeLayerId ? 1 : GRID_MODE_DIM_OPACITY
   }
 

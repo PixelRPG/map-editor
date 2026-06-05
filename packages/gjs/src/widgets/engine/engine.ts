@@ -5,7 +5,7 @@ import { Canvas2DBridge } from '@gjsify/canvas2d'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
   type EditorTool,
-  type EditorViewMode,
+  type EditorViewFlags,
   EngineEvent,
   type EngineEventMap,
   EngineStatus,
@@ -193,14 +193,19 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.setLayerVisible(layerId, visible) ?? false
   }
 
-  /** Forward to `Engine.setEditorViewMode` — toggles editor's grid view. */
-  public setEditorViewMode(mode: EditorViewMode): void {
-    this._excalibur?.setEditorViewMode(mode)
+  /** Forward to `Engine.setShowGrid` — toggles Excalibur's debug grid lines. */
+  public setShowGrid(showGrid: boolean): void {
+    this._excalibur?.setShowGrid(showGrid)
   }
 
-  /** Forward to `Engine.getEditorViewMode`. */
-  public getEditorViewMode(): EditorViewMode {
-    return this._excalibur?.getEditorViewMode() ?? 'normal'
+  /** Forward to `Engine.setDimInactiveLayers` — toggles non-active-layer dimming. */
+  public setDimInactiveLayers(dimInactiveLayers: boolean): void {
+    this._excalibur?.setDimInactiveLayers(dimInactiveLayers)
+  }
+
+  /** Forward to `Engine.getEditorViewFlags`. */
+  public getEditorViewFlags(): EditorViewFlags {
+    return this._excalibur?.getEditorViewFlags() ?? { showGrid: false, dimInactiveLayers: false }
   }
 
   /** Forward to `Engine.setRuntimeMode` — toggles editor ↔ playtest. */
@@ -219,10 +224,10 @@ export class Engine extends Adw.Bin {
   }
 
   /**
-   * Subscribe to view-mode changes. Disposer is captured into
+   * Subscribe to view-flag changes. Disposer is captured into
    * {@link _excaliburSubscriptions} so unmap releases it.
    */
-  public onEditorViewModeChanged(cb: (mode: EditorViewMode) => void): boolean {
+  public onEditorViewModeChanged(cb: (flags: EditorViewFlags) => void): boolean {
     if (!this._excalibur) return false
     const dispose = this._excalibur.onEditorViewModeChanged(cb)
     this._excaliburSubscriptions.push({ close: dispose })
@@ -283,9 +288,7 @@ export class Engine extends Adw.Bin {
    * hasn't started yet. Auto-cleaned alongside the other engine
    * subscriptions.
    */
-  public onPointerTileChanged(
-    cb: (event: { sceneId: string; tileX: number; tileY: number }) => void,
-  ): boolean {
+  public onPointerTileChanged(cb: (event: { sceneId: string; tileX: number; tileY: number }) => void): boolean {
     const excalibur = this._excalibur
     if (!excalibur) return false
     const dispose = excalibur.onPointerTileChanged(cb)
@@ -423,10 +426,7 @@ export class Engine extends Adw.Bin {
     // for engine-aware consumers) and — if `gobjectArg` is provided —
     // also emits a GObject signal carrying a single extracted field
     // for Blueprint bindings + classic signal handlers.
-    const fwd = <K extends keyof EngineEventMap>(
-      event: K,
-      gobjectArg?: (payload: EngineEventMap[K]) => unknown,
-    ) =>
+    const fwd = <K extends keyof EngineEventMap>(event: K, gobjectArg?: (payload: EngineEventMap[K]) => unknown) =>
       engine.events.on(event, (p) => {
         this.events.emit(event, p)
         if (gobjectArg) this.emit(event, gobjectArg(p))
