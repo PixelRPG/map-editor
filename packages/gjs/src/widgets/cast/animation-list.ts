@@ -29,6 +29,7 @@ export class AnimationList extends Adw.Bin {
   private _character: CharacterDefinition | null = null
   private _spriteSet: GdkSpriteSetResource | null = null
   private _rowsById = new Map<string, Adw.ActionRow>()
+  private _activeId: string | null = null
 
   static {
     GObject.registerClass(
@@ -56,11 +57,39 @@ export class AnimationList extends Adw.Bin {
     this._character = character
     this._spriteSet = spriteSet
     this._rebuild()
+    this._applyActiveHighlight()
   }
 
   /** Refresh after the host mutated the underlying character (frames, duration changed). */
   refresh(): void {
     this._rebuild()
+    this._applyActiveHighlight()
+  }
+
+  /**
+   * Highlight the row matching `animId` with the `accent` CSS class
+   * — same affordance the character gallery uses for the active
+   * character. Pass `null` to clear. Idempotent: a re-call with the
+   * already-active id is a no-op, so the cast-view's
+   * `list-selected → preview-notify → list-highlight` round trip
+   * doesn't churn the CSS classes.
+   *
+   * Does NOT emit `animation-selected` — only user activation does,
+   * so callers driving the list from outside (preview state-change
+   * notifications) can't loop back through the host's selection
+   * handler.
+   */
+  setActiveAnimation(animId: string | null): void {
+    if (this._activeId === animId) return
+    this._activeId = animId
+    this._applyActiveHighlight()
+  }
+
+  private _applyActiveHighlight(): void {
+    for (const [id, row] of this._rowsById) {
+      if (id === this._activeId) row.add_css_class('accent')
+      else row.remove_css_class('accent')
+    }
   }
 
   private _rebuild(): void {

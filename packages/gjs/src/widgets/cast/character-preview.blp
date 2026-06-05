@@ -31,27 +31,47 @@ template $PixelRpgCharacterPreview : Adw.Bin {
       };
     }
 
-    Gtk.Box direction_pad {
+    Gtk.Box pad_row {
       orientation: horizontal;
       halign: center;
-      spacing: 4;
-      styles ["toolbar", "linked"]
+      spacing: 8;
 
-      Gtk.ToggleButton btn_up {
-        icon-name: "go-up-symbolic";
-        tooltip-text: _("Walk up");
+      // Linked-style direction quartet. Tooltips dynamically swap
+      // between "Walk <dir>" and "Idle <dir>" depending on the
+      // `paused` toggle below — handled in `character-preview.ts`
+      // so a single source of truth (the paused property) drives
+      // both the playing animation AND the visible labels.
+      Gtk.Box direction_pad {
+        orientation: horizontal;
+        spacing: 4;
+        styles ["toolbar", "linked"]
+
+        Gtk.ToggleButton btn_up {
+          icon-name: "go-up-symbolic";
+          tooltip-text: _("Walk up");
+        }
+        Gtk.ToggleButton btn_left {
+          icon-name: "go-previous-symbolic";
+          tooltip-text: _("Walk left");
+        }
+        Gtk.ToggleButton btn_down {
+          icon-name: "go-down-symbolic";
+          tooltip-text: _("Walk down");
+        }
+        Gtk.ToggleButton btn_right {
+          icon-name: "go-next-symbolic";
+          tooltip-text: _("Walk right");
+        }
       }
-      Gtk.ToggleButton btn_left {
-        icon-name: "go-previous-symbolic";
-        tooltip-text: _("Walk left");
-      }
-      Gtk.ToggleButton btn_down {
-        icon-name: "go-down-symbolic";
-        tooltip-text: _("Walk down");
-      }
-      Gtk.ToggleButton btn_right {
-        icon-name: "go-next-symbolic";
-        tooltip-text: _("Walk right");
+
+      // Pause flips the direction quartet between `walk-<dir>` and
+      // `idle-<dir>` for the current facing — the same arrow stays
+      // active, just selects the still-standing pose. Visually
+      // separated from the quartet by an 8px spacing so it reads as
+      // a distinct mode rather than a fifth direction.
+      Gtk.ToggleButton btn_pause {
+        icon-name: "media-playback-pause-symbolic";
+        tooltip-text: _("Pause — show idle pose for the active direction");
       }
     }
 

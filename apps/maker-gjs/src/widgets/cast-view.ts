@@ -145,9 +145,18 @@ export class CastView extends Adw.Bin {
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
+    // Bidirectional active-animation sync — three surfaces stay in
+    // lock-step: the preview's direction/pause buttons, the animation-
+    // list row highlight, and the inspector's duration field. Both
+    // user inputs (list activate, preview button click) funnel into
+    // `_setActiveAnimation` which is idempotent on no-change, so the
+    // resulting `preview-notify → setActive → list-highlight` round
+    // trip terminates after one pass.
     this.signals.connect(this._anim_list, 'animation-selected', (_v: AnimationList, animId: string) => {
-      this._activeAnimationId = animId
-      this._inspector.setAnimation(this._currentAnimation())
+      this._setActiveAnimation(animId)
+    })
+    this.signals.connect(this._preview, 'notify::active-animation-id', () => {
+      this._setActiveAnimation(this._preview.activeAnimationId)
     })
     this.signals.connect(this._inspector, 'name-changed', (_v: CastInspector, name: string) => {
       if (this._activeCharacterId) this._onRenameRequested?.(this._activeCharacterId, name)
@@ -309,6 +318,37 @@ export class CastView extends Adw.Bin {
     this._preview.setCharacter(character, this._spriteSet)
     this._anim_list.setCharacter(character, this._spriteSet)
     this._inspector.setCharacter(character)
+    // Pick up whatever the preview defaulted to (`walk-down` on a
+    // fresh character) so the list highlight + inspector duration
+    // line up with what's playing — without this the first row
+    // would never be marked accent until the user clicked
+    // something.
+    this._setActiveAnimation(this._preview.activeAnimationId)
+  }
+
+  /**
+   * Single-entry helper that keeps the three active-animation
+   * surfaces in lock-step:
+   *
+   * - `_activeAnimationId` — the field every other lookup
+   *   (`_currentAnimation`, the inspector's duration write-back)
+   *   reads from.
+   * - `AnimationList` row highlight — accent class on the matching
+   *   row.
+   * - `CharacterPreview` direction + paused — derived from the id
+   *   via `setActiveAnimation`.
+   * - `CastInspector` duration row — populated from the resolved
+   *   animation.
+   *
+   * Idempotent on `id === current` to break the round-trip
+   * `preview-notify → cast-view → preview-setActive` chain after one
+   * pass.
+   */
+  private _setActiveAnimation(animId: string | null): void {
+    if (this._activeAnimationId === animId) return
+    this._activeAnimationId = animId
+    this._anim_list.setActiveAnimation(animId)
+    if (animId) this._preview.setActiveAnimation(animId)
     this._inspector.setAnimation(this._currentAnimation())
   }
 
