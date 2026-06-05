@@ -83,20 +83,22 @@ template $TilesView : Adw.Bin {
           }
 
           // Dedicated ScrolledWindow around just the palette so it can
-          // scroll horizontally + vertically when the sheet's native
-          // grid is wider than the viewport (lokiri-forest is 32 cols
-          // × ~32 px ≈ 1024 px, broader than most containers). The
-          // outer header / combo stay fixed at the top.
+          // scroll vertically once the grid has more rows than fit.
+          // `wrap: true` on the palette lets the FlowBox flow against
+          // the available width — wide windows fit more tiles per
+          // row, narrow ones wrap to fewer; no horizontal scrolling
+          // either way.
           Gtk.ScrolledWindow palette_scroller {
             hexpand: true;
             vexpand: true;
-            hscrollbar-policy: automatic;
+            hscrollbar-policy: never;
             vscrollbar-policy: automatic;
 
             child: $PixelRpgTilePalette palette {
-              halign: start;
+              wrap: true;
+              halign: fill;
               valign: start;
-              hexpand: false;
+              hexpand: true;
               vexpand: false;
               tile-size: 32;
             };

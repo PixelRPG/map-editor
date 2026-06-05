@@ -39,6 +39,7 @@ export class TilePalette extends Adw.Bin {
   private _tileSize: number = 42
   private _selectedId: number | null = null
   private _aspectMode: TilePaletteAspectMode = 'fill'
+  private _wrap = false
   /**
    * Aspect ratio (width / height) of the active sprite-sheet's
    * sprites — populated by `setFromSpriteSheet` from the first
@@ -89,6 +90,26 @@ export class TilePalette extends Adw.Bin {
             'Swatch rendering policy: `fill` stretches, `contain` preserves the sprite-sheet aspect',
             GObject.ParamFlags.READWRITE,
             'fill',
+          ),
+          // Whether the FlowBox is allowed to wrap to available width.
+          //
+          //  - `false` (default — scene-editor tile-tab + popover
+          //    use cases that want a fixed column count): `columns`
+          //    pins both `min-children-per-line` and
+          //    `max-children-per-line` so the grid stays rectangular
+          //    and the host scrolls horizontally if the sheet is wide.
+          //  - `true` (tiles-view + custom-animation picker — the user
+          //    wants to see as many frames at once as possible without
+          //    scrolling sideways): `min-children-per-line` stays at
+          //    1, `max-children-per-line` becomes the cap. The FlowBox
+          //    then flows freely against whatever width the host
+          //    allocates.
+          wrap: GObject.ParamSpec.boolean(
+            'wrap',
+            'Wrap',
+            'Whether the FlowBox is allowed to wrap to the available width (vs. pinned to a fixed column count)',
+            GObject.ParamFlags.READWRITE,
+            false,
           ),
         },
         Signals: {
@@ -143,9 +164,26 @@ export class TilePalette extends Adw.Bin {
   }
 
   set columns(value: number) {
-    this._flow.set_min_children_per_line(value)
+    // `wrap` decides whether `columns` pins the grid to exactly N
+    // per line or just caps the maximum:
+    //  - off → both min + max = value (rectangular grid).
+    //  - on  → min stays at 1, max = value (wraps freely).
+    this._flow.set_min_children_per_line(this._wrap ? 1 : value)
     this._flow.set_max_children_per_line(value)
     this.notify('columns')
+  }
+
+  get wrap(): boolean {
+    return this._wrap ?? false
+  }
+
+  set wrap(value: boolean) {
+    if (this._wrap === value) return
+    this._wrap = value
+    this.notify('wrap')
+    // Reapply the current column setting under the new policy so
+    // `set columns` picks the right `min-children-per-line`.
+    this.columns = this.columns
   }
 
   get selectedId(): number | null {
