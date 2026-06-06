@@ -210,6 +210,15 @@ export class SessionService {
     if (this.state.kind === 'browsing') this.setState({ kind: 'idle' })
   }
 
+  /**
+   * Reset to the pre-session state after a session ends or fails: back to
+   * `browsing` if the welcome view was browsing when we started, else
+   * `idle`. Recurs across every host/join teardown + error path.
+   */
+  private resetToPreSession(): void {
+    this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+  }
+
   // ────────────────────────────────────────────────────────────
   // Host
   // ────────────────────────────────────────────────────────────
@@ -263,7 +272,7 @@ export class SessionService {
       this.hostingHandle = null
     }
     if (this.state.kind === 'hosting') {
-      this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+      this.resetToPreSession()
     }
   }
 
@@ -280,7 +289,7 @@ export class SessionService {
       await this.openSession('joiner', roomId, transport)
     } catch (err) {
       this.handleError(err)
-      this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+      this.resetToPreSession()
       throw err
     }
   }
@@ -305,7 +314,7 @@ export class SessionService {
       await this.openSession('joiner', roomId, transport)
     } catch (err) {
       this.handleError(err)
-      this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+      this.resetToPreSession()
       throw err
     }
   }
@@ -349,7 +358,7 @@ export class SessionService {
     }
     if (this.state.kind === 'connected' || this.state.kind === 'awaiting-engine' || this.state.kind === 'hosting') {
       await this.stopHosting()
-      this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+      this.resetToPreSession()
     }
   }
 
@@ -455,7 +464,7 @@ export class SessionService {
     collab.peer.events.on('closed', () => {
       if ((this.state.kind === 'connected' || this.state.kind === 'awaiting-engine') && this.state.collab === collab) {
         void this.stopHosting()
-        this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
+        this.resetToPreSession()
       }
     })
   }

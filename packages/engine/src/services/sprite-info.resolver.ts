@@ -39,9 +39,7 @@ export function findSpriteInfoForTileId(
   }
 
   for (const [spriteSetId, spriteSetResource] of spriteSetResources) {
-    const spriteSetRef = mapData.spriteSets?.find((ref: SpriteSetReferenceLike) => ref?.id === spriteSetId) as
-      | SpriteSetReferenceLike
-      | undefined
+    const spriteSetRef = findSpriteSetRef(mapData, spriteSetId)
     if (!spriteSetRef?.firstGid || typeof spriteSetRef.firstGid !== 'number') {
       continue
     }
@@ -85,11 +83,20 @@ export function findTileIdForSpriteInfo(
   spriteSetId: string,
   localSpriteId: number,
 ): number | null {
-  const mapData = mapResource.mapData
-  if (!mapData?.spriteSets) return null
-  const ref = mapData.spriteSets.find((r: SpriteSetReferenceLike) => r?.id === spriteSetId) as
-    | SpriteSetReferenceLike
-    | undefined
+  const ref = findSpriteSetRef(mapResource.mapData, spriteSetId)
   if (typeof ref?.firstGid !== 'number') return null
   return ref.firstGid + localSpriteId
+}
+
+/**
+ * Find a map's reference entry for the given sprite-set id. Shared by the
+ * tile-id ↔ sprite-info conversions above.
+ */
+function findSpriteSetRef(
+  mapData: MapResource['mapData'],
+  spriteSetId: string,
+): SpriteSetReferenceLike | undefined {
+  return mapData?.spriteSets?.find((ref: SpriteSetReferenceLike) => ref?.id === spriteSetId) as
+    | SpriteSetReferenceLike
+    | undefined
 }
