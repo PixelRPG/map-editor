@@ -1,7 +1,7 @@
 # Editor Architecture — GTK View, ECS Model+Controller
 
-> Status: **planning** — design captured, migration phased.
-> Last meaningful change: 2026-05-22.
+> Status: **active** — Phases 1–5 landed; the ECS model is also the basis for external control (D-Bus/MCP).
+> Last meaningful change: 2026-06-06.
 
 The map editor runs the same Excalibur ECS world that the game runtime uses. Rather than maintaining two parallel state representations — editor state in widget instance fields, runtime state in ECS components — **all session state lives in components on a session-singleton entity in the engine's world**. GTK widgets become thin, subscribing views.
 
@@ -305,6 +305,7 @@ Phase tracker — fill in as PRs land.
 - [`runtime-modes.md`](runtime-modes.md) — Phase 1's session-singleton is the same entity that hosts the mode markers (`EditorMode`, `RuntimeMode`, `GhostSpawn`). Both docs describe one half of the same machinery; this doc owns the lifecycle + subscription API, runtime-modes owns the mode-marker semantics.
 - [`object-system.md`](object-system.md) — the editor UI for the object library (Library mode-rail, Object tool, Inspector tab) is built on the subscription bridge here. The data model itself lives in the project file (`GameProjectData.objectLibrary` + `MapData.objectPlacements`), so the in-memory project is not on the session-singleton — only the *editor state about which object is selected* is.
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — the operation-oriented mutation API + the `Command` interface defined here **is** the editor op vocabulary in the multi-peer sync layer. Phase 5 (Undo) IS the editor op-log. The two docs describe the same mechanism from different angles: this one for single-user UX, the collab doc for multi-peer ordering.
+- **External control (D-Bus / MCP)** — `apps/maker-gjs/src/services/control-dbus.service.ts` (`org.pixelrpg.maker.Control`) + the `apps/mcp-bridge` orchestrator are a fourth consumer of this same model: status reads come from the ECS getters (`getDebugStatus`), and mutations (`paint_tile`) go through the very same `Engine.executeCommand` / `Command` path as a pointer click — so an agent-driven edit undoes and syncs to collab peers identically. This is *why* the data-driven ECS model matters beyond the GTK view: GTK widgets, the op-log, multiplayer peers, and the D-Bus/MCP control surface are all just different observers/drivers of one model. A future generic `get_components` projection (serialising the session-singleton) would make the control surface fully data-driven (auto-tracking new components) — tracked in `TODO.md`.
 
 ## Cross-references to `AGENTS.md`
 
