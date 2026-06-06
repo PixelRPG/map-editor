@@ -1,5 +1,5 @@
-import GLib from '@girs/glib-2.0'
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import { writeJsonFile } from './file-io.ts'
 
 /**
@@ -40,11 +40,12 @@ export function loadRecentProjects(): RecentProject[] {
     const parsed = JSON.parse(text)
     if (!Array.isArray(parsed)) return []
     return parsed
-      .filter((entry): entry is RecentProject =>
-        typeof entry === 'object' &&
-        entry != null &&
-        typeof (entry as RecentProject).path === 'string' &&
-        typeof (entry as RecentProject).name === 'string',
+      .filter(
+        (entry): entry is RecentProject =>
+          typeof entry === 'object' &&
+          entry != null &&
+          typeof (entry as RecentProject).path === 'string' &&
+          typeof (entry as RecentProject).name === 'string',
       )
       .slice(0, MAX_RECENTS)
   } catch (error) {

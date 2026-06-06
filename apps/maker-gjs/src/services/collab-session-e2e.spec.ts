@@ -31,11 +31,11 @@ import {
   type ConnectedSessionPair,
   createConnectedSessionPair,
   flushMicrotasks,
+  isSessionProtocolOp,
   PROJECT_SNAPSHOT_VERSION,
   type ProjectSnapshot,
   type SessionProtocolOp,
   SnapshotExchange,
-  isSessionProtocolOp,
 } from '@pixelrpg/engine'
 
 import { connectLanJoinerTransport, startLanHostServer } from './lan-signalling.ts'
@@ -50,7 +50,9 @@ import { connectLanJoinerTransport, startLanHostServer } from './lan-signalling.
  * live in the maker package. If a second consumer needs this
  * shape, extract to a shared helper module.
  */
-async function createWebSocketSessionPair(): Promise<ConnectedSessionPair & { hostServer: { close(): Promise<void> } }> {
+async function createWebSocketSessionPair(): Promise<
+  ConnectedSessionPair & { hostServer: { close(): Promise<void> } }
+> {
   // 1. Spin up the real WS server. `port: 0` lets the kernel
   //    pick; we read back the bound port for the joiner.
   let hostTransportFromServer: import('@pixelrpg/engine').SignallingTransport | null = null
@@ -63,10 +65,7 @@ async function createWebSocketSessionPair(): Promise<ConnectedSessionPair & { ho
 
   try {
     // 2. Joiner connects over real WS.
-    const joinerTransport = await connectLanJoinerTransport(
-      hostServer.address.host,
-      hostServer.address.port,
-    )
+    const joinerTransport = await connectLanJoinerTransport(hostServer.address.host, hostServer.address.port)
 
     // 3. Wait for the server side to have wired its transport.
     const start = Date.now()
@@ -87,8 +86,9 @@ async function createWebSocketSessionPair(): Promise<ConnectedSessionPair & { ho
     // Easier path: don't reuse `createConnectedSessionPair` since
     // it builds its own InMemoryTransports. Build PeerSessions
     // directly, this time wiring our real WS transports.
-    const { FakeRTCPeerConnection, rtcFactoryFor, CHANNEL_OP, CHANNEL_AWARENESS, wireChannelDelivery } =
-      await import('@pixelrpg/engine')
+    const { FakeRTCPeerConnection, rtcFactoryFor, CHANNEL_OP, CHANNEL_AWARENESS, wireChannelDelivery } = await import(
+      '@pixelrpg/engine'
+    )
     const { PeerSession } = await import('@pixelrpg/engine')
 
     const hostPc = new FakeRTCPeerConnection()

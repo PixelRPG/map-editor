@@ -38,8 +38,8 @@
  * Idempotent — re-running on already-migrated files is a no-op.
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from 'node:fs'
-import { dirname, resolve, basename } from 'node:path'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

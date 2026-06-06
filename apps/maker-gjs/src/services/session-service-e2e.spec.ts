@@ -52,15 +52,9 @@ import {
   rtcFactoryFor,
   wireChannelDelivery,
 } from '@pixelrpg/engine'
-
-import { connectLanJoinerTransport, startLanHostServer } from './lan-signalling.ts'
 import type { DiscoveredService, LanDiscoveryEvent } from './lan-discovery-parse.ts'
-import {
-  type HostingHandle,
-  type HostingOptions,
-  type SessionBackend,
-  SessionService,
-} from './session-service.ts'
+import { connectLanJoinerTransport, startLanHostServer } from './lan-signalling.ts'
+import { type HostingHandle, type HostingOptions, type SessionBackend, SessionService } from './session-service.ts'
 
 const FAKE_SNAPSHOT: ProjectSnapshot = {
   version: PROJECT_SNAPSHOT_VERSION,
@@ -167,7 +161,11 @@ function makeJoinerEngineStub(): Engine {
  * host's bound port.
  */
 class LanLoopbackBackend implements SessionBackend {
-  private hostHandle: { close(): Promise<void>; port: number; peerCallbacks: Array<(t: import('@pixelrpg/engine').SignallingTransport) => void> } | null = null
+  private hostHandle: {
+    close(): Promise<void>
+    port: number
+    peerCallbacks: Array<(t: import('@pixelrpg/engine').SignallingTransport) => void>
+  } | null = null
   private discoveryListeners = new Set<(event: LanDiscoveryEvent) => void>()
   private peerOf: LanLoopbackBackend | null = null
 
@@ -285,25 +283,11 @@ export default async () => {
 
         // — Host SessionService with real engine stub + LAN backend
         const hostBackend = new LanLoopbackBackend()
-        const host = new SessionService(
-          () => makeHostEngineStub(),
-          hostBackend,
-          'host-peer',
-          1_000,
-          2_000,
-          hostFactory,
-        )
+        const host = new SessionService(() => makeHostEngineStub(), hostBackend, 'host-peer', 1_000, 2_000, hostFactory)
 
         // — Joiner SessionService WITHOUT engine (the sandbox flow attaches it later)
         const joinerBackend = new LanLoopbackBackend()
-        const joiner = new SessionService(
-          () => null,
-          joinerBackend,
-          'joiner-peer',
-          1_000,
-          2_000,
-          joinerFactory,
-        )
+        const joiner = new SessionService(() => null, joinerBackend, 'joiner-peer', 1_000, 2_000, joinerFactory)
 
         // — Host starts hosting
         const roomId = await host.startHosting({

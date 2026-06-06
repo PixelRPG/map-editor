@@ -1,6 +1,6 @@
 import { Animation, AnimationStrategy, type Sprite } from 'excalibur'
-import { buildPlaceholderAnimations } from '../runtime/placeholder-character.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
+import { buildPlaceholderAnimations } from '../runtime/placeholder-character.ts'
 import type { CharacterAnimation, CharacterAnimationRole, CharacterDefinition } from '../types/data/index.ts'
 import { REQUIRED_ROLES } from '../types/data/index.ts'
 
@@ -22,7 +22,11 @@ import { REQUIRED_ROLES } from '../types/data/index.ts'
 export function buildCharacterAnimations(
   character: CharacterDefinition,
   spriteSet: SpriteSetResource | undefined,
-): { animations: Partial<Record<CharacterAnimationRole, Animation>>; spriteWidth?: number; spriteHeight?: number } | null {
+): {
+  animations: Partial<Record<CharacterAnimationRole, Animation>>
+  spriteWidth?: number
+  spriteHeight?: number
+} | null {
   if (!spriteSet) return null
   const animations: Partial<Record<CharacterAnimationRole, Animation>> = {}
   for (const anim of character.animations) {
@@ -43,10 +47,7 @@ export function buildCharacterAnimations(
 }
 
 /** Build a single Excalibur {@link Animation} from a {@link CharacterAnimation}. */
-function buildAnimation(
-  anim: CharacterAnimation,
-  sprites: Record<number, Sprite>,
-): Animation | null {
+function buildAnimation(anim: CharacterAnimation, sprites: Record<number, Sprite>): Animation | null {
   const frames = anim.frames
     .map((spriteId) => sprites[spriteId])
     .filter((s): s is Sprite => s != null)

@@ -77,10 +77,7 @@ export default async () => {
         },
       })
       try {
-        const joinerTransport = await connectLanJoinerTransport(
-          server.address.host,
-          server.address.port,
-        )
+        const joinerTransport = await connectLanJoinerTransport(server.address.host, server.address.port)
         const ok = await waitFor(() => receivedTransport !== null)
         expect(ok).toBe(true)
         expect(receivedTransport).not.toBeNull()
@@ -100,81 +97,73 @@ export default async () => {
     // permanent reminder. The Node side validates our wrapper +
     // wire format is correct.
     await on('Node.js', async () => {
-    await it('host → joiner SDP frame delivers correctly', async () => {
-      let serverTransport: import('@pixelrpg/engine').SignallingTransport | null = null
-      const server = await startLanHostServer({
-        port: 0,
-        onPeerConnected: (t) => {
-          serverTransport = t
-        },
+      await it('host → joiner SDP frame delivers correctly', async () => {
+        let serverTransport: import('@pixelrpg/engine').SignallingTransport | null = null
+        const server = await startLanHostServer({
+          port: 0,
+          onPeerConnected: (t) => {
+            serverTransport = t
+          },
+        })
+        try {
+          const joinerTransport = await connectLanJoinerTransport(server.address.host, server.address.port)
+          await waitFor(() => serverTransport !== null)
+          if (!serverTransport) throw new Error('peer never connected')
+
+          const joinerInbound: SignallingMessage[] = []
+          joinerTransport.onMessage((m) => joinerInbound.push(m))
+
+          ;(serverTransport as import('@pixelrpg/engine').SignallingTransport).send({
+            type: 'sdp',
+            payload: { type: 'offer', sdp: 'fake-offer' },
+          })
+
+          const got = await waitFor(() => joinerInbound.length > 0)
+          expect(got).toBe(true)
+          expect(joinerInbound[0]).toStrictEqual({
+            type: 'sdp',
+            payload: { type: 'offer', sdp: 'fake-offer' },
+          })
+
+          joinerTransport.close()
+        } finally {
+          await server.close()
+        }
       })
-      try {
-        const joinerTransport = await connectLanJoinerTransport(
-          server.address.host,
-          server.address.port,
-        )
-        await waitFor(() => serverTransport !== null)
-        if (!serverTransport) throw new Error('peer never connected')
 
-        const joinerInbound: SignallingMessage[] = []
-        joinerTransport.onMessage((m) => joinerInbound.push(m))
-
-        ;(serverTransport as import('@pixelrpg/engine').SignallingTransport).send({
-          type: 'sdp',
-          payload: { type: 'offer', sdp: 'fake-offer' },
+      await it('joiner → host SDP frame delivers correctly', async () => {
+        let serverTransport: import('@pixelrpg/engine').SignallingTransport | null = null
+        const server = await startLanHostServer({
+          port: 0,
+          onPeerConnected: (t) => {
+            serverTransport = t
+          },
         })
+        try {
+          const joinerTransport = await connectLanJoinerTransport(server.address.host, server.address.port)
+          await waitFor(() => serverTransport !== null)
+          if (!serverTransport) throw new Error('peer never connected')
 
-        const got = await waitFor(() => joinerInbound.length > 0)
-        expect(got).toBe(true)
-        expect(joinerInbound[0]).toStrictEqual({
-          type: 'sdp',
-          payload: { type: 'offer', sdp: 'fake-offer' },
-        })
+          const hostInbound: SignallingMessage[] = []
+          ;(serverTransport as import('@pixelrpg/engine').SignallingTransport).onMessage((m) => hostInbound.push(m))
 
-        joinerTransport.close()
-      } finally {
-        await server.close()
-      }
-    })
+          joinerTransport.send({
+            type: 'sdp',
+            payload: { type: 'answer', sdp: 'fake-answer' },
+          })
 
-    await it('joiner → host SDP frame delivers correctly', async () => {
-      let serverTransport: import('@pixelrpg/engine').SignallingTransport | null = null
-      const server = await startLanHostServer({
-        port: 0,
-        onPeerConnected: (t) => {
-          serverTransport = t
-        },
+          const got = await waitFor(() => hostInbound.length > 0)
+          expect(got).toBe(true)
+          expect(hostInbound[0]).toStrictEqual({
+            type: 'sdp',
+            payload: { type: 'answer', sdp: 'fake-answer' },
+          })
+
+          joinerTransport.close()
+        } finally {
+          await server.close()
+        }
       })
-      try {
-        const joinerTransport = await connectLanJoinerTransport(
-          server.address.host,
-          server.address.port,
-        )
-        await waitFor(() => serverTransport !== null)
-        if (!serverTransport) throw new Error('peer never connected')
-
-        const hostInbound: SignallingMessage[] = []
-        ;(serverTransport as import('@pixelrpg/engine').SignallingTransport).onMessage((m) =>
-          hostInbound.push(m),
-        )
-
-        joinerTransport.send({
-          type: 'sdp',
-          payload: { type: 'answer', sdp: 'fake-answer' },
-        })
-
-        const got = await waitFor(() => hostInbound.length > 0)
-        expect(got).toBe(true)
-        expect(hostInbound[0]).toStrictEqual({
-          type: 'sdp',
-          payload: { type: 'answer', sdp: 'fake-answer' },
-        })
-
-        joinerTransport.close()
-      } finally {
-        await server.close()
-      }
-    })
     })
 
     await it('a second joiner is rejected (host accepts only one peer)', async () => {

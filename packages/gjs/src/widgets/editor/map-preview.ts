@@ -1,11 +1,11 @@
 import Gdk from '@girs/gdk-4.0'
-import { GameProjectResource, type MapData } from '@pixelrpg/engine'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
-import { GdkSpriteSetResource } from '../../sprite/resource/GdkSpriteSetResource'
+import { GameProjectResource, type MapData } from '@pixelrpg/engine'
 import type { GdkSpriteSheet } from '../../sprite/objects/GdkSpriteSheet'
+import { GdkSpriteSetResource } from '../../sprite/resource/GdkSpriteSetResource'
 
 interface DrawOp {
   texture: Gdk.Texture
@@ -114,9 +114,7 @@ export class MapPreview extends Gtk.Widget {
    */
   async setFromResource(resource: GameProjectResource, mapId?: string): Promise<void> {
     try {
-      const mapData = mapId
-        ? resource.maps.get(mapId)?.mapData
-        : Array.from(resource.maps.values())[0]?.mapData
+      const mapData = mapId ? resource.maps.get(mapId)?.mapData : Array.from(resource.maps.values())[0]?.mapData
       if (!mapData) {
         this._loaded = true
         this.queue_draw()

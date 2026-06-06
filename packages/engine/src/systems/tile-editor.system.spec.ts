@@ -15,11 +15,11 @@
  */
 
 import { describe, expect, it } from '@gjsify/unit'
-import { Entity, EventEmitter, Scene } from 'excalibur'
+import { type Entity, EventEmitter, type Scene } from 'excalibur'
 
 import type { Command } from '../commands/index.ts'
-import { TileEditorSystem } from './tile-editor.system.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { TileEditorSystem } from './tile-editor.system.ts'
 
 /**
  * Minimal duck-typed scene sufficient for `SessionState`. We only

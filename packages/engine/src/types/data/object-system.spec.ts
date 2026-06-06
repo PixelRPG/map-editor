@@ -1,13 +1,13 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import {
-  type ObjectDefinition,
-  type ObjectPlacement,
   isObjectDefinition,
   isObjectPlacement,
   isSpriteRef,
   isTileProperties,
   isTriggerSpec,
+  type ObjectDefinition,
+  type ObjectPlacement,
 } from './index'
 
 export default async () => {

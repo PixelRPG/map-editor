@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 // SPDX-License-Identifier: MIT
 /**
  * Generates the minimalist-starter template's tileset:
@@ -19,10 +20,10 @@
  * without commissioning per-scene art.
  */
 
-import { deflateSync } from 'node:zlib'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { deflateSync } from 'node:zlib'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUTPUT_DIR = resolve(__dirname, '..', 'games', 'minimalist-starter', 'spritesets')
@@ -36,7 +37,11 @@ const SHEET_H = TILE_SIZE * ROWS
 /** Decode `#rrggbb` (or `#rgb`) into `[r, g, b]`. */
 function hex(h) {
   let s = h.replace('#', '')
-  if (s.length === 3) s = s.split('').map((c) => c + c).join('')
+  if (s.length === 3)
+    s = s
+      .split('')
+      .map((c) => c + c)
+      .join('')
   return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)]
 }
 
@@ -53,50 +58,137 @@ function hex(h) {
 // sprite".
 const TILES = [
   // Row 0 — overworld foliage / earth
-  { id: 'grass',      name: 'Grass',        base: '#5fb04c', detail: scatter(8, '#6cc457', '#4d9b3a', 0x42),
-    tileProperties: { surface: 'grass' } },
-  { id: 'tree',       name: 'Tree',         base: '#2d6a25', detail: blob('#3b8f30', 4)    .concat(blob('#1c4517', 1)),
-    tileProperties: { walkable: false, surface: 'wood' } },
-  { id: 'flower',     name: 'Flower',       base: '#5fb04c', detail: scatter(4, '#f0a85c', '#e056fd', 0x77).concat(scatter(2, '#ffffff', '#ffd166', 0x33)),
-    tileProperties: { surface: 'grass' } },
-  { id: 'bush',       name: 'Bush',         base: '#5fb04c', detail: roundish('#3d6b3a', 6).concat(roundish('#2d4b2a', 2)),
-    tileProperties: { walkable: false, surface: 'wood' } },
+  {
+    id: 'grass',
+    name: 'Grass',
+    base: '#5fb04c',
+    detail: scatter(8, '#6cc457', '#4d9b3a', 0x42),
+    tileProperties: { surface: 'grass' },
+  },
+  {
+    id: 'tree',
+    name: 'Tree',
+    base: '#2d6a25',
+    detail: blob('#3b8f30', 4).concat(blob('#1c4517', 1)),
+    tileProperties: { walkable: false, surface: 'wood' },
+  },
+  {
+    id: 'flower',
+    name: 'Flower',
+    base: '#5fb04c',
+    detail: scatter(4, '#f0a85c', '#e056fd', 0x77).concat(scatter(2, '#ffffff', '#ffd166', 0x33)),
+    tileProperties: { surface: 'grass' },
+  },
+  {
+    id: 'bush',
+    name: 'Bush',
+    base: '#5fb04c',
+    detail: roundish('#3d6b3a', 6).concat(roundish('#2d4b2a', 2)),
+    tileProperties: { walkable: false, surface: 'wood' },
+  },
 
   // Row 1 — water + sand
-  { id: 'water',      name: 'Water',        base: '#5db9d6', detail: scatter(6, '#7ed1e6', '#4198b0', 0x55).concat(stripes('#9adfee', 3, 4)),
-    tileProperties: { walkable: false, surface: 'water' } },
-  { id: 'deep-water', name: 'Deep Water',   base: '#2b6783', detail: scatter(4, '#3d8aab', '#1d4659', 0x33).concat(stripes('#5da6c7', 2, 5)),
-    tileProperties: { walkable: false, surface: 'water' } },
-  { id: 'sand',       name: 'Sand',         base: '#f0d995', detail: scatter(6, '#ecca6d', '#d6b562', 0x55),
-    tileProperties: { surface: 'sand' } },
-  { id: 'pond',       name: 'Pond',         base: '#5fb04c', detail: roundish('#5db9d6', 8).concat(roundish('#7ed1e6', 4)),
-    tileProperties: { walkable: false, surface: 'water' } },
+  {
+    id: 'water',
+    name: 'Water',
+    base: '#5db9d6',
+    detail: scatter(6, '#7ed1e6', '#4198b0', 0x55).concat(stripes('#9adfee', 3, 4)),
+    tileProperties: { walkable: false, surface: 'water' },
+  },
+  {
+    id: 'deep-water',
+    name: 'Deep Water',
+    base: '#2b6783',
+    detail: scatter(4, '#3d8aab', '#1d4659', 0x33).concat(stripes('#5da6c7', 2, 5)),
+    tileProperties: { walkable: false, surface: 'water' },
+  },
+  {
+    id: 'sand',
+    name: 'Sand',
+    base: '#f0d995',
+    detail: scatter(6, '#ecca6d', '#d6b562', 0x55),
+    tileProperties: { surface: 'sand' },
+  },
+  {
+    id: 'pond',
+    name: 'Pond',
+    base: '#5fb04c',
+    detail: roundish('#5db9d6', 8).concat(roundish('#7ed1e6', 4)),
+    tileProperties: { walkable: false, surface: 'water' },
+  },
 
   // Row 2 — paths / stone / dungeon
-  { id: 'path',       name: 'Path',         base: '#c6a576', detail: scatter(6, '#d6b58a', '#a8895f', 0x44),
-    tileProperties: { surface: 'sand' } },
-  { id: 'stone',      name: 'Stone',        base: '#6a6a6f', detail: scatter(6, '#7c7c81', '#535358', 0x55),
-    tileProperties: { surface: 'stone' } },
-  { id: 'wall',       name: 'Wall',         base: '#4a4a4f', detail: stripes('#5a5a5f', 2, 4).concat(stripes('#3a3a3f', 1, 8)),
-    tileProperties: { walkable: false, surface: 'stone' } },
-  { id: 'door',       name: 'Door',         base: '#4a2e1e', detail: stripes('#5e3a25', 1, 5).concat([{ x: 12, y: 8, color: '#ffd166' }]),
-    tileProperties: { surface: 'wood' } },
+  {
+    id: 'path',
+    name: 'Path',
+    base: '#c6a576',
+    detail: scatter(6, '#d6b58a', '#a8895f', 0x44),
+    tileProperties: { surface: 'sand' },
+  },
+  {
+    id: 'stone',
+    name: 'Stone',
+    base: '#6a6a6f',
+    detail: scatter(6, '#7c7c81', '#535358', 0x55),
+    tileProperties: { surface: 'stone' },
+  },
+  {
+    id: 'wall',
+    name: 'Wall',
+    base: '#4a4a4f',
+    detail: stripes('#5a5a5f', 2, 4).concat(stripes('#3a3a3f', 1, 8)),
+    tileProperties: { walkable: false, surface: 'stone' },
+  },
+  {
+    id: 'door',
+    name: 'Door',
+    base: '#4a2e1e',
+    detail: stripes('#5e3a25', 1, 5).concat([{ x: 12, y: 8, color: '#ffd166' }]),
+    tileProperties: { surface: 'wood' },
+  },
 
   // Row 3 — town / accents
-  { id: 'house-wall', name: 'House Wall',   base: '#8b6240', detail: bricks('#7a5536', '#9a6f4a') },
-  { id: 'house-roof', name: 'House Roof',   base: '#8b3a3a', detail: stripes('#a04646', 2, 3).concat(stripes('#6f2c2c', 1, 6)) },
-  { id: 'torch',      name: 'Torch',        base: '#4a2e1e', detail: [
-    { x: 7, y: 1, color: '#ffd166' }, { x: 8, y: 1, color: '#ffd166' },
-    { x: 6, y: 2, color: '#f0a85c' }, { x: 7, y: 2, color: '#fff5d6' },
-    { x: 8, y: 2, color: '#fff5d6' }, { x: 9, y: 2, color: '#f0a85c' },
-    { x: 7, y: 3, color: '#f0a85c' }, { x: 8, y: 3, color: '#f0a85c' },
-  ] },
-  { id: 'crystal',    name: 'Crystal',      base: '#2d6a25', detail: [
-    { x: 7, y: 4, color: '#7ed6df' }, { x: 8, y: 4, color: '#7ed6df' },
-    { x: 6, y: 5, color: '#5fb6c9' }, { x: 7, y: 5, color: '#cef5fa' }, { x: 8, y: 5, color: '#cef5fa' }, { x: 9, y: 5, color: '#5fb6c9' },
-    { x: 6, y: 6, color: '#5fb6c9' }, { x: 7, y: 6, color: '#7ed6df' }, { x: 8, y: 6, color: '#7ed6df' }, { x: 9, y: 6, color: '#5fb6c9' },
-    { x: 7, y: 7, color: '#5fb6c9' }, { x: 8, y: 7, color: '#5fb6c9' },
-  ] },
+  { id: 'house-wall', name: 'House Wall', base: '#8b6240', detail: bricks('#7a5536', '#9a6f4a') },
+  {
+    id: 'house-roof',
+    name: 'House Roof',
+    base: '#8b3a3a',
+    detail: stripes('#a04646', 2, 3).concat(stripes('#6f2c2c', 1, 6)),
+  },
+  {
+    id: 'torch',
+    name: 'Torch',
+    base: '#4a2e1e',
+    detail: [
+      { x: 7, y: 1, color: '#ffd166' },
+      { x: 8, y: 1, color: '#ffd166' },
+      { x: 6, y: 2, color: '#f0a85c' },
+      { x: 7, y: 2, color: '#fff5d6' },
+      { x: 8, y: 2, color: '#fff5d6' },
+      { x: 9, y: 2, color: '#f0a85c' },
+      { x: 7, y: 3, color: '#f0a85c' },
+      { x: 8, y: 3, color: '#f0a85c' },
+    ],
+  },
+  {
+    id: 'crystal',
+    name: 'Crystal',
+    base: '#2d6a25',
+    detail: [
+      { x: 7, y: 4, color: '#7ed6df' },
+      { x: 8, y: 4, color: '#7ed6df' },
+      { x: 6, y: 5, color: '#5fb6c9' },
+      { x: 7, y: 5, color: '#cef5fa' },
+      { x: 8, y: 5, color: '#cef5fa' },
+      { x: 9, y: 5, color: '#5fb6c9' },
+      { x: 6, y: 6, color: '#5fb6c9' },
+      { x: 7, y: 6, color: '#7ed6df' },
+      { x: 8, y: 6, color: '#7ed6df' },
+      { x: 9, y: 6, color: '#5fb6c9' },
+      { x: 7, y: 7, color: '#5fb6c9' },
+      { x: 8, y: 7, color: '#5fb6c9' },
+    ],
+  },
 ]
 
 /** Deterministic scatter of `count` dots across the tile. */

@@ -141,11 +141,7 @@ export class MapFormat {
     // means the map has no objects yet (NPCs, items, teleports, …).
     if (data.objectPlacements !== undefined) {
       if (!Array.isArray(data.objectPlacements)) {
-        throw new MapValidationError(
-          'objectPlacements must be an array',
-          'objectPlacements',
-          data.objectPlacements,
-        )
+        throw new MapValidationError('objectPlacements must be an array', 'objectPlacements', data.objectPlacements)
       }
       const seenIds = new Set<string>()
       const layerIds = new Set(data.layers.map((l) => l.id))

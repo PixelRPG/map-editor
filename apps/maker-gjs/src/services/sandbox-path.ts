@@ -67,10 +67,7 @@ export function sanitiseRoomId(roomId: string): string {
  * re-validated on the wire side AND just before the actual
  * `writeFile` call.
  */
-export async function writeSnapshotToSandbox(
-  snapshot: ProjectSnapshot,
-  roomId: string,
-): Promise<string> {
+export async function writeSnapshotToSandbox(snapshot: ProjectSnapshot, roomId: string): Promise<string> {
   const dir = resolveSandboxDir(roomId)
   await applyProjectSnapshot(
     snapshot,
@@ -102,8 +99,7 @@ export async function writeSnapshotToSandbox(
  */
 export async function cleanupSandboxDir(roomId: string): Promise<void> {
   const dir = resolveSandboxDir(roomId)
-  const sandboxRoot =
-    GLib.build_filenamev([GLib.get_user_data_dir(), ...SANDBOX_ROOT_SEGMENTS]) + '/'
+  const sandboxRoot = GLib.build_filenamev([GLib.get_user_data_dir(), ...SANDBOX_ROOT_SEGMENTS]) + '/'
   if (!dir.startsWith(sandboxRoot)) {
     throw new Error(`cleanupSandboxDir: refusing to delete outside sandbox root (got "${dir}")`)
   }
@@ -122,11 +118,7 @@ export async function cleanupSandboxDir(roomId: string): Promise<void> {
 function deleteRecursive(file: Gio.File): void {
   const info = file.query_info('standard::*', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null)
   if (info.get_file_type() === Gio.FileType.DIRECTORY) {
-    const enumerator = file.enumerate_children(
-      'standard::name',
-      Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS,
-      null,
-    )
+    const enumerator = file.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, null)
     let childInfo: Gio.FileInfo | null
     while ((childInfo = enumerator.next_file(null)) !== null) {
       const child = file.get_child(childInfo.get_name())

@@ -30,10 +30,7 @@ export class AtlasCanvasStory extends StoryWidget {
           name: 'selectedId',
           label: 'Selected scene',
           type: ControlType.SELECT,
-          options: [
-            { label: 'None', value: '' },
-            ...SAMPLE_SCENES.map((s) => ({ label: s.name, value: s.id })),
-          ],
+          options: [{ label: 'None', value: '' }, ...SAMPLE_SCENES.map((s) => ({ label: s.name, value: s.id }))],
         },
       ],
     }

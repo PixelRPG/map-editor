@@ -447,9 +447,7 @@ export class MapResource implements Loadable<TileMap> {
    */
   private _isSolidRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): boolean {
     if (placementSolid !== undefined) return placementSolid
-    const def = this.spriteSetResources
-      .get(spriteSetId)
-      ?.data?.sprites.find((s) => s.id === spriteId)
+    const def = this.spriteSetResources.get(spriteSetId)?.data?.sprites.find((s) => s.id === spriteId)
     if (def?.solid === true) return true
     if (def?.solid === false) return false
     return def?.tileProperties?.walkable === false

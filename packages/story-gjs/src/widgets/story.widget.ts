@@ -147,11 +147,7 @@ export class StoryWidget extends Adw.Bin {
 
   private _refreshChromeText(): void {
     if (!this._group) return
-    const title = this._meta
-      ? this._story
-        ? `${this._meta.title} — ${this._story}`
-        : this._meta.title
-      : this._story
+    const title = this._meta ? (this._story ? `${this._meta.title} — ${this._story}` : this._meta.title) : this._story
     const description = this._meta?.description ?? ''
     this._group.set_title(title)
     this._group.set_description(description)

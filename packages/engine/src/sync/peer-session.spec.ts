@@ -106,9 +106,7 @@ function pair(): {
 }
 
 function factoryFor(pc: FakeRTCPeerConnection): typeof RTCPeerConnection {
-  return function () {
-    return pc
-  } as unknown as typeof RTCPeerConnection
+  return (() => pc) as unknown as typeof RTCPeerConnection
 }
 
 export default async () => {

@@ -25,6 +25,8 @@ import {
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { buildPlaceholderAnimations } from '../runtime/placeholder-character.ts'
+import type { CharacterAnimationRole, CharacterDefinition, Facing } from '../types/data/index.ts'
+import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { buildCharacterAnimations } from '../utils/character.ts'
 import {
   isActionPressed,
@@ -33,8 +35,6 @@ import {
   readMovementInput,
   roleFromState,
 } from '../utils/player-input.ts'
-import type { CharacterAnimationRole, CharacterDefinition, Facing } from '../types/data/index.ts'
-import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 const DEFAULT_FACING: Facing = 'down'
@@ -142,8 +142,7 @@ export class PlayerSystem extends System {
     const resolved = this.resolveCharacterAnimations()
     const actorWidth = resolved.spriteWidth ?? tw
     const actorHeight = resolved.spriteHeight ?? th
-    const speedPxPerSec =
-      (this.playerCharacter?.speedTilesPerSec ?? DEFAULT_SPEED_TILES_PER_SEC) * tw
+    const speedPxPerSec = (this.playerCharacter?.speedTilesPerSec ?? DEFAULT_SPEED_TILES_PER_SEC) * tw
     const initialRole: CharacterAnimationRole = `idle-${initialFacing}`
 
     const actor = new Actor({
@@ -165,12 +164,7 @@ export class PlayerSystem extends System {
     // feet are.
     const footWidth = Math.min(FOOT_COLLIDER_MAX_WIDTH, actorWidth - 2)
     actor.collider.set(
-      Shape.Box(
-        footWidth,
-        FOOT_COLLIDER_HEIGHT,
-        vec(0.5, 0.5),
-        vec(0, actorHeight / 2 - FOOT_COLLIDER_HEIGHT / 2),
-      ),
+      Shape.Box(footWidth, FOOT_COLLIDER_HEIGHT, vec(0.5, 0.5), vec(0, actorHeight / 2 - FOOT_COLLIDER_HEIGHT / 2)),
     )
 
     actor.addComponent(new PlayerComponent())

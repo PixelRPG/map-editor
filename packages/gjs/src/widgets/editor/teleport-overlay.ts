@@ -140,12 +140,7 @@ export class TeleportOverlay extends Gtk.Widget {
     snapshot.pop()
   }
 
-  private _endpoint(
-    byId: Map<string, SampleScene>,
-    sceneId: string,
-    tx: number,
-    ty: number,
-  ): Endpoint | null {
+  private _endpoint(byId: Map<string, SampleScene>, sceneId: string, tx: number, ty: number): Endpoint | null {
     const s = byId.get(sceneId)
     if (!s) return null
     const scale = this._scale
@@ -172,14 +167,7 @@ export class TeleportOverlay extends Gtk.Widget {
     snapshot.pop()
   }
 
-  private _drawLabel(
-    snapshot: Gtk.Snapshot,
-    cx: number,
-    cy: number,
-    text: string,
-    bg: Gdk.RGBA,
-    fg: Gdk.RGBA,
-  ): void {
+  private _drawLabel(snapshot: Gtk.Snapshot, cx: number, cy: number, text: string, bg: Gdk.RGBA, fg: Gdk.RGBA): void {
     const layout = this._layoutFor(text)
     const [w, h] = layout.get_pixel_size()
     const pillW = w + LABEL_PADDING_X * 2

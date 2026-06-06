@@ -22,11 +22,7 @@ import { describe, expect, it } from '@gjsify/unit'
 import { createConnectedSessionPair, flushMicrotasks } from './in-memory-transport.ts'
 import type { ProjectSnapshot } from './project-snapshot.ts'
 import { PROJECT_SNAPSHOT_VERSION } from './project-snapshot.ts'
-import {
-  type SessionProtocolOp,
-  SNAPSHOT_CHUNK_KIND,
-  isSessionProtocolOp,
-} from './session-protocol.ts'
+import { isSessionProtocolOp, type SessionProtocolOp, SNAPSHOT_CHUNK_KIND } from './session-protocol.ts'
 import { SnapshotExchange } from './snapshot-exchange.ts'
 
 const FAKE_SNAPSHOT: ProjectSnapshot = {
@@ -243,9 +239,7 @@ export default async () => {
         // Inspect what the host actually sent on the wire — at least
         // ONE frame should be a SNAPSHOT_CHUNK_KIND (never the legacy
         // single-message SNAPSHOT_RESPONSE_KIND).
-        const hostSent = sessions.hostOpChannel.sentFrames.map(
-          (f) => JSON.parse(f) as SessionProtocolOp,
-        )
+        const hostSent = sessions.hostOpChannel.sentFrames.map((f) => JSON.parse(f) as SessionProtocolOp)
         const chunks = hostSent.filter((op) => op.kind === SNAPSHOT_CHUNK_KIND)
         expect(chunks.length).toBeGreaterThanOrEqual(1)
         // Sanity: chunk envelopes carry coherent `totalChunks` and
@@ -288,9 +282,7 @@ export default async () => {
         expect(received.project.name).toBe('Shared Project')
         expect(received.maps.length).toBe(1)
 
-        const hostSent = sessions.hostOpChannel.sentFrames.map(
-          (f) => JSON.parse(f) as SessionProtocolOp,
-        )
+        const hostSent = sessions.hostOpChannel.sentFrames.map((f) => JSON.parse(f) as SessionProtocolOp)
         const chunks = hostSent.filter((op) => op.kind === SNAPSHOT_CHUNK_KIND)
         // FAKE_SNAPSHOT JSON is ~430 bytes — 64-byte chunks → 7 chunks
         expect(chunks.length).toBeGreaterThan(3)
@@ -419,9 +411,7 @@ export default async () => {
         const received = await joinerExchange.request('room-1chunk', 2_000)
         expect(received.project.id).toBe('shared')
 
-        const hostSent = sessions.hostOpChannel.sentFrames.map(
-          (f) => JSON.parse(f) as SessionProtocolOp,
-        )
+        const hostSent = sessions.hostOpChannel.sentFrames.map((f) => JSON.parse(f) as SessionProtocolOp)
         const chunks = hostSent.filter((op) => op.kind === SNAPSHOT_CHUNK_KIND)
         // Single chunk: totalChunks === 1
         expect(chunks.length).toBe(1)

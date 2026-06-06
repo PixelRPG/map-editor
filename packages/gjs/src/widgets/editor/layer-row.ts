@@ -55,7 +55,7 @@ export class LayerRow extends Adw.Bin {
             GObject.ParamFlags.READABLE,
             '0',
           ),
-          'visible': GObject.ParamSpec.boolean(
+          visible: GObject.ParamSpec.boolean(
             'visible',
             'Visible',
             'Whether the layer is rendered',
@@ -69,7 +69,7 @@ export class LayerRow extends Adw.Bin {
             GObject.ParamFlags.READABLE,
             'view-reveal-symbolic',
           ),
-          'locked': GObject.ParamSpec.boolean(
+          locked: GObject.ParamSpec.boolean(
             'locked',
             'Locked',
             'Whether the layer is locked for editing',
@@ -83,7 +83,7 @@ export class LayerRow extends Adw.Bin {
             GObject.ParamFlags.READABLE,
             'changes-allow-symbolic',
           ),
-          'active': GObject.ParamSpec.boolean(
+          active: GObject.ParamSpec.boolean(
             'active',
             'Active',
             'Whether the row represents the active editor layer',

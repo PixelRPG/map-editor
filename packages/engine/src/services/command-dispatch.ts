@@ -27,11 +27,7 @@ import { SessionState } from '../utils/session-state.ts'
  * Same-instance equality on the undo bus drops redundant updates and
  * one paint per click would otherwise allocate fresh wrappers.
  */
-export function executeCommandOnScene(
-  scene: Scene,
-  events: EventEmitter<EngineEventMap>,
-  command: Command,
-): void {
+export function executeCommandOnScene(scene: Scene, events: EventEmitter<EngineEventMap>, command: Command): void {
   command.apply(scene)
 
   const existing = SessionState.get(scene, UndoStackComponent)

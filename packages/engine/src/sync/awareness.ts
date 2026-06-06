@@ -323,14 +323,11 @@ export class AwarenessManager {
   // Internals
   // ────────────────────────────────────────────────────────────
 
-  private updatePeer(
-    peerId: string,
-    patch: Partial<Pick<AwarenessPeerState, 'info' | 'cursor' | 'selection'>>,
-  ): void {
+  private updatePeer(peerId: string, patch: Partial<Pick<AwarenessPeerState, 'info' | 'cursor' | 'selection'>>): void {
     const prev = this.peers.get(peerId)
     const info = patch.info ?? prev?.info ?? { displayName: peerId, color: '#888' }
-    const cursor = patch.cursor !== undefined ? patch.cursor : prev?.cursor ?? null
-    const selection = patch.selection !== undefined ? patch.selection : prev?.selection ?? null
+    const cursor = patch.cursor !== undefined ? patch.cursor : (prev?.cursor ?? null)
+    const selection = patch.selection !== undefined ? patch.selection : (prev?.selection ?? null)
     const next: AwarenessPeerState = {
       peerId,
       info,

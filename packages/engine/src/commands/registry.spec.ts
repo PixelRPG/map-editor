@@ -1,7 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
-
-import { BUILT_IN_COMMANDS } from './registry.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
+import { BUILT_IN_COMMANDS } from './registry.ts'
 
 export default async () => {
   await describe('BUILT_IN_COMMANDS registry', async () => {

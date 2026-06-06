@@ -19,13 +19,7 @@ export function writeTextFile(path: string, contents: string): boolean {
       dirFile.make_directory_with_parents(null)
     }
     const file = Gio.File.new_for_path(path)
-    const [ok] = file.replace_contents(
-      new TextEncoder().encode(contents),
-      null,
-      false,
-      Gio.FileCreateFlags.NONE,
-      null,
-    )
+    const [ok] = file.replace_contents(new TextEncoder().encode(contents), null, false, Gio.FileCreateFlags.NONE, null)
     return ok
   } catch (error) {
     console.warn(`[file-io] write failed for ${path}:`, error)
@@ -62,13 +56,7 @@ export function writeBinaryFile(path: string, bytes: Uint8Array): boolean {
       dirFile.make_directory_with_parents(null)
     }
     const file = Gio.File.new_for_path(path)
-    const [ok] = file.replace_contents(
-      bytes,
-      null,
-      false,
-      Gio.FileCreateFlags.NONE,
-      null,
-    )
+    const [ok] = file.replace_contents(bytes, null, false, Gio.FileCreateFlags.NONE, null)
     return ok
   } catch (error) {
     console.warn(`[file-io] binary write failed for ${path}:`, error)

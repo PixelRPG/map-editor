@@ -1,6 +1,6 @@
-import { WebSocketServer, type WebSocket } from 'ws'
+import { type WebSocket, WebSocketServer } from 'ws'
 
-import { RoomManager, type RoomEvent } from './room-manager.ts'
+import { type RoomEvent, RoomManager } from './room-manager.ts'
 import type { PeerRole, SignallingMessage, SignallingPeer } from './types.ts'
 
 /**

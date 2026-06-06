@@ -19,7 +19,7 @@
  * pairs so a single grid covers both layers cleanly.
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -192,25 +192,25 @@ const TELEPORTS = [
     id: 'overworld-to-dungeon',
     label: 'Cave Entrance',
     from: { mapId: 'overworld', x: 13, y: 7 },
-    to:   { mapId: 'dungeon',   x: 9,  y: 12 },
+    to: { mapId: 'dungeon', x: 9, y: 12 },
   },
   {
     id: 'dungeon-to-overworld',
     label: 'Exit',
-    from: { mapId: 'dungeon',   x: 9,  y: 12 },
-    to:   { mapId: 'overworld', x: 13, y: 7 },
+    from: { mapId: 'dungeon', x: 9, y: 12 },
+    to: { mapId: 'overworld', x: 13, y: 7 },
   },
   {
     id: 'overworld-to-town',
     label: 'Town Path',
     from: { mapId: 'overworld', x: 21, y: 15 },
-    to:   { mapId: 'cozy-town', x: 3,  y: 7 },
+    to: { mapId: 'cozy-town', x: 3, y: 7 },
   },
   {
     id: 'town-to-overworld',
     label: 'Open Field',
-    from: { mapId: 'cozy-town', x: 3,  y: 7 },
-    to:   { mapId: 'overworld', x: 21, y: 15 },
+    from: { mapId: 'cozy-town', x: 3, y: 7 },
+    to: { mapId: 'overworld', x: 21, y: 15 },
   },
 ]
 
@@ -266,7 +266,9 @@ for (const scene of SCENES) {
 
   const outPath = resolve(mapsDir, `${scene.id}.json`)
   writeFileSync(outPath, `${JSON.stringify(mapData, null, 2)}\n`)
-  console.log(`Wrote ${outPath} (${scene.grid[0].length}×${scene.grid.length}, ${mapData.layers.reduce((n, l) => n + (l.sprites?.length ?? 0), 0)} sprites, ${sourceTeleports.length} teleports)`)
+  console.log(
+    `Wrote ${outPath} (${scene.grid[0].length}×${scene.grid.length}, ${mapData.layers.reduce((n, l) => n + (l.sprites?.length ?? 0), 0)} sprites, ${sourceTeleports.length} teleports)`,
+  )
 }
 
 // --- Write the project file --------------------------------------------------
@@ -289,8 +291,8 @@ const project = {
   })),
   mapCategories: [
     { id: 'overworld', name: 'Overworld' },
-    { id: 'dungeon',   name: 'Dungeon' },
-    { id: 'town',      name: 'Town' },
+    { id: 'dungeon', name: 'Dungeon' },
+    { id: 'town', name: 'Town' },
   ],
   spriteSets: [
     {
@@ -314,4 +316,6 @@ const project = {
 
 const projectPath = resolve(TEMPLATE_DIR, 'game-project.json')
 writeFileSync(projectPath, `${JSON.stringify(project, null, 2)}\n`)
-console.log(`Wrote ${projectPath} (${SCENES.length} maps, ${TELEPORTS.length} teleport placements distributed across source maps)`)
+console.log(
+  `Wrote ${projectPath} (${SCENES.length} maps, ${TELEPORTS.length} teleport placements distributed across source maps)`,
+)

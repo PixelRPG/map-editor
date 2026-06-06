@@ -28,9 +28,7 @@ export interface DiscoveredService {
   txt: Record<string, string>
 }
 
-export type LanDiscoveryEvent =
-  | { kind: 'resolved'; service: DiscoveredService }
-  | { kind: 'gone'; serviceName: string }
+export type LanDiscoveryEvent = { kind: 'resolved'; service: DiscoveredService } | { kind: 'gone'; serviceName: string }
 
 /**
  * Convert one line of `avahi-browse -p` output into a structured

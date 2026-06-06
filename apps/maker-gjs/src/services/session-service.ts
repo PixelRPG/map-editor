@@ -453,10 +453,7 @@ export class SessionService {
    */
   private wireCollabClose(collab: CollabSession): void {
     collab.peer.events.on('closed', () => {
-      if (
-        (this.state.kind === 'connected' || this.state.kind === 'awaiting-engine') &&
-        this.state.collab === collab
-      ) {
+      if ((this.state.kind === 'connected' || this.state.kind === 'awaiting-engine') && this.state.collab === collab) {
         void this.stopHosting()
         this.setState(this.wasBrowsing ? { kind: 'browsing' } : { kind: 'idle' })
       }

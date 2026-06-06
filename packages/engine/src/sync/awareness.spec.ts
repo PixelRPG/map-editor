@@ -1,11 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import {
-  type AwarenessMessage,
-  AwarenessManager,
-  type AwarenessPeerState,
-  isAwarenessMessage,
-} from './awareness.ts'
+import { AwarenessManager, type AwarenessMessage, type AwarenessPeerState, isAwarenessMessage } from './awareness.ts'
 
 interface FakeClock {
   now: () => number
@@ -29,12 +24,10 @@ export default async () => {
   await describe('isAwarenessMessage', async () => {
     await it('accepts every valid variant', async () => {
       expect(isAwarenessMessage({ type: 'presence', peerId: 'p1', info: LOCAL_INFO })).toBe(true)
-      expect(
-        isAwarenessMessage({ type: 'cursor', peerId: 'p1', cursor: { sceneId: 's1', x: 1, y: 2 } }),
-      ).toBe(true)
-      expect(
-        isAwarenessMessage({ type: 'selection', peerId: 'p1', selection: { placementIds: ['a', 'b'] } }),
-      ).toBe(true)
+      expect(isAwarenessMessage({ type: 'cursor', peerId: 'p1', cursor: { sceneId: 's1', x: 1, y: 2 } })).toBe(true)
+      expect(isAwarenessMessage({ type: 'selection', peerId: 'p1', selection: { placementIds: ['a', 'b'] } })).toBe(
+        true,
+      )
       expect(isAwarenessMessage({ type: 'leave', peerId: 'p1' })).toBe(true)
     })
 
@@ -44,12 +37,10 @@ export default async () => {
       expect(isAwarenessMessage('not an object')).toBe(false)
       expect(isAwarenessMessage({ type: 'presence' })).toBe(false)
       expect(isAwarenessMessage({ type: 'presence', peerId: '', info: LOCAL_INFO })).toBe(false)
-      expect(isAwarenessMessage({ type: 'cursor', peerId: 'p1', cursor: { sceneId: 's', x: 'not-a-number', y: 0 } })).toBe(
-        false,
-      )
       expect(
-        isAwarenessMessage({ type: 'selection', peerId: 'p1', selection: { placementIds: ['a', 5] } }),
+        isAwarenessMessage({ type: 'cursor', peerId: 'p1', cursor: { sceneId: 's', x: 'not-a-number', y: 0 } }),
       ).toBe(false)
+      expect(isAwarenessMessage({ type: 'selection', peerId: 'p1', selection: { placementIds: ['a', 5] } })).toBe(false)
       expect(isAwarenessMessage({ type: 'unknown', peerId: 'p1' })).toBe(false)
     })
   })

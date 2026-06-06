@@ -343,9 +343,7 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
           // An empty string is allowed (corner case: a zero-byte
           // image), but any other invalid character fails fast.
           if (img.base64.length > 0 && !/^[A-Za-z0-9+/=]+$/.test(img.base64)) {
-            throw new Error(
-              `parseProjectSnapshot: spriteSets[].images[].base64 contains non-base64 characters`,
-            )
+            throw new Error(`parseProjectSnapshot: spriteSets[].images[].base64 contains non-base64 characters`)
           }
         }
       }
@@ -443,9 +441,7 @@ export async function applyProjectSnapshot(
   // reproduce the pre-fix "joiner has JSON but no PNG" bug.
   const needsBinary = (snapshot.spriteSets ?? []).some((s) => (s.images ?? []).length > 0)
   if (needsBinary && !writeBinaryFile) {
-    throw new Error(
-      'applyProjectSnapshot: snapshot has binary images but no writeBinaryFile callback was supplied',
-    )
+    throw new Error('applyProjectSnapshot: snapshot has binary images but no writeBinaryFile callback was supplied')
   }
 
   // Project descriptor first — it's the entry point the engine

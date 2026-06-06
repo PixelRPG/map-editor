@@ -75,9 +75,9 @@ export interface PeerSessionEventMap {
   /** Unreliable channel delivered a frame. Payload is the awareness data. */
   'awareness-received': { data: unknown }
   /** Connection closed for any reason — clean shutdown, peer drop, ICE failure. */
-  'closed': { reason: string }
+  closed: { reason: string }
   /** Recoverable error — caller decides whether to retry / surface to UI. */
-  'error': { error: Error }
+  error: { error: Error }
 }
 
 /**

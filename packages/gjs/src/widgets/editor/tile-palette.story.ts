@@ -78,7 +78,14 @@ export class TilePaletteSpriteSheetStory extends StoryWidget {
       component: TilePalette.$gtype,
       controls: [
         { name: 'tileSize', label: 'Tile size', type: ControlType.RANGE, min: 16, max: 64, step: 2 },
-        { name: 'overrideColumns', label: 'Override columns (0 = auto)', type: ControlType.RANGE, min: 0, max: 64, step: 1 },
+        {
+          name: 'overrideColumns',
+          label: 'Override columns (0 = auto)',
+          type: ControlType.RANGE,
+          min: 0,
+          max: 64,
+          step: 1,
+        },
       ],
     }
   }
@@ -101,9 +108,7 @@ export class TilePaletteSpriteSheetStory extends StoryWidget {
 
   private async _loadSheet(): Promise<void> {
     try {
-      const resource = await GdkSpriteSetResource.fromPath(
-        '../../games/zelda-like/spritesets/lokiri-forest.json',
-      )
+      const resource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/lokiri-forest.json')
       if (!resource.spriteSheet || !this._palette) return
       this._palette.setFromSpriteSheet(resource.spriteSheet)
     } catch (error) {

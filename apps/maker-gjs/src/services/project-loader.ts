@@ -1,15 +1,7 @@
 import { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '@pixelrpg/gjs'
 
-const SOLID_PALETTE = [
-  '#3d6b3a',
-  '#3a5e7b',
-  '#7a5a3a',
-  '#6b3a3a',
-  '#4a4a6b',
-  '#6b6b3a',
-  '#3a6b6b',
-]
+const SOLID_PALETTE = ['#3d6b3a', '#3a5e7b', '#7a5a3a', '#6b3a3a', '#4a4a6b', '#6b6b3a', '#3a6b6b']
 
 /** Result returned by {@link loadProjectAsAtlas}. */
 export interface LoadedProject {
@@ -112,7 +104,8 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
       const props = def.properties as
         | { targetMapId?: string; targetTileX?: number; targetTileY?: number; label?: string }
         | undefined
-      if (!props?.targetMapId || typeof props.targetTileX !== 'number' || typeof props.targetTileY !== 'number') return []
+      if (!props?.targetMapId || typeof props.targetTileX !== 'number' || typeof props.targetTileY !== 'number')
+        return []
       return [
         {
           from: data.id,

@@ -6,8 +6,8 @@ import {
   DEFAULT_ICE_SERVERS,
   type PeerRole,
   type PeerSessionEventMap,
-  type RTCPeerConnectionFactory,
   type PeerSessionState,
+  type RTCPeerConnectionFactory,
   type SignallingMessage,
   type SignallingTransport,
 } from './types.ts'
@@ -238,10 +238,7 @@ export class PeerSession {
       // A drop on ops would mean state divergence; surface so the
       // caller can retry or escalate.
       if (kind === 'op') {
-        plog(
-          this.role,
-          `sendOp DROPPED: op channel not open (state=${channel?.readyState ?? 'absent'})`,
-        )
+        plog(this.role, `sendOp DROPPED: op channel not open (state=${channel?.readyState ?? 'absent'})`)
         this.events.emit('error', {
           error: new Error(`PeerSession.sendOp: op channel not open (state=${channel?.readyState ?? 'absent'})`),
         })

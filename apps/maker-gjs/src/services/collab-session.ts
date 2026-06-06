@@ -1,15 +1,10 @@
-import type {
-  AwarenessPeerInfo,
-  Engine,
-  ProjectSnapshot,
-  SignallingTransport,
-} from '@pixelrpg/engine'
+import type { AwarenessPeerInfo, Engine, ProjectSnapshot, SignallingTransport } from '@pixelrpg/engine'
 import {
   AwarenessManager,
   captureProjectSnapshot,
   isSessionProtocolOp,
-  PeerSession,
   type PeerRole,
+  PeerSession,
   type PeerSessionState,
   RemoteCursorRenderer,
   SessionController,
@@ -259,21 +254,13 @@ export class CollabSession {
     this.subscriptions.push(() => announceOnConnect.close())
 
     try {
-      await withTimeout(
-        'CollabSession peer.connect',
-        this.peerConnectTimeoutMs,
-        this.peer.connect(),
-      )
+      await withTimeout('CollabSession peer.connect', this.peerConnectTimeoutMs, this.peer.connect())
       // peer.connect() resolves on ICE-gather-started, not connected.
       // Wait for the actual `'connected'` state under the same deadline
       // (minus what peer.connect() already consumed — we don't track
       // elapsed precisely; the remaining budget is approximately
       // `timeout - 0`, which is fine for the typical sub-second LAN).
-      await withTimeout(
-        'CollabSession reach connected state',
-        this.peerConnectTimeoutMs,
-        this.waitForConnected(),
-      )
+      await withTimeout('CollabSession reach connected state', this.peerConnectTimeoutMs, this.waitForConnected())
     } catch (err) {
       log.warn('start() failed during peer negotiation', err)
       throw err

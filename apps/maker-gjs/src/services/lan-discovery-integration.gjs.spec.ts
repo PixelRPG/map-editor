@@ -23,9 +23,9 @@
  * cross-contaminate.
  */
 
-import { describe, expect, it, on } from '@gjsify/unit'
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
+import { describe, expect, it, on } from '@gjsify/unit'
 
 import { LanBrowser, LanPublisher } from './lan-discovery.ts'
 
@@ -128,8 +128,7 @@ export default async () => {
                 readerClosed = true
                 return
               }
-              const decoded =
-                typeof line === 'string' ? line : new TextDecoder().decode(line)
+              const decoded = typeof line === 'string' ? line : new TextDecoder().decode(line)
               if (decoded.startsWith('=') || decoded.startsWith('+') || decoded.startsWith('-')) {
                 const fields = decoded.split(';')
                 events.push({ kind: decoded[0], name: fields[3] ?? '' })

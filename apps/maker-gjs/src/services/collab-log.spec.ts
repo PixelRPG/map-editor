@@ -15,7 +15,10 @@ interface CapturedLine {
   line: string
 }
 
-function createCapturingSink(): { lines: CapturedLine[]; sink: { log: (l: string) => void; warn: (l: string) => void; error: (l: string) => void } } {
+function createCapturingSink(): {
+  lines: CapturedLine[]
+  sink: { log: (l: string) => void; warn: (l: string) => void; error: (l: string) => void }
+} {
   const lines: CapturedLine[] = []
   return {
     lines,

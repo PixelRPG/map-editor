@@ -1,6 +1,6 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
+import type Gtk from '@girs/gtk-4.0'
 import { FloatingPlay } from './floating-play'
 import { FloatingTopBar } from './floating-top-bar'
 import { FloatingZoom } from './floating-zoom'

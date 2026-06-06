@@ -1,5 +1,9 @@
 import { Logger } from 'excalibur'
-import { BUILT_IN_SCIENTIST, BUILT_IN_SCIENTIST_SPRITESET, BUILT_IN_SCIENTIST_SPRITESET_ID } from '../__demo__/scientist/index'
+import {
+  BUILT_IN_SCIENTIST,
+  BUILT_IN_SCIENTIST_SPRITESET,
+  BUILT_IN_SCIENTIST_SPRITESET_ID,
+} from '../__demo__/scientist/index'
 import { GameProjectFormat } from '../format/GameProjectFormat'
 import type { GameProjectData, GameProjectResourceOptions, MapData } from '../types'
 import { loadTextFile } from '../utils'

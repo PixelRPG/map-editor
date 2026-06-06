@@ -27,15 +27,7 @@ export interface TileProperties {
    * Free-form string so projects can introduce custom surfaces
    * (e.g. `'magma'`, `'cloud'`) without an engine schema change.
    */
-  surface?:
-    | 'grass'
-    | 'water'
-    | 'stone'
-    | 'sand'
-    | 'wood'
-    | 'snow'
-    | 'dirt'
-    | (string & {})
+  surface?: 'grass' | 'water' | 'stone' | 'sand' | 'wood' | 'snow' | 'dirt' | (string & {})
 
   /**
    * Explicit override for the footstep sound this tile triggers.

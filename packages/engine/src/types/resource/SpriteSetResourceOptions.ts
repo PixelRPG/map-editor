@@ -1,5 +1,5 @@
-import type { ResourceOptions } from '../ResourceOptions'
 import type { SpriteSetData } from '../data/index'
+import type { ResourceOptions } from '../ResourceOptions'
 
 /**
  * Options for the SpriteSetResource loader

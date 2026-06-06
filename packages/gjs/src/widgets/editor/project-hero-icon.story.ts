@@ -23,9 +23,7 @@ export class ProjectHeroIconStory extends StoryWidget {
       title: 'Editor/Project Hero Icon',
       description: 'Accent-colored rounded-square chip with a compass-rose glyph; used by the library mode rail.',
       component: ProjectHeroIcon.$gtype,
-      controls: [
-        { name: 'size', label: 'Size', type: ControlType.RANGE, min: 24, max: 160, step: 4 },
-      ],
+      controls: [{ name: 'size', label: 'Size', type: ControlType.RANGE, min: 24, max: 160, step: 4 }],
     }
   }
 

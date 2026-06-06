@@ -114,11 +114,7 @@ export function isSessionProtocolOp(rawOp: unknown): rawOp is SessionProtocolOp 
  * object so the type discriminator stays exact + the kind string
  * is single-source-of-truth.
  */
-export function createSnapshotRequestOp(args: {
-  peerId: string
-  seq: number
-  roomId: string
-}): SnapshotRequestOp {
+export function createSnapshotRequestOp(args: { peerId: string; seq: number; roomId: string }): SnapshotRequestOp {
   return {
     kind: SNAPSHOT_REQUEST_KIND,
     payload: { roomId: args.roomId },

@@ -202,9 +202,7 @@ export function makeTransportPair(): {
 
 /** Wrap a {@link FakeRTCPeerConnection} as the `typeof RTCPeerConnection` PeerSession options expect. */
 export function rtcFactoryFor(pc: FakeRTCPeerConnection): typeof RTCPeerConnection {
-  return function () {
-    return pc
-  } as unknown as typeof RTCPeerConnection
+  return (() => pc) as unknown as typeof RTCPeerConnection
 }
 
 /**

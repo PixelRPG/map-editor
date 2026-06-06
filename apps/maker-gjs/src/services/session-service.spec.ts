@@ -1,8 +1,14 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import type { Engine, SignallingMessage, SignallingTransport } from '@pixelrpg/engine'
-import { generatePeerId, type HostingHandle, type SessionBackend, SessionService, type SessionState } from './session-service.ts'
 import type { LanDiscoveryEvent } from './lan-discovery-parse.ts'
+import {
+  generatePeerId,
+  type HostingHandle,
+  type SessionBackend,
+  SessionService,
+  type SessionState,
+} from './session-service.ts'
 
 class MockTransport implements SignallingTransport {
   public closed = false
@@ -21,7 +27,8 @@ class MockTransport implements SignallingTransport {
 
 class MockBackend implements SessionBackend {
   public browsing = false
-  public hostingArgs: { roomId: string; sessionName: string; projectName: string; hostDisplayName: string } | null = null
+  public hostingArgs: { roomId: string; sessionName: string; projectName: string; hostDisplayName: string } | null =
+    null
   public lanConnectArgs: { host: string; port: number } | null = null
   public relayConnectArgs: { roomId: string; role: 'host' | 'joiner' } | null = null
   public browseListener: ((event: LanDiscoveryEvent) => void) | null = null

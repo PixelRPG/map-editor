@@ -93,12 +93,7 @@ export function formatError(err: unknown): string {
  * Emit a single log line in the canonical `[scope] message` shape.
  * When `err` is provided, it's appended as `: <formatted error>`.
  */
-export function emitCollabLog(
-  scope: string,
-  level: CollabLogLevel,
-  message: string,
-  err?: unknown,
-): void {
+export function emitCollabLog(scope: string, level: CollabLogLevel, message: string, err?: unknown): void {
   const head = `[${scope}] ${message}`
   const line = err === undefined ? head : `${head}: ${formatError(err)}`
   if (level === 'info') activeSink.log(line)
@@ -164,12 +159,7 @@ export class CollabTimeoutError extends Error {
  * `operation` is the human-readable verb used in the timeout
  * message (e.g. `'LAN signalling connect'`).
  */
-export function withTimeout<T>(
-  operation: string,
-  timeoutMs: number,
-  promise: Promise<T>,
-  url?: string,
-): Promise<T> {
+export function withTimeout<T>(operation: string, timeoutMs: number, promise: Promise<T>, url?: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       reject(new CollabTimeoutError(operation, timeoutMs, url))

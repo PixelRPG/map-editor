@@ -22,9 +22,7 @@ import { describe, expect, it } from '@gjsify/unit'
 import { isOrphanedPixelrpgPublisher, type ProcReaders } from './orphan-publisher-cleanup.ts'
 
 /** Build a `ProcReaders` over an in-memory fixture map. */
-function fixture(
-  procs: Record<number, { comm?: string; cmdline?: string[]; ppid?: number }>,
-): ProcReaders {
+function fixture(procs: Record<number, { comm?: string; cmdline?: string[]; ppid?: number }>): ProcReaders {
   return {
     readComm: (pid) => procs[pid]?.comm ?? null,
     readCmdlineArgs: (pid) => procs[pid]?.cmdline ?? null,

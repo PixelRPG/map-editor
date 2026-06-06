@@ -1,6 +1,6 @@
 import { describe, expect, it, spy } from '@gjsify/unit'
 
-import { RoomManager, type RoomEvent } from './room-manager.ts'
+import { type RoomEvent, RoomManager } from './room-manager.ts'
 import type { SignallingPeer } from './types.ts'
 
 class FakePeer implements SignallingPeer {

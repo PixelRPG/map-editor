@@ -1,9 +1,8 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { ProjectHeroIcon } from './project-hero-icon'
-
 import Template from './mode-rail.blp'
+import { ProjectHeroIcon } from './project-hero-icon'
 
 GObject.type_ensure(ProjectHeroIcon.$gtype)
 

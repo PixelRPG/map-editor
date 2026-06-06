@@ -1,4 +1,4 @@
-import { EraseTileCommand, type PaintTilePayload, PaintTileCommand } from './paint-tile.command.ts'
+import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from './paint-tile.command.ts'
 import type { CommandRegistry } from './types.ts'
 
 /**

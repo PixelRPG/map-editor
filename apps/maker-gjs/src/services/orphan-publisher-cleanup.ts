@@ -113,10 +113,7 @@ export function cleanupOrphanedPublishers(): { scanned: number; killed: number; 
  * in-memory fixtures so the cleanup logic can be exercised
  * without a real /proc tree.
  */
-export function isOrphanedPixelrpgPublisher(
-  pid: number,
-  readers: ProcReaders = DEFAULT_PROC_READERS,
-): boolean {
+export function isOrphanedPixelrpgPublisher(pid: number, readers: ProcReaders = DEFAULT_PROC_READERS): boolean {
   const comm = readers.readComm(pid)
   if (!comm) return false
   if (!comm.trim().startsWith(COMM_NAME.slice(0, 15))) {

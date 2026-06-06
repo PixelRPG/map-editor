@@ -246,9 +246,7 @@ export const DEMO_TILE_COLORS = [
 ]
 
 /** Build a deterministic list of synthetic tile descriptors. */
-export function buildDemoTiles(
-  count: number,
-): { id: number; color: string; name: string }[] {
+export function buildDemoTiles(count: number): { id: number; color: string; name: string }[] {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     color: DEMO_TILE_COLORS[i % DEMO_TILE_COLORS.length],

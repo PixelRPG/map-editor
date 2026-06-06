@@ -12,7 +12,7 @@ export default async () => {
       expect(event).toStrictEqual({
         kind: 'resolved',
         service: {
-          name: "Bob%27s Project",
+          name: 'Bob%27s Project',
           host: 'bob.local',
           address: '192.168.1.42',
           port: 8088,
@@ -31,7 +31,7 @@ export default async () => {
 
     await it('parses a withdrawal line', async () => {
       const event = parseAvahiBrowseLine('-;eth0;IPv4;Bob%27s Project;_pixelrpg._tcp;local')
-      expect(event).toStrictEqual({ kind: 'gone', serviceName: "Bob%27s Project" })
+      expect(event).toStrictEqual({ kind: 'gone', serviceName: 'Bob%27s Project' })
     })
 
     await it('returns null for announce-only `+` lines (we only act on resolved)', async () => {

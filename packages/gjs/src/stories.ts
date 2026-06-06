@@ -5,13 +5,9 @@
 
 import GObject from '@girs/gobject-2.0'
 import type { StoryModule } from '@pixelrpg/story-gjs'
-
-import { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
-
 import { AnimationList } from './widgets/cast/animation-list'
 import { CastInspector } from './widgets/cast/cast-inspector'
 import { CharacterPreview } from './widgets/cast/character-preview'
-import { TileInspector } from './widgets/tiles/tile-inspector'
 import { AtlasCanvas } from './widgets/editor/atlas-canvas'
 import { AtlasCanvasStories } from './widgets/editor/atlas-canvas.story'
 import { FloatingTopBar } from './widgets/editor/floating-top-bar'
@@ -22,9 +18,9 @@ import { LayerRow } from './widgets/editor/layer-row'
 import { LayerRowStories } from './widgets/editor/layer-row.story'
 import { LayersTab } from './widgets/editor/layers-tab'
 import { MiniMap } from './widgets/editor/mini-map'
-import { ObjectsTab } from './widgets/editor/objects-tab'
 import { ModeRail } from './widgets/editor/mode-rail'
 import { ModeRailStories } from './widgets/editor/mode-rail.story'
+import { ObjectsTab } from './widgets/editor/objects-tab'
 import { ProjectHeroIcon } from './widgets/editor/project-hero-icon'
 import { ProjectHeroIconStories } from './widgets/editor/project-hero-icon.story'
 import { PropsTab } from './widgets/editor/props-tab'
@@ -39,6 +35,8 @@ import { TeleportOverlay } from './widgets/editor/teleport-overlay'
 import { TilePalette } from './widgets/editor/tile-palette'
 import { TilePaletteStories } from './widgets/editor/tile-palette.story'
 import { TilesTab } from './widgets/editor/tiles-tab'
+import { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'
+import { TileInspector } from './widgets/tiles/tile-inspector'
 
 // Force widget registration up-front so any composite template that
 // references one of these by GTypeName resolves at template-parse time.

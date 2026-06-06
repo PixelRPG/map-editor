@@ -1,11 +1,11 @@
-import { EventEmitter as ExEventEmitter } from 'excalibur'
 import { describe, expect, it } from '@gjsify/unit'
+import { EventEmitter as ExEventEmitter } from 'excalibur'
 
 import type { Command, CommandRegistry, Operation } from '../commands/types.ts'
 import type { Engine } from '../engine.ts'
 import type { PeerSession } from './peer-session.ts'
-import type { PeerSessionEventMap } from './types.ts'
 import { SessionController } from './session-controller.ts'
+import type { PeerSessionEventMap } from './types.ts'
 
 interface MockEngine {
   events: ExEventEmitter<{

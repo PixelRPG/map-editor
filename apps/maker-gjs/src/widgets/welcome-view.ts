@@ -262,7 +262,13 @@ export class WelcomeView extends Adw.Bin {
     }
   }
 
-  private _buildTemplateCard(template: { id: string; name: string; caption: string; projectPath: string; accentColor: string }): Gtk.Button {
+  private _buildTemplateCard(template: {
+    id: string
+    name: string
+    caption: string
+    projectPath: string
+    accentColor: string
+  }): Gtk.Button {
     const button = new Gtk.Button({ css_classes: ['card'] })
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,

@@ -263,9 +263,7 @@ export class SpriteSetResource {
       // already-fully-qualified, so we let `loadImage` handle them
       // as-is. Only relative paths go through `joinPaths` for
       // basePath resolution.
-      const imagePath = isAbsoluteOrUrl(data.image.path)
-        ? data.image.path
-        : joinPaths(this.basePath, data.image.path)
+      const imagePath = isAbsoluteOrUrl(data.image.path) ? data.image.path : joinPaths(this.basePath, data.image.path)
       try {
         const imageLoader = await this.loadImage(imagePath)
         imageLoaders.set(data.image.id, imageLoader)

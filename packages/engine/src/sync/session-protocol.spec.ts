@@ -13,7 +13,14 @@ import {
 const FAKE_SNAPSHOT: ProjectSnapshot = {
   version: PROJECT_SNAPSHOT_VERSION,
   projectFilename: 'game-project.json',
-  project: { id: 'p', name: 'P', version: '1', spriteSets: [], maps: [], startup: { initialMapId: 'm' } } as unknown as ProjectSnapshot['project'],
+  project: {
+    id: 'p',
+    name: 'P',
+    version: '1',
+    spriteSets: [],
+    maps: [],
+    startup: { initialMapId: 'm' },
+  } as unknown as ProjectSnapshot['project'],
   maps: [],
   spriteSets: [],
 }

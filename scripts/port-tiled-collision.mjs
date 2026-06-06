@@ -51,11 +51,14 @@ function parseTiledColliders(tsxText) {
       if (inner.includes('<polygon')) {
         const pts = inner.match(/<polygon\s+points="([^"]+)"/)
         if (!pts) continue
-        const points = pts[1].split(/\s+/).filter(Boolean).map((pair) => {
-          const [px, py] = pair.split(',').map(Number)
-          const flip = rotation === 180 || rotation === -180
-          return { x: x + (flip ? -px : px), y: y + (flip ? -py : py) }
-        })
+        const points = pts[1]
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((pair) => {
+            const [px, py] = pair.split(',').map(Number)
+            const flip = rotation === 180 || rotation === -180
+            return { x: x + (flip ? -px : px), y: y + (flip ? -py : py) }
+          })
         colliders.push({ type: 'polygon', points })
         continue
       }

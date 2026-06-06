@@ -107,7 +107,13 @@ export default async () => {
           // wire envelope.
           registry: {
             'tile.paint': (payload: unknown) =>
-              ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} } as unknown as Command),
+              ({
+                kind: 'tile.paint',
+                label: 'paint',
+                payload,
+                apply: () => {},
+                revert: () => {},
+              }) as unknown as Command,
           },
         })
         const joinerCtrl = new SessionController({
@@ -116,7 +122,13 @@ export default async () => {
           peerId: 'joiner-1',
           registry: {
             'tile.paint': (payload: unknown) =>
-              ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} } as unknown as Command),
+              ({
+                kind: 'tile.paint',
+                label: 'paint',
+                payload,
+                apply: () => {},
+                revert: () => {},
+              }) as unknown as Command,
           },
         })
 
@@ -145,7 +157,7 @@ export default async () => {
         const joinerEngine = makeRecordingEngine()
         const registry = {
           'tile.paint': (payload: unknown) =>
-            ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} } as unknown as Command),
+            ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} }) as unknown as Command,
         }
 
         const hostCtrl = new SessionController({
@@ -187,7 +199,13 @@ export default async () => {
           peerId: 'host-3',
           registry: {
             'tile.paint': (payload: unknown) =>
-              ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} } as unknown as Command),
+              ({
+                kind: 'tile.paint',
+                label: 'paint',
+                payload,
+                apply: () => {},
+                revert: () => {},
+              }) as unknown as Command,
           },
         })
         const joinerCtrl = new SessionController({
@@ -312,14 +330,14 @@ export default async () => {
   })
 
   await describe('Collab integration — tear-down ordering', async () => {
-    await it('closing one peer\'s controller does not leak into the other', async () => {
+    await it("closing one peer's controller does not leak into the other", async () => {
       const sessions = await createConnectedSessionPair()
       try {
         const hostEngine = makeRecordingEngine()
         const joinerEngine = makeRecordingEngine()
         const registry = {
           'tile.paint': (payload: unknown) =>
-            ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} } as unknown as Command),
+            ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} }) as unknown as Command,
         }
 
         const hostCtrl = new SessionController({

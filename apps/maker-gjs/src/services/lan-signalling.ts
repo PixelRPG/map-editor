@@ -1,7 +1,5 @@
 import type { SignallingMessage, SignallingTransport } from '@pixelrpg/engine'
-import { WebSocket, type WebSocketServer as WsServer } from 'ws'
-
-import { WebSocketServer } from 'ws'
+import { WebSocket, WebSocketServer, type WebSocketServer as WsServer } from 'ws'
 
 import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
 
@@ -253,8 +251,7 @@ export async function startLanHostServer(opts: LanHostServerOptions): Promise<La
   // returns `string` for AF_UNIX sockets (we never use those) so
   // narrow to the AddressInfo shape before reading `.port`.
   const boundAddress = wss.address()
-  const boundPort =
-    boundAddress && typeof boundAddress !== 'string' ? boundAddress.port : opts.port
+  const boundPort = boundAddress && typeof boundAddress !== 'string' ? boundAddress.port : opts.port
 
   let activePeer: WebSocket | null = null
 
@@ -302,9 +299,7 @@ export async function connectLanJoinerTransport(
   // `ws://::1:8089/` is ambiguous (port? part of address?), only
   // `ws://[::1]:8089/` parses. Avahi resolves on IPv6 too, so
   // the joiner can receive a `::1` / `fe80::…` address.
-  const target = hostAddress.includes(':') && !hostAddress.startsWith('[')
-    ? `[${hostAddress}]`
-    : hostAddress
+  const target = hostAddress.includes(':') && !hostAddress.startsWith('[') ? `[${hostAddress}]` : hostAddress
   const url = `ws://${target}:${port}/`
   log.info(`joiner connecting to ${url}`)
   const ws = new WebSocket(url)

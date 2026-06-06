@@ -185,30 +185,27 @@ export class SnapshotExchange {
       return Promise.reject(new Error('SnapshotExchange: disposed'))
     }
     if (this.pending) {
-      return Promise.reject(
-        new Error('SnapshotExchange: a snapshot request is already in flight — await it first'),
-      )
+      return Promise.reject(new Error('SnapshotExchange: a snapshot request is already in flight — await it first'))
     }
 
     return new Promise<ProjectSnapshot>((resolve, reject) => {
       const ms = timeoutMs ?? this.defaultTimeoutMs
-      const timer = ms > 0
-        ? setTimeout(() => {
-            if (this.pending?.timer === timer) {
-              const p = this.pending
-              this.pending = null
-              p.reject(new Error(`SnapshotExchange: request timed out after ${ms} ms`))
-            }
-          }, ms)
-        : null
+      const timer =
+        ms > 0
+          ? setTimeout(() => {
+              if (this.pending?.timer === timer) {
+                const p = this.pending
+                this.pending = null
+                p.reject(new Error(`SnapshotExchange: request timed out after ${ms} ms`))
+              }
+            }, ms)
+          : null
       this.pending = { resolve, reject, timer }
       // Wire-send happens AFTER the pending registration so a
       // synchronous-handler test scenario (where the response
       // arrives before sendOp returns) can't race past the
       // assignment.
-      this.send(
-        createSnapshotRequestOp({ peerId: this.peerId, seq: this.nextSeq(), roomId }),
-      )
+      this.send(createSnapshotRequestOp({ peerId: this.peerId, seq: this.nextSeq(), roomId }))
     })
   }
 

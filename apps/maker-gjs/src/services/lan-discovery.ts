@@ -69,10 +69,7 @@ export class LanPublisher {
 
     const args = ['avahi-publish-service', ad.name, SERVICE_TYPE, String(ad.port), ...txtToArgs(ad.txt)]
     try {
-      this.process = Gio.Subprocess.new(
-        args,
-        Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
-      )
+      this.process = Gio.Subprocess.new(args, Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE)
     } catch (err) {
       throw new Error(
         `LanPublisher: failed to start avahi-publish-service — is the avahi-tools package installed? (${
@@ -127,10 +124,7 @@ export class LanBrowser {
     const args = [...AVAHI_BROWSE_ARGS]
     log.info(`starting browser: ${args.join(' ')}`)
     try {
-      this.process = Gio.Subprocess.new(
-        args,
-        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
-      )
+      this.process = Gio.Subprocess.new(args, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE)
     } catch (err) {
       this.onEvent = null
       throw new Error(

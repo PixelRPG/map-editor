@@ -1,5 +1,5 @@
-import { Entity, type Scene } from 'excalibur'
 import type { Component, ComponentCtor } from 'excalibur'
+import { Entity, type Scene } from 'excalibur'
 import { SubscriptionRegistry } from './subscription-registry.ts'
 
 /**
@@ -126,11 +126,7 @@ export class SessionState {
    * Returns a `disconnect` function — callers stash it in their
    * per-widget disposables bag and release it from `vfunc_unmap`.
    */
-  static subscribe<C extends Component>(
-    scene: Scene,
-    ctor: ComponentCtor<C>,
-    listener: Listener<C>,
-  ): Unsubscribe {
+  static subscribe<C extends Component>(scene: Scene, ctor: ComponentCtor<C>, listener: Listener<C>): Unsubscribe {
     SessionState.ensure(scene) // make sure the singleton exists so latest-value semantics work
     const reg = getRegistry(scene)
     return reg.subscribe(ctor as ComponentCtor<Component>, (value) => {

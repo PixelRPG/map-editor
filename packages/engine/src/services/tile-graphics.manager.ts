@@ -101,10 +101,7 @@ export function rebuildAllTileGraphics(
     } catch (error) {
       // Single-sprite failure shouldn't abort the whole rebuild; log with
       // enough context to debug, then continue.
-      console.error(
-        `[TileGraphicsManager] Failed to add graphic ${ref.spriteSetId}#${ref.spriteId} to tile:`,
-        error,
-      )
+      console.error(`[TileGraphicsManager] Failed to add graphic ${ref.spriteSetId}#${ref.spriteId} to tile:`, error)
     }
   }
 }

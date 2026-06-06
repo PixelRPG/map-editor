@@ -1,9 +1,9 @@
 import Adw from '@girs/adw-1'
-import Gdk from '@girs/gdk-4.0'
+import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
-import { gettext as _ } from 'gettext'
+import type Gtk from '@girs/gtk-4.0'
 import { SignalScope } from '@pixelrpg/gjs'
+import { gettext as _ } from 'gettext'
 
 import type { SessionState } from '../services/session-service.ts'
 

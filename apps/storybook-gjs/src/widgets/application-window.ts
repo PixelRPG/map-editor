@@ -208,11 +208,7 @@ export class StorybookWindow extends Adw.ApplicationWindow {
 
     switch (controlConfig.type) {
       case ControlType.TEXT:
-        return this._createTextRow(
-          storyWidget,
-          controlConfig,
-          typeof currentValue === 'string' ? currentValue : '',
-        )
+        return this._createTextRow(storyWidget, controlConfig, typeof currentValue === 'string' ? currentValue : '')
 
       case ControlType.NUMBER:
         return this._createNumberRow(

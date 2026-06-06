@@ -14,7 +14,6 @@ import {
 import { TIER_Z } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
-import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 import type {
   ItemProperties,
   LayerData,
@@ -24,6 +23,7 @@ import type {
   SpawnPointProperties,
   TeleportProperties,
 } from '../types/data/index.ts'
+import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 
 /**
  * Outline marker colours per object kind for sprite-less

@@ -1,8 +1,8 @@
 import type { SignallingTransport } from '@pixelrpg/engine'
 
 import { scopedLogger } from './collab-log.ts'
-import type { LanDiscoveryEvent } from './lan-discovery-parse.ts'
 import { LanBrowser, LanPublisher, type SessionTxt } from './lan-discovery.ts'
+import type { LanDiscoveryEvent } from './lan-discovery-parse.ts'
 import { connectLanJoinerTransport, startLanHostServer } from './lan-signalling.ts'
 import { connectRelaySignalling, defaultRelayUrl } from './relay-signalling.ts'
 import type { HostingHandle, HostingOptions, SessionBackend } from './session-service.ts'

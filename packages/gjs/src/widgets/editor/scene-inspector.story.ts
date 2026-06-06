@@ -53,7 +53,7 @@ export class SceneInspectorStory extends StoryWidget {
   private _applyScene(): void {
     if (!this._inspector) return
     const id = typeof this.args.sceneId === 'string' ? this.args.sceneId : ''
-    const scene = id ? SAMPLE_SCENES.find((s) => s.id === id) ?? null : null
+    const scene = id ? (SAMPLE_SCENES.find((s) => s.id === id) ?? null) : null
     this._inspector.setScene(scene, SAMPLE_SCENES, SAMPLE_TELEPORTS)
   }
 }
