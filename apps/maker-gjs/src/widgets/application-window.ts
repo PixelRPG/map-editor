@@ -145,6 +145,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * "playing" state to require an extra click on re-entry.
    */
   private _playAction: Gio.SimpleAction | null = null
+  /** Guards the one-shot "AI assistant joined" toast; re-armed on HideAssistant. */
+  private _assistantAnnounced = false
   /**
    * The `win.mode` GAction. Stateful string — `'world'` / `'cast'` /
    * `'tiles'` / `'audio'` / `'data'`. The change-state handler routes
@@ -813,6 +815,25 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(assistantPausedAction)
 
+    // AI-assistant follow toggle. The pill's ToggleButton
+    // (action-name="win.toggle-follow-assistant") flips this boolean
+    // stateful action; the change-state handler tells the engine to pan
+    // the camera to the assistant's cursor on each move. Off by default.
+    const followAssistantAction = Gio.SimpleAction.new_stateful(
+      'toggle-follow-assistant',
+      null,
+      GLib.Variant.new_boolean(false),
+    )
+    followAssistantAction.connect('activate', () => {
+      const current = followAssistantAction.get_state()?.get_boolean() ?? false
+      followAssistantAction.change_state(GLib.Variant.new_boolean(!current))
+    })
+    followAssistantAction.connect('change-state', (action, value) => {
+      action.set_state(value!)
+      this._engineCtl.engine?.excalibur?.setFollowAssistant(value!.get_boolean())
+    })
+    winActions.add_action(followAssistantAction)
+
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
     // Ctrl+G = toggle grid, Ctrl+T = toggle non-active-layer
     // transparency, F5 = play / pause playtest.
@@ -1191,7 +1212,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */
   setAssistantCursor(tileX: number, tileY: number): boolean {
     const applied = this._engineCtl.engine?.excalibur?.setAssistantCursor(tileX, tileY) ?? false
-    if (applied) this._scene_editor_view.setAssistantActive(true)
+    if (applied) this._markAssistantPresent(true)
     return applied
   }
 
@@ -1199,13 +1220,28 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   setAssistantInfo(displayName: string, color: string): void {
     this._engineCtl.engine?.excalibur?.setAssistantInfo(displayName, color)
     this._scene_editor_view.setAssistantName(displayName)
-    this._scene_editor_view.setAssistantActive(true)
+    this._markAssistantPresent(true)
   }
 
   /** Remove the AI-assistant cursor/presence. */
   hideAssistant(): void {
     this._engineCtl.engine?.excalibur?.hideAssistant()
-    this._scene_editor_view.setAssistantActive(false)
+    this._markAssistantPresent(false)
+  }
+
+  /**
+   * Reflect assistant presence on the pill, and announce the FIRST
+   * activation with a toast — a clear, consent-style "an AI is now acting
+   * here" cue (not a silent takeover). Re-armed on `HideAssistant`.
+   */
+  private _markAssistantPresent(active: boolean): void {
+    if (active && !this._assistantAnnounced) {
+      this._assistantAnnounced = true
+      this._showToast(_('AI assistant is now editing with you'))
+    } else if (!active) {
+      this._assistantAnnounced = false
+    }
+    this._scene_editor_view.setAssistantActive(active)
   }
 
   /**

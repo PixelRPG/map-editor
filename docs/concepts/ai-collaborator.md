@@ -1,7 +1,8 @@
 # AI Collaborator — the MCP/D-Bus assistant as a live in-editor peer
 
-> Status: **active** — Phases 1–3 landed (presence + cursor; edit
-> attribution; presence pill + user pause/stop).
+> Status: **active** — Phases 1–4 landed (presence + cursor; edit
+> attribution; presence pill + pause/stop; follow-cam + activation toast).
+> Phase 5 (merge with networked collab) is gated on the WebRTC/GL work.
 > Last meaningful change: 2026-06-06.
 
 The `org.pixelrpg.maker.Control` D-Bus interface + the MCP bridge (see
@@ -77,9 +78,12 @@ virtual peers.
    rejects the assistant's cursor + paints (`Engine._assistantPaused`) and
    `get_status` reports `assistantPaused` / `assistantPresent` so the agent
    knows to stop. User stays in control.
-4. **Follow-cam + activation UX.** Optional "follow the assistant" camera;
-   a deliberate end-user activation (not the dev `PIXELRPG_*` env) with
-   clear consent that an AI is acting.
+4. **Follow-cam + activation UX (done).** An opt-in "follow the assistant"
+   toggle on the pill (`win.toggle-follow-assistant` → `Engine._followAssistant`)
+   pans the camera to the assistant's cursor on each move; off by default
+   so the view isn't yanked around. The first time the assistant becomes
+   present, a toast ("AI assistant is now editing with you") announces it —
+   a clear, consent-style cue rather than a silent takeover.
 5. **Unify with real collaboration.** The AI participates alongside human
    peers in a real `CollabSession` (its ops/awareness merge with the
    networked ones). Depends on the WebRTC/GL-coexistence work in `TODO.md`.

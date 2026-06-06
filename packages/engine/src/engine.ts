@@ -79,6 +79,10 @@ export class Engine {
   // are rejected (the human stays in control). Presence (the pill) stays
   // so the user can resume.
   private _assistantPaused = false
+  // Opt-in: pan the camera to follow the assistant's cursor so the user
+  // can watch it work without manually scrolling. Off by default — we
+  // don't yank the view around unless asked.
+  private _followAssistant = false
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -400,14 +404,17 @@ export class Engine {
     if (!scene || !mapId) return false
     const tm = this._anyTileMap(scene)
     if (!tm) return false
+    const worldX = tm.pos.x + (tileX + 0.5) * tm.tileWidth
+    const worldY = tm.pos.y + (tileY + 0.5) * tm.tileHeight
     const aware = this._ensureAssistant()
     this._assistantActive = true
     aware.handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
-    aware.handleInbound({
-      type: 'cursor',
-      peerId: ASSISTANT_PEER_ID,
-      cursor: { sceneId: mapId, x: tm.pos.x + (tileX + 0.5) * tm.tileWidth, y: tm.pos.y + (tileY + 0.5) * tm.tileHeight },
-    })
+    aware.handleInbound({ type: 'cursor', peerId: ASSISTANT_PEER_ID, cursor: { sceneId: mapId, x: worldX, y: worldY } })
+    // Opt-in follow: pan the camera to keep the assistant in view.
+    // Fire-and-forget — the cursor update must not wait on the pan.
+    if (this._followAssistant) {
+      scene.camera.move(new Vector(worldX, worldY), 300).catch(() => {})
+    }
     return true
   }
 
@@ -437,6 +444,11 @@ export class Engine {
   /** Pause/resume the assistant. While paused, its cursor + paints are rejected. */
   setAssistantPaused(paused: boolean): void {
     this._assistantPaused = paused
+  }
+
+  /** Toggle camera-follow of the assistant cursor (off by default). */
+  setFollowAssistant(follow: boolean): void {
+    this._followAssistant = follow
   }
 
   /**

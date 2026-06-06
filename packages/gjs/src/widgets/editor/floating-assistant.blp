@@ -29,6 +29,20 @@ template $PixelRpgFloatingAssistant : Adw.Bin {
       ellipsize: end;
     }
 
+    // Toggle: follow the assistant with the camera. A ToggleButton bound
+    // to the boolean stateful `win.toggle-follow-assistant` action shows
+    // its pressed state automatically.
+    Gtk.ToggleButton follow_button {
+      action-name: "win.toggle-follow-assistant";
+      icon-name: "find-location-symbolic";
+      tooltip-text: _("Follow the assistant");
+
+      styles [
+        "flat",
+        "circular",
+      ]
+    }
+
     Gtk.Button pause_button {
       action-name: "win.toggle-assistant-paused";
       icon-name: "media-playback-pause-symbolic";
