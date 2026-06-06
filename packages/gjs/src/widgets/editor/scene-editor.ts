@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
+import { FloatingAssistant } from './floating-assistant'
 import { FloatingPlay } from './floating-play'
 import { FloatingTopBar } from './floating-top-bar'
 import { FloatingZoom } from './floating-zoom'
@@ -10,6 +11,7 @@ import Template from './scene-editor.blp'
 GObject.type_ensure(FloatingTopBar.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
 GObject.type_ensure(FloatingPlay.$gtype)
+GObject.type_ensure(FloatingAssistant.$gtype)
 
 /**
  * Scene-editor content surface.
@@ -30,6 +32,7 @@ export class SceneEditor extends Adw.Bin {
   declare _top_bar: FloatingTopBar
   declare _zoom_osd: FloatingZoom
   declare _floating_play: FloatingPlay
+  declare _floating_assistant: FloatingAssistant
 
   private _engineWidget: Gtk.Widget | null = null
 
@@ -38,7 +41,7 @@ export class SceneEditor extends Adw.Bin {
       {
         GTypeName: 'PixelRpgSceneEditor',
         Template,
-        InternalChildren: ['overlay', 'engine_holder', 'top_bar', 'zoom_osd', 'floating_play'],
+        InternalChildren: ['overlay', 'engine_holder', 'top_bar', 'zoom_osd', 'floating_play', 'floating_assistant'],
       },
       SceneEditor,
     )
@@ -66,6 +69,10 @@ export class SceneEditor extends Adw.Bin {
 
   get floatingPlay(): FloatingPlay {
     return this._floating_play
+  }
+
+  get floatingAssistant(): FloatingAssistant {
+    return this._floating_assistant
   }
 }
 

@@ -58,6 +58,10 @@ export interface DebugStatus {
   canRedo: boolean
   isPlaying: boolean
   selectedPlacements: string[]
+  /** Whether the AI assistant collaborator is currently present. */
+  assistantPresent: boolean
+  /** Whether the user has paused the assistant (its actions are rejected). */
+  assistantPaused: boolean
 }
 
 /** One `Gio.Action` as surfaced to external tooling via Control. */
@@ -787,6 +791,28 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(playAction)
     this._playAction = playAction
 
+    // AI-assistant pause toggle. The FloatingAssistant pill's button
+    // (action-name="win.toggle-assistant-paused") activates this; the
+    // change-state handler pauses the engine's assistant (its cursor +
+    // paints are rejected) and swaps the pill's icon to "resume". This
+    // is the user's stay-in-control switch over the AI collaborator.
+    const assistantPausedAction = Gio.SimpleAction.new_stateful(
+      'toggle-assistant-paused',
+      null,
+      GLib.Variant.new_boolean(false),
+    )
+    assistantPausedAction.connect('activate', () => {
+      const current = assistantPausedAction.get_state()?.get_boolean() ?? false
+      assistantPausedAction.change_state(GLib.Variant.new_boolean(!current))
+    })
+    assistantPausedAction.connect('change-state', (action, value) => {
+      action.set_state(value!)
+      const paused = value!.get_boolean()
+      this._engineCtl.engine?.excalibur?.setAssistantPaused(paused)
+      this._scene_editor_view.setAssistantPaused(paused)
+    })
+    winActions.add_action(assistantPausedAction)
+
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
     // Ctrl+G = toggle grid, Ctrl+T = toggle non-active-layer
     // transparency, F5 = play / pause playtest.
@@ -1142,6 +1168,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       canRedo: engine?.canRedo() ?? false,
       isPlaying: ex?.isRuntimeMode() ?? false,
       selectedPlacements: engine?.getSelectedPlacements() ?? [],
+      assistantPresent: ex?.isAssistantActive() ?? false,
+      assistantPaused: ex?.isAssistantPaused() ?? false,
     }
   }
 
@@ -1162,17 +1190,22 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */
   setAssistantCursor(tileX: number, tileY: number): boolean {
-    return this._engineCtl.engine?.excalibur?.setAssistantCursor(tileX, tileY) ?? false
+    const applied = this._engineCtl.engine?.excalibur?.setAssistantCursor(tileX, tileY) ?? false
+    if (applied) this._scene_editor_view.setAssistantActive(true)
+    return applied
   }
 
   /** Set the AI-assistant cursor's display name + colour. */
   setAssistantInfo(displayName: string, color: string): void {
     this._engineCtl.engine?.excalibur?.setAssistantInfo(displayName, color)
+    this._scene_editor_view.setAssistantName(displayName)
+    this._scene_editor_view.setAssistantActive(true)
   }
 
   /** Remove the AI-assistant cursor/presence. */
   hideAssistant(): void {
     this._engineCtl.engine?.excalibur?.hideAssistant()
+    this._scene_editor_view.setAssistantActive(false)
   }
 
   /**

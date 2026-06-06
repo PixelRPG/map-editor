@@ -1,6 +1,7 @@
 # AI Collaborator — the MCP/D-Bus assistant as a live in-editor peer
 
-> Status: **active** — Phases 1–2 landed (presence + cursor; edit attribution).
+> Status: **active** — Phases 1–3 landed (presence + cursor; edit
+> attribution; presence pill + user pause/stop).
 > Last meaningful change: 2026-06-06.
 
 The `org.pixelrpg.maker.Control` D-Bus interface + the MCP bridge (see
@@ -69,9 +70,13 @@ virtual peers.
    brief fading outline in the assistant's colour ("AI painted here") so
    edits are visibly the AI's. Auto-gated on assistant presence
    (`Engine._flashAssistantTile`).
-3. **Presence UI + control.** Show the AI in a collaborators chip/roster
-   ("AI Assistant · active") with a **Pause / Stop** button — user stays
-   in control.
+3. **Presence UI + control (done).** A bottom-left `FloatingAssistant`
+   OSD pill (avatar + "AI Assistant" + a pause/resume button) appears when
+   the assistant is present. The button drives the
+   `win.toggle-assistant-paused` stateful action; while paused the engine
+   rejects the assistant's cursor + paints (`Engine._assistantPaused`) and
+   `get_status` reports `assistantPaused` / `assistantPresent` so the agent
+   knows to stop. User stays in control.
 4. **Follow-cam + activation UX.** Optional "follow the assistant" camera;
    a deliberate end-user activation (not the dev `PIXELRPG_*` env) with
    clear consent that an AI is acting.

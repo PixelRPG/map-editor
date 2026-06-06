@@ -225,6 +225,21 @@ export class SceneEditorView extends Adw.Bin {
     this._editor.floatingPlay.playing = playing
   }
 
+  /** Show/hide the AI-assistant presence pill (set when a SetAssistant* call arrives). */
+  setAssistantActive(active: boolean): void {
+    this._editor.floatingAssistant.active = active
+  }
+
+  /** Reflect the user pause state on the assistant pill. */
+  setAssistantPaused(paused: boolean): void {
+    this._editor.floatingAssistant.paused = paused
+  }
+
+  /** Set the assistant's displayed name on the pill. */
+  setAssistantName(name: string): void {
+    this._editor.floatingAssistant.setName(name)
+  }
+
   /**
    * Forward the active editor tool to the top bar so its tool
    * MenuButton's icon mirrors the selection. The host calls this

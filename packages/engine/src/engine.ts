@@ -75,6 +75,10 @@ export class Engine {
   // gates the edit-attribution flash so plain paintTileAt callers (tests)
   // don't grow stray highlight actors.
   private _assistantActive = false
+  // User-controlled pause: while paused, the assistant's cursor + paints
+  // are rejected (the human stays in control). Presence (the pill) stays
+  // so the user can resume.
+  private _assistantPaused = false
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -358,6 +362,8 @@ export class Engine {
    * layer is locked, or the coords are out of bounds.
    */
   paintTileAt(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null): boolean {
+    // The user paused the assistant — reject its paints (the human is in control).
+    if (this._assistantPaused) return false
     const scene = this._activeMapScene()
     if (!scene) return false
     const resolvedLayer = layerId ?? this.getActiveLayer()
@@ -388,6 +394,7 @@ export class Engine {
    * of the tile for rendering.
    */
   setAssistantCursor(tileX: number, tileY: number): boolean {
+    if (this._assistantPaused) return false
     const scene = this._activeMapScene()
     const mapId = scene?.mapResource?.mapData?.id
     if (!scene || !mapId) return false
@@ -415,6 +422,21 @@ export class Engine {
   hideAssistant(): void {
     this._assistantActive = false
     this._assistantAwareness?.handleInbound({ type: 'leave', peerId: ASSISTANT_PEER_ID })
+  }
+
+  /** Whether the assistant is currently present (cursor/info set, not hidden). */
+  isAssistantActive(): boolean {
+    return this._assistantActive
+  }
+
+  /** Whether the user has paused the assistant. */
+  isAssistantPaused(): boolean {
+    return this._assistantPaused
+  }
+
+  /** Pause/resume the assistant. While paused, its cursor + paints are rejected. */
+  setAssistantPaused(paused: boolean): void {
+    this._assistantPaused = paused
   }
 
   /**

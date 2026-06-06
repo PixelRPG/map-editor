@@ -693,7 +693,9 @@ server.registerTool(
         '(b)',
       )
       const [applied] = reply.recursiveUnpack() as [boolean]
-      return applied ? ok(`Assistant cursor at (${x}, ${y})`) : fail('No active scene for the assistant cursor.')
+      return applied
+        ? ok(`Assistant cursor at (${x}, ${y})`)
+        : fail('Assistant cursor not applied — no active scene, or the user paused the assistant (check get_status.assistantPaused).')
     } catch (error) {
       return dbusError(error, instance)
     }
