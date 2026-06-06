@@ -47,6 +47,15 @@ const CONTROL_IFACE_XML = `
     <method name="ListTemplates">
       <arg type="s" direction="out" name="templates_json"/>
     </method>
+    <method name="StartSession">
+      <arg type="s" direction="out" name="room_id"/>
+    </method>
+    <method name="JoinSession">
+      <arg type="s" direction="in" name="room_id"/>
+    </method>
+    <method name="GetSessionState">
+      <arg type="s" direction="out" name="state_json"/>
+    </method>
   </interface>
 </node>`
 
@@ -139,6 +148,23 @@ export class ControlDbusService {
     return JSON.stringify(
       STARTER_TEMPLATES.map((t) => ({ id: t.id, name: t.name, caption: t.caption, projectPath: t.projectPath })),
     )
+  }
+
+  /** `StartSession() -> s` — host a collaboration session; returns the room id. */
+  async StartSession(): Promise<string> {
+    return this.requireWindow().startSession()
+  }
+
+  /** `JoinSession(roomId)` — join a collaboration session by room id (LAN). */
+  async JoinSession(roomId: string): Promise<void> {
+    await this.requireWindow().joinSession(roomId)
+  }
+
+  /** `GetSessionState() -> s` — JSON snapshot of the collaboration session state. */
+  GetSessionState(): string {
+    const win = this.window
+    if (!win) return JSON.stringify({ kind: 'no-active-window' })
+    return JSON.stringify(win.getSessionState())
   }
 
   private requireWindow(): ApplicationWindow {

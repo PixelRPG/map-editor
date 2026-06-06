@@ -74,6 +74,15 @@ export interface ActionList {
 
 type ActionScope = 'app' | 'win'
 
+/** JSON-safe view of the collaboration session state for external tooling. */
+export interface SessionSnapshot {
+  kind: string
+  roomId?: string
+  port?: number
+  role?: string
+  sandboxProjectPath?: string
+}
+
 /**
  * Top-level window.
  *
@@ -1154,6 +1163,45 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       throw new Error(`Project file not found: ${path}`)
     }
     void this._loadProjectFromPath(path)
+  }
+
+  /**
+   * Start hosting a collaboration session — the headless equivalent of
+   * the Share dialog's "Share" button (Control D-Bus → MCP). Requires a
+   * loaded project; resolves with the room id joiners use. The host's
+   * engine must be live (open a scene) by the time a joiner connects.
+   */
+  async startSession(): Promise<string> {
+    if (!this._sessionSvc) throw new Error('Session service not ready (window not mapped yet)')
+    if (!this._loadedProject) throw new Error('Open a project before hosting a session')
+    return this._sessionSvc.startHosting({
+      sessionName: this._loadedProject.projectName,
+      projectName: this._loadedProject.projectName,
+      hostDisplayName: GLib.get_user_name() ?? 'host',
+    })
+  }
+
+  /**
+   * Join a collaboration session by room id (the headless equivalent of
+   * the Welcome view's "Join by code"). The window must be browsing
+   * (i.e. on the welcome view) for the LAN path to find the host. The
+   * existing `sandbox-project-ready` wiring loads the pulled project;
+   * open a scene afterwards to attach the engine.
+   */
+  async joinSession(roomId: string): Promise<void> {
+    if (!this._sessionSvc) throw new Error('Session service not ready (window not mapped yet)')
+    await this._sessionSvc.joinByRoomId(roomId)
+  }
+
+  /** JSON-safe snapshot of the current collaboration session state. */
+  getSessionState(): SessionSnapshot {
+    const state = this._sessionSvc?.getState() ?? { kind: 'idle' as const }
+    const snap: SessionSnapshot = { kind: state.kind }
+    if ('roomId' in state) snap.roomId = state.roomId
+    if ('port' in state) snap.port = state.port
+    if ('role' in state) snap.role = state.role
+    if ('sandboxProjectPath' in state) snap.sandboxProjectPath = state.sandboxProjectPath
+    return snap
   }
 
   /**

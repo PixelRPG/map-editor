@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
@@ -44,8 +45,14 @@ export class Application extends Adw.Application {
   }
 
   constructor() {
+    // PIXELRPG_INSTANCE (set only by the devtools orchestrator) gives this
+    // process a distinct app-id — and therefore a distinct D-Bus name +
+    // Control object path — so several makers can run side by side for
+    // collaboration testing. Empty/unset = the normal single instance.
+    const instance = GLib.getenv('PIXELRPG_INSTANCE')
+    const applicationId = instance ? `${APPLICATION_ID}.${sanitizeInstanceId(instance)}` : APPLICATION_ID
     super({
-      applicationId: APPLICATION_ID,
+      applicationId,
       // HANDLES_COMMAND_LINE so the `x-scheme-handler/pixelrpg`
       // .desktop entry can re-dispatch to the running instance
       // when the user clicks `pixelrpg://join/<roomid>` in a
@@ -53,6 +60,9 @@ export class Application extends Adw.Application {
       // for the URL and emits `pixelrpg-intent`.
       flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
     })
+    // Pin the resource base path so a per-instance app-id doesn't move
+    // where GTK auto-loads resources from (defaults to the app-id path).
+    this.set_resource_base_path('/org/pixelrpg/maker')
     this.onStartup = this.onStartup.bind(this)
     this.connect('startup', this.onStartup)
     this.connect('shutdown', () => this.control?.unexport())
@@ -213,4 +223,10 @@ export class Application extends Adw.Application {
     this.pendingIntent = null
     return intent
   }
+}
+
+/** Coerce a free-form instance label into a valid app-id segment (letter-led, alphanumeric). */
+function sanitizeInstanceId(label: string): string {
+  const cleaned = label.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return /^[a-z]/.test(cleaned) ? cleaned : `i${cleaned || '0'}`
 }
