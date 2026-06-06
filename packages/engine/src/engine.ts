@@ -6,6 +6,7 @@ import {
   Engine as ExcaliburEngine,
   Loader,
   Logger,
+  Rectangle,
   TileMap,
   Vector,
 } from 'excalibur'
@@ -46,6 +47,15 @@ interface LoaderEventMap {
 /** Stable peer id for the in-process AI assistant collaborator. */
 const ASSISTANT_PEER_ID = 'ai-assistant'
 
+/** Parse a `#rrggbb` token to an Excalibur Color; mid-grey on failure. */
+function parseAssistantColour(token: string): Color {
+  try {
+    return Color.fromHex(token)
+  } catch {
+    return Color.fromHex('#888888')
+  }
+}
+
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -61,6 +71,10 @@ export class Engine {
   private _assistantAwareness: AwarenessManager | null = null
   private _assistantRenderer: RemoteCursorRenderer | null = null
   private _assistantInfo: AwarenessPeerInfo = { displayName: 'AI Assistant', color: '#9141ac' }
+  // True while the assistant is present (info/cursor set, not hidden) —
+  // gates the edit-attribution flash so plain paintTileAt callers (tests)
+  // don't grow stray highlight actors.
+  private _assistantActive = false
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -354,6 +368,9 @@ export class Engine {
     if (tileX < 0 || tileY < 0 || tileX >= found.tileMap.columns || tileY >= found.tileMap.rows) return false
     const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
     this.executeCommand(buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null))
+    // Attribution: flash the painted tile in the assistant's colour so the
+    // user sees the AI act. Only while the assistant is present.
+    if (this._assistantActive) this._flashAssistantTile(found.tileMap, tileX, tileY)
     return true
   }
 
@@ -377,6 +394,7 @@ export class Engine {
     const tm = this._anyTileMap(scene)
     if (!tm) return false
     const aware = this._ensureAssistant()
+    this._assistantActive = true
     aware.handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
     aware.handleInbound({
       type: 'cursor',
@@ -389,12 +407,53 @@ export class Engine {
   /** Update the AI assistant's display name + colour (re-announced immediately). */
   setAssistantInfo(displayName: string, color: string): void {
     this._assistantInfo = { displayName, color }
-    this._assistantAwareness?.handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
+    this._assistantActive = true
+    this._ensureAssistant().handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
   }
 
   /** Remove the AI assistant's cursor/presence from the canvas. */
   hideAssistant(): void {
+    this._assistantActive = false
     this._assistantAwareness?.handleInbound({ type: 'leave', peerId: ASSISTANT_PEER_ID })
+  }
+
+  /**
+   * Brief fading highlight in the assistant's colour on a tile it just
+   * painted — visible attribution ("the AI did this"). Self-disposing via
+   * `onPostUpdate`, so no external timer. No-op without an active scene.
+   */
+  private _flashAssistantTile(tm: TileMap, tileX: number, tileY: number): void {
+    const scene = this.excalibur?.currentScene
+    if (!scene) return
+    const actor = new Actor({
+      pos: new Vector(tm.pos.x + (tileX + 0.5) * tm.tileWidth, tm.pos.y + (tileY + 0.5) * tm.tileHeight),
+      z: 9_000, // below the cursor (10_000), above the tilemap
+    })
+    const colour = parseAssistantColour(this._assistantInfo.color)
+    // Outline (not a fill) so the painted tile content stays visible —
+    // a colour-coded border that says "the AI touched this".
+    actor.graphics.use(
+      new Rectangle({
+        width: tm.tileWidth,
+        height: tm.tileHeight,
+        color: Color.Transparent,
+        strokeColor: colour,
+        lineWidth: 2,
+      }),
+    )
+    const peakOpacity = 0.95
+    const fadeMs = 700
+    let elapsed = 0
+    actor.graphics.opacity = peakOpacity
+    actor.onPostUpdate = (_engine, elapsedMs: number) => {
+      elapsed += elapsedMs
+      if (elapsed >= fadeMs) {
+        actor.kill()
+        return
+      }
+      actor.graphics.opacity = peakOpacity * (1 - elapsed / fadeMs)
+    }
+    scene.add(actor)
   }
 
   private _ensureAssistant(): AwarenessManager {

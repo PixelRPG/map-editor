@@ -1,6 +1,6 @@
 # AI Collaborator — the MCP/D-Bus assistant as a live in-editor peer
 
-> Status: **active** — Phase 1 (presence + cursor) landing.
+> Status: **active** — Phases 1–2 landed (presence + cursor; edit attribution).
 > Last meaningful change: 2026-06-06.
 
 The `org.pixelrpg.maker.Control` D-Bus interface + the MCP bridge (see
@@ -65,8 +65,10 @@ virtual peers.
    `HideAssistant`. Bridge tools: `assistant_cursor` / `assistant_info` /
    `assistant_hide`. Result: the user watches a labelled "AI Assistant"
    cursor move over the map.
-2. **Edit attribution.** Tag AI ops with its peerId; the UI flashes a
-   brief highlight ("AI painted here") so edits are visibly the AI's.
+2. **Edit attribution (done).** When the assistant paints, the tile gets a
+   brief fading outline in the assistant's colour ("AI painted here") so
+   edits are visibly the AI's. Auto-gated on assistant presence
+   (`Engine._flashAssistantTile`).
 3. **Presence UI + control.** Show the AI in a collaborators chip/roster
    ("AI Assistant · active") with a **Pause / Stop** button — user stays
    in control.
