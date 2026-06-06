@@ -41,6 +41,7 @@ jobs:
             gir1.2-gstreamer-1.0 \
             gir1.2-gst-plugins-base-1.0 \
             gir1.2-gst-plugins-bad-1.0 \
+            gir1.2-soup-3.0 \
             meson \
             ninja-build \
             python3
