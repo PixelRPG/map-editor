@@ -24,6 +24,11 @@ jobs:
         # (Gtk 4.0, Adw 1, GtkSource 5). `libglib2.0-bin` ships
         # `glib-compile-resources` for `gjsify gresource`. `meson`/`ninja`
         # are for the blueprint-compiler-from-source build in the next step.
+        # The `gir1.2-gst*` typelibs satisfy `@gjsify/webrtc`'s
+        # `gi://Gst` / `gi://GstSdp` / `gi://GstWebRTC` imports, which the
+        # engine test bundle pulls in (collab/PeerSession) — without them
+        # the gjs test run aborts at module load with "Typelib for Gst not
+        # found". The tests themselves use fakes, so no gst runtime needed.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -33,6 +38,9 @@ jobs:
             libgtk-4-dev \
             libadwaita-1-dev \
             libgtksourceview-5-dev \
+            gir1.2-gstreamer-1.0 \
+            gir1.2-gst-plugins-base-1.0 \
+            gir1.2-gst-plugins-bad-1.0 \
             meson \
             ninja-build \
             python3
