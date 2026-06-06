@@ -367,6 +367,11 @@ export class MapResource implements Loadable<TileMap> {
    */
   syncShadowToMapData(): boolean {
     if (!this._mapData) return false
+    // No tier tilemaps = this map was loaded (e.g. for a snapshot) but
+    // never opened in a scene, so there's no editor shadow to fold in.
+    // Bail out — otherwise the write-back loop below would overwrite the
+    // loaded on-disk sprites with an empty shadow (data loss).
+    if (this.tileMapsByTier.size === 0) return false
 
     const spritesPerLayer = new Map<string, SpriteDataMap[]>()
     for (const tileMap of this.tileMapsByTier.values()) {

@@ -110,16 +110,13 @@ export async function captureProjectSnapshot(engine: Engine): Promise<ProjectSna
 
   const maps: ProjectSnapshot['maps'] = []
   for (const ref of project.maps) {
-    const mapResource = resource.getMapResource(ref.id)
-    if (!mapResource) {
-      // Map is referenced by the project but hasn't been loaded.
-      // Snapshot would be incomplete — refuse to capture rather
-      // than ship a half-state.
-      throw new Error(
-        `captureProjectSnapshot: map "${ref.id}" referenced by project but not loaded — ` +
-          `call engine.loadMap(id) first or check the project file for stale references.`,
-      )
-    }
+    // The editor lazy-loads maps (only the opened scene's map is in
+    // memory), but the snapshot must be complete. Load any map the host
+    // hasn't opened yet on demand — `resource.loadMap` only loads the
+    // map DATA (no scene switch), so the host's active view is
+    // untouched. A freshly-loaded map has no tilemap shadow, so the
+    // `syncShadowToMapData` below correctly no-ops for it.
+    const mapResource = resource.getMapResource(ref.id) ?? (await resource.loadMap(ref.id))
     // Fold the live editor shadow (MapEditorComponent.sprites) on
     // every tier's tilemap back into mapData.layers[].sprites[].
     // Paints mutate the shadow only — without this sync, the

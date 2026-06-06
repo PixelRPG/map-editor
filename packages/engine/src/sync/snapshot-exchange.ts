@@ -238,7 +238,7 @@ export class SnapshotExchange {
       const result = this.captureSnapshot()
       resolved = Promise.resolve(result)
     } catch (err) {
-      console.warn('[SnapshotExchange] captureSnapshot threw synchronously:', err)
+      console.warn('[SnapshotExchange] captureSnapshot threw synchronously:', describeSnapshotError(err))
       return
     }
     void resolved
@@ -280,7 +280,7 @@ export class SnapshotExchange {
         }
       })
       .catch((err) => {
-        console.warn('[SnapshotExchange] captureSnapshot rejected:', err)
+        console.warn('[SnapshotExchange] snapshot capture/send failed:', describeSnapshotError(err))
       })
   }
 
@@ -379,5 +379,19 @@ export class SnapshotExchange {
     this.pending = null
     if (p.timer) clearTimeout(p.timer)
     p.reject(err)
+  }
+}
+
+/**
+ * Render a thrown/rejected value with its message + stack so snapshot
+ * failures don't collapse to an opaque `{}` in the log (a bare
+ * `console.warn(..., err)` of an Error prints `{}` in GJS).
+ */
+function describeSnapshotError(err: unknown): string {
+  if (err instanceof Error) return err.stack ? `${err.message}\n${err.stack}` : err.message
+  try {
+    return JSON.stringify(err)
+  } catch {
+    return String(err)
   }
 }

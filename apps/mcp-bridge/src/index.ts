@@ -211,16 +211,27 @@ server.registerTool(
     if (seg === 'default') return fail('Use a non-"default" label for a launched instance.')
     try {
       if (await nameHasOwner(`${BASE_NAME}.${seg}`)) return ok(`Instance "${seg}" is already running.`)
-      const gjsify = GLib.find_program_in_path('gjsify')
-      if (!gjsify) return fail('`gjsify` not found on PATH — cannot launch an instance.')
       const launcher = Gio.SubprocessLauncher.new(
         Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
       )
       launcher.setenv('PIXELRPG_INSTANCE', seg, true)
-      const proc = launcher.spawnv([gjsify, 'run', makerBinary()])
+      // Spawn through a login shell so the user's full PATH (node,
+      // gjsify, ~/.local/bin) is loaded — the MCP server's own env
+      // (inherited from the host app) is typically too minimal for
+      // `gjsify run` to resolve node.
+      const shell = GLib.getenv('SHELL') || '/bin/bash'
+      const proc = launcher.spawnv([shell, '-lc', `exec gjsify run ${GLib.shell_quote(makerBinary())}`])
       launched.set(seg, proc)
       const up = await waitForName(`${BASE_NAME}.${seg}`)
-      if (!up) return fail(`Launched "${seg}" but it did not appear on the bus within 30s.`)
+      if (!up) {
+        try {
+          proc.force_exit()
+        } catch {
+          /* best-effort */
+        }
+        launched.delete(seg)
+        return fail(`Launched "${seg}" but it did not appear on the bus within 30s.`)
+      }
       if (project) await control(seg, 'OpenProject', GLib.Variant.new_tuple([strv(project)]), null)
       return ok(`Launched instance "${seg}"${project ? ` and opened ${project}` : ''}.`)
     } catch (error) {
