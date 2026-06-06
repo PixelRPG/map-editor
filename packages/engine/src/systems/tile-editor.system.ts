@@ -11,7 +11,7 @@ import {
   vec,
   type World,
 } from 'excalibur'
-import { EraseTileCommand, PaintTileCommand } from '../commands/index.ts'
+import type { Command } from '../commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveTileComponent,
@@ -23,7 +23,6 @@ import {
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
-import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import {
   createSelectHoverBorderActor,
@@ -31,6 +30,7 @@ import {
   type SelectHoverBorderContext,
 } from '../services/select-hover-border.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
+import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerTier } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
@@ -262,41 +262,23 @@ export class TileEditorSystem extends System {
     if (tool !== 'eyedropper' && this.isLayerLocked(layerId)) return
 
     // Capture the previous sprites on this (tile, layer) so the command
-    // can revert. The hit already carries the `MapEditorComponent`
-    // resolved by `findTileUnderPointer` — reuse it instead of a
-    // second `tileMap.get(MapEditorComponent)` lookup.
-    const previousSprites = getSpritesAt(hit.editor, hit.coords.x, hit.coords.y, layerId).map((ref) => ({
-      spriteSetId: ref.spriteSetId,
-      spriteId: ref.spriteId,
-      zIndex: ref.zIndex,
-      animationId: ref.animationId,
-    }))
+    // can revert (also reused by the eyedropper branch below). The hit
+    // already carries the `MapEditorComponent` resolved by
+    // `findTileUnderPointer`. Command construction is shared with the
+    // programmatic paint path (`Engine.paintTileAt`) via
+    // `makeTilePaintCommand`.
+    const previousSprites = snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y)
 
     if (tool === 'pencil') {
       if (tileId === null) return
-      this.dispatchCommand(
-        new PaintTileCommand({
-          layerId,
-          tileX: hit.coords.x,
-          tileY: hit.coords.y,
-          spriteId: tileId,
-          previousSprites,
-        }),
-      )
+      this.dispatchCommand(makeTilePaintCommand(layerId, hit.coords.x, hit.coords.y, tileId, previousSprites))
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
         tileId,
         layerId,
       })
     } else if (tool === 'eraser') {
-      this.dispatchCommand(
-        new EraseTileCommand({
-          layerId,
-          tileX: hit.coords.x,
-          tileY: hit.coords.y,
-          previousSprites,
-        }),
-      )
+      this.dispatchCommand(makeTilePaintCommand(layerId, hit.coords.x, hit.coords.y, null, previousSprites))
       this.events.emit(EngineEvent.TILE_PLACED, {
         coords: hit.coords,
         tileId: 0,
@@ -367,7 +349,7 @@ export class TileEditorSystem extends System {
    * collab path then broke until the mirror was restored. One owner of
    * the command flow eliminates that class of bug.
    */
-  private dispatchCommand(command: PaintTileCommand | EraseTileCommand): void {
+  private dispatchCommand(command: Command): void {
     if (!this.scene) return
     executeCommandOnScene(this.scene, this.events, command)
   }

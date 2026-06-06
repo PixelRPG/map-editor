@@ -601,6 +601,69 @@ server.registerTool(
 )
 
 server.registerTool(
+  'paint_tile',
+  {
+    description:
+      'Paint or erase a tile at tile-coordinate (x, y). Omit tileId to use the active tile, tileId 0 to ' +
+      'erase, or a global tile id to paint that tile. Omit layerId to use the active layer. Goes through ' +
+      'the engine command path, so it undoes and (in a collab session) syncs to peers. Needs an open scene.',
+    inputSchema: z.object({
+      x: z.number().int(),
+      y: z.number().int(),
+      tileId: z.number().int().optional(),
+      layerId: z.string().optional(),
+      ...instanceArg,
+    }),
+  },
+  async ({ x, y, tileId, layerId, instance }) => {
+    try {
+      const params = new GLib.Variant('(siii)', [layerId ?? '', x, y, tileId === undefined ? -1 : tileId])
+      const reply = await control(instance, 'PaintTile', params, '(b)')
+      const [applied] = reply.recursiveUnpack() as [boolean]
+      return applied
+        ? ok(`Painted tile (${x}, ${y})${tileId === undefined ? '' : ` with ${tileId}`}`)
+        : fail('Paint not applied (no engine/scene, layer locked, or coords out of bounds).')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'set_zoom',
+  {
+    description: 'Set the camera zoom to an absolute value (1 = 100%, e.g. 0.5, 2). Needs an open scene.',
+    inputSchema: z.object({ zoom: z.number(), ...instanceArg }),
+  },
+  async ({ zoom, instance }) => {
+    try {
+      await control(instance, 'SetZoom', GLib.Variant.new_tuple([GLib.Variant.new_double(zoom)]), null)
+      return ok(`Set zoom to ${zoom}`)
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'present_window',
+  {
+    description:
+      "Bring the editor window to the foreground (map + focus). Needed before hosting/painting on a " +
+      'background instance whose WebGL engine has not initialised yet (get_status.engineReady === false).',
+    inputSchema: z.object({ ...instanceArg }),
+  },
+  async ({ instance }) => {
+    try {
+      await control(instance, 'PresentWindow', null, null)
+      return ok('Presented window (foreground + focus).')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
   'set_playing',
   {
     description: 'Enter (true) or leave (false) playtest/runtime mode in the scene editor.',

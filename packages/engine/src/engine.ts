@@ -29,6 +29,7 @@ import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
+import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -311,6 +312,34 @@ export class Engine {
     const scene = this._activeMapScene()
     if (!scene) return
     executeCommandOnScene(scene, this.events, command)
+  }
+
+  /**
+   * Paint (or erase) a tile at `(tileX, tileY)` programmatically — the
+   * headless equivalent of a pointer click, for external tooling
+   * (D-Bus/MCP) and scripted edits. Routes through {@link executeCommand}
+   * (the shared {@link buildTilePaintCommand}), so undo/redo + collab
+   * op-sync behave exactly like a user paint.
+   *
+   * - `layerId` null/omitted → the active layer.
+   * - `spriteId` omitted → the active tile; `0`/`null` → erase; else paint
+   *   that global tile id.
+   *
+   * Returns `false` if there's no active map, no resolvable layer, the
+   * layer is locked, or the coords are out of bounds.
+   */
+  paintTileAt(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null): boolean {
+    const scene = this._activeMapScene()
+    if (!scene) return false
+    const resolvedLayer = layerId ?? this.getActiveLayer()
+    if (!resolvedLayer) return false
+    if (this.isLayerLocked(resolvedLayer)) return false
+    const found = findTileMapForLayer(scene, resolvedLayer)
+    if (!found) return false
+    if (tileX < 0 || tileY < 0 || tileX >= found.tileMap.columns || tileY >= found.tileMap.rows) return false
+    const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
+    this.executeCommand(buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null))
+    return true
   }
 
   /**

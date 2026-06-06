@@ -46,6 +46,10 @@ export interface DebugStatus {
   sceneIds: string[]
   scenes: Array<{ id: string; name: string }>
   enginePresent: boolean
+  /** True once Excalibur has actually initialised (needs a realised window). */
+  engineReady: boolean
+  /** Whether the window is currently mapped (visible). */
+  mapped: boolean
   activeTool: EditorTool | null
   activeTile: number | null
   activeLayer: string | null
@@ -1124,6 +1128,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       sceneIds: [...this._scenesById.keys()],
       scenes: [...this._scenesById.values()].map((s) => ({ id: s.id, name: s.name })),
       enginePresent: engine != null,
+      // engineReady = Excalibur actually initialised (vs. just the widget
+      // existing). It's null until the window is realised + the GLArea's
+      // `onReady` fires — so a tool can tell whether to `present_window`
+      // before hosting/painting.
+      engineReady: ex != null,
+      mapped: this.get_mapped(),
       activeTool: ex?.getActiveTool() ?? null,
       activeTile: ex?.getActiveTile() ?? null,
       activeLayer: ex?.getActiveLayer() ?? null,
@@ -1133,6 +1143,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       isPlaying: ex?.isRuntimeMode() ?? false,
       selectedPlacements: engine?.getSelectedPlacements() ?? [],
     }
+  }
+
+  /** Set the camera zoom to an absolute value (1 = 100%). No-op without an engine. */
+  setZoom(zoom: number): void {
+    this._applyZoom(zoom)
+  }
+
+  /**
+   * Paint/erase a tile programmatically (Control → MCP). `layerId` null =
+   * active layer; `spriteId` undefined = active tile, `0`/`null` = erase.
+   * Goes through the engine's command path, so it undoes + syncs to collab
+   * peers. Returns `false` if it couldn't be applied.
+   */
+  paintTile(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null): boolean {
+    return this._engineCtl.engine?.excalibur?.paintTileAt(layerId, tileX, tileY, spriteId) ?? false
   }
 
   /**

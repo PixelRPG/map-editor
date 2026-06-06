@@ -56,6 +56,17 @@ const CONTROL_IFACE_XML = `
     <method name="GetSessionState">
       <arg type="s" direction="out" name="state_json"/>
     </method>
+    <method name="SetZoom">
+      <arg type="d" direction="in" name="zoom"/>
+    </method>
+    <method name="PresentWindow"/>
+    <method name="PaintTile">
+      <arg type="s" direction="in" name="layer_id"/>
+      <arg type="i" direction="in" name="tile_x"/>
+      <arg type="i" direction="in" name="tile_y"/>
+      <arg type="i" direction="in" name="sprite_id"/>
+      <arg type="b" direction="out" name="applied"/>
+    </method>
   </interface>
 </node>`
 
@@ -165,6 +176,25 @@ export class ControlDbusService {
     const win = this.window
     if (!win) return JSON.stringify({ kind: 'no-active-window' })
     return JSON.stringify(win.getSessionState())
+  }
+
+  /** `SetZoom(zoom)` — set the camera zoom to an absolute value (1 = 100%). */
+  SetZoom(zoom: number): void {
+    this.requireWindow().setZoom(zoom)
+  }
+
+  /** `PresentWindow()` — bring the editor window to the foreground (map + focus). */
+  PresentWindow(): void {
+    this.requireWindow().present()
+  }
+
+  /**
+   * `PaintTile(layer_id, x, y, sprite_id) -> applied` — paint/erase a tile.
+   * `layer_id` `''` = active layer; `sprite_id` `-1` = active tile, `0` = erase,
+   * `>0` = paint that global tile id.
+   */
+  PaintTile(layerId: string, tileX: number, tileY: number, spriteId: number): boolean {
+    return this.requireWindow().paintTile(layerId || null, tileX, tileY, spriteId < 0 ? undefined : spriteId)
   }
 
   private requireWindow(): ApplicationWindow {
