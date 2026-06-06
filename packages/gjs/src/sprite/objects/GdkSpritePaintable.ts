@@ -54,6 +54,11 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
   declare snapshot: Gdk.Paintable['snapshot']
   declare invalidate_contents: Gdk.Paintable['invalidate_contents']
   declare invalidate_size: Gdk.Paintable['invalidate_size']
+  // Declared (not overridden) so the type satisfies `Gdk.Paintable` —
+  // GTK provides the default C-side `compute_concrete_size`. We cannot
+  // override its vfunc from JS (see the note on `vfunc_compute_concrete_size`
+  // below), but the inherited method exists at runtime.
+  declare compute_concrete_size: Gdk.Paintable['compute_concrete_size']
 
   static {
     GObject.registerClass(
