@@ -80,6 +80,11 @@ export class Engine {
   // can watch it work without manually scrolling. Off by default — we
   // don't yank the view around unless asked.
   private _followAssistant = false
+  // Smooth camera-follow target (world space) or null when not following.
+  // Updated cheaply on every followed-peer cursor move; the camera eases
+  // toward it each frame (see `_tickCameraFollow`) so following a fast
+  // cursor reads as a smooth glide, not a hectic per-update jump.
+  private _followTarget: Vector | null = null
   // When a networked CollabSession is active, the app sets this so the
   // assistant's presence/cursor are relayed to remote peers too (the AI
   // shows up as a peer to networked humans). The AI's *edits* already
@@ -116,6 +121,13 @@ export class Engine {
       enableCanvasTransparency: true,
       enableCanvasContextMenu: true,
     })
+
+    // Smooth camera-follow: ease the camera toward `_followTarget` every
+    // frame rather than issuing a fresh `camera.move` tween per cursor
+    // update (which fought itself and looked hectic).
+    this.excalibur.on('postupdate', (evt: { elapsed?: number; delta?: number }) =>
+      this._tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
+    )
   }
 
   async initialize(): Promise<void> {
@@ -418,11 +430,8 @@ export class Engine {
     // Relay to networked peers too (no-op when no session is wired).
     this._assistantFrameRelay?.(presence)
     this._assistantFrameRelay?.(cursor)
-    // Opt-in follow: pan the camera to keep the assistant in view.
-    // Fire-and-forget — the cursor update must not wait on the pan.
-    if (this._followAssistant) {
-      scene.camera.move(new Vector(worldX, worldY), 300).catch(() => {})
-    }
+    // Opt-in follow: ease the camera toward the assistant (smooth glide).
+    if (this._followAssistant) this.panCameraTo(worldX, worldY)
     return true
   }
 
@@ -473,16 +482,40 @@ export class Engine {
   }
 
   /**
-   * Smoothly pan the camera so world point `(x, y)` becomes the viewport
-   * centre. Used to follow ANY collaborator (human peer or the AI) the
-   * user selected in the participants toolbar — the app feeds the
-   * followed peer's awareness cursor (already world-space) here. No-op
-   * without an active scene.
+   * Set the smooth camera-follow target to world point `(x, y)`. Used to
+   * follow ANY collaborator (human peer or the AI) the user selected in
+   * the participants toolbar — the app feeds the followed peer's awareness
+   * cursor (already world-space) here on each move. The camera eases
+   * toward it in `_tickCameraFollow`, so rapid updates glide instead of
+   * snapping.
    */
-  panCameraTo(worldX: number, worldY: number, durationMs = 250): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    scene.camera.move(new Vector(worldX, worldY), durationMs).catch(() => {})
+  panCameraTo(worldX: number, worldY: number): void {
+    this._followTarget = new Vector(worldX, worldY)
+  }
+
+  /** Stop following — the camera stays where it is and responds to the user again. */
+  stopCameraFollow(): void {
+    this._followTarget = null
+  }
+
+  /**
+   * Per-frame easing toward `_followTarget`. Frame-rate independent: the
+   * lerp factor scales with elapsed time so the glide feels the same at
+   * 30 or 60 fps. Snaps + stops once within a sub-pixel of the target.
+   */
+  private _tickCameraFollow(elapsedMs: number): void {
+    if (!this._followTarget) return
+    const camera = this.excalibur.currentScene?.camera
+    if (!camera) return
+    const dx = this._followTarget.x - camera.pos.x
+    const dy = this._followTarget.y - camera.pos.y
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      camera.pos = this._followTarget.clone()
+      return
+    }
+    // Exponential smoothing; ~120ms time constant reads as a gentle glide.
+    const factor = Math.min(1, elapsedMs / 120)
+    camera.pos = new Vector(camera.pos.x + dx * factor, camera.pos.y + dy * factor)
   }
 
   /**
@@ -1023,6 +1056,30 @@ export class Engine {
     const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
     return () => {
       disposeMove?.()
+      mapSub.close()
+    }
+  }
+
+  /**
+   * Subscribe to the local placement-selection set. Fires with the
+   * current selection immediately and on every change (select tool,
+   * inspector, programmatic `setSelectedPlacements`). Re-binds across
+   * `MAP_LOADED`. Used by `CollabSession` to broadcast our selection over
+   * awareness so peers can see what we've selected. Returns a disposer.
+   */
+  onSelectionChanged(cb: (placementIds: string[]) => void): () => void {
+    let unsub: (() => void) | null = null
+    const rebind = () => {
+      unsub?.()
+      unsub = null
+      const scene = this._activeMapScene()
+      if (!scene) return
+      unsub = SessionState.subscribe(scene, SelectedPlacementsComponent, () => cb(this.getSelectedPlacements()))
+    }
+    rebind()
+    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
+    return () => {
+      unsub?.()
       mapSub.close()
     }
   }

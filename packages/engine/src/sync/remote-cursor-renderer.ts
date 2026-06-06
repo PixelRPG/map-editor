@@ -1,6 +1,8 @@
-import { Actor, Circle, Color, Font, GraphicsGroup, Text, Vector } from 'excalibur'
+import { Actor, Circle, Color, Font, GraphicsGroup, type Scene, Text, Vector } from 'excalibur'
 
 import type { Engine } from '../engine.ts'
+import { createSelectionRing, findPlacementActor } from '../services/selection-highlight.ts'
+import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { AwarenessManager, AwarenessPeerState } from './awareness.ts'
 
 /**
@@ -40,6 +42,8 @@ import type { AwarenessManager, AwarenessPeerState } from './awareness.ts'
  */
 export class RemoteCursorRenderer {
   private readonly actors = new Map<string, Actor>()
+  /** Per-peer selection-ring pools: peerId → (placementId → ring + target). */
+  private readonly selectionPools = new Map<string, Map<string, { ring: Actor; target: Actor }>>()
   private readonly disposers: Array<() => void> = []
   private closed = false
 
@@ -48,16 +52,17 @@ export class RemoteCursorRenderer {
     private readonly awareness: AwarenessManager,
   ) {
     this.disposers.push(awareness.on('peer-changed', (peer) => this.applyPeer(peer)))
-    this.disposers.push(awareness.on('peer-left', ({ peerId }) => this.removeActor(peerId)))
+    this.disposers.push(awareness.on('peer-left', ({ peerId }) => this.removePeer(peerId)))
     // Re-paint every existing peer when the map changes — actors
     // were attached to the OLD scene and went away with it.
     this.disposers.push(
       (() => {
         const sub = this.engine.events.on('map-loaded', () => {
-          // The old actors are torn down with the previous scene
-          // graph. Re-create from the awareness snapshot for the
-          // new map.
+          // The old actors + selection rings are torn down with the
+          // previous scene graph. Re-create from the awareness snapshot
+          // for the new map.
           this.actors.clear()
+          this.selectionPools.clear()
           for (const peer of awareness.getPeers()) this.applyPeer(peer)
         })
         return () => sub.close()
@@ -79,14 +84,19 @@ export class RemoteCursorRenderer {
     this.disposers.length = 0
     for (const actor of this.actors.values()) actor.kill()
     this.actors.clear()
+    for (const pool of this.selectionPools.values()) for (const { ring } of pool.values()) ring.kill()
+    this.selectionPools.clear()
   }
 
   private applyPeer(peer: AwarenessPeerState): void {
     if (this.closed) return
     const scene = this.engine.excalibur?.currentScene
     if (!scene) return
+    // Selection rings are independent of the cursor — a peer can select
+    // a placement without having moved the pointer yet.
+    this.applyPeerSelection(scene, peer)
     // No cursor yet OR peer is editing a different scene — make
-    // sure we don't have a stale actor lying around.
+    // sure we don't have a stale cursor actor lying around.
     const activeMapId = (scene as { mapResource?: { mapData?: { id?: string } } }).mapResource?.mapData?.id
     if (!peer.cursor || peer.cursor.sceneId !== activeMapId) {
       this.removeActor(peer.peerId)
@@ -133,6 +143,49 @@ export class RemoteCursorRenderer {
       ],
     })
     actor.graphics.use(group)
+  }
+
+  /**
+   * Reconcile a peer's selection rings against its awareness `selection`.
+   * Each selected placement on the active map gets an outline ring in the
+   * PEER's colour (so each collaborator's selection is visually distinct).
+   * Placements not on the active map (peer on another scene, unspawned id)
+   * are silently skipped.
+   */
+  private applyPeerSelection(scene: Scene, peer: AwarenessPeerState): void {
+    const want = peer.selection?.placementIds ?? []
+    let pool = this.selectionPools.get(peer.peerId)
+    if (!pool) {
+      pool = new Map()
+      this.selectionPools.set(peer.peerId, pool)
+    }
+    // Drop rings for placements no longer selected.
+    for (const [id, entry] of pool) {
+      if (!want.includes(id)) {
+        entry.ring.kill()
+        pool.delete(id)
+      }
+    }
+    // Add rings for newly-selected placements, in the peer's colour.
+    const colour = parseAwarenessColour(peer.info.color)
+    for (const id of want) {
+      if (pool.has(id)) continue
+      const target = findPlacementActor(scene, id)
+      if (!target) continue
+      const ring = createSelectionRing(target, colour, EDITOR_CONSTANTS.SELECTION_HIGHLIGHT_LINE_WIDTH)
+      scene.add(ring)
+      pool.set(id, { ring, target })
+    }
+  }
+
+  /** Remove everything for a peer (cursor + selection rings) — on peer-left. */
+  private removePeer(peerId: string): void {
+    this.removeActor(peerId)
+    const pool = this.selectionPools.get(peerId)
+    if (pool) {
+      for (const { ring } of pool.values()) ring.kill()
+      this.selectionPools.delete(peerId)
+    }
   }
 
   private removeActor(peerId: string): void {

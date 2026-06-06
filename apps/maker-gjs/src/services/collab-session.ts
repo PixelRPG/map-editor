@@ -16,6 +16,20 @@ import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
 const log = scopedLogger('collab-session')
 
 /**
+ * Distinct accent palette for collaborators (Adwaita-ish), deliberately
+ * excluding the AI assistant's default purple (`#9141ac`) so a human peer
+ * and the AI don't collide. Each peer's colour is its peerId hashed into
+ * this palette — stable across reconnects, distinct between peers.
+ */
+const PEER_COLOURS = ['#3584e4', '#33d17a', '#f6d32d', '#ff7800', '#e01b24', '#c061cb', '#986a44', '#33c7de']
+
+function colourForPeer(peerId: string): string {
+  let hash = 0
+  for (let i = 0; i < peerId.length; i++) hash = (hash * 31 + peerId.charCodeAt(i)) >>> 0
+  return PEER_COLOURS[hash % PEER_COLOURS.length]
+}
+
+/**
  * Default deadline for the WebRTC handshake — from the moment
  * `peer.connect()` is called to the moment both data channels open
  * and the peer's state transitions to `'connected'`. Generous to
@@ -128,13 +142,12 @@ export class CollabSession {
       rtcFactory: opts.rtcFactory,
     })
 
-    // Default display info — caller can override via `localInfo`.
-    // The placeholder colour matches the Adwaita "blue-3" accent so
-    // a default-styled peer still sits cleanly on either the light
-    // or dark scratchpad backdrop.
+    // Default display info — caller can override via `localInfo`. The
+    // colour is derived from the peerId so each collaborator gets a
+    // distinct, stable accent (cursor + selection rings on peers' views).
     const localInfo: AwarenessPeerInfo = opts.localInfo ?? {
       displayName: opts.peerId,
-      color: '#1c71d8',
+      color: colourForPeer(opts.peerId),
     }
     this.awareness = new AwarenessManager({
       localPeerId: opts.peerId,
@@ -223,6 +236,12 @@ export class CollabSession {
       this.awareness.sendCursor({ sceneId, x: worldX, y: worldY })
     })
     this.subscriptions.push(() => cursorDispose())
+    // Bridge engine selection → awareness selection stream, so peers see
+    // what we've selected (rendered in our colour on their side).
+    const selectionDispose = engine.onSelectionChanged((placementIds) => {
+      this.awareness.sendSelection({ placementIds })
+    })
+    this.subscriptions.push(() => selectionDispose())
   }
 
   /**

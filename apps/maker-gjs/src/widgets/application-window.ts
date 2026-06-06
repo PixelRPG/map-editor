@@ -1362,9 +1362,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   private _setFollowedPeer(peerId: string | null): void {
     this._followedPeerId = peerId
+    const engine = this._engineCtl.engine?.excalibur
     // The engine pans itself for the AI (it owns the AI cursor); human
     // peers are panned from `_onPeerChanged` as their cursors arrive.
-    this._engineCtl.engine?.excalibur?.setFollowAssistant(peerId === ASSISTANT_PEER_ID)
+    engine?.setFollowAssistant(peerId === ASSISTANT_PEER_ID)
+    // Stop the smooth glide when following no one.
+    if (!peerId) engine?.stopCameraFollow()
   }
 
   /** A session peer's awareness changed — pan if it's the followed one; rebuild only on roster changes. */

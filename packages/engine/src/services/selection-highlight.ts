@@ -24,7 +24,7 @@ import { EDITOR_CONSTANTS } from '../utils/constants.ts'
  * so the ring sits above every tile (and above the placement actor
  * itself, which renders at its layer's tier z).
  */
-function createHighlightActor(target: Actor): Actor {
+export function createSelectionRing(target: Actor, strokeColor: Color, lineWidth: number): Actor {
   const ring = new Actor({
     name: `selection-highlight:${target.get(PlacementIdComponent)?.id ?? 'unknown'}`,
     pos: target.pos.clone(),
@@ -36,8 +36,8 @@ function createHighlightActor(target: Actor): Actor {
     width: target.width,
     height: target.height,
     color: Color.Transparent,
-    strokeColor: Color.fromHex(EDITOR_CONSTANTS.SELECTION_HIGHLIGHT_COLOR),
-    lineWidth: EDITOR_CONSTANTS.SELECTION_HIGHLIGHT_LINE_WIDTH,
+    strokeColor,
+    lineWidth,
   })
   ring.graphics.use(rect)
   ring.graphics.anchor = vec(0.5, 0.5)
@@ -52,7 +52,7 @@ function createHighlightActor(target: Actor): Actor {
  * was filtered out, etc.). Linear scan over scene entities — fine
  * for the typical few-dozen-placements-per-map case.
  */
-function findPlacementActor(scene: Scene, placementId: string): Actor | null {
+export function findPlacementActor(scene: Scene, placementId: string): Actor | null {
   for (const entity of scene.world.entityManager.entities) {
     if (!(entity instanceof Actor)) continue
     if (entity.get(PlacementIdComponent)?.id === placementId) return entity
@@ -89,7 +89,11 @@ export function refreshSelectionHighlights(
     if (pool.has(id)) continue
     const target = findPlacementActor(scene, id)
     if (!target) continue
-    const ring = createHighlightActor(target)
+    const ring = createSelectionRing(
+      target,
+      Color.fromHex(EDITOR_CONSTANTS.SELECTION_HIGHLIGHT_COLOR),
+      EDITOR_CONSTANTS.SELECTION_HIGHLIGHT_LINE_WIDTH,
+    )
     scene.add(ring)
     pool.set(id, { ring, target })
   }
