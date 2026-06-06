@@ -1,3 +1,5 @@
+import { isAbsoluteOrUrl } from './url.ts'
+
 /**
  * Normalize a path into a fetch-compatible URL. In the browser, absolute
  * POSIX paths resolve relative to the origin. In GJS there is no origin, so
@@ -9,9 +11,22 @@
  * `loadTextFile` wrapper.
  */
 export function toFetchUrl(path: string): string {
-  if (/^(https?|file|data|blob):/i.test(path)) return path
+  if (isAbsoluteOrUrl(path)) return path
   if (path.startsWith('/')) return `file://${path}`
   return path
+}
+
+/**
+ * Normalise + fetch a path, throwing on a non-2xx response. Shared
+ * transport for {@link loadTextFile} and {@link loadBinaryFile}.
+ */
+async function fetchOk(path: string): Promise<Response> {
+  const url = toFetchUrl(path)
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to load file: ${url} (${response.status})`)
+  }
+  return response
 }
 
 /**
@@ -19,22 +34,7 @@ export function toFetchUrl(path: string): string {
  * progress reporting — this helper is the low-level transport.
  */
 export async function loadTextFile(path: string): Promise<string> {
-  const url = toFetchUrl(path)
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to load file: ${url} (${response.status})`)
-  }
-  return await response.text()
-}
-
-/**
- * Load and parse a JSON file
- * @param path Path to the JSON file
- * @returns Parsed JSON data
- */
-export async function loadJsonFile<T>(path: string): Promise<T> {
-  const content = await loadTextFile(path)
-  return JSON.parse(content) as T
+  return await (await fetchOk(path)).text()
 }
 
 /**
@@ -49,11 +49,6 @@ export async function loadJsonFile<T>(path: string): Promise<T> {
  * Node / GJS via `@gjsify/fetch`).
  */
 export async function loadBinaryFile(path: string): Promise<Uint8Array> {
-  const url = toFetchUrl(path)
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to load file: ${url} (${response.status})`)
-  }
-  const buf = await response.arrayBuffer()
+  const buf = await (await fetchOk(path)).arrayBuffer()
   return new Uint8Array(buf)
 }

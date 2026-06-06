@@ -150,16 +150,6 @@ export class Application extends Adw.Application {
     // About action
     const showAboutAction = new Gio.SimpleAction({ name: 'about' })
     showAboutAction.connect('activate', (_action) => {
-      // const aboutParams: Partial<Adw.AboutWindow.ConstructorProps> = {
-      //   transient_for: this.active_window,
-      //   application_name: 'PixelRPG Map Editor',
-      //   application_icon: APPLICATION_ID,
-      //   developer_name: 'Pascal Garber',
-      //   version: '0.1.0',
-      //   developers: ['Pascal Garber'],
-      //   copyright: '© 2024 Pascal Garber',
-      // }
-      // const aboutWindow = new Adw.AboutWindow(aboutParams)
       // Pass `null` as the release version until the metainfo has
       // proper <release> entries; libadwaita falls back to the latest
       // release block (or just the app metadata if there are none).
@@ -169,7 +159,6 @@ export class Application extends Adw.Application {
       )
       aboutDialog.set_version(PACKAGE_VERSION)
       aboutDialog.present(this.get_active_window())
-      // aboutWindow.present()
     })
     this.add_action(showAboutAction)
 

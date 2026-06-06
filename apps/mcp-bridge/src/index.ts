@@ -160,11 +160,16 @@ function changeState(label: string | undefined, scope: string, name: string, val
   )
 }
 
-/** Call a `() -> (s)` Control method and return its JSON string (pretty-printed). */
-async function jsonCall(label: string | undefined, method: string): Promise<string> {
+/** Raw (non-pretty) JSON string from a `() -> (s)` Control method. */
+async function rawJson(label: string | undefined, method: string): Promise<string> {
   const reply = await control(label, method, null, '(s)')
   const [json] = reply.recursiveUnpack() as [string]
-  return JSON.stringify(JSON.parse(json), null, 2)
+  return json
+}
+
+/** Call a `() -> (s)` Control method and return its JSON string (pretty-printed). */
+async function jsonCall(label: string | undefined, method: string): Promise<string> {
+  return JSON.stringify(JSON.parse(await rawJson(label, method)), null, 2)
 }
 
 // --- MCP server ---
@@ -470,13 +475,6 @@ server.registerTool(
     }
   },
 )
-
-/** Raw (non-pretty) JSON string from a `() -> (s)` Control method. */
-async function rawJson(label: string | undefined, method: string): Promise<string> {
-  const reply = await control(label, method, null, '(s)')
-  const [json] = reply.recursiveUnpack() as [string]
-  return json
-}
 
 server.registerTool(
   'activate_action',

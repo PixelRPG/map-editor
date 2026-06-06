@@ -31,7 +31,13 @@ import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
-import { AwarenessManager, type AwarenessMessage, type AwarenessPeerInfo, RemoteCursorRenderer } from './sync/index.ts'
+import {
+  AwarenessManager,
+  type AwarenessMessage,
+  type AwarenessPeerInfo,
+  parseAwarenessColour,
+  RemoteCursorRenderer,
+} from './sync/index.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -46,15 +52,6 @@ interface LoaderEventMap {
 
 /** Stable peer id for the in-process AI assistant collaborator. */
 export const ASSISTANT_PEER_ID = 'ai-assistant'
-
-/** Parse a `#rrggbb` token to an Excalibur Color; mid-grey on failure. */
-function parseAssistantColour(token: string): Color {
-  try {
-    return Color.fromHex(token)
-  } catch {
-    return Color.fromHex('#888888')
-  }
-}
 
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
@@ -500,7 +497,7 @@ export class Engine {
       pos: new Vector(tm.pos.x + (tileX + 0.5) * tm.tileWidth, tm.pos.y + (tileY + 0.5) * tm.tileHeight),
       z: 9_000, // below the cursor (10_000), above the tilemap
     })
-    const colour = parseAssistantColour(this._assistantInfo.color)
+    const colour = parseAwarenessColour(this._assistantInfo.color)
     // Outline (not a fill) so the painted tile content stays visible —
     // a colour-coded border that says "the AI touched this".
     actor.graphics.use(

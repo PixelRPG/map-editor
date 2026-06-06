@@ -117,7 +117,7 @@ export class RemoteCursorRenderer {
   }
 
   private applyGraphics(actor: Actor, peer: AwarenessPeerState): void {
-    const colour = parseColour(peer.info.color)
+    const colour = parseAwarenessColour(peer.info.color)
     const dot = new Circle({ radius: 6, color: colour })
     const label = new Text({
       text: peer.info.displayName,
@@ -163,11 +163,12 @@ function debugEnabled(): boolean {
 }
 
 /**
- * Parse a CSS-style colour token (`#rgb` / `#rrggbb`) into an
- * Excalibur Color. Falls back to mid-grey on parse failure so a
- * peer with a bogus colour still renders.
+ * Parse a CSS-style colour token (`#rgb` / `#rrggbb`) into an Excalibur
+ * Color. Falls back to mid-grey on parse failure so a peer (or the AI
+ * assistant) with a bogus colour still renders. Shared by the cursor
+ * renderer and the engine's assistant-edit highlight.
  */
-function parseColour(token: string): Color {
+export function parseAwarenessColour(token: string): Color {
   try {
     return Color.fromHex(token)
   } catch {

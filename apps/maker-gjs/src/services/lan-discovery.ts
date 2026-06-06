@@ -106,7 +106,9 @@ export class LanPublisher {
  */
 export class LanBrowser {
   private process: Gio.Subprocess | null = null
-  private stdin: Gio.InputStream | null = null
+  // The avahi-browse subprocess's stdout pipe — held so it stays alive
+  // for the lifetime of the reader and is dropped on close().
+  private stdoutPipe: Gio.InputStream | null = null
   private closed = false
   private onEvent: ((event: LanDiscoveryEvent) => void) | null = null
 
@@ -139,7 +141,7 @@ export class LanBrowser {
       this.close()
       throw new Error('LanBrowser: no stdout pipe on avahi-browse subprocess')
     }
-    this.stdin = stdout
+    this.stdoutPipe = stdout
     const reader = new Gio.DataInputStream({ base_stream: stdout })
     this.readNext(reader)
   }
@@ -156,7 +158,7 @@ export class LanBrowser {
       }
       this.process = null
     }
-    this.stdin = null
+    this.stdoutPipe = null
     this.onEvent = null
   }
 

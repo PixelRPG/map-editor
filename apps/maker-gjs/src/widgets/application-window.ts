@@ -844,10 +844,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(playAction)
     this._playAction = playAction
 
-    // AI-assistant pause toggle. The FloatingAssistant pill's button
+    // AI-assistant pause toggle. The collaborators bar's pause button
     // (action-name="win.toggle-assistant-paused") activates this; the
     // change-state handler pauses the engine's assistant (its cursor +
-    // paints are rejected) and swaps the pill's icon to "resume". This
+    // paints are rejected) and swaps the button's icon to "resume". This
     // is the user's stay-in-control switch over the AI collaborator.
     const assistantPausedAction = Gio.SimpleAction.new_stateful(
       'toggle-assistant-paused',

@@ -48,22 +48,6 @@ function resolveTileGraphic(mapResource: MapResource, ref: TileSpriteRef): Graph
 }
 
 /**
- * @deprecated Internal helper retained for backwards-compatibility
- * with any external caller that imported it before the refactor.
- * Use {@link resolveTileGraphic} for new code — it accepts a
- * `TileSpriteRef` (so it can pick animations) and always clones.
- */
-export function getSpriteFromResource(
-  mapResource: MapResource,
-  spriteInfo: { spriteSetId: string; spriteId: number },
-): Graphic | null {
-  const spriteSet = mapResource.getSpriteSetResource(spriteInfo.spriteSetId)
-  if (!spriteSet) return null
-  const sprite = spriteSet.sprites[spriteInfo.spriteId]
-  return sprite ? sprite.clone() : null
-}
-
-/**
  * Optional per-sprite opacity hook. When supplied, the returned
  * value is written to the cloned graphic's `opacity` before it's
  * attached to the tile. Used by the editor view mode (grid mode
