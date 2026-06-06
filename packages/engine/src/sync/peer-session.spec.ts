@@ -106,7 +106,11 @@ function pair(): {
 }
 
 function factoryFor(pc: FakeRTCPeerConnection): typeof RTCPeerConnection {
-  return (() => pc) as unknown as typeof RTCPeerConnection
+  // Regular function, not an arrow — PeerSession does `new factory(...)`
+  // and arrows aren't constructable.
+  return function () {
+    return pc
+  } as unknown as typeof RTCPeerConnection
 }
 
 export default async () => {

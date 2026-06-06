@@ -68,3 +68,11 @@ jobs:
 
       - name: Verify barrel files are not stale
         run: gjsify foreach check:barrels -v -t
+
+      - name: Run engine tests (collab op-log + awareness contract)
+        # The platform-independent @pixelrpg/engine suite — the collab
+        # round-trip (op-log sync, awareness, snapshot exchange) + the
+        # registry-completeness guard that fails if a new Command isn't
+        # registered. Runs under both gjs + node. Keeps "new feature must
+        # stay collab-compatible" enforced, not just documented.
+        run: gjsify foreach test -v -p --include @pixelrpg/engine

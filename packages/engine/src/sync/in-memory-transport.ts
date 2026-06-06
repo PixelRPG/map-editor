@@ -200,9 +200,18 @@ export function makeTransportPair(): {
   return { hostTransport: host, joinerTransport: joiner }
 }
 
-/** Wrap a {@link FakeRTCPeerConnection} as the `typeof RTCPeerConnection` PeerSession options expect. */
+/**
+ * Wrap a {@link FakeRTCPeerConnection} as the `typeof RTCPeerConnection`
+ * PeerSession options expect. Must be a REGULAR function, not an arrow —
+ * `PeerSession` calls it with `new factory(...)`, and arrow functions are
+ * not constructable (`TypeError: ... is not a constructor`). A constructor
+ * that returns an object yields that object from `new`, so this hands back
+ * the shared fake.
+ */
 export function rtcFactoryFor(pc: FakeRTCPeerConnection): typeof RTCPeerConnection {
-  return (() => pc) as unknown as typeof RTCPeerConnection
+  return function () {
+    return pc
+  } as unknown as typeof RTCPeerConnection
 }
 
 /**

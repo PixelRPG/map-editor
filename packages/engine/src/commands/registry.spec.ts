@@ -1,6 +1,22 @@
 import { describe, expect, it } from '@gjsify/unit'
+import * as Commands from './index.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
 import { BUILT_IN_COMMANDS } from './registry.ts'
+
+/**
+ * Auto-discover every shipped Command class from the package barrel: a
+ * Command class is a constructor carrying a static string `KIND`. Because
+ * `check:barrels` guarantees the barrel re-exports every `*.command.ts`,
+ * this finds every command in the codebase without a hand-maintained list.
+ */
+function discoverCommandKinds(): string[] {
+  return (Object.values(Commands) as unknown[])
+    .filter(
+      (value): value is { KIND: string } =>
+        typeof value === 'function' && typeof (value as { KIND?: unknown }).KIND === 'string',
+    )
+    .map((commandClass) => commandClass.KIND)
+}
 
 export default async () => {
   await describe('BUILT_IN_COMMANDS registry', async () => {
@@ -31,8 +47,20 @@ export default async () => {
       expect(cmd.kind).toBe(EraseTileCommand.KIND)
     })
 
-    await it('covers every shipped Command class — adding one without a registry entry breaks this test', async () => {
-      expect(Object.keys(BUILT_IN_COMMANDS).sort()).toStrictEqual([EraseTileCommand.KIND, PaintTileCommand.KIND].sort())
+    await it('every shipped Command class is registered in BUILT_IN_COMMANDS', async () => {
+      // Auto-enforced collab contract: a Command applies locally even when
+      // unregistered, but a remote peer can't reconstruct it from the wire
+      // — so an unregistered command works solo and silently desyncs in
+      // collab. Adding a `*.command.ts` without a registry entry fails here.
+      const discovered = discoverCommandKinds()
+      expect(discovered.length).toBeGreaterThan(0)
+      for (const kind of discovered) {
+        expect(BUILT_IN_COMMANDS[kind]).toBeDefined()
+      }
+      // And no stale registry entries without a backing class.
+      for (const kind of Object.keys(BUILT_IN_COMMANDS)) {
+        expect(discovered).toContain(kind)
+      }
     })
   })
 }
