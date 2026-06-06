@@ -30,6 +30,7 @@ import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
+import { AwarenessManager, type AwarenessPeerInfo, RemoteCursorRenderer } from './sync/index.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -42,6 +43,9 @@ interface LoaderEventMap {
   afterload: undefined
 }
 
+/** Stable peer id for the in-process AI assistant collaborator. */
+const ASSISTANT_PEER_ID = 'ai-assistant'
+
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -49,6 +53,14 @@ export class Engine {
   public readonly excalibur: ExcaliburEngine
   private _gameProjectResource: GameProjectResource | null = null
   private logger = Logger.getInstance()
+
+  // Local virtual-collaborator presence (the AI assistant). A
+  // session-less AwarenessManager + RemoteCursorRenderer let an
+  // in-process peer (driven over D-Bus/MCP) render a cursor without any
+  // CollabSession / WebRTC. See docs/concepts/ai-collaborator.md.
+  private _assistantAwareness: AwarenessManager | null = null
+  private _assistantRenderer: RemoteCursorRenderer | null = null
+  private _assistantInfo: AwarenessPeerInfo = { displayName: 'AI Assistant', color: '#9141ac' }
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -183,6 +195,9 @@ export class Engine {
   }
 
   async stop(): Promise<void> {
+    this._assistantRenderer?.close()
+    this._assistantRenderer = null
+    this._assistantAwareness = null
     this.excalibur.stop()
     this.setStatus(EngineStatus.READY)
   }
@@ -340,6 +355,68 @@ export class Engine {
     const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
     this.executeCommand(buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null))
     return true
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // AI assistant — in-process virtual collaborator presence/cursor
+  // (see docs/concepts/ai-collaborator.md)
+  // ──────────────────────────────────────────────────────────────
+
+  /**
+   * Show (or move) the AI assistant's cursor at tile `(tileX, tileY)` on
+   * the active map — rendered by the same `RemoteCursorRenderer` a human
+   * peer's cursor uses, but fed from a local session-less awareness
+   * channel (no CollabSession / WebRTC). Returns `false` if no map/scene
+   * is active. Coordinates are tile cells; converted to the world centre
+   * of the tile for rendering.
+   */
+  setAssistantCursor(tileX: number, tileY: number): boolean {
+    const scene = this._activeMapScene()
+    const mapId = scene?.mapResource?.mapData?.id
+    if (!scene || !mapId) return false
+    const tm = this._anyTileMap(scene)
+    if (!tm) return false
+    const aware = this._ensureAssistant()
+    aware.handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
+    aware.handleInbound({
+      type: 'cursor',
+      peerId: ASSISTANT_PEER_ID,
+      cursor: { sceneId: mapId, x: tm.pos.x + (tileX + 0.5) * tm.tileWidth, y: tm.pos.y + (tileY + 0.5) * tm.tileHeight },
+    })
+    return true
+  }
+
+  /** Update the AI assistant's display name + colour (re-announced immediately). */
+  setAssistantInfo(displayName: string, color: string): void {
+    this._assistantInfo = { displayName, color }
+    this._assistantAwareness?.handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
+  }
+
+  /** Remove the AI assistant's cursor/presence from the canvas. */
+  hideAssistant(): void {
+    this._assistantAwareness?.handleInbound({ type: 'leave', peerId: ASSISTANT_PEER_ID })
+  }
+
+  private _ensureAssistant(): AwarenessManager {
+    if (!this._assistantAwareness) {
+      // localPeerId is a sentinel that never matches the assistant peer,
+      // so handleInbound treats the assistant as a "remote" peer and the
+      // renderer draws it. `send` is a no-op — purely local, no wire.
+      this._assistantAwareness = new AwarenessManager({
+        localPeerId: '__local_viewer__',
+        localInfo: { displayName: 'viewer', color: '#000000' },
+        send: () => {},
+      })
+      this._assistantRenderer = new RemoteCursorRenderer(this, this._assistantAwareness)
+    }
+    return this._assistantAwareness
+  }
+
+  private _anyTileMap(scene: MapScene): TileMap | null {
+    for (const entity of scene.world.entityManager.entities) {
+      if (entity instanceof TileMap) return entity
+    }
+    return null
   }
 
   /**

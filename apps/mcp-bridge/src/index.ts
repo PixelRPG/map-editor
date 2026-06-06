@@ -674,6 +674,64 @@ server.registerTool(
   },
 )
 
+// AI collaborator presence (watch-the-assistant) -------------------------
+
+server.registerTool(
+  'assistant_cursor',
+  {
+    description:
+      "Show or move the AI assistant's collaborator cursor at tile (x, y) on the active map — the user " +
+      'watches it like a remote peer. Pair it with paint_tile to "point then paint". Needs an open scene.',
+    inputSchema: z.object({ x: z.number().int(), y: z.number().int(), ...instanceArg }),
+  },
+  async ({ x, y, instance }) => {
+    try {
+      const reply = await control(
+        instance,
+        'SetAssistantCursor',
+        GLib.Variant.new_tuple([GLib.Variant.new_int32(x), GLib.Variant.new_int32(y)]),
+        '(b)',
+      )
+      const [applied] = reply.recursiveUnpack() as [boolean]
+      return applied ? ok(`Assistant cursor at (${x}, ${y})`) : fail('No active scene for the assistant cursor.')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'assistant_info',
+  {
+    description: "Set the AI assistant collaborator's display name + colour (CSS hex, e.g. #9141ac).",
+    inputSchema: z.object({ name: z.string(), color: z.string(), ...instanceArg }),
+  },
+  async ({ name, color, instance }) => {
+    try {
+      await control(instance, 'SetAssistantInfo', GLib.Variant.new_tuple([strv(name), strv(color)]), null)
+      return ok(`Assistant info set: ${name} (${color})`)
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'assistant_hide',
+  {
+    description: "Remove the AI assistant collaborator cursor/presence from the editor.",
+    inputSchema: z.object({ ...instanceArg }),
+  },
+  async ({ instance }) => {
+    try {
+      await control(instance, 'HideAssistant', null, null)
+      return ok('Assistant hidden.')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
 server.registerTool(
   'set_playing',
   {

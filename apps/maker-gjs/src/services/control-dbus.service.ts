@@ -67,6 +67,16 @@ const CONTROL_IFACE_XML = `
       <arg type="i" direction="in" name="sprite_id"/>
       <arg type="b" direction="out" name="applied"/>
     </method>
+    <method name="SetAssistantCursor">
+      <arg type="i" direction="in" name="tile_x"/>
+      <arg type="i" direction="in" name="tile_y"/>
+      <arg type="b" direction="out" name="applied"/>
+    </method>
+    <method name="SetAssistantInfo">
+      <arg type="s" direction="in" name="display_name"/>
+      <arg type="s" direction="in" name="color"/>
+    </method>
+    <method name="HideAssistant"/>
   </interface>
 </node>`
 
@@ -195,6 +205,21 @@ export class ControlDbusService {
    */
   PaintTile(layerId: string, tileX: number, tileY: number, spriteId: number): boolean {
     return this.requireWindow().paintTile(layerId || null, tileX, tileY, spriteId < 0 ? undefined : spriteId)
+  }
+
+  /** `SetAssistantCursor(x, y) -> applied` — show/move the AI collaborator cursor. */
+  SetAssistantCursor(tileX: number, tileY: number): boolean {
+    return this.requireWindow().setAssistantCursor(tileX, tileY)
+  }
+
+  /** `SetAssistantInfo(name, color)` — set the AI collaborator's label + colour. */
+  SetAssistantInfo(displayName: string, color: string): void {
+    this.requireWindow().setAssistantInfo(displayName, color)
+  }
+
+  /** `HideAssistant()` — remove the AI collaborator cursor/presence. */
+  HideAssistant(): void {
+    this.requireWindow().hideAssistant()
   }
 
   private requireWindow(): ApplicationWindow {

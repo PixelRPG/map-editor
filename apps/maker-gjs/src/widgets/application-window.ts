@@ -1160,6 +1160,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     return this._engineCtl.engine?.excalibur?.paintTileAt(layerId, tileX, tileY, spriteId) ?? false
   }
 
+  /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */
+  setAssistantCursor(tileX: number, tileY: number): boolean {
+    return this._engineCtl.engine?.excalibur?.setAssistantCursor(tileX, tileY) ?? false
+  }
+
+  /** Set the AI-assistant cursor's display name + colour. */
+  setAssistantInfo(displayName: string, color: string): void {
+    this._engineCtl.engine?.excalibur?.setAssistantInfo(displayName, color)
+  }
+
+  /** Remove the AI-assistant cursor/presence. */
+  hideAssistant(): void {
+    this._engineCtl.engine?.excalibur?.hideAssistant()
+  }
+
   /**
    * Capture the editor to PNG bytes for external tooling. `scope:
    * 'window'` renders the whole top-level (chrome + sidebars + canvas)
