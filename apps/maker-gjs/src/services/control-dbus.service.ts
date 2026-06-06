@@ -60,6 +60,12 @@ const CONTROL_IFACE_XML = `
       <arg type="d" direction="in" name="zoom"/>
     </method>
     <method name="PresentWindow"/>
+    <method name="ResizeWindow">
+      <arg type="i" direction="in" name="width"/>
+      <arg type="i" direction="in" name="height"/>
+      <arg type="i" direction="out" name="result_width"/>
+      <arg type="i" direction="out" name="result_height"/>
+    </method>
     <method name="PaintTile">
       <arg type="s" direction="in" name="layer_id"/>
       <arg type="i" direction="in" name="tile_x"/>
@@ -199,6 +205,15 @@ export class ControlDbusService {
   /** `PresentWindow()` — bring the editor window to the foreground (map + focus). */
   PresentWindow(): void {
     this.requireWindow().present()
+  }
+
+  /**
+   * `ResizeWindow(width, height) -> (result_width, result_height)` — resize
+   * the top-level to an absolute pixel size to test the responsive
+   * (phone / tablet / desktop) breakpoints. Returns the requested size.
+   */
+  ResizeWindow(width: number, height: number): [number, number] {
+    return this.requireWindow().resizeWindow(width, height)
   }
 
   /**

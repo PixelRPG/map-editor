@@ -1238,6 +1238,25 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * Resize the top-level window to an absolute pixel size — lets external
+   * tooling (Control D-Bus → MCP) exercise the adaptive phone / tablet /
+   * desktop breakpoints the responsive layouts react to. GTK4 has no
+   * synchronous `resize()`, so we unmaximize / unfullscreen (otherwise the
+   * request is ignored) and set the default size, which is GTK4's resize
+   * path for an already-mapped window. Returns the [width, height] actually
+   * requested (clamped to ≥1); the real allocation settles a frame later,
+   * so a caller wanting the settled size should re-`GetStatus` after.
+   */
+  resizeWindow(width: number, height: number): [number, number] {
+    const w = Math.max(1, Math.round(width))
+    const h = Math.max(1, Math.round(height))
+    if (this.is_maximized()) this.unmaximize()
+    if (this.is_fullscreen()) this.unfullscreen()
+    this.set_default_size(w, h)
+    return [w, h]
+  }
+
+  /**
    * Paint/erase a tile programmatically (Control → MCP). `layerId` null =
    * active layer; `spriteId` undefined = active tile, `0`/`null` = erase.
    * Goes through the engine's command path, so it undoes + syncs to collab
