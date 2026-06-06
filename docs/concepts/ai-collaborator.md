@@ -1,8 +1,10 @@
 # AI Collaborator — the MCP/D-Bus assistant as a live in-editor peer
 
-> Status: **active** — Phases 1–4 landed (presence + cursor; edit
-> attribution; presence pill + pause/stop; follow-cam + activation toast).
-> Phase 5 (merge with networked collab) is gated on the WebRTC/GL work.
+> Status: **active** — Phases 1–5 landed. The in-process AI collaborator
+> is complete (presence + cursor, edit attribution, presence pill +
+> pause/stop, follow-cam + activation toast) AND participates in networked
+> collaboration: its edits sync via the shared op-log and its cursor/
+> presence relay to remote human peers.
 > Last meaningful change: 2026-06-06.
 
 The `org.pixelrpg.maker.Control` D-Bus interface + the MCP bridge (see
@@ -84,9 +86,15 @@ virtual peers.
    so the view isn't yanked around. The first time the assistant becomes
    present, a toast ("AI assistant is now editing with you") announces it —
    a clear, consent-style cue rather than a silent takeover.
-5. **Unify with real collaboration.** The AI participates alongside human
-   peers in a real `CollabSession` (its ops/awareness merge with the
-   networked ones). Depends on the WebRTC/GL-coexistence work in `TODO.md`.
+5. **Unify with real collaboration (done).** The AI participates alongside
+   human peers in a real `CollabSession`: its **edits** already flow over
+   the shared op-log, and its **cursor/presence** relay to remote peers via
+   `AwarenessManager.relay` (a verbatim send-as-virtual-peer frame), wired
+   to the live session in `ApplicationWindow._wireAssistantRelay` on the
+   SessionService `state-changed` event and cleared when idle. Verified
+   live: a remote joiner renders the host's "AI Assistant" cursor.
+   (The WebRTC/GL "blocker" turned out to be an *intermittent* engine-init
+   crash, not a fundamental incompatibility — see `TODO.md`.)
 
 ## UX / product considerations
 

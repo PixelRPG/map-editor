@@ -262,6 +262,17 @@ export class AwarenessManager {
     this.opts.send({ type: 'leave', peerId: this.opts.localPeerId })
   }
 
+  /**
+   * Send a pre-built awareness frame verbatim — NOT stamped with our
+   * `localPeerId`. Used to relay a *virtual* peer (the in-process AI
+   * assistant, `peerId: 'ai-assistant'`) to remote peers over the same
+   * channel, so a networked human collaborator sees the AI's cursor too.
+   * Outbound only; does not touch local tracked state.
+   */
+  relay(message: AwarenessMessage): void {
+    this.opts.send(message)
+  }
+
   // ────────────────────────────────────────────────────────────
   // Incoming
   // ────────────────────────────────────────────────────────────

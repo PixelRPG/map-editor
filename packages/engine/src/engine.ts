@@ -31,7 +31,7 @@ import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
-import { AwarenessManager, type AwarenessPeerInfo, RemoteCursorRenderer } from './sync/index.ts'
+import { AwarenessManager, type AwarenessMessage, type AwarenessPeerInfo, RemoteCursorRenderer } from './sync/index.ts'
 import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -83,6 +83,11 @@ export class Engine {
   // can watch it work without manually scrolling. Off by default — we
   // don't yank the view around unless asked.
   private _followAssistant = false
+  // When a networked CollabSession is active, the app sets this so the
+  // assistant's presence/cursor are relayed to remote peers too (the AI
+  // shows up as a peer to networked humans). The AI's *edits* already
+  // propagate via the shared op-log; this carries its cursor/presence.
+  private _assistantFrameRelay: ((message: AwarenessMessage) => void) | null = null
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -220,6 +225,7 @@ export class Engine {
     this._assistantRenderer?.close()
     this._assistantRenderer = null
     this._assistantAwareness = null
+    this._assistantFrameRelay = null
     this.excalibur.stop()
     this.setStatus(EngineStatus.READY)
   }
@@ -408,8 +414,13 @@ export class Engine {
     const worldY = tm.pos.y + (tileY + 0.5) * tm.tileHeight
     const aware = this._ensureAssistant()
     this._assistantActive = true
-    aware.handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
-    aware.handleInbound({ type: 'cursor', peerId: ASSISTANT_PEER_ID, cursor: { sceneId: mapId, x: worldX, y: worldY } })
+    const presence: AwarenessMessage = { type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo }
+    const cursor: AwarenessMessage = { type: 'cursor', peerId: ASSISTANT_PEER_ID, cursor: { sceneId: mapId, x: worldX, y: worldY } }
+    aware.handleInbound(presence)
+    aware.handleInbound(cursor)
+    // Relay to networked peers too (no-op when no session is wired).
+    this._assistantFrameRelay?.(presence)
+    this._assistantFrameRelay?.(cursor)
     // Opt-in follow: pan the camera to keep the assistant in view.
     // Fire-and-forget — the cursor update must not wait on the pan.
     if (this._followAssistant) {
@@ -422,13 +433,26 @@ export class Engine {
   setAssistantInfo(displayName: string, color: string): void {
     this._assistantInfo = { displayName, color }
     this._assistantActive = true
-    this._ensureAssistant().handleInbound({ type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo })
+    const presence: AwarenessMessage = { type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo }
+    this._ensureAssistant().handleInbound(presence)
+    this._assistantFrameRelay?.(presence)
   }
 
   /** Remove the AI assistant's cursor/presence from the canvas. */
   hideAssistant(): void {
     this._assistantActive = false
-    this._assistantAwareness?.handleInbound({ type: 'leave', peerId: ASSISTANT_PEER_ID })
+    const leave: AwarenessMessage = { type: 'leave', peerId: ASSISTANT_PEER_ID }
+    this._assistantAwareness?.handleInbound(leave)
+    this._assistantFrameRelay?.(leave)
+  }
+
+  /**
+   * Wire (or clear with `null`) a relay that forwards the assistant's
+   * awareness frames to remote peers — set by the app to the active
+   * `CollabSession`'s awareness so networked humans see the AI's cursor.
+   */
+  setAssistantFrameRelay(relay: ((message: AwarenessMessage) => void) | null): void {
+    this._assistantFrameRelay = relay
   }
 
   /** Whether the assistant is currently present (cursor/info set, not hidden). */

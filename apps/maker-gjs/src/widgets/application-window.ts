@@ -15,7 +15,7 @@ import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
-import { generatePeerId, SessionService } from '../services/session-service.ts'
+import { generatePeerId, type SessionState, SessionService } from '../services/session-service.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
@@ -347,6 +347,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       svc.on('sandbox-project-ready', (event) => {
         void this._loadSandboxProject(event.sandboxProjectPath)
       }),
+      // Relay the AI assistant's cursor/presence to networked peers
+      // while a session is live, so a remote human sees the AI too. The
+      // AI's edits already sync via the shared op-log; this carries its
+      // awareness frames. Cleared when the session goes idle.
+      svc.on('state-changed', (state) => this._wireAssistantRelay(state)),
     ]
 
     // Start browsing whenever the welcome view is the visible page.
@@ -443,6 +448,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       console.warn('[ApplicationWindow] attachEngineToCurrentSession failed:', err)
       this._showToast(_('Could not start live sync — see logs.'))
     }
+  }
+
+  /**
+   * Point the engine's assistant-awareness relay at the live
+   * `CollabSession` (or clear it when the session goes idle), so the AI
+   * collaborator's cursor/presence reach networked human peers too. The
+   * AI's edits already propagate via the shared op-log — this is just the
+   * awareness channel. See docs/concepts/ai-collaborator.md (Phase 5).
+   */
+  private _wireAssistantRelay(state: SessionState): void {
+    const engine = this._engineCtl.engine?.excalibur
+    if (!engine) return
+    const collab = 'collab' in state ? state.collab : null
+    engine.setAssistantFrameRelay(collab ? (frame) => collab.awareness.relay(frame) : null)
   }
 
   /**
