@@ -1143,6 +1143,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * Load a project from a `game-project.json` path — the headless
+   * equivalent of the welcome view's file picker, for external tooling
+   * (Control D-Bus → MCP). Validates the path exists (throws → D-Bus
+   * error otherwise), then kicks off the async load; callers poll
+   * {@link getDebugStatus} for completion.
+   */
+  openProject(path: string): void {
+    if (!Gio.File.new_for_path(path).query_exists(null)) {
+      throw new Error(`Project file not found: ${path}`)
+    }
+    void this._loadProjectFromPath(path)
+  }
+
+  /**
    * Enumerate the `app.*` and `win.*` actions for external tooling
    * (Control D-Bus → MCP bridge). `Adw.ApplicationWindow` has no
    * GtkApplicationWindow-style auto-export, so this is how a client

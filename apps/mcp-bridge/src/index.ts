@@ -140,6 +140,64 @@ server.registerTool(
   },
 )
 
+// project management -------------------------------------------------------
+
+server.registerTool(
+  'open_project',
+  {
+    description:
+      'Open a project by its game-project.json absolute path (the headless equivalent of the welcome ' +
+      "file picker). Poll get_status to confirm it loaded. Use list_recent_projects / list_templates " +
+      'to discover paths.',
+    inputSchema: z.object({ path: z.string() }),
+  },
+  async ({ path }) => {
+    try {
+      await control('OpenProject', GLib.Variant.new_tuple([str(path)]), null)
+      return ok(`Opening project ${path}`)
+    } catch (error) {
+      return dbusError(error)
+    }
+  },
+)
+
+server.registerTool(
+  'list_recent_projects',
+  {
+    description:
+      'List recently opened projects (path, name, caption, openedAt). Handy on the welcome view to ' +
+      'pick a path for open_project.',
+    inputSchema: z.object({}),
+  },
+  async () => {
+    try {
+      const reply = await control('ListRecentProjects', null, '(s)')
+      const [json] = reply.recursiveUnpack() as [string]
+      return ok(JSON.stringify(JSON.parse(json), null, 2))
+    } catch (error) {
+      return dbusError(error)
+    }
+  },
+)
+
+server.registerTool(
+  'list_templates',
+  {
+    description:
+      'List the built-in starter templates (id, name, caption, projectPath) that open_project can load.',
+    inputSchema: z.object({}),
+  },
+  async () => {
+    try {
+      const reply = await control('ListTemplates', null, '(s)')
+      const [json] = reply.recursiveUnpack() as [string]
+      return ok(JSON.stringify(JSON.parse(json), null, 2))
+    } catch (error) {
+      return dbusError(error)
+    }
+  },
+)
+
 // generic action access ----------------------------------------------------
 
 server.registerTool(

@@ -1,0 +1,7 @@
+ {
+    "mcpServers": {
+      "maker": {
+        "command": "${CLAUDE_PROJECT_DIR:-.}/apps/mcp-bridge/dist/mcp-bridge.gjs.mjs"
+      }
+    } 
+  }

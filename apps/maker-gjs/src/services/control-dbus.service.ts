@@ -1,5 +1,7 @@
 import Gio from '@girs/gio-2.0'
 import type { Application } from '../application.ts'
+import { loadRecentProjects } from './recent-projects.ts'
+import { STARTER_TEMPLATES } from './templates.ts'
 import type { ApplicationWindow } from '../widgets/application-window.ts'
 
 /**
@@ -35,6 +37,15 @@ const CONTROL_IFACE_XML = `
       <arg type="s" direction="in" name="scope"/>
       <arg type="s" direction="in" name="name"/>
       <arg type="s" direction="in" name="value_json"/>
+    </method>
+    <method name="OpenProject">
+      <arg type="s" direction="in" name="path"/>
+    </method>
+    <method name="ListRecentProjects">
+      <arg type="s" direction="out" name="projects_json"/>
+    </method>
+    <method name="ListTemplates">
+      <arg type="s" direction="out" name="templates_json"/>
     </method>
   </interface>
 </node>`
@@ -111,6 +122,23 @@ export class ControlDbusService {
   ChangeActionState(scope: string, name: string, valueJson: string): void {
     const win = this.requireWindow()
     win.changeActionState(toScope(scope), name, JSON.parse(valueJson))
+  }
+
+  /** `OpenProject(path)` — load a project by its game-project.json path. */
+  OpenProject(path: string): void {
+    this.requireWindow().openProject(path)
+  }
+
+  /** `ListRecentProjects() -> s` — JSON list of recently opened projects. */
+  ListRecentProjects(): string {
+    return JSON.stringify(loadRecentProjects())
+  }
+
+  /** `ListTemplates() -> s` — JSON list of built-in starter templates. */
+  ListTemplates(): string {
+    return JSON.stringify(
+      STARTER_TEMPLATES.map((t) => ({ id: t.id, name: t.name, caption: t.caption, projectPath: t.projectPath })),
+    )
   }
 
   private requireWindow(): ApplicationWindow {
