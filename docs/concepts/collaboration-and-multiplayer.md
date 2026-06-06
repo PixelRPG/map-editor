@@ -1,7 +1,13 @@
 # Collaboration & Multiplayer — Op-Log with Host-Sequencer
 
-> Status: **planning** — design captured before implementation so the architectural constraints inform earlier PRs.
-> Last meaningful change: 2026-05-29 (UX section for v1 Pair-Editing + discovery / signalling specifications).
+> Status: **active** — v1 editor Pair-Editing is LIVE. The op-log broadcast,
+> WebRTC `PeerSession`, LAN discovery, snapshot-on-join, awareness (cursors +
+> per-peer selection), and an in-process AI collaborator all ship and are
+> verified end-to-end (host paint → joiner sync; bidirectional cursors). Game
+> multiplayer (Phases 5–8) remains future. See also
+> [`ai-collaborator.md`](ai-collaborator.md).
+> Last meaningful change: 2026-06-06 (op-sync verified live; awareness selection
+> + per-peer colours; AI collaborator + participants toolbar).
 
 The editor will eventually let multiple users edit the same project simultaneously ("collaborative editing"). The game will eventually support **split-screen** and **networked multiplayer**. Both flows are real-time multi-peer state synchronisation. This doc commits to **one unified mechanism** for both: an **Operation Log with a host-sequencer (Player 1)**.
 
@@ -337,12 +343,12 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 | 0 | **Substrate constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | **landed (substrate)** (folded into editor-architecture Phases 2–5) |
 | 1 | Op-log skeleton in `packages/engine/src/commands/types.ts` — `Operation`-shape, local sequencer (`UndoStackComponent.cursor`), `Command` applier. Solo mode only (no wire). | **landed** |
 | 2 | Editor op vocabulary — `PaintTileCommand` + `EraseTileCommand` are the first entries; the op-log IS the undo log via `Engine.executeCommand` + `undo` + `redo`. Hook into `editor-architecture.md` Phase 5 is now bi-directional reference. | **landed** (initial vocab; grows as more editor mutations land) |
-| 3a | **`apps/signalling-server/`** — GJS-runnable WebSocket relay built on `@gjsify/{ws,http}`. Stateless, room-keyed, ~50 lines. Doubles as a gjsify Soup-backed-server integration test. | planned |
-| 3b | **`packages/engine/src/sync/`** — `PeerSession` class wrapping `@gjsify/webrtc` `RTCPeerConnection` + `RTCDataChannel`. Reliable + unreliable channels open per § 3. Platform-indep so `game-browser` can reuse it. | planned |
-| 3c | **`apps/maker-gjs/src/services/lan-discovery.ts`** — Avahi publish + browse via `@girs/avahi-0.6`. Welcome-view "Sessions on this network" pane. Window-header Share button. | planned |
-| 3d | **Op-log broadcast** — wire `Engine.executeCommand` to also push the operation onto `PeerSession`; receive-side feeds remote ops back through the same applier. End-to-end Pair-Editing on LAN. | planned |
-| 3e | **`pixelrpg://join/<roomid>`** URL scheme via `x-scheme-handler/pixelrpg` Desktop entry + cross-internet signalling via Phase 3a relay. | planned |
-| 4 | Editor awareness layer — live cursors, presence, per-peer selection outlines. Rides on the unreliable channel. | planned |
+| 3a | **LAN + relay signalling** — `lan-signalling.ts` (in-app WebSocket server over `@gjsify/{ws,http}`) + `relay-signalling.ts`. Room-keyed, stateless. | **landed** (LAN); standalone `apps/signalling-server/` + cross-internet relay still stubbed |
+| 3b | **`packages/engine/src/sync/`** — `PeerSession` wrapping `@gjsify/webrtc` `RTCPeerConnection` + `RTCDataChannel`; reliable (op) + unreliable (awareness) channels. Platform-indep. | **landed** |
+| 3c | **`apps/maker-gjs/src/services/lan-discovery.ts`** — Avahi publish + browse. Welcome-view "Sessions on this network" pane + Share dialog. | **landed** |
+| 3d | **Op-log broadcast** — `SessionController` relays `COMMAND_EXECUTED`/`COMMAND_REVERTED` onto `PeerSession`; inbound ops feed `applyRemoteCommand`/`applyRemoteRevert`. **Verified live: host paint → joiner sync.** | **landed** |
+| 3e | **Join-by-room-id + snapshot-on-join** — `SessionService.joinByRoomId` + `SnapshotExchange` (host captures full project, chunked over the wire; joiner sandboxes + loads). LAN path verified. | **landed** (LAN); `pixelrpg://` scheme + cross-internet relay future |
+| 4 | Editor awareness layer — live cursors, presence, **per-peer selection outlines in the peer's colour** (`colourForPeer`), participants toolbar w/ follow-camera, + an in-process AI collaborator. | **landed** |
 | 5 | `InputSourceComponent` runtime + local split-screen support. | planned |
 | 6 | Game op vocabulary + host-authoritative simulation + snapshot-on-join. | planned |
 | 7 | Client-side prediction + reconciliation for game ops. | planned |
@@ -350,7 +356,11 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 
 ## Where this is implemented
 
-Filled in as phases land. Currently empty — Phase 0 constraints are enforced via review against the rules in this doc.
+- **Op-log / commands** — `packages/engine/src/commands/` (`types.ts` `Command`/`Operation`, `paint-tile.command.ts`, `registry.ts`). New mutations MUST register here — enforced by `registry.spec.ts` (auto-discovery) + CI.
+- **Sync layer** — `packages/engine/src/sync/`: `peer-session.ts` (WebRTC), `session-controller.ts` (op-log ↔ peer bridge), `awareness.ts` + `remote-cursor-renderer.ts` (cursors + per-peer selection), `snapshot-exchange.ts` + `project-snapshot.ts` (snapshot-on-join), `in-memory-transport.ts` (test harness/fakes).
+- **App orchestration** — `apps/maker-gjs/src/services/`: `session-service.ts` (lifecycle state machine), `collab-session.ts` (per-session wiring: cursor + selection broadcast, `colourForPeer`), `lan-discovery.ts` / `lan-signalling.ts` / `relay-signalling.ts`.
+- **AI collaborator** — `Engine` assistant API + `apps/maker-gjs/src/widgets/editor` `FloatingCollaborators`; see [`ai-collaborator.md`](ai-collaborator.md).
+- **Enforcement** — the collaboration contract is stated in the repo-root `AGENTS.md` ("Transport-ready primitives", constraints 2 + 5 + the litmus), and `@pixelrpg/engine`'s test suite (collab round-trip + registry-completeness) runs in CI.
 
 ## Related concepts
 
