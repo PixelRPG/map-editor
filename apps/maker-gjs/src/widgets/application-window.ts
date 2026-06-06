@@ -14,6 +14,7 @@ import { LanSessionBackend } from '../services/lan-session-backend.ts'
 import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
+import { captureWidgetPng } from '../services/screenshot.ts'
 import { generatePeerId, SessionService } from '../services/session-service.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
@@ -31,6 +32,47 @@ GObject.type_ensure(CastView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
 
 type ViewName = 'welcome' | 'atlas' | 'cast' | 'tiles' | 'scene-editor'
+
+/**
+ * Read-only snapshot of the editor's live state, surfaced to external
+ * tooling via the `org.pixelrpg.maker.Control` D-Bus interface (and the
+ * MCP bridge on top of it). Plain JSON-serialisable shape.
+ */
+export interface DebugStatus {
+  view: string | null
+  projectName: string | null
+  projectPath: string | null
+  currentSceneId: string | null
+  sceneIds: string[]
+  scenes: Array<{ id: string; name: string }>
+  enginePresent: boolean
+  activeTool: EditorTool | null
+  activeTile: number | null
+  activeLayer: string | null
+  zoom: number | null
+  canUndo: boolean
+  canRedo: boolean
+  isPlaying: boolean
+  selectedPlacements: string[]
+}
+
+/** One `Gio.Action` as surfaced to external tooling via Control. */
+export interface ActionDescriptor {
+  name: string
+  enabled: boolean
+  /** D-Bus signature of the action's parameter, or `null` if it takes none. */
+  parameterType: string | null
+  /** D-Bus signature of the action's state, or `null` if it is stateless. */
+  stateType: string | null
+}
+
+/** `app.*` and `win.*` actions surfaced together. */
+export interface ActionList {
+  app: ActionDescriptor[]
+  win: ActionDescriptor[]
+}
+
+type ActionScope = 'app' | 'win'
 
 /**
  * Top-level window.
@@ -58,6 +100,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _toast_overlay: Adw.ToastOverlay
 
   private signals = new SignalScope()
+  /**
+   * The `win` action group, kept for the Control D-Bus interface to
+   * enumerate + drive (see {@link _installActions}). Set once actions
+   * are installed.
+   */
+  private _winActions: Gio.SimpleActionGroup | null = null
   // Populated by `_loadProjectFromPath` from the project's atlas
   // scenes. Empty until a project is opened — `_showSceneEditor`
   // is only reachable from the atlas, which itself only renders
@@ -810,6 +858,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(openSceneAction)
 
     this.insert_action_group('win', winActions)
+    // Keep a reference so the Control D-Bus interface can list / drive
+    // these actions. Adw.ApplicationWindow (unlike Gtk.ApplicationWindow)
+    // has no GActionMap that GtkApplication would export over
+    // org.gtk.Actions, so external tooling reaches them through Control.
+    this._winActions = winActions
   }
 
   private _lastAtlasSelection: string | null = null
@@ -1044,6 +1097,132 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._engineCtl.applyZoom(zoom)
     this._scene_editor_view.setZoom(zoom)
   }
+
+  /**
+   * Read-only snapshot of the editor's live state for external tooling
+   * (the `org.pixelrpg.maker.Control` D-Bus interface → MCP bridge).
+   * Pulls together view + project + engine state that is otherwise
+   * scattered across private fields and the engine controller.
+   */
+  getDebugStatus(): DebugStatus {
+    const engine = this._engineCtl.engine
+    const ex = engine?.excalibur ?? null
+    return {
+      view: this._stack.get_visible_child_name(),
+      projectName: this._loadedProject?.projectName ?? null,
+      projectPath: this._loadedProject?.projectPath ?? null,
+      currentSceneId: this._currentSceneId,
+      sceneIds: [...this._scenesById.keys()],
+      scenes: [...this._scenesById.values()].map((s) => ({ id: s.id, name: s.name })),
+      enginePresent: engine != null,
+      activeTool: ex?.getActiveTool() ?? null,
+      activeTile: ex?.getActiveTile() ?? null,
+      activeLayer: ex?.getActiveLayer() ?? null,
+      zoom: engine?.getCameraZoom() ?? null,
+      canUndo: engine?.canUndo() ?? false,
+      canRedo: engine?.canRedo() ?? false,
+      isPlaying: ex?.isRuntimeMode() ?? false,
+      selectedPlacements: engine?.getSelectedPlacements() ?? [],
+    }
+  }
+
+  /**
+   * Capture the editor to PNG bytes for external tooling. `scope:
+   * 'window'` renders the whole top-level (chrome + sidebars + canvas)
+   * via the GSK renderer; `scope: 'canvas'` renders just the engine
+   * widget. Returns `null` when nothing renderable is available (e.g.
+   * the scene editor isn't open for `'canvas'`, or the window isn't
+   * realised yet).
+   */
+  captureScreenshot(scope: 'window' | 'canvas'): Uint8Array | null {
+    if (scope === 'canvas') {
+      const engine = this._engineCtl.engine
+      if (engine) return captureWidgetPng(engine)
+    }
+    return captureWidgetPng(this)
+  }
+
+  /**
+   * Enumerate the `app.*` and `win.*` actions for external tooling
+   * (Control D-Bus → MCP bridge). `Adw.ApplicationWindow` has no
+   * GtkApplicationWindow-style auto-export, so this is how a client
+   * discovers what {@link activateAction} / {@link changeActionState}
+   * can drive.
+   */
+  listActions(): ActionList {
+    return { app: this._describeActions('app'), win: this._describeActions('win') }
+  }
+
+  /**
+   * Activate an action by scope + name, optionally with a parameter.
+   * The parameter `GLib.Variant` is built from the action's declared
+   * parameter type, so a plain JS value is enough.
+   */
+  activateAction(scope: ActionScope, name: string, value?: unknown): void {
+    const group = this._actionGroup(scope)
+    if (!group) throw new Error(`No '${scope}' action group`)
+    if (!group.has_action(name)) throw new Error(`Unknown action ${scope}.${name}`)
+    const paramType = group.get_action_parameter_type(name)
+    const param = value === undefined || value === null ? null : buildVariant(paramType, value)
+    group.activate_action(name, param)
+  }
+
+  /**
+   * Set a stateful action's state by scope + name. Used for idempotent
+   * toggles (e.g. `win.toggle-grid`, `win.play`, `win.set-tool`) where
+   * activation alone would only flip the current value.
+   */
+  changeActionState(scope: ActionScope, name: string, value: unknown): void {
+    const group = this._actionGroup(scope)
+    if (!group) throw new Error(`No '${scope}' action group`)
+    if (!group.has_action(name)) throw new Error(`Unknown action ${scope}.${name}`)
+    group.change_action_state(name, buildVariant(group.get_action_state_type(name), value))
+  }
+
+  private _actionGroup(scope: ActionScope): Gio.ActionGroup | null {
+    if (scope === 'app') return this.get_application()
+    return this._winActions
+  }
+
+  private _describeActions(scope: ActionScope): ActionDescriptor[] {
+    const group = this._actionGroup(scope)
+    if (!group) return []
+    return group
+      .list_actions()
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({
+        name,
+        enabled: group.get_action_enabled(name),
+        parameterType: group.get_action_parameter_type(name)?.dup_string() ?? null,
+        stateType: group.get_action_state_type(name)?.dup_string() ?? null,
+      }))
+  }
+}
+
+/**
+ * Build a `GLib.Variant` for an action parameter/state from a plain JS
+ * value, using the action's declared type when known and otherwise
+ * inferring from the JS runtime type.
+ */
+function buildVariant(type: GLib.VariantType | null, value: unknown): GLib.Variant {
+  switch (type?.dup_string() ?? null) {
+    case 's':
+      return GLib.Variant.new_string(String(value))
+    case 'b':
+      return GLib.Variant.new_boolean(Boolean(value))
+    case 'i':
+      return GLib.Variant.new_int32(Number(value))
+    case 'u':
+      return GLib.Variant.new_uint32(Number(value))
+    case 'd':
+      return GLib.Variant.new_double(Number(value))
+  }
+  if (typeof value === 'string') return GLib.Variant.new_string(value)
+  if (typeof value === 'boolean') return GLib.Variant.new_boolean(value)
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? GLib.Variant.new_int32(value) : GLib.Variant.new_double(value)
+  }
+  throw new Error(`Cannot build a GLib.Variant from ${typeof value}`)
 }
 
 GObject.type_ensure(ApplicationWindow.$gtype)
