@@ -106,7 +106,7 @@ export interface SessionSnapshot {
  * - `win.zoom-in / zoom-out / zoom-reset`
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
- * - `win.new-scene`, `win.new-character`, `win.open-recent-projects`
+ * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.open-recent-projects`
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -943,8 +943,24 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(newSceneAction)
 
     const newCharacterAction = new Gio.SimpleAction({ name: 'new-character' })
-    newCharacterAction.connect('activate', () => this._showToast(_('New character — not yet implemented')))
+    newCharacterAction.connect('activate', () => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      this._cast_view.presentNewCharacterDialog()
+    })
     winActions.add_action(newCharacterAction)
+
+    const newSpriteSetAction = new Gio.SimpleAction({ name: 'new-spriteset' })
+    newSpriteSetAction.connect('activate', () => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      this._cast_view.presentSpriteSetImportDialog()
+    })
+    winActions.add_action(newSpriteSetAction)
 
     const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
     openSceneAction.connect('activate', () => {

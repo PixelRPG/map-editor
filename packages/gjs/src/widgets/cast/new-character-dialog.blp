@@ -1,0 +1,122 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgNewCharacterDialog : Adw.Dialog {
+  title: _("New character");
+  content-width: 480;
+  content-height: 620;
+
+  child: Adw.ToolbarView {
+    top-bar-style: flat;
+
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Gtk.Button cancel_button {
+        label: _("Cancel");
+      }
+
+      [end]
+      Gtk.Button create_button {
+        sensitive: false;
+        label: _("Create");
+        styles ["suggested-action"]
+      }
+    }
+
+    content: Gtk.ScrolledWindow {
+      hscrollbar-policy: never;
+      vexpand: true;
+
+      child: Adw.Clamp {
+        maximum-size: 440;
+        tightening-threshold: 360;
+
+        child: Gtk.Box {
+          orientation: vertical;
+          spacing: 18;
+          margin-top: 18;
+          margin-bottom: 18;
+          margin-start: 12;
+          margin-end: 12;
+
+          // Live preview of the picked sprite set's first sprite, so
+          // the user sees who they're creating before committing.
+          Gtk.Frame {
+            halign: center;
+            styles ["card"]
+
+            child: Gtk.Picture preview_picture {
+              content-fit: contain;
+              halign: center;
+              valign: center;
+              width-request: 96;
+              height-request: 96;
+              margin-top: 10;
+              margin-bottom: 10;
+              margin-start: 10;
+              margin-end: 10;
+            };
+          }
+
+          Adw.PreferencesGroup {
+            title: _("Character");
+
+            Adw.EntryRow name_row {
+              title: _("Name");
+            }
+
+            Adw.ComboRow kind_row {
+              title: _("Type");
+
+              model: Gtk.StringList {
+                strings [_("Hero"), _("NPC")]
+              };
+            }
+
+            Adw.SwitchRow player_row {
+              title: _("Player character");
+              subtitle: _("Spawns at the map's player spawn-point");
+            }
+          }
+
+          Adw.PreferencesGroup {
+            title: _("Appearance");
+            description: _("Pick an existing sprite set, or import a new image.");
+
+            header-suffix: Gtk.Button import_button {
+              valign: center;
+              icon-name: "list-add-symbolic";
+              tooltip-text: _("Import a new sprite set");
+              styles ["flat", "circular"]
+            };
+
+            Adw.ComboRow spriteset_row {
+              title: _("Sprite set");
+            }
+          }
+
+          Adw.PreferencesGroup {
+            title: _("Movement");
+
+            Adw.SpinRow speed_row {
+              title: _("Speed");
+              subtitle: _("Tiles per second");
+
+              adjustment: Gtk.Adjustment {
+                lower: 1;
+                upper: 20;
+                step-increment: 1;
+                page-increment: 2;
+                value: 4;
+              };
+            }
+          }
+        };
+      };
+    };
+  };
+}
