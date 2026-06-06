@@ -5,6 +5,7 @@ import type { EditorTool } from '@pixelrpg/engine'
 import {
   type EditorMode,
   type Engine,
+  type CollaboratorEntry,
   GdkSpriteSetResource,
   type GdkSpriteSheet,
   type LayerDescriptor,
@@ -225,19 +226,19 @@ export class SceneEditorView extends Adw.Bin {
     this._editor.floatingPlay.playing = playing
   }
 
-  /** Show/hide the AI-assistant presence pill (set when a SetAssistant* call arrives). */
-  setAssistantActive(active: boolean): void {
-    this._editor.floatingAssistant.active = active
+  /** Push the live participant roster (AI + peers) to the collaborators bar. */
+  setCollaborators(participants: CollaboratorEntry[], followedId: string | null): void {
+    this._editor.floatingCollaborators.setParticipants(participants, followedId)
   }
 
-  /** Reflect the user pause state on the assistant pill. */
+  /** Reflect the user pause state on the collaborators bar's AI control. */
   setAssistantPaused(paused: boolean): void {
-    this._editor.floatingAssistant.paused = paused
+    this._editor.floatingCollaborators.paused = paused
   }
 
-  /** Set the assistant's displayed name on the pill. */
-  setAssistantName(name: string): void {
-    this._editor.floatingAssistant.setName(name)
+  /** Subscribe to chip clicks — the host toggles follow for that participant. */
+  onParticipantActivated(callback: (peerId: string) => void): void {
+    this._editor.floatingCollaborators.connect('participant-activated', (_widget, peerId: string) => callback(peerId))
   }
 
   /**

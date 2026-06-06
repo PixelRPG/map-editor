@@ -1,10 +1,13 @@
 # AI Collaborator — the MCP/D-Bus assistant as a live in-editor peer
 
-> Status: **active** — Phases 1–5 landed. The in-process AI collaborator
-> is complete (presence + cursor, edit attribution, presence pill +
-> pause/stop, follow-cam + activation toast) AND participates in networked
-> collaboration: its edits sync via the shared op-log and its cursor/
-> presence relay to remote human peers.
+> Status: **active** — Phases 1–5 landed, plus a generalised
+> **participants toolbar**. The in-process AI collaborator is complete
+> (presence + cursor, edit attribution, pause/stop, follow-cam, activation
+> toast) AND participates in networked collaboration (edits via the shared
+> op-log; cursor/presence relayed to remote peers). The bottom-left bar is
+> now a **roster switcher**: it lists every participant (the AI + each
+> networked human peer) and clicking a chip follows that participant with
+> the camera.
 > Last meaningful change: 2026-06-06.
 
 The `org.pixelrpg.maker.Control` D-Bus interface + the MCP bridge (see
@@ -95,6 +98,27 @@ virtual peers.
    live: a remote joiner renders the host's "AI Assistant" cursor.
    (The WebRTC/GL "blocker" turned out to be an *intermittent* engine-init
    crash, not a fundamental incompatibility — see `TODO.md`.)
+
+## Participants toolbar (roster switcher)
+
+The bottom-left OSD bar (`FloatingCollaborators`) is not AI-specific — it
+renders the **live roster** and lets the user follow any participant:
+
+- **Roster** — the window aggregates the local AI assistant + every peer
+  from the session awareness (`ApplicationWindow.getParticipants`), each as
+  a colour-matched chip. A relayed AI on a joiner appears as a session peer
+  with `ASSISTANT_PEER_ID`, flagged `isAI`. Exposed in `get_status`
+  (`participants`, `followedPeerId`).
+- **Follow** — clicking a chip follows that participant with the camera
+  (`ApplicationWindow.followParticipant` → `Engine.panCameraTo` on the
+  followed peer's awareness cursor; the engine self-pans for the AI). Also
+  driveable via `Control.FollowParticipant` / the `follow_participant` MCP
+  tool. Clicking the followed chip again stops following.
+- **AI pause** lives on the same bar (shown when an AI participant is
+  present).
+
+So "watch what a collaborator is doing" works uniformly for the AI and for
+human peers — the AI was just the first participant.
 
 ## UX / product considerations
 

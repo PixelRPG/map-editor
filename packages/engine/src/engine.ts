@@ -45,7 +45,7 @@ interface LoaderEventMap {
 }
 
 /** Stable peer id for the in-process AI assistant collaborator. */
-const ASSISTANT_PEER_ID = 'ai-assistant'
+export const ASSISTANT_PEER_ID = 'ai-assistant'
 
 /** Parse a `#rrggbb` token to an Excalibur Color; mid-grey on failure. */
 function parseAssistantColour(token: string): Color {
@@ -473,6 +473,19 @@ export class Engine {
   /** Toggle camera-follow of the assistant cursor (off by default). */
   setFollowAssistant(follow: boolean): void {
     this._followAssistant = follow
+  }
+
+  /**
+   * Smoothly pan the camera so world point `(x, y)` becomes the viewport
+   * centre. Used to follow ANY collaborator (human peer or the AI) the
+   * user selected in the participants toolbar — the app feeds the
+   * followed peer's awareness cursor (already world-space) here. No-op
+   * without an active scene.
+   */
+  panCameraTo(worldX: number, worldY: number, durationMs = 250): void {
+    const scene = this._activeMapScene()
+    if (!scene) return
+    scene.camera.move(new Vector(worldX, worldY), durationMs).catch(() => {})
   }
 
   /**

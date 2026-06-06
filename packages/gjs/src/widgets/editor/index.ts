@@ -2,7 +2,7 @@
 
 export * from './atlas-canvas.story'
 export * from './atlas-canvas'
-export * from './floating-assistant'
+export * from './floating-collaborators'
 export * from './floating-play'
 export * from './floating-top-bar.story'
 export * from './floating-top-bar'

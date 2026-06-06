@@ -77,6 +77,9 @@ const CONTROL_IFACE_XML = `
       <arg type="s" direction="in" name="color"/>
     </method>
     <method name="HideAssistant"/>
+    <method name="FollowParticipant">
+      <arg type="s" direction="in" name="peer_id"/>
+    </method>
   </interface>
 </node>`
 
@@ -220,6 +223,11 @@ export class ControlDbusService {
   /** `HideAssistant()` — remove the AI collaborator cursor/presence. */
   HideAssistant(): void {
     this.requireWindow().hideAssistant()
+  }
+
+  /** `FollowParticipant(peer_id)` — follow a participant with the camera; `''` stops following. */
+  FollowParticipant(peerId: string): void {
+    this.requireWindow().followParticipant(peerId || null)
   }
 
   private requireWindow(): ApplicationWindow {

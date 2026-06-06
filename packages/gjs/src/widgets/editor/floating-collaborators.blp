@@ -1,0 +1,47 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgFloatingCollaborators : Adw.Bin {
+  // Bottom-left OSD pill — stacked above the FloatingZoom pill (also
+  // bottom-left). Lists the live session participants (the AI assistant +
+  // any networked human peers); clicking a chip follows that participant
+  // with the camera. Hidden until there's at least one participant.
+  // Without explicit halign/valign an empty Adw.Bin fills the overlay and
+  // eats pointer events for the layers underneath.
+  halign: start;
+  valign: end;
+  margin-start: 12;
+  margin-bottom: 60;
+  visible: false;
+
+  child: Gtk.Box {
+    styles ["toolbar", "osd"]
+    spacing: 6;
+    valign: center;
+
+    Gtk.Image {
+      icon-name: "system-users-symbolic";
+    }
+
+    // Participant chips are built in floating-collaborators.ts from the
+    // live roster the window feeds in via setParticipants().
+    Gtk.Box chips_box {
+      spacing: 2;
+    }
+
+    // AI-only control: pause/resume the assistant. Shown when an AI
+    // participant is present. Drives the boolean stateful
+    // `win.toggle-assistant-paused` action.
+    Gtk.Button pause_button {
+      action-name: "win.toggle-assistant-paused";
+      icon-name: "media-playback-pause-symbolic";
+      tooltip-text: _("Pause the assistant");
+      visible: false;
+
+      styles [
+        "flat",
+        "circular",
+      ]
+    }
+  };
+}

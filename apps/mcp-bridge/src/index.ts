@@ -735,6 +735,25 @@ server.registerTool(
 )
 
 server.registerTool(
+  'follow_participant',
+  {
+    description:
+      'Follow a session participant with the camera so the user (or you) can watch their activity. Pass a ' +
+      'peerId from get_status.participants[].peerId; an empty string stops following. Mirrors clicking a chip ' +
+      'in the editor\'s collaborators bar.',
+    inputSchema: z.object({ peerId: z.string(), ...instanceArg }),
+  },
+  async ({ peerId, instance }) => {
+    try {
+      await control(instance, 'FollowParticipant', GLib.Variant.new_tuple([strv(peerId)]), null)
+      return ok(peerId ? `Following participant ${peerId}` : 'Stopped following.')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
   'set_playing',
   {
     description: 'Enter (true) or leave (false) playtest/runtime mode in the scene editor.',
