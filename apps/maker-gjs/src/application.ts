@@ -5,6 +5,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
 import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
+import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
@@ -20,6 +21,15 @@ export class Application extends Adw.Application {
    * window.
    */
   private pendingIntent: PixelrpgIntent | null = null
+
+  /**
+   * Permanent `org.pixelrpg.maker.Control` D-Bus interface (status +
+   * screenshot). Exported in {@link onStartup} once the session-bus
+   * connection is up, torn down on `shutdown`. Navigation/commands ride
+   * the standard `org.gtk.Actions` interface GtkApplication exports for
+   * free, so they need no code here.
+   */
+  private control: ControlDbusService | null = null
 
   static {
     GObject.registerClass(
@@ -45,12 +55,14 @@ export class Application extends Adw.Application {
     })
     this.onStartup = this.onStartup.bind(this)
     this.connect('startup', this.onStartup)
+    this.connect('shutdown', () => this.control?.unexport())
     this.initActions()
   }
 
   protected onStartup(): void {
     this.initResources()
     this.initStyles()
+    this.initControlInterface()
     // Defensive: kill any `avahi-publish-service` subprocess left
     // behind by a previous maker that crashed without invoking
     // `LanPublisher.close()`. Skipped when the scan returns
@@ -62,6 +74,30 @@ export class Application extends Adw.Application {
         `[Application] cleaned up ${cleanup.killed} orphaned avahi-publish-service subprocess(es) ` +
           `from a previous run (scanned ${cleanup.scanned} pids, ${cleanup.errors} errors)`,
       )
+    }
+  }
+
+  /**
+   * Export the permanent `org.pixelrpg.maker.Control` D-Bus interface so
+   * external tooling (the MCP bridge, `gdbus`, scripts) can inspect and
+   * screenshot the running editor. Best-effort: skipped when there is no
+   * session-bus connection (e.g. launched without a bus). The standard
+   * `org.gtk.Actions` interface for `app.*` / `win.*` actions is exported
+   * automatically by GtkApplication and needs no code here.
+   */
+  protected initControlInterface(): void {
+    const connection = this.get_dbus_connection()
+    const objectPath = this.get_dbus_object_path()
+    if (!connection || !objectPath) {
+      console.warn('[Application] No D-Bus connection; Control interface not exported')
+      return
+    }
+    try {
+      this.control = new ControlDbusService(this)
+      this.control.export(connection, `${objectPath}/control`)
+      console.log(`[Application] Exported ${objectPath}/control (org.pixelrpg.maker.Control)`)
+    } catch (error) {
+      console.warn(`[Application] Failed to export Control interface: ${error}`)
     }
   }
 
