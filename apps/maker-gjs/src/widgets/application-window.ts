@@ -483,6 +483,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // Phase 5: relay the AI's awareness frames out to networked peers.
     engine?.setAssistantFrameRelay(collab ? (frame) => collab.awareness.relay(frame) : null)
 
+    // Project-level (cast) sync — works without an engine, since cast
+    // editing has no live scene. While a session is up the controller
+    // broadcasts character upserts; inbound peer ops route back to it.
+    this._castCtl?.setCollabSession(collab)
+    if (collab) {
+      collab.onProjectOpReceived = (op) => this._castCtl?.applyRemoteProjectOp(op)
+    }
+
     // Track the live session roster for the collaborators bar + follow.
     for (const unsub of this._collabAwarenessUnsubs) unsub()
     this._collabAwarenessUnsubs = []

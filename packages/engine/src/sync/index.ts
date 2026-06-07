@@ -3,6 +3,7 @@
 export * from './awareness'
 export * from './in-memory-transport'
 export * from './peer-session'
+export * from './project-operations'
 export * from './project-snapshot'
 export * from './remote-cursor-renderer'
 export * from './session-controller'

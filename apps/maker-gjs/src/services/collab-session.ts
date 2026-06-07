@@ -1,7 +1,8 @@
-import type { AwarenessPeerInfo, Engine, ProjectSnapshot, SignallingTransport } from '@pixelrpg/engine'
+import type { AwarenessPeerInfo, Engine, ProjectOp, ProjectSnapshot, SignallingTransport } from '@pixelrpg/engine'
 import {
   AwarenessManager,
   captureProjectSnapshot,
+  isProjectOp,
   isSessionProtocolOp,
   type PeerRole,
   PeerSession,
@@ -125,11 +126,21 @@ export class CollabSession {
   /** Set once {@link attachEngine} runs. `null` in the joiner-pre-snapshot phase. */
   public controller: SessionController | null = null
   public cursorRenderer: RemoteCursorRenderer | null = null
+  /**
+   * Sink for inbound project-level ops (`__project/*` — cast
+   * mutations). Set by the maker so the CastController can apply them
+   * to its `GameProjectData` + refresh the Cast view. These ride the
+   * always-present op channel and work WITHOUT an engine (cast editing
+   * has no live scene), so they're handled here rather than in the
+   * engine-tied SessionController.
+   */
+  public onProjectOpReceived: ((op: ProjectOp) => void) | null = null
   private closed = false
   private engine: Engine | null = null
   private readonly peerId: string
   private readonly roomId: string
   private readonly peerConnectTimeoutMs: number
+  private projectSeq = 0
   private readonly subscriptions: Array<() => void> = []
 
   constructor(opts: CollabSessionOptions) {
@@ -186,7 +197,17 @@ export class CollabSession {
       captureSnapshot: () => (this.engine ? captureProjectSnapshot(this.engine) : null),
     })
     const opSub = this.peer.events.on('op-received', ({ op }) => {
-      if (isSessionProtocolOp(op)) this.snapshotExchange.handle(op)
+      if (isSessionProtocolOp(op)) {
+        this.snapshotExchange.handle(op)
+        return
+      }
+      // Project-level ops apply even with no engine attached (cast
+      // editing has no scene) — hand them to the maker-side sink.
+      // Drop our own echoes defensively (point-to-point shouldn't
+      // loop them back, but mirrors SessionController's guard).
+      if (isProjectOp(op) && (op as ProjectOp).peerId !== this.peerId) {
+        this.onProjectOpReceived?.(op as ProjectOp)
+      }
     })
     this.subscriptions.push(() => opSub.close())
 
@@ -336,6 +357,17 @@ export class CollabSession {
    */
   requestSnapshot(timeoutMs?: number): Promise<ProjectSnapshot> {
     return this.snapshotExchange.request(this.roomId, timeoutMs)
+  }
+
+  /**
+   * Broadcast a project-level op (cast mutation) to the peer. The
+   * caller builds the op content (it owns the character data); this
+   * stamps the peer id + a per-peer sequence and sends it on the
+   * reliable op channel. No-op once closed. Works without an engine.
+   */
+  sendProjectOp(build: (ctx: { peerId: string; seq: number }) => ProjectOp): void {
+    if (this.closed) return
+    this.peer.sendOp(build({ peerId: this.peerId, seq: this.projectSeq++ }))
   }
 
   /** Whether `attachEngine` has been called yet. */
