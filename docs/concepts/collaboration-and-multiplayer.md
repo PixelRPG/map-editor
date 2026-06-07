@@ -7,9 +7,9 @@
 > multiplayer (Phases 5–8) remains future. See also
 > [`ai-collaborator.md`](ai-collaborator.md).
 > Last meaningful change: 2026-06-07 (project-op channel — cast/character edits
-> sync live via `__project/*`; sprite-set-import binary sync still pending). Prior:
-> 2026-06-06 (op-sync verified live; awareness selection + per-peer colours; AI
-> collaborator + participants toolbar).
+> AND sprite-set imports sync live via `__project/*`, the latter chunked for the
+> image bytes). Prior: 2026-06-06 (op-sync verified live; awareness selection +
+> per-peer colours; AI collaborator + participants toolbar).
 
 The editor will eventually let multiple users edit the same project simultaneously ("collaborative editing"). The game will eventually support **split-screen** and **networked multiplayer**. Both flows are real-time multi-peer state synchronisation. This doc commits to **one unified mechanism** for both: an **Operation Log with a host-sequencer (Player 1)**.
 
@@ -88,7 +88,9 @@ There's a **third** category of mutation that's neither a scene `Command` nor ep
 
 They ride a dedicated **project-op** channel (`packages/engine/src/sync/project-operations.ts`), reusing the reliable op channel like the `__session/*` snapshot protocol does. Kinds are `__project/*` (`character.upsert`, `character.remove`); `isProjectOp` filters them out of both the command registry (`SessionController` skips them) and the snapshot path. Semantics are **coarse, idempotent upserts**: every cast mutation re-sends the whole affected `CharacterDefinition`, the receiver replaces-by-id (and `applyCharacterUpsert` re-enforces single-player on the wire). Unlike commands, project-ops do **not** land on the undo stack.
 
-Plumbing is maker-side: `CollabSession.sendProjectOp` (stamps peer id + seq, sends on the always-present op channel — works without an attached engine) and `CollabSession.onProjectOpReceived` → `CastController.applyRemoteProjectOp` (mutates the peer's `GameProjectData`, persists, refreshes the Cast view). Remaining gap: **sprite-set import** (binary PNG) isn't synced yet — shipping the bytes needs the SCTP chunking the snapshot path uses; tracked in `TODO.md`.
+Plumbing is maker-side: `CollabSession.sendProjectOp` (stamps peer id + seq, sends on the always-present op channel — works without an attached engine) and `CollabSession.onProjectOpReceived` → `CastController.applyRemoteProjectOp` (mutates the peer's `GameProjectData`, persists, refreshes the Cast view).
+
+**Sprite-set import** carries image bytes, so it can't be one op (a single SCTP send >64 KiB is silently dropped). It rides a chunked `__project/spriteset.add.chunk` transfer (`chunkSpriteSetAdd` → `SpriteSetAddReassembler`, same 16 KiB chunking as the snapshot path), surfaced via `CollabSession.sendSpriteSetAdd` / `onSpriteSetAddReceived` → `CastController.applyRemoteSpriteSetAdd` (writes the PNG + descriptor into the peer's `spritesets/`, registers the set under the *same id* so referencing characters resolve). Because the import broadcasts before the character that uses it (reliable + ordered channel), the peer has the set registered by the time the character upsert lands — no empty-preview window.
 
 ### 5. Input-source abstraction makes split-screen and network multiplayer identical
 
@@ -368,7 +370,7 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 
 - **Op-log / commands** — `packages/engine/src/commands/` (`types.ts` `Command`/`Operation`, `paint-tile.command.ts`, `registry.ts`). New mutations MUST register here — enforced by `registry.spec.ts` (auto-discovery) + CI.
 - **Sync layer** — `packages/engine/src/sync/`: `peer-session.ts` (WebRTC), `session-controller.ts` (op-log ↔ peer bridge), `awareness.ts` + `remote-cursor-renderer.ts` (cursors + per-peer selection), `snapshot-exchange.ts` + `project-snapshot.ts` (snapshot-on-join), `project-operations.ts` (`__project/*` cast/sprite-set sync), `in-memory-transport.ts` (test harness/fakes).
-- **Project-op wiring (maker)** — `apps/maker-gjs/src/services/collab-session.ts` (`sendProjectOp` / `onProjectOpReceived`) ↔ `cast-controller.ts` (`applyRemoteProjectOp` + per-mutation broadcast), wired in `application-window.ts` `_wireAssistantRelay`.
+- **Project-op wiring (maker)** — `apps/maker-gjs/src/services/collab-session.ts` (`sendProjectOp` / `onProjectOpReceived` for characters; `sendSpriteSetAdd` / `onSpriteSetAddReceived` + reassembler for chunked sprite-set imports) ↔ `cast-controller.ts` (`applyRemoteProjectOp` / `applyRemoteSpriteSetAdd` + per-mutation broadcast), wired in `application-window.ts` `_wireAssistantRelay`.
 - **App orchestration** — `apps/maker-gjs/src/services/`: `session-service.ts` (lifecycle state machine), `collab-session.ts` (per-session wiring: cursor + selection broadcast, `colourForPeer`), `lan-discovery.ts` / `lan-signalling.ts` / `relay-signalling.ts`.
 - **AI collaborator** — `Engine` assistant API + `apps/maker-gjs/src/widgets/editor` `FloatingCollaborators`; see [`ai-collaborator.md`](ai-collaborator.md).
 - **Enforcement** — the collaboration contract is stated in the repo-root `AGENTS.md` ("Transport-ready primitives", constraints 2 + 5 + the litmus), and `@pixelrpg/engine`'s test suite (collab round-trip + registry-completeness) runs in CI.

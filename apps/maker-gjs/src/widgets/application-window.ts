@@ -489,6 +489,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._castCtl?.setCollabSession(collab)
     if (collab) {
       collab.onProjectOpReceived = (op) => this._castCtl?.applyRemoteProjectOp(op)
+      collab.onSpriteSetAddReceived = (payload) => this._castCtl?.applyRemoteSpriteSetAdd(payload)
     }
 
     // Track the live session roster for the collaborators bar + follow.

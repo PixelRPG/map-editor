@@ -1,16 +1,39 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import type { CharacterDefinition, GameProjectData } from '../types/index.ts'
+import type { CharacterDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
 import {
   applyCharacterRemove,
   applyCharacterUpsert,
+  applySpriteSetReference,
   CHARACTER_REMOVE_KIND,
   CHARACTER_UPSERT_KIND,
+  chunkSpriteSetAdd,
   createCharacterRemoveOp,
   createCharacterUpsertOp,
   isProjectOp,
   PROJECT_OP_PREFIX,
+  type SpriteSetAddChunkOp,
+  type SpriteSetAddPayload,
+  SpriteSetAddReassembler,
 } from './project-operations.ts'
+
+function spriteSetData(id: string, imageBase64Len = 8): SpriteSetData {
+  return {
+    version: '1.0.0',
+    id,
+    name: id,
+    image: { id: 'main', path: `${id}.png`, type: 'image' },
+    spriteWidth: 16,
+    spriteHeight: 16,
+    columns: 1,
+    rows: 1,
+    sprites: [{ id: 0, col: 0, row: 0 }],
+  } as SpriteSetData
+}
+
+function stamp(op: Omit<SpriteSetAddChunkOp, 'peerId' | 'seq'>, seq: number): SpriteSetAddChunkOp {
+  return { ...op, peerId: 'host', seq } as SpriteSetAddChunkOp
+}
 
 function character(id: string, extra: Partial<CharacterDefinition> = {}): CharacterDefinition {
   return {
@@ -113,6 +136,72 @@ export default async () => {
       const data = projectData([character('a')])
       applyCharacterRemove(data, 'zzz')
       expect(data.characters?.map((c) => c.id)).toStrictEqual(['a'])
+    })
+  })
+
+  await describe('chunkSpriteSetAdd + SpriteSetAddReassembler', async () => {
+    await it('round-trips a small payload through a single chunk', async () => {
+      const payload: SpriteSetAddPayload = { data: spriteSetData('hero'), imageBase64: 'AAAA' }
+      const chunks = chunkSpriteSetAdd({ transferId: 'host:0', payload })
+      expect(chunks.length).toBe(1)
+      expect(isProjectOp(stamp(chunks[0], 0))).toBe(true)
+
+      const re = new SpriteSetAddReassembler()
+      const result = re.accept(stamp(chunks[0], 0))
+      expect(result).not.toBeNull()
+      expect(result?.data.id).toBe('hero')
+      expect(result?.imageBase64).toBe('AAAA')
+    })
+
+    await it('splits a large payload into many chunks + reassembles', async () => {
+      // 40 KiB of base64 forces >1 chunk (16 KiB budget each).
+      const payload: SpriteSetAddPayload = { data: spriteSetData('big'), imageBase64: 'A'.repeat(40 * 1024) }
+      const chunks = chunkSpriteSetAdd({ transferId: 'host:1', payload })
+      expect(chunks.length).toBeGreaterThan(1)
+      expect(chunks.every((c) => c.payload.totalChunks === chunks.length)).toBe(true)
+
+      const re = new SpriteSetAddReassembler()
+      let result: SpriteSetAddPayload | null = null
+      for (let i = 0; i < chunks.length; i++) {
+        result = re.accept(stamp(chunks[i], i)) ?? result
+      }
+      expect(result).not.toBeNull()
+      expect(result?.data.id).toBe('big')
+      expect(result?.imageBase64.length).toBe(40 * 1024)
+    })
+
+    await it('reassembles out-of-order chunks', async () => {
+      const payload: SpriteSetAddPayload = { data: spriteSetData('ooo'), imageBase64: 'B'.repeat(40 * 1024) }
+      const chunks = chunkSpriteSetAdd({ transferId: 'host:2', payload }).map((c, i) => stamp(c, i))
+      const re = new SpriteSetAddReassembler()
+      // Feed reversed; only the final (completing) chunk yields a payload.
+      const reversed = [...chunks].reverse()
+      let result: SpriteSetAddPayload | null = null
+      for (const c of reversed) result = re.accept(c) ?? result
+      expect(result?.data.id).toBe('ooo')
+      expect(result?.imageBase64.length).toBe(40 * 1024)
+    })
+  })
+
+  await describe('applySpriteSetReference', async () => {
+    function ref(id: string, firstGid: number): SpriteSetReference {
+      return { id, path: `./spritesets/${id}.json`, type: 'spriteset', firstGid }
+    }
+    function dataWithSets(refs: SpriteSetReference[]): GameProjectData {
+      return { id: 'p', name: 'P', version: '1', spriteSets: refs, maps: [], startup: { initialMapId: 'm' } } as unknown as GameProjectData
+    }
+
+    await it('appends a new reference', async () => {
+      const data = dataWithSets([ref('a', 1)])
+      applySpriteSetReference(data, ref('b', 2))
+      expect(data.spriteSets.map((s) => s.id)).toStrictEqual(['a', 'b'])
+    })
+
+    await it('replaces an existing reference by id (idempotent)', async () => {
+      const data = dataWithSets([ref('a', 1)])
+      applySpriteSetReference(data, ref('a', 99))
+      expect(data.spriteSets.length).toBe(1)
+      expect(data.spriteSets[0].firstGid).toBe(99)
     })
   })
 }
