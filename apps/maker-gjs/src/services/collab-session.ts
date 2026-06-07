@@ -1,7 +1,16 @@
-import type { AwarenessPeerInfo, Engine, ProjectOp, ProjectSnapshot, SignallingTransport } from '@pixelrpg/engine'
+import type {
+  AwarenessPeerInfo,
+  Engine,
+  ProjectOp,
+  ProjectSnapshot,
+  SignallingTransport,
+  SpriteSetAddChunkOp,
+  SpriteSetAddPayload,
+} from '@pixelrpg/engine'
 import {
   AwarenessManager,
   captureProjectSnapshot,
+  chunkSpriteSetAdd,
   isProjectOp,
   isSessionProtocolOp,
   type PeerRole,
@@ -10,6 +19,8 @@ import {
   RemoteCursorRenderer,
   SessionController,
   SnapshotExchange,
+  SPRITESET_ADD_CHUNK_KIND,
+  SpriteSetAddReassembler,
 } from '@pixelrpg/engine'
 
 import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
@@ -135,12 +146,21 @@ export class CollabSession {
    * engine-tied SessionController.
    */
   public onProjectOpReceived: ((op: ProjectOp) => void) | null = null
+  /**
+   * Sink for a completed sprite-set-import transfer. Set by the maker
+   * so the CastController can write the image + descriptor into the
+   * project and register the set. Fed by the chunk reassembler once all
+   * chunks of one transfer arrive.
+   */
+  public onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null = null
   private closed = false
   private engine: Engine | null = null
   private readonly peerId: string
   private readonly roomId: string
   private readonly peerConnectTimeoutMs: number
   private projectSeq = 0
+  private transferCounter = 0
+  private readonly spriteSetReassembler = new SpriteSetAddReassembler()
   private readonly subscriptions: Array<() => void> = []
 
   constructor(opts: CollabSessionOptions) {
@@ -206,7 +226,14 @@ export class CollabSession {
       // Drop our own echoes defensively (point-to-point shouldn't
       // loop them back, but mirrors SessionController's guard).
       if (isProjectOp(op) && (op as ProjectOp).peerId !== this.peerId) {
-        this.onProjectOpReceived?.(op as ProjectOp)
+        // Sprite-set imports arrive chunked — reassemble before
+        // surfacing the (heavy, binary) payload to its own sink.
+        if ((op as ProjectOp).kind === SPRITESET_ADD_CHUNK_KIND) {
+          const payload = this.spriteSetReassembler.accept(op as SpriteSetAddChunkOp)
+          if (payload) this.onSpriteSetAddReceived?.(payload)
+        } else {
+          this.onProjectOpReceived?.(op as ProjectOp)
+        }
       }
     })
     this.subscriptions.push(() => opSub.close())
@@ -370,6 +397,20 @@ export class CollabSession {
     this.peer.sendOp(build({ peerId: this.peerId, seq: this.projectSeq++ }))
   }
 
+  /**
+   * Broadcast a sprite-set import to peers, chunked so the image bytes
+   * clear the SCTP single-send ceiling. Each chunk is a normal project
+   * op (own peer id + seq); the receiver reassembles by transfer id.
+   * No-op once closed.
+   */
+  sendSpriteSetAdd(payload: SpriteSetAddPayload): void {
+    if (this.closed) return
+    const transferId = `${this.peerId}:s${this.transferCounter++}`
+    for (const chunk of chunkSpriteSetAdd({ transferId, payload })) {
+      this.peer.sendOp({ ...chunk, peerId: this.peerId, seq: this.projectSeq++ })
+    }
+  }
+
   /** Whether `attachEngine` has been called yet. */
   hasEngine(): boolean {
     return this.engine !== null
@@ -400,6 +441,7 @@ export class CollabSession {
       }
     }
     this.subscriptions.length = 0
+    this.spriteSetReassembler.clear()
     this.cursorRenderer?.close()
     this.cursorRenderer = null
     this.snapshotExchange.dispose()

@@ -87,3 +87,19 @@ export function copyFile(srcPath: string, destPath: string): boolean {
     return false
   }
 }
+
+/**
+ * Read a file's raw bytes via `Gio.File.load_contents`. Returns the
+ * `Uint8Array` on success, or `null` on failure (logged). Used by the
+ * collab sprite-set-import broadcast to base64-encode an image for the
+ * wire. Companion to {@link writeBinaryFile}.
+ */
+export function readBinaryFile(path: string): Uint8Array | null {
+  try {
+    const [ok, bytes] = Gio.File.new_for_path(path).load_contents(null)
+    return ok ? bytes : null
+  } catch (error) {
+    console.warn(`[file-io] read failed for ${path}:`, error)
+    return null
+  }
+}

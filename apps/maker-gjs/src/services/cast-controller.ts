@@ -2,6 +2,7 @@ import GLib from '@girs/glib-2.0'
 import {
   applyCharacterRemove,
   applyCharacterUpsert,
+  applySpriteSetReference,
   CHARACTER_REMOVE_KIND,
   CHARACTER_UPSERT_KIND,
   type CharacterAnimation,
@@ -10,6 +11,7 @@ import {
   GameProjectFormat,
   type ProjectOp,
   REQUIRED_ROLES,
+  type SpriteSetAddPayload,
   SpriteSetFormat,
   SpriteSetResource,
 } from '@pixelrpg/engine'
@@ -22,7 +24,7 @@ import {
 import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
 import type { CollabSession } from './collab-session.ts'
-import { copyFile, writeTextFile } from './file-io.ts'
+import { copyFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 
 /** Default per-frame duration (ms) seeded into a new character's animations. */
@@ -304,8 +306,57 @@ export class CastController {
     } catch (err) {
       console.warn('[CastController] Imported set written but failed to load live:', err)
     }
+    // Sync to peers (chunked — carries the image bytes). Best-effort:
+    // a read failure just means peers won't get this set live.
+    if (this._session) {
+      const bytes = readBinaryFile(pngDest)
+      if (bytes) this._session.sendSpriteSetAdd({ data: finalData, imageBase64: GLib.base64_encode(bytes) })
+    }
     this.onToast(_(`Imported sprite set “${finalData.name}”`))
     return { id, name: finalData.name }
+  }
+
+  /**
+   * Apply an inbound sprite-set import from a peer: write the image +
+   * descriptor into this project's `spritesets/`, register the
+   * reference (keeping the sender's id so characters that reference it
+   * still resolve), load it live, persist, and refresh. Idempotent —
+   * re-applying overwrites the same files + replaces the ref by id.
+   */
+  applyRemoteSpriteSetAdd(payload: SpriteSetAddPayload): void {
+    const resource = this._project?.resource
+    if (!resource?.data) return
+    const { data } = payload
+    const id = data.id
+    const imageFile = data.image?.path ?? `${id}.png`
+    const projectDir = GLib.path_get_dirname(resource.path)
+    const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
+    const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
+
+    if (!writeBinaryFile(pngDest, GLib.base64_decode(payload.imageBase64))) {
+      console.warn('[CastController] Failed to write peer sprite-set image:', pngDest)
+      return
+    }
+    writeTextFile(jsonDest, SpriteSetFormat.serialize(data))
+    applySpriteSetReference(resource.data, {
+      id,
+      path: `./spritesets/${id}.json`,
+      type: 'spriteset',
+      // Recompute on our side — gid space is per-peer; the sender's
+      // value may collide with ours.
+      firstGid: this._nextFirstGid(),
+    })
+    this._persist()
+    void (async () => {
+      try {
+        const engineSet = new SpriteSetResource(jsonDest, { headless: false })
+        await engineSet.load()
+        resource.spriteSets.set(id, engineSet)
+      } catch (err) {
+        console.warn('[CastController] Peer sprite-set written but failed to load live:', err)
+      }
+      void this.refresh()
+    })()
   }
 
   /** Wrap a project sprite set as a GTK preview resource for the dialogs. */
