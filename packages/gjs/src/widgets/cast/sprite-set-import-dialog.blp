@@ -1,0 +1,248 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
+  title: _("Import sprite set");
+  // Wide enough for the settings column + the grid preview side by
+  // side on desktop; on phones libadwaita drops to a bottom-sheet and
+  // the Adw.BreakpointBin below stacks the two columns vertically.
+  content-width: 860;
+  content-height: 680;
+
+  child: Adw.ToolbarView {
+    top-bar-style: flat;
+
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Gtk.Button cancel_button {
+        label: _("Cancel");
+      }
+
+      [end]
+      Gtk.Button import_button {
+        // Disabled until an image is chosen and the sprite size fits.
+        sensitive: false;
+        label: _("Import");
+        styles ["suggested-action"]
+      }
+    }
+
+    content: Adw.BreakpointBin {
+      width-request: 1;
+      height-request: 1;
+
+      // ≥ 720sp = desktop: settings on the left, cell grid on the
+      // right. Below it the columns stack (phone bottom-sheet scroll).
+      Adw.Breakpoint {
+        condition ("min-width: 720sp")
+
+        setters {
+          split_box.orientation: horizontal;
+          settings_scroller.width-request: 340;
+          settings_scroller.hexpand: false;
+        }
+      }
+
+      child: Gtk.Box split_box {
+        orientation: vertical;
+        spacing: 0;
+
+        Gtk.ScrolledWindow settings_scroller {
+          hscrollbar-policy: never;
+          vscrollbar-policy: automatic;
+          hexpand: true;
+          vexpand: true;
+          propagate-natural-width: true;
+
+          child: Gtk.Box {
+            orientation: vertical;
+            spacing: 18;
+            margin-top: 18;
+            margin-bottom: 18;
+            margin-start: 18;
+            margin-end: 18;
+
+            Adw.PreferencesGroup {
+              title: _("Sprite set");
+
+              Adw.EntryRow name_row {
+                title: _("Name");
+              }
+
+              Adw.ActionRow file_row {
+                title: _("Image");
+                subtitle: bind template.image-name;
+                activatable-widget: choose_button;
+
+                [suffix]
+                Gtk.Button choose_button {
+                  valign: center;
+                  label: _("Choose…");
+                  styles ["flat"]
+                }
+              }
+            }
+
+            Adw.PreferencesGroup size_group {
+              title: _("Sprite size");
+              description: _("Every sprite in the image is the same size. The image is sliced into a grid using this size.");
+
+              Adw.SpinRow width_row {
+                title: _("Width");
+                subtitle: _("Pixels");
+
+                adjustment: Gtk.Adjustment {
+                  lower: 1;
+                  upper: 1024;
+                  step-increment: 1;
+                  page-increment: 8;
+                  value: 16;
+                };
+              }
+
+              Adw.SpinRow height_row {
+                title: _("Height");
+                subtitle: _("Pixels");
+
+                adjustment: Gtk.Adjustment {
+                  lower: 1;
+                  upper: 1024;
+                  step-increment: 1;
+                  page-increment: 8;
+                  value: 16;
+                };
+              }
+
+              Adw.ActionRow grid_row {
+                title: _("Grid");
+                subtitle: bind template.grid-summary;
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Collision");
+              description: _("Mark which part of each sprite blocks movement. The same box applies to every sprite.");
+
+              Adw.SwitchRow collision_row {
+                title: _("Has collision");
+                active: true;
+              }
+
+              Adw.SpinRow collider_x_row {
+                title: _("Offset X");
+                sensitive: bind collision_row.active;
+
+                adjustment: Gtk.Adjustment {
+                  lower: 0;
+                  upper: 1024;
+                  step-increment: 1;
+                  value: 0;
+                };
+              }
+
+              Adw.SpinRow collider_y_row {
+                title: _("Offset Y");
+                sensitive: bind collision_row.active;
+
+                adjustment: Gtk.Adjustment {
+                  lower: 0;
+                  upper: 1024;
+                  step-increment: 1;
+                  value: 0;
+                };
+              }
+
+              Adw.SpinRow collider_w_row {
+                title: _("Width");
+                sensitive: bind collision_row.active;
+
+                adjustment: Gtk.Adjustment {
+                  lower: 1;
+                  upper: 1024;
+                  step-increment: 1;
+                  value: 16;
+                };
+              }
+
+              Adw.SpinRow collider_h_row {
+                title: _("Height");
+                sensitive: bind collision_row.active;
+
+                adjustment: Gtk.Adjustment {
+                  lower: 1;
+                  upper: 1024;
+                  step-increment: 1;
+                  value: 16;
+                };
+              }
+            }
+          };
+        }
+
+        // Right column: a big crisp preview of the picked cell with
+        // the collision box, plus the full sliced grid so the user can
+        // verify the size + tap any cell to inspect it.
+        Gtk.Box picker_column {
+          orientation: vertical;
+          spacing: 12;
+          hexpand: true;
+          vexpand: true;
+          margin-top: 18;
+          margin-bottom: 18;
+          margin-start: 18;
+          margin-end: 18;
+
+          Gtk.Label {
+            label: _("Preview");
+            halign: start;
+            styles ["caption-heading"]
+          }
+
+          $PixelRpgCollisionPreview collision_preview {
+            halign: center;
+            valign: start;
+            height-request: 168;
+          }
+
+          Gtk.Label {
+            label: _("Tap a cell below to inspect it");
+            halign: center;
+            styles ["dim-label", "caption"]
+          }
+
+          Gtk.Separator {
+            margin-top: 4;
+            margin-bottom: 4;
+          }
+
+          Gtk.Label {
+            label: _("Sliced cells");
+            halign: start;
+            styles ["caption-heading"]
+          }
+
+          Gtk.ScrolledWindow {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: automatic;
+            vscrollbar-policy: automatic;
+
+            child: $PixelRpgTilePalette palette {
+              aspect-mode: "contain";
+              wrap: true;
+              tile-size: 40;
+              halign: start;
+              valign: start;
+              hexpand: true;
+              vexpand: false;
+            };
+          }
+        }
+      };
+    };
+  };
+}

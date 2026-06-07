@@ -63,3 +63,27 @@ export function writeBinaryFile(path: string, bytes: Uint8Array): boolean {
     return false
   }
 }
+
+/**
+ * Copy a file from `srcPath` to `destPath`, creating the destination's
+ * parent directories on demand and overwriting any existing file.
+ * Returns `true` on success.
+ *
+ * Used by the sprite-set import path to land the user-picked image
+ * inside the project's `spritesets/` directory. Same best-effort error
+ * policy as {@link writeTextFile}.
+ */
+export function copyFile(srcPath: string, destPath: string): boolean {
+  try {
+    const dirFile = Gio.File.new_for_path(GLib.path_get_dirname(destPath))
+    if (!dirFile.query_exists(null)) {
+      dirFile.make_directory_with_parents(null)
+    }
+    const src = Gio.File.new_for_path(srcPath)
+    const dest = Gio.File.new_for_path(destPath)
+    return src.copy(dest, Gio.FileCopyFlags.OVERWRITE, null, null)
+  } catch (error) {
+    console.warn(`[file-io] copy failed ${srcPath} → ${destPath}:`, error)
+    return false
+  }
+}

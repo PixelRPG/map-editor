@@ -10,7 +10,12 @@ import {
   type EditorMode,
   type GdkSpriteSetResource,
   type ModeRail,
+  NewCharacterDialog,
+  type NewCharacterDraft,
   SignalScope,
+  type SpriteSetChoice,
+  SpriteSetImportDialog,
+  type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
@@ -81,6 +86,10 @@ export class CastView extends Adw.Bin {
   private _onEditAnimationRequested:
     | ((charId: string, originalId: string, animation: CharacterAnimation) => void)
     | null = null
+  private _onListSpriteSets: (() => SpriteSetChoice[]) | null = null
+  private _onCreateCharacter: ((draft: NewCharacterDraft) => void) | null = null
+  private _onImportSpriteSet: ((result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>) | null = null
+  private _onLoadSpriteSetPreview: ((id: string) => Promise<GdkSpriteSetResource | null>) | null = null
 
   static {
     GObject.registerClass(
@@ -234,6 +243,68 @@ export class CastView extends Adw.Bin {
     dialog.present(this)
   }
 
+  /**
+   * Present the "New character" dialog (wired to `win.new-character`).
+   * Seeds it with the project's sprite sets, streams a live preview as
+   * the selection changes, and routes the "+" import button through the
+   * sprite-set import dialog — the imported set is appended + selected
+   * so the user can keep going without leaving the flow. The assembled
+   * draft goes to the host's `createCharacter` callback (controller
+   * generates the id, seeds animations, persists).
+   */
+  presentNewCharacterDialog(): void {
+    const dialog = new NewCharacterDialog()
+    dialog.connect('spriteset-activated', (_d: NewCharacterDialog, id: string) => {
+      void this._onLoadSpriteSetPreview?.(id).then((res) => dialog.setPreview(res ?? null))
+    })
+    dialog.connect('import-spriteset-requested', () =>
+      this._presentSpriteSetImportDialog((choice) => dialog.addSpriteSet(choice)),
+    )
+    dialog.connect('character-created', (_d: NewCharacterDialog, draft: NewCharacterDraft) => {
+      this._onCreateCharacter?.(draft)
+    })
+    // Populate AFTER wiring so the initial `spriteset-activated` (fired
+    // by setSpriteSets selecting the first entry) loads its preview.
+    dialog.setSpriteSets(this._onListSpriteSets?.() ?? [])
+    dialog.present(this)
+  }
+
+  /**
+   * Present the sprite-set import dialog standalone (wired to
+   * `win.new-spriteset`). The imported set is copied into the project
+   * and registered; it's then available to any character. Reuses the
+   * same flow the character dialog's "+" button drives.
+   */
+  presentSpriteSetImportDialog(): void {
+    this._presentSpriteSetImportDialog()
+  }
+
+  /**
+   * Open the sprite-set import dialog. On import the host copies the
+   * image + registers the set; `onImported` (when given) receives the
+   * resulting choice — the character dialog uses it to append + select
+   * the new set without leaving its flow.
+   */
+  private _presentSpriteSetImportDialog(onImported?: (choice: SpriteSetChoice) => void): void {
+    const dialog = new SpriteSetImportDialog()
+    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
+      void this._onImportSpriteSet?.(result).then((choice) => {
+        if (choice) onImported?.(choice)
+      })
+    })
+    dialog.present(this)
+  }
+
+  /** Select + reveal a character in the gallery (used after creation). */
+  focusCharacter(id: string): void {
+    if (!this._characters.find((c) => c.id === id)) return
+    this._activeCharacterId = id
+    this._activeAnimationId = null
+    this._refreshActive()
+    this._refreshHighlight()
+    this.showInspector = true
+  }
+
   get projectName(): string {
     // Defensive `?? ''` — see character-preview.ts roleLabel for why.
     return this._projectName ?? ''
@@ -298,6 +369,10 @@ export class CastView extends Adw.Bin {
     setDuration: (charId: string, animId: string, durationMs: number) => void
     addAnimation: (charId: string, animation: CharacterAnimation) => void
     editAnimation: (charId: string, originalId: string, animation: CharacterAnimation) => void
+    listSpriteSets: () => SpriteSetChoice[]
+    createCharacter: (draft: NewCharacterDraft) => void
+    importSpriteSet: (result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>
+    loadSpriteSetPreview: (id: string) => Promise<GdkSpriteSetResource | null>
   }): void {
     this._onRenameRequested = callbacks.rename
     this._onSetPlayerRequested = callbacks.setPlayer
@@ -305,6 +380,10 @@ export class CastView extends Adw.Bin {
     this._onSetDurationRequested = callbacks.setDuration
     this._onAddAnimationRequested = callbacks.addAnimation
     this._onEditAnimationRequested = callbacks.editAnimation
+    this._onListSpriteSets = callbacks.listSpriteSets
+    this._onCreateCharacter = callbacks.createCharacter
+    this._onImportSpriteSet = callbacks.importSpriteSet
+    this._onLoadSpriteSetPreview = callbacks.loadSpriteSetPreview
   }
 
   /**

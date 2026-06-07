@@ -672,6 +672,54 @@ server.registerTool(
   },
 )
 
+// Device-size presets (logical px) for exercising the responsive layout
+// breakpoints. Portrait phone/tablet trip the adaptive (mobile) layout;
+// the landscape + desktop sizes cover the wider arrangements.
+const SIZE_PRESETS: Record<string, [number, number]> = {
+  phone: [400, 880],
+  'phone-landscape': [880, 400],
+  tablet: [768, 1024],
+  'tablet-landscape': [1024, 768],
+  desktop: [1280, 800],
+  'desktop-large': [1920, 1080],
+}
+
+server.registerTool(
+  'resize_window',
+  {
+    description:
+      'Resize the editor window to test the responsive (phone / tablet / desktop) layout. Pass a `preset` ' +
+      `(${Object.keys(SIZE_PRESETS).join(', ')}) or explicit width + height in pixels (these override the ` +
+      'preset). Take a screenshot afterwards to inspect the layout at that size.',
+    inputSchema: z.object({
+      preset: z.enum(['phone', 'phone-landscape', 'tablet', 'tablet-landscape', 'desktop', 'desktop-large']).optional(),
+      width: z.number().int().positive().optional(),
+      height: z.number().int().positive().optional(),
+      ...instanceArg,
+    }),
+  },
+  async ({ preset, width, height, instance }) => {
+    const base = preset ? SIZE_PRESETS[preset] : undefined
+    const w = width ?? base?.[0]
+    const h = height ?? base?.[1]
+    if (w === undefined || h === undefined) {
+      return fail('Provide a `preset` or both `width` and `height`.')
+    }
+    try {
+      const reply = await control(
+        instance,
+        'ResizeWindow',
+        GLib.Variant.new_tuple([GLib.Variant.new_int32(w), GLib.Variant.new_int32(h)]),
+        '(ii)',
+      )
+      const [rw, rh] = reply.recursiveUnpack() as [number, number]
+      return ok(`Resized window to ${rw}×${rh}px${preset ? ` (${preset})` : ''}. Screenshot to inspect the layout.`)
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
 // AI collaborator presence (watch-the-assistant) -------------------------
 
 server.registerTool(

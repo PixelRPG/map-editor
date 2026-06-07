@@ -106,7 +106,7 @@ export interface SessionSnapshot {
  * - `win.zoom-in / zoom-out / zoom-reset`
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
- * - `win.new-scene`, `win.new-character`, `win.open-recent-projects`
+ * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.open-recent-projects`
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -943,8 +943,24 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(newSceneAction)
 
     const newCharacterAction = new Gio.SimpleAction({ name: 'new-character' })
-    newCharacterAction.connect('activate', () => this._showToast(_('New character — not yet implemented')))
+    newCharacterAction.connect('activate', () => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      this._cast_view.presentNewCharacterDialog()
+    })
     winActions.add_action(newCharacterAction)
+
+    const newSpriteSetAction = new Gio.SimpleAction({ name: 'new-spriteset' })
+    newSpriteSetAction.connect('activate', () => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      this._cast_view.presentSpriteSetImportDialog()
+    })
+    winActions.add_action(newSpriteSetAction)
 
     const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
     openSceneAction.connect('activate', () => {
@@ -1235,6 +1251,25 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /** Set the camera zoom to an absolute value (1 = 100%). No-op without an engine. */
   setZoom(zoom: number): void {
     this._applyZoom(zoom)
+  }
+
+  /**
+   * Resize the top-level window to an absolute pixel size — lets external
+   * tooling (Control D-Bus → MCP) exercise the adaptive phone / tablet /
+   * desktop breakpoints the responsive layouts react to. GTK4 has no
+   * synchronous `resize()`, so we unmaximize / unfullscreen (otherwise the
+   * request is ignored) and set the default size, which is GTK4's resize
+   * path for an already-mapped window. Returns the [width, height] actually
+   * requested (clamped to ≥1); the real allocation settles a frame later,
+   * so a caller wanting the settled size should re-`GetStatus` after.
+   */
+  resizeWindow(width: number, height: number): [number, number] {
+    const w = Math.max(1, Math.round(width))
+    const h = Math.max(1, Math.round(height))
+    if (this.is_maximized()) this.unmaximize()
+    if (this.is_fullscreen()) this.unfullscreen()
+    this.set_default_size(w, h)
+    return [w, h]
   }
 
   /**
