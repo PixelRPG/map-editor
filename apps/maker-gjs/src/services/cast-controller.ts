@@ -33,6 +33,16 @@ const DEFAULT_ANIMATION_MS = 200
 const DEFAULT_FRAME = 0
 
 /**
+ * True when `name` is a plain single-path-segment filename — no path
+ * separators, no `..`, no NUL. Used to vet a peer-supplied sprite-set
+ * id before it's used to build filesystem paths, so a malicious peer
+ * can't write outside the project's `spritesets/` directory.
+ */
+function isPlainFilename(name: string): boolean {
+  return name.length > 0 && !/[\\/]/.test(name) && !name.includes('..') && !name.includes('\0')
+}
+
+/**
  * Owns the Cast view's data + mutation path.
  *
  * The view stays presentational; this controller:
@@ -328,7 +338,18 @@ export class CastController {
     if (!resource?.data) return
     const { data } = payload
     const id = data.id
-    const imageFile = data.image?.path ?? `${id}.png`
+    // SECURITY: `id` is peer-supplied and feeds filesystem paths below.
+    // Reject anything that isn't a plain filename so a malicious peer
+    // can't escape `spritesets/` (path traversal). We also DERIVE the
+    // image filename from the validated id rather than trusting the
+    // peer's `image.path`, and normalise the descriptor to match — so
+    // the only peer string that touches the FS is the vetted id.
+    if (!isPlainFilename(id)) {
+      console.warn('[CastController] Rejected peer sprite-set with unsafe id:', id)
+      return
+    }
+    const imageFile = `${id}.png`
+    const safeData: typeof data = { ...data, image: { ...(data.image ?? { id: 'main', type: 'image' }), path: imageFile } }
     const projectDir = GLib.path_get_dirname(resource.path)
     const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
     const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
@@ -337,7 +358,7 @@ export class CastController {
       console.warn('[CastController] Failed to write peer sprite-set image:', pngDest)
       return
     }
-    writeTextFile(jsonDest, SpriteSetFormat.serialize(data))
+    writeTextFile(jsonDest, SpriteSetFormat.serialize(safeData))
     applySpriteSetReference(resource.data, {
       id,
       path: `./spritesets/${id}.json`,
