@@ -4,6 +4,7 @@ import type { Engine } from '../engine.ts'
 import { EngineEvent } from '../types/index.ts'
 
 import type { PeerSession } from './peer-session.ts'
+import { isProjectOp } from './project-operations.ts'
 import { isSessionProtocolOp, type SessionProtocolOp } from './session-protocol.ts'
 
 interface SessionControllerOptions {
@@ -148,6 +149,13 @@ export class SessionController {
     // NOT commands — route them around the command registry.
     if (isSessionProtocolOp(rawOp)) {
       this.onSessionProtocol?.(rawOp)
+      return
+    }
+    // Project-level ops (`__project/*` — cast mutations) ride the same
+    // channel but mutate the GameProjectResource, not a scene. The
+    // engine-independent CollabSession layer applies them; skip here so
+    // they don't hit the command registry (which would warn).
+    if (isProjectOp(rawOp)) {
       return
     }
     const factory = this.registry[op.kind]

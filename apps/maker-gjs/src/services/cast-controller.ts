@@ -1,8 +1,14 @@
 import GLib from '@girs/glib-2.0'
 import {
+  applyCharacterRemove,
+  applyCharacterUpsert,
+  CHARACTER_REMOVE_KIND,
+  CHARACTER_UPSERT_KIND,
   type CharacterAnimation,
   type CharacterDefinition,
+  createCharacterUpsertOp,
   GameProjectFormat,
+  type ProjectOp,
   REQUIRED_ROLES,
   SpriteSetFormat,
   SpriteSetResource,
@@ -15,6 +21,7 @@ import {
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
+import type { CollabSession } from './collab-session.ts'
 import { copyFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 
@@ -41,12 +48,60 @@ const DEFAULT_FRAME = 0
  */
 export class CastController {
   private _project: LoadedProject | null = null
+  /**
+   * Active collab session, when one is live. Set by the host window on
+   * session start/stop. While set, every local cast mutation also
+   * broadcasts a `__project/character.upsert` so peers stay in sync;
+   * inbound ops arrive via {@link applyRemoteProjectOp}. Null in solo
+   * editing (the common case) — then mutations only persist locally.
+   */
+  private _session: CollabSession | null = null
 
   constructor(
     private readonly view: CastView,
     private readonly onToast: (message: string) => void,
   ) {
     view.bindCallbacks(this.callbacks)
+  }
+
+  /**
+   * Attach/detach the live collab session. While attached, cast
+   * mutations broadcast to peers; detaching (null) returns to
+   * local-only editing.
+   */
+  setCollabSession(session: CollabSession | null): void {
+    this._session = session
+  }
+
+  /**
+   * Apply an inbound project op from a peer: mutate the in-memory
+   * `GameProjectData`, persist, and refresh the Cast view. Does NOT
+   * re-broadcast (no loopback). A character referencing a sprite-set
+   * this peer lacks (e.g. one imported mid-session — binary import
+   * sync is a follow-up) still lands; its preview just falls back to
+   * empty until the set arrives.
+   */
+  applyRemoteProjectOp(op: ProjectOp): void {
+    const data = this._project?.resource?.data
+    if (!data) return
+    if (op.kind === CHARACTER_UPSERT_KIND) {
+      applyCharacterUpsert(data, op.payload.character)
+    } else if (op.kind === CHARACTER_REMOVE_KIND) {
+      applyCharacterRemove(data, op.payload.characterId)
+    } else {
+      return
+    }
+    this._persist()
+    void this.refresh()
+  }
+
+  /** Broadcast the current state of one character to peers (no-op solo). */
+  private _broadcastCharacter(id: string): void {
+    const session = this._session
+    if (!session) return
+    const character = this._project?.resource?.data?.characters?.find((c) => c.id === id)
+    if (!character) return
+    session.sendProjectOp(({ peerId, seq }) => createCharacterUpsertOp({ peerId, seq, character }))
   }
 
   /**
@@ -199,6 +254,7 @@ export class CastController {
     }
     characters.push(character)
     this._persist()
+    this._broadcastCharacter(id)
     void this.refresh().then(() => this.view.focusCharacter(id))
   }
 
@@ -310,6 +366,9 @@ export class CastController {
       if (target) target.isPlayer = false
     }
     this._persist()
+    // Upsert of an `isPlayer: true` character clears the others on the
+    // receiver too, so one broadcast carries the whole player switch.
+    this._broadcastCharacter(id)
     void this.refresh()
   }
 
@@ -323,6 +382,7 @@ export class CastController {
     if (!character) return
     mutator(character)
     this._persist()
+    this._broadcastCharacter(id)
   }
 
   /**

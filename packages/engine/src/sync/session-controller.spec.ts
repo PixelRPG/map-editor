@@ -209,6 +209,34 @@ export default async () => {
       expect(engine.applied).toHaveLength(0)
     })
 
+    await it('ignores inbound project ops (__project/*) without hitting the registry or engine', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      // Throw if any warn fires — a project op must be skipped cleanly,
+      // NOT treated as an unknown command kind (which warns).
+      const originalWarn = console.warn
+      let warned = false
+      console.warn = () => {
+        warned = true
+      }
+      try {
+        new SessionController({
+          engine: engine as unknown as Engine,
+          session: session as unknown as PeerSession,
+          peerId: 'alice',
+          registry: FAKE_REGISTRY,
+        })
+        session.events.emit('op-received', {
+          op: { kind: '__project/character.upsert', payload: { character: { id: 'x' } }, peerId: 'bob', seq: 0 },
+        })
+      } finally {
+        console.warn = originalWarn
+      }
+      expect(engine.applied).toHaveLength(0)
+      expect(engine.reverted).toHaveLength(0)
+      expect(warned).toBe(false)
+    })
+
     await it('drops inbound ops whose peerId equals our own (echo defence)', async () => {
       const engine = makeMockEngine()
       const session = makeMockSession()
