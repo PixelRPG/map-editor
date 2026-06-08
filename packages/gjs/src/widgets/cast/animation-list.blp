@@ -6,7 +6,6 @@ template $PixelRpgAnimationList : Adw.Bin {
     orientation: vertical;
     spacing: 12;
 
-    // Fixed header — stays put while the list scrolls.
     Gtk.Box {
       orientation: vertical;
       spacing: 2;
@@ -26,21 +25,14 @@ template $PixelRpgAnimationList : Adw.Bin {
       }
     }
 
-    // ONLY this scrolls — not the header above or the button below.
-    Gtk.ScrolledWindow {
-      hexpand: true;
-      vexpand: true;
-      hscrollbar-policy: never;
-      vscrollbar-policy: automatic;
-
-      child: Gtk.ListBox list {
-        selection-mode: none;
-        valign: start;
-        styles ["boxed-list"]
-      };
+    // Natural height — the rows are NOT in their own scroller, so the
+    // detail page's outer scroll shows them all inline (mobile + desktop).
+    Gtk.ListBox list {
+      selection-mode: none;
+      valign: start;
+      styles ["boxed-list"]
     }
 
-    // Fixed footer — opens `AddAnimationDialog`.
     Gtk.Box {
       orientation: horizontal;
       halign: center;
