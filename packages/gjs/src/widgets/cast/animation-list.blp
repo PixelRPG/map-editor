@@ -2,38 +2,54 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgAnimationList : Adw.Bin {
-  Gtk.ScrolledWindow {
-    hexpand: true;
-    vexpand: true;
-    hscrollbar-policy: never;
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 12;
 
-    child: Gtk.Box {
+    // Fixed header — stays put while the list scrolls.
+    Gtk.Box {
       orientation: vertical;
-      margin-top: 12;
-      margin-bottom: 12;
-      margin-start: 12;
-      margin-end: 12;
-      spacing: 12;
+      spacing: 2;
 
-      Adw.PreferencesGroup group {
-        title: _("Animations");
-        description: _("Frame indices into the character's sprite-set. Required roles are marked with a checkmark.");
+      Gtk.Label {
+        label: _("Animations");
+        halign: start;
+        styles ["heading"]
       }
 
-      // Opens `AddAnimationDialog` — frame picker + name + duration
-      // composer. The list itself just emits the request; the cast
-      // view owns the dialog lifecycle.
-      Gtk.Box footer {
-        orientation: horizontal;
-        halign: center;
-        spacing: 8;
-
-        Gtk.Button add_button {
-          label: _("Add custom animation…");
-          tooltip-text: _("Pick frames from the sprite-sheet to build a custom animation");
-          styles ["pill"]
-        }
+      Gtk.Label {
+        label: _("Frame indices into the character's sprite-set. Required roles are marked with a checkmark.");
+        halign: start;
+        wrap: true;
+        xalign: 0;
+        styles ["caption", "dim-label"]
       }
-    };
+    }
+
+    // ONLY this scrolls — not the header above or the button below.
+    Gtk.ScrolledWindow {
+      hexpand: true;
+      vexpand: true;
+      hscrollbar-policy: never;
+      vscrollbar-policy: automatic;
+
+      child: Gtk.ListBox list {
+        selection-mode: none;
+        valign: start;
+        styles ["boxed-list"]
+      };
+    }
+
+    // Fixed footer — opens `AddAnimationDialog`.
+    Gtk.Box {
+      orientation: horizontal;
+      halign: center;
+
+      Gtk.Button add_button {
+        label: _("Add custom animation…");
+        tooltip-text: _("Pick frames from the sprite-sheet to build a custom animation");
+        styles ["pill"]
+      }
+    }
   }
 }

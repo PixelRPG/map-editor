@@ -177,9 +177,11 @@ template $TilesView : Adw.Bin {
       }
 
       // ── Detail (drill-down) ───────────────────────────────────────
-      // ONE page, ONE header (the NavigationView back button). The tile
-      // inspector is INLINED beside the palette (desktop) / below it
-      // (phone) — not an overlay sidebar with its own header.
+      // ONE page, ONE header (the NavigationView back button). The
+      // palette fills the page; picking a tile slides its properties up
+      // in an `Adw.BottomSheet` (non-modal, so the palette stays live —
+      // clicking another tile just updates the sheet). The drag handle
+      // dismisses it.
       Adw.NavigationPage detail_page {
         tag: "detail";
         title: _("Tileset");
@@ -193,60 +195,87 @@ template $TilesView : Adw.Bin {
             show-end-title-buttons: false;
           }
 
-          content: Adw.BreakpointBin {
-            width-request: 1;
-            height-request: 1;
+          // A `Gtk.Revealer` plays the role of a bottom sheet (the
+          // libadwaita on the build/runtime baseline predates
+          // `Adw.BottomSheet`): it overlays the bottom of the palette and
+          // slides up when a tile is picked. Non-modal — the palette
+          // above stays clickable, so picking another tile just updates
+          // the sheet.
+          content: Gtk.Overlay {
+            // Dedicated ScrolledWindow around the palette so it scrolls
+            // vertically once the grid has more rows than fit. `wrap`
+            // lets the FlowBox flow against the available width.
+            child: Gtk.ScrolledWindow palette_scroller {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+              vscrollbar-policy: automatic;
 
-            Adw.Breakpoint {
-              condition ("min-width: 680sp")
-
-              setters {
-                detail_box.orientation: horizontal;
-                inspector_scroller.hexpand: false;
-                inspector_scroller.width-request: 320;
-                inspector_scroller.vexpand: true;
-              }
-            }
-
-            child: Gtk.Box detail_box {
-              orientation: vertical;
-
-              // Dedicated ScrolledWindow around the palette so it scrolls
-              // vertically once the grid has more rows than fit. `wrap`
-              // lets the FlowBox flow against the available width.
-              Gtk.ScrolledWindow palette_scroller {
+              child: $PixelRpgTilePalette palette {
+                wrap: true;
+                halign: fill;
+                valign: start;
                 hexpand: true;
-                vexpand: true;
-                hscrollbar-policy: never;
-                vscrollbar-policy: automatic;
-
-                child: $PixelRpgTilePalette palette {
-                  wrap: true;
-                  halign: fill;
-                  valign: start;
-                  hexpand: true;
-                  vexpand: false;
-                  tile-size: 32;
-                  margin-top: 16;
-                  margin-bottom: 16;
-                  margin-start: 16;
-                  margin-end: 16;
-                };
-              }
-
-              Gtk.ScrolledWindow inspector_scroller {
-                hscrollbar-policy: never;
-                vscrollbar-policy: automatic;
-                propagate-natural-height: true;
-
-                child: $PixelRpgTileInspector inspector {
-                  margin-top: 16;
-                  margin-bottom: 16;
-                  margin-start: 16;
-                  margin-end: 16;
-                };
-              }
+                vexpand: false;
+                tile-size: 32;
+                margin-top: 16;
+                margin-bottom: 16;
+                margin-start: 16;
+                margin-end: 16;
+              };
             };
+
+            [overlay]
+            Gtk.Revealer tile_sheet {
+              valign: end;
+              halign: fill;
+              transition-type: slide_up;
+              reveal-child: false;
+
+              child: Gtk.Box {
+                orientation: vertical;
+                margin-top: 8;
+                margin-bottom: 12;
+                margin-start: 12;
+                margin-end: 12;
+                styles ["card", "tile-sheet"]
+
+                Gtk.Box {
+                  orientation: horizontal;
+                  margin-top: 6;
+                  margin-start: 12;
+                  margin-end: 6;
+
+                  Gtk.Label {
+                    label: _("Tile");
+                    halign: start;
+                    hexpand: true;
+                    styles ["heading"]
+                  }
+
+                  Gtk.Button sheet_close {
+                    icon-name: "window-close-symbolic";
+                    tooltip-text: _("Close");
+                    valign: center;
+                    styles ["flat", "circular"]
+                  }
+                }
+
+                Gtk.ScrolledWindow {
+                  hscrollbar-policy: never;
+                  vscrollbar-policy: automatic;
+                  propagate-natural-height: true;
+                  max-content-height: 360;
+
+                  child: $PixelRpgTileInspector inspector {
+                    margin-top: 0;
+                    margin-bottom: 12;
+                    margin-start: 12;
+                    margin-end: 12;
+                  };
+                }
+              };
+            }
           };
         };
       }
