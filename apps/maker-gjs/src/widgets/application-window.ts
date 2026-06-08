@@ -3,16 +3,24 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { ASSISTANT_PEER_ID, type AwarenessPeerState, type EditorTool, MapFormat } from '@pixelrpg/engine'
+import {
+  ASSISTANT_PEER_ID,
+  type AwarenessPeerState,
+  type EditorTool,
+  MapFormat,
+  type SpriteSetKind,
+} from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
   type EditorMode,
   type SampleScene,
   SignalScope,
+  SpriteSetImportDialog,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
+import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
@@ -27,17 +35,19 @@ import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
+import { DataView } from './data-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import { ShareDialog } from './share-dialog.ts'
 import { TilesView } from './tiles-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
-// Force registration so the `$CastView` / `$TilesView` references in
-// the blueprint resolve at template-parse time.
+// Force registration so the `$CastView` / `$TilesView` / `$PixelRpgDataView`
+// references in the blueprint resolve at template-parse time.
 GObject.type_ensure(CastView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
+GObject.type_ensure(DataView.$gtype)
 
-type ViewName = 'welcome' | 'atlas' | 'cast' | 'tiles' | 'scene-editor'
+type ViewName = 'welcome' | 'atlas' | 'cast' | 'tiles' | 'scene-editor' | 'data'
 
 /**
  * Read-only snapshot of the editor's live state, surfaced to external
@@ -124,6 +134,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _cast_view: CastView
   declare _tiles_view: TilesView
   declare _scene_editor_view: SceneEditorView
+  declare _data_view: DataView
   declare _stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
 
@@ -194,6 +205,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _castCtl: CastController | null = null
   private _tilesCtl: TilesController | null = null
+  private _dataCtl: DataController | null = null
   /**
    * Pair-Editing orchestration. Constructed once in `vfunc_map` with
    * a lazy engine provider — Welcome-view discovery flows work
@@ -224,6 +236,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           'cast_view',
           'tiles_view',
           'scene_editor_view',
+          'data_view',
           'stack',
           'toast_overlay',
         ],
@@ -327,7 +340,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // cast controller owns all sprite-set CRUD + collab broadcast, so
       // when its set list changes (import / delete / inbound peer op)
       // re-hydrate the Tiles view too.
-      this._castCtl.onSpriteSetsChanged = () => void this._tilesCtl?.setProject(this._loadedProject)
+      this._castCtl.onSpriteSetsChanged = () => {
+        void this._tilesCtl?.setProject(this._loadedProject)
+        this._dataCtl?.setProject(this._loadedProject)
+      }
     }
     if (!this._tilesCtl) {
       this._tilesCtl = new TilesController(
@@ -336,6 +352,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         (msg) => this._showToast(msg),
       )
     }
+    if (!this._dataCtl) {
+      this._dataCtl = new DataController(this._data_view, (msg) => this._showToast(msg))
+      this._data_view.bindCallbacks({
+        importAsset: (kind) => this._presentAssetImport(kind),
+        openAsset: (id, kind) => this._openAsset(id, kind),
+        renameAsset: (id, currentName) => this._presentRenameAsset(id, currentName),
+        deleteAsset: (id, name, usedBy) => this._presentDeleteAsset(id, name, usedBy),
+        setProjectField: (field, value) => this._dataCtl?.setProjectField(field, value),
+      })
+    }
+    this.signals.connect(this._data_view, 'mode-changed', (_v: DataView, mode: string) => setMode(mode))
     // Tiles view → shared sprite-set CRUD on the cast controller. Import
     // and delete both flow through the one path so the copy/register +
     // collab broadcast live in a single place.
@@ -622,17 +649,77 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       case 'tiles':
         if (this._loadedProject) this._setView('tiles')
         break
-      case 'audio':
-      case 'data': {
+      case 'data':
+        if (this._loadedProject) this._setView('data')
+        break
+      case 'audio': {
         this._showToast(_('Coming soon — this mode is not yet implemented'))
         // Reset back to whichever view we were on; the action state
         // already advanced to the new mode but no view exists.
         const current = this._stack.get_visible_child_name()
-        const fallback = current === 'cast' ? 'cast' : current === 'tiles' ? 'tiles' : 'world'
+        const fallback =
+          current === 'cast' ? 'cast' : current === 'tiles' ? 'tiles' : current === 'data' ? 'data' : 'world'
         this._modeAction?.set_state(GLib.Variant.new_string(fallback))
         break
       }
     }
+  }
+
+  /** Present the unified import dialog for a Data-view asset of `kind`. */
+  private _presentAssetImport(kind: SpriteSetKind): void {
+    const dialog = new SpriteSetImportDialog()
+    dialog.set_title(kind === 'character' ? _('Import sprite sheet') : _('Import tileset'))
+    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
+      void this._castCtl?.importSpriteSet(result, kind)
+    })
+    dialog.present(this)
+  }
+
+  /** Jump from a Data-view asset row to its editor (Cast for sheets, Tiles for tilesets). */
+  private _openAsset(id: string, kind: SpriteSetKind): void {
+    if (!this._loadedProject) return
+    if (kind === 'tileset') {
+      this._setView('tiles')
+      this._tiles_view.focusTileset(id)
+      return
+    }
+    // Sprite sheet → open the first character that uses it, else the Cast view.
+    const character = this._loadedProject.resource.data?.characters?.find((c) => c.spriteSetId === id)
+    this._setView('cast')
+    if (character) this._cast_view.focusCharacter(character.id)
+  }
+
+  /** Rename an asset's display name via a small dialog (Data view). */
+  private _presentRenameAsset(id: string, currentName: string): void {
+    const entry = new Gtk.Entry({ text: currentName, activatesDefault: true })
+    const dialog = new Adw.AlertDialog({ heading: _('Rename asset'), extraChild: entry })
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.add_response('rename', _('Rename'))
+    dialog.set_response_appearance('rename', Adw.ResponseAppearance.SUGGESTED)
+    dialog.set_default_response('rename')
+    dialog.set_close_response('cancel')
+    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+      if (response === 'rename') this._dataCtl?.renameSpriteSet(id, entry.get_text())
+    })
+    dialog.present(this)
+  }
+
+  /** Confirm + delete an asset (sprite set) through the shared cast controller. */
+  private _presentDeleteAsset(id: string, name: string, usedBy: number): void {
+    const body =
+      usedBy > 0
+        ? _(`“${name}” is still used in ${usedBy} place(s). Deleting it may break them. Continue?`)
+        : _(`“${name}” will be removed from the project, including its files. This cannot be undone.`)
+    const dialog = new Adw.AlertDialog({ heading: _('Delete asset?'), body })
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.add_response('delete', _('Delete'))
+    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
+    dialog.set_default_response('cancel')
+    dialog.set_close_response('cancel')
+    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+      if (response === 'delete') this._castCtl?.deleteSpriteSet(id)
+    })
+    dialog.present(this)
   }
 
   /**
@@ -697,6 +784,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this.bind_property('show-inspector', view, 'show-inspector', flags)
     }
     this.bind_property('show-inspector', this._welcome_view, 'show-inspector', flags)
+    // The Data view has a mode rail but no inspector — bind only the library.
+    this.bind_property('show-library', this._data_view, 'show-library', flags)
   }
 
   private _installActions(): void {
@@ -1078,6 +1167,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       cast: 'cast',
       tiles: 'tiles',
       'scene-editor': 'world',
+      data: 'data',
     }
     const targetMode = modeForView[name]
     if (targetMode && this._modeAction?.get_state()?.get_string()[0] !== targetMode) {
@@ -1105,6 +1195,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._cast_view.syncActiveMode(mode)
     this._tiles_view.syncActiveMode(mode)
     this._scene_editor_view.syncActiveMode(mode)
+    this._data_view.syncActiveMode(mode)
   }
 
   private _showAtlas(): void {
@@ -1245,6 +1336,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // about the new project so their views can hydrate.
       this._castCtl?.setProject(project)
       this._tilesCtl?.setProject(project)
+      this._dataCtl?.setProject(project)
       // A fresh project starts on the card overview, not a stale detail
       // page left over from the previous project.
       this._cast_view.resetToOverview()
