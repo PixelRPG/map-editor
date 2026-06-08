@@ -419,7 +419,7 @@ export class TilesView extends Adw.Bin {
    */
   presentTilesetImportDialog(): void {
     const dialog = new SpriteSetImportDialog()
-    dialog.set_title(_('Import tileset'))
+    dialog.kind = 'tileset'
     dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
       this.emit('spriteset-imported', result)
     })

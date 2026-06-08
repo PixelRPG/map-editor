@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { CharacterAnimation, CharacterDefinition, SpriteSetKind } from '@pixelrpg/engine'
+import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import {
   AddAnimationDialog,
   AnimationList,
@@ -118,9 +118,7 @@ export class CastView extends Adw.Bin {
   private _onDeleteCharacterRequested: ((charId: string) => void) | null = null
   private _onListSpriteSets: (() => SpriteSetChoice[]) | null = null
   private _onCreateCharacter: ((draft: NewCharacterDraft) => void) | null = null
-  private _onImportSpriteSet:
-    | ((result: SpriteSetImportResult, kind: SpriteSetKind) => Promise<SpriteSetChoice | null>)
-    | null = null
+  private _onImportSpriteSet: ((result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>) | null = null
   private _onLoadSpriteSetPreview: ((id: string) => Promise<GdkSpriteSetResource | null>) | null = null
 
   static {
@@ -386,10 +384,9 @@ export class CastView extends Adw.Bin {
    */
   private _presentSpriteSetImportDialog(onImported?: (choice: SpriteSetChoice) => void): void {
     const dialog = new SpriteSetImportDialog()
-    dialog.set_title(_('Import sprite sheet'))
+    dialog.kind = 'character'
     dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
-      // Cast imports are character sprite sheets.
-      void this._onImportSpriteSet?.(result, 'character').then((choice) => {
+      void this._onImportSpriteSet?.(result).then((choice) => {
         if (choice) onImported?.(choice)
       })
     })
@@ -499,7 +496,7 @@ export class CastView extends Adw.Bin {
     deleteCharacter: (charId: string) => void
     listSpriteSets: () => SpriteSetChoice[]
     createCharacter: (draft: NewCharacterDraft) => void
-    importSpriteSet: (result: SpriteSetImportResult, kind: SpriteSetKind) => Promise<SpriteSetChoice | null>
+    importSpriteSet: (result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>
     loadSpriteSetPreview: (id: string) => Promise<GdkSpriteSetResource | null>
   }): void {
     this._onRenameRequested = callbacks.rename
