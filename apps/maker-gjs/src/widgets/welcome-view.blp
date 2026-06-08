@@ -208,6 +208,11 @@ template $WelcomeView : Adw.Bin {
           Gtk.Label welcome_title {
             label: _("Welcome to Pixel RPG Editor");
             halign: center;
+            // Wrap so the large title doesn't force a wide minimum window
+            // width — a non-wrapping title-1's min width is the full text.
+            wrap: true;
+            wrap-mode: word_char;
+            justify: center;
             margin-top: 24;
             margin-bottom: 6;
             styles ["title-1"]
