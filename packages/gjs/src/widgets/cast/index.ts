@@ -1,6 +1,7 @@
 export * from './add-animation-dialog'
 export * from './animation-list'
 export * from './cast-inspector'
+export * from './character-card-preview'
 export * from './character-preview'
 export * from './collision-preview'
 export * from './new-character-dialog'

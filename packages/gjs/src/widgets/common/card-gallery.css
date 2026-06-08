@@ -24,19 +24,28 @@
   background-color: alpha(currentColor, 0.06);
 }
 
-/* Corner delete button: quiet by default (it must not compete with the
- * card's own content), destructive-red on hover/focus so the intent is
- * unmistakable once the user reaches for it. */
-.card-gallery-delete {
+/* Corner three-dots menu button: quiet by default (it must not compete
+ * with the card's own content), full-strength on hover/focus/open. */
+.card-gallery-menu {
   min-width: 24px;
   min-height: 24px;
   padding: 2px;
   opacity: 0.7;
 }
 
-.card-gallery-delete:hover,
-.card-gallery-delete:focus {
+.card-gallery-menu:hover,
+.card-gallery-menu:focus,
+.card-gallery-menu:checked {
   opacity: 1;
-  background-color: @destructive_bg_color;
-  color: @destructive_fg_color;
+}
+
+/* Hover-revealed direction arrows on an animated character card. The
+ * widget toggles each arrow's opacity + targetability in code; this
+ * just keeps them compact + crossfading. */
+.character-card-preview .card-arrow {
+  min-width: 22px;
+  min-height: 22px;
+  padding: 2px;
+  margin: 2px;
+  transition: opacity 120ms ease-in-out;
 }

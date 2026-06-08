@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
+import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
@@ -87,14 +88,20 @@ export class CardGallery extends Adw.Bin {
           ),
           'delete-tooltip': GObject.ParamSpec.string(
             'delete-tooltip',
-            'Delete Tooltip',
-            'Tooltip on each card delete button',
+            'Delete Label',
+            "Label of the delete item in each card's three-dots menu",
             GObject.ParamFlags.READWRITE,
             _('Delete'),
           ),
         },
         Signals: {
+          // A card was clicked (select it).
           'item-activated': { param_types: [GObject.TYPE_STRING] },
+          // A card was double-clicked or its menu's "open" chosen — open
+          // the full detail view for it.
+          'item-opened': { param_types: [GObject.TYPE_STRING] },
+          // The card's three-dots menu → delete was chosen. The host
+          // owns the confirm dialog + the actual removal.
           'delete-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
@@ -143,11 +150,18 @@ export class CardGallery extends Adw.Bin {
    * Replace every card. Items are rendered in array order. Switches to
    * the empty state when the list is empty. The active selection ring
    * is preserved if the active id is still present.
+   *
+   * `buildPreview`, when given, supplies a custom preview WIDGET for a
+   * card (e.g. an animated character preview) instead of the static
+   * {@link GalleryCardItem.paintable}; returning `null` falls back to the
+   * paintable/icon. The gallery owns the returned widget's lifecycle
+   * (it's destroyed when the card is cleared), so the factory should
+   * return a fresh widget per call.
    */
-  setItems(items: GalleryCardItem[]): void {
+  setItems(items: GalleryCardItem[], buildPreview?: (item: GalleryCardItem) => Gtk.Widget | null): void {
     this._clear()
     for (const item of items) {
-      const child = this._buildCard(item)
+      const child = this._buildCard(item, buildPreview)
       this._flow.append(child)
     }
     this._stack.set_visible_child_name(items.length === 0 ? 'empty' : 'grid')
@@ -190,9 +204,18 @@ export class CardGallery extends Adw.Bin {
    * above the card button, so clicking trash never also activates the
    * card underneath.
    */
-  private _buildCard(item: GalleryCardItem): Gtk.Overlay {
+  private _buildCard(item: GalleryCardItem, buildPreview?: (item: GalleryCardItem) => Gtk.Widget | null): Gtk.Overlay {
     const card = new Gtk.Button({ cssClasses: ['card', 'card-gallery-card'] })
     card.connect('clicked', () => this.emit('item-activated', item.id))
+    // Double-click opens the detail view. A capture-phase gesture sees
+    // the press before the button's own click gesture; we don't claim
+    // it, so the single-click `item-activated` still fires.
+    const dbl = new Gtk.GestureClick()
+    dbl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+    dbl.connect('pressed', (_g: Gtk.GestureClick, nPress: number) => {
+      if (nPress === 2) this.emit('item-opened', item.id)
+    })
+    card.add_controller(dbl)
 
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
@@ -203,7 +226,7 @@ export class CardGallery extends Adw.Bin {
       marginEnd: 10,
     })
 
-    box.append(this._buildPreview(item))
+    box.append(buildPreview?.(item) ?? this._buildPreview(item))
 
     const title = new Gtk.Label({
       label: item.title,
@@ -238,18 +261,30 @@ export class CardGallery extends Adw.Bin {
     const overlay = new Gtk.Overlay()
     overlay.set_child(card)
 
+    // Per-card actions live in a standard GNOME three-dots menu
+    // (`Gtk.MenuButton` + `Gio.Menu`) in the corner — not a bare trash
+    // icon. Only deletable items get the menu (built-ins have no
+    // actions). The `card.delete` action drives the host's confirm +
+    // removal via `delete-requested`.
     if (item.deletable) {
-      const trash = new Gtk.Button({
-        iconName: 'user-trash-symbolic',
-        tooltipText: this.deleteTooltip,
-        cssClasses: ['flat', 'circular', 'card-gallery-delete'],
+      const menu = Gio.Menu.new()
+      menu.append(this.deleteTooltip, 'card.delete')
+      const menuButton = new Gtk.MenuButton({
+        iconName: 'view-more-symbolic',
+        tooltipText: _('More options'),
+        cssClasses: ['flat', 'circular', 'card-gallery-menu'],
         halign: Gtk.Align.END,
         valign: Gtk.Align.START,
         marginTop: 6,
         marginEnd: 6,
+        menuModel: menu,
       })
-      trash.connect('clicked', () => this.emit('delete-requested', item.id))
-      overlay.add_overlay(trash)
+      const group = new Gio.SimpleActionGroup()
+      const deleteAction = new Gio.SimpleAction({ name: 'delete' })
+      deleteAction.connect('activate', () => this.emit('delete-requested', item.id))
+      group.add_action(deleteAction)
+      menuButton.insert_action_group('card', group)
+      overlay.add_overlay(menuButton)
     }
 
     this._cardsById.set(item.id, card)
