@@ -546,8 +546,8 @@ export class CastView extends Adw.Bin {
 
   /**
    * Rebuild the character cards. Each card's preview is a live
-   * {@link CharacterCardPreview} — the character walks in its default
-   * direction, and hovering reveals direction arrows to spin it.
+   * {@link CharacterPreview} that auto-cycles walking direction while the
+   * card is the active or hovered one (static otherwise).
    */
   private _rebuildGallery(): void {
     this._characters_gallery.setItems(

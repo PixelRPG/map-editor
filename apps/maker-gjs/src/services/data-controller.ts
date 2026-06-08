@@ -12,6 +12,7 @@ import { gettext as _ } from 'gettext'
 import type { DataAssetRow, DataView, DataViewModel } from '../widgets/data-view.ts'
 import { readBinaryFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
+import { isCharacterSpriteSet } from './sprite-set-classification.ts'
 
 /** Thumbnail edge passed to the sheet downscaler (≥ the row size, for sharpness). */
 const THUMB_PX = 96
@@ -117,7 +118,7 @@ export class DataController {
       const sd = engineSet.data
       if (!sd) continue
       const usedByChars = charUsers.get(id) ?? 0
-      const isCharacter = sd.kind === 'character' || usedByChars > 0
+      const isCharacter = isCharacterSpriteSet(sd.kind, usedByChars > 0)
       const row = await this._buildRow(
         id,
         engineSet,

@@ -8,6 +8,7 @@ import { iterateSpriteGrid, type SpriteDataSet, type SpriteSetData, type SpriteS
 import { gettext as _ } from 'gettext'
 
 import { GdkImageTexture, GdkSpriteSheet } from '../../sprite/index.ts'
+import { reparentWidget } from '../../utils/index.ts'
 import { TilePalette } from '../editor/tile-palette.ts'
 import { CollisionPreview } from './collision-preview.ts'
 
@@ -196,10 +197,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
 
   /** Reparent the preview block into `target` (no-op if already there). */
   private _movePreview(target: Gtk.Box): void {
-    const current = this._preview_block.get_parent()
-    if (current === target) return
-    if (current) (current as Gtk.Box).remove(this._preview_block)
-    target.append(this._preview_block)
+    reparentWidget(this._preview_block, target)
   }
 
   get imageName(): string {
