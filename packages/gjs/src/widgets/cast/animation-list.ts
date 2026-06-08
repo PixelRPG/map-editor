@@ -43,6 +43,10 @@ export class AnimationList extends Adw.Bin {
           // Per-row edit affordance — fires the animation id; cast
           // view opens `AddAnimationDialog` in edit mode against it.
           'edit-animation-requested': { param_types: [GObject.TYPE_STRING] },
+          // Per-row delete affordance — fires the animation id. Only
+          // custom animations carry it (required roles can't be
+          // removed); the cast view forwards it to the controller.
+          'delete-animation-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
       AnimationList,
@@ -186,6 +190,23 @@ export class AnimationList extends Adw.Bin {
         this.emit('edit-animation-requested', id)
       })
       row.add_suffix(editButton)
+    }
+
+    // Custom animations get a trash affordance — the eight required
+    // roles are part of the character contract and can't be removed
+    // (their row stays delete-free; an empty required role is
+    // "configure", not "delete"). Pairs with the pencil edit button.
+    if (isCustom) {
+      const deleteButton = new Gtk.Button({
+        iconName: 'user-trash-symbolic',
+        tooltipText: _('Delete animation'),
+        cssClasses: ['flat', 'circular'],
+        valign: Gtk.Align.CENTER,
+      })
+      deleteButton.connect('clicked', () => {
+        this.emit('delete-animation-requested', id)
+      })
+      row.add_suffix(deleteButton)
     }
 
     row.connect('activated', () => {

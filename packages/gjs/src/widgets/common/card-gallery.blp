@@ -1,0 +1,55 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgCardGallery : Adw.Bin {
+  // A `Gtk.Stack` toggles between the populated grid and a compact
+  // empty state. The grid is a `Gtk.FlowBox` so cards reflow per the
+  // allocated width — wide windows pack more cards per row, narrow
+  // ones drop to a single column (the responsive contract the cast +
+  // tiles views rely on). Cards themselves are built in TS
+  // (`card-gallery.ts`) since they're data-driven.
+  Gtk.Stack stack {
+    transition-type: crossfade;
+
+    StackPage {
+      name: "empty";
+      child: Gtk.Box {
+        orientation: vertical;
+        spacing: 10;
+        halign: center;
+        valign: center;
+        margin-top: 24;
+        margin-bottom: 24;
+        margin-start: 12;
+        margin-end: 12;
+
+        Gtk.Image empty_icon {
+          pixel-size: 48;
+          icon-name: bind template.empty-icon;
+          styles ["dim-label"]
+        }
+
+        Gtk.Label empty_label {
+          label: bind template.empty-title;
+          wrap: true;
+          justify: center;
+          styles ["dim-label"]
+        }
+      };
+    }
+
+    StackPage {
+      name: "grid";
+      child: Gtk.FlowBox flow {
+        selection-mode: none;
+        homogeneous: true;
+        column-spacing: 12;
+        row-spacing: 12;
+        min-children-per-line: 1;
+        max-children-per-line: 5;
+        halign: fill;
+        valign: start;
+      };
+    }
+  }
+}
