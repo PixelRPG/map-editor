@@ -6,10 +6,11 @@
 > verified end-to-end (host paint → joiner sync; bidirectional cursors). Game
 > multiplayer (Phases 5–8) remains future. See also
 > [`ai-collaborator.md`](ai-collaborator.md).
-> Last meaningful change: 2026-06-07 (project-op channel — cast/character edits
-> AND sprite-set imports sync live via `__project/*`, the latter chunked for the
-> image bytes). Prior: 2026-06-06 (op-sync verified live; awareness selection +
-> per-peer colours; AI collaborator + participants toolbar).
+> Last meaningful change: 2026-06-08 (project-op channel now also carries
+> sprite-set/tileset DELETE — `__project/spriteset.remove`; cast + tiles share a
+> card-gallery master-detail UI with character/animation/tileset delete). Prior:
+> 2026-06-07 (project-op channel — cast/character edits AND sprite-set imports
+> sync live via `__project/*`, the latter chunked for the image bytes).
 
 The editor will eventually let multiple users edit the same project simultaneously ("collaborative editing"). The game will eventually support **split-screen** and **networked multiplayer**. Both flows are real-time multi-peer state synchronisation. This doc commits to **one unified mechanism** for both: an **Operation Log with a host-sequencer (Player 1)**.
 
@@ -84,13 +85,13 @@ Awareness is **separate** from the op-log. It rides over an unreliable channel b
 
 #### Project-op channel — cast / sprite-set edits (no scene)
 
-There's a **third** category of mutation that's neither a scene `Command` nor ephemeral awareness: **project-level data** — the cast (`characters[]`) and sprite-sets. These are edited in the Cast view, where there is *no live scene/engine* (the engine only exists inside the scene editor), so a `Command` (which mutates a `Scene`) can't represent them.
+There's a **third** category of mutation that's neither a scene `Command` nor ephemeral awareness: **project-level data** — the cast (`characters[]`) and sprite-sets (tilesets). These are edited in the Cast + Tiles views, where there is *no live scene/engine* (the engine only exists inside the scene editor), so a `Command` (which mutates a `Scene`) can't represent them.
 
-They ride a dedicated **project-op** channel (`packages/engine/src/sync/project-operations.ts`), reusing the reliable op channel like the `__session/*` snapshot protocol does. Kinds are `__project/*` (`character.upsert`, `character.remove`); `isProjectOp` filters them out of both the command registry (`SessionController` skips them) and the snapshot path. Semantics are **coarse, idempotent upserts**: every cast mutation re-sends the whole affected `CharacterDefinition`, the receiver replaces-by-id (and `applyCharacterUpsert` re-enforces single-player on the wire). Unlike commands, project-ops do **not** land on the undo stack.
+They ride a dedicated **project-op** channel (`packages/engine/src/sync/project-operations.ts`), reusing the reliable op channel like the `__session/*` snapshot protocol does. Kinds are `__project/*` (`character.upsert`, `character.remove`, `spriteset.add.chunk`, `spriteset.remove`); `isProjectOp` filters them out of both the command registry (`SessionController` skips them) and the snapshot path. Semantics are **coarse, idempotent upserts**: every cast mutation re-sends the whole affected `CharacterDefinition`, the receiver replaces-by-id (and `applyCharacterUpsert` re-enforces single-player on the wire). Deletes (`character.remove`, `spriteset.remove`) carry just the id. Unlike commands, project-ops do **not** land on the undo stack.
 
 Plumbing is maker-side: `CollabSession.sendProjectOp` (stamps peer id + seq, sends on the always-present op channel — works without an attached engine) and `CollabSession.onProjectOpReceived` → `CastController.applyRemoteProjectOp` (mutates the peer's `GameProjectData`, persists, refreshes the Cast view).
 
-**Sprite-set import** carries image bytes, so it can't be one op (a single SCTP send >64 KiB is silently dropped). It rides a chunked `__project/spriteset.add.chunk` transfer (`chunkSpriteSetAdd` → `SpriteSetAddReassembler`, same 16 KiB chunking as the snapshot path), surfaced via `CollabSession.sendSpriteSetAdd` / `onSpriteSetAddReceived` → `CastController.applyRemoteSpriteSetAdd` (writes the PNG + descriptor into the peer's `spritesets/`, registers the set under the *same id* so referencing characters resolve). Because the import broadcasts before the character that uses it (reliable + ordered channel), the peer has the set registered by the time the character upsert lands — no empty-preview window.
+**Sprite-set import** carries image bytes, so it can't be one op (a single SCTP send >64 KiB is silently dropped). It rides a chunked `__project/spriteset.add.chunk` transfer (`chunkSpriteSetAdd` → `SpriteSetAddReassembler`, same 16 KiB chunking as the snapshot path), surfaced via `CollabSession.sendSpriteSetAdd` / `onSpriteSetAddReceived` → `CastController.applyRemoteSpriteSetAdd` (writes the PNG + descriptor into the peer's `spritesets/`, registers the set under the *same id* so referencing characters resolve). Because the import broadcasts before the character that uses it (reliable + ordered channel), the peer has the set registered by the time the character upsert lands — no empty-preview window. **Sprite-set delete** is the inverse: a tiny `__project/spriteset.remove` (id only) via `sendProjectOp`; `applyRemoteProjectOp` drops the reference, deletes the local `<id>.png` + `<id>.json`, and refreshes both the Cast and Tiles views (sprite-sets are shared project assets shown in both — the cast controller owns the CRUD + broadcast for both surfaces, with the Tiles view routing its create/delete through the host).
 
 ### 5. Input-source abstraction makes split-screen and network multiplayer identical
 

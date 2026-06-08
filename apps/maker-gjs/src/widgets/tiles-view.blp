@@ -2,12 +2,10 @@ using Gtk 4.0;
 using Adw 1;
 
 template $TilesView : Adw.Bin {
-  // Same outer/inner OverlaySplitView shell as cast-view + atlas-view
-  // + scene-editor-view — ModeRail (left) + tile inspector (right),
-  // central content panel in the middle. Like cast-view, the centre
-  // is a regular `Adw.ToolbarView` with a flat headerbar: no canvas
-  // underneath, so the floating-OSD pattern the canvas views use
-  // doesn't apply here.
+  // Same master-detail shape as cast-view: ModeRail (left) holds the
+  // whole view; the central `Adw.NavigationView` drills from a tileset
+  // card GALLERY into a per-tileset DETAIL page (palette + inspector).
+  // The two are never shown at once.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -22,89 +20,149 @@ template $TilesView : Adw.Bin {
       project-tagline: _("Tiles view");
     };
 
-    content: Adw.OverlaySplitView inner_split {
-      sidebar-position: end;
-      min-sidebar-width: 280;
-      max-sidebar-width: 360;
-      pin-sidebar: true;
-      collapsed: bind template.inspector-collapsed;
-      show-sidebar: bind template.show-inspector bidirectional;
+    content: Adw.NavigationView nav {
+      // ── Gallery (master) ──────────────────────────────────────────
+      Adw.NavigationPage {
+        tag: "gallery";
+        title: _("Tiles");
 
-      sidebar: $PixelRpgTileInspector inspector {
-        collapsed: bind template.inspector-collapsed;
-      };
+        child: Adw.ToolbarView {
+          top-bar-style: flat;
 
-      content: Adw.ToolbarView {
-        top-bar-style: flat;
+          [top]
+          Adw.HeaderBar {
+            show-title: false;
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
 
-        [top]
-        Adw.HeaderBar {
-          show-title: false;
-          show-start-title-buttons: false;
-          show-end-title-buttons: false;
-
-          [start]
-          Gtk.ToggleButton library_toggle {
-            icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Toggle library");
-            active: bind template.show-library bidirectional;
-          }
-
-          [end]
-          Gtk.ToggleButton inspector_toggle {
-            icon-name: "sidebar-show-right-symbolic";
-            tooltip-text: _("Toggle inspector");
-            active: bind template.show-inspector bidirectional;
-          }
-        }
-
-        content: Gtk.Box content_box {
-          orientation: vertical;
-          spacing: 16;
-          margin-top: 24;
-          margin-bottom: 24;
-          margin-start: 24;
-          margin-end: 24;
-
-          Gtk.Label header_label {
-            label: _("Tiles");
-            halign: start;
-            styles ["title-1"]
-          }
-
-          Adw.PreferencesGroup tileset_group {
-            title: _("Tileset");
-            description: _("Pick a sprite-set; configure each of its tiles in the right inspector.");
-
-            Adw.ComboRow tileset_combo {
-              title: _("Active tileset");
-              sensitive: false;
+            [start]
+            Gtk.ToggleButton library_toggle {
+              icon-name: "sidebar-show-symbolic";
+              tooltip-text: _("Toggle library");
+              active: bind template.show-library bidirectional;
             }
           }
 
-          // Dedicated ScrolledWindow around just the palette so it can
-          // scroll vertically once the grid has more rows than fit.
-          // `wrap: true` on the palette lets the FlowBox flow against
-          // the available width — wide windows fit more tiles per
-          // row, narrow ones wrap to fewer; no horizontal scrolling
-          // either way.
-          Gtk.ScrolledWindow palette_scroller {
+          content: Gtk.ScrolledWindow {
             hexpand: true;
             vexpand: true;
             hscrollbar-policy: never;
-            vscrollbar-policy: automatic;
 
-            child: $PixelRpgTilePalette palette {
-              wrap: true;
-              halign: fill;
-              valign: start;
-              hexpand: true;
-              vexpand: false;
-              tile-size: 32;
+            child: Adw.Clamp {
+              maximum-size: 1000;
+              tightening-threshold: 600;
+
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 16;
+                margin-top: 24;
+                margin-bottom: 24;
+                margin-start: 24;
+                margin-end: 24;
+
+                Gtk.Label header_label {
+                  label: _("Tiles");
+                  halign: start;
+                  styles ["title-1"]
+                }
+
+                Gtk.Box gallery_header {
+                  orientation: horizontal;
+                  spacing: 8;
+
+                  Gtk.Label {
+                    label: _("Tilesets");
+                    halign: start;
+                    hexpand: true;
+                    styles ["heading"]
+                  }
+
+                  Gtk.Button new_tileset_button {
+                    icon-name: "list-add-symbolic";
+                    action-name: "win.new-tileset";
+                    tooltip-text: _("Import a new tileset");
+                    valign: center;
+                    styles ["flat", "circular"]
+                  }
+                }
+
+                Gtk.Label gallery_description {
+                  label: _("Select a tileset to configure its tiles in the inspector, or import a new one.");
+                  halign: start;
+                  wrap: true;
+                  xalign: 0;
+                  styles ["caption", "dim-label"]
+                }
+
+                $PixelRpgCardGallery tilesets_gallery {
+                  empty-title: _("No tilesets yet. Import one to start painting maps.");
+                  empty-icon: "view-grid-symbolic";
+                  delete-tooltip: _("Delete tileset");
+                }
+              };
             };
-          }
+          };
         };
-      };
+      }
+
+      // ── Detail (drill-down) ───────────────────────────────────────
+      Adw.NavigationPage detail_page {
+        tag: "detail";
+        title: _("Tileset");
+
+        child: Adw.OverlaySplitView inner_split {
+          sidebar-position: end;
+          min-sidebar-width: 280;
+          max-sidebar-width: 360;
+          pin-sidebar: true;
+          collapsed: bind template.inspector-collapsed;
+          show-sidebar: bind template.show-inspector bidirectional;
+
+          sidebar: $PixelRpgTileInspector inspector {
+            collapsed: bind template.inspector-collapsed;
+          };
+
+          content: Adw.ToolbarView {
+            top-bar-style: flat;
+
+            [top]
+            Adw.HeaderBar {
+              show-start-title-buttons: false;
+              show-end-title-buttons: false;
+
+              [end]
+              Gtk.ToggleButton inspector_toggle {
+                icon-name: "sidebar-show-right-symbolic";
+                tooltip-text: _("Toggle inspector");
+                active: bind template.show-inspector bidirectional;
+              }
+            }
+
+            // Dedicated ScrolledWindow around the palette so it scrolls
+            // vertically once the grid has more rows than fit. `wrap`
+            // lets the FlowBox flow against the available width.
+            content: Gtk.ScrolledWindow palette_scroller {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+              vscrollbar-policy: automatic;
+
+              child: $PixelRpgTilePalette palette {
+                wrap: true;
+                halign: fill;
+                valign: start;
+                hexpand: true;
+                vexpand: false;
+                tile-size: 32;
+                margin-top: 16;
+                margin-bottom: 16;
+                margin-start: 16;
+                margin-end: 16;
+              };
+            };
+          };
+        };
+      }
     };
   }
 }

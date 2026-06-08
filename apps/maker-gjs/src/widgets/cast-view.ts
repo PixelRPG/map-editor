@@ -1,13 +1,14 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import {
   AddAnimationDialog,
   AnimationList,
+  CardGallery,
   CastInspector,
   CharacterPreview,
   type EditorMode,
+  type GalleryCardItem,
   type GdkSpriteSetResource,
   type ModeRail,
   NewCharacterDialog,
@@ -27,6 +28,7 @@ import Template from './cast-view.blp'
 GObject.type_ensure(CharacterPreview.$gtype)
 GObject.type_ensure(AnimationList.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
+GObject.type_ensure(CardGallery.$gtype)
 
 export namespace CastView {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
@@ -37,15 +39,34 @@ export namespace CastView {
 }
 
 /**
- * Project-level Cast (heroes + NPCs) view. Composes:
+ * Pick the sprite-frame that best represents a character on its gallery
+ * card: the first frame of its default animation, else `idle-down`,
+ * else the first animation that has frames, else sprite 0. Keeps the
+ * card preview meaningful without animating every card.
+ */
+function representativeFrame(character: CharacterDefinition): number {
+  const byId = (id: string) => character.animations.find((a) => a.id === id)
+  const anim =
+    (character.defaultAnimation ? byId(character.defaultAnimation) : null) ??
+    byId('idle-down') ??
+    character.animations.find((a) => a.frames.length > 0) ??
+    character.animations[0]
+  return anim?.frames?.[0] ?? 0
+}
+
+/**
+ * Project-level Cast (heroes + NPCs) view. A master-detail drill-down
+ * inside an `Adw.NavigationView`:
  *
- * - `ModeRail` (left navigation; this view's `mode-changed` signal
- *   forwards to the application window to switch between World / Cast
- *   / Tiles / Audio / Data)
- * - Character gallery (`Adw.PreferencesGroup` of action rows)
- * - `CharacterPreview` (animated, direction-pad-switchable)
- * - `AnimationList` (list of the selected character's animations)
- * - `CastInspector` (right pane — name, isPlayer, speed, anim duration)
+ * - `ModeRail` (left navigation, always present; this view's
+ *   `mode-changed` signal forwards to the application window to switch
+ *   between World / Cast / Tiles / Audio / Data)
+ * - GALLERY page — every character as a `CardGallery` card (preview +
+ *   name + kind + Player badge + delete). Activating a card drills into:
+ * - DETAIL page — `CharacterPreview` (animated, direction-pad), the
+ *   `AnimationList`, and the `CastInspector` (name, isPlayer, speed,
+ *   anim duration) as a collapsible right pane. A back button returns
+ *   to the gallery; the two pages are never shown at once.
  *
  * Mutations land via host-supplied callbacks (set via `bindCallbacks`)
  * so the application window remains the single owner of project data +
@@ -58,7 +79,9 @@ export class CastView extends Adw.Bin {
   declare _inspector: CastInspector
   declare _preview: CharacterPreview
   declare _anim_list: AnimationList
-  declare _gallery_group: Adw.PreferencesGroup
+  declare _characters_gallery: CardGallery
+  declare _nav: Adw.NavigationView
+  declare _detail_page: Adw.NavigationPage
 
   private _projectName = ''
   // Sidebar visibility starts CLOSED — the actual value is overwritten
@@ -74,8 +97,14 @@ export class CastView extends Adw.Bin {
   private _characters: CharacterDefinition[] = []
   private _activeCharacterId: string | null = null
   private _activeAnimationId: string | null = null
-  private _spriteSet: GdkSpriteSetResource | null = null
-  private _galleryRowsById = new Map<string, Adw.ActionRow>()
+  /**
+   * Resolved GTK preview resource per sprite-set id. Keyed by
+   * `spriteSetId` (not character id) so several characters sharing a
+   * set reuse the one resource. Filled by the controller's `refresh`;
+   * a missing/failed set maps to `null` (the card falls back to an icon
+   * and the detail preview blanks).
+   */
+  private _spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
   private signals = new SignalScope()
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
@@ -86,6 +115,8 @@ export class CastView extends Adw.Bin {
   private _onEditAnimationRequested:
     | ((charId: string, originalId: string, animation: CharacterAnimation) => void)
     | null = null
+  private _onDeleteAnimationRequested: ((charId: string, animId: string) => void) | null = null
+  private _onDeleteCharacterRequested: ((charId: string) => void) | null = null
   private _onListSpriteSets: (() => SpriteSetChoice[]) | null = null
   private _onCreateCharacter: ((draft: NewCharacterDraft) => void) | null = null
   private _onImportSpriteSet: ((result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>) | null = null
@@ -96,7 +127,15 @@ export class CastView extends Adw.Bin {
       {
         GTypeName: 'CastView',
         Template,
-        InternalChildren: ['mode_rail', 'inspector', 'preview', 'anim_list', 'gallery_group'],
+        InternalChildren: [
+          'mode_rail',
+          'inspector',
+          'preview',
+          'anim_list',
+          'characters_gallery',
+          'nav',
+          'detail_page',
+        ],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -156,6 +195,9 @@ export class CastView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
+    // Re-entering the Cast section (mode switch) lands on the gallery
+    // overview, not a stale detail page — the card view is the hub.
+    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
@@ -192,6 +234,41 @@ export class CastView extends Adw.Bin {
     this.signals.connect(this._anim_list, 'edit-animation-requested', (_v: AnimationList, animId: string) => {
       this._presentEditAnimationDialog(animId)
     })
+    this.signals.connect(this._anim_list, 'delete-animation-requested', (_v: AnimationList, animId: string) => {
+      this._confirmDeleteAnimation(animId)
+    })
+    // Character gallery — card click selects, trash button (after a
+    // confirm) removes. Selection drives the preview + animation list +
+    // inspector, same as the old action-row gallery did.
+    this.signals.connect(this._characters_gallery, 'item-activated', (_v: CardGallery, id: string) => {
+      this._selectCharacter(id)
+    })
+    this.signals.connect(this._characters_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
+      this._confirmDeleteCharacter(id)
+    })
+  }
+
+  /**
+   * Select a character from the gallery: make it active, reset the
+   * active animation, refresh the detail surfaces, and DRILL INTO the
+   * dedicated detail sub-page (preview + animations + inspector). The
+   * gallery and detail are never shown at once — this pushes the detail
+   * page onto the navigation stack; its back button returns to the
+   * gallery.
+   */
+  private _selectCharacter(id: string): void {
+    const character = this._characters.find((c) => c.id === id)
+    if (!character) return
+    this._activeCharacterId = id
+    this._activeAnimationId = null
+    this._refreshActive()
+    this._characters_gallery.setActiveId(id)
+    this._detail_page.title = character.name
+    // Auto-reveal the inspector on roomy layouts (its name / isPlayer /
+    // speed / duration fields are the point of the detail page); leave
+    // it closed on narrow ones, where it overlays the content.
+    if (!this._inspectorCollapsed) this.showInspector = true
+    if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
 
   /**
@@ -212,7 +289,7 @@ export class CastView extends Adw.Bin {
     const character = this._currentCharacter()
     if (!character) return
     const dialog = new AddAnimationDialog()
-    dialog.setContext(character, this._spriteSet)
+    dialog.setContext(character, this._activeSpriteSet())
     dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
       this._onAddAnimationRequested?.(character.id, animation)
     })
@@ -233,13 +310,10 @@ export class CastView extends Adw.Bin {
     const existing = character.animations.find((a) => a.id === animId)
     if (!existing) return
     const dialog = new AddAnimationDialog()
-    dialog.setContext(character, this._spriteSet, existing)
-    dialog.connect(
-      'animation-edited',
-      (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
-        this._onEditAnimationRequested?.(character.id, originalId, animation)
-      },
-    )
+    dialog.setContext(character, this._activeSpriteSet(), existing)
+    dialog.connect('animation-edited', (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
+      this._onEditAnimationRequested?.(character.id, originalId, animation)
+    })
     dialog.present(this)
   }
 
@@ -297,12 +371,7 @@ export class CastView extends Adw.Bin {
 
   /** Select + reveal a character in the gallery (used after creation). */
   focusCharacter(id: string): void {
-    if (!this._characters.find((c) => c.id === id)) return
-    this._activeCharacterId = id
-    this._activeAnimationId = null
-    this._refreshActive()
-    this._refreshHighlight()
-    this.showInspector = true
+    this._selectCharacter(id)
   }
 
   get projectName(): string {
@@ -369,6 +438,8 @@ export class CastView extends Adw.Bin {
     setDuration: (charId: string, animId: string, durationMs: number) => void
     addAnimation: (charId: string, animation: CharacterAnimation) => void
     editAnimation: (charId: string, originalId: string, animation: CharacterAnimation) => void
+    deleteAnimation: (charId: string, animId: string) => void
+    deleteCharacter: (charId: string) => void
     listSpriteSets: () => SpriteSetChoice[]
     createCharacter: (draft: NewCharacterDraft) => void
     importSpriteSet: (result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>
@@ -380,6 +451,8 @@ export class CastView extends Adw.Bin {
     this._onSetDurationRequested = callbacks.setDuration
     this._onAddAnimationRequested = callbacks.addAnimation
     this._onEditAnimationRequested = callbacks.editAnimation
+    this._onDeleteAnimationRequested = callbacks.deleteAnimation
+    this._onDeleteCharacterRequested = callbacks.deleteCharacter
     this._onListSpriteSets = callbacks.listSpriteSets
     this._onCreateCharacter = callbacks.createCharacter
     this._onImportSpriteSet = callbacks.importSpriteSet
@@ -389,10 +462,15 @@ export class CastView extends Adw.Bin {
   /**
    * Refresh from project data. Called by the host on every cast
    * mutation + on initial project load.
+   *
+   * `spriteSetsById` carries a resolved GTK preview resource for every
+   * sprite-set id referenced by the cast (keyed by `spriteSetId`), so
+   * each card previews its OWN character's sheet and the detail preview
+   * follows the active character rather than always the player's set.
    */
-  setCharacters(characters: CharacterDefinition[], spriteSet: GdkSpriteSetResource | null): void {
+  setCharacters(characters: CharacterDefinition[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
     this._characters = characters
-    this._spriteSet = spriteSet
+    this._spriteSetsById = spriteSetsById
     if (this._activeCharacterId && !characters.find((c) => c.id === this._activeCharacterId)) {
       this._activeCharacterId = null
       this._activeAnimationId = null
@@ -412,54 +490,44 @@ export class CastView extends Adw.Bin {
     this._mode_rail.activeMode = mode
   }
 
+  /** Rebuild the character cards from the current data + selection. */
   private _rebuildGallery(): void {
-    for (const row of this._galleryRowsById.values()) {
-      this._gallery_group.remove(row)
-    }
-    this._galleryRowsById.clear()
-
-    for (const character of this._characters) {
-      const row = new Adw.ActionRow({
-        title: character.name,
-        subtitle: character.kind === 'hero' ? _('Hero') : _('NPC'),
-        activatable: true,
-      })
-      if (character.isPlayer) {
-        const label = new Gtk.Label({ label: _('Player') })
-        label.add_css_class('caption')
-        label.add_css_class('accent')
-        row.add_suffix(label)
-      }
-      row.connect('activated', () => {
-        this._activeCharacterId = character.id
-        this._activeAnimationId = null
-        this._refreshActive()
-        this._refreshHighlight()
-        // Auto-open the right inspector when the user picks a
-        // character — see [right-inspector auto-open policy] in
-        // `docs/concepts/responsive-chrome.md`. The inspector now
-        // has content to show (name + isPlayer + speed + active-
-        // animation duration); leaving it closed hides the only
-        // configuration surface the click produced.
-        this.showInspector = true
-      })
-      this._gallery_group.add(row)
-      this._galleryRowsById.set(character.id, row)
-    }
-    this._refreshHighlight()
+    this._characters_gallery.setItems(this._characters.map((c) => this._buildCardItem(c)))
+    this._characters_gallery.setActiveId(this._activeCharacterId)
   }
 
-  private _refreshHighlight(): void {
-    for (const [id, row] of this._galleryRowsById) {
-      if (id === this._activeCharacterId) row.add_css_class('accent')
-      else row.remove_css_class('accent')
+  /**
+   * Build the card model for one character: a representative sprite
+   * (the first frame of its default/idle-down animation) as the
+   * preview, the kind as subtitle, and a `Player` badge for the
+   * playable character. Every character is deletable.
+   */
+  private _buildCardItem(character: CharacterDefinition): GalleryCardItem {
+    const set = this._spriteSetsById.get(character.spriteSetId) ?? null
+    const sprite = set?.getSprite(representativeFrame(character))
+    return {
+      id: character.id,
+      title: character.name,
+      subtitle: character.kind === 'hero' ? _('Hero') : _('NPC'),
+      badge: character.isPlayer ? _('Player') : null,
+      paintable: sprite?.createPaintable({ keepAspectRatio: true }) ?? null,
+      fallbackIcon: 'person-symbolic',
+      deletable: true,
     }
+  }
+
+  /** The GTK preview resource for the active character's sprite set. */
+  private _activeSpriteSet(): GdkSpriteSetResource | null {
+    const character = this._currentCharacter()
+    if (!character) return null
+    return this._spriteSetsById.get(character.spriteSetId) ?? null
   }
 
   private _refreshActive(): void {
     const character = this._currentCharacter()
-    this._preview.setCharacter(character, this._spriteSet)
-    this._anim_list.setCharacter(character, this._spriteSet)
+    const spriteSet = this._activeSpriteSet()
+    this._preview.setCharacter(character, spriteSet)
+    this._anim_list.setCharacter(character, spriteSet)
     this._inspector.setCharacter(character)
     // Pick up whatever the preview defaulted to (`walk-down` on a
     // fresh character) so the list highlight + inspector duration
@@ -504,6 +572,43 @@ export class CastView extends Adw.Bin {
     const character = this._currentCharacter()
     if (!character || !this._activeAnimationId) return null
     return character.animations.find((a) => a.id === this._activeAnimationId) ?? null
+  }
+
+  /**
+   * Confirm + delete a character. Deletion is destructive (it drops the
+   * whole {@link CharacterDefinition} and, in collab, broadcasts the
+   * removal) so it routes through an `Adw.AlertDialog` with a
+   * destructive confirm before the host callback fires.
+   */
+  private _confirmDeleteCharacter(id: string): void {
+    const character = this._characters.find((c) => c.id === id)
+    if (!character) return
+    const dialog = new Adw.AlertDialog({
+      heading: _('Delete character?'),
+      body: _(`“${character.name}” will be removed from the project. This cannot be undone.`),
+    })
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.add_response('delete', _('Delete'))
+    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
+    dialog.set_default_response('cancel')
+    dialog.set_close_response('cancel')
+    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+      if (response === 'delete') this._onDeleteCharacterRequested?.(id)
+    })
+    dialog.present(this)
+  }
+
+  /**
+   * Delete a custom animation. Lower-stakes than a character delete (a
+   * custom animation is trivially re-created in the editor) so it
+   * skips the confirm dialog — the trash affordance only appears on
+   * custom rows, never the required roles. The host removes it from the
+   * character + re-broadcasts the character.
+   */
+  private _confirmDeleteAnimation(animId: string): void {
+    const character = this._currentCharacter()
+    if (!character) return
+    this._onDeleteAnimationRequested?.(character.id, animId)
   }
 
   vfunc_unmap(): void {
