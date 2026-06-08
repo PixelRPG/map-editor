@@ -8,6 +8,7 @@ import {
   type GalleryCardItem,
   GdkSpriteSetResource,
   type ModeRail,
+  reparentWidget,
   SignalScope,
   SpriteSetImportDialog,
   type SpriteSetImportResult,
@@ -16,6 +17,7 @@ import {
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
+import { characterSpriteSetIds, isCharacterSpriteSet } from '../services/sprite-set-classification.ts'
 import Template from './tiles-view.blp'
 
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
@@ -193,12 +195,7 @@ export class TilesView extends Adw.Bin {
    */
   private _placeInspector(): void {
     const collapsed = this._inspectorCollapsed
-    const target = collapsed ? this._sheet_slot : this._side_slot
-    const current = this._inspector.get_parent()
-    if (current !== target) {
-      if (current) (current as Gtk.Box).remove(this._inspector)
-      target.append(this._inspector)
-    }
+    reparentWidget(this._inspector, collapsed ? this._sheet_slot : this._side_slot)
     // Desktop: show the split's pinned sidebar. Phone: hide it (the
     // inspector lives in the bottom sheet instead).
     this._tile_split.set_show_sidebar(!collapsed)
@@ -359,10 +356,8 @@ export class TilesView extends Adw.Bin {
     }
 
     // Tiles shows ONLY world tilesets — character animation sheets
-    // belong to the Cast view. Exclude any set tagged `kind: 'character'`
-    // AND any set a character references (belt-and-suspenders: catches
-    // legacy/untagged sheets like a project that predates the split).
-    const usedByCharacter = new Set((project.data?.characters ?? []).map((c) => c.spriteSetId))
+    // belong to the Cast view (see `isCharacterSpriteSet`).
+    const usedByCharacter = characterSpriteSetIds(project.data?.characters)
 
     // Snapshot sprite-sets in project order, wrapping each as a GTK
     // resource up-front so its card can show a sheet thumbnail. Tilesets
@@ -370,7 +365,7 @@ export class TilesView extends Adw.Bin {
     // keeps the gallery from popping in thumbnails one by one.
     const items: TilesetEntry[] = []
     for (const [id, resource] of project.spriteSets) {
-      if (resource.data?.kind === 'character' || usedByCharacter.has(id)) continue
+      if (isCharacterSpriteSet(resource.data?.kind, usedByCharacter.has(id))) continue
       let gdk: GdkSpriteSetResource | null = null
       try {
         gdk = await GdkSpriteSetResource.fromEngineResource(resource)

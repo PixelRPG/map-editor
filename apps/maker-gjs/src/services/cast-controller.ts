@@ -30,6 +30,7 @@ import type { CastView } from '../widgets/cast-view.ts'
 import type { CollabSession } from './collab-session.ts'
 import { copyFile, deleteFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
+import { characterSpriteSetIds, isCharacterSpriteSet } from './sprite-set-classification.ts'
 
 /** Default per-frame duration (ms) seeded into a new character's animations. */
 const DEFAULT_ANIMATION_MS = 200
@@ -301,13 +302,11 @@ export class CastController {
   private _listSpriteSets(): SpriteSetChoice[] {
     const resource = this._project?.resource
     if (!resource) return []
-    const usedByCharacter = new Set((resource.data?.characters ?? []).map((c) => c.spriteSetId))
     // Only sprite SHEETS are assignable to a character — world tilesets
-    // are excluded (a character sheet is `kind: 'character'` or already
-    // referenced by a character; untagged-but-referenced sheets still
-    // qualify so legacy projects keep working).
+    // are excluded (see `isCharacterSpriteSet`).
+    const usedByCharacter = characterSpriteSetIds(resource.data?.characters)
     return [...resource.spriteSets.entries()]
-      .filter(([id, set]) => set.data?.kind === 'character' || usedByCharacter.has(id))
+      .filter(([id, set]) => isCharacterSpriteSet(set.data?.kind, usedByCharacter.has(id)))
       .map(([id, set]) => ({ id, name: set.data?.name ?? id }))
       .sort((a, b) => Number(usedByCharacter.has(b.id)) - Number(usedByCharacter.has(a.id)))
   }
