@@ -31,7 +31,6 @@ export class TileInspector extends Adw.Bin {
   private _sprite: SpriteDataSet | null = null
   /** Set during host-driven refresh so input changes don't loop back. */
   private _silentUpdate = false
-  private _collapsed = false
 
   static {
     GObject.registerClass(
@@ -39,19 +38,6 @@ export class TileInspector extends Adw.Bin {
         GTypeName: 'PixelRpgTileInspector',
         Template,
         InternalChildren: ['preview', 'title_label', 'solid_row', 'surface_row'],
-        Properties: {
-          // Mirrors the parent view's `inspector-collapsed` — drives
-          // the in-overlay close button. See
-          // `docs/concepts/responsive-chrome.md` § "In-overlay close
-          // affordance".
-          collapsed: GObject.ParamSpec.boolean(
-            'collapsed',
-            'Collapsed',
-            'Whether the inspector is in overlay-drawer mode (narrow widths)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-        },
         Signals: {
           'solid-changed': { param_types: [GObject.TYPE_BOOLEAN] },
           'surface-changed': { param_types: [GObject.TYPE_STRING] },
@@ -59,16 +45,6 @@ export class TileInspector extends Adw.Bin {
       },
       TileInspector,
     )
-  }
-
-  get collapsed(): boolean {
-    return this._collapsed
-  }
-
-  set collapsed(value: boolean) {
-    if (this._collapsed === value) return
-    this._collapsed = value
-    this.notify('collapsed')
   }
 
   constructor() {
