@@ -23,7 +23,7 @@ const ROW_THUMBNAIL_SIZE = 24
  * the actual mutation; this widget is presentational.
  */
 export class AnimationList extends Adw.Bin {
-  declare _group: Adw.PreferencesGroup
+  declare _list: Gtk.ListBox
   declare _add_button: Gtk.Button
 
   private _character: CharacterDefinition | null = null
@@ -36,7 +36,7 @@ export class AnimationList extends Adw.Bin {
       {
         GTypeName: 'PixelRpgAnimationList',
         Template,
-        InternalChildren: ['group', 'add_button'],
+        InternalChildren: ['list', 'add_button'],
         Signals: {
           'animation-selected': { param_types: [GObject.TYPE_STRING] },
           'add-animation-requested': {},
@@ -100,10 +100,11 @@ export class AnimationList extends Adw.Bin {
   }
 
   private _rebuild(): void {
-    // Remove all existing rows. Adw.PreferencesGroup exposes a remove() on each
-    // child via the standard GTK4 child management.
+    // Rows live in a plain `Gtk.ListBox` (`.boxed-list`) so the
+    // surrounding ScrolledWindow scrolls ONLY the rows — the header
+    // above + the "Add custom animation…" button below stay fixed.
     for (const row of this._rowsById.values()) {
-      this._group.remove(row)
+      this._list.remove(row)
     }
     this._rowsById.clear()
 
@@ -122,12 +123,12 @@ export class AnimationList extends Adw.Bin {
 
     for (const { role, anim } of requiredOrdered) {
       const row = this._buildRow(role, anim, /* isCustom */ false)
-      this._group.add(row)
+      this._list.append(row)
       this._rowsById.set(role, row)
     }
     for (const anim of customAnims) {
       const row = this._buildRow(anim.id, anim, /* isCustom */ true)
-      this._group.add(row)
+      this._list.append(row)
       this._rowsById.set(anim.id, row)
     }
   }

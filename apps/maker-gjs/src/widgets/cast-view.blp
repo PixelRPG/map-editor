@@ -213,57 +213,57 @@ template $CastView : Adw.Bin {
             show-end-title-buttons: false;
           }
 
-          content: Gtk.ScrolledWindow {
-            hexpand: true;
-            vexpand: true;
-            hscrollbar-policy: never;
+          // No outer ScrolledWindow: the page fills the window so the
+          // animation list (inside `anim_list`) can scroll on its OWN —
+          // only its rows move, the heading + "Add custom animation…"
+          // button stay put. The clamp only constrains width.
+          content: Adw.Clamp {
+            maximum-size: 900;
+            tightening-threshold: 600;
 
-            child: Adw.Clamp {
-              maximum-size: 900;
-              tightening-threshold: 600;
+            child: Adw.BreakpointBin {
+              width-request: 1;
+              height-request: 1;
 
-              child: Adw.BreakpointBin {
-                width-request: 1;
-                height-request: 1;
+              // Desktop / tablet: the preview + animations column sits
+              // beside the inspector. Below the breakpoint everything
+              // stacks in one column (phone).
+              Adw.Breakpoint {
+                condition ("min-width: 680sp")
 
-                // Desktop / tablet: the preview + animations column sits
-                // beside the inspector. Below the breakpoint everything
-                // stacks in one column (phone).
-                Adw.Breakpoint {
-                  condition ("min-width: 680sp")
+                setters {
+                  detail_box.orientation: horizontal;
+                  detail_box.spacing: 24;
+                  main_col.hexpand: true;
+                  inspector.valign: start;
+                  inspector.width-request: 320;
+                }
+              }
 
-                  setters {
-                    detail_box.orientation: horizontal;
-                    detail_box.spacing: 24;
-                    main_col.hexpand: true;
-                    inspector.valign: start;
-                    inspector.width-request: 320;
+              child: Gtk.Box detail_box {
+                orientation: vertical;
+                spacing: 24;
+                margin-top: 24;
+                margin-bottom: 24;
+                margin-start: 24;
+                margin-end: 24;
+
+                Gtk.Box main_col {
+                  orientation: vertical;
+                  spacing: 16;
+                  vexpand: true;
+
+                  $PixelRpgCharacterPreview preview {
+                    halign: center;
+                  }
+
+                  $PixelRpgAnimationList anim_list {
+                    hexpand: true;
+                    vexpand: true;
                   }
                 }
 
-                child: Gtk.Box detail_box {
-                  orientation: vertical;
-                  spacing: 24;
-                  margin-top: 24;
-                  margin-bottom: 24;
-                  margin-start: 24;
-                  margin-end: 24;
-
-                  Gtk.Box main_col {
-                    orientation: vertical;
-                    spacing: 16;
-
-                    $PixelRpgCharacterPreview preview {
-                      halign: center;
-                    }
-
-                    $PixelRpgAnimationList anim_list {
-                      hexpand: true;
-                    }
-                  }
-
-                  $PixelRpgCastInspector inspector {}
-                };
+                $PixelRpgCastInspector inspector {}
               };
             };
           };
