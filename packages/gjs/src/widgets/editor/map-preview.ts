@@ -1,4 +1,5 @@
 import Gdk from '@girs/gdk-4.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
@@ -40,12 +41,21 @@ interface SheetRange {
  * batches one `append_scaled_texture` call per tile. GTK caches the
  * resulting GSK tree, so the per-tile cost is paid exactly once.
  */
+/** Cap the baked preview texture's longest edge — these are small thumbnails. */
+const BAKE_MAX_EDGE = 512
+
 export class MapPreview extends Gtk.Widget {
   private _ops: DrawOp[] = []
   private _mapWidth = 0
   private _mapHeight = 0
   private _accentColor: Gdk.RGBA
   private _loaded = false
+  // The composited tiles, rasterised to ONE texture so repaints (atlas
+  // pan, card hover) are O(1) instead of re-rendering N clipped tile nodes
+  // every frame. Invalidated whenever the tile ops change; rebuilt lazily
+  // off the first paint (when the widget has a renderer).
+  private _baked: Gdk.Texture | null = null
+  private _bakeScheduled = false
 
   static {
     GObject.registerClass(
@@ -152,6 +162,7 @@ export class MapPreview extends Gtk.Widget {
     }
     this._ops = ops
     this._loaded = true
+    this._baked = null // tiles changed → re-bake on next paint
     this.queue_draw()
   }
 
@@ -167,18 +178,60 @@ export class MapPreview extends Gtk.Widget {
     if (!this._loaded || !this._ops.length || !this._mapWidth || !this._mapHeight) return
 
     const scale = Math.min(width / this._mapWidth, height / this._mapHeight)
-    const offsetX = (width - this._mapWidth * scale) / 2
-    const offsetY = (height - this._mapHeight * scale) / 2
+    const dw = this._mapWidth * scale
+    const dh = this._mapHeight * scale
+    const dest = new Graphene.Rect()
+    dest.init((width - dw) / 2, (height - dh) / 2, dw, dh)
 
-    const translatePoint = new Graphene.Point({ x: offsetX, y: offsetY })
-    snapshot.save()
-    snapshot.translate(translatePoint)
-
-    for (const op of this._ops) {
-      this._paintTile(snapshot, op, scale)
+    // Fast path: paint the pre-rasterised composite (one texture).
+    if (this._baked) {
+      snapshot.append_scaled_texture(this._baked, Gsk.ScalingFilter.NEAREST, dest)
+      return
     }
 
+    // First paint (or just after the tiles changed): draw the tiles
+    // directly this once, and bake them to a texture for every paint
+    // after. The bake runs off an idle so it isn't a re-entrant
+    // `render_texture` inside this snapshot.
+    snapshot.save()
+    snapshot.translate(new Graphene.Point({ x: dest.get_x(), y: dest.get_y() }))
+    for (const op of this._ops) this._paintTile(snapshot, op, scale)
     snapshot.restore()
+    this._scheduleBake()
+  }
+
+  /** Rasterise the tile composite to one texture (off-snapshot), then repaint. */
+  private _scheduleBake(): void {
+    if (this._bakeScheduled) return
+    this._bakeScheduled = true
+    GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+      this._bakeScheduled = false
+      if (!this._baked && this._ops.length) {
+        this._baked = this._bakeTexture()
+        if (this._baked) this.queue_draw()
+      }
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
+  private _bakeTexture(): Gdk.Texture | null {
+    const renderer = this.get_native()?.get_renderer()
+    if (!renderer || !this._mapWidth || !this._mapHeight) return null
+    // Bake at native map resolution, capped so a large map stays a small
+    // thumbnail texture (it's only ever shown card-sized).
+    const bakeScale = Math.min(1, BAKE_MAX_EDGE / Math.max(this._mapWidth, this._mapHeight))
+    const sub = Gtk.Snapshot.new()
+    for (const op of this._ops) this._paintTile(sub, op, bakeScale)
+    const node = sub.to_node()
+    if (!node) return null
+    const region = new Graphene.Rect()
+    region.init(0, 0, this._mapWidth * bakeScale, this._mapHeight * bakeScale)
+    try {
+      return renderer.render_texture(node, region)
+    } catch (error) {
+      console.warn('[MapPreview] Failed to bake preview texture:', error)
+      return null
+    }
   }
 
   private _paintTile(snapshot: Gtk.Snapshot, op: DrawOp, scale: number): void {
