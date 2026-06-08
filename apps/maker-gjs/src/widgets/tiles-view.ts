@@ -60,6 +60,10 @@ export class TilesView extends Adw.Bin {
   declare _tilesets_gallery: CardGallery
   declare _nav: Adw.NavigationView
   declare _detail_page: Adw.NavigationPage
+  // Revealer acting as a bottom sheet — slides the selected tile's
+  // properties up over the palette (non-modal). Closed via `_sheet_close`.
+  declare _tile_sheet: Gtk.Revealer
+  declare _sheet_close: Gtk.Button
   // Desktop gallery quick-view (read-only glance for the selected tileset).
   declare _quick_stack: Gtk.Stack
   declare _quick_thumb: Gtk.Picture
@@ -99,6 +103,8 @@ export class TilesView extends Adw.Bin {
           'tilesets_gallery',
           'nav',
           'detail_page',
+          'tile_sheet',
+          'sheet_close',
           'quick_stack',
           'quick_thumb',
           'quick_name',
@@ -194,9 +200,16 @@ export class TilesView extends Adw.Bin {
     })
     this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
-      // The inspector is inlined into the detail page (beside / below the
-      // palette), so picking a tile just refreshes it — no overlay to open.
+      // Picking a tile refreshes the inspector + slides the bottom sheet
+      // up (non-modal — clicking another tile just updates it).
       this._selectedSpriteId = tileId
+      this._refreshInspector()
+      this._tile_sheet.set_reveal_child(true)
+    })
+    // The sheet's close button slides it back down + clears the selection.
+    this.signals.connect(this._sheet_close, 'clicked', () => {
+      this._tile_sheet.set_reveal_child(false)
+      this._selectedSpriteId = null
       this._refreshInspector()
     })
     this.signals.connect(this._inspector, 'solid-changed', (_v: TileInspector, solid: boolean) => {
@@ -405,6 +418,8 @@ export class TilesView extends Adw.Bin {
     if (!entry) return
     this._activeSpriteSetId = id
     this._selectedSpriteId = null
+    // Start with the tile-properties sheet closed — no tile picked yet.
+    this._tile_sheet.set_reveal_child(false)
     this._tilesets_gallery.setActiveId(id)
     this._detail_page.title = entry.resource.data?.name ?? id
     this._refreshQuickView()
