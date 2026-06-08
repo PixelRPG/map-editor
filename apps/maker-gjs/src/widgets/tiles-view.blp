@@ -177,59 +177,75 @@ template $TilesView : Adw.Bin {
       }
 
       // ── Detail (drill-down) ───────────────────────────────────────
+      // ONE page, ONE header (the NavigationView back button). The tile
+      // inspector is INLINED beside the palette (desktop) / below it
+      // (phone) — not an overlay sidebar with its own header.
       Adw.NavigationPage detail_page {
         tag: "detail";
         title: _("Tileset");
 
-        child: Adw.OverlaySplitView inner_split {
-          sidebar-position: end;
-          min-sidebar-width: 280;
-          max-sidebar-width: 360;
-          pin-sidebar: true;
-          collapsed: bind template.inspector-collapsed;
-          show-sidebar: bind template.show-inspector bidirectional;
+        child: Adw.ToolbarView {
+          top-bar-style: flat;
 
-          sidebar: $PixelRpgTileInspector inspector {
-            collapsed: bind template.inspector-collapsed;
-          };
+          [top]
+          Adw.HeaderBar {
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
+          }
 
-          content: Adw.ToolbarView {
-            top-bar-style: flat;
+          content: Adw.BreakpointBin {
+            width-request: 1;
+            height-request: 1;
 
-            [top]
-            Adw.HeaderBar {
-              show-start-title-buttons: false;
-              show-end-title-buttons: false;
+            Adw.Breakpoint {
+              condition ("min-width: 680sp")
 
-              [end]
-              Gtk.ToggleButton inspector_toggle {
-                icon-name: "sidebar-show-right-symbolic";
-                tooltip-text: _("Toggle inspector");
-                active: bind template.show-inspector bidirectional;
+              setters {
+                detail_box.orientation: horizontal;
+                inspector_scroller.hexpand: false;
+                inspector_scroller.width-request: 320;
+                inspector_scroller.vexpand: true;
               }
             }
 
-            // Dedicated ScrolledWindow around the palette so it scrolls
-            // vertically once the grid has more rows than fit. `wrap`
-            // lets the FlowBox flow against the available width.
-            content: Gtk.ScrolledWindow palette_scroller {
-              hexpand: true;
-              vexpand: true;
-              hscrollbar-policy: never;
-              vscrollbar-policy: automatic;
+            child: Gtk.Box detail_box {
+              orientation: vertical;
 
-              child: $PixelRpgTilePalette palette {
-                wrap: true;
-                halign: fill;
-                valign: start;
+              // Dedicated ScrolledWindow around the palette so it scrolls
+              // vertically once the grid has more rows than fit. `wrap`
+              // lets the FlowBox flow against the available width.
+              Gtk.ScrolledWindow palette_scroller {
                 hexpand: true;
-                vexpand: false;
-                tile-size: 32;
-                margin-top: 16;
-                margin-bottom: 16;
-                margin-start: 16;
-                margin-end: 16;
-              };
+                vexpand: true;
+                hscrollbar-policy: never;
+                vscrollbar-policy: automatic;
+
+                child: $PixelRpgTilePalette palette {
+                  wrap: true;
+                  halign: fill;
+                  valign: start;
+                  hexpand: true;
+                  vexpand: false;
+                  tile-size: 32;
+                  margin-top: 16;
+                  margin-bottom: 16;
+                  margin-start: 16;
+                  margin-end: 16;
+                };
+              }
+
+              Gtk.ScrolledWindow inspector_scroller {
+                hscrollbar-policy: never;
+                vscrollbar-policy: automatic;
+                propagate-natural-height: true;
+
+                child: $PixelRpgTileInspector inspector {
+                  margin-top: 16;
+                  margin-bottom: 16;
+                  margin-start: 16;
+                  margin-end: 16;
+                };
+              }
             };
           };
         };

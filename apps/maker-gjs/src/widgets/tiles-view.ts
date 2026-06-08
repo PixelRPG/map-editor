@@ -194,15 +194,10 @@ export class TilesView extends Adw.Bin {
     })
     this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
+      // The inspector is inlined into the detail page (beside / below the
+      // palette), so picking a tile just refreshes it — no overlay to open.
       this._selectedSpriteId = tileId
       this._refreshInspector()
-      // Auto-open the right inspector when the user picks a tile —
-      // see [right-inspector auto-open policy] in
-      // `docs/concepts/responsive-chrome.md`. The inspector now has
-      // content to show (Solid switch + Surface combo for the picked
-      // sprite); leaving it closed hides the only configuration
-      // surface the click produced.
-      this.showInspector = true
     })
     this.signals.connect(this._inspector, 'solid-changed', (_v: TileInspector, solid: boolean) => {
       const active = this._activeSpriteSet()
@@ -278,9 +273,6 @@ export class TilesView extends Adw.Bin {
     // Collapsed = narrow/phone → hide the gallery quick-view (a tap
     // drills straight into the detail page). Expanded = desktop → show.
     this.showQuickview = !value
-    // Collapsing closes the inspector so shrinking while editing doesn't
-    // pop an overlay over the palette; it stays reachable via the toggle.
-    if (value) this.showInspector = false
   }
 
   /**
