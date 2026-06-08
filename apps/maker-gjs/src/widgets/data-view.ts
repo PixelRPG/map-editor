@@ -4,10 +4,11 @@ import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SpriteSetKind } from '@pixelrpg/engine'
-import type { EditorMode, ModeRail } from '@pixelrpg/gjs'
+import type { ModeRail } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import Template from './data-view.blp'
+import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
 /** One asset (sprite sheet or tileset) as a management row. */
 export interface DataAssetRow {
@@ -52,9 +53,8 @@ const THUMB_SIZE = 44
  * project metadata. Complements the visual Cast/Tiles galleries — same
  * assets, file/management angle. See `data-controller.ts` for the data.
  */
-export class DataView extends Adw.Bin {
+export class DataView extends ResponsiveEditorView {
   declare _outer_split: Adw.OverlaySplitView
-  declare _mode_rail: ModeRail
   declare _library_toggle: Gtk.ToggleButton
   declare _name_row: Adw.EntryRow
   declare _author_row: Adw.EntryRow
@@ -73,10 +73,6 @@ export class DataView extends Adw.Bin {
   private _loading = false
   private _sheetRows: Adw.ActionRow[] = []
   private _tilesetRows: Adw.ActionRow[] = []
-  // Backing fields for the GObject properties (GJS uses the camelCase
-  // get/set below as the `show-library` / `library-collapsed` accessors).
-  private _showLibrary = false
-  private _libraryCollapsed = false
 
   static {
     GObject.registerClass(
@@ -98,25 +94,8 @@ export class DataView extends Adw.Bin {
           'import_sheet_button',
           'import_tileset_button',
         ],
-        Properties: {
-          'show-library': GObject.ParamSpec.boolean(
-            'show-library',
-            'Show Library',
-            'Whether the left mode-rail sidebar is visible (shared across views)',
-            GObject.ParamFlags.READWRITE,
-            true,
-          ),
-          'library-collapsed': GObject.ParamSpec.boolean(
-            'library-collapsed',
-            'Library Collapsed',
-            'Whether the mode rail should auto-overlay (responsive breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-        },
-        Signals: {
-          'mode-changed': { param_types: [GObject.TYPE_STRING] },
-        },
+        // show-library / library-collapsed (+ inspector) props + the
+        // mode-changed signal are inherited from ResponsiveEditorView.
       },
       DataView,
     )
@@ -145,31 +124,6 @@ export class DataView extends Adw.Bin {
 
   bindCallbacks(callbacks: DataViewCallbacks): void {
     this._callbacks = callbacks
-  }
-
-  get showLibrary(): boolean {
-    return this._showLibrary
-  }
-
-  set showLibrary(value: boolean) {
-    if (this._showLibrary === value) return
-    this._showLibrary = value
-    this.notify('show-library')
-  }
-
-  get libraryCollapsed(): boolean {
-    return this._libraryCollapsed
-  }
-
-  set libraryCollapsed(value: boolean) {
-    if (this._libraryCollapsed === value) return
-    this._libraryCollapsed = value
-    this.notify('library-collapsed')
-  }
-
-  /** Sync the ModeRail's active mode (called when the host changes view). */
-  syncActiveMode(mode: EditorMode): void {
-    this._mode_rail.activeMode = mode
   }
 
   /** Replace the whole view from a freshly built model. */

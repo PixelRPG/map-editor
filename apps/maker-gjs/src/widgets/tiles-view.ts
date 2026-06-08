@@ -4,7 +4,6 @@ import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource, SpriteDataSet, SpriteSetResource } from '@pixelrpg/engine'
 import {
   CardGallery,
-  type EditorMode,
   type GalleryCardItem,
   GdkSpriteSetResource,
   type ModeRail,
@@ -19,6 +18,7 @@ import { gettext as _ } from 'gettext'
 
 import { characterSpriteSetIds, isCharacterSpriteSet } from '../services/sprite-set-classification.ts'
 import Template from './tiles-view.blp'
+import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
 GObject.type_ensure(TilePalette.$gtype)
@@ -55,8 +55,7 @@ interface TilesetEntry {
  * Tileset create/delete also route to the host (shared with the Cast
  * controller's sprite-set CRUD + collab broadcast).
  */
-export class TilesView extends Adw.Bin {
-  declare _mode_rail: ModeRail
+export class TilesView extends ResponsiveEditorView {
   declare _inspector: TileInspector
   declare _palette: TilePalette
   declare _tilesets_gallery: CardGallery
@@ -78,16 +77,9 @@ export class TilesView extends Adw.Bin {
   declare _quick_edit: Gtk.Button
 
   private _projectName = ''
-  // Sidebar visibility starts CLOSED — overwritten on window
-  // construction by `ApplicationWindow._shareSidebarState`'s
-  // SYNC_CREATE bind, so the actual sidebar state follows whatever
-  // the user last left it across views.
-  private _showLibrary = false
-  private _showInspector = false
-  // Quick-view shown on desktop; flipped off when the breakpoint collapses.
+  // Quick-view shown on desktop; flipped off when the breakpoint collapses
+  // (see `_onInspectorCollapsedChanged`).
   private _showQuickview = true
-  private _libraryCollapsed = false
-  private _inspectorCollapsed = false
 
   private signals = new SignalScope()
   private _spriteSets: TilesetEntry[] = []
@@ -128,20 +120,8 @@ export class TilesView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          'show-library': GObject.ParamSpec.boolean(
-            'show-library',
-            'Show Library',
-            'Whether the mode-rail sidebar is shown',
-            GObject.ParamFlags.READWRITE,
-            true,
-          ),
-          'show-inspector': GObject.ParamSpec.boolean(
-            'show-inspector',
-            'Show Inspector',
-            'Whether the right inspector is shown',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
+          // show-library/-inspector + *-collapsed are inherited from
+          // ResponsiveEditorView; only the gallery quick-view is local.
           'show-quickview': GObject.ParamSpec.boolean(
             'show-quickview',
             'Show Quick-view',
@@ -149,23 +129,9 @@ export class TilesView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             true,
           ),
-          'library-collapsed': GObject.ParamSpec.boolean(
-            'library-collapsed',
-            'Library Collapsed',
-            'Whether the library should auto-overlay (responsive breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'inspector-collapsed': GObject.ParamSpec.boolean(
-            'inspector-collapsed',
-            'Inspector Collapsed',
-            'Whether the inspector should auto-overlay (responsive breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
         },
         Signals: {
-          'mode-changed': { param_types: [GObject.TYPE_STRING] },
+          // mode-changed is inherited from ResponsiveEditorView.
           'tile-changed': {},
           // A tileset was imported via this view's dialog — payload is
           // the `SpriteSetImportResult`. The host routes it to the
@@ -194,7 +160,7 @@ export class TilesView extends Adw.Bin {
    * sidebar's visibility to match.
    */
   private _placeInspector(): void {
-    const collapsed = this._inspectorCollapsed
+    const collapsed = this.inspectorCollapsed
     reparentWidget(this._inspector, collapsed ? this._sheet_slot : this._side_slot)
     // Desktop: show the split's pinned sidebar. Phone: hide it (the
     // inspector lives in the bottom sheet instead).
@@ -234,7 +200,7 @@ export class TilesView extends Adw.Bin {
       // visible, so it just updates in place.
       this._selectedSpriteId = tileId
       this._refreshInspector()
-      if (this._inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
+      if (this.inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
     })
     // The sheet's close button slides it back down + clears the selection.
     this.signals.connect(this._sheet_close, 'clicked', () => {
@@ -265,26 +231,6 @@ export class TilesView extends Adw.Bin {
     this.notify('project-name')
   }
 
-  get showLibrary(): boolean {
-    return this._showLibrary
-  }
-
-  set showLibrary(value: boolean) {
-    if (this._showLibrary === value) return
-    this._showLibrary = value
-    this.notify('show-library')
-  }
-
-  get showInspector(): boolean {
-    return this._showInspector
-  }
-
-  set showInspector(value: boolean) {
-    if (this._showInspector === value) return
-    this._showInspector = value
-    this.notify('show-inspector')
-  }
-
   get showQuickview(): boolean {
     return this._showQuickview ?? true
   }
@@ -295,27 +241,10 @@ export class TilesView extends Adw.Bin {
     this.notify('show-quickview')
   }
 
-  get libraryCollapsed(): boolean {
-    return this._libraryCollapsed
-  }
-
-  set libraryCollapsed(value: boolean) {
-    if (this._libraryCollapsed === value) return
-    this._libraryCollapsed = value
-    this.notify('library-collapsed')
-  }
-
-  get inspectorCollapsed(): boolean {
-    return this._inspectorCollapsed
-  }
-
-  set inspectorCollapsed(value: boolean) {
-    if (this._inspectorCollapsed === value) return
-    this._inspectorCollapsed = value
-    this.notify('inspector-collapsed')
+  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
     // Collapsed = narrow/phone → hide the gallery quick-view (a tap
     // drills straight into the detail page). Expanded = desktop → show.
-    this.showQuickview = !value
+    this.showQuickview = !collapsed
     // Re-home the tile inspector: right sidebar (desktop) ↔ bottom sheet
     // (phone).
     this._placeInspector()
@@ -384,11 +313,6 @@ export class TilesView extends Adw.Bin {
     this._rebuildGallery()
     this._refreshQuickView()
     await this._loadActivePalette()
-  }
-
-  /** Sync the ModeRail's active mode (called when the host changes view). */
-  syncActiveMode(mode: EditorMode): void {
-    this._mode_rail.activeMode = mode
   }
 
   /**
@@ -463,7 +387,7 @@ export class TilesView extends Adw.Bin {
     this._detail_page.title = entry.resource.data?.name ?? id
     this._refreshQuickView()
     void this._loadActivePalette()
-    if (this._inspectorCollapsed) this._openDetail()
+    if (this.inspectorCollapsed) this._openDetail()
   }
 
   /**
