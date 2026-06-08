@@ -7,7 +7,6 @@ import {
   AnimationList,
   CardGallery,
   CastInspector,
-  CharacterCardPreview,
   CharacterPreview,
   type EditorMode,
   type GalleryCardItem,
@@ -24,11 +23,13 @@ import { gettext as _ } from 'gettext'
 
 import Template from './cast-view.blp'
 
+/** Card preview edge length (px) — matches the quick-view sidebar preview. */
+const CARD_PREVIEW_SIZE = 160
+
 // Force registration of all referenced cast widgets up-front so the
 // `$PixelRpgModeRail` / `$PixelRpgCharacterPreview` / … references in
 // `cast-view.blp` resolve at template-parse time.
 GObject.type_ensure(CharacterPreview.$gtype)
-GObject.type_ensure(CharacterCardPreview.$gtype)
 GObject.type_ensure(AnimationList.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
@@ -563,11 +564,20 @@ export class CastView extends Adw.Bin {
     }
   }
 
-  /** Build the animated, hover-steerable preview widget for a card. */
-  private _buildCardPreview(id: string): CharacterCardPreview | null {
+  /**
+   * Build the per-card preview — the SAME `CharacterPreview` used in the
+   * quick-view, in "showcase" mode (no controls, auto-cycling direction).
+   * It starts un-highlighted (static); the gallery highlights the active
+   * / hovered card so only that one animates + circles.
+   */
+  private _buildCardPreview(id: string): CharacterPreview | null {
     const character = this._characters.find((c) => c.id === id)
     if (!character) return null
-    const preview = new CharacterCardPreview()
+    const preview = new CharacterPreview()
+    preview.showControls = false
+    preview.autoCycle = true
+    preview.frameSize = CARD_PREVIEW_SIZE
+    preview.highlighted = false
     preview.setCharacter(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
     return preview
   }

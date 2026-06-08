@@ -38,14 +38,3 @@
 .card-gallery-menu:checked {
   opacity: 1;
 }
-
-/* Hover-revealed direction arrows on an animated character card. The
- * widget toggles each arrow's opacity + targetability in code; this
- * just keeps them compact + crossfading. */
-.character-card-preview .card-arrow {
-  min-width: 22px;
-  min-height: 22px;
-  padding: 2px;
-  margin: 2px;
-  transition: opacity 120ms ease-in-out;
-}
