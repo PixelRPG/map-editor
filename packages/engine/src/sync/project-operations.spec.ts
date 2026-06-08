@@ -5,16 +5,19 @@ import {
   applyCharacterRemove,
   applyCharacterUpsert,
   applySpriteSetReference,
+  applySpriteSetRemove,
   CHARACTER_REMOVE_KIND,
   CHARACTER_UPSERT_KIND,
   chunkSpriteSetAdd,
   createCharacterRemoveOp,
   createCharacterUpsertOp,
+  createSpriteSetRemoveOp,
   isProjectOp,
   PROJECT_OP_PREFIX,
   type SpriteSetAddChunkOp,
   type SpriteSetAddPayload,
   SpriteSetAddReassembler,
+  SPRITESET_REMOVE_KIND,
 } from './project-operations.ts'
 
 function spriteSetData(id: string, imageBase64Len = 8): SpriteSetData {
@@ -188,7 +191,14 @@ export default async () => {
       return { id, path: `./spritesets/${id}.json`, type: 'spriteset', firstGid }
     }
     function dataWithSets(refs: SpriteSetReference[]): GameProjectData {
-      return { id: 'p', name: 'P', version: '1', spriteSets: refs, maps: [], startup: { initialMapId: 'm' } } as unknown as GameProjectData
+      return {
+        id: 'p',
+        name: 'P',
+        version: '1',
+        spriteSets: refs,
+        maps: [],
+        startup: { initialMapId: 'm' },
+      } as unknown as GameProjectData
     }
 
     await it('appends a new reference', async () => {
@@ -202,6 +212,28 @@ export default async () => {
       applySpriteSetReference(data, ref('a', 99))
       expect(data.spriteSets.length).toBe(1)
       expect(data.spriteSets[0].firstGid).toBe(99)
+    })
+
+    await it('removes a reference by id, idempotent for unknown ids', async () => {
+      const data = dataWithSets([ref('a', 1), ref('b', 2)])
+      applySpriteSetRemove(data, 'a')
+      expect(data.spriteSets.map((s) => s.id)).toStrictEqual(['b'])
+      // Re-removing + removing an unknown id are both no-ops.
+      applySpriteSetRemove(data, 'a')
+      applySpriteSetRemove(data, 'zzz')
+      expect(data.spriteSets.map((s) => s.id)).toStrictEqual(['b'])
+    })
+  })
+
+  await describe('createSpriteSetRemoveOp', async () => {
+    await it('builds a project op recognised by isProjectOp', async () => {
+      const op = createSpriteSetRemoveOp({ peerId: 'p1', seq: 7, spriteSetId: 'forest' })
+      expect(op.kind).toBe(SPRITESET_REMOVE_KIND)
+      expect(SPRITESET_REMOVE_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(op.payload.spriteSetId).toBe('forest')
+      expect(op.peerId).toBe('p1')
+      expect(op.seq).toBe(7)
+      expect(isProjectOp(op)).toBe(true)
     })
   })
 }

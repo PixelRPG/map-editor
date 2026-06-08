@@ -2,12 +2,12 @@ using Gtk 4.0;
 using Adw 1;
 
 template $CastView : Adw.Bin {
-  // Two-level OverlaySplitView, same pattern as atlas-view + scene-
-  // editor-view: ModeRail (left) + CastInspector (right) bracket the
-  // central content. The middle pane is a regular `Adw.ToolbarView`
-  // with a flat headerbar — Cast has no canvas underneath, so the
-  // floating-OSD chrome the canvas views need doesn't apply here.
-  // A normal headerbar reads cleaner + folds neatly into Adwaita.
+  // Outer OverlaySplitView holds the ModeRail (left navigation) for the
+  // whole view's lifetime. The central content is an `Adw.NavigationView`
+  // master-detail drill-down: the GALLERY page lists every character as a
+  // card; activating one PUSHES a dedicated DETAIL page (preview +
+  // animations + inspector). The two are never shown at once — the
+  // detail page is its own sub-page with a back button.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -22,87 +22,39 @@ template $CastView : Adw.Bin {
       project-tagline: _("Cast view");
     };
 
-    content: Adw.OverlaySplitView inner_split {
-      sidebar-position: end;
-      min-sidebar-width: 280;
-      max-sidebar-width: 360;
-      pin-sidebar: true;
-      collapsed: bind template.inspector-collapsed;
-      show-sidebar: bind template.show-inspector bidirectional;
+    content: Adw.NavigationView nav {
+      // ── Gallery (master) ──────────────────────────────────────────
+      Adw.NavigationPage {
+        tag: "gallery";
+        title: _("Cast");
 
-      sidebar: $PixelRpgCastInspector inspector {
-        collapsed: bind template.inspector-collapsed;
-      };
+        child: Adw.ToolbarView {
+          top-bar-style: flat;
 
-      content: Adw.ToolbarView {
-        top-bar-style: flat;
+          [top]
+          Adw.HeaderBar {
+            show-title: false;
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
 
-        [top]
-        Adw.HeaderBar {
-          show-title: false;
-          show-start-title-buttons: false;
-          show-end-title-buttons: false;
-
-          [start]
-          Gtk.ToggleButton library_toggle {
-            icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Toggle library");
-            active: bind template.show-library bidirectional;
+            [start]
+            Gtk.ToggleButton library_toggle {
+              icon-name: "sidebar-show-symbolic";
+              tooltip-text: _("Toggle library");
+              active: bind template.show-library bidirectional;
+            }
           }
 
-          [end]
-          Gtk.ToggleButton inspector_toggle {
-            icon-name: "sidebar-show-right-symbolic";
-            tooltip-text: _("Toggle inspector");
-            active: bind template.show-inspector bidirectional;
-          }
-        }
+          content: Gtk.ScrolledWindow {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: never;
 
-        // `Adw.Clamp` keeps the Preferences-style content readable on
-        // both layouts — without it the gallery / detail sections
-        // stretch across the full window (kilometres of empty space
-        // either side of the row labels on widescreen monitors).
-        //
-        // The clamp's `maximum-size` is widened to 960 because the
-        // ≥ 800sp breakpoint inside flips the detail row (preview +
-        // animations list) from a single column to two side-by-side
-        // columns — at 720 the side-by-side mode is cramped. Narrow
-        // widths still let the content fill the viewport since the
-        // clamp only kicks in once the available width exceeds the
-        // tightening threshold.
-        content: Gtk.ScrolledWindow {
-          hexpand: true;
-          vexpand: true;
-          hscrollbar-policy: never;
+            child: Adw.Clamp {
+              maximum-size: 1000;
+              tightening-threshold: 600;
 
-          child: Adw.Clamp {
-            maximum-size: 960;
-            tightening-threshold: 480;
-
-            child: Adw.BreakpointBin {
-              width-request: 1;
-              height-request: 1;
-
-              // Desktop / large tablet: preview sits to the left of
-              // the animations list — the gallery + title stay full-
-              // width above. Both detail columns get hexpand: true
-              // weighted against each other so the preview takes its
-              // natural width (driven by `frame-size`) and the anim
-              // list absorbs the rest. Mobile defaults below the
-              // breakpoint are a single vertical column.
-              Adw.Breakpoint {
-                condition ("min-width: 800sp")
-
-                setters {
-                  detail_box.orientation: horizontal;
-                  detail_box.spacing: 24;
-                  preview.frame-size: 240;
-                  preview.halign: start;
-                  preview.valign: start;
-                }
-              }
-
-              child: Gtk.Box content_box {
+              child: Gtk.Box {
                 orientation: vertical;
                 spacing: 16;
                 margin-top: 24;
@@ -116,37 +68,126 @@ template $CastView : Adw.Bin {
                   styles ["title-1"]
                 }
 
-                Adw.PreferencesGroup gallery_group {
-                  title: _("Characters");
-                  description: _("Heroes and NPCs in this project. The character marked as player spawns at the map's player spawn-point.");
+                Gtk.Box gallery_header {
+                  orientation: horizontal;
+                  spacing: 8;
 
-                  // Header-suffix slot on Adw.PreferencesGroup is the
-                  // standard Adwaita spot for a group-level CTA — keeps
-                  // the "+ New character" affordance discoverable
-                  // without taking a row of its own.
-                  header-suffix: Gtk.Button new_character_button {
+                  Gtk.Label {
+                    label: _("Characters");
+                    halign: start;
+                    hexpand: true;
+                    styles ["heading"]
+                  }
+
+                  Gtk.Button new_character_button {
                     icon-name: "list-add-symbolic";
                     action-name: "win.new-character";
                     tooltip-text: _("Add a new character");
+                    valign: center;
                     styles ["flat", "circular"]
-                  };
+                  }
                 }
 
-                Gtk.Box detail_box {
-                  orientation: vertical;
-                  spacing: 16;
+                Gtk.Label gallery_description {
+                  label: _("Heroes and NPCs in this project. The character marked as player spawns at the map's player spawn-point. Select one to edit it.");
+                  halign: start;
+                  wrap: true;
+                  xalign: 0;
+                  styles ["caption", "dim-label"]
+                }
 
-                  $PixelRpgCharacterPreview preview {}
-
-                  $PixelRpgAnimationList anim_list {
-                    hexpand: true;
-                  }
+                $PixelRpgCardGallery characters_gallery {
+                  empty-title: _("No characters yet. Add a hero or an NPC to get started.");
+                  empty-icon: "people-symbolic";
+                  delete-tooltip: _("Delete character");
                 }
               };
             };
           };
         };
-      };
+      }
+
+      // ── Detail (drill-down) ───────────────────────────────────────
+      Adw.NavigationPage detail_page {
+        tag: "detail";
+        title: _("Character");
+
+        child: Adw.OverlaySplitView inner_split {
+          sidebar-position: end;
+          min-sidebar-width: 280;
+          max-sidebar-width: 360;
+          pin-sidebar: true;
+          collapsed: bind template.inspector-collapsed;
+          show-sidebar: bind template.show-inspector bidirectional;
+
+          sidebar: $PixelRpgCastInspector inspector {
+            collapsed: bind template.inspector-collapsed;
+          };
+
+          content: Adw.ToolbarView {
+            top-bar-style: flat;
+
+            [top]
+            Adw.HeaderBar {
+              show-start-title-buttons: false;
+              show-end-title-buttons: false;
+
+              [end]
+              Gtk.ToggleButton inspector_toggle {
+                icon-name: "sidebar-show-right-symbolic";
+                tooltip-text: _("Toggle inspector");
+                active: bind template.show-inspector bidirectional;
+              }
+            }
+
+            content: Gtk.ScrolledWindow {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+
+              child: Adw.Clamp {
+                maximum-size: 960;
+                tightening-threshold: 480;
+
+                child: Adw.BreakpointBin {
+                  width-request: 1;
+                  height-request: 1;
+
+                  // Desktop / large tablet: preview sits to the left of
+                  // the animations list. Below the breakpoint they stack
+                  // in a single column (phone).
+                  Adw.Breakpoint {
+                    condition ("min-width: 800sp")
+
+                    setters {
+                      detail_box.orientation: horizontal;
+                      detail_box.spacing: 24;
+                      preview.frame-size: 240;
+                      preview.halign: start;
+                      preview.valign: start;
+                    }
+                  }
+
+                  child: Gtk.Box detail_box {
+                    orientation: vertical;
+                    spacing: 16;
+                    margin-top: 24;
+                    margin-bottom: 24;
+                    margin-start: 24;
+                    margin-end: 24;
+
+                    $PixelRpgCharacterPreview preview {}
+
+                    $PixelRpgAnimationList anim_list {
+                      hexpand: true;
+                    }
+                  };
+                };
+              };
+            };
+          };
+        };
+      }
     };
   }
 }

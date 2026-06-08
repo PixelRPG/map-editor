@@ -103,3 +103,22 @@ export function readBinaryFile(path: string): Uint8Array | null {
     return null
   }
 }
+
+/**
+ * Delete a file at an absolute path. Returns `true` when the file was
+ * removed OR was already absent (a missing file is the desired
+ * end-state, so it's treated as success). Used by the sprite-set delete
+ * path to clean up the `<id>.png` + `<id>.json` pair. Same best-effort
+ * policy as {@link writeTextFile} — a real failure logs + returns
+ * `false`.
+ */
+export function deleteFile(path: string): boolean {
+  try {
+    const file = Gio.File.new_for_path(path)
+    if (!file.query_exists(null)) return true
+    return file.delete(null)
+  } catch (error) {
+    console.warn(`[file-io] delete failed for ${path}:`, error)
+    return false
+  }
+}

@@ -3,10 +3,14 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource, SpriteDataSet, SpriteSetResource } from '@pixelrpg/engine'
 import {
+  CardGallery,
   type EditorMode,
+  type GalleryCardItem,
   GdkSpriteSetResource,
   type ModeRail,
   SignalScope,
+  SpriteSetImportDialog,
+  type SpriteSetImportResult,
   TileInspector,
   TilePalette,
 } from '@pixelrpg/gjs'
@@ -17,24 +21,45 @@ import Template from './tiles-view.blp'
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
+GObject.type_ensure(CardGallery.$gtype)
+
+/** Built-in sprite sets (engine-provided) have no project files to remove. */
+function isBuiltInSpriteSet(id: string): boolean {
+  return id.startsWith('built-in:')
+}
+
+interface TilesetEntry {
+  id: string
+  resource: SpriteSetResource
+  gdk: GdkSpriteSetResource | null
+}
 
 /**
  * Tileset editor view. Lives at the same level as cast-view + atlas-view:
  * an Adw.OverlaySplitView with the ModeRail on the left, a tile inspector
- * on the right, and the central area showing a sprite-set picker + the
- * full tile palette of the active sprite-set.
+ * on the right, and the central area showing a sprite-set card gallery +
+ * the full tile palette of the active sprite-set.
  *
- * Selecting a tile populates the right inspector with that sprite's
- * properties (Solid switch, Surface combo). Inspector edits mutate the
- * `SpriteSetData` in memory, push the change to the engine's live
- * tilemap via `refreshTileSolidsForSprite`, and persist the JSON via a
- * host-supplied callback so the host owns the file-IO path.
+ * The gallery mirrors the Cast view's character cards (shared
+ * `CardGallery`): each tileset is a card with a sheet thumbnail; the
+ * "+ New tileset" header button imports one (same `SpriteSetImportDialog`
+ * the cast uses), and each project tileset's card carries a delete
+ * affordance. Selecting a card populates the palette below + the right
+ * inspector for that set's tiles.
+ *
+ * Inspector edits mutate the `SpriteSetData` in memory, push the change
+ * to the engine's live tilemap via `refreshTileSolidsForSprite`, and
+ * persist the JSON via host-supplied callbacks (the host owns file IO).
+ * Tileset create/delete also route to the host (shared with the Cast
+ * controller's sprite-set CRUD + collab broadcast).
  */
 export class TilesView extends Adw.Bin {
   declare _mode_rail: ModeRail
   declare _inspector: TileInspector
   declare _palette: TilePalette
-  declare _tileset_combo: Adw.ComboRow
+  declare _tilesets_gallery: CardGallery
+  declare _nav: Adw.NavigationView
+  declare _detail_page: Adw.NavigationPage
 
   private _projectName = ''
   // Sidebar visibility starts CLOSED — overwritten on window
@@ -47,11 +72,9 @@ export class TilesView extends Adw.Bin {
   private _inspectorCollapsed = false
 
   private signals = new SignalScope()
-  private _spriteSets: { id: string; resource: SpriteSetResource; gdk: GdkSpriteSetResource | null }[] = []
-  private _activeSpriteSetIdx = 0
+  private _spriteSets: TilesetEntry[] = []
+  private _activeSpriteSetId: string | null = null
   private _selectedSpriteId: number | null = null
-  /** Suppress combo selection echo while we're populating the model. */
-  private _suppressComboNotify = false
 
   private _onSolidChanged: ((spriteSetId: string, spriteId: number, solid: boolean) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
@@ -61,7 +84,7 @@ export class TilesView extends Adw.Bin {
       {
         GTypeName: 'TilesView',
         Template,
-        InternalChildren: ['mode_rail', 'inspector', 'palette', 'tileset_combo'],
+        InternalChildren: ['mode_rail', 'inspector', 'palette', 'tilesets_gallery', 'nav', 'detail_page'],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -102,6 +125,13 @@ export class TilesView extends Adw.Bin {
         Signals: {
           'mode-changed': { param_types: [GObject.TYPE_STRING] },
           'tile-changed': {},
+          // A tileset was imported via this view's dialog — payload is
+          // the `SpriteSetImportResult`. The host routes it to the
+          // shared sprite-set import path (copy + register + broadcast).
+          'spriteset-imported': { param_types: [GObject.TYPE_JSOBJECT] },
+          // The user confirmed deleting a tileset — payload is its id.
+          // The host removes the files + reference + broadcasts.
+          'spriteset-delete-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
       TilesView,
@@ -122,14 +152,17 @@ export class TilesView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
+    // Re-entering the Tiles section (mode switch) lands on the gallery
+    // overview, not a stale detail page — the card view is the hub.
+    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
-    this.signals.connect(this._tileset_combo, 'notify::selected', () => {
-      if (this._suppressComboNotify) return
-      const idx = this._tileset_combo.get_selected()
-      this._activeSpriteSetIdx = idx
-      this._loadActivePalette()
+    this.signals.connect(this._tilesets_gallery, 'item-activated', (_v: CardGallery, id: string) => {
+      this._setActiveSpriteSet(id)
+    })
+    this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
+      this._confirmDeleteTileset(id)
     })
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
       this._selectedSpriteId = tileId
@@ -221,8 +254,8 @@ export class TilesView extends Adw.Bin {
   /**
    * Replace the view's data from a freshly loaded project resource.
    * Called by the host when entering the Tiles mode and after any
-   * tile-property mutation so the inspector reflects the persisted
-   * state.
+   * tile-property mutation or tileset create/delete so the gallery +
+   * inspector reflect the persisted state.
    */
   async setProject(project: GameProjectResource | null): Promise<void> {
     this._projectName = project?.data?.name ?? _('New Project')
@@ -230,28 +263,36 @@ export class TilesView extends Adw.Bin {
 
     if (!project) {
       this._spriteSets = []
-      this._activeSpriteSetIdx = 0
+      this._activeSpriteSetId = null
       this._selectedSpriteId = null
-      this._populateCombo([])
+      this._tilesets_gallery.setItems([])
       this._palette.setTiles([])
       this._inspector.setSprite(null, null)
       return
     }
 
-    // Snapshot sprite-set ids in project order. Build GdkSpriteSet
-    // resources lazily on first palette load (cheap, but no point
-    // doing it for sets the user never switches to).
-    const ids: string[] = []
-    const items: { id: string; resource: SpriteSetResource; gdk: GdkSpriteSetResource | null }[] = []
+    // Snapshot sprite-sets in project order, wrapping each as a GTK
+    // resource up-front so its card can show a sheet thumbnail. Tilesets
+    // are few (a handful per project) so eager wrapping is cheap and
+    // keeps the gallery from popping in thumbnails one by one.
+    const items: TilesetEntry[] = []
     for (const [id, resource] of project.spriteSets) {
-      ids.push(id)
-      items.push({ id, resource, gdk: null })
+      let gdk: GdkSpriteSetResource | null = null
+      try {
+        gdk = await GdkSpriteSetResource.fromEngineResource(resource)
+      } catch (err) {
+        console.warn('[TilesView] Failed to wrap sprite-set for thumbnail:', err)
+      }
+      items.push({ id, resource, gdk })
     }
     this._spriteSets = items
-    this._populateCombo(ids)
 
-    // Restore active selection if possible; otherwise default to 0.
-    if (this._activeSpriteSetIdx >= items.length) this._activeSpriteSetIdx = 0
+    // Keep the active selection if still present; otherwise fall back
+    // to the first set.
+    if (!this._activeSpriteSetId || !items.some((i) => i.id === this._activeSpriteSetId)) {
+      this._activeSpriteSetId = items[0]?.id ?? null
+    }
+    this._rebuildGallery()
     await this._loadActivePalette()
   }
 
@@ -260,21 +301,71 @@ export class TilesView extends Adw.Bin {
     this._mode_rail.activeMode = mode
   }
 
-  private _populateCombo(ids: string[]): void {
-    const model = new Gtk.StringList()
-    for (const id of ids) model.append(id)
-    this._suppressComboNotify = true
-    try {
-      this._tileset_combo.set_model(model)
-      this._tileset_combo.set_selected(this._activeSpriteSetIdx)
-      this._tileset_combo.set_sensitive(ids.length > 1)
-    } finally {
-      this._suppressComboNotify = false
+  /** Select a tileset by id + drill into its detail page (host / MCP entry). */
+  focusTileset(id: string): void {
+    this._setActiveSpriteSet(id)
+  }
+
+  /**
+   * Present the sprite-set import dialog as the "New tileset" flow. On
+   * import it emits `spriteset-imported` with the result; the host runs
+   * the shared copy + register + broadcast path and re-hydrates this
+   * view. Reuses the exact dialog the Cast view uses for sprite-sets.
+   */
+  presentTilesetImportDialog(): void {
+    const dialog = new SpriteSetImportDialog()
+    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
+      this.emit('spriteset-imported', result)
+    })
+    dialog.present(this)
+  }
+
+  private _rebuildGallery(): void {
+    this._tilesets_gallery.setItems(this._spriteSets.map((entry) => this._buildTilesetItem(entry)))
+    this._tilesets_gallery.setActiveId(this._activeSpriteSetId)
+  }
+
+  /**
+   * Card model for one tileset: a downscaled thumbnail of the whole
+   * sheet as the preview (the recognisable mosaic — far more useful than
+   * any single tile, which is often an empty eraser cell — bounded so
+   * the card grids compactly), the sprite count as subtitle, deletable
+   * only for project sets (built-ins have no files + can't be removed).
+   */
+  private _buildTilesetItem(entry: TilesetEntry): GalleryCardItem {
+    const count = entry.resource.data?.sprites?.length ?? 0
+    return {
+      id: entry.id,
+      title: entry.resource.data?.name ?? entry.id,
+      subtitle: count === 1 ? _('1 tile') : _(`${count} tiles`),
+      paintable: entry.gdk?.createSheetThumbnail() ?? null,
+      fallbackIcon: 'view-grid-symbolic',
+      deletable: !isBuiltInSpriteSet(entry.id),
     }
   }
 
-  private _activeSpriteSet() {
-    return this._spriteSets[this._activeSpriteSetIdx] ?? null
+  /**
+   * Select a tileset from the gallery and DRILL INTO its detail page
+   * (the tile palette + inspector). Mirrors the Cast view's card →
+   * detail navigation; the back button returns to the gallery. The
+   * inspector stays closed until the user picks a tile (it has nothing
+   * to show for a whole set), matching the palette's tile-selected
+   * auto-open.
+   */
+  private _setActiveSpriteSet(id: string): void {
+    const entry = this._spriteSets.find((s) => s.id === id)
+    if (!entry) return
+    this._activeSpriteSetId = id
+    this._selectedSpriteId = null
+    this._tilesets_gallery.setActiveId(id)
+    this._detail_page.title = entry.resource.data?.name ?? id
+    void this._loadActivePalette()
+    if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
+  }
+
+  private _activeSpriteSet(): TilesetEntry | null {
+    if (!this._activeSpriteSetId) return null
+    return this._spriteSets.find((s) => s.id === this._activeSpriteSetId) ?? null
   }
 
   private async _loadActivePalette(): Promise<void> {
@@ -322,6 +413,33 @@ export class TilesView extends Adw.Bin {
     const def: SpriteDataSet | undefined = active.resource.data?.sprites.find((s) => s.id === this._selectedSpriteId)
     const sprite = active.gdk?.getSprite(this._selectedSpriteId)
     this._inspector.setSprite(def ?? null, sprite?.createPaintable() ?? null)
+  }
+
+  /**
+   * Confirm + request deletion of a tileset. Destructive (removes the
+   * project's `<id>.png` + `<id>.json` and, in collab, broadcasts the
+   * removal) so it routes through an `Adw.AlertDialog` first; the host
+   * does the actual removal on confirm.
+   */
+  private _confirmDeleteTileset(id: string): void {
+    const entry = this._spriteSets.find((s) => s.id === id)
+    if (!entry || isBuiltInSpriteSet(id)) return
+    const name = entry.resource.data?.name ?? id
+    const dialog = new Adw.AlertDialog({
+      heading: _('Delete tileset?'),
+      body: _(
+        `“${name}” and its image will be removed from the project. Tiles painted with it may break. This cannot be undone.`,
+      ),
+    })
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.add_response('delete', _('Delete'))
+    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
+    dialog.set_default_response('cancel')
+    dialog.set_close_response('cancel')
+    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+      if (response === 'delete') this.emit('spriteset-delete-requested', id)
+    })
+    dialog.present(this)
   }
 
   vfunc_unmap(): void {

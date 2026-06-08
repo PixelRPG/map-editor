@@ -3,17 +3,21 @@ import {
   applyCharacterRemove,
   applyCharacterUpsert,
   applySpriteSetReference,
+  applySpriteSetRemove,
   CHARACTER_REMOVE_KIND,
   CHARACTER_UPSERT_KIND,
   type CharacterAnimation,
   type CharacterDefinition,
+  createCharacterRemoveOp,
   createCharacterUpsertOp,
+  createSpriteSetRemoveOp,
   GameProjectFormat,
   type ProjectOp,
   REQUIRED_ROLES,
   type SpriteSetAddPayload,
   SpriteSetFormat,
   SpriteSetResource,
+  SPRITESET_REMOVE_KIND,
 } from '@pixelrpg/engine'
 import {
   GdkSpriteSetResource,
@@ -24,7 +28,7 @@ import {
 import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
 import type { CollabSession } from './collab-session.ts'
-import { copyFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
+import { copyFile, deleteFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 
 /** Default per-frame duration (ms) seeded into a new character's animations. */
@@ -68,6 +72,20 @@ export class CastController {
    * editing (the common case) — then mutations only persist locally.
    */
   private _session: CollabSession | null = null
+  /**
+   * Cache of GTK preview resources keyed by sprite-set id, so the cast
+   * gallery can preview every character on its own sheet without
+   * re-wrapping a set per refresh. Rebuilt lazily in {@link refresh};
+   * invalidated wholesale on project swap.
+   */
+  private _spriteSetCache = new Map<string, GdkSpriteSetResource | null>()
+  /**
+   * Invoked after the project's sprite-set list changes (import /
+   * delete / inbound peer add+remove) so the host can re-hydrate the
+   * Tiles view — sprite-sets are shared project assets shown in both
+   * places. Null until the host wires it.
+   */
+  onSpriteSetsChanged: (() => void) | null = null
 
   constructor(
     private readonly view: CastView,
@@ -100,11 +118,33 @@ export class CastController {
       applyCharacterUpsert(data, op.payload.character)
     } else if (op.kind === CHARACTER_REMOVE_KIND) {
       applyCharacterRemove(data, op.payload.characterId)
+    } else if (op.kind === SPRITESET_REMOVE_KIND) {
+      this._applyRemoteSpriteSetRemove(op.payload.spriteSetId)
+      return
     } else {
       return
     }
     this._persist()
     void this.refresh()
+  }
+
+  /**
+   * Apply an inbound sprite-set removal from a peer: drop the reference,
+   * delete the local `<id>.png` + `<id>.json`, evict the live resource +
+   * preview cache, persist, and refresh BOTH views. Idempotent. Does
+   * NOT re-broadcast.
+   */
+  private _applyRemoteSpriteSetRemove(id: string): void {
+    const resource = this._project?.resource
+    if (!resource?.data) return
+    if (!resource.data.spriteSets?.some((s) => s.id === id)) return
+    this._removeSpriteSetFiles(id)
+    applySpriteSetRemove(resource.data, id)
+    resource.spriteSets.delete(id)
+    this._spriteSetCache.delete(id)
+    this._persist()
+    void this.refresh()
+    this.onSpriteSetsChanged?.()
   }
 
   /** Broadcast the current state of one character to peers (no-op solo). */
@@ -123,36 +163,56 @@ export class CastController {
    */
   setProject(project: LoadedProject | null): void {
     this._project = project
+    // A different project (or a re-open) invalidates every wrapped
+    // sprite-set — drop the cache so stale textures can't leak across.
+    this._spriteSetCache.clear()
     void this.refresh()
   }
 
   /**
-   * Push the project's character list + player sprite-set into the
-   * Cast view. Called by `setProject` and after every mutation that
-   * changes the player character or its sprite-set binding.
+   * Push the project's character list + a per-sprite-set preview map
+   * into the Cast view. Called by `setProject` and after every mutation
+   * that changes a character or the sprite-set list.
+   *
+   * Resolves a GTK preview resource for every sprite-set id referenced
+   * by the cast (cached by id) so each card previews its OWN sheet and
+   * the detail preview follows the active character.
    */
   async refresh(): Promise<void> {
     const resource = this._project?.resource
     if (!resource) {
-      this.view.setCharacters([], null)
+      this.view.setCharacters([], new Map())
       return
     }
     this.view.projectName = resource.data?.name ?? _('New Project')
 
     const characters = resource.data?.characters ?? []
-    const player = characters.find((c) => c.isPlayer)
-    let spriteSet: GdkSpriteSetResource | null = null
-    if (player) {
-      const engineSpriteSet = await resource.getSpriteSet(player.spriteSetId)
-      if (engineSpriteSet) {
-        try {
-          spriteSet = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
-        } catch (err) {
-          console.warn('[CastController] Failed to wrap sprite set for preview:', err)
-        }
+    const neededIds = new Set(characters.map((c) => c.spriteSetId))
+    const spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
+    for (const id of neededIds) {
+      spriteSetsById.set(id, await this._resolveSpriteSet(id))
+    }
+    this.view.setCharacters(characters, spriteSetsById)
+  }
+
+  /**
+   * Wrap a project sprite-set as a GTK preview resource, memoised by
+   * id. A failed/absent set caches `null` so a broken reference doesn't
+   * retry-storm on every refresh.
+   */
+  private async _resolveSpriteSet(id: string): Promise<GdkSpriteSetResource | null> {
+    if (this._spriteSetCache.has(id)) return this._spriteSetCache.get(id) ?? null
+    let wrapped: GdkSpriteSetResource | null = null
+    const engineSpriteSet = await this._project?.resource?.getSpriteSet(id)
+    if (engineSpriteSet) {
+      try {
+        wrapped = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
+      } catch (err) {
+        console.warn('[CastController] Failed to wrap sprite set for preview:', err)
       }
     }
-    this.view.setCharacters(characters, spriteSet)
+    this._spriteSetCache.set(id, wrapped)
+    return wrapped
   }
 
   /** Wire once into `CastView.bindCallbacks`. */
@@ -211,6 +271,17 @@ export class CastController {
       })
       void this.refresh()
     },
+    deleteAnimation: (id: string, animId: string) => {
+      // Guard the required roles even though the UI only offers delete
+      // on custom rows — a stale view or a future caller mustn't be
+      // able to strip a character of a contract animation.
+      if ((REQUIRED_ROLES as readonly string[]).includes(animId)) return
+      this._mutate(id, (c) => {
+        c.animations = c.animations.filter((a) => a.id !== animId)
+      })
+      void this.refresh()
+    },
+    deleteCharacter: (id: string) => this._deleteCharacter(id),
     listSpriteSets: () => this._listSpriteSets(),
     createCharacter: (draft: NewCharacterDraft) => this._createCharacter(draft),
     importSpriteSet: (result: SpriteSetImportResult) => this._importSpriteSet(result),
@@ -247,16 +318,17 @@ export class CastController {
     const resource = this._project?.resource
     if (!resource?.data) return
     const characters = (resource.data.characters ??= [])
-    const id = this._uniqueId(
-      draft.name,
-      new Set(characters.map((c) => c.id)),
-    )
+    const id = this._uniqueId(draft.name, new Set(characters.map((c) => c.id)))
     const character: CharacterDefinition = {
       id,
       name: draft.name,
       kind: draft.kind,
       spriteSetId: draft.spriteSetId,
-      animations: REQUIRED_ROLES.map((role) => ({ id: role, frames: [DEFAULT_FRAME], durationMs: DEFAULT_ANIMATION_MS })),
+      animations: REQUIRED_ROLES.map((role) => ({
+        id: role,
+        frames: [DEFAULT_FRAME],
+        durationMs: DEFAULT_ANIMATION_MS,
+      })),
       defaultAnimation: 'idle-down',
       speedTilesPerSec: draft.speedTilesPerSec,
     }
@@ -268,6 +340,22 @@ export class CastController {
     this._persist()
     this._broadcastCharacter(id)
     void this.refresh().then(() => this.view.focusCharacter(id))
+  }
+
+  /**
+   * Remove a character from the project: drop it from `characters[]`,
+   * persist, broadcast a `__project/character.remove` so peers drop it
+   * too, and refresh. The view re-selects the first remaining character
+   * (its `setCharacters` clears a stale active id).
+   */
+  private _deleteCharacter(id: string): void {
+    const data = this._project?.resource?.data
+    if (!data?.characters?.some((c) => c.id === id)) return
+    applyCharacterRemove(data, id)
+    this._persist()
+    const session = this._session
+    if (session) session.sendProjectOp(({ peerId, seq }) => createCharacterRemoveOp({ peerId, seq, characterId: id }))
+    void this.refresh()
   }
 
   /**
@@ -284,7 +372,11 @@ export class CastController {
     if (!resource?.data) return null
     const id = this._uniqueId(data.id, new Set(resource.spriteSets.keys()))
     const imageFile = `${id}.png`
-    const finalData = { ...data, id, image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile } }
+    const finalData = {
+      ...data,
+      id,
+      image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile },
+    }
 
     const projectDir = GLib.path_get_dirname(resource.path)
     const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
@@ -322,8 +414,59 @@ export class CastController {
       const bytes = readBinaryFile(pngDest)
       if (bytes) this._session.sendSpriteSetAdd({ data: finalData, imageBase64: GLib.base64_encode(bytes) })
     }
+    this._spriteSetCache.delete(id)
+    this.onSpriteSetsChanged?.()
     this.onToast(_(`Imported sprite set “${finalData.name}”`))
     return { id, name: finalData.name }
+  }
+
+  /**
+   * Public entry for importing a sprite set — used by both the Cast
+   * view (sprite-set for a character) and the Tiles view (a new
+   * tileset). Both surfaces present the same {@link SpriteSetImportDialog}
+   * and route its result here so the copy + register + collab-broadcast
+   * path lives in one place.
+   */
+  importSpriteSet(result: SpriteSetImportResult): Promise<SpriteSetChoice | null> {
+    return this._importSpriteSet(result)
+  }
+
+  /**
+   * Delete a sprite set (tileset) from the project: drop its reference,
+   * delete the `<id>.png` + `<id>.json` files, evict the live resource +
+   * preview cache, persist, broadcast a `__project/spriteset.remove`,
+   * and refresh both views. No-op for an unknown id. Built-in sets
+   * (`built-in:*`, which have no project files) are guarded by the
+   * caller — the Tiles view never offers a delete affordance for them.
+   */
+  deleteSpriteSet(id: string): void {
+    const resource = this._project?.resource
+    if (!resource?.data) return
+    if (!resource.data.spriteSets?.some((s) => s.id === id)) return
+    this._removeSpriteSetFiles(id)
+    applySpriteSetRemove(resource.data, id)
+    resource.spriteSets.delete(id)
+    this._spriteSetCache.delete(id)
+    this._persist()
+    const session = this._session
+    if (session) session.sendProjectOp(({ peerId, seq }) => createSpriteSetRemoveOp({ peerId, seq, spriteSetId: id }))
+    void this.refresh()
+    this.onSpriteSetsChanged?.()
+  }
+
+  /**
+   * Delete the on-disk `<id>.png` + `<id>.json` of a project sprite set.
+   * Best-effort — a failed delete logs but doesn't abort the in-memory
+   * removal (the reference is gone either way; an orphaned file is
+   * harmless).
+   */
+  private _removeSpriteSetFiles(id: string): void {
+    const resource = this._project?.resource
+    if (!resource) return
+    if (!isPlainFilename(id)) return
+    const projectDir = GLib.path_get_dirname(resource.path)
+    deleteFile(GLib.build_filenamev([projectDir, 'spritesets', `${id}.png`]))
+    deleteFile(GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`]))
   }
 
   /**
@@ -349,7 +492,10 @@ export class CastController {
       return
     }
     const imageFile = `${id}.png`
-    const safeData: typeof data = { ...data, image: { ...(data.image ?? { id: 'main', type: 'image' }), path: imageFile } }
+    const safeData: typeof data = {
+      ...data,
+      image: { ...(data.image ?? { id: 'main', type: 'image' }), path: imageFile },
+    }
     const projectDir = GLib.path_get_dirname(resource.path)
     const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
     const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
@@ -376,7 +522,9 @@ export class CastController {
       } catch (err) {
         console.warn('[CastController] Peer sprite-set written but failed to load live:', err)
       }
+      this._spriteSetCache.delete(id)
       void this.refresh()
+      this.onSpriteSetsChanged?.()
     })()
   }
 

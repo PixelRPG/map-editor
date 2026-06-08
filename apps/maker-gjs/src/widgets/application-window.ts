@@ -4,7 +4,13 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { ASSISTANT_PEER_ID, type AwarenessPeerState, type EditorTool, MapFormat } from '@pixelrpg/engine'
-import { type CollaboratorEntry, type EditorMode, type SampleScene, SignalScope } from '@pixelrpg/gjs'
+import {
+  type CollaboratorEntry,
+  type EditorMode,
+  type SampleScene,
+  SignalScope,
+  type SpriteSetImportResult,
+} from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
@@ -106,7 +112,8 @@ export interface SessionSnapshot {
  * - `win.zoom-in / zoom-out / zoom-reset`
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
- * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.open-recent-projects`
+ * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
+ * - `win.open-character` / `win.open-tileset` (string id — drill into the detail sub-page)
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -315,6 +322,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     if (!this._castCtl) {
       this._castCtl = new CastController(this._cast_view, (msg) => this._showToast(msg))
+      // Sprite-sets are shared project assets shown in BOTH the Cast
+      // view (a character's sheet) and the Tiles view (a tileset). The
+      // cast controller owns all sprite-set CRUD + collab broadcast, so
+      // when its set list changes (import / delete / inbound peer op)
+      // re-hydrate the Tiles view too.
+      this._castCtl.onSpriteSetsChanged = () => void this._tilesCtl?.setProject(this._loadedProject)
     }
     if (!this._tilesCtl) {
       this._tilesCtl = new TilesController(
@@ -323,6 +336,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         (msg) => this._showToast(msg),
       )
     }
+    // Tiles view → shared sprite-set CRUD on the cast controller. Import
+    // and delete both flow through the one path so the copy/register +
+    // collab broadcast live in a single place.
+    this.signals.connect(this._tiles_view, 'spriteset-imported', (_v: TilesView, result: SpriteSetImportResult) => {
+      void this._castCtl?.importSpriteSet(result)
+    })
+    this.signals.connect(this._tiles_view, 'spriteset-delete-requested', (_v: TilesView, id: string) => {
+      this._castCtl?.deleteSpriteSet(id)
+    })
     if (!this._sessionSvc) {
       // Resolve the core `@pixelrpg/engine` instance through the GJS
       // Engine widget — `widget.excalibur` is the same Engine class
@@ -971,6 +993,34 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(newSpriteSetAction)
 
+    const newTilesetAction = new Gio.SimpleAction({ name: 'new-tileset' })
+    newTilesetAction.connect('activate', () => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      this._tiles_view.presentTilesetImportDialog()
+    })
+    winActions.add_action(newTilesetAction)
+
+    // Drill into a character / tileset detail sub-page by id — the
+    // master-detail equivalent of `open-scene-by-id`. Card clicks do this
+    // in the UI; the action lets tooling (the MCP bridge) + scripts reach
+    // the detail page too.
+    const openCharacterAction = Gio.SimpleAction.new('open-character', GLib.VariantType.new('s'))
+    openCharacterAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (id) this._cast_view.focusCharacter(id)
+    })
+    winActions.add_action(openCharacterAction)
+
+    const openTilesetAction = Gio.SimpleAction.new('open-tileset', GLib.VariantType.new('s'))
+    openTilesetAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (id) this._tiles_view.focusTileset(id)
+    })
+    winActions.add_action(openTilesetAction)
+
     const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
     openSceneAction.connect('activate', () => {
       const id = this._currentAtlasSelection()
@@ -1361,7 +1411,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   getParticipants(): CollaboratorEntry[] {
     const participants: CollaboratorEntry[] = []
     if (this._assistantPresent) {
-      participants.push({ peerId: ASSISTANT_PEER_ID, name: this._assistantName, color: this._assistantColor, isAI: true })
+      participants.push({
+        peerId: ASSISTANT_PEER_ID,
+        name: this._assistantName,
+        color: this._assistantColor,
+        isAI: true,
+      })
     }
     const collab = this._activeCollab()
     if (collab) {

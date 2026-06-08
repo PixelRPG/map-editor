@@ -1,5 +1,5 @@
 import Gdk from '@girs/gdk-4.0'
-import type GdkPixbuf from '@girs/gdkpixbuf-2.0'
+import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import Gio from '@girs/gio-2.0'
 import type { SpriteSetData, SpriteSetResource } from '@pixelrpg/engine'
 import { SpriteSetFormat } from '@pixelrpg/engine'
@@ -150,6 +150,43 @@ export class GdkSpriteSetResource {
 
   getSprite(id: number): GdkSprite | undefined {
     return this._sprites[id]
+  }
+
+  /**
+   * A downscaled paintable of the WHOLE sheet, bounded to `maxSize` px
+   * on its longer edge — for thumbnails (e.g. tileset gallery cards).
+   *
+   * The raw {@link imageTexture} can't be shown directly in a card: a
+   * `Gtk.Picture` sizes to its paintable's intrinsic width, so a
+   * 1024-px sheet would balloon the card across the row. Downscaling
+   * produces a small-intrinsic texture that grids compactly while still
+   * showing the recognisable sheet mosaic (better than any single tile,
+   * which is often an empty/eraser cell). Operates on the already-loaded
+   * in-memory texture, so it works for both disk-backed and built-in
+   * sets. Returns the original texture when it's already within bounds,
+   * or `null` if no image is loaded.
+   */
+  createSheetThumbnail(maxSize = 160): Gdk.Texture | null {
+    const texture = this._imageTexture?.texture
+    if (!texture) return null
+    const w = texture.get_width()
+    const h = texture.get_height()
+    if (w <= 0 || h <= 0) return null
+    if (Math.max(w, h) <= maxSize) return texture
+    const scale = maxSize / Math.max(w, h)
+    try {
+      const full = Gdk.pixbuf_get_from_texture(texture)
+      if (!full) return texture
+      const scaled = full.scale_simple(
+        Math.max(1, Math.round(w * scale)),
+        Math.max(1, Math.round(h * scale)),
+        GdkPixbuf.InterpType.BILINEAR,
+      )
+      return scaled ? Gdk.Texture.new_for_pixbuf(scaled) : texture
+    } catch (err) {
+      console.warn('[GdkSpriteSetResource] Failed to build sheet thumbnail:', err)
+      return texture
+    }
   }
 
   /** Placeholder — animation support is not yet implemented in the GTK pipeline. */

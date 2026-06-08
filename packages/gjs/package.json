@@ -5,8 +5,8 @@
   "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "build:barrels": "gjsify barrels src/widgets/editor src/widgets/sprite",
-    "check:barrels": "gjsify barrels --check src/widgets/editor src/widgets/sprite",
+    "build:barrels": "gjsify barrels src/widgets/common src/widgets/editor src/widgets/sprite",
+    "check:barrels": "gjsify barrels --check src/widgets/common src/widgets/editor src/widgets/sprite",
     "build": "gjsify run build:barrels",
     "check": "gjsify run build:barrels && tsc"
   },

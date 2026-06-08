@@ -1,0 +1,42 @@
+/*
+ * CardGallery — the shared card-grid used by the Cast (characters) and
+ * Tiles (tilesets) views. Each card is an Adwaita `.card` button; the
+ * rules here add a selection ring, a faint preview backdrop so pixel
+ * sprites with transparency stay visible, and a subdued delete button
+ * that lifts to destructive-red on hover.
+ */
+
+.card-gallery-card {
+  padding: 0;
+}
+
+/* Selection ring — an inset accent border that reads as "active"
+ * without repainting the whole card (mirrors the accent-row affordance
+ * the list-based galleries used before). */
+.card-gallery-card.card-gallery-selected {
+  box-shadow: inset 0 0 0 2px @accent_color;
+}
+
+/* Square preview backdrop. A low-contrast fill keeps transparent
+ * sprite cells legible against the card body. */
+.card-gallery-preview {
+  border-radius: 9px;
+  background-color: alpha(currentColor, 0.06);
+}
+
+/* Corner delete button: quiet by default (it must not compete with the
+ * card's own content), destructive-red on hover/focus so the intent is
+ * unmistakable once the user reaches for it. */
+.card-gallery-delete {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 2px;
+  opacity: 0.7;
+}
+
+.card-gallery-delete:hover,
+.card-gallery-delete:focus {
+  opacity: 1;
+  background-color: @destructive_bg_color;
+  color: @destructive_fg_color;
+}
