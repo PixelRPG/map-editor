@@ -9,6 +9,13 @@ import type { GdkSpriteSheet } from '../../sprite'
 import Template from './tile-palette.blp'
 
 /**
+ * Max swatches per line in `wrap` mode — high enough that the available
+ * width (not this cap) decides how many fixed-size tiles fit per row, so
+ * tiles never stretch to fill a wide window.
+ */
+const WRAP_MAX_CHILDREN = 64
+
+/**
  * Descriptor for a single tile shown in {@link TilePalette}.
  *
  * `color` is rendered as the fallback swatch background; `paintable`,
@@ -164,12 +171,15 @@ export class TilePalette extends Adw.Bin {
   }
 
   set columns(value: number) {
-    // `wrap` decides whether `columns` pins the grid to exactly N
-    // per line or just caps the maximum:
-    //  - off → both min + max = value (rectangular grid).
-    //  - on  → min stays at 1, max = value (wraps freely).
+    // `wrap` decides the line policy:
+    //  - off → both min + max = value (rectangular grid that stretches
+    //    to fill, scrolls horizontally if the sheet is wider).
+    //  - on  → min 1, max = a high cap (NOT `value`), so the available
+    //    width — not the sheet's column count — decides how many
+    //    fixed-size tiles fit per row. Pinning max to the column count
+    //    made a wide window stretch each cell to `width / columns`.
     this._flow.set_min_children_per_line(this._wrap ? 1 : value)
-    this._flow.set_max_children_per_line(value)
+    this._flow.set_max_children_per_line(this._wrap ? WRAP_MAX_CHILDREN : value)
     this.notify('columns')
   }
 
@@ -181,8 +191,13 @@ export class TilePalette extends Adw.Bin {
     if (this._wrap === value) return
     this._wrap = value
     this.notify('wrap')
+    // Homogeneous makes the FlowBox stretch every cell to fill its line
+    // — fine for a fixed-column grid (wrap off), but in wrap mode it
+    // stretches fixed-size tiles across a wide window. Turn it off so
+    // wrapped tiles keep their `tile-size` and just pack left.
+    this._flow.set_homogeneous(!value)
     // Reapply the current column setting under the new policy so
-    // `set columns` picks the right `min-children-per-line`.
+    // `set columns` picks the right min/max-children-per-line.
     this.columns = this.columns
   }
 
@@ -199,7 +214,11 @@ export class TilePalette extends Adw.Bin {
    * needs to be denser (e.g., inside a narrow popover).
    */
   setFromSpriteSheet(sheet: GdkSpriteSheet, names?: Record<number, string>): void {
-    this.columns = sheet.columns
+    // Only pin the column count in fixed-grid (wrap off) mode. In wrap
+    // mode the width decides the columns (high cap), so the sheet's
+    // native column count must NOT cap the line — that's what stretched
+    // a wide window's tiles.
+    if (!this._wrap) this.columns = sheet.columns
     // Capture the per-cell aspect from the first sprite so swatch
     // sizing can match (aspect-mode `contain` only — `fill` ignores
     // this and stays square). Character sprite-sheets are uniform so
