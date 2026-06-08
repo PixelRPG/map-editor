@@ -200,6 +200,16 @@ function dbusError(error: unknown, label?: string): ToolResult {
 
 const instanceArg = { instance: z.string().optional().describe('Editor instance label; omit for the default app') }
 
+/** Resolve after `ms`, letting the (single-threaded) GLib main loop run meanwhile. */
+function delay(ms: number): Promise<void> {
+  return new Promise((res) => {
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+      res()
+      return GLib.SOURCE_REMOVE
+    })
+  })
+}
+
 // instance fleet ------------------------------------------------------------
 
 server.registerTool(
@@ -393,15 +403,33 @@ server.registerTool(
   {
     description:
       'Capture a PNG screenshot. scope "window" (default) = whole app window (chrome + canvas); ' +
-      '"canvas" = just the map/engine canvas.',
+      '"canvas" = just the map/engine canvas. Auto-raises the window and retries once if the first ' +
+      'capture is empty (an occluded / minimized / mid-resize window re-renders to nothing).',
     inputSchema: z.object({ scope: z.enum(['window', 'canvas']).optional(), ...instanceArg }),
   },
   async ({ scope, instance }) => {
     try {
-      const params = GLib.Variant.new_tuple([strv(scope ?? 'window')])
-      const reply = await control(instance, 'Screenshot', params, '(ay)')
-      const data = reply.get_child_value(0).deepUnpack() as Uint8Array | null
-      if (!data || data.length === 0) return fail('Screenshot returned no data (is a window open and realised?).')
+      const grab = async (): Promise<Uint8Array | null> => {
+        const params = GLib.Variant.new_tuple([strv(scope ?? 'window')])
+        const reply = await control(instance, 'Screenshot', params, '(ay)')
+        return reply.get_child_value(0).deepUnpack() as Uint8Array | null
+      }
+      let data = await grab()
+      if (!data || data.length === 0) {
+        // The capture re-renders the window's GSK node offscreen, which
+        // needs a mapped window with a settled allocation. If it's
+        // occluded/minimized or mid-resize, raise it, let a couple frames
+        // land, and try once more.
+        await control(instance, 'PresentWindow', null, null)
+        await delay(350)
+        data = await grab()
+      }
+      if (!data || data.length === 0) {
+        return fail(
+          'Screenshot returned no data — the window is likely occluded, minimized, or mid-resize. ' +
+            'Bring it to the foreground (or call present_window) and retry.',
+        )
+      }
       return { content: [{ type: 'image', data: GLib.base64_encode(data), mimeType: 'image/png' }] }
     } catch (error) {
       return dbusError(error, instance)
