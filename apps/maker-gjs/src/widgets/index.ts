@@ -3,6 +3,7 @@
 export * from './application-window'
 export * from './atlas-view'
 export * from './cast-view'
+export * from './data-view'
 export * from './preferences-dialog'
 export * from './scene-editor-view'
 export * from './share-dialog'
