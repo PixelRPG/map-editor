@@ -60,6 +60,12 @@ export class TilesView extends Adw.Bin {
   declare _tilesets_gallery: CardGallery
   declare _nav: Adw.NavigationView
   declare _detail_page: Adw.NavigationPage
+  // Desktop gallery quick-view (read-only glance for the selected tileset).
+  declare _quick_stack: Gtk.Stack
+  declare _quick_thumb: Gtk.Picture
+  declare _quick_name: Gtk.Label
+  declare _quick_count: Gtk.Label
+  declare _quick_edit: Gtk.Button
 
   private _projectName = ''
   // Sidebar visibility starts CLOSED — overwritten on window
@@ -68,6 +74,8 @@ export class TilesView extends Adw.Bin {
   // the user last left it across views.
   private _showLibrary = false
   private _showInspector = false
+  // Quick-view shown on desktop; flipped off when the breakpoint collapses.
+  private _showQuickview = true
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
 
@@ -84,7 +92,19 @@ export class TilesView extends Adw.Bin {
       {
         GTypeName: 'TilesView',
         Template,
-        InternalChildren: ['mode_rail', 'inspector', 'palette', 'tilesets_gallery', 'nav', 'detail_page'],
+        InternalChildren: [
+          'mode_rail',
+          'inspector',
+          'palette',
+          'tilesets_gallery',
+          'nav',
+          'detail_page',
+          'quick_stack',
+          'quick_thumb',
+          'quick_name',
+          'quick_count',
+          'quick_edit',
+        ],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -106,6 +126,13 @@ export class TilesView extends Adw.Bin {
             'Whether the right inspector is shown',
             GObject.ParamFlags.READWRITE,
             false,
+          ),
+          'show-quickview': GObject.ParamSpec.boolean(
+            'show-quickview',
+            'Show Quick-view',
+            "Whether the gallery's right quick-view sidebar is shown (desktop)",
+            GObject.ParamFlags.READWRITE,
+            true,
           ),
           'library-collapsed': GObject.ParamSpec.boolean(
             'library-collapsed',
@@ -161,9 +188,14 @@ export class TilesView extends Adw.Bin {
     this.signals.connect(this._tilesets_gallery, 'item-activated', (_v: CardGallery, id: string) => {
       this._setActiveSpriteSet(id)
     })
+    this.signals.connect(this._tilesets_gallery, 'item-opened', (_v: CardGallery, id: string) => {
+      this._setActiveSpriteSet(id)
+      this._openDetail()
+    })
     this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteTileset(id)
     })
+    this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
       this._selectedSpriteId = tileId
       this._refreshInspector()
@@ -218,6 +250,16 @@ export class TilesView extends Adw.Bin {
     this.notify('show-inspector')
   }
 
+  get showQuickview(): boolean {
+    return this._showQuickview ?? true
+  }
+
+  set showQuickview(value: boolean) {
+    if (this._showQuickview === value) return
+    this._showQuickview = value
+    this.notify('show-quickview')
+  }
+
   get libraryCollapsed(): boolean {
     return this._libraryCollapsed
   }
@@ -236,6 +278,9 @@ export class TilesView extends Adw.Bin {
     if (this._inspectorCollapsed === value) return
     this._inspectorCollapsed = value
     this.notify('inspector-collapsed')
+    // Collapsed = narrow/phone → hide the gallery quick-view (a tap
+    // drills straight into the detail page). Expanded = desktop → show.
+    this.showQuickview = !value
   }
 
   /**
@@ -268,6 +313,7 @@ export class TilesView extends Adw.Bin {
       this._tilesets_gallery.setItems([])
       this._palette.setTiles([])
       this._inspector.setSprite(null, null)
+      this._refreshQuickView()
       return
     }
 
@@ -293,6 +339,7 @@ export class TilesView extends Adw.Bin {
       this._activeSpriteSetId = items[0]?.id ?? null
     }
     this._rebuildGallery()
+    this._refreshQuickView()
     await this._loadActivePalette()
   }
 
@@ -301,9 +348,10 @@ export class TilesView extends Adw.Bin {
     this._mode_rail.activeMode = mode
   }
 
-  /** Select a tileset by id + drill into its detail page (host / MCP entry). */
+  /** Select a tileset by id + open its detail page (host / MCP entry). */
   focusTileset(id: string): void {
     this._setActiveSpriteSet(id)
+    this._openDetail()
   }
 
   /**
@@ -345,12 +393,11 @@ export class TilesView extends Adw.Bin {
   }
 
   /**
-   * Select a tileset from the gallery and DRILL INTO its detail page
-   * (the tile palette + inspector). Mirrors the Cast view's card →
-   * detail navigation; the back button returns to the gallery. The
-   * inspector stays closed until the user picks a tile (it has nothing
-   * to show for a whole set), matching the palette's tile-selected
-   * auto-open.
+   * Select a tileset: make it active, refresh the quick-view + (lazily)
+   * the palette, and highlight the card. On a NARROW layout (no
+   * quick-view sidebar) this also drills into the detail page; on
+   * desktop it just updates the quick-view (the user opens the detail
+   * explicitly via double-click or the "Edit" button).
    */
   private _setActiveSpriteSet(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
@@ -359,8 +406,38 @@ export class TilesView extends Adw.Bin {
     this._selectedSpriteId = null
     this._tilesets_gallery.setActiveId(id)
     this._detail_page.title = entry.resource.data?.name ?? id
+    this._refreshQuickView()
     void this._loadActivePalette()
+    if (this._inspectorCollapsed) this._openDetail()
+  }
+
+  /**
+   * Drill into the detail sub-page (tile palette + inspector) for the
+   * active tileset. No-op if already there. The inspector stays closed
+   * until the user picks a tile (it has nothing to show for a whole
+   * set), matching the palette's tile-selected auto-open.
+   */
+  private _openDetail(): void {
+    if (!this._activeSpriteSetId) return
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
+  }
+
+  /**
+   * Populate the desktop quick-view sidebar (read-only glance) for the
+   * active tileset, or switch it to the empty state when none is active.
+   */
+  private _refreshQuickView(): void {
+    const active = this._activeSpriteSet()
+    if (!active) {
+      this._quick_stack.set_visible_child_name('empty')
+      this._quick_thumb.set_paintable(null)
+      return
+    }
+    this._quick_stack.set_visible_child_name('info')
+    this._quick_thumb.set_paintable(active.gdk?.createSheetThumbnail(240) ?? null)
+    this._quick_name.set_label(active.resource.data?.name ?? active.id)
+    const count = active.resource.data?.sprites?.length ?? 0
+    this._quick_count.set_label(count === 1 ? _('1 tile') : _(`${count} tiles`))
   }
 
   private _activeSpriteSet(): TilesetEntry | null {
