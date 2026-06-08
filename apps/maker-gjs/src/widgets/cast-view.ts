@@ -283,15 +283,14 @@ export class CastView extends Adw.Bin {
   }
 
   /**
-   * Drill into the detail sub-page for the active character (preview +
-   * animations + inspector). On roomy layouts the inspector auto-opens
-   * (side-by-side); on narrow ones it stays CLOSED so the page lands on
-   * the content, not an inspector overlay (the user opens it via the
-   * toggle). No-op if already on the detail page.
+   * Drill into the detail sub-page for the active character. The detail
+   * page is a single scrolling column (preview + animations + the
+   * inlined inspector), responsive via its own breakpoint — no overlay
+   * sidebar, so there's just the one NavigationView back button. No-op
+   * if already on the detail page.
    */
   private _openDetail(): void {
     if (!this._activeCharacterId) return
-    this.showInspector = !this._inspectorCollapsed
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
 
@@ -478,10 +477,6 @@ export class CastView extends Adw.Bin {
     // drills straight into the detail page there). Expanded = desktop →
     // show it. The user can still toggle it via the header button.
     this.showQuickview = !value
-    // Collapsing also closes the detail inspector so shrinking the
-    // window while editing doesn't pop an inspector overlay over the
-    // content; it stays reachable via the toggle.
-    if (value) this.showInspector = false
   }
 
   /**

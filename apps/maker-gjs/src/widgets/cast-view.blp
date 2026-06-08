@@ -195,80 +195,74 @@ template $CastView : Adw.Bin {
       }
 
       // ── Detail (drill-down) ───────────────────────────────────────
+      // ONE page, ONE header (the NavigationView back button). The
+      // inspector is INLINED into the content flow — not an overlay
+      // sidebar with its own header — so there's no second back/close
+      // button and no overlay to dismiss. Desktop lays preview +
+      // animations beside the inspector; phone stacks them.
       Adw.NavigationPage detail_page {
         tag: "detail";
         title: _("Character");
 
-        child: Adw.OverlaySplitView inner_split {
-          sidebar-position: end;
-          min-sidebar-width: 280;
-          max-sidebar-width: 360;
-          pin-sidebar: true;
-          collapsed: bind template.inspector-collapsed;
-          show-sidebar: bind template.show-inspector bidirectional;
+        child: Adw.ToolbarView {
+          top-bar-style: flat;
 
-          sidebar: $PixelRpgCastInspector inspector {
-            collapsed: bind template.inspector-collapsed;
-          };
+          [top]
+          Adw.HeaderBar {
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
+          }
 
-          content: Adw.ToolbarView {
-            top-bar-style: flat;
+          content: Gtk.ScrolledWindow {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: never;
 
-            [top]
-            Adw.HeaderBar {
-              show-start-title-buttons: false;
-              show-end-title-buttons: false;
+            child: Adw.Clamp {
+              maximum-size: 900;
+              tightening-threshold: 600;
 
-              [end]
-              Gtk.ToggleButton inspector_toggle {
-                icon-name: "sidebar-show-right-symbolic";
-                tooltip-text: _("Toggle inspector");
-                active: bind template.show-inspector bidirectional;
-              }
-            }
+              child: Adw.BreakpointBin {
+                width-request: 1;
+                height-request: 1;
 
-            content: Gtk.ScrolledWindow {
-              hexpand: true;
-              vexpand: true;
-              hscrollbar-policy: never;
+                // Desktop / tablet: the preview + animations column sits
+                // beside the inspector. Below the breakpoint everything
+                // stacks in one column (phone).
+                Adw.Breakpoint {
+                  condition ("min-width: 680sp")
 
-              child: Adw.Clamp {
-                maximum-size: 960;
-                tightening-threshold: 480;
-
-                child: Adw.BreakpointBin {
-                  width-request: 1;
-                  height-request: 1;
-
-                  // Desktop / large tablet: preview sits to the left of
-                  // the animations list. Below the breakpoint they stack
-                  // in a single column (phone).
-                  Adw.Breakpoint {
-                    condition ("min-width: 800sp")
-
-                    setters {
-                      detail_box.orientation: horizontal;
-                      detail_box.spacing: 24;
-                      preview.frame-size: 240;
-                      preview.halign: start;
-                      preview.valign: start;
-                    }
+                  setters {
+                    detail_box.orientation: horizontal;
+                    detail_box.spacing: 24;
+                    main_col.hexpand: true;
+                    inspector.valign: start;
+                    inspector.width-request: 320;
                   }
+                }
 
-                  child: Gtk.Box detail_box {
+                child: Gtk.Box detail_box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 24;
+                  margin-bottom: 24;
+                  margin-start: 24;
+                  margin-end: 24;
+
+                  Gtk.Box main_col {
                     orientation: vertical;
                     spacing: 16;
-                    margin-top: 24;
-                    margin-bottom: 24;
-                    margin-start: 24;
-                    margin-end: 24;
 
-                    $PixelRpgCharacterPreview preview {}
+                    $PixelRpgCharacterPreview preview {
+                      halign: center;
+                    }
 
                     $PixelRpgAnimationList anim_list {
                       hexpand: true;
                     }
-                  };
+                  }
+
+                  $PixelRpgCastInspector inspector {}
                 };
               };
             };

@@ -1060,6 +1060,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     }
     this._stack.set_visible_child_name(name)
 
+    // When the mode rail is an overlay (narrow widths, `library-collapsed`),
+    // selecting a page through it should dismiss it so the chosen view
+    // isn't left covered. On wide layouts the rail is pinned and stays.
+    if (name !== 'welcome' && this._cast_view.libraryCollapsed) {
+      this.set_property('show-library', false)
+    }
+
     // Keep `win.mode` in sync with the visible view so the mode rail's
     // active row matches what's on screen. `welcome` doesn't have a
     // mode — leave the action where it was so going welcome → back-to-
