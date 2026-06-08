@@ -1,11 +1,13 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
+import Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import {
   AddAnimationDialog,
   AnimationList,
   CardGallery,
   CastInspector,
+  CharacterCardPreview,
   CharacterPreview,
   type EditorMode,
   type GalleryCardItem,
@@ -26,6 +28,7 @@ import Template from './cast-view.blp'
 // `$PixelRpgModeRail` / `$PixelRpgCharacterPreview` / … references in
 // `cast-view.blp` resolve at template-parse time.
 GObject.type_ensure(CharacterPreview.$gtype)
+GObject.type_ensure(CharacterCardPreview.$gtype)
 GObject.type_ensure(AnimationList.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
@@ -36,22 +39,6 @@ export namespace CastView {
     'mode-changed': [string]
     'character-changed': []
   }
-}
-
-/**
- * Pick the sprite-frame that best represents a character on its gallery
- * card: the first frame of its default animation, else `idle-down`,
- * else the first animation that has frames, else sprite 0. Keeps the
- * card preview meaningful without animating every card.
- */
-function representativeFrame(character: CharacterDefinition): number {
-  const byId = (id: string) => character.animations.find((a) => a.id === id)
-  const anim =
-    (character.defaultAnimation ? byId(character.defaultAnimation) : null) ??
-    byId('idle-down') ??
-    character.animations.find((a) => a.frames.length > 0) ??
-    character.animations[0]
-  return anim?.frames?.[0] ?? 0
 }
 
 /**
@@ -82,6 +69,14 @@ export class CastView extends Adw.Bin {
   declare _characters_gallery: CardGallery
   declare _nav: Adw.NavigationView
   declare _detail_page: Adw.NavigationPage
+  // Desktop gallery quick-view (read-only glance for the selected card).
+  declare _quick_stack: Gtk.Stack
+  declare _quick_preview: CharacterPreview
+  declare _quick_name: Gtk.Label
+  declare _quick_kind: Gtk.Label
+  declare _quick_player: Gtk.Label
+  declare _quick_speed: Gtk.Label
+  declare _quick_edit: Gtk.Button
 
   private _projectName = ''
   // Sidebar visibility starts CLOSED — the actual value is overwritten
@@ -91,6 +86,9 @@ export class CastView extends Adw.Bin {
   // open sidebar against the user's saved-closed state.
   private _showLibrary = false
   private _showInspector = false
+  // Quick-view sidebar starts shown on desktop; the `inspectorCollapsed`
+  // setter flips it off when the responsive breakpoint collapses (phone).
+  private _showQuickview = true
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
 
@@ -135,6 +133,13 @@ export class CastView extends Adw.Bin {
           'characters_gallery',
           'nav',
           'detail_page',
+          'quick_stack',
+          'quick_preview',
+          'quick_name',
+          'quick_kind',
+          'quick_player',
+          'quick_speed',
+          'quick_edit',
         ],
         Properties: {
           'project-name': GObject.ParamSpec.string(
@@ -157,6 +162,13 @@ export class CastView extends Adw.Bin {
             'Whether the right inspector is shown',
             GObject.ParamFlags.READWRITE,
             false,
+          ),
+          'show-quickview': GObject.ParamSpec.boolean(
+            'show-quickview',
+            'Show Quick-view',
+            "Whether the gallery's right quick-view sidebar is shown (desktop)",
+            GObject.ParamFlags.READWRITE,
+            true,
           ),
           'library-collapsed': GObject.ParamSpec.boolean(
             'library-collapsed',
@@ -237,24 +249,29 @@ export class CastView extends Adw.Bin {
     this.signals.connect(this._anim_list, 'delete-animation-requested', (_v: AnimationList, animId: string) => {
       this._confirmDeleteAnimation(animId)
     })
-    // Character gallery — card click selects, trash button (after a
-    // confirm) removes. Selection drives the preview + animation list +
-    // inspector, same as the old action-row gallery did.
+    // Character gallery. Single-click SELECTS (desktop: populates the
+    // quick-view sidebar; phone: drills straight to detail). Double-click
+    // / the quick-view "Edit" button OPENS the full detail page. The
+    // three-dots menu's delete routes through a confirm.
     this.signals.connect(this._characters_gallery, 'item-activated', (_v: CardGallery, id: string) => {
       this._selectCharacter(id)
+    })
+    this.signals.connect(this._characters_gallery, 'item-opened', (_v: CardGallery, id: string) => {
+      this._selectCharacter(id)
+      this._openDetail()
     })
     this.signals.connect(this._characters_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteCharacter(id)
     })
+    this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
   }
 
   /**
-   * Select a character from the gallery: make it active, reset the
-   * active animation, refresh the detail surfaces, and DRILL INTO the
-   * dedicated detail sub-page (preview + animations + inspector). The
-   * gallery and detail are never shown at once — this pushes the detail
-   * page onto the navigation stack; its back button returns to the
-   * gallery.
+   * Select a character: make it active, refresh the quick-view + detail
+   * surfaces, and highlight the card. On a NARROW layout (no quick-view
+   * sidebar) this also drills straight into the detail page; on desktop
+   * it just updates the quick-view sidebar (the user opens the detail
+   * explicitly via double-click or the "Edit" button).
    */
   private _selectCharacter(id: string): void {
     const character = this._characters.find((c) => c.id === id)
@@ -264,9 +281,16 @@ export class CastView extends Adw.Bin {
     this._refreshActive()
     this._characters_gallery.setActiveId(id)
     this._detail_page.title = character.name
-    // Auto-reveal the inspector on roomy layouts (its name / isPlayer /
-    // speed / duration fields are the point of the detail page); leave
-    // it closed on narrow ones, where it overlays the content.
+    if (this._inspectorCollapsed) this._openDetail()
+  }
+
+  /**
+   * Drill into the detail sub-page for the active character (preview +
+   * animations + inspector). Auto-reveals the inspector on roomy
+   * layouts. No-op if already on the detail page.
+   */
+  private _openDetail(): void {
+    if (!this._activeCharacterId) return
     if (!this._inspectorCollapsed) this.showInspector = true
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
@@ -369,9 +393,14 @@ export class CastView extends Adw.Bin {
     dialog.present(this)
   }
 
-  /** Select + reveal a character in the gallery (used after creation). */
+  /**
+   * Select a character AND open its detail page. Used after creation
+   * (land on the new character to edit it) and by the `win.open-character`
+   * action (tooling drill-in).
+   */
   focusCharacter(id: string): void {
     this._selectCharacter(id)
+    this._openDetail()
   }
 
   get projectName(): string {
@@ -406,6 +435,16 @@ export class CastView extends Adw.Bin {
     this.notify('show-inspector')
   }
 
+  get showQuickview(): boolean {
+    return this._showQuickview ?? true
+  }
+
+  set showQuickview(value: boolean) {
+    if (this._showQuickview === value) return
+    this._showQuickview = value
+    this.notify('show-quickview')
+  }
+
   get libraryCollapsed(): boolean {
     return this._libraryCollapsed
   }
@@ -424,6 +463,10 @@ export class CastView extends Adw.Bin {
     if (this._inspectorCollapsed === value) return
     this._inspectorCollapsed = value
     this.notify('inspector-collapsed')
+    // Collapsed = narrow/phone → hide the gallery quick-view (a card tap
+    // drills straight into the detail page there). Expanded = desktop →
+    // show it. The user can still toggle it via the header button.
+    this.showQuickview = !value
   }
 
   /**
@@ -490,30 +533,43 @@ export class CastView extends Adw.Bin {
     this._mode_rail.activeMode = mode
   }
 
-  /** Rebuild the character cards from the current data + selection. */
+  /**
+   * Rebuild the character cards. Each card's preview is a live
+   * {@link CharacterCardPreview} — the character walks in its default
+   * direction, and hovering reveals direction arrows to spin it.
+   */
   private _rebuildGallery(): void {
-    this._characters_gallery.setItems(this._characters.map((c) => this._buildCardItem(c)))
+    this._characters_gallery.setItems(
+      this._characters.map((c) => this._buildCardItem(c)),
+      (item) => this._buildCardPreview(item.id),
+    )
     this._characters_gallery.setActiveId(this._activeCharacterId)
   }
 
   /**
-   * Build the card model for one character: a representative sprite
-   * (the first frame of its default/idle-down animation) as the
-   * preview, the kind as subtitle, and a `Player` badge for the
-   * playable character. Every character is deletable.
+   * Build the card model for one character: kind as subtitle, a `Player`
+   * badge for the playable character. The preview comes from
+   * {@link _buildCardPreview} (animated), so no static paintable here.
+   * Every character is deletable.
    */
   private _buildCardItem(character: CharacterDefinition): GalleryCardItem {
-    const set = this._spriteSetsById.get(character.spriteSetId) ?? null
-    const sprite = set?.getSprite(representativeFrame(character))
     return {
       id: character.id,
       title: character.name,
       subtitle: character.kind === 'hero' ? _('Hero') : _('NPC'),
       badge: character.isPlayer ? _('Player') : null,
-      paintable: sprite?.createPaintable({ keepAspectRatio: true }) ?? null,
       fallbackIcon: 'person-symbolic',
       deletable: true,
     }
+  }
+
+  /** Build the animated, hover-steerable preview widget for a card. */
+  private _buildCardPreview(id: string): CharacterCardPreview | null {
+    const character = this._characters.find((c) => c.id === id)
+    if (!character) return null
+    const preview = new CharacterCardPreview()
+    preview.setCharacter(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
+    return preview
   }
 
   /** The GTK preview resource for the active character's sprite set. */
@@ -529,12 +585,33 @@ export class CastView extends Adw.Bin {
     this._preview.setCharacter(character, spriteSet)
     this._anim_list.setCharacter(character, spriteSet)
     this._inspector.setCharacter(character)
+    this._refreshQuickView(character, spriteSet)
     // Pick up whatever the preview defaulted to (`walk-down` on a
     // fresh character) so the list highlight + inspector duration
     // line up with what's playing — without this the first row
     // would never be marked accent until the user clicked
     // something.
     this._setActiveAnimation(this._preview.activeAnimationId)
+  }
+
+  /**
+   * Populate the desktop quick-view sidebar (read-only glance) for the
+   * active character, or switch it to the empty state when nothing is
+   * selected.
+   */
+  private _refreshQuickView(character: CharacterDefinition | null, spriteSet: GdkSpriteSetResource | null): void {
+    if (!character) {
+      this._quick_stack.set_visible_child_name('empty')
+      this._quick_preview.setCharacter(null, null)
+      return
+    }
+    this._quick_stack.set_visible_child_name('info')
+    this._quick_preview.setCharacter(character, spriteSet)
+    this._quick_name.set_label(character.name)
+    this._quick_kind.set_label(character.kind === 'hero' ? _('Hero') : _('NPC'))
+    this._quick_player.set_visible(character.isPlayer === true)
+    const speed = character.speedTilesPerSec ?? 4
+    this._quick_speed.set_label(_(`${speed} tiles/second`))
   }
 
   /**

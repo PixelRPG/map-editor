@@ -4,8 +4,8 @@ using Adw 1;
 template $TilesView : Adw.Bin {
   // Same master-detail shape as cast-view: ModeRail (left) holds the
   // whole view; the central `Adw.NavigationView` drills from a tileset
-  // card GALLERY into a per-tileset DETAIL page (palette + inspector).
-  // The two are never shown at once.
+  // card GALLERY (with a desktop quick-view sidebar) into a per-tileset
+  // DETAIL page (palette + inspector). The two are never shown at once.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -26,79 +26,150 @@ template $TilesView : Adw.Bin {
         tag: "gallery";
         title: _("Tiles");
 
-        child: Adw.ToolbarView {
-          top-bar-style: flat;
+        child: Adw.OverlaySplitView gallery_split {
+          sidebar-position: end;
+          min-sidebar-width: 260;
+          max-sidebar-width: 340;
+          pin-sidebar: true;
+          collapsed: bind template.inspector-collapsed;
+          show-sidebar: bind template.show-quickview bidirectional;
 
-          [top]
-          Adw.HeaderBar {
-            show-title: false;
-            show-start-title-buttons: false;
-            show-end-title-buttons: false;
-
-            [start]
-            Gtk.ToggleButton library_toggle {
-              icon-name: "sidebar-show-symbolic";
-              tooltip-text: _("Toggle library");
-              active: bind template.show-library bidirectional;
-            }
-          }
-
-          content: Gtk.ScrolledWindow {
-            hexpand: true;
-            vexpand: true;
+          sidebar: Gtk.ScrolledWindow {
             hscrollbar-policy: never;
+            vscrollbar-policy: automatic;
 
-            child: Adw.Clamp {
-              maximum-size: 1000;
-              tightening-threshold: 600;
+            child: Gtk.Stack quick_stack {
+              Gtk.StackPage {
+                name: "empty";
+                child: Adw.StatusPage {
+                  icon-name: "view-grid-symbolic";
+                  title: _("No selection");
+                  description: _("Select a tileset to see its details.");
+                };
+              }
 
-              child: Gtk.Box {
-                orientation: vertical;
-                spacing: 16;
-                margin-top: 24;
-                margin-bottom: 24;
-                margin-start: 24;
-                margin-end: 24;
+              Gtk.StackPage {
+                name: "info";
+                child: Gtk.Box {
+                  orientation: vertical;
+                  spacing: 12;
+                  margin-top: 18;
+                  margin-bottom: 18;
+                  margin-start: 18;
+                  margin-end: 18;
 
-                Gtk.Label header_label {
-                  label: _("Tiles");
-                  halign: start;
-                  styles ["title-1"]
-                }
+                  Gtk.Picture quick_thumb {
+                    content-fit: contain;
+                    can-shrink: true;
+                    halign: center;
+                    height-request: 160;
+                    styles ["card", "card-gallery-preview"]
+                  }
 
-                Gtk.Box gallery_header {
-                  orientation: horizontal;
-                  spacing: 8;
+                  Gtk.Label quick_name {
+                    halign: center;
+                    wrap: true;
+                    justify: center;
+                    styles ["title-2"]
+                  }
 
-                  Gtk.Label {
-                    label: _("Tilesets");
+                  Gtk.Label quick_count {
+                    halign: center;
+                    styles ["caption", "dim-label"]
+                  }
+
+                  Gtk.Button quick_edit {
+                    label: _("Edit");
+                    halign: center;
+                    margin-top: 6;
+                    styles ["suggested-action", "pill"]
+                  }
+                };
+              }
+            };
+          };
+
+          content: Adw.ToolbarView {
+            top-bar-style: flat;
+
+            [top]
+            Adw.HeaderBar {
+              show-title: false;
+              show-start-title-buttons: false;
+              show-end-title-buttons: false;
+
+              [start]
+              Gtk.ToggleButton library_toggle {
+                icon-name: "sidebar-show-symbolic";
+                tooltip-text: _("Toggle library");
+                active: bind template.show-library bidirectional;
+              }
+
+              [end]
+              Gtk.ToggleButton quickview_toggle {
+                icon-name: "sidebar-show-right-symbolic";
+                tooltip-text: _("Toggle details");
+                active: bind template.show-quickview bidirectional;
+              }
+            }
+
+            content: Gtk.ScrolledWindow {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+
+              child: Adw.Clamp {
+                maximum-size: 1000;
+                tightening-threshold: 600;
+
+                child: Gtk.Box {
+                  orientation: vertical;
+                  spacing: 16;
+                  margin-top: 24;
+                  margin-bottom: 24;
+                  margin-start: 24;
+                  margin-end: 24;
+
+                  Gtk.Label header_label {
+                    label: _("Tiles");
                     halign: start;
-                    hexpand: true;
-                    styles ["heading"]
+                    styles ["title-1"]
                   }
 
-                  Gtk.Button new_tileset_button {
-                    icon-name: "list-add-symbolic";
-                    action-name: "win.new-tileset";
-                    tooltip-text: _("Import a new tileset");
-                    valign: center;
-                    styles ["flat", "circular"]
+                  Gtk.Box gallery_header {
+                    orientation: horizontal;
+                    spacing: 8;
+
+                    Gtk.Label {
+                      label: _("Tilesets");
+                      halign: start;
+                      hexpand: true;
+                      styles ["heading"]
+                    }
+
+                    Gtk.Button new_tileset_button {
+                      icon-name: "list-add-symbolic";
+                      action-name: "win.new-tileset";
+                      tooltip-text: _("Import a new tileset");
+                      valign: center;
+                      styles ["flat", "circular"]
+                    }
                   }
-                }
 
-                Gtk.Label gallery_description {
-                  label: _("Select a tileset to configure its tiles in the inspector, or import a new one.");
-                  halign: start;
-                  wrap: true;
-                  xalign: 0;
-                  styles ["caption", "dim-label"]
-                }
+                  Gtk.Label gallery_description {
+                    label: _("Select a tileset to see its details; open it to configure its tiles. Or import a new one.");
+                    halign: start;
+                    wrap: true;
+                    xalign: 0;
+                    styles ["caption", "dim-label"]
+                  }
 
-                $PixelRpgCardGallery tilesets_gallery {
-                  empty-title: _("No tilesets yet. Import one to start painting maps.");
-                  empty-icon: "view-grid-symbolic";
-                  delete-tooltip: _("Delete tileset");
-                }
+                  $PixelRpgCardGallery tilesets_gallery {
+                    empty-title: _("No tilesets yet. Import one to start painting maps.");
+                    empty-icon: "view-grid-symbolic";
+                    delete-tooltip: _("Delete tileset");
+                  }
+                };
               };
             };
           };
