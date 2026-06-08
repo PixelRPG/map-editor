@@ -60,10 +60,14 @@ export class TilesView extends Adw.Bin {
   declare _tilesets_gallery: CardGallery
   declare _nav: Adw.NavigationView
   declare _detail_page: Adw.NavigationPage
-  // Revealer acting as a bottom sheet — slides the selected tile's
-  // properties up over the palette (non-modal). Closed via `_sheet_close`.
+  // Responsive tile inspector. On desktop the inspector lives in the
+  // pinned right sidebar of `_tile_split` (`_side_slot`); on phone it's
+  // reparented into the `_tile_sheet` bottom-sheet revealer (`_sheet_slot`).
+  declare _tile_split: Adw.OverlaySplitView
   declare _tile_sheet: Gtk.Revealer
   declare _sheet_close: Gtk.Button
+  declare _sheet_slot: Gtk.Box
+  declare _side_slot: Gtk.Box
   // Desktop gallery quick-view (read-only glance for the selected tileset).
   declare _quick_stack: Gtk.Stack
   declare _quick_thumb: Gtk.Picture
@@ -103,8 +107,11 @@ export class TilesView extends Adw.Bin {
           'tilesets_gallery',
           'nav',
           'detail_page',
+          'tile_split',
           'tile_sheet',
           'sheet_close',
+          'sheet_slot',
+          'side_slot',
           'quick_stack',
           'quick_thumb',
           'quick_name',
@@ -173,6 +180,31 @@ export class TilesView extends Adw.Bin {
 
   constructor() {
     super()
+    // Place the inspector in the slot matching the initial (desktop)
+    // layout. Later breakpoint changes re-place it via the setter.
+    this._placeInspector()
+  }
+
+  /**
+   * Move the single tile inspector into the slot that matches the
+   * current responsive layout: the pinned right `side_panel` on desktop,
+   * or the `tile_sheet` bottom-sheet revealer on phone. Toggles the
+   * sidebar's visibility to match.
+   */
+  private _placeInspector(): void {
+    const collapsed = this._inspectorCollapsed
+    const target = collapsed ? this._sheet_slot : this._side_slot
+    const current = this._inspector.get_parent()
+    if (current !== target) {
+      if (current) (current as Gtk.Box).remove(this._inspector)
+      target.append(this._inspector)
+    }
+    // Desktop: show the split's pinned sidebar. Phone: hide it (the
+    // inspector lives in the bottom sheet instead).
+    this._tile_split.set_show_sidebar(!collapsed)
+    // The phone bottom sheet only reveals on tile-select; on desktop the
+    // sidebar is always shown, so keep the sheet closed.
+    if (!collapsed) this._tile_sheet.set_reveal_child(false)
   }
 
   /**
@@ -200,11 +232,12 @@ export class TilesView extends Adw.Bin {
     })
     this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
-      // Picking a tile refreshes the inspector + slides the bottom sheet
-      // up (non-modal — clicking another tile just updates it).
+      // Picking a tile refreshes the inspector. On phone that means
+      // sliding the bottom sheet up; on desktop the sidebar is already
+      // visible, so it just updates in place.
       this._selectedSpriteId = tileId
       this._refreshInspector()
-      this._tile_sheet.set_reveal_child(true)
+      if (this._inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
     })
     // The sheet's close button slides it back down + clears the selection.
     this.signals.connect(this._sheet_close, 'clicked', () => {
@@ -286,6 +319,9 @@ export class TilesView extends Adw.Bin {
     // Collapsed = narrow/phone → hide the gallery quick-view (a tap
     // drills straight into the detail page). Expanded = desktop → show.
     this.showQuickview = !value
+    // Re-home the tile inspector: right sidebar (desktop) ↔ bottom sheet
+    // (phone).
+    this._placeInspector()
   }
 
   /**
