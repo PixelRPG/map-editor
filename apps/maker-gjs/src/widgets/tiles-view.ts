@@ -358,12 +358,19 @@ export class TilesView extends Adw.Bin {
       return
     }
 
+    // Tiles shows ONLY world tilesets — character animation sheets
+    // belong to the Cast view. Exclude any set tagged `kind: 'character'`
+    // AND any set a character references (belt-and-suspenders: catches
+    // legacy/untagged sheets like a project that predates the split).
+    const usedByCharacter = new Set((project.data?.characters ?? []).map((c) => c.spriteSetId))
+
     // Snapshot sprite-sets in project order, wrapping each as a GTK
     // resource up-front so its card can show a sheet thumbnail. Tilesets
     // are few (a handful per project) so eager wrapping is cheap and
     // keeps the gallery from popping in thumbnails one by one.
     const items: TilesetEntry[] = []
     for (const [id, resource] of project.spriteSets) {
+      if (resource.data?.kind === 'character' || usedByCharacter.has(id)) continue
       let gdk: GdkSpriteSetResource | null = null
       try {
         gdk = await GdkSpriteSetResource.fromEngineResource(resource)
@@ -412,6 +419,7 @@ export class TilesView extends Adw.Bin {
    */
   presentTilesetImportDialog(): void {
     const dialog = new SpriteSetImportDialog()
+    dialog.set_title(_('Import tileset'))
     dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
       this.emit('spriteset-imported', result)
     })

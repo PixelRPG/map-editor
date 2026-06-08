@@ -340,7 +340,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // and delete both flow through the one path so the copy/register +
     // collab broadcast live in a single place.
     this.signals.connect(this._tiles_view, 'spriteset-imported', (_v: TilesView, result: SpriteSetImportResult) => {
-      void this._castCtl?.importSpriteSet(result)
+      // Tiles imports are world tilesets.
+      void this._castCtl?.importSpriteSet(result, 'tileset')
     })
     this.signals.connect(this._tiles_view, 'spriteset-delete-requested', (_v: TilesView, id: string) => {
       this._castCtl?.deleteSpriteSet(id)
