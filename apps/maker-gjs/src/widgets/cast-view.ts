@@ -8,7 +8,6 @@ import {
   CardGallery,
   CastInspector,
   CharacterPreview,
-  type EditorMode,
   type GalleryCardItem,
   type GdkSpriteSetResource,
   type ModeRail,
@@ -22,6 +21,7 @@ import {
 import { gettext as _ } from 'gettext'
 
 import Template from './cast-view.blp'
+import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
 /** Card preview edge length (px) — matches the quick-view sidebar preview. */
 const CARD_PREVIEW_SIZE = 160
@@ -62,8 +62,7 @@ export namespace CastView {
  * it diffs against `setCharacters` and emits `character-changed` once
  * the host has applied the mutation.
  */
-export class CastView extends Adw.Bin {
-  declare _mode_rail: ModeRail
+export class CastView extends ResponsiveEditorView {
   declare _inspector: CastInspector
   declare _preview: CharacterPreview
   declare _anim_list: AnimationList
@@ -80,18 +79,9 @@ export class CastView extends Adw.Bin {
   declare _quick_edit: Gtk.Button
 
   private _projectName = ''
-  // Sidebar visibility starts CLOSED — the actual value is overwritten
-  // by `ApplicationWindow._shareSidebarState`'s SYNC_CREATE bind on
-  // window construction. Keeping the default `false` here means the
-  // very first frame (before the bind fires) doesn't briefly show an
-  // open sidebar against the user's saved-closed state.
-  private _showLibrary = false
-  private _showInspector = false
-  // Quick-view sidebar starts shown on desktop; the `inspectorCollapsed`
-  // setter flips it off when the responsive breakpoint collapses (phone).
+  // Quick-view sidebar starts shown on desktop; `_onInspectorCollapsedChanged`
+  // flips it off when the responsive breakpoint collapses (phone).
   private _showQuickview = true
-  private _libraryCollapsed = false
-  private _inspectorCollapsed = false
 
   private _characters: CharacterDefinition[] = []
   private _activeCharacterId: string | null = null
@@ -150,20 +140,8 @@ export class CastView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          'show-library': GObject.ParamSpec.boolean(
-            'show-library',
-            'Show Library',
-            'Whether the mode-rail sidebar is shown',
-            GObject.ParamFlags.READWRITE,
-            true,
-          ),
-          'show-inspector': GObject.ParamSpec.boolean(
-            'show-inspector',
-            'Show Inspector',
-            'Whether the right inspector is shown',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
+          // show-library/-inspector + *-collapsed are inherited from
+          // ResponsiveEditorView; only the gallery quick-view is local.
           'show-quickview': GObject.ParamSpec.boolean(
             'show-quickview',
             'Show Quick-view',
@@ -171,23 +149,9 @@ export class CastView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             true,
           ),
-          'library-collapsed': GObject.ParamSpec.boolean(
-            'library-collapsed',
-            'Library Collapsed',
-            'Whether the library should auto-overlay (responsive breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'inspector-collapsed': GObject.ParamSpec.boolean(
-            'inspector-collapsed',
-            'Inspector Collapsed',
-            'Whether the inspector should auto-overlay (responsive breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
         },
         Signals: {
-          'mode-changed': { param_types: [GObject.TYPE_STRING] },
+          // mode-changed is inherited from ResponsiveEditorView.
           'character-changed': {},
         },
       },
@@ -279,7 +243,7 @@ export class CastView extends Adw.Bin {
     this._refreshActive()
     this._characters_gallery.setActiveId(id)
     this._detail_page.title = character.name
-    if (this._inspectorCollapsed) this._openDetail()
+    if (this.inspectorCollapsed) this._openDetail()
   }
 
   /**
@@ -426,26 +390,6 @@ export class CastView extends Adw.Bin {
     this.notify('project-name')
   }
 
-  get showLibrary(): boolean {
-    return this._showLibrary
-  }
-
-  set showLibrary(value: boolean) {
-    if (this._showLibrary === value) return
-    this._showLibrary = value
-    this.notify('show-library')
-  }
-
-  get showInspector(): boolean {
-    return this._showInspector
-  }
-
-  set showInspector(value: boolean) {
-    if (this._showInspector === value) return
-    this._showInspector = value
-    this.notify('show-inspector')
-  }
-
   get showQuickview(): boolean {
     return this._showQuickview ?? true
   }
@@ -456,28 +400,11 @@ export class CastView extends Adw.Bin {
     this.notify('show-quickview')
   }
 
-  get libraryCollapsed(): boolean {
-    return this._libraryCollapsed
-  }
-
-  set libraryCollapsed(value: boolean) {
-    if (this._libraryCollapsed === value) return
-    this._libraryCollapsed = value
-    this.notify('library-collapsed')
-  }
-
-  get inspectorCollapsed(): boolean {
-    return this._inspectorCollapsed
-  }
-
-  set inspectorCollapsed(value: boolean) {
-    if (this._inspectorCollapsed === value) return
-    this._inspectorCollapsed = value
-    this.notify('inspector-collapsed')
-    // Collapsed = narrow/phone → hide the gallery quick-view (a card tap
-    // drills straight into the detail page there). Expanded = desktop →
-    // show it. The user can still toggle it via the header button.
-    this.showQuickview = !value
+  // Collapsed = narrow/phone → hide the gallery quick-view (a card tap
+  // drills straight into the detail page there). Expanded = desktop →
+  // show it. The user can still toggle it via the header button.
+  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
+    this.showQuickview = !collapsed
   }
 
   /**
@@ -534,14 +461,6 @@ export class CastView extends Adw.Bin {
     }
     this._rebuildGallery()
     this._refreshActive()
-  }
-
-  /**
-   * `win.mode` routes here so the view can keep its ModeRail's
-   * `activeMode` in sync with the wider app state.
-   */
-  syncActiveMode(mode: EditorMode): void {
-    this._mode_rail.activeMode = mode
   }
 
   /**

@@ -22,6 +22,7 @@ import {
 import type { LoadedProject } from '../services/project-loader.ts'
 
 import Template from './scene-editor-view.blp'
+import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(SceneEditor.$gtype)
@@ -45,38 +46,13 @@ GObject.type_ensure(RightInspector.$gtype)
  * `tileId` is sent to the engine as a global tile id
  * (`spriteIndex + firstGid`); the inspector deals in 0-based indices.
  */
-export class SceneEditorView extends Adw.Bin {
-  declare _mode_rail: ModeRail
+export class SceneEditorView extends ResponsiveEditorView {
   declare _editor: SceneEditor
   declare _inspector: RightInspector
 
   private signals = new SignalScope()
   private _projectName = "Aria's Quest"
   private _sceneName = ''
-  private _libraryCollapsed = false
-  private _inspectorCollapsed = false
-  // Same reasoning as `_showInspector` below: the `OverlaySplitView`
-  // settles on `show-sidebar=false` for the first frame, so starting
-  // this property `true` would cause the same multi-step desync where
-  // the first click of the library toggle pill is consumed
-  // resyncing button↔state and only the second click actually opens
-  // the rail. ParamSpec default + class field both `false` keeps every
-  // end of the chain consistent.
-  private _showLibrary = false
-  // Initial inspector visibility matches the `OverlaySplitView`'s own
-  // post-layout state. Starting this `true` while the
-  // `OverlaySplitView` ends up showing `show-sidebar=false` for the
-  // first frame caused a multi-step desync on view-show: the
-  // bidirectional bind from `inner_split.show-sidebar` would write
-  // `false` back into this property AFTER `bind_property` already
-  // synced `true` into `FloatingTopBar.show-inspector`. The button's
-  // `active` ended up `true` while the inspector was visually closed,
-  // so the first user click toggled `active` back to `false` (closing
-  // again) and only the second click opened it. Keeping this `false`
-  // from the start keeps all four ends (this property, the
-  // OverlaySplitView, the FloatingTopBar's mirror, the button's
-  // `active`) consistent.
-  private _showInspector = false
   private _engine: Engine | null = null
   private _layers: LayerDescriptor[] = []
   private _tiles: TileDescriptor[] = []
@@ -111,44 +87,9 @@ export class SceneEditorView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          // Per-sidebar collapse flags so the window breakpoint can
-          // independently switch each into overlay-drawer mode. The
-          // tablet preset wants the library overlay + inspector
-          // persistent — impossible to express with a single shared
-          // `collapsed` property.
-          'library-collapsed': GObject.ParamSpec.boolean(
-            'library-collapsed',
-            'Library Collapsed',
-            'Whether the left library sidebar collapses to an overlay (set by the window breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'inspector-collapsed': GObject.ParamSpec.boolean(
-            'inspector-collapsed',
-            'Inspector Collapsed',
-            'Whether the right inspector sidebar collapses to an overlay (set by the window breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          // Both sidebars default to *closed*. On desktop the user
-          // opens them on demand from the floating toggle pills; on
-          // mobile / tablet the breakpoint-driven `collapsed` makes
-          // them drawer-style, so `show-…: false` means the drawer
-          // is hidden at startup.
-          'show-library': GObject.ParamSpec.boolean(
-            'show-library',
-            'Show library',
-            'Whether the library mode rail is visible',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'show-inspector': GObject.ParamSpec.boolean(
-            'show-inspector',
-            'Show inspector',
-            'Whether the right-side inspector is visible',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
+          // show-library/-inspector + *-collapsed are inherited from
+          // ResponsiveEditorView (all default false — both sidebars start
+          // closed, opened on demand via the floating toggle pills).
           // Top-bar density (compact / show-back / show-history /
           // show-grid / show-chip-labels) is driven by an
           // `Adw.BreakpointBin` inside `scene-editor.blp` so it
@@ -156,7 +97,7 @@ export class SceneEditorView extends Adw.Bin {
           // no passthrough properties needed here.
         },
         Signals: {
-          'mode-changed': { param_types: [GObject.TYPE_STRING] },
+          // mode-changed is inherited from ResponsiveEditorView.
           // Fired when the active map's `MapData` was mutated in
           // place (e.g. user toggled a layer's visibility or lock
           // flag) and should be serialised back to disk. The host
@@ -661,11 +602,6 @@ export class SceneEditorView extends Adw.Bin {
     this.notify('project-name')
   }
 
-  /** Push the active mode-rail row from the host on every view switch. */
-  syncActiveMode(mode: EditorMode): void {
-    this._mode_rail.activeMode = mode
-  }
-
   get sceneName(): string {
     return this._sceneName ?? ''
   }
@@ -674,46 +610,6 @@ export class SceneEditorView extends Adw.Bin {
     if (this._sceneName === value) return
     this._sceneName = value
     this.notify('scene-name')
-  }
-
-  get libraryCollapsed(): boolean {
-    return this._libraryCollapsed ?? false
-  }
-
-  set libraryCollapsed(value: boolean) {
-    if (this._libraryCollapsed === value) return
-    this._libraryCollapsed = value
-    this.notify('library-collapsed')
-  }
-
-  get inspectorCollapsed(): boolean {
-    return this._inspectorCollapsed ?? false
-  }
-
-  set inspectorCollapsed(value: boolean) {
-    if (this._inspectorCollapsed === value) return
-    this._inspectorCollapsed = value
-    this.notify('inspector-collapsed')
-  }
-
-  get showLibrary(): boolean {
-    return this._showLibrary ?? false
-  }
-
-  set showLibrary(value: boolean) {
-    if (this._showLibrary === value) return
-    this._showLibrary = value
-    this.notify('show-library')
-  }
-
-  get showInspector(): boolean {
-    return this._showInspector ?? false
-  }
-
-  set showInspector(value: boolean) {
-    if (this._showInspector === value) return
-    this._showInspector = value
-    this.notify('show-inspector')
   }
 
   vfunc_map(): void {

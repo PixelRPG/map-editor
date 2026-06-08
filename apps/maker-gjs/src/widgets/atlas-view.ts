@@ -15,6 +15,7 @@ import {
 } from '@pixelrpg/gjs'
 
 import Template from './atlas-view.blp'
+import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
@@ -33,8 +34,7 @@ GObject.type_ensure(FloatingFab.$gtype)
  * Emits `scene-opened::<id>` so the application window can swap to the
  * scene editor view.
  */
-export class AtlasView extends Adw.Bin {
-  declare _mode_rail: ModeRail
+export class AtlasView extends ResponsiveEditorView {
   declare _atlas: AtlasCanvas
   declare _inspector: SceneInspector
 
@@ -42,10 +42,6 @@ export class AtlasView extends Adw.Bin {
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
   private _projectName = SAMPLE_SCENES.length ? "Aria's Quest" : 'New Project'
-  private _libraryCollapsed = false
-  private _inspectorCollapsed = false
-  private _showLibrary = false
-  private _showInspector = false
   private _projectResource: GameProjectResource | null = null
 
   static {
@@ -62,37 +58,8 @@ export class AtlasView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             'New Project',
           ),
-          // Per-sidebar collapse flags so the window breakpoint
-          // can independently switch each into drawer mode. See
-          // `scene-editor-view.ts` for the rationale.
-          'library-collapsed': GObject.ParamSpec.boolean(
-            'library-collapsed',
-            'Library Collapsed',
-            'Whether the left library sidebar collapses to an overlay (set by the window breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'inspector-collapsed': GObject.ParamSpec.boolean(
-            'inspector-collapsed',
-            'Inspector Collapsed',
-            'Whether the right scene-inspector sidebar collapses to an overlay (set by the window breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'show-library': GObject.ParamSpec.boolean(
-            'show-library',
-            'Show library',
-            'Whether the library mode rail is visible',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'show-inspector': GObject.ParamSpec.boolean(
-            'show-inspector',
-            'Show inspector',
-            'Whether the right-side scene inspector is visible',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
+          // show-library/-inspector + *-collapsed are inherited from
+          // ResponsiveEditorView.
         },
         Signals: {
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
@@ -100,7 +67,7 @@ export class AtlasView extends Adw.Bin {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
-          'mode-changed': { param_types: [GObject.TYPE_STRING] },
+          // mode-changed is inherited from ResponsiveEditorView.
         },
       },
       AtlasView,
@@ -124,51 +91,6 @@ export class AtlasView extends Adw.Bin {
     this._projectName = value
     this._mode_rail.projectName = value
     this.notify('project-name')
-  }
-
-  /** Push the active mode-rail row from the host on every view switch. */
-  syncActiveMode(mode: EditorMode): void {
-    this._mode_rail.activeMode = mode
-  }
-
-  get libraryCollapsed(): boolean {
-    return this._libraryCollapsed ?? false
-  }
-
-  set libraryCollapsed(value: boolean) {
-    if (this._libraryCollapsed === value) return
-    this._libraryCollapsed = value
-    this.notify('library-collapsed')
-  }
-
-  get inspectorCollapsed(): boolean {
-    return this._inspectorCollapsed ?? false
-  }
-
-  set inspectorCollapsed(value: boolean) {
-    if (this._inspectorCollapsed === value) return
-    this._inspectorCollapsed = value
-    this.notify('inspector-collapsed')
-  }
-
-  get showLibrary(): boolean {
-    return this._showLibrary ?? false
-  }
-
-  set showLibrary(value: boolean) {
-    if (this._showLibrary === value) return
-    this._showLibrary = value
-    this.notify('show-library')
-  }
-
-  get showInspector(): boolean {
-    return this._showInspector ?? false
-  }
-
-  set showInspector(value: boolean) {
-    if (this._showInspector === value) return
-    this._showInspector = value
-    this.notify('show-inspector')
   }
 
   /**

@@ -8,7 +8,7 @@ using Adw 1;
 //   • Sprite sheets / Tilesets — every imported asset as a management
 //     row (thumbnail · metadata · "used by") with a ⋯ menu; rows are
 //     built in data-view.ts. Import buttons reuse the unified dialog.
-template $PixelRpgDataView : Adw.Bin {
+template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
