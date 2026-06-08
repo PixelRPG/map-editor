@@ -75,6 +75,7 @@ export class CardGallery extends Adw.Bin {
   private _emptyTitle = _('Nothing here yet')
   private _emptyIcon = 'view-grid-symbolic'
   private _deleteTooltip = _('Delete')
+  private _openLabel = _('Edit')
   private _activeId: string | null = null
   private _hoveredId: string | null = null
   /** card-button by item id, so `setActiveId` can move the selection ring. */
@@ -109,6 +110,13 @@ export class CardGallery extends Adw.Bin {
             "Label of the delete item in each card's three-dots menu",
             GObject.ParamFlags.READWRITE,
             _('Delete'),
+          ),
+          'open-label': GObject.ParamSpec.string(
+            'open-label',
+            'Open Label',
+            "Label of the open/edit item in each card's three-dots menu",
+            GObject.ParamFlags.READWRITE,
+            _('Edit'),
           ),
         },
         Signals: {
@@ -161,6 +169,16 @@ export class CardGallery extends Adw.Bin {
     if (this._deleteTooltip === value) return
     this._deleteTooltip = value
     this.notify('delete-tooltip')
+  }
+
+  get openLabel(): string {
+    return this._openLabel ?? _('Edit')
+  }
+
+  set openLabel(value: string) {
+    if (this._openLabel === value) return
+    this._openLabel = value
+    this.notify('open-label')
   }
 
   /**
@@ -309,29 +327,33 @@ export class CardGallery extends Adw.Bin {
 
     // Per-card actions live in a standard GNOME three-dots menu
     // (`Gtk.MenuButton` + `Gio.Menu`) in the corner — not a bare trash
-    // icon. Only deletable items get the menu (built-ins have no
-    // actions). The `card.delete` action drives the host's confirm +
-    // removal via `delete-requested`.
+    // icon. "Edit" (→ open the detail page) is always offered; "Delete"
+    // only for deletable items (built-ins can't be removed). The actions
+    // drive the host via `item-opened` / `delete-requested`.
+    const menu = Gio.Menu.new()
+    menu.append(this.openLabel, 'card.open')
+    if (item.deletable) menu.append(this.deleteTooltip, 'card.delete')
+    const menuButton = new Gtk.MenuButton({
+      iconName: 'view-more-symbolic',
+      tooltipText: _('More options'),
+      cssClasses: ['flat', 'circular', 'card-gallery-menu'],
+      halign: Gtk.Align.END,
+      valign: Gtk.Align.START,
+      marginTop: 6,
+      marginEnd: 6,
+      menuModel: menu,
+    })
+    const group = new Gio.SimpleActionGroup()
+    const openAction = new Gio.SimpleAction({ name: 'open' })
+    openAction.connect('activate', () => this.emit('item-opened', item.id))
+    group.add_action(openAction)
     if (item.deletable) {
-      const menu = Gio.Menu.new()
-      menu.append(this.deleteTooltip, 'card.delete')
-      const menuButton = new Gtk.MenuButton({
-        iconName: 'view-more-symbolic',
-        tooltipText: _('More options'),
-        cssClasses: ['flat', 'circular', 'card-gallery-menu'],
-        halign: Gtk.Align.END,
-        valign: Gtk.Align.START,
-        marginTop: 6,
-        marginEnd: 6,
-        menuModel: menu,
-      })
-      const group = new Gio.SimpleActionGroup()
       const deleteAction = new Gio.SimpleAction({ name: 'delete' })
       deleteAction.connect('activate', () => this.emit('delete-requested', item.id))
       group.add_action(deleteAction)
-      menuButton.insert_action_group('card', group)
-      overlay.add_overlay(menuButton)
     }
+    menuButton.insert_action_group('card', group)
+    overlay.add_overlay(menuButton)
 
     this._cardsById.set(item.id, card)
     return overlay

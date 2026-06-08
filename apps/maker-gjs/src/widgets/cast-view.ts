@@ -208,9 +208,6 @@ export class CastView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
-    // Re-entering the Cast section (mode switch) lands on the gallery
-    // overview, not a stale detail page — the card view is the hub.
-    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
@@ -287,12 +284,14 @@ export class CastView extends Adw.Bin {
 
   /**
    * Drill into the detail sub-page for the active character (preview +
-   * animations + inspector). Auto-reveals the inspector on roomy
-   * layouts. No-op if already on the detail page.
+   * animations + inspector). On roomy layouts the inspector auto-opens
+   * (side-by-side); on narrow ones it stays CLOSED so the page lands on
+   * the content, not an inspector overlay (the user opens it via the
+   * toggle). No-op if already on the detail page.
    */
   private _openDetail(): void {
     if (!this._activeCharacterId) return
-    if (!this._inspectorCollapsed) this.showInspector = true
+    this.showInspector = !this._inspectorCollapsed
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
 
@@ -395,6 +394,17 @@ export class CastView extends Adw.Bin {
   }
 
   /**
+   * Reset the navigation to the gallery overview. Called by the host on
+   * a project swap so a freshly-opened project starts on the card list
+   * rather than a stale detail page. (Deliberately NOT done on every
+   * re-map — that fired on window resize / sidebar overlay transitions
+   * and yanked the user out of the editor.)
+   */
+  resetToOverview(): void {
+    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
+  }
+
+  /**
    * Select a character AND open its detail page. Used after creation
    * (land on the new character to edit it) and by the `win.open-character`
    * action (tooling drill-in).
@@ -468,6 +478,10 @@ export class CastView extends Adw.Bin {
     // drills straight into the detail page there). Expanded = desktop →
     // show it. The user can still toggle it via the header button.
     this.showQuickview = !value
+    // Collapsing also closes the detail inspector so shrinking the
+    // window while editing doesn't pop an inspector overlay over the
+    // content; it stays reachable via the toggle.
+    if (value) this.showInspector = false
   }
 
   /**

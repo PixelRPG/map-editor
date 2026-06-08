@@ -179,9 +179,6 @@ export class TilesView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
-    // Re-entering the Tiles section (mode switch) lands on the gallery
-    // overview, not a stale detail page — the card view is the hub.
-    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
@@ -281,6 +278,9 @@ export class TilesView extends Adw.Bin {
     // Collapsed = narrow/phone → hide the gallery quick-view (a tap
     // drills straight into the detail page). Expanded = desktop → show.
     this.showQuickview = !value
+    // Collapsing closes the inspector so shrinking while editing doesn't
+    // pop an overlay over the palette; it stays reachable via the toggle.
+    if (value) this.showInspector = false
   }
 
   /**
@@ -346,6 +346,15 @@ export class TilesView extends Adw.Bin {
   /** Sync the ModeRail's active mode (called when the host changes view). */
   syncActiveMode(mode: EditorMode): void {
     this._mode_rail.activeMode = mode
+  }
+
+  /**
+   * Reset navigation to the gallery overview — called by the host on a
+   * project swap. Not done on every re-map (that fired on resize and
+   * yanked the user out of the editor).
+   */
+  resetToOverview(): void {
+    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
   }
 
   /** Select a tileset by id + open its detail page (host / MCP entry). */
