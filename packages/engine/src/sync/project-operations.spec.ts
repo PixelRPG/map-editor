@@ -43,7 +43,7 @@ function character(id: string, extra: Partial<CharacterDefinition> = {}): Charac
     id,
     name: id,
     kind: 'npc',
-    spriteSetId: 'built-in:scientist',
+    spriteSetId: 'scientist',
     animations: [{ id: 'idle-down', frames: [0], durationMs: 200 }],
     ...extra,
   }

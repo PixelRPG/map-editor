@@ -35,6 +35,12 @@
       "path": "./spritesets/water.json",
       "type": "spriteset",
       "category": "environments"
+    },
+    {
+      "id": "scientist",
+      "path": "./spritesets/scientist.json",
+      "type": "spriteset",
+      "category": "characters"
     }
   ],
   "properties": {
@@ -58,89 +64,52 @@
   },
   "characters": [
     {
-      "id": "built-in:scientist",
+      "id": "scientist",
       "name": "Scientist",
       "kind": "hero",
       "isPlayer": true,
-      "spriteSetId": "built-in:scientist",
+      "spriteSetId": "scientist",
       "speedTilesPerSec": 6,
       "defaultAnimation": "idle-down",
       "animations": [
         {
           "id": "idle-up",
-          "frames": [
-            0
-          ],
+          "frames": [0],
           "durationMs": 200
         },
         {
           "id": "walk-up",
-          "frames": [
-            1,
-            2,
-            3,
-            4
-          ],
+          "frames": [1, 2, 3, 4],
           "durationMs": 200
         },
         {
           "id": "idle-down",
-          "frames": [
-            5
-          ],
+          "frames": [5],
           "durationMs": 200
         },
         {
           "id": "walk-down",
-          "frames": [
-            6,
-            7,
-            8,
-            9
-          ],
+          "frames": [6, 7, 8, 9],
           "durationMs": 200
         },
         {
           "id": "idle-left",
-          "frames": [
-            10
-          ],
+          "frames": [10],
           "durationMs": 200
         },
         {
           "id": "walk-left",
-          "frames": [
-            11,
-            12,
-            13,
-            14
-          ],
+          "frames": [11, 12, 13, 14],
           "durationMs": 200
         },
         {
           "id": "idle-right",
-          "frames": [
-            15
-          ],
+          "frames": [15],
           "durationMs": 200
         },
         {
           "id": "walk-right",
-          "frames": [
-            16,
-            17,
-            18,
-            19
-          ],
-          "durationMs": 200
-        },
-        {
-          "id": "Schwertangriff",
-          "frames": [
-            5,
-            6,
-            5
-          ],
+          "frames": [16, 17, 18, 19],
           "durationMs": 200
         }
       ]
