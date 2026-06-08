@@ -37,29 +37,33 @@ template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
 
       // ≥ 720sp = desktop: settings on the left, cell grid on the
       // right. Below it the columns stack (phone bottom-sheet scroll).
-      Adw.Breakpoint {
+      Adw.Breakpoint desktop_breakpoint {
         condition ("min-width: 720sp")
 
         setters {
           split_box.orientation: horizontal;
-          settings_scroller.width-request: 340;
-          settings_scroller.hexpand: false;
+          settings_column.width-request: 340;
+          settings_column.hexpand: false;
         }
       }
 
-      child: Gtk.Box split_box {
-        orientation: vertical;
-        spacing: 0;
+      // One outer scroll for the whole dialog — neither column scrolls on
+      // its own (the settings/"Details" column doing so on the phone
+      // bottom-sheet read as a confusing nested scroll). The BreakpointBin
+      // wraps the scroller (not vice-versa) so it can still switch the
+      // columns horizontal↔vertical.
+      child: Gtk.ScrolledWindow {
+        hscrollbar-policy: never;
+        vscrollbar-policy: automatic;
+        vexpand: true;
 
-        Gtk.ScrolledWindow settings_scroller {
-          hscrollbar-policy: never;
-          vscrollbar-policy: automatic;
-          hexpand: true;
-          vexpand: true;
-          propagate-natural-width: true;
+        child: Gtk.Box split_box {
+          orientation: vertical;
+          spacing: 0;
 
-          child: Gtk.Box {
+          Gtk.Box settings_column {
             orientation: vertical;
+            hexpand: true;
             spacing: 18;
             margin-top: 18;
             margin-bottom: 18;
@@ -83,6 +87,37 @@ template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
                   valign: center;
                   label: _("Choose…");
                   styles ["flat"]
+                }
+              }
+            }
+
+            // Phone: the preview lives here, right under the file picker,
+            // so it's immediately visible. On desktop the breakpoint moves
+            // `preview_block` into `desktop_preview_slot` (right column).
+            // See `_movePreviewForBreakpoint` in the .ts.
+            Gtk.Box phone_preview_slot {
+              orientation: vertical;
+
+              Gtk.Box preview_block {
+                orientation: vertical;
+                spacing: 12;
+
+                Gtk.Label {
+                  label: _("Preview");
+                  halign: start;
+                  styles ["caption-heading"]
+                }
+
+                $PixelRpgCollisionPreview collision_preview {
+                  halign: center;
+                  valign: start;
+                  height-request: 168;
+                }
+
+                Gtk.Label {
+                  label: _("Tap a cell below to inspect it");
+                  halign: center;
+                  styles ["dim-label", "caption"]
                 }
               }
             }
@@ -180,12 +215,12 @@ template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
                 };
               }
             }
-          };
-        }
+          }
 
-        // Right column: a big crisp preview of the picked cell with
-        // the collision box, plus the full sliced grid so the user can
-        // verify the size + tap any cell to inspect it.
+        // Right column on desktop / lower section on phone: the sliced
+        // grid. `desktop_preview_slot` receives `preview_block` on desktop
+        // (so the preview sits beside the settings); on phone the preview
+        // stays up in `phone_preview_slot` and this slot is empty.
         Gtk.Box picker_column {
           orientation: vertical;
           spacing: 12;
@@ -196,27 +231,8 @@ template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
           margin-start: 18;
           margin-end: 18;
 
-          Gtk.Label {
-            label: _("Preview");
-            halign: start;
-            styles ["caption-heading"]
-          }
-
-          $PixelRpgCollisionPreview collision_preview {
-            halign: center;
-            valign: start;
-            height-request: 168;
-          }
-
-          Gtk.Label {
-            label: _("Tap a cell below to inspect it");
-            halign: center;
-            styles ["dim-label", "caption"]
-          }
-
-          Gtk.Separator {
-            margin-top: 4;
-            margin-bottom: 4;
+          Gtk.Box desktop_preview_slot {
+            orientation: vertical;
           }
 
           Gtk.Label {
@@ -225,23 +241,17 @@ template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
             styles ["caption-heading"]
           }
 
-          Gtk.ScrolledWindow {
+          $PixelRpgTilePalette palette {
+            aspect-mode: "contain";
+            wrap: true;
+            tile-size: 40;
+            halign: start;
+            valign: start;
             hexpand: true;
-            vexpand: true;
-            hscrollbar-policy: automatic;
-            vscrollbar-policy: automatic;
-
-            child: $PixelRpgTilePalette palette {
-              aspect-mode: "contain";
-              wrap: true;
-              tile-size: 40;
-              halign: start;
-              valign: start;
-              hexpand: true;
-              vexpand: false;
-            };
+            vexpand: false;
           }
         }
+        };
       };
     };
   };
