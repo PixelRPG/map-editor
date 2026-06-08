@@ -75,6 +75,13 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   declare _collider_h_row: Adw.SpinRow
   declare _collision_preview: CollisionPreview
   declare _palette: TilePalette
+  // Responsive preview placement: `preview_block` is reparented between
+  // `phone_preview_slot` (under the file picker) and `desktop_preview_slot`
+  // (right column) by the `desktop_breakpoint` apply/unapply signals.
+  declare _desktop_breakpoint: Adw.Breakpoint
+  declare _preview_block: Gtk.Box
+  declare _phone_preview_slot: Gtk.Box
+  declare _desktop_preview_slot: Gtk.Box
 
   private _texture: Gdk.Texture | null = null
   private _sourcePath: string | null = null
@@ -105,6 +112,10 @@ export class SpriteSetImportDialog extends Adw.Dialog {
           'collider_h_row',
           'collision_preview',
           'palette',
+          'desktop_breakpoint',
+          'preview_block',
+          'phone_preview_slot',
+          'desktop_preview_slot',
         ],
         Properties: {
           'image-name': GObject.ParamSpec.string(
@@ -136,6 +147,19 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     this._wireInputs()
     this._refreshGrid()
     this._refreshValidity()
+    // Desktop (≥720sp): preview beside the settings. Phone: preview under
+    // the file picker (its blp home). apply/unapply only fire on a
+    // transition, so the initial phone layout needs no action.
+    this._desktop_breakpoint.connect('apply', () => this._movePreview(this._desktop_preview_slot))
+    this._desktop_breakpoint.connect('unapply', () => this._movePreview(this._phone_preview_slot))
+  }
+
+  /** Reparent the preview block into `target` (no-op if already there). */
+  private _movePreview(target: Gtk.Box): void {
+    const current = this._preview_block.get_parent()
+    if (current === target) return
+    if (current) (current as Gtk.Box).remove(this._preview_block)
+    target.append(this._preview_block)
   }
 
   get imageName(): string {
@@ -351,7 +375,12 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     const id = slugifySpriteSetName(this._name_row.get_text())
     const collider = withCollision && this._collision_row.get_active() ? this._buildCollider() : null
     const sprites: SpriteDataSet[] = []
-    for (const cell of iterateSpriteGrid({ columns, rows, spriteWidth: this._spriteWidth, spriteHeight: this._spriteHeight } as SpriteSetData)) {
+    for (const cell of iterateSpriteGrid({
+      columns,
+      rows,
+      spriteWidth: this._spriteWidth,
+      spriteHeight: this._spriteHeight,
+    } as SpriteSetData)) {
       const sprite: SpriteDataSet = { id: cell.index, col: cell.col, row: cell.row }
       if (collider) sprite.colliders = [collider]
       sprites.push(sprite)
