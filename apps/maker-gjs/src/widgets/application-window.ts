@@ -1237,6 +1237,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // about the new project so their views can hydrate.
       this._castCtl?.setProject(project)
       this._tilesCtl?.setProject(project)
+      // A fresh project starts on the card overview, not a stale detail
+      // page left over from the previous project.
+      this._cast_view.resetToOverview()
+      this._tiles_view.resetToOverview()
       // Force the engine to reload its project on the next scene-editor entry.
       this._engineCtl.invalidateCache()
       // Record success in the recent-projects store + refresh the
