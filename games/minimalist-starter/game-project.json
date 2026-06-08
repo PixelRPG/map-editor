@@ -51,16 +51,75 @@
       "path": "./spritesets/minimalist.json",
       "type": "spriteset",
       "category": "tiles"
+    },
+    {
+      "id": "scientist",
+      "path": "./spritesets/scientist.json",
+      "type": "spriteset",
+      "category": "characters"
     }
   ],
   "properties": {
     "gameTitle": "Minimalist Starter",
     "author": "",
     "version": "0.1.0",
-    "description": "Three connected scenes (overworld · dungeon · cozy town) built from a shared minimalist tileset.",
+    "description": "Three connected scenes (overworld \u00b7 dungeon \u00b7 cozy town) built from a shared minimalist tileset.",
     "defaultTileSize": 16
   },
   "editorData": {
     "template": "minimalist-starter"
-  }
+  },
+  "characters": [
+    {
+      "id": "scientist",
+      "name": "Scientist",
+      "kind": "hero",
+      "isPlayer": true,
+      "spriteSetId": "scientist",
+      "speedTilesPerSec": 6,
+      "defaultAnimation": "idle-down",
+      "animations": [
+        {
+          "id": "idle-up",
+          "frames": [0],
+          "durationMs": 200
+        },
+        {
+          "id": "walk-up",
+          "frames": [1, 2, 3, 4],
+          "durationMs": 200
+        },
+        {
+          "id": "idle-down",
+          "frames": [5],
+          "durationMs": 200
+        },
+        {
+          "id": "walk-down",
+          "frames": [6, 7, 8, 9],
+          "durationMs": 200
+        },
+        {
+          "id": "idle-left",
+          "frames": [10],
+          "durationMs": 200
+        },
+        {
+          "id": "walk-left",
+          "frames": [11, 12, 13, 14],
+          "durationMs": 200
+        },
+        {
+          "id": "idle-right",
+          "frames": [15],
+          "durationMs": 200
+        },
+        {
+          "id": "walk-right",
+          "frames": [16, 17, 18, 19],
+          "durationMs": 200
+        }
+      ]
+    }
+  ]
 }

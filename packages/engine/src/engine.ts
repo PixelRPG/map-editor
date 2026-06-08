@@ -202,10 +202,11 @@ export class Engine {
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
     const objectLibrary = this._gameProjectResource.data?.objectLibrary ?? []
-    // `GameProjectResource._registerBuiltIns` auto-seeds the scientist
-    // when the project has no `characters[]` configured, so this is
-    // populated for every loaded project. Cast view edits flow through
-    // the same data → next `loadMap` picks up the new player.
+    // The player is whichever project character is flagged `isPlayer`.
+    // Projects ship a starter character (the scientist) as real project
+    // data; if none is flagged the scene falls back to a procedural
+    // placeholder. Cast view edits flow through the same data → next
+    // `loadMap` picks up the new player.
     const playerCharacter = this._gameProjectResource.data?.characters?.find((c) => c.isPlayer)
     // Resolve the player's sprite-set directly from the project. We
     // cannot rely on `MapResource.getSpriteSetResource` because that
@@ -424,7 +425,11 @@ export class Engine {
     const aware = this._ensureAssistant()
     this._assistantActive = true
     const presence: AwarenessMessage = { type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo }
-    const cursor: AwarenessMessage = { type: 'cursor', peerId: ASSISTANT_PEER_ID, cursor: { sceneId: mapId, x: worldX, y: worldY } }
+    const cursor: AwarenessMessage = {
+      type: 'cursor',
+      peerId: ASSISTANT_PEER_ID,
+      cursor: { sceneId: mapId, x: worldX, y: worldY },
+    }
     aware.handleInbound(presence)
     aware.handleInbound(cursor)
     // Relay to networked peers too (no-op when no session is wired).
