@@ -23,6 +23,7 @@ export const BUILT_IN_SCIENTIST_SPRITESET: SpriteSetData = {
   version: '1.0.0',
   id: BUILT_IN_SCIENTIST_SPRITESET_ID,
   name: 'Scientist (built-in)',
+  kind: 'character',
   image: {
     id: 'main',
     path: SCIENTIST_PNG_DATA_URL,

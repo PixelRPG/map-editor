@@ -1,5 +1,16 @@
 import type { ImageReference } from '../reference/index'
 import type { AnimationData, EditorMetadata, Properties, SpriteDataSet } from './index'
+
+/**
+ * What a sprite set is FOR — drives which gallery surfaces it:
+ *  - `tileset`   → world-building tiles (Tiles view).
+ *  - `character` → a character animation sheet (Cast view).
+ *
+ * Absent on a {@link SpriteSetData} is treated as `tileset` (back-compat
+ * with projects written before the character/tileset split).
+ */
+export type SpriteSetKind = 'tileset' | 'character'
+
 /**
  * Represents a sprite set that can be used in a map
  * Compatible with Excalibur.js graphics system
@@ -19,6 +30,13 @@ export interface SpriteSetData {
    * Display name of the sprite set
    */
   name: string
+
+  /**
+   * Whether this set holds world tiles (`tileset`) or a character
+   * animation sheet (`character`). Absent ⇒ `tileset`. Keeps character
+   * sheets out of the Tiles gallery and vice-versa.
+   */
+  kind?: SpriteSetKind
 
   /**
    * Multiple image sources for the sprite set

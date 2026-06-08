@@ -16,6 +16,7 @@ import {
   REQUIRED_ROLES,
   type SpriteSetAddPayload,
   SpriteSetFormat,
+  type SpriteSetKind,
   SpriteSetResource,
   SPRITESET_REMOVE_KIND,
 } from '@pixelrpg/engine'
@@ -302,7 +303,12 @@ export class CastController {
     const resource = this._project?.resource
     if (!resource) return []
     const usedByCharacter = new Set((resource.data?.characters ?? []).map((c) => c.spriteSetId))
+    // Only sprite SHEETS are assignable to a character — world tilesets
+    // are excluded (a character sheet is `kind: 'character'` or already
+    // referenced by a character; untagged-but-referenced sheets still
+    // qualify so legacy projects keep working).
     return [...resource.spriteSets.entries()]
+      .filter(([id, set]) => set.data?.kind === 'character' || usedByCharacter.has(id))
       .map(([id, set]) => ({ id, name: set.data?.name ?? id }))
       .sort((a, b) => Number(usedByCharacter.has(b.id)) - Number(usedByCharacter.has(a.id)))
   }
@@ -367,7 +373,10 @@ export class CastController {
    * the new set as a {@link SpriteSetChoice} for the character dialog to
    * select, or `null` if the copy/write failed.
    */
-  private async _importSpriteSet({ data, sourcePath }: SpriteSetImportResult): Promise<SpriteSetChoice | null> {
+  private async _importSpriteSet(
+    { data, sourcePath }: SpriteSetImportResult,
+    kind: SpriteSetKind = 'tileset',
+  ): Promise<SpriteSetChoice | null> {
     const resource = this._project?.resource
     if (!resource?.data) return null
     const id = this._uniqueId(data.id, new Set(resource.spriteSets.keys()))
@@ -375,6 +384,9 @@ export class CastController {
     const finalData = {
       ...data,
       id,
+      // Tag the imported set so it surfaces in the right gallery: a Cast
+      // import is a character sheet, a Tiles import is a world tileset.
+      kind,
       image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile },
     }
 
@@ -427,8 +439,8 @@ export class CastController {
    * and route its result here so the copy + register + collab-broadcast
    * path lives in one place.
    */
-  importSpriteSet(result: SpriteSetImportResult): Promise<SpriteSetChoice | null> {
-    return this._importSpriteSet(result)
+  importSpriteSet(result: SpriteSetImportResult, kind: SpriteSetKind = 'tileset'): Promise<SpriteSetChoice | null> {
+    return this._importSpriteSet(result, kind)
   }
 
   /**
