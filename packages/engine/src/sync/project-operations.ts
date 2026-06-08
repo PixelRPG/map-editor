@@ -36,6 +36,7 @@ export const PROJECT_OP_PREFIX = '__project/'
 export const CHARACTER_UPSERT_KIND = '__project/character.upsert'
 export const CHARACTER_REMOVE_KIND = '__project/character.remove'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
+export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
 
 /**
  * Per-chunk payload budget for a sprite-set transfer (chars of the
@@ -97,7 +98,22 @@ export interface SpriteSetAddChunkOp {
   seq: number
 }
 
-export type ProjectOp = CharacterUpsertOp | CharacterRemoveOp | SpriteSetAddChunkOp
+/**
+ * Peer → peers: a sprite-set (tileset) was deleted from the project;
+ * drop its reference by id. The image + descriptor files are removed
+ * on each peer by the maker's CollabSession ↔ controller wiring — this
+ * op carries only the id (the inverse of the chunked
+ * {@link SpriteSetAddChunkOp} add). Coarse + idempotent like the
+ * character ops: applying twice leaves the same state.
+ */
+export interface SpriteSetRemoveOp {
+  kind: typeof SPRITESET_REMOVE_KIND
+  payload: { spriteSetId: string }
+  peerId: string
+  seq: number
+}
+
+export type ProjectOp = CharacterUpsertOp | CharacterRemoveOp | SpriteSetAddChunkOp | SpriteSetRemoveOp
 
 /**
  * Discriminator: is this raw op a project-level message that should be
@@ -125,11 +141,7 @@ export function createCharacterUpsertOp(args: {
 }
 
 /** Build a character-remove envelope. */
-export function createCharacterRemoveOp(args: {
-  peerId: string
-  seq: number
-  characterId: string
-}): CharacterRemoveOp {
+export function createCharacterRemoveOp(args: { peerId: string; seq: number; characterId: string }): CharacterRemoveOp {
   return {
     kind: CHARACTER_REMOVE_KIND,
     payload: { characterId: args.characterId },
@@ -162,6 +174,27 @@ export function applyCharacterUpsert(data: GameProjectData, character: Character
 export function applyCharacterRemove(data: GameProjectData, characterId: string): void {
   if (!data.characters) return
   data.characters = data.characters.filter((c) => c.id !== characterId)
+}
+
+/** Build a sprite-set-remove envelope. */
+export function createSpriteSetRemoveOp(args: { peerId: string; seq: number; spriteSetId: string }): SpriteSetRemoveOp {
+  return {
+    kind: SPRITESET_REMOVE_KIND,
+    payload: { spriteSetId: args.spriteSetId },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/**
+ * Remove a sprite-set reference from project data IN PLACE by id.
+ * Idempotent — a no-op when the id isn't present. Does not touch the
+ * on-disk image/descriptor files; the caller deletes those (the engine
+ * layer is filesystem-agnostic).
+ */
+export function applySpriteSetRemove(data: GameProjectData, spriteSetId: string): void {
+  if (!data.spriteSets) return
+  data.spriteSets = data.spriteSets.filter((s) => s.id !== spriteSetId)
 }
 
 /**
