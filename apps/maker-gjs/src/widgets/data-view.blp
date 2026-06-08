@@ -1,0 +1,114 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Data view — the project's lower-level "Assets and project" surface.
+// ModeRail (left) holds the whole view; the content is an
+// `Adw.PreferencesPage` (clamped + scrollable → responsive for free):
+//   • Project   — editable project metadata (name, author, …).
+//   • Sprite sheets / Tilesets — every imported asset as a management
+//     row (thumbnail · metadata · "used by") with a ⋯ menu; rows are
+//     built in data-view.ts. Import buttons reuse the unified dialog.
+template $PixelRpgDataView : Adw.Bin {
+  Adw.OverlaySplitView outer_split {
+    sidebar-position: start;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.7;
+    pin-sidebar: true;
+    collapsed: bind template.library-collapsed;
+    show-sidebar: bind template.show-library bidirectional;
+
+    sidebar: $PixelRpgModeRail mode_rail {
+      project-name: _("New Project");
+      project-tagline: _("Data view");
+    };
+
+    content: Adw.ToolbarView {
+      top-bar-style: flat;
+
+      [top]
+      Adw.HeaderBar {
+        show-title: false;
+        show-start-title-buttons: false;
+        show-end-title-buttons: false;
+
+        [start]
+        Gtk.ToggleButton library_toggle {
+          icon-name: "sidebar-show-symbolic";
+          tooltip-text: _("Toggle library");
+          active: bind template.show-library bidirectional;
+        }
+      }
+
+      content: Adw.PreferencesPage {
+        title: _("Data");
+
+        Adw.PreferencesGroup {
+          title: _("Project");
+          description: _("Project-wide settings saved into game-project.json.");
+
+          Adw.EntryRow name_row {
+            show-apply-button: true;
+            title: _("Name");
+          }
+
+          Adw.EntryRow author_row {
+            show-apply-button: true;
+            title: _("Author");
+          }
+
+          Adw.EntryRow version_row {
+            show-apply-button: true;
+            title: _("Version");
+          }
+
+          Adw.EntryRow description_row {
+            show-apply-button: true;
+            title: _("Description");
+          }
+
+          Adw.SpinRow tilesize_row {
+            title: _("Default tile size");
+            subtitle: _("Pixel grid step for new maps.");
+            adjustment: Gtk.Adjustment {
+              lower: 4;
+              upper: 256;
+              step-increment: 1;
+              page-increment: 8;
+            };
+          }
+
+          Adw.ActionRow path_row {
+            title: _("Project file");
+            subtitle-selectable: true;
+            styles ["property"]
+          }
+        }
+
+        Adw.PreferencesGroup sheets_group {
+          title: _("Sprite sheets");
+          description: _("Character animation sheets used by the Cast.");
+
+          header-suffix: Gtk.Button import_sheet_button {
+            valign: center;
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Import a sprite sheet from an image");
+            styles ["flat", "circular"]
+          };
+        }
+
+        Adw.PreferencesGroup tilesets_group {
+          title: _("Tilesets");
+          description: _("World-building tile images used by the map editor.");
+
+          header-suffix: Gtk.Button import_tileset_button {
+            valign: center;
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Import a tileset from an image");
+            styles ["flat", "circular"]
+          };
+        }
+      };
+    };
+  }
+}

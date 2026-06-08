@@ -24,6 +24,7 @@ template $ApplicationWindow : Adw.ApplicationWindow {
       tiles_view.inspector-collapsed: true;
       scene_editor_view.library-collapsed: true;
       scene_editor_view.inspector-collapsed: true;
+      data_view.library-collapsed: true;
       welcome_view.inspector-collapsed: true;
     }
   }
@@ -47,6 +48,7 @@ template $ApplicationWindow : Adw.ApplicationWindow {
       cast_view.library-collapsed: true;
       tiles_view.library-collapsed: true;
       scene_editor_view.library-collapsed: true;
+      data_view.library-collapsed: true;
     }
   }
 
@@ -98,6 +100,12 @@ template $ApplicationWindow : Adw.ApplicationWindow {
         name: "scene-editor";
         title: _("Scene Editor");
         child: $SceneEditorView scene_editor_view {};
+      }
+
+      Adw.ViewStackPage {
+        name: "data";
+        title: _("Data");
+        child: $PixelRpgDataView data_view {};
       }
     };
   };

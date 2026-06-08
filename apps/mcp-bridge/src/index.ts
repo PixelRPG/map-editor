@@ -321,7 +321,7 @@ server.registerTool(
   {
     description:
       'Host a collaboration session on the given instance (needs a loaded project; open a scene so the ' +
-      "engine is live before a joiner connects). Returns the room id for join_session.",
+      'engine is live before a joiner connects). Returns the room id for join_session.',
     inputSchema: z.object({ ...instanceArg }),
   },
   async ({ instance }) => {
@@ -356,7 +356,8 @@ server.registerTool(
 server.registerTool(
   'get_session_state',
   {
-    description: 'Get the collaboration session state (kind: idle/browsing/hosting/connecting/awaiting-engine/connected).',
+    description:
+      'Get the collaboration session state (kind: idle/browsing/hosting/connecting/awaiting-engine/connected).',
     inputSchema: z.object({ ...instanceArg }),
   },
   async ({ instance }) => {
@@ -503,7 +504,8 @@ server.registerTool(
 server.registerTool(
   'change_action_state',
   {
-    description: 'Set a stateful GTK action\'s state (e.g. win.set-tool, win.toggle-grid, win.play). scope "app"/"win" (default).',
+    description:
+      'Set a stateful GTK action\'s state (e.g. win.set-tool, win.toggle-grid, win.play). scope "app"/"win" (default).',
     inputSchema: z.object({
       scope: z.enum(['app', 'win']).optional(),
       name: z.string(),
@@ -580,9 +582,12 @@ server.registerTool(
   'set_view',
   {
     description:
-      'Switch the top-level view. "atlas"/"cast"/"tiles" need a loaded project; "welcome" closes it; ' +
-      'for "scene-editor" use open_scene.',
-    inputSchema: z.object({ view: z.enum(['welcome', 'atlas', 'cast', 'tiles', 'scene-editor']), ...instanceArg }),
+      'Switch the top-level view. "atlas"/"cast"/"tiles"/"data" need a loaded project; "welcome" closes it; ' +
+      'for "scene-editor" use open_scene. "data" is the Assets & project view.',
+    inputSchema: z.object({
+      view: z.enum(['welcome', 'atlas', 'cast', 'tiles', 'data', 'scene-editor']),
+      ...instanceArg,
+    }),
   },
   async ({ view, instance }) => {
     try {
@@ -598,6 +603,9 @@ server.registerTool(
           break
         case 'tiles':
           await activate(instance, 'win', 'mode', 'tiles')
+          break
+        case 'data':
+          await activate(instance, 'win', 'mode', 'data')
           break
         case 'scene-editor':
           return fail('Use open_scene { sceneId } to enter the scene editor.')
@@ -658,7 +666,7 @@ server.registerTool(
   'present_window',
   {
     description:
-      "Bring the editor window to the foreground (map + focus). Needed before hosting/painting on a " +
+      'Bring the editor window to the foreground (map + focus). Needed before hosting/painting on a ' +
       'background instance whose WebGL engine has not initialised yet (get_status.engineReady === false).',
     inputSchema: z.object({ ...instanceArg }),
   },
@@ -741,7 +749,9 @@ server.registerTool(
       const [applied] = reply.recursiveUnpack() as [boolean]
       return applied
         ? ok(`Assistant cursor at (${x}, ${y})`)
-        : fail('Assistant cursor not applied — no active scene, or the user paused the assistant (check get_status.assistantPaused).')
+        : fail(
+            'Assistant cursor not applied — no active scene, or the user paused the assistant (check get_status.assistantPaused).',
+          )
     } catch (error) {
       return dbusError(error, instance)
     }
@@ -767,7 +777,7 @@ server.registerTool(
 server.registerTool(
   'assistant_hide',
   {
-    description: "Remove the AI assistant collaborator cursor/presence from the editor.",
+    description: 'Remove the AI assistant collaborator cursor/presence from the editor.',
     inputSchema: z.object({ ...instanceArg }),
   },
   async ({ instance }) => {
@@ -786,7 +796,7 @@ server.registerTool(
     description:
       'Follow a session participant with the camera so the user (or you) can watch their activity. Pass a ' +
       'peerId from get_status.participants[].peerId; an empty string stops following. Mirrors clicking a chip ' +
-      'in the editor\'s collaborators bar.',
+      "in the editor's collaborators bar.",
     inputSchema: z.object({ peerId: z.string(), ...instanceArg }),
   },
   async ({ peerId, instance }) => {
