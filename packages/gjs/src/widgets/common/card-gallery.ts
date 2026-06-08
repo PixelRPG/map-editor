@@ -36,6 +36,20 @@ export interface GalleryCardItem {
 }
 
 /**
+ * Optional contract a card's preview widget can implement so the gallery
+ * can tell it when its card is the active or hovered one — e.g. an
+ * animated character preview that should only move while highlighted.
+ * Previews that don't implement it (a plain `Gtk.Picture`) are ignored.
+ */
+export interface CardPreview extends Gtk.Widget {
+  setHighlighted(highlighted: boolean): void
+}
+
+function isCardPreview(widget: Gtk.Widget): widget is CardPreview {
+  return typeof (widget as Partial<CardPreview>).setHighlighted === 'function'
+}
+
+/**
  * Reusable, responsive grid of Adwaita cards — the single visual
  * vocabulary the Cast view (characters) and the Tiles view (tilesets)
  * share for listing their project entities. Each card carries a
@@ -62,8 +76,11 @@ export class CardGallery extends Adw.Bin {
   private _emptyIcon = 'view-grid-symbolic'
   private _deleteTooltip = _('Delete')
   private _activeId: string | null = null
+  private _hoveredId: string | null = null
   /** card-button by item id, so `setActiveId` can move the selection ring. */
   private _cardsById = new Map<string, Gtk.Button>()
+  /** highlightable previews by id, so the active/hovered one can animate. */
+  private _previewsById = new Map<string, CardPreview>()
 
   static {
     GObject.registerClass(
@@ -167,6 +184,7 @@ export class CardGallery extends Adw.Bin {
     this._stack.set_visible_child_name(items.length === 0 ? 'empty' : 'grid')
     if (this._activeId && !this._cardsById.has(this._activeId)) this._activeId = null
     this._applyHighlight()
+    this._refreshPreviewStates()
   }
 
   /**
@@ -178,6 +196,7 @@ export class CardGallery extends Adw.Bin {
     if (this._activeId === id) return
     this._activeId = id
     this._applyHighlight()
+    this._refreshPreviewStates()
   }
 
   private _clear(): void {
@@ -188,12 +207,24 @@ export class CardGallery extends Adw.Bin {
       child = next
     }
     this._cardsById.clear()
+    this._previewsById.clear()
+    this._hoveredId = null
   }
 
   private _applyHighlight(): void {
     for (const [id, card] of this._cardsById) {
       if (id === this._activeId) card.add_css_class('card-gallery-selected')
       else card.remove_css_class('card-gallery-selected')
+    }
+  }
+
+  /**
+   * Tell each highlightable preview whether its card is the active or
+   * hovered one, so only that card animates (the rest stay static).
+   */
+  private _refreshPreviewStates(): void {
+    for (const [id, preview] of this._previewsById) {
+      preview.setHighlighted(id === this._activeId || id === this._hoveredId)
     }
   }
 
@@ -217,6 +248,19 @@ export class CardGallery extends Adw.Bin {
     })
     card.add_controller(dbl)
 
+    // Hover highlights the card's preview (e.g. starts its animation),
+    // so the hovered card moves even when it isn't the selected one.
+    const motion = new Gtk.EventControllerMotion()
+    motion.connect('enter', () => {
+      this._hoveredId = item.id
+      this._refreshPreviewStates()
+    })
+    motion.connect('leave', () => {
+      if (this._hoveredId === item.id) this._hoveredId = null
+      this._refreshPreviewStates()
+    })
+    card.add_controller(motion)
+
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       spacing: 6,
@@ -226,7 +270,9 @@ export class CardGallery extends Adw.Bin {
       marginEnd: 10,
     })
 
-    box.append(buildPreview?.(item) ?? this._buildPreview(item))
+    const preview = buildPreview?.(item) ?? this._buildPreview(item)
+    if (isCardPreview(preview)) this._previewsById.set(item.id, preview)
+    box.append(preview)
 
     const title = new Gtk.Label({
       label: item.title,

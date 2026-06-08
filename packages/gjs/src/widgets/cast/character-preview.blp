@@ -35,6 +35,9 @@ template $PixelRpgCharacterPreview : Adw.Bin {
       orientation: horizontal;
       halign: center;
       spacing: 8;
+      // Hidden in "showcase" mode (gallery cards + quick-view), where the
+      // preview auto-cycles direction and has no manual controls.
+      visible: bind template.show-controls;
 
       // Linked-style direction quartet. Tooltips dynamically swap
       // between "Walk <dir>" and "Idle <dir>" depending on the
@@ -77,6 +80,7 @@ template $PixelRpgCharacterPreview : Adw.Bin {
 
     Gtk.Label role_label {
       label: bind template.role-label;
+      visible: bind template.show-controls;
       styles ["caption", "dim-label"]
     }
   }

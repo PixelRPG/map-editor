@@ -14,6 +14,9 @@ type AnimationKind = 'walk' | 'idle'
 
 const ANIMATION_ID_PATTERN = /^(walk|idle)-(up|down|left|right)$/
 
+/** Auto-cycle dwell time per direction (ms) — ~2 walk loops before turning. */
+const DIRECTION_CYCLE_MS = 1600
+
 /**
  * Animated preview of a {@link CharacterDefinition}'s sprite. Plays the
  * `<kind>-<direction>` animation for the currently-selected direction
@@ -63,8 +66,12 @@ export class CharacterPreview extends Adw.Bin {
   private _customAnimationId: string | null = null
   private _frameIndex = 0
   private _timeoutId = 0
+  private _cycleTimeoutId = 0
   private _roleLabel = ''
   private _frameSize = 160
+  private _showControls = true
+  private _autoCycle = false
+  private _highlighted = true
 
   static {
     GObject.registerClass(
@@ -117,6 +124,33 @@ export class CharacterPreview extends Adw.Bin {
             GObject.ParamFlags.READABLE,
             'walk-down',
           ),
+          // "Showcase" knobs — let the SAME widget serve the detail-page
+          // editor (controls on, manual) and the overview cards +
+          // quick-view (controls off, auto-cycling, animate-when-active).
+          'show-controls': GObject.ParamSpec.boolean(
+            'show-controls',
+            'Show Controls',
+            'Whether the direction pad + pause + role label are shown',
+            GObject.ParamFlags.READWRITE,
+            true,
+          ),
+          'auto-cycle': GObject.ParamSpec.boolean(
+            'auto-cycle',
+            'Auto-cycle',
+            'Rotate the walk direction over time (down → left → up → right) while highlighted',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          // Gates whether the preview animates at all. When false it
+          // shows a single static frame (no timers); the gallery sets it
+          // true for the selected / hovered card so only that one moves.
+          highlighted: GObject.ParamSpec.boolean(
+            'highlighted',
+            'Highlighted',
+            'Whether the preview animates (vs. shows a static frame)',
+            GObject.ParamFlags.READWRITE,
+            true,
+          ),
         },
       },
       CharacterPreview,
@@ -154,6 +188,49 @@ export class CharacterPreview extends Adw.Bin {
     if (this._frameSize === value) return
     this._frameSize = value
     this.notify('frame-size')
+  }
+
+  get showControls(): boolean {
+    return this._showControls ?? true
+  }
+
+  set showControls(value: boolean) {
+    if (this._showControls === value) return
+    this._showControls = value
+    this.notify('show-controls')
+  }
+
+  get autoCycle(): boolean {
+    return this._autoCycle ?? false
+  }
+
+  set autoCycle(value: boolean) {
+    if (this._autoCycle === value) return
+    this._autoCycle = value
+    this.notify('auto-cycle')
+    this._restart()
+  }
+
+  get highlighted(): boolean {
+    return this._highlighted ?? true
+  }
+
+  set highlighted(value: boolean) {
+    if (this._highlighted === value) return
+    this._highlighted = value
+    // Going static resets to a consistent facing-down pose so idle cards
+    // line up; going active restarts the walk (+ auto-cycle) from there.
+    if (!value) {
+      this._activeDirection = 'down'
+      this._frameIndex = 0
+    }
+    this.notify('highlighted')
+    this._restart()
+  }
+
+  /** Imperative alias for the `highlighted` property (gallery contract). */
+  setHighlighted(highlighted: boolean): void {
+    this.highlighted = highlighted
   }
 
   get paused(): boolean {
@@ -273,6 +350,7 @@ export class CharacterPreview extends Adw.Bin {
 
   vfunc_unmap(): void {
     this._stopTimer()
+    this._stopCycleTimer()
     super.vfunc_unmap()
   }
 
@@ -360,8 +438,14 @@ export class CharacterPreview extends Adw.Bin {
 
   private _restart(): void {
     this._stopTimer()
+    this._stopCycleTimer()
     this._applyFrame()
+    // Static when not highlighted (idle gallery cards) — show one frame,
+    // no timers. Highlighted → run the walk cycle, and if auto-cycling,
+    // also rotate the facing over time so the character circles.
+    if (!this._highlighted) return
     this._scheduleNext()
+    if (this._autoCycle) this._scheduleDirectionCycle()
   }
 
   private _stopTimer(): void {
@@ -369,6 +453,29 @@ export class CharacterPreview extends Adw.Bin {
       GLib.Source.remove(this._timeoutId)
       this._timeoutId = 0
     }
+  }
+
+  private _stopCycleTimer(): void {
+    if (this._cycleTimeoutId !== 0) {
+      GLib.Source.remove(this._cycleTimeoutId)
+      this._cycleTimeoutId = 0
+    }
+  }
+
+  /**
+   * Rotate the facing every {@link DIRECTION_CYCLE_MS} (down → left →
+   * up → right → …) so an auto-cycling preview walks a full circle.
+   * `_setActive` reschedules both timers, so this source removes itself.
+   */
+  private _scheduleDirectionCycle(): void {
+    this._cycleTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, DIRECTION_CYCLE_MS, () => {
+      this._cycleTimeoutId = 0
+      const order: DirectionRole[] = ['down', 'left', 'up', 'right']
+      const next = order[(order.indexOf(this._activeDirection) + 1) % order.length]
+      this._customAnimationId = null
+      this._setActive(next, false)
+      return GLib.SOURCE_REMOVE
+    })
   }
 
   /**
