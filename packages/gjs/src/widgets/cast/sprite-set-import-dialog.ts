@@ -4,7 +4,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { iterateSpriteGrid, type SpriteDataSet, type SpriteSetData } from '@pixelrpg/engine'
+import { iterateSpriteGrid, type SpriteDataSet, type SpriteSetData, type SpriteSetKind } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import { GdkImageTexture, GdkSpriteSheet } from '../../sprite/index.ts'
@@ -73,6 +73,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   declare _collider_y_row: Adw.SpinRow
   declare _collider_w_row: Adw.SpinRow
   declare _collider_h_row: Adw.SpinRow
+  declare _size_group: Adw.PreferencesGroup
+  declare _collision_group: Adw.PreferencesGroup
   declare _collision_preview: CollisionPreview
   declare _palette: TilePalette
   // Responsive preview placement: `preview_block` is reparented between
@@ -90,6 +92,11 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   private _gridSummary = '—'
   /** Guard so programmatic spin updates don't re-trigger their own handlers. */
   private _syncing = false
+  // What's being imported. Drives the title, wording, and whether the
+  // shared-collision section is shown: a character sprite sheet shares
+  // ONE collision box across its frames; a tileset's collision is
+  // per-tile (set later in the Tiles inspector), so it has no box here.
+  private _kind: SpriteSetKind = 'character'
 
   static {
     GObject.registerClass(
@@ -110,6 +117,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
           'collider_y_row',
           'collider_w_row',
           'collider_h_row',
+          'size_group',
+          'collision_group',
           'collision_preview',
           'palette',
           'desktop_breakpoint',
@@ -152,6 +161,37 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     // transition, so the initial phone layout needs no action.
     this._desktop_breakpoint.connect('apply', () => this._movePreview(this._desktop_preview_slot))
     this._desktop_breakpoint.connect('unapply', () => this._movePreview(this._phone_preview_slot))
+    this._applyKind()
+  }
+
+  /** What's being imported. Callers set this to tailor the dialog to its domain. */
+  get kind(): SpriteSetKind {
+    return this._kind
+  }
+
+  set kind(value: SpriteSetKind) {
+    if (this._kind === value) return
+    this._kind = value
+    this._applyKind()
+  }
+
+  /**
+   * Tailor the (shared) dialog to its kind: title + "sprite"/"tile"
+   * wording, and hide the shared-collision section for tilesets (their
+   * collision is per-tile, set in the Tiles inspector after import).
+   */
+  private _applyKind(): void {
+    const isCharacter = this._kind === 'character'
+    this.set_title(isCharacter ? _('Import sprite sheet') : _('Import tileset'))
+    this._size_group.set_title(isCharacter ? _('Sprite size') : _('Tile size'))
+    this._size_group.set_description(
+      isCharacter
+        ? _('Every sprite in the image is the same size. The image is sliced into a grid using this size.')
+        : _('Every tile in the image is the same size. The image is sliced into a grid using this size.'),
+    )
+    this._collision_group.set_visible(isCharacter)
+    this._refreshGrid()
+    this._refreshPreview()
   }
 
   /** Reparent the preview block into `target` (no-op if already there). */
@@ -223,7 +263,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
 
   /** Open a native file picker filtered to images; load the pick into a texture. */
   private _chooseImage(): void {
-    const dialog = new Gtk.FileDialog({ title: _('Choose sprite sheet image'), modal: true })
+    const title = this._kind === 'character' ? _('Choose sprite sheet image') : _('Choose tileset image')
+    const dialog = new Gtk.FileDialog({ title, modal: true })
     const filter = new Gtk.FileFilter()
     filter.set_name(_('Images'))
     filter.add_mime_type('image/png')
@@ -300,7 +341,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       this._palette.setTiles([])
       return
     }
-    this.gridSummary = _(`${columns} × ${rows} — ${columns * rows} sprites`)
+    const unit = this._kind === 'character' ? _('sprites') : _('tiles')
+    this.gridSummary = `${columns} × ${rows} — ${columns * rows} ${unit}`
     const data = this._buildSpriteSetData(columns, rows, false)
     const sheet = new GdkSpriteSheet(data, GdkImageTexture.fromTexture(this._texture))
     this._palette.setFromSpriteSheet(sheet)
@@ -329,7 +371,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       Math.round(this._collider_y_row.get_value()),
       Math.round(this._collider_w_row.get_value()),
       Math.round(this._collider_h_row.get_value()),
-      this._collision_row.get_active(),
+      // Tilesets have no shared collider, so never draw one in the preview.
+      this._collision_row.get_active() && this._kind === 'character',
     )
   }
 
@@ -389,6 +432,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       version: '1.0.0',
       id,
       name: this._name_row.get_text().trim() || id,
+      kind: this._kind,
       image: { id: 'main', path: `${id}.png`, type: 'image' },
       spriteWidth: this._spriteWidth,
       spriteHeight: this._spriteHeight,
@@ -417,7 +461,11 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     const columns = this._columns()
     const rows = this._rows()
     if (columns < 1 || rows < 1) return null
-    return { data: this._buildSpriteSetData(columns, rows, true), sourcePath: this._sourcePath }
+    // Tilesets carry no shared collider — collision is per-tile.
+    return {
+      data: this._buildSpriteSetData(columns, rows, this._kind === 'character'),
+      sourcePath: this._sourcePath,
+    }
   }
 }
 

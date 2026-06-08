@@ -367,8 +367,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // and delete both flow through the one path so the copy/register +
     // collab broadcast live in a single place.
     this.signals.connect(this._tiles_view, 'spriteset-imported', (_v: TilesView, result: SpriteSetImportResult) => {
-      // Tiles imports are world tilesets.
-      void this._castCtl?.importSpriteSet(result, 'tileset')
+      void this._castCtl?.importSpriteSet(result)
     })
     this.signals.connect(this._tiles_view, 'spriteset-delete-requested', (_v: TilesView, id: string) => {
       this._castCtl?.deleteSpriteSet(id)
@@ -668,9 +667,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /** Present the unified import dialog for a Data-view asset of `kind`. */
   private _presentAssetImport(kind: SpriteSetKind): void {
     const dialog = new SpriteSetImportDialog()
-    dialog.set_title(kind === 'character' ? _('Import sprite sheet') : _('Import tileset'))
+    dialog.kind = kind
     dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
-      void this._castCtl?.importSpriteSet(result, kind)
+      void this._castCtl?.importSpriteSet(result)
     })
     dialog.present(this)
   }
