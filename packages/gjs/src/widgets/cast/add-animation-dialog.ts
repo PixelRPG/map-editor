@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import Gdk from '@girs/gdk-4.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
@@ -66,10 +67,14 @@ export class AddAnimationDialog extends Adw.Dialog {
   declare _sequence_stack: Gtk.Stack
   declare _sequence_strip: Gtk.Box
   declare _palette: TilePalette
+  declare _add_frame_button: Gtk.MenuButton
+  declare _frame_picker: TilePalette
 
   private _character: CharacterDefinition | null = null
   private _spriteSet: GdkSpriteSetResource | null = null
   private _frames: number[] = []
+  /** Source index of an in-progress sequence-strip drag-to-reorder. */
+  private _dragFromIndex: number | null = null
   private _sequenceState = 'empty'
   private _previewIndex = 0
   private _previewTimeoutId = 0
@@ -102,6 +107,8 @@ export class AddAnimationDialog extends Adw.Dialog {
           'sequence_stack',
           'sequence_strip',
           'palette',
+          'add_frame_button',
+          'frame_picker',
         ],
         Properties: {
           // Drives the Gtk.Stack between the "no frames yet" hint
@@ -318,24 +325,38 @@ export class AddAnimationDialog extends Adw.Dialog {
   }
 
   private _wirePalette(): void {
+    // Both pickers (the big side grid + the compact header popover) append
+    // the clicked sprite to the end of the sequence. The popover also
+    // pops down so the user lands back on the timeline.
     this._palette.connect('tile-selected', (_p: TilePalette, spriteId: number) => {
-      this._frames = [...this._frames, spriteId]
-      this._previewIndex = 0
-      this._rebuildSequenceStrip()
-      this._refreshPreview()
-      this._refreshValidity()
+      this._appendFrame(spriteId)
     })
+    this._frame_picker.connect('tile-selected', (_p: TilePalette, spriteId: number) => {
+      this._appendFrame(spriteId)
+      this._add_frame_button.popdown()
+    })
+  }
+
+  /** Append a sprite to the frame sequence + refresh the dependent surfaces. */
+  private _appendFrame(spriteId: number): void {
+    this._frames = [...this._frames, spriteId]
+    this._previewIndex = 0
+    this._rebuildSequenceStrip()
+    this._refreshPreview()
+    this._refreshValidity()
   }
 
   private _populatePalette(): void {
     const sheet = this._spriteSet?.spriteSheet
     if (!sheet) {
       this._palette.setTiles([])
+      this._frame_picker.setTiles([])
       this._cellAspect = null
       this._refreshPreviewSize()
       return
     }
     this._palette.setFromSpriteSheet(sheet)
+    this._frame_picker.setFromSpriteSheet(sheet)
     // Capture the per-cell aspect from the first sprite — character
     // sprite-sheets are uniform so it's representative for the whole
     // set. Drives `_refreshPreviewSize` so the preview frame matches
@@ -367,13 +388,14 @@ export class AddAnimationDialog extends Adw.Dialog {
 
   /**
    * Build one thumbnail button for the sequence strip. Each button
-   * carries its frame's sprite plus a tooltip that explains the
-   * click affordance (`tap to remove`). Single-click removes for
-   * now — drag-reorder is tracked in TODO.md.
+   * carries its frame's sprite. Click removes the frame; dragging it
+   * onto another thumbnail reorders the sequence (a `Gtk.DragSource` +
+   * `Gtk.DropTarget` pair carrying the frame's index). Click and drag
+   * coexist — GTK suppresses the click once a press turns into a drag.
    */
   private _buildSequenceThumbnail(spriteId: number, indexInSequence: number): Gtk.Button {
     const button = new Gtk.Button({
-      tooltipText: _('Click to remove from sequence'),
+      tooltipText: _('Drag to reorder · click to remove'),
       cssClasses: ['flat'],
     })
     const sprite = this._spriteSet?.getSprite(spriteId)
@@ -393,7 +415,55 @@ export class AddAnimationDialog extends Adw.Dialog {
       this._refreshPreview()
       this._refreshValidity()
     })
+
+    // Drag source — carries this frame's index (an int) so the drop
+    // target can reorder. The dragged sprite shows as the drag icon.
+    const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
+    dragSource.connect('prepare', () => {
+      this._dragFromIndex = indexInSequence
+      const value = new GObject.Value()
+      value.init(GObject.TYPE_INT)
+      value.set_int(indexInSequence)
+      return Gdk.ContentProvider.new_for_value(value)
+    })
+    if (paintable) {
+      dragSource.connect('drag-begin', () => {
+        dragSource.set_icon(paintable, Math.round(SEQUENCE_THUMB_SIZE / 2), Math.round(SEQUENCE_THUMB_SIZE / 2))
+      })
+    }
+    dragSource.connect('drag-end', () => {
+      this._dragFromIndex = null
+    })
+    button.add_controller(dragSource)
+
+    // Drop target — accepts a dragged frame index and reorders so the
+    // dragged frame lands at this thumbnail's slot.
+    const dropTarget = Gtk.DropTarget.new(GObject.TYPE_INT, Gdk.DragAction.MOVE)
+    dropTarget.connect('drop', () => {
+      const from = this._dragFromIndex
+      if (from === null) return false
+      this._reorderFrame(from, indexInSequence)
+      return true
+    })
+    button.add_controller(dropTarget)
+
     return button
+  }
+
+  /**
+   * Move the frame at `from` to `to` in the sequence + refresh the
+   * dependent surfaces. No-op for an out-of-range or unchanged move.
+   */
+  private _reorderFrame(from: number, to: number): void {
+    if (from === to || from < 0 || from >= this._frames.length || to < 0 || to >= this._frames.length) return
+    const next = [...this._frames]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    this._frames = next
+    this._previewIndex = 0
+    this._rebuildSequenceStrip()
+    this._refreshPreview()
+    this._refreshValidity()
   }
 
   private _refreshPreview(): void {

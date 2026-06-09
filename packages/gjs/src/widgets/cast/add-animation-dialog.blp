@@ -178,19 +178,52 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
             }
           }
 
-          // The picked-frames strip. Each thumbnail is a flat
-          // button; clicking removes the frame from the sequence
-          // (single click for now — drag-to-reorder is queued in
-          // TODO.md). Empty placeholder swaps in via the bound
-          // `empty-sequence` property when nothing's been picked.
+          // The picked-frames strip — a small timeline. Each thumbnail
+          // is a flat button: click removes the frame, drag reorders it
+          // within the strip. The "+" in the header opens a frame-picker
+          // popover (the sheet's sprites) so a frame can be added without
+          // leaving the strip — handy on the narrow/bottom-sheet layout
+          // where the big picker grid sits far below. Empty placeholder
+          // swaps in via the bound `sequence-state` when nothing's picked.
           Gtk.Box sequence_section {
             orientation: vertical;
             spacing: 6;
 
-            Gtk.Label {
-              label: _("Frame sequence");
-              halign: start;
-              styles ["caption-heading"]
+            Gtk.Box {
+              orientation: horizontal;
+              spacing: 6;
+
+              Gtk.Label {
+                label: _("Frame sequence");
+                halign: start;
+                hexpand: true;
+                styles ["caption-heading"]
+              }
+
+              Gtk.MenuButton add_frame_button {
+                icon-name: "list-add-symbolic";
+                tooltip-text: _("Add a frame");
+                valign: center;
+                styles ["flat", "circular"]
+
+                popover: Gtk.Popover {
+                  child: Gtk.ScrolledWindow {
+                    width-request: 320;
+                    height-request: 260;
+                    hscrollbar-policy: never;
+                    vscrollbar-policy: automatic;
+
+                    child: $PixelRpgTilePalette frame_picker {
+                      aspect-mode: "contain";
+                      wrap: true;
+                      tile-size: 40;
+                      halign: start;
+                      valign: start;
+                      hexpand: true;
+                    };
+                  };
+                };
+              }
             }
 
             Gtk.Stack sequence_stack {
