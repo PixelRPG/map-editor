@@ -1,17 +1,24 @@
 import GLib from '@girs/glib-2.0'
 import {
-  applyCharacterRemove,
-  applyCharacterUpsert,
+  applyEntityRemove,
+  applyEntityUpsert,
+  applyPlayerSet,
   applySpriteSetReference,
   applySpriteSetRemove,
-  CHARACTER_REMOVE_KIND,
-  CHARACTER_UPSERT_KIND,
   type CharacterAnimation,
   type CharacterDefinition,
-  createCharacterRemoveOp,
-  createCharacterUpsertOp,
+  characterToEntity,
+  createEntityRemoveOp,
+  createEntityUpsertOp,
+  createPlayerSetOp,
   createSpriteSetRemoveOp,
+  ENTITY_REMOVE_KIND,
+  ENTITY_UPSERT_KIND,
+  type EntityDefinition,
+  entityToCharacter,
   GameProjectFormat,
+  isCharacterEntity,
+  PLAYER_SET_KIND,
   type ProjectOp,
   REQUIRED_ROLES,
   SPRITESET_REMOVE_KIND,
@@ -117,10 +124,12 @@ export class CastController {
   applyRemoteProjectOp(op: ProjectOp): void {
     const data = this._project?.resource?.data
     if (!data) return
-    if (op.kind === CHARACTER_UPSERT_KIND) {
-      applyCharacterUpsert(data, op.payload.character)
-    } else if (op.kind === CHARACTER_REMOVE_KIND) {
-      applyCharacterRemove(data, op.payload.characterId)
+    if (op.kind === ENTITY_UPSERT_KIND) {
+      applyEntityUpsert(data, op.payload.entity)
+    } else if (op.kind === ENTITY_REMOVE_KIND) {
+      applyEntityRemove(data, op.payload.entityId)
+    } else if (op.kind === PLAYER_SET_KIND) {
+      applyPlayerSet(data, op.payload.playerActorId)
     } else if (op.kind === SPRITESET_REMOVE_KIND) {
       this._applyRemoteSpriteSetRemove(op.payload.spriteSetId)
       return
@@ -150,13 +159,47 @@ export class CastController {
     this.onSpriteSetsChanged?.()
   }
 
+  /**
+   * The project's characters as flat view models — derived from the
+   * `character`-template entities in `entityLibrary`, with `isPlayer`
+   * resolved from `playerActorId`. The cast view consumes these; mutations
+   * write back through {@link _upsertCharacter}.
+   */
+  private _listCharacters(): CharacterDefinition[] {
+    const data = this._project?.resource?.data
+    if (!data?.entityLibrary) return []
+    const out: CharacterDefinition[] = []
+    for (const def of data.entityLibrary) {
+      if (!isCharacterEntity(def)) continue
+      const char = entityToCharacter(def, data.playerActorId)
+      if (char) out.push(char)
+    }
+    return out
+  }
+
+  /**
+   * Persist + broadcast a character view model as its `entityLibrary`
+   * entry (`characterToEntity`). Single write path for create / rename /
+   * speed / sheet-change. Does NOT touch the player flag — that rides
+   * `playerActorId` via {@link _setPlayer}.
+   */
+  private _upsertCharacter(char: CharacterDefinition): void {
+    const data = this._project?.resource?.data
+    if (!data) return
+    const entity = characterToEntity(char)
+    applyEntityUpsert(data, entity)
+    this._persist()
+    const session = this._session
+    if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+  }
+
   /** Broadcast the current state of one character to peers (no-op solo). */
   private _broadcastCharacter(id: string): void {
     const session = this._session
     if (!session) return
-    const character = this._project?.resource?.data?.characters?.find((c) => c.id === id)
-    if (!character) return
-    session.sendProjectOp(({ peerId, seq }) => createCharacterUpsertOp({ peerId, seq, character }))
+    const def = this._project?.resource?.data?.entityLibrary?.find((e) => e.id === id)
+    if (!def) return
+    session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity: def }))
   }
 
   /**
@@ -193,7 +236,7 @@ export class CastController {
     }
     this.view.projectName = resource.data?.name ?? _('New Project')
 
-    const characters = resource.data?.characters ?? []
+    const characters = this._listCharacters()
     const sheets = this._listSpriteSets()
     // Resolve every sprite-set a character references OR that the
     // Sprite-sheets section lists, into one shared map.
@@ -314,7 +357,7 @@ export class CastController {
     if (!resource) return []
     // Only sprite SHEETS are assignable to a character — world tilesets
     // are excluded (see `isCharacterSpriteSet`).
-    const usedByCharacter = characterSpriteSetIds(resource.data?.characters)
+    const usedByCharacter = characterSpriteSetIds(resource.data?.entityLibrary)
     return [...resource.spriteSets.entries()]
       .filter(([id, set]) => isCharacterSpriteSet(set.data?.kind, usedByCharacter.has(id)))
       .map(([id, set]) => ({ id, name: set.data?.name ?? id }))
@@ -329,12 +372,12 @@ export class CastController {
    * + refresh, then focus the new character so the user lands on it.
    */
   private _createCharacter(draft: NewCharacterDraft): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    const characters = (resource.data.characters ??= [])
-    const id = this._uniqueId(draft.name, new Set(characters.map((c) => c.id)))
-    // No animations here — the character inherits them from its chosen
-    // sheet (seeded on sheet import; see `_seedCharacterAnimations`).
+    const data = this._project?.resource?.data
+    if (!data) return
+    const takenIds = new Set((data.entityLibrary ?? []).map((e) => e.id))
+    const id = this._uniqueId(draft.name, takenIds)
+    // Animations live on the chosen sheet (seeded on sheet import); the
+    // character just references it.
     const character: CharacterDefinition = {
       id,
       name: draft.name,
@@ -343,29 +386,24 @@ export class CastController {
       defaultAnimation: 'idle-down',
       speedTilesPerSec: draft.speedTilesPerSec,
     }
-    if (draft.isPlayer) {
-      for (const c of characters) c.isPlayer = false
-      character.isPlayer = true
-    }
-    characters.push(character)
-    this._persist()
-    this._broadcastCharacter(id)
+    this._upsertCharacter(character)
+    if (draft.isPlayer) this._setPlayerActor(id)
     void this.refresh().then(() => this.view.focusCharacter(id))
   }
 
   /**
-   * Remove a character from the project: drop it from `characters[]`,
-   * persist, broadcast a `__project/character.remove` so peers drop it
-   * too, and refresh. The view re-selects the first remaining character
-   * (its `setCharacters` clears a stale active id).
+   * Remove a character from the project: drop its `entityLibrary` entry,
+   * persist, broadcast a `__project/entity.remove` so peers drop it too,
+   * and refresh. `applyEntityRemove` also clears `playerActorId` if this
+   * was the player. The view re-selects the first remaining character.
    */
   private _deleteCharacter(id: string): void {
     const data = this._project?.resource?.data
-    if (!data?.characters?.some((c) => c.id === id)) return
-    applyCharacterRemove(data, id)
+    if (!data?.entityLibrary?.some((e) => e.id === id)) return
+    applyEntityRemove(data, id)
     this._persist()
     const session = this._session
-    if (session) session.sendProjectOp(({ peerId, seq }) => createCharacterRemoveOp({ peerId, seq, characterId: id }))
+    if (session) session.sendProjectOp(({ peerId, seq }) => createEntityRemoveOp({ peerId, seq, entityId: id }))
     void this.refresh()
   }
 
@@ -595,37 +633,35 @@ export class CastController {
   }
 
   /**
-   * Toggle the `isPlayer` flag with one-of enforcement: exactly one
-   * character is the player at any time. Refresh the view afterwards
-   * so the "Player" badge moves to the new owner.
+   * Set / clear the project player. The one-of-N invariant is structural
+   * — `playerActorId` is a single id, so no per-character flag to clear.
+   * Refresh moves the "Player" badge. Persists + broadcasts `player.set`.
    */
   private _setPlayer(id: string, isPlayer: boolean): void {
-    const characters = this._project?.resource?.data?.characters
-    if (!characters) return
-    if (isPlayer) {
-      for (const c of characters) c.isPlayer = c.id === id
-    } else {
-      const target = characters.find((c) => c.id === id)
-      if (target) target.isPlayer = false
-    }
-    this._persist()
-    // Upsert of an `isPlayer: true` character clears the others on the
-    // receiver too, so one broadcast carries the whole player switch.
-    this._broadcastCharacter(id)
+    this._setPlayerActor(isPlayer ? id : null)
     void this.refresh()
   }
 
+  /** Write + broadcast `playerActorId` (null clears it). */
+  private _setPlayerActor(playerActorId: string | null): void {
+    const data = this._project?.resource?.data
+    if (!data) return
+    applyPlayerSet(data, playerActorId)
+    this._persist()
+    const session = this._session
+    if (session) session.sendProjectOp(({ peerId, seq }) => createPlayerSetOp({ peerId, seq, playerActorId }))
+  }
+
   /**
-   * Mutate a character in-place via the given closure. Returns
-   * silently when the character isn't found so callers don't need to
-   * null-check. Auto-persists after the mutation lands.
+   * Mutate a character via the given closure: load its view model, apply
+   * the change, and write it back as an `entityLibrary` entry (persist +
+   * broadcast). Returns silently when the character isn't found.
    */
   private _mutate(id: string, mutator: (c: CharacterDefinition) => void): void {
-    const character = this._project?.resource?.data?.characters?.find((c) => c.id === id)
+    const character = this._listCharacters().find((c) => c.id === id)
     if (!character) return
     mutator(character)
-    this._persist()
-    this._broadcastCharacter(id)
+    this._upsertCharacter(character)
   }
 
   /**

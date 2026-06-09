@@ -63,21 +63,33 @@
     "gameTitle": "Minimalist Starter",
     "author": "",
     "version": "0.1.0",
-    "description": "Three connected scenes (overworld \u00b7 dungeon \u00b7 cozy town) built from a shared minimalist tileset.",
+    "description": "Three connected scenes (overworld · dungeon · cozy town) built from a shared minimalist tileset.",
     "defaultTileSize": 16
   },
   "editorData": {
     "template": "minimalist-starter"
   },
-  "characters": [
+  "entityLibrary": [
     {
       "id": "scientist",
       "name": "Scientist",
-      "kind": "hero",
-      "isPlayer": true,
-      "spriteSetId": "scientist",
-      "speedTilesPerSec": 6,
-      "defaultAnimation": "idle-down"
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "scientist",
+          "spriteId": 0,
+          "animationId": "idle-down"
+        },
+        {
+          "type": "movement",
+          "tilesPerSec": 6
+        }
+      ],
+      "editorData": {
+        "template": "character",
+        "category": "hero"
+      }
     }
-  ]
+  ],
+  "playerActorId": "scientist"
 }

@@ -1,4 +1,4 @@
-import type { CharacterDefinition, SpriteSetKind } from '@pixelrpg/engine'
+import { type EntityDefinition, getComponentData, isCharacterEntity, type SpriteSetKind } from '@pixelrpg/engine'
 
 /**
  * Sprite-set classification — the single source of truth for "is this a
@@ -6,9 +6,19 @@ import type { CharacterDefinition, SpriteSetKind } from '@pixelrpg/engine'
  * the Tiles gallery, and the Data view so the rule stays consistent.
  */
 
-/** Ids of every sprite-set referenced by a character (i.e. used as its sheet). */
-export function characterSpriteSetIds(characters: readonly CharacterDefinition[] | undefined): Set<string> {
-  return new Set((characters ?? []).map((c) => c.spriteSetId))
+/**
+ * Ids of every sprite-set used as a character appearance — the `visual`
+ * component's `spriteSetId` of each `character`-template entity in the
+ * project's `entityLibrary`.
+ */
+export function characterSpriteSetIds(entityLibrary: readonly EntityDefinition[] | undefined): Set<string> {
+  const ids = new Set<string>()
+  for (const def of entityLibrary ?? []) {
+    if (!isCharacterEntity(def)) continue
+    const spriteSetId = getComponentData(def, 'visual')?.spriteSetId
+    if (typeof spriteSetId === 'string') ids.add(spriteSetId)
+  }
+  return ids
 }
 
 /**

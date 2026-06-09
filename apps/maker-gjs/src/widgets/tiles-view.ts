@@ -309,7 +309,7 @@ export class TilesView extends ResponsiveEditorView {
 
     // Tiles shows ONLY world tilesets — character animation sheets
     // belong to the Cast view (see `isCharacterSpriteSet`).
-    const usedByCharacter = characterSpriteSetIds(project.data?.characters)
+    const usedByCharacter = characterSpriteSetIds(project.data?.entityLibrary)
 
     // Snapshot sprite-sets in project order, wrapping each as a GTK
     // resource up-front so its card can show a sheet thumbnail. Tilesets

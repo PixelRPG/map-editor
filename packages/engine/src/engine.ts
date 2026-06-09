@@ -25,6 +25,7 @@ import {
   TileTransformComponent,
   UndoStackComponent,
 } from './components/index.ts'
+import { entityToCharacter } from './entity/convert.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
@@ -201,13 +202,19 @@ export class Engine {
     this.logger.info(`Loading map: ${mapId}`)
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
-    const entityLibrary = this._gameProjectResource.data?.entityLibrary ?? []
-    // The player is whichever project character is flagged `isPlayer`.
-    // Projects ship a starter character (the scientist) as real project
-    // data; if none is flagged the scene falls back to a procedural
-    // placeholder. Cast view edits flow through the same data → next
-    // `loadMap` picks up the new player.
-    const playerCharacter = this._gameProjectResource.data?.characters?.find((c) => c.isPlayer)
+    const projectData = this._gameProjectResource.data
+    const entityLibrary = projectData?.entityLibrary ?? []
+    // The player is the entity named by `playerActorId`, mapped to the
+    // flat character view model `PlayerSystem` consumes. Projects ship a
+    // starter character (the scientist); if none is set the scene falls
+    // back to a procedural placeholder. Cast view edits flow through the
+    // same data → next `loadMap` picks up the new player.
+    const playerEntity = projectData?.playerActorId
+      ? entityLibrary.find((e) => e.id === projectData.playerActorId)
+      : undefined
+    const playerCharacter = playerEntity
+      ? (entityToCharacter(playerEntity, projectData?.playerActorId) ?? undefined)
+      : undefined
     // Resolve the player's sprite-set directly from the project. We
     // cannot rely on `MapResource.getSpriteSetResource` because that
     // map only copies in the sprite-sets the map JSON references —

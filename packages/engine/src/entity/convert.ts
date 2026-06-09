@@ -1,4 +1,5 @@
-import type { ComponentData, EntityDefinition, Facing } from '../types/data/index.ts'
+import type { CharacterDefinition, ComponentData, EntityDefinition, Facing } from '../types/data/index.ts'
+import { getComponentData } from './data-access.ts'
 
 /**
  * Pure migration: the shipped `kind`-discriminated object definition →
@@ -130,4 +131,62 @@ export function objectDefinitionToEntity(def: LegacyObjectDefinition | EntityDef
       ...(legacy.editorData?.icon ? { icon: legacy.editorData.icon } : {}),
     },
   }
+}
+
+/** Default movement speed (tiles/sec) when a character omits one. */
+const DEFAULT_SPEED_TILES_PER_SEC = 4
+
+/**
+ * A character {@link CharacterDefinition} (view model) → an
+ * {@link EntityDefinition}: a `visual` component (the appearance sheet,
+ * `defaultAnimation` as the animation id) + a `movement` component
+ * (speed), tagged `editorData.template === 'character'`. `kind` rides
+ * `editorData.category` so it round-trips. The `isPlayer` flag is NOT
+ * stored on the entity — it lives in `GameProjectData.playerActorId`.
+ */
+export function characterToEntity(char: CharacterDefinition): EntityDefinition {
+  const components: ComponentData[] = [
+    {
+      type: 'visual',
+      spriteSetId: char.spriteSetId,
+      spriteId: 0,
+      ...(char.defaultAnimation ? { animationId: char.defaultAnimation } : {}),
+    },
+    { type: 'movement', tilesPerSec: char.speedTilesPerSec ?? DEFAULT_SPEED_TILES_PER_SEC },
+  ]
+  return {
+    id: char.id,
+    name: char.name,
+    components,
+    editorData: { template: 'character', category: char.kind },
+  }
+}
+
+/**
+ * An {@link EntityDefinition} (a `character`-template entity) → the
+ * {@link CharacterDefinition} view model the Cast UI + `PlayerSystem`
+ * consume. Returns `null` when the entity has no `visual` component (so
+ * it isn't a renderable character). `isPlayer` is set from the project's
+ * `playerActorId`.
+ */
+export function entityToCharacter(def: EntityDefinition, playerActorId?: string): CharacterDefinition | null {
+  const visual = getComponentData(def, 'visual')
+  const spriteSetId = typeof visual?.spriteSetId === 'string' ? visual.spriteSetId : undefined
+  if (!spriteSetId) return null
+  const movement = getComponentData(def, 'movement')
+  const category = def.editorData?.category
+  return {
+    id: def.id,
+    name: def.name,
+    kind: category === 'npc' ? 'npc' : 'hero',
+    spriteSetId,
+    defaultAnimation: typeof visual?.animationId === 'string' ? visual.animationId : 'idle-down',
+    speedTilesPerSec: typeof movement?.tilesPerSec === 'number' ? movement.tilesPerSec : DEFAULT_SPEED_TILES_PER_SEC,
+    isPlayer: playerActorId !== undefined && def.id === playerActorId,
+  }
+}
+
+/** True when an entity definition is a `character`-template cast member. */
+export function isCharacterEntity(def: EntityDefinition): boolean {
+  return def.editorData?.template === 'character'
 }

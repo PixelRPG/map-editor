@@ -1,20 +1,23 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import type { CharacterDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
+import type { EntityDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
 import {
-  applyCharacterRemove,
-  applyCharacterUpsert,
+  applyEntityRemove,
+  applyEntityUpsert,
+  applyPlayerSet,
   applySpriteSetReference,
   applySpriteSetRemove,
-  CHARACTER_REMOVE_KIND,
-  CHARACTER_UPSERT_KIND,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
   ChunkReassembler,
-  createCharacterRemoveOp,
-  createCharacterUpsertOp,
+  createEntityRemoveOp,
+  createEntityUpsertOp,
+  createPlayerSetOp,
   createSpriteSetRemoveOp,
+  ENTITY_REMOVE_KIND,
+  ENTITY_UPSERT_KIND,
   isProjectOp,
+  PLAYER_SET_KIND,
   PROJECT_OP_PREFIX,
   type SpriteSetAddChunkOp,
   type SpriteSetAddPayload,
@@ -47,18 +50,17 @@ function stampUpdate(op: Omit<SpriteSetUpdateChunkOp, 'peerId' | 'seq'>, seq: nu
   return { ...op, peerId: 'host', seq } as SpriteSetUpdateChunkOp
 }
 
-function character(id: string, extra: Partial<CharacterDefinition> = {}): CharacterDefinition {
+function entity(id: string, extra: Partial<EntityDefinition> = {}): EntityDefinition {
   return {
     id,
     name: id,
-    kind: 'npc',
-    spriteSetId: 'scientist',
-    animations: [{ id: 'idle-down', frames: [0], durationMs: 200 }],
+    components: [{ type: 'visual', spriteSetId: 'scientist', spriteId: 0 }],
+    editorData: { template: 'character' },
     ...extra,
   }
 }
 
-function projectData(characters: CharacterDefinition[]): GameProjectData {
+function projectData(entityLibrary: EntityDefinition[], playerActorId?: string): GameProjectData {
   return {
     id: 'p',
     name: 'P',
@@ -66,23 +68,25 @@ function projectData(characters: CharacterDefinition[]): GameProjectData {
     spriteSets: [],
     maps: [],
     startup: { initialMapId: 'm' },
-    characters,
+    entityLibrary,
+    playerActorId,
   } as unknown as GameProjectData
 }
 
 export default async () => {
   await describe('PROJECT_OP_PREFIX + kinds', async () => {
-    await it('exposes the prefix and both kinds under it', async () => {
+    await it('exposes the prefix and the entity kinds under it', async () => {
       expect(PROJECT_OP_PREFIX).toBe('__project/')
-      expect(CHARACTER_UPSERT_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
-      expect(CHARACTER_REMOVE_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(ENTITY_UPSERT_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(ENTITY_REMOVE_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(PLAYER_SET_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
     })
   })
 
   await describe('isProjectOp', async () => {
     await it('recognises project ops + rejects commands / session-protocol / junk', async () => {
-      expect(isProjectOp({ kind: CHARACTER_UPSERT_KIND, payload: {}, peerId: 'a', seq: 0 })).toBe(true)
-      expect(isProjectOp({ kind: CHARACTER_REMOVE_KIND, payload: {}, peerId: 'a', seq: 0 })).toBe(true)
+      expect(isProjectOp({ kind: ENTITY_UPSERT_KIND, payload: {}, peerId: 'a', seq: 0 })).toBe(true)
+      expect(isProjectOp({ kind: PLAYER_SET_KIND, payload: {}, peerId: 'a', seq: 0 })).toBe(true)
       expect(isProjectOp({ kind: '__project/future', payload: {}, peerId: 'a', seq: 0 })).toBe(true)
       expect(isProjectOp({ kind: 'tile.paint', payload: {}, peerId: 'a', seq: 0 })).toBe(false)
       expect(isProjectOp({ kind: '__session/snapshot-request', payload: {}, peerId: 'a', seq: 0 })).toBe(false)
@@ -93,61 +97,64 @@ export default async () => {
 
   await describe('builders', async () => {
     await it('build typed envelopes', async () => {
-      const up = createCharacterUpsertOp({ peerId: 'p1', seq: 4, character: character('hero') })
-      expect(up.kind).toBe(CHARACTER_UPSERT_KIND)
-      expect(up.payload.character.id).toBe('hero')
-      expect(up.peerId).toBe('p1')
-      expect(up.seq).toBe(4)
+      const up = createEntityUpsertOp({ peerId: 'p1', seq: 4, entity: entity('hero') })
+      expect(up.kind).toBe(ENTITY_UPSERT_KIND)
+      expect(up.payload.entity.id).toBe('hero')
       expect(isProjectOp(up)).toBe(true)
 
-      const rm = createCharacterRemoveOp({ peerId: 'p1', seq: 5, characterId: 'hero' })
-      expect(rm.kind).toBe(CHARACTER_REMOVE_KIND)
-      expect(rm.payload.characterId).toBe('hero')
+      const rm = createEntityRemoveOp({ peerId: 'p1', seq: 5, entityId: 'hero' })
+      expect(rm.kind).toBe(ENTITY_REMOVE_KIND)
+      expect(rm.payload.entityId).toBe('hero')
       expect(isProjectOp(rm)).toBe(true)
+
+      const ps = createPlayerSetOp({ peerId: 'p1', seq: 6, playerActorId: 'hero' })
+      expect(ps.kind).toBe(PLAYER_SET_KIND)
+      expect(ps.payload.playerActorId).toBe('hero')
+      expect(isProjectOp(ps)).toBe(true)
     })
   })
 
-  await describe('applyCharacterUpsert', async () => {
-    await it('appends a new character', async () => {
-      const data = projectData([character('a')])
-      applyCharacterUpsert(data, character('b'))
-      expect(data.characters?.map((c) => c.id)).toStrictEqual(['a', 'b'])
+  await describe('applyEntityUpsert', async () => {
+    await it('appends a new entity', async () => {
+      const data = projectData([entity('a')])
+      applyEntityUpsert(data, entity('b'))
+      expect(data.entityLibrary?.map((e) => e.id)).toStrictEqual(['a', 'b'])
     })
 
-    await it('replaces an existing character by id', async () => {
-      const data = projectData([character('a', { name: 'Old' })])
-      applyCharacterUpsert(data, character('a', { name: 'New' }))
-      expect(data.characters?.length).toBe(1)
-      expect(data.characters?.[0].name).toBe('New')
-    })
-
-    await it('enforces single-player when the upsert is the player', async () => {
-      const data = projectData([character('a', { isPlayer: true }), character('b')])
-      applyCharacterUpsert(data, character('b', { isPlayer: true }))
-      const byId = Object.fromEntries((data.characters ?? []).map((c) => [c.id, c.isPlayer ?? false]))
-      expect(byId).toStrictEqual({ a: false, b: true })
+    await it('replaces an existing entity by id', async () => {
+      const data = projectData([entity('a', { name: 'Old' })])
+      applyEntityUpsert(data, entity('a', { name: 'New' }))
+      expect(data.entityLibrary?.length).toBe(1)
+      expect(data.entityLibrary?.[0].name).toBe('New')
     })
 
     await it('is idempotent', async () => {
       const data = projectData([])
-      applyCharacterUpsert(data, character('a', { isPlayer: true }))
-      applyCharacterUpsert(data, character('a', { isPlayer: true }))
-      expect(data.characters?.length).toBe(1)
-      expect(data.characters?.[0].isPlayer).toBe(true)
+      applyEntityUpsert(data, entity('a'))
+      applyEntityUpsert(data, entity('a'))
+      expect(data.entityLibrary?.length).toBe(1)
     })
   })
 
-  await describe('applyCharacterRemove', async () => {
-    await it('drops the matching character + leaves the rest', async () => {
-      const data = projectData([character('a'), character('b')])
-      applyCharacterRemove(data, 'a')
-      expect(data.characters?.map((c) => c.id)).toStrictEqual(['b'])
+  await describe('applyEntityRemove + applyPlayerSet', async () => {
+    await it('drops the matching entity + leaves the rest', async () => {
+      const data = projectData([entity('a'), entity('b')])
+      applyEntityRemove(data, 'a')
+      expect(data.entityLibrary?.map((e) => e.id)).toStrictEqual(['b'])
     })
 
-    await it('is a no-op for an unknown id', async () => {
-      const data = projectData([character('a')])
-      applyCharacterRemove(data, 'zzz')
-      expect(data.characters?.map((c) => c.id)).toStrictEqual(['a'])
+    await it('clears playerActorId when the removed entity was the player', async () => {
+      const data = projectData([entity('a')], 'a')
+      applyEntityRemove(data, 'a')
+      expect(data.playerActorId).toBe(undefined)
+    })
+
+    await it('player.set sets and clears the player', async () => {
+      const data = projectData([entity('a')])
+      applyPlayerSet(data, 'a')
+      expect(data.playerActorId).toBe('a')
+      applyPlayerSet(data, null)
+      expect(data.playerActorId).toBe(undefined)
     })
   })
 

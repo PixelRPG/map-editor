@@ -1,7 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { CharacterDefinition, EntityDefinition, GameProjectEditorMetadata, Properties } from './index'
+import type { EntityDefinition, GameProjectEditorMetadata, Properties } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -60,16 +60,17 @@ export interface GameProjectData {
   entityLibrary?: EntityDefinition[]
 
   /**
-   * Project-level cast — heroes and NPCs as reusable definitions.
-   * Exactly one entry should carry `isPlayer: true` for `PlayerSystem`
-   * to resolve. NPC placements reference a definition via
-   * `NpcProperties.characterId` to inherit its sprite + animations.
+   * Id of the {@link EntityDefinition} in {@link entityLibrary} that is
+   * the player. `PlayerSystem` resolves it (via the maker's view-model
+   * mapping) and spawns it at the map's player spawn-point. The cast
+   * "is this the player?" toggle writes this single field — the one-of-N
+   * player invariant is structural, not enforced.
    *
-   * Optional — projects without configured characters fall back to a
-   * procedural placeholder hero in playtest (see
-   * `runtime/placeholder-character.ts`).
+   * Optional — a project without one falls back to a procedural
+   * placeholder hero in playtest. Characters themselves are
+   * `entityLibrary` entries tagged `editorData.template === 'character'`.
    */
-  characters?: CharacterDefinition[]
+  playerActorId?: string
 
   /**
    * Optional editor-specific data
