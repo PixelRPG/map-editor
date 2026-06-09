@@ -151,7 +151,7 @@ export class DataView extends ResponsiveEditorView {
     this._import_sheet_button.set_sensitive(sensitive)
     this._import_tileset_button.set_sensitive(sensitive)
 
-    this._rebuild(this._sheets_group, this._sheetRows, model?.sheets ?? [], _('No sprite sheets yet.'))
+    this._rebuild(this._sheets_group, this._sheetRows, model?.sheets ?? [], _('No appearances yet.'))
     this._rebuild(this._tilesets_group, this._tilesetRows, model?.tilesets ?? [], _('No tilesets yet.'))
   }
 

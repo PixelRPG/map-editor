@@ -183,7 +183,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
    */
   private _applyKind(): void {
     const isCharacter = this._kind === 'character'
-    this.set_title(isCharacter ? _('Import sprite sheet') : _('Import tileset'))
+    this.set_title(isCharacter ? _('Import appearance') : _('Import tileset'))
     this._size_group.set_title(isCharacter ? _('Sprite size') : _('Tile size'))
     this._size_group.set_description(
       isCharacter
@@ -261,7 +261,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
 
   /** Open a native file picker filtered to images; load the pick into a texture. */
   private _chooseImage(): void {
-    const title = this._kind === 'character' ? _('Choose sprite sheet image') : _('Choose tileset image')
+    const title = this._kind === 'character' ? _('Choose appearance image') : _('Choose tileset image')
     const dialog = new Gtk.FileDialog({ title, modal: true })
     const filter = new Gtk.FileFilter()
     filter.set_name(_('Images'))

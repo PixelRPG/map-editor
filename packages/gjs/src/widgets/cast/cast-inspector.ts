@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
+import { gettext as _ } from 'gettext'
 
 import Template from './cast-inspector.blp'
 
@@ -29,6 +30,7 @@ export class CastInspector extends Adw.Bin {
   declare _duration_group: Adw.PreferencesGroup
   declare _name_row: Adw.EntryRow
   declare _sheet_row: Adw.ComboRow
+  declare _edit_appearance_row: Adw.ActionRow
   declare _player_row: Adw.SwitchRow
   declare _speed_row: Adw.SpinRow
   declare _sheet_name_row: Adw.EntryRow
@@ -53,6 +55,7 @@ export class CastInspector extends Adw.Bin {
           'duration_group',
           'name_row',
           'sheet_row',
+          'edit_appearance_row',
           'player_row',
           'speed_row',
           'sheet_name_row',
@@ -68,6 +71,9 @@ export class CastInspector extends Adw.Bin {
           // The sheet's display name was edited (sheet mode). Payload is
           // the new name; the host renames + re-persists the sheet.
           'sheet-renamed': { param_types: [GObject.TYPE_STRING] },
+          // The "Edit appearance" deep-link row was activated (character
+          // mode). The host drills into the appearance's detail page.
+          'edit-appearance-requested': {},
         },
       },
       CastInspector,
@@ -90,6 +96,15 @@ export class CastInspector extends Adw.Bin {
     this._props_group.set_visible(mode === 'character')
     this._sheet_group.set_visible(mode === 'sheet')
     this._duration_group.set_visible(mode === 'sheet')
+  }
+
+  /**
+   * Set the "Edit appearance" row's subtitle to the share count —
+   * "Used by N characters" tells the user an animation edit affects
+   * every character wearing this appearance.
+   */
+  setAppearanceUsage(count: number): void {
+    this._edit_appearance_row.set_subtitle(count === 1 ? _('Used by 1 character') : _(`Used by ${count} characters`))
   }
 
   /** Populate the sheet-mode name field (sheet detail). */
@@ -173,6 +188,9 @@ export class CastInspector extends Adw.Bin {
       const idx = this._sheet_row.get_selected()
       const id = idx >= 0 && idx < this._sheetIds.length ? this._sheetIds[idx] : null
       if (id) this.emit('sheet-changed', id)
+    })
+    this._edit_appearance_row.connect('activated', () => {
+      this.emit('edit-appearance-requested')
     })
     // `apply` (button / Enter), not `changed` — commit the rename once
     // rather than on every keystroke (each commit re-persists + refreshes).

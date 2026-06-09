@@ -150,7 +150,7 @@ Each rung is the same substance (components on one entity model) — no cliff wh
 
 | # | Scope | Status |
 |---|---|---|
-| A | **UI/naming, no schema break** — "Sprite sheets" → "Appearances" (labels only); deep-link "Edit appearance →" (+ "used by N") from the character detail. Relocating the animation-editor page into the Library view is *not* cheap (it lives in the Cast navigation) — that rides Phase B/C's view work. | **planned** (can start anytime) |
+| A | **UI/naming, no schema break** — "Sprite sheets" → "Appearances" (labels only, incl. Data view + import dialog); deep-link "Edit appearance" row (+ "Used by N characters") from the character detail to the appearance editor. Relocating the animation-editor page into the Library view rides Phase B/C's view work. | **landed** |
 | B | **Composition refactor (engine)** — `EntityDefinition.components[]` + registry; `ObjectSpawnSystem` kind-switch → registry walk; `ObjectProperties` union + `blocking` field dissolve into component data; `Visual` union + appearance-driven animation component (the existing object-system open question); migrate `GameProjectData.characters[]` + `objectLibrary[]` via `scripts/migrate-to-entity-components.mjs` across `games/*`; delete `CharacterDefinition` + `ObjectKind`; validators reject unregistered component types. | **planned** |
 | C | **Object-system editor UX on the new model** — library mode, object tool, generated inspectors (from component schemas), Cast view rebased onto templates. | **planned** |
 | D | **States** — `EntityState` + `StateSystem` + flags vocabulary + state UI. | **planned** |

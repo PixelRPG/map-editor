@@ -19,8 +19,22 @@ template $PixelRpgCastInspector : Adw.Bin {
       }
 
       Adw.ComboRow sheet_row {
-        title: _("Sprite sheet");
+        title: _("Appearance");
         subtitle: _("Defines the look + the available animations.");
+      }
+
+      // Deep-link to the selected appearance's editor (animations live on
+      // the appearance asset, shared by every character wearing it). The
+      // subtitle shows how many characters share it.
+      Adw.ActionRow edit_appearance_row {
+        title: _("Edit appearance");
+        activatable: true;
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
       }
 
       Adw.SwitchRow player_row {
@@ -41,7 +55,7 @@ template $PixelRpgCastInspector : Adw.Bin {
     }
 
     Adw.PreferencesGroup sheet_group {
-      title: _("Sprite sheet");
+      title: _("Appearance");
 
       // Commit on the apply button / Enter (not per-keystroke) — a rename
       // re-persists + re-renders the galleries, so we want one commit.
