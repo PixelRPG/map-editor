@@ -1,7 +1,6 @@
 # Editor Architecture — GTK View, ECS Model+Controller
 
-> Status: **active** — Phases 1–5 landed; the ECS model is also the basis for external control (D-Bus/MCP).
-> Last meaningful change: 2026-06-06.
+> Status: tracked in the [phase table](#where-this-is-implemented) — the single source of truth for what's landed vs planned. The ECS model is also the basis for external control (D-Bus/MCP).
 
 The map editor runs the same Excalibur ECS world that the game runtime uses. Rather than maintaining two parallel state representations — editor state in widget instance fields, runtime state in ECS components — **all session state lives in components on a session-singleton entity in the engine's world**. GTK widgets become thin, subscribing views.
 

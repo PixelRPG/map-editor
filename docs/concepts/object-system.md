@@ -1,11 +1,12 @@
 # Object System
 
-> Status: **planning** — schema agreed, implementation not started.
-> Last meaningful change: 2026-05-22.
+> Status: tracked in the [implementation phases](#implementation-phases) table — the single source of truth for what's landed vs pending.
 
 The PixelRPG editor models **tiles**, **NPCs**, **items**, **teleports**, **spawn points**, **events**, and **collider zones** under one unified concept: the *Definition / Placement* split, with Excalibur ECS as the runtime substrate.
 
 This document is the source of truth for the data model + ECS layout. When schema or system responsibilities change, update this file in the same commit.
+
+> **Composition layer superseded (decided 2026-06-09):** the data-model sections below (`ObjectKind`, the kind-discriminated `ObjectProperties` union, the `kind`-switch in `ObjectSpawnSystem`) describe the **shipped prototype** and stay accurate until the refactor lands — but the agreed **target model** replaces them with explicit `components[]` on entity definitions + a component registry + editor templates, and folds the Cast view's "Characters"/"Sprite sheets" in (visuals generalise to `Visual = SpriteRef | AppearanceRef`; the "animated objects" open question below is part of that work). See [`entity-and-appearance-model.md`](entity-and-appearance-model.md) — phases tracked there. Everything else in this doc (placements + override semantics, tile properties, layers/z-order, systems, event bus) carries over unchanged. Do **not** build the pending editor UX (library mode, object tool) on the kind model — it would be built twice.
 
 ## Why this exists
 
@@ -343,11 +344,13 @@ These citations update as the work lands. Anything referenced here must exist in
 - `packages/engine/src/format/{GameProjectFormat,MapFormat,SpriteSetFormat}.ts` — validators accept new fields, reject malformed shapes, catch orphaned layer refs + duplicate ids
 - `packages/engine/src/types/data/object-system.test.ts`, `packages/engine/src/format/object-system-validation.test.ts` — vitest coverage
 
-**Pending phases:**
+**Phases 2–7 — landed** (paths corrected in the 2026-06-09 docs audit; this block had drifted while the phases table above was already accurate):
 - Migration script: `scripts/migrate-objects-and-teleports.mjs`
-- Components: `packages/engine/src/components/` (one file per component)
-- Systems: `packages/engine/src/systems/`
-- Editor UI: `apps/maker-gjs/src/widgets/` + `packages/gjs/src/widgets/editor/`
+- Components: `packages/engine/src/components/` — `tile-transform`, `sprite-ref`, `trigger`, `collision`, `teleport`, `item`, `npc`, `spawn-point`, `custom-data`, `placement-id` (one file per component)
+- Systems: `packages/engine/src/systems/` — `object-spawn.system.ts`, `trigger.system.ts`, `teleport.system.ts`, `item-pickup.system.ts`, `walk-on-tile.system.ts`, player spawn handling in `player.system.ts`
+- Editor UI (read-only Objects inspector, PR 7): `apps/maker-gjs/src/widgets/`
+
+**Still pending:** library mode + object-tool drag-to-place (tracked in `TODO.md`) — to be built on the [entity-composition target model](entity-and-appearance-model.md), not the kind model.
 
 ## What's NOT on the table
 
