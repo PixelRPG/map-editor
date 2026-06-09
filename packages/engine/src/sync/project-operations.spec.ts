@@ -9,6 +9,8 @@ import {
   CHARACTER_REMOVE_KIND,
   CHARACTER_UPSERT_KIND,
   chunkSpriteSetAdd,
+  chunkSpriteSetUpdate,
+  ChunkReassembler,
   createCharacterRemoveOp,
   createCharacterUpsertOp,
   createSpriteSetRemoveOp,
@@ -17,7 +19,10 @@ import {
   type SpriteSetAddChunkOp,
   type SpriteSetAddPayload,
   SpriteSetAddReassembler,
+  type SpriteSetUpdateChunkOp,
+  type SpriteSetUpdatePayload,
   SPRITESET_REMOVE_KIND,
+  SPRITESET_UPDATE_CHUNK_KIND,
 } from './project-operations.ts'
 
 function spriteSetData(id: string, imageBase64Len = 8): SpriteSetData {
@@ -36,6 +41,10 @@ function spriteSetData(id: string, imageBase64Len = 8): SpriteSetData {
 
 function stamp(op: Omit<SpriteSetAddChunkOp, 'peerId' | 'seq'>, seq: number): SpriteSetAddChunkOp {
   return { ...op, peerId: 'host', seq } as SpriteSetAddChunkOp
+}
+
+function stampUpdate(op: Omit<SpriteSetUpdateChunkOp, 'peerId' | 'seq'>, seq: number): SpriteSetUpdateChunkOp {
+  return { ...op, peerId: 'host', seq } as SpriteSetUpdateChunkOp
 }
 
 function character(id: string, extra: Partial<CharacterDefinition> = {}): CharacterDefinition {
@@ -183,6 +192,37 @@ export default async () => {
       for (const c of reversed) result = re.accept(c) ?? result
       expect(result?.data.id).toBe('ooo')
       expect(result?.imageBase64.length).toBe(40 * 1024)
+    })
+  })
+
+  await describe('chunkSpriteSetUpdate + ChunkReassembler', async () => {
+    await it('round-trips a descriptor-only payload (no image bytes)', async () => {
+      const payload: SpriteSetUpdatePayload = { data: spriteSetData('hero') }
+      const chunks = chunkSpriteSetUpdate({ transferId: 'host:0', payload })
+      expect(chunks.length).toBe(1)
+      expect(chunks[0].kind).toBe(SPRITESET_UPDATE_CHUNK_KIND)
+      expect(isProjectOp(stampUpdate(chunks[0], 0))).toBe(true)
+
+      const re = new ChunkReassembler<SpriteSetUpdatePayload>()
+      const result = re.accept(stampUpdate(chunks[0], 0))
+      expect(result).not.toBeNull()
+      expect(result?.data.id).toBe('hero')
+      // No image bytes ride along — only the descriptor.
+      expect((result as unknown as { imageBase64?: string }).imageBase64).toBeUndefined()
+    })
+
+    await it('splits a large descriptor into many chunks + reassembles', async () => {
+      // A fat descriptor (many sprites) forces >1 chunk (16 KiB budget each).
+      const big = spriteSetData('big')
+      big.sprites = Array.from({ length: 4000 }, (_v, i) => ({ id: i, col: i % 32, row: Math.floor(i / 32) }))
+      const chunks = chunkSpriteSetUpdate({ transferId: 'host:1', payload: { data: big } })
+      expect(chunks.length).toBeGreaterThan(1)
+
+      const re = new ChunkReassembler<SpriteSetUpdatePayload>()
+      let result: SpriteSetUpdatePayload | null = null
+      for (let i = 0; i < chunks.length; i++) result = re.accept(stampUpdate(chunks[i], i)) ?? result
+      expect(result?.data.id).toBe('big')
+      expect(result?.data.sprites.length).toBe(4000)
     })
   })
 

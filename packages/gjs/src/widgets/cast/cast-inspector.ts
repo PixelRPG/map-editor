@@ -25,11 +25,13 @@ export interface CastSheetChoice {
  */
 export class CastInspector extends Adw.Bin {
   declare _props_group: Adw.PreferencesGroup
+  declare _sheet_group: Adw.PreferencesGroup
   declare _duration_group: Adw.PreferencesGroup
   declare _name_row: Adw.EntryRow
   declare _sheet_row: Adw.ComboRow
   declare _player_row: Adw.SwitchRow
   declare _speed_row: Adw.SpinRow
+  declare _sheet_name_row: Adw.EntryRow
   declare _selected_anim_row: Adw.ActionRow
   declare _duration_row: Adw.SpinRow
 
@@ -47,11 +49,13 @@ export class CastInspector extends Adw.Bin {
         Template,
         InternalChildren: [
           'props_group',
+          'sheet_group',
           'duration_group',
           'name_row',
           'sheet_row',
           'player_row',
           'speed_row',
+          'sheet_name_row',
           'selected_anim_row',
           'duration_row',
         ],
@@ -61,6 +65,9 @@ export class CastInspector extends Adw.Bin {
           'speed-changed': { param_types: [GObject.TYPE_INT] },
           'duration-changed': { param_types: [GObject.TYPE_INT] },
           'sheet-changed': { param_types: [GObject.TYPE_STRING] },
+          // The sheet's display name was edited (sheet mode). Payload is
+          // the new name; the host renames + re-persists the sheet.
+          'sheet-renamed': { param_types: [GObject.TYPE_STRING] },
         },
       },
       CastInspector,
@@ -81,7 +88,18 @@ export class CastInspector extends Adw.Bin {
    */
   setMode(mode: 'character' | 'sheet'): void {
     this._props_group.set_visible(mode === 'character')
+    this._sheet_group.set_visible(mode === 'sheet')
     this._duration_group.set_visible(mode === 'sheet')
+  }
+
+  /** Populate the sheet-mode name field (sheet detail). */
+  setSheetName(name: string): void {
+    this._silentUpdate = true
+    try {
+      this._sheet_name_row.set_text(name)
+    } finally {
+      this._silentUpdate = false
+    }
   }
 
   /** Populate the sheet picker + select the character's current sheet. */
@@ -155,6 +173,12 @@ export class CastInspector extends Adw.Bin {
       const idx = this._sheet_row.get_selected()
       const id = idx >= 0 && idx < this._sheetIds.length ? this._sheetIds[idx] : null
       if (id) this.emit('sheet-changed', id)
+    })
+    // `apply` (button / Enter), not `changed` — commit the rename once
+    // rather than on every keystroke (each commit re-persists + refreshes).
+    this._sheet_name_row.connect('apply', () => {
+      if (this._silentUpdate) return
+      this.emit('sheet-renamed', this._sheet_name_row.get_text())
     })
     this._duration_row.connect('notify::value', () => {
       if (this._silentUpdate) return

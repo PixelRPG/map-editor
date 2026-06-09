@@ -127,6 +127,7 @@ export class CastView extends ResponsiveEditorView {
     | ((sheetId: string, originalId: string, animation: CharacterAnimation) => void)
     | null = null
   private _onDeleteAnimationRequested: ((sheetId: string, animId: string) => void) | null = null
+  private _onRenameSheetRequested: ((sheetId: string, name: string) => void) | null = null
   private _onDeleteCharacterRequested: ((charId: string) => void) | null = null
   private _onDeleteSheetRequested: ((sheetId: string) => void) | null = null
   private _onListSpriteSets: (() => SpriteSetChoice[]) | null = null
@@ -241,6 +242,9 @@ export class CastView extends ResponsiveEditorView {
       if (this._activeSheetId && this._activeAnimationId) {
         this._onSetDurationRequested?.(this._activeSheetId, this._activeAnimationId, ms)
       }
+    })
+    this.signals.connect(this._sheet_inspector, 'sheet-renamed', (_v: CastInspector, name: string) => {
+      if (this._activeSheetId) this._onRenameSheetRequested?.(this._activeSheetId, name)
     })
     this.signals.connect(this._anim_list, 'add-animation-requested', () => {
       this._presentAddAnimationDialog()
@@ -521,6 +525,7 @@ export class CastView extends ResponsiveEditorView {
     addAnimation: (sheetId: string, animation: CharacterAnimation) => void
     editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => void
     deleteAnimation: (sheetId: string, animId: string) => void
+    renameSheet: (sheetId: string, name: string) => void
     deleteCharacter: (charId: string) => void
     deleteSheet: (sheetId: string) => void
     listSpriteSets: () => SpriteSetChoice[]
@@ -536,6 +541,7 @@ export class CastView extends ResponsiveEditorView {
     this._onAddAnimationRequested = callbacks.addAnimation
     this._onEditAnimationRequested = callbacks.editAnimation
     this._onDeleteAnimationRequested = callbacks.deleteAnimation
+    this._onRenameSheetRequested = callbacks.renameSheet
     this._onDeleteCharacterRequested = callbacks.deleteCharacter
     this._onDeleteSheetRequested = callbacks.deleteSheet
     this._onListSpriteSets = callbacks.listSpriteSets
@@ -704,6 +710,7 @@ export class CastView extends ResponsiveEditorView {
     const sheet = this._activeSheetId ? (this._spriteSetsById.get(this._activeSheetId) ?? null) : null
     this._sheet_preview.setCharacter(synthetic, sheet)
     this._anim_list.setCharacter(synthetic, sheet)
+    this._sheet_inspector.setSheetName(synthetic?.name ?? '')
     this._activeAnimationId = null
     this._setActiveAnimation(this._sheet_preview.activeAnimationId)
   }

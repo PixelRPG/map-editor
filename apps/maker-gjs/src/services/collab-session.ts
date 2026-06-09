@@ -6,11 +6,15 @@ import type {
   SignallingTransport,
   SpriteSetAddChunkOp,
   SpriteSetAddPayload,
+  SpriteSetUpdateChunkOp,
+  SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 import {
   AwarenessManager,
   captureProjectSnapshot,
   chunkSpriteSetAdd,
+  chunkSpriteSetUpdate,
+  ChunkReassembler,
   isProjectOp,
   isSessionProtocolOp,
   type PeerRole,
@@ -21,6 +25,7 @@ import {
   SnapshotExchange,
   SPRITESET_ADD_CHUNK_KIND,
   SpriteSetAddReassembler,
+  SPRITESET_UPDATE_CHUNK_KIND,
 } from '@pixelrpg/engine'
 
 import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
@@ -153,6 +158,13 @@ export class CollabSession {
    * chunks of one transfer arrive.
    */
   public onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null = null
+  /**
+   * Sink for a completed sprite-set DESCRIPTOR update (rename / animation
+   * edit / tile-property change — no image bytes). Set by the maker so the
+   * CastController can overwrite the descriptor of a set it already has.
+   * Fed by a dedicated reassembler once all chunks of one transfer arrive.
+   */
+  public onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null = null
   private closed = false
   private engine: Engine | null = null
   private readonly peerId: string
@@ -161,6 +173,7 @@ export class CollabSession {
   private projectSeq = 0
   private transferCounter = 0
   private readonly spriteSetReassembler = new SpriteSetAddReassembler()
+  private readonly spriteSetUpdateReassembler = new ChunkReassembler<SpriteSetUpdatePayload>()
   private readonly subscriptions: Array<() => void> = []
 
   constructor(opts: CollabSessionOptions) {
@@ -231,6 +244,12 @@ export class CollabSession {
         if ((op as ProjectOp).kind === SPRITESET_ADD_CHUNK_KIND) {
           const payload = this.spriteSetReassembler.accept(op as SpriteSetAddChunkOp)
           if (payload) this.onSpriteSetAddReceived?.(payload)
+        } else if ((op as ProjectOp).kind === SPRITESET_UPDATE_CHUNK_KIND) {
+          // Descriptor-only updates (rename / animation / tile-prop) are
+          // also chunked — a fat tileset descriptor can exceed the SCTP
+          // single-send ceiling.
+          const payload = this.spriteSetUpdateReassembler.accept(op as SpriteSetUpdateChunkOp)
+          if (payload) this.onSpriteSetUpdateReceived?.(payload)
         } else {
           this.onProjectOpReceived?.(op as ProjectOp)
         }
@@ -411,6 +430,20 @@ export class CollabSession {
     }
   }
 
+  /**
+   * Broadcast a sprite-set DESCRIPTOR update (rename / animation edit /
+   * tile-property change) to peers — chunked like the add, but carrying
+   * only the descriptor (no image bytes; the image already exists on the
+   * peer). No-op once closed.
+   */
+  sendSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
+    if (this.closed) return
+    const transferId = `${this.peerId}:u${this.transferCounter++}`
+    for (const chunk of chunkSpriteSetUpdate({ transferId, payload })) {
+      this.peer.sendOp({ ...chunk, peerId: this.peerId, seq: this.projectSeq++ })
+    }
+  }
+
   /** Whether `attachEngine` has been called yet. */
   hasEngine(): boolean {
     return this.engine !== null
@@ -442,6 +475,7 @@ export class CollabSession {
     }
     this.subscriptions.length = 0
     this.spriteSetReassembler.clear()
+    this.spriteSetUpdateReassembler.clear()
     this.cursorRenderer?.close()
     this.cursorRenderer = null
     this.snapshotExchange.dispose()

@@ -137,6 +137,9 @@ export class TilesView extends ResponsiveEditorView {
           // the `SpriteSetImportResult`. The host routes it to the
           // shared sprite-set import path (copy + register + broadcast).
           'spriteset-imported': { param_types: [GObject.TYPE_JSOBJECT] },
+          // The user renamed a tileset — payload is its id + the new name.
+          // The host re-persists the descriptor + broadcasts the update.
+          'spriteset-rename-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
           // The user confirmed deleting a tileset — payload is its id.
           // The host removes the files + reference + broadcasts.
           'spriteset-delete-requested': { param_types: [GObject.TYPE_STRING] },
@@ -189,6 +192,9 @@ export class TilesView extends ResponsiveEditorView {
     this.signals.connect(this._tilesets_gallery, 'item-opened', (_v: CardGallery, id: string) => {
       this._setActiveSpriteSet(id)
       this._openDetail()
+    })
+    this.signals.connect(this._tilesets_gallery, 'rename-requested', (_v: CardGallery, id: string) => {
+      this._presentRenameTileset(id)
     })
     this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteTileset(id)
@@ -366,6 +372,7 @@ export class TilesView extends ResponsiveEditorView {
       paintable: entry.gdk?.createSheetThumbnail() ?? null,
       fallbackIcon: 'view-grid-symbolic',
       deletable: !isBuiltInSpriteSet(entry.id),
+      renamable: !isBuiltInSpriteSet(entry.id),
     }
   }
 
@@ -469,6 +476,30 @@ export class TilesView extends ResponsiveEditorView {
     const def: SpriteDataSet | undefined = active.resource.data?.sprites.find((s) => s.id === this._selectedSpriteId)
     const sprite = active.gdk?.getSprite(this._selectedSpriteId)
     this._inspector.setSprite(def ?? null, sprite?.createPaintable() ?? null)
+  }
+
+  /**
+   * Prompt for a new display name for a tileset, then emit
+   * `spriteset-rename-requested` (id + name) so the host re-persists the
+   * descriptor + broadcasts the update over collab. Built-ins (no project
+   * files) aren't renamable — their cards don't offer the menu item.
+   */
+  private _presentRenameTileset(id: string): void {
+    const entry = this._spriteSets.find((s) => s.id === id)
+    if (!entry || isBuiltInSpriteSet(id)) return
+    const currentName = entry.resource.data?.name ?? id
+    const field = new Gtk.Entry({ text: currentName, activatesDefault: true })
+    const dialog = new Adw.AlertDialog({ heading: _('Rename tileset'), extraChild: field })
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.add_response('rename', _('Rename'))
+    dialog.set_response_appearance('rename', Adw.ResponseAppearance.SUGGESTED)
+    dialog.set_default_response('rename')
+    dialog.set_close_response('cancel')
+    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+      const name = field.get_text().trim()
+      if (response === 'rename' && name) this.emit('spriteset-rename-requested', id, name)
+    })
+    dialog.present(this)
   }
 
   /**
