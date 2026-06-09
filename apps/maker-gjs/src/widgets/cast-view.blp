@@ -181,7 +181,7 @@ template $CastView : $PixelRpgResponsiveEditorView {
                       }
 
                       Gtk.Label {
-                        label: _("Heroes and NPCs. Each picks a sprite sheet (its look + animations); the one marked player spawns at the map's player spawn-point.");
+                        label: _("Heroes and NPCs. Each picks an appearance (its look + animations); the one marked player spawns at the map's player spawn-point.");
                         halign: start;
                         wrap: true;
                         xalign: 0;
@@ -200,7 +200,7 @@ template $CastView : $PixelRpgResponsiveEditorView {
 
               Adw.ViewStackPage {
                 name: "sheets";
-                title: _("Sprite sheets");
+                title: _("Appearances");
                 icon-name: "image-x-generic-symbolic";
 
                 child: Gtk.ScrolledWindow {
@@ -225,7 +225,7 @@ template $CastView : $PixelRpgResponsiveEditorView {
                         spacing: 8;
 
                         Gtk.Label {
-                          label: _("Sprite sheets");
+                          label: _("Appearances");
                           halign: start;
                           hexpand: true;
                           styles ["title-2"]
@@ -234,14 +234,14 @@ template $CastView : $PixelRpgResponsiveEditorView {
                         Gtk.Button new_sheet_button {
                           icon-name: "list-add-symbolic";
                           action-name: "win.new-spriteset";
-                          tooltip-text: _("Import a sprite sheet");
+                          tooltip-text: _("Import an appearance");
                           valign: center;
                           styles ["flat", "circular"]
                         }
                       }
 
                       Gtk.Label {
-                        label: _("Animation sheets used by characters. Open one to edit its animations; several characters can share a sheet.");
+                        label: _("Appearances are the animation sheets characters wear. Open one to edit its animations; several characters can share an appearance.");
                         halign: start;
                         wrap: true;
                         xalign: 0;
@@ -249,9 +249,9 @@ template $CastView : $PixelRpgResponsiveEditorView {
                       }
 
                       $PixelRpgCardGallery sheets_gallery {
-                        empty-title: _("No sprite sheets yet. Import one to animate your characters.");
+                        empty-title: _("No appearances yet. Import one to animate your characters.");
                         empty-icon: "image-x-generic-symbolic";
-                        delete-tooltip: _("Delete sprite sheet");
+                        delete-tooltip: _("Delete appearance");
                       }
                     };
                   };
@@ -318,7 +318,7 @@ template $CastView : $PixelRpgResponsiveEditorView {
       // list), stacked + page-scrolled on phone.
       Adw.NavigationPage sheet_detail_page {
         tag: "sheet-detail";
-        title: _("Sprite sheet");
+        title: _("Appearance");
 
         child: Adw.ToolbarView {
           top-bar-style: flat;

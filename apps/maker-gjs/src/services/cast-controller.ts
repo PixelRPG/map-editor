@@ -741,7 +741,7 @@ export class CastController {
     const projectDir = GLib.path_get_dirname(resource.path)
     const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${spriteSetId}.json`])
     if (!writeTextFile(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
-      this.onToast(_('Could not save the sprite sheet'))
+      this.onToast(_('Could not save the appearance'))
     }
   }
 

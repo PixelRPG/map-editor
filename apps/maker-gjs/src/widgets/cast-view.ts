@@ -48,15 +48,16 @@ export namespace CastView {
  * `Adw.NavigationView`:
  *
  * - **Characters** — every hero / NPC as a `CardGallery` card. A
- *   character just *picks* a sprite sheet (its look + animations); the
+ *   character just *picks* an appearance (its look + animations); the
  *   detail page is identity-only: an animated `CharacterPreview` + the
- *   `CastInspector` in `character` mode (name, sheet picker, player flag,
- *   speed).
- * - **Sprite sheets** — every character-kind sheet as a card. A sheet
- *   OWNS its animations (shared by every character using it), so the
- *   animation editor lives here: the sheet detail has a `CharacterPreview`
- *   + the `AnimationList` + the `CastInspector` in `sheet` mode (selected-
- *   animation duration), all keyed by `_activeSheetId`.
+ *   `CastInspector` in `character` mode (name, appearance picker, player
+ *   flag, speed, "Edit appearance" deep-link).
+ * - **Appearances** (user-facing term; internally still sprite sheets /
+ *   `SpriteSetData{kind:'character'}`) — every character-kind sheet as a
+ *   card. An appearance OWNS its animations (shared by every character
+ *   wearing it), so the animation editor lives here: the sheet detail has
+ *   a `CharacterPreview` + the `AnimationList` + the `CastInspector` in
+ *   `sheet` mode (selected-animation duration), all keyed by `_activeSheetId`.
  *
  * The `ModeRail` (left navigation) is always present; this view's
  * `mode-changed` signal forwards to the application window to switch
@@ -222,6 +223,12 @@ export class CastView extends ResponsiveEditorView {
     })
     this.signals.connect(this._inspector, 'sheet-changed', (_v: CastInspector, sheetId: string) => {
       if (this._activeCharacterId) this._onChangeSheetRequested?.(this._activeCharacterId, sheetId)
+    })
+    // Deep-link from the character detail into its appearance's editor —
+    // animations live on the shared appearance asset, not the character.
+    this.signals.connect(this._inspector, 'edit-appearance-requested', () => {
+      const character = this._currentCharacter()
+      if (character) this.focusSheet(character.spriteSetId)
     })
 
     // ── Sheet detail: bidirectional active-animation sync ──────────
@@ -708,6 +715,10 @@ export class CastView extends ResponsiveEditorView {
     this._preview.setCharacter(character, spriteSet)
     this._inspector.setCharacter(character)
     this._inspector.setSheets(this._sheets, character?.spriteSetId ?? null)
+    // Share count for the "Edit appearance" deep-link — an animation edit
+    // there affects every character wearing the same appearance.
+    const usage = character ? this._characters.filter((c) => c.spriteSetId === character.spriteSetId).length : 0
+    this._inspector.setAppearanceUsage(usage)
     this._refreshQuickView(character, spriteSet)
   }
 
@@ -837,7 +848,7 @@ export class CastView extends ResponsiveEditorView {
     const sheet = this._sheets.find((s) => s.id === id)
     if (!sheet) return
     const dialog = new Adw.AlertDialog({
-      heading: _('Delete sprite sheet?'),
+      heading: _('Delete appearance?'),
       body: _(
         `“${sheet.name}” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone.`,
       ),

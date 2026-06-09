@@ -85,17 +85,17 @@ template $PixelRpgNewCharacterDialog : Adw.Dialog {
 
           Adw.PreferencesGroup {
             title: _("Appearance");
-            description: _("Pick an existing sprite sheet, or import a new image.");
+            description: _("Pick an existing appearance, or import a new image.");
 
             header-suffix: Gtk.Button import_button {
               valign: center;
               icon-name: "list-add-symbolic";
-              tooltip-text: _("Import a new sprite sheet");
+              tooltip-text: _("Import a new appearance");
               styles ["flat", "circular"]
             };
 
             Adw.ComboRow spriteset_row {
-              title: _("Sprite sheet");
+              title: _("Appearance");
             }
           }
 
