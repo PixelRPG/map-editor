@@ -18,6 +18,11 @@ template $PixelRpgCastInspector : Adw.Bin {
         title: _("Name");
       }
 
+      Adw.ComboRow sheet_row {
+        title: _("Sprite sheet");
+        subtitle: _("Defines the look + the available animations.");
+      }
+
       Adw.SwitchRow player_row {
         title: _("Player character");
         subtitle: _("Spawns at the map's player spawn-point and obeys keyboard input.");

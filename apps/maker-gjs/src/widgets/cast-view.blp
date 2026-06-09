@@ -112,9 +112,13 @@ template $CastView : $PixelRpgResponsiveEditorView {
 
             [top]
             Adw.HeaderBar {
-              show-title: false;
               show-start-title-buttons: false;
               show-end-title-buttons: false;
+
+              title-widget: Adw.ViewSwitcher {
+                policy: wide;
+                stack: section_stack;
+              };
 
               [start]
               Gtk.ToggleButton library_toggle {
@@ -131,64 +135,128 @@ template $CastView : $PixelRpgResponsiveEditorView {
               }
             }
 
-            content: Gtk.ScrolledWindow {
-              hexpand: true;
-              vexpand: true;
-              hscrollbar-policy: never;
+            // Two sections: Characters (each picks a sheet) + Sprite sheets
+            // (each owns its animations). Switched via the header switcher.
+            content: Adw.ViewStack section_stack {
+              Adw.ViewStackPage {
+                name: "characters";
+                title: _("Characters");
+                icon-name: "people-symbolic";
 
-              child: Adw.Clamp {
-                maximum-size: 1000;
-                tightening-threshold: 600;
+                child: Gtk.ScrolledWindow {
+                  hexpand: true;
+                  vexpand: true;
+                  hscrollbar-policy: never;
 
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 16;
-                  margin-top: 24;
-                  margin-bottom: 24;
-                  margin-start: 24;
-                  margin-end: 24;
+                  child: Adw.Clamp {
+                    maximum-size: 1000;
+                    tightening-threshold: 600;
 
-                  Gtk.Label header_label {
-                    label: _("Cast");
-                    halign: start;
-                    styles ["title-1"]
-                  }
+                    child: Gtk.Box {
+                      orientation: vertical;
+                      spacing: 16;
+                      margin-top: 24;
+                      margin-bottom: 24;
+                      margin-start: 24;
+                      margin-end: 24;
 
-                  Gtk.Box gallery_header {
-                    orientation: horizontal;
-                    spacing: 8;
+                      Gtk.Box {
+                        orientation: horizontal;
+                        spacing: 8;
 
-                    Gtk.Label {
-                      label: _("Characters");
-                      halign: start;
-                      hexpand: true;
-                      styles ["heading"]
-                    }
+                        Gtk.Label {
+                          label: _("Characters");
+                          halign: start;
+                          hexpand: true;
+                          styles ["title-2"]
+                        }
 
-                    Gtk.Button new_character_button {
-                      icon-name: "list-add-symbolic";
-                      action-name: "win.new-character";
-                      tooltip-text: _("Add a new character");
-                      valign: center;
-                      styles ["flat", "circular"]
-                    }
-                  }
+                        Gtk.Button new_character_button {
+                          icon-name: "list-add-symbolic";
+                          action-name: "win.new-character";
+                          tooltip-text: _("Add a new character");
+                          valign: center;
+                          styles ["flat", "circular"]
+                        }
+                      }
 
-                  Gtk.Label gallery_description {
-                    label: _("Heroes and NPCs in this project. The character marked as player spawns at the map's player spawn-point. Select one to see its details; open it to edit.");
-                    halign: start;
-                    wrap: true;
-                    xalign: 0;
-                    styles ["caption", "dim-label"]
-                  }
+                      Gtk.Label {
+                        label: _("Heroes and NPCs. Each picks a sprite sheet (its look + animations); the one marked player spawns at the map's player spawn-point.");
+                        halign: start;
+                        wrap: true;
+                        xalign: 0;
+                        styles ["caption", "dim-label"]
+                      }
 
-                  $PixelRpgCardGallery characters_gallery {
-                    empty-title: _("No characters yet. Add a hero or an NPC to get started.");
-                    empty-icon: "people-symbolic";
-                    delete-tooltip: _("Delete character");
-                  }
+                      $PixelRpgCardGallery characters_gallery {
+                        empty-title: _("No characters yet. Add a hero or an NPC to get started.");
+                        empty-icon: "people-symbolic";
+                        delete-tooltip: _("Delete character");
+                      }
+                    };
+                  };
                 };
-              };
+              }
+
+              Adw.ViewStackPage {
+                name: "sheets";
+                title: _("Sprite sheets");
+                icon-name: "image-x-generic-symbolic";
+
+                child: Gtk.ScrolledWindow {
+                  hexpand: true;
+                  vexpand: true;
+                  hscrollbar-policy: never;
+
+                  child: Adw.Clamp {
+                    maximum-size: 1000;
+                    tightening-threshold: 600;
+
+                    child: Gtk.Box {
+                      orientation: vertical;
+                      spacing: 16;
+                      margin-top: 24;
+                      margin-bottom: 24;
+                      margin-start: 24;
+                      margin-end: 24;
+
+                      Gtk.Box {
+                        orientation: horizontal;
+                        spacing: 8;
+
+                        Gtk.Label {
+                          label: _("Sprite sheets");
+                          halign: start;
+                          hexpand: true;
+                          styles ["title-2"]
+                        }
+
+                        Gtk.Button new_sheet_button {
+                          icon-name: "list-add-symbolic";
+                          action-name: "win.new-spriteset";
+                          tooltip-text: _("Import a sprite sheet");
+                          valign: center;
+                          styles ["flat", "circular"]
+                        }
+                      }
+
+                      Gtk.Label {
+                        label: _("Animation sheets used by characters. Open one to edit its animations; several characters can share a sheet.");
+                        halign: start;
+                        wrap: true;
+                        xalign: 0;
+                        styles ["caption", "dim-label"]
+                      }
+
+                      $PixelRpgCardGallery sheets_gallery {
+                        empty-title: _("No sprite sheets yet. Import one to animate your characters.");
+                        empty-icon: "image-x-generic-symbolic";
+                        delete-tooltip: _("Delete sprite sheet");
+                      }
+                    };
+                  };
+                };
+              }
             };
           };
         };
@@ -213,16 +281,54 @@ template $CastView : $PixelRpgResponsiveEditorView {
             show-end-title-buttons: false;
           }
 
-          // The whole page scrolls (the animation list shows all its
-          // rows inline, no nested scroll). Left column / top: preview +
-          // Character properties. Right column / below: the Animations
-          // list. So Character sits under the preview on both layouts,
-          // and the properties come ABOVE the animations on phone.
-          //
-          // The BreakpointBin wraps the ScrolledWindow (NOT the other way
-          // round): it needs a fixed size from the content area to switch
-          // layouts — inside a scroller it gets unbounded height and the
-          // page then refuses to scroll.
+          // Identity only — animations live on the sheet (edited in the
+          // Sprite-sheet detail). Just preview + the Character inspector.
+          content: Gtk.ScrolledWindow {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: never;
+
+            child: Adw.Clamp {
+              maximum-size: 560;
+              tightening-threshold: 400;
+
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 16;
+                margin-top: 24;
+                margin-bottom: 24;
+                margin-start: 24;
+                margin-end: 24;
+
+                $PixelRpgCharacterPreview preview {
+                  halign: center;
+                }
+
+                $PixelRpgCastInspector inspector {}
+              };
+            };
+          };
+        };
+      }
+
+      // ── Sprite-sheet detail ───────────────────────────────────────
+      // The sheet's animation editor: preview + the Animations list + the
+      // selected-animation duration. Shared by every character that uses
+      // this sheet. Two-column on desktop (preview/duration beside the
+      // list), stacked + page-scrolled on phone.
+      Adw.NavigationPage sheet_detail_page {
+        tag: "sheet-detail";
+        title: _("Sprite sheet");
+
+        child: Adw.ToolbarView {
+          top-bar-style: flat;
+
+          [top]
+          Adw.HeaderBar {
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
+          }
+
           content: Adw.BreakpointBin {
             width-request: 1;
             height-request: 1;
@@ -231,10 +337,10 @@ template $CastView : $PixelRpgResponsiveEditorView {
               condition ("min-width: 680sp")
 
               setters {
-                detail_box.orientation: horizontal;
-                detail_box.spacing: 24;
-                main_col.width-request: 320;
-                main_col.valign: start;
+                sheet_detail_box.orientation: horizontal;
+                sheet_detail_box.spacing: 24;
+                sheet_main_col.width-request: 320;
+                sheet_main_col.valign: start;
                 anim_list.hexpand: true;
                 anim_list.valign: start;
               }
@@ -249,7 +355,7 @@ template $CastView : $PixelRpgResponsiveEditorView {
                 maximum-size: 900;
                 tightening-threshold: 600;
 
-                child: Gtk.Box detail_box {
+                child: Gtk.Box sheet_detail_box {
                   orientation: vertical;
                   spacing: 24;
                   margin-top: 24;
@@ -257,15 +363,15 @@ template $CastView : $PixelRpgResponsiveEditorView {
                   margin-start: 24;
                   margin-end: 24;
 
-                  Gtk.Box main_col {
+                  Gtk.Box sheet_main_col {
                     orientation: vertical;
                     spacing: 16;
 
-                    $PixelRpgCharacterPreview preview {
+                    $PixelRpgCharacterPreview sheet_preview {
                       halign: center;
                     }
 
-                    $PixelRpgCastInspector inspector {}
+                    $PixelRpgCastInspector sheet_inspector {}
                   }
 
                   $PixelRpgAnimationList anim_list {
