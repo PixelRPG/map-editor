@@ -119,6 +119,26 @@ template $PixelRpgModeRail : Adw.Bin {
         }
       }
 
+      Adw.ActionRow row_objects {
+        title: _("Objects");
+        subtitle: _("NPCs, items, events");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'objects'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "view-grid-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
       Adw.ActionRow row_tiles {
         title: _("Tiles");
         subtitle: _("Tilesets and stamps");

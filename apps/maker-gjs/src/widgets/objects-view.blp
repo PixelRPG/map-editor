@@ -1,0 +1,121 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ObjectsView : $PixelRpgResponsiveEditorView {
+  // OverlaySplitView holds the ModeRail (left) for the view's lifetime;
+  // the content is an Adw.NavigationView master-detail: a GALLERY page
+  // listing every world-object definition, drilling into a DETAIL page
+  // with the generated all-components editor.
+  Adw.OverlaySplitView outer_split {
+    sidebar-position: start;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.7;
+    pin-sidebar: true;
+    collapsed: bind template.library-collapsed;
+    show-sidebar: bind template.show-library bidirectional;
+
+    sidebar: $PixelRpgModeRail mode_rail {
+      project-name: _("New Project");
+      project-tagline: _("Objects");
+    };
+
+    content: Adw.NavigationView nav {
+      // ── Gallery (master) ──────────────────────────────────────────
+      Adw.NavigationPage {
+        tag: "gallery";
+        title: _("Objects");
+
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {
+            show-title: false;
+
+            [end]
+            Gtk.Button new_object_button {
+              tooltip-text: _("New object");
+
+              child: Adw.ButtonContent {
+                icon-name: "list-add-symbolic";
+                label: _("New object");
+              };
+
+              styles ["suggested-action"]
+            }
+          }
+
+          content: Gtk.ScrolledWindow {
+            hscrollbar-policy: never;
+
+            child: Adw.Clamp {
+              maximum-size: 640;
+              margin-top: 18;
+              margin-bottom: 18;
+              margin-start: 12;
+              margin-end: 12;
+
+              child: Gtk.Stack list_stack {
+                Gtk.StackPage {
+                  name: "empty";
+
+                  child: Adw.StatusPage {
+                    icon-name: "view-grid-symbolic";
+                    title: _("No objects yet");
+                    description: _("Create reusable NPCs, items, teleports and events from a template.");
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "list";
+
+                  child: Gtk.ListBox objects_list {
+                    selection-mode: none;
+                    valign: start;
+
+                    styles ["boxed-list"]
+                  };
+                }
+              };
+            };
+          };
+        };
+      }
+
+      // ── Detail ────────────────────────────────────────────────────
+      Adw.NavigationPage detail_page {
+        tag: "detail";
+        title: _("Object");
+
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {
+            [end]
+            Gtk.Button delete_button {
+              tooltip-text: _("Delete object");
+              icon-name: "user-trash-symbolic";
+
+              styles ["flat"]
+            }
+          }
+
+          content: Gtk.ScrolledWindow {
+            hscrollbar-policy: never;
+
+            child: Adw.Clamp {
+              maximum-size: 640;
+              margin-top: 18;
+              margin-bottom: 18;
+              margin-start: 12;
+              margin-end: 12;
+
+              child: Gtk.Box detail_slot {
+                orientation: vertical;
+                spacing: 18;
+              };
+            };
+          };
+        };
+      }
+    };
+  }
+}
