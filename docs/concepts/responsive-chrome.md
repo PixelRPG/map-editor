@@ -1,8 +1,6 @@
 # Responsive Chrome — Sidebars, Breakpoints, Floating OSDs
 
-> Status: **landed** — describes the chrome architecture as it
-> ships in `apps/maker-gjs` today (PRs #48 – #64).
-> Last meaningful change: 2026-06-04.
+> Status: tracked in [implementation status](#implementation-status) — the single source of truth.
 
 The editor has three top-level views (welcome, atlas, scene-editor)
 and one window-level chrome system that has to render acceptably
@@ -504,6 +502,13 @@ dragging wouldn't be discoverable anyway.
   detach) instead. See the "Engine widget lifecycle" section
   above for the full lifecycle map and why GObject GC criticals
   rule out `vfunc_dispose` as well.
+
+## Implementation status
+
+| Scope | Status |
+|---|---|
+| Chrome architecture as described (breakpoints, sidebars, OSD pills, engine-resize handling) — ships in `apps/maker-gjs` | **landed** (PRs #48–#64) |
+| `FloatingTopBar` breakpoint thresholds re-measure once sidebar widths settle | follow-up, tracked in `TODO.md` |
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller

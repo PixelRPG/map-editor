@@ -1,16 +1,6 @@
 # Collaboration & Multiplayer — Op-Log with Host-Sequencer
 
-> Status: **active** — v1 editor Pair-Editing is LIVE. The op-log broadcast,
-> WebRTC `PeerSession`, LAN discovery, snapshot-on-join, awareness (cursors +
-> per-peer selection), and an in-process AI collaborator all ship and are
-> verified end-to-end (host paint → joiner sync; bidirectional cursors). Game
-> multiplayer (Phases 5–8) remains future. See also
-> [`ai-collaborator.md`](ai-collaborator.md).
-> Last meaningful change: 2026-06-08 (project-op channel now also carries
-> sprite-set/tileset DELETE — `__project/spriteset.remove`; cast + tiles share a
-> card-gallery master-detail UI with character/animation/tileset delete). Prior:
-> 2026-06-07 (project-op channel — cast/character edits AND sprite-set imports
-> sync live via `__project/*`, the latter chunked for the image bytes).
+> Status: tracked in the [phase plan](#phase-plan) — the single source of truth for what's landed vs planned. See also [`ai-collaborator.md`](ai-collaborator.md).
 
 The editor will eventually let multiple users edit the same project simultaneously ("collaborative editing"). The game will eventually support **split-screen** and **networked multiplayer**. Both flows are real-time multi-peer state synchronisation. This doc commits to **one unified mechanism** for both: an **Operation Log with a host-sequencer (Player 1)**.
 

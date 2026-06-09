@@ -1,14 +1,6 @@
 # AI Collaborator — the MCP/D-Bus assistant as a live in-editor peer
 
-> Status: **active** — Phases 1–5 landed, plus a generalised
-> **participants toolbar**. The in-process AI collaborator is complete
-> (presence + cursor, edit attribution, pause/stop, follow-cam, activation
-> toast) AND participates in networked collaboration (edits via the shared
-> op-log; cursor/presence relayed to remote peers). The bottom-left bar is
-> now a **roster switcher**: it lists every participant (the AI + each
-> networked human peer) and clicking a chip follows that participant with
-> the camera.
-> Last meaningful change: 2026-06-06.
+> Status: tracked in the [phases](#phases) section (per-item status markers) — the single source of truth for what's landed vs planned.
 
 The `org.pixelrpg.maker.Control` D-Bus interface + the MCP bridge (see
 [the orchestrator work in `TODO.md`]) started as a **developer** tool for
@@ -66,7 +58,7 @@ virtual peers.
 
 ## Phases
 
-1. **Presence + cursor (this).** `Engine` owns a lazily-created local
+1. **Presence + cursor (done).** `Engine` owns a lazily-created local
    `AwarenessManager` + `RemoteCursorRenderer` for virtual peers. Control:
    `SetAssistantCursor(tileX, tileY)`, `SetAssistantInfo(name, color)`,
    `HideAssistant`. Bridge tools: `assistant_cursor` / `assistant_info` /

@@ -1,7 +1,6 @@
 # Runtime Modes — Editor, Full Run, Live Run
 
-> Status: **planning** — design captured, no implementation yet.
-> Last meaningful change: 2026-05-22.
+> Status: tracked in the [phase tracker](#where-this-is-implemented) — the single source of truth for what's landed vs planned. (Naming note: the spawn-override marker shipped as `SpawnOverrideComponent`; early drafts called it `GhostSpawnComponent`.)
 
 The maker is **both** an editor and a runtime host. Three orthogonal modes — *editor active*, *runtime active*, *ghost spawn override* — compose to produce the user-visible "play modes". Inspired by Super Mario Maker's "edit ⇄ play seamlessly at the cursor's current tile" workflow.
 
@@ -23,15 +22,15 @@ For shipping, the same engine has to run in a **separate window** without the ed
 |---|---|
 | `EditorModeComponent` | Tool systems active — tile painter, object placer, selection, undo/redo. Inspector edits are committed to the in-memory project. |
 | `RuntimeModeComponent` | Game systems active — player movement, input bindings, trigger system *actually fires effects*, animations advance, audio plays. |
-| `GhostSpawnComponent` | The player is spawned at the component's `tileX/tileY` instead of the map's `kind: 'spawn-point'` placement. In-memory only — does **not** modify the project data. |
+| `SpawnOverrideComponent` | The player is spawned at the component's `tileX/tileY` instead of the map's `kind: 'spawn-point'` placement. In-memory only — does **not** modify the project data. |
 
 Combinations are first-class. Each user-facing button picks a marker set:
 
 | Button / action | Markers active | Result |
 |---|---|---|
 | Default (open editor) | `EditorMode` | Pure editor — tools work, nothing moves, triggers are visualised but don't execute |
-| **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `GhostSpawn{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. |
-| **Test run** (no edit) | `RuntimeMode` + `GhostSpawn` | Same in-editor window, but the floating top-bar's tool affordances are hidden and the inspector goes read-only — clean run-through. Esc / Stop → drops the runtime marker, back to editor. |
+| **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `SpawnOverride{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. |
+| **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the floating top-bar's tool affordances are hidden and the inspector goes read-only — clean run-through. Esc / Stop → drops the runtime marker, back to editor. |
 | **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + `kind: 'spawn-point'` placement. No editor chrome. This is what shipping looks like. |
 
 **Why marker components instead of an enum:** "Live Run" isn't a separate mode from "Editor" — it's `Editor && Runtime`. Modelling each as a separate boolean marker lets the systems independently observe their own concern without anyone owning a giant `Mode` enum that needs a switch statement everywhere.
@@ -40,22 +39,22 @@ Combinations are first-class. Each user-facing button picks a marker set:
 
 ### The session-singleton entity
 
-On scene activate, an `ex.Entity` named `'session-mode'` is added to the world. The mode markers (`EditorModeComponent`, `RuntimeModeComponent`, `GhostSpawnComponent`) live on this singleton. Adding/removing a component flips a mode.
+On scene activate, an `ex.Entity` named `'session-state'` is added to the world. The mode markers (`EditorModeComponent`, `RuntimeModeComponent`, `SpawnOverrideComponent`) live on this singleton. Adding/removing a component flips a mode.
 
 ```ts
 // Default state inside the maker
-const session = new ex.Entity({ name: 'session-mode' })
+const session = new ex.Entity({ name: 'session-state' })
 session.addComponent(new EditorModeComponent())
 scene.add(session)
 
 // User hits "Play here":
 const session = scene.world.queryManager.createQuery([EditorModeComponent]).entities[0]
 session.addComponent(new RuntimeModeComponent())
-session.addComponent(new GhostSpawnComponent(camera.tileX, camera.tileY))
+session.addComponent(new SpawnOverrideComponent(camera.tileX, camera.tileY))
 
 // User hits Stop:
 session.removeComponent(RuntimeModeComponent)
-session.removeComponent(GhostSpawnComponent)
+session.removeComponent(SpawnOverrideComponent)
 ```
 
 ### Systems gate themselves on session state
@@ -82,11 +81,11 @@ A tiny helper (`SessionMode.hasEditor(world)` / `hasRuntime(world)`) keeps the b
 
 ### Ghost spawn replaces the real spawn
 
-`PlayerSpawnSystem` already exists (PR 4). It picks up a new rule: if `GhostSpawnComponent` is present on the session singleton, prefer it over the map's `kind: 'spawn-point'` placement. Otherwise fall back to the existing behaviour.
+`PlayerSpawnSystem` already exists (PR 4). It picks up a new rule: if `SpawnOverrideComponent` is present on the session singleton, prefer it over the map's `kind: 'spawn-point'` placement. Otherwise fall back to the existing behaviour.
 
 ```ts
 // PlayerSpawnSystem.initialize
-const ghost = sessionEntity.get(GhostSpawnComponent)
+const ghost = sessionEntity.get(SpawnOverrideComponent)
 const spawn = ghost ?? findSpawnPointEntity(world)
 this.events.emit('player-spawned', spawn)
 ```
@@ -100,9 +99,9 @@ Transitions are user-driven and atomic. The maker UI owns them; the engine expos
 | User action | Component mutation | Side effect |
 |---|---|---|
 | Open project | Add `EditorMode` to session | Maker shows editor chrome |
-| Click "Play here" | Add `RuntimeMode` + `GhostSpawn{camera-focused tile}` | Player entity spawns at ghost, player-movement / trigger systems start firing effects |
-| Press Esc / click Stop | Remove `RuntimeMode` + `GhostSpawn` | Player entity despawns, world reverts to editor-only state |
-| Click "Test run" | Remove `EditorMode`, add `RuntimeMode` + `GhostSpawn` | Editor chrome hides, no painting; same window |
+| Click "Play here" | Add `RuntimeMode` + `SpawnOverride{camera-focused tile}` | Player entity spawns at ghost, player-movement / trigger systems start firing effects |
+| Press Esc / click Stop | Remove `RuntimeMode` + `SpawnOverride` | Player entity despawns, world reverts to editor-only state |
+| Click "Test run" | Remove `EditorMode`, add `RuntimeMode` + `SpawnOverride` | Editor chrome hides, no painting; same window |
 | Click "Launch game" | (new window opens, fresh session with `RuntimeMode` only) | Separate process / `Gtk.ApplicationWindow` with the engine fullscreen |
 
 Crucially: re-entering edit after live-run **doesn't undo gameplay state changes**. If the user opened a chest in live mode (`ItemPickupSystem` removed the entity), the chest stays gone for that session. To get a "fresh" runtime, the user removes + re-adds the `RuntimeMode` marker, which triggers a scene reload from the map data — that's the equivalent of Mario Maker's "reset" button.
@@ -113,7 +112,7 @@ The session-singleton lives **per scene** — when the user switches maps, the a
 
 - `EditorMode` is restored automatically (the user is still "in the editor" — that's a window-level state, not scene-level).
 - `RuntimeMode` is **not** restored. Switching scenes from inside Live Run drops you back into pure-editor on the new scene. If the user wants to play again, they hit "Play here" again on the new scene. Matches Mario-Maker behaviour where leaving a course always returns to edit mode.
-- `GhostSpawn` is not restored. The ghost was anchored to the previous scene's camera focus; on the new scene it makes no sense.
+- `SpawnOverride` is not restored. The ghost was anchored to the previous scene's camera focus; on the new scene it makes no sense.
 
 The app-level source of truth lives on `Application` (the GJS `Adw.Application` singleton) — `Application._editorActive: boolean` is the bit that determines whether `EditorMode` is added when constructing each `MapScene`. The maker mutates that bit when the user enters/exits the editor entirely (e.g. closes the project).
 
@@ -157,20 +156,19 @@ Out of scope for current implementation. Mentioned so the maker UI doesn't make 
 
 Phase tracker — fill in as PRs land. Anything cited here must exist in the tree at the cited path.
 
-**Phase 1 — Mode markers (planned)**:
+**Phase 1 — Mode markers (landed)**:
 - `packages/engine/src/components/editor-mode.component.ts`
 - `packages/engine/src/components/runtime-mode.component.ts`
-- `packages/engine/src/components/ghost-spawn.component.ts`
-- Session-singleton helper in `packages/engine/src/utils/session-mode.ts`
-- Existing systems gain a one-line guard against `hasEditorMode` / `hasRuntimeMode`
+- `packages/engine/src/components/spawn-override.component.ts`
+- Session-singleton helper in `packages/engine/src/utils/session-state.ts` (singleton entity name: `session-state`)
+- Systems gate on the markers (e.g. `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)`); `Engine.setRuntimeMode()` is the host-facing switch
 
-**Phase 2 — Maker controls (planned)**:
-- Headerbar "Play here" button → toggle session markers in the active `MapScene`
-- Stop / reset action
-- Hide editor chrome when `EditorMode` is absent
+**Phase 2 — Maker controls (landed)**:
+- Play / Stop wired through `win.play` in `apps/maker-gjs/src/widgets/application-window.ts` → toggles the session markers in the active `MapScene`
+- Editor chrome reacts to `EditorMode` presence
 
-**Phase 3 — `PlayerSpawnSystem` ghost-spawn handling (planned)**:
-- Update existing system to prefer `GhostSpawnComponent` when present
+**Phase 3 — `PlayerSpawnSystem` spawn-override handling (landed)**:
+- The spawn resolution prefers `SpawnOverrideComponent` when present (see `resolveSpawnTile` in `packages/engine/src/systems/player.system.ts`)
 
 **Phase 4 — Full-Run windowing (planned)**:
 - "Launch game" action opens a new `Gtk.ApplicationWindow` with a fresh engine instance (`RuntimeMode` only, no editor systems)
@@ -183,7 +181,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 
 - [`editor-architecture.md`](editor-architecture.md) — defines the session-singleton entity that hosts the mode markers, the `SessionState` subscription API the maker UI uses to react to mode changes, and the per-scene singleton lifetime that this doc references. Read first if you want to understand *how* mode changes propagate to the GTK widgets.
 - [`object-system.md`](object-system.md) — `TriggerSystem` and the kind-specific systems (teleport, item-pickup, walk-on-tile) gate themselves on `RuntimeModeComponent`. In pure editor mode they render placements but don't execute effects. In Live Run / Test Run / Full Run they fire normally.
-- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — Full Run with multiplayer is where the game op-log machinery activates. Player 1 hosts and the engine's per-tick state changes (player movement, trigger effects, item pickups) become broadcast ops. Live Run and Test Run share a single peer's simulation — they're not multiplayer-aware. Mode markers (`EditorMode` / `RuntimeMode` / `GhostSpawn`) are local-only and never replicate.
+- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — Full Run with multiplayer is where the game op-log machinery activates. Player 1 hosts and the engine's per-tick state changes (player movement, trigger effects, item pickups) become broadcast ops. Live Run and Test Run share a single peer's simulation — they're not multiplayer-aware. Mode markers (`EditorMode` / `RuntimeMode` / `SpawnOverride`) are local-only and never replicate.
 
 ## Open questions
 

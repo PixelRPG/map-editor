@@ -25,22 +25,24 @@ Rules:
 
 - **Update in the same commit** as the change. Don't leave the doc trailing.
 - **Delete decisively** when a concept is superseded. Don't keep "old approach" sections — that's what `git log` is for.
-- **Status header** at the top of each concept doc: `Status: planning | active | superseded`, plus the date of the last meaningful change.
+- **One status source per doc: the phase tracker.** Every doc carries exactly one phase/implementation tracker section (a phase table, or a phase list with per-item status). That section is the **single source of truth** for what's landed vs planned. The header contains **only a link** to it — never its own status word, never a phase summary, never a "last changed" date (`git log -- <file>` is the date source). Rationale: the 2026-06-09 audit found every drift was a header or index row lying while the tracker in the same file was accurate — duplicated status is where drift lives.
 - **Cross-link**: every concept doc cites the package(s) and file path(s) where the concept is implemented. When you refactor, update the citations.
 - **One concept per file.** If two concepts are getting tangled, split them.
-- **In-doc trackers are TODOs.** When a doc carries a rollout / phase table, an "Open questions" section, or a "Where this is implemented" list, those are first-class tasks — update them in the same commit that lands the implementation. Flip `planned → landed`, strike resolved open questions, refresh citations to point at real files. The same rule that governs the workspace-level `TODO.md` (no drift, update in the same commit, no "done" archive) applies inside concept docs.
+- **In-doc trackers are TODOs.** The phase tracker, "Open questions", and "Where this is implemented" citations are first-class tasks — update them in the same commit that lands the implementation. Flip `planned → landed`, strike resolved open questions, refresh citations to point at real files. The same rule that governs the workspace-level `TODO.md` (no drift, update in the same commit, no "done" archive) applies inside concept docs.
 
 ## Index
 
-Ordered by dependency — read top-to-bottom for the cleanest mental sequence. Each doc builds on the ones above it.
+Ordered by dependency — read top-to-bottom for the cleanest mental sequence. Each doc builds on the ones above it. The index deliberately carries **no status column** — each doc's phase tracker is the single source of truth for what's landed (see Maintenance rules).
 
-| File | Status | What it covers |
-|---|---|---|
-| [`editor-architecture.md`](editor-architecture.md) | planning | **Foundation** — Three-layer split (GTK View, ECS Components as Model, ECS Systems as Controller), the session-singleton entity, the `SessionState` subscription API. Everything else lives on top. |
-| [`responsive-chrome.md`](responsive-chrome.md) | landed | **View-layer chrome** — Breakpoints (mobile / tablet / desktop), sidebar layout patterns, floating-OSD vs regular-headerbar treatment, size-propagation hazards, engine-resize handling. The "how does the UI fit on every screen" map. |
-| [`runtime-modes.md`](runtime-modes.md) | planning | **Mode markers** — `EditorMode` / `RuntimeMode` / `GhostSpawn` components on the session-singleton. Composes the Editor / Full Run / Live Run / Test Run user-visible modes, Mario-Maker-inspired. |
-| [`object-system.md`](object-system.md) | planning | **What's in the world** — Definition/Placement model for tiles, objects, NPCs, items, teleports, spawn points. Maps placements to ECS entities via `ObjectSpawnSystem`. |
-| [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) | planning | **Multi-peer sync** — Op-Log with Host-Sequencer (Player 1) for both collaborative editing and networked multiplayer. Single mechanism, two op vocabularies. Solo edits work locally; collab requires a host. |
+| File | What it covers |
+|---|---|
+| [`editor-architecture.md`](editor-architecture.md) | **Foundation** — Three-layer split (GTK View, ECS Components as Model, ECS Systems as Controller), the session-singleton entity, the `SessionState` subscription API. Everything else lives on top. |
+| [`responsive-chrome.md`](responsive-chrome.md) | **View-layer chrome** — Breakpoints (mobile / tablet / desktop), sidebar layout patterns, floating-OSD vs regular-headerbar treatment, size-propagation hazards, engine-resize handling. The "how does the UI fit on every screen" map. |
+| [`runtime-modes.md`](runtime-modes.md) | **Mode markers** — `EditorMode` / `RuntimeMode` / `SpawnOverride` components on the session-singleton. Composes the Editor / Full Run / Live Run / Test Run user-visible modes, Mario-Maker-inspired. |
+| [`object-system.md`](object-system.md) | **What's in the world** — Definition/Placement model for tiles, objects, NPCs, items, teleports, spawn points. Maps placements to ECS entities via `ObjectSpawnSystem`. Its composition layer is being superseded by the entity-composition model below. |
+| [`entity-and-appearance-model.md`](entity-and-appearance-model.md) | **The target content model** — explicit `components[]` on entity definitions (replaces `ObjectKind`-switch + properties union), component registry with schema-generated inspectors, templates as the RPG-Maker-style authoring surface, declarative states, **Appearance** (sheet + animations) as a shared asset layer. Folds the Cast "Characters"/"Sprite sheets" split in; where the built-in code editor attaches. |
+| [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) | **Multi-peer sync** — Op-Log with Host-Sequencer (Player 1) for both collaborative editing and networked multiplayer. Single mechanism, two op vocabularies. Solo edits work locally; collab requires a host. |
+| [`ai-collaborator.md`](ai-collaborator.md) | **In-process AI as live peer** — virtual collaborator on the shared op-log + awareness (cursor, presence, follow), driven via D-Bus/MCP, relayed to remote peers. |
 
 ## Glossary
 
@@ -52,7 +54,7 @@ Terms used across multiple docs.
 - **Definition** — the reusable shape an object instance refers to: `kind`, optional `sprite`, optional `trigger`, optional `blocking`, kind-specific `properties`. Library entries live in `GameProjectData.objectLibrary`.
 - **Library** — `GameProjectData.objectLibrary[]`, the project-level pool of reusable `ObjectDefinition`s. Editing one entry updates every placement that references it via `defId`.
 - **Kind** — the semantic discriminator on an `ObjectDefinition`: `event | teleport | item | npc | spawn-point | custom`. Drives editor UX (library category, default trigger mode, default `blocking`) and component composition at spawn time.
-- **Ghost spawn** — a runtime-only override of where the player spawns, used by Live Run. Stored in `GhostSpawnComponent` on the singleton; does **not** modify the map data.
+- **Ghost spawn** — a runtime-only override of where the player spawns, used by Live Run. Stored in `SpawnOverrideComponent` on the singleton; does **not** modify the map data.
 - **Subscription bridge** — the `SessionState.subscribe(scene, ComponentCtor, listener)` helper that lets GTK widgets observe singleton-component changes (add, remove, in-place mutation via `notifyMutation`).
 - **Operation (Op)** — a typed mutation message in the form `{ kind, payload, peerId, seq }`. The unit of synchronisation in the op-log + host-sequencer model. Editor mutations, game events, and undo commands are all ops.
 - **Op-log** — the sequence of operations applied to a session, in host-assigned order. Both the editor and game flows multiplex over the same op-log mechanism with different op vocabularies.
