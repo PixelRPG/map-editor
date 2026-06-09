@@ -613,7 +613,7 @@ server.registerTool(
       'Switch the top-level view. "atlas"/"cast"/"tiles"/"data" need a loaded project; "welcome" closes it; ' +
       'for "scene-editor" use open_scene. "data" is the Assets & project view.',
     inputSchema: z.object({
-      view: z.enum(['welcome', 'atlas', 'cast', 'tiles', 'data', 'scene-editor']),
+      view: z.enum(['welcome', 'atlas', 'cast', 'objects', 'tiles', 'data', 'scene-editor']),
       ...instanceArg,
     }),
   },
@@ -628,6 +628,9 @@ server.registerTool(
           break
         case 'cast':
           await activate(instance, 'win', 'mode', 'cast')
+          break
+        case 'objects':
+          await activate(instance, 'win', 'mode', 'objects')
           break
         case 'tiles':
           await activate(instance, 'win', 'mode', 'tiles')

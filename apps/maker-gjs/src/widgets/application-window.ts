@@ -23,6 +23,7 @@ import {
 import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
 import { DataController } from '../services/data-controller.ts'
+import { ObjectsController } from '../services/objects-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
@@ -38,18 +39,20 @@ import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
 import { DataView } from './data-view.ts'
+import { ObjectsView } from './objects-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import { ShareDialog } from './share-dialog.ts'
 import { TilesView } from './tiles-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
-// Force registration so the `$CastView` / `$TilesView` / `$PixelRpgDataView`
-// references in the blueprint resolve at template-parse time.
+// Force registration so the `$CastView` / `$TilesView` / `$ObjectsView` /
+// `$PixelRpgDataView` references in the blueprint resolve at parse time.
 GObject.type_ensure(CastView.$gtype)
+GObject.type_ensure(ObjectsView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
 GObject.type_ensure(DataView.$gtype)
 
-type ViewName = 'welcome' | 'atlas' | 'cast' | 'tiles' | 'scene-editor' | 'data'
+type ViewName = 'welcome' | 'atlas' | 'cast' | 'objects' | 'tiles' | 'scene-editor' | 'data'
 
 /**
  * Read-only snapshot of the editor's live state, surfaced to external
@@ -135,6 +138,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _welcome_view: WelcomeView
   declare _atlas_view: AtlasView
   declare _cast_view: CastView
+  declare _objects_view: ObjectsView
   declare _tiles_view: TilesView
   declare _scene_editor_view: SceneEditorView
   declare _data_view: DataView
@@ -207,6 +211,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * views are reachable.
    */
   private _castCtl: CastController | null = null
+  private _objectsCtl: ObjectsController | null = null
   private _tilesCtl: TilesController | null = null
   private _dataCtl: DataController | null = null
   /**
@@ -237,6 +242,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           'welcome_view',
           'atlas_view',
           'cast_view',
+          'objects_view',
           'tiles_view',
           'scene_editor_view',
           'data_view',
@@ -365,6 +371,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         setProjectField: (field, value) => this._dataCtl?.setProjectField(field, value),
       })
     }
+    if (!this._objectsCtl) {
+      this._objectsCtl = new ObjectsController(this._objects_view, (msg) => this._showToast(msg))
+    }
+    this.signals.connect(this._objects_view, 'mode-changed', (_v: ObjectsView, mode: string) => setMode(mode))
     this.signals.connect(this._data_view, 'mode-changed', (_v: DataView, mode: string) => setMode(mode))
     // Tiles view → shared sprite-set CRUD on the cast controller. Import
     // and delete both flow through the one path so the copy/register +
@@ -545,8 +555,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // editing has no live scene. While a session is up the controller
     // broadcasts character upserts; inbound peer ops route back to it.
     this._castCtl?.setCollabSession(collab)
+    this._objectsCtl?.setCollabSession(collab)
     if (collab) {
-      collab.onProjectOpReceived = (op) => this._castCtl?.applyRemoteProjectOp(op)
+      // The cast controller is the single applier of inbound entity ops
+      // (it mutates `entityLibrary` + refreshes the Cast view); also
+      // re-`refresh` the Objects view so an object-entity edit shows there.
+      collab.onProjectOpReceived = (op) => {
+        this._castCtl?.applyRemoteProjectOp(op)
+        this._objectsCtl?.refresh()
+      }
       collab.onSpriteSetAddReceived = (payload) => this._castCtl?.applyRemoteSpriteSetAdd(payload)
       collab.onSpriteSetUpdateReceived = (payload) => this._castCtl?.applyRemoteSpriteSetUpdate(payload)
     }
@@ -653,6 +670,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         if (this._loadedProject) {
           void this._castCtl?.refresh()
           this._setView('cast')
+        }
+        break
+      case 'objects':
+        if (this._loadedProject) {
+          this._objectsCtl?.refresh()
+          this._setView('objects')
         }
         break
       case 'tiles':
@@ -794,7 +817,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _shareSidebarState(): void {
     const flags = GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL
-    for (const view of [this._atlas_view, this._cast_view, this._tiles_view, this._scene_editor_view]) {
+    for (const view of [
+      this._atlas_view,
+      this._cast_view,
+      this._objects_view,
+      this._tiles_view,
+      this._scene_editor_view,
+    ]) {
       this.bind_property('show-library', view, 'show-library', flags)
       this.bind_property('show-inspector', view, 'show-inspector', flags)
     }
@@ -1126,6 +1155,29 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(openTilesetAction)
 
+    // Create a library object from a template id (default `npc`), switch to
+    // the Objects view, and focus the new entry. The in-view "New object"
+    // button shows a template chooser; this action is the driveable form.
+    const newObjectAction = Gio.SimpleAction.new('new-object', GLib.VariantType.new('s'))
+    newObjectAction.connect('activate', (_a, parameter) => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      this._setView('objects')
+      this._objectsCtl?.createFromTemplate(parameter?.get_string()[0] || 'npc')
+    })
+    winActions.add_action(newObjectAction)
+
+    const openObjectAction = Gio.SimpleAction.new('open-object', GLib.VariantType.new('s'))
+    openObjectAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (!id) return
+      this._setView('objects')
+      this._objects_view.focusObject(id)
+    })
+    winActions.add_action(openObjectAction)
+
     // Drill into a sprite-sheet detail sub-page by id — the Cast view's
     // Sprite-sheets section equivalent of `open-character`.
     const openSheetAction = Gio.SimpleAction.new('open-sheet', GLib.VariantType.new('s'))
@@ -1204,6 +1256,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       welcome: null,
       atlas: 'world',
       cast: 'cast',
+      objects: 'objects',
       tiles: 'tiles',
       'scene-editor': 'world',
       data: 'data',
@@ -1232,6 +1285,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _syncModeRails(mode: EditorMode): void {
     this._atlas_view.syncActiveMode(mode)
     this._cast_view.syncActiveMode(mode)
+    this._objects_view.syncActiveMode(mode)
     this._tiles_view.syncActiveMode(mode)
     this._scene_editor_view.syncActiveMode(mode)
     this._data_view.syncActiveMode(mode)
@@ -1374,6 +1428,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // Per-mode controllers own the cast + tiles data path; tell them
       // about the new project so their views can hydrate.
       this._castCtl?.setProject(project)
+      this._objectsCtl?.setProject(project)
       this._tilesCtl?.setProject(project)
       this._dataCtl?.setProject(project)
       // A fresh project starts on the card overview, not a stale detail

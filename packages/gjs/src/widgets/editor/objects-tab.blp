@@ -49,6 +49,10 @@ template $PixelRpgObjectsTab : Adw.Bin {
     Gtk.Button new_object_button {
       label: _("New object");
       action-name: "win.new-object";
+      // Seeds an NPC in the Objects library + opens it (the scene
+      // inspector's quick entry to the library; in-place placement is
+      // the object tool's job). MCP drives it with any template id.
+      action-target: "'npc'";
       styles ["flat"]
       margin-top: 6;
 
