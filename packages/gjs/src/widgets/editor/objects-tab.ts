@@ -11,8 +11,12 @@ export interface ObjectDescriptor {
   id: string
   /** Display name — comes from the resolved definition. */
   name: string
-  /** Object kind — drives the row icon when no sprite is available. */
-  kind: 'event' | 'teleport' | 'item' | 'npc' | 'spawn-point' | 'custom'
+  /**
+   * Symbolic icon shown when no sprite is available — the host derives it
+   * from the entity's components (the dominant component's editor icon).
+   * Falls back to {@link FALLBACK_ICON} when absent.
+   */
+  icon?: string
   /** Tile-grid position, surfaced as a "(x, y)" caption. */
   tileX: number
   tileY: number
@@ -20,27 +24,15 @@ export interface ObjectDescriptor {
   layerId: string
   /**
    * Optional sprite preview. When supplied, the row renders this
-   * paintable as its prefix instead of the {@link KIND_ICONS}
-   * symbolic icon — useful for decoration / NPC placements with
-   * an actual sprite attached to their definition. Falls back to
-   * the kind icon when `null` / unavailable.
+   * paintable as its prefix instead of the {@link icon} symbolic icon —
+   * useful for placements with an actual sprite. Falls back to the icon
+   * when `null` / unavailable.
    */
   paintable?: Gdk.Paintable | null
 }
 
-/**
- * Icon lookup per object kind. The editor uses Adwaita symbolic
- * icons that ship with every Linux desktop so we don't need to
- * package custom artwork.
- */
-const KIND_ICONS: Record<ObjectDescriptor['kind'], string> = {
-  event: 'preferences-system-symbolic',
-  teleport: 'mail-forward-symbolic',
-  item: 'starred-symbolic',
-  npc: 'avatar-default-symbolic',
-  'spawn-point': 'go-home-symbolic',
-  custom: 'view-grid-symbolic',
-}
+/** Symbolic icon used when a placement supplies neither a paintable nor an icon. */
+const FALLBACK_ICON = 'view-grid-symbolic'
 
 /**
  * Inspector's "Objects" tab.
@@ -148,7 +140,7 @@ export class ObjectsTab extends Adw.Bin {
       return picture
     }
     return new Gtk.Image({
-      icon_name: KIND_ICONS[placement.kind] ?? KIND_ICONS.custom,
+      icon_name: placement.icon ?? FALLBACK_ICON,
       pixel_size: 18,
     })
   }

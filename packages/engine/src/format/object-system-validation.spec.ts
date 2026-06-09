@@ -50,47 +50,55 @@ function makeSpriteSet(overrides: Partial<SpriteSetData> = {}): SpriteSetData {
 }
 
 export default async () => {
-  await describe('GameProjectFormat — objectLibrary', async () => {
-    await it('accepts a project without an objectLibrary (optional field)', async () => {
+  await describe('GameProjectFormat — entityLibrary', async () => {
+    await it('accepts a project without an entityLibrary (optional field)', async () => {
       expect(GameProjectFormat.validate(makeProject())).toBe(true)
     })
 
-    await it('accepts a project with a valid objectLibrary', async () => {
+    await it('accepts a project with a valid entityLibrary', async () => {
       const project = makeProject({
-        objectLibrary: [
-          { id: 'apple', kind: 'item', name: 'Apple' },
+        entityLibrary: [
+          { id: 'apple', name: 'Apple', components: [{ type: 'item', itemId: 'apple' }] },
           {
             id: 'cave',
-            kind: 'teleport',
             name: 'Cave',
-            trigger: { on: 'walk-onto' },
-            properties: { targetMapId: 'm', targetTileX: 0, targetTileY: 0 },
+            components: [
+              { type: 'trigger', on: 'walk-onto' },
+              { type: 'teleport', targetMapId: 'm', targetTileX: 0, targetTileY: 0 },
+            ],
           },
         ],
       })
       expect(GameProjectFormat.validate(project)).toBe(true)
     })
 
-    await it('rejects a non-array objectLibrary', async () => {
-      const project = makeProject({ objectLibrary: 'oops' as unknown as GameProjectData['objectLibrary'] })
-      expect(() => GameProjectFormat.validate(project)).toThrow(/objectLibrary must be an array/)
+    await it('rejects a non-array entityLibrary', async () => {
+      const project = makeProject({ entityLibrary: 'oops' as unknown as GameProjectData['entityLibrary'] })
+      expect(() => GameProjectFormat.validate(project)).toThrow(/entityLibrary must be an array/)
     })
 
-    await it('rejects malformed library entries', async () => {
+    await it('rejects structurally-malformed entries', async () => {
       const project = makeProject({
-        objectLibrary: [{ id: 'broken', kind: 'fancy' as unknown as 'event', name: 'Bad' }],
+        entityLibrary: [{ id: 'broken', name: 'Bad' }] as unknown as GameProjectData['entityLibrary'],
       })
-      expect(() => GameProjectFormat.validate(project)).toThrow(/Invalid object definition at objectLibrary\[0\]/)
+      expect(() => GameProjectFormat.validate(project)).toThrow(/Invalid entity definition at entityLibrary\[0\]/)
+    })
+
+    await it('rejects an unregistered component type loudly', async () => {
+      const project = makeProject({
+        entityLibrary: [{ id: 'weird', name: 'Weird', components: [{ type: 'fancy' }] }],
+      })
+      expect(() => GameProjectFormat.validate(project)).toThrow(/unregistered component type "fancy"/)
     })
 
     await it('rejects duplicate library ids', async () => {
       const project = makeProject({
-        objectLibrary: [
-          { id: 'x', kind: 'event', name: 'A' },
-          { id: 'x', kind: 'event', name: 'B' },
+        entityLibrary: [
+          { id: 'x', name: 'A', components: [] },
+          { id: 'x', name: 'B', components: [] },
         ],
       })
-      expect(() => GameProjectFormat.validate(project)).toThrow(/Duplicate object definition id "x"/)
+      expect(() => GameProjectFormat.validate(project)).toThrow(/Duplicate entity definition id "x"/)
     })
   })
 
@@ -108,7 +116,7 @@ export default async () => {
             layerId: 'l1',
             tileX: 3,
             tileY: 0,
-            inline: { id: 'p2-def', kind: 'event', name: 'Sign', trigger: { on: 'action-button' } },
+            inline: { id: 'p2-def', name: 'Sign', components: [{ type: 'trigger', on: 'action-button' }] },
           },
         ],
       })
@@ -141,11 +149,26 @@ export default async () => {
             tileX: 0,
             tileY: 0,
             defId: 'apple',
-            inline: { id: 'inline-def', kind: 'item', name: 'Apple' },
+            inline: { id: 'inline-def', name: 'Apple', components: [] },
           },
         ],
       })
       expect(() => MapFormat.validate(map)).toThrow(/Invalid object placement/)
+    })
+
+    await it('rejects an inline definition with an unregistered component type', async () => {
+      const map = makeMap({
+        objectPlacements: [
+          {
+            id: 'p1',
+            layerId: 'l1',
+            tileX: 0,
+            tileY: 0,
+            inline: { id: 'bad', name: 'Bad', components: [{ type: 'bogus' }] },
+          },
+        ],
+      })
+      expect(() => MapFormat.validate(map)).toThrow(/inline definition is invalid/)
     })
   })
 

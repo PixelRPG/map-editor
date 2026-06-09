@@ -6,7 +6,7 @@ The PixelRPG editor models **tiles**, **NPCs**, **items**, **teleports**, **spaw
 
 This document is the source of truth for the data model + ECS layout. When schema or system responsibilities change, update this file in the same commit.
 
-> **Composition layer superseded (decided 2026-06-09):** the data-model sections below (`ObjectKind`, the kind-discriminated `ObjectProperties` union, the `kind`-switch in `ObjectSpawnSystem`) describe the **shipped prototype** and stay accurate until the refactor lands — but the agreed **target model** replaces them with explicit `components[]` on entity definitions + a component registry + editor templates, and folds the Cast view's "Characters"/"Sprite sheets" in (visuals generalise to `Visual = SpriteRef | AppearanceRef`; the "animated objects" open question below is part of that work). See [`entity-and-appearance-model.md`](entity-and-appearance-model.md) — phases tracked there. Everything else in this doc (placements + override semantics, tile properties, layers/z-order, systems, event bus) carries over unchanged. Do **not** build the pending editor UX (library mode, object tool) on the kind model — it would be built twice.
+> **⚠️ Composition layer SUPERSEDED (landed — entity-composition refactor):** the data-model sections below that describe `ObjectDefinition` / `ObjectKind` / the kind-discriminated `ObjectProperties` union / the `kind`-switch in `ObjectSpawnSystem` are **historical** — that prototype has been replaced in the shipped code by explicit `components[]` on `EntityDefinition` + a component registry (`packages/engine/src/entity/`). A placement now resolves to an `EntityDefinition` and `ObjectSpawnSystem` walks its `components[]` through the registry (no `kind`-switch); the project library is `GameProjectData.entityLibrary`. **The source of truth for composition is [`entity-and-appearance-model.md`](entity-and-appearance-model.md).** Everything else in this doc still describes shipped behaviour and carries over unchanged: placements + wholesale-replace override semantics (now keyed per component `type`), tile properties, layers / z-order, the runtime systems + event bus. *(Cleanup follow-up: prune the historical kind/properties subsections from this file — tracked in `TODO.md`.)*
 
 ## Why this exists
 
@@ -334,10 +334,10 @@ These citations update as the work lands. Anything referenced here must exist in
 
 **Phase 1 (additive schema) — landed:**
 - `packages/engine/src/types/data/TileProperties.ts` — gameplay properties on a sprite-set entry
-- `packages/engine/src/types/data/ObjectDefinition.ts` — library entries + `ObjectKind`, `SpriteRef`, `TriggerSpec`, kind-specific properties shapes
-- `packages/engine/src/types/data/ObjectPlacement.ts` — map-level instances with defId/inline mutual exclusion
+- `packages/engine/src/types/data/EntityDefinition.ts` — `EntityDefinition { components[] }` (replaced the old `ObjectDefinition`); `packages/engine/src/entity/` — component registry, specs, validation, `spawn-placement.ts`, `convert.ts`
+- `packages/engine/src/types/data/ObjectPlacement.ts` — map-level instances (`inline?: EntityDefinition` / `defId` + `{name?, components?}` overrides), defId/inline mutual exclusion
 - `packages/engine/src/types/data/SpriteDataSet.ts` — `tileProperties?: TileProperties` field
-- `packages/engine/src/types/data/GameProjectData.ts` — `objectLibrary?: ObjectDefinition[]` field; `teleports[]` marked `@deprecated`
+- `packages/engine/src/types/data/GameProjectData.ts` — `entityLibrary?: EntityDefinition[]` field; `teleports[]` marked `@deprecated`
 - `packages/engine/src/types/data/MapData.ts` — `objectPlacements?: ObjectPlacement[]` field
 - `packages/engine/src/types/data/LayerData.ts` — `type` + `objects[]` fields marked `@deprecated`
 - `packages/engine/src/types/data/ObjectData.ts`, `TeleportData.ts` — interfaces marked `@deprecated`

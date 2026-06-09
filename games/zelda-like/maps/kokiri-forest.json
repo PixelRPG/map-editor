@@ -118861,8 +118861,11 @@
       "tileY": 27,
       "inline": {
         "id": "def-layer_11-10",
-        "kind": "custom",
-        "name": "Object 10"
+        "name": "Object 10",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118872,8 +118875,11 @@
       "tileY": 38,
       "inline": {
         "id": "def-layer_11-11",
-        "kind": "custom",
-        "name": "Object 11"
+        "name": "Object 11",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118883,8 +118889,11 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_11-15",
-        "kind": "custom",
-        "name": "Object 15"
+        "name": "Object 15",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118894,8 +118903,11 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_11-16",
-        "kind": "custom",
-        "name": "Object 16"
+        "name": "Object 16",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118905,8 +118917,11 @@
       "tileY": 64,
       "inline": {
         "id": "def-layer_10-5",
-        "kind": "custom",
-        "name": "Object 5"
+        "name": "Object 5",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118916,8 +118931,11 @@
       "tileY": 64,
       "inline": {
         "id": "def-layer_10-6",
-        "kind": "custom",
-        "name": "Object 6"
+        "name": "Object 6",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118927,8 +118945,11 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_10-7",
-        "kind": "custom",
-        "name": "Object 7"
+        "name": "Object 7",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118938,8 +118959,11 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_10-8",
-        "kind": "custom",
-        "name": "Object 8"
+        "name": "Object 8",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     },
     {
@@ -118949,11 +118973,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-17",
-        "kind": "custom",
         "name": "Grass 17",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -118964,11 +118993,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-18",
-        "kind": "custom",
         "name": "Grass 18",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -118979,11 +119013,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-19",
-        "kind": "custom",
         "name": "Grass 19",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -118994,11 +119033,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-20",
-        "kind": "custom",
         "name": "Grass 20",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119009,11 +119053,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-21",
-        "kind": "custom",
         "name": "Grass 21",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119024,11 +119073,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-22",
-        "kind": "custom",
         "name": "Grass 22",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119039,11 +119093,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-23",
-        "kind": "custom",
         "name": "Grass 23",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119054,11 +119113,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-24",
-        "kind": "custom",
         "name": "Grass 24",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119069,11 +119133,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-25",
-        "kind": "custom",
         "name": "Grass 25",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119084,11 +119153,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-26",
-        "kind": "custom",
         "name": "Grass 26",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119099,11 +119173,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-27",
-        "kind": "custom",
         "name": "Grass 27",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119114,11 +119193,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-28",
-        "kind": "custom",
         "name": "Grass 28",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119129,11 +119213,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-29",
-        "kind": "custom",
         "name": "Grass 29",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119144,11 +119233,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-30",
-        "kind": "custom",
         "name": "Grass 30",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119159,11 +119253,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-31",
-        "kind": "custom",
         "name": "Grass 31",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119174,11 +119273,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-32",
-        "kind": "custom",
         "name": "Grass 32",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119189,11 +119293,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-33",
-        "kind": "custom",
         "name": "Grass 33",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119204,11 +119313,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-34",
-        "kind": "custom",
         "name": "Grass 34",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119219,11 +119333,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-35",
-        "kind": "custom",
         "name": "Grass 35",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119234,11 +119353,16 @@
       "tileY": 57,
       "inline": {
         "id": "def-layer_12-36",
-        "kind": "custom",
         "name": "Grass 36",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119249,11 +119373,16 @@
       "tileY": 56,
       "inline": {
         "id": "def-layer_12-37",
-        "kind": "custom",
         "name": "Grass 37",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119264,11 +119393,16 @@
       "tileY": 71,
       "inline": {
         "id": "def-layer_12-38",
-        "kind": "custom",
         "name": "Grass 38",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119279,11 +119413,16 @@
       "tileY": 71,
       "inline": {
         "id": "def-layer_12-39",
-        "kind": "custom",
         "name": "Grass 39",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119294,11 +119433,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-40",
-        "kind": "custom",
         "name": "Grass 40",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119309,11 +119453,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-41",
-        "kind": "custom",
         "name": "Grass 41",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119324,11 +119473,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-42",
-        "kind": "custom",
         "name": "Grass 42",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119339,11 +119493,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-43",
-        "kind": "custom",
         "name": "Grass 43",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119354,11 +119513,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-44",
-        "kind": "custom",
         "name": "Grass 44",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119369,11 +119533,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-45",
-        "kind": "custom",
         "name": "Grass 45",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119384,11 +119553,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-46",
-        "kind": "custom",
         "name": "Grass 46",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119399,11 +119573,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-47",
-        "kind": "custom",
         "name": "Grass 47",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119414,11 +119593,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-48",
-        "kind": "custom",
         "name": "Grass 48",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119429,11 +119613,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-53",
-        "kind": "custom",
         "name": "Grass 53",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119444,11 +119633,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-54",
-        "kind": "custom",
         "name": "Grass 54",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119459,11 +119653,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-55",
-        "kind": "custom",
         "name": "Grass 55",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119474,11 +119673,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-56",
-        "kind": "custom",
         "name": "Grass 56",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119489,11 +119693,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-57",
-        "kind": "custom",
         "name": "Grass 57",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119504,11 +119713,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-58",
-        "kind": "custom",
         "name": "Grass 58",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119519,11 +119733,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-59",
-        "kind": "custom",
         "name": "Grass 59",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119534,11 +119753,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_12-60",
-        "kind": "custom",
         "name": "Grass 60",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119549,11 +119773,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-61",
-        "kind": "custom",
         "name": "Grass 61",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119564,11 +119793,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-62",
-        "kind": "custom",
         "name": "Grass 62",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119579,11 +119813,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-63",
-        "kind": "custom",
         "name": "Grass 63",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119594,11 +119833,16 @@
       "tileY": 52,
       "inline": {
         "id": "def-layer_12-64",
-        "kind": "custom",
         "name": "Grass 64",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119609,11 +119853,16 @@
       "tileY": 53,
       "inline": {
         "id": "def-layer_12-65",
-        "kind": "custom",
         "name": "Grass 65",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119624,11 +119873,16 @@
       "tileY": 53,
       "inline": {
         "id": "def-layer_12-66",
-        "kind": "custom",
         "name": "Grass 66",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119639,11 +119893,16 @@
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-67",
-        "kind": "custom",
         "name": "Grass 67",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119654,11 +119913,16 @@
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-68",
-        "kind": "custom",
         "name": "Grass 68",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119669,11 +119933,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-69",
-        "kind": "custom",
         "name": "Grass 69",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119684,11 +119953,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-70",
-        "kind": "custom",
         "name": "Grass 70",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119699,11 +119973,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-71",
-        "kind": "custom",
         "name": "Grass 71",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119714,11 +119993,16 @@
       "tileY": 55,
       "inline": {
         "id": "def-layer_12-72",
-        "kind": "custom",
         "name": "Grass 72",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119729,11 +120013,16 @@
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-73",
-        "kind": "custom",
         "name": "Grass 73",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119744,11 +120033,16 @@
       "tileY": 54,
       "inline": {
         "id": "def-layer_12-74",
-        "kind": "custom",
         "name": "Grass 74",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119759,11 +120053,16 @@
       "tileY": 36,
       "inline": {
         "id": "def-layer_12-75",
-        "kind": "custom",
         "name": "Grass 75",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119774,11 +120073,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_12-76",
-        "kind": "custom",
         "name": "Grass 76",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119789,11 +120093,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_12-77",
-        "kind": "custom",
         "name": "Grass 77",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119804,11 +120113,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-78",
-        "kind": "custom",
         "name": "Grass 78",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119819,11 +120133,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-79",
-        "kind": "custom",
         "name": "Grass 79",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119834,11 +120153,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-80",
-        "kind": "custom",
         "name": "Grass 80",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119849,11 +120173,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-81",
-        "kind": "custom",
         "name": "Grass 81",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119864,11 +120193,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-82",
-        "kind": "custom",
         "name": "Grass 82",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119879,11 +120213,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-83",
-        "kind": "custom",
         "name": "Grass 83",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119894,11 +120233,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_12-84",
-        "kind": "custom",
         "name": "Grass 84",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119909,11 +120253,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-85",
-        "kind": "custom",
         "name": "Grass 85",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119924,11 +120273,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-86",
-        "kind": "custom",
         "name": "Grass 86",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119939,11 +120293,16 @@
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-87",
-        "kind": "custom",
         "name": "Grass 87",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119954,11 +120313,16 @@
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-88",
-        "kind": "custom",
         "name": "Grass 88",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119969,11 +120333,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-89",
-        "kind": "custom",
         "name": "Grass 89",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119984,11 +120353,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-90",
-        "kind": "custom",
         "name": "Grass 90",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -119999,11 +120373,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-91",
-        "kind": "custom",
         "name": "Grass 91",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120014,11 +120393,16 @@
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-92",
-        "kind": "custom",
         "name": "Grass 92",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120029,11 +120413,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-93",
-        "kind": "custom",
         "name": "Grass 93",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120044,11 +120433,16 @@
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-94",
-        "kind": "custom",
         "name": "Grass 94",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120059,11 +120453,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-95",
-        "kind": "custom",
         "name": "Grass 95",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120074,11 +120473,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-96",
-        "kind": "custom",
         "name": "Grass 96",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120089,11 +120493,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-97",
-        "kind": "custom",
         "name": "Grass 97",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120104,11 +120513,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-98",
-        "kind": "custom",
         "name": "Grass 98",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120119,11 +120533,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-99",
-        "kind": "custom",
         "name": "Grass 99",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120134,11 +120553,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-100",
-        "kind": "custom",
         "name": "Grass 100",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120149,11 +120573,16 @@
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-101",
-        "kind": "custom",
         "name": "Grass 101",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120164,11 +120593,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-102",
-        "kind": "custom",
         "name": "Grass 102",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120179,11 +120613,16 @@
       "tileY": 59,
       "inline": {
         "id": "def-layer_12-103",
-        "kind": "custom",
         "name": "Grass 103",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120194,11 +120633,16 @@
       "tileY": 59,
       "inline": {
         "id": "def-layer_12-104",
-        "kind": "custom",
         "name": "Grass 104",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120209,11 +120653,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-105",
-        "kind": "custom",
         "name": "Grass 105",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120224,11 +120673,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-106",
-        "kind": "custom",
         "name": "Grass 106",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120239,11 +120693,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-107",
-        "kind": "custom",
         "name": "Grass 107",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120254,11 +120713,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-108",
-        "kind": "custom",
         "name": "Grass 108",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120269,11 +120733,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-109",
-        "kind": "custom",
         "name": "Grass 109",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120284,11 +120753,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_12-110",
-        "kind": "custom",
         "name": "Grass 110",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120299,11 +120773,16 @@
       "tileY": 17,
       "inline": {
         "id": "def-layer_12-111",
-        "kind": "custom",
         "name": "Grass 111",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120314,11 +120793,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-112",
-        "kind": "custom",
         "name": "Grass 112",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120329,11 +120813,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-113",
-        "kind": "custom",
         "name": "Grass 113",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120344,11 +120833,16 @@
       "tileY": 16,
       "inline": {
         "id": "def-layer_12-114",
-        "kind": "custom",
         "name": "Grass 114",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120359,11 +120853,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-115",
-        "kind": "custom",
         "name": "Grass 115",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120374,11 +120873,16 @@
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-116",
-        "kind": "custom",
         "name": "Grass 116",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120389,11 +120893,16 @@
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-117",
-        "kind": "custom",
         "name": "Grass 117",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120404,11 +120913,16 @@
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-118",
-        "kind": "custom",
         "name": "Grass 118",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120419,11 +120933,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_12-119",
-        "kind": "custom",
         "name": "Grass 119",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120434,11 +120953,16 @@
       "tileY": 14,
       "inline": {
         "id": "def-layer_12-120",
-        "kind": "custom",
         "name": "Grass 120",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120449,11 +120973,16 @@
       "tileY": 13,
       "inline": {
         "id": "def-layer_12-121",
-        "kind": "custom",
         "name": "Grass 121",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120464,11 +120993,16 @@
       "tileY": 13,
       "inline": {
         "id": "def-layer_12-122",
-        "kind": "custom",
         "name": "Grass 122",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120479,11 +121013,16 @@
       "tileY": 12,
       "inline": {
         "id": "def-layer_12-123",
-        "kind": "custom",
         "name": "Grass 123",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120494,11 +121033,16 @@
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-124",
-        "kind": "custom",
         "name": "Grass 124",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120509,11 +121053,16 @@
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-125",
-        "kind": "custom",
         "name": "Grass 125",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120524,11 +121073,16 @@
       "tileY": 77,
       "inline": {
         "id": "def-layer_12-126",
-        "kind": "custom",
         "name": "Grass 126",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120539,11 +121093,16 @@
       "tileY": 76,
       "inline": {
         "id": "def-layer_12-127",
-        "kind": "custom",
         "name": "Grass 127",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120554,11 +121113,16 @@
       "tileY": 75,
       "inline": {
         "id": "def-layer_12-128",
-        "kind": "custom",
         "name": "Grass 128",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120569,11 +121133,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-129",
-        "kind": "custom",
         "name": "Grass 129",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120584,11 +121153,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-130",
-        "kind": "custom",
         "name": "Grass 130",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120599,11 +121173,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-131",
-        "kind": "custom",
         "name": "Grass 131",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120614,11 +121193,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_12-132",
-        "kind": "custom",
         "name": "Grass 132",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120629,11 +121213,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-133",
-        "kind": "custom",
         "name": "Grass 133",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120644,11 +121233,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_12-134",
-        "kind": "custom",
         "name": "Grass 134",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120659,11 +121253,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-135",
-        "kind": "custom",
         "name": "Grass 135",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120674,11 +121273,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_12-136",
-        "kind": "custom",
         "name": "Grass 136",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120689,11 +121293,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-137",
-        "kind": "custom",
         "name": "Grass 137",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120704,11 +121313,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-138",
-        "kind": "custom",
         "name": "Grass 138",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120719,11 +121333,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-139",
-        "kind": "custom",
         "name": "Grass 139",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120734,11 +121353,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-140",
-        "kind": "custom",
         "name": "Grass 140",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120749,11 +121373,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-141",
-        "kind": "custom",
         "name": "Grass 141",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120764,11 +121393,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-142",
-        "kind": "custom",
         "name": "Grass 142",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120779,11 +121413,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-143",
-        "kind": "custom",
         "name": "Grass 143",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120794,11 +121433,16 @@
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-144",
-        "kind": "custom",
         "name": "Grass 144",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120809,11 +121453,16 @@
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-145",
-        "kind": "custom",
         "name": "Grass 145",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120824,11 +121473,16 @@
       "tileY": 27,
       "inline": {
         "id": "def-layer_12-146",
-        "kind": "custom",
         "name": "Grass 146",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120839,11 +121493,16 @@
       "tileY": 20,
       "inline": {
         "id": "def-layer_12-147",
-        "kind": "custom",
         "name": "Grass 147",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120854,11 +121513,16 @@
       "tileY": 20,
       "inline": {
         "id": "def-layer_12-148",
-        "kind": "custom",
         "name": "Grass 148",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120869,11 +121533,16 @@
       "tileY": 20,
       "inline": {
         "id": "def-layer_12-149",
-        "kind": "custom",
         "name": "Grass 149",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120884,11 +121553,16 @@
       "tileY": 21,
       "inline": {
         "id": "def-layer_12-150",
-        "kind": "custom",
         "name": "Grass 150",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120899,11 +121573,16 @@
       "tileY": 21,
       "inline": {
         "id": "def-layer_12-151",
-        "kind": "custom",
         "name": "Grass 151",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120914,11 +121593,16 @@
       "tileY": 21,
       "inline": {
         "id": "def-layer_12-152",
-        "kind": "custom",
         "name": "Grass 152",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120929,11 +121613,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_12-153",
-        "kind": "custom",
         "name": "Grass 153",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120944,11 +121633,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_12-154",
-        "kind": "custom",
         "name": "Grass 154",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120959,11 +121653,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_12-155",
-        "kind": "custom",
         "name": "Grass 155",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120974,11 +121673,16 @@
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-156",
-        "kind": "custom",
         "name": "Grass 156",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -120989,11 +121693,16 @@
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-157",
-        "kind": "custom",
         "name": "Grass 157",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121004,11 +121713,16 @@
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-158",
-        "kind": "custom",
         "name": "Grass 158",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121019,11 +121733,16 @@
       "tileY": 24,
       "inline": {
         "id": "def-layer_12-159",
-        "kind": "custom",
         "name": "Grass 159",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121034,11 +121753,16 @@
       "tileY": 24,
       "inline": {
         "id": "def-layer_12-160",
-        "kind": "custom",
         "name": "Grass 160",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121049,11 +121773,16 @@
       "tileY": 24,
       "inline": {
         "id": "def-layer_12-161",
-        "kind": "custom",
         "name": "Grass 161",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121064,11 +121793,16 @@
       "tileY": 23,
       "inline": {
         "id": "def-layer_12-162",
-        "kind": "custom",
         "name": "Grass 162",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121079,11 +121813,16 @@
       "tileY": 25,
       "inline": {
         "id": "def-layer_12-163",
-        "kind": "custom",
         "name": "Grass 163",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121094,11 +121833,16 @@
       "tileY": 26,
       "inline": {
         "id": "def-layer_12-164",
-        "kind": "custom",
         "name": "Grass 164",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121109,11 +121853,16 @@
       "tileY": 27,
       "inline": {
         "id": "def-layer_12-165",
-        "kind": "custom",
         "name": "Grass 165",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121124,11 +121873,16 @@
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-166",
-        "kind": "custom",
         "name": "Grass 166",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121139,11 +121893,16 @@
       "tileY": 28,
       "inline": {
         "id": "def-layer_12-167",
-        "kind": "custom",
         "name": "Grass 167",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121154,11 +121913,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-168",
-        "kind": "custom",
         "name": "Grass 168",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121169,11 +121933,16 @@
       "tileY": 29,
       "inline": {
         "id": "def-layer_12-169",
-        "kind": "custom",
         "name": "Grass 169",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121184,11 +121953,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-170",
-        "kind": "custom",
         "name": "Grass 170",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121199,11 +121973,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-171",
-        "kind": "custom",
         "name": "Grass 171",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121214,11 +121993,16 @@
       "tileY": 30,
       "inline": {
         "id": "def-layer_12-172",
-        "kind": "custom",
         "name": "Grass 172",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121229,11 +122013,16 @@
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-173",
-        "kind": "custom",
         "name": "Grass 173",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121244,11 +122033,16 @@
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-174",
-        "kind": "custom",
         "name": "Grass 174",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121259,11 +122053,16 @@
       "tileY": 31,
       "inline": {
         "id": "def-layer_12-175",
-        "kind": "custom",
         "name": "Grass 175",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121274,11 +122073,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-176",
-        "kind": "custom",
         "name": "Grass 176",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121289,11 +122093,16 @@
       "tileY": 32,
       "inline": {
         "id": "def-layer_12-177",
-        "kind": "custom",
         "name": "Grass 177",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121304,11 +122113,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-178",
-        "kind": "custom",
         "name": "Grass 178",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121319,11 +122133,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_12-179",
-        "kind": "custom",
         "name": "Grass 179",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121334,11 +122153,16 @@
       "tileY": 102,
       "inline": {
         "id": "def-layer_12-236",
-        "kind": "custom",
         "name": "Grass 236",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121349,11 +122173,16 @@
       "tileY": 101,
       "inline": {
         "id": "def-layer_12-237",
-        "kind": "custom",
         "name": "Grass 237",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121364,11 +122193,16 @@
       "tileY": 101,
       "inline": {
         "id": "def-layer_12-238",
-        "kind": "custom",
         "name": "Grass 238",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121379,11 +122213,16 @@
       "tileY": 101,
       "inline": {
         "id": "def-layer_12-239",
-        "kind": "custom",
         "name": "Grass 239",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121394,11 +122233,16 @@
       "tileY": 100,
       "inline": {
         "id": "def-layer_12-240",
-        "kind": "custom",
         "name": "Grass 240",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121409,11 +122253,16 @@
       "tileY": 100,
       "inline": {
         "id": "def-layer_12-241",
-        "kind": "custom",
         "name": "Grass 241",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121424,11 +122273,16 @@
       "tileY": 100,
       "inline": {
         "id": "def-layer_12-242",
-        "kind": "custom",
         "name": "Grass 242",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121439,11 +122293,16 @@
       "tileY": 99,
       "inline": {
         "id": "def-layer_12-243",
-        "kind": "custom",
         "name": "Grass 243",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121454,11 +122313,16 @@
       "tileY": 99,
       "inline": {
         "id": "def-layer_12-244",
-        "kind": "custom",
         "name": "Grass 244",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121469,11 +122333,16 @@
       "tileY": 99,
       "inline": {
         "id": "def-layer_12-245",
-        "kind": "custom",
         "name": "Grass 245",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121484,11 +122353,16 @@
       "tileY": 98,
       "inline": {
         "id": "def-layer_12-246",
-        "kind": "custom",
         "name": "Grass 246",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121499,11 +122373,16 @@
       "tileY": 98,
       "inline": {
         "id": "def-layer_12-247",
-        "kind": "custom",
         "name": "Grass 247",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121514,11 +122393,16 @@
       "tileY": 98,
       "inline": {
         "id": "def-layer_12-248",
-        "kind": "custom",
         "name": "Grass 248",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121529,11 +122413,16 @@
       "tileY": 97,
       "inline": {
         "id": "def-layer_12-249",
-        "kind": "custom",
         "name": "Grass 249",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121544,11 +122433,16 @@
       "tileY": 97,
       "inline": {
         "id": "def-layer_12-250",
-        "kind": "custom",
         "name": "Grass 250",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121559,11 +122453,16 @@
       "tileY": 97,
       "inline": {
         "id": "def-layer_12-251",
-        "kind": "custom",
         "name": "Grass 251",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121574,11 +122473,16 @@
       "tileY": 96,
       "inline": {
         "id": "def-layer_12-252",
-        "kind": "custom",
         "name": "Grass 252",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121589,11 +122493,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_12-312",
-        "kind": "custom",
         "name": "Grass 312",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 339
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 339
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121604,11 +122513,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_13-180",
-        "kind": "custom",
         "name": "Shrubs 180",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121619,11 +122533,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_13-181",
-        "kind": "custom",
         "name": "Shrubs 181",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121634,11 +122553,16 @@
       "tileY": 36,
       "inline": {
         "id": "def-layer_13-182",
-        "kind": "custom",
         "name": "Shrubs 182",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121649,11 +122573,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_13-183",
-        "kind": "custom",
         "name": "Shrubs 183",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121664,11 +122593,16 @@
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-184",
-        "kind": "custom",
         "name": "Shrubs 184",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121679,11 +122613,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-185",
-        "kind": "custom",
         "name": "Shrubs 185",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121694,11 +122633,16 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-186",
-        "kind": "custom",
         "name": "Shrubs 186",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121709,11 +122653,16 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-187",
-        "kind": "custom",
         "name": "Shrubs 187",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121724,11 +122673,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-188",
-        "kind": "custom",
         "name": "Shrubs 188",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121739,11 +122693,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-189",
-        "kind": "custom",
         "name": "Shrubs 189",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121754,11 +122713,16 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-190",
-        "kind": "custom",
         "name": "Shrubs 190",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121769,11 +122733,16 @@
       "tileY": 41,
       "inline": {
         "id": "def-layer_13-191",
-        "kind": "custom",
         "name": "Shrubs 191",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121784,11 +122753,16 @@
       "tileY": 42,
       "inline": {
         "id": "def-layer_13-192",
-        "kind": "custom",
         "name": "Shrubs 192",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121799,11 +122773,16 @@
       "tileY": 41,
       "inline": {
         "id": "def-layer_13-193",
-        "kind": "custom",
         "name": "Shrubs 193",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121814,11 +122793,16 @@
       "tileY": 41,
       "inline": {
         "id": "def-layer_13-194",
-        "kind": "custom",
         "name": "Shrubs 194",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121829,11 +122813,16 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-195",
-        "kind": "custom",
         "name": "Shrubs 195",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121844,11 +122833,16 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-196",
-        "kind": "custom",
         "name": "Shrubs 196",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121859,11 +122853,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-197",
-        "kind": "custom",
         "name": "Shrubs 197",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121874,11 +122873,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-198",
-        "kind": "custom",
         "name": "Shrubs 198",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121889,11 +122893,16 @@
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-199",
-        "kind": "custom",
         "name": "Shrubs 199",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121904,11 +122913,16 @@
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-200",
-        "kind": "custom",
         "name": "Shrubs 200",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121919,11 +122933,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-201",
-        "kind": "custom",
         "name": "Shrubs 201",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121934,11 +122953,16 @@
       "tileY": 40,
       "inline": {
         "id": "def-layer_13-202",
-        "kind": "custom",
         "name": "Shrubs 202",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121949,11 +122973,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_13-203",
-        "kind": "custom",
         "name": "Shrubs 203",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121964,11 +122993,16 @@
       "tileY": 38,
       "inline": {
         "id": "def-layer_13-204",
-        "kind": "custom",
         "name": "Shrubs 204",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121979,11 +123013,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_13-205",
-        "kind": "custom",
         "name": "Shrubs 205",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -121994,11 +123033,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_13-206",
-        "kind": "custom",
         "name": "Shrubs 206",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122009,11 +123053,16 @@
       "tileY": 36,
       "inline": {
         "id": "def-layer_13-207",
-        "kind": "custom",
         "name": "Shrubs 207",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122024,11 +123073,16 @@
       "tileY": 36,
       "inline": {
         "id": "def-layer_13-208",
-        "kind": "custom",
         "name": "Shrubs 208",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122039,11 +123093,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_13-209",
-        "kind": "custom",
         "name": "Shrubs 209",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122054,11 +123113,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_13-210",
-        "kind": "custom",
         "name": "Shrubs 210",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122069,11 +123133,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_13-211",
-        "kind": "custom",
         "name": "Shrubs 211",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122084,11 +123153,16 @@
       "tileY": 33,
       "inline": {
         "id": "def-layer_13-212",
-        "kind": "custom",
         "name": "Shrubs 212",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122099,11 +123173,16 @@
       "tileY": 44,
       "inline": {
         "id": "def-layer_13-213",
-        "kind": "custom",
         "name": "Shrubs 213",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122114,11 +123193,16 @@
       "tileY": 62,
       "inline": {
         "id": "def-layer_13-214",
-        "kind": "custom",
         "name": "Shrubs 214",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122129,11 +123213,16 @@
       "tileY": 63,
       "inline": {
         "id": "def-layer_13-215",
-        "kind": "custom",
         "name": "Shrubs 215",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122144,11 +123233,16 @@
       "tileY": 62,
       "inline": {
         "id": "def-layer_13-216",
-        "kind": "custom",
         "name": "Shrubs 216",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122159,11 +123253,16 @@
       "tileY": 63,
       "inline": {
         "id": "def-layer_13-217",
-        "kind": "custom",
         "name": "Shrubs 217",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122174,11 +123273,16 @@
       "tileY": 76,
       "inline": {
         "id": "def-layer_13-218",
-        "kind": "custom",
         "name": "Shrubs 218",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122189,11 +123293,16 @@
       "tileY": 76,
       "inline": {
         "id": "def-layer_13-219",
-        "kind": "custom",
         "name": "Shrubs 219",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122204,11 +123313,16 @@
       "tileY": 75,
       "inline": {
         "id": "def-layer_13-220",
-        "kind": "custom",
         "name": "Shrubs 220",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122219,11 +123333,16 @@
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-221",
-        "kind": "custom",
         "name": "Shrubs 221",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122234,11 +123353,16 @@
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-222",
-        "kind": "custom",
         "name": "Shrubs 222",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122249,11 +123373,16 @@
       "tileY": 67,
       "inline": {
         "id": "def-layer_13-223",
-        "kind": "custom",
         "name": "Shrubs 223",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122264,11 +123393,16 @@
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-224",
-        "kind": "custom",
         "name": "Shrubs 224",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122279,11 +123413,16 @@
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-225",
-        "kind": "custom",
         "name": "Shrubs 225",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122294,11 +123433,16 @@
       "tileY": 66,
       "inline": {
         "id": "def-layer_13-226",
-        "kind": "custom",
         "name": "Shrubs 226",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122309,11 +123453,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_13-227",
-        "kind": "custom",
         "name": "Shrubs 227",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122324,11 +123473,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_13-228",
-        "kind": "custom",
         "name": "Shrubs 228",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122339,11 +123493,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_13-229",
-        "kind": "custom",
         "name": "Shrubs 229",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122354,11 +123513,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_13-230",
-        "kind": "custom",
         "name": "Shrubs 230",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122369,11 +123533,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_13-231",
-        "kind": "custom",
         "name": "Shrubs 231",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122384,11 +123553,16 @@
       "tileY": 104,
       "inline": {
         "id": "def-layer_13-232",
-        "kind": "custom",
         "name": "Shrubs 232",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122399,11 +123573,16 @@
       "tileY": 117,
       "inline": {
         "id": "def-layer_13-233",
-        "kind": "custom",
         "name": "Shrubs 233",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122414,11 +123593,16 @@
       "tileY": 117,
       "inline": {
         "id": "def-layer_13-234",
-        "kind": "custom",
         "name": "Shrubs 234",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122429,11 +123613,16 @@
       "tileY": 117,
       "inline": {
         "id": "def-layer_13-235",
-        "kind": "custom",
         "name": "Shrubs 235",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122444,11 +123633,16 @@
       "tileY": 92,
       "inline": {
         "id": "def-layer_13-253",
-        "kind": "custom",
         "name": "Shrubs 253",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122459,11 +123653,16 @@
       "tileY": 20,
       "inline": {
         "id": "def-layer_13-254",
-        "kind": "custom",
         "name": "Shrubs 254",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122474,11 +123673,16 @@
       "tileY": 21,
       "inline": {
         "id": "def-layer_13-255",
-        "kind": "custom",
         "name": "Shrubs 255",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122489,11 +123693,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-257",
-        "kind": "custom",
         "name": "Shrubs 257",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122504,11 +123713,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-258",
-        "kind": "custom",
         "name": "Shrubs 258",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122519,11 +123733,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-259",
-        "kind": "custom",
         "name": "Shrubs 259",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122534,11 +123753,16 @@
       "tileY": 64,
       "inline": {
         "id": "def-layer_13-273",
-        "kind": "custom",
         "name": "Shrubs 273",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122549,11 +123773,16 @@
       "tileY": 65,
       "inline": {
         "id": "def-layer_13-274",
-        "kind": "custom",
         "name": "Shrubs 274",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122564,11 +123793,16 @@
       "tileY": 22,
       "inline": {
         "id": "def-layer_13-275",
-        "kind": "custom",
         "name": "Shrubs 275",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122579,11 +123813,16 @@
       "tileY": 21,
       "inline": {
         "id": "def-layer_13-276",
-        "kind": "custom",
         "name": "Shrubs 276",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122594,11 +123833,16 @@
       "tileY": 20,
       "inline": {
         "id": "def-layer_13-277",
-        "kind": "custom",
         "name": "Shrubs 277",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122609,11 +123853,16 @@
       "tileY": 19,
       "inline": {
         "id": "def-layer_13-278",
-        "kind": "custom",
         "name": "Shrubs 278",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122624,11 +123873,16 @@
       "tileY": 19,
       "inline": {
         "id": "def-layer_13-279",
-        "kind": "custom",
         "name": "Shrubs 279",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122639,11 +123893,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_13-280",
-        "kind": "custom",
         "name": "Shrubs 280",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122654,11 +123913,16 @@
       "tileY": 18,
       "inline": {
         "id": "def-layer_13-281",
-        "kind": "custom",
         "name": "Shrubs 281",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122669,11 +123933,16 @@
       "tileY": 17,
       "inline": {
         "id": "def-layer_13-282",
-        "kind": "custom",
         "name": "Shrubs 282",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122684,11 +123953,16 @@
       "tileY": 17,
       "inline": {
         "id": "def-layer_13-283",
-        "kind": "custom",
         "name": "Shrubs 283",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122699,11 +123973,16 @@
       "tileY": 16,
       "inline": {
         "id": "def-layer_13-284",
-        "kind": "custom",
         "name": "Shrubs 284",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122714,11 +123993,16 @@
       "tileY": 16,
       "inline": {
         "id": "def-layer_13-285",
-        "kind": "custom",
         "name": "Shrubs 285",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122729,11 +124013,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_13-286",
-        "kind": "custom",
         "name": "Shrubs 286",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122744,11 +124033,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_13-287",
-        "kind": "custom",
         "name": "Shrubs 287",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122759,11 +124053,16 @@
       "tileY": 15,
       "inline": {
         "id": "def-layer_13-288",
-        "kind": "custom",
         "name": "Shrubs 288",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122774,11 +124073,16 @@
       "tileY": 66,
       "inline": {
         "id": "def-layer_13-300",
-        "kind": "custom",
         "name": "Shrubs 300",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122789,11 +124093,16 @@
       "tileY": 67,
       "inline": {
         "id": "def-layer_13-301",
-        "kind": "custom",
         "name": "Shrubs 301",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122804,11 +124113,16 @@
       "tileY": 68,
       "inline": {
         "id": "def-layer_13-302",
-        "kind": "custom",
         "name": "Shrubs 302",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122819,11 +124133,16 @@
       "tileY": 45,
       "inline": {
         "id": "def-layer_13-308",
-        "kind": "custom",
         "name": "Shrubs 308",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122834,11 +124153,16 @@
       "tileY": 46,
       "inline": {
         "id": "def-layer_13-309",
-        "kind": "custom",
         "name": "Shrubs 309",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122849,11 +124173,16 @@
       "tileY": 46,
       "inline": {
         "id": "def-layer_13-310",
-        "kind": "custom",
         "name": "Shrubs 310",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122864,11 +124193,16 @@
       "tileY": 46,
       "inline": {
         "id": "def-layer_13-311",
-        "kind": "custom",
         "name": "Shrubs 311",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 372
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 372
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122879,11 +124213,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_14-260",
-        "kind": "custom",
         "name": "Rocks 260",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122894,11 +124233,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_14-261",
-        "kind": "custom",
         "name": "Rocks 261",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122909,11 +124253,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_14-262",
-        "kind": "custom",
         "name": "Rocks 262",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122924,11 +124273,16 @@
       "tileY": 41,
       "inline": {
         "id": "def-layer_14-263",
-        "kind": "custom",
         "name": "Rocks 263",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122939,11 +124293,16 @@
       "tileY": 42,
       "inline": {
         "id": "def-layer_14-264",
-        "kind": "custom",
         "name": "Rocks 264",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122954,11 +124313,16 @@
       "tileY": 41,
       "inline": {
         "id": "def-layer_14-265",
-        "kind": "custom",
         "name": "Rocks 265",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122969,11 +124333,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_14-266",
-        "kind": "custom",
         "name": "Rocks 266",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122984,11 +124353,16 @@
       "tileY": 36,
       "inline": {
         "id": "def-layer_14-267",
-        "kind": "custom",
         "name": "Rocks 267",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -122999,11 +124373,16 @@
       "tileY": 37,
       "inline": {
         "id": "def-layer_14-268",
-        "kind": "custom",
         "name": "Rocks 268",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123014,11 +124393,16 @@
       "tileY": 39,
       "inline": {
         "id": "def-layer_14-269",
-        "kind": "custom",
         "name": "Rocks 269",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123029,11 +124413,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_14-270",
-        "kind": "custom",
         "name": "Rocks 270",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123044,11 +124433,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_14-271",
-        "kind": "custom",
         "name": "Rocks 271",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123059,11 +124453,16 @@
       "tileY": 64,
       "inline": {
         "id": "def-layer_14-272",
-        "kind": "custom",
         "name": "Rocks 272",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123074,11 +124473,16 @@
       "tileY": 72,
       "inline": {
         "id": "def-layer_14-305",
-        "kind": "custom",
         "name": "Rocks 305",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123089,11 +124493,16 @@
       "tileY": 71,
       "inline": {
         "id": "def-layer_14-306",
-        "kind": "custom",
         "name": "Rocks 306",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123104,11 +124513,16 @@
       "tileY": 61,
       "inline": {
         "id": "def-layer_14-307",
-        "kind": "custom",
         "name": "Rocks 307",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 371
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 371
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123119,11 +124533,16 @@
       "tileY": 42,
       "inline": {
         "id": "def-layer_15-289",
-        "kind": "custom",
         "name": "Signs 289",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123134,11 +124553,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_15-290",
-        "kind": "custom",
         "name": "Signs 290",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123149,11 +124573,16 @@
       "tileY": 34,
       "inline": {
         "id": "def-layer_15-291",
-        "kind": "custom",
         "name": "Signs 291",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123164,11 +124593,16 @@
       "tileY": 64,
       "inline": {
         "id": "def-layer_15-292",
-        "kind": "custom",
         "name": "Signs 292",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123179,11 +124613,16 @@
       "tileY": 73,
       "inline": {
         "id": "def-layer_15-293",
-        "kind": "custom",
         "name": "Signs 293",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123194,11 +124633,16 @@
       "tileY": 35,
       "inline": {
         "id": "def-layer_15-294",
-        "kind": "custom",
         "name": "Signs 294",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123209,11 +124653,16 @@
       "tileY": 67,
       "inline": {
         "id": "def-layer_15-295",
-        "kind": "custom",
         "name": "Signs 295",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123224,11 +124673,16 @@
       "tileY": 74,
       "inline": {
         "id": "def-layer_15-296",
-        "kind": "custom",
         "name": "Signs 296",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123239,11 +124693,16 @@
       "tileY": 67,
       "inline": {
         "id": "def-layer_15-297",
-        "kind": "custom",
         "name": "Signs 297",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123254,11 +124713,16 @@
       "tileY": 44,
       "inline": {
         "id": "def-layer_15-298",
-        "kind": "custom",
         "name": "Signs 298",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123269,11 +124733,16 @@
       "tileY": 12,
       "inline": {
         "id": "def-layer_15-299",
-        "kind": "custom",
         "name": "Signs 299",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123284,11 +124753,16 @@
       "tileY": 62,
       "inline": {
         "id": "def-layer_15-303",
-        "kind": "custom",
         "name": "Signs 303",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123299,11 +124773,16 @@
       "tileY": 113,
       "inline": {
         "id": "def-layer_15-304",
-        "kind": "custom",
         "name": "Signs 304",
-        "sprite": {
-          "spriteSetId": "lokiri-forest",
-          "spriteId": 402
+        "components": [
+          {
+            "type": "visual",
+            "spriteSetId": "lokiri-forest",
+            "spriteId": 402
+          }
+        ],
+        "editorData": {
+          "template": "custom"
         }
       }
     },
@@ -123314,8 +124793,11 @@
       "tileY": 0,
       "inline": {
         "id": "def-layer_16-314",
-        "kind": "custom",
-        "name": "Camera Boundaries"
+        "name": "Camera Boundaries",
+        "components": [],
+        "editorData": {
+          "template": "custom"
+        }
       }
     }
   ],

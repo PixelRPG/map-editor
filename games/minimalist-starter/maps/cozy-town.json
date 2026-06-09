@@ -2396,16 +2396,22 @@
       "tileY": 7,
       "inline": {
         "id": "def-town-to-overworld",
-        "kind": "teleport",
         "name": "Open Field",
-        "trigger": {
-          "on": "walk-onto"
-        },
-        "properties": {
-          "targetMapId": "overworld",
-          "targetTileX": 21,
-          "targetTileY": 15,
-          "label": "Open Field"
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "overworld",
+            "targetTileX": 21,
+            "targetTileY": 15,
+            "label": "Open Field"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
         }
       }
     }
