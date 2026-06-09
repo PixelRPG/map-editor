@@ -1,5 +1,5 @@
 import Adw from '@girs/adw-1'
-import type Gdk from '@girs/gdk-4.0'
+import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
@@ -79,8 +79,11 @@ export class CardGallery extends Adw.Bin {
   private _deleteTooltip = _('Delete')
   private _openLabel = _('Edit')
   private _renameLabel = _('Rename')
+  private _reorderable = false
   private _activeId: string | null = null
   private _hoveredId: string | null = null
+  /** Id of the card currently being dragged (drag-reorder), else null. */
+  private _dragId: string | null = null
   /** card-button by item id, so `setActiveId` can move the selection ring. */
   private _cardsById = new Map<string, Gtk.Button>()
   /** highlightable previews by id, so the active/hovered one can animate. */
@@ -128,6 +131,13 @@ export class CardGallery extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             _('Rename'),
           ),
+          reorderable: GObject.ParamSpec.boolean(
+            'reorderable',
+            'Reorderable',
+            'Whether cards can be drag-reordered (emits `reorder-requested`)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
         },
         Signals: {
           // A card was clicked (select it).
@@ -141,6 +151,10 @@ export class CardGallery extends Adw.Bin {
           // The card's three-dots menu → delete was chosen. The host
           // owns the confirm dialog + the actual removal.
           'delete-requested': { param_types: [GObject.TYPE_STRING] },
+          // A card was drag-dropped onto another (only when `reorderable`).
+          // Args: dragged card id, target card id. The host reorders +
+          // persists; the gallery doesn't mutate its own model.
+          'reorder-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
         },
       },
       CardGallery,
@@ -202,6 +216,16 @@ export class CardGallery extends Adw.Bin {
     if (this._renameLabel === value) return
     this._renameLabel = value
     this.notify('rename-label')
+  }
+
+  get reorderable(): boolean {
+    return this._reorderable ?? false
+  }
+
+  set reorderable(value: boolean) {
+    if (this._reorderable === value) return
+    this._reorderable = value
+    this.notify('reorderable')
   }
 
   /**
@@ -384,8 +408,44 @@ export class CardGallery extends Adw.Bin {
     menuButton.insert_action_group('card', group)
     overlay.add_overlay(menuButton)
 
+    if (this._reorderable) this._wireReorder(card, item.id)
+
     this._cardsById.set(item.id, card)
     return overlay
+  }
+
+  /**
+   * Make a card drag-reorderable: a `Gtk.DragSource` carrying the card's
+   * id (string) + a `Gtk.DropTarget` that, on drop, emits
+   * `reorder-requested(draggedId, targetId)`. The host owns the actual
+   * reorder + persistence. Click vs drag is disambiguated by GTK's drag
+   * threshold, so single-click select still works.
+   */
+  private _wireReorder(card: Gtk.Button, id: string): void {
+    const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
+    dragSource.connect('prepare', () => {
+      this._dragId = id
+      const value = new GObject.Value()
+      value.init(GObject.TYPE_STRING)
+      value.set_string(id)
+      return Gdk.ContentProvider.new_for_value(value)
+    })
+    dragSource.connect('drag-begin', () => {
+      dragSource.set_icon(Gtk.WidgetPaintable.new(card), 0, 0)
+    })
+    dragSource.connect('drag-end', () => {
+      this._dragId = null
+    })
+    card.add_controller(dragSource)
+
+    const dropTarget = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE)
+    dropTarget.connect('drop', () => {
+      const draggedId = this._dragId
+      if (draggedId === null || draggedId === id) return false
+      this.emit('reorder-requested', draggedId, id)
+      return true
+    })
+    card.add_controller(dropTarget)
   }
 
   /**

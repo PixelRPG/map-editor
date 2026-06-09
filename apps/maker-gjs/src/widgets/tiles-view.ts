@@ -88,6 +88,7 @@ export class TilesView extends ResponsiveEditorView {
 
   private _onSolidChanged: ((spriteSetId: string, spriteId: number, solid: boolean) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
+  private _onTilesetUsage: ((spriteSetId: string) => number) | null = null
 
   static {
     GObject.registerClass(
@@ -140,6 +141,10 @@ export class TilesView extends ResponsiveEditorView {
           // The user renamed a tileset — payload is its id + the new name.
           // The host re-persists the descriptor + broadcasts the update.
           'spriteset-rename-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
+          // The user drag-reordered the tileset cards — payload is the
+          // full ordered id list. The host rewrites `data.spriteSets[]`
+          // order + persists (display order; local, not collab-synced).
+          'spriteset-reorder-requested': { param_types: [GObject.TYPE_JSOBJECT] },
           // The user confirmed deleting a tileset — payload is its id.
           // The host removes the files + reference + broadcasts.
           'spriteset-delete-requested': { param_types: [GObject.TYPE_STRING] },
@@ -154,6 +159,9 @@ export class TilesView extends ResponsiveEditorView {
     // Place the inspector in the slot matching the initial (desktop)
     // layout. Later breakpoint changes re-place it via the setter.
     this._placeInspector()
+    // Tilesets are drag-reorderable (cosmetic display order); the Cast
+    // galleries leave this off.
+    this._tilesets_gallery.reorderable = true
   }
 
   /**
@@ -196,6 +204,13 @@ export class TilesView extends ResponsiveEditorView {
     this.signals.connect(this._tilesets_gallery, 'rename-requested', (_v: CardGallery, id: string) => {
       this._presentRenameTileset(id)
     })
+    this.signals.connect(
+      this._tilesets_gallery,
+      'reorder-requested',
+      (_v: CardGallery, draggedId: string, targetId: string) => {
+        this._reorderTilesets(draggedId, targetId)
+      },
+    )
     this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteTileset(id)
     })
@@ -264,9 +279,11 @@ export class TilesView extends ResponsiveEditorView {
   bindCallbacks(callbacks: {
     setSolid: (spriteSetId: string, spriteId: number, solid: boolean) => void
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => void
+    tilesetUsage: (spriteSetId: string) => number
   }): void {
     this._onSolidChanged = callbacks.setSolid
     this._onSurfaceChanged = callbacks.setSurface
+    this._onTilesetUsage = callbacks.tilesetUsage
   }
 
   /**
@@ -309,6 +326,13 @@ export class TilesView extends ResponsiveEditorView {
       }
       items.push({ id, resource, gdk })
     }
+    // Order the cards by the project's `spriteSets[]` order so a live
+    // drag-reorder (which rewrites that array) reflects on the next
+    // re-hydration — the live `project.spriteSets` Map keeps its original
+    // insertion order. Sets absent from the array (built-ins) sort to the
+    // end in their existing order (stable sort).
+    const order = new Map((project.data?.spriteSets ?? []).map((ref, i) => [ref.id, i]))
+    items.sort((a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER))
     this._spriteSets = items
 
     // Keep the active selection if still present; otherwise fall back
@@ -506,18 +530,22 @@ export class TilesView extends ResponsiveEditorView {
    * Confirm + request deletion of a tileset. Destructive (removes the
    * project's `<id>.png` + `<id>.json` and, in collab, broadcasts the
    * removal) so it routes through an `Adw.AlertDialog` first; the host
-   * does the actual removal on confirm.
+   * does the actual removal on confirm. When the set is still referenced
+   * (by characters or maps) the body names the count so the user knows
+   * what they'd break — vs the generic "this cannot be undone" otherwise.
    */
   private _confirmDeleteTileset(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry || isBuiltInSpriteSet(id)) return
     const name = entry.resource.data?.name ?? id
-    const dialog = new Adw.AlertDialog({
-      heading: _('Delete tileset?'),
-      body: _(
-        `“${name}” and its image will be removed from the project. Tiles painted with it may break. This cannot be undone.`,
-      ),
-    })
+    const usedBy = this._onTilesetUsage?.(id) ?? 0
+    const body =
+      usedBy > 0
+        ? _(
+            `“${name}” is still used in ${usedBy} place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone.`,
+          )
+        : _(`“${name}” and its image will be removed from the project. This cannot be undone.`)
+    const dialog = new Adw.AlertDialog({ heading: _('Delete tileset?'), body })
     dialog.add_response('cancel', _('Cancel'))
     dialog.add_response('delete', _('Delete'))
     dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
@@ -527,6 +555,31 @@ export class TilesView extends ResponsiveEditorView {
       if (response === 'delete') this.emit('spriteset-delete-requested', id)
     })
     dialog.present(this)
+  }
+
+  /**
+   * Move `draggedId` to just before `targetId` in the gallery, rebuild
+   * for instant feedback, and emit the full ordered id list so the host
+   * rewrites `data.spriteSets[]` order + persists. No-op on a self-drop
+   * or an unknown id.
+   */
+  private _reorderTilesets(draggedId: string, targetId: string): void {
+    if (draggedId === targetId) return
+    const from = this._spriteSets.findIndex((s) => s.id === draggedId)
+    if (from === -1 || !this._spriteSets.some((s) => s.id === targetId)) return
+    const next = [...this._spriteSets]
+    const [moved] = next.splice(from, 1)
+    next.splice(
+      next.findIndex((s) => s.id === targetId),
+      0,
+      moved,
+    )
+    this._spriteSets = next
+    this._rebuildGallery()
+    this.emit(
+      'spriteset-reorder-requested',
+      next.map((s) => s.id),
+    )
   }
 
   vfunc_unmap(): void {
