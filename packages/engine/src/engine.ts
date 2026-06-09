@@ -201,7 +201,7 @@ export class Engine {
     this.logger.info(`Loading map: ${mapId}`)
     const mapResource = await this._gameProjectResource.loadMap(mapId)
 
-    const objectLibrary = this._gameProjectResource.data?.objectLibrary ?? []
+    const entityLibrary = this._gameProjectResource.data?.entityLibrary ?? []
     // The player is whichever project character is flagged `isPlayer`.
     // Projects ship a starter character (the scientist) as real project
     // data; if none is flagged the scene falls back to a procedural
@@ -217,7 +217,7 @@ export class Engine {
     const playerSpriteSet = playerCharacter
       ? this._gameProjectResource.spriteSets.get(playerCharacter.spriteSetId)
       : undefined
-    const newMapScene = new MapScene(mapResource, this.events, objectLibrary, playerCharacter, playerSpriteSet)
+    const newMapScene = new MapScene(mapResource, this.events, entityLibrary, playerCharacter, playerSpriteSet)
 
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)

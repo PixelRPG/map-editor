@@ -1,4 +1,4 @@
-import { GameProjectResource } from '@pixelrpg/engine'
+import { GameProjectResource, getComponentData } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '@pixelrpg/gjs'
 
 const SOLID_PALETTE = ['#3d6b3a', '#3a5e7b', '#7a5a3a', '#6b3a3a', '#4a4a6b', '#6b6b3a', '#3a6b6b']
@@ -92,29 +92,31 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
   })
 
   // Aggregate teleports for the atlas overlay by walking every map's
-  // `objectPlacements` and picking out `kind: 'teleport'` entries.
-  // This replaces the legacy project-level `teleports[]` array that
-  // PR 2 of the object-system rollout removed.
+  // `objectPlacements` and picking out entities that carry a `teleport`
+  // component. This replaces the legacy project-level `teleports[]` array.
   const teleports: SampleTeleport[] = maps.flatMap((mapResource) => {
     const data = mapResource.mapData
     const placements = data?.objectPlacements ?? []
     return placements.flatMap((placement) => {
-      const def = placement.inline // PR 2 always inlined teleports; library refs are an editor concern
-      if (def?.kind !== 'teleport') return []
-      const props = def.properties as
-        | { targetMapId?: string; targetTileX?: number; targetTileY?: number; label?: string }
-        | undefined
-      if (!props?.targetMapId || typeof props.targetTileX !== 'number' || typeof props.targetTileY !== 'number')
+      const def = placement.inline // editor inlines placements; library refs are an editor concern
+      const teleport = def ? getComponentData(def, 'teleport') : undefined
+      if (
+        !teleport ||
+        typeof teleport.targetMapId !== 'string' ||
+        typeof teleport.targetTileX !== 'number' ||
+        typeof teleport.targetTileY !== 'number'
+      ) {
         return []
+      }
       return [
         {
           from: data.id,
           fx: placement.tileX,
           fy: placement.tileY,
-          to: props.targetMapId,
-          tx: props.targetTileX,
-          ty: props.targetTileY,
-          label: props.label ?? def.name ?? '',
+          to: teleport.targetMapId,
+          tx: teleport.targetTileX,
+          ty: teleport.targetTileY,
+          label: (typeof teleport.label === 'string' ? teleport.label : undefined) ?? def?.name ?? '',
         },
       ]
     })

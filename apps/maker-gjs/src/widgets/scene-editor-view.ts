@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { EditorTool } from '@pixelrpg/engine'
+import { BUILT_IN_COMPONENT_SPECS, type EditorTool, type EntityDefinition, getComponentData } from '@pixelrpg/engine'
 import {
   type EditorMode,
   type Engine,
@@ -23,6 +23,30 @@ import type { LoadedProject } from '../services/project-loader.ts'
 
 import Template from './scene-editor-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+
+/** The sprite reference of a definition's `visual` component, if any. */
+function visualOf(def: EntityDefinition | null): { spriteSetId: string; spriteId: number } | null {
+  const v = def ? getComponentData(def, 'visual') : undefined
+  if (v && typeof v.spriteSetId === 'string') {
+    return { spriteSetId: v.spriteSetId, spriteId: typeof v.spriteId === 'number' ? v.spriteId : 0 }
+  }
+  return null
+}
+
+/**
+ * Priority order for the Objects-tab row icon when a placement has no
+ * sprite — the dominant component's editor icon wins (mirrors the spawn
+ * marker priority). Returns `undefined` so the tab uses its fallback.
+ */
+const OBJECT_ICON_PRIORITY = ['teleport', 'item', 'spawn-point', 'npc-route', 'dialogue', 'trigger']
+function iconOf(def: EntityDefinition | null): string | undefined {
+  if (!def) return undefined
+  const types = new Set(def.components.map((c) => c.type))
+  for (const t of OBJECT_ICON_PRIORITY) {
+    if (types.has(t)) return BUILT_IN_COMPONENT_SPECS[t]?.editor.icon
+  }
+  return undefined
+}
 
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(SceneEditor.$gtype)
@@ -279,14 +303,15 @@ export class SceneEditorView extends ResponsiveEditorView {
     // instead of the kind-fallback icon (decorations / NPCs gain a
     // visible thumbnail). We deduplicate sprite-set loads — most
     // decoration objects share one set, and `getSpriteSet` is async.
-    const library = project.resource.data?.objectLibrary ?? []
+    const library = project.resource.data?.entityLibrary ?? []
     const resolvedDefs = (mapData.objectPlacements ?? []).map((p) => ({
       placement: p,
       def: p.inline ?? library.find((d) => d.id === p.defId) ?? null,
     }))
     const objectSpriteSetIds = new Set<string>()
     for (const { def } of resolvedDefs) {
-      if (def?.sprite?.spriteSetId) objectSpriteSetIds.add(def.sprite.spriteSetId)
+      const vis = visualOf(def)
+      if (vis) objectSpriteSetIds.add(vis.spriteSetId)
     }
     const gdkSheets = new Map<string, GdkSpriteSheet | null>()
     await Promise.all(
@@ -307,15 +332,16 @@ export class SceneEditorView extends ResponsiveEditorView {
     )
     const placements = resolvedDefs.map(({ placement, def }) => {
       let paintable = null
-      if (def?.sprite) {
-        const sheet = gdkSheets.get(def.sprite.spriteSetId)
-        const sprite = sheet?.sprites[def.sprite.spriteId]
+      const vis = visualOf(def)
+      if (vis) {
+        const sheet = gdkSheets.get(vis.spriteSetId)
+        const sprite = sheet?.sprites[vis.spriteId]
         paintable = sprite?.createPaintable() ?? null
       }
       return {
         id: placement.id,
         name: def?.name ?? placement.id,
-        kind: def?.kind ?? 'custom',
+        icon: iconOf(def),
         tileX: placement.tileX,
         tileY: placement.tileY,
         layerId: placement.layerId,

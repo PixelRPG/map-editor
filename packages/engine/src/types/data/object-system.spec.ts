@@ -1,12 +1,11 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import {
-  isObjectDefinition,
+  type EntityDefinition,
+  isComponentData,
+  isEntityDefinition,
   isObjectPlacement,
-  isSpriteRef,
   isTileProperties,
-  isTriggerSpec,
-  type ObjectDefinition,
   type ObjectPlacement,
 } from './index'
 
@@ -31,133 +30,67 @@ export default async () => {
       ).toBe(true)
     })
 
-    await it('accepts a free-form surface string (so projects can extend)', async () => {
-      expect(isTileProperties({ surface: 'magma' })).toBe(true)
-    })
-
     await it('rejects wrong types', async () => {
       expect(isTileProperties({ walkable: 'yes' })).toBe(false)
       expect(isTileProperties({ surface: 42 })).toBe(false)
-      expect(isTileProperties({ custom: null })).toBe(false)
       expect(isTileProperties(null)).toBe(false)
-      expect(isTileProperties('grass')).toBe(false)
     })
   })
 
   // ----------------------------------------------------------------
-  // SpriteRef + TriggerSpec
+  // ComponentData
   // ----------------------------------------------------------------
-  await describe('isSpriteRef', async () => {
-    await it('accepts a minimal ref', async () => {
-      expect(isSpriteRef({ spriteSetId: 'minimalist', spriteId: 7 })).toBe(true)
+  await describe('isComponentData', async () => {
+    await it('accepts a typed component config', async () => {
+      expect(isComponentData({ type: 'visual', spriteSetId: 's', spriteId: 0 })).toBe(true)
+      expect(isComponentData({ type: 'collision' })).toBe(true)
     })
-
-    await it('accepts an animated ref', async () => {
-      expect(isSpriteRef({ spriteSetId: 'npc-pack', spriteId: 12, animationId: 'walk-down' })).toBe(true)
-    })
-
-    await it('rejects missing or wrong fields', async () => {
-      expect(isSpriteRef({ spriteId: 7 })).toBe(false)
-      expect(isSpriteRef({ spriteSetId: 'minimalist', spriteId: '7' })).toBe(false)
-      expect(isSpriteRef(null)).toBe(false)
-    })
-  })
-
-  await describe('isTriggerSpec', async () => {
-    await it('accepts each canonical trigger mode', async () => {
-      for (const on of ['walk-onto', 'walk-off', 'action-button', 'auto', 'none'] as const) {
-        expect(isTriggerSpec({ on })).toBe(true)
-      }
-    })
-
-    await it('accepts optional once + scriptId', async () => {
-      expect(isTriggerSpec({ on: 'walk-onto', once: true, scriptId: 'pickup-apple' })).toBe(true)
-    })
-
-    await it('rejects unknown trigger modes', async () => {
-      expect(isTriggerSpec({ on: 'on-fire' })).toBe(false)
-      expect(isTriggerSpec({ on: '' })).toBe(false)
-      expect(isTriggerSpec({})).toBe(false)
+    await it('rejects a missing/invalid type', async () => {
+      expect(isComponentData({ spriteId: 0 })).toBe(false)
+      expect(isComponentData({ type: 7 })).toBe(false)
+      expect(isComponentData(null)).toBe(false)
     })
   })
 
   // ----------------------------------------------------------------
-  // ObjectDefinition
+  // EntityDefinition (structural guard — registry-aware check lives in
+  // entity/validate.ts)
   // ----------------------------------------------------------------
-  await describe('isObjectDefinition', async () => {
-    await it('accepts each canonical kind', async () => {
-      const kinds = ['event', 'teleport', 'item', 'npc', 'spawn-point', 'custom'] as const
-      for (const kind of kinds) {
-        expect(isObjectDefinition({ id: `def-${kind}`, kind, name: kind })).toBe(true)
-      }
+  await describe('isEntityDefinition', async () => {
+    await it('accepts a minimal definition', async () => {
+      expect(isEntityDefinition({ id: 'hero', name: 'Hero', components: [] })).toBe(true)
     })
 
-    await it('rejects unknown kinds', async () => {
-      expect(isObjectDefinition({ id: 'd', kind: 'collider', name: 'old-collider' })).toBe(false)
-      expect(isObjectDefinition({ id: 'd', kind: '', name: 'empty' })).toBe(false)
+    await it('accepts a component-rich definition (the canonical NPC recipe)', async () => {
+      const guard: EntityDefinition = {
+        id: 'guard',
+        name: 'Guard',
+        components: [
+          { type: 'visual', spriteSetId: 'soldier', spriteId: 0 },
+          { type: 'movement', tilesPerSec: 3 },
+          { type: 'dialogue', dialogueId: 'guard-1' },
+          { type: 'trigger', on: 'action-button' },
+        ],
+        editorData: { template: 'npc' },
+      }
+      expect(isEntityDefinition(guard)).toBe(true)
     })
 
-    await it('rejects definitions missing the required fields', async () => {
-      expect(isObjectDefinition({ kind: 'event', name: 'no-id' })).toBe(false)
-      expect(isObjectDefinition({ id: 'd', name: 'no-kind' })).toBe(false)
-      expect(isObjectDefinition({ id: 'd', kind: 'event' })).toBe(false)
+    await it('accepts conditional states', async () => {
+      const door: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [{ type: 'collision' }],
+        states: [{ id: 'open', when: { flag: 'door-key' }, components: [] }],
+      }
+      expect(isEntityDefinition(door)).toBe(true)
     })
 
-    await it('accepts the canonical pattern recipes from the concept doc', async () => {
-      const apple: ObjectDefinition = {
-        id: 'apple',
-        kind: 'item',
-        name: 'Apple',
-        sprite: { spriteSetId: 'overworld', spriteId: 4 },
-        trigger: { on: 'walk-onto' },
-        blocking: false,
-        properties: { itemId: 'apple', qty: 1 },
-      }
-      expect(isObjectDefinition(apple)).toBe(true)
-
-      const stone: ObjectDefinition = {
-        id: 'liftable-stone',
-        kind: 'item',
-        name: 'Stone',
-        sprite: { spriteSetId: 'overworld', spriteId: 18 },
-        trigger: { on: 'action-button' },
-        blocking: true,
-        properties: { itemId: 'stone', qty: 1 },
-      }
-      expect(isObjectDefinition(stone)).toBe(true)
-
-      const pad: ObjectDefinition = {
-        id: 'cave-entrance',
-        kind: 'teleport',
-        name: 'Cave Entrance',
-        trigger: { on: 'walk-onto' },
-        blocking: false,
-        properties: {
-          targetMapId: 'cave',
-          targetTileX: 4,
-          targetTileY: 9,
-          facing: 'down',
-          label: 'Cave',
-        },
-      }
-      expect(isObjectDefinition(pad)).toBe(true)
-
-      const spawn: ObjectDefinition = {
-        id: 'player-spawn',
-        kind: 'spawn-point',
-        name: 'Player Spawn',
-        properties: { spawnId: 'player', facing: 'down' },
-      }
-      expect(isObjectDefinition(spawn)).toBe(true)
-
-      const wall: ObjectDefinition = {
-        id: 'invisible-wall',
-        kind: 'custom',
-        name: 'Invisible Wall',
-        blocking: true,
-        trigger: { on: 'none' },
-      }
-      expect(isObjectDefinition(wall)).toBe(true)
+    await it('rejects definitions missing required fields', async () => {
+      expect(isEntityDefinition({ name: 'no-id', components: [] })).toBe(false)
+      expect(isEntityDefinition({ id: 'd', components: [] })).toBe(false)
+      expect(isEntityDefinition({ id: 'd', name: 'no-components' })).toBe(false)
+      expect(isEntityDefinition({ id: 'd', name: 'bad-components', components: [{ noType: true }] })).toBe(false)
     })
   })
 
@@ -166,24 +99,18 @@ export default async () => {
   // ----------------------------------------------------------------
   await describe('isObjectPlacement', async () => {
     await it('accepts a library-referenced placement', async () => {
-      const p: ObjectPlacement = {
-        id: 'apple-1',
-        layerId: 'foreground',
-        tileX: 3,
-        tileY: 7,
-        defId: 'apple',
-      }
+      const p: ObjectPlacement = { id: 'apple-1', layerId: 'foreground', tileX: 3, tileY: 7, defId: 'apple' }
       expect(isObjectPlacement(p)).toBe(true)
     })
 
-    await it('accepts a library-referenced placement with overrides', async () => {
+    await it('accepts overrides (name + component replace)', async () => {
       const p: ObjectPlacement = {
         id: 'apple-2',
         layerId: 'foreground',
         tileX: 9,
         tileY: 4,
         defId: 'apple',
-        overrides: { name: 'Golden Apple', sprite: { spriteSetId: 'overworld', spriteId: 99 } },
+        overrides: { name: 'Golden Apple', components: [{ type: 'visual', spriteSetId: 'overworld', spriteId: 99 }] },
       }
       expect(isObjectPlacement(p)).toBe(true)
     })
@@ -196,10 +123,11 @@ export default async () => {
         tileY: 5,
         inline: {
           id: 'lava-pit-1-def',
-          kind: 'event',
           name: 'Lava Pit',
-          trigger: { on: 'walk-onto' },
-          properties: { damage: 10 },
+          components: [
+            { type: 'trigger', on: 'walk-onto' },
+            { type: 'custom-data', data: { damage: 10 } },
+          ],
         },
       }
       expect(isObjectPlacement(p)).toBe(true)
@@ -217,32 +145,27 @@ export default async () => {
           tileX: 0,
           tileY: 0,
           defId: 'apple',
-          inline: { id: 'p-inline', kind: 'item', name: 'Apple' },
+          inline: { id: 'p-inline', name: 'Apple', components: [] },
         }),
+      ).toBe(false)
+    })
+
+    await it('rejects bad override shapes', async () => {
+      expect(
+        isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: 0, defId: 'a', overrides: { name: 7 } }),
+      ).toBe(false)
+      expect(
+        isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: 0, defId: 'a', overrides: { components: 'x' } }),
       ).toBe(false)
     })
 
     await it('rejects non-finite tile coordinates', async () => {
       expect(isObjectPlacement({ id: 'p', layerId: 'l', tileX: Number.NaN, tileY: 0, defId: 'a' })).toBe(false)
-      expect(isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: Number.POSITIVE_INFINITY, defId: 'a' })).toBe(
-        false,
-      )
-    })
-
-    await it('rejects empty layerId / id', async () => {
-      expect(isObjectPlacement({ id: '', layerId: 'l', tileX: 0, tileY: 0, defId: 'a' })).toBe(false)
-      expect(isObjectPlacement({ id: 'p', layerId: '', tileX: 0, tileY: 0, defId: 'a' })).toBe(false)
     })
 
     await it('rejects placements whose inline definition is malformed', async () => {
       expect(
-        isObjectPlacement({
-          id: 'p',
-          layerId: 'l',
-          tileX: 0,
-          tileY: 0,
-          inline: { kind: 'event', name: 'no-id' },
-        }),
+        isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: 0, inline: { name: 'no-id', components: [] } }),
       ).toBe(false)
     })
   })

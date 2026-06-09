@@ -1,5 +1,6 @@
+import { validateEntityDefinition } from '../entity/validate'
 import type { GameProjectData } from '../types'
-import { isObjectDefinition } from '../types/data/ObjectDefinition'
+import { isEntityDefinition } from '../types/data/index'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -55,19 +56,24 @@ export class GameProjectFormat {
       throw new Error(`Initial map with id '${data.startup.initialMapId}' not found in maps`)
     }
 
-    // Validate object library — every entry must be a well-formed
-    // ObjectDefinition. Optional field: missing / empty array is fine.
-    if (data.objectLibrary !== undefined) {
-      if (!Array.isArray(data.objectLibrary)) {
-        throw new Error('Game project objectLibrary must be an array')
+    // Validate the entity library — every entry must be a well-formed
+    // EntityDefinition with registered component types. Optional field:
+    // missing / empty array is fine.
+    if (data.entityLibrary !== undefined) {
+      if (!Array.isArray(data.entityLibrary)) {
+        throw new Error('Game project entityLibrary must be an array')
       }
       const seenIds = new Set<string>()
-      data.objectLibrary.forEach((def, index) => {
-        if (!isObjectDefinition(def)) {
-          throw new Error(`Invalid object definition at objectLibrary[${index}]`)
+      data.entityLibrary.forEach((def, index) => {
+        if (!isEntityDefinition(def)) {
+          throw new Error(`Invalid entity definition at entityLibrary[${index}]`)
+        }
+        const errors = validateEntityDefinition(def)
+        if (errors.length > 0) {
+          throw new Error(`Invalid entity definition "${def.id}" at entityLibrary[${index}]: ${errors[0]}`)
         }
         if (seenIds.has(def.id)) {
-          throw new Error(`Duplicate object definition id "${def.id}" in objectLibrary`)
+          throw new Error(`Duplicate entity definition id "${def.id}" in entityLibrary`)
         }
         seenIds.add(def.id)
       })

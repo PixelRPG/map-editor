@@ -2432,16 +2432,22 @@
       "tileY": 7,
       "inline": {
         "id": "def-overworld-to-dungeon",
-        "kind": "teleport",
         "name": "Cave Entrance",
-        "trigger": {
-          "on": "walk-onto"
-        },
-        "properties": {
-          "targetMapId": "dungeon",
-          "targetTileX": 9,
-          "targetTileY": 12,
-          "label": "Cave Entrance"
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "dungeon",
+            "targetTileX": 9,
+            "targetTileY": 12,
+            "label": "Cave Entrance"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
         }
       }
     },
@@ -2452,16 +2458,22 @@
       "tileY": 15,
       "inline": {
         "id": "def-overworld-to-town",
-        "kind": "teleport",
         "name": "Town Path",
-        "trigger": {
-          "on": "walk-onto"
-        },
-        "properties": {
-          "targetMapId": "cozy-town",
-          "targetTileX": 3,
-          "targetTileY": 7,
-          "label": "Town Path"
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "cozy-town",
+            "targetTileX": 3,
+            "targetTileY": 7,
+            "label": "Town Path"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
         }
       }
     }

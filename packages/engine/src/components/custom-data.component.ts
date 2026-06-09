@@ -5,7 +5,7 @@ import { Component } from 'excalibur'
  * engine never touches `bag`'s shape — project systems and scripts
  * read and (rarely) write it.
  *
- * Source: `ObjectDefinition.properties.custom` flows into here
+ * Source: the `custom-data` component's `data` flows into here
  * unchanged at spawn time.
  */
 export class CustomDataComponent extends Component {

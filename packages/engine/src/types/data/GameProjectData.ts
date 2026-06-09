@@ -1,7 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { CharacterDefinition, GameProjectEditorMetadata, ObjectDefinition, Properties } from './index'
+import type { CharacterDefinition, EntityDefinition, GameProjectEditorMetadata, Properties } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -50,14 +50,14 @@ export interface GameProjectData {
   properties?: Properties
 
   /**
-   * Projectwide library of reusable object definitions — NPCs, items,
-   * teleports, spawn points, custom entities. Map-level
-   * `objectPlacements[]` reference these via `defId`.
+   * Projectwide library of reusable {@link EntityDefinition}s — NPCs,
+   * items, teleports, spawn points, characters, custom entities, each an
+   * explicit list of components. Map-level `objectPlacements[]` reference
+   * these via `defId`.
    *
-   * See `docs/concepts/object-system.md` for the Definition/Placement
-   * model and the canonical pattern table.
+   * See `docs/concepts/entity-and-appearance-model.md`.
    */
-  objectLibrary?: ObjectDefinition[]
+  entityLibrary?: EntityDefinition[]
 
   /**
    * Project-level cast — heroes and NPCs as reusable definitions.

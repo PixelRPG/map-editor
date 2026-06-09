@@ -71,7 +71,7 @@ export interface MapData {
   /**
    * Object instances on this map — NPCs, teleports, items, spawn
    * points, events. Each placement is tile-snapped and references
-   * either a project-level `ObjectDefinition` (via `defId`) or
+   * either a project-level `EntityDefinition` (via `defId`) or
    * carries the full definition inline.
    *
    * See `docs/concepts/object-system.md`. Replaces the legacy

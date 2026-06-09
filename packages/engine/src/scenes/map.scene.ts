@@ -14,7 +14,7 @@ import {
   TriggerSystem,
   WalkOnTileSystem,
 } from '../systems/index.ts'
-import type { CharacterDefinition, EngineEventMap, ObjectDefinition } from '../types/index.ts'
+import type { CharacterDefinition, EngineEventMap, EntityDefinition } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
@@ -44,7 +44,7 @@ export class MapScene extends Scene {
   constructor(
     public readonly mapResource: MapResource,
     events: EventEmitter<EngineEventMap>,
-    objectLibrary: readonly ObjectDefinition[] = [],
+    entityLibrary: readonly EntityDefinition[] = [],
     playerCharacter?: CharacterDefinition,
     playerSpriteSet?: SpriteSetResource,
   ) {
@@ -58,7 +58,7 @@ export class MapScene extends Scene {
     this.world.add(new CameraControlSystem(events))
     this.world.add(new TileEditorSystem(events))
     this.world.add(new SelectionHighlightSystem())
-    this.world.add(new ObjectSpawnSystem(mapResource, objectLibrary))
+    this.world.add(new ObjectSpawnSystem(mapResource, entityLibrary))
     this.world.add(new PlayerSystem(mapResource, events, playerCharacter, playerSpriteSet))
     this.world.add(new TriggerSystem(events))
     this.world.add(new TeleportSystem(events))

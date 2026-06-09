@@ -1766,16 +1766,22 @@
       "tileY": 12,
       "inline": {
         "id": "def-dungeon-to-overworld",
-        "kind": "teleport",
         "name": "Exit",
-        "trigger": {
-          "on": "walk-onto"
-        },
-        "properties": {
-          "targetMapId": "overworld",
-          "targetTileX": 13,
-          "targetTileY": 7,
-          "label": "Exit"
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "overworld",
+            "targetTileX": 13,
+            "targetTileY": 7,
+            "label": "Exit"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
         }
       }
     }

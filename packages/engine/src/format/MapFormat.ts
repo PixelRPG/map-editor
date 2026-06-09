@@ -1,3 +1,4 @@
+import { validateEntityDefinition } from '../entity/validate'
 import type { MapData } from '../types'
 import { isObjectPlacement } from '../types/data/ObjectPlacement'
 
@@ -167,6 +168,19 @@ export class MapFormat {
             `objectPlacements[${index}].layerId`,
             placement.layerId,
           )
+        }
+        // Registry-aware check for an inline definition: reject
+        // unregistered component types loudly (the structural guard above
+        // only checks component shape).
+        if (placement.inline) {
+          const errors = validateEntityDefinition(placement.inline)
+          if (errors.length > 0) {
+            throw new MapValidationError(
+              `Object placement "${placement.id}" inline definition is invalid: ${errors[0]}`,
+              `objectPlacements[${index}].inline`,
+              placement.inline,
+            )
+          }
         }
       })
     }

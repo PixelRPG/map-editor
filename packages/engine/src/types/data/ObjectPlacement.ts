@@ -1,26 +1,25 @@
-import type { ObjectDefinition } from './ObjectDefinition'
-import { isObjectDefinition } from './ObjectDefinition'
+import type { ComponentData, EntityDefinition } from './EntityDefinition'
+import { isComponentData, isEntityDefinition } from './EntityDefinition'
 
 /**
- * A concrete instance of an object on a map's tile grid.
+ * A concrete instance of an entity on a map's tile grid.
  *
  * Two forms — exactly one of `defId` or `inline` must be set:
  *
  * - **Library reference** (`defId` + optional `overrides`): the
- *   canonical form for any object that gets reused. Engine looks up
- *   the {@link ObjectDefinition} in the project's `objectLibrary`
- *   and shallow-merges `overrides` on top.
+ *   canonical form for any entity that gets reused. Engine looks up
+ *   the {@link EntityDefinition} in the project's `entityLibrary` and
+ *   merges `overrides` on top (wholesale-replace per component `type`).
  *
- * - **Inline definition** (`inline`): the entire definition is
- *   stored on the placement itself. Useful for genuinely one-off
- *   placements where promoting to the library would just clutter
- *   the project.
+ * - **Inline definition** (`inline`): the entire definition is stored
+ *   on the placement itself — for genuinely one-off placements.
  *
  * Tile-snapped — `tileX`/`tileY` are grid cells, not pixels. The
- * `layerId` controls sort + visibility grouping only; objects don't
- * "belong" to a layer in the data-ownership sense.
+ * `layerId` controls sort + visibility grouping only.
  *
- * See `docs/concepts/object-system.md` for the full design.
+ * See `docs/concepts/entity-and-appearance-model.md`. (Kept the
+ * `ObjectPlacement` name + `objectPlacements` map key — these are
+ * "placed objects on the map"; only the *definition* model changed.)
  */
 export interface ObjectPlacement {
   /** Stable id, unique within the map. Used as a save-state key. */
@@ -42,19 +41,23 @@ export interface ObjectPlacement {
   defId?: string
 
   /**
-   * Shallow overrides applied on top of the library entry. Each
-   * field replaces (does not merge) the corresponding field on the
-   * resolved definition. `properties` is treated as a single value —
-   * the whole `properties` block is replaced, not deep-merged.
+   * Per-instance overrides on top of the library entry. `name` replaces
+   * the display name; each component in `components` **replaces the base
+   * component of the same `type`** (wholesale, never deep-merged — same
+   * discipline as the shipped object overrides). A component type absent
+   * from the base is appended. See `mergePlacementComponents`.
    */
-  overrides?: Partial<Omit<ObjectDefinition, 'id' | 'kind'>>
+  overrides?: {
+    name?: string
+    components?: ComponentData[]
+  }
 
   /**
-   * Self-contained definition. Mutually exclusive with `defId`. The
-   * inline definition itself carries an `id` for entity identity at
-   * runtime; conventionally derived from the placement id.
+   * Self-contained definition. Mutually exclusive with `defId`. Carries
+   * its own `id` for entity identity at runtime (conventionally derived
+   * from the placement id).
    */
-  inline?: ObjectDefinition
+  inline?: EntityDefinition
 }
 
 /** Type guard for `ObjectPlacement`. */
@@ -71,8 +74,14 @@ export function isObjectPlacement(value: unknown): value is ObjectPlacement {
   // Exactly one of the two must be set.
   if (hasDefId === hasInline) return false
 
-  if (v.overrides !== undefined && (typeof v.overrides !== 'object' || v.overrides === null)) return false
-  if (hasInline && !isObjectDefinition(v.inline)) return false
+  if (v.overrides !== undefined) {
+    if (typeof v.overrides !== 'object' || v.overrides === null) return false
+    const o = v.overrides as Record<string, unknown>
+    if (o.name !== undefined && typeof o.name !== 'string') return false
+    if (o.components !== undefined && (!Array.isArray(o.components) || !o.components.every(isComponentData)))
+      return false
+  }
+  if (hasInline && !isEntityDefinition(v.inline)) return false
 
   return true
 }
