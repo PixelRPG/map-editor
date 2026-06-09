@@ -15,6 +15,8 @@ import { run } from '@gjsify/unit'
 // its import + `run()` entry here. (Tracked in TODO.md as a guard
 // follow-up — a test that asserts every spec file is registered.)
 import registrySuite from './commands/registry.spec.js'
+import entityRegistrySuite from './entity/registry.spec.js'
+import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
@@ -35,6 +37,8 @@ import subscriptionRegistrySuite from './utils/subscription-registry.spec.js'
 
 run({
   registrySuite,
+  entityRegistrySuite,
+  entityValidateSuite,
   objectSystemValidationSuite,
   layerVisibilitySuite,
   spriteInfoResolverSuite,
