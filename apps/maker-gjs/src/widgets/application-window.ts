@@ -29,7 +29,7 @@ import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
-import { generatePeerId, type SessionState, SessionService } from '../services/session-service.ts'
+import { generatePeerId, SessionService, type SessionState } from '../services/session-service.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
@@ -123,7 +123,7 @@ export interface SessionSnapshot {
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
  * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
- * - `win.open-character` / `win.open-tileset` (string id — drill into the detail sub-page)
+ * - `win.open-character` / `win.open-sheet` / `win.open-tileset` (string id — drill into the detail sub-page)
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -1109,6 +1109,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (id) this._tiles_view.focusTileset(id)
     })
     winActions.add_action(openTilesetAction)
+
+    // Drill into a sprite-sheet detail sub-page by id — the Cast view's
+    // Sprite-sheets section equivalent of `open-character`.
+    const openSheetAction = Gio.SimpleAction.new('open-sheet', GLib.VariantType.new('s'))
+    openSheetAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (id) this._cast_view.focusSheet(id)
+    })
+    winActions.add_action(openSheetAction)
 
     const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
     openSceneAction.connect('activate', () => {

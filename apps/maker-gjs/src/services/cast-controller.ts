@@ -14,10 +14,10 @@ import {
   GameProjectFormat,
   type ProjectOp,
   REQUIRED_ROLES,
+  SPRITESET_REMOVE_KIND,
   type SpriteSetAddPayload,
   SpriteSetFormat,
   SpriteSetResource,
-  SPRITESET_REMOVE_KIND,
 } from '@pixelrpg/engine'
 import {
   GdkSpriteSetResource,
@@ -171,28 +171,36 @@ export class CastController {
   }
 
   /**
-   * Push the project's character list + a per-sprite-set preview map
-   * into the Cast view. Called by `setProject` and after every mutation
-   * that changes a character or the sprite-set list.
+   * Push the project's character list + sprite-sheet list + a shared
+   * per-sprite-set preview map into the Cast view. Called by `setProject`
+   * and after every mutation that changes a character, a sheet, or the
+   * sprite-set list.
    *
-   * Resolves a GTK preview resource for every sprite-set id referenced
-   * by the cast (cached by id) so each card previews its OWN sheet and
-   * the detail preview follows the active character.
+   * Resolves a GTK preview resource for every sprite-set id referenced by
+   * the cast OR exposed as a character sheet (cached by id) so each card
+   * previews its OWN sheet and the detail previews follow the active
+   * character / sheet. Sheets are pushed BEFORE characters so the
+   * character detail's sheet picker has the fresh list when it refreshes.
    */
   async refresh(): Promise<void> {
     const resource = this._project?.resource
     if (!resource) {
+      this.view.setSheets([], new Map())
       this.view.setCharacters([], new Map())
       return
     }
     this.view.projectName = resource.data?.name ?? _('New Project')
 
     const characters = resource.data?.characters ?? []
-    const neededIds = new Set(characters.map((c) => c.spriteSetId))
+    const sheets = this._listSpriteSets()
+    // Resolve every sprite-set a character references OR that the
+    // Sprite-sheets section lists, into one shared map.
+    const neededIds = new Set<string>([...characters.map((c) => c.spriteSetId), ...sheets.map((s) => s.id)])
     const spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
     for (const id of neededIds) {
       spriteSetsById.set(id, await this._resolveSpriteSet(id))
     }
+    this.view.setSheets(sheets, spriteSetsById)
     this.view.setCharacters(characters, spriteSetsById)
   }
 
@@ -229,16 +237,24 @@ export class CastController {
         c.speedTilesPerSec = tilesPerSec
       })
     },
+    // Reassign a character to a different sprite sheet (it inherits the
+    // sheet's look + animations).
+    changeSheet: (id: string, sheetId: string) => {
+      this._mutate(id, (c) => {
+        c.spriteSetId = sheetId
+      })
+      void this.refresh()
+    },
     // Animations live on the SHEET now (shared by every character using
-    // it), so these mutate the character's sprite-sheet, not the character.
-    setDuration: (id: string, animId: string, durationMs: number) => {
-      this._mutateSheetAnimations(id, (anims) => {
+    // it), so these mutate the sprite-sheet directly, keyed by sheet id.
+    setDuration: (sheetId: string, animId: string, durationMs: number) => {
+      this._mutateSheetAnimations(sheetId, (anims) => {
         const anim = anims.find((a) => a.id === animId)
         if (anim) anim.durationMs = durationMs
       })
     },
-    addAnimation: (id: string, animation: CharacterAnimation) => {
-      this._mutateSheetAnimations(id, (anims) => {
+    addAnimation: (sheetId: string, animation: CharacterAnimation) => {
+      this._mutateSheetAnimations(sheetId, (anims) => {
         // Dialog-side validation already rejected duplicate ids + empty
         // frames; defensive double-check so a mismatch can't corrupt it.
         if (animation.frames.length === 0) return
@@ -246,8 +262,8 @@ export class CastController {
         anims.push(animation)
       })
     },
-    editAnimation: (id: string, originalId: string, animation: CharacterAnimation) => {
-      this._mutateSheetAnimations(id, (anims) => {
+    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => {
+      this._mutateSheetAnimations(sheetId, (anims) => {
         if (animation.frames.length === 0) return
         const idx = anims.findIndex((a) => a.id === originalId)
         if (idx === -1) {
@@ -264,15 +280,16 @@ export class CastController {
         anims[idx] = animation
       })
     },
-    deleteAnimation: (id: string, animId: string) => {
+    deleteAnimation: (sheetId: string, animId: string) => {
       // Required roles can't be removed (part of the character contract).
       if ((REQUIRED_ROLES as readonly string[]).includes(animId)) return
-      this._mutateSheetAnimations(id, (anims) => {
+      this._mutateSheetAnimations(sheetId, (anims) => {
         const idx = anims.findIndex((a) => a.id === animId)
         if (idx !== -1) anims.splice(idx, 1)
       })
     },
     deleteCharacter: (id: string) => this._deleteCharacter(id),
+    deleteSheet: (id: string) => this.deleteSpriteSet(id),
     listSpriteSets: () => this._listSpriteSets(),
     createCharacter: (draft: NewCharacterDraft) => this._createCharacter(draft),
     importSpriteSet: (result: SpriteSetImportResult) => this._importSpriteSet(result),
@@ -609,19 +626,18 @@ export class CastController {
   }
 
   /**
-   * Mutate the animations of the SHEET a character references (animations
-   * are sheet-owned now, shared by every character using it) + persist
-   * the sheet's JSON + refresh.
+   * Mutate a sprite SHEET's animations (sheet-owned now, shared by every
+   * character using it) + persist the sheet's JSON + refresh. Keyed by
+   * `spriteSetId` — the Sprite-sheets section edits a sheet directly.
    */
-  private _mutateSheetAnimations(charId: string, mutator: (anims: CharacterAnimation[]) => void): void {
+  private _mutateSheetAnimations(spriteSetId: string, mutator: (anims: CharacterAnimation[]) => void): void {
     const resource = this._project?.resource
-    const character = resource?.data?.characters?.find((c) => c.id === charId)
-    const engineSet = character ? resource?.spriteSets.get(character.spriteSetId) : undefined
+    const engineSet = resource?.spriteSets.get(spriteSetId)
     if (!resource || !engineSet?.data) return
     const anims = (engineSet.data.characterAnimations ??= [])
     mutator(anims)
-    this._persistSheet(character?.spriteSetId ?? '')
-    this._spriteSetCache.delete(character?.spriteSetId ?? '')
+    this._persistSheet(spriteSetId)
+    this._spriteSetCache.delete(spriteSetId)
     void this.refresh()
   }
 
