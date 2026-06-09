@@ -10,6 +10,8 @@ import { CastInspector } from './widgets/cast/cast-inspector'
 import { CharacterPreview } from './widgets/cast/character-preview'
 import { AtlasCanvas } from './widgets/editor/atlas-canvas'
 import { AtlasCanvasStories } from './widgets/editor/atlas-canvas.story'
+import { EntityComponentsEditor } from './widgets/editor/entity-components-editor'
+import { EntityComponentsEditorStories } from './widgets/editor/entity-components-editor.story'
 import { FloatingTopBar } from './widgets/editor/floating-top-bar'
 import { FloatingTopBarStories } from './widgets/editor/floating-top-bar.story'
 import { FloatingZoom } from './widgets/editor/floating-zoom'
@@ -61,6 +63,7 @@ GObject.type_ensure(CharacterPreview.$gtype)
 GObject.type_ensure(AnimationList.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
+GObject.type_ensure(EntityComponentsEditor.$gtype)
 
 /** All story modules available in the UI-GJS package. */
 export const UIStories: StoryModule[] = [
@@ -75,6 +78,7 @@ export const UIStories: StoryModule[] = [
   AtlasCanvasStories,
   SceneInspectorStories,
   SceneEditorStories,
+  EntityComponentsEditorStories,
 ]
 
 export { SpriteWidgetStories } from './widgets/sprite/sprite.widget.story'

@@ -2,6 +2,9 @@
 
 export * from './atlas-canvas.story'
 export * from './atlas-canvas'
+export * from './component-inspector'
+export * from './entity-components-editor.story'
+export * from './entity-components-editor'
 export * from './floating-collaborators'
 export * from './floating-play'
 export * from './floating-top-bar.story'
