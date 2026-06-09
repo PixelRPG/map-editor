@@ -1,11 +1,5 @@
 import GLib from '@girs/glib-2.0'
-import {
-  GameProjectFormat,
-  type SpriteSetData,
-  SpriteSetFormat,
-  type SpriteSetKind,
-  type SpriteSetResource,
-} from '@pixelrpg/engine'
+import { GameProjectFormat, type SpriteSetData, type SpriteSetKind, type SpriteSetResource } from '@pixelrpg/engine'
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
@@ -68,22 +62,6 @@ export class DataController {
       }
     }
     this._persistProject()
-  }
-
-  /** Rename an asset's display name (the `name` in its sprite-set JSON). */
-  renameSpriteSet(id: string, name: string): void {
-    const resource = this._project?.resource
-    const engineSet = resource?.spriteSets.get(id)
-    const trimmed = name.trim()
-    if (!resource || !engineSet?.data || !trimmed) return
-    engineSet.data.name = trimmed
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
-    if (!writeTextFile(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
-      this.onToast(_('Could not rename the asset'))
-      return
-    }
-    void this._rebuild()
   }
 
   private _persistProject(): void {

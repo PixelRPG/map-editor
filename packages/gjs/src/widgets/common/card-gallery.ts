@@ -33,6 +33,8 @@ export interface GalleryCardItem {
   fallbackIcon?: string
   /** When true the card shows a trash affordance emitting `delete-requested`. */
   deletable?: boolean
+  /** When true the card's menu offers "Rename", emitting `rename-requested`. */
+  renamable?: boolean
 }
 
 /**
@@ -76,6 +78,7 @@ export class CardGallery extends Adw.Bin {
   private _emptyIcon = 'view-grid-symbolic'
   private _deleteTooltip = _('Delete')
   private _openLabel = _('Edit')
+  private _renameLabel = _('Rename')
   private _activeId: string | null = null
   private _hoveredId: string | null = null
   /** card-button by item id, so `setActiveId` can move the selection ring. */
@@ -118,6 +121,13 @@ export class CardGallery extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             _('Edit'),
           ),
+          'rename-label': GObject.ParamSpec.string(
+            'rename-label',
+            'Rename Label',
+            "Label of the rename item in each card's three-dots menu",
+            GObject.ParamFlags.READWRITE,
+            _('Rename'),
+          ),
         },
         Signals: {
           // A card was clicked (select it).
@@ -125,6 +135,9 @@ export class CardGallery extends Adw.Bin {
           // A card was double-clicked or its menu's "open" chosen — open
           // the full detail view for it.
           'item-opened': { param_types: [GObject.TYPE_STRING] },
+          // The card's three-dots menu → rename was chosen. The host owns
+          // the rename prompt + the actual mutation.
+          'rename-requested': { param_types: [GObject.TYPE_STRING] },
           // The card's three-dots menu → delete was chosen. The host
           // owns the confirm dialog + the actual removal.
           'delete-requested': { param_types: [GObject.TYPE_STRING] },
@@ -179,6 +192,16 @@ export class CardGallery extends Adw.Bin {
     if (this._openLabel === value) return
     this._openLabel = value
     this.notify('open-label')
+  }
+
+  get renameLabel(): string {
+    return this._renameLabel ?? _('Rename')
+  }
+
+  set renameLabel(value: string) {
+    if (this._renameLabel === value) return
+    this._renameLabel = value
+    this.notify('rename-label')
   }
 
   /**
@@ -332,6 +355,7 @@ export class CardGallery extends Adw.Bin {
     // drive the host via `item-opened` / `delete-requested`.
     const menu = Gio.Menu.new()
     menu.append(this.openLabel, 'card.open')
+    if (item.renamable) menu.append(this.renameLabel, 'card.rename')
     if (item.deletable) menu.append(this.deleteTooltip, 'card.delete')
     const menuButton = new Gtk.MenuButton({
       iconName: 'view-more-symbolic',
@@ -347,6 +371,11 @@ export class CardGallery extends Adw.Bin {
     const openAction = new Gio.SimpleAction({ name: 'open' })
     openAction.connect('activate', () => this.emit('item-opened', item.id))
     group.add_action(openAction)
+    if (item.renamable) {
+      const renameAction = new Gio.SimpleAction({ name: 'rename' })
+      renameAction.connect('activate', () => this.emit('rename-requested', item.id))
+      group.add_action(renameAction)
+    }
     if (item.deletable) {
       const deleteAction = new Gio.SimpleAction({ name: 'delete' })
       deleteAction.connect('activate', () => this.emit('delete-requested', item.id))

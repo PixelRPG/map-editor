@@ -16,8 +16,10 @@ import {
   REQUIRED_ROLES,
   SPRITESET_REMOVE_KIND,
   type SpriteSetAddPayload,
+  type SpriteSetData,
   SpriteSetFormat,
   SpriteSetResource,
+  type SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 import {
   GdkSpriteSetResource,
@@ -288,6 +290,7 @@ export class CastController {
         if (idx !== -1) anims.splice(idx, 1)
       })
     },
+    renameSheet: (id: string, name: string) => this.renameSpriteSet(id, name),
     deleteCharacter: (id: string) => this._deleteCharacter(id),
     deleteSheet: (id: string) => this.deleteSpriteSet(id),
     listSpriteSets: () => this._listSpriteSets(),
@@ -637,8 +640,72 @@ export class CastController {
     const anims = (engineSet.data.characterAnimations ??= [])
     mutator(anims)
     this._persistSheet(spriteSetId)
+    this._broadcastSpriteSetUpdate(spriteSetId)
     this._spriteSetCache.delete(spriteSetId)
     void this.refresh()
+  }
+
+  /**
+   * Rename a sprite set's display name (the `name` in its
+   * `spritesets/<id>.json`). Works for both a character sheet (Cast view)
+   * and a world tileset (Tiles / Data views) — the single owner of the
+   * file write + collab broadcast. Persists, broadcasts a descriptor
+   * update so peers rename too, and re-hydrates every view. No-op on a
+   * blank name or an unknown id.
+   */
+  renameSpriteSet(id: string, name: string): void {
+    const resource = this._project?.resource
+    const engineSet = resource?.spriteSets.get(id)
+    const trimmed = name.trim()
+    if (!resource || !engineSet?.data || !trimmed) return
+    if (engineSet.data.name === trimmed) return
+    engineSet.data.name = trimmed
+    this._persistSheet(id)
+    this._broadcastSpriteSetUpdate(id)
+    this._spriteSetCache.delete(id)
+    void this.refresh()
+    this.onSpriteSetsChanged?.()
+  }
+
+  /**
+   * Broadcast a sprite set's current DESCRIPTOR to peers (rename /
+   * animation edit / tile-prop change) — no image bytes, the peer already
+   * has the image. No-op solo. Sent after the local persist so the wire
+   * carries exactly what was saved.
+   */
+  private _broadcastSpriteSetUpdate(spriteSetId: string): void {
+    const session = this._session
+    if (!session) return
+    const data = this._project?.resource?.spriteSets.get(spriteSetId)?.data
+    if (!data) return
+    session.sendSpriteSetUpdate({ data })
+  }
+
+  /**
+   * Apply an inbound sprite-set DESCRIPTOR update from a peer: overwrite
+   * the descriptor JSON + the live in-memory data, evict the preview
+   * cache, and refresh both views. Keeps the LOCAL image descriptor (the
+   * `<id>.png` bytes are unchanged — only metadata moved) so a peer can't
+   * repoint our image. Ignored when we don't already have the set (adds
+   * come via {@link applyRemoteSpriteSetAdd}) or the id is unsafe. Does
+   * NOT re-broadcast.
+   */
+  applyRemoteSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
+    const resource = this._project?.resource
+    const engineSet = resource?.spriteSets.get(payload.data.id)
+    if (!resource || !engineSet?.data) return
+    if (!isPlainFilename(payload.data.id)) {
+      console.warn('[CastController] Rejected peer sprite-set update with unsafe id:', payload.data.id)
+      return
+    }
+    // Take the peer's descriptor wholesale but pin the image to our local
+    // one — the bytes on disk didn't change, only the metadata.
+    const merged: SpriteSetData = { ...payload.data, image: engineSet.data.image ?? payload.data.image }
+    engineSet.data = merged
+    this._persistSheet(payload.data.id)
+    this._spriteSetCache.delete(payload.data.id)
+    void this.refresh()
+    this.onSpriteSetsChanged?.()
   }
 
   /** Serialise a sprite sheet's `SpriteSetData` back to `spritesets/<id>.json`. */

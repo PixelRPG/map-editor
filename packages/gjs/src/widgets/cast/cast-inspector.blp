@@ -40,6 +40,17 @@ template $PixelRpgCastInspector : Adw.Bin {
       }
     }
 
+    Adw.PreferencesGroup sheet_group {
+      title: _("Sprite sheet");
+
+      // Commit on the apply button / Enter (not per-keystroke) — a rename
+      // re-persists + re-renders the galleries, so we want one commit.
+      Adw.EntryRow sheet_name_row {
+        title: _("Name");
+        show-apply-button: true;
+      }
+    }
+
     Adw.PreferencesGroup duration_group {
       title: _("Selected animation");
       description: _("Edit duration; frame editing lands in the next pass.");

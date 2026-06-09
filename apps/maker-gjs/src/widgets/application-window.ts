@@ -369,6 +369,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._tiles_view, 'spriteset-imported', (_v: TilesView, result: SpriteSetImportResult) => {
       void this._castCtl?.importSpriteSet(result)
     })
+    this.signals.connect(this._tiles_view, 'spriteset-rename-requested', (_v: TilesView, id: string, name: string) => {
+      this._castCtl?.renameSpriteSet(id, name)
+    })
     this.signals.connect(this._tiles_view, 'spriteset-delete-requested', (_v: TilesView, id: string) => {
       this._castCtl?.deleteSpriteSet(id)
     })
@@ -539,6 +542,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (collab) {
       collab.onProjectOpReceived = (op) => this._castCtl?.applyRemoteProjectOp(op)
       collab.onSpriteSetAddReceived = (payload) => this._castCtl?.applyRemoteSpriteSetAdd(payload)
+      collab.onSpriteSetUpdateReceived = (payload) => this._castCtl?.applyRemoteSpriteSetUpdate(payload)
     }
 
     // Track the live session roster for the collaborators bar + follow.
@@ -698,7 +702,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     dialog.set_default_response('rename')
     dialog.set_close_response('cancel')
     dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'rename') this._dataCtl?.renameSpriteSet(id, entry.get_text())
+      // Route through the cast controller — the single owner of sprite-set
+      // file writes + collab broadcast (it re-hydrates the Data view via
+      // `onSpriteSetsChanged`).
+      if (response === 'rename') this._castCtl?.renameSpriteSet(id, entry.get_text())
     })
     dialog.present(this)
   }

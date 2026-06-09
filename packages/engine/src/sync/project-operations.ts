@@ -36,6 +36,7 @@ export const PROJECT_OP_PREFIX = '__project/'
 export const CHARACTER_UPSERT_KIND = '__project/character.upsert'
 export const CHARACTER_REMOVE_KIND = '__project/character.remove'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
+export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
 export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
 
 /**
@@ -99,6 +100,43 @@ export interface SpriteSetAddChunkOp {
 }
 
 /**
+ * The data a sprite-set DESCRIPTOR update carries to peers: just the
+ * {@link SpriteSetData} (NO image bytes — the image already exists on
+ * every peer from the original add). Sent when a sprite set's metadata
+ * changes without the image: a rename (`data.name`), an animation edit
+ * (`data.characterAnimations`), or a tile-property change
+ * (`data.sprites[].solid`/`surface`). The receiver overwrites only the
+ * descriptor JSON + live data; the reference (`firstGid`) + the image
+ * file stay untouched.
+ */
+export interface SpriteSetUpdatePayload {
+  data: SpriteSetData
+}
+
+/**
+ * Peer → peers: one chunk of a sprite-set DESCRIPTOR update. Same
+ * chunked transport as {@link SpriteSetAddChunkOp} (a fat tileset
+ * descriptor can exceed the SCTP single-send ceiling) but carries a
+ * {@link SpriteSetUpdatePayload} — no image bytes. The receiver
+ * reassembles by `transferId` and applies the descriptor in place
+ * against the set it already has (an update for a set the peer lacks is
+ * ignored — adds come via {@link SpriteSetAddChunkOp}).
+ */
+export interface SpriteSetUpdateChunkOp {
+  kind: typeof SPRITESET_UPDATE_CHUNK_KIND
+  payload: {
+    /** Stable id grouping the chunks of one transfer (`<peerId>:<n>`). */
+    transferId: string
+    chunkIndex: number
+    totalChunks: number
+    /** Slice of the JSON-serialised {@link SpriteSetUpdatePayload}. */
+    data: string
+  }
+  peerId: string
+  seq: number
+}
+
+/**
  * Peer → peers: a sprite-set (tileset) was deleted from the project;
  * drop its reference by id. The image + descriptor files are removed
  * on each peer by the maker's CollabSession ↔ controller wiring — this
@@ -113,7 +151,12 @@ export interface SpriteSetRemoveOp {
   seq: number
 }
 
-export type ProjectOp = CharacterUpsertOp | CharacterRemoveOp | SpriteSetAddChunkOp | SpriteSetRemoveOp
+export type ProjectOp =
+  | CharacterUpsertOp
+  | CharacterRemoveOp
+  | SpriteSetAddChunkOp
+  | SpriteSetUpdateChunkOp
+  | SpriteSetRemoveOp
 
 /**
  * Discriminator: is this raw op a project-level message that should be
@@ -197,24 +240,32 @@ export function applySpriteSetRemove(data: GameProjectData, spriteSetId: string)
   data.spriteSets = data.spriteSets.filter((s) => s.id !== spriteSetId)
 }
 
-/**
- * Slice a {@link SpriteSetAddPayload} into ordered chunk-op bodies
- * (without the per-op `peerId`/`seq`, which the transport stamps).
- * Always emits at least one chunk so an empty/tiny payload still
- * round-trips. `transferId` groups the chunks for reassembly.
- */
-export function chunkSpriteSetAdd(args: {
+/** The shared body of every chunked project-op (add + update). */
+interface ChunkBody {
   transferId: string
-  payload: SpriteSetAddPayload
-}): Array<Omit<SpriteSetAddChunkOp, 'peerId' | 'seq'>> {
-  const json = JSON.stringify(args.payload)
+  chunkIndex: number
+  totalChunks: number
+  data: string
+}
+
+/**
+ * Slice a JSON string into ordered {@link ChunkBody} envelopes tagged
+ * with `kind` (without the per-op `peerId`/`seq`, which the transport
+ * stamps). Always emits at least one chunk so an empty/tiny payload
+ * still round-trips. `transferId` groups the chunks for reassembly.
+ */
+function buildChunks<K extends string>(
+  kind: K,
+  transferId: string,
+  json: string,
+): Array<{ kind: K; payload: ChunkBody }> {
   const totalChunks = Math.max(1, Math.ceil(json.length / SPRITESET_CHUNK_SIZE))
-  const ops: Array<Omit<SpriteSetAddChunkOp, 'peerId' | 'seq'>> = []
+  const ops: Array<{ kind: K; payload: ChunkBody }> = []
   for (let i = 0; i < totalChunks; i++) {
     ops.push({
-      kind: SPRITESET_ADD_CHUNK_KIND,
+      kind,
       payload: {
-        transferId: args.transferId,
+        transferId,
         chunkIndex: i,
         totalChunks,
         data: json.slice(i * SPRITESET_CHUNK_SIZE, (i + 1) * SPRITESET_CHUNK_SIZE),
@@ -225,17 +276,39 @@ export function chunkSpriteSetAdd(args: {
 }
 
 /**
- * Accumulates {@link SpriteSetAddChunkOp}s by `transferId` until a
- * transfer is complete, then returns the parsed payload. Indexes by
- * `chunkIndex` (not arrival order) so a re-sent chunk or a future
- * unordered channel is safe. Drops the buffer once a transfer
- * completes or fails to parse.
+ * Slice a {@link SpriteSetAddPayload} into ordered chunk-op bodies.
+ * See {@link buildChunks}.
  */
-export class SpriteSetAddReassembler {
+export function chunkSpriteSetAdd(args: {
+  transferId: string
+  payload: SpriteSetAddPayload
+}): Array<Omit<SpriteSetAddChunkOp, 'peerId' | 'seq'>> {
+  return buildChunks(SPRITESET_ADD_CHUNK_KIND, args.transferId, JSON.stringify(args.payload))
+}
+
+/**
+ * Slice a {@link SpriteSetUpdatePayload} (descriptor-only — no image
+ * bytes) into ordered chunk-op bodies. Mirrors {@link chunkSpriteSetAdd}
+ * but tags the chunks {@link SPRITESET_UPDATE_CHUNK_KIND}.
+ */
+export function chunkSpriteSetUpdate(args: {
+  transferId: string
+  payload: SpriteSetUpdatePayload
+}): Array<Omit<SpriteSetUpdateChunkOp, 'peerId' | 'seq'>> {
+  return buildChunks(SPRITESET_UPDATE_CHUNK_KIND, args.transferId, JSON.stringify(args.payload))
+}
+
+/**
+ * Accumulates chunk ops by `transferId` until a transfer is complete,
+ * then returns the parsed payload of type `T`. Indexes by `chunkIndex`
+ * (not arrival order) so a re-sent chunk or a future unordered channel
+ * is safe. Drops the buffer once a transfer completes or fails to parse.
+ */
+export class ChunkReassembler<T> {
   private readonly transfers = new Map<string, { chunks: Map<number, string>; total: number }>()
 
   /** Feed one chunk; returns the payload once the last chunk arrives, else null. */
-  accept(op: SpriteSetAddChunkOp): SpriteSetAddPayload | null {
+  accept(op: { payload: ChunkBody }): T | null {
     const { transferId, chunkIndex, totalChunks, data } = op.payload
     let entry = this.transfers.get(transferId)
     if (!entry) {
@@ -248,7 +321,7 @@ export class SpriteSetAddReassembler {
     let json = ''
     for (let i = 0; i < entry.total; i++) json += entry.chunks.get(i) ?? ''
     try {
-      return JSON.parse(json) as SpriteSetAddPayload
+      return JSON.parse(json) as T
     } catch {
       return null
     }
@@ -259,6 +332,13 @@ export class SpriteSetAddReassembler {
     this.transfers.clear()
   }
 }
+
+/**
+ * Reassembles {@link SpriteSetAddChunkOp}s into a {@link SpriteSetAddPayload}.
+ * Thin alias over {@link ChunkReassembler} kept for call-site clarity at
+ * the sprite-set add path.
+ */
+export class SpriteSetAddReassembler extends ChunkReassembler<SpriteSetAddPayload> {}
 
 /**
  * Add or replace a sprite-set reference in project data IN PLACE,
