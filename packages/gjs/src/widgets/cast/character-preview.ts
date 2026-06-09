@@ -491,18 +491,17 @@ export class CharacterPreview extends Adw.Bin {
    */
   private _activeAnimation(): CharacterAnimation | null {
     if (!this._character) return null
+    // Animations are owned by the sheet now (shared across characters);
+    // fall back to the deprecated per-character list.
+    const anims = this._spriteSet?.data?.characterAnimations ?? this._character.animations ?? []
     if (this._customAnimationId !== null) {
-      return this._character.animations.find((a) => a.id === this._customAnimationId) ?? null
+      return anims.find((a) => a.id === this._customAnimationId) ?? null
     }
     const primaryKind: AnimationKind = this._paused ? 'idle' : 'walk'
     const fallbackKind: AnimationKind = primaryKind === 'idle' ? 'walk' : 'idle'
     const primary = `${primaryKind}-${this._activeDirection}` as CharacterAnimationRole
     const fallback = `${fallbackKind}-${this._activeDirection}` as CharacterAnimationRole
-    return (
-      this._character.animations.find((a) => a.id === primary) ??
-      this._character.animations.find((a) => a.id === fallback) ??
-      null
-    )
+    return anims.find((a) => a.id === primary) ?? anims.find((a) => a.id === fallback) ?? null
   }
 
   private _applyFrame(): void {

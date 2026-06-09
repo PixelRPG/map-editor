@@ -29,7 +29,10 @@ export function buildCharacterAnimations(
 } | null {
   if (!spriteSet) return null
   const animations: Partial<Record<CharacterAnimationRole, Animation>> = {}
-  for (const anim of character.animations) {
+  // Animations are owned by the sheet now; fall back to the (deprecated)
+  // per-character list for projects written before the move.
+  const sourceAnimations = spriteSet.data?.characterAnimations ?? character.animations ?? []
+  for (const anim of sourceAnimations) {
     if (!REQUIRED_ROLES.includes(anim.id as CharacterAnimationRole)) continue
     const built = buildAnimation(anim, spriteSet.sprites)
     if (built) animations[anim.id as CharacterAnimationRole] = built

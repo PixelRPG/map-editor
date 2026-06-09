@@ -229,58 +229,48 @@ export class CastController {
         c.speedTilesPerSec = tilesPerSec
       })
     },
+    // Animations live on the SHEET now (shared by every character using
+    // it), so these mutate the character's sprite-sheet, not the character.
     setDuration: (id: string, animId: string, durationMs: number) => {
-      this._mutate(id, (c) => {
-        const anim = c.animations.find((a) => a.id === animId)
+      this._mutateSheetAnimations(id, (anims) => {
+        const anim = anims.find((a) => a.id === animId)
         if (anim) anim.durationMs = durationMs
       })
-      void this.refresh()
     },
     addAnimation: (id: string, animation: CharacterAnimation) => {
-      this._mutate(id, (c) => {
-        // Dialog-side validation already rejected duplicate ids +
-        // empty frames; this is a defensive double-check so a
-        // dialog/controller mismatch can't corrupt the project.
+      this._mutateSheetAnimations(id, (anims) => {
+        // Dialog-side validation already rejected duplicate ids + empty
+        // frames; defensive double-check so a mismatch can't corrupt it.
         if (animation.frames.length === 0) return
-        if (c.animations.some((a) => a.id === animation.id)) return
-        c.animations.push(animation)
+        if (anims.some((a) => a.id === animation.id)) return
+        anims.push(animation)
       })
-      void this.refresh()
     },
     editAnimation: (id: string, originalId: string, animation: CharacterAnimation) => {
-      this._mutate(id, (c) => {
+      this._mutateSheetAnimations(id, (anims) => {
         if (animation.frames.length === 0) return
-        const idx = c.animations.findIndex((a) => a.id === originalId)
+        const idx = anims.findIndex((a) => a.id === originalId)
         if (idx === -1) {
-          // The original isn't there anymore (deleted in another
-          // session, race with file reload, …). Treat the edit as
-          // an add — the user's frames don't get lost.
-          if (!c.animations.some((a) => a.id === animation.id)) {
-            c.animations.push(animation)
-          }
+          // The original is gone (edited in another session, …) — treat
+          // as an add so the user's frames aren't lost.
+          if (!anims.some((a) => a.id === animation.id)) anims.push(animation)
           return
         }
-        // Renaming a custom animation has to clear any existing
-        // entry that already holds the new name (collisions are
-        // dialog-side rejected, but a stale list could still slip
-        // one through). Replace in place when the id is unchanged.
+        // A rename must not collide with an existing entry.
         if (animation.id !== originalId) {
-          const collision = c.animations.findIndex((a) => a.id === animation.id)
+          const collision = anims.findIndex((a) => a.id === animation.id)
           if (collision !== -1 && collision !== idx) return
         }
-        c.animations[idx] = animation
+        anims[idx] = animation
       })
-      void this.refresh()
     },
     deleteAnimation: (id: string, animId: string) => {
-      // Guard the required roles even though the UI only offers delete
-      // on custom rows — a stale view or a future caller mustn't be
-      // able to strip a character of a contract animation.
+      // Required roles can't be removed (part of the character contract).
       if ((REQUIRED_ROLES as readonly string[]).includes(animId)) return
-      this._mutate(id, (c) => {
-        c.animations = c.animations.filter((a) => a.id !== animId)
+      this._mutateSheetAnimations(id, (anims) => {
+        const idx = anims.findIndex((a) => a.id === animId)
+        if (idx !== -1) anims.splice(idx, 1)
       })
-      void this.refresh()
     },
     deleteCharacter: (id: string) => this._deleteCharacter(id),
     listSpriteSets: () => this._listSpriteSets(),
@@ -323,16 +313,13 @@ export class CastController {
     if (!resource?.data) return
     const characters = (resource.data.characters ??= [])
     const id = this._uniqueId(draft.name, new Set(characters.map((c) => c.id)))
+    // No animations here — the character inherits them from its chosen
+    // sheet (seeded on sheet import; see `_seedCharacterAnimations`).
     const character: CharacterDefinition = {
       id,
       name: draft.name,
       kind: draft.kind,
       spriteSetId: draft.spriteSetId,
-      animations: REQUIRED_ROLES.map((role) => ({
-        id: role,
-        frames: [DEFAULT_FRAME],
-        durationMs: DEFAULT_ANIMATION_MS,
-      })),
       defaultAnimation: 'idle-down',
       speedTilesPerSec: draft.speedTilesPerSec,
     }
@@ -376,12 +363,21 @@ export class CastController {
     if (!resource?.data) return null
     const id = this._uniqueId(data.id, new Set(resource.spriteSets.keys()))
     const imageFile = `${id}.png`
+    const kind = data.kind ?? ('tileset' as const)
     const finalData = {
       ...data,
       id,
       // The dialog tags the set by kind ('character' sheet vs 'tileset')
       // so it surfaces in the right gallery; default to tileset if absent.
-      kind: data.kind ?? ('tileset' as const),
+      kind,
+      // A character sheet OWNS its animations — seed the 8 required roles
+      // (single placeholder frame) so a character using it can animate
+      // immediately; the user refines frames in the sheet's editor.
+      characterAnimations:
+        kind === 'character'
+          ? (data.characterAnimations ??
+            REQUIRED_ROLES.map((role) => ({ id: role, frames: [DEFAULT_FRAME], durationMs: DEFAULT_ANIMATION_MS })))
+          : undefined,
       image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile },
     }
 
@@ -610,6 +606,35 @@ export class CastController {
     mutator(character)
     this._persist()
     this._broadcastCharacter(id)
+  }
+
+  /**
+   * Mutate the animations of the SHEET a character references (animations
+   * are sheet-owned now, shared by every character using it) + persist
+   * the sheet's JSON + refresh.
+   */
+  private _mutateSheetAnimations(charId: string, mutator: (anims: CharacterAnimation[]) => void): void {
+    const resource = this._project?.resource
+    const character = resource?.data?.characters?.find((c) => c.id === charId)
+    const engineSet = character ? resource?.spriteSets.get(character.spriteSetId) : undefined
+    if (!resource || !engineSet?.data) return
+    const anims = (engineSet.data.characterAnimations ??= [])
+    mutator(anims)
+    this._persistSheet(character?.spriteSetId ?? '')
+    this._spriteSetCache.delete(character?.spriteSetId ?? '')
+    void this.refresh()
+  }
+
+  /** Serialise a sprite sheet's `SpriteSetData` back to `spritesets/<id>.json`. */
+  private _persistSheet(spriteSetId: string): void {
+    const resource = this._project?.resource
+    const engineSet = resource?.spriteSets.get(spriteSetId)
+    if (!resource || !engineSet?.data || !isPlainFilename(spriteSetId)) return
+    const projectDir = GLib.path_get_dirname(resource.path)
+    const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${spriteSetId}.json`])
+    if (!writeTextFile(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
+      this.onToast(_('Could not save the sprite sheet'))
+    }
   }
 
   /**

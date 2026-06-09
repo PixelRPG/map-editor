@@ -44,8 +44,13 @@ export interface CharacterDefinition {
   isPlayer?: boolean
   /** Source sprite-set the frames are indexed into. */
   spriteSetId: string
-  /** Per-character animation timeline (8 required + any custom). */
-  animations: CharacterAnimation[]
+  /**
+   * @deprecated Animations now live on the sprite sheet
+   * ({@link SpriteSetData.characterAnimations}) so characters sharing a
+   * sheet share them. Optional only for back-compat: the engine falls
+   * back to this when the referenced sheet carries no animations.
+   */
+  animations?: CharacterAnimation[]
   /** Default animation when the character is first instantiated. Falls back to `idle-down`. */
   defaultAnimation?: string
   /** Movement speed (tiles per second) when controlled by PlayerSystem. Default 4. */
