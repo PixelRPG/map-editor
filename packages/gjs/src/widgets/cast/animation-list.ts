@@ -110,14 +110,18 @@ export class AnimationList extends Adw.Bin {
 
     if (!this._character) return
 
+    // Animations are owned by the SHEET now (shared across characters
+    // using it); fall back to the deprecated per-character list.
+    const anims = this._spriteSet?.data?.characterAnimations ?? this._character.animations ?? []
+
     // Required roles first (sorted by canonical order), then custom anims
     // alphabetically.
-    const present = new Map(this._character.animations.map((a) => [a.id, a]))
+    const present = new Map(anims.map((a) => [a.id, a]))
     const requiredOrdered = REQUIRED_ROLES.map((role) => ({
       role,
       anim: present.get(role) ?? null,
     }))
-    const customAnims = this._character.animations
+    const customAnims = anims
       .filter((a) => !REQUIRED_ROLES.includes(a.id as (typeof REQUIRED_ROLES)[number]))
       .sort((a, b) => a.id.localeCompare(b.id))
 

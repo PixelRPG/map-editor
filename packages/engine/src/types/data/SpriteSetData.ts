@@ -1,4 +1,5 @@
 import type { ImageReference } from '../reference/index'
+import type { CharacterAnimation } from './CharacterDefinition'
 import type { AnimationData, EditorMetadata, Properties, SpriteDataSet } from './index'
 
 /**
@@ -80,9 +81,19 @@ export interface SpriteSetData {
   rows: number
 
   /**
-   * Array of animation definitions
+   * Array of animation definitions (engine-level, for animated TILES /
+   * object graphics — referenced by `animationId`).
    */
   animations?: AnimationData[]
+
+  /**
+   * Character animations OWNED by this sheet (kind: 'character'): the
+   * directional roles (idle/walk-*) + any custom animations, as frame
+   * indices into this set's sprites. A {@link CharacterDefinition} that
+   * references this sheet inherits these — so several characters sharing
+   * a sheet share its animations (edit once). Absent for tilesets.
+   */
+  characterAnimations?: CharacterAnimation[]
 
   /**
    * Editor-specific metadata

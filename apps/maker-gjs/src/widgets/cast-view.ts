@@ -294,7 +294,7 @@ export class CastView extends ResponsiveEditorView {
   private _presentEditAnimationDialog(animId: string): void {
     const character = this._currentCharacter()
     if (!character) return
-    const existing = character.animations.find((a) => a.id === animId)
+    const existing = this._animationsFor(character).find((a) => a.id === animId)
     if (!existing) return
     const dialog = new AddAnimationDialog()
     dialog.setContext(character, this._activeSpriteSet(), existing)
@@ -587,7 +587,12 @@ export class CastView extends ResponsiveEditorView {
   private _currentAnimation(): CharacterAnimation | null {
     const character = this._currentCharacter()
     if (!character || !this._activeAnimationId) return null
-    return character.animations.find((a) => a.id === this._activeAnimationId) ?? null
+    return this._animationsFor(character).find((a) => a.id === this._activeAnimationId) ?? null
+  }
+
+  /** Animations for a character — sheet-owned now, with the deprecated per-character fallback. */
+  private _animationsFor(character: CharacterDefinition): CharacterAnimation[] {
+    return this._spriteSetsById.get(character.spriteSetId)?.data?.characterAnimations ?? character.animations ?? []
   }
 
   /**
