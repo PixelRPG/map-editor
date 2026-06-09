@@ -21,17 +21,19 @@ export interface CharacterAnimation {
 }
 
 /**
- * Top-level "what is this character" definition. Lives at the project
- * level under {@link GameProjectData.characters}; map placements
- * reference it by id rather than embedding the data inline.
+ * A character **view model** — the friendly, flat shape the Cast UI and
+ * `PlayerSystem` consume. **Not project-persisted:** a character lives in
+ * `GameProjectData.entityLibrary` as an `EntityDefinition` (tagged
+ * `editorData.template === 'character'`, with `visual` + `movement`
+ * components); the maker / engine map that entity ↔ this view model via
+ * `entityToCharacter` / `characterToEntity` (`entity/convert.ts`).
  *
- * Exactly one character per project carries `isPlayer: true`. The
- * {@link PlayerSystem} resolves it at runtime and uses its animation
- * map to drive the placeholder-or-real hero.
+ * Keeping a flat view model is the concept's progressive-disclosure rule:
+ * the Cast surface stays simple while the persisted data is the unified
+ * entity model. See `docs/concepts/entity-and-appearance-model.md`.
  *
- * Heroes and NPCs share the same shape, distinguished only by `kind`.
- * That keeps the Cast view's UX uniform — picking frames + setting
- * timings works the same for both.
+ * `isPlayer` is derived from `GameProjectData.playerActorId` when the
+ * view model is built; `kind` is editor-cosmetic.
  */
 export interface CharacterDefinition {
   /** Stable, project-unique id. */

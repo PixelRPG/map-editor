@@ -7,6 +7,8 @@ import {
   ASSISTANT_PEER_ID,
   type AwarenessPeerState,
   type EditorTool,
+  getComponentData,
+  isCharacterEntity,
   MapFormat,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
@@ -690,8 +692,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._tiles_view.focusTileset(id)
       return
     }
-    // Sprite sheet → open the first character that uses it, else the Cast view.
-    const character = this._loadedProject.resource.data?.characters?.find((c) => c.spriteSetId === id)
+    // Sprite sheet → open the first character (character-template entity)
+    // whose appearance uses it, else just the Cast view.
+    const character = this._loadedProject.resource.data?.entityLibrary?.find(
+      (e) => isCharacterEntity(e) && getComponentData(e, 'visual')?.spriteSetId === id,
+    )
     this._setView('cast')
     if (character) this._cast_view.focusCharacter(character.id)
   }

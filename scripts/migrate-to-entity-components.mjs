@@ -133,12 +133,43 @@ function migrateOverrides(overrides) {
   return next
 }
 
+const DEFAULT_SPEED_TILES_PER_SEC = 4
+
+/** Mirror of `characterToEntity` in entity/convert.ts. */
+function characterToEntity(char) {
+  return {
+    id: char.id,
+    name: char.name,
+    components: [
+      {
+        type: 'visual',
+        spriteSetId: char.spriteSetId,
+        spriteId: 0,
+        ...(char.defaultAnimation ? { animationId: char.defaultAnimation } : {}),
+      },
+      { type: 'movement', tilesPerSec: char.speedTilesPerSec ?? DEFAULT_SPEED_TILES_PER_SEC },
+    ],
+    editorData: { template: 'character', category: char.kind },
+  }
+}
+
 function migrateProject(projectPath) {
   const data = readJson(projectPath)
   let dirty = false
+  // Object library → entity library (objects).
   if (Array.isArray(data.objectLibrary)) {
-    data.entityLibrary = data.objectLibrary.map(objectDefinitionToEntity)
+    data.entityLibrary = (data.entityLibrary ?? []).concat(data.objectLibrary.map(objectDefinitionToEntity))
     delete data.objectLibrary
+    dirty = true
+  }
+  // Characters → entity-library `character`-template entries + playerActorId.
+  if (Array.isArray(data.characters)) {
+    const library = (data.entityLibrary ??= [])
+    for (const char of data.characters) {
+      if (char.isPlayer && data.playerActorId === undefined) data.playerActorId = char.id
+      if (!library.some((e) => e.id === char.id)) library.push(characterToEntity(char))
+    }
+    delete data.characters
     dirty = true
   }
   if (dirty) writeJson(projectPath, data)

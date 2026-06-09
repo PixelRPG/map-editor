@@ -1,4 +1,5 @@
 import GLib from '@girs/glib-2.0'
+import { getComponentData, isCharacterEntity } from '@pixelrpg/engine'
 
 import { readBinaryFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
@@ -17,11 +18,13 @@ type Resource = LoadedProject['resource']
  * an unreadable map is skipped, never fatal).
  */
 
-/** spriteSetId → number of characters referencing it. */
+/** spriteSetId → number of characters (character-template entities) referencing it. */
 export function countCharacterUsers(resource: Resource): Map<string, number> {
   const out = new Map<string, number>()
-  for (const c of resource.data?.characters ?? []) {
-    out.set(c.spriteSetId, (out.get(c.spriteSetId) ?? 0) + 1)
+  for (const def of resource.data?.entityLibrary ?? []) {
+    if (!isCharacterEntity(def)) continue
+    const spriteSetId = getComponentData(def, 'visual')?.spriteSetId
+    if (typeof spriteSetId === 'string') out.set(spriteSetId, (out.get(spriteSetId) ?? 0) + 1)
   }
   return out
 }

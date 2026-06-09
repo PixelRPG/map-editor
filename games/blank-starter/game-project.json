@@ -41,15 +41,27 @@
   "editorData": {
     "template": "blank-starter"
   },
-  "characters": [
+  "entityLibrary": [
     {
       "id": "scientist",
       "name": "Scientist",
-      "kind": "hero",
-      "isPlayer": true,
-      "spriteSetId": "scientist",
-      "speedTilesPerSec": 6,
-      "defaultAnimation": "idle-down"
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "scientist",
+          "spriteId": 0,
+          "animationId": "idle-down"
+        },
+        {
+          "type": "movement",
+          "tilesPerSec": 6
+        }
+      ],
+      "editorData": {
+        "template": "character",
+        "category": "hero"
+      }
     }
-  ]
+  ],
+  "playerActorId": "scientist"
 }

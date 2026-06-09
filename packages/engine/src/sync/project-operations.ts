@@ -1,40 +1,40 @@
 /**
  * Project-operation message kinds — reliable-channel messages that
- * mutate PROJECT-LEVEL data (the cast: `characters[]`) rather than
- * scene/map state. The `__project/` prefix is the discriminator that
- * keeps them OUT of the command registry (they aren't `Command`s —
- * they don't operate on a `Scene`) and out of the session-protocol
- * snapshot path.
+ * mutate PROJECT-LEVEL data (the `entityLibrary` — characters + objects,
+ * the `playerActorId`, and sprite-sets) rather than scene/map state. The
+ * `__project/` prefix is the discriminator that keeps them OUT of the
+ * command registry (they aren't `Command`s — they don't operate on a
+ * `Scene`) and out of the session-protocol snapshot path.
  *
  * Why a separate channel rather than a `Command`:
  *   - `Command.apply(scene)` only gets a `Scene`; project metadata
- *     (characters, sprite-sets) lives on the `GameProjectResource`,
+ *     (entity library, sprite-sets) lives on the `GameProjectResource`,
  *     not the scene. Commands can't reach it.
- *   - Cast editing happens in the Cast view, where there is NO live
- *     engine/scene at all (the engine only exists inside the scene
- *     editor). So the command/op-log path isn't even attached.
+ *   - Cast / library editing happens where there is NO live engine/scene
+ *     at all. So the command/op-log path isn't even attached.
  * These ops therefore ride the always-present `PeerSession` op channel
  * and are applied directly to each peer's `GameProjectData` by the
  * maker's CollabSession ↔ CastController wiring — see
  * `docs/concepts/collaboration-and-multiplayer.md`.
  *
  * Coarse-grained UPSERT semantics (rather than one op per editable
- * field) keep the surface small + the apply idempotent: every cast
- * mutation (rename / set-player / set-speed / add-or-edit animation /
- * create) re-sends the whole affected {@link CharacterDefinition};
- * the receiver replaces-by-id. A remove op carries just the id.
+ * field) keep the surface small + the apply idempotent: an entity edit
+ * re-sends the whole affected {@link EntityDefinition}; the receiver
+ * replaces-by-id. `player.set` carries the new `playerActorId`; a remove
+ * op carries just the id.
  *
  * Naming mirrors `session-protocol.ts`: `__`-prefixed, kinds use `.`
- * after the prefix segment (`__project/character.upsert`). Any future
+ * after the prefix segment (`__project/entity.upsert`). Any future
  * `__project/*` kind an older peer doesn't recognise is ignored, same
  * forward-compat contract as session-protocol.
  */
 
-import type { CharacterDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
+import type { EntityDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
 
 export const PROJECT_OP_PREFIX = '__project/'
-export const CHARACTER_UPSERT_KIND = '__project/character.upsert'
-export const CHARACTER_REMOVE_KIND = '__project/character.remove'
+export const ENTITY_UPSERT_KIND = '__project/entity.upsert'
+export const ENTITY_REMOVE_KIND = '__project/entity.remove'
+export const PLAYER_SET_KIND = '__project/player.set'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
 export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
 export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
@@ -48,19 +48,27 @@ export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
  */
 export const SPRITESET_CHUNK_SIZE = 16 * 1024
 
-/** Peer → peers: a character was created or edited; replace it by id. */
-export interface CharacterUpsertOp {
-  kind: typeof CHARACTER_UPSERT_KIND
-  payload: { character: CharacterDefinition }
+/** Peer → peers: an entity definition was created or edited; replace it by id. */
+export interface EntityUpsertOp {
+  kind: typeof ENTITY_UPSERT_KIND
+  payload: { entity: EntityDefinition }
   peerId: string
   /** Per-peer monotonic sequence. Same envelope shape as a normal Operation. */
   seq: number
 }
 
-/** Peer → peers: a character was removed; drop it by id. */
-export interface CharacterRemoveOp {
-  kind: typeof CHARACTER_REMOVE_KIND
-  payload: { characterId: string }
+/** Peer → peers: an entity definition was removed; drop it by id. */
+export interface EntityRemoveOp {
+  kind: typeof ENTITY_REMOVE_KIND
+  payload: { entityId: string }
+  peerId: string
+  seq: number
+}
+
+/** Peer → peers: the project's player actor changed (`playerActorId`). */
+export interface PlayerSetOp {
+  kind: typeof PLAYER_SET_KIND
+  payload: { playerActorId: string | null }
   peerId: string
   seq: number
 }
@@ -152,8 +160,9 @@ export interface SpriteSetRemoveOp {
 }
 
 export type ProjectOp =
-  | CharacterUpsertOp
-  | CharacterRemoveOp
+  | EntityUpsertOp
+  | EntityRemoveOp
+  | PlayerSetOp
   | SpriteSetAddChunkOp
   | SpriteSetUpdateChunkOp
   | SpriteSetRemoveOp
@@ -169,54 +178,59 @@ export function isProjectOp(rawOp: unknown): rawOp is ProjectOp {
   return typeof k === 'string' && k.startsWith(PROJECT_OP_PREFIX)
 }
 
-/** Build a character-upsert envelope. */
-export function createCharacterUpsertOp(args: {
-  peerId: string
-  seq: number
-  character: CharacterDefinition
-}): CharacterUpsertOp {
+/** Build an entity-upsert envelope. */
+export function createEntityUpsertOp(args: { peerId: string; seq: number; entity: EntityDefinition }): EntityUpsertOp {
   return {
-    kind: CHARACTER_UPSERT_KIND,
-    payload: { character: args.character },
+    kind: ENTITY_UPSERT_KIND,
+    payload: { entity: args.entity },
     peerId: args.peerId,
     seq: args.seq,
   }
 }
 
-/** Build a character-remove envelope. */
-export function createCharacterRemoveOp(args: { peerId: string; seq: number; characterId: string }): CharacterRemoveOp {
+/** Build an entity-remove envelope. */
+export function createEntityRemoveOp(args: { peerId: string; seq: number; entityId: string }): EntityRemoveOp {
   return {
-    kind: CHARACTER_REMOVE_KIND,
-    payload: { characterId: args.characterId },
+    kind: ENTITY_REMOVE_KIND,
+    payload: { entityId: args.entityId },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/** Build a player-set envelope. */
+export function createPlayerSetOp(args: { peerId: string; seq: number; playerActorId: string | null }): PlayerSetOp {
+  return {
+    kind: PLAYER_SET_KIND,
+    payload: { playerActorId: args.playerActorId },
     peerId: args.peerId,
     seq: args.seq,
   }
 }
 
 /**
- * Apply a character upsert to project data IN PLACE: replace the entry
- * with the same id, or append a new one. When the upserted character
- * is the player, clears `isPlayer` on every other character so the
- * single-player invariant survives the wire (mirrors the local
- * `CastController` enforcement). Idempotent — applying the same op
- * twice yields the same state.
+ * Apply an entity upsert to project data IN PLACE: replace the
+ * `entityLibrary` entry with the same id, or append a new one.
+ * Idempotent — applying the same op twice yields the same state.
  */
-export function applyCharacterUpsert(data: GameProjectData, character: CharacterDefinition): void {
-  const characters = (data.characters ??= [])
-  if (character.isPlayer) {
-    for (const c of characters) {
-      if (c.id !== character.id) c.isPlayer = false
-    }
-  }
-  const idx = characters.findIndex((c) => c.id === character.id)
-  if (idx >= 0) characters[idx] = character
-  else characters.push(character)
+export function applyEntityUpsert(data: GameProjectData, entity: EntityDefinition): void {
+  const library = (data.entityLibrary ??= [])
+  const idx = library.findIndex((e) => e.id === entity.id)
+  if (idx >= 0) library[idx] = entity
+  else library.push(entity)
 }
 
-/** Remove a character from project data IN PLACE by id. Idempotent. */
-export function applyCharacterRemove(data: GameProjectData, characterId: string): void {
-  if (!data.characters) return
-  data.characters = data.characters.filter((c) => c.id !== characterId)
+/** Remove an entity definition from project data IN PLACE by id. Idempotent. */
+export function applyEntityRemove(data: GameProjectData, entityId: string): void {
+  if (!data.entityLibrary) return
+  data.entityLibrary = data.entityLibrary.filter((e) => e.id !== entityId)
+  // A removed entity can't remain the player.
+  if (data.playerActorId === entityId) data.playerActorId = undefined
+}
+
+/** Set the project's player actor IN PLACE. Idempotent. */
+export function applyPlayerSet(data: GameProjectData, playerActorId: string | null): void {
+  data.playerActorId = playerActorId ?? undefined
 }
 
 /** Build a sprite-set-remove envelope. */
