@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 import * as Commands from './index.ts'
+import { PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
 import { BUILT_IN_COMMANDS } from './registry.ts'
 
@@ -45,6 +46,16 @@ export default async () => {
       })
       expect(cmd).toBeInstanceOf(EraseTileCommand)
       expect(cmd.kind).toBe(EraseTileCommand.KIND)
+    })
+
+    await it('roundtrips object place / remove kinds → instances', async () => {
+      const placement = { id: 'p1', layerId: 'l1', tileX: 2, tileY: 3, defId: 'apple' }
+      const place = BUILT_IN_COMMANDS[PlaceObjectCommand.KIND]?.({ placement })
+      expect(place).toBeInstanceOf(PlaceObjectCommand)
+      expect(place?.kind).toBe('object.place')
+      const remove = BUILT_IN_COMMANDS[RemoveObjectCommand.KIND]?.({ placement })
+      expect(remove).toBeInstanceOf(RemoveObjectCommand)
+      expect(remove?.kind).toBe('object.remove')
     })
 
     await it('every shipped Command class is registered in BUILT_IN_COMMANDS', async () => {

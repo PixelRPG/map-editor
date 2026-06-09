@@ -1,3 +1,4 @@
+import { type ObjectPlacementPayload, PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
 import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from './paint-tile.command.ts'
 import type { CommandRegistry } from './types.ts'
 
@@ -22,4 +23,6 @@ import type { CommandRegistry } from './types.ts'
 export const BUILT_IN_COMMANDS: CommandRegistry = {
   [PaintTileCommand.KIND]: (payload) => new PaintTileCommand(payload as PaintTilePayload),
   [EraseTileCommand.KIND]: (payload) => new EraseTileCommand(payload as Omit<PaintTilePayload, 'spriteId'>),
+  [PlaceObjectCommand.KIND]: (payload) => new PlaceObjectCommand(payload as ObjectPlacementPayload),
+  [RemoveObjectCommand.KIND]: (payload) => new RemoveObjectCommand(payload as ObjectPlacementPayload),
 }

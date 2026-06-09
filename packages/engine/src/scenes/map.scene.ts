@@ -1,5 +1,6 @@
 import { type EventEmitter, Logger, Scene } from 'excalibur'
-import { EditorModeComponent } from '../components/index.ts'
+import { EditorModeComponent, PlacementIdComponent } from '../components/index.ts'
+import { buildPlacementEntity, resolvePlacementDefinition } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import {
@@ -41,6 +42,9 @@ import { SessionState } from '../utils/session-state.ts'
 export class MapScene extends Scene {
   private logger = Logger.getInstance()
 
+  /** Project entity library — used to resolve `defId` placements at spawn time. */
+  public readonly entityLibrary: readonly EntityDefinition[]
+
   constructor(
     public readonly mapResource: MapResource,
     events: EventEmitter<EngineEventMap>,
@@ -49,6 +53,7 @@ export class MapScene extends Scene {
     playerSpriteSet?: SpriteSetResource,
   ) {
     super()
+    this.entityLibrary = entityLibrary
     // PointerGestureSystem must run before any consumer subscribes
     // to its events — it owns the raw `pointer.on('down/move/up')`
     // listeners that drive `POINTER_TAP` / `POINTER_DRAG_*`. Add
@@ -73,5 +78,30 @@ export class MapScene extends Scene {
 
     mapResource.addToScene(this)
     this.logger.debug('MapScene initialized')
+  }
+
+  /**
+   * Spawn a single placement live (used by `PlaceObjectCommand` / the undo
+   * of a remove). Resolves the placement's definition through the entity
+   * library + builds the entity via the component registry — same path as
+   * the bulk `ObjectSpawnSystem`. No-op if the definition can't resolve.
+   */
+  spawnPlacement(placement: import('../types/data/index.ts').ObjectPlacement): void {
+    const mapData = this.mapResource.mapData
+    if (!mapData) return
+    const def = resolvePlacementDefinition(placement, this.entityLibrary)
+    if (!def) return
+    const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
+    this.add(buildPlacementEntity(placement, def, this.mapResource, layersById))
+  }
+
+  /** Despawn the live entity for a placement id (used by `RemoveObjectCommand`). */
+  despawnPlacement(placementId: string): void {
+    for (const entity of [...this.world.entityManager.entities]) {
+      if (entity.get(PlacementIdComponent)?.id === placementId) {
+        entity.kill()
+        this.world.remove(entity, false)
+      }
+    }
   }
 }
