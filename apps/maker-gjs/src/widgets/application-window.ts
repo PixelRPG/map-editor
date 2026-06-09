@@ -373,6 +373,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._tiles_view, 'spriteset-rename-requested', (_v: TilesView, id: string, name: string) => {
       this._castCtl?.renameSpriteSet(id, name)
     })
+    this.signals.connect(this._tiles_view, 'spriteset-reorder-requested', (_v: TilesView, orderedIds: string[]) => {
+      this._castCtl?.reorderSpriteSets(orderedIds)
+    })
     this.signals.connect(this._tiles_view, 'spriteset-delete-requested', (_v: TilesView, id: string) => {
       this._castCtl?.deleteSpriteSet(id)
     })

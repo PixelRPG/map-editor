@@ -668,6 +668,31 @@ export class CastController {
   }
 
   /**
+   * Rewrite the project's `spriteSets[]` reference order to match
+   * `orderedIds` (the Tiles gallery's display order after a drag).
+   * References whose id isn't in the list keep their relative order at
+   * the end (stable). Persists + re-hydrates both views. **Local +
+   * cosmetic — NOT broadcast over collab**: order carries no editing
+   * state, so a peer's gallery order is independent (new joiners still
+   * get the host's order via the project snapshot). No-op when the order
+   * is already current.
+   */
+  reorderSpriteSets(orderedIds: string[]): void {
+    const data = this._project?.resource?.data
+    if (!data?.spriteSets) return
+    const rank = (id: string): number => {
+      const i = orderedIds.indexOf(id)
+      return i === -1 ? Number.MAX_SAFE_INTEGER : i
+    }
+    const sorted = [...data.spriteSets].sort((a, b) => rank(a.id) - rank(b.id))
+    if (sorted.every((ref, i) => ref === data.spriteSets[i])) return
+    data.spriteSets = sorted
+    this._persist()
+    void this.refresh()
+    this.onSpriteSetsChanged?.()
+  }
+
+  /**
    * Broadcast a sprite set's current DESCRIPTOR to peers (rename /
    * animation edit / tile-prop change) — no image bytes, the peer already
    * has the image. No-op solo. Sent after the local persist so the wire

@@ -1,12 +1,12 @@
-import GLib from '@girs/glib-2.0'
 import { GameProjectFormat, type SpriteSetData, type SpriteSetKind, type SpriteSetResource } from '@pixelrpg/engine'
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { DataAssetRow, DataView, DataViewModel } from '../widgets/data-view.ts'
-import { readBinaryFile, writeTextFile } from './file-io.ts'
+import { writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 import { isCharacterSpriteSet } from './sprite-set-classification.ts'
+import { countCharacterUsers, countMapUsers } from './sprite-set-usage.ts'
 
 /** Thumbnail edge passed to the sheet downscaler (≥ the row size, for sharpness). */
 const THUMB_PX = 96
@@ -87,8 +87,8 @@ export class DataController {
     const data = resource.data
     const props = data.properties ?? {}
 
-    const charUsers = this._countCharacterUsers(resource)
-    const mapUsers = this._countMapUsers(resource)
+    const charUsers = countCharacterUsers(resource)
+    const mapUsers = countMapUsers(resource)
 
     const sheets: DataAssetRow[] = []
     const tilesets: DataAssetRow[] = []
@@ -154,38 +154,5 @@ export class DataController {
       meta: `${width}×${height} · ${count} ${unit}`,
       usedBy: usedByChars + usedByMaps,
     }
-  }
-
-  /** spriteSetId → number of characters referencing it. */
-  private _countCharacterUsers(resource: LoadedProject['resource']): Map<string, number> {
-    const out = new Map<string, number>()
-    for (const c of resource.data?.characters ?? []) {
-      out.set(c.spriteSetId, (out.get(c.spriteSetId) ?? 0) + 1)
-    }
-    return out
-  }
-
-  /**
-   * spriteSetId → number of maps referencing it. Reads each map JSON's
-   * `spriteSets[]` directly (maps aren't preloaded). Best-effort: an
-   * unreadable/garbled map is skipped, not fatal.
-   */
-  private _countMapUsers(resource: LoadedProject['resource']): Map<string, number> {
-    const out = new Map<string, number>()
-    const projectDir = GLib.path_get_dirname(resource.path)
-    for (const mapRef of resource.data?.maps ?? []) {
-      try {
-        const mapPath = GLib.build_filenamev([projectDir, mapRef.path.replace(/^\.\//, '')])
-        const bytes = readBinaryFile(mapPath)
-        if (!bytes) continue
-        const mapData = JSON.parse(new TextDecoder().decode(bytes)) as { spriteSets?: { id: string }[] }
-        for (const s of mapData.spriteSets ?? []) {
-          out.set(s.id, (out.get(s.id) ?? 0) + 1)
-        }
-      } catch {
-        // skip unreadable/garbled map
-      }
-    }
-    return out
   }
 }

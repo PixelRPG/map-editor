@@ -4,6 +4,7 @@ import { gettext as _ } from 'gettext'
 import type { TilesView } from '../widgets/tiles-view.ts'
 import { writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
+import { countSpriteSetUsers } from './sprite-set-usage.ts'
 
 /**
  * Owns the Tiles view's data + mutation path.
@@ -55,6 +56,13 @@ export class TilesController {
           def.tileProperties = Object.keys(next).length === 0 ? undefined : next
         }
       })
+    },
+    // How many characters + maps reference this set — drives the delete
+    // confirmation's "still used in N place(s)" warning.
+    tilesetUsage: (spriteSetId: string): number => {
+      const resource = this._project?.resource
+      if (!resource) return 0
+      return countSpriteSetUsers(resource).get(spriteSetId) ?? 0
     },
   }
 
