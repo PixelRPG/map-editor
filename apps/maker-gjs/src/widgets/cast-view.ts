@@ -417,6 +417,18 @@ export class CastView extends ResponsiveEditorView {
   }
 
   /**
+   * Present the "New animation" dialog for a sprite sheet (wired to
+   * `win.new-animation`, mainly for tooling / MCP). When `sheetId` is
+   * given it drills into that sheet's detail first so the dialog has a
+   * context in one call; otherwise it targets the currently-active sheet
+   * ({@link _presentAddAnimationDialog} no-ops if there is none).
+   */
+  presentNewAnimationDialog(sheetId?: string): void {
+    if (sheetId) this.focusSheet(sheetId)
+    this._presentAddAnimationDialog()
+  }
+
+  /**
    * Open the sprite-set import dialog. On import the host copies the
    * image + registers the set; `onImported` (when given) receives the
    * resulting choice — the character dialog uses it to append + select

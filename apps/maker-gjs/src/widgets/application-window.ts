@@ -123,6 +123,7 @@ export interface SessionSnapshot {
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
  * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
+ * - `win.new-animation` (string sheet id, empty = active sheet — opens the Add-animation dialog)
  * - `win.open-character` / `win.open-sheet` / `win.open-tileset` (string id — drill into the detail sub-page)
  *
  * Atlas/scene state lives in the views; the window orchestrates the
@@ -1125,6 +1126,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (id) this._cast_view.focusSheet(id)
     })
     winActions.add_action(openSheetAction)
+
+    // Present the "New animation" dialog for a sprite sheet. Optional
+    // string id drills into that sheet first (so tooling can open it in
+    // one call); empty targets the active sheet. Mainly for the MCP
+    // bridge — the in-UI path is the sheet detail's "Add animation" row.
+    const newAnimationAction = Gio.SimpleAction.new('new-animation', GLib.VariantType.new('s'))
+    newAnimationAction.connect('activate', (_a, parameter) => {
+      if (!this._loadedProject) {
+        this._showToast(_('Open a project first'))
+        return
+      }
+      const id = parameter?.get_string()[0]
+      this._cast_view.presentNewAnimationDialog(id || undefined)
+    })
+    winActions.add_action(newAnimationAction)
 
     const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
     openSceneAction.connect('activate', () => {
