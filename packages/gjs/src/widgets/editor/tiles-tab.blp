@@ -36,5 +36,24 @@ template $PixelRpgTilesTab : Adw.Bin {
       tile-size: 42;
       columns: 5;
     }
+
+    Gtk.Box objects_section {
+      orientation: vertical;
+      spacing: 6;
+      visible: false;
+
+      Gtk.Label {
+        label: _("Objects");
+        halign: start;
+        styles ["heading", "dim-label"]
+      }
+
+      $PixelRpgTilePalette object_palette {
+        tile-size: 42;
+        columns: 5;
+        aspect-mode: "contain";
+        styles ["object-brush-palette"]
+      }
+    }
   }
 }
