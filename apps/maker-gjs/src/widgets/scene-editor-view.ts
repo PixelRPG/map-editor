@@ -350,10 +350,12 @@ export class SceneEditorView extends ResponsiveEditorView {
       }
     })
     this._inspector.objectsTab.setObjects(placements)
-    // Feed the object-tool brush picker the project's world objects (the
-    // non-character library entities — characters live in the Cast view).
+    // Feed the object-tool brush picker every library entity EXCEPT the
+    // player actor — characters (Cast NPCs) are placeable now too, but the
+    // player spawns at the map's player spawn-point, not via the brush.
+    const playerId = project.resource.data?.playerActorId
     const brushOptions = (project.resource.data?.entityLibrary ?? [])
-      .filter((e) => e.editorData?.template !== 'character')
+      .filter((e) => e.id !== playerId)
       .map((e) => ({ id: e.id, name: e.name }))
     this._inspector.objectsTab.setBrushOptions(brushOptions)
 
