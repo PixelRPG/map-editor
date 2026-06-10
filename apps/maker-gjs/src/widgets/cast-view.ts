@@ -1,10 +1,9 @@
 import Adw from '@girs/adw-1'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { CharacterAnimation, CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
+import type { CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
 import {
-  AddAnimationDialog,
-  AnimationList,
   CardGallery,
   CastInspector,
   CharacterPreview,
@@ -32,7 +31,6 @@ const CARD_PREVIEW_SIZE = 160
 // `$PixelRpgModeRail` / `$PixelRpgCharacterPreview` / … references in
 // `cast-view.blp` resolve at template-parse time.
 GObject.type_ensure(CharacterPreview.$gtype)
-GObject.type_ensure(AnimationList.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
 
@@ -45,47 +43,37 @@ export namespace CastView {
 }
 
 /**
- * Project-level Cast view. Two sections, switched by the header
- * `Adw.ViewSwitcher`, each a master-detail drill-down inside the shared
- * `Adw.NavigationView`:
+ * Project-level Cast view — a Characters-only lens (the friendly hero /
+ * NPC roster). A master-detail drill-down inside the shared
+ * `Adw.NavigationView`: every character is a `CardGallery` card; a card
+ * drills into an identity-only DETAIL page (an animated
+ * `CharacterPreview` + the `CastInspector` in `character` mode = name,
+ * appearance picker, player flag, speed, "Edit appearance" deep-link,
+ * plus the "all components" disclosure).
  *
- * - **Characters** — every hero / NPC as a `CardGallery` card. A
- *   character just *picks* an appearance (its look + animations); the
- *   detail page is identity-only: an animated `CharacterPreview` + the
- *   `CastInspector` in `character` mode (name, appearance picker, player
- *   flag, speed, "Edit appearance" deep-link).
- * - **Appearances** (user-facing term; internally still sprite sheets /
- *   `SpriteSetData{kind:'character'}`) — every character-kind sheet as a
- *   card. An appearance OWNS its animations (shared by every character
- *   wearing it), so the animation editor lives here: the sheet detail has
- *   a `CharacterPreview` + the `AnimationList` + the `CastInspector` in
- *   `sheet` mode (selected-animation duration), all keyed by `_activeSheetId`.
+ * A character just *picks* an appearance — sprite sheets and their
+ * animation editor live in the unified **Sheets** view now. The inspector's
+ * "Edit appearance →" deep-link activates `win.open-appearance` to drill
+ * straight into that editor.
  *
  * The `ModeRail` (left navigation) is always present; this view's
  * `mode-changed` signal forwards to the application window to switch
- * between World / Cast / Tiles / Audio / Data.
+ * between World / Cast / Objects / Sheets / Audio / Data.
  *
  * Mutations land via host-supplied callbacks (set via `bindCallbacks`)
  * so the application window remains the single owner of project data +
  * the persistence path. The cast view is intentionally presentational;
- * it diffs against `setCharacters` / `setSheets` and emits
- * `character-changed` once the host has applied the mutation.
+ * it diffs against `setCharacters` and emits `character-changed` once the
+ * host has applied the mutation.
  */
 export class CastView extends ResponsiveEditorView {
-  // ── Characters section / detail ─────────────────────────────────
+  // ── Characters gallery / detail ─────────────────────────────────
   declare _characters_gallery: CardGallery
   declare _detail_page: Adw.NavigationPage
   declare _preview: CharacterPreview
   declare _inspector: CastInspector
   declare _advanced_slot: Gtk.Box
-  // ── Sprite-sheets section / detail ──────────────────────────────
-  declare _sheets_gallery: CardGallery
-  declare _sheet_detail_page: Adw.NavigationPage
-  declare _sheet_preview: CharacterPreview
-  declare _sheet_inspector: CastInspector
-  declare _anim_list: AnimationList
   // ── Shared chrome ───────────────────────────────────────────────
-  declare _section_stack: Adw.ViewStack
   declare _nav: Adw.NavigationView
   declare _quickview_toggle: Gtk.ToggleButton
   // Desktop gallery quick-view (read-only glance for the selected card).
@@ -99,23 +87,19 @@ export class CastView extends ResponsiveEditorView {
 
   private _projectName = ''
   // Quick-view sidebar starts shown on desktop; `_onInspectorCollapsedChanged`
-  // flips it off when the responsive breakpoint collapses (phone) or when
-  // the active section isn't Characters (the quick-view is character-only).
+  // flips it off when the responsive breakpoint collapses (phone).
   private _showQuickview = true
 
   private _characters: CharacterDefinition[] = []
+  // The project's appearance choices — drives the inspector's appearance
+  // picker only (the sheets gallery + animation editor moved to Sheets).
   private _sheets: SpriteSetChoice[] = []
   private _activeCharacterId: string | null = null
-  private _activeSheetId: string | null = null
-  /** Active animation in the SHEET detail (preview ↔ list ↔ duration). */
-  private _activeAnimationId: string | null = null
   /**
    * Resolved GTK preview resource per sprite-set id. Keyed by
    * `spriteSetId` so several characters sharing a set reuse the one
-   * resource, and so a sheet card / sheet detail can resolve the same
-   * resource by sheet id. Filled by the controller's `refresh`; a
-   * missing/failed set maps to `null` (the card falls back to an icon
-   * and the preview blanks).
+   * resource. Filled by the controller's `refresh`; a missing/failed set
+   * maps to `null` (the card falls back to an icon and the preview blanks).
    */
   private _spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
   private signals = new SignalScope()
@@ -126,16 +110,7 @@ export class CastView extends ResponsiveEditorView {
   private _onGetRefOptions: (() => ComponentRefOptions) | null = null
   private _onSetSpeedRequested: ((charId: string, tilesPerSec: number) => void) | null = null
   private _onChangeSheetRequested: ((charId: string, sheetId: string) => void) | null = null
-  // Animation edits target the SHEET (keyed by spriteSetId), not the character.
-  private _onSetDurationRequested: ((sheetId: string, animId: string, durationMs: number) => void) | null = null
-  private _onAddAnimationRequested: ((sheetId: string, animation: CharacterAnimation) => void) | null = null
-  private _onEditAnimationRequested:
-    | ((sheetId: string, originalId: string, animation: CharacterAnimation) => void)
-    | null = null
-  private _onDeleteAnimationRequested: ((sheetId: string, animId: string) => void) | null = null
-  private _onRenameSheetRequested: ((sheetId: string, name: string) => void) | null = null
   private _onDeleteCharacterRequested: ((charId: string) => void) | null = null
-  private _onDeleteSheetRequested: ((sheetId: string) => void) | null = null
   private _onListSpriteSets: (() => SpriteSetChoice[]) | null = null
   private _onCreateCharacter: ((draft: NewCharacterDraft) => void) | null = null
   private _onImportSpriteSet: ((result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>) | null = null
@@ -153,12 +128,6 @@ export class CastView extends ResponsiveEditorView {
           'preview',
           'inspector',
           'advanced_slot',
-          'sheets_gallery',
-          'sheet_detail_page',
-          'sheet_preview',
-          'sheet_inspector',
-          'anim_list',
-          'section_stack',
           'nav',
           'quickview_toggle',
           'quick_stack',
@@ -238,9 +207,8 @@ export class CastView extends ResponsiveEditorView {
    */
   vfunc_map(): void {
     super.vfunc_map()
-    // The two inspectors serve fixed roles — set their modes once.
+    // The detail inspector serves one fixed role — character mode.
     this._inspector.setMode('character')
-    this._sheet_inspector.setMode('sheet')
 
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
@@ -259,43 +227,12 @@ export class CastView extends ResponsiveEditorView {
     this.signals.connect(this._inspector, 'sheet-changed', (_v: CastInspector, sheetId: string) => {
       if (this._activeCharacterId) this._onChangeSheetRequested?.(this._activeCharacterId, sheetId)
     })
-    // Deep-link from the character detail into its appearance's editor —
-    // animations live on the shared appearance asset, not the character.
+    // Deep-link from the character detail into its appearance's animation
+    // editor — animations live on the shared appearance asset (the Sheets
+    // view), not the character. Routes through the window's action group.
     this.signals.connect(this._inspector, 'edit-appearance-requested', () => {
       const character = this._currentCharacter()
-      if (character) this.focusSheet(character.spriteSetId)
-    })
-
-    // ── Sheet detail: bidirectional active-animation sync ──────────
-    // Three surfaces stay in lock-step — the sheet preview's direction/
-    // pause buttons, the animation-list row highlight, and the sheet
-    // inspector's duration field. Both user inputs (list activate,
-    // preview button click) funnel into `_setActiveAnimation` which is
-    // idempotent on no-change, so the resulting
-    // `preview-notify → setActive → list-highlight` round trip
-    // terminates after one pass.
-    this.signals.connect(this._anim_list, 'animation-selected', (_v: AnimationList, animId: string) => {
-      this._setActiveAnimation(animId)
-    })
-    this.signals.connect(this._sheet_preview, 'notify::active-animation-id', () => {
-      this._setActiveAnimation(this._sheet_preview.activeAnimationId)
-    })
-    this.signals.connect(this._sheet_inspector, 'duration-changed', (_v: CastInspector, ms: number) => {
-      if (this._activeSheetId && this._activeAnimationId) {
-        this._onSetDurationRequested?.(this._activeSheetId, this._activeAnimationId, ms)
-      }
-    })
-    this.signals.connect(this._sheet_inspector, 'sheet-renamed', (_v: CastInspector, name: string) => {
-      if (this._activeSheetId) this._onRenameSheetRequested?.(this._activeSheetId, name)
-    })
-    this.signals.connect(this._anim_list, 'add-animation-requested', () => {
-      this._presentAddAnimationDialog()
-    })
-    this.signals.connect(this._anim_list, 'edit-animation-requested', (_v: AnimationList, animId: string) => {
-      this._presentEditAnimationDialog(animId)
-    })
-    this.signals.connect(this._anim_list, 'delete-animation-requested', (_v: AnimationList, animId: string) => {
-      this._confirmDeleteAnimation(animId)
+      if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))
     })
 
     // ── Character gallery ──────────────────────────────────────────
@@ -314,24 +251,6 @@ export class CastView extends ResponsiveEditorView {
       this._confirmDeleteCharacter(id)
     })
     this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
-
-    // ── Sprite-sheets gallery ──────────────────────────────────────
-    // No quick-view for sheets — a tap (single or double) drills straight
-    // into the sheet's animation editor. The three-dots delete confirms.
-    this.signals.connect(this._sheets_gallery, 'item-activated', (_v: CardGallery, id: string) => {
-      this._openSheetDetail(id)
-    })
-    this.signals.connect(this._sheets_gallery, 'item-opened', (_v: CardGallery, id: string) => {
-      this._openSheetDetail(id)
-    })
-    this.signals.connect(this._sheets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
-      this._confirmDeleteSheet(id)
-    })
-
-    // The quick-view is character-only — hide it (and disable its toggle)
-    // while the Sprite-sheets section is showing.
-    this.signals.connect(this._section_stack, 'notify::visible-child-name', () => this._syncQuickviewVisibility())
-    this._syncQuickviewVisibility()
   }
 
   /**
@@ -353,73 +272,13 @@ export class CastView extends ResponsiveEditorView {
 
   /**
    * Drill into the Character detail sub-page — identity only (preview +
-   * the `character`-mode inspector). Animations live on the sheet now, so
-   * there's no animation list here. No-op if already on the page.
+   * the `character`-mode inspector). Animations live on the appearance
+   * sheet now, so there's no animation list here. No-op if already on the
+   * page.
    */
   private _openDetail(): void {
     if (!this._activeCharacterId) return
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
-  }
-
-  /**
-   * Drill into the Sprite-sheet detail sub-page for `id` — the sheet's
-   * animation editor (preview + animation list + selected-animation
-   * duration), shared by every character using the sheet. Switches the
-   * underlying gallery section to Sprite-sheets so the back button lands
-   * there.
-   */
-  private _openSheetDetail(id: string): void {
-    const sheet = this._sheets.find((s) => s.id === id)
-    if (!sheet) return
-    this._activeSheetId = id
-    this._sheets_gallery.setActiveId(id)
-    this._refreshActiveSheet()
-    this._sheet_detail_page.title = sheet.name
-    if (this._section_stack.get_visible_child_name() !== 'sheets') {
-      this._section_stack.set_visible_child_name('sheets')
-    }
-    if (this._nav.get_visible_page()?.tag !== 'sheet-detail') this._nav.push_by_tag('sheet-detail')
-  }
-
-  /**
-   * Construct a fresh `AddAnimationDialog` against the ACTIVE SHEET, seed
-   * it with a synthetic character bound to the sheet (so its picker +
-   * preview render and name-uniqueness validates against the sheet's
-   * animations), and present it. Save fires `animation-created`; we
-   * forward it to the host's `addAnimation` callback keyed by the sheet
-   * id (controller writes the new entry into the sheet's
-   * `characterAnimations` + persists the sheet JSON).
-   */
-  private _presentAddAnimationDialog(): void {
-    const sheetId = this._activeSheetId
-    const synthetic = this._sheetAsCharacter(sheetId)
-    if (!sheetId || !synthetic) return
-    const dialog = new AddAnimationDialog()
-    dialog.setContext(synthetic, this._spriteSetsById.get(sheetId) ?? null)
-    dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
-      this._onAddAnimationRequested?.(sheetId, animation)
-    })
-    dialog.present(this)
-  }
-
-  /**
-   * Same dialog as {@link _presentAddAnimationDialog} but seeded with the
-   * sheet's existing animation so the user edits in place — the dialog's
-   * third `setContext` argument flips it to edit mode (title swap, name
-   * locked for required roles, save fires `animation-edited`).
-   */
-  private _presentEditAnimationDialog(animId: string): void {
-    const sheetId = this._activeSheetId
-    const synthetic = this._sheetAsCharacter(sheetId)
-    if (!sheetId || !synthetic) return
-    const existing = this._sheetAnimations(sheetId).find((a) => a.id === animId)
-    if (!existing) return
-    const dialog = new AddAnimationDialog()
-    dialog.setContext(synthetic, this._spriteSetsById.get(sheetId) ?? null, existing)
-    dialog.connect('animation-edited', (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
-      this._onEditAnimationRequested?.(sheetId, originalId, animation)
-    })
-    dialog.present(this)
   }
 
   /**
@@ -449,32 +308,11 @@ export class CastView extends ResponsiveEditorView {
   }
 
   /**
-   * Present the sprite-set import dialog standalone (wired to
-   * `win.new-spriteset`). The imported set is copied into the project
-   * and registered; it's then available to any character. Reuses the
-   * same flow the character dialog's "+" button drives.
-   */
-  presentSpriteSetImportDialog(): void {
-    this._presentSpriteSetImportDialog()
-  }
-
-  /**
-   * Present the "New animation" dialog for a sprite sheet (wired to
-   * `win.new-animation`, mainly for tooling / MCP). When `sheetId` is
-   * given it drills into that sheet's detail first so the dialog has a
-   * context in one call; otherwise it targets the currently-active sheet
-   * ({@link _presentAddAnimationDialog} no-ops if there is none).
-   */
-  presentNewAnimationDialog(sheetId?: string): void {
-    if (sheetId) this.focusSheet(sheetId)
-    this._presentAddAnimationDialog()
-  }
-
-  /**
-   * Open the sprite-set import dialog. On import the host copies the
-   * image + registers the set; `onImported` (when given) receives the
-   * resulting choice — the character dialog uses it to append + select
-   * the new set without leaving its flow.
+   * Open the sprite-set import dialog for the New Character flow. On
+   * import the host copies the image + registers the set; `onImported`
+   * (when given) receives the resulting choice — the character dialog
+   * uses it to append + select the new set without leaving its flow.
+   * (Standalone appearance import lives in the Sheets view now.)
    */
   private _presentSpriteSetImportDialog(onImported?: (choice: SpriteSetChoice) => void): void {
     const dialog = new SpriteSetImportDialog()
@@ -496,9 +334,6 @@ export class CastView extends ResponsiveEditorView {
    */
   resetToOverview(): void {
     if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
-    if (this._section_stack.get_visible_child_name() !== 'characters') {
-      this._section_stack.set_visible_child_name('characters')
-    }
   }
 
   /**
@@ -509,15 +344,6 @@ export class CastView extends ResponsiveEditorView {
   focusCharacter(id: string): void {
     this._selectCharacter(id)
     this._openDetail()
-  }
-
-  /**
-   * Drill into a sprite sheet's detail page by id. Used by the
-   * `win.open-sheet` action (tooling drill-in) — the master-detail
-   * equivalent of {@link focusCharacter} for the Sprite-sheets section.
-   */
-  focusSheet(id: string): void {
-    this._openSheetDetail(id)
   }
 
   get projectName(): string {
@@ -544,31 +370,15 @@ export class CastView extends ResponsiveEditorView {
 
   // Collapsed = narrow/phone → hide the gallery quick-view (a card tap
   // drills straight into the detail page there). Expanded = desktop →
-  // show it (only on the Characters section). The user can still toggle
-  // it via the header button.
-  protected override _onInspectorCollapsedChanged(_collapsed: boolean): void {
-    this._syncQuickviewVisibility()
-  }
-
-  /**
-   * The quick-view is character-only and desktop-only: show it when the
-   * Characters section is active AND the layout isn't collapsed, and
-   * disable its toggle button otherwise so it can't resurface a stale
-   * character glance over the sheet cards.
-   */
-  private _syncQuickviewVisibility(): void {
-    const onCharacters = (this._section_stack?.get_visible_child_name() ?? 'characters') === 'characters'
-    this._quickview_toggle?.set_sensitive(onCharacters)
-    this.showQuickview = onCharacters && !this.inspectorCollapsed
+  // show it. The user can still toggle it via the header button.
+  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
+    this.showQuickview = !collapsed
   }
 
   /**
    * Set the host callbacks. Called once by `CastController` after
    * construction. Decouples the view from the project mutation /
    * persistence layer.
-   *
-   * Animation callbacks key by SHEET id (animations are sheet-owned now,
-   * shared by every character using the sheet).
    */
   bindCallbacks(callbacks: {
     rename: (charId: string, name: string) => void
@@ -577,13 +387,7 @@ export class CastView extends ResponsiveEditorView {
     getRefOptions: () => ComponentRefOptions
     setSpeed: (charId: string, tilesPerSec: number) => void
     changeSheet: (charId: string, sheetId: string) => void
-    setDuration: (sheetId: string, animId: string, durationMs: number) => void
-    addAnimation: (sheetId: string, animation: CharacterAnimation) => void
-    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => void
-    deleteAnimation: (sheetId: string, animId: string) => void
-    renameSheet: (sheetId: string, name: string) => void
     deleteCharacter: (charId: string) => void
-    deleteSheet: (sheetId: string) => void
     listSpriteSets: () => SpriteSetChoice[]
     createCharacter: (draft: NewCharacterDraft) => void
     importSpriteSet: (result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>
@@ -595,13 +399,7 @@ export class CastView extends ResponsiveEditorView {
     this._onGetRefOptions = callbacks.getRefOptions
     this._onSetSpeedRequested = callbacks.setSpeed
     this._onChangeSheetRequested = callbacks.changeSheet
-    this._onSetDurationRequested = callbacks.setDuration
-    this._onAddAnimationRequested = callbacks.addAnimation
-    this._onEditAnimationRequested = callbacks.editAnimation
-    this._onDeleteAnimationRequested = callbacks.deleteAnimation
-    this._onRenameSheetRequested = callbacks.renameSheet
     this._onDeleteCharacterRequested = callbacks.deleteCharacter
-    this._onDeleteSheetRequested = callbacks.deleteSheet
     this._onListSpriteSets = callbacks.listSpriteSets
     this._onCreateCharacter = callbacks.createCharacter
     this._onImportSpriteSet = callbacks.importSpriteSet
@@ -615,8 +413,7 @@ export class CastView extends ResponsiveEditorView {
    * `spriteSetsById` carries a resolved GTK preview resource for every
    * sprite-set id (keyed by `spriteSetId`), so each card previews its
    * OWN character's sheet and the detail preview follows the active
-   * character rather than always the player's set. The same map covers
-   * the sheets section (see {@link setSheets}).
+   * character rather than always the player's set.
    */
   setCharacters(characters: CharacterDefinition[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
     this._characters = characters
@@ -632,24 +429,15 @@ export class CastView extends ResponsiveEditorView {
   }
 
   /**
-   * Push the project's sprite-sheet list into the Cast view. Called by
-   * the host alongside {@link setCharacters} (same `spriteSetsById` map).
-   * `sheets` are the character-kind sprite sheets — the ones a character
-   * can pick + the ones whose animations are editable here.
+   * Push the project's appearance (sprite-sheet) choices into the Cast
+   * view. Called by the host alongside {@link setCharacters}. Cast no
+   * longer renders a sheets gallery (that's the Sheets view) — these only
+   * feed the character detail's appearance PICKER so it can reassign a
+   * character to a different sheet.
    */
-  setSheets(sheets: SpriteSetChoice[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
+  setSheets(sheets: SpriteSetChoice[]): void {
     this._sheets = sheets
-    this._spriteSetsById = spriteSetsById
-    if (this._activeSheetId && !sheets.find((s) => s.id === this._activeSheetId)) {
-      this._activeSheetId = null
-    }
-    if (!this._activeSheetId && sheets.length > 0) {
-      this._activeSheetId = sheets[0].id
-    }
-    this._rebuildSheetsGallery()
-    // The character detail's sheet picker reflects the latest list.
     this._inspector.setSheets(this._sheets, this._currentCharacter()?.spriteSetId ?? null)
-    this._refreshActiveSheet()
   }
 
   /**
@@ -663,19 +451,6 @@ export class CastView extends ResponsiveEditorView {
       (item) => this._buildCardPreview(item.id),
     )
     this._characters_gallery.setActiveId(this._activeCharacterId)
-  }
-
-  /**
-   * Rebuild the sprite-sheet cards. Each previews the sheet's animations
-   * via a showcase {@link CharacterPreview} (bound to a synthetic
-   * character — see {@link _sheetAsCharacter}).
-   */
-  private _rebuildSheetsGallery(): void {
-    this._sheets_gallery.setItems(
-      this._sheets.map((s) => this._buildSheetCardItem(s)),
-      (item) => this._buildSheetCardPreview(item.id),
-    )
-    this._sheets_gallery.setActiveId(this._activeSheetId)
   }
 
   /**
@@ -695,18 +470,6 @@ export class CastView extends ResponsiveEditorView {
     }
   }
 
-  /** Build the card model for one sprite sheet: animation count as subtitle. */
-  private _buildSheetCardItem(sheet: SpriteSetChoice): GalleryCardItem {
-    const count = this._spriteSetsById.get(sheet.id)?.data?.characterAnimations?.length ?? 0
-    return {
-      id: sheet.id,
-      title: sheet.name,
-      subtitle: count === 1 ? _('1 animation') : _(`${count} animations`),
-      fallbackIcon: 'image-x-generic-symbolic',
-      deletable: true,
-    }
-  }
-
   /**
    * Build the per-card preview — the SAME `CharacterPreview` used in the
    * quick-view, in "showcase" mode (no controls, auto-cycling direction).
@@ -719,14 +482,7 @@ export class CastView extends ResponsiveEditorView {
     return this._buildShowcasePreview(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
   }
 
-  /** Showcase preview for a sprite-sheet card (synthetic character bound to the sheet). */
-  private _buildSheetCardPreview(id: string): CharacterPreview | null {
-    const synthetic = this._sheetAsCharacter(id)
-    if (!synthetic) return null
-    return this._buildShowcasePreview(synthetic, this._spriteSetsById.get(id) ?? null)
-  }
-
-  /** Shared showcase-preview factory used by both galleries. */
+  /** Shared showcase-preview factory for the character cards. */
   private _buildShowcasePreview(
     character: CharacterDefinition,
     spriteSet: GdkSpriteSetResource | null,
@@ -766,22 +522,6 @@ export class CastView extends ResponsiveEditorView {
   }
 
   /**
-   * Refresh the Sprite-sheet detail surfaces (preview + animation list +
-   * duration inspector), all bound to the active sheet via a synthetic
-   * character. Re-derives the active animation from the preview's default
-   * so the list highlight + duration line up immediately.
-   */
-  private _refreshActiveSheet(): void {
-    const synthetic = this._sheetAsCharacter(this._activeSheetId)
-    const sheet = this._activeSheetId ? (this._spriteSetsById.get(this._activeSheetId) ?? null) : null
-    this._sheet_preview.setCharacter(synthetic, sheet)
-    this._anim_list.setCharacter(synthetic, sheet)
-    this._sheet_inspector.setSheetName(synthetic?.name ?? '')
-    this._activeAnimationId = null
-    this._setActiveAnimation(this._sheet_preview.activeAnimationId)
-  }
-
-  /**
    * Populate the desktop quick-view sidebar (read-only glance) for the
    * active character, or switch it to the empty state when nothing is
    * selected.
@@ -801,60 +541,9 @@ export class CastView extends ResponsiveEditorView {
     this._quick_speed.set_label(_(`${speed} tiles/second`))
   }
 
-  /**
-   * Single-entry helper that keeps the three active-animation surfaces
-   * (sheet detail) in lock-step: the `_activeAnimationId` field, the
-   * `AnimationList` row highlight, the `CharacterPreview` direction +
-   * paused, and the `CastInspector` duration row.
-   *
-   * Idempotent on `id === current` to break the round-trip
-   * `preview-notify → cast-view → preview-setActive` chain after one pass.
-   */
-  private _setActiveAnimation(animId: string | null): void {
-    if (this._activeAnimationId === animId) return
-    this._activeAnimationId = animId
-    this._anim_list.setActiveAnimation(animId)
-    if (animId) this._sheet_preview.setActiveAnimation(animId)
-    this._sheet_inspector.setAnimation(this._currentSheetAnimation())
-  }
-
   private _currentCharacter(): CharacterDefinition | null {
     if (!this._activeCharacterId) return null
     return this._characters.find((c) => c.id === this._activeCharacterId) ?? null
-  }
-
-  /** The animations owned by the sheet with `spriteSetId`. */
-  private _sheetAnimations(spriteSetId: string): CharacterAnimation[] {
-    return this._spriteSetsById.get(spriteSetId)?.data?.characterAnimations ?? []
-  }
-
-  /** The currently-selected animation in the SHEET detail. */
-  private _currentSheetAnimation(): CharacterAnimation | null {
-    if (!this._activeSheetId || !this._activeAnimationId) return null
-    return this._sheetAnimations(this._activeSheetId).find((a) => a.id === this._activeAnimationId) ?? null
-  }
-
-  /**
-   * A throwaway {@link CharacterDefinition} bound to a sprite sheet, so
-   * the character-keyed widgets ({@link CharacterPreview},
-   * {@link AnimationList}, {@link AddAnimationDialog}) can render a SHEET
-   * directly. The sheet owns the animations (read via
-   * `spriteSet.data.characterAnimations`); the synthetic character just
-   * carries the same list as its (deprecated) `animations` so the
-   * dialog's name-uniqueness check sees the existing ids. Never
-   * persisted.
-   */
-  private _sheetAsCharacter(sheetId: string | null): CharacterDefinition | null {
-    if (!sheetId) return null
-    const name = this._sheets.find((s) => s.id === sheetId)?.name ?? sheetId
-    return {
-      id: sheetId,
-      name,
-      kind: 'hero',
-      spriteSetId: sheetId,
-      defaultAnimation: 'idle-down',
-      animations: this._sheetAnimations(sheetId),
-    }
   }
 
   /**
@@ -879,43 +568,6 @@ export class CastView extends ResponsiveEditorView {
       if (response === 'delete') this._onDeleteCharacterRequested?.(id)
     })
     dialog.present(this)
-  }
-
-  /**
-   * Confirm + delete a sprite sheet. Destructive — drops the sheet (and
-   * its animations) from the project; any character still referencing it
-   * falls back to a blank preview until reassigned. Confirms before the
-   * host callback fires.
-   */
-  private _confirmDeleteSheet(id: string): void {
-    const sheet = this._sheets.find((s) => s.id === id)
-    if (!sheet) return
-    const dialog = new Adw.AlertDialog({
-      heading: _('Delete appearance?'),
-      body: _(
-        `“${sheet.name}” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone.`,
-      ),
-    })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('delete', _('Delete'))
-    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
-    dialog.set_default_response('cancel')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'delete') this._onDeleteSheetRequested?.(id)
-    })
-    dialog.present(this)
-  }
-
-  /**
-   * Delete a custom animation from the active sheet. Lower-stakes than a
-   * character delete (a custom animation is trivially re-created) so it
-   * skips the confirm dialog — the trash affordance only appears on
-   * custom rows, never the required roles. The host removes it from the
-   * sheet + re-persists.
-   */
-  private _confirmDeleteAnimation(animId: string): void {
-    if (this._activeSheetId) this._onDeleteAnimationRequested?.(this._activeSheetId, animId)
   }
 
   vfunc_unmap(): void {

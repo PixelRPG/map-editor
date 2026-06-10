@@ -144,8 +144,8 @@ Each rung is the same substance (components on one entity model) — no cliff wh
 
 ## Editor surfaces
 
-- **Library / Assets** — Appearances + Tilesets (the Data view already lists both; it becomes the canonical asset home; appearance/animation editing lives with the asset).
-- **Cast view** — survives as the friendly authoring surface over entity definitions seeded from the `NPC`/character templates: name, Appearance picker, speed, player toggle; components/states/scripts behind disclosure. All of #145–#158's UI (galleries, inspectors, animation timeline, dialogs) carries over.
+- **Sheets view** — the unified sprite-sheet editor + the canonical home of appearance/animation editing (landed C5; the former Tiles view, relabelled). Two stacked card galleries: **Tilesets** (→ the tile-property inspector) and **Appearances** (→ the animation editor: preview + animation list + duration). Appearance import lives here too. (The Data view still *lists* both kinds as assets; opening one jumps here via `win.open-appearance` / `win.open-tileset`.)
+- **Cast view** — a **Characters-only** lens (the friendly hero/NPC roster) over the `character`-template entity definitions: name, Appearance **picker**, speed, player toggle; components/states/scripts behind the "all components" disclosure; an **"Edit appearance →"** deep-link into the Sheets animation editor. The sheet gallery + animation editor moved out to the Sheets view (C5).
 - **Objects library + object tool** (the pending object-system editor UX) — same definitions, placed on maps; built once, on the new composition, instead of once per old model + once per new.
 
 ## Migration phases
@@ -161,6 +161,7 @@ Each rung is the same substance (components on one entity model) — no cliff wh
 | C3a | **Placement commands (engine)** — `PlaceObjectCommand` / `RemoveObjectCommand` (registered, undoable, collab-reconstructible) + `MapScene.spawnPlacement` / `despawnPlacement` (live spawn/despawn via the registry). | **landed** |
 | C3b | **Object placement tool** — the `object` editor tool (FloatingTopBar) + `ActiveObjectComponent` brush + `TileEditorSystem` click→`PlaceObjectCommand`; Objects-inspector brush picker → `win.set-object-brush`; `Engine.placeObjectAt` + DBus `PlaceObject` + MCP `place_object` (driveable). | **landed** |
 | C4 | **Cast view "all components" disclosure** — the cast detail gains a collapsed `EntityComponentsEditor` disclosure editing the character's raw `components[]`; the friendly inspector (name / appearance / speed) now **merges** onto the existing entity (`mergeCharacterIntoEntity`) so it never drops disclosure-added components. (New-character already seeds the `character` component set via `characterToEntity`.) | **landed** |
+| C5 | **Sheets-view unification (maker)** — the Tiles view becomes the unified **Sheets** view; appearances + the animation editor relocate from Cast into it (one editor for both sprite-sheet kinds — Tilesets + Appearances). Cast slims to a Characters-only lens (appearance picker + "Edit appearance" deep-link via `win.open-appearance`). Appearance data still owned by `CastController` (pushed via `onAppearancesChanged`; animation mutations route back through its public methods); appearance import + `win.new-animation` + Data "open appearance" all route to the Sheets view; `win.open-sheet` removed. | **landed** |
 | D | **States** — `EntityState` + `StateSystem` + flags vocabulary + state UI. | **planned** |
 | E | **Code editor** — script representation (likely TS — the whole stack is TS and gjsify can bundle/run it; sandboxing TBD), `script` component spec, editor surface. The `scriptId` seam already exists on `trigger`. | **planned** |
 

@@ -292,7 +292,7 @@ export class CastController {
   async refresh(): Promise<void> {
     const resource = this._project?.resource
     if (!resource) {
-      this.view.setSheets([], new Map())
+      this.view.setSheets([])
       this.view.setCharacters([], new Map())
       this.onAppearancesChanged?.([], new Map())
       return
@@ -308,10 +308,11 @@ export class CastController {
     for (const id of neededIds) {
       spriteSetsById.set(id, await this._resolveSpriteSet(id))
     }
-    this.view.setSheets(sheets, spriteSetsById)
+    // Cast gets the appearance choices for its picker; the Sheets view
+    // gets the full list + shared preview map (it owns the gallery +
+    // animation editor now, sharing the memoised cache).
+    this.view.setSheets(sheets)
     this.view.setCharacters(characters, spriteSetsById)
-    // Mirror the appearance list into the unified Sheets view (it owns
-    // the animation editor now); shares the memoised preview map.
     this.onAppearancesChanged?.(sheets, spriteSetsById)
   }
 
@@ -360,19 +361,10 @@ export class CastController {
       })
       void this.refresh()
     },
-    // Animations live on the SHEET now (shared by every character using
-    // it), so these mutate the sprite-sheet directly, keyed by sheet id.
-    // The bodies are public methods so the unified Sheets view's
-    // animation editor can drive the SAME mutation path via the host.
-    setDuration: (sheetId: string, animId: string, durationMs: number) =>
-      this.setAnimationDuration(sheetId, animId, durationMs),
-    addAnimation: (sheetId: string, animation: CharacterAnimation) => this.addAnimation(sheetId, animation),
-    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) =>
-      this.editAnimation(sheetId, originalId, animation),
-    deleteAnimation: (sheetId: string, animId: string) => this.deleteAnimation(sheetId, animId),
-    renameSheet: (id: string, name: string) => this.renameSpriteSet(id, name),
+    // Sprite-sheet animations are edited in the Sheets view now — those
+    // mutations call the public methods (`setAnimationDuration` /
+    // `addAnimation` / … / `deleteSpriteSet`) directly via the host.
     deleteCharacter: (id: string) => this._deleteCharacter(id),
-    deleteSheet: (id: string) => this.deleteSpriteSet(id),
     listSpriteSets: () => this._listSpriteSets(),
     createCharacter: (draft: NewCharacterDraft) => this._createCharacter(draft),
     importSpriteSet: (result: SpriteSetImportResult) => this._importSpriteSet(result),
