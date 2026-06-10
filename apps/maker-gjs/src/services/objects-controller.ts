@@ -5,7 +5,6 @@ import {
   createEntityUpsertOp,
   type EntityDefinition,
   GameProjectFormat,
-  isCharacterEntity,
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 import type { ObjectsView } from '../widgets/objects-view.ts'
@@ -15,17 +14,26 @@ import { writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 
 /**
- * Controller for the **Objects library** view: CRUD over the world-object
- * entries in `GameProjectData.entityLibrary` (everything that is NOT a
- * `character`-template entity — those are the Cast view's). Mirrors the
- * Cast controller: every mutation writes the in-memory data, persists the
- * project JSON, and broadcasts a `__project/entity.*` op so peers stay in
- * sync. Remote ops are applied centrally by the Cast controller (single
- * applier); this view just re-`refresh`es when notified.
+ * Controller for the **Objects library** view — the GENERAL lens over the
+ * project's `GameProjectData.entityLibrary`: it lists EVERY entity
+ * definition (world objects AND `character`-template cast members), edited
+ * raw through the generated component inspector. The Cast view is a
+ * specialised friendly lens over the character subset of the same library.
+ * Mirrors the Cast controller: every mutation writes the in-memory data,
+ * persists the project JSON, and broadcasts a `__project/entity.*` op so
+ * peers stay in sync. Remote ops are applied centrally by the Cast
+ * controller (single applier); this view just re-`refresh`es when notified.
  */
 export class ObjectsController {
   private _project: LoadedProject | null = null
   private _session: CollabSession | null = null
+  /**
+   * Invoked after a local entity upsert / delete so the host can refresh
+   * the OTHER lens (the Cast view) — the two views now overlap on the
+   * shared `entityLibrary`, so an edit in one must reflect in the other.
+   * Null until the host wires it.
+   */
+  onEntityLibraryChanged: (() => void) | null = null
 
   constructor(
     public readonly view: ObjectsView,
@@ -48,9 +56,9 @@ export class ObjectsController {
     this._session = session
   }
 
-  /** The object (non-character) entity definitions in the project library. */
+  /** Every entity definition in the project library (the general lens). */
   private _objects(): EntityDefinition[] {
-    return (this._project?.resource?.data?.entityLibrary ?? []).filter((e) => !isCharacterEntity(e))
+    return this._project?.resource?.data?.entityLibrary ?? []
   }
 
   /** Push the current object list + project-scoped ref options into the view. */
@@ -120,6 +128,7 @@ export class ObjectsController {
     this._persist()
     this._session?.sendProjectOp(({ peerId, seq }) => createEntityRemoveOp({ peerId, seq, entityId: id }))
     this.refresh()
+    this.onEntityLibraryChanged?.()
   }
 
   /** Single write path: persist + broadcast the entity as an `entityLibrary` entry. */
@@ -129,6 +138,7 @@ export class ObjectsController {
     applyEntityUpsert(data, entity)
     this._persist()
     this._session?.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+    this.onEntityLibraryChanged?.()
   }
 
   private _persist(): void {

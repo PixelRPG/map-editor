@@ -108,6 +108,13 @@ export class CastController {
   onAppearancesChanged:
     | ((sheets: SpriteSetChoice[], spriteSetsById: Map<string, GdkSpriteSetResource | null>) => void)
     | null = null
+  /**
+   * Invoked after a local character upsert / delete / player change so the
+   * host can refresh the Objects view — it's the GENERAL lens over the same
+   * `entityLibrary` and now lists characters too, so a Cast edit must
+   * reflect there. Null until the host wires it.
+   */
+  onEntityLibraryChanged: (() => void) | null = null
 
   constructor(
     private readonly view: CastView,
@@ -175,6 +182,7 @@ export class CastController {
     }
     this._persist()
     void this.refresh()
+    this.onEntityLibraryChanged?.()
   }
 
   /**
@@ -232,6 +240,7 @@ export class CastController {
     this._persist()
     const session = this._session
     if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+    this.onEntityLibraryChanged?.()
   }
 
   /**
@@ -248,6 +257,7 @@ export class CastController {
     const session = this._session
     if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
     void this.refresh()
+    this.onEntityLibraryChanged?.()
   }
 
   /** The full entity definition for a character id (for the disclosure editor). */
@@ -434,6 +444,7 @@ export class CastController {
     const session = this._session
     if (session) session.sendProjectOp(({ peerId, seq }) => createEntityRemoveOp({ peerId, seq, entityId: id }))
     void this.refresh()
+    this.onEntityLibraryChanged?.()
   }
 
   /**
@@ -679,6 +690,7 @@ export class CastController {
     this._persist()
     const session = this._session
     if (session) session.sendProjectOp(({ peerId, seq }) => createPlayerSetOp({ peerId, seq, playerActorId }))
+    this.onEntityLibraryChanged?.()
   }
 
   /**

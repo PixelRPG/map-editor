@@ -367,6 +367,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         renameSheet: (sheetId, name) => this._castCtl?.renameSpriteSet(sheetId, name),
         deleteAppearance: (sheetId) => this._castCtl?.deleteSpriteSet(sheetId),
       })
+      // Cast + Objects are two lenses over the one entityLibrary (Objects
+      // is the general lens, lists characters too); a character edit in one
+      // must refresh the other.
+      this._castCtl.onEntityLibraryChanged = () => this._objectsCtl?.refresh()
     }
     if (!this._tilesCtl) {
       this._tilesCtl = new TilesController(
@@ -387,6 +391,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     }
     if (!this._objectsCtl) {
       this._objectsCtl = new ObjectsController(this._objects_view, (msg) => this._showToast(msg))
+      // Reverse of the Cast hook: an entity edit in the general Objects
+      // lens must refresh the Cast view (if it's a character).
+      this._objectsCtl.onEntityLibraryChanged = () => void this._castCtl?.refresh()
     }
     this.signals.connect(this._objects_view, 'mode-changed', (_v: ObjectsView, mode: string) => setMode(mode))
     this.signals.connect(this._data_view, 'mode-changed', (_v: DataView, mode: string) => setMode(mode))

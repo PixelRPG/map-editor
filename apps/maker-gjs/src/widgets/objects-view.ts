@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { EntityDefinition } from '@pixelrpg/engine'
+import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
 import { type ComponentRefOptions, EntityComponentsEditor, type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES } from '../services/entity-templates.ts'
@@ -11,11 +11,13 @@ import { ResponsiveEditorView } from './responsive-editor-view.ts'
 GObject.type_ensure(EntityComponentsEditor.$gtype)
 
 /**
- * Objects library view — master-detail over the project's world-object
- * entity definitions (the non-character `entityLibrary` entries). The
- * gallery lists them; the detail page edits one through a name field + the
- * generated {@link EntityComponentsEditor}. Pure view: all persistence /
- * collab rides `ObjectsController` via the emitted signals.
+ * Objects library view — the GENERAL master-detail lens over EVERY entity
+ * definition in the project's `entityLibrary` (world objects AND the
+ * `character`-template cast members, the latter flagged with a "Cast"
+ * badge). The gallery lists them; the detail page edits one raw through a
+ * name field + the generated {@link EntityComponentsEditor}. The Cast view
+ * is the specialised friendly lens over the character subset. Pure view:
+ * all persistence / collab rides `ObjectsController` via the emitted signals.
  */
 export class ObjectsView extends ResponsiveEditorView {
   declare _outer_split: Adw.OverlaySplitView
@@ -117,8 +119,18 @@ export class ObjectsView extends ResponsiveEditorView {
       child = next
     }
     for (const obj of objects) {
+      // Objects is the GENERAL lens, so it lists characters too — flag
+      // them with a person icon + a "Cast" badge so it's clear they're
+      // also the friendly Cast members (edited nicely over there).
+      const isCharacter = isCharacterEntity(obj)
       const row = new Adw.ActionRow({ title: obj.name || obj.id, activatable: true })
-      row.add_prefix(new Gtk.Image({ iconName: obj.editorData?.icon ?? 'view-grid-symbolic' }))
+      const icon = isCharacter ? 'avatar-default-symbolic' : (obj.editorData?.icon ?? 'view-grid-symbolic')
+      row.add_prefix(new Gtk.Image({ iconName: icon }))
+      if (isCharacter) {
+        row.add_suffix(
+          new Gtk.Label({ label: _('Cast'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }),
+        )
+      }
       row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic', cssClasses: ['dim-label'] }))
       row.connect('activated', () => this.focusObject(obj.id))
       this._objects_list.append(row)
