@@ -3,6 +3,7 @@
 export * from './component-spec'
 export * from './convert'
 export * from './data-access'
+export * from './placement-graphic'
 export * from './registry'
 export * from './spawn-placement'
 export * from './validate'
