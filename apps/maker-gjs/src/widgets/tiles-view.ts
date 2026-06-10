@@ -520,6 +520,22 @@ export class TilesView extends ResponsiveEditorView {
     dialog.present(this)
   }
 
+  /**
+   * Present the sprite-set import dialog as the "Import appearance" flow
+   * (the Appearances "+" button, wired to `win.new-spriteset`). Same
+   * dialog as the tileset import but tagged `character` so the copy +
+   * register path files it as an appearance; routes through the shared
+   * `spriteset-imported` signal → the cast controller's import path.
+   */
+  presentAppearanceImportDialog(): void {
+    const dialog = new SpriteSetImportDialog()
+    dialog.kind = 'character'
+    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
+      this.emit('spriteset-imported', result)
+    })
+    dialog.present(this)
+  }
+
   private _rebuildGallery(): void {
     this._tilesets_gallery.setItems(this._spriteSets.map((entry) => this._buildTilesetItem(entry)))
     this._tilesets_gallery.setActiveId(this._activeSpriteSetId)

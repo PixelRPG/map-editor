@@ -7,8 +7,6 @@ import {
   ASSISTANT_PEER_ID,
   type AwarenessPeerState,
   type EditorTool,
-  getComponentData,
-  isCharacterEntity,
   MapFormat,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
@@ -128,8 +126,8 @@ export interface SessionSnapshot {
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
  * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
- * - `win.new-animation` (string sheet id, empty = active sheet — opens the Add-animation dialog)
- * - `win.open-character` / `win.open-sheet` / `win.open-tileset` / `win.open-appearance` (string id — drill into the detail sub-page)
+ * - `win.new-animation` (string appearance id, empty = active — opens the Add-animation dialog in the Sheets view)
+ * - `win.open-character` / `win.open-tileset` / `win.open-appearance` (string id — drill into the detail sub-page)
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -723,21 +721,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     dialog.present(this)
   }
 
-  /** Jump from a Data-view asset row to its editor (Cast for sheets, Tiles for tilesets). */
+  /** Jump from a Data-view asset row to its editor (the unified Sheets view). */
   private _openAsset(id: string, kind: SpriteSetKind): void {
     if (!this._loadedProject) return
-    if (kind === 'tileset') {
-      this._setView('tiles')
-      this._tiles_view.focusTileset(id)
-      return
-    }
-    // Sprite sheet → open the first character (character-template entity)
-    // whose appearance uses it, else just the Cast view.
-    const character = this._loadedProject.resource.data?.entityLibrary?.find(
-      (e) => isCharacterEntity(e) && getComponentData(e, 'visual')?.spriteSetId === id,
-    )
-    this._setView('cast')
-    if (character) this._cast_view.focusCharacter(character.id)
+    // Both kinds live in the Sheets view now: tilesets → tile inspector,
+    // appearances (character sheets) → the animation editor.
+    this._setView('tiles')
+    if (kind === 'tileset') this._tiles_view.focusTileset(id)
+    else this._tiles_view.focusAppearance(id)
   }
 
   /** Rename an asset's display name via a small dialog (Data view). */
@@ -1144,13 +1135,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(newCharacterAction)
 
+    // Import an appearance (character sprite sheet) — lives in the unified
+    // Sheets view now (the Appearances "+" button), alongside tileset import.
     const newSpriteSetAction = new Gio.SimpleAction({ name: 'new-spriteset' })
     newSpriteSetAction.connect('activate', () => {
       if (!this._loadedProject) {
         this._showToast(_('Open a project first'))
         return
       }
-      this._cast_view.presentSpriteSetImportDialog()
+      this._setView('tiles')
+      this._tiles_view.presentAppearanceImportDialog()
     })
     winActions.add_action(newSpriteSetAction)
 
@@ -1205,18 +1199,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(openObjectAction)
 
-    // Drill into a sprite-sheet detail sub-page by id — the Cast view's
-    // Sprite-sheets section equivalent of `open-character`.
-    const openSheetAction = Gio.SimpleAction.new('open-sheet', GLib.VariantType.new('s'))
-    openSheetAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (id) this._cast_view.focusSheet(id)
-    })
-    winActions.add_action(openSheetAction)
-
     // Drill into an appearance (sprite-sheet) animation editor in the
-    // unified Sheets view — the new home of appearance editing. Switches
-    // to the Sheets view + focuses the appearance detail page.
+    // unified Sheets view — the home of appearance editing. Switches to
+    // the Sheets view + focuses the appearance detail page. (Replaces the
+    // old `win.open-sheet`, which targeted the removed Cast sheet section.)
     const openAppearanceAction = Gio.SimpleAction.new('open-appearance', GLib.VariantType.new('s'))
     openAppearanceAction.connect('activate', (_a, parameter) => {
       const id = parameter?.get_string()[0]
@@ -1226,18 +1212,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(openAppearanceAction)
 
-    // Present the "New animation" dialog for a sprite sheet. Optional
-    // string id drills into that sheet first (so tooling can open it in
-    // one call); empty targets the active sheet. Mainly for the MCP
-    // bridge — the in-UI path is the sheet detail's "Add animation" row.
+    // Present the "New animation" dialog for an appearance sheet in the
+    // Sheets view. Optional string id drills into that appearance first
+    // (so tooling can open it in one call); empty targets the active one.
+    // Mainly for the MCP bridge — the in-UI path is the appearance
+    // detail's "Add custom animation" row.
     const newAnimationAction = Gio.SimpleAction.new('new-animation', GLib.VariantType.new('s'))
     newAnimationAction.connect('activate', (_a, parameter) => {
       if (!this._loadedProject) {
         this._showToast(_('Open a project first'))
         return
       }
+      this._setView('tiles')
       const id = parameter?.get_string()[0]
-      this._cast_view.presentNewAnimationDialog(id || undefined)
+      this._tiles_view.presentNewAnimationDialog(id || undefined)
     })
     winActions.add_action(newAnimationAction)
 
