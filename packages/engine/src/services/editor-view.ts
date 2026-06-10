@@ -1,7 +1,8 @@
-import { Actor, TileMap } from 'excalibur'
+import { Actor, type Scene, TileMap } from 'excalibur'
 import { ActiveLayerComponent, EditorViewModeComponent, TileTransformComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { isLayerVisible } from './layer-visibility.ts'
 import { refreshAllTileGraphics } from './tile-graphics.manager.ts'
 
 /**
@@ -58,11 +59,19 @@ export function applyEditorViewMode(scene: MapScene): void {
 
   // Pass 2: placement actors. `GraphicsComponent.opacity` is a
   // simple scalar multiplied into every draw, so flipping it back
-  // and forth between toggles is cheap.
+  // and forth between toggles is cheap. Visibility combines the
+  // global objects toggle with the placement's per-layer flag.
+  const objectsVisible = flags?.objectsVisible ?? true
   for (const entity of scene.world.entityManager.entities) {
     if (!(entity instanceof Actor)) continue
     const transform = entity.get(TileTransformComponent)
     if (!transform) continue
     entity.graphics.opacity = opacityFor(transform.layerId)
+    entity.graphics.visible = objectsVisible && isLayerVisible(mapResource, transform.layerId)
   }
+}
+
+/** Whether object placements are globally visible on this scene (default true). */
+export function areObjectsVisible(scene: Scene): boolean {
+  return SessionState.get(scene, EditorViewModeComponent)?.objectsVisible ?? true
 }

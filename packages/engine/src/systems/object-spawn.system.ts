@@ -1,5 +1,6 @@
-import { type Scene, System, SystemType, type World } from 'excalibur'
+import { Actor, type Scene, System, SystemType, type World } from 'excalibur'
 import { buildPlacementEntity, resolvePlacementDefinition } from '../entity/spawn-placement.ts'
+import { areObjectsVisible } from '../services/editor-view.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { EntityDefinition } from '../types/data/index.ts'
 
@@ -40,10 +41,14 @@ export class ObjectSpawnSystem extends System {
     // Cache layers by id once so per-placement layer lookup is O(1).
     const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
 
+    const objectsVisible = areObjectsVisible(scene)
     for (const placement of mapData.objectPlacements) {
       const def = resolvePlacementDefinition(placement, this.entityLibrary)
       if (!def) continue
-      scene.add(buildPlacementEntity(placement, def, this.mapResource, layersById))
+      const entity = buildPlacementEntity(placement, def, this.mapResource, layersById)
+      // Respect the global objects toggle (Layers tab "Objects" row).
+      if (entity instanceof Actor && !objectsVisible) entity.graphics.visible = false
+      scene.add(entity)
     }
   }
 }

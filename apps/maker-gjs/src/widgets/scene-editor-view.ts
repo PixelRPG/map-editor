@@ -213,6 +213,11 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._editor.floatingPlay.playing = playing
   }
 
+  /** Mirror the global objects visibility into the Layers tab's Objects row (no re-emit). */
+  setObjectsVisible(visible: boolean): void {
+    this._inspector.layersTab.setObjectsState(this._placementInfo.size, visible)
+  }
+
   /** Push the live participant roster (AI + peers) to the collaborators bar. */
   setCollaborators(participants: CollaboratorEntry[], followedId: string | null): void {
     this._editor.floatingCollaborators.setParticipants(participants, followedId)
@@ -347,6 +352,10 @@ export class SceneEditorView extends ResponsiveEditorView {
     }))
     this._layers = layers
     this._inspector.layersTab.setLayers(layers)
+    this._inspector.layersTab.setObjectsState(
+      mapData.objectPlacements?.length ?? 0,
+      this._engine?.excalibur?.getEditorViewFlags().objectsVisible ?? true,
+    )
     if (layers.length) {
       this._inspector.layersTab.selectLayer(layers[0].id)
       this._setActiveLayer(layers[0].id)
@@ -785,6 +794,14 @@ export class SceneEditorView extends ResponsiveEditorView {
       const idx = this._layers.findIndex((l) => l.id === layerId)
       if (idx >= 0) this._layers[idx] = { ...this._layers[idx], locked }
       this._persistMapData()
+    })
+    // Global objects visibility (the pinned "Objects" pseudo-row).
+    // Pure view state like the grid/dim toggles — not persisted.
+    layers.connect('objects-visibility-toggled', (_l: LayersTab, visible: boolean) => {
+      this.activate_action('win.toggle-objects', null)
+      // The stateful action flips engine + row state; activating with no
+      // param toggles, which matches the row's already-flipped state via
+      // setObjectsVisible's no-re-emit sync.
     })
 
     // Object placements: forward inspector selection into the engine's
