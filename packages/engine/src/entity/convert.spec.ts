@@ -1,6 +1,12 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { CharacterDefinition, ComponentData } from '../types/data/index.ts'
-import { characterToEntity, entityToCharacter, isCharacterEntity, objectDefinitionToEntity } from './convert.ts'
+import {
+  characterToEntity,
+  entityToCharacter,
+  isCharacterEntity,
+  mergeCharacterIntoEntity,
+  objectDefinitionToEntity,
+} from './convert.ts'
 
 function types(components: ComponentData[]): string[] {
   return components.map((c) => c.type)
@@ -120,6 +126,27 @@ export default async () => {
 
     await it('returns null for an entity without a visual component', async () => {
       expect(entityToCharacter({ id: 'x', name: 'X', components: [{ type: 'collision' }] })).toBe(null)
+    })
+
+    await it('mergeCharacterIntoEntity updates basics but preserves extra components', async () => {
+      // A character entity that gained a `dialogue` component via the
+      // "all components" disclosure.
+      const existing = {
+        id: 'scientist',
+        name: 'Scientist',
+        components: [
+          { type: 'visual', spriteSetId: 'old', spriteId: 0, animationId: 'idle-down' },
+          { type: 'movement', tilesPerSec: 4 },
+          { type: 'dialogue', dialogueId: 'hello' },
+        ],
+        editorData: { template: 'character', category: 'hero' },
+      }
+      const edited = mergeCharacterIntoEntity(existing, { ...hero, spriteSetId: 'new', speedTilesPerSec: 8 })
+      expect(types(edited.components)).toStrictEqual(['visual', 'movement', 'dialogue'])
+      expect(edited.components.find((c) => c.type === 'visual')?.spriteSetId).toBe('new')
+      expect(edited.components.find((c) => c.type === 'movement')?.tilesPerSec).toBe(8)
+      // The disclosure-added component survives.
+      expect(edited.components.find((c) => c.type === 'dialogue')?.dialogueId).toBe('hello')
     })
 
     await it('isCharacterEntity is strict on the template', async () => {

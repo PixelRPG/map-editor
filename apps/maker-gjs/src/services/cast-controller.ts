@@ -16,6 +16,7 @@ import {
   ENTITY_UPSERT_KIND,
   type EntityDefinition,
   entityToCharacter,
+  mergeCharacterIntoEntity,
   GameProjectFormat,
   isCharacterEntity,
   PLAYER_SET_KIND,
@@ -102,6 +103,31 @@ export class CastController {
     private readonly onToast: (message: string) => void,
   ) {
     view.bindCallbacks(this.callbacks)
+    // Raw-entity edits from the cast detail's "all components" disclosure.
+    view.connect('character-entity-changed', (_v: CastView, json: string) => {
+      try {
+        this.upsertCharacterEntity(JSON.parse(json) as EntityDefinition)
+      } catch {
+        /* malformed payload — ignore */
+      }
+    })
+  }
+
+  /** Project ref-picker options (maps + appearance sheets) for the disclosure editor. */
+  private _castRefOptions(): {
+    maps: { value: string; label: string }[]
+    appearances: { value: string; label: string }[]
+  } {
+    const data = this._project?.resource?.data
+    return {
+      maps: (data?.maps ?? []).map((m) => ({ value: m.id, label: m.name ?? m.id })),
+      appearances: this._project?.resource?.spriteSets
+        ? [...this._project.resource.spriteSets.entries()].map(([id, set]) => ({
+            value: id,
+            label: set.data?.name ?? id,
+          }))
+        : [],
+    }
   }
 
   /**
@@ -186,11 +212,36 @@ export class CastController {
   private _upsertCharacter(char: CharacterDefinition): void {
     const data = this._project?.resource?.data
     if (!data) return
-    const entity = characterToEntity(char)
+    // Merge onto the existing entity so the basic fields (name / sheet /
+    // speed) don't drop components the user added via the "all components"
+    // disclosure; a brand-new character has no entity yet → build fresh.
+    const existing = data.entityLibrary?.find((e) => e.id === char.id)
+    const entity = existing ? mergeCharacterIntoEntity(existing, char) : characterToEntity(char)
     applyEntityUpsert(data, entity)
     this._persist()
     const session = this._session
     if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+  }
+
+  /**
+   * Persist + broadcast a raw entity definition edited through the cast
+   * detail's "all components" disclosure (the advanced surface bypasses
+   * the view model — it edits `components[]` directly). Refreshes so the
+   * friendly fields reflect any appearance / speed change made there.
+   */
+  upsertCharacterEntity(entity: EntityDefinition): void {
+    const data = this._project?.resource?.data
+    if (!data) return
+    applyEntityUpsert(data, entity)
+    this._persist()
+    const session = this._session
+    if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+    void this.refresh()
+  }
+
+  /** The full entity definition for a character id (for the disclosure editor). */
+  entityForCharacter(id: string): EntityDefinition | null {
+    return this._project?.resource?.data?.entityLibrary?.find((e) => e.id === id) ?? null
   }
 
   /** Broadcast the current state of one character to peers (no-op solo). */
@@ -277,6 +328,10 @@ export class CastController {
       })
     },
     setPlayer: (id: string, isPlayer: boolean) => this._setPlayer(id, isPlayer),
+    // The "all components" disclosure needs the character's raw entity +
+    // the project ref-picker options.
+    getCharacterEntity: (id: string) => this.entityForCharacter(id),
+    getRefOptions: () => this._castRefOptions(),
     setSpeed: (id: string, tilesPerSec: number) => {
       this._mutate(id, (c) => {
         c.speedTilesPerSec = tilesPerSec

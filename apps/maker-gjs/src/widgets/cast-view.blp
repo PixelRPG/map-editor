@@ -305,6 +305,12 @@ template $CastView : $PixelRpgResponsiveEditorView {
                 }
 
                 $PixelRpgCastInspector inspector {}
+
+                // Progressive disclosure: the advanced "all components"
+                // editor (built in code) lives here, collapsed by default.
+                Gtk.Box advanced_slot {
+                  orientation: vertical;
+                }
               };
             };
           };
