@@ -44,10 +44,14 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                 child: Adw.StatusPage {
                   icon-name: "view-grid-symbolic";
                   title: _("No selection");
-                  description: _("Select a tileset to see its details.");
+                  description: _("Select a tileset or appearance to see its details.");
                 };
               }
 
+              // Shared glance for the selected card of EITHER section. The
+              // preview swaps by kind (a static sheet thumbnail for a
+              // tileset, an animated `CharacterPreview` for an appearance);
+              // the name / subtitle / Edit button are shared.
               Gtk.StackPage {
                 name: "info";
                 child: Gtk.Box {
@@ -58,12 +62,27 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   margin-start: 18;
                   margin-end: 18;
 
-                  Gtk.Picture quick_thumb {
-                    content-fit: contain;
-                    can-shrink: true;
-                    halign: center;
-                    height-request: 160;
-                    styles ["card", "card-gallery-preview"]
+                  Gtk.Stack quick_preview_stack {
+                    Gtk.StackPage {
+                      name: "tileset";
+                      child: Gtk.Picture quick_thumb {
+                        content-fit: contain;
+                        can-shrink: true;
+                        halign: center;
+                        height-request: 160;
+                        styles ["card", "card-gallery-preview"]
+                      };
+                    }
+
+                    Gtk.StackPage {
+                      name: "appearance";
+                      child: $PixelRpgCharacterPreview quick_preview {
+                        frame-size: 160;
+                        halign: center;
+                        show-controls: false;
+                        auto-cycle: true;
+                      };
+                    }
                   }
 
                   Gtk.Label quick_name {
@@ -73,7 +92,7 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                     styles ["title-2"]
                   }
 
-                  Gtk.Label quick_count {
+                  Gtk.Label quick_subtitle {
                     halign: center;
                     styles ["caption", "dim-label"]
                   }
