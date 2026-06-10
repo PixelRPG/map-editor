@@ -24,6 +24,7 @@ import {
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
+import { createObjectPreviewActor, refreshObjectPreview } from '../services/object-preview.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import {
   createSelectHoverBorderActor,
@@ -68,6 +69,7 @@ export class TileEditorSystem extends System {
   private scene?: Scene
 
   private previewActor: Actor | null = null
+  private objectPreviewActor: Actor | null = null
   private hoverContext: PencilPreviewHover | null = null
   private selectHoverBorderActor: Actor | null = null
 
@@ -94,6 +96,9 @@ export class TileEditorSystem extends System {
     this.previewActor = createPencilPreviewActor()
     scene.add(this.previewActor)
 
+    this.objectPreviewActor = createObjectPreviewActor()
+    scene.add(this.objectPreviewActor)
+
     this.selectHoverBorderActor = createSelectHoverBorderActor()
     scene.add(this.selectHoverBorderActor)
 
@@ -105,6 +110,12 @@ export class TileEditorSystem extends System {
     SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshPreview())
     SessionState.subscribe(scene, ActiveTileComponent, () => this.refreshPreview())
     SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshPreview())
+
+    // The object-brush ghost mirrors the pencil preview: re-evaluate it
+    // when the tool, the armed object brush, or the active layer changes.
+    SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshObjectPreview())
+    SessionState.subscribe(scene, ActiveObjectComponent, () => this.refreshObjectPreview())
+    SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshObjectPreview())
 
     // Tool changes also re-evaluate the select-hover border so
     // switching to / from `'select'` doesn't strand the previous
@@ -132,6 +143,7 @@ export class TileEditorSystem extends System {
       if (hit) this.applyHover(hit)
       this.hoverContext = hit ? { tileMap: hit.tileMap, coords: hit.coords } : null
       this.refreshPreview()
+      this.refreshObjectPreview()
       this.refreshSelectHoverBorder()
     })
   }
@@ -143,6 +155,11 @@ export class TileEditorSystem extends System {
   private refreshPreview(): void {
     if (!this.previewActor || !this.scene) return
     refreshPencilPreview(this.previewActor, this.scene, this.hoverContext)
+  }
+
+  private refreshObjectPreview(): void {
+    if (!this.objectPreviewActor || !this.scene) return
+    refreshObjectPreview(this.objectPreviewActor, this.scene, this.hoverContext)
   }
 
   private refreshSelectHoverBorder(): void {
