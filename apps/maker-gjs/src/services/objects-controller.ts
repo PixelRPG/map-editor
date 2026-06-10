@@ -5,6 +5,7 @@ import {
   createEntityUpsertOp,
   type EntityDefinition,
   GameProjectFormat,
+  isCharacterEntity,
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 import type { ObjectsView } from '../widgets/objects-view.ts'
@@ -45,6 +46,9 @@ export class ObjectsController {
     )
     view.connect('object-delete-requested', (_v: ObjectsView, id: string) => this._deleteObject(id))
     view.connect('object-rename-requested', (_v: ObjectsView, id: string, name: string) => this._renameObject(id, name))
+    view.connect('object-cast-toggle-requested', (_v: ObjectsView, id: string, isCast: boolean) =>
+      this._setCastMember(id, isCast),
+    )
   }
 
   setProject(project: LoadedProject | null): void {
@@ -119,6 +123,41 @@ export class ObjectsController {
     const existing = this._objects().find((e) => e.id === id)
     if (!existing) return
     this._upsert({ ...existing, name })
+  }
+
+  /**
+   * Promote / demote an entity into the friendly Cast roster by flipping
+   * its `editorData.template` ↔ `'character'`. Promoting a world object
+   * (e.g. an NPC made here) makes it show in the Cast view's character
+   * inspector; demoting returns it to a plain library object. Components
+   * are untouched — only the editor classification changes. The
+   * `onEntityLibraryChanged` hook (in `_upsert`) refreshes the Cast view.
+   */
+  /**
+   * Flip an entity's Cast membership (public — driven by the
+   * `win.toggle-object-cast` action / MCP; the in-view path is the
+   * "Cast member" switch). No-op on an unknown id.
+   */
+  toggleCastMember(id: string): void {
+    const existing = this._objects().find((e) => e.id === id)
+    if (!existing) return
+    this._setCastMember(id, !isCharacterEntity(existing))
+  }
+
+  private _setCastMember(id: string, isCast: boolean): void {
+    const existing = this._objects().find((e) => e.id === id)
+    if (!existing) return
+    const editorData = { ...existing.editorData }
+    if (isCast) {
+      editorData.template = 'character'
+      // Promoted world actors default to the NPC category (the hero is
+      // created in the Cast view + tracked via `playerActorId`).
+      if (!editorData.category) editorData.category = 'npc'
+    } else {
+      editorData.template = 'object'
+    }
+    this._upsert({ ...existing, editorData })
+    this.refresh()
   }
 
   private _deleteObject(id: string): void {
