@@ -190,3 +190,42 @@ export function entityToCharacter(def: EntityDefinition, playerActorId?: string)
 export function isCharacterEntity(def: EntityDefinition): boolean {
   return def.editorData?.template === 'character'
 }
+
+/**
+ * Apply a character view model's friendly fields (name + appearance +
+ * speed) onto an EXISTING entity, **preserving every other component**.
+ * This is what the Cast inspector's basic fields must use instead of
+ * {@link characterToEntity}: regenerating from scratch would silently drop
+ * any extra components (dialogue / trigger / …) the user added through the
+ * "all components" disclosure. New characters (no existing entity) still go
+ * through `characterToEntity`.
+ */
+export function mergeCharacterIntoEntity(existing: EntityDefinition, char: CharacterDefinition): EntityDefinition {
+  const components: ComponentData[] = existing.components.map((c) => ({ ...c }))
+
+  const visualIdx = components.findIndex((c) => c.type === 'visual')
+  const visual: ComponentData = {
+    ...(visualIdx >= 0 ? components[visualIdx] : { type: 'visual', spriteId: 0 }),
+    type: 'visual',
+    spriteSetId: char.spriteSetId,
+    ...(char.defaultAnimation ? { animationId: char.defaultAnimation } : {}),
+  }
+  if (visualIdx >= 0) components[visualIdx] = visual
+  else components.unshift(visual)
+
+  const movementIdx = components.findIndex((c) => c.type === 'movement')
+  const movement: ComponentData = {
+    ...(movementIdx >= 0 ? components[movementIdx] : { type: 'movement' }),
+    type: 'movement',
+    tilesPerSec: char.speedTilesPerSec ?? DEFAULT_SPEED_TILES_PER_SEC,
+  }
+  if (movementIdx >= 0) components[movementIdx] = movement
+  else components.push(movement)
+
+  return {
+    ...existing,
+    name: char.name,
+    components,
+    editorData: { ...existing.editorData, template: 'character', category: char.kind },
+  }
+}

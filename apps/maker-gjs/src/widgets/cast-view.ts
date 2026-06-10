@@ -1,13 +1,15 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
-import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
+import Gtk from '@girs/gtk-4.0'
+import type { CharacterAnimation, CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
 import {
   AddAnimationDialog,
   AnimationList,
   CardGallery,
   CastInspector,
   CharacterPreview,
+  type ComponentRefOptions,
+  EntityComponentsEditor,
   type GalleryCardItem,
   type GdkSpriteSetResource,
   type ModeRail,
@@ -75,6 +77,7 @@ export class CastView extends ResponsiveEditorView {
   declare _detail_page: Adw.NavigationPage
   declare _preview: CharacterPreview
   declare _inspector: CastInspector
+  declare _advanced_slot: Gtk.Box
   // ── Sprite-sheets section / detail ──────────────────────────────
   declare _sheets_gallery: CardGallery
   declare _sheet_detail_page: Adw.NavigationPage
@@ -119,6 +122,8 @@ export class CastView extends ResponsiveEditorView {
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
+  private _onGetCharacterEntity: ((charId: string) => EntityDefinition | null) | null = null
+  private _onGetRefOptions: (() => ComponentRefOptions) | null = null
   private _onSetSpeedRequested: ((charId: string, tilesPerSec: number) => void) | null = null
   private _onChangeSheetRequested: ((charId: string, sheetId: string) => void) | null = null
   // Animation edits target the SHEET (keyed by spriteSetId), not the character.
@@ -147,6 +152,7 @@ export class CastView extends ResponsiveEditorView {
           'detail_page',
           'preview',
           'inspector',
+          'advanced_slot',
           'sheets_gallery',
           'sheet_detail_page',
           'sheet_preview',
@@ -184,14 +190,43 @@ export class CastView extends ResponsiveEditorView {
         Signals: {
           // mode-changed is inherited from ResponsiveEditorView.
           'character-changed': {},
+          // The active character's raw entity was edited through the "all
+          // components" disclosure — payload is the EntityDefinition JSON.
+          'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
         },
       },
       CastView,
     )
   }
 
+  private _advancedEditor = new EntityComponentsEditor()
+  /** Suppresses `character-entity-changed` while populating the editor. */
+  private _silentAdvanced = false
+
   constructor() {
     super()
+    // Progressive disclosure: the raw "all components" editor lives in a
+    // collapsed expander under the friendly inspector.
+    const expander = new Gtk.Expander({ label: _('All components'), marginTop: 8 })
+    expander.set_child(this._advancedEditor)
+    this._advanced_slot.append(expander)
+    this._advancedEditor.connect('entity-changed', (_e: EntityComponentsEditor, json: string) => {
+      if (!this._silentAdvanced) this.emit('character-entity-changed', json)
+    })
+  }
+
+  /**
+   * Populate the "all components" disclosure with a character's raw entity
+   * definition + the project ref-picker options. Silent — no echo back.
+   */
+  setCharacterEntity(def: EntityDefinition, refOptions: ComponentRefOptions): void {
+    this._silentAdvanced = true
+    try {
+      this._advancedEditor.setRefOptions(refOptions)
+      this._advancedEditor.setEntity(def)
+    } finally {
+      this._silentAdvanced = false
+    }
   }
 
   /**
@@ -538,6 +573,8 @@ export class CastView extends ResponsiveEditorView {
   bindCallbacks(callbacks: {
     rename: (charId: string, name: string) => void
     setPlayer: (charId: string, isPlayer: boolean) => void
+    getCharacterEntity: (charId: string) => EntityDefinition | null
+    getRefOptions: () => ComponentRefOptions
     setSpeed: (charId: string, tilesPerSec: number) => void
     changeSheet: (charId: string, sheetId: string) => void
     setDuration: (sheetId: string, animId: string, durationMs: number) => void
@@ -554,6 +591,8 @@ export class CastView extends ResponsiveEditorView {
   }): void {
     this._onRenameRequested = callbacks.rename
     this._onSetPlayerRequested = callbacks.setPlayer
+    this._onGetCharacterEntity = callbacks.getCharacterEntity
+    this._onGetRefOptions = callbacks.getRefOptions
     this._onSetSpeedRequested = callbacks.setSpeed
     this._onChangeSheetRequested = callbacks.changeSheet
     this._onSetDurationRequested = callbacks.setDuration
@@ -719,6 +758,10 @@ export class CastView extends ResponsiveEditorView {
     // there affects every character wearing the same appearance.
     const usage = character ? this._characters.filter((c) => c.spriteSetId === character.spriteSetId).length : 0
     this._inspector.setAppearanceUsage(usage)
+    // Populate the "all components" disclosure with the active character's
+    // raw entity (the advanced surface editing `components[]` directly).
+    const entity = character ? (this._onGetCharacterEntity?.(character.id) ?? null) : null
+    if (entity) this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {})
     this._refreshQuickView(character, spriteSet)
   }
 
