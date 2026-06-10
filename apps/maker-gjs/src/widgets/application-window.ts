@@ -896,6 +896,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       const defId = parameter?.get_string()[0] ?? ''
       this._engineCtl.engine?.setObjectBrush(defId || null)
       if (defId) this._toolAction?.change_state(GLib.Variant.new_string('object'))
+      // Mirror into the editor view so the Tiles-tab grid highlight +
+      // the context chip track the armed brush wherever it was set from.
+      this._scene_editor_view.setArmedObjectBrush(defId || null)
     })
     winActions.add_action(setObjectBrushAction)
 

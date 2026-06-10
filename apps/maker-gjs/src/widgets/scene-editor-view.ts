@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
@@ -88,6 +89,12 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _layers: LayerDescriptor[] = []
   private _tiles: TileDescriptor[] = []
   private _activeTileId: number | null = null
+  /** Placeable library objects (id/name/paintable/colour) — feeds the Tiles-tab grid + the context-chip popover. */
+  private _objectBrushes: Array<{ id: string; name: string; paintable: Gdk.Paintable | null; color?: string }> = []
+  /** The armed object brush (defId), mirrored from `win.set-object-brush`. */
+  private _armedObjectId: string | null = null
+  /** The active editor tool — decides what the context chip quick-selects (tiles vs objects). */
+  private _activeTool: EditorTool = 'select'
   private _activeLayerId: string | null = null
   private _tilesetName = ''
   /**
@@ -217,9 +224,30 @@ export class SceneEditorView extends ResponsiveEditorView {
    * Forward the active editor tool to the top bar so its tool
    * MenuButton's icon mirrors the selection. The host calls this
    * from the `win.set-tool` action's change-state handler.
+   *
+   * The context chip is tool-dependent: under the Object tool its
+   * quick-select popover offers the placeable OBJECTS (and the swatch
+   * previews the armed brush); under every other tool it offers tiles —
+   * so the chip always quick-selects what the current tool consumes.
    */
   setActiveTool(tool: EditorTool): void {
     this._editor.topBar.setActiveTool(tool)
+    if (this._activeTool === tool) return
+    this._activeTool = tool
+    this._refreshContextPopovers()
+    this._syncContextChip()
+  }
+
+  /**
+   * Mirror the armed object brush (from `win.set-object-brush`) into
+   * the Tiles-tab grid highlight + the context chip (when the Object
+   * tool is active). `null` clears.
+   */
+  setArmedObjectBrush(defId: string | null): void {
+    if (this._armedObjectId === defId) return
+    this._armedObjectId = defId
+    this._inspector.tilesTab.selectObjectBrush(defId)
+    if (this._activeTool === 'object') this._syncContextChip()
   }
 
   /**
@@ -391,7 +419,10 @@ export class SceneEditorView extends ResponsiveEditorView {
       if (vis) paintable = gdkSheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable() ?? null
       return { id: def.id, name: def.name, paintable, color: paintable ? undefined : markerColorFor(def.components) }
     })
+    this._objectBrushes = brushOptions
     this._inspector.tilesTab.setObjectBrushes(brushOptions)
+    if (this._armedObjectId && !brushOptions.some((b) => b.id === this._armedObjectId)) this._armedObjectId = null
+    this._inspector.tilesTab.selectObjectBrush(this._armedObjectId)
 
     // Pick the first sprite set referenced by *this map* — that's the
     // one whose `firstGid` we need to offset against. Fall back to the
@@ -411,7 +442,7 @@ export class SceneEditorView extends ResponsiveEditorView {
             this._tiles = tiles
             this._inspector.tilesTab.setTiles(tiles)
             this._refreshContextPopovers()
-            if (tiles.length) this._setActiveTile(tiles[0].id, tiles[0].name)
+            if (tiles.length) this._setActiveTile(tiles[0].id)
           }
         }
       } catch (error) {
@@ -438,7 +469,7 @@ export class SceneEditorView extends ResponsiveEditorView {
    * it reflected in the other. Also pushes the tile's paintable into
    * the chip so the swatch is a live preview instead of a static icon.
    */
-  private _setActiveTile(tileId: number, tileName?: string): void {
+  private _setActiveTile(tileId: number): void {
     // Do NOT short-circuit on `_activeTileId === tileId`. The engine's
     // `ActiveTileComponent` is per-scene; on map switch (or re-entry
     // after `EngineController.dispose`) the new scene's session state
@@ -447,9 +478,9 @@ export class SceneEditorView extends ResponsiveEditorView {
     // without an active tile until the user manually picked a swatch
     // — the same shape of bug the startup-order fix addresses.
     this._activeTileId = tileId
-    this._editor.topBar.tileName = tileName ?? `Tile ${tileId}`
-    const tile = this._tiles.find((t) => t.id === tileId)
-    this._editor.topBar.setTilePaintable(tile?.paintable ?? null)
+    // The chip mirrors what the current tool consumes — under the Object
+    // tool it keeps showing the armed object; tile state still updates.
+    this._syncContextChip()
     const globalTileId = tileId + this._tilesetFirstGid
     this._engine?.setActiveTile(globalTileId)
     // Mirror selection back to the inspector palette in case the change
@@ -478,7 +509,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const localId = globalTileId - this._tilesetFirstGid
     const tile = this._tiles.find((t) => t.id === localId)
     if (!tile) return false
-    this._setActiveTile(localId, tile.name)
+    this._setActiveTile(localId)
     return true
   }
 
@@ -512,10 +543,31 @@ export class SceneEditorView extends ResponsiveEditorView {
   /**
    * Rebuild the active-tile and active-layer popovers under the
    * top-right context chip with the currently loaded tiles + layers.
+   * The brush popover is tool-dependent: the Object tool quick-selects
+   * objects, every other tool quick-selects tiles.
    */
   private _refreshContextPopovers(): void {
-    this._editor.topBar.setTilePopover(this._buildTilePopover())
+    this._editor.topBar.setTilePopover(
+      this._activeTool === 'object' ? this._buildObjectPopover() : this._buildTilePopover(),
+    )
     this._editor.topBar.setLayerPopover(this._buildLayerPopover())
+  }
+
+  /**
+   * Sync the context chip's label + swatch with what the current tool
+   * consumes: the armed object brush under the Object tool, the active
+   * tile otherwise.
+   */
+  private _syncContextChip(): void {
+    if (this._activeTool === 'object') {
+      const armed = this._objectBrushes.find((b) => b.id === this._armedObjectId) ?? null
+      this._editor.topBar.tileName = armed?.name ?? 'Object'
+      this._editor.topBar.setTilePaintable(armed?.paintable ?? null)
+      return
+    }
+    const tile = this._activeTileId != null ? this._tiles.find((t) => t.id === this._activeTileId) : null
+    this._editor.topBar.tileName = tile?.name ?? (this._activeTileId != null ? `Tile ${this._activeTileId}` : 'Tile')
+    this._editor.topBar.setTilePaintable(tile?.paintable ?? null)
   }
 
   private _buildTilePopover(): Gtk.Popover {
@@ -544,7 +596,67 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (this._activeTileId != null) palette.selectTile(this._activeTileId)
     palette.connect('tile-selected', (_p, id) => {
       const tile = this._tiles.find((t) => t.id === id)
-      this._setActiveTile(id, tile?.name)
+      this._setActiveTile(id)
+    })
+    scrolled.set_child(palette)
+    box.append(scrolled)
+
+    popover.set_child(box)
+    return popover
+  }
+
+  /**
+   * The Object tool's counterpart to {@link _buildTilePopover}: the same
+   * palette grid fed with the placeable library objects (shared swatch
+   * rendering — sprite or marker colour, framed). Picking one arms the
+   * brush via `win.set-object-brush`.
+   */
+  private _buildObjectPopover(): Gtk.Popover {
+    const popover = new Gtk.Popover()
+    const box = new Gtk.Box({
+      orientation: Gtk.Orientation.VERTICAL,
+      spacing: 8,
+      margin_top: 8,
+      margin_bottom: 8,
+      margin_start: 8,
+      margin_end: 8,
+    })
+
+    const heading = new Gtk.Label({ label: 'Objects', halign: Gtk.Align.START })
+    heading.add_css_class('caption-heading')
+    heading.add_css_class('dim-label')
+    box.append(heading)
+
+    if (this._objectBrushes.length === 0) {
+      const empty = new Gtk.Label({ label: 'No objects in the library yet' })
+      empty.add_css_class('dim-label')
+      box.append(empty)
+      popover.set_child(box)
+      return popover
+    }
+
+    const scrolled = new Gtk.ScrolledWindow({
+      hscrollbar_policy: Gtk.PolicyType.NEVER,
+      vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+      min_content_height: 240,
+      min_content_width: 280,
+    })
+    const palette = new TilePalette({ tileSize: 32, columns: 6 })
+    palette.aspectMode = 'contain'
+    palette.add_css_class('object-brush-palette')
+    palette.setTiles(
+      this._objectBrushes.map((b, idx) => ({
+        id: idx,
+        name: b.name,
+        color: b.color,
+        paintable: b.paintable ?? undefined,
+      })),
+    )
+    const armedIdx = this._armedObjectId ? this._objectBrushes.findIndex((b) => b.id === this._armedObjectId) : -1
+    if (armedIdx >= 0) palette.selectTile(armedIdx)
+    palette.connect('tile-selected', (_p, idx: number) => {
+      const brush = this._objectBrushes[idx]
+      if (brush) this.activate_action('win.set-object-brush', GLib.Variant.new_string(brush.id))
     })
     scrolled.set_child(palette)
     box.append(scrolled)
@@ -614,8 +726,13 @@ export class SceneEditorView extends ResponsiveEditorView {
     // switches, so re-connecting in vfunc_map would double-fire.
     const tiles: TilesTab = this._inspector.tilesTab
     tiles.connect('tile-selected', (_t: TilesTab, tileId: number) => {
-      const tile = this._tiles.find((t) => t.id === tileId)
-      this._setActiveTile(tileId, tile?.name)
+      // Picking a tile while the Object tool is armed means "paint this
+      // tile" — switch back to the pencil, the mirror of an object pick
+      // arming the Object tool.
+      if (this._activeTool === 'object') {
+        this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
+      }
+      this._setActiveTile(tileId)
     })
     const layers: LayersTab = this._inspector.layersTab
     layers.connect('layer-selected', (_l: LayersTab, id: string) => {
