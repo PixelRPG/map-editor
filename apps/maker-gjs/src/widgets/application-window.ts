@@ -341,6 +341,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._persistCurrentMap()
     })
 
+    // A placement was removed via the Props tab — refresh the
+    // inspector's placement list (the command already mutated the live
+    // MapData) and persist, mirroring the layer-flag flow.
+    this.signals.connect(this._scene_editor_view, 'object-removed', () => {
+      if (this._loadedProject && this._currentSceneId) {
+        void this._scene_editor_view.populateFromProject(this._loadedProject, this._currentSceneId)
+      }
+      this._persistCurrentMap()
+    })
+
     if (!this._castCtl) {
       this._castCtl = new CastController(this._cast_view, (msg) => this._showToast(msg))
       // Sprite-sets are shared project assets shown in BOTH the Cast
@@ -901,6 +911,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._scene_editor_view.setArmedObjectBrush(defId || null)
     })
     winActions.add_action(setObjectBrushAction)
+
+    // Select a placement by id (`''` clears) — the driveable equivalent
+    // of a select-tool canvas click, so external tooling (MCP bridge,
+    // tests) can exercise the selection → Objects-row → Props flow.
+    const selectPlacementAction = Gio.SimpleAction.new('select-placement', GLib.VariantType.new('s'))
+    selectPlacementAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0] ?? ''
+      this._engineCtl.engine?.setSelectedPlacements(id ? [id] : [])
+      this._scene_editor_view.highlightPlacement(id || null)
+      if (id) this.set_property('show-inspector', true)
+    })
+    winActions.add_action(selectPlacementAction)
 
     // Switch the scene-editor inspector to a tab by name (tiles / layers /
     // objects / props). The tab bar is otherwise click-only — this lets

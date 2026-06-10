@@ -2,55 +2,96 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgPropsTab : Adw.Bin {
-  Adw.PreferencesGroup props_group {
-    margin-top: 12;
-    margin-bottom: 12;
-    margin-start: 12;
-    margin-end: 12;
+  Gtk.Box {
+    orientation: vertical;
 
-    Adw.EntryRow name_row {
-      title: _("Name");
-    }
+    // Settings for the placement currently selected on the canvas
+    // (select tool) or in the Objects tab. Hidden without a selection.
+    Adw.PreferencesGroup object_group {
+      title: _("Selected object");
+      visible: false;
+      margin-top: 12;
+      margin-start: 12;
+      margin-end: 12;
 
-    Adw.ActionRow size_row {
-      title: _("Size");
-      subtitle: bind template.size-text;
-    }
+      Adw.ActionRow object_def_row {
+        title: _("Object");
 
-    Adw.ActionRow tile_size_row {
-      title: _("Tile size");
-      subtitle: bind template.tile-size-text;
-    }
+        [suffix]
+        Gtk.Button object_open_button {
+          icon-name: "document-edit-symbolic";
+          tooltip-text: _("Edit in library");
+          valign: center;
+          styles ["flat"]
+        }
+      }
 
-    Adw.EntryRow music_row {
-      title: _("Music");
-    }
+      Adw.ActionRow object_position_row {
+        title: _("Position");
+      }
 
-    Adw.EntryRow battle_bg_row {
-      title: _("Battle BG");
-    }
+      Adw.ActionRow object_remove_row {
+        title: _("Remove from map");
+        activatable: true;
+        styles ["error"]
 
-    Adw.ActionRow encounters_row {
-      title: _("Encounters");
-      subtitle: bind template.encounters-text;
-      activatable: true;
-
-      [suffix]
-      Gtk.Image {
-        icon-name: "go-next-symbolic";
-        styles ["dim-label"]
+        [suffix]
+        Gtk.Image {
+          icon-name: "user-trash-symbolic";
+        }
       }
     }
 
-    Adw.ActionRow on_enter_row {
-      title: _("On Enter");
-      subtitle: bind template.on-enter-text;
-      activatable: true;
+    Adw.PreferencesGroup props_group {
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
 
-      [suffix]
-      Gtk.Image {
-        icon-name: "go-next-symbolic";
-        styles ["dim-label"]
+      Adw.EntryRow name_row {
+        title: _("Name");
+      }
+
+      Adw.ActionRow size_row {
+        title: _("Size");
+        subtitle: bind template.size-text;
+      }
+
+      Adw.ActionRow tile_size_row {
+        title: _("Tile size");
+        subtitle: bind template.tile-size-text;
+      }
+
+      Adw.EntryRow music_row {
+        title: _("Music");
+      }
+
+      Adw.EntryRow battle_bg_row {
+        title: _("Battle BG");
+      }
+
+      Adw.ActionRow encounters_row {
+        title: _("Encounters");
+        subtitle: bind template.encounters-text;
+        activatable: true;
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow on_enter_row {
+        title: _("On Enter");
+        subtitle: bind template.on-enter-text;
+        activatable: true;
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
       }
     }
   }

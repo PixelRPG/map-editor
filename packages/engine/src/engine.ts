@@ -10,7 +10,7 @@ import {
   TileMap,
   Vector,
 } from 'excalibur'
-import { type Command, PlaceObjectCommand } from './commands/index.ts'
+import { type Command, PlaceObjectCommand, RemoveObjectCommand } from './commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveObjectComponent,
@@ -449,6 +449,23 @@ export class Engine {
       defId,
     }
     this.executeCommand(new PlaceObjectCommand({ placement }))
+    return true
+  }
+
+  /**
+   * Remove an object placement by id — the driveable equivalent of a
+   * delete action in the inspector. Goes through
+   * {@link RemoveObjectCommand} so it undoes (restoring the captured
+   * placement) + syncs to peers. Returns `false` if there's no active
+   * map or the id doesn't resolve to a placement.
+   */
+  removeObject(placementId: string): boolean {
+    if (this._assistantPaused) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
+    const placement = scene.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId)
+    if (!placement) return false
+    this.executeCommand(new RemoveObjectCommand({ placement }))
     return true
   }
 
