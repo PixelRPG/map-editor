@@ -97,6 +97,17 @@ export class CastController {
    * places. Null until the host wires it.
    */
   onSpriteSetsChanged: (() => void) | null = null
+  /**
+   * Invoked on every {@link refresh} with the project's appearance
+   * (character-kind sprite-sheet) list + the shared preview-resource map,
+   * so the unified Sheets view's Appearances section + animation editor
+   * stay in sync. The cast controller owns appearance data (sheets,
+   * animations); the Sheets view just renders it + routes edits back
+   * here. Null until the host wires it.
+   */
+  onAppearancesChanged:
+    | ((sheets: SpriteSetChoice[], spriteSetsById: Map<string, GdkSpriteSetResource | null>) => void)
+    | null = null
 
   constructor(
     private readonly view: CastView,
@@ -283,6 +294,7 @@ export class CastController {
     if (!resource) {
       this.view.setSheets([], new Map())
       this.view.setCharacters([], new Map())
+      this.onAppearancesChanged?.([], new Map())
       return
     }
     this.view.projectName = resource.data?.name ?? _('New Project')
@@ -298,6 +310,9 @@ export class CastController {
     }
     this.view.setSheets(sheets, spriteSetsById)
     this.view.setCharacters(characters, spriteSetsById)
+    // Mirror the appearance list into the unified Sheets view (it owns
+    // the animation editor now); shares the memoised preview map.
+    this.onAppearancesChanged?.(sheets, spriteSetsById)
   }
 
   /**
@@ -347,47 +362,14 @@ export class CastController {
     },
     // Animations live on the SHEET now (shared by every character using
     // it), so these mutate the sprite-sheet directly, keyed by sheet id.
-    setDuration: (sheetId: string, animId: string, durationMs: number) => {
-      this._mutateSheetAnimations(sheetId, (anims) => {
-        const anim = anims.find((a) => a.id === animId)
-        if (anim) anim.durationMs = durationMs
-      })
-    },
-    addAnimation: (sheetId: string, animation: CharacterAnimation) => {
-      this._mutateSheetAnimations(sheetId, (anims) => {
-        // Dialog-side validation already rejected duplicate ids + empty
-        // frames; defensive double-check so a mismatch can't corrupt it.
-        if (animation.frames.length === 0) return
-        if (anims.some((a) => a.id === animation.id)) return
-        anims.push(animation)
-      })
-    },
-    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => {
-      this._mutateSheetAnimations(sheetId, (anims) => {
-        if (animation.frames.length === 0) return
-        const idx = anims.findIndex((a) => a.id === originalId)
-        if (idx === -1) {
-          // The original is gone (edited in another session, …) — treat
-          // as an add so the user's frames aren't lost.
-          if (!anims.some((a) => a.id === animation.id)) anims.push(animation)
-          return
-        }
-        // A rename must not collide with an existing entry.
-        if (animation.id !== originalId) {
-          const collision = anims.findIndex((a) => a.id === animation.id)
-          if (collision !== -1 && collision !== idx) return
-        }
-        anims[idx] = animation
-      })
-    },
-    deleteAnimation: (sheetId: string, animId: string) => {
-      // Required roles can't be removed (part of the character contract).
-      if ((REQUIRED_ROLES as readonly string[]).includes(animId)) return
-      this._mutateSheetAnimations(sheetId, (anims) => {
-        const idx = anims.findIndex((a) => a.id === animId)
-        if (idx !== -1) anims.splice(idx, 1)
-      })
-    },
+    // The bodies are public methods so the unified Sheets view's
+    // animation editor can drive the SAME mutation path via the host.
+    setDuration: (sheetId: string, animId: string, durationMs: number) =>
+      this.setAnimationDuration(sheetId, animId, durationMs),
+    addAnimation: (sheetId: string, animation: CharacterAnimation) => this.addAnimation(sheetId, animation),
+    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) =>
+      this.editAnimation(sheetId, originalId, animation),
+    deleteAnimation: (sheetId: string, animId: string) => this.deleteAnimation(sheetId, animId),
     renameSheet: (id: string, name: string) => this.renameSpriteSet(id, name),
     deleteCharacter: (id: string) => this._deleteCharacter(id),
     deleteSheet: (id: string) => this.deleteSpriteSet(id),
@@ -717,6 +699,59 @@ export class CastController {
     if (!character) return
     mutator(character)
     this._upsertCharacter(character)
+  }
+
+  /**
+   * Set one animation's per-loop duration on a sheet. Public so both the
+   * Cast detail (via `callbacks`) and the unified Sheets view's animation
+   * editor (via the host) drive the same sheet-owned mutation.
+   */
+  setAnimationDuration(sheetId: string, animId: string, durationMs: number): void {
+    this._mutateSheetAnimations(sheetId, (anims) => {
+      const anim = anims.find((a) => a.id === animId)
+      if (anim) anim.durationMs = durationMs
+    })
+  }
+
+  /** Append a new animation to a sheet (dialog-validated; defensive re-check here). */
+  addAnimation(sheetId: string, animation: CharacterAnimation): void {
+    this._mutateSheetAnimations(sheetId, (anims) => {
+      // Dialog-side validation already rejected duplicate ids + empty
+      // frames; defensive double-check so a mismatch can't corrupt it.
+      if (animation.frames.length === 0) return
+      if (anims.some((a) => a.id === animation.id)) return
+      anims.push(animation)
+    })
+  }
+
+  /** Replace `originalId`'s animation on a sheet (treats a lost original as an add). */
+  editAnimation(sheetId: string, originalId: string, animation: CharacterAnimation): void {
+    this._mutateSheetAnimations(sheetId, (anims) => {
+      if (animation.frames.length === 0) return
+      const idx = anims.findIndex((a) => a.id === originalId)
+      if (idx === -1) {
+        // The original is gone (edited in another session, …) — treat
+        // as an add so the user's frames aren't lost.
+        if (!anims.some((a) => a.id === animation.id)) anims.push(animation)
+        return
+      }
+      // A rename must not collide with an existing entry.
+      if (animation.id !== originalId) {
+        const collision = anims.findIndex((a) => a.id === animation.id)
+        if (collision !== -1 && collision !== idx) return
+      }
+      anims[idx] = animation
+    })
+  }
+
+  /** Remove a custom animation from a sheet (required roles are protected). */
+  deleteAnimation(sheetId: string, animId: string): void {
+    // Required roles can't be removed (part of the character contract).
+    if ((REQUIRED_ROLES as readonly string[]).includes(animId)) return
+    this._mutateSheetAnimations(sheetId, (anims) => {
+      const idx = anims.findIndex((a) => a.id === animId)
+      if (idx !== -1) anims.splice(idx, 1)
+    })
   }
 
   /**
