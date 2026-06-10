@@ -1,16 +1,19 @@
-import { Actor, type Scene, type Sprite, type TileMap, Vector, vec } from 'excalibur'
+import { Actor, type GraphicsGroup, type Scene, type TileMap, Vector, vec } from 'excalibur'
 import { ActiveLayerComponent, ActiveObjectComponent, ActiveToolComponent, TIER_Z } from '../components/index.ts'
-import { getComponentData } from '../entity/data-access.ts'
+import { buildPlacementGraphic } from '../entity/placement-graphic.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
+import type { EntityDefinition } from '../types/data/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
  * Object-tool hover preview — a half-transparent ghost of the armed
- * object brush's appearance that follows the pointer on the active map,
- * so placing a library object feels like painting a tile (its tile-twin
- * is `services/pencil-preview.ts`). Renders as a regular scene `Actor`
- * above every tilemap tier; spawn / despawn rebuilds don't disturb it.
+ * object brush that follows the pointer on the active map, so placing a
+ * library object feels like painting a tile (its tile-twin is
+ * `services/pencil-preview.ts`). The ghost is the exact graphic the
+ * placement will get (`entity/placement-graphic.ts`): framed cell +
+ * fitted sprite, or frame + type marker for a sprite-less definition —
+ * so every armed brush previews, appearance or not.
  *
  * Owner contract mirrors the pencil preview: the caller holds the actor +
  * the current hover state and hands both to {@link refreshObjectPreview};
@@ -23,6 +26,17 @@ export interface ObjectPreviewHover {
   tileMap: TileMap
   coords: { x: number; y: number }
 }
+
+/**
+ * Per-actor cache of the built ghost graphic. Rebuilding the framed
+ * `GraphicsGroup` rasterizes two canvas textures, so doing it on every
+ * pointer move would churn; the def's object identity invalidates the
+ * cache (the entity library is replaced wholesale on edits).
+ */
+const ghostCache = new WeakMap<
+  Actor,
+  { def: EntityDefinition; tileWidth: number; tileHeight: number; graphic: GraphicsGroup }
+>()
 
 /**
  * Construct the preview actor. Top-left anchored so `pos` maps directly
@@ -44,38 +58,42 @@ export function createObjectPreviewActor(): Actor {
  *
  * - Active tool isn't `'object'`
  * - No object brush armed (`ActiveObjectComponent.defId`)
- * - The armed def has no resolvable appearance sprite
+ * - The armed def no longer exists in the entity library
  * - The active layer is locked (a click would no-op)
  *
  * Idempotent — safe to call on every pointer move + on every
  * `ActiveTool` / `ActiveObject` / `ActiveLayer` mutation.
  */
 export function refreshObjectPreview(actor: Actor, scene: Scene, hover: ObjectPreviewHover | null): void {
-  const sprite = resolvePreviewSprite(scene, hover)
-  if (!sprite || !hover) {
+  const def = hover ? resolveArmedDefinition(scene) : null
+  if (!def || !hover) {
     actor.graphics.visible = false
     return
   }
-  // Clone — sharing one Sprite across draw targets corrupts per-frame
-  // transforms (same invariant the pencil preview relies on).
-  const cloned = sprite.clone()
-  cloned.opacity = EDITOR_CONSTANTS.PAINT_PREVIEW_OPACITY
-  actor.graphics.use(cloned)
+
+  const { tileWidth, tileHeight } = hover.tileMap
+  let cached = ghostCache.get(actor)
+  if (!cached || cached.def !== def || cached.tileWidth !== tileWidth || cached.tileHeight !== tileHeight) {
+    const graphic = buildPlacementGraphic(def, (scene as MapScene).mapResource, tileWidth, tileHeight)
+    graphic.opacity = EDITOR_CONSTANTS.PAINT_PREVIEW_OPACITY
+    cached = { def, tileWidth, tileHeight, graphic }
+    ghostCache.set(actor, cached)
+  }
+
+  actor.graphics.use(cached.graphic)
   actor.pos = new Vector(
-    hover.tileMap.pos.x + hover.coords.x * hover.tileMap.tileWidth,
-    hover.tileMap.pos.y + hover.coords.y * hover.tileMap.tileHeight,
+    hover.tileMap.pos.x + hover.coords.x * tileWidth,
+    hover.tileMap.pos.y + hover.coords.y * tileHeight,
   )
   actor.graphics.visible = true
 }
 
 /**
- * Resolve the sprite to ghost at the hover position, or `null` when any
+ * Resolve the armed brush to its library definition, or `null` when any
  * precondition is missing. Split out so {@link refreshObjectPreview} has
  * one "draw vs. hide" branch instead of nested guards.
  */
-function resolvePreviewSprite(scene: Scene, hover: ObjectPreviewHover | null): Sprite | null {
-  if (!hover) return null
-
+function resolveArmedDefinition(scene: Scene): EntityDefinition | null {
   const tool = SessionState.get(scene, ActiveToolComponent)?.tool
   if (tool !== 'object') return null
 
@@ -89,12 +107,5 @@ function resolvePreviewSprite(scene: Scene, hover: ObjectPreviewHover | null): S
   const layer = layerId ? mapResource.mapData?.layers.find((l) => l.id === layerId) : null
   if (layer?.locked) return null
 
-  const def = (scene as MapScene).entityLibrary?.find((e) => e.id === defId)
-  if (!def) return null
-  const visual = getComponentData(def, 'visual')
-  const spriteSetId = typeof visual?.spriteSetId === 'string' ? visual.spriteSetId : null
-  if (!spriteSetId) return null
-  const spriteId = typeof visual?.spriteId === 'number' ? visual.spriteId : 0
-
-  return mapResource.getSpriteSetResource(spriteSetId)?.sprites[spriteId] ?? null
+  return (scene as MapScene).entityLibrary?.find((e) => e.id === defId) ?? null
 }

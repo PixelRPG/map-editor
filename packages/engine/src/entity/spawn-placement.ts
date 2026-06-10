@@ -1,25 +1,14 @@
-import { Actor, Color, type Entity, Rectangle, vec } from 'excalibur'
+import { Actor, type Entity, vec } from 'excalibur'
 import { PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
 import { TIER_Z } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
-import type { ComponentData, EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
+import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER, type LayerData } from '../types/data/LayerData.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
 import { mergePlacementComponents } from './data-access.ts'
+import { buildPlacementGraphic } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
-import { buildVisualGraphic } from './visual-graphic.ts'
-
-/** Outline colour for a sprite-less placement carrying no marker component. */
-const FALLBACK_MARKER_COLOR = '#ff9966'
-
-/**
- * Priority order for a sprite-less placement that carries several
- * marker components — the first match's `editor.markerColor` wins.
- * Preserves the pre-refactor per-kind colours (teleport/item/spawn-point
- * /npc/event), now derived from the components instead of a `kind`.
- */
-const MARKER_PRIORITY = ['teleport', 'item', 'spawn-point', 'npc-route', 'dialogue', 'trigger'] as const
 
 /**
  * Resolve a placement to its effective {@link EntityDefinition}: an inline
@@ -45,12 +34,12 @@ export function resolvePlacementDefinition(
 
 /**
  * Build one Excalibur entity from a placement + its resolved definition,
- * by walking the definition's `components[]` through the registry. Runtime
- * shape is identical to the pre-refactor kind-switch spawn: an `Actor` at
- * the tile centre, always-on `TileTransform` + `PlacementId`, each
- * component instantiated by its spec, the `visual` component's graphic
- * attached, a coloured outline marker for sprite-less placements, z from
- * the layer's tier, and the layer's visibility flag respected.
+ * by walking the definition's `components[]` through the registry: an
+ * `Actor` at the tile centre, always-on `TileTransform` + `PlacementId`,
+ * each component instantiated by its spec, the tile-like framed graphic
+ * from {@link buildPlacementGraphic} (sprite fitted into the cell, or a
+ * type-coloured marker for sprite-less placements), z from the layer's
+ * tier, and the layer's visibility flag respected.
  */
 export function buildPlacementEntity(
   placement: ObjectPlacement,
@@ -74,7 +63,6 @@ export function buildPlacementEntity(
   actor.addComponent(new PlacementIdComponent(placement.id))
 
   const ctx = { placementId: placement.id, tileX: placement.tileX, tileY: placement.tileY, tileWidth, tileHeight }
-  let graphicAttached = false
   for (const comp of def.components) {
     const spec = registry[comp.type]
     if (!spec) continue // load-time validation rejects unknowns; defensive here
@@ -82,47 +70,13 @@ export function buildPlacementEntity(
     if (built) {
       for (const c of Array.isArray(built) ? built : [built]) actor.addComponent(c)
     }
-    if (comp.type === 'visual') {
-      const graphic = buildVisualGraphic(comp, mapResource)
-      if (graphic) {
-        actor.graphics.use(graphic)
-        actor.graphics.anchor = vec(0.5, 0.5)
-        graphicAttached = true
-      }
-    }
   }
-  if (!graphicAttached) attachOutlineMarker(actor, def.components, tileWidth, tileHeight, registry)
+  actor.graphics.use(buildPlacementGraphic(def, mapResource, tileWidth, tileHeight, registry))
+  actor.graphics.anchor = vec(0.5, 0.5)
 
   const layer = layersById.get(placement.layerId)
   actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]
   if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.visible = false
 
   return actor
-}
-
-function markerColorFor(components: ComponentData[], registry: ComponentSpecRegistry): string {
-  const types = new Set(components.map((c) => c.type))
-  for (const t of MARKER_PRIORITY) {
-    const color = types.has(t) ? registry[t]?.editor.markerColor : undefined
-    if (color) return color
-  }
-  return FALLBACK_MARKER_COLOR
-}
-
-function attachOutlineMarker(
-  actor: Actor,
-  components: ComponentData[],
-  width: number,
-  height: number,
-  registry: ComponentSpecRegistry,
-): void {
-  const rect = new Rectangle({
-    width,
-    height,
-    color: Color.Transparent,
-    strokeColor: Color.fromHex(markerColorFor(components, registry)),
-    lineWidth: 1,
-  })
-  actor.graphics.use(rect)
-  actor.graphics.anchor = vec(0.5, 0.5)
 }

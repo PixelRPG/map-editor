@@ -16,6 +16,7 @@ import { run } from '@gjsify/unit'
 // follow-up — a test that asserts every spec file is registered.)
 import registrySuite from './commands/registry.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
+import entityPlacementGraphicSuite from './entity/placement-graphic.spec.js'
 import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
@@ -42,6 +43,7 @@ run({
   entityRegistrySuite,
   entityValidateSuite,
   entityConvertSuite,
+  entityPlacementGraphicSuite,
   entitySpawnPlacementSuite,
   objectSystemValidationSuite,
   layerVisibilitySuite,

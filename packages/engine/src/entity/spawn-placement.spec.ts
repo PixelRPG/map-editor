@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@gjsify/unit'
-import type { Actor } from 'excalibur'
+import { type Actor, GraphicsGroup } from 'excalibur'
 import {
   CollisionComponent,
   PlacementIdComponent,
@@ -109,6 +109,19 @@ export default async () => {
       ) as Actor
       expect(entity.has(SpriteRefComponent)).toBe(false)
       expect(entity.has(CollisionComponent)).toBe(true)
+    })
+
+    await it('attaches the tile-like framed group graphic', async () => {
+      if (!domAvailable) return
+      const def: EntityDefinition = { id: 'wall', name: 'Wall', components: [{ type: 'collision' }] }
+      const entity = buildPlacementEntity(
+        { id: 'wall-2', layerId: 'l1', tileX: 1, tileY: 1, inline: def },
+        def,
+        fakeMapResource,
+        layersById,
+      ) as Actor
+      expect(entity.graphics.current instanceof GraphicsGroup).toBe(true)
+      expect((entity.graphics.current as GraphicsGroup).width).toBe(16)
     })
   })
 }
