@@ -86,11 +86,15 @@ export class TilesView extends ResponsiveEditorView {
   declare _sheet_close: Gtk.Button
   declare _sheet_slot: Gtk.Box
   declare _side_slot: Gtk.Box
-  // Desktop gallery quick-view (read-only glance for the selected tileset).
+  // Desktop gallery quick-view (read-only glance for the selected card of
+  // either section). The preview swaps by kind: a static `quick_thumb`
+  // (tileset sheet) or an animated `quick_preview` (appearance).
   declare _quick_stack: Gtk.Stack
+  declare _quick_preview_stack: Gtk.Stack
   declare _quick_thumb: Gtk.Picture
+  declare _quick_preview: CharacterPreview
   declare _quick_name: Gtk.Label
-  declare _quick_count: Gtk.Label
+  declare _quick_subtitle: Gtk.Label
   declare _quick_edit: Gtk.Button
   // ── Appearances (character sprite sheets) gallery + animation editor ──
   declare _appearances_gallery: CardGallery
@@ -108,6 +112,12 @@ export class TilesView extends ResponsiveEditorView {
   private _spriteSets: TilesetEntry[] = []
   private _activeSpriteSetId: string | null = null
   private _selectedSpriteId: number | null = null
+  // Which kind the quick-view + single gallery highlight currently reflect.
+  // Both sections share one quick-view sidebar (desktop) and the same
+  // select→glance / open→detail / collapsed→drill-in interaction; this
+  // tracks which one is showing so a re-hydrate keeps the right card lit
+  // and the Edit button opens the right detail page.
+  private _activeKind: 'tileset' | 'appearance' = 'tileset'
 
   // Appearance state. Sourced from the cast controller (the owner of
   // sprite-sheet data) via `setAppearances`, NOT from `setProject` — so
@@ -151,9 +161,11 @@ export class TilesView extends ResponsiveEditorView {
           'sheet_slot',
           'side_slot',
           'quick_stack',
+          'quick_preview_stack',
           'quick_thumb',
+          'quick_preview',
           'quick_name',
-          'quick_count',
+          'quick_subtitle',
           'quick_edit',
           'appearances_gallery',
           'appearance_detail_page',
@@ -243,11 +255,11 @@ export class TilesView extends ResponsiveEditorView {
       this.emit('mode-changed', mode)
     })
     this.signals.connect(this._tilesets_gallery, 'item-activated', (_v: CardGallery, id: string) => {
-      this._setActiveSpriteSet(id)
+      this._selectTileset(id)
     })
     this.signals.connect(this._tilesets_gallery, 'item-opened', (_v: CardGallery, id: string) => {
-      this._setActiveSpriteSet(id)
-      this._openDetail()
+      this._selectTileset(id)
+      this._openTilesetDetail()
     })
     this.signals.connect(this._tilesets_gallery, 'rename-requested', (_v: CardGallery, id: string) => {
       this._presentRenameTileset(id)
@@ -262,7 +274,12 @@ export class TilesView extends ResponsiveEditorView {
     this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteTileset(id)
     })
-    this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
+    // The quick-view "Edit" button opens the detail of whichever kind the
+    // glance is currently showing.
+    this.signals.connect(this._quick_edit, 'clicked', () => {
+      if (this._activeKind === 'appearance') this._openAppearanceDetailPage()
+      else this._openTilesetDetail()
+    })
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
       // Picking a tile refreshes the inspector. On phone that means
       // sliding the bottom sheet up; on desktop the sidebar is already
@@ -293,13 +310,15 @@ export class TilesView extends ResponsiveEditorView {
     // selected-animation duration + sheet rename).
     this._appearance_inspector.setMode('sheet')
 
-    // No quick-view for appearances — a tap (single or double) drills
-    // straight into the animation editor. The three-dots delete confirms.
+    // Appearances behave exactly like tilesets: a single tap SELECTS
+    // (desktop → updates the quick-view; phone → drills into the animation
+    // editor); a double tap OPENS the detail. The three-dots delete confirms.
     this.signals.connect(this._appearances_gallery, 'item-activated', (_v: CardGallery, id: string) => {
-      this._openAppearanceDetail(id)
+      this._selectAppearance(id)
     })
     this.signals.connect(this._appearances_gallery, 'item-opened', (_v: CardGallery, id: string) => {
-      this._openAppearanceDetail(id)
+      this._selectAppearance(id)
+      this._openAppearanceDetailPage()
     })
     this.signals.connect(this._appearances_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteAppearance(id)
@@ -420,6 +439,9 @@ export class TilesView extends ResponsiveEditorView {
     }
     this._rebuildAppearancesGallery()
     this._refreshActiveAppearance()
+    // If the user is currently glancing at an appearance, refresh it (e.g.
+    // an animation edit changed the count). Tileset glances are untouched.
+    if (this._activeKind === 'appearance') this._refreshQuickView()
   }
 
   /**
@@ -436,6 +458,7 @@ export class TilesView extends ResponsiveEditorView {
       this._spriteSets = []
       this._activeSpriteSetId = null
       this._selectedSpriteId = null
+      this._activeKind = 'tileset'
       this._tilesets_gallery.setItems([])
       this._palette.setTiles([])
       this._inspector.setSprite(null, null)
@@ -477,7 +500,10 @@ export class TilesView extends ResponsiveEditorView {
       this._activeSpriteSetId = items[0]?.id ?? null
     }
     this._rebuildGallery()
-    this._refreshQuickView()
+    // Only steal the quick-view glance if the user is currently on a
+    // tileset; a tileset re-hydrate (e.g. reorder) shouldn't yank a
+    // showing appearance glance away.
+    if (this._activeKind === 'tileset') this._refreshQuickView()
     await this._loadActivePalette()
   }
 
@@ -492,17 +518,18 @@ export class TilesView extends ResponsiveEditorView {
 
   /** Select a tileset by id + open its detail page (host / MCP entry). */
   focusTileset(id: string): void {
-    this._setActiveSpriteSet(id)
-    this._openDetail()
+    this._selectTileset(id)
+    this._openTilesetDetail()
   }
 
   /**
-   * Drill into an appearance (sprite-sheet) detail page by id — the
-   * animation editor. Used by the `win.open-appearance` action (tooling
+   * Select an appearance (sprite-sheet) by id + open its animation-editor
+   * detail page. Used by the `win.open-appearance` action (tooling
    * drill-in) + the character detail's "Edit appearance" deep-link.
    */
   focusAppearance(id: string): void {
-    this._openAppearanceDetail(id)
+    this._selectAppearance(id)
+    this._openAppearanceDetailPage()
   }
 
   /**
@@ -538,7 +565,8 @@ export class TilesView extends ResponsiveEditorView {
 
   private _rebuildGallery(): void {
     this._tilesets_gallery.setItems(this._spriteSets.map((entry) => this._buildTilesetItem(entry)))
-    this._tilesets_gallery.setActiveId(this._activeSpriteSetId)
+    // Only one card across both galleries is lit — the active selection's.
+    this._tilesets_gallery.setActiveId(this._activeKind === 'tileset' ? this._activeSpriteSetId : null)
   }
 
   /**
@@ -562,42 +590,62 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   /**
-   * Select a tileset: make it active, refresh the quick-view + (lazily)
-   * the palette, and highlight the card. On a NARROW layout (no
-   * quick-view sidebar) this also drills into the detail page; on
-   * desktop it just updates the quick-view (the user opens the detail
-   * explicitly via double-click or the "Edit" button).
+   * Select a tileset: make it the active selection, refresh the quick-view
+   * + (lazily) the palette, and highlight the card (clearing any appearance
+   * highlight). On a NARROW layout (no quick-view sidebar) this also drills
+   * into the detail page; on desktop it just updates the quick-view (the
+   * user opens the detail explicitly via double-click or the "Edit" button).
+   * Mirrors {@link _selectAppearance} so both sections behave identically.
    */
-  private _setActiveSpriteSet(id: string): void {
+  private _selectTileset(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry) return
     this._activeSpriteSetId = id
+    this._activeKind = 'tileset'
     this._selectedSpriteId = null
     // Start with the tile-properties sheet closed — no tile picked yet.
     this._tile_sheet.set_reveal_child(false)
     this._tilesets_gallery.setActiveId(id)
+    this._appearances_gallery.setActiveId(null)
     this._detail_page.title = entry.resource.data?.name ?? id
     this._refreshQuickView()
     void this._loadActivePalette()
-    if (this.inspectorCollapsed) this._openDetail()
+    if (this.inspectorCollapsed) this._openTilesetDetail()
   }
 
   /**
-   * Drill into the detail sub-page (tile palette + inspector) for the
-   * active tileset. No-op if already there. The inspector stays closed
-   * until the user picks a tile (it has nothing to show for a whole
-   * set), matching the palette's tile-selected auto-open.
+   * Drill into the tileset detail sub-page (tile palette + inspector) for
+   * the active tileset. No-op if already there. The inspector stays closed
+   * until the user picks a tile (it has nothing to show for a whole set),
+   * matching the palette's tile-selected auto-open.
    */
-  private _openDetail(): void {
+  private _openTilesetDetail(): void {
     if (!this._activeSpriteSetId) return
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
 
   /**
-   * Populate the desktop quick-view sidebar (read-only glance) for the
-   * active tileset, or switch it to the empty state when none is active.
+   * Populate the shared desktop quick-view sidebar for the active
+   * selection — a static sheet thumbnail for a tileset, an animated
+   * preview for an appearance (`_activeKind`). Switches to the empty state
+   * when the active kind has nothing selected.
    */
   private _refreshQuickView(): void {
+    if (this._activeKind === 'appearance') {
+      const synthetic = this._sheetAsCharacter(this._activeAppearanceId)
+      if (!synthetic) {
+        this._quick_stack.set_visible_child_name('empty')
+        return
+      }
+      const sheet = this._activeAppearanceId ? (this._appearanceSetsById.get(this._activeAppearanceId) ?? null) : null
+      this._quick_stack.set_visible_child_name('info')
+      this._quick_preview_stack.set_visible_child_name('appearance')
+      this._quick_preview.setCharacter(synthetic, sheet)
+      this._quick_name.set_label(synthetic.name)
+      const count = sheet?.data?.characterAnimations?.length ?? 0
+      this._quick_subtitle.set_label(count === 1 ? _('1 animation') : _(`${count} animations`))
+      return
+    }
     const active = this._activeSpriteSet()
     if (!active) {
       this._quick_stack.set_visible_child_name('empty')
@@ -605,10 +653,11 @@ export class TilesView extends ResponsiveEditorView {
       return
     }
     this._quick_stack.set_visible_child_name('info')
+    this._quick_preview_stack.set_visible_child_name('tileset')
     this._quick_thumb.set_paintable(active.gdk?.createSheetThumbnail(240) ?? null)
     this._quick_name.set_label(active.resource.data?.name ?? active.id)
     const count = active.resource.data?.sprites?.length ?? 0
-    this._quick_count.set_label(count === 1 ? _('1 tile') : _(`${count} tiles`))
+    this._quick_subtitle.set_label(count === 1 ? _('1 tile') : _(`${count} tiles`))
   }
 
   private _activeSpriteSet(): TilesetEntry | null {
@@ -755,7 +804,8 @@ export class TilesView extends ResponsiveEditorView {
       this._appearances.map((s) => this._buildAppearanceItem(s)),
       (item) => this._buildAppearancePreview(item.id),
     )
-    this._appearances_gallery.setActiveId(this._activeAppearanceId)
+    // Lit only when an appearance is the active selection (see `_rebuildGallery`).
+    this._appearances_gallery.setActiveId(this._activeKind === 'appearance' ? this._activeAppearanceId : null)
   }
 
   /** Card model for one appearance sheet: animation count as subtitle. */
@@ -784,17 +834,32 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   /**
-   * Drill into an appearance's detail sub-page — its animation editor
-   * (preview + animation list + selected-animation duration), shared by
-   * every character wearing the sheet. No-op on an unknown id.
+   * Select an appearance: make it the active selection, refresh the
+   * quick-view + the (ready-to-open) animation editor, and highlight the
+   * card (clearing any tileset highlight). On a NARROW layout this drills
+   * straight into the editor; on desktop it just updates the quick-view.
+   * Mirrors {@link _selectTileset} so both sections behave identically.
    */
-  private _openAppearanceDetail(id: string): void {
+  private _selectAppearance(id: string): void {
     const sheet = this._appearances.find((s) => s.id === id)
     if (!sheet) return
     this._activeAppearanceId = id
+    this._activeKind = 'appearance'
     this._appearances_gallery.setActiveId(id)
-    this._refreshActiveAppearance()
+    this._tilesets_gallery.setActiveId(null)
     this._appearance_detail_page.title = sheet.name
+    this._refreshActiveAppearance()
+    this._refreshQuickView()
+    if (this.inspectorCollapsed) this._openAppearanceDetailPage()
+  }
+
+  /**
+   * Drill into the active appearance's animation-editor sub-page (preview +
+   * animation list + selected-animation duration), shared by every
+   * character wearing the sheet. No-op if already there or none active.
+   */
+  private _openAppearanceDetailPage(): void {
+    if (!this._activeAppearanceId) return
     if (this._nav.get_visible_page()?.tag !== 'appearance-detail') this._nav.push_by_tag('appearance-detail')
   }
 
