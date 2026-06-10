@@ -73,6 +73,13 @@ const CONTROL_IFACE_XML = `
       <arg type="i" direction="in" name="sprite_id"/>
       <arg type="b" direction="out" name="applied"/>
     </method>
+    <method name="PlaceObject">
+      <arg type="s" direction="in" name="def_id"/>
+      <arg type="s" direction="in" name="layer_id"/>
+      <arg type="i" direction="in" name="tile_x"/>
+      <arg type="i" direction="in" name="tile_y"/>
+      <arg type="b" direction="out" name="applied"/>
+    </method>
     <method name="SetAssistantCursor">
       <arg type="i" direction="in" name="tile_x"/>
       <arg type="i" direction="in" name="tile_y"/>
@@ -223,6 +230,15 @@ export class ControlDbusService {
    */
   PaintTile(layerId: string, tileX: number, tileY: number, spriteId: number): boolean {
     return this.requireWindow().paintTile(layerId || null, tileX, tileY, spriteId < 0 ? undefined : spriteId)
+  }
+
+  /**
+   * `PlaceObject(def_id, layer_id, x, y) -> applied` — stamp a library
+   * object (entity definition) onto the active map. `layer_id` `''` =
+   * active layer. Goes through the engine command path (undo + collab).
+   */
+  PlaceObject(defId: string, layerId: string, tileX: number, tileY: number): boolean {
+    return this.requireWindow().placeObject(defId, layerId || null, tileX, tileY)
   }
 
   /** `SetAssistantCursor(x, y) -> applied` — show/move the AI collaborator cursor. */

@@ -21,6 +21,7 @@ const TOOL_ICONS: Record<EditorTool, string> = {
   pencil: 'document-edit-symbolic',
   eraser: 'edit-clear-all-symbolic',
   eyedropper: 'color-select-symbolic',
+  object: 'view-grid-symbolic',
 }
 
 const TOOL_LABELS: Record<EditorTool, () => string> = {
@@ -28,6 +29,7 @@ const TOOL_LABELS: Record<EditorTool, () => string> = {
   pencil: () => _('Pencil'),
   eraser: () => _('Eraser'),
   eyedropper: () => _('Eyedropper'),
+  object: () => _('Place object'),
 }
 
 /**

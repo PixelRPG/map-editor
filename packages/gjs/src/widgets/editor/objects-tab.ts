@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { gettext as _ } from 'gettext'
 
 import Template from './objects-tab.blp'
 
@@ -54,17 +55,23 @@ export class ObjectsTab extends Adw.Bin {
   declare _list: Gtk.ListBox
   declare _empty_state: Gtk.Box
   declare _new_object_button: Gtk.Button
+  declare _brush_row: Gtk.Box
+  declare _brush_picker: Gtk.DropDown
 
   private _activeId: string | null = null
+  /** Library object ids parallel to the brush DropDown model (index 0 = none). */
+  private _brushIds: (string | null)[] = []
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgObjectsTab',
         Template,
-        InternalChildren: ['list', 'empty_state', 'new_object_button'],
+        InternalChildren: ['list', 'empty_state', 'new_object_button', 'brush_row', 'brush_picker'],
         Signals: {
           'object-selected': { param_types: [GObject.TYPE_STRING] },
+          // A library object was chosen as the placement brush (empty = none).
+          'brush-selected': { param_types: [GObject.TYPE_STRING] },
         },
       },
       ObjectsTab,
@@ -80,6 +87,22 @@ export class ObjectsTab extends Adw.Bin {
       this._activeId = id
       this.emit('object-selected', id)
     })
+    this._brush_picker.connect('notify::selected', () => {
+      const idx = this._brush_picker.get_selected()
+      this.emit('brush-selected', this._brushIds[idx] ?? '')
+    })
+  }
+
+  /**
+   * Populate the placement-brush picker with the project's library objects
+   * (`{ id, name }`). A leading "(None)" entry disarms the brush. Hidden
+   * when there are no library objects to place.
+   */
+  setBrushOptions(objects: ReadonlyArray<{ id: string; name: string }>): void {
+    this._brushIds = [null, ...objects.map((o) => o.id)]
+    const model = Gtk.StringList.new([_('(None)'), ...objects.map((o) => o.name)])
+    this._brush_picker.set_model(model)
+    this._brush_row.set_visible(objects.length > 0)
   }
 
   /**

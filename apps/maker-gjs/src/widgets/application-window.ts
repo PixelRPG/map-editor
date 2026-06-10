@@ -873,6 +873,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(toolAction)
     this._toolAction = toolAction
 
+    // Pick the "object brush" (a library entity id) for the object tool +
+    // switch to that tool, so choosing what to place activates placement
+    // mode in one step. Empty string clears the brush.
+    const setObjectBrushAction = Gio.SimpleAction.new('set-object-brush', GLib.VariantType.new('s'))
+    setObjectBrushAction.connect('activate', (_a, parameter) => {
+      const defId = parameter?.get_string()[0] ?? ''
+      this._engineCtl.engine?.setObjectBrush(defId || null)
+      if (defId) this._toolAction?.change_state(GLib.Variant.new_string('object'))
+    })
+    winActions.add_action(setObjectBrushAction)
+
     // Undo / redo route through the engine's command stack
     // (\`docs/concepts/editor-architecture.md\` § Phase 5). The engine
     // mutates the active scene's `UndoStackComponent` and applies /
@@ -1537,6 +1548,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   paintTile(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null): boolean {
     return this._engineCtl.engine?.excalibur?.paintTileAt(layerId, tileX, tileY, spriteId) ?? false
+  }
+
+  /**
+   * Place a library object on the active map programmatically (Control →
+   * MCP). `layerId` null = active layer. Goes through the engine command
+   * path (undo + collab). Returns `false` if it couldn't be applied.
+   */
+  placeObject(defId: string, layerId: string | null, tileX: number, tileY: number): boolean {
+    return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY) ?? false
   }
 
   /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */

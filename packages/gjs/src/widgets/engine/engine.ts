@@ -133,6 +133,11 @@ export class Engine extends Adw.Bin {
     this._excalibur?.setActiveTile(spriteId)
   }
 
+  /** Forward to `Engine.setObjectBrush` — the library entity id the object tool stamps. */
+  public setObjectBrush(defId: string | null): void {
+    this._excalibur?.setObjectBrush(defId)
+  }
+
   /** Forward to `Engine.setActiveLayer` — sets the layer used for tile painting. */
   public setActiveLayer(layerId: string): void {
     this._excalibur?.setActiveLayer(layerId)

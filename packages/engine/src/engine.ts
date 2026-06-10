@@ -10,9 +10,10 @@ import {
   TileMap,
   Vector,
 } from 'excalibur'
-import type { Command } from './commands/index.ts'
+import { type Command, PlaceObjectCommand } from './commands/index.ts'
 import {
   ActiveLayerComponent,
+  ActiveObjectComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   EditorModeComponent,
@@ -282,6 +283,23 @@ export class Engine {
     return SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null
   }
 
+  /**
+   * Set the "object brush" — the entity-library definition id the
+   * `'object'` tool stamps on click. `null` clears it. Lives on the
+   * session-singleton (see {@link ActiveObjectComponent}).
+   */
+  setObjectBrush(defId: string | null): void {
+    const scene = this._activeMapScene()
+    if (!scene) return
+    SessionState.set(scene, new ActiveObjectComponent(defId))
+  }
+
+  getObjectBrush(): string | null {
+    const scene = this._activeMapScene()
+    if (!scene) return null
+    return SessionState.get(scene, ActiveObjectComponent)?.defId ?? null
+  }
+
   /** Set the active layer for tile painting. Matches a `LayerData.id`. */
   setActiveLayer(layerId: string): void {
     const scene = this._activeMapScene()
@@ -404,6 +422,33 @@ export class Engine {
     // Attribution: flash the painted tile in the assistant's colour so the
     // user sees the AI act. Only while the assistant is present.
     if (this._assistantActive) this._flashAssistantTile(found.tileMap, tileX, tileY)
+    return true
+  }
+
+  /**
+   * Place a library object on the active map programmatically (Control →
+   * MCP, or the AI collaborator) — the driveable equivalent of the object
+   * tool's canvas click. Goes through {@link PlaceObjectCommand} so it
+   * undoes + syncs to peers. `layerId` null → the active layer. Returns
+   * `false` if there's no active map, no resolvable / unlocked layer, or
+   * `defId` isn't in the project's entity library.
+   */
+  placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number): boolean {
+    if (this._assistantPaused) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
+    const resolvedLayer = layerId ?? this.getActiveLayer()
+    if (!resolvedLayer) return false
+    if (this.isLayerLocked(resolvedLayer)) return false
+    if (!scene.entityLibrary.some((e) => e.id === defId)) return false
+    const placement = {
+      id: `obj_${tileX}_${tileY}_${Math.random().toString(36).slice(2, 8)}`,
+      layerId: resolvedLayer,
+      tileX,
+      tileY,
+      defId,
+    }
+    this.executeCommand(new PlaceObjectCommand({ placement }))
     return true
   }
 

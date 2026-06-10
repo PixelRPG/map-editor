@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { BUILT_IN_COMPONENT_SPECS, type EditorTool, type EntityDefinition, getComponentData } from '@pixelrpg/engine'
@@ -349,6 +350,12 @@ export class SceneEditorView extends ResponsiveEditorView {
       }
     })
     this._inspector.objectsTab.setObjects(placements)
+    // Feed the object-tool brush picker the project's world objects (the
+    // non-character library entities — characters live in the Cast view).
+    const brushOptions = (project.resource.data?.entityLibrary ?? [])
+      .filter((e) => e.editorData?.template !== 'character')
+      .map((e) => ({ id: e.id, name: e.name }))
+    this._inspector.objectsTab.setBrushOptions(brushOptions)
 
     // Pick the first sprite set referenced by *this map* — that's the
     // one whose `firstGid` we need to offset against. Fall back to the
@@ -614,6 +621,11 @@ export class SceneEditorView extends ResponsiveEditorView {
       // e.g. the user picked a second object before the first pan
       // finished — also fine, the new pan supersedes).
       void this._engine?.focusOnPlacement(placementId)
+    })
+    // Object brush picked → arm it + switch to the Object tool via the
+    // window action (it sets both the engine brush and the tool state).
+    objects.connect('brush-selected', (_o: typeof objects, defId: string) => {
+      this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId))
     })
   }
 
