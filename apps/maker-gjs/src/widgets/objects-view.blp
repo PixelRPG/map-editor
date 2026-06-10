@@ -30,6 +30,18 @@ template $ObjectsView : $PixelRpgResponsiveEditorView {
           [top]
           Adw.HeaderBar {
             show-title: false;
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
+
+            // Reopen the mode rail when it's collapsed to an overlay
+            // (narrow widths) — without this the Objects view had no way
+            // back to the other modes once the rail was dismissed.
+            [start]
+            Gtk.ToggleButton library_toggle {
+              icon-name: "sidebar-show-symbolic";
+              tooltip-text: _("Toggle library");
+              active: bind template.show-library bidirectional;
+            }
 
             [end]
             Gtk.Button new_object_button {
