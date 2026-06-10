@@ -10,6 +10,24 @@ template $PixelRpgObjectsTab : Adw.Bin {
     margin-start: 12;
     margin-end: 12;
 
+    // Object "brush" picker: choose a library object, then click the
+    // canvas (with the Object tool active) to stamp it. Picking one
+    // arms the brush + switches to the Object tool via win.set-object-brush.
+    Gtk.Box brush_row {
+      orientation: horizontal;
+      spacing: 8;
+      visible: false;
+
+      Gtk.Label {
+        label: _("Place:");
+        styles ["dim-label"]
+      }
+
+      Gtk.DropDown brush_picker {
+        hexpand: true;
+      }
+    }
+
     Gtk.Box empty_state {
       orientation: vertical;
       spacing: 6;

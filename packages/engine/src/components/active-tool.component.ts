@@ -14,11 +14,12 @@ import { Component } from 'excalibur'
  * `'select'` is the default — read-only inspect/select. Clicks
  * select an object placement at the pointer (highlight + inspector
  * sync) or clear the selection when the user clicks empty tile
- * space. Mutating tools (`'pencil'`, `'eraser'`) require an explicit
- * pick from the tool menu so the user can't accidentally paint over
- * existing artwork.
+ * space. Mutating tools (`'pencil'`, `'eraser'`, `'object'`) require an
+ * explicit pick from the tool menu so the user can't accidentally paint
+ * over existing artwork. `'object'` stamps the active "object brush"
+ * ({@link ActiveObjectComponent}) onto the clicked tile.
  */
-export type EditorTool = 'select' | 'pencil' | 'eraser' | 'eyedropper'
+export type EditorTool = 'select' | 'pencil' | 'eraser' | 'eyedropper' | 'object'
 
 export class ActiveToolComponent extends Component {
   constructor(public tool: EditorTool) {

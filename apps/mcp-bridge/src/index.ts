@@ -593,8 +593,10 @@ server.registerTool(
 server.registerTool(
   'set_tool',
   {
-    description: 'Select the active editor tool.',
-    inputSchema: z.object({ tool: z.enum(['select', 'pencil', 'eraser', 'eyedropper']), ...instanceArg }),
+    description:
+      'Select the active editor tool. `object` stamps the object brush (set it first with place_object, ' +
+      'or pick a library object) on canvas clicks.',
+    inputSchema: z.object({ tool: z.enum(['select', 'pencil', 'eraser', 'eyedropper', 'object']), ...instanceArg }),
   },
   async ({ tool, instance }) => {
     try {
@@ -671,6 +673,36 @@ server.registerTool(
       return applied
         ? ok(`Painted tile (${x}, ${y})${tileId === undefined ? '' : ` with ${tileId}`}`)
         : fail('Paint not applied (no engine/scene, layer locked, or coords out of bounds).')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'place_object',
+  {
+    description:
+      'Place a library object (entity definition) on the active map at tile (x, y). `defId` is an ' +
+      'entityLibrary id (create objects in the Objects view / win.new-object). Omit layerId for the active ' +
+      'layer. Goes through the engine command path, so it undoes and (in a collab session) syncs to peers. ' +
+      'Needs an open scene.',
+    inputSchema: z.object({
+      defId: z.string(),
+      x: z.number().int(),
+      y: z.number().int(),
+      layerId: z.string().optional(),
+      ...instanceArg,
+    }),
+  },
+  async ({ defId, x, y, layerId, instance }) => {
+    try {
+      const params = new GLib.Variant('(ssii)', [defId, layerId ?? '', x, y])
+      const reply = await control(instance, 'PlaceObject', params, '(b)')
+      const [applied] = reply.recursiveUnpack() as [boolean]
+      return applied
+        ? ok(`Placed object "${defId}" at (${x}, ${y})`)
+        : fail('Not placed (no engine/scene, layer locked, coords out of bounds, or unknown defId).')
     } catch (error) {
       return dbusError(error, instance)
     }

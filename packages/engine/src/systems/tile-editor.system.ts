@@ -11,9 +11,10 @@ import {
   vec,
   type World,
 } from 'excalibur'
-import type { Command } from '../commands/index.ts'
+import { type Command, PlaceObjectCommand } from '../commands/index.ts'
 import {
   ActiveLayerComponent,
+  ActiveObjectComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
@@ -301,6 +302,20 @@ export class TileEditorSystem extends System {
         localSpriteId: top.spriteId,
         globalTileId,
       })
+    } else if (tool === 'object') {
+      // Stamp the active "object brush" (a library entity id) onto the
+      // map at the clicked tile via an undoable + collab-synced command.
+      const defId = SessionState.get(this.scene, ActiveObjectComponent)?.defId ?? null
+      if (!defId) return
+      const placement = {
+        id: this.makePlacementId(hit.coords.x, hit.coords.y),
+        layerId,
+        tileX: hit.coords.x,
+        tileY: hit.coords.y,
+        defId,
+      }
+      this.dispatchCommand(new PlaceObjectCommand({ placement }))
+      this.events.emit(EngineEvent.TILE_PLACED, { coords: hit.coords, tileId: 0, layerId })
     }
 
     this.events.emit(EngineEvent.TILE_CLICKED, {
@@ -352,6 +367,16 @@ export class TileEditorSystem extends System {
   private dispatchCommand(command: Command): void {
     if (!this.scene) return
     executeCommandOnScene(this.scene, this.events, command)
+  }
+
+  /**
+   * Stable, unique placement id for a freshly-stamped object: tile coords
+   * for readability + a random suffix for cross-peer uniqueness (the id is
+   * generated once on the originating peer and carried in the command
+   * payload, so two peers stamping the same tile won't collide).
+   */
+  private makePlacementId(x: number, y: number): string {
+    return `obj_${x}_${y}_${Math.random().toString(36).slice(2, 8)}`
   }
 
   private resolveLayerId(layerId: string | null): string | null {
