@@ -95,6 +95,11 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _armedObjectId: string | null = null
   /** The active editor tool — decides what the context chip quick-selects (tiles vs objects). */
   private _activeTool: EditorTool = 'select'
+  /** Per-placement info for the Props tab's "Selected object" group. */
+  private _placementInfo = new Map<
+    string,
+    { name: string; defId: string | null; tileX: number; tileY: number; layerId: string }
+  >()
   private _activeLayerId: string | null = null
   private _tilesetName = ''
   /**
@@ -142,6 +147,9 @@ export class SceneEditorView extends ResponsiveEditorView {
           // listens because it tracks the project + scene paths
           // needed by `MapFormat.serialize` + `writeTextFile`.
           'persist-requested': { param_types: [] },
+          // A placement was removed via the Props tab — the host
+          // refreshes the inspector's placement list.
+          'object-removed': { param_types: [] },
         },
       },
       SceneEditorView,
@@ -262,6 +270,13 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   highlightPlacement(placementId: string | null): void {
     this._inspector.objectsTab.selectObject(placementId)
+    this._syncSelectedObjectProps(placementId)
+  }
+
+  /** Push the selected placement into the Props tab's "Selected object" group (`null` hides it). */
+  private _syncSelectedObjectProps(placementId: string | null): void {
+    const info = placementId ? this._placementInfo.get(placementId) : null
+    this._inspector.propsTab.setSelectedObject(info && placementId ? { placementId, ...info } : null)
   }
 
   /**
@@ -407,6 +422,18 @@ export class SceneEditorView extends ResponsiveEditorView {
       }
     })
     this._inspector.objectsTab.setObjects(placements)
+    this._placementInfo = new Map(
+      resolvedDefs.map(({ placement, def }) => [
+        placement.id,
+        {
+          name: def?.name ?? placement.id,
+          defId: placement.defId ?? null,
+          tileX: placement.tileX,
+          tileY: placement.tileY,
+          layerId: placement.layerId,
+        },
+      ]),
+    )
     // Feed the Tiles tab's Objects grid every brush candidate WITH a
     // sprite thumbnail (its `visual` component resolved against the
     // loaded sheets) or its marker colour as the fallback swatch, so
@@ -768,6 +795,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const objects = this._inspector.objectsTab
     objects.connect('object-selected', (_o: typeof objects, placementId: string) => {
       this._engine?.setSelectedPlacements([placementId])
+      this._syncSelectedObjectProps(placementId)
       // Smoothly pan the canvas to the picked object. Fire-and-forget —
       // we don't care about the promise here, the engine resolves it
       // when the camera move ends (or rejects on an interrupted move,
@@ -775,6 +803,21 @@ export class SceneEditorView extends ResponsiveEditorView {
       // finished — also fine, the new pan supersedes).
       void this._engine?.focusOnPlacement(placementId)
     })
+    // Selected-object actions from the Props tab. Open routes through
+    // the existing `win.open-object` navigation; remove dispatches the
+    // undoable RemoveObjectCommand and asks the host to refresh the
+    // placement list.
+    const props = this._inspector.propsTab
+    props.connect('object-open-requested', (_p: typeof props, defId: string) => {
+      this.activate_action('win.open-object', GLib.Variant.new_string(defId))
+    })
+    props.connect('object-remove-requested', (_p: typeof props, placementId: string) => {
+      if (!this._engine?.excalibur?.removeObject(placementId)) return
+      this._syncSelectedObjectProps(null)
+      this._inspector.objectsTab.selectObject(null)
+      this.emit('object-removed')
+    })
+
     // Object brush picked in the Tiles tab's Objects grid → arm it +
     // switch to the Object tool via the window action (it sets both the
     // engine brush and the tool state) — picking what to place activates
