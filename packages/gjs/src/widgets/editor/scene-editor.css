@@ -31,3 +31,29 @@
 .header-osd windowcontrols button:hover image {
   background-color: alpha(@window_fg_color, 0.16);
 }
+
+/*
+ * Tile-like object swatches — the SAME visual language as placements on
+ * the map (engine `placement-graphic.ts`): a thin frame in the object
+ * accent colour (#f5c211, the object hover-border hue) around the
+ * sprite/marker preview. Applied to the Tiles tab's Objects grid cells
+ * (`.object-brush-palette`) and the Objects tab's placement-row
+ * swatches (`.object-swatch`), so an object reads identically in the
+ * palette, in the placement list, and on the canvas.
+ */
+.object-brush-palette flowboxchild {
+  border: 1px solid alpha(#f5c211, 0.7);
+  border-radius: 4px;
+  padding: 1px;
+}
+
+.object-brush-palette flowboxchild:selected {
+  border-color: @accent_bg_color;
+  background-color: alpha(@accent_bg_color, 0.25);
+}
+
+.object-swatch {
+  border: 1px solid alpha(#f5c211, 0.7);
+  border-radius: 4px;
+  padding: 1px;
+}

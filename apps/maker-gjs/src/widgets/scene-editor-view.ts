@@ -2,7 +2,13 @@ import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { BUILT_IN_COMPONENT_SPECS, type EditorTool, type EntityDefinition, getComponentData } from '@pixelrpg/engine'
+import {
+  BUILT_IN_COMPONENT_SPECS,
+  type EditorTool,
+  type EntityDefinition,
+  getComponentData,
+  markerColorFor,
+} from '@pixelrpg/engine'
 import {
   type EditorMode,
   type Engine,
@@ -367,20 +373,25 @@ export class SceneEditorView extends ResponsiveEditorView {
         tileY: placement.tileY,
         layerId: placement.layerId,
         paintable,
+        // No resolvable sprite → the def's marker colour, mirroring the
+        // type-coloured marker the placement shows on the map.
+        color: paintable ? undefined : def ? markerColorFor(def.components) : undefined,
       }
     })
     this._inspector.objectsTab.setObjects(placements)
-    // Feed the placement-brush palette every brush candidate WITH a sprite
-    // thumbnail (its `visual` component resolved against the loaded sheets),
-    // so the user sees what they're about to stamp. Characters (Cast NPCs)
-    // are placeable now too; the player is excluded above.
+    // Feed the Tiles tab's Objects grid every brush candidate WITH a
+    // sprite thumbnail (its `visual` component resolved against the
+    // loaded sheets) or its marker colour as the fallback swatch, so
+    // picking an object looks + feels exactly like picking a tile.
+    // Characters (Cast NPCs) are placeable too; the player is excluded
+    // above.
     const brushOptions = brushDefs.map((def) => {
       let paintable = null
       const vis = visualOf(def)
       if (vis) paintable = gdkSheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable() ?? null
-      return { id: def.id, name: def.name, paintable, icon: iconOf(def) }
+      return { id: def.id, name: def.name, paintable, color: paintable ? undefined : markerColorFor(def.components) }
     })
-    this._inspector.objectsTab.setBrushOptions(brushOptions)
+    this._inspector.tilesTab.setObjectBrushes(brushOptions)
 
     // Pick the first sprite set referenced by *this map* — that's the
     // one whose `firstGid` we need to offset against. Fall back to the
@@ -647,9 +658,12 @@ export class SceneEditorView extends ResponsiveEditorView {
       // finished — also fine, the new pan supersedes).
       void this._engine?.focusOnPlacement(placementId)
     })
-    // Object brush picked → arm it + switch to the Object tool via the
-    // window action (it sets both the engine brush and the tool state).
-    objects.connect('brush-selected', (_o: typeof objects, defId: string) => {
+    // Object brush picked in the Tiles tab's Objects grid → arm it +
+    // switch to the Object tool via the window action (it sets both the
+    // engine brush and the tool state) — picking what to place activates
+    // placement mode in one step, just like picking a tile arms the
+    // pencil's active tile.
+    tiles.connect('object-brush-selected', (_t: TilesTab, defId: string) => {
       this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId))
     })
   }

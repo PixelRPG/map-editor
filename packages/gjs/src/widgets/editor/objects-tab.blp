@@ -10,40 +10,9 @@ template $PixelRpgObjectsTab : Adw.Bin {
     margin-start: 12;
     margin-end: 12;
 
-    // Object "brush" palette: a wrapping grid of library-object cards
-    // (sprite thumbnail + name). Single-click a card to arm that brush,
-    // then click the canvas (Object tool) to stamp it. Picking one arms the
-    // brush + switches to the Object tool via win.set-object-brush.
-    Gtk.Box brush_section {
-      orientation: vertical;
-      spacing: 6;
-      visible: false;
-
-      Gtk.Label {
-        label: _("Place");
-        halign: start;
-        styles ["heading"]
-      }
-
-      Gtk.ScrolledWindow {
-        hscrollbar-policy: never;
-        vscrollbar-policy: automatic;
-        propagate-natural-height: true;
-        max-content-height: 220;
-
-        child: Gtk.FlowBox brush_palette {
-          selection-mode: single;
-          activate-on-single-click: true;
-          homogeneous: true;
-          min-children-per-line: 2;
-          max-children-per-line: 4;
-          row-spacing: 6;
-          column-spacing: 6;
-          styles ["object-brush-palette"]
-        };
-      }
-    }
-
+    // The placement-brush grid lives in the Tiles tab (below the tile
+    // palette) — this tab is a pure list of the objects PLACED on the
+    // active scene.
     Gtk.Box empty_state {
       orientation: vertical;
       spacing: 6;

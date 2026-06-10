@@ -29,6 +29,32 @@ export interface TileDescriptor {
 }
 
 /**
+ * Build the swatch widget for one palette cell: a `Gtk.Picture` for a
+ * paintable, else a solid-colour {@link TileSwatch}. The single shared
+ * renderer for tile-like previews — {@link TilePalette} cells and the
+ * Objects tab's placement rows both go through here, so a sprite looks
+ * identical wherever it appears.
+ */
+export function createSwatchWidget(
+  desc: { color?: string; paintable?: Gdk.Paintable | null },
+  width: number,
+  height: number,
+  contentFit: 'fill' | 'contain' = 'fill',
+): Gtk.Widget {
+  let swatch: Gtk.Widget
+  if (desc.paintable) {
+    const picture = new Gtk.Picture()
+    picture.set_paintable(desc.paintable)
+    picture.set_content_fit(contentFit === 'contain' ? Gtk.ContentFit.CONTAIN : Gtk.ContentFit.FILL)
+    swatch = picture
+  } else {
+    swatch = new TileSwatch(desc.color ?? '#9aa0a6')
+  }
+  swatch.set_size_request(width, height)
+  return swatch
+}
+
+/**
  * 5-column FlowBox of tile swatches. Emits `tile-selected::<id>` when a
  * swatch is activated. Used by `tiles-tab` and the active-tile popover
  * surfaced inside `floating-top-bar`.
@@ -290,25 +316,21 @@ export class TilePalette extends Adw.Bin {
     return [Math.max(1, Math.round(this._tileSize * this._cellAspect)), this._tileSize]
   }
 
+  /** Clear the visual selection (no tile armed). */
+  clearSelection(): void {
+    this._flow.unselect_all()
+    this._selectedId = null
+  }
+
   private _buildSwatch(tile: TileDescriptor): Gtk.FlowBoxChild {
     const child = new Gtk.FlowBoxChild()
-
-    let swatch: Gtk.Widget
-    if (tile.paintable) {
-      const picture = new Gtk.Picture()
-      picture.set_paintable(tile.paintable)
-      // Picture's content-fit + the paintable's `keepAspectRatio`
-      // option pull in the same direction — both must match the
-      // aspect-mode setting. `fill` stretches the sprite to fill
-      // the square cell (tile-tab / scene-editor use case); contain
-      // preserves aspect inside cells sized by `_swatchDimensions`.
-      picture.set_content_fit(this._aspectMode === 'contain' ? Gtk.ContentFit.CONTAIN : Gtk.ContentFit.FILL)
-      swatch = picture
-    } else {
-      swatch = new TileSwatch(tile.color ?? '#9aa0a6')
-    }
+    // Picture's content-fit + the paintable's `keepAspectRatio` option
+    // pull in the same direction — both must match the aspect-mode
+    // setting. `fill` stretches the sprite to fill the square cell
+    // (tile-tab / scene-editor use case); `contain` preserves aspect
+    // inside cells sized by `_swatchDimensions`.
     const [w, h] = this._swatchDimensions()
-    swatch.set_size_request(w, h)
+    const swatch = createSwatchWidget(tile, w, h, this._aspectMode)
     if (tile.name) child.set_tooltip_text(tile.name)
     child.set_child(swatch)
     return child
