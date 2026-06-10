@@ -1553,7 +1553,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       canRedo: engine?.canRedo() ?? false,
       isPlaying: ex?.isRuntimeMode() ?? false,
       selectedPlacements: engine?.getSelectedPlacements() ?? [],
-      assistantPresent: ex?.isAssistantActive() ?? false,
+      // Window-level presence OR an engine-side active assistant — the
+      // participants bar and this status flag must tell the same story
+      // (presence can exist without a live engine, e.g. in the atlas).
+      assistantPresent: this._assistantPresent || (ex?.isAssistantActive() ?? false),
       assistantPaused: ex?.isAssistantPaused() ?? false,
       participants: this.getParticipants(),
       followedPeerId: this._followedPeerId,
@@ -1612,6 +1615,24 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._refreshCollaborators()
     }
     return applied
+  }
+
+  /**
+   * Mark the AI assistant present without moving its cursor. The Control
+   * D-Bus surface calls this on every mutating method, so ANY external
+   * driver (MCP bridge, scripts) shows up in the participants bar the
+   * moment it starts acting — visibility must not depend on the driver
+   * remembering to announce itself via `SetAssistantInfo` /
+   * `SetAssistantCursor` first.
+   */
+  ensureAssistantPresence(): void {
+    if (this._assistantPresent) return
+    this._assistantPresent = true
+    // Mirror into the engine (when one is live) so `isAssistantActive`
+    // and the participants bar agree about the assistant being around.
+    this._engineCtl.engine?.excalibur?.setAssistantInfo(this._assistantName, this._assistantColor)
+    this._announceAssistantOnce()
+    this._refreshCollaborators()
   }
 
   /** Set the AI-assistant cursor's display name + colour. */

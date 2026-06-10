@@ -157,6 +157,7 @@ export class ControlDbusService {
    */
   ActivateAction(scope: string, name: string, valueJson: string): void {
     const win = this.requireWindow()
+    this._surfaceAssistantActivity()
     win.activateAction(toScope(scope), name, valueJson ? JSON.parse(valueJson) : undefined)
   }
 
@@ -167,11 +168,13 @@ export class ControlDbusService {
    */
   ChangeActionState(scope: string, name: string, valueJson: string): void {
     const win = this.requireWindow()
+    this._surfaceAssistantActivity()
     win.changeActionState(toScope(scope), name, JSON.parse(valueJson))
   }
 
   /** `OpenProject(path)` — load a project by its game-project.json path. */
   OpenProject(path: string): void {
+    this._surfaceAssistantActivity()
     this.requireWindow().openProject(path)
   }
 
@@ -206,6 +209,7 @@ export class ControlDbusService {
 
   /** `SetZoom(zoom)` — set the camera zoom to an absolute value (1 = 100%). */
   SetZoom(zoom: number): void {
+    this._surfaceAssistantActivity()
     this.requireWindow().setZoom(zoom)
   }
 
@@ -229,6 +233,7 @@ export class ControlDbusService {
    * `>0` = paint that global tile id.
    */
   PaintTile(layerId: string, tileX: number, tileY: number, spriteId: number): boolean {
+    this._surfaceAssistantActivity({ x: tileX, y: tileY })
     return this.requireWindow().paintTile(layerId || null, tileX, tileY, spriteId < 0 ? undefined : spriteId)
   }
 
@@ -238,6 +243,7 @@ export class ControlDbusService {
    * active layer. Goes through the engine command path (undo + collab).
    */
   PlaceObject(defId: string, layerId: string, tileX: number, tileY: number): boolean {
+    this._surfaceAssistantActivity({ x: tileX, y: tileY })
     return this.requireWindow().placeObject(defId, layerId || null, tileX, tileY)
   }
 
@@ -265,6 +271,24 @@ export class ControlDbusService {
     const win = this.window
     if (!win) throw new Error('No active window')
     return win
+  }
+
+  /**
+   * Surface the external driver as the AI participant. Called by every
+   * MUTATING control method (read-onlys like `GetStatus` / `Screenshot`
+   * stay silent), so the user always sees in the participants bar that an
+   * AI/automation is acting — and can follow it — even when the driver
+   * never announces itself explicitly. Tile-targeted mutations also move
+   * the assistant cursor onto the target tile, making the activity
+   * followable on the map. `HideAssistant` remains the explicit opt-out
+   * when a driver finishes.
+   */
+  private _surfaceAssistantActivity(tile?: { x: number; y: number }): void {
+    const win = this.window
+    if (!win) return
+    // The cursor path only applies with a live engine (scene editor);
+    // fall back to bare presence everywhere else.
+    if (!(tile && win.setAssistantCursor(tile.x, tile.y))) win.ensureAssistantPresence()
   }
 }
 
