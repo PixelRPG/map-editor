@@ -129,7 +129,7 @@ export interface SessionSnapshot {
  * - `win.back-to-atlas` / `win.open-scene` (string param)
  * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
  * - `win.new-animation` (string sheet id, empty = active sheet — opens the Add-animation dialog)
- * - `win.open-character` / `win.open-sheet` / `win.open-tileset` (string id — drill into the detail sub-page)
+ * - `win.open-character` / `win.open-sheet` / `win.open-tileset` / `win.open-appearance` (string id — drill into the detail sub-page)
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -353,6 +353,22 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         void this._tilesCtl?.setProject(this._loadedProject)
         this._dataCtl?.setProject(this._loadedProject)
       }
+      // The unified Sheets (Tiles) view hosts the appearance animation
+      // editor now; the cast controller still OWNS appearance data, so it
+      // pushes the list + shared preview map here on every refresh, and
+      // the Sheets view's animation edits route back to the same
+      // controller methods (single mutation + collab-broadcast path).
+      this._castCtl.onAppearancesChanged = (sheets, spriteSetsById) => {
+        this._tiles_view.setAppearances(sheets, spriteSetsById)
+      }
+      this._tiles_view.bindAppearanceCallbacks({
+        setDuration: (sheetId, animId, ms) => this._castCtl?.setAnimationDuration(sheetId, animId, ms),
+        addAnimation: (sheetId, animation) => this._castCtl?.addAnimation(sheetId, animation),
+        editAnimation: (sheetId, originalId, animation) => this._castCtl?.editAnimation(sheetId, originalId, animation),
+        deleteAnimation: (sheetId, animId) => this._castCtl?.deleteAnimation(sheetId, animId),
+        renameSheet: (sheetId, name) => this._castCtl?.renameSpriteSet(sheetId, name),
+        deleteAppearance: (sheetId) => this._castCtl?.deleteSpriteSet(sheetId),
+      })
     }
     if (!this._tilesCtl) {
       this._tilesCtl = new TilesController(
@@ -1197,6 +1213,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (id) this._cast_view.focusSheet(id)
     })
     winActions.add_action(openSheetAction)
+
+    // Drill into an appearance (sprite-sheet) animation editor in the
+    // unified Sheets view — the new home of appearance editing. Switches
+    // to the Sheets view + focuses the appearance detail page.
+    const openAppearanceAction = Gio.SimpleAction.new('open-appearance', GLib.VariantType.new('s'))
+    openAppearanceAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (!id) return
+      this._setView('tiles')
+      this._tiles_view.focusAppearance(id)
+    })
+    winActions.add_action(openAppearanceAction)
 
     // Present the "New animation" dialog for a sprite sheet. Optional
     // string id drills into that sheet first (so tooling can open it in

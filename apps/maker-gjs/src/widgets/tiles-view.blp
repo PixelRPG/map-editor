@@ -17,14 +17,14 @@ template $TilesView : $PixelRpgResponsiveEditorView {
 
     sidebar: $PixelRpgModeRail mode_rail {
       project-name: _("New Project");
-      project-tagline: _("Tiles view");
+      project-tagline: _("Sheets view");
     };
 
     content: Adw.NavigationView nav {
       // ── Gallery (master) ──────────────────────────────────────────
       Adw.NavigationPage {
         tag: "gallery";
-        title: _("Tiles");
+        title: _("Sheets");
 
         child: Adw.OverlaySplitView gallery_split {
           sidebar-position: end;
@@ -131,9 +131,18 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   margin-end: 24;
 
                   Gtk.Label header_label {
-                    label: _("Tiles");
+                    label: _("Sheets");
                     halign: start;
                     styles ["title-1"]
+                  }
+
+                  Gtk.Label {
+                    label: _("Every sprite sheet in the project. Tilesets paint maps; appearances dress characters. Both are edited here.");
+                    halign: start;
+                    wrap: true;
+                    xalign: 0;
+                    margin-bottom: 4;
+                    styles ["dim-label"]
                   }
 
                   Gtk.Box gallery_header {
@@ -168,6 +177,45 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                     empty-title: _("No tilesets yet. Import one to start painting maps.");
                     empty-icon: "view-grid-symbolic";
                     delete-tooltip: _("Delete tileset");
+                  }
+
+                  // ── Appearances (character sprite sheets) ──────────
+                  // The other kind of sprite sheet: a character's look +
+                  // its animations. A tap drills straight into the
+                  // animation editor (`appearance-detail`).
+                  Gtk.Box appearance_header {
+                    orientation: horizontal;
+                    spacing: 8;
+                    margin-top: 8;
+
+                    Gtk.Label {
+                      label: _("Appearances");
+                      halign: start;
+                      hexpand: true;
+                      styles ["heading"]
+                    }
+
+                    Gtk.Button new_appearance_button {
+                      icon-name: "list-add-symbolic";
+                      action-name: "win.new-spriteset";
+                      tooltip-text: _("Import an appearance");
+                      valign: center;
+                      styles ["flat", "circular"]
+                    }
+                  }
+
+                  Gtk.Label {
+                    label: _("Animation sheets characters wear. Open one to edit its animations; several characters can share an appearance.");
+                    halign: start;
+                    wrap: true;
+                    xalign: 0;
+                    styles ["caption", "dim-label"]
+                  }
+
+                  $PixelRpgCardGallery appearances_gallery {
+                    empty-title: _("No appearances yet. Import one to animate your characters.");
+                    empty-icon: "image-x-generic-symbolic";
+                    delete-tooltip: _("Delete appearance");
                   }
                 };
               };
@@ -301,6 +349,80 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   }
                 };
               }
+            };
+          };
+        };
+      }
+
+      // ── Appearance detail (animation editor) ──────────────────────
+      // The appearance sheet's animation editor: preview + the Animations
+      // list + the selected-animation duration. Shared by every character
+      // wearing this appearance. Two-column on desktop (preview/duration
+      // beside the list), stacked + page-scrolled on phone. Mirrors the
+      // (now-removed) Cast Sprite-sheet detail — this is its new home.
+      Adw.NavigationPage appearance_detail_page {
+        tag: "appearance-detail";
+        title: _("Appearance");
+
+        child: Adw.ToolbarView {
+          top-bar-style: flat;
+
+          [top]
+          Adw.HeaderBar {
+            show-start-title-buttons: false;
+            show-end-title-buttons: false;
+          }
+
+          content: Adw.BreakpointBin {
+            width-request: 1;
+            height-request: 1;
+
+            Adw.Breakpoint {
+              condition ("min-width: 680sp")
+
+              setters {
+                appearance_detail_box.orientation: horizontal;
+                appearance_detail_box.spacing: 24;
+                appearance_main_col.width-request: 320;
+                appearance_main_col.valign: start;
+                anim_list.hexpand: true;
+                anim_list.valign: start;
+              }
+            }
+
+            child: Gtk.ScrolledWindow {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+
+              child: Adw.Clamp {
+                maximum-size: 900;
+                tightening-threshold: 600;
+
+                child: Gtk.Box appearance_detail_box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 24;
+                  margin-bottom: 24;
+                  margin-start: 24;
+                  margin-end: 24;
+
+                  Gtk.Box appearance_main_col {
+                    orientation: vertical;
+                    spacing: 16;
+
+                    $PixelRpgCharacterPreview appearance_preview {
+                      halign: center;
+                    }
+
+                    $PixelRpgCastInspector appearance_inspector {}
+                  }
+
+                  $PixelRpgAnimationList anim_list {
+                    hexpand: true;
+                  }
+                };
+              };
             };
           };
         };
