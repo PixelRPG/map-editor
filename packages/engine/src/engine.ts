@@ -435,6 +435,36 @@ export class Engine {
    */
   placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number): boolean {
     if (this._assistantPaused) return false
+    return this._dispatchPlaceObject(defId, layerId, tileX, tileY)
+  }
+
+  /**
+   * Place a library object at a SCREEN pixel position — the drag-to-place
+   * drop path (a brush card dragged from the Objects palette onto the
+   * canvas). Maps the canvas-pixel `(screenX, screenY)` through Excalibur's
+   * camera/zoom/pan (`screenToWorldCoordinates`) to a tile, then places it.
+   * A direct user gesture, so it is NOT gated by the assistant pause.
+   * Returns `false` if there's no active map or the placement is rejected.
+   */
+  placeObjectAtScreen(defId: string, layerId: string | null, screenX: number, screenY: number): boolean {
+    const scene = this._activeMapScene()
+    const mapData = scene?.mapResource?.mapData
+    if (!mapData) return false
+    const tileWidth = mapData.tileWidth || 16
+    const tileHeight = mapData.tileHeight || 16
+    const world = this.excalibur.screen.screenToWorldCoordinates(new Vector(screenX, screenY))
+    const tileX = Math.floor(world.x / tileWidth)
+    const tileY = Math.floor(world.y / tileHeight)
+    return this._dispatchPlaceObject(defId, layerId, tileX, tileY)
+  }
+
+  /**
+   * Shared core of {@link placeObjectAt} / {@link placeObjectAtScreen}:
+   * resolve + vet the layer, confirm the def exists, and dispatch the
+   * undoable + collab-reconstructible {@link PlaceObjectCommand}. No
+   * assistant-pause gate (the public entries decide that).
+   */
+  private _dispatchPlaceObject(defId: string, layerId: string | null, tileX: number, tileY: number): boolean {
     const scene = this._activeMapScene()
     if (!scene) return false
     const resolvedLayer = layerId ?? this.getActiveLayer()

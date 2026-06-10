@@ -1,5 +1,5 @@
 import Adw from '@girs/adw-1'
-import type Gdk from '@girs/gdk-4.0'
+import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
@@ -65,8 +65,9 @@ const FALLBACK_ICON = 'view-grid-symbolic'
  * `object-selected::<id>`. The empty state ("No objects yet") shows when
  * the scene has no placements.
  *
- * Drag-to-place is a follow-up (see TODO.md); the footer's "New object"
- * button seeds a library entry via `win.new-object`.
+ * Cards are also **drag sources** — drag one onto the map canvas to stamp
+ * it at the drop tile (the canvas is the matching DropTarget). The
+ * footer's "New object" button seeds a library entry via `win.new-object`.
  */
 export class ObjectsTab extends Adw.Bin {
   declare _list: Gtk.ListBox
@@ -174,6 +175,24 @@ export class ObjectsTab extends Adw.Bin {
         cssClasses: ['caption'],
       }),
     )
+    // Drag-to-place: every real object card is a drag source carrying its
+    // id (a string), so the user can drag it onto the canvas to stamp it
+    // at the drop tile (the canvas is the matching DropTarget). The
+    // "(None)" card (empty id) isn't draggable. Mirrors the CardGallery
+    // reorder DnD setup.
+    if (opt.id) {
+      const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.COPY })
+      dragSource.connect('prepare', () => {
+        const value = new GObject.Value()
+        value.init(GObject.TYPE_STRING)
+        value.set_string(opt.id)
+        return Gdk.ContentProvider.new_for_value(value)
+      })
+      dragSource.connect('drag-begin', () => {
+        dragSource.set_icon(Gtk.WidgetPaintable.new(box), 0, 0)
+      })
+      box.add_controller(dragSource)
+    }
     const child = new Gtk.FlowBoxChild({ child: box })
     ;(child as Gtk.FlowBoxChild & { brushId?: string }).brushId = opt.id
     return child

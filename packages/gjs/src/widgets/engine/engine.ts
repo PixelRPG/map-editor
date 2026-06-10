@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
+import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import { Canvas2DBridge } from '@gjsify/canvas2d'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
@@ -324,6 +325,26 @@ export class Engine extends Adw.Bin {
 
   private _styleManagerHandlerId = 0
 
+  /**
+   * Read the dropped payload as a string. GJS usually auto-unboxes a
+   * `GObject.TYPE_STRING` drop value to a JS string in the signal arg, but
+   * some bindings deliver a raw `GObject.Value` — handle both, returning
+   * `null` for an empty / unreadable payload.
+   */
+  private _coerceDropString(value: unknown): string | null {
+    if (typeof value === 'string') return value.length > 0 ? value : null
+    const boxed = value as { get_string?: () => string | null } | null
+    if (boxed && typeof boxed.get_string === 'function') {
+      try {
+        const str = boxed.get_string()
+        return str && str.length > 0 ? str : null
+      } catch {
+        return null
+      }
+    }
+    return null
+  }
+
   private _startWithWidget(useFallback: boolean): void {
     let child = this._canvasContainer.get_first_child()
     while (child) {
@@ -368,6 +389,19 @@ export class Engine extends Adw.Bin {
     widget.installGlobals()
     this._canvasContainer.append(widget)
     this._widget = widget
+
+    // Drag-to-place: accept an object id dragged from the Objects palette
+    // and stamp it at the drop tile. The drop (x, y) are canvas-local
+    // pixels — the bridge sizes the canvas 1:1 to its allocation (see
+    // `onResize`), so they ARE Excalibur screen coords, which
+    // `placeObjectAtScreen` maps through the camera to a tile.
+    const dropTarget = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.COPY)
+    dropTarget.connect('drop', (_t: Gtk.DropTarget, value: unknown, x: number, y: number) => {
+      const defId = this._coerceDropString(value)
+      if (!defId) return false
+      return this._excalibur?.placeObjectAtScreen(defId, null, x, y) ?? false
+    })
+    widget.add_controller(dropTarget)
 
     widget.onReady(async (canvas: HTMLCanvasElement) => {
       widget.grab_focus()
