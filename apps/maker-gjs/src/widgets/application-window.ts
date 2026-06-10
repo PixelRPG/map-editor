@@ -1217,6 +1217,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(openObjectAction)
 
+    // Flip an entity's Cast membership (promote a world object into the
+    // friendly Cast roster, or demote it back). The in-UI path is the
+    // Objects detail's "Cast member" switch; this is the driveable form.
+    const toggleObjectCastAction = Gio.SimpleAction.new('toggle-object-cast', GLib.VariantType.new('s'))
+    toggleObjectCastAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (id) this._objectsCtl?.toggleCastMember(id)
+    })
+    winActions.add_action(toggleObjectCastAction)
+
     // Drill into an appearance (sprite-sheet) animation editor in the
     // unified Sheets view — the home of appearance editing. Switches to
     // the Sheets view + focuses the appearance detail page. (Replaces the

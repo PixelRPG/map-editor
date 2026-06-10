@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
+import { type EntityDefinition, getComponentData, isCharacterEntity } from '@pixelrpg/engine'
 import { type ComponentRefOptions, EntityComponentsEditor, type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES } from '../services/entity-templates.ts'
@@ -32,9 +32,11 @@ export class ObjectsView extends ResponsiveEditorView {
   private _objects: EntityDefinition[] = []
   private _activeId: string | null = null
   private _nameRow: Adw.EntryRow
+  private _castRow: Adw.SwitchRow
   private _editor: EntityComponentsEditor
   private _refOptions: ComponentRefOptions = {}
   private _silentName = false
+  private _silentCast = false
   private signals = new SignalScope()
 
   static {
@@ -63,6 +65,8 @@ export class ObjectsView extends ResponsiveEditorView {
           'object-delete-requested': { param_types: [GObject.TYPE_STRING] },
           // Object id + the new name.
           'object-rename-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
+          // Object id + whether it should be a Cast member (character).
+          'object-cast-toggle-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_BOOLEAN] },
         },
       },
       ObjectsView,
@@ -71,10 +75,19 @@ export class ObjectsView extends ResponsiveEditorView {
 
   constructor() {
     super()
-    // Build the detail body once: a name group + the components editor.
+    // Build the detail body once: a name group (name + the "Cast member"
+    // toggle) + the components editor.
     const nameGroup = new Adw.PreferencesGroup()
     this._nameRow = new Adw.EntryRow({ title: _('Name') })
     nameGroup.add(this._nameRow)
+    // Promote/demote an actor-like entity into the friendly Cast roster.
+    // Only shown for entities with a `visual` component (a character needs
+    // an appearance); flips `editorData.template` ↔ 'character'.
+    this._castRow = new Adw.SwitchRow({
+      title: _('Cast member'),
+      subtitle: _('Show in the Cast roster — edit its appearance, speed, and player flag there.'),
+    })
+    nameGroup.add(this._castRow)
     this._editor = new EntityComponentsEditor()
     this._detail_slot.append(nameGroup)
     this._detail_slot.append(this._editor)
@@ -92,6 +105,10 @@ export class ObjectsView extends ResponsiveEditorView {
     this.signals.connect(this._nameRow, 'changed', () => {
       if (this._silentName || !this._activeId) return
       this.emit('object-rename-requested', this._activeId, this._nameRow.get_text())
+    })
+    this.signals.connect(this._castRow, 'notify::active', () => {
+      if (this._silentCast || !this._activeId) return
+      this.emit('object-cast-toggle-requested', this._activeId, this._castRow.get_active())
     })
     this.signals.connect(this._editor, 'entity-changed', (_e: EntityComponentsEditor, json: string) => {
       this.emit('object-changed', json)
@@ -161,6 +178,16 @@ export class ObjectsView extends ResponsiveEditorView {
     this._silentName = true
     this._nameRow.set_text(obj.name)
     this._silentName = false
+    // The "Cast member" toggle only makes sense for entities that can
+    // render in the Cast roster — i.e. with a `visual` that names a real
+    // appearance (a `spriteSetId`). Hide it for teleports / events and for
+    // visual-but-appearance-less entities (promoting those would flip the
+    // marker but they'd still be filtered out of Cast — confusing).
+    const visualSpriteSet = getComponentData(obj, 'visual')?.spriteSetId
+    this._castRow.set_visible(typeof visualSpriteSet === 'string' && visualSpriteSet.length > 0)
+    this._silentCast = true
+    this._castRow.set_active(isCharacterEntity(obj))
+    this._silentCast = false
     this._editor.setRefOptions(this._refOptions)
     this._editor.setEntity(obj)
   }
