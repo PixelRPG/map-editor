@@ -203,16 +203,22 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     this._trackedRows.push(row)
   }
 
-  /** Options for a select/ref field — from the descriptor or the injected refs. */
+  /**
+   * Options for a select/ref field. `*-ref` lists get a leading "(None)"
+   * sentinel (value `''`) so an unset reference shows honestly + maps back
+   * to empty — without it the ComboRow would silently display the first
+   * option for a value it doesn't contain.
+   */
   private _optionsFor(field: FieldDescriptor): ReadonlyArray<{ value: string; label: string }> {
+    const none = { value: '', label: _('(None)') }
     switch (field.input) {
       case 'facing':
         return FACING_OPTIONS
       case 'map-ref':
-        return this._refOptions.maps ?? []
+        return [none, ...(this._refOptions.maps ?? [])]
       case 'appearance-ref':
       case 'sprite-ref':
-        return this._refOptions.appearances ?? this._refOptions.spriteSets ?? []
+        return [none, ...(this._refOptions.appearances ?? this._refOptions.spriteSets ?? [])]
       default:
         return field.options ?? []
     }
