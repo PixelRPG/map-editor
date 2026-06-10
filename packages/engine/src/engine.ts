@@ -30,7 +30,7 @@ import { entityToCharacter } from './entity/convert.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
-import { applyEditorViewMode } from './services/editor-view.ts'
+import { applyEditorViewMode, areObjectsVisible } from './services/editor-view.ts'
 import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import {
@@ -803,7 +803,9 @@ export class Engine {
       // `TileTransformComponent`, so just match by layer.
       const transform = entity.get(TileTransformComponent)
       if (transform?.layerId === layerId && entity instanceof Actor) {
-        entity.graphics.visible = visible
+        // Combine with the global objects toggle (Layers tab "Objects"
+        // row) — a placement renders only when BOTH are on.
+        entity.graphics.visible = visible && areObjectsVisible(scene)
       }
     }
     return true
@@ -894,14 +896,26 @@ export class Engine {
     this._updateViewFlags({ dimInactiveLayers })
   }
 
+  /**
+   * Globally show / hide object placements — the Layers tab's
+   * "Objects" row toggle. Combined with each placement's per-layer
+   * visibility ({@link setLayerVisible}): a placement renders only when
+   * its layer is visible AND objects are globally visible. Pure view
+   * state (like {@link setShowGrid}) — never persisted to map data.
+   */
+  setObjectsVisible(objectsVisible: boolean): void {
+    this._updateViewFlags({ objectsVisible })
+  }
+
   /** Read both flags from the active scene (defaults to `{ false, false }`). */
   getEditorViewFlags(): EditorViewFlags {
     const scene = this._activeMapScene()
-    if (!scene) return { showGrid: false, dimInactiveLayers: false }
+    if (!scene) return { showGrid: false, dimInactiveLayers: false, objectsVisible: true }
     const current = SessionState.get(scene, EditorViewModeComponent)
     return {
       showGrid: current?.showGrid ?? false,
       dimInactiveLayers: current?.dimInactiveLayers ?? false,
+      objectsVisible: current?.objectsVisible ?? true,
     }
   }
 
@@ -917,9 +931,16 @@ export class Engine {
     const next: EditorViewFlags = {
       showGrid: partial.showGrid ?? current?.showGrid ?? false,
       dimInactiveLayers: partial.dimInactiveLayers ?? current?.dimInactiveLayers ?? false,
+      objectsVisible: partial.objectsVisible ?? current?.objectsVisible ?? true,
     }
-    if (current && current.showGrid === next.showGrid && current.dimInactiveLayers === next.dimInactiveLayers) return
-    SessionState.set(scene, new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers))
+    if (
+      current &&
+      current.showGrid === next.showGrid &&
+      current.dimInactiveLayers === next.dimInactiveLayers &&
+      current.objectsVisible === next.objectsVisible
+    )
+      return
+    SessionState.set(scene, new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers, next.objectsVisible))
     this._configureExcaliburDebugForShowGrid(next.showGrid)
     applyEditorViewMode(scene)
   }
@@ -985,13 +1006,14 @@ export class Engine {
       inner = null
       const scene = this._activeMapScene()
       if (!scene) {
-        cb({ showGrid: false, dimInactiveLayers: false })
+        cb({ showGrid: false, dimInactiveLayers: false, objectsVisible: true })
         return
       }
       inner = SessionState.subscribe(scene, EditorViewModeComponent, (component) => {
         cb({
           showGrid: component?.showGrid ?? false,
           dimInactiveLayers: component?.dimInactiveLayers ?? false,
+          objectsVisible: component?.objectsVisible ?? true,
         })
       })
     }

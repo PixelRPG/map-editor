@@ -1024,6 +1024,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // focus). The engine mirrors that split as `setShowGrid` +
     // `setDimInactiveLayers` against the same session-singleton
     // component, so each toggle drives just its own flag.
+    // Global objects visibility — the Layers tab's "Objects" row as a
+    // driveable stateful action (MCP bridge / shortcuts).
+    const objectsAction = Gio.SimpleAction.new_stateful('toggle-objects', null, GLib.Variant.new_boolean(true))
+    objectsAction.connect('change-state', (action, value) => {
+      action.set_state(value!)
+      const visible = value!.get_boolean()
+      this._engineCtl.engine?.setObjectsVisible(visible)
+      this._scene_editor_view.setObjectsVisible(visible)
+    })
+    winActions.add_action(objectsAction)
+
     const gridAction = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
     gridAction.connect('change-state', (action, value) => {
       action.set_state(value!)

@@ -8,6 +8,9 @@ import { Component } from 'excalibur'
  * - `dimInactiveLayers` — non-active-layer sprites + placements
  *   fade to {@link GRID_MODE_DIM_OPACITY} so the active layer's
  *   content is the dominant signal.
+ * - `objectsVisible` — global show/hide for object placements,
+ *   the Layers tab's "Objects" row toggle (combined with each
+ *   placement's per-layer visibility).
  *
  * Earlier shape (`mode: 'normal' | 'grid'`) coupled the two — the
  * user could only get the dimming alongside the grid lines, or
@@ -27,6 +30,7 @@ export class EditorViewModeComponent extends Component {
   constructor(
     public showGrid: boolean,
     public dimInactiveLayers: boolean,
+    public objectsVisible: boolean = true,
   ) {
     super()
   }
@@ -36,4 +40,5 @@ export class EditorViewModeComponent extends Component {
 export interface EditorViewFlags {
   showGrid: boolean
   dimInactiveLayers: boolean
+  objectsVisible: boolean
 }

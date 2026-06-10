@@ -22,16 +22,21 @@ export interface LayerDescriptor {
  * Inspector's "Layers" tab.
  *
  * Renders a `boxed-list` of {@link LayerRow} widgets, footer "New layer"
- * button. Emits:
+ * button, plus a pinned **Objects** row — a layer-like global toggle for
+ * object placements on the map (eye only, no lock, not selectable as
+ * the active layer). Emits:
  * - `layer-selected::<id>` when a row is activated.
  * - `layer-visibility-toggled::<id, visible>` when a row's eye toggle flips.
  * - `layer-lock-toggled::<id, locked>` for the lock toggle.
+ * - `objects-visibility-toggled::<visible>` for the Objects row's eye.
  */
 export class LayersTab extends Adw.Bin {
   declare _list: Gtk.ListBox
 
   private _layers: Map<string, { row: Gtk.ListBoxRow; widget: LayerRow }> = new Map()
   private _activeId: string | null = null
+  private _objectsRow: { row: Gtk.ListBoxRow; widget: LayerRow } | null = null
+  private _objectsVisible = true
 
   static {
     GObject.registerClass(
@@ -47,6 +52,8 @@ export class LayersTab extends Adw.Bin {
           'layer-lock-toggled': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_BOOLEAN],
           },
+          // The Objects pseudo-row's eye flipped (global placement visibility).
+          'objects-visibility-toggled': { param_types: [GObject.TYPE_BOOLEAN] },
         },
       },
       LayersTab,
@@ -101,6 +108,44 @@ export class LayersTab extends Adw.Bin {
       this._list.append(boxRow)
       this._layers.set(layer.id, { row: boxRow, widget: row })
     }
+    this._appendObjectsRow()
+  }
+
+  /**
+   * Update the Objects pseudo-row's placement count + eye state without
+   * re-emitting `objects-visibility-toggled`.
+   */
+  setObjectsState(count: number, visible: boolean): void {
+    this._objectsVisible = visible
+    if (!this._objectsRow) return
+    this._objectsRow.widget.tileCount = count
+    if (this._objectsRow.widget.visible !== visible) this._objectsRow.widget.visible = visible
+  }
+
+  /**
+   * Pinned "Objects" row at the end of the layer list: a layer-LIKE
+   * global toggle for object placements. Eye only (placements lock via
+   * their layer), and not selectable as the active layer. Rebuilt by
+   * every `setLayers` so it always sits below the real layers.
+   */
+  private _appendObjectsRow(): void {
+    const widget = new LayerRow({
+      layerName: 'Objects',
+      tileCount: 0,
+      visible: this._objectsVisible,
+      locked: false,
+      active: false,
+    })
+    widget._lock_button.set_visible(false)
+    widget.connect('notify::visible', () => {
+      if (this._objectsVisible === widget.visible) return
+      this._objectsVisible = widget.visible
+      this.emit('objects-visibility-toggled', widget.visible)
+    })
+    const boxRow = new Gtk.ListBoxRow({ selectable: false })
+    boxRow.set_child(widget)
+    this._list.append(boxRow)
+    this._objectsRow = { row: boxRow, widget }
   }
 
   selectLayer(id: string): void {

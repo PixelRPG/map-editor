@@ -1,6 +1,7 @@
-import { type EventEmitter, Logger, Scene } from 'excalibur'
+import { Actor, type EventEmitter, Logger, Scene } from 'excalibur'
 import { EditorModeComponent, PlacementIdComponent } from '../components/index.ts'
 import { buildPlacementEntity, resolvePlacementDefinition } from '../entity/spawn-placement.ts'
+import { areObjectsVisible } from '../services/editor-view.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import {
@@ -92,7 +93,10 @@ export class MapScene extends Scene {
     const def = resolvePlacementDefinition(placement, this.entityLibrary)
     if (!def) return
     const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
-    this.add(buildPlacementEntity(placement, def, this.mapResource, layersById))
+    const entity = buildPlacementEntity(placement, def, this.mapResource, layersById)
+    // Respect the global objects toggle for live spawns (place / undo).
+    if (entity instanceof Actor && !areObjectsVisible(this)) entity.graphics.visible = false
+    this.add(entity)
   }
 
   /** Despawn the live entity for a placement id (used by `RemoveObjectCommand`). */

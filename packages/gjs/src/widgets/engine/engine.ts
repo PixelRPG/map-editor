@@ -198,6 +198,11 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.setLayerVisible(layerId, visible) ?? false
   }
 
+  /** Forward to `Engine.setObjectsVisible` — global show/hide for object placements. */
+  public setObjectsVisible(visible: boolean): void {
+    this._excalibur?.setObjectsVisible(visible)
+  }
+
   /** Forward to `Engine.setShowGrid` — toggles Excalibur's debug grid lines. */
   public setShowGrid(showGrid: boolean): void {
     this._excalibur?.setShowGrid(showGrid)
@@ -210,7 +215,7 @@ export class Engine extends Adw.Bin {
 
   /** Forward to `Engine.getEditorViewFlags`. */
   public getEditorViewFlags(): EditorViewFlags {
-    return this._excalibur?.getEditorViewFlags() ?? { showGrid: false, dimInactiveLayers: false }
+    return this._excalibur?.getEditorViewFlags() ?? { showGrid: false, dimInactiveLayers: false, objectsVisible: true }
   }
 
   /** Forward to `Engine.setRuntimeMode` — toggles editor ↔ playtest. */
