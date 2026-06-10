@@ -230,6 +230,16 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._inspector.objectsTab.selectObject(placementId)
   }
 
+  /**
+   * Switch the right inspector to a tab by name (`tiles` / `layers` /
+   * `objects` / `props`). Drives the `win.set-inspector-tab` action so
+   * tooling (the MCP bridge) can reach the Objects brush palette, the
+   * Layers list, etc. — the tab bar is otherwise click-only.
+   */
+  setInspectorTab(name: string): void {
+    this._inspector.visiblePage = name
+  }
+
   /** Header title + the floating chips. */
   setScene(scene: SampleScene): void {
     this.sceneName = scene.name
@@ -309,8 +319,18 @@ export class SceneEditorView extends ResponsiveEditorView {
       placement: p,
       def: p.inline ?? library.find((d) => d.id === p.defId) ?? null,
     }))
+    // The placement-brush palette lists every library entity except the
+    // player actor (it spawns at the player spawn-point, not via the brush).
+    const playerId = project.resource.data?.playerActorId
+    const brushDefs = library.filter((e) => e.id !== playerId)
+    // Collect the sprite-sets used by BOTH placed objects and brush
+    // candidates so each gets a real sprite thumbnail (deduped load).
     const objectSpriteSetIds = new Set<string>()
     for (const { def } of resolvedDefs) {
+      const vis = visualOf(def)
+      if (vis) objectSpriteSetIds.add(vis.spriteSetId)
+    }
+    for (const def of brushDefs) {
       const vis = visualOf(def)
       if (vis) objectSpriteSetIds.add(vis.spriteSetId)
     }
@@ -350,13 +370,16 @@ export class SceneEditorView extends ResponsiveEditorView {
       }
     })
     this._inspector.objectsTab.setObjects(placements)
-    // Feed the object-tool brush picker every library entity EXCEPT the
-    // player actor — characters (Cast NPCs) are placeable now too, but the
-    // player spawns at the map's player spawn-point, not via the brush.
-    const playerId = project.resource.data?.playerActorId
-    const brushOptions = (project.resource.data?.entityLibrary ?? [])
-      .filter((e) => e.id !== playerId)
-      .map((e) => ({ id: e.id, name: e.name }))
+    // Feed the placement-brush palette every brush candidate WITH a sprite
+    // thumbnail (its `visual` component resolved against the loaded sheets),
+    // so the user sees what they're about to stamp. Characters (Cast NPCs)
+    // are placeable now too; the player is excluded above.
+    const brushOptions = brushDefs.map((def) => {
+      let paintable = null
+      const vis = visualOf(def)
+      if (vis) paintable = gdkSheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable() ?? null
+      return { id: def.id, name: def.name, paintable, icon: iconOf(def) }
+    })
     this._inspector.objectsTab.setBrushOptions(brushOptions)
 
     // Pick the first sprite set referenced by *this map* — that's the

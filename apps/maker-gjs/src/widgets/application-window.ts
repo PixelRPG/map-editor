@@ -122,6 +122,7 @@ export interface SessionSnapshot {
  * window-level actions used by the floating chrome and headers:
  * - `win.mode` (string state) — picks the active mode in the rail
  * - `win.set-tool` (string state) — picks the active tool in the editor
+ * - `win.set-inspector-tab` (string) — switches the scene inspector tab (tiles/layers/objects/props)
  * - `win.zoom-in / zoom-out / zoom-reset`
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
@@ -897,6 +898,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (defId) this._toolAction?.change_state(GLib.Variant.new_string('object'))
     })
     winActions.add_action(setObjectBrushAction)
+
+    // Switch the scene-editor inspector to a tab by name (tiles / layers /
+    // objects / props). The tab bar is otherwise click-only — this lets
+    // tooling (the MCP bridge) reach the Objects brush palette etc.
+    const setInspectorTabAction = Gio.SimpleAction.new('set-inspector-tab', GLib.VariantType.new('s'))
+    setInspectorTabAction.connect('activate', (_a, parameter) => {
+      const name = parameter?.get_string()[0]
+      if (name) this._scene_editor_view.setInspectorTab(name)
+    })
+    winActions.add_action(setInspectorTabAction)
 
     // Undo / redo route through the engine's command stack
     // (\`docs/concepts/editor-architecture.md\` § Phase 5). The engine
