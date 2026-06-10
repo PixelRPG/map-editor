@@ -25,8 +25,11 @@ export default async () => {
     await it('accepts valid data', async () => {
       expect(validateComponentData(speedSpec, { type: 'movement', tilesPerSec: 4 })).toStrictEqual([])
     })
-    await it('flags a missing required field', async () => {
-      expect(validateComponentData(speedSpec, { type: 'movement' }).length).toBe(1)
+    await it('only flags a missing required field when requireComplete', async () => {
+      // Lenient (save / draft) — an empty required field is allowed.
+      expect(validateComponentData(speedSpec, { type: 'movement' })).toStrictEqual([])
+      // Strict (spawn / publish) — required is enforced.
+      expect(validateComponentData(speedSpec, { type: 'movement' }, true).length).toBe(1)
     })
     await it('enforces numeric range', async () => {
       expect(validateComponentData(speedSpec, { type: 'movement', tilesPerSec: 99 }).length).toBe(1)
@@ -51,9 +54,18 @@ export default async () => {
       const errors = validateEntityDefinition(def, registry)
       expect(errors.some((e) => e.includes('unregistered component type "teleport"'))).toBe(true)
     })
-    await it('validates component data through the registry', async () => {
-      const def: EntityDefinition = { id: 'x', name: 'X', components: [{ type: 'movement' }] }
-      expect(validateEntityDefinition(def, registry).length).toBe(1)
+    await it('flags wrong field types always, but required only when requireComplete', async () => {
+      // Wrong TYPE is always rejected (even on the lenient save path).
+      const wrongType: EntityDefinition = {
+        id: 'x',
+        name: 'X',
+        components: [{ type: 'movement', tilesPerSec: 'fast' }],
+      }
+      expect(validateEntityDefinition(wrongType, registry).length).toBe(1)
+      // Empty required field: a draft saves clean, the strict gate flags it.
+      const draft: EntityDefinition = { id: 'x', name: 'X', components: [{ type: 'movement' }] }
+      expect(validateEntityDefinition(draft, registry)).toStrictEqual([])
+      expect(validateEntityDefinition(draft, registry, true).length).toBe(1)
     })
     await it('validates state-overlay components too', async () => {
       const def: EntityDefinition = {

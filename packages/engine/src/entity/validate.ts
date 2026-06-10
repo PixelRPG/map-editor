@@ -4,10 +4,17 @@ import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
 
 const FACINGS = new Set(['up', 'down', 'left', 'right'])
 
-/** Validate one field's value against its descriptor. Returns an error string or null. */
-function validateField(field: FieldDescriptor, value: unknown): string | null {
+/**
+ * Validate one field's value against its descriptor. Returns an error
+ * string or null. `requireComplete` gates the `required` check: a save /
+ * draft passes `false` (an in-progress definition may leave required
+ * fields empty — e.g. a freshly-templated NPC with no appearance chosen
+ * yet), while a spawn / publish check passes `true`. Type errors on
+ * *present* values are reported regardless.
+ */
+function validateField(field: FieldDescriptor, value: unknown, requireComplete: boolean): string | null {
   const present = value !== undefined && value !== null && !(typeof value === 'string' && value.length === 0)
-  if (!present) return field.required ? `"${field.key}" is required` : null
+  if (!present) return field.required && requireComplete ? `"${field.key}" is required` : null
 
   switch (field.input) {
     case 'text':
@@ -43,26 +50,30 @@ function validateField(field: FieldDescriptor, value: unknown): string | null {
 
 /**
  * Validate one component's data against its spec's field descriptors.
- * Returns a list of human-readable errors (empty = valid).
+ * Returns a list of human-readable errors (empty = valid). `requireComplete`
+ * (default false) gates the per-field `required` check — see {@link validateField}.
  */
-export function validateComponentData(spec: ComponentSpec, data: ComponentData): string[] {
+export function validateComponentData(spec: ComponentSpec, data: ComponentData, requireComplete = false): string[] {
   const errors: string[] = []
   for (const field of spec.fields) {
-    const err = validateField(field, data[field.key])
+    const err = validateField(field, data[field.key], requireComplete)
     if (err) errors.push(`${spec.type}: ${err}`)
   }
   return errors
 }
 
 /**
- * Registry-aware validation of an entity definition. **Fails loudly on
- * an unregistered component `type`** (the concept's no-silent-skip rule)
- * and validates every component's data against its spec. Returns a list
- * of errors (empty = valid). Used by the format validators + the editor.
+ * Registry-aware validation of an entity definition. **Always fails loudly
+ * on an unregistered component `type`** (the concept's no-silent-skip rule)
+ * and on wrong field *types*. The `requireComplete` flag (default false)
+ * additionally enforces per-field `required`: the save path leaves it
+ * false (a draft may have empty required fields), a spawn / publish gate
+ * passes true. Returns a list of errors (empty = valid).
  */
 export function validateEntityDefinition(
   def: EntityDefinition,
   registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
+  requireComplete = false,
 ): string[] {
   const errors: string[] = []
   if (typeof def.id !== 'string' || def.id.length === 0) errors.push('Entity definition is missing an id')
@@ -78,7 +89,7 @@ export function validateEntityDefinition(
         errors.push(`Entity "${def.id}" ${where} references unregistered component type "${comp.type}"`)
         continue
       }
-      errors.push(...validateComponentData(spec, comp))
+      errors.push(...validateComponentData(spec, comp, requireComplete))
     }
   }
   validateList(def.components, 'components')
