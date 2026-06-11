@@ -14,6 +14,8 @@ import { run } from '@gjsify/unit'
 // stays green while testing nothing). When you add a `*.spec.ts`, add
 // its import + `run()` entry here. (Tracked in TODO.md as a guard
 // follow-up — a test that asserts every spec file is registered.)
+import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
+import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import registrySuite from './commands/registry.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
 import entityPlacementGraphicSuite from './entity/placement-graphic.spec.js'
@@ -22,8 +24,8 @@ import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
-import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
+import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import awarenessSuite from './sync/awareness.spec.js'
 import collabIntegrationSuite from './sync/collab-integration.spec.js'
 import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
@@ -40,6 +42,8 @@ import subscriptionRegistrySuite from './utils/subscription-registry.spec.js'
 
 run({
   registrySuite,
+  paintTileCommandSuite,
+  objectPlacementCommandSuite,
   entityRegistrySuite,
   entityValidateSuite,
   entityConvertSuite,
