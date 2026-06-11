@@ -49,11 +49,25 @@ jobs:
       - name: Install blueprint-compiler from source
         # Ubuntu 24.04 ships blueprint-compiler 0.10, which predates the
         # `css-classes: [...]` array literal syntax used in our templates.
-        # Pin the latest upstream tag (v0.20.4) from GNOME GitLab. Bump
-        # this whenever we adopt newer blueprint syntax.
+        # Pin the latest upstream tag (v0.20.4). Bump this whenever we
+        # adopt newer blueprint syntax. GNOME GitLab has repeated 5xx
+        # outages, so try the official GitHub mirror first and fall back
+        # to gitlab.gnome.org, with retries on both.
         run: |
-          git clone --depth 1 --branch v0.20.4 \
-            https://gitlab.gnome.org/jwestman/blueprint-compiler.git /tmp/bpc
+          clone_bpc() {
+            for url in \
+              https://github.com/GNOME/blueprint-compiler.git \
+              https://gitlab.gnome.org/jwestman/blueprint-compiler.git; do
+              for attempt in 1 2 3; do
+                git clone --depth 1 --branch v0.20.4 "$url" /tmp/bpc && return 0
+                echo "clone failed ($url, attempt $attempt), retrying…"
+                rm -rf /tmp/bpc
+                sleep $((attempt * 10))
+              done
+            done
+            return 1
+          }
+          clone_bpc
           meson setup --prefix=/usr/local /tmp/bpc /tmp/bpc/_build
           sudo meson install -C /tmp/bpc/_build
           blueprint-compiler --version
