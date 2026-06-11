@@ -15,7 +15,7 @@
  *     at all. So the command/op-log path isn't even attached.
  * These ops therefore ride the always-present `PeerSession` op channel
  * and are applied directly to each peer's `GameProjectData` by the
- * maker's CollabSession ↔ CastController wiring — see
+ * maker's CollabSession ↔ ProjectStore wiring — see
  * `docs/concepts/collaboration-and-multiplayer.md`.
  *
  * Coarse-grained UPSERT semantics (rather than one op per editable

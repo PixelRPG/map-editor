@@ -1,69 +1,83 @@
-import {
-  createProjectMetaUpdateOp,
-  GameProjectFormat,
-  type SpriteSetData,
-  type SpriteSetKind,
-  type SpriteSetResource,
-} from '@pixelrpg/engine'
+import type { SpriteSetData, SpriteSetKind, SpriteSetResource } from '@pixelrpg/engine'
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { DataAssetRow, DataView, DataViewModel } from '../widgets/data-view.ts'
-import type { CollabSession } from './collab-session.ts'
-import { writeTextFile } from './file-io.ts'
-import type { LoadedProject } from './project-loader.ts'
+import type { ProjectStore } from './project-store.ts'
 import { isCharacterSpriteSet } from './sprite-set-classification.ts'
 import { countCharacterUsers, countMapUsers } from './sprite-set-usage.ts'
+import { TypedEmitter } from './typed-emitter.ts'
 
 /** Thumbnail edge passed to the sheet downscaler (≥ the row size, for sharpness). */
 const THUMB_PX = 96
 
 /**
+ * Typed event map for {@link DataController.on} — asset actions the
+ * host window resolves (dialogs + cross-view navigation; this
+ * controller stays dialog-free).
+ */
+export interface DataControllerEvents {
+  /** The user asked to import an asset of `kind` (file-picker dialog). */
+  'import-requested': { kind: SpriteSetKind }
+  /** The user asked to open an asset in its editor (the Sheets view). */
+  'open-requested': { id: string; kind: SpriteSetKind }
+  /** The user asked to rename an asset (rename dialog). */
+  'rename-requested': { id: string; currentName: string }
+  /** The user asked to delete an asset (usage-aware confirm dialog). */
+  'delete-requested': { id: string; name: string; usedBy: number }
+}
+
+/**
  * Owns the Data view's "Assets and project" model: builds the asset
  * list (sprite sheets + tilesets, each with a thumbnail, metadata and a
- * "used by" count from the reference graph), persists project-metadata
- * edits, and renames an asset's display name. Asset import/delete +
- * "open" are routed by the host (application-window) to the shared
- * `CastController` / actions so there's one owner of the files.
+ * "used by" count from the reference graph) and routes project-metadata
+ * edits into the {@link ProjectStore} — the single owner of project
+ * persistence + the `__project/meta.update` collab broadcast. Asset
+ * import / delete / rename / "open" need host dialogs, so they surface
+ * as typed events the window subscribes to; the resulting mutations
+ * land on the store, whose `sprite-sets-changed` /
+ * `project-meta-changed` events re-hydrate this view.
  */
 export class DataController {
-  private _project: LoadedProject | null = null
-  /**
-   * Active collab session, when one is live. Set by the host window on
-   * session start/stop. While set, every metadata edit also broadcasts
-   * a `__project/meta.update` so peers stay in sync; inbound ops land
-   * via the single applier (`CastController.applyRemoteProjectOp`),
-   * which asks the host to re-hydrate this controller. Null in solo
-   * editing — then edits only persist locally.
-   */
-  private _session: CollabSession | null = null
+  private readonly _events = new TypedEmitter<DataControllerEvents>()
 
   constructor(
     private readonly view: DataView,
-    private readonly onToast: (message: string) => void,
-  ) {}
-
-  /**
-   * Attach/detach the live collab session. While attached, metadata
-   * edits broadcast to peers; detaching (null) returns to local-only
-   * editing.
-   */
-  setCollabSession(session: CollabSession | null): void {
-    this._session = session
+    private readonly store: ProjectStore,
+  ) {
+    view.bindCallbacks({
+      importAsset: (kind) => this._events.emit('import-requested', { kind }),
+      openAsset: (id, kind) => this._events.emit('open-requested', { id, kind }),
+      renameAsset: (id, currentName) => this._events.emit('rename-requested', { id, currentName }),
+      deleteAsset: (id, name, usedBy) => this._events.emit('delete-requested', { id, name, usedBy }),
+      setProjectField: (field, value) => this.setProjectField(field, value),
+    })
+    store.on('project-changed', (project) => {
+      if (!project) {
+        this.view.setData(null)
+        return
+      }
+      void this._rebuild()
+    })
+    // The asset list mirrors the sprite-set library — re-hydrate on any
+    // set change; an inbound peer meta update re-renders the metadata
+    // rows (local edits don't, by design — no row re-render mid-typing).
+    store.on('sprite-sets-changed', () => {
+      if (this.store.project) void this._rebuild()
+    })
+    store.on('project-meta-changed', () => {
+      if (this.store.project) void this._rebuild()
+    })
   }
 
-  setProject(project: LoadedProject | null): void {
-    this._project = project
-    if (!project) {
-      this.view.setData(null)
-      return
-    }
-    void this._rebuild()
+  /** Subscribe to a controller event. Returns an unsubscribe closure. */
+  on<K extends keyof DataControllerEvents>(event: K, listener: (payload: DataControllerEvents[K]) => void): () => void {
+    return this._events.on(event, listener)
   }
 
   /** Persist a single project-metadata field edit (no row re-render). */
   setProjectField(field: 'name' | 'author' | 'version' | 'description' | 'tileSize', value: string): void {
-    const data = this._project?.resource?.data
+    const data = this.store.data
     if (!data) return
     const props = (data.properties ??= {})
     switch (field) {
@@ -86,30 +100,14 @@ export class DataController {
         break
       }
     }
-    this._persistProject()
-    // Coarse broadcast: the whole name + properties bag, so the
-    // receiver replaces wholesale (idempotent, mirrors entity.upsert).
-    this._session?.sendProjectOp(({ peerId, seq }) =>
-      createProjectMetaUpdateOp({ peerId, seq, name: data.name, properties: props }),
-    )
-  }
-
-  private _persistProject(): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    try {
-      if (!writeTextFile(resource.path, GameProjectFormat.serialize(resource.data))) {
-        this.onToast(_('Could not save project'))
-      }
-    } catch (err) {
-      console.warn('[DataController] Failed to persist project:', err)
-      this.onToast(_('Could not save project'))
-    }
+    // Persist + coarse broadcast (the whole name + properties bag, so
+    // the receiver replaces wholesale — idempotent, mirrors entity.upsert).
+    this.store.commitProjectMeta()
   }
 
   /** Rebuild the whole view model: project metadata + asset rows + usage. */
   private async _rebuild(): Promise<void> {
-    const resource = this._project?.resource
+    const resource = this.store.resource
     if (!resource?.data) {
       this.view.setData(null)
       return

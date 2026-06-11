@@ -1,44 +1,25 @@
-import {
-  applyEntityRemove,
-  applyEntityUpsert,
-  createEntityRemoveOp,
-  createEntityUpsertOp,
-  type EntityDefinition,
-  GameProjectFormat,
-  isCharacterEntity,
-} from '@pixelrpg/engine'
-import { gettext as _ } from 'gettext'
+import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
 import type { ObjectsView } from '../widgets/objects-view.ts'
-import type { CollabSession } from './collab-session.ts'
 import { type EntityTemplate, findEntityTemplate } from './entity-templates.ts'
-import { writeTextFile } from './file-io.ts'
-import type { LoadedProject } from './project-loader.ts'
+import { type ProjectStore, uniqueIdFrom } from './project-store.ts'
 
 /**
- * Controller for the **Objects library** view — the GENERAL lens over the
- * project's `GameProjectData.entityLibrary`: it lists EVERY entity
- * definition (world objects AND `character`-template cast members), edited
- * raw through the generated component inspector. The Cast view is a
- * specialised friendly lens over the character subset of the same library.
- * Mirrors the Cast controller: every mutation writes the in-memory data,
- * persists the project JSON, and broadcasts a `__project/entity.*` op so
- * peers stay in sync. Remote ops are applied centrally by the Cast
- * controller (single applier); this view just re-`refresh`es when notified.
+ * The **Objects lens** — the GENERAL view over the {@link ProjectStore}'s
+ * `entityLibrary`: it lists EVERY entity definition (world objects AND
+ * `character`-template cast members), edited raw through the generated
+ * component inspector. The Cast view is a specialised friendly lens over
+ * the character subset of the same library.
+ *
+ * Every mutation routes through the store — the single persist +
+ * collab-broadcast pipeline; this controller holds no project/session
+ * reference of its own. Store changes (the Cast lens's edits, inbound
+ * peer ops) flow back via the typed `entity-library-changed` event, so
+ * this view re-hydrates automatically.
  */
 export class ObjectsController {
-  private _project: LoadedProject | null = null
-  private _session: CollabSession | null = null
-  /**
-   * Invoked after a local entity upsert / delete so the host can refresh
-   * the OTHER lens (the Cast view) — the two views now overlap on the
-   * shared `entityLibrary`, so an edit in one must reflect in the other.
-   * Null until the host wires it.
-   */
-  onEntityLibraryChanged: (() => void) | null = null
-
   constructor(
     public readonly view: ObjectsView,
-    private readonly onToast: (message: string) => void,
+    private readonly store: ProjectStore,
   ) {
     view.connect('object-changed', (_v: ObjectsView, json: string) => this._onObjectChanged(json))
     view.connect('object-create-requested', (_v: ObjectsView, templateId: string) =>
@@ -49,38 +30,27 @@ export class ObjectsController {
     view.connect('object-cast-toggle-requested', (_v: ObjectsView, id: string, isCast: boolean) =>
       this._setCastMember(id, isCast),
     )
-  }
-
-  setProject(project: LoadedProject | null): void {
-    this._project = project
-    void this.refresh()
-  }
-
-  setCollabSession(session: CollabSession | null): void {
-    this._session = session
+    store.on('project-changed', () => this.refresh())
+    // The other lens (Cast) or a peer edited the shared entityLibrary —
+    // re-hydrate. Our own edits skip this (the mutation paths below
+    // refresh inline exactly where the old behaviour did).
+    store.on('entity-library-changed', ({ source }) => {
+      if (source !== 'objects') this.refresh()
+    })
   }
 
   /** Every entity definition in the project library (the general lens). */
   private _objects(): EntityDefinition[] {
-    return this._project?.resource?.data?.entityLibrary ?? []
+    return this.store.entities()
   }
 
   /** Push the current object list + project-scoped ref options into the view. */
   refresh(): void {
-    const data = this._project?.resource?.data
-    if (!data) {
+    if (!this.store.data) {
       this.view.setObjects([])
       return
     }
-    this.view.setRefOptions({
-      maps: (data.maps ?? []).map((m) => ({ value: m.id, label: m.name ?? m.id })),
-      appearances: this._project?.resource?.spriteSets
-        ? [...this._project.resource.spriteSets.entries()].map(([id, set]) => ({
-            value: id,
-            label: set.data?.name ?? id,
-          }))
-        : [],
-    })
+    this.view.setRefOptions(this.store.refOptions())
     this.view.setObjects(this._objects())
   }
 
@@ -92,19 +62,19 @@ export class ObjectsController {
     } catch {
       return
     }
-    this._upsert(entity)
+    this.store.upsertEntity(entity, 'objects')
   }
 
   /** Create a new object from a template id, focus it. Public (driven by
    * the view's "New object" dialog AND the `win.new-object` action). */
   createFromTemplate(templateId: string): void {
-    const data = this._project?.resource?.data
+    const data = this.store.data
     if (!data) return
     const template = findEntityTemplate(templateId)
     if (!template) return
-    const id = this._uniqueId(template.label, new Set((data.entityLibrary ?? []).map((e) => e.id)))
+    const id = uniqueIdFrom(template.label, new Set((data.entityLibrary ?? []).map((e) => e.id)), 'object')
     const entity = this._seedEntity(id, template)
-    this._upsert(entity)
+    this.store.upsertEntity(entity, 'objects')
     this.refresh()
     this.view.focusObject(id)
   }
@@ -122,17 +92,9 @@ export class ObjectsController {
   private _renameObject(id: string, name: string): void {
     const existing = this._objects().find((e) => e.id === id)
     if (!existing) return
-    this._upsert({ ...existing, name })
+    this.store.upsertEntity({ ...existing, name }, 'objects')
   }
 
-  /**
-   * Promote / demote an entity into the friendly Cast roster by flipping
-   * its `editorData.template` ↔ `'character'`. Promoting a world object
-   * (e.g. an NPC made here) makes it show in the Cast view's character
-   * inspector; demoting returns it to a plain library object. Components
-   * are untouched — only the editor classification changes. The
-   * `onEntityLibraryChanged` hook (in `_upsert`) refreshes the Cast view.
-   */
   /**
    * Flip an entity's Cast membership (public — driven by the
    * `win.toggle-object-cast` action / MCP; the in-view path is the
@@ -144,6 +106,14 @@ export class ObjectsController {
     this._setCastMember(id, !isCharacterEntity(existing))
   }
 
+  /**
+   * Promote / demote an entity into the friendly Cast roster by flipping
+   * its `editorData.template` ↔ `'character'`. Promoting a world object
+   * (e.g. an NPC made here) makes it show in the Cast view's character
+   * inspector; demoting returns it to a plain library object. Components
+   * are untouched — only the editor classification changes. The store's
+   * `entity-library-changed` event refreshes the Cast view.
+   */
   private _setCastMember(id: string, isCast: boolean): void {
     const existing = this._objects().find((e) => e.id === id)
     if (!existing) return
@@ -156,54 +126,12 @@ export class ObjectsController {
     } else {
       editorData.template = 'object'
     }
-    this._upsert({ ...existing, editorData })
+    this.store.upsertEntity({ ...existing, editorData }, 'objects')
     this.refresh()
   }
 
   private _deleteObject(id: string): void {
-    const data = this._project?.resource?.data
-    if (!data?.entityLibrary?.some((e) => e.id === id)) return
-    applyEntityRemove(data, id)
-    this._persist()
-    this._session?.sendProjectOp(({ peerId, seq }) => createEntityRemoveOp({ peerId, seq, entityId: id }))
+    if (!this.store.removeEntity(id, 'objects')) return
     this.refresh()
-    this.onEntityLibraryChanged?.()
-  }
-
-  /** Single write path: persist + broadcast the entity as an `entityLibrary` entry. */
-  private _upsert(entity: EntityDefinition): void {
-    const data = this._project?.resource?.data
-    if (!data) return
-    applyEntityUpsert(data, entity)
-    this._persist()
-    this._session?.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
-    this.onEntityLibraryChanged?.()
-  }
-
-  private _persist(): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    try {
-      if (!writeTextFile(resource.path, GameProjectFormat.serialize(resource.data))) {
-        this.onToast(_('Could not save project'))
-      }
-    } catch (err) {
-      console.warn('[ObjectsController] Failed to persist project:', err)
-      this.onToast(_('Could not save project'))
-    }
-  }
-
-  /** Lowest unused id derived from `name` (`npc`, `npc-2`, …). */
-  private _uniqueId(name: string, taken: Set<string>): string {
-    const base =
-      name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'object'
-    let id = base
-    let n = 2
-    while (taken.has(id)) id = `${base}-${n++}`
-    return id
   }
 }

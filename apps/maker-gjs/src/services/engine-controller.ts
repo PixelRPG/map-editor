@@ -1,5 +1,6 @@
 import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
 import { Engine } from '@pixelrpg/gjs'
+import { TypedEmitter } from './typed-emitter.ts'
 
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
@@ -13,6 +14,52 @@ type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
  */
 export type EngineSlot = (engine: Engine | null) => void
 
+/** Typed event map for {@link EngineController.on}. */
+export interface EngineControllerEvents {
+  /**
+   * Camera zoom changed (scroll-wheel, Ctrl+= etc.). Filtered through a
+   * 0.01-zoom dead-band so tiny floating-point drift doesn't spam the
+   * OSD label.
+   */
+  'zoom-changed': number
+  /**
+   * The active scene's undo-stack mutated (paint / erase / undo /
+   * redo). Fired once with the current snapshot when an engine + map
+   * load, then on every stack change — and with `{ false, false }` on
+   * {@link EngineController.dispose} so `win.undo` / `win.redo` grey
+   * out without an engine.
+   */
+  'undo-changed': { canUndo: boolean; canRedo: boolean }
+  /**
+   * The engine's `TILE_PICKED` event (eyedropper click). The host
+   * routes the picked tile through its tile-palette state (palette
+   * highlight + context chip + engine `ActiveTileComponent` stay in
+   * sync) and flips the tool back to `pencil` for a Tiled-style
+   * "pick then immediately paint" workflow.
+   */
+  'tile-picked': TilePickedPayload
+  /**
+   * The engine's `PLACEMENT_SELECTED` event (`'select'`-tool click).
+   * The host mirrors the pick into the right-inspector's objects-tab
+   * row highlight; the engine-side selection state is already mutated
+   * inside the system, so the canvas ring updates without the host.
+   */
+  'placement-selected': PlacementSelectedPayload
+  /**
+   * The engine's `LAYER_FLAG_CHANGED` event — fired on every
+   * application path of the layer-flag commands (local toggle,
+   * undo/redo, AND inbound peer ops, which don't emit
+   * `COMMAND_EXECUTED`) so the Layers tab follows changes the
+   * inspector didn't originate, just like the canvas does.
+   */
+  'layer-flag-changed': LayerFlagChangedPayload
+  /**
+   * Fired once per pointer tile-transition over the active map — drives
+   * the floating-zoom OSD's coord readout (the `12, 7` label).
+   */
+  'pointer-tile-changed': { sceneId: string; tileX: number; tileY: number }
+}
+
 /**
  * Encapsulates the engine widget's lifecycle for the maker:
  *
@@ -21,8 +68,9 @@ export type EngineSlot = (engine: Engine | null) => void
  *   state.
  * - Caches the currently-loaded project / map so subsequent
  *   `ensureForMap` calls skip re-loading the same data.
- * - Wires the zoom-from-engine hook exactly once per engine instance
- *   and dispatches changes to a single subscriber.
+ * - Wires the engine hooks exactly once per engine instance and
+ *   re-emits them as typed controller events (see
+ *   {@link EngineControllerEvents}) — subscribe via {@link on}.
  * - Disposes cleanly when the host navigates away from the scene
  *   editor (`vfunc_unmap` on the gjs `Engine` widget nulls out the
  *   underlying Excalibur instance, so caching the wrapper across view
@@ -38,17 +86,12 @@ export class EngineController {
   private _mapId: string | null = null
   private _zoomHookAttached = false
   private _lastReportedZoom = 1
-  private _zoomListener: ((zoom: number) => void) | null = null
   private _undoHookAttached = false
-  private _undoListener: ((state: { canUndo: boolean; canRedo: boolean }) => void) | null = null
   private _tilePickedHookAttached = false
-  private _tilePickedListener: ((payload: TilePickedPayload) => void) | null = null
   private _placementSelectedHookAttached = false
-  private _placementSelectedListener: ((payload: PlacementSelectedPayload) => void) | null = null
   private _layerFlagHookAttached = false
-  private _layerFlagListener: ((payload: LayerFlagChangedPayload) => void) | null = null
   private _pointerTileHookAttached = false
-  private _pointerTileListener: ((payload: { sceneId: string; tileX: number; tileY: number }) => void) | null = null
+  private readonly _events = new TypedEmitter<EngineControllerEvents>()
 
   constructor(private readonly slot: EngineSlot) {}
 
@@ -57,90 +100,12 @@ export class EngineController {
     return this._engine
   }
 
-  /**
-   * Called by the host on every postupdate zoom change. Forwarded
-   * to the registered listener unless the change is below the
-   * 0.01-zoom dead-band (avoids spamming the OSD label on tiny
-   * floating-point drift).
-   */
-  onZoomChanged(listener: (zoom: number) => void): void {
-    this._zoomListener = listener
-  }
-
-  /**
-   * Register a listener that fires whenever the active scene's
-   * undo-stack mutates (paint / erase / undo / redo). Mirrors
-   * {@link onZoomChanged} — the listener is invoked once
-   * synchronously with the current `{ canUndo, canRedo }` snapshot
-   * once an engine + map are loaded, then again on every stack
-   * change. The maker uses this to keep `win.undo` / `win.redo`
-   * `GAction.enabled` in sync so the OSD buttons + Ctrl+Z grey out
-   * at stack boundaries.
-   */
-  onUndoChanged(listener: (state: { canUndo: boolean; canRedo: boolean }) => void): void {
-    this._undoListener = listener
-  }
-
-  /**
-   * Register a listener for the engine's `TILE_PICKED` event (emitted
-   * by `TileEditorSystem` when the user clicks while the eyedropper
-   * tool is active). Mirrors {@link onZoomChanged} — listener is
-   * stored once on the controller and re-attached lazily after each
-   * `ensureForMap` via {@link _attachTilePickedHook}.
-   *
-   * The host typically responds by routing the picked tile through
-   * its existing tile-palette state (so palette highlight + context
-   * chip + engine `ActiveTileComponent` all stay in sync) and by
-   * switching the tool action back to `pencil` for a Tiled-style
-   * "pick then immediately paint" workflow.
-   */
-  onTilePicked(listener: (payload: TilePickedPayload) => void): void {
-    this._tilePickedListener = listener
-  }
-
-  /**
-   * Register a listener for the engine's `PLACEMENT_SELECTED` event
-   * (emitted by `TileEditorSystem` when the user clicks while the
-   * `'select'` tool is active). Mirrors {@link onTilePicked} — listener
-   * is stored once and re-attached lazily after each `ensureForMap`
-   * via {@link _attachPlacementSelectedHook}.
-   *
-   * The host typically responds by highlighting the matching row in
-   * the right-inspector's objects-tab; the engine-side selection
-   * state (`SelectedPlacementsComponent`) is already mutated inside
-   * the system, so the visual ring on the canvas updates without
-   * host involvement.
-   */
-  onPlacementSelected(listener: (payload: PlacementSelectedPayload) => void): void {
-    this._placementSelectedListener = listener
-  }
-
-  /**
-   * Register a listener for the engine's `LAYER_FLAG_CHANGED` event —
-   * fired on every application path of the layer-flag commands
-   * (local toggle, undo/redo, AND inbound peer ops, which don't emit
-   * `COMMAND_EXECUTED`). Mirrors {@link onPlacementSelected} — the
-   * listener is stored once and re-attached lazily after each
-   * `ensureForMap` via {@link _attachLayerFlagHook}.
-   *
-   * The host responds by mirroring the new eye/padlock value into the
-   * Layers tab row, so a remote peer's toggle (or a local undo) is
-   * visible in the inspector, not just on the canvas.
-   */
-  onLayerFlagChanged(listener: (payload: LayerFlagChangedPayload) => void): void {
-    this._layerFlagListener = listener
-  }
-
-  /**
-   * Register a listener fired once per pointer tile-transition over
-   * the active map. The host uses this to drive the floating-zoom
-   * OSD's coord readout (the label that reads e.g. `12, 7` next to
-   * the zoom buttons). Mirrors {@link onZoomChanged} — listener is
-   * stored once and re-attached lazily after each `ensureForMap`
-   * via {@link _attachPointerTileHook}.
-   */
-  onPointerTileChanged(listener: (payload: { sceneId: string; tileX: number; tileY: number }) => void): void {
-    this._pointerTileListener = listener
+  /** Subscribe to a controller event. Returns an unsubscribe closure. */
+  on<K extends keyof EngineControllerEvents>(
+    event: K,
+    listener: (payload: EngineControllerEvents[K]) => void,
+  ): () => void {
+    return this._events.on(event, listener)
   }
 
   /**
@@ -222,7 +187,7 @@ export class EngineController {
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
     // last loaded scene reported.
-    this._undoListener?.({ canUndo: false, canRedo: false })
+    this._events.emit('undo-changed', { canUndo: false, canRedo: false })
   }
 
   /** Read the current camera zoom (1 = 100%) or `null` if no engine. */
@@ -254,14 +219,14 @@ export class EngineController {
     this._zoomHookAttached = this._engine.onCameraZoomChanged((zoom) => {
       if (Math.abs(zoom - this._lastReportedZoom) < 0.01) return
       this._lastReportedZoom = zoom
-      this._zoomListener?.(zoom)
+      this._events.emit('zoom-changed', zoom)
     })
   }
 
   private _attachUndoHook(): void {
     if (this._undoHookAttached || !this._engine) return
     this._undoHookAttached = this._engine.onUndoStackChanged((state) => {
-      this._undoListener?.(state)
+      this._events.emit('undo-changed', state)
     })
   }
 
@@ -271,7 +236,7 @@ export class EngineController {
     // widget is dropped and its emitter is GC'd along with this
     // closure, so we don't track an explicit Subscription handle.
     this._engine.events.on(EngineEvent.TILE_PICKED, (payload) => {
-      this._tilePickedListener?.(payload)
+      this._events.emit('tile-picked', payload)
     })
     this._tilePickedHookAttached = true
   }
@@ -279,7 +244,7 @@ export class EngineController {
   private _attachPlacementSelectedHook(): void {
     if (this._placementSelectedHookAttached || !this._engine) return
     this._engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
-      this._placementSelectedListener?.(payload)
+      this._events.emit('placement-selected', payload)
     })
     this._placementSelectedHookAttached = true
   }
@@ -287,7 +252,7 @@ export class EngineController {
   private _attachLayerFlagHook(): void {
     if (this._layerFlagHookAttached || !this._engine) return
     this._engine.events.on(EngineEvent.LAYER_FLAG_CHANGED, (payload) => {
-      this._layerFlagListener?.(payload)
+      this._events.emit('layer-flag-changed', payload)
     })
     this._layerFlagHookAttached = true
   }
@@ -295,7 +260,7 @@ export class EngineController {
   private _attachPointerTileHook(): void {
     if (this._pointerTileHookAttached || !this._engine) return
     this._pointerTileHookAttached = this._engine.onPointerTileChanged((payload) => {
-      this._pointerTileListener?.(payload)
+      this._events.emit('pointer-tile-changed', payload)
     })
   }
 }

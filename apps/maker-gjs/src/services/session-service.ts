@@ -5,6 +5,7 @@ import { CollabSession } from './collab-session.ts'
 import type { DiscoveredService, LanDiscoveryEvent } from './lan-discovery-parse.ts'
 import { generateRoomId } from './relay-signalling.ts'
 import { writeSnapshotToSandbox } from './sandbox-path.ts'
+import { TypedEmitter } from './typed-emitter.ts'
 
 const log = scopedLogger('session-service')
 
@@ -89,8 +90,6 @@ export interface SessionEvents {
   error: Error
 }
 
-type Listener<T> = (payload: T) => void
-
 /**
  * Discovered LAN services keyed by their `txt.room` field — the
  * room id the host advertises. Lets `joinByRoomId` shortcut to
@@ -127,7 +126,7 @@ type DiscoveredByRoom = Map<string, DiscoveredService>
  * `browsing` (if the service was browsing before) or `idle`.
  */
 export class SessionService {
-  private readonly listeners = new Map<keyof SessionEvents, Set<Listener<unknown>>>()
+  private readonly events = new TypedEmitter<SessionEvents>()
   private state: SessionState = { kind: 'idle' }
   private hostingHandle: HostingHandle | null = null
   private wasBrowsing = false
@@ -366,14 +365,8 @@ export class SessionService {
   // Events
   // ────────────────────────────────────────────────────────────
 
-  on<K extends keyof SessionEvents>(event: K, listener: Listener<SessionEvents[K]>): () => void {
-    let set = this.listeners.get(event)
-    if (!set) {
-      set = new Set()
-      this.listeners.set(event, set)
-    }
-    set.add(listener as Listener<unknown>)
-    return () => set?.delete(listener as Listener<unknown>)
+  on<K extends keyof SessionEvents>(event: K, listener: (payload: SessionEvents[K]) => void): () => void {
+    return this.events.on(event, listener)
   }
 
   getState(): SessionState {
@@ -475,9 +468,7 @@ export class SessionService {
   }
 
   private emit<K extends keyof SessionEvents>(event: K, payload: SessionEvents[K]): void {
-    const set = this.listeners.get(event)
-    if (!set) return
-    for (const listener of set) (listener as Listener<SessionEvents[K]>)(payload)
+    this.events.emit(event, payload)
   }
 
   private handleError(err: unknown): void {

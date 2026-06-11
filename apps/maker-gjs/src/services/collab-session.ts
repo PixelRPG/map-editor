@@ -145,26 +145,28 @@ export class CollabSession {
   public controller: SessionController | null = null
   public cursorRenderer: RemoteCursorRenderer | null = null
   /**
-   * Sink for inbound project-level ops (`__project/*` — cast
-   * mutations). Set by the maker so the CastController can apply them
-   * to its `GameProjectData` + refresh the Cast view. These ride the
-   * always-present op channel and work WITHOUT an engine (cast editing
-   * has no live scene), so they're handled here rather than in the
-   * engine-tied SessionController.
+   * Sink for inbound project-level ops (`__project/*` — entity-library /
+   * player / meta / map-editor-data / sprite-set-remove mutations). The
+   * maker's `ProjectStore` registers itself here (the single applier) to
+   * mutate its `GameProjectData` + notify every lens. These ride the
+   * always-present op channel and work WITHOUT an engine (cast/library
+   * editing has no live scene), so they're handled here rather than in
+   * the engine-tied SessionController.
    */
   public onProjectOpReceived: ((op: ProjectOp) => void) | null = null
   /**
-   * Sink for a completed sprite-set-import transfer. Set by the maker
-   * so the CastController can write the image + descriptor into the
-   * project and register the set. Fed by the chunk reassembler once all
-   * chunks of one transfer arrive.
+   * Sink for a completed sprite-set-import transfer. The maker's
+   * `ProjectStore` registers itself here to write the image + descriptor
+   * into the project and register the set. Fed by the chunk reassembler
+   * once all chunks of one transfer arrive.
    */
   public onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null = null
   /**
    * Sink for a completed sprite-set DESCRIPTOR update (rename / animation
-   * edit / tile-property change — no image bytes). Set by the maker so the
-   * CastController can overwrite the descriptor of a set it already has.
-   * Fed by a dedicated reassembler once all chunks of one transfer arrive.
+   * edit / tile-property change — no image bytes). The maker's
+   * `ProjectStore` registers itself here to overwrite the descriptor of a
+   * set it already has. Fed by a dedicated reassembler once all chunks of
+   * one transfer arrive.
    */
   public onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null = null
   private closed = false

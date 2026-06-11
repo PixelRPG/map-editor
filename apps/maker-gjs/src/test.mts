@@ -15,6 +15,7 @@ import lanSignallingTimeoutSuite from './services/lan-signalling-timeout.spec.js
 import orphanPublisherCleanupSuite from './services/orphan-publisher-cleanup.spec.js'
 import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
 import projectLoaderSuite from './services/project-loader.spec.js'
+import projectStoreSuite from './services/project-store.spec.js'
 import relaySignallingSuite from './services/relay-signalling.spec.js'
 import sandboxPathSuite from './services/sandbox-path.spec.js'
 import sessionServiceSuite from './services/session-service.spec.js'
@@ -36,6 +37,7 @@ run({
   orphanPublisherCleanupSuite,
   pixelrpgUrlSuite,
   projectLoaderSuite,
+  projectStoreSuite,
   relaySignallingSuite,
   sandboxPathSuite,
   sessionServiceSuite,
