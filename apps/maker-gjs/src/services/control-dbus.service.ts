@@ -2,6 +2,13 @@ import Gio from '@girs/gio-2.0'
 import { ASSISTANT_PEER_ID } from '@pixelrpg/engine'
 import type { Application } from '../application.ts'
 import type { ApplicationWindow } from '../widgets/application-window.ts'
+import {
+  ControlUnavailableError,
+  type EngineActionContext,
+  guardControlAction,
+  guardControlMethod,
+  guardEngineAction,
+} from './assistant-pause-policy.ts'
 import { loadRecentProjects } from './recent-projects.ts'
 import { STARTER_TEMPLATES } from './templates.ts'
 
@@ -154,29 +161,40 @@ export class ControlDbusService {
   /**
    * `ActivateAction(scope, name, value_json)` — activate an action.
    * `value_json` is `''` for no parameter, otherwise a JSON-encoded
-   * scalar. Throws (→ D-Bus error) on an unknown action.
+   * scalar. Throws (→ D-Bus error) on an unknown action, on a
+   * human-only action (`win.toggle-assistant-paused`), while the user
+   * has the assistant paused, and on engine-backed actions that would
+   * silently no-op (no engine / empty undo stack).
    */
   ActivateAction(scope: string, name: string, valueJson: string): void {
-    const win = this.requireWindow()
+    const win = this._guardMutation('ActivateAction')
+    const actionScope = toScope(scope)
+    guardControlAction(actionScope, name)
+    guardEngineAction(actionScope, name, this._engineActionContext(win))
     this._surfaceAssistantActivity()
-    win.activateAction(toScope(scope), name, valueJson ? JSON.parse(valueJson) : undefined)
+    win.activateAction(actionScope, name, valueJson ? JSON.parse(valueJson) : undefined)
   }
 
   /**
    * `ChangeActionState(scope, name, value_json)` — set a stateful
-   * action's state from a JSON-encoded scalar. Throws (→ D-Bus error)
-   * on an unknown action.
+   * action's state from a JSON-encoded scalar. Same guards as
+   * {@link ActivateAction}: unknown action, human-only action,
+   * assistant paused, silent engine no-ops.
    */
   ChangeActionState(scope: string, name: string, valueJson: string): void {
-    const win = this.requireWindow()
+    const win = this._guardMutation('ChangeActionState')
+    const actionScope = toScope(scope)
+    guardControlAction(actionScope, name)
+    guardEngineAction(actionScope, name, this._engineActionContext(win))
     this._surfaceAssistantActivity()
-    win.changeActionState(toScope(scope), name, JSON.parse(valueJson))
+    win.changeActionState(actionScope, name, JSON.parse(valueJson))
   }
 
   /** `OpenProject(path)` — load a project by its game-project.json path. */
   OpenProject(path: string): void {
+    const win = this._guardMutation('OpenProject')
     this._surfaceAssistantActivity()
-    this.requireWindow().openProject(path)
+    win.openProject(path)
   }
 
   /** `ListRecentProjects() -> s` — JSON list of recently opened projects. */
@@ -193,12 +211,16 @@ export class ControlDbusService {
 
   /** `StartSession() -> s` — host a collaboration session; returns the room id. */
   async StartSession(): Promise<string> {
-    return this.requireWindow().startSession()
+    const win = this._guardMutation('StartSession')
+    this._surfaceAssistantActivity()
+    return win.startSession()
   }
 
   /** `JoinSession(roomId)` — join a collaboration session by room id (LAN). */
   async JoinSession(roomId: string): Promise<void> {
-    await this.requireWindow().joinSession(roomId)
+    const win = this._guardMutation('JoinSession')
+    this._surfaceAssistantActivity()
+    await win.joinSession(roomId)
   }
 
   /** `GetSessionState() -> s` — JSON snapshot of the collaboration session state. */
@@ -208,10 +230,20 @@ export class ControlDbusService {
     return JSON.stringify(win.getSessionState())
   }
 
-  /** `SetZoom(zoom)` — set the camera zoom to an absolute value (1 = 100%). */
+  /**
+   * `SetZoom(zoom)` — set the camera zoom to an absolute value (1 = 100%).
+   * Throws a typed `no-engine` error when there is no live scene engine
+   * (instead of silently succeeding).
+   */
   SetZoom(zoom: number): void {
+    const win = this._guardMutation('SetZoom')
     this._surfaceAssistantActivity()
-    this.requireWindow().setZoom(zoom)
+    if (!win.setZoom(zoom)) {
+      throw new ControlUnavailableError(
+        'no-engine',
+        'SetZoom needs a live scene engine — open a scene first (open_scene / win.open-scene-by-id), then retry.',
+      )
+    }
   }
 
   /** `PresentWindow()` — bring the editor window to the foreground (map + focus). */
@@ -225,7 +257,11 @@ export class ControlDbusService {
    * (phone / tablet / desktop) breakpoints. Returns the requested size.
    */
   ResizeWindow(width: number, height: number): [number, number] {
-    return this.requireWindow().resizeWindow(width, height)
+    const win = this._guardMutation('ResizeWindow')
+    // Mutating (it resizes the USER's window) → surface the assistant in
+    // the participants bar; no cursor — there's no spatial target.
+    this._surfaceAssistantActivity()
+    return win.resizeWindow(width, height)
   }
 
   /**
@@ -234,18 +270,13 @@ export class ControlDbusService {
    * `>0` = paint that global tile id.
    */
   PaintTile(layerId: string, tileX: number, tileY: number, spriteId: number): boolean {
+    const win = this._guardMutation('PaintTile')
     this._surfaceAssistantActivity({ x: tileX, y: tileY })
     // Control callers are the external (AI) driver — stamp the
     // assistant as the op's `origin` so remote peers attribute the
     // edit to the AI, not the hosting user. The op still rides the
     // host's peerId/seq (transport identity is unchanged).
-    return this.requireWindow().paintTile(
-      layerId || null,
-      tileX,
-      tileY,
-      spriteId < 0 ? undefined : spriteId,
-      ASSISTANT_PEER_ID,
-    )
+    return win.paintTile(layerId || null, tileX, tileY, spriteId < 0 ? undefined : spriteId, ASSISTANT_PEER_ID)
   }
 
   /**
@@ -254,9 +285,10 @@ export class ControlDbusService {
    * active layer. Goes through the engine command path (undo + collab).
    */
   PlaceObject(defId: string, layerId: string, tileX: number, tileY: number): boolean {
+    const win = this._guardMutation('PlaceObject')
     this._surfaceAssistantActivity({ x: tileX, y: tileY })
     // Assistant-attributed like PaintTile — see the comment there.
-    return this.requireWindow().placeObject(defId, layerId || null, tileX, tileY, ASSISTANT_PEER_ID)
+    return win.placeObject(defId, layerId || null, tileX, tileY, ASSISTANT_PEER_ID)
   }
 
   /** `SetAssistantCursor(x, y) -> applied` — show/move the AI collaborator cursor. */
@@ -276,7 +308,10 @@ export class ControlDbusService {
 
   /** `FollowParticipant(peer_id)` — follow a participant with the camera; `''` stops following. */
   FollowParticipant(peerId: string): void {
-    this.requireWindow().followParticipant(peerId || null)
+    const win = this._guardMutation('FollowParticipant')
+    // Mutating (it pans/locks the USER's camera) → surface the assistant.
+    this._surfaceAssistantActivity()
+    win.followParticipant(peerId || null)
   }
 
   private requireWindow(): ApplicationWindow {
@@ -286,14 +321,36 @@ export class ControlDbusService {
   }
 
   /**
+   * Shared entry guard for every MUTATING Control method: resolves the
+   * window and rejects the call with a typed `assistant-paused` D-Bus
+   * error while the user has the assistant paused. The classification
+   * (mutating vs read-only vs presence) lives in
+   * `assistant-pause-policy.ts` — see ai-collaborator.md § Pause contract.
+   */
+  private _guardMutation(method: string): ApplicationWindow {
+    const win = this.requireWindow()
+    guardControlMethod(method, win.isAssistantPaused())
+    return win
+  }
+
+  /** Snapshot the engine-availability slice `guardEngineAction` consults. */
+  private _engineActionContext(win: ApplicationWindow): EngineActionContext {
+    const status = win.getDebugStatus()
+    return { engineReady: status.engineReady, canUndo: status.canUndo, canRedo: status.canRedo }
+  }
+
+  /**
    * Surface the external driver as the AI participant. Called by every
    * MUTATING control method (read-onlys like `GetStatus` / `Screenshot`
    * stay silent), so the user always sees in the participants bar that an
    * AI/automation is acting — and can follow it — even when the driver
-   * never announces itself explicitly. Tile-targeted mutations also move
-   * the assistant cursor onto the target tile, making the activity
-   * followable on the map. `HideAssistant` remains the explicit opt-out
-   * when a driver finishes.
+   * never announces itself explicitly: `ActivateAction`,
+   * `ChangeActionState`, `OpenProject`, `StartSession`, `JoinSession`,
+   * `SetZoom`, `ResizeWindow`, `PaintTile`, `PlaceObject`,
+   * `FollowParticipant`. Tile-targeted mutations also move the assistant
+   * cursor onto the target tile, making the activity followable on the
+   * map. `HideAssistant` remains the explicit opt-out when a driver
+   * finishes.
    */
   private _surfaceAssistantActivity(tile?: { x: number; y: number }): void {
     const win = this.window

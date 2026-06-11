@@ -22,9 +22,11 @@ import {
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
+import { AssistantStateService } from '../services/assistant-state.service.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
+import { syncEngineState } from '../services/engine-state-sync.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { LanSessionBackend } from '../services/lan-session-backend.ts'
@@ -82,7 +84,15 @@ export interface DebugStatus {
   selectedPlacements: string[]
   /** Whether the AI assistant collaborator is currently present. */
   assistantPresent: boolean
-  /** Whether the user has paused the assistant (its actions are rejected). */
+  /**
+   * Whether the user has paused the assistant. While `true`, the engine
+   * rejects the assistant's cursor + canvas edits AND the Control plane
+   * rejects every MUTATING method with a typed `assistant-paused` error;
+   * read-only methods (GetStatus, Screenshot, List*) keep working. Only
+   * the user can resume — `win.toggle-assistant-paused` is human-only
+   * (the control plane rejects it with `human-only-action`). See
+   * docs/concepts/ai-collaborator.md § "Pause contract".
+   */
   assistantPaused: boolean
   /** Live session participants (AI assistant + networked peers). */
   participants: CollaboratorEntry[]
@@ -176,13 +186,29 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * "playing" state to require an extra click on re-entry.
    */
   private _playAction: Gio.SimpleAction | null = null
+  /**
+   * The stateful view-flag GActions (`win.toggle-objects` /
+   * `win.toggle-grid` / `win.toggle-transparency`). Held as fields so
+   * {@link _syncEngineUiState} can re-push their current state into
+   * every freshly recreated engine — without the re-push, the flags
+   * silently reset (and the paused assistant resumed) after any
+   * scene-editor exit + re-entry. Assistant pause is re-pushed from
+   * {@link _assistantState}, the single source the
+   * `win.toggle-assistant-paused` handler writes.
+   */
+  private _objectsAction: Gio.SimpleAction | null = null
+  private _gridAction: Gio.SimpleAction | null = null
+  private _transparencyAction: Gio.SimpleAction | null = null
   /** Guards the one-shot "AI assistant joined" toast; re-armed on HideAssistant. */
   private _assistantAnnounced = false
-  // Local AI-assistant presence (the host's own virtual collaborator).
-  // Networked human peers come from the live CollabSession awareness.
-  private _assistantPresent = false
-  private _assistantName = 'AI Assistant'
-  private _assistantColor = '#9141ac'
+  /**
+   * Single source of truth for the local AI assistant's presence,
+   * identity and the user's pause switch. The engine only carries
+   * push-down caches of these (it is disposed/recreated per scene —
+   * see {@link _syncEngineUiState}); networked human peers come from
+   * the live CollabSession awareness.
+   */
+  private readonly _assistantState = new AssistantStateService()
   /** The participant the camera is following (peerId), or null. */
   private _followedPeerId: string | null = null
   /** Subscriptions to the live session awareness — torn down on state change. */
@@ -1074,6 +1100,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._scene_editor_view.setObjectsVisible(visible)
     })
     winActions.add_action(objectsAction)
+    this._objectsAction = objectsAction
 
     const gridAction = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
     gridAction.connect('change-state', (action, value) => {
@@ -1081,6 +1108,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._engineCtl.engine?.setShowGrid(value!.get_boolean())
     })
     winActions.add_action(gridAction)
+    this._gridAction = gridAction
 
     const transparencyAction = Gio.SimpleAction.new_stateful(
       'toggle-transparency',
@@ -1092,6 +1120,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._engineCtl.engine?.setDimInactiveLayers(value!.get_boolean())
     })
     winActions.add_action(transparencyAction)
+    this._transparencyAction = transparencyAction
 
     // Play / playtest toggle. Stateful boolean — clicking the
     // FloatingPlay button (action-name="win.play") activates the
@@ -1121,11 +1150,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(playAction)
     this._playAction = playAction
 
-    // AI-assistant pause toggle. The collaborators bar's pause button
+    // AI-assistant pause toggle — the user's stay-in-control switch over
+    // the AI collaborator. The collaborators bar's pause button
     // (action-name="win.toggle-assistant-paused") activates this; the
-    // change-state handler pauses the engine's assistant (its cursor +
-    // paints are rejected) and swaps the button's icon to "resume". This
-    // is the user's stay-in-control switch over the AI collaborator.
+    // change-state handler writes the AssistantStateService (the single
+    // source) and mirrors into the engine (canvas-channel rejection) +
+    // the pill icon. HUMAN-ONLY: the Control plane rejects driving this
+    // action (the AI must not un-pause itself — see
+    // assistant-pause-policy.ts / ai-collaborator.md § Pause contract).
     const assistantPausedAction = Gio.SimpleAction.new_stateful(
       'toggle-assistant-paused',
       null,
@@ -1138,6 +1170,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     assistantPausedAction.connect('change-state', (action, value) => {
       action.set_state(value!)
       const paused = value!.get_boolean()
+      this._assistantState.setPaused(paused)
       this._engineCtl.engine?.excalibur?.setAssistantPaused(paused)
       this._scene_editor_view.setAssistantPaused(paused)
     })
@@ -1472,16 +1505,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // null on a failed bring-up.
     }
 
-    // Push the UI's current tool selection into the freshly-loaded
-    // scene's session state. The engine's `ActiveToolComponent` is
-    // per-scene and resets on every `loadMap`, while the GAction
-    // preserves the user's choice across scenes — without this sync
-    // the UI would still show e.g. "eraser" while the engine reverts
-    // to its system default and the pencil-preview helper hides.
-    const toolState = this._toolAction?.get_state()
-    if (toolState) {
-      this._engineCtl.engine?.setActiveTool(toolState.get_string()[0] as EditorTool)
-    }
+    // Re-push EVERY piece of window-owned stateful editor state into the
+    // freshly-(re)created engine: active tool, view flags (objects /
+    // grid / dimming), assistant pause + identity, follow state and the
+    // Phase-5 awareness relay. The engine's per-scene/per-instance state
+    // resets on every `loadMap` / recreation while the GActions + the
+    // AssistantStateService preserve the user's choices — without this
+    // sync, e.g. a paused assistant silently resumed after a Cast-view
+    // detour. See engine-state-sync.ts for the full re-push list.
+    this._syncEngineUiState()
 
     // If we joined a shared session before any scene was open, the
     // engine was null at `_loadSandboxProject` time and the collab
@@ -1495,6 +1527,34 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     } catch (error) {
       console.warn('[ApplicationWindow] Failed to populate inspector:', error)
     }
+  }
+
+  /**
+   * Push the window-owned stateful editor state into the current engine —
+   * called after every `ensureForMap` so a recreated engine starts from
+   * the user's actual state instead of the engine defaults. The push
+   * list lives in `engine-state-sync.ts` (spec-guarded); this method only
+   * adapts the GAction states + the AssistantStateService snapshot into
+   * the sync call and re-wires the assistant awareness relay (a fresh
+   * engine has `setAssistantFrameRelay(null)`).
+   */
+  private _syncEngineUiState(): void {
+    const widget = this._engineCtl.engine
+    const ex = widget?.excalibur
+    if (!widget || !ex) return
+    const boolState = (action: Gio.SimpleAction | null, fallback: boolean) =>
+      action?.get_state()?.get_boolean() ?? fallback
+    syncEngineState(widget, ex, {
+      tool: (this._toolAction?.get_state()?.get_string()[0] as EditorTool | undefined) ?? null,
+      objectsVisible: boolState(this._objectsAction, true),
+      showGrid: boolState(this._gridAction, false),
+      dimInactiveLayers: boolState(this._transparencyAction, false),
+      assistant: this._assistantState.snapshot(),
+      followAssistant: this._followedPeerId === ASSISTANT_PEER_ID,
+    })
+    // Re-point the Phase-5 relay (and the collab-roster wiring) at the
+    // live session — idempotent, a no-op chain when the session is idle.
+    if (this._sessionSvc) this._wireAssistantRelay(this._sessionSvc.getState())
   }
 
   private _onTemplateSelected(templateId: string): void {
@@ -1592,10 +1652,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (next != null) this._scene_editor_view.setZoom(next)
   }
 
-  /** Set the engine camera to an absolute zoom value and mirror into the OSD. */
-  private _applyZoom(zoom: number): void {
-    this._engineCtl.applyZoom(zoom)
+  /**
+   * Set the engine camera to an absolute zoom value and mirror into the
+   * OSD. Returns `false` when there is no live engine (nothing changed) —
+   * the Control plane reports that as a typed error instead of success.
+   */
+  private _applyZoom(zoom: number): boolean {
+    if (!this._engineCtl.applyZoom(zoom)) return false
     this._scene_editor_view.setZoom(zoom)
+    return true
   }
 
   /**
@@ -1632,16 +1697,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // Window-level presence OR an engine-side active assistant — the
       // participants bar and this status flag must tell the same story
       // (presence can exist without a live engine, e.g. in the atlas).
-      assistantPresent: this._assistantPresent || (ex?.isAssistantActive() ?? false),
-      assistantPaused: ex?.isAssistantPaused() ?? false,
+      assistantPresent: this._assistantState.present || (ex?.isAssistantActive() ?? false),
+      // The AssistantStateService is the single source — the engine's
+      // copy is a push-down cache that resets on recreation.
+      assistantPaused: this._assistantState.paused,
       participants: this.getParticipants(),
       followedPeerId: this._followedPeerId,
     }
   }
 
-  /** Set the camera zoom to an absolute value (1 = 100%). No-op without an engine. */
-  setZoom(zoom: number): void {
-    this._applyZoom(zoom)
+  /** Set the camera zoom to an absolute value (1 = 100%). Returns `false` without a live engine. */
+  setZoom(zoom: number): boolean {
+    return this._applyZoom(zoom)
   }
 
   /**
@@ -1686,11 +1753,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY, origin) ?? false
   }
 
+  /** Whether the user has paused the assistant (read by the Control plane's pause guard). */
+  isAssistantPaused(): boolean {
+    return this._assistantState.paused
+  }
+
   /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */
   setAssistantCursor(tileX: number, tileY: number): boolean {
     const applied = this._engineCtl.engine?.excalibur?.setAssistantCursor(tileX, tileY) ?? false
-    if (applied && !this._assistantPresent) {
-      this._assistantPresent = true
+    if (applied && this._assistantState.setPresent(true)) {
       this._announceAssistantOnce()
       this._refreshCollaborators()
     }
@@ -1706,11 +1777,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * `SetAssistantCursor` first.
    */
   ensureAssistantPresence(): void {
-    if (this._assistantPresent) return
-    this._assistantPresent = true
+    if (!this._assistantState.setPresent(true)) return
     // Mirror into the engine (when one is live) so `isAssistantActive`
     // and the participants bar agree about the assistant being around.
-    this._engineCtl.engine?.excalibur?.setAssistantInfo(this._assistantName, this._assistantColor)
+    // A later engine recreation re-mirrors via `_syncEngineUiState`.
+    this._engineCtl.engine?.excalibur?.setAssistantInfo(this._assistantState.name, this._assistantState.color)
     this._announceAssistantOnce()
     this._refreshCollaborators()
   }
@@ -1718,19 +1789,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /** Set the AI-assistant cursor's display name + colour. */
   setAssistantInfo(displayName: string, color: string): void {
     this._engineCtl.engine?.excalibur?.setAssistantInfo(displayName, color)
-    this._assistantName = displayName
-    this._assistantColor = color
-    if (!this._assistantPresent) {
-      this._assistantPresent = true
-      this._announceAssistantOnce()
-    }
+    this._assistantState.setInfo(displayName, color)
+    if (this._assistantState.setPresent(true)) this._announceAssistantOnce()
     this._refreshCollaborators()
   }
 
   /** Remove the AI-assistant cursor/presence. */
   hideAssistant(): void {
     this._engineCtl.engine?.excalibur?.hideAssistant()
-    this._assistantPresent = false
+    this._assistantState.setPresent(false)
     this._assistantAnnounced = false
     if (this._followedPeerId === ASSISTANT_PEER_ID) this._setFollowedPeer(null)
     this._refreshCollaborators()
@@ -1773,18 +1840,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   getParticipants(): CollaboratorEntry[] {
     const participants: CollaboratorEntry[] = []
-    if (this._assistantPresent) {
+    if (this._assistantState.present) {
       participants.push({
         peerId: ASSISTANT_PEER_ID,
-        name: this._assistantName,
-        color: this._assistantColor,
+        name: this._assistantState.name,
+        color: this._assistantState.color,
         isAI: true,
       })
     }
     const collab = this._activeCollab()
     if (collab) {
       for (const peer of collab.awareness.getPeers()) {
-        if (peer.peerId === ASSISTANT_PEER_ID && this._assistantPresent) continue // already listed locally
+        if (peer.peerId === ASSISTANT_PEER_ID && this._assistantState.present) continue // already listed locally
         participants.push({
           peerId: peer.peerId,
           name: peer.info.displayName,

@@ -57,6 +57,13 @@ interface LoaderEventMap {
 /** Stable peer id for the in-process AI assistant collaborator. */
 export const ASSISTANT_PEER_ID = 'ai-assistant'
 
+/**
+ * Default display identity of the AI assistant collaborator. Single
+ * definition — the maker's `AssistantStateService` imports it instead of
+ * duplicating the literals (the duplicated copies drifted before).
+ */
+export const DEFAULT_ASSISTANT_INFO: AwarenessPeerInfo = { displayName: 'AI Assistant', color: '#9141ac' }
+
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -71,7 +78,7 @@ export class Engine {
   // CollabSession / WebRTC. See docs/concepts/ai-collaborator.md.
   private _assistantAwareness: AwarenessManager | null = null
   private _assistantRenderer: RemoteCursorRenderer | null = null
-  private _assistantInfo: AwarenessPeerInfo = { displayName: 'AI Assistant', color: '#9141ac' }
+  private _assistantInfo: AwarenessPeerInfo = { ...DEFAULT_ASSISTANT_INFO }
   // True while the assistant is present (info/cursor set, not hidden) —
   // gates the edit-attribution flash so plain paintTileAt callers (tests)
   // don't grow stray highlight actors.
@@ -456,7 +463,10 @@ export class Engine {
     spriteId?: number | null,
     origin?: string,
   ): boolean {
-    // The user paused the assistant — reject its paints (the human is in control).
+    // The user paused the assistant — reject its paints (the human is in
+    // control). The human's own paints take the TileEditorSystem pointer
+    // path, never this method. Defense in depth: the maker's Control
+    // D-Bus layer already rejects paused mutations with a typed error.
     if (this._assistantPaused) return false
     const scene = this._activeMapScene()
     if (!scene) return false
@@ -514,9 +524,15 @@ export class Engine {
    * peer-side attribution; the human's Props "Remove" button passes
    * none (see {@link executeCommand}). Returns `false` if there's no
    * active map or the id doesn't resolve to a placement.
+   *
+   * Deliberately NOT assistant-pause-gated (unlike {@link paintTileAt} /
+   * {@link placeObjectAt}): this is the ONLY remove path and the human's
+   * Props "Remove" button routes through it — an engine-level gate
+   * silently disabled the user's own button while the AI was paused.
+   * The assistant's access is gated at the maker's Control/D-Bus
+   * boundary instead, where the caller is known to be the assistant.
    */
   removeObject(placementId: string, origin?: string): boolean {
-    if (this._assistantPaused) return false
     const scene = this._activeMapScene()
     if (!scene) return false
     const placement = scene.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId)

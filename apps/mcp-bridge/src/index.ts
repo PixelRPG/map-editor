@@ -195,7 +195,19 @@ function dbusError(error: unknown, label?: string): ToolResult {
         ` (D-Bus error: ${message})`,
     )
   }
-  return fail(`D-Bus call failed: ${message}`)
+  // Typed editor-side rejections thrown by the Control service arrive as
+  // GDBus remote errors ("GDBus.Error:…JSError…: <original message>") —
+  // surface the original, descriptive message instead of the D-Bus noise.
+  // Known prefixes: assistant-paused (the user paused the AI; mutating
+  // calls are rejected until the user resumes), human-only-action
+  // (win.toggle-assistant-paused is the user's switch — never driveable
+  // from here), no-engine / nothing-to-undo / nothing-to-redo (the call
+  // would have been a silent no-op).
+  const remote = message.match(/GDBus\.Error:[^\s:]*:\s*([\s\S]+)/)?.[1]?.trim()
+  if (remote && /^(assistant-paused|human-only-action|no-engine|nothing-to-undo|nothing-to-redo):/.test(remote)) {
+    return fail(remote)
+  }
+  return fail(`D-Bus call failed: ${remote ?? message}`)
 }
 
 const instanceArg = { instance: z.string().optional().describe('Editor instance label; omit for the default app') }
@@ -385,8 +397,11 @@ server.registerTool(
   'get_status',
   {
     description:
-      'Snapshot the editor as JSON: current view, project, scene + scene list, active tool/tile/layer, ' +
-      'zoom, undo/redo, play state, selection.',
+      'Snapshot the editor as JSON: view, project, scene + scene list, engine presence/readiness, mapped, ' +
+      'active tool/tile/layer, zoom, canUndo/canRedo, play state, selected placements, assistant ' +
+      'presence/pause (while assistantPaused is true every mutating tool is rejected with an ' +
+      'assistant-paused error until the USER resumes — you cannot un-pause yourself), participants and ' +
+      'the followed peer.',
     inputSchema: z.object({ ...instanceArg }),
   },
   async ({ instance }) => {
@@ -594,8 +609,9 @@ server.registerTool(
   'set_tool',
   {
     description:
-      'Select the active editor tool. `object` stamps the object brush (set it first with place_object, ' +
-      'or pick a library object) on canvas clicks.',
+      'Select the active editor tool. `object` stamps the armed object brush on canvas clicks — arm a ' +
+      'brush first via activate_action win.set-object-brush with an entityLibrary id (place_object places ' +
+      'directly and does NOT arm the brush).',
     inputSchema: z.object({ tool: z.enum(['select', 'pencil', 'eraser', 'eyedropper', 'object']), ...instanceArg }),
   },
   async ({ tool, instance }) => {
