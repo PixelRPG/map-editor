@@ -2,16 +2,12 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgFloatingCollaborators : Adw.Bin {
-  // Bottom-left OSD pill — stacked above the FloatingZoom pill (also
-  // bottom-left). Lists the live session participants (the AI assistant +
-  // any networked human peers); clicking a chip follows that participant
-  // with the camera. Hidden until there's at least one participant.
-  // Without explicit halign/valign an empty Adw.Bin fills the overlay and
-  // eats pointer events for the layers underneath.
+  // Bottom-left OSD pill — lives in the scene editor's bottom-left OSD
+  // stack, directly above the FloatingZoom pill. Lists the live session
+  // participants (the AI assistant + any networked human peers); clicking
+  // a chip follows that participant with the camera. Hidden until there's
+  // at least one participant (a hidden child takes no space in the stack).
   halign: start;
-  valign: end;
-  margin-start: 12;
-  margin-bottom: 60;
   visible: false;
 
   child: Gtk.Box {

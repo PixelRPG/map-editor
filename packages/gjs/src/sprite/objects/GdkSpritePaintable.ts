@@ -49,6 +49,10 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
   declare get_flags: Gdk.Paintable['get_flags']
   declare vfunc_get_flags: Gdk.Paintable['vfunc_get_flags']
   declare get_intrinsic_aspect_ratio: Gdk.Paintable['get_intrinsic_aspect_ratio']
+  // Type-only — deliberately NOT implemented at runtime (see the note
+  // above `vfunc_snapshot`): GJS mis-marshals the double return, so the
+  // GDK default (intrinsic width / height) supplies the behaviour.
+  declare vfunc_get_intrinsic_aspect_ratio: Gdk.Paintable['vfunc_get_intrinsic_aspect_ratio']
   declare get_intrinsic_height: Gdk.Paintable['get_intrinsic_height']
   declare get_intrinsic_width: Gdk.Paintable['get_intrinsic_width']
   declare snapshot: Gdk.Paintable['snapshot']
@@ -95,9 +99,15 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
     return this._height
   }
 
-  vfunc_get_intrinsic_aspect_ratio(): number {
-    return this._width / this._height || 1
-  }
+  // Deliberately NOT overriding `vfunc_get_intrinsic_aspect_ratio`:
+  // GJS's interface-vfunc bridge mis-marshals the double return — the
+  // JS implementation returned 1, but C callers saw ~5e-324 (an
+  // uninitialised double). `Gtk.Picture`'s `contain`/`scale-down`
+  // content-fit math multiplies by that ratio, collapsing the sprite
+  // to a sub-pixel sliver. Leaving the slot empty makes GDK's default
+  // implementation compute the ratio from the two (working) intrinsic
+  // size vfuncs above. Same GJS limitation family as
+  // `compute_concrete_size` below.
 
   // `vfunc_compute_concrete_size` would be the cleanest place to
   // enforce the sprite's intrinsic aspect ratio — that's the GTK-

@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
@@ -59,6 +60,8 @@ export class ObjectsTab extends Adw.Bin {
   declare _new_object_button: Gtk.Button
 
   private _activeId: string | null = null
+  /** Guards {@link selectObject} from re-emitting `object-selected`. */
+  private _silentSelect = false
 
   static {
     GObject.registerClass(
@@ -81,7 +84,7 @@ export class ObjectsTab extends Adw.Bin {
       const id = (row as Gtk.ListBoxRow & { objectId?: string }).objectId
       if (!id || id === this._activeId) return
       this._activeId = id
-      this.emit('object-selected', id)
+      if (!this._silentSelect) this.emit('object-selected', id)
     })
   }
 
@@ -135,24 +138,62 @@ export class ObjectsTab extends Adw.Bin {
     }
     const swatch = createSwatchWidget(placement, 28, 28, 'contain')
     swatch.add_css_class('object-swatch')
+    // Keep the swatch square — without this the prefix stretches to the
+    // full ActionRow height (visible on the solid-colour fallbacks).
+    swatch.set_valign(Gtk.Align.CENTER)
     return swatch
   }
 
-  /** Programmatically set the active object. No-op if id not present. */
+  /**
+   * Programmatically set the active object (canvas select-tool sync).
+   * Does NOT re-emit `object-selected` — the engine-side selection is
+   * already in place, so re-emitting would bounce a `focusOnPlacement`
+   * camera pan back at every canvas click. Scrolls the row into view so
+   * the selection is visible in long placement lists. No-op if the id
+   * isn't present.
+   */
   selectObject(id: string | null): void {
     if (id === this._activeId) return
-    let row = this._list.get_first_child()
-    while (row) {
-      const objId = (row as Gtk.ListBoxRow & { objectId?: string }).objectId
-      if (objId === id) {
-        this._list.select_row(row as Gtk.ListBoxRow)
-        this._activeId = id
-        return
+    this._silentSelect = true
+    try {
+      let row = this._list.get_first_child()
+      while (row) {
+        const objId = (row as Gtk.ListBoxRow & { objectId?: string }).objectId
+        if (objId === id) {
+          this._list.select_row(row as Gtk.ListBoxRow)
+          this._activeId = id
+          this._scrollRowIntoView(row as Gtk.ListBoxRow)
+          return
+        }
+        row = row.get_next_sibling()
       }
-      row = row.get_next_sibling()
+      this._list.unselect_all()
+      this._activeId = null
+    } finally {
+      this._silentSelect = false
     }
-    this._list.unselect_all()
-    this._activeId = null
+  }
+
+  /**
+   * Scroll an off-screen row into the inspector's viewport (centred).
+   * The list lives inside the RightInspector's ScrolledWindow (implicit
+   * `Gtk.Viewport`); we position the vadjustment manually from the
+   * row's bounds — `Gtk.Viewport.scroll_to` proved unreliable across
+   * the ViewStack nesting — and defer to an idle so the row's
+   * allocation is valid even when the tab was just switched in.
+   */
+  private _scrollRowIntoView(row: Gtk.ListBoxRow): void {
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      const viewport = row.get_ancestor(Gtk.Viewport.$gtype) as Gtk.Viewport | null
+      const content = viewport?.get_child()
+      if (!viewport || !content) return GLib.SOURCE_REMOVE
+      const [ok, bounds] = row.compute_bounds(content)
+      if (!ok) return GLib.SOURCE_REMOVE
+      const adj = viewport.vadjustment
+      const target = bounds.get_y() - (adj.get_page_size() - bounds.get_height()) / 2
+      adj.set_value(Math.max(adj.get_lower(), Math.min(target, adj.get_upper() - adj.get_page_size())))
+      return GLib.SOURCE_REMOVE
+    })
   }
 }
 

@@ -457,6 +457,9 @@ export class Engine extends Adw.Bin {
       fwd(EngineEvent.TILE_HOVERED),
       fwd(EngineEvent.TILE_PLACED),
       fwd(EngineEvent.TILE_PICKED),
+      // Select-tool canvas picks — without this relay the host never
+      // hears about them and the Objects-list / Props sync stays dead.
+      fwd(EngineEvent.PLACEMENT_SELECTED),
     )
   }
 

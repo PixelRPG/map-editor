@@ -2,10 +2,8 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgFloatingZoom : Adw.Bin {
+  // Positioned by the scene editor's bottom-left OSD stack.
   halign: start;
-  valign: end;
-  margin-start: 12;
-  margin-bottom: 12;
 
   // WindowHandle wrap — pill padding + the cursor label area pick
   // up window-drag gestures.
@@ -27,10 +25,18 @@ template $PixelRpgFloatingZoom : Adw.Bin {
       tooltip-text: _("Reset zoom");
       styles ["flat"]
 
-      child: Gtk.Label zoom_label {
-        label: bind template.zoom-label;
+      // Inscription, NOT Label — same flicker fix as cursor_label
+      // below: Label re-measures when the text changes (e.g. wheel
+      // zoom "98%" -> "220%"), queue_resize bubbles up and the whole
+      // OSD pill flickers. Inscription's measure is fixed at
+      // nat-chars regardless of content.
+      child: Gtk.Inscription zoom_label {
+        text: bind template.zoom-label;
         styles ["numeric"]
-        width-chars: 5;
+        min-chars: 5;
+        nat-chars: 5;
+        xalign: 0.5;
+        valign: center;
       };
     }
 

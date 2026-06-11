@@ -10,14 +10,25 @@ template $PixelRpgSceneEditor : Adw.Bin {
     [overlay]
     $PixelRpgFloatingTopBar top_bar {}
 
+    // Bottom-left OSD stack — collaborators pill above the zoom pill.
+    // One Box instead of two absolutely-margined overlays, so the pills
+    // can never collide regardless of their heights.
     [overlay]
-    $PixelRpgFloatingZoom zoom_osd {}
+    Gtk.Box bottom_left_osds {
+      orientation: vertical;
+      spacing: 8;
+      halign: start;
+      valign: end;
+      margin-start: 12;
+      margin-bottom: 12;
+
+      $PixelRpgFloatingCollaborators floating_collaborators {}
+
+      $PixelRpgFloatingZoom zoom_osd {}
+    }
 
     [overlay]
     $PixelRpgFloatingPlay floating_play {}
-
-    [overlay]
-    $PixelRpgFloatingCollaborators floating_collaborators {}
 
     child: Adw.Bin backdrop {
       // Diagonal-stripe scratchpad — visible wherever the engine canvas
