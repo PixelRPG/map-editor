@@ -15,6 +15,13 @@
       "path": "./maps/kokiri-forest.json",
       "type": "map",
       "category": "overworld"
+    },
+    {
+      "id": "tree-house",
+      "name": "Link's Tree House",
+      "path": "./maps/tree-house.json",
+      "type": "map",
+      "category": "interiors"
     }
   ],
   "mapCategories": [
@@ -47,6 +54,12 @@
       "path": "./spritesets/link.json",
       "type": "spriteset",
       "category": "characters"
+    },
+    {
+      "id": "tree-house",
+      "path": "./spritesets/tree-house.json",
+      "type": "spriteset",
+      "category": "environments"
     }
   ],
   "properties": {

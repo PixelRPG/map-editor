@@ -43,6 +43,8 @@ Conventions:
 - **Engine canvas transparency** — `Gtk.GLArea` `has_alpha(true)` + `Color.Transparent` clear + `.engine-canvas` CSS — all three failed on this stack. Report filed at `../../gjsify/docs/reports/webgl-bridge-resize-observer.md` (also covers the resize issue). *owner: gjsify, blocked: external release*
 - **`FillContainer` resize** — switching to `DisplayMode.FillContainer` is in but Excalibur's `ResizeObserver(parent)` never fires on this stack. Same handoff report. *owner: gjsify, blocked: external release*
 
+- **Play-mode presentation gaps (found building the zelda-like teleport loop)** — (a) editor placement chrome (spawn-point / teleport marker frames) stays visible while playing; runtime mode should hide editor-only markers. (b) entering play does not snap the camera to the player until the first movement — on a small interior map the room can sit off-centre (or off-screen entirely before the map had a spawn-point). (c) scene chrome (inspector tabs, scene title) stays on the previous scene when a teleport switches maps mid-play. *owner: engine + maker*
+
 ## Atlas / world
 
 - **Real scene-card thumbnails for very large maps** — `MapPreview` works but a 176×148 map renders ~26k snapshot ops. Acceptable today; if it becomes a bottleneck cap the max ops per preview (downsample, every Nth tile). *owner: gjs (MapPreview)*
