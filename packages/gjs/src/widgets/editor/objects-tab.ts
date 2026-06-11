@@ -190,6 +190,7 @@ export class ObjectsTab extends Adw.Bin {
       const [ok, bounds] = row.compute_bounds(content)
       if (!ok) return GLib.SOURCE_REMOVE
       const adj = viewport.vadjustment
+      if (!adj) return GLib.SOURCE_REMOVE
       const target = bounds.get_y() - (adj.get_page_size() - bounds.get_height()) / 2
       adj.set_value(Math.max(adj.get_lower(), Math.min(target, adj.get_upper() - adj.get_page_size())))
       return GLib.SOURCE_REMOVE
