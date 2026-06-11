@@ -26,8 +26,21 @@ import { SessionState } from '../utils/session-state.ts'
  * `SessionState.notifyMutation` rather than re-`set`ing the wrapper.
  * Same-instance equality on the undo bus drops redundant updates and
  * one paint per click would otherwise allocate fresh wrappers.
+ *
+ * `origin` is the initiating actor when it isn't the local human
+ * user (e.g. `ASSISTANT_PEER_ID` for AI-collaborator edits). It is
+ * forwarded on `COMMAND_EXECUTED` so the collab layer can stamp it
+ * onto the outgoing `Operation.origin`. The undo-stack push is
+ * deliberately origin-agnostic: AI-initiated commands land on the
+ * SAME stack as the user's own edits so the human can always Ctrl+Z
+ * an AI mistake (see docs/concepts/ai-collaborator.md § attribution).
  */
-export function executeCommandOnScene(scene: Scene, events: EventEmitter<EngineEventMap>, command: Command): void {
+export function executeCommandOnScene(
+  scene: Scene,
+  events: EventEmitter<EngineEventMap>,
+  command: Command,
+  origin?: string,
+): void {
   command.apply(scene)
 
   const existing = SessionState.get(scene, UndoStackComponent)
@@ -40,5 +53,5 @@ export function executeCommandOnScene(scene: Scene, events: EventEmitter<EngineE
     SessionState.set(scene, new UndoStackComponent([command], 1))
   }
 
-  events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+  events.emit(EngineEvent.COMMAND_EXECUTED, { command, origin })
 }

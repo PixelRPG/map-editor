@@ -53,6 +53,24 @@ export default async () => {
       expect(drained.map((o) => o.seq)).toStrictEqual([2, 3])
     })
 
+    await it('watermark dedupe keys on (peerId, seq) — `origin` (AI attribution) does not change coverage', async () => {
+      const buffer = new PreAttachOpBuffer()
+      // Assistant-initiated host ops still ride the host's peerId/seq —
+      // the attribution-only `origin` field must be invisible to dedupe.
+      buffer.push({ ...op('host', 0), origin: 'ai-assistant' }) // in snapshot — skip
+      buffer.push({ ...op('host', 1), origin: 'ai-assistant' }) // in snapshot — skip
+      buffer.push({ ...op('host', 2), origin: 'ai-assistant' }) // at watermark — replay
+      buffer.push(op('host', 3)) // after watermark — replay
+
+      const drained = buffer.drain({ peerId: 'host', nextSeq: 2 }) as Operation[]
+      expect(drained.map((o) => o.seq)).toStrictEqual([2, 3])
+      expect(drained[0]?.origin).toBe('ai-assistant')
+
+      const watermark = { peerId: 'host', nextSeq: 2 }
+      expect(isCoveredByWatermark({ ...op('host', 1), origin: 'ai-assistant' }, watermark)).toBe(true)
+      expect(isCoveredByWatermark({ ...op('host', 2), origin: 'ai-assistant' }, watermark)).toBe(false)
+    })
+
     await it('watermark only covers the snapshot host — other peers replay fully', async () => {
       const buffer = new PreAttachOpBuffer()
       buffer.push(op('host', 0))

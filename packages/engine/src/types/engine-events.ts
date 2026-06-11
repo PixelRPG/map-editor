@@ -28,6 +28,7 @@ export enum EngineEvent {
   POINTER_DRAG_END = 'pointer-drag-end',
   COMMAND_EXECUTED = 'command-executed',
   COMMAND_REVERTED = 'command-reverted',
+  REMOTE_COMMAND_APPLIED = 'remote-command-applied',
   LAYER_FLAG_CHANGED = 'layer-flag-changed',
 }
 
@@ -180,8 +181,15 @@ export interface EngineEventMap {
    * peer session (direction `'apply'`). **Not** fired for remote
    * commands applied via `Engine.applyRemoteCommand` — that would
    * create a feedback loop.
+   *
+   * `origin` is the initiating actor when it isn't the local human
+   * user — e.g. `ASSISTANT_PEER_ID` for AI-collaborator edits driven
+   * via Control/MCP. The SessionController copies it onto the
+   * outgoing `Operation.origin` so remote peers can attribute the
+   * edit to the AI instead of the hosting user. Absent = the local
+   * user initiated the command.
    */
-  [EngineEvent.COMMAND_EXECUTED]: { command: Command }
+  [EngineEvent.COMMAND_EXECUTED]: { command: Command; origin?: string }
   /**
    * Fired by `Engine.undo` after the local command reverts + cursor
    * decrement. The {@link SessionController} relays the command as
@@ -189,8 +197,27 @@ export interface EngineEventMap {
    * runs `command.revert` (mirroring the originator's undo).
    * **Not** fired for remote reverts applied via
    * `Engine.revertRemoteCommand`.
+   *
+   * `origin` mirrors `COMMAND_EXECUTED`'s — the initiating actor
+   * when it isn't the local user.
    */
-  [EngineEvent.COMMAND_REVERTED]: { command: Command }
+  [EngineEvent.COMMAND_REVERTED]: { command: Command; origin?: string }
+  /**
+   * Fired by `Engine.applyRemoteCommand` / `Engine.applyRemoteRevert`
+   * after a REMOTE peer's operation mutated the local scene — the
+   * receive-side counterpart of `COMMAND_EXECUTED` (which is local-
+   * only to avoid relay loops). `origin` is the remote op's
+   * attribution field: `ASSISTANT_PEER_ID` when the sending peer's
+   * AI collaborator initiated the edit, absent for that peer's own
+   * human edits. This is the hook UI attribution (e.g. an "AI
+   * painted here" flash/badge for remote AI edits) subscribes to —
+   * see TODO.md.
+   */
+  [EngineEvent.REMOTE_COMMAND_APPLIED]: {
+    command: Command
+    direction: 'apply' | 'revert'
+    origin?: string
+  }
   /**
    * A layer's `visible` / `locked` flag changed on the active map —
    * UI-sync event for the host's Layers tab. Fired by the Engine on

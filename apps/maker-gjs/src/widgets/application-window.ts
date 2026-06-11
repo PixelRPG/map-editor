@@ -1667,19 +1667,23 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * Paint/erase a tile programmatically (Control → MCP). `layerId` null =
    * active layer; `spriteId` undefined = active tile, `0`/`null` = erase.
    * Goes through the engine's command path, so it undoes + syncs to collab
-   * peers. Returns `false` if it couldn't be applied.
+   * peers. `origin` is the initiating actor id the Control service passes
+   * (`ASSISTANT_PEER_ID`) so the op attributes the edit to the AI on
+   * remote peers. Returns `false` if it couldn't be applied.
    */
-  paintTile(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null): boolean {
-    return this._engineCtl.engine?.excalibur?.paintTileAt(layerId, tileX, tileY, spriteId) ?? false
+  paintTile(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null, origin?: string): boolean {
+    return this._engineCtl.engine?.excalibur?.paintTileAt(layerId, tileX, tileY, spriteId, origin) ?? false
   }
 
   /**
    * Place a library object on the active map programmatically (Control →
    * MCP). `layerId` null = active layer. Goes through the engine command
-   * path (undo + collab). Returns `false` if it couldn't be applied.
+   * path (undo + collab). `origin` — initiating actor id for peer-side
+   * attribution (see {@link paintTile}). Returns `false` if it couldn't
+   * be applied.
    */
-  placeObject(defId: string, layerId: string | null, tileX: number, tileY: number): boolean {
-    return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY) ?? false
+  placeObject(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): boolean {
+    return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY, origin) ?? false
   }
 
   /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */

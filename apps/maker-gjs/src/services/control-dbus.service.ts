@@ -1,8 +1,9 @@
 import Gio from '@girs/gio-2.0'
+import { ASSISTANT_PEER_ID } from '@pixelrpg/engine'
 import type { Application } from '../application.ts'
+import type { ApplicationWindow } from '../widgets/application-window.ts'
 import { loadRecentProjects } from './recent-projects.ts'
 import { STARTER_TEMPLATES } from './templates.ts'
-import type { ApplicationWindow } from '../widgets/application-window.ts'
 
 /**
  * D-Bus interface description for `org.pixelrpg.maker.Control`.
@@ -234,7 +235,17 @@ export class ControlDbusService {
    */
   PaintTile(layerId: string, tileX: number, tileY: number, spriteId: number): boolean {
     this._surfaceAssistantActivity({ x: tileX, y: tileY })
-    return this.requireWindow().paintTile(layerId || null, tileX, tileY, spriteId < 0 ? undefined : spriteId)
+    // Control callers are the external (AI) driver — stamp the
+    // assistant as the op's `origin` so remote peers attribute the
+    // edit to the AI, not the hosting user. The op still rides the
+    // host's peerId/seq (transport identity is unchanged).
+    return this.requireWindow().paintTile(
+      layerId || null,
+      tileX,
+      tileY,
+      spriteId < 0 ? undefined : spriteId,
+      ASSISTANT_PEER_ID,
+    )
   }
 
   /**
@@ -244,7 +255,8 @@ export class ControlDbusService {
    */
   PlaceObject(defId: string, layerId: string, tileX: number, tileY: number): boolean {
     this._surfaceAssistantActivity({ x: tileX, y: tileY })
-    return this.requireWindow().placeObject(defId, layerId || null, tileX, tileY)
+    // Assistant-attributed like PaintTile — see the comment there.
+    return this.requireWindow().placeObject(defId, layerId || null, tileX, tileY, ASSISTANT_PEER_ID)
   }
 
   /** `SetAssistantCursor(x, y) -> applied` — show/move the AI collaborator cursor. */
