@@ -2,10 +2,11 @@
 
 > Status: tracked in [implementation status](#implementation-status) — the single source of truth.
 
-The editor has three top-level views (welcome, atlas, scene-editor)
-and one window-level chrome system that has to render acceptably
-from a 360 px-wide smartphone form-factor up to a 4K desktop
-monitor. This doc is the high-level map of how that's stitched
+The editor has seven top-level views (welcome, atlas, cast, objects,
+tiles/Sheets, scene-editor, data — the `Adw.ViewStack` pages in
+`application-window.blp`) and one window-level chrome system that has
+to render acceptably from a 360 px-wide smartphone form-factor up to
+a 4K desktop monitor. This doc is the high-level map of how that's stitched
 together so the next contributor doesn't have to reverse-engineer
 fifteen PRs to add a new view.
 
@@ -65,9 +66,13 @@ the inspector **auto-opens** if it was closed.
 | View          | Triggering selection                                          | Inspector content                          |
 |---------------|---------------------------------------------------------------|--------------------------------------------|
 | Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
-| Cast          | Click a character row in the gallery                          | Name, isPlayer, speed, animation duration  |
-| Tiles         | Click a tile in the palette                                   | Solid switch, surface combo                |
+| Cast          | Click a character card in the gallery                         | Name, appearance picker, player toggle, speed (`CastInspector` in `character` mode) |
+| Sheets (stack page `tiles`) | Click a tile in a tileset's palette             | Solid switch, surface combo (tile-property inspector); appearance sheets open the animation editor (`CastInspector` in `sheet` mode) |
 | Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Objects-tab row highlights, props          |
+
+The Objects and Data views follow the same content-view master-detail
+pattern (gallery/list → detail page) rather than a separate inspector
+drawer.
 
 The rule is one line per call site: `this.showInspector = true`
 in the selection handler. The setter is a no-op when the panel is

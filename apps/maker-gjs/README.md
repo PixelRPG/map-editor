@@ -18,35 +18,33 @@ Application ID: `org.pixelrpg.maker`. Resources are bundled into a GResource fil
 
 ## What works today
 
-- Tile placement and removal via brush + eraser tools
-- Multi-layer maps with tileset selection
-- Live preview in the embedded engine widget
+See the [project README](../../README.md#status) for the full feature list — tile + object editing with undo/redo, the entity-composition content model, the seven editor views (Welcome / Atlas / Cast / Objects / Sheets / Scene editor / Data), in-editor Play mode, WebRTC pair-editing, and the AI collaborator driveable over D-Bus/MCP.
 
 ## Project layout
 
 ```
 src/
-├── application.ts          # GApplication subclass, registers actions
+├── application.ts          # GApplication subclass
 ├── main.ts                 # entry point
-├── widgets/                # GTK widgets (.ts + .blp + .css triples)
-│   ├── application-window  # main window
-│   ├── sidebar             # left panel (layers, tools, tileset selector)
-│   ├── project-view        # project explorer
-│   ├── welcome-view        # initial empty state
-│   ├── preferences-dialog
-│   └── layer-row.widget    # row in the layer list
-└── objects/
-    └── layer.ts            # layer data shape
+├── constants.ts
+├── widgets/                # GTK views (.ts + .blp [+ .css] per widget):
+│                           #   application-window, welcome-view, atlas-view,
+│                           #   cast-view, objects-view, tiles-view (Sheets),
+│                           #   scene-editor-view, data-view, share-dialog,
+│                           #   preferences-dialog
+└── services/               # controller layer: project load/save, collab
+                            # session + signalling, cast/objects controllers,
+                            # control D-Bus service, …
 ```
 
-UI is defined declaratively in Blueprint (`.blp`) files; widget classes wire signals via `@Gtk.Template.Callback`.
+UI is defined declaratively in Blueprint (`.blp`) files; widget classes wire signals via `@Gtk.Template.Callback`. Unit tests are `*.spec.ts` registered in `src/test.mts` (`gjsify test`).
 
 ## Build pipeline
 
 `gjsify run build` runs three steps:
 
 1. `build:resources` — `gjsify gresource` packs Blueprint UI + CSS + assets into the `.gresource` file
-2. `build:barrels` — `barrelsby` regenerates `index.ts` barrel exports
+2. `build:barrels` — `gjsify barrels` regenerates `index.ts` barrel exports
 3. `build:app` — `gjsify build` bundles `src/main.ts` to a single executable `org.pixelrpg.maker`
 
 ## Related

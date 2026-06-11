@@ -20,9 +20,9 @@ For shipping, the same engine has to run in a **separate window** without the ed
 
 | Mode marker | What it enables when present |
 |---|---|
-| `EditorModeComponent` | Tool systems active — tile painter, object placer, selection, undo/redo. Inspector edits are committed to the in-memory project. |
-| `RuntimeModeComponent` | Game systems active — player movement, input bindings, trigger system *actually fires effects*, animations advance, audio plays. |
-| `SpawnOverrideComponent` | The player is spawned at the component's `tileX/tileY` instead of the map's `kind: 'spawn-point'` placement. In-memory only — does **not** modify the project data. |
+| `EditorModeComponent` | Marks "the editor is active". **Today no tool system actually short-circuits on it** — the tile painter / object placer stay live even during Play (proto-Live-Run behaviour; see the gating note below). Inspector edits are committed to the in-memory project. |
+| `RuntimeModeComponent` | Game behaviour active — `PlayerSystem` gates on it (spawn visibility, movement, input, and the `player-tile-changed` / `player-action-pressed` events that drive trigger effects). |
+| `SpawnOverrideComponent` | The player is spawned at the component's `tileX/tileY` instead of the map's spawn-point placement. In-memory only — does **not** modify the project data. |
 
 Combinations are first-class. Each user-facing button picks a marker set:
 
@@ -31,7 +31,7 @@ Combinations are first-class. Each user-facing button picks a marker set:
 | Default (open editor) | `EditorMode` | Pure editor — tools work, nothing moves, triggers are visualised but don't execute |
 | **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `SpawnOverride{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. |
 | **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the floating top-bar's tool affordances are hidden and the inspector goes read-only — clean run-through. Esc / Stop → drops the runtime marker, back to editor. |
-| **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + `kind: 'spawn-point'` placement. No editor chrome. This is what shipping looks like. |
+| **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + spawn-point placement. No editor chrome. This is what shipping looks like. |
 
 **Why marker components instead of an enum:** "Live Run" isn't a separate mode from "Editor" — it's `Editor && Runtime`. Modelling each as a separate boolean marker lets the systems independently observe their own concern without anyone owning a giant `Mode` enum that needs a switch statement everywhere.
 
@@ -59,36 +59,19 @@ session.removeComponent(SpawnOverrideComponent)
 
 ### Systems gate themselves on session state
 
-Every editor / runtime system starts with a one-line check against the session singleton:
+The pattern is a one-line check against the session singleton:
 
 ```ts
-class TileEditorSystem extends System {
-  update(elapsed: number) {
-    if (!this.hasEditorMode(world)) return
-    // … paint logic …
-  }
-}
-
-class PlayerMovementSystem extends System {
-  update(elapsed: number) {
-    if (!this.hasRuntimeMode(world)) return
-    // … movement logic …
-  }
-}
+// player.system.ts — the shipped marker check
+const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
+if (!inRuntime) { /* hide player, zero velocity, skip input */ }
 ```
 
-A tiny helper (`SessionMode.hasEditor(world)` / `hasRuntime(world)`) keeps the boilerplate to one line. Same pattern any system uses to react to mode presence.
+**What's actually gated today:** `PlayerSystem` is the only system with a direct marker check. That single gate carries the runtime semantics indirectly — walk-onto/action triggers, item pickups and teleport requests can only fire in runtime mode because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`. Two known gaps against the design intent: (a) `TileEditorSystem` does not check `EditorModeComponent`, so an armed pencil/eraser/object tool still paints during Play (undoable + broadcast — acceptable as proto-Live-Run, but unintentional in Test Run); (b) `TriggerSystem.fireAuto` runs at scene init regardless of mode — latent, since no shipped template uses `on: 'auto'`. Either implement the missing guards or promote this behaviour to design — tracked as drift until then.
 
 ### Ghost spawn replaces the real spawn
 
-`PlayerSpawnSystem` already exists (PR 4). It picks up a new rule: if `SpawnOverrideComponent` is present on the session singleton, prefer it over the map's `kind: 'spawn-point'` placement. Otherwise fall back to the existing behaviour.
-
-```ts
-// PlayerSpawnSystem.initialize
-const ghost = sessionEntity.get(SpawnOverrideComponent)
-const spawn = ghost ?? findSpawnPointEntity(world)
-this.events.emit('player-spawned', spawn)
-```
+`PlayerSystem` owns spawn handling. The rule: if `SpawnOverrideComponent` is present on the session singleton, prefer it over the map's spawn-point placement; otherwise fall back to the placement (see `resolveSpawnTile` in `player.system.ts`).
 
 The map data stays untouched — ghost spawn is purely runtime state.
 
@@ -161,13 +144,13 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 - `packages/engine/src/components/runtime-mode.component.ts`
 - `packages/engine/src/components/spawn-override.component.ts`
 - Session-singleton helper in `packages/engine/src/utils/session-state.ts` (singleton entity name: `session-state`)
-- Systems gate on the markers (e.g. `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)`); `Engine.setRuntimeMode()` is the host-facing switch
+- `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)` — the only direct marker gate so far (see "Systems gate themselves" for the two gaps); `Engine.setRuntimeMode()` is the host-facing switch
 
 **Phase 2 — Maker controls (landed)**:
 - Play / Stop wired through `win.play` in `apps/maker-gjs/src/widgets/application-window.ts` → toggles the session markers in the active `MapScene`
 - Editor chrome reacts to `EditorMode` presence
 
-**Phase 3 — `PlayerSpawnSystem` spawn-override handling (landed)**:
+**Phase 3 — `PlayerSystem` spawn-override handling (landed)**:
 - The spawn resolution prefers `SpawnOverrideComponent` when present (see `resolveSpawnTile` in `packages/engine/src/systems/player.system.ts`)
 
 **Phase 4 — Full-Run windowing (planned)**:
@@ -180,7 +163,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 ## Related concepts
 
 - [`editor-architecture.md`](editor-architecture.md) — defines the session-singleton entity that hosts the mode markers, the `SessionState` subscription API the maker UI uses to react to mode changes, and the per-scene singleton lifetime that this doc references. Read first if you want to understand *how* mode changes propagate to the GTK widgets.
-- [`object-system.md`](object-system.md) — `TriggerSystem` and the kind-specific systems (teleport, item-pickup, walk-on-tile) gate themselves on `RuntimeModeComponent`. In pure editor mode they render placements but don't execute effects. In Live Run / Test Run / Full Run they fire normally.
+- [`object-system.md`](object-system.md) — trigger / teleport / item-pickup / walk-on-tile effects only execute in runtime mode, but **indirectly**: those systems carry no marker check themselves — their source events come from the `RuntimeModeComponent`-gated `PlayerSystem`. In pure editor mode the placements render and the events never fire. (Exception: `auto` triggers — see the gating note above.)
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — Full Run with multiplayer is where the game op-log machinery activates. Player 1 hosts and the engine's per-tick state changes (player movement, trigger effects, item pickups) become broadcast ops. Live Run and Test Run share a single peer's simulation — they're not multiplayer-aware. Mode markers (`EditorMode` / `RuntimeMode` / `SpawnOverride`) are local-only and never replicate.
 
 ## Open questions

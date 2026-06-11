@@ -8,15 +8,11 @@ This is the foundation for the runtime-mode flow in [`runtime-modes.md`](runtime
 
 ## Why this exists
 
-Today the editor's session state is fragmented:
-- `SceneEditorView` holds `_activeTileId`, `_activeLayerId`, `_layers`, `_tiles`, `_tilesetName`, `_tilesetFirstGid`, …
-- `ApplicationWindow` holds `_loadedProject`, `_scenesById`, `_engineCtl`, `_lastReportedZoom`, …
-- The engine's `MapEditorComponent` holds tile-level shadow state
-- `TileEditorSystem` pulls editor state through a `getEditorState()` callback the maker provides
-
-Result: state is duplicated, subscriptions are ad-hoc (GObject signals on individual widgets), and any non-GTK frontend (browser-export editor, future console in-game editor) would have to reimplement the state plumbing from scratch.
+Before the migration, the editor's session state was fragmented: `SceneEditorView` owned the active tile/layer in instance fields, `ApplicationWindow` owned project + zoom state, the engine's `MapEditorComponent` held tile-level shadow state, and `TileEditorSystem` pulled editor state through a maker-provided callback. State was duplicated, subscriptions were ad-hoc (GObject signals on individual widgets), and any non-GTK frontend (browser-export editor, future console in-game editor) would have had to reimplement the state plumbing from scratch.
 
 **Goal**: the engine's ECS world is the single source of truth for editor session state. GTK widgets observe, render, and emit "intent" — they don't *own* state.
+
+The engine side of this is shipped (session-singleton, `SessionState` subscription bridge, the editor-state components, the `Command`/undo machinery). Widget adoption is **not** finished: `SceneEditorView` still mirrors `_activeTileId` / `_activeLayerId` next to the per-scene components (see the phase tracker).
 
 ## The three-layer split
 
@@ -50,32 +46,33 @@ Result: state is duplicated, subscriptions are ad-hoc (GObject signals on indivi
 
 Editor-state components, all on the session-singleton entity:
 
-| Component | Purpose | Today's home (pre-migration) |
+| Component | Purpose | Former home (pre-migration) |
 |---|---|---|
-| `ActiveToolComponent` | `{ tool: 'select' \| 'pencil' \| 'eraser' \| 'eyedropper' }` (see note below) | `engine.setEditorState({ tool })` callback |
-| `ActiveTileComponent` | `{ spriteSetId, spriteId }` | `SceneEditorView._activeTileId` field |
-| `ActiveLayerComponent` | `{ layerId }` | `SceneEditorView._activeLayerId` field |
-| `SelectionComponent` | `{ entityIds: number[] }` | doesn't exist yet — would land here |
-| `UndoStackComponent` | `{ commands: Command[], cursor: number }` | doesn't exist yet — would land here |
+| `ActiveToolComponent` | `{ tool: 'select' \| 'pencil' \| 'eraser' \| 'eyedropper' \| 'object' }` (see note below) | `engine.setEditorState({ tool })` callback |
+| `ActiveTileComponent` | `{ spriteSetId, spriteId }` | `SceneEditorView._activeTileId` field (the view still mirrors it — see phase tracker) |
+| `ActiveLayerComponent` | `{ layerId }` | `SceneEditorView._activeLayerId` field (same caveat) |
+| `ActiveObjectComponent` | the armed object brush (entity `defId`) | new with the object tool |
+| `SelectedPlacementsComponent` | selected placement ids | new (built ECS-first) |
+| `UndoStackComponent` | `{ commands: Command[], cursor: number }` | new (built ECS-first) |
 | `EditorModeComponent` | (marker) | see [`runtime-modes.md`](runtime-modes.md) |
 | `RuntimeModeComponent` | (marker) | see [`runtime-modes.md`](runtime-modes.md) |
-| `GhostSpawnComponent` | `{ tileX, tileY }` | see [`runtime-modes.md`](runtime-modes.md) |
+| `SpawnOverrideComponent` | `{ tileX, tileY }` | see [`runtime-modes.md`](runtime-modes.md) |
 
 The set is intentionally small — anything that doesn't qualify (see below) stays in its natural home.
 
-> **Note on the tool union:** the shipped set is `select | pencil | eraser | eyedropper`. `select` is the default — read-only click-to-select that picks the topmost `ObjectPlacement` at the clicked tile (mutating `SelectedPlacementsComponent`) and emits `PLACEMENT_SELECTED` for inspector sync; tile-level / marquee selection is still deferred. Bucket-fill, rect, stamp, and event tools also remain deferred. Any future tool drops in via the tool MenuButton inside `FloatingTopBar` (see `_buildToolPopover`) by extending the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts`.
+> **Note on the tool union:** the shipped set is `select | pencil | eraser | eyedropper | object`. `select` is the default — read-only click-to-select that picks the topmost `ObjectPlacement` at the clicked tile (mutating `SelectedPlacementsComponent`) and emits `PLACEMENT_SELECTED` for inspector sync; tile-level / marquee selection is still deferred. `object` stamps the armed object brush (`ActiveObjectComponent`) onto the clicked tile. Bucket-fill, rect, stamp, and event tools remain deferred. Any future tool drops in via the tool MenuButton inside `FloatingTopBar` (see `_buildToolPopover`) by extending the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts`.
 
 ### In ECS systems (controller)
 
-Existing systems migrate to query the singleton instead of accepting state via callbacks:
+Systems query the singleton instead of accepting state via callbacks:
 
-| System | What it does today | What changes |
-|---|---|---|
-| `TileEditorSystem` | reads `getEditorState()` callback per tick | queries `ActiveTool / ActiveTile / ActiveLayer` components |
-| `CameraControlSystem` | direct pointer events | unchanged — camera state isn't editor state |
-| `ObjectSpawnSystem` | walks placements at activate | unchanged |
-| `PlayerSpawnSystem` | resolves player spawn | gains the `GhostSpawnComponent` short-circuit per runtime-modes.md |
-| `TriggerSystem` | walks placements per event | gates on `RuntimeModeComponent` presence |
+| System | How it consumes session state |
+|---|---|
+| `TileEditorSystem` | queries `ActiveTool / ActiveTile / ActiveLayer / ActiveObject` components |
+| `CameraControlSystem` | direct pointer events — camera state isn't editor state |
+| `ObjectSpawnSystem` | walks placements at activate; no session state |
+| `PlayerSystem` | gates runtime behaviour on `RuntimeModeComponent`; spawn resolution prefers `SpawnOverrideComponent` per runtime-modes.md |
+| `TriggerSystem` | effects fire only in runtime because its source events come from the `RuntimeModeComponent`-gated `PlayerSystem` |
 
 New systems landing as tools / features grow:
 
@@ -105,9 +102,9 @@ We do **not** try to model the widget tree as entities. GTK does that well; ECS 
 
 ### The session-singleton lifetime
 
-The singleton lives **per scene**. Each `MapScene` constructs its own Excalibur `World`; the singleton is added during scene construction and dies with the scene. Mode markers (`EditorMode`, `RuntimeMode`, `GhostSpawn`), active-tool/tile/layer, selection state — all attach to that per-scene singleton.
+The singleton lives **per scene**. Each `MapScene` constructs its own Excalibur `World`; the singleton is added during scene construction and dies with the scene. Mode markers (`EditorMode`, `RuntimeMode`, `SpawnOverride`), active-tool/tile/layer, selection state — all attach to that per-scene singleton.
 
-Cross-scene continuity is the **maker's** job, not the singleton's. The maker carries an app-level `EditorActive: boolean` bit on `Application` and re-applies `EditorModeComponent` whenever a new `MapScene` activates. Markers that *shouldn't* persist (`RuntimeMode`, `GhostSpawn`) are intentionally not restored on scene-switch — leaving Live Run by switching maps drops you back into pure-editor on the new map. See [`runtime-modes.md`](runtime-modes.md) § "Scene-switch behaviour" for the user-facing rules.
+Cross-scene continuity is the **maker's** job, not the singleton's. The maker carries an app-level `EditorActive: boolean` bit on `Application` and re-applies `EditorModeComponent` whenever a new `MapScene` activates. Markers that *shouldn't* persist (`RuntimeMode`, `SpawnOverride`) are intentionally not restored on scene-switch — leaving Live Run by switching maps drops you back into pure-editor on the new map. See [`runtime-modes.md`](runtime-modes.md) § "Scene-switch behaviour" for the user-facing rules.
 
 This separation — singleton lives per scene, mode-restoration policy lives on the app — keeps each layer responsible for what it can see. Singletons don't try to communicate across scenes; the app coordinates.
 
@@ -184,44 +181,28 @@ Reason: if both representations co-exist for a release cycle, every mutating cod
 
 This is also recorded in `AGENTS.md` under the migration governance rules so reviewers can call it out automatically.
 
-### `Command` shape for Phase 5 (Undo)
+### The `Command` shape (Undo + collab)
 
-When `UndoSystem` lands, every mutating editor operation emits a `Command` that captures enough information to apply and revert without referencing runtime entity IDs.
+Every mutating editor operation is a `Command` that captures enough information to apply and revert without referencing runtime entity IDs. The shipped interface lives in `packages/engine/src/commands/types.ts`:
 
 ```ts
-export interface Command {
-  /** User-facing label shown in the Undo menu / status bar. */
+export interface Command<P = unknown> {
+  /** Discriminator + serialisation key — lets the CommandRegistry
+   *  re-construct the concrete command from a deserialised Operation. */
+  readonly kind: string
+  /** User-facing label shown in the Undo/Redo menus / status bar. */
   readonly label: string
-
-  /** Apply the mutation. Called once on the original action + on redo. */
-  apply(world: World): void
-
-  /** Reverse the mutation. Called on undo. */
-  revert(world: World): void
-}
-
-// Example — every paint stroke captures the previous sprite for revert.
-export class PaintTileCommand implements Command {
-  constructor(
-    private readonly layerId: string,
-    private readonly tileX: number,
-    private readonly tileY: number,
-    private readonly newSpriteId: number,
-    private readonly previousSpriteId: number | null,
-  ) {}
-  get label() { return `Paint tile (${this.tileX}, ${this.tileY})` }
-  apply(world: World) { /* set sprite on the map data + redraw */ }
-  revert(world: World) { /* restore previousSpriteId, or clear if null */ }
-}
-
-// And on UndoStackComponent:
-export class UndoStackComponent extends Component {
-  public commands: Command[] = []
-  public cursor: number = 0   // index of next command to apply on redo
+  /** Pure, fully serialisable data — enough for both apply and revert,
+   *  including any captured "previous value" needed to undo. */
+  readonly payload: P
+  apply(scene: Scene): void
+  revert(scene: Scene): void
 }
 ```
 
-Stability rule: commands reference **stable identifiers** (`layerId`, tile coords, `ObjectPlacement.id`) — **never** Excalibur runtime entity IDs. Entity IDs reset per scene load; placement / layer IDs are stable across save/load. This keeps the undo stack serialisable for future "session restore" or collaborative-edit replay.
+`kind` + the serialisable `payload` are load-bearing for collaboration: they're what lets a remote peer reconstruct and apply the same command (see `AGENTS.md` "Transport-ready primitives" rule 2 — every new mutation must register in `BUILT_IN_COMMANDS`). `UndoStackComponent { commands, cursor }` holds the per-scene stack; `Engine.executeCommand` / `undo` / `redo` drive it.
+
+Stability rule: command payloads reference **stable identifiers** (`layerId`, tile coords, `ObjectPlacement.id`) — **never** Excalibur runtime entity IDs. Entity IDs reset per scene load; placement / layer IDs are stable across save/load. This keeps the undo stack serialisable for "session restore" or collaborative-edit replay.
 
 ### Performance + error-handling open questions
 
@@ -249,25 +230,25 @@ Five phases, ordered by leverage. Each is its own PR. The current code keeps wor
 
 ### Phase 1 — Foundation: mode-marker components
 
-Lands as part of the runtime-modes PR series (see `runtime-modes.md` Phase 1). The session singleton itself + `EditorModeComponent` / `RuntimeModeComponent` / `GhostSpawnComponent` are the first inhabitants. The maker creates the singleton when constructing `MapScene` and adds `EditorModeComponent` by default.
+Landed as part of the runtime-modes PR series (see `runtime-modes.md` Phase 1). The session singleton itself + `EditorModeComponent` / `RuntimeModeComponent` / `SpawnOverrideComponent` are the first inhabitants. The maker creates the singleton when constructing `MapScene` and adds `EditorModeComponent` by default.
 
-This is the **minimum** for the architecture to be real. Nothing migrates yet; we just establish the home.
+This was the **minimum** for the architecture to be real — it established the home.
 
 ### Phase 2 — `ActiveToolComponent`
 
-Replaces the `engine.setEditorState({ tool })` callback with component mutation. `TileEditorSystem` queries the session singleton instead. The tool MenuButton inside `FloatingTopBar` (popover-driven) mutates the component on selection. Smallest possible migration to validate the subscription bridge.
+Replaced the `engine.setEditorState({ tool })` callback with component mutation. `TileEditorSystem` queries the session singleton instead. The tool MenuButton inside `FloatingTopBar` (popover-driven) mutates the component on selection. Smallest possible migration; it validated the subscription bridge.
 
 ### Phase 3 — `ActiveTileComponent` + `ActiveLayerComponent`
 
-`SceneEditorView._activeTileId` and `_activeLayerId` move to components. The active-tile + active-layer chip inside `FloatingTopBar` + the inspector subscribe. `TileEditorSystem` consumes them.
+The active tile + layer became per-scene components; the `FloatingTopBar` chips, the inspector and `TileEditorSystem` consume them. **Caveat — widget adoption incomplete:** `SceneEditorView` still keeps `_activeTileId` / `_activeLayerId` instance fields alongside the components (the per-scene component resets on scene-switch while the view's value persists, and the view re-syncs by hand). That is the parallel-state shape the migration rule below forbids — either the cross-scene persistence moves to the app-level restore path (per the singleton-lifetime section) or the exception gets designed in deliberately. Tracked in `TODO.md`.
 
 ### Phase 4 — `SelectionComponent` + `SelectionSystem`
 
 First **new** feature built directly on the new architecture. The foundation component (`SelectedPlacementsComponent`) has shipped; the marquee-select tool itself — together with multi-tile clipboard and group-move — is deferred to a future phase (`SelectionSystem` lands alongside it). No legacy state to migrate — built fresh in the ECS-first style.
 
-### Phase 5 — `UndoStackComponent` + `UndoSystem`
+### Phase 5 — `UndoStackComponent` + undo/redo
 
-The killer feature. Once all mutating operations (paint, erase, place-object, move, layer-edit) emit commands into the stack, `UndoSystem` replays / reverses them. Currently there's no undo at all; this is where the architecture pays back the migration investment.
+Mutating operations (paint, erase, place-object, remove-object) emit `Command`s into the per-scene `UndoStackComponent`; `Engine.executeCommand` / `undo` / `redo` apply and reverse them, and the same commands broadcast to collab peers. This is where the architecture pays back the migration investment.
 
 ### Future phases (deferred)
 
@@ -291,18 +272,18 @@ Phase tracker — fill in as PRs land.
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Mode markers + session-singleton (folds into runtime-modes PR series) | **landed** |
+| 1 | Mode markers + session-singleton + `SessionState` subscription bridge | **landed** |
 | 2 | `ActiveToolComponent` + system migration | **landed** |
-| 3 | `ActiveTileComponent` + `ActiveLayerComponent` migration | **landed** |
-| 4 | `SelectedPlacementsComponent` (foundation; marquee `SelectionSystem` is Phase 4b) | **landed** |
-| 5 | `UndoStackComponent` + `Command` interface + paint/erase commands + Engine `executeCommand` / `undo` / `redo` | **landed** |
+| 3 | `ActiveTileComponent` + `ActiveLayerComponent` migration | **landed (engine side)** — `SceneEditorView` still mirrors `_activeTileId` / `_activeLayerId`; widget adoption pending (see Phase 3 caveat) |
+| 4 | `SelectedPlacementsComponent` (foundation; marquee `SelectionSystem` is Phase 4b, pending) | **landed** |
+| 5 | `UndoStackComponent` + `Command` interface + paint/erase/object commands + Engine `executeCommand` / `undo` / `redo` | **landed** |
 
-**Subscription bridge implementation** — Phase 1 includes the `SessionState.subscribe` helper. Until that's built, widgets can read the components directly (no notifications on mutation, requires explicit re-render call). The bridge upgrades them to push-based.
+**Subscription bridge implementation** — the `SessionState.subscribe` helper shipped with Phase 1 (`packages/engine/src/utils/session-state.ts`). The open work is widget-side: moving the remaining `SceneEditorView` mirrors onto subscriptions (Phase 3 caveat above).
 
 ## Related concepts
 
-- [`runtime-modes.md`](runtime-modes.md) — Phase 1's session-singleton is the same entity that hosts the mode markers (`EditorMode`, `RuntimeMode`, `GhostSpawn`). Both docs describe one half of the same machinery; this doc owns the lifecycle + subscription API, runtime-modes owns the mode-marker semantics.
-- [`object-system.md`](object-system.md) — the editor UI for the object library (Library mode-rail, Object tool, Inspector tab) is built on the subscription bridge here. The data model itself lives in the project file (`GameProjectData.objectLibrary` + `MapData.objectPlacements`), so the in-memory project is not on the session-singleton — only the *editor state about which object is selected* is.
+- [`runtime-modes.md`](runtime-modes.md) — Phase 1's session-singleton is the same entity that hosts the mode markers (`EditorMode`, `RuntimeMode`, `SpawnOverride`). Both docs describe one half of the same machinery; this doc owns the lifecycle + subscription API, runtime-modes owns the mode-marker semantics.
+- [`object-system.md`](object-system.md) — the editor UI for the object system (Objects view, object tool, inspector tabs) is built on the subscription bridge here. The data model itself lives in the project file (`GameProjectData.entityLibrary` + `MapData.objectPlacements`), so the in-memory project is not on the session-singleton — only the *editor state about which object is selected / armed* is (`SelectedPlacementsComponent`, `ActiveObjectComponent`).
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — the operation-oriented mutation API + the `Command` interface defined here **is** the editor op vocabulary in the multi-peer sync layer. Phase 5 (Undo) IS the editor op-log. The two docs describe the same mechanism from different angles: this one for single-user UX, the collab doc for multi-peer ordering.
 - **External control (D-Bus / MCP)** — `apps/maker-gjs/src/services/control-dbus.service.ts` (`org.pixelrpg.maker.Control`) + the `apps/mcp-bridge` orchestrator are a fourth consumer of this same model: status reads come from the ECS getters (`getDebugStatus`), and mutations (`paint_tile`) go through the very same `Engine.executeCommand` / `Command` path as a pointer click — so an agent-driven edit undoes and syncs to collab peers identically. This is *why* the data-driven ECS model matters beyond the GTK view: GTK widgets, the op-log, multiplayer peers, and the D-Bus/MCP control surface are all just different observers/drivers of one model. A future generic `get_components` projection (serialising the session-singleton) would make the control surface fully data-driven (auto-tracking new components) — tracked in `TODO.md`.
 

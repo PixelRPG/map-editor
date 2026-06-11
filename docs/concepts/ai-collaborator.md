@@ -27,18 +27,21 @@ machinery** a human peer uses:
 ### Why this is the right architecture
 
 It **reuses** what already exists (op-log, awareness, cursor renderer)
-and **sidesteps the hard collab blocker**: the WebRTC/multi-instance path
-crashes because a *second* editor runs WebGL + GStreamer in one process
-(see `TODO.md`). The AI collaborator needs **none** of that:
+and needs no second process at all:
 
-- One editor process (the user's) — renders normally, no second engine.
-- No WebRTC / GStreamer — the AI↔editor channel is D-Bus/MCP.
+- One editor process (the user's) — renders normally, no second engine,
+  no WebRTC / GStreamer for the AI itself; the AI↔editor channel is
+  D-Bus/MCP.
 - The AI's presence/cursor are injected **locally** into an
-  `AwarenessManager` whose `send` is a no-op (nothing goes on a wire).
+  `AwarenessManager` whose `send` is a no-op (nothing goes on a wire) —
+  and relay verbatim to remote peers when a real session is live
+  (Phase 5).
 
 So the collaboration investment (op-log + awareness) pays off as a
-shippable product feature **without** the WebRTC pair-edit path needing to
-be crash-free.
+shippable product feature with zero extra infrastructure. (The
+WebRTC pair-edit path works too — its only fragility is an
+intermittent engine-init crash, see `TODO.md` — but the in-process AI
+doesn't depend on it either way.)
 
 ## How it maps onto existing code
 
@@ -47,7 +50,7 @@ be crash-free.
 | AI edits | `Engine.executeCommand` (op-log) via `paint_tile` etc. | already there |
 | AI cursor | local `AwarenessManager` + `RemoteCursorRenderer`, fed `handleInbound({type:'cursor', peerId:'ai-assistant', …})` | already there — just not session-bound |
 | AI presence (name/colour) | `handleInbound({type:'presence', …})` | already there |
-| Edit attribution | stamp the AI's ops with its peerId | op `peerId` field exists |
+| Edit attribution | visual: tile flash in the assistant's colour. **Op-level attribution is NOT implemented** — the AI's ops are stamped with the hosting user's `peerId` and land on the host's undo stack (remote peers can't distinguish them; the host's Ctrl+Z undoes AI work). Stamping a real origin id through `executeCommand` → `Operation` is planned. | partial |
 | Presence UI (roster, pause) | new small UI on top of awareness state | Phase 3 |
 
 The one architectural move: **decouple the awareness + cursor renderer
@@ -64,17 +67,25 @@ virtual peers.
    `HideAssistant`. Bridge tools: `assistant_cursor` / `assistant_info` /
    `assistant_hide`. Result: the user watches a labelled "AI Assistant"
    cursor move over the map.
-2. **Edit attribution (done).** When the assistant paints, the tile gets a
-   brief fading outline in the assistant's colour ("AI painted here") so
-   edits are visibly the AI's. Auto-gated on assistant presence
-   (`Engine._flashAssistantTile`).
-3. **Presence UI + control (done).** A bottom-left `FloatingAssistant`
+2. **Edit attribution (done — visual only).** When the assistant paints,
+   the tile gets a brief fading outline in the assistant's colour ("AI
+   painted here") so edits are visibly the AI's in the moment. Auto-gated
+   on assistant presence (`Engine._flashAssistantTile`). The flash is
+   ephemeral — on the wire and on the undo stack the ops carry the
+   hosting user's `peerId` (see the mapping table); durable per-op
+   attribution is planned.
+3. **Presence UI + control (done).** A bottom-left `FloatingCollaborators`
    OSD pill (avatar + "AI Assistant" + a pause/resume button) appears when
    the assistant is present. The button drives the
    `win.toggle-assistant-paused` stateful action; while paused the engine
-   rejects the assistant's cursor + paints (`Engine._assistantPaused`) and
+   rejects the assistant's cursor + canvas mutations (`paintTileAt` /
+   `placeObjectAt` / `removeObject` via `Engine._assistantPaused`) and
    `get_status` reports `assistantPaused` / `assistantPresent` so the agent
-   knows to stop. User stays in control.
+   knows to stop. **Pause does NOT gate the Control action plane** —
+   `ActivateAction` / `ChangeActionState` / `OpenProject` still execute
+   while paused (so `win.*` actions remain driveable); for those, pause is
+   advisory and a well-behaved driver respects `assistantPaused`
+   voluntarily. User stays in control of the canvas either way.
 4. **Follow-cam + activation UX (done).** An opt-in "follow the assistant"
    toggle on the pill (`win.toggle-follow-assistant` → `Engine._followAssistant`)
    pans the camera to the assistant's cursor on each move; off by default
@@ -90,6 +101,21 @@ virtual peers.
    live: a remote joiner renders the host's "AI Assistant" cursor.
    (The WebRTC/GL "blocker" turned out to be an *intermittent* engine-init
    crash, not a fundamental incompatibility — see `TODO.md`.)
+
+## Auto-presence — external drivers always surface as the AI
+
+A driver doesn't have to announce itself with `SetAssistantInfo` to be
+visible. Every **mutating** Control method (`ActivateAction`,
+`ChangeActionState`, `OpenProject`, `PaintTile`, `PlaceObject`, …)
+calls `_surfaceAssistantActivity`
+(`apps/maker-gjs/src/services/control-dbus.service.ts`), which ensures
+the assistant participant exists in the roster — so the user always
+sees that an AI/automation is acting, even when the driver never
+introduces itself. Tile-targeted mutations additionally move the
+assistant cursor onto the target tile, making the activity followable
+on the map. Read-only methods (`GetStatus`, `Screenshot`, …) stay
+silent; `HideAssistant` remains the explicit opt-out when a driver
+finishes.
 
 ## Participants toolbar (roster switcher)
 
@@ -117,8 +143,11 @@ human peers — the AI was just the first participant.
 - **Transparency + consent** — it must be obvious an AI is acting; a
   visible presence chip + a Pause/Stop control are non-negotiable for the
   end-user feature.
-- **Undo attribution** — AI edits share the op-log/undo stack but are
-  recognisable as the AI's.
+- **Undo attribution** — AI edits share the op-log/undo stack with the
+  host's own edits. Today they are only recognisable in the moment (the
+  tile flash); the stack itself carries no originator, so the host's
+  undo reverses AI work indistinguishably. A per-op origin field is the
+  planned fix.
 - **Gating** — the dev path stays env-driven; the *product* path needs a
   deliberate in-app enable.
 - **Cursor throttle** — `AwarenessManager` already throttles; the AI's
