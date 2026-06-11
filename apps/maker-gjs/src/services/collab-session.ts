@@ -11,21 +11,23 @@ import type {
 } from '@pixelrpg/engine'
 import {
   AwarenessManager,
+  ChunkReassembler,
   captureProjectSnapshot,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
-  ChunkReassembler,
   isProjectOp,
   isSessionProtocolOp,
   type PeerRole,
   PeerSession,
   type PeerSessionState,
+  PreAttachOpBuffer,
   RemoteCursorRenderer,
   SessionController,
   SnapshotExchange,
+  type SnapshotOpWatermark,
   SPRITESET_ADD_CHUNK_KIND,
-  SpriteSetAddReassembler,
   SPRITESET_UPDATE_CHUNK_KIND,
+  SpriteSetAddReassembler,
 } from '@pixelrpg/engine'
 
 import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
@@ -172,6 +174,20 @@ export class CollabSession {
   private readonly peerConnectTimeoutMs: number
   private projectSeq = 0
   private transferCounter = 0
+  /**
+   * Holding pen for scene Command ops that arrive before
+   * {@link attachEngine} builds the SessionController (the joiner's
+   * snapshot → sandbox → engine-init window, which takes seconds).
+   * Drained + replayed through the controller on attach; see
+   * {@link attachEngine} for the dedupe/idempotency reasoning.
+   */
+  private readonly preAttachBuffer = new PreAttachOpBuffer()
+  /**
+   * Watermark carried by the snapshot we loaded (joiner side) — the
+   * host's next command seq at capture start. Buffered ops below it
+   * are already reflected in the snapshot and are skipped on replay.
+   */
+  private snapshotWatermark: SnapshotOpWatermark | null = null
   private readonly spriteSetReassembler = new SpriteSetAddReassembler()
   private readonly spriteSetUpdateReassembler = new ChunkReassembler<SpriteSetUpdatePayload>()
   private readonly subscriptions: Array<() => void> = []
@@ -227,7 +243,22 @@ export class CollabSession {
     this.snapshotExchange = new SnapshotExchange({
       peerId: opts.peerId,
       send: (op) => this.peer.sendOp(op),
-      captureSnapshot: () => (this.engine ? captureProjectSnapshot(this.engine) : null),
+      captureSnapshot: async () => {
+        if (!this.engine) return null
+        // Read the command-seq watermark SYNCHRONOUSLY before the
+        // (async) capture touches any state: every op we sent with
+        // `seq < nextSeq` was applied to our engine before this line
+        // ran, so its effect is guaranteed inside the snapshot and the
+        // joiner can skip its buffered copy. Ops sequenced during the
+        // capture replay on the joiner — safe, because every built-in
+        // command's apply is idempotent (see attachEngine).
+        const watermark: SnapshotOpWatermark | null = this.controller
+          ? { peerId: this.peerId, nextSeq: this.controller.peekNextSeq() }
+          : null
+        const snapshot = await captureProjectSnapshot(this.engine)
+        if (!snapshot) return null
+        return watermark ? { ...snapshot, opWatermark: watermark } : snapshot
+      },
     })
     const opSub = this.peer.events.on('op-received', ({ op }) => {
       if (isSessionProtocolOp(op)) {
@@ -253,6 +284,16 @@ export class CollabSession {
         } else {
           this.onProjectOpReceived?.(op as ProjectOp)
         }
+        return
+      }
+      // Scene Command ops are consumed by the SessionController —
+      // which only exists once attachEngine() runs. Buffer them in
+      // the meantime (joiner pre-attach window) so a host paint /
+      // place / undo during snapshot-load + engine-init isn't lost;
+      // attachEngine replays the buffer in arrival order. Own echoes
+      // are skipped defensively (mirrors SessionController's guard).
+      if (!this.controller && (op as { peerId?: unknown }).peerId !== this.peerId) {
+        this.preAttachBuffer.push(op)
       }
     })
     this.subscriptions.push(() => opSub.close())
@@ -276,11 +317,34 @@ export class CollabSession {
    * Host flow remains unchanged: pass `engine` in the constructor;
    * attach happens implicitly.
    *
-   * NOTE: ops received between `start()` and `attachEngine()` are
-   * dropped (no command target). For the sandbox window this is
-   * acceptable — the host typically isn't editing while it
-   * services a snapshot request — but a future PR could add a
-   * pre-attach buffer for stricter consistency.
+   * Scene Command ops received between `start()` and `attachEngine()`
+   * are buffered (see {@link PreAttachOpBuffer}) and replayed here in
+   * arrival order, so a host paint / place / undo during the joiner's
+   * snapshot-load + engine-init window is not lost.
+   *
+   * Dedupe: the snapshot may already contain a buffered op's effect
+   * (host painted, then serviced our snapshot request — the op was
+   * still delivered). The snapshot's `opWatermark` (host's next
+   * command seq at capture start) lets us skip exactly those ops.
+   * Ops at-or-above the watermark replay; a command the host executed
+   * DURING its async capture can be both inside the snapshot and
+   * replayed, which is safe because every built-in command converges
+   * under re-apply:
+   *
+   *   - `tile.paint` apply sets the sprite at (tile, layer) —
+   *     replacing what's there; applying twice yields the same state.
+   *   - `tile.erase` apply clears the slot — idempotent.
+   *   - `object.place` apply replaces an existing placement with the
+   *     same id (`addPlacement`'s replace branch) — the replayed
+   *     placement is byte-identical to the snapshot's, so the replace
+   *     is a no-op (and replay never calls `revert`, so the known
+   *     place-replace revert flaw — revert deletes instead of
+   *     restoring — is not reachable from here; a LIVE revert op
+   *     arriving later corresponds to a real host undo, where
+   *     deleting the placement is the converged outcome).
+   *   - `object.remove` apply filters by id — idempotent.
+   *   - `direction: 'revert'` replays restore captured previous state
+   *     (paint/erase) or add/remove by stable id — all idempotent.
    */
   attachEngine(engine: Engine): void {
     if (this.closed) throw new Error('CollabSession: attachEngine called after close()')
@@ -295,6 +359,20 @@ export class CollabSession {
       // SessionController's own filter drops them via the no-hook
       // path; we deliberately don't double-route through here.
     })
+    // Replay ops buffered during the pre-attach window BEFORE any live
+    // op can interleave (this method is synchronous — the controller's
+    // own `op-received` subscription can't fire until we return to the
+    // event loop). Arrival order on the ordered-reliable channel equals
+    // the host's send order, so replaying in buffer order preserves
+    // host-side causality.
+    if (this.preAttachBuffer.dropped > 0) {
+      log.warn(`pre-attach buffer overflowed — ${this.preAttachBuffer.dropped} oldest op(s) were dropped`)
+    }
+    const buffered = this.preAttachBuffer.drain(this.snapshotWatermark)
+    if (buffered.length > 0) {
+      log.info(`replaying ${buffered.length} buffered pre-attach op(s)`)
+      for (const op of buffered) this.controller.applyRemoteOperation(op)
+    }
     this.cursorRenderer = new RemoteCursorRenderer(engine, this.awareness)
     // Bridge engine pointer → awareness cursor stream. The engine
     // hook fires on every Excalibur `pointermove`; the manager
@@ -400,9 +478,15 @@ export class CollabSession {
    * Engine-independent: works in the pre-attach phase. The host
    * peer responds from its own captureProjectSnapshot regardless
    * of whether the joiner has an engine yet.
+   *
+   * Side effect: records the snapshot's `opWatermark` so
+   * {@link attachEngine} can skip buffered pre-attach ops whose
+   * effects the snapshot already contains.
    */
-  requestSnapshot(timeoutMs?: number): Promise<ProjectSnapshot> {
-    return this.snapshotExchange.request(this.roomId, timeoutMs)
+  async requestSnapshot(timeoutMs?: number): Promise<ProjectSnapshot> {
+    const snapshot = await this.snapshotExchange.request(this.roomId, timeoutMs)
+    this.snapshotWatermark = snapshot.opWatermark ?? null
+    return snapshot
   }
 
   /**
@@ -474,6 +558,7 @@ export class CollabSession {
       }
     }
     this.subscriptions.length = 0
+    this.preAttachBuffer.clear()
     this.spriteSetReassembler.clear()
     this.spriteSetUpdateReassembler.clear()
     this.cursorRenderer?.close()

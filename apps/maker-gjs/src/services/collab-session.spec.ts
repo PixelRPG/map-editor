@@ -20,13 +20,21 @@ import { describe, expect, it } from '@gjsify/unit'
 import {
   CHANNEL_AWARENESS,
   CHANNEL_OP,
+  type Command,
+  createSnapshotResponseOp,
+  type Engine,
   FakeRTCPeerConnection,
   InMemoryTransport,
+  type Operation,
+  PROJECT_SNAPSHOT_VERSION,
+  type ProjectOp,
+  type ProjectSnapshot,
   rtcFactoryFor,
   type SignallingMessage,
   type SignallingTransport,
   wireChannelDelivery,
 } from '@pixelrpg/engine'
+import { EventEmitter as ExEventEmitter } from 'excalibur'
 
 import { CollabTimeoutError } from './collab-log.ts'
 import { CollabSession } from './collab-session.ts'
@@ -200,6 +208,131 @@ export default async () => {
       // a non-empty message that doesn't reduce to "{}".
       expect(errMsg.length).toBeGreaterThan(0)
       expect(errMsg).not.toBe('{}')
+    })
+  })
+
+  await describe('CollabSession pre-attach op buffer', async () => {
+    /**
+     * Minimal engine fake satisfying everything `attachEngine` wires:
+     * SessionController (events + applyRemoteCommand/Revert),
+     * RemoteCursorRenderer ('map-loaded' subscription) and the two
+     * pointer/selection bridges.
+     */
+    function makeMockEngine() {
+      const applied: Command[] = []
+      const reverted: Command[] = []
+      const engine = {
+        events: new ExEventEmitter(),
+        applyRemoteCommand: (command: Command) => {
+          applied.push(command)
+        },
+        applyRemoteRevert: (command: Command) => {
+          reverted.push(command)
+        },
+        onPointerMoved: () => () => {},
+        onSelectionChanged: () => () => {},
+      }
+      return { engine: engine as unknown as Engine, applied, reverted }
+    }
+
+    function makeJoinerSession(): CollabSession {
+      return new CollabSession({
+        role: 'joiner',
+        signalling: silentTransport(),
+        peerId: 'joiner-buffer',
+        peerConnectTimeoutMs: 100,
+        rtcFactory: rtcFactoryFor(new FakeRTCPeerConnection()),
+      })
+    }
+
+    function paintOp(seq: number, overrides: Partial<Operation> = {}): Operation {
+      return {
+        kind: 'tile.paint',
+        payload: { layerId: 'ground', tileX: seq, tileY: 0, spriteId: 1, previousSprites: [] },
+        peerId: 'host-peer',
+        seq,
+        ...overrides,
+      }
+    }
+
+    await it('buffers pre-attach scene Command ops and replays them in arrival order on attachEngine', async () => {
+      const session = makeJoinerSession()
+      const projectOps: ProjectOp[] = []
+      session.onProjectOpReceived = (op) => {
+        projectOps.push(op)
+      }
+
+      // Delivered while NO engine is attached — pre-fix these were lost.
+      session.peer.events.emit('op-received', { op: paintOp(0) })
+      session.peer.events.emit('op-received', { op: paintOp(1) })
+      session.peer.events.emit('op-received', { op: paintOp(2, { direction: 'revert' }) })
+      // Own echo — must not be buffered.
+      session.peer.events.emit('op-received', { op: paintOp(3, { peerId: 'joiner-buffer' }) })
+      // Project op — handled by its own sink, must not be replayed.
+      session.peer.events.emit('op-received', {
+        op: { kind: '__project/entity.remove', payload: { id: 'x' }, peerId: 'host-peer', seq: 4 },
+      })
+
+      const { engine, applied, reverted } = makeMockEngine()
+      session.attachEngine(engine)
+
+      expect(applied).toHaveLength(2)
+      expect(applied.map((c) => (c.payload as { tileX: number }).tileX)).toStrictEqual([0, 1])
+      expect(reverted).toHaveLength(1)
+      expect((reverted[0]?.payload as { tileX: number }).tileX).toBe(2)
+      expect(projectOps).toHaveLength(1)
+
+      // Live ops after attach flow straight through the controller.
+      session.peer.events.emit('op-received', { op: paintOp(5) })
+      expect(applied).toHaveLength(3)
+      session.close('test')
+    })
+
+    await it('skips buffered ops the snapshot opWatermark marks as already contained', async () => {
+      const session = makeJoinerSession()
+
+      // Resolve a snapshot request carrying the host's watermark:
+      // ops with seq < 2 were applied before capture began.
+      const snapshot: ProjectSnapshot = {
+        version: PROJECT_SNAPSHOT_VERSION,
+        projectFilename: 'game-project.json',
+        project: { id: 'p' } as ProjectSnapshot['project'],
+        maps: [],
+        spriteSets: [],
+        opWatermark: { peerId: 'host-peer', nextSeq: 2 },
+      }
+      const pending = session.requestSnapshot(1_000)
+      session.peer.events.emit('op-received', {
+        op: createSnapshotResponseOp({ peerId: 'host-peer', seq: 0, snapshot }),
+      })
+      const received = await pending
+      expect(received.opWatermark?.nextSeq).toBe(2)
+
+      session.peer.events.emit('op-received', { op: paintOp(0) }) // in snapshot — skipped
+      session.peer.events.emit('op-received', { op: paintOp(1) }) // in snapshot — skipped
+      session.peer.events.emit('op-received', { op: paintOp(2) }) // replayed
+      session.peer.events.emit('op-received', { op: paintOp(3) }) // replayed
+
+      const { engine, applied } = makeMockEngine()
+      session.attachEngine(engine)
+
+      expect(applied.map((c) => (c.payload as { tileX: number }).tileX)).toStrictEqual([2, 3])
+      session.close('test')
+    })
+
+    await it('close() discards the buffer without replaying', async () => {
+      const session = makeJoinerSession()
+      session.peer.events.emit('op-received', { op: paintOp(0) })
+      session.close('test')
+      const { engine, applied } = makeMockEngine()
+      let threw = false
+      try {
+        session.attachEngine(engine)
+      } catch {
+        threw = true
+      }
+      expect(threw).toBe(true)
+      expect(applied).toHaveLength(0)
     })
   })
 }

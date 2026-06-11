@@ -40,6 +40,7 @@ import type { GameProjectData, MapData, SpriteSetData } from '../types/index.ts'
 import { base64ToBytes, bytesToBase64 } from '../utils/base64.ts'
 import { loadBinaryFile } from '../utils/file.ts'
 import { isAbsoluteOrUrl, joinPaths } from '../utils/url.ts'
+import type { SnapshotOpWatermark } from './pre-attach-op-buffer.ts'
 
 export const PROJECT_SNAPSHOT_VERSION = 1
 
@@ -89,6 +90,19 @@ export interface ProjectSnapshot {
     data: SpriteSetData
     images?: Array<{ path: string; base64: string }>
   }>
+  /**
+   * Host's command-op seq watermark, read synchronously at capture
+   * START (before any state is serialised). The joiner skips buffered
+   * pre-attach ops from `peerId` with `seq < nextSeq` — their effects
+   * are guaranteed inside this snapshot (the host applies a command
+   * before stamping + sending its op, so any op sequenced before the
+   * watermark read had already mutated the captured state). Optional:
+   * absent on snapshots from hosts without an attached engine
+   * (shouldn't happen — hosts always have one) and on pre-watermark
+   * peers; receivers then replay every buffered op and rely on
+   * idempotent re-apply.
+   */
+  opWatermark?: SnapshotOpWatermark
 }
 
 /**
@@ -201,6 +215,7 @@ export function serializeProjectSnapshot(snapshot: ProjectSnapshot): string {
     project: snapshot.project,
     maps: snapshot.maps,
     spriteSets: snapshot.spriteSets,
+    ...(snapshot.opWatermark ? { opWatermark: snapshot.opWatermark } : {}),
   })
 }
 
@@ -344,6 +359,24 @@ export function parseProjectSnapshot(raw: string): ProjectSnapshot {
           }
         }
       }
+    }
+  }
+  // `opWatermark` is optional (older hosts omit it — the receiver
+  // then replays every buffered pre-attach op). When present it must
+  // be well-formed; a malformed watermark would silently skip the
+  // wrong ops, so reject the snapshot instead.
+  if (obj.opWatermark !== undefined) {
+    const wm = obj.opWatermark as Partial<SnapshotOpWatermark> | null
+    if (
+      !wm ||
+      typeof wm !== 'object' ||
+      typeof wm.peerId !== 'string' ||
+      wm.peerId.length === 0 ||
+      typeof wm.nextSeq !== 'number' ||
+      !Number.isInteger(wm.nextSeq) ||
+      wm.nextSeq < 0
+    ) {
+      throw new Error('parseProjectSnapshot: malformed opWatermark (expected { peerId: string, nextSeq: int >= 0 })')
     }
   }
   return obj as ProjectSnapshot

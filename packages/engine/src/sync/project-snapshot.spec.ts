@@ -81,6 +81,27 @@ export default async () => {
       expect(() => parseProjectSnapshot('42')).toThrow()
       expect(() => parseProjectSnapshot('null')).toThrow()
     })
+
+    await it('round-trips the opWatermark', async () => {
+      const wire = serializeProjectSnapshot({ ...FAKE_SNAPSHOT, opWatermark: { peerId: 'host-1', nextSeq: 42 } })
+      const back = parseProjectSnapshot(wire)
+      expect(back.opWatermark).toStrictEqual({ peerId: 'host-1', nextSeq: 42 })
+    })
+
+    await it('treats a missing opWatermark as absent (older hosts)', async () => {
+      const back = parseProjectSnapshot(serializeProjectSnapshot(FAKE_SNAPSHOT))
+      expect(back.opWatermark).toBeUndefined()
+    })
+
+    await it('rejects a malformed opWatermark', async () => {
+      const wireWith = (opWatermark: unknown): string => JSON.stringify({ ...FAKE_SNAPSHOT, opWatermark })
+      expect(() => parseProjectSnapshot(wireWith(null))).toThrow()
+      expect(() => parseProjectSnapshot(wireWith('seq-3'))).toThrow()
+      expect(() => parseProjectSnapshot(wireWith({ peerId: '', nextSeq: 1 }))).toThrow()
+      expect(() => parseProjectSnapshot(wireWith({ peerId: 'host', nextSeq: -1 }))).toThrow()
+      expect(() => parseProjectSnapshot(wireWith({ peerId: 'host', nextSeq: 1.5 }))).toThrow()
+      expect(() => parseProjectSnapshot(wireWith({ peerId: 'host' }))).toThrow()
+    })
   })
 
   await describe('parseProjectSnapshot — path-traversal defence', async () => {

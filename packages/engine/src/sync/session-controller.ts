@@ -89,6 +89,32 @@ export class SessionController {
   }
 
   /**
+   * The next sequence number this controller will stamp onto an
+   * outgoing op — i.e. every op already sent has `seq < peekNextSeq()`.
+   *
+   * Snapshot hosts read this synchronously at capture START to build
+   * the {@link SnapshotOpWatermark} included in the snapshot: a
+   * command is applied to the local engine BEFORE `COMMAND_EXECUTED`
+   * fires and the seq is stamped (see `executeCommandOnScene`), so any
+   * op sequenced below this value has already mutated the state the
+   * capture is about to read.
+   */
+  peekNextSeq(): number {
+    return this.localSeq
+  }
+
+  /**
+   * Feed a raw inbound op through the same pipeline as a live
+   * `op-received` event — registry lookup, echo/protocol/project
+   * filtering, apply-vs-revert routing. Used by the CollabSession to
+   * replay ops buffered during the joiner's pre-attach window.
+   */
+  applyRemoteOperation(rawOp: unknown): void {
+    if (this.closed) return
+    this.applyInbound(rawOp)
+  }
+
+  /**
    * Send a session-protocol message (e.g. snapshot-request /
    * snapshot-response). Stamps `peerId` + `seq` so the receiver
    * can deduplicate the same way it does for commands; the

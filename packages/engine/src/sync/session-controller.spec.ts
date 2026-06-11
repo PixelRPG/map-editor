@@ -271,6 +271,67 @@ export default async () => {
       expect(engine.applied).toHaveLength(0)
     })
 
+    await it('peekNextSeq() exposes the next outgoing seq without consuming it', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      const ctrl = new SessionController({
+        engine: engine as unknown as Engine,
+        session: session as unknown as PeerSession,
+        peerId: 'alice',
+        registry: FAKE_REGISTRY,
+      })
+
+      expect(ctrl.peekNextSeq()).toBe(0)
+      expect(ctrl.peekNextSeq()).toBe(0) // peek does not increment
+      engine.events.emit('command-executed', { command: new FakeCommand({ value: 1 }) })
+      engine.events.emit('command-reverted', { command: new FakeCommand({ value: 2 }) })
+      expect(ctrl.peekNextSeq()).toBe(2)
+      // Watermark contract: every op already sent has seq < peekNextSeq().
+      expect(session.sent.every((op) => (op as Operation).seq < ctrl.peekNextSeq())).toBe(true)
+    })
+
+    await it('applyRemoteOperation() replays a raw op through the same inbound pipeline', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      const ctrl = new SessionController({
+        engine: engine as unknown as Engine,
+        session: session as unknown as PeerSession,
+        peerId: 'alice',
+        registry: FAKE_REGISTRY,
+      })
+
+      ctrl.applyRemoteOperation({ kind: 'test.fake', payload: { value: 21 }, peerId: 'bob', seq: 0 })
+      ctrl.applyRemoteOperation({
+        kind: 'test.fake',
+        payload: { value: 22 },
+        peerId: 'bob',
+        seq: 1,
+        direction: 'revert',
+      })
+      // Echo + project ops are filtered exactly like live inbound ops.
+      ctrl.applyRemoteOperation({ kind: 'test.fake', payload: { value: 23 }, peerId: 'alice', seq: 9 })
+      ctrl.applyRemoteOperation({ kind: '__project/entity.upsert', payload: {}, peerId: 'bob', seq: 2 })
+
+      expect(engine.applied).toHaveLength(1)
+      expect((engine.applied[0]?.payload as { value: number }).value).toBe(21)
+      expect(engine.reverted).toHaveLength(1)
+      expect((engine.reverted[0]?.payload as { value: number }).value).toBe(22)
+    })
+
+    await it('applyRemoteOperation() is a no-op after close()', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      const ctrl = new SessionController({
+        engine: engine as unknown as Engine,
+        session: session as unknown as PeerSession,
+        peerId: 'alice',
+        registry: FAKE_REGISTRY,
+      })
+      ctrl.close()
+      ctrl.applyRemoteOperation({ kind: 'test.fake', payload: { value: 5 }, peerId: 'bob', seq: 0 })
+      expect(engine.applied).toHaveLength(0)
+    })
+
     await it('close() stops both directions; further emits are ignored', async () => {
       const engine = makeMockEngine()
       const session = makeMockSession()
