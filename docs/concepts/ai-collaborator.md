@@ -50,7 +50,7 @@ doesn't depend on it either way.)
 | AI edits | `Engine.executeCommand` (op-log) via `paint_tile` etc. | already there |
 | AI cursor | local `AwarenessManager` + `RemoteCursorRenderer`, fed `handleInbound({type:'cursor', peerId:'ai-assistant', …})` | already there — just not session-bound |
 | AI presence (name/colour) | `handleInbound({type:'presence', …})` | already there |
-| Edit attribution | visual: tile flash in the assistant's colour. **Op-level attribution is NOT implemented** — the AI's ops are stamped with the hosting user's `peerId` and land on the host's undo stack (remote peers can't distinguish them; the host's Ctrl+Z undoes AI work). Stamping a real origin id through `executeCommand` → `Operation` is planned. | partial |
+| Edit attribution | visual: tile flash in the assistant's colour. **On the wire:** assistant-initiated mutations carry `Operation.origin = ASSISTANT_PEER_ID` (threaded explicitly Control → `paintTileAt`/`placeObjectAt` → `executeCommand` → `COMMAND_EXECUTED` → `Operation`), while `peerId`/`seq` stay the host's — so echo suppression and the snapshot `opWatermark` are untouched. Receivers surface it via `EngineEvent.REMOTE_COMMAND_APPLIED { command, direction, origin }`; rendering an "AI" badge from it is a UI follow-up (TODO.md). **On the undo stack:** AI edits deliberately stay on the host's stack with no marker — see § Undo attribution. | done (wire) / follow-up (UI) |
 | Presence UI (roster, pause) | new small UI on top of awareness state | Phase 3 |
 
 The one architectural move: **decouple the awareness + cursor renderer
@@ -67,13 +67,16 @@ virtual peers.
    `HideAssistant`. Bridge tools: `assistant_cursor` / `assistant_info` /
    `assistant_hide`. Result: the user watches a labelled "AI Assistant"
    cursor move over the map.
-2. **Edit attribution (done — visual only).** When the assistant paints,
+2. **Edit attribution (done — visual + wire).** When the assistant paints,
    the tile gets a brief fading outline in the assistant's colour ("AI
    painted here") so edits are visibly the AI's in the moment. Auto-gated
-   on assistant presence (`Engine._flashAssistantTile`). The flash is
-   ephemeral — on the wire and on the undo stack the ops carry the
-   hosting user's `peerId` (see the mapping table); durable per-op
-   attribution is planned.
+   on assistant presence (`Engine._flashAssistantTile`). On the wire,
+   assistant-initiated ops additionally carry
+   `Operation.origin = ASSISTANT_PEER_ID` (the initiator is an explicit
+   parameter through Control → engine — no ambient "current actor" state),
+   so remote peers can durably attribute them to the AI; the receive-side
+   `REMOTE_COMMAND_APPLIED` event exposes it. A remote-peer attribution
+   UI (badge/flash on `origin`) is a follow-up in `TODO.md`.
 3. **Presence UI + control (done).** A bottom-left `FloatingCollaborators`
    OSD pill (avatar + "AI Assistant" + a pause/resume button) appears when
    the assistant is present. The button drives the
@@ -144,10 +147,16 @@ human peers — the AI was just the first participant.
   visible presence chip + a Pause/Stop control are non-negotiable for the
   end-user feature.
 - **Undo attribution** — AI edits share the op-log/undo stack with the
-  host's own edits. Today they are only recognisable in the moment (the
-  tile flash); the stack itself carries no originator, so the host's
-  undo reverses AI work indistinguishably. A per-op origin field is the
-  planned fix.
+  host's own edits **by design**: the AI acts inside the host's editor,
+  so the human must always be able to Ctrl+Z an AI mistake with the
+  ordinary undo affordance — a separate AI stack (or excluding AI ops
+  from undo) would take that control away. On the wire the same edits
+  ARE distinguishable (`Operation.origin = ASSISTANT_PEER_ID`); the
+  local stack deliberately carries no originator marker today. If
+  "undo only the AI's changes" is ever wanted, the origin already
+  threaded through `executeCommand` is the seam to hang it on
+  (per-entry origin on `UndoStackComponent`) — explicitly future work,
+  not a gap in the current model.
 - **Gating** — the dev path stays env-driven; the *product* path needs a
   deliberate in-app enable.
 - **Cursor throttle** — `AwarenessManager` already throttles; the AI's

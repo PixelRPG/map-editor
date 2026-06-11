@@ -9,13 +9,15 @@ import type { PeerSessionEventMap } from './types.ts'
 
 interface MockEngine {
   events: ExEventEmitter<{
-    'command-executed': { command: Command }
-    'command-reverted': { command: Command }
+    'command-executed': { command: Command; origin?: string }
+    'command-reverted': { command: Command; origin?: string }
   }>
-  applyRemoteCommand: (command: Command) => void
-  applyRemoteRevert: (command: Command) => void
+  applyRemoteCommand: (command: Command, origin?: string) => void
+  applyRemoteRevert: (command: Command, origin?: string) => void
   applied: Command[]
   reverted: Command[]
+  appliedOrigins: Array<string | undefined>
+  revertedOrigins: Array<string | undefined>
 }
 
 interface MockSession {
@@ -27,16 +29,22 @@ interface MockSession {
 function makeMockEngine(): MockEngine {
   const applied: Command[] = []
   const reverted: Command[] = []
+  const appliedOrigins: Array<string | undefined> = []
+  const revertedOrigins: Array<string | undefined> = []
   return {
     events: new ExEventEmitter(),
-    applyRemoteCommand(command) {
+    applyRemoteCommand(command, origin) {
       applied.push(command)
+      appliedOrigins.push(origin)
     },
-    applyRemoteRevert(command) {
+    applyRemoteRevert(command, origin) {
       reverted.push(command)
+      revertedOrigins.push(origin)
     },
     applied,
     reverted,
+    appliedOrigins,
+    revertedOrigins,
   }
 }
 
@@ -99,6 +107,85 @@ export default async () => {
       expect(op.peerId).toBe('alice')
       expect(op.seq).toBe(0)
       expect(op.direction).toBe('apply')
+      // Host-initiated: NO origin field at all (matches pre-origin
+      // peers; absent = "the sending peer's own user did this").
+      expect('origin' in op).toBe(false)
+    })
+
+    await it('stamps `origin` onto the outgoing Operation while keeping peerId/seq the host’s (assistant-initiated)', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      new SessionController({
+        engine: engine as unknown as Engine,
+        session: session as unknown as PeerSession,
+        peerId: 'alice',
+        registry: FAKE_REGISTRY,
+      })
+
+      engine.events.emit('command-executed', { command: new FakeCommand({ value: 7 }), origin: 'ai-assistant' })
+      engine.events.emit('command-reverted', { command: new FakeCommand({ value: 8 }), origin: 'ai-assistant' })
+
+      expect(session.sent).toHaveLength(2)
+      const applyOp = session.sent[0] as Operation
+      expect(applyOp.origin).toBe('ai-assistant')
+      // Transport identity unchanged — seq counters, echo-filter and
+      // the snapshot watermark all key on (peerId, seq).
+      expect(applyOp.peerId).toBe('alice')
+      expect(applyOp.seq).toBe(0)
+      const revertOp = session.sent[1] as Operation
+      expect(revertOp.origin).toBe('ai-assistant')
+      expect(revertOp.direction).toBe('revert')
+      expect(revertOp.peerId).toBe('alice')
+      expect(revertOp.seq).toBe(1)
+    })
+
+    await it('forwards an inbound op’s `origin` to applyRemoteCommand / applyRemoteRevert', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      new SessionController({
+        engine: engine as unknown as Engine,
+        session: session as unknown as PeerSession,
+        peerId: 'alice',
+        registry: FAKE_REGISTRY,
+      })
+
+      session.events.emit('op-received', {
+        op: { kind: 'test.fake', payload: { value: 1 }, peerId: 'bob', seq: 0, origin: 'ai-assistant' },
+      })
+      session.events.emit('op-received', {
+        op: { kind: 'test.fake', payload: { value: 2 }, peerId: 'bob', seq: 1 },
+      })
+      session.events.emit('op-received', {
+        op: {
+          kind: 'test.fake',
+          payload: { value: 3 },
+          peerId: 'bob',
+          seq: 2,
+          direction: 'revert',
+          origin: 'ai-assistant',
+        },
+      })
+
+      expect(engine.appliedOrigins).toStrictEqual(['ai-assistant', undefined])
+      expect(engine.revertedOrigins).toStrictEqual(['ai-assistant'])
+    })
+
+    await it('echo defence still keys on peerId — own op is dropped even with an origin set', async () => {
+      const engine = makeMockEngine()
+      const session = makeMockSession()
+      new SessionController({
+        engine: engine as unknown as Engine,
+        session: session as unknown as PeerSession,
+        peerId: 'alice',
+        registry: FAKE_REGISTRY,
+      })
+
+      session.events.emit('op-received', {
+        op: { kind: 'test.fake', payload: { value: 1 }, peerId: 'alice', seq: 0, origin: 'ai-assistant' },
+      })
+
+      expect(engine.applied).toHaveLength(0)
+      expect(engine.reverted).toHaveLength(0)
     })
 
     await it("relays a local 'command-reverted' as an Operation with direction='revert'", async () => {

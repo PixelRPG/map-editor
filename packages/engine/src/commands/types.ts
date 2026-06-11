@@ -60,6 +60,17 @@ export interface Command<P = unknown> {
  * Older peers (pre-direction-field) sent operations without the
  * field; receivers default to `'apply'` so existing wire traffic
  * continues to work unchanged.
+ *
+ * `origin` is attribution-only: the actor that INITIATED the
+ * mutation when it differs from the sending peer's human user —
+ * today that's the in-process AI collaborator
+ * (`ASSISTANT_PEER_ID`) driving the host's engine via Control/MCP.
+ * It deliberately does NOT replace `peerId`: sequence counters,
+ * echo suppression and the snapshot `opWatermark` all key on
+ * `(peerId, seq)` — the transport/session identity — and an op the
+ * AI initiates is still sent (and deduped) as the hosting peer's
+ * op. Absent = initiated by `peerId`'s own user (also what older
+ * peers without the field send).
  */
 export interface Operation<K extends string = string, P = unknown> {
   kind: K
@@ -68,6 +79,7 @@ export interface Operation<K extends string = string, P = unknown> {
   seq: number
   localId?: string
   direction?: 'apply' | 'revert'
+  origin?: string
 }
 
 /**

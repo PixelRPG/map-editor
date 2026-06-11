@@ -165,10 +165,14 @@ interface Operation<K extends string = string, P = unknown> {
   localId?: string
   /** Apply/revert discriminator — 'revert' replicates an undo; missing = 'apply'. */
   direction?: 'apply' | 'revert'
+  /** Initiating actor when not the sending peer's user (e.g. the AI collaborator); attribution-only. */
+  origin?: string
 }
 ```
 
 Undo replication is the `direction` field: a peer's undo re-sends the full command payload tagged `'revert'`, and receivers run `command.revert` (an earlier draft specified a `{ kind: 'revert', payload: { targetSeq } }` mirror op — superseded by the direction field, which avoids needing a host-ordered log to resolve `targetSeq` against).
+
+Attribution is the `origin` field: when the in-process AI collaborator (see [`ai-collaborator.md`](ai-collaborator.md)) initiates a mutation via Control/MCP, the op carries `origin = ASSISTANT_PEER_ID` so receivers can show it as the AI's edit. `origin` is **deliberately separate from `peerId`** — the op is still sent, sequenced, echo-filtered and watermark-deduped as the hosting peer's op (`(peerId, seq)` stays the transport identity); swapping `peerId` to the assistant's id would fork those keys. Absent `origin` = the sending peer's own user (also what pre-origin peers send, so the field is backward compatible). Receivers expose it via `EngineEvent.REMOTE_COMMAND_APPLIED`.
 
 ### Host-sequencer: shipped v1 vs target design
 

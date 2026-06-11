@@ -66,19 +66,21 @@ export class SessionController {
     this.registry = opts.registry ?? BUILT_IN_COMMANDS
     this.onSessionProtocol = opts.onSessionProtocol ?? null
 
-    // Local → wire (apply path: initial execute + redo)
-    this.commandSub = this.engine.events.on(EngineEvent.COMMAND_EXECUTED, ({ command }) => {
+    // Local → wire (apply path: initial execute + redo). `origin`
+    // (the initiating actor when not the local user — e.g. the AI
+    // collaborator) rides along so peers can attribute the edit.
+    this.commandSub = this.engine.events.on(EngineEvent.COMMAND_EXECUTED, ({ command, origin }) => {
       if (this.closed) return
-      this.session.sendOp(this.toOperation(command, 'apply'))
+      this.session.sendOp(this.toOperation(command, 'apply', origin))
     })
 
     // Local → wire (revert path: undo). Relayed with
     // `Operation.direction = 'revert'` so the receiving peer
     // runs `command.revert` instead of `apply`. Without this hook
     // a peer's undo of their own paint would never reach peers.
-    this.revertSub = this.engine.events.on(EngineEvent.COMMAND_REVERTED, ({ command }) => {
+    this.revertSub = this.engine.events.on(EngineEvent.COMMAND_REVERTED, ({ command, origin }) => {
       if (this.closed) return
-      this.session.sendOp(this.toOperation(command, 'revert'))
+      this.session.sendOp(this.toOperation(command, 'revert', origin))
     })
 
     // Wire → local
@@ -147,13 +149,22 @@ export class SessionController {
     this.sessionSub = null
   }
 
-  private toOperation(command: Command, direction: 'apply' | 'revert'): Operation {
+  /**
+   * `origin` is attribution-only and deliberately separate from
+   * `peerId`: the op is still sent (sequenced, echo-filtered and
+   * watermark-deduped) as THIS peer's op — swapping `peerId` to the
+   * assistant's id would fork the `(peerId, seq)` key those
+   * mechanisms rely on. Omitted entirely when the local user
+   * initiated the command, matching what pre-origin peers send.
+   */
+  private toOperation(command: Command, direction: 'apply' | 'revert', origin?: string): Operation {
     return {
       kind: command.kind,
       payload: command.payload,
       peerId: this.peerId,
       seq: this.localSeq++,
       direction,
+      ...(origin !== undefined ? { origin } : {}),
     }
   }
 
@@ -190,15 +201,19 @@ export class SessionController {
       return
     }
     const command = factory(op.payload)
+    // Attribution: forward the op's `origin` (initiating actor —
+    // e.g. the sending peer's AI collaborator) so the engine's
+    // `REMOTE_COMMAND_APPLIED` event carries it for UI attribution.
+    const origin = typeof op.origin === 'string' ? op.origin : undefined
     // `direction` defaults to 'apply' for backward compat with
     // older peers that didn't ship the field. A 'revert' direction
     // routes to the symmetric `applyRemoteRevert` so peer-A's undo
     // of their own paint reverts on every connected peer (the
     // bug this field was introduced to close).
     if (op.direction === 'revert') {
-      this.engine.applyRemoteRevert(command)
+      this.engine.applyRemoteRevert(command, origin)
     } else {
-      this.engine.applyRemoteCommand(command)
+      this.engine.applyRemoteCommand(command, origin)
     }
   }
 }

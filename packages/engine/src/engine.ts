@@ -386,12 +386,22 @@ export class Engine {
    * is mid-stack, the redo tail is truncated (the abandoned branch
    * cannot be re-redone).
    *
+   * `origin` attributes the mutation to an initiating actor other
+   * than the local user — pass {@link ASSISTANT_PEER_ID} for AI-
+   * collaborator edits driven via Control/MCP. It rides
+   * `COMMAND_EXECUTED` → `Operation.origin` so remote peers can
+   * show "AI" instead of the hosting user. Deliberately NOT a
+   * stored "current actor" flag: the initiator is an explicit
+   * per-call parameter so it cannot leak across async boundaries.
+   * The undo-stack push stays origin-agnostic — AI edits land on
+   * the host's stack so the human can Ctrl+Z an AI mistake.
+   *
    * No-op when no `MapScene` is active.
    */
-  executeCommand(command: Command): void {
+  executeCommand(command: Command, origin?: string): void {
     const scene = this._activeMapScene()
     if (!scene) return
-    executeCommandOnScene(scene, this.events, command)
+    executeCommandOnScene(scene, this.events, command, origin)
     this._emitLayerFlagChanged(command, 'apply')
   }
 
@@ -432,11 +442,20 @@ export class Engine {
    * - `layerId` null/omitted → the active layer.
    * - `spriteId` omitted → the active tile; `0`/`null` → erase; else paint
    *   that global tile id.
+   * - `origin` — initiating actor id (e.g. {@link ASSISTANT_PEER_ID}
+   *   from the Control plane); stamped onto the outgoing op for
+   *   peer-side attribution. See {@link executeCommand}.
    *
    * Returns `false` if there's no active map, no resolvable layer, the
    * layer is locked, or the coords are out of bounds.
    */
-  paintTileAt(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null): boolean {
+  paintTileAt(
+    layerId: string | null,
+    tileX: number,
+    tileY: number,
+    spriteId?: number | null,
+    origin?: string,
+  ): boolean {
     // The user paused the assistant — reject its paints (the human is in control).
     if (this._assistantPaused) return false
     const scene = this._activeMapScene()
@@ -448,7 +467,10 @@ export class Engine {
     if (!found) return false
     if (tileX < 0 || tileY < 0 || tileX >= found.tileMap.columns || tileY >= found.tileMap.rows) return false
     const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
-    this.executeCommand(buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null))
+    this.executeCommand(
+      buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null),
+      origin,
+    )
     // Attribution: flash the painted tile in the assistant's colour so the
     // user sees the AI act. Only while the assistant is present.
     if (this._assistantActive) this._flashAssistantTile(found.tileMap, tileX, tileY)
@@ -459,11 +481,13 @@ export class Engine {
    * Place a library object on the active map programmatically (Control →
    * MCP, or the AI collaborator) — the driveable equivalent of the object
    * tool's canvas click. Goes through {@link PlaceObjectCommand} so it
-   * undoes + syncs to peers. `layerId` null → the active layer. Returns
+   * undoes + syncs to peers. `layerId` null → the active layer.
+   * `origin` — initiating actor id for peer-side attribution (see
+   * {@link executeCommand}). Returns
    * `false` if there's no active map, no resolvable / unlocked layer, or
    * `defId` isn't in the project's entity library.
    */
-  placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number): boolean {
+  placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): boolean {
     if (this._assistantPaused) return false
     const scene = this._activeMapScene()
     if (!scene) return false
@@ -478,7 +502,7 @@ export class Engine {
       tileY,
       defId,
     }
-    this.executeCommand(new PlaceObjectCommand({ placement }))
+    this.executeCommand(new PlaceObjectCommand({ placement }), origin)
     return true
   }
 
@@ -486,16 +510,18 @@ export class Engine {
    * Remove an object placement by id — the driveable equivalent of a
    * delete action in the inspector. Goes through
    * {@link RemoveObjectCommand} so it undoes (restoring the captured
-   * placement) + syncs to peers. Returns `false` if there's no active
-   * map or the id doesn't resolve to a placement.
+   * placement) + syncs to peers. `origin` — initiating actor id for
+   * peer-side attribution; the human's Props "Remove" button passes
+   * none (see {@link executeCommand}). Returns `false` if there's no
+   * active map or the id doesn't resolve to a placement.
    */
-  removeObject(placementId: string): boolean {
+  removeObject(placementId: string, origin?: string): boolean {
     if (this._assistantPaused) return false
     const scene = this._activeMapScene()
     if (!scene) return false
     const placement = scene.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId)
     if (!placement) return false
-    this.executeCommand(new RemoveObjectCommand({ placement }))
+    this.executeCommand(new RemoveObjectCommand({ placement }), origin)
     return true
   }
 
@@ -693,12 +719,17 @@ export class Engine {
    *  - does NOT emit `COMMAND_EXECUTED` (would relay the command
    *    back through `SessionController` and bounce indefinitely).
    *
+   * Emits `REMOTE_COMMAND_APPLIED` instead (receive-side only, so
+   * no relay loop) carrying the op's `origin` — the hook UI
+   * attribution of remote AI edits subscribes to.
+   *
    * No-op when no `MapScene` is active.
    */
-  applyRemoteCommand(command: Command): void {
+  applyRemoteCommand(command: Command, origin?: string): void {
     const scene = this._activeMapScene()
     if (!scene) return
     command.apply(scene)
+    this.events.emit(EngineEvent.REMOTE_COMMAND_APPLIED, { command, direction: 'apply', origin })
     this._emitLayerFlagChanged(command, 'apply')
   }
 
@@ -713,10 +744,11 @@ export class Engine {
    *
    * No-op when no `MapScene` is active.
    */
-  applyRemoteRevert(command: Command): void {
+  applyRemoteRevert(command: Command, origin?: string): void {
     const scene = this._activeMapScene()
     if (!scene) return
     command.revert(scene)
+    this.events.emit(EngineEvent.REMOTE_COMMAND_APPLIED, { command, direction: 'revert', origin })
     this._emitLayerFlagChanged(command, 'revert')
   }
 
@@ -744,8 +776,12 @@ export class Engine {
    * mirroring the local undo on every connected peer. Without this
    * emit, a peer's undo of their own paint would leave the host
    * showing the paint forever.
+   *
+   * `origin` attributes the undo to an initiating actor other than
+   * the local user (see {@link executeCommand}). Note the win.undo
+   * GAction path cannot thread an initiator yet — see TODO.md.
    */
-  undo(): boolean {
+  undo(origin?: string): boolean {
     const ctx = this._undoContext()
     if (!ctx || !canUndo(ctx.stack)) return false
     const command = ctx.stack.commands[ctx.stack.cursor - 1]
@@ -753,7 +789,7 @@ export class Engine {
     command.revert(ctx.scene)
     ctx.stack.cursor -= 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
-    this.events.emit(EngineEvent.COMMAND_REVERTED, { command })
+    this.events.emit(EngineEvent.COMMAND_REVERTED, { command, origin })
     this._emitLayerFlagChanged(command, 'revert')
     return true
   }
@@ -766,8 +802,11 @@ export class Engine {
    * Bypasses `executeCommandOnScene` because the command is already
    * in the local undo stack — we only need the apply + relay halves,
    * not the stack push.
+   *
+   * `origin` attributes the redo to an initiating actor other than
+   * the local user (see {@link undo}).
    */
-  redo(): boolean {
+  redo(origin?: string): boolean {
     const ctx = this._undoContext()
     if (!ctx || !canRedo(ctx.stack)) return false
     const command = ctx.stack.commands[ctx.stack.cursor]
@@ -775,7 +814,7 @@ export class Engine {
     command.apply(ctx.scene)
     ctx.stack.cursor += 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
-    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command, origin })
     this._emitLayerFlagChanged(command, 'apply')
     return true
   }

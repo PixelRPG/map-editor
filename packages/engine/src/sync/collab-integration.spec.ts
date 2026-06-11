@@ -49,20 +49,24 @@ import { SessionController } from './session-controller.ts'
  */
 interface RecordingEngine extends Engine {
   appliedRemote: Command[]
-  emitCommand: (command: Command) => void
+  appliedRemoteOrigins: Array<string | undefined>
+  emitCommand: (command: Command, origin?: string) => void
 }
 
 function makeRecordingEngine(): RecordingEngine {
   const events = new EventEmitter<EngineEventMap>()
   const applied: Command[] = []
+  const appliedOrigins: Array<string | undefined> = []
   return {
     events,
-    applyRemoteCommand: (cmd: Command) => {
+    applyRemoteCommand: (cmd: Command, origin?: string) => {
       applied.push(cmd)
+      appliedOrigins.push(origin)
     },
     appliedRemote: applied,
-    emitCommand: (command: Command) => {
-      events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+    appliedRemoteOrigins: appliedOrigins,
+    emitCommand: (command: Command, origin?: string) => {
+      events.emit(EngineEvent.COMMAND_EXECUTED, { command, origin })
     },
   } as unknown as RecordingEngine
 }
@@ -142,6 +146,52 @@ export default async () => {
         expect(joinerEngine.appliedRemote.length).toBe(1)
         expect(joinerEngine.appliedRemote[0].kind).toBe('tile.paint')
         expect(joinerEngine.appliedRemote[0].payload).toStrictEqual(SAMPLE_PAINT.payload)
+
+        hostCtrl.close()
+        joinerCtrl.close()
+      } finally {
+        sessions.close()
+      }
+    })
+
+    await it('assistant-initiated command round-trips the wire with `origin` intact; host edits arrive origin-less', async () => {
+      const sessions = await createConnectedSessionPair()
+      try {
+        const hostEngine = makeRecordingEngine()
+        const joinerEngine = makeRecordingEngine()
+        const registry = {
+          'tile.paint': (payload: unknown) =>
+            ({ kind: 'tile.paint', label: 'paint', payload, apply: () => {}, revert: () => {} }) as unknown as Command,
+        }
+
+        const hostCtrl = new SessionController({
+          engine: hostEngine,
+          session: sessions.host,
+          peerId: 'host-ai',
+          registry,
+        })
+        const joinerCtrl = new SessionController({
+          engine: joinerEngine,
+          session: sessions.joiner,
+          peerId: 'joiner-ai',
+          registry,
+        })
+
+        // The host's AI collaborator paints (Control/MCP path stamps
+        // the assistant id as `origin`); the host's human paints too.
+        hostEngine.emitCommand(SAMPLE_PAINT, 'ai-assistant')
+        hostEngine.emitCommand(SAMPLE_PAINT_B)
+        await flushMicrotasks()
+
+        // Both ops applied on the joiner — the AI's with the assistant
+        // origin (full wire serialisation preserved it), the human's
+        // without one. Echo suppression unaffected on the host side.
+        expect(hostEngine.appliedRemote.length).toBe(0)
+        expect(joinerEngine.appliedRemote.map((c) => c.payload)).toStrictEqual([
+          SAMPLE_PAINT.payload,
+          SAMPLE_PAINT_B.payload,
+        ])
+        expect(joinerEngine.appliedRemoteOrigins).toStrictEqual(['ai-assistant', undefined])
 
         hostCtrl.close()
         joinerCtrl.close()
