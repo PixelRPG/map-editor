@@ -77,8 +77,19 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install @gjsify/cli globally
-        run: npm install -g @gjsify/cli
+      - name: Install @gjsify/cli globally (pinned to the lockfile)
+        # Bootstrap chicken-and-egg: the global CLI is needed for the
+        # initial `gjsify install`, so it can't come from node_modules.
+        # Pin it to the exact version gjsify-lock.json resolves for the
+        # workspace (apps pin `@gjsify/cli: ^0.4.36`), so the bootstrap
+        # CLI and the workspace-local CLI are always the same build and
+        # CI never silently adopts a newer release — a broken latest must
+        # not break CI without a repo change (global 0.4.40 e.g. could
+        # not even build the test bundles). Bumps happen by updating the
+        # lockfile in dedicated commits.
+        run: |
+          version=$(node -p "require('./gjsify-lock.json').packages['node_modules/@gjsify/cli'].version")
+          npm install -g "@gjsify/cli@${version}"
 
       - name: Install dependencies (gjsify install --immutable)
         run: gjsify install --immutable
@@ -99,3 +110,21 @@ jobs:
         # registered. Runs under both gjs + node. Keeps "new feature must
         # stay collab-compatible" enforced, not just documented.
         run: gjsify foreach test -v -p --include @pixelrpg/engine
+
+      - name: Run maker tests (collab transport + session services)
+        # The @pixelrpg/maker-gjs suite (18 suites): SessionService
+        # host/join e2e over REAL LAN signalling (WebSocket on loopback,
+        # exercises @gjsify/ws over Soup), collab-session (+e2e),
+        # lan-discovery/-signalling, relay signalling, pause policy,
+        # engine-state sync, sandbox paths… Headless-safe: no display or
+        # WebGL needed; LAN specs bind 127.0.0.1 only, and the real-Avahi
+        # discovery integration spec skips itself when no avahi-daemon is
+        # available (this runner). Runs under both gjs + node.
+        run: gjsify foreach test -v -p --include @pixelrpg/maker-gjs
+
+      - name: Run signalling-server tests (room manager + relay e2e)
+        # The @pixelrpg/signalling-server suite: RoomManager unit tests
+        # plus the end-to-end relay test, which spawns the GJS bundle
+        # built in the build step above (via the pinned global `gjsify`
+        # on PATH) and drives it with real `ws` clients from Node.
+        run: gjsify foreach test -v -p --include @pixelrpg/signalling-server

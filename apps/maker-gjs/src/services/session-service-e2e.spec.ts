@@ -116,10 +116,18 @@ function makeHostEngineStub(): Engine {
       data: FAKE_SNAPSHOT.project,
       getMapResource(id: string) {
         const entry = FAKE_SNAPSHOT.maps.find((m) => m.path.endsWith(`${id}.json`))
-        return entry ? { mapData: entry.data } : null
+        // `syncShadowToMapData` is called by `captureProjectSnapshot`
+        // to fold the live editor shadow back into mapData — the stub
+        // has no shadow, so it no-ops (mirrors a freshly-loaded map).
+        return entry ? { mapData: entry.data, syncShadowToMapData: () => false } : null
       },
     },
     onPointerMoved(_cb: unknown) {
+      return () => {
+        /* no-op disposer */
+      }
+    },
+    onSelectionChanged(_cb: unknown) {
       return () => {
         /* no-op disposer */
       }
@@ -141,6 +149,11 @@ function makeJoinerEngineStub(): Engine {
       },
     },
     onPointerMoved(_cb: unknown) {
+      return () => {
+        /* no-op disposer */
+      }
+    },
+    onSelectionChanged(_cb: unknown) {
       return () => {
         /* no-op disposer */
       }
