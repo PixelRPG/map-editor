@@ -20,7 +20,11 @@ distributed as a game.
 - **Link character graphics** — from **OoT 2D 2014** (v.15.2) by the
   [oot-2d.com](http://www.oot-2d.com/) team (`Graphics/Link.png`),
   recomposed onto a uniform sprite grid for the PixelRPG sprite-set format.
-- The original pixel art in both projects derives from Nintendo's
+- **Tree-house interior tileset** — from **OoT2D: Full Steam Ahead**
+  (`oot2d_fsa`, `graphics/finalized/tileset_kokiri_forest_interior.png`,
+  authored by **xfixium** and the oot2d_fsa contributors), sliced into the
+  PixelRPG tileset format for the `tree-house` map.
+- The original pixel art in these projects derives from Nintendo's
   *The Legend of Zelda* games; see the Nintendo notice above.
 
 ## Engine & editor

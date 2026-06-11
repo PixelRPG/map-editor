@@ -15,6 +15,13 @@
       "path": "./maps/kokiri-forest.json",
       "type": "map",
       "category": "overworld"
+    },
+    {
+      "id": "tree-house",
+      "name": "Link's Tree House",
+      "path": "./maps/tree-house.json",
+      "type": "map",
+      "category": "interiors"
     }
   ],
   "mapCategories": [
@@ -41,6 +48,18 @@
       "path": "./spritesets/scientist.json",
       "type": "spriteset",
       "category": "characters"
+    },
+    {
+      "id": "link",
+      "path": "./spritesets/link.json",
+      "type": "spriteset",
+      "category": "characters"
+    },
+    {
+      "id": "tree-house",
+      "path": "./spritesets/tree-house.json",
+      "type": "spriteset",
+      "category": "environments"
     }
   ],
   "properties": {
@@ -82,7 +101,27 @@
         "template": "character",
         "category": "hero"
       }
+    },
+    {
+      "id": "link",
+      "name": "Link",
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "link",
+          "spriteId": 5,
+          "animationId": "idle-down"
+        },
+        {
+          "type": "movement",
+          "tilesPerSec": 6
+        }
+      ],
+      "editorData": {
+        "template": "character",
+        "category": "hero"
+      }
     }
   ],
-  "playerActorId": "scientist"
+  "playerActorId": "link"
 }

@@ -124799,6 +124799,80 @@
           "template": "custom"
         }
       }
+    },
+    {
+      "id": "tp-treehouse-door-l",
+      "layerId": "layer_functional",
+      "tileX": 76,
+      "tileY": 66,
+      "inline": {
+        "id": "tp-treehouse-door-l-def",
+        "name": "Link's tree house door",
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "tree-house",
+            "targetTileX": 5,
+            "targetTileY": 8,
+            "facing": "up",
+            "label": "Link's Tree House"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
+        }
+      }
+    },
+    {
+      "id": "tp-treehouse-door-r",
+      "layerId": "layer_functional",
+      "tileX": 77,
+      "tileY": 66,
+      "inline": {
+        "id": "tp-treehouse-door-r-def",
+        "name": "Link's tree house door",
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "tree-house",
+            "targetTileX": 5,
+            "targetTileY": 8,
+            "facing": "up",
+            "label": "Link's Tree House"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
+        }
+      }
+    },
+    {
+      "id": "spawn-player",
+      "layerId": "layer_functional",
+      "tileX": 72,
+      "tileY": 60,
+      "inline": {
+        "id": "spawn-player-def",
+        "name": "Player spawn",
+        "components": [
+          {
+            "type": "spawn-point",
+            "spawnId": "player",
+            "facing": "down"
+          }
+        ],
+        "editorData": {
+          "template": "spawn-point"
+        }
+      }
     }
   ],
   "editorData": {
