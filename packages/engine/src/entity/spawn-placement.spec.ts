@@ -11,7 +11,7 @@ import {
 import { TIER_Z } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { EntityDefinition, LayerData } from '../types/data/index.ts'
-import { buildPlacementEntity, resolvePlacementDefinition } from './spawn-placement.ts'
+import { buildPlacementEntity } from './spawn-placement.ts'
 
 const layer: LayerData = { id: 'l1', name: 'L', visible: true, sprites: [] }
 const fakeMapResource = {
@@ -21,43 +21,6 @@ const fakeMapResource = {
 const layersById = new Map([[layer.id, layer]])
 
 export default async () => {
-  await describe('resolvePlacementDefinition', async () => {
-    const library: EntityDefinition[] = [
-      { id: 'apple', name: 'Apple', components: [{ type: 'item', itemId: 'apple' }] },
-    ]
-
-    await it('returns the inline definition verbatim', async () => {
-      const inline: EntityDefinition = { id: 'd', name: 'D', components: [] }
-      const placement = { id: 'p', layerId: 'l1', tileX: 0, tileY: 0, inline }
-      expect(resolvePlacementDefinition(placement, library)).toBe(inline)
-    })
-
-    await it('looks up a library entry by defId', async () => {
-      const placement = { id: 'p', layerId: 'l1', tileX: 0, tileY: 0, defId: 'apple' }
-      expect(resolvePlacementDefinition(placement, library)?.name).toBe('Apple')
-    })
-
-    await it('merges overrides — name replace + wholesale-replace component per type', async () => {
-      const placement = {
-        id: 'p',
-        layerId: 'l1',
-        tileX: 0,
-        tileY: 0,
-        defId: 'apple',
-        overrides: { name: 'Golden', components: [{ type: 'item', itemId: 'gold-apple', qty: 5 }] },
-      }
-      const resolved = resolvePlacementDefinition(placement, library)
-      expect(resolved?.name).toBe('Golden')
-      expect(resolved?.components).toStrictEqual([{ type: 'item', itemId: 'gold-apple', qty: 5 }])
-    })
-
-    await it('returns null when neither inline nor a known defId resolves', async () => {
-      expect(resolvePlacementDefinition({ id: 'p', layerId: 'l1', tileX: 0, tileY: 0, defId: 'ghost' }, library)).toBe(
-        null,
-      )
-    })
-  })
-
   await describe('buildPlacementEntity — runtime parity', async () => {
     // Building an entity attaches Excalibur graphics (sprite or the outline
     // marker Rectangle), which need a DOM canvas. The spawn pipeline only

@@ -83,6 +83,8 @@ interface ObjectPlacement {
 
 `overrides` is **not** deep-merged. `name` replaces the display name; each entry in `overrides.components` **replaces the base component of the same `type` in its entirety** (a type absent from the base is appended). See `mergePlacementComponents` in `packages/engine/src/entity/data-access.ts`.
 
+Placement → definition resolution (inline, or `defId` library lookup, with `overrides` merged) has **one** implementation: `resolvePlacementDefinition` in `packages/engine/src/entity/data-access.ts`. Every consumer — the spawn pipeline, the maker's Objects tab, the atlas teleport overlay — goes through it; hand-rolled partial resolution (e.g. reading `placement.inline` only) is a bug, since the object brush creates `defId` placements.
+
 If a user wants "same as library but with a different teleport label", they put the **entire** `teleport` component config in `overrides.components` with the new label included. Deterministic behaviour beats convenience for the editor's mutation surface.
 
 ### Layer changes
@@ -169,11 +171,11 @@ The shipped surface (entity-composition C2–C6 + the tile-like-object UX, PRs #
 
 - **Objects view** — a top-level master-detail view over the whole `entityLibrary` (world objects AND cast characters, the latter with a "Cast" badge), edited through the generated component inspector (`ObjectsController`, `win.new-object` / `win.open-object`).
 - **Object brushes in the scene editor's Tiles tab** — a visual sprite-thumbnail palette (shared `TilePalette` / `createSwatchWidget`) below the tile palette; single-click a card to arm the brush (`win.set-object-brush`), which switches to the `'object'` tool.
-- **Object tool** — part of the `EditorTool` union; stamps the armed brush onto the clicked tile as an undoable, collab-synced `PlaceObjectCommand`. Placements render framed with a shared hover ghost. The FloatingTopBar context chip quick-selects tiles or objects depending on the active tool.
+- **Object tool** — part of the `EditorTool` union; stamps the armed brush onto the clicked tile as an undoable, collab-synced `PlaceObjectCommand`. Placements render framed with a shared hover ghost (`entity/placement-graphic.ts`): the definition's `visual` sprite/animation contain-fitted into the cell — for a Cast character that's the sheet-owned `characterAnimations` default (e.g. `idle-down`) — or a type-coloured marker only when no appearance resolves. The FloatingTopBar context chip quick-selects tiles or objects depending on the active tool.
 - **Props tab "Selected object" group** — selecting a placement (`'select'` tool or `win.select-placement`) shows its name/position + an undoable Remove (`RemoveObjectCommand`).
 - **Objects visibility row** in the Layers tab (`win.toggle-objects`).
 - **Tile properties** — edited in the Sheets view's tile-property inspector (Solid switch, surface); persists to the sprite-set JSON.
-- **Atlas teleport curves** — built by aggregating placements carrying a `teleport` component across all maps (`project-loader.ts`; replaced the legacy projectwide `teleports[]`).
+- **Atlas teleport curves** — built by aggregating placements carrying a `teleport` component across all maps via `resolvePlacementDefinition` — inline AND `defId` placements both surface (`project-loader.ts`; replaced the legacy projectwide `teleports[]`).
 
 Remaining follow-ups (per-placement override editing, palette layout) are tracked in `TODO.md` § "Object-system editor UI follow-ups".
 

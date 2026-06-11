@@ -1,9 +1,10 @@
 import { Actor, type EventEmitter, Logger, Scene } from 'excalibur'
 import { EditorModeComponent, PlacementIdComponent } from '../components/index.ts'
-import { buildPlacementEntity, resolvePlacementDefinition } from '../entity/spawn-placement.ts'
-import { areObjectsVisible } from '../services/editor-view.ts'
+import { resolvePlacementDefinition } from '../entity/data-access.ts'
+import { buildPlacementEntity } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
+import { areObjectsVisible } from '../services/editor-view.ts'
 import {
   CameraControlSystem,
   ItemPickupSystem,

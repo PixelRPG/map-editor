@@ -9,6 +9,7 @@ import {
   type EntityDefinition,
   getComponentData,
   markerColorFor,
+  resolvePlacementDefinition,
 } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
@@ -376,10 +377,10 @@ export class SceneEditorView extends ResponsiveEditorView {
     }
 
     // Surface the map's object placements in the Objects tab. Each
-    // placement resolves its display name from the inline definition
-    // (when present) or from the project's `objectLibrary` (when
-    // referenced by `defId`); falling back to the placement id keeps
-    // the row labelled even if the library lookup misses.
+    // placement resolves through the canonical resolver (inline, or
+    // entity-library lookup by `defId`, with per-instance overrides
+    // merged); falling back to the placement id keeps the row labelled
+    // even if the library lookup misses.
     //
     // Placements with a `sprite` ref additionally get a `Gdk.Paintable`
     // preview attached so the Objects tab renders the actual sprite
@@ -389,7 +390,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const library = project.resource.data?.entityLibrary ?? []
     const resolvedDefs = (mapData.objectPlacements ?? []).map((p) => ({
       placement: p,
-      def: p.inline ?? library.find((d) => d.id === p.defId) ?? null,
+      def: resolvePlacementDefinition(p, library),
     }))
     // The placement-brush palette lists every library entity except the
     // player actor (it spawns at the player spawn-point, not via the brush).

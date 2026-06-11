@@ -6,31 +6,8 @@ import { isLayerVisible } from '../services/layer-visibility.ts'
 import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER, type LayerData } from '../types/data/LayerData.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
-import { mergePlacementComponents } from './data-access.ts'
 import { buildPlacementGraphic } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
-
-/**
- * Resolve a placement to its effective {@link EntityDefinition}: an inline
- * definition, or a library lookup by `defId` with per-instance
- * `overrides` merged (name replace + wholesale-replace components per
- * `type`). Returns `null` if neither resolves.
- */
-export function resolvePlacementDefinition(
-  placement: ObjectPlacement,
-  library: readonly EntityDefinition[],
-): EntityDefinition | null {
-  let base: EntityDefinition | null = null
-  if (placement.inline) base = placement.inline
-  else if (placement.defId) base = library.find((d) => d.id === placement.defId) ?? null
-  if (!base) return null
-  if (!placement.overrides) return base
-  return {
-    ...base,
-    name: placement.overrides.name ?? base.name,
-    components: mergePlacementComponents(base.components, placement.overrides.components),
-  }
-}
 
 /**
  * Build one Excalibur entity from a placement + its resolved definition,

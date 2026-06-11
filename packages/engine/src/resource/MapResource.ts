@@ -324,8 +324,16 @@ export class MapResource implements Loadable<TileMap> {
     for (const t of this.tileMapsByTier.values()) yield t
   }
 
+  /**
+   * Look up a sprite-set resource by id: the map's own referenced sets
+   * first, then the pre-loaded project-level sets. The fallback makes
+   * project-only sets resolvable through the map — character appearance
+   * sheets (e.g. the scientist) live on the project but are not
+   * referenced by any map JSON, yet placed Cast NPCs must render their
+   * sprite on this map (`entity/visual-graphic.ts`).
+   */
   getSpriteSetResource(spriteSetId: string): SpriteSetResource | undefined {
-    return this.spriteSetResources.get(spriteSetId)
+    return this.spriteSetResources.get(spriteSetId) ?? this._preloadedSpriteSets.get(spriteSetId)
   }
 
   /**

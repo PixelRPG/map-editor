@@ -19,11 +19,13 @@ import objectPlacementCommandSuite from './commands/object-placement.command.spe
 import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import registrySuite from './commands/registry.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
+import entityDataAccessSuite from './entity/data-access.spec.js'
 import entityPlacementGraphicSuite from './entity/placement-graphic.spec.js'
 import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
+import mapResourceSuite from './resource/map-resource.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
@@ -50,9 +52,11 @@ run({
   entityRegistrySuite,
   entityValidateSuite,
   entityConvertSuite,
+  entityDataAccessSuite,
   entityPlacementGraphicSuite,
   entitySpawnPlacementSuite,
   objectSystemValidationSuite,
+  mapResourceSuite,
   layerVisibilitySuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
