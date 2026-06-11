@@ -793,8 +793,9 @@ export class Engine {
    * showing the paint forever.
    *
    * `origin` attributes the undo to an initiating actor other than
-   * the local user (see {@link executeCommand}). Note the win.undo
-   * GAction path cannot thread an initiator yet — see TODO.md.
+   * the local user (see {@link executeCommand}). The Control plane
+   * passes `ASSISTANT_PEER_ID` via the maker window's `undoRedo`;
+   * the human's win.undo GAction stays origin-less.
    */
   undo(origin?: string): boolean {
     const ctx = this._undoContext()
