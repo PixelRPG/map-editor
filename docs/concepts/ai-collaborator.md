@@ -80,15 +80,12 @@ virtual peers.
 3. **Presence UI + control (done).** A bottom-left `FloatingCollaborators`
    OSD pill (avatar + "AI Assistant" + a pause/resume button) appears when
    the assistant is present. The button drives the
-   `win.toggle-assistant-paused` stateful action; while paused the engine
-   rejects the assistant's cursor + canvas mutations (`paintTileAt` /
-   `placeObjectAt` / `removeObject` via `Engine._assistantPaused`) and
-   `get_status` reports `assistantPaused` / `assistantPresent` so the agent
-   knows to stop. **Pause does NOT gate the Control action plane** —
-   `ActivateAction` / `ChangeActionState` / `OpenProject` still execute
-   while paused (so `win.*` actions remain driveable); for those, pause is
-   advisory and a well-behaved driver respects `assistantPaused`
-   voluntarily. User stays in control of the canvas either way.
+   `win.toggle-assistant-paused` stateful action and `get_status` reports
+   `assistantPaused` / `assistantPresent` so the agent can stop *before*
+   hitting errors. Pause is **enforced**, not advisory — every mutating
+   Control method is rejected with a typed error while paused, and the
+   control plane can never flip the pause action itself. Full semantics
+   in [Pause contract](#pause-contract).
 4. **Follow-cam + activation UX (done).** An opt-in "follow the assistant"
    toggle on the pill (`win.toggle-follow-assistant` → `Engine._followAssistant`)
    pans the camera to the assistant's cursor on each move; off by default
@@ -105,19 +102,76 @@ virtual peers.
    (The WebRTC/GL "blocker" turned out to be an *intermittent* engine-init
    crash, not a fundamental incompatibility — see `TODO.md`.)
 
+## Pause contract
+
+Pause is the **human's** safety switch over the AI — never the other way
+round. It is enforced at two layers: the Control D-Bus service rejects
+every **mutating** method with a typed `assistant-paused` error (the MCP
+bridge surfaces the message verbatim, so the driver learns the cause and
+the way out instead of getting silence), and the engine additionally
+rejects the assistant's canvas channel (`paintTileAt` / `placeObjectAt` /
+`setAssistantCursor` return `false`) as defense in depth. The
+classification is code + spec, not prose:
+`apps/maker-gjs/src/services/assistant-pause-policy.ts` (every Control
+method must be classified there — the guard throws on unclassified
+names — and `assistant-pause-policy.spec.ts` pins the table).
+
+| Surface | While paused | Who can toggle / notes |
+|---|---|---|
+| `GetStatus`, `Screenshot`, `ListActions`, `ListRecentProjects`, `ListTemplates`, `GetSessionState`, `PresentWindow` | **allowed** | read-only/diagnostic (`PresentWindow` is required by the bridge's screenshot retry) |
+| `SetAssistantInfo`, `HideAssistant` | **allowed** | the assistant's own presence channel (labelling / explicit opt-out) |
+| `SetAssistantCursor` | rejected — returns `false` | engine-gated; the bridge hint names the pause |
+| `PaintTile`, `PlaceObject`, `OpenProject`, `SetZoom`, `ResizeWindow`, `StartSession`, `JoinSession`, `FollowParticipant`, `ActivateAction`, `ChangeActionState` | rejected — `assistant-paused` D-Bus error | the whole action plane counts as mutating: every `win.*` / `app.*` action mutates project data or the user's UI, so there is no per-action allowlist today |
+| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (the OSD pill / UI); the AI can never un-pause itself |
+| the user's **own UI** | **unaffected** | pause gates the AI, never the human — e.g. the Props "Remove" button works while paused (`Engine.removeObject` is deliberately ungated; the assistant has no Control-side remove) |
+
+`get_status.assistantPaused` reports the pause from the window-side
+single source (correct even with no live engine), so a well-behaved
+agent stops before hitting the errors. Mutating Control calls that
+cannot act for *other* reasons also fail typed instead of silently
+"succeeding": `no-engine` (e.g. `SetZoom`, `win.undo`, `win.play`
+without an open scene) and `nothing-to-undo` / `nothing-to-redo` on
+empty stacks.
+
+## State ownership & engine recreation
+
+The engine is **disposed on every scene-editor exit** and recreated on
+re-entry, so per-engine assistant fields (`_assistantPaused`,
+`_assistantInfo`, `_followAssistant`, the Phase-5 frame relay) are
+push-down caches, never owners. The durable owners live window-side:
+the `AssistantStateService`
+(`apps/maker-gjs/src/services/assistant-state.service.ts` — presence,
+name/colour, pause; the `win.toggle-assistant-paused` GAction state is
+its GTK-binding mirror, written in the same handler) plus the stateful
+`win.*` GActions for the view flags.
+
+On every engine (re)creation `ApplicationWindow._syncEngineUiState()`
+re-pushes the full set via `engine-state-sync.ts` (the one spec-guarded
+list — a new stateful toggle belongs there): active tool
+(`win.set-tool`), objects visibility (`win.toggle-objects`), grid
+(`win.toggle-grid`), layer dimming (`win.toggle-transparency`),
+assistant pause + identity/presence, camera-follow state, and the
+assistant awareness relay (re-wired from the live session).
+`win.play` is the deliberate exception: it is reset to `false` on
+scene-editor exit instead (a fresh scene starts in editor mode). This
+kills the old drift class where a paused assistant silently resumed
+after a Cast-view detour.
+
 ## Auto-presence — external drivers always surface as the AI
 
 A driver doesn't have to announce itself with `SetAssistantInfo` to be
-visible. Every **mutating** Control method (`ActivateAction`,
-`ChangeActionState`, `OpenProject`, `PaintTile`, `PlaceObject`, …)
-calls `_surfaceAssistantActivity`
+visible. Every **mutating** Control method — `ActivateAction`,
+`ChangeActionState`, `OpenProject`, `StartSession`, `JoinSession`,
+`SetZoom`, `ResizeWindow`, `PaintTile`, `PlaceObject`,
+`FollowParticipant` — calls `_surfaceAssistantActivity`
 (`apps/maker-gjs/src/services/control-dbus.service.ts`), which ensures
 the assistant participant exists in the roster — so the user always
 sees that an AI/automation is acting, even when the driver never
 introduces itself. Tile-targeted mutations additionally move the
 assistant cursor onto the target tile, making the activity followable
-on the map. Read-only methods (`GetStatus`, `Screenshot`, …) stay
-silent; `HideAssistant` remains the explicit opt-out when a driver
+on the map; non-spatial mutations (`ResizeWindow`, session methods)
+surface presence only. Read-only methods (`GetStatus`, `Screenshot`, …)
+stay silent; `HideAssistant` remains the explicit opt-out when a driver
 finishes.
 
 ## Participants toolbar (roster switcher)

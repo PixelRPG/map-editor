@@ -230,10 +230,11 @@ export class EngineController {
     return this._engine?.getCameraZoom() ?? null
   }
 
-  /** Apply an absolute zoom value to the camera. No-op if no engine. */
-  applyZoom(zoom: number): void {
-    if (this._engine?.getCameraZoom() == null) return
+  /** Apply an absolute zoom value to the camera. Returns `false` (untouched) if no engine. */
+  applyZoom(zoom: number): boolean {
+    if (this._engine?.getCameraZoom() == null) return false
     this._engine.setCameraZoom(zoom)
+    return true
   }
 
   /**
