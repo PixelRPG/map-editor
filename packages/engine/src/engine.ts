@@ -28,6 +28,7 @@ import {
   EditorViewModeComponent,
   RuntimeModeComponent,
   SelectedPlacementsComponent,
+  SpawnOverrideComponent,
   UndoStackComponent,
 } from './components/index.ts'
 import { entityToCharacter } from './entity/convert.ts'
@@ -43,8 +44,9 @@ import {
   parseAwarenessColour,
   RemoteCursorRenderer,
 } from './sync/index.ts'
-import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
+import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from './types/index.ts'
 import { EDITOR_CONSTANTS } from './utils/constants.ts'
+import { formatError } from './utils/format-error.ts'
 import { SessionState } from './utils/session-state.ts'
 import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
 
@@ -140,6 +142,19 @@ export class Engine {
     this.excalibur.on('postupdate', (evt: { elapsed?: number; delta?: number }) =>
       this._tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
     )
+
+    // Teleport host wiring: `TeleportSystem` emits the intent (it has no
+    // engine reference); the engine — the only owner of scene switching —
+    // performs it. Carries the play state to the target scene and plants
+    // the arrival tile as a spawn override (see `loadMap`'s options).
+    this.events.on(EngineEvent.TELEPORT_REQUESTED, ({ targetMapId, targetTileX, targetTileY, facing }) => {
+      this.loadMap(targetMapId, {
+        spawnOverride: { tileX: targetTileX, tileY: targetTileY, facing },
+        keepRuntimeMode: true,
+      }).catch((err) => {
+        console.warn(`[Engine] teleport to "${targetMapId}" failed:`, formatError(err))
+      })
+    })
   }
 
   async initialize(): Promise<void> {
@@ -205,10 +220,32 @@ export class Engine {
     }
   }
 
-  async loadMap(mapId: string): Promise<void> {
+  /**
+   * Load a map and switch the active scene to it.
+   *
+   * `options.spawnOverride` plants a {@link SpawnOverrideComponent} on
+   * the NEW scene's session-singleton BEFORE `goToScene`, so
+   * `PlayerSystem.resolveSpawnTile` deterministically sees it when the
+   * scene initialises — no reliance on event-tick ordering. Used by the
+   * teleport flow to position the player at the arrival tile.
+   * `options.keepRuntimeMode` carries the play state across the switch
+   * (mode markers are per-scene): when the CURRENT scene is in runtime
+   * mode, the new scene starts in runtime mode too, so a mid-play
+   * teleport stays in play instead of dropping back to the editor.
+   *
+   * Re-entering a previously visited map rebuilds the scene from data
+   * (no scene instance is reused) — RPG-Maker-style room reset; save
+   * state is a future concern.
+   */
+  async loadMap(
+    mapId: string,
+    options?: { spawnOverride?: { tileX: number; tileY: number; facing?: Facing }; keepRuntimeMode?: boolean },
+  ): Promise<void> {
     if (!this._gameProjectResource) {
       throw new Error('Project not loaded')
     }
+    // Capture BEFORE the switch — isRuntimeMode() reads the current scene.
+    const carryRuntime = (options?.keepRuntimeMode ?? false) && this.isRuntimeMode()
 
     this.logger.info(`Loading map: ${mapId}`)
     const mapResource = await this._gameProjectResource.loadMap(mapId)
@@ -236,6 +273,20 @@ export class Engine {
       : undefined
     const newMapScene = new MapScene(mapResource, this.events, entityLibrary, playerCharacter, playerSpriteSet)
 
+    // Session-singleton state must be in place BEFORE goToScene so the
+    // scene's systems read it during their initialize pass.
+    if (options?.spawnOverride) {
+      const { tileX, tileY, facing } = options.spawnOverride
+      SessionState.set(newMapScene, new SpawnOverrideComponent(tileX, tileY, facing))
+    }
+    if (carryRuntime) {
+      SessionState.unset(newMapScene, EditorModeComponent)
+      SessionState.set(newMapScene, new RuntimeModeComponent())
+    }
+
+    // Re-entry: drop the stale scene instance so addScene doesn't
+    // collide and the room rebuilds fresh from data.
+    if (this.excalibur.scenes[mapId]) this.excalibur.removeScene(mapId)
     this.excalibur.addScene(mapId, newMapScene)
     this.excalibur.goToScene(mapId)
 
