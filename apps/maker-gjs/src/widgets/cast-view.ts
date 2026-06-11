@@ -1,4 +1,4 @@
-import Adw from '@girs/adw-1'
+import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
@@ -8,6 +8,7 @@ import {
   CastInspector,
   CharacterPreview,
   type ComponentRefOptions,
+  confirmDestructive,
   EntityComponentsEditor,
   type GalleryCardItem,
   type GdkSpriteSetResource,
@@ -555,19 +556,12 @@ export class CastView extends ResponsiveEditorView {
   private _confirmDeleteCharacter(id: string): void {
     const character = this._characters.find((c) => c.id === id)
     if (!character) return
-    const dialog = new Adw.AlertDialog({
+    void confirmDestructive(this, {
       heading: _('Delete character?'),
-      body: _(`“${character.name}” will be removed from the project. This cannot be undone.`),
+      body: _('“%s” will be removed from the project. This cannot be undone.').replace('%s', character.name),
+    }).then((confirmed) => {
+      if (confirmed) this._onDeleteCharacterRequested?.(id)
     })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('delete', _('Delete'))
-    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
-    dialog.set_default_response('cancel')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'delete') this._onDeleteCharacterRequested?.(id)
-    })
-    dialog.present(this)
   }
 
   vfunc_unmap(): void {

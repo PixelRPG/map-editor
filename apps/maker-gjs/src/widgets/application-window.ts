@@ -13,7 +13,9 @@ import {
 } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
+  confirmDestructive,
   type EditorMode,
+  promptRename,
   type SampleScene,
   SignalScope,
   SpriteSetImportDialog,
@@ -771,38 +773,25 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   /** Rename an asset's display name via a small dialog (Data view). */
   private _presentRenameAsset(id: string, currentName: string): void {
-    const entry = new Gtk.Entry({ text: currentName, activatesDefault: true })
-    const dialog = new Adw.AlertDialog({ heading: _('Rename asset'), extraChild: entry })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('rename', _('Rename'))
-    dialog.set_response_appearance('rename', Adw.ResponseAppearance.SUGGESTED)
-    dialog.set_default_response('rename')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+    void promptRename(this, { heading: _('Rename asset'), current: currentName }).then((name) => {
       // Route through the cast controller — the single owner of sprite-set
       // file writes + collab broadcast (it re-hydrates the Data view via
       // `onSpriteSetsChanged`).
-      if (response === 'rename') this._castCtl?.renameSpriteSet(id, entry.get_text())
+      if (name) this._castCtl?.renameSpriteSet(id, name)
     })
-    dialog.present(this)
   }
 
   /** Confirm + delete an asset (sprite set) through the shared cast controller. */
   private _presentDeleteAsset(id: string, name: string, usedBy: number): void {
     const body =
       usedBy > 0
-        ? _(`“${name}” is still used in ${usedBy} place(s). Deleting it may break them. Continue?`)
-        : _(`“${name}” will be removed from the project, including its files. This cannot be undone.`)
-    const dialog = new Adw.AlertDialog({ heading: _('Delete asset?'), body })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('delete', _('Delete'))
-    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
-    dialog.set_default_response('cancel')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'delete') this._castCtl?.deleteSpriteSet(id)
+        ? _('“%s” is still used in %d place(s). Deleting it may break them. Continue?')
+            .replace('%s', name)
+            .replace('%d', String(usedBy))
+        : _('“%s” will be removed from the project, including its files. This cannot be undone.').replace('%s', name)
+    void confirmDestructive(this, { heading: _('Delete asset?'), body }).then((confirmed) => {
+      if (confirmed) this._castCtl?.deleteSpriteSet(id)
     })
-    dialog.present(this)
   }
 
   /**

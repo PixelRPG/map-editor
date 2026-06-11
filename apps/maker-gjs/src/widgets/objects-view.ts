@@ -2,7 +2,13 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { type EntityDefinition, getComponentData, isCharacterEntity } from '@pixelrpg/engine'
-import { type ComponentRefOptions, EntityComponentsEditor, type ModeRail, SignalScope } from '@pixelrpg/gjs'
+import {
+  type ComponentRefOptions,
+  confirmDestructive,
+  EntityComponentsEditor,
+  type ModeRail,
+  SignalScope,
+} from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES } from '../services/entity-templates.ts'
 import Template from './objects-view.blp'
@@ -144,9 +150,7 @@ export class ObjectsView extends ResponsiveEditorView {
       const icon = isCharacter ? 'avatar-default-symbolic' : (obj.editorData?.icon ?? 'view-grid-symbolic')
       row.add_prefix(new Gtk.Image({ iconName: icon }))
       if (isCharacter) {
-        row.add_suffix(
-          new Gtk.Label({ label: _('Cast'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }),
-        )
+        row.add_suffix(new Gtk.Label({ label: _('Cast'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }))
       }
       row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic', cssClasses: ['dim-label'] }))
       row.connect('activated', () => this.focusObject(obj.id))
@@ -216,16 +220,11 @@ export class ObjectsView extends ResponsiveEditorView {
 
   private _confirmDelete(id: string): void {
     const obj = this._objects.find((o) => o.id === id)
-    const dialog = new Adw.AlertDialog({
+    void confirmDestructive(this, {
       heading: _('Delete object?'),
       body: _('“%s” will be removed from the project library.').replace('%s', obj?.name ?? id),
+    }).then((confirmed) => {
+      if (confirmed) this.emit('object-delete-requested', id)
     })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('delete', _('Delete'))
-    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'delete') this.emit('object-delete-requested', id)
-    })
-    dialog.present(this)
   }
 }
