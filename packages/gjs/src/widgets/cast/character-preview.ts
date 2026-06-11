@@ -120,7 +120,7 @@ export class CharacterPreview extends Adw.Bin {
           'active-animation-id': GObject.ParamSpec.string(
             'active-animation-id',
             'Active Animation ID',
-            'Computed `${kind}-${direction}` id of the currently-previewed animation',
+            'Computed `<kind>-<direction>` id of the currently-previewed animation',
             GObject.ParamFlags.READABLE,
             'walk-down',
           ),

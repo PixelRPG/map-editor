@@ -35,7 +35,7 @@ import {
   type SpriteSetUpdatePayload,
 } from './project-operations.ts'
 
-function spriteSetData(id: string, imageBase64Len = 8): SpriteSetData {
+function spriteSetData(id: string, _imageBase64Len = 8): SpriteSetData {
   return {
     version: '1.0.0',
     id,

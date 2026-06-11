@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { describe, expect, it, on } from '@gjsify/unit'
+import { describe, expect, it } from '@gjsify/unit'
 
 import { wrapWebSocket } from './lan-signalling.ts'
 

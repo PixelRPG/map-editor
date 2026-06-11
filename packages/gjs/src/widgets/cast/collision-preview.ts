@@ -81,9 +81,7 @@ export class CollisionPreview extends Gtk.Widget {
 
   vfunc_measure(orientation: Gtk.Orientation, _forSize: number): [number, number, number, number] {
     const natural =
-      orientation === Gtk.Orientation.HORIZONTAL
-        ? this._cellW * this._displayScale
-        : this._cellH * this._displayScale
+      orientation === Gtk.Orientation.HORIZONTAL ? this._cellW * this._displayScale : this._cellH * this._displayScale
     // Min stays small so the widget can shrink on narrow phones; the
     // snapshot letterboxes to the available space either way.
     const min = Math.min(natural, orientation === Gtk.Orientation.HORIZONTAL ? this._cellW * 2 : this._cellH * 2)

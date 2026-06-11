@@ -295,7 +295,8 @@ export function createMapEditorDataOp(args: {
  * Idempotent — applying the same op twice yields the same state.
  */
 export function applyEntityUpsert(data: GameProjectData, entity: EntityDefinition): void {
-  const library = (data.entityLibrary ??= [])
+  data.entityLibrary ??= []
+  const library = data.entityLibrary
   const idx = library.findIndex((e) => e.id === entity.id)
   if (idx >= 0) library[idx] = entity
   else library.push(entity)
@@ -444,7 +445,8 @@ export class SpriteSetAddReassembler extends OpChunkReassembler<SpriteSetAddPayl
  * so characters that reference the set still resolve on the peer.
  */
 export function applySpriteSetReference(data: GameProjectData, reference: SpriteSetReference): void {
-  const sets = (data.spriteSets ??= [])
+  data.spriteSets ??= []
+  const sets = data.spriteSets
   const idx = sets.findIndex((s) => s.id === reference.id)
   if (idx >= 0) sets[idx] = reference
   else sets.push(reference)

@@ -2,6 +2,7 @@ import { EDITOR_CONSTANTS, type SpriteSetData, type SpriteSetKind, type SpriteSe
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
 import type { DataAssetRow, DataView, DataViewModel } from '../widgets/data-view.ts'
 import type { ProjectStore } from './project-store.ts'
 import { isCharacterSpriteSet } from './sprite-set-classification.ts'
@@ -79,7 +80,8 @@ export class DataController {
   setProjectField(field: 'name' | 'author' | 'version' | 'description' | 'tileSize', value: string): void {
     const data = this.store.data
     if (!data) return
-    const props = (data.properties ??= {})
+    data.properties ??= {}
+    const props = data.properties
     switch (field) {
       case 'name':
         data.name = value

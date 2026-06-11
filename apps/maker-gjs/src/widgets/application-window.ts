@@ -43,6 +43,7 @@ import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
+// biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
 import { DataView } from './data-view.ts'
 import { ObjectsView } from './objects-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'

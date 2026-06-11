@@ -92,10 +92,7 @@ export function findTileIdForSpriteInfo(
  * Find a map's reference entry for the given sprite-set id. Shared by the
  * tile-id ↔ sprite-info conversions above.
  */
-function findSpriteSetRef(
-  mapData: MapResource['mapData'],
-  spriteSetId: string,
-): SpriteSetReferenceLike | undefined {
+function findSpriteSetRef(mapData: MapResource['mapData'], spriteSetId: string): SpriteSetReferenceLike | undefined {
   return mapData?.spriteSets?.find((ref: SpriteSetReferenceLike) => ref?.id === spriteSetId) as
     | SpriteSetReferenceLike
     | undefined

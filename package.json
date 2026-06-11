@@ -13,9 +13,9 @@
     "start": "gjsify workspace @pixelrpg/maker-gjs start",
     "start:storybook": "gjsify workspace @pixelrpg/storybook-gjs start",
     "clear": "gjsify foreach clear -v -p",
-    "format": "gjsify fix",
-    "lint": "gjsify lint",
-    "check:format": "gjsify format --check",
+    "format": "biome check --write packages apps",
+    "lint": "biome ci packages apps",
+    "check:format": "biome format packages apps",
     "flatpak:init": "gjsify workspace @pixelrpg/maker-gjs flatpak:init",
     "flatpak:check": "gjsify workspace @pixelrpg/maker-gjs flatpak:check",
     "flatpak:build": "gjsify workspace @pixelrpg/maker-gjs flatpak:build"

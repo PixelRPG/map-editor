@@ -234,7 +234,7 @@ export class PeerSession {
   }
 
   private send(channel: RTCDataChannel | null, payload: unknown, kind: 'op' | 'awareness'): void {
-    if (!channel || channel.readyState !== 'open') {
+    if (channel?.readyState !== 'open') {
       // A drop on awareness is fine (the next update supersedes it).
       // A drop on ops would mean state divergence; surface so the
       // caller can retry or escalate.

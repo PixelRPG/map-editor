@@ -90,7 +90,11 @@ export class NewCharacterDialog extends Adw.Dialog {
   /** Replace the list of sprite sets (and select the first). */
   setSpriteSets(choices: SpriteSetChoice[]): void {
     this._spriteSetIds = choices.map((c) => c.id)
-    this._spriteSetModel.splice(0, this._spriteSetModel.get_n_items(), choices.map((c) => c.name))
+    this._spriteSetModel.splice(
+      0,
+      this._spriteSetModel.get_n_items(),
+      choices.map((c) => c.name),
+    )
     if (choices.length > 0) this._spriteset_row.set_selected(0)
     this._refreshValidity()
     this._emitActivated()

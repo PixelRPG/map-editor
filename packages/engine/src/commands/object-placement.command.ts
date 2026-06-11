@@ -22,7 +22,8 @@ export interface ObjectPlacementPayload {
 function addPlacement(scene: MapScene, placement: ObjectPlacement): void {
   const mapData = scene.mapResource.mapData
   if (!mapData) return
-  const list = (mapData.objectPlacements ??= [])
+  mapData.objectPlacements ??= []
+  const list = mapData.objectPlacements
   const idx = list.findIndex((p) => p.id === placement.id)
   if (idx >= 0) list[idx] = placement
   else list.push(placement)

@@ -53,6 +53,7 @@ const THUMB_SIZE = 44
  * project metadata. Complements the visual Cast/Tiles galleries — same
  * assets, file/management angle. See `data-controller.ts` for the data.
  */
+// biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
 export class DataView extends ResponsiveEditorView {
   declare _outer_split: Adw.OverlaySplitView
   declare _library_toggle: Gtk.ToggleButton

@@ -534,7 +534,7 @@ export async function applyProjectSnapshot(
  * — this is the last-ditch tripwire for the case where they don't.
  */
 function assertStaysInside(targetDir: string, joinedPath: string, field: string): void {
-  const normTarget = targetDir.replace(/\\/g, '/').replace(/\/+$/, '') + '/'
+  const normTarget = `${targetDir.replace(/\\/g, '/').replace(/\/+$/, '')}/`
   const normJoined = joinedPath.replace(/\\/g, '/')
   if (!normJoined.startsWith(normTarget)) {
     throw new Error(

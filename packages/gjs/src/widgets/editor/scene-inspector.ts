@@ -11,13 +11,6 @@ import Template from './scene-inspector.blp'
 GObject.type_ensure(MiniMap.$gtype)
 GObject.type_ensure(MapPreview.$gtype)
 
-interface SceneStats {
-  npcs: number
-  events: number
-  incoming: number
-  outgoing: number
-}
-
 interface TeleportSummary {
   label: string
   /** Other-scene id (destination when outgoing, source when incoming). */
@@ -183,7 +176,7 @@ export class SceneInspector extends Adw.Bin {
     const tilePx = Math.max(1, Math.floor(Math.min(desiredWidth / cols, desiredHeight / rows)))
 
     // Real-project path: render the scene's tile data via MapPreview.
-    if (this._projectResource && this._projectResource.maps.has(this._scene.id)) {
+    if (this._projectResource?.maps.has(this._scene.id)) {
       const preview = new MapPreview()
       preview.accentColor = this._scene.previewColor ?? '#3a3a40'
       preview.set_size_request(desiredWidth, desiredHeight)

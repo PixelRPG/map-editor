@@ -408,7 +408,8 @@ export class CastController {
    */
   private _mutateSheetAnimations(spriteSetId: string, mutator: (anims: CharacterAnimation[]) => void): void {
     const mutated = this.store.mutateSpriteSetData(spriteSetId, (data) => {
-      const anims = (data.characterAnimations ??= [])
+      data.characterAnimations ??= []
+      const anims = data.characterAnimations
       mutator(anims)
     })
     if (!mutated) return

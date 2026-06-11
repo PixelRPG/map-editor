@@ -2,7 +2,7 @@
 
 PixelRPG Map Editor — gjsify-native monorepo (no Yarn, no Node-only build tooling). Single-process GTK4/libadwaita app with Excalibur.js running directly in GJS via gjsify. Tile-based RPG map editor for the GNOME platform; exported games target multiple platforms (browser-runtime seeded under `apps/game-browser`).
 
-Toolchain: `gjsify install` (replaces yarn), `gjsify build` (replaces esbuild/vite), `gjsify barrels` (replaces barrelsby), `gjsify format` / `gjsify lint` / `gjsify fix` (wraps Biome), `gjsify foreach` / `gjsify workspace` (replaces `yarn workspaces foreach`), `gjsify flatpak` for `apps/maker-gjs` packaging. Lockfile: `gjsify-lock.json` (no `yarn.lock`).
+Toolchain: `gjsify install` (replaces yarn), `gjsify build` (replaces esbuild/vite), `gjsify barrels` (replaces barrelsby), `gjsify run lint` / `gjsify run format` (Biome direct — the CLI's own lint/fix subcommands wrap oxlint/oxfmt, which this repo does not use), `gjsify foreach` / `gjsify workspace` (replaces `yarn workspaces foreach`), `gjsify flatpak` for `apps/maker-gjs` packaging. Lockfile: `gjsify-lock.json` (no `yarn.lock`).
 
 IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for PixelRPG tasks. Read files under `packages/` and `apps/` before assuming behavior.
 
@@ -96,7 +96,7 @@ refs: https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/css-variables
 
 ## Build / format / lint / test (root-level scripts)
 
-|`gjsify foreach build -v -t` — topological build (root `build`) |`gjsify foreach check -v -t` — type-check + barrel regen across all packages |`gjsify foreach check:barrels -v -t` — drift guard (CI: any stale barrel exits non-zero) |`gjsify foreach test -v -p --include @pixelrpg/engine --include @pixelrpg/maker-gjs --include @pixelrpg/signalling-server` — all test suites (`@gjsify/unit`; this is the root `test`; CI runs the same three suites as separate steps — use one `--include` or `gjsify workspace <pkg> test` for a single suite) |`gjsify workspace @pixelrpg/maker-gjs start` — run the editor (root `start`) |`gjsify fix` / `gjsify lint` / `gjsify format --check` — Biome wrappers (read project's `biome.json`)
+|`gjsify foreach build -v -t` — topological build (root `build`) |`gjsify foreach check -v -t` — type-check + barrel regen across all packages |`gjsify foreach check:barrels -v -t` — drift guard (CI: any stale barrel exits non-zero) |`gjsify foreach test -v -p --include @pixelrpg/engine --include @pixelrpg/maker-gjs --include @pixelrpg/signalling-server` — all test suites (`@gjsify/unit`; this is the root `test`; CI runs the same three suites as separate steps — use one `--include` or `gjsify workspace <pkg> test` for a single suite) |`gjsify workspace @pixelrpg/maker-gjs start` — run the editor (root `start`) |`gjsify run format` / `gjsify run lint` / `gjsify run check:format` — Biome direct (`biome.json`; the gjsify CLI's own lint/fix subcommands wrap oxlint/oxfmt, which this repo does not use). GTK CSS (`*.css`) is excluded from Biome — it is a GTK dialect Biome cannot parse; the gjsify CSS plugin owns it
 
 ## Flatpak (maker-gjs)
 
@@ -104,7 +104,7 @@ App-ID `org.pixelrpg.maker`. Manifest + MetaInfo + .desktop generated from `apps
 
 ## Validation & commits
 
-[Pre-commit] |no automated hook — devs run `gjsify fix && gjsify lint` manually before committing (CI does NOT lint/format-check — tracked in TODO.md "Biome cleanup + CI lint gate"; it runs type-check, build, the barrel-drift guard and the engine + maker-gjs + signalling-server test suites, with `@gjsify/cli` pinned to the gjsify-lock.json version — see `.github/workflows/ci.yml`) |`gjsify foreach build -v -t` builds all packages |`gjsify foreach check -v -t` full type check (slow) |`gjsify workspace @pixelrpg/engine test` for engine unit tests |per-pkg: `cd <pkg> && gjsify run {check,build}` |fix all errors+warnings before commit
+[Pre-commit] |no automated hook — devs run `gjsify run format && gjsify run lint` manually before committing (CI gates Biome lint+format via `biome ci`, type-check, build, the barrel-drift guard and the engine + maker-gjs + signalling-server test suites, with `@gjsify/cli` pinned to the gjsify-lock.json version — see `.github/workflows/ci.yml`) |`gjsify foreach build -v -t` builds all packages |`gjsify foreach check -v -t` full type check (slow) |`gjsify workspace @pixelrpg/engine test` for engine unit tests |per-pkg: `cd <pkg> && gjsify run {check,build}` |fix all errors+warnings before commit
 
 [Commits] |atomic, one logical change |conventional: `<type>[scope]: <description>` (feat|fix|docs|refactor|test|chore) |imperative, subject ≤50 chars, include scope |working state every commit |check `git log --oneline -10` to match project style |commit at milestones for large tasks, not just end
 
