@@ -1059,6 +1059,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (placementId) this.set_property('show-inspector', true)
     })
 
+    // Layer eye/padlock mirroring: `LAYER_FLAG_CHANGED` fires on every
+    // application path of the layer-flag commands — local toggle,
+    // undo/redo, and inbound peer ops (which don't emit
+    // `COMMAND_EXECUTED`) — so the Layers tab follows changes the
+    // inspector didn't originate, just like the canvas does.
+    this._engineCtl.onLayerFlagChanged(({ layerId, flag, value }) => {
+      this._scene_editor_view.setLayerFlag(layerId, flag, value)
+    })
+
     // Grid lines + non-active-layer dimming are two INDEPENDENT
     // editor view flags. The user can have grid on / off and the
     // dimming on / off in any combination — they help with

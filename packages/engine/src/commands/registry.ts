@@ -1,3 +1,9 @@
+import {
+  SetLayerLockedCommand,
+  type SetLayerLockedPayload,
+  SetLayerVisibilityCommand,
+  type SetLayerVisibilityPayload,
+} from './layer-flag.command.ts'
 import { type ObjectPlacementPayload, PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
 import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from './paint-tile.command.ts'
 import type { CommandRegistry } from './types.ts'
@@ -25,4 +31,6 @@ export const BUILT_IN_COMMANDS: CommandRegistry = {
   [EraseTileCommand.KIND]: (payload) => new EraseTileCommand(payload as Omit<PaintTilePayload, 'spriteId'>),
   [PlaceObjectCommand.KIND]: (payload) => new PlaceObjectCommand(payload as ObjectPlacementPayload),
   [RemoveObjectCommand.KIND]: (payload) => new RemoveObjectCommand(payload as ObjectPlacementPayload),
+  [SetLayerVisibilityCommand.KIND]: (payload) => new SetLayerVisibilityCommand(payload as SetLayerVisibilityPayload),
+  [SetLayerLockedCommand.KIND]: (payload) => new SetLayerLockedCommand(payload as SetLayerLockedPayload),
 }

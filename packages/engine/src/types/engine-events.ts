@@ -28,6 +28,7 @@ export enum EngineEvent {
   POINTER_DRAG_END = 'pointer-drag-end',
   COMMAND_EXECUTED = 'command-executed',
   COMMAND_REVERTED = 'command-reverted',
+  LAYER_FLAG_CHANGED = 'layer-flag-changed',
 }
 
 export interface EngineEventMap {
@@ -190,4 +191,18 @@ export interface EngineEventMap {
    * `Engine.revertRemoteCommand`.
    */
   [EngineEvent.COMMAND_REVERTED]: { command: Command }
+  /**
+   * A layer's `visible` / `locked` flag changed on the active map —
+   * UI-sync event for the host's Layers tab. Fired by the Engine on
+   * EVERY application path of a `SetLayerVisibilityCommand` /
+   * `SetLayerLockedCommand`: local execute, undo, redo, AND remote
+   * apply/revert (unlike `COMMAND_EXECUTED`, which deliberately
+   * skips remote ops). `value` is the flag's effective value AFTER
+   * the change. Carries the stable `LayerData.id`.
+   */
+  [EngineEvent.LAYER_FLAG_CHANGED]: {
+    layerId: string
+    flag: 'visible' | 'locked'
+    value: boolean
+  }
 }

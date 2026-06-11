@@ -6,7 +6,7 @@ import type { MapResource } from '../resource/MapResource.ts'
  * `MapResource.applyInitialGraphics`, the per-tile rebuild in
  * `rebuildAllTileGraphics`, the placement spawn in
  * `ObjectSpawnSystem.buildEntity`, and the runtime toggle in
- * `Engine.setLayerVisible`.
+ * `SetLayerVisibilityCommand` (dispatched by `Engine.setLayerVisible`).
  *
  * Before this lived in three different inlined for-loops with
  * subtly-different semantics (`layer.visible !== false` vs
