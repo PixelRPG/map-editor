@@ -30,7 +30,6 @@ import {
   type SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 import { copyFile, deleteFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 import { TypedEmitter } from './typed-emitter.ts'
@@ -76,7 +75,21 @@ export function uniqueIdFrom(name: string, taken: ReadonlySet<string>, fallback 
 export type EntityLibraryChangeSource = 'cast' | 'objects' | 'remote'
 
 /** Typed event map for {@link ProjectStore.on}. */
+/**
+ * User-facing notification from the store. The store is UI-free (it also
+ * runs in the node test bundle, where GJS's `gettext` builtin does not
+ * exist), so it emits semantic notices and the window translates +
+ * toasts them — the same pattern `SessionService` uses for its toasts.
+ */
+export type ProjectStoreNotice =
+  | { kind: 'image-copy-failed' }
+  | { kind: 'sprite-set-save-failed' }
+  | { kind: 'project-save-failed' }
+  | { kind: 'sprite-set-imported'; name: string }
+
 export interface ProjectStoreEvents {
+  /** A user-facing notice — the host translates + shows it as a toast. */
+  notice: ProjectStoreNotice
   /** The active project was swapped (or cleared with `null`). */
   'project-changed': LoadedProject | null
   /** `entityLibrary` / `playerActorId` changed (local mutation or inbound peer op). */
@@ -178,10 +191,7 @@ export class ProjectStore {
   private _session: ProjectSyncSession | null = null
   private readonly _events = new TypedEmitter<ProjectStoreEvents>()
 
-  constructor(
-    private readonly onToast: (message: string) => void,
-    private readonly io: ProjectStoreIo = DEFAULT_IO,
-  ) {}
+  constructor(private readonly io: ProjectStoreIo = DEFAULT_IO) {}
 
   /** Subscribe to a store event. Returns an unsubscribe closure. */
   on<K extends keyof ProjectStoreEvents>(event: K, listener: (payload: ProjectStoreEvents[K]) => void): () => void {
@@ -501,11 +511,11 @@ export class ProjectStore {
     const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
 
     if (!this.io.copy(sourcePath, pngDest)) {
-      this.onToast(_('Could not copy the image into the project'))
+      this._events.emit('notice', { kind: 'image-copy-failed' })
       return null
     }
     if (!this.io.writeText(jsonDest, SpriteSetFormat.serialize(finalData))) {
-      this.onToast(_('Could not save the sprite set'))
+      this._events.emit('notice', { kind: 'sprite-set-save-failed' })
       return null
     }
 
@@ -533,7 +543,7 @@ export class ProjectStore {
       if (bytes) this._session.sendSpriteSetAdd({ data: finalData, imageBase64: GLib.base64_encode(bytes) })
     }
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
-    this.onToast(_(`Imported sprite set “${finalData.name}”`))
+    this._events.emit('notice', { kind: 'sprite-set-imported', name: finalData.name })
     return { id, name: finalData.name }
   }
 
@@ -717,7 +727,7 @@ export class ProjectStore {
     const projectDir = GLib.path_get_dirname(resource.path)
     const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${spriteSetId}.json`])
     if (!this.io.writeText(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
-      this.onToast(_('Could not save the sprite set'))
+      this._events.emit('notice', { kind: 'sprite-set-save-failed' })
     }
   }
 
@@ -731,10 +741,10 @@ export class ProjectStore {
     if (!resource?.data) return
     try {
       const ok = this.io.writeText(resource.path, GameProjectFormat.serialize(resource.data))
-      if (!ok) this.onToast(_('Could not save project'))
+      if (!ok) this._events.emit('notice', { kind: 'project-save-failed' })
     } catch (err) {
       console.warn('[ProjectStore] Failed to persist project:', err)
-      this.onToast(_('Could not save project'))
+      this._events.emit('notice', { kind: 'project-save-failed' })
     }
   }
 }

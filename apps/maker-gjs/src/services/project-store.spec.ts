@@ -98,7 +98,8 @@ function makeSession(): ProjectSyncSession & { sent: ProjectOp[] } {
 function makeStore(data = makeProjectData()) {
   const io = makeIo()
   const toasts: string[] = []
-  const store = new ProjectStore((msg) => toasts.push(msg), io)
+  const store = new ProjectStore(io)
+  store.on('notice', (n) => toasts.push(n.kind))
   store.setProject(makeProject(data))
   return { store, io, toasts, data }
 }
@@ -225,7 +226,7 @@ export default async () => {
 
     await it('mutations without a project are no-ops', async () => {
       const io = makeIo()
-      const store = new ProjectStore(() => {}, io)
+      const store = new ProjectStore(io)
       store.upsertEntity(npc, 'cast')
       store.setPlayerActor('npc-1', 'cast')
       expect(store.removeEntity('npc-1', 'cast')).toBe(false)
@@ -299,7 +300,7 @@ export default async () => {
 
     await it('ignores ops while no project is open', async () => {
       const io = makeIo()
-      const store = new ProjectStore(() => {}, io)
+      const store = new ProjectStore(io)
       store.applyRemoteProjectOp(remoteUpsert(npc))
       expect(io.writes).toHaveLength(0)
     })

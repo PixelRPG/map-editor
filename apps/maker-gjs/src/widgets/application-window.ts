@@ -33,7 +33,7 @@ import { LanSessionBackend } from '../services/lan-session-backend.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
 import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
-import { ProjectStore } from '../services/project-store.ts'
+import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
 import { generatePeerId, SessionService, type SessionState } from '../services/session-service.ts'
@@ -177,7 +177,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * lenses over it; this window only handles the store events that need
    * window-owned resources (the live engine, map-file IO, dialogs).
    */
-  private readonly _projectStore = new ProjectStore((msg) => this._showToast(msg))
+  private readonly _projectStore = new ProjectStore()
   private get _loadedProject(): LoadedProject | null {
     return this._projectStore.project
   }
@@ -338,6 +338,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // change live collision; with a scene open refresh the engine so
     // the change applies without a reload. The engine ref is per-scene
     // + lazy, so resolve it on every call.
+    // The store is UI-free: it emits semantic notices, the window
+    // translates + toasts them (msgids stay literal for extraction).
+    this._projectStore.on('notice', (notice) => this._showToast(this._noticeText(notice)))
     this._projectStore.on('tile-properties-changed', ({ spriteSetId }) => {
       this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
     })
@@ -1586,6 +1589,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     } catch (error) {
       console.error('[ApplicationWindow] Failed to load project:', error)
       this._showToast(_('Failed to load project'))
+    }
+  }
+
+  /** Translate a {@link ProjectStoreNotice} into its user-facing toast text. */
+  private _noticeText(notice: ProjectStoreNotice): string {
+    switch (notice.kind) {
+      case 'image-copy-failed':
+        return _('Could not copy the image into the project')
+      case 'sprite-set-save-failed':
+        return _('Could not save the sprite set')
+      case 'project-save-failed':
+        return _('Could not save project')
+      case 'sprite-set-imported':
+        return _('Imported sprite set “%s”').replace('%s', notice.name)
     }
   }
 
