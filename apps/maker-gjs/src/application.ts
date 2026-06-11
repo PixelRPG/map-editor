@@ -6,6 +6,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import applicationStyle from './application.css'
 import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
+import { sanitizeInstanceId } from './instance-id.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
@@ -212,10 +213,4 @@ export class Application extends Adw.Application {
     this.pendingIntent = null
     return intent
   }
-}
-
-/** Coerce a free-form instance label into a valid app-id segment (letter-led, alphanumeric). */
-function sanitizeInstanceId(label: string): string {
-  const cleaned = label.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return /^[a-z]/.test(cleaned) ? cleaned : `i${cleaned || '0'}`
 }

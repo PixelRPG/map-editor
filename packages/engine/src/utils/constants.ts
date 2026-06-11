@@ -7,6 +7,14 @@
  * constant rather than leaving it as orphaned configuration.
  */
 export const EDITOR_CONSTANTS = {
+  // Fallback tile dimension (px) when `MapData.tileWidth/tileHeight`
+  // (or the Data view's `properties.defaultTileSize`) are absent —
+  // schema semantics shared by spawn positioning, player movement and
+  // the engine's tilemap construction. ONE definition: a scatter of
+  // `?? 16` literals previously risked drifting per site (subtle
+  // spawn/movement misalignment on maps without explicit sizes).
+  DEFAULT_TILE_SIZE: 16,
+
   // `CameraControlSystem.handleZoomEvent`: per-wheel-notch zoom delta
   // and the absolute floor the camera clamps to (avoid an inverted /
   // imperceptibly-small viewport).

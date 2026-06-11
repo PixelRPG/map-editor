@@ -1,5 +1,5 @@
 import { run } from '@gjsify/unit'
-
+import instanceIdSuite from './instance-id.spec.js'
 import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
 import collabLogSuite from './services/collab-log.spec.js'
@@ -24,6 +24,7 @@ import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 run({
   assistantPausePolicySuite,
   assistantStateServiceSuite,
+  instanceIdSuite,
   engineStateSyncSuite,
   collabLogSuite,
   collabSessionSuite,

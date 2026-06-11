@@ -39,6 +39,12 @@ import type {
   SpriteSetData,
   SpriteSetReference,
 } from '../types/index.ts'
+import {
+  buildChunkEnvelopes,
+  CHUNK_SIZE_BYTES,
+  type ChunkEnvelope,
+  ChunkReassembler as SharedChunkReassembler,
+} from './chunking.ts'
 
 export const PROJECT_OP_PREFIX = '__project/'
 export const ENTITY_UPSERT_KIND = '__project/entity.upsert'
@@ -57,7 +63,7 @@ export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
  * SCTP `max-message-size` ceiling (RFC 8841 default 64 KiB), above
  * which `webrtcbin` silently drops the send.
  */
-export const SPRITESET_CHUNK_SIZE = 16 * 1024
+export const SPRITESET_CHUNK_SIZE = CHUNK_SIZE_BYTES
 
 /** Peer → peers: an entity definition was created or edited; replace it by id. */
 export interface EntityUpsertOp {
@@ -358,12 +364,7 @@ export function applySpriteSetRemove(data: GameProjectData, spriteSetId: string)
 }
 
 /** The shared body of every chunked project-op (add + update). */
-interface ChunkBody {
-  transferId: string
-  chunkIndex: number
-  totalChunks: number
-  data: string
-}
+type ChunkBody = ChunkEnvelope
 
 /**
  * Slice a JSON string into ordered {@link ChunkBody} envelopes tagged
@@ -376,20 +377,7 @@ function buildChunks<K extends string>(
   transferId: string,
   json: string,
 ): Array<{ kind: K; payload: ChunkBody }> {
-  const totalChunks = Math.max(1, Math.ceil(json.length / SPRITESET_CHUNK_SIZE))
-  const ops: Array<{ kind: K; payload: ChunkBody }> = []
-  for (let i = 0; i < totalChunks; i++) {
-    ops.push({
-      kind,
-      payload: {
-        transferId,
-        chunkIndex: i,
-        totalChunks,
-        data: json.slice(i * SPRITESET_CHUNK_SIZE, (i + 1) * SPRITESET_CHUNK_SIZE),
-      },
-    })
-  }
-  return ops
+  return buildChunkEnvelopes(transferId, json, SPRITESET_CHUNK_SIZE).map((payload) => ({ kind, payload }))
 }
 
 /**
@@ -417,45 +405,38 @@ export function chunkSpriteSetUpdate(args: {
 
 /**
  * Accumulates chunk ops by `transferId` until a transfer is complete,
- * then returns the parsed payload of type `T`. Indexes by `chunkIndex`
- * (not arrival order) so a re-sent chunk or a future unordered channel
- * is safe. Drops the buffer once a transfer completes or fails to parse.
+ * then returns the parsed payload of type `T`. Thin adapter over the
+ * shared validated {@link SharedChunkReassembler} (`chunking.ts`):
+ * protocol violations (malformed envelope, mid-stream `totalChunks`
+ * change, parse failure) are logged via `console.warn` and the
+ * transfer is dropped — project-ops are best-effort upserts, so
+ * "warn + wait for the next full re-send" beats failing the session.
  */
-export class ChunkReassembler<T> {
-  private readonly transfers = new Map<string, { chunks: Map<number, string>; total: number }>()
+export class OpChunkReassembler<T> {
+  private readonly inner = new SharedChunkReassembler<T>()
 
   /** Feed one chunk; returns the payload once the last chunk arrives, else null. */
   accept(op: { payload: ChunkBody }): T | null {
-    const { transferId, chunkIndex, totalChunks, data } = op.payload
-    let entry = this.transfers.get(transferId)
-    if (!entry) {
-      entry = { chunks: new Map(), total: totalChunks }
-      this.transfers.set(transferId, entry)
+    const result = this.inner.accept(op.payload)
+    if (result.status === 'done') return result.payload
+    if (result.status === 'error') {
+      console.warn(`[project-operations] dropped chunked transfer: ${result.reason}`)
     }
-    entry.chunks.set(chunkIndex, data)
-    if (entry.chunks.size < entry.total) return null
-    this.transfers.delete(transferId)
-    let json = ''
-    for (let i = 0; i < entry.total; i++) json += entry.chunks.get(i) ?? ''
-    try {
-      return JSON.parse(json) as T
-    } catch {
-      return null
-    }
+    return null
   }
 
   /** Drop any partially-received transfers (e.g. on session close). */
   clear(): void {
-    this.transfers.clear()
+    this.inner.clear()
   }
 }
 
 /**
  * Reassembles {@link SpriteSetAddChunkOp}s into a {@link SpriteSetAddPayload}.
- * Thin alias over {@link ChunkReassembler} kept for call-site clarity at
+ * Thin alias over {@link OpChunkReassembler} kept for call-site clarity at
  * the sprite-set add path.
  */
-export class SpriteSetAddReassembler extends ChunkReassembler<SpriteSetAddPayload> {}
+export class SpriteSetAddReassembler extends OpChunkReassembler<SpriteSetAddPayload> {}
 
 /**
  * Add or replace a sprite-set reference in project data IN PLACE,

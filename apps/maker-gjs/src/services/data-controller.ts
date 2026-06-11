@@ -1,4 +1,4 @@
-import type { SpriteSetData, SpriteSetKind, SpriteSetResource } from '@pixelrpg/engine'
+import { EDITOR_CONSTANTS, type SpriteSetData, type SpriteSetKind, type SpriteSetResource } from '@pixelrpg/engine'
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
@@ -143,7 +143,7 @@ export class DataController {
       author: typeof props.author === 'string' ? props.author : '',
       version: typeof props.version === 'string' ? props.version : '',
       description: typeof props.description === 'string' ? props.description : '',
-      tileSize: typeof props.defaultTileSize === 'number' ? props.defaultTileSize : 16,
+      tileSize: typeof props.defaultTileSize === 'number' ? props.defaultTileSize : EDITOR_CONSTANTS.DEFAULT_TILE_SIZE,
       path: resource.path,
       sheets,
       tilesets,

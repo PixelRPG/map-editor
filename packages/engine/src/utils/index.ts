@@ -1,6 +1,7 @@
 export * from './base64.ts'
 export * from './constants.ts'
 export * from './file.ts'
+export * from './format-error.ts'
 export * from './session-state.ts'
 export * from './sprite-set.utils.ts'
 export * from './subscription-registry.ts'

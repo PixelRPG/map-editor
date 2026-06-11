@@ -28,6 +28,7 @@ import { buildPlaceholderAnimations } from '../runtime/placeholder-character.ts'
 import type { CharacterAnimationRole, CharacterDefinition, Facing } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { buildCharacterAnimations } from '../utils/character.ts'
+import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import {
   isActionPressed,
   type KeyboardLike,
@@ -135,8 +136,8 @@ export class PlayerSystem extends System {
 
   private spawnPlayer(scene: Scene): void {
     const tile = this.resolveSpawnTile(scene)
-    const tw = this.mapResource.mapData?.tileWidth ?? 16
-    const th = this.mapResource.mapData?.tileHeight ?? 16
+    const tw = this.mapResource.mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const th = this.mapResource.mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
     const initialFacing: Facing = tile.facing ?? DEFAULT_FACING
 
     const resolved = this.resolveCharacterAnimations()
@@ -260,8 +261,8 @@ export class PlayerSystem extends System {
   ): void {
     if (inRuntime && !session.wasInRuntime) {
       const tile = this.resolveSpawnTile(scene)
-      const tw = this.mapResource.mapData?.tileWidth ?? 16
-      const th = this.mapResource.mapData?.tileHeight ?? 16
+      const tw = this.mapResource.mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+      const th = this.mapResource.mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
       player.pos.x = tile.tileX * tw + tw / 2
       player.pos.y = tile.tileY * th + th / 2
       pc.facing = tile.facing ?? pc.facing
@@ -288,8 +289,8 @@ export class PlayerSystem extends System {
       scene.camera.strategy.lockToActor(player)
       const mapData = this.mapResource.mapData
       if (!mapData) return
-      const tw = mapData.tileWidth ?? 16
-      const th = mapData.tileHeight ?? 16
+      const tw = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+      const th = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
       const bb = new BoundingBox({
         left: 0,
         top: 0,
@@ -339,8 +340,8 @@ export class PlayerSystem extends System {
     session: PlayerSessionComponent,
     kb: KeyboardLike,
   ): void {
-    const tw = this.mapResource.mapData?.tileWidth ?? 16
-    const th = this.mapResource.mapData?.tileHeight ?? 16
+    const tw = this.mapResource.mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const th = this.mapResource.mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
     const tileX = Math.floor(player.pos.x / tw)
     const tileY = Math.floor(player.pos.y / th)
 

@@ -10,6 +10,7 @@ import {
   type EngineEventMap,
   EngineStatus,
   Engine as ExcaliburEngine,
+  formatError,
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription } from 'excalibur'
@@ -24,17 +25,6 @@ import Template from './engine.blp'
  */
 const SCRATCHPAD_BG_LIGHT = Color.fromHex('#ededed')
 const SCRATCHPAD_BG_DARK = Color.fromHex('#232328')
-
-function describeError(err: unknown): string {
-  if (err instanceof Error) {
-    return err.stack ? `${err.message}\n${err.stack}` : err.message
-  }
-  try {
-    return typeof err === 'string' ? err : JSON.stringify(err)
-  } catch {
-    return String(err)
-  }
-}
 
 export namespace Engine {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
@@ -434,7 +424,7 @@ export class Engine extends Adw.Bin {
         this.emit('ready')
       } catch (err) {
         const renderer = useFallback ? 'Canvas 2D' : 'WebGL'
-        const detail = describeError(err)
+        const detail = formatError(err)
         console.error(`[Engine] ${renderer} start failed: ${detail}`)
         this.status = EngineStatus.ERROR
         this.emit(EngineEvent.ERROR, detail)

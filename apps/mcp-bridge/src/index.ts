@@ -32,7 +32,14 @@ const bus = Gio.bus_get_sync(Gio.BusType.SESSION, null)
 
 // --- instance addressing ---
 
-/** Coerce a label into the same app-id segment the app derives from PIXELRPG_INSTANCE. */
+/**
+ * Coerce a label into the same app-id segment the app derives from
+ * PIXELRPG_INSTANCE. CONTRACT: byte-identical copy of
+ * `apps/maker-gjs/src/application.ts` `sanitizeInstanceId` (this app
+ * is deliberately dependency-free, so it cannot import it). The
+ * maker-side `instance-id.spec.ts` pins the mapping; change BOTH
+ * copies + the spec together.
+ */
 function sanitizeLabel(label: string): string {
   const cleaned = label.toLowerCase().replace(/[^a-z0-9]/g, '')
   return /^[a-z]/.test(cleaned) ? cleaned : `i${cleaned || '0'}`

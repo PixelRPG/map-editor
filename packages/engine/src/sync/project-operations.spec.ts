@@ -10,7 +10,6 @@ import {
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
-  ChunkReassembler,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
   createEntityRemoveOp,
@@ -23,6 +22,7 @@ import {
   ENTITY_UPSERT_KIND,
   isProjectOp,
   MAP_EDITOR_DATA_KIND,
+  OpChunkReassembler,
   PLAYER_SET_KIND,
   PROJECT_META_UPDATE_KIND,
   PROJECT_OP_PREFIX,
@@ -307,7 +307,7 @@ export default async () => {
     })
   })
 
-  await describe('chunkSpriteSetUpdate + ChunkReassembler', async () => {
+  await describe('chunkSpriteSetUpdate + OpChunkReassembler', async () => {
     await it('round-trips a descriptor-only payload (no image bytes)', async () => {
       const payload: SpriteSetUpdatePayload = { data: spriteSetData('hero') }
       const chunks = chunkSpriteSetUpdate({ transferId: 'host:0', payload })
@@ -315,7 +315,7 @@ export default async () => {
       expect(chunks[0].kind).toBe(SPRITESET_UPDATE_CHUNK_KIND)
       expect(isProjectOp(stampUpdate(chunks[0], 0))).toBe(true)
 
-      const re = new ChunkReassembler<SpriteSetUpdatePayload>()
+      const re = new OpChunkReassembler<SpriteSetUpdatePayload>()
       const result = re.accept(stampUpdate(chunks[0], 0))
       expect(result).not.toBeNull()
       expect(result?.data.id).toBe('hero')
@@ -330,7 +330,7 @@ export default async () => {
       const chunks = chunkSpriteSetUpdate({ transferId: 'host:1', payload: { data: big } })
       expect(chunks.length).toBeGreaterThan(1)
 
-      const re = new ChunkReassembler<SpriteSetUpdatePayload>()
+      const re = new OpChunkReassembler<SpriteSetUpdatePayload>()
       let result: SpriteSetUpdatePayload | null = null
       for (let i = 0; i < chunks.length; i++) result = re.accept(stampUpdate(chunks[i], i)) ?? result
       expect(result?.data.id).toBe('big')
@@ -357,7 +357,7 @@ export default async () => {
       const chunks = chunkSpriteSetUpdate({ transferId: 'host:8', payload: { data: sender } })
 
       // Receiver: reassemble the wire chunks + apply onto its own copy.
-      const re = new ChunkReassembler<SpriteSetUpdatePayload>()
+      const re = new OpChunkReassembler<SpriteSetUpdatePayload>()
       let payload: SpriteSetUpdatePayload | null = null
       for (let i = 0; i < chunks.length; i++) payload = re.accept(stampUpdate(chunks[i], i)) ?? payload
       expect(payload).not.toBeNull()
