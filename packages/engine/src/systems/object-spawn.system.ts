@@ -1,7 +1,8 @@
 import { Actor, type Scene, System, SystemType, type World } from 'excalibur'
-import { buildPlacementEntity, resolvePlacementDefinition } from '../entity/spawn-placement.ts'
-import { areObjectsVisible } from '../services/editor-view.ts'
+import { resolvePlacementDefinition } from '../entity/data-access.ts'
+import { buildPlacementEntity } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import { areObjectsVisible } from '../services/editor-view.ts'
 import type { EntityDefinition } from '../types/data/index.ts'
 
 /**

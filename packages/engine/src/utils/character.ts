@@ -34,7 +34,7 @@ export function buildCharacterAnimations(
   const sourceAnimations = spriteSet.data?.characterAnimations ?? character.animations ?? []
   for (const anim of sourceAnimations) {
     if (!REQUIRED_ROLES.includes(anim.id as CharacterAnimationRole)) continue
-    const built = buildAnimation(anim, spriteSet.sprites)
+    const built = buildCharacterAnimation(anim, spriteSet.sprites)
     if (built) animations[anim.id as CharacterAnimationRole] = built
   }
   // Plug holes with the placeholder so role transitions never miss.
@@ -49,8 +49,16 @@ export function buildCharacterAnimations(
   }
 }
 
-/** Build a single Excalibur {@link Animation} from a {@link CharacterAnimation}. */
-function buildAnimation(anim: CharacterAnimation, sprites: Record<number, Sprite>): Animation | null {
+/**
+ * Build a single Excalibur {@link Animation} from a {@link CharacterAnimation}
+ * (frame indices into the sheet's sprites, uniform `durationMs`, loop by
+ * default). Returns `null` when no frame resolves to a loaded sprite.
+ *
+ * Shared by the player path ({@link buildCharacterAnimations}) and the
+ * placement-graphic path (`entity/visual-graphic.ts`), so a placed Cast
+ * NPC animates exactly like the player would.
+ */
+export function buildCharacterAnimation(anim: CharacterAnimation, sprites: Record<number, Sprite>): Animation | null {
   const frames = anim.frames
     .map((spriteId) => sprites[spriteId])
     .filter((s): s is Sprite => s != null)

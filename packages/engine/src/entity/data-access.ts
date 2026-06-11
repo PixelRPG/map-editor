@@ -1,4 +1,4 @@
-import type { ComponentData, EntityDefinition } from '../types/data/index.ts'
+import type { ComponentData, EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 
 /**
  * Read one component's data off a definition by `type`. Returns the
@@ -39,4 +39,31 @@ export function mergePlacementComponents(
   // Override types not on the base are additive.
   for (const o of overrideByType.values()) merged.push({ ...o })
   return merged
+}
+
+/**
+ * Resolve a placement to its effective {@link EntityDefinition}: an inline
+ * definition, or a library lookup by `defId` with per-instance
+ * `overrides` merged (name replace + wholesale-replace components per
+ * `type`). Returns `null` if neither resolves.
+ *
+ * This is the **single** placement→definition resolver — the spawn
+ * pipeline, the maker's Objects tab and the atlas teleport overlay all
+ * go through it, so `defId` placements (created by the object brush
+ * since C3b) and per-placement overrides behave identically everywhere.
+ */
+export function resolvePlacementDefinition(
+  placement: ObjectPlacement,
+  library: readonly EntityDefinition[],
+): EntityDefinition | null {
+  let base: EntityDefinition | null = null
+  if (placement.inline) base = placement.inline
+  else if (placement.defId) base = library.find((d) => d.id === placement.defId) ?? null
+  if (!base) return null
+  if (!placement.overrides) return base
+  return {
+    ...base,
+    name: placement.overrides.name ?? base.name,
+    components: mergePlacementComponents(base.components, placement.overrides.components),
+  }
 }

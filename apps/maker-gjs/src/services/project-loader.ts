@@ -1,4 +1,10 @@
-import { GameProjectResource, getComponentData } from '@pixelrpg/engine'
+import {
+  type EntityDefinition,
+  GameProjectResource,
+  getComponentData,
+  type MapData,
+  resolvePlacementDefinition,
+} from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '@pixelrpg/gjs'
 
 const SOLID_PALETTE = ['#3d6b3a', '#3a5e7b', '#7a5a3a', '#6b3a3a', '#4a4a6b', '#6b6b3a', '#3a6b6b']
@@ -91,14 +97,30 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
     })
   })
 
-  // Aggregate teleports for the atlas overlay by walking every map's
-  // `objectPlacements` and picking out entities that carry a `teleport`
-  // component. This replaces the legacy project-level `teleports[]` array.
-  const teleports: SampleTeleport[] = maps.flatMap((mapResource) => {
-    const data = mapResource.mapData
+  const teleports = collectAtlasTeleports(
+    maps.map((m) => m.mapData),
+    resource.data?.entityLibrary ?? [],
+  )
+
+  return { projectPath, projectName, scenes, teleports, resource }
+}
+
+/**
+ * Aggregate teleports for the atlas overlay by walking every map's
+ * `objectPlacements` and picking out entities that carry a `teleport`
+ * component. This replaces the legacy project-level `teleports[]` array.
+ * Placements resolve through the canonical `resolvePlacementDefinition`,
+ * so `defId` references into the entity library (created by the object
+ * brush) show up on the atlas exactly like inline definitions.
+ */
+export function collectAtlasTeleports(
+  maps: readonly MapData[],
+  entityLibrary: readonly EntityDefinition[],
+): SampleTeleport[] {
+  return maps.flatMap((data) => {
     const placements = data?.objectPlacements ?? []
     return placements.flatMap((placement) => {
-      const def = placement.inline // editor inlines placements; library refs are an editor concern
+      const def = resolvePlacementDefinition(placement, entityLibrary)
       const teleport = def ? getComponentData(def, 'teleport') : undefined
       if (
         !teleport ||
@@ -121,6 +143,4 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
       ]
     })
   })
-
-  return { projectPath, projectName, scenes, teleports, resource }
 }

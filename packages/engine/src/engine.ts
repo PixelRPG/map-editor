@@ -225,12 +225,11 @@ export class Engine {
     const playerCharacter = playerEntity
       ? (entityToCharacter(playerEntity, projectData?.playerActorId) ?? undefined)
       : undefined
-    // Resolve the player's sprite-set directly from the project. We
-    // cannot rely on `MapResource.getSpriteSetResource` because that
-    // map only copies in the sprite-sets the map JSON references —
-    // the scientist (and any other character-only sprite-set) is on
-    // the project but not on the map. Look it up at the project
-    // level and pass it through.
+    // Resolve the player's sprite-set directly from the project —
+    // character-only sprite-sets (e.g. the scientist) live on the
+    // project, not in any map JSON. (`MapResource.getSpriteSetResource`
+    // also falls back to these project-level sets now, but the player
+    // sheet is project data, so look it up at the project level.)
     const playerSpriteSet = playerCharacter
       ? this._gameProjectResource.spriteSets.get(playerCharacter.spriteSetId)
       : undefined
