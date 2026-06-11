@@ -33,6 +33,7 @@ import { LanSessionBackend } from '../services/lan-session-backend.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
 import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
+import { ProjectStore } from '../services/project-store.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
 import { generatePeerId, SessionService, type SessionState } from '../services/session-service.ts'
@@ -169,7 +170,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   // is only reachable from the atlas, which itself only renders
   // once a project loaded, so the empty initial state is fine.
   private _scenesById = new Map<string, SampleScene>()
-  private _loadedProject: LoadedProject | null = null
+  /**
+   * The single owner of the active project + every project-level write
+   * (entity library, sprite-sets, metadata) including persistence +
+   * collab broadcast + inbound peer-op application. Controllers are
+   * lenses over it; this window only handles the store events that need
+   * window-owned resources (the live engine, map-file IO, dialogs).
+   */
+  private readonly _projectStore = new ProjectStore((msg) => this._showToast(msg))
+  private get _loadedProject(): LoadedProject | null {
+    return this._projectStore.project
+  }
   /**
    * The `win.set-tool` GAction. Kept as a field so `_hydrateSceneEditor`
    * can push its current state into the engine after every map load —
@@ -314,13 +325,28 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._installActions()
     this._shareSidebarState()
     // Mirror engine-driven zoom (scroll-wheel + Ctrl+= etc.) into the OSD label.
-    this._engineCtl.onZoomChanged((zoom) => this._scene_editor_view.setZoom(zoom))
+    this._engineCtl.on('zoom-changed', (zoom) => this._scene_editor_view.setZoom(zoom))
     // Same idea for the cursor coord readout on the OSD pill —
     // each tile-crossing of the pointer over the canvas updates the
     // `12, 7`-style label next to the zoom buttons. Engine handles
     // screen → world → tile + per-tile dedupe; we just forward.
-    this._engineCtl.onPointerTileChanged(({ tileX, tileY }) => {
+    this._engineCtl.on('pointer-tile-changed', ({ tileX, tileY }) => {
       this._scene_editor_view.setCursorTile(tileX, tileY)
+    })
+    // Store events that need window-owned resources. Tile-property
+    // edits (Solid / Surface) — local or inbound from a peer — may
+    // change live collision; with a scene open refresh the engine so
+    // the change applies without a reload. The engine ref is per-scene
+    // + lazy, so resolve it on every call.
+    this._projectStore.on('tile-properties-changed', ({ spriteSetId }) => {
+      this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
+    })
+    // An inbound `__project/map.editor-data` patched a map (the store
+    // applied it in memory) — persist that map file here (this window
+    // owns map IO) and reposition its atlas card.
+    this._projectStore.on('map-editor-data-changed', ({ mapId }) => {
+      this._persistMap(mapId, _('Could not save atlas position'))
+      this._refreshAtlasScenePosition(mapId)
     })
   }
 
@@ -380,96 +406,32 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._persistCurrentMap()
     })
 
+    // Per-mode controllers — thin lenses over the shared ProjectStore.
+    // Cross-lens refreshes ride the store's typed events (each lens
+    // subscribes itself in its constructor); this window only wires the
+    // pieces that need window-owned resources (dialogs, navigation).
     if (!this._castCtl) {
-      this._castCtl = new CastController(this._cast_view, (msg) => this._showToast(msg))
-      // Sprite-sets are shared project assets shown in BOTH the Cast
-      // view (a character's sheet) and the Tiles view (a tileset). The
-      // cast controller owns all sprite-set CRUD + collab broadcast, so
-      // when its set list changes (import / delete / inbound peer op)
-      // re-hydrate the Tiles view too.
-      this._castCtl.onSpriteSetsChanged = () => {
-        void this._tilesCtl?.setProject(this._loadedProject)
-        this._dataCtl?.setProject(this._loadedProject)
-      }
-      // The unified Sheets (Tiles) view hosts the appearance animation
-      // editor now; the cast controller still OWNS appearance data, so it
-      // pushes the list + shared preview map here on every refresh, and
-      // the Sheets view's animation edits route back to the same
-      // controller methods (single mutation + collab-broadcast path).
-      this._castCtl.onAppearancesChanged = (sheets, spriteSetsById) => {
-        this._tiles_view.setAppearances(sheets, spriteSetsById)
-      }
-      this._tiles_view.bindAppearanceCallbacks({
-        setDuration: (sheetId, animId, ms) => this._castCtl?.setAnimationDuration(sheetId, animId, ms),
-        addAnimation: (sheetId, animation) => this._castCtl?.addAnimation(sheetId, animation),
-        editAnimation: (sheetId, originalId, animation) => this._castCtl?.editAnimation(sheetId, originalId, animation),
-        deleteAnimation: (sheetId, animId) => this._castCtl?.deleteAnimation(sheetId, animId),
-        renameSheet: (sheetId, name) => this._castCtl?.renameSpriteSet(sheetId, name),
-        deleteAppearance: (sheetId) => this._castCtl?.deleteSpriteSet(sheetId),
-      })
-      // Cast + Objects are two lenses over the one entityLibrary (Objects
-      // is the general lens, lists characters too); a character edit in one
-      // must refresh the other.
-      this._castCtl.onEntityLibraryChanged = () => this._objectsCtl?.refresh()
-      // Tile-property edits (Solid / Surface) — local or inbound from a
-      // peer — may change live collision; with a scene open refresh the
-      // engine so the change applies without a reload. The engine ref is
-      // per-scene + lazy, so resolve it on every call.
-      this._castCtl.onTilePropertiesChanged = (spriteSetId) => {
-        this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
-      }
-      // An inbound `__project/meta.update` landed (the cast controller
-      // already applied + persisted it) — re-hydrate the Data view so
-      // the metadata rows show the peer's edit when the view is open.
-      this._castCtl.onProjectMetaChanged = () => {
-        this._dataCtl?.setProject(this._loadedProject)
-      }
-      // An inbound `__project/map.editor-data` patched a map (the cast
-      // controller applied it in memory) — persist that map file here
-      // (this window owns map IO) and reposition its atlas card.
-      this._castCtl.onMapEditorDataChanged = (mapId) => {
-        this._persistMap(mapId, _('Could not save atlas position'))
-        this._refreshAtlasScenePosition(mapId)
-      }
+      this._castCtl = new CastController(this._cast_view, this._projectStore)
     }
     if (!this._tilesCtl && this._castCtl) {
-      // Tile-property mutations delegate to the cast controller — the
-      // single sprite-set descriptor write + collab-broadcast path.
-      this._tilesCtl = new TilesController(this._tiles_view, this._castCtl)
+      // Sprite-set CRUD + tile properties delegate to the store (the
+      // single descriptor write + collab-broadcast path); appearance /
+      // animation edits route through the cast controller's methods.
+      this._tilesCtl = new TilesController(this._tiles_view, this._projectStore, this._castCtl)
     }
     if (!this._dataCtl) {
-      this._dataCtl = new DataController(this._data_view, (msg) => this._showToast(msg))
-      this._data_view.bindCallbacks({
-        importAsset: (kind) => this._presentAssetImport(kind),
-        openAsset: (id, kind) => this._openAsset(id, kind),
-        renameAsset: (id, currentName) => this._presentRenameAsset(id, currentName),
-        deleteAsset: (id, name, usedBy) => this._presentDeleteAsset(id, name, usedBy),
-        setProjectField: (field, value) => this._dataCtl?.setProjectField(field, value),
-      })
+      this._dataCtl = new DataController(this._data_view, this._projectStore)
+      // Asset actions that need host dialogs / navigation.
+      this._dataCtl.on('import-requested', ({ kind }) => this._presentAssetImport(kind))
+      this._dataCtl.on('open-requested', ({ id, kind }) => this._openAsset(id, kind))
+      this._dataCtl.on('rename-requested', ({ id, currentName }) => this._presentRenameAsset(id, currentName))
+      this._dataCtl.on('delete-requested', ({ id, name, usedBy }) => this._presentDeleteAsset(id, name, usedBy))
     }
     if (!this._objectsCtl) {
-      this._objectsCtl = new ObjectsController(this._objects_view, (msg) => this._showToast(msg))
-      // Reverse of the Cast hook: an entity edit in the general Objects
-      // lens must refresh the Cast view (if it's a character).
-      this._objectsCtl.onEntityLibraryChanged = () => void this._castCtl?.refresh()
+      this._objectsCtl = new ObjectsController(this._objects_view, this._projectStore)
     }
     this.signals.connect(this._objects_view, 'mode-changed', (_v: ObjectsView, mode: string) => setMode(mode))
     this.signals.connect(this._data_view, 'mode-changed', (_v: DataView, mode: string) => setMode(mode))
-    // Tiles view → shared sprite-set CRUD on the cast controller. Import
-    // and delete both flow through the one path so the copy/register +
-    // collab broadcast live in a single place.
-    this.signals.connect(this._tiles_view, 'spriteset-imported', (_v: TilesView, result: SpriteSetImportResult) => {
-      void this._castCtl?.importSpriteSet(result)
-    })
-    this.signals.connect(this._tiles_view, 'spriteset-rename-requested', (_v: TilesView, id: string, name: string) => {
-      this._castCtl?.renameSpriteSet(id, name)
-    })
-    this.signals.connect(this._tiles_view, 'spriteset-reorder-requested', (_v: TilesView, orderedIds: string[]) => {
-      this._castCtl?.reorderSpriteSets(orderedIds)
-    })
-    this.signals.connect(this._tiles_view, 'spriteset-delete-requested', (_v: TilesView, id: string) => {
-      this._castCtl?.deleteSpriteSet(id)
-    })
     if (!this._sessionSvc) {
       // Resolve the core `@pixelrpg/engine` instance through the GJS
       // Engine widget — `widget.excalibur` is the same Engine class
@@ -630,23 +592,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // Phase 5: relay the AI's awareness frames out to networked peers.
     engine?.setAssistantFrameRelay(collab ? (frame) => collab.awareness.relay(frame) : null)
 
-    // Project-level (cast) sync — works without an engine, since cast
-    // editing has no live scene. While a session is up the controller
-    // broadcasts character upserts; inbound peer ops route back to it.
-    this._castCtl?.setCollabSession(collab)
-    this._objectsCtl?.setCollabSession(collab)
-    this._dataCtl?.setCollabSession(collab)
-    if (collab) {
-      // The cast controller is the single applier of inbound entity ops
-      // (it mutates `entityLibrary` + refreshes the Cast view); also
-      // re-`refresh` the Objects view so an object-entity edit shows there.
-      collab.onProjectOpReceived = (op) => {
-        this._castCtl?.applyRemoteProjectOp(op)
-        this._objectsCtl?.refresh()
-      }
-      collab.onSpriteSetAddReceived = (payload) => this._castCtl?.applyRemoteSpriteSetAdd(payload)
-      collab.onSpriteSetUpdateReceived = (payload) => this._castCtl?.applyRemoteSpriteSetUpdate(payload)
-    }
+    // Project-level sync — works without an engine, since cast/library
+    // editing has no live scene. While a session is up the store
+    // broadcasts every project-level mutation; it also registers itself
+    // as the single applier of inbound peer ops (entity, player, meta,
+    // map editor-data, sprite-set add/update/remove) and the lenses
+    // re-hydrate via its typed events.
+    this._projectStore.setCollabSession(collab)
 
     // Track the live session roster for the collaborators bar + follow.
     for (const unsub of this._collabAwarenessUnsubs) unsub()
@@ -782,7 +734,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const dialog = new SpriteSetImportDialog()
     dialog.kind = kind
     dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
-      void this._castCtl?.importSpriteSet(result)
+      void this._projectStore.importSpriteSet(result)
     })
     dialog.present(this)
   }
@@ -800,14 +752,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /** Rename an asset's display name via a small dialog (Data view). */
   private _presentRenameAsset(id: string, currentName: string): void {
     void promptRename(this, { heading: _('Rename asset'), current: currentName }).then((name) => {
-      // Route through the cast controller — the single owner of sprite-set
+      // Route through the project store — the single owner of sprite-set
       // file writes + collab broadcast (it re-hydrates the Data view via
-      // `onSpriteSetsChanged`).
-      if (name) this._castCtl?.renameSpriteSet(id, name)
+      // its `sprite-sets-changed` event).
+      if (name) this._projectStore.renameSpriteSet(id, name)
     })
   }
 
-  /** Confirm + delete an asset (sprite set) through the shared cast controller. */
+  /** Confirm + delete an asset (sprite set) through the shared project store. */
   private _presentDeleteAsset(id: string, name: string, usedBy: number): void {
     const body =
       usedBy > 0
@@ -816,7 +768,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
             .replace('%d', String(usedBy))
         : _('“%s” will be removed from the project, including its files. This cannot be undone.').replace('%s', name)
     void confirmDestructive(this, { heading: _('Delete asset?'), body }).then((confirmed) => {
-      if (confirmed) this._castCtl?.deleteSpriteSet(id)
+      if (confirmed) this._projectStore.deleteSpriteSet(id)
     })
   }
 
@@ -1010,7 +962,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     // Default both to disabled — they switch on once a map is loaded
     // and the engine reports `canUndo` / `canRedo` (see the
-    // `_engineCtl.onUndoChanged` registration below). Without this
+    // `_engineCtl.on('undo-changed', …)` registration below). Without this
     // they would be enabled on the welcome view, where pressing
     // Ctrl+Z is a no-op but the UI affordance suggests otherwise.
     undoAction.set_enabled(false)
@@ -1038,7 +990,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         property_name: 'show-inspector',
       }),
     )
-    this._engineCtl.onUndoChanged(({ canUndo, canRedo }) => {
+    this._engineCtl.on('undo-changed', ({ canUndo, canRedo }) => {
       undoAction.set_enabled(canUndo)
       redoAction.set_enabled(canRedo)
     })
@@ -1050,7 +1002,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // context chip + engine's `ActiveTileComponent` stay in lock-step)
     // and then flip the tool action back to `pencil` for a Tiled-style
     // "pick → paint immediately" workflow.
-    this._engineCtl.onTilePicked(({ globalTileId }) => {
+    this._engineCtl.on('tile-picked', ({ globalTileId }) => {
       this._scene_editor_view.selectTileByGlobalId(globalTileId)
       toolAction.change_state(GLib.Variant.new_string('pencil'))
     })
@@ -1069,7 +1021,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // empty selection, so popping the sidebar open would feel
     // surprising. The window-level `show-inspector` setter is a no-
     // op when already open.
-    this._engineCtl.onPlacementSelected(({ placementId }) => {
+    this._engineCtl.on('placement-selected', ({ placementId }) => {
       this._scene_editor_view.highlightPlacement(placementId)
       if (placementId) this.set_property('show-inspector', true)
     })
@@ -1079,7 +1031,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // undo/redo, and inbound peer ops (which don't emit
     // `COMMAND_EXECUTED`) — so the Layers tab follows changes the
     // inspector didn't originate, just like the canvas does.
-    this._engineCtl.onLayerFlagChanged(({ layerId, flag, value }) => {
+    this._engineCtl.on('layer-flag-changed', ({ layerId, flag, value }) => {
       this._scene_editor_view.setLayerFlag(layerId, flag, value)
     })
 
@@ -1610,18 +1562,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._showToast(_('Loading project…'))
     try {
       const project = await loadProjectAsAtlas(projectPath)
-      this._loadedProject = project
       this._shareAction?.set_enabled(true)
       this._atlas_view.projectName = project.projectName
       this._scene_editor_view.projectName = project.projectName
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenesById = new Map(project.scenes.map((s) => [s.id, s]))
-      // Per-mode controllers own the cast + tiles data path; tell them
-      // about the new project so their views can hydrate.
-      this._castCtl?.setProject(project)
-      this._objectsCtl?.setProject(project)
-      this._tilesCtl?.setProject(project)
-      this._dataCtl?.setProject(project)
+      // Hand the new project to the store — its `project-changed` event
+      // hydrates every per-mode lens (cast / objects / tiles / data).
+      this._projectStore.setProject(project)
       // A fresh project starts on the card overview, not a stale detail
       // page left over from the previous project.
       this._cast_view.resetToOverview()

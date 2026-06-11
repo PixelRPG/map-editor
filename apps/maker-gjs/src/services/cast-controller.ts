@@ -1,38 +1,12 @@
-import GLib from '@girs/glib-2.0'
 import {
-  applyEntityRemove,
-  applyEntityUpsert,
-  applyMapEditorData,
-  applyPlayerSet,
-  applyProjectMetaUpdate,
-  applySpriteSetReference,
-  applySpriteSetRemove,
-  applySpriteSetUpdate,
   type CharacterAnimation,
   type CharacterDefinition,
   characterToEntity,
-  createEntityRemoveOp,
-  createEntityUpsertOp,
-  createPlayerSetOp,
-  createSpriteSetRemoveOp,
-  ENTITY_REMOVE_KIND,
-  ENTITY_UPSERT_KIND,
   type EntityDefinition,
   entityToCharacter,
-  GameProjectFormat,
   isCharacterEntity,
-  MAP_EDITOR_DATA_KIND,
   mergeCharacterIntoEntity,
-  PLAYER_SET_KIND,
-  PROJECT_META_UPDATE_KIND,
-  type ProjectOp,
   REQUIRED_ROLES,
-  SPRITESET_REMOVE_KIND,
-  type SpriteSetAddPayload,
-  type SpriteSetData,
-  SpriteSetFormat,
-  SpriteSetResource,
-  type SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 import {
   GdkSpriteSetResource,
@@ -42,112 +16,60 @@ import {
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
-import type { CollabSession } from './collab-session.ts'
-import { copyFile, deleteFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
-import type { LoadedProject } from './project-loader.ts'
+import { type ProjectStore, uniqueIdFrom } from './project-store.ts'
 import { characterSpriteSetIds, isCharacterSpriteSet } from './sprite-set-classification.ts'
+import { TypedEmitter } from './typed-emitter.ts'
 
-/** Default per-frame duration (ms) seeded into a new character's animations. */
-const DEFAULT_ANIMATION_MS = 200
-/** Default frame index seeded into every required animation role. */
-const DEFAULT_FRAME = 0
-
-/**
- * True when `name` is a plain single-path-segment filename — no path
- * separators, no `..`, no NUL. Used to vet a peer-supplied sprite-set
- * id before it's used to build filesystem paths, so a malicious peer
- * can't write outside the project's `spritesets/` directory.
- */
-function isPlainFilename(name: string): boolean {
-  return name.length > 0 && !/[\\/]/.test(name) && !name.includes('..') && !name.includes('\0')
+/** Typed event map for {@link CastController.on}. */
+export interface CastControllerEvents {
+  /**
+   * Emitted on every {@link CastController.refresh} with the project's
+   * appearance (character-kind sprite-sheet) list + the shared
+   * preview-resource map, so the unified Sheets view's Appearances
+   * section + animation editor stay in sync. The cast controller owns
+   * appearance data (sheets, animations); the Sheets view just renders
+   * it + routes edits back here.
+   */
+  'appearances-changed': {
+    sheets: SpriteSetChoice[]
+    spriteSetsById: Map<string, GdkSpriteSetResource | null>
+  }
 }
 
 /**
- * Owns the Cast view's data + mutation path.
+ * The **Cast lens** — character view-model conversion + appearance
+ * concerns over the {@link ProjectStore}'s `entityLibrary`.
  *
  * The view stays presentational; this controller:
- *   - holds the active project ref + pushes its character list and
- *     the player's sprite-set into the view on every (re)hydration,
+ *   - derives the character list (`character`-template entities +
+ *     `playerActorId`) from the store and pushes it into the view on
+ *     every (re)hydration,
  *   - exposes a single `callbacks` object wired once into the view
  *     via `castView.bindCallbacks(...)`, so the view can request
- *     mutations without knowing about file IO or project state,
- *   - persists the in-memory `GameProjectData` back to
- *     `game-project.json` after every mutation.
+ *     mutations without knowing about project state,
+ *   - routes EVERY mutation through the store — the single
+ *     persist + collab-broadcast pipeline (this controller does no
+ *     file IO and holds no project/session reference of its own),
+ *   - owns the GTK preview-resource cache + the appearance/animation
+ *     editing surface (sheet-owned animations, edited from the Sheets
+ *     view via the public methods here).
  *
- * Pattern mirrors the existing `EngineController` — a thin service
- * per editor mode, owned by `ApplicationWindow`, with file IO + view
- * coordination kept out of the host widget.
+ * Store changes flow back via typed store events: another lens's (or a
+ * peer's) entity edit re-hydrates this view automatically.
  */
 export class CastController {
-  private _project: LoadedProject | null = null
-  /**
-   * Active collab session, when one is live. Set by the host window on
-   * session start/stop. While set, every local cast mutation also
-   * broadcasts a `__project/character.upsert` so peers stay in sync;
-   * inbound ops arrive via {@link applyRemoteProjectOp}. Null in solo
-   * editing (the common case) — then mutations only persist locally.
-   */
-  private _session: CollabSession | null = null
   /**
    * Cache of GTK preview resources keyed by sprite-set id, so the cast
    * gallery can preview every character on its own sheet without
    * re-wrapping a set per refresh. Rebuilt lazily in {@link refresh};
-   * invalidated wholesale on project swap.
+   * invalidated wholesale on project swap, per-id on set changes.
    */
   private _spriteSetCache = new Map<string, GdkSpriteSetResource | null>()
-  /**
-   * Invoked after the project's sprite-set list changes (import /
-   * delete / inbound peer add+remove) so the host can re-hydrate the
-   * Tiles view — sprite-sets are shared project assets shown in both
-   * places. Null until the host wires it.
-   */
-  onSpriteSetsChanged: (() => void) | null = null
-  /**
-   * Invoked on every {@link refresh} with the project's appearance
-   * (character-kind sprite-sheet) list + the shared preview-resource map,
-   * so the unified Sheets view's Appearances section + animation editor
-   * stay in sync. The cast controller owns appearance data (sheets,
-   * animations); the Sheets view just renders it + routes edits back
-   * here. Null until the host wires it.
-   */
-  onAppearancesChanged:
-    | ((sheets: SpriteSetChoice[], spriteSetsById: Map<string, GdkSpriteSetResource | null>) => void)
-    | null = null
-  /**
-   * Invoked after a local character upsert / delete / player change so the
-   * host can refresh the Objects view — it's the GENERAL lens over the same
-   * `entityLibrary` and now lists characters too, so a Cast edit must
-   * reflect there. Null until the host wires it.
-   */
-  onEntityLibraryChanged: (() => void) | null = null
-  /**
-   * Invoked after a sprite-set descriptor's tile properties changed —
-   * a local Solid/Surface edit ({@link setTileSolid} /
-   * {@link setTileSurface}) or an inbound peer descriptor update
-   * ({@link applyRemoteSpriteSetUpdate}) — so the host can refresh live
-   * engine collision (`Engine.refreshTileSolidsForSpriteSet`) when a
-   * scene is open. Null until the host wires it.
-   */
-  onTilePropertiesChanged: ((spriteSetId: string) => void) | null = null
-  /**
-   * Invoked after an inbound `__project/meta.update` landed on the
-   * project data (name / author / version / description /
-   * `defaultTileSize`) so the host can refresh the Data view — the
-   * surface that renders + edits these fields. Null until the host
-   * wires it.
-   */
-  onProjectMetaChanged: (() => void) | null = null
-  /**
-   * Invoked after an inbound `__project/map.editor-data` patched a
-   * map's `editorData` (today: atlas card position) so the host —
-   * the owner of map-file IO — can persist that map + refresh the
-   * atlas view. Null until the host wires it.
-   */
-  onMapEditorDataChanged: ((mapId: string) => void) | null = null
+  private readonly _events = new TypedEmitter<CastControllerEvents>()
 
   constructor(
     private readonly view: CastView,
-    private readonly onToast: (message: string) => void,
+    private readonly store: ProjectStore,
   ) {
     view.bindCallbacks(this.callbacks)
     // Raw-entity edits from the cast detail's "all components" disclosure.
@@ -158,96 +80,31 @@ export class CastController {
         /* malformed payload — ignore */
       }
     })
+    // A different project (or a re-open) invalidates every wrapped
+    // sprite-set — drop the cache so stale textures can't leak across.
+    store.on('project-changed', () => {
+      this._spriteSetCache.clear()
+      void this.refresh()
+    })
+    // Sprite-sets are shared project assets (a character's sheet) —
+    // evict the affected preview + re-hydrate on any set change,
+    // whether it came from this lens, the Sheets view, or a peer.
+    store.on('sprite-sets-changed', ({ spriteSetId }) => {
+      if (spriteSetId) this._spriteSetCache.delete(spriteSetId)
+      else this._spriteSetCache.clear()
+      void this.refresh()
+    })
+    // Another lens (Objects) or a peer edited the shared entityLibrary —
+    // re-hydrate. Our own edits skip this (the mutation paths below
+    // already refresh exactly where the old behaviour did).
+    store.on('entity-library-changed', ({ source }) => {
+      if (source !== 'cast') void this.refresh()
+    })
   }
 
-  /** Project ref-picker options (maps + appearance sheets) for the disclosure editor. */
-  private _castRefOptions(): {
-    maps: { value: string; label: string }[]
-    appearances: { value: string; label: string }[]
-  } {
-    const data = this._project?.resource?.data
-    return {
-      maps: (data?.maps ?? []).map((m) => ({ value: m.id, label: m.name ?? m.id })),
-      appearances: this._project?.resource?.spriteSets
-        ? [...this._project.resource.spriteSets.entries()].map(([id, set]) => ({
-            value: id,
-            label: set.data?.name ?? id,
-          }))
-        : [],
-    }
-  }
-
-  /**
-   * Attach/detach the live collab session. While attached, cast
-   * mutations broadcast to peers; detaching (null) returns to
-   * local-only editing.
-   */
-  setCollabSession(session: CollabSession | null): void {
-    this._session = session
-  }
-
-  /**
-   * Apply an inbound project op from a peer: mutate the in-memory
-   * `GameProjectData`, persist, and refresh the Cast view. Does NOT
-   * re-broadcast (no loopback). A character referencing a sprite-set
-   * this peer lacks (e.g. one imported mid-session — binary import
-   * sync is a follow-up) still lands; its preview just falls back to
-   * empty until the set arrives.
-   */
-  applyRemoteProjectOp(op: ProjectOp): void {
-    const data = this._project?.resource?.data
-    if (!data) return
-    if (op.kind === ENTITY_UPSERT_KIND) {
-      applyEntityUpsert(data, op.payload.entity)
-    } else if (op.kind === ENTITY_REMOVE_KIND) {
-      applyEntityRemove(data, op.payload.entityId)
-    } else if (op.kind === PLAYER_SET_KIND) {
-      applyPlayerSet(data, op.payload.playerActorId)
-    } else if (op.kind === SPRITESET_REMOVE_KIND) {
-      this._applyRemoteSpriteSetRemove(op.payload.spriteSetId)
-      return
-    } else if (op.kind === PROJECT_META_UPDATE_KIND) {
-      // Coarse replace of name + the whole properties bag; persist the
-      // project JSON here (this controller owns project-file IO), then
-      // let the host refresh the Data view that renders these fields.
-      applyProjectMetaUpdate(data, op.payload)
-      this._persist()
-      this.onProjectMetaChanged?.()
-      return
-    } else if (op.kind === MAP_EDITOR_DATA_KIND) {
-      // Shallow-merge the patch onto the matching map's `editorData`.
-      // Map-file persistence + atlas refresh belong to the host (the
-      // owner of map IO) — hand it the patched map's id.
-      const maps = this._project?.resource?.maps
-      if (!maps) return
-      const mapDatas = [...maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : []))
-      if (applyMapEditorData(mapDatas, op.payload)) this.onMapEditorDataChanged?.(op.payload.mapId)
-      return
-    } else {
-      return
-    }
-    this._persist()
-    void this.refresh()
-    this.onEntityLibraryChanged?.()
-  }
-
-  /**
-   * Apply an inbound sprite-set removal from a peer: drop the reference,
-   * delete the local `<id>.png` + `<id>.json`, evict the live resource +
-   * preview cache, persist, and refresh BOTH views. Idempotent. Does
-   * NOT re-broadcast.
-   */
-  private _applyRemoteSpriteSetRemove(id: string): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    if (!resource.data.spriteSets?.some((s) => s.id === id)) return
-    this._removeSpriteSetFiles(id)
-    applySpriteSetRemove(resource.data, id)
-    resource.spriteSets.delete(id)
-    this._spriteSetCache.delete(id)
-    this._persist()
-    void this.refresh()
-    this.onSpriteSetsChanged?.()
+  /** Subscribe to a controller event. Returns an unsubscribe closure. */
+  on<K extends keyof CastControllerEvents>(event: K, listener: (payload: CastControllerEvents[K]) => void): () => void {
+    return this._events.on(event, listener)
   }
 
   /**
@@ -257,7 +114,7 @@ export class CastController {
    * write back through {@link _upsertCharacter}.
    */
   private _listCharacters(): CharacterDefinition[] {
-    const data = this._project?.resource?.data
+    const data = this.store.data
     if (!data?.entityLibrary) return []
     const out: CharacterDefinition[] = []
     for (const def of data.entityLibrary) {
@@ -269,24 +126,19 @@ export class CastController {
   }
 
   /**
-   * Persist + broadcast a character view model as its `entityLibrary`
-   * entry (`characterToEntity`). Single write path for create / rename /
-   * speed / sheet-change. Does NOT touch the player flag — that rides
-   * `playerActorId` via {@link _setPlayer}.
+   * Write a character view model back as its `entityLibrary` entry
+   * (`characterToEntity`) through the store (persist + broadcast).
+   * Single write path for create / rename / speed / sheet-change. Does
+   * NOT touch the player flag — that rides `playerActorId` via
+   * {@link _setPlayer}.
    */
   private _upsertCharacter(char: CharacterDefinition): void {
-    const data = this._project?.resource?.data
-    if (!data) return
     // Merge onto the existing entity so the basic fields (name / sheet /
     // speed) don't drop components the user added via the "all components"
     // disclosure; a brand-new character has no entity yet → build fresh.
-    const existing = data.entityLibrary?.find((e) => e.id === char.id)
+    const existing = this.store.findEntity(char.id)
     const entity = existing ? mergeCharacterIntoEntity(existing, char) : characterToEntity(char)
-    applyEntityUpsert(data, entity)
-    this._persist()
-    const session = this._session
-    if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
-    this.onEntityLibraryChanged?.()
+    this.store.upsertEntity(entity, 'cast')
   }
 
   /**
@@ -296,48 +148,20 @@ export class CastController {
    * friendly fields reflect any appearance / speed change made there.
    */
   upsertCharacterEntity(entity: EntityDefinition): void {
-    const data = this._project?.resource?.data
-    if (!data) return
-    applyEntityUpsert(data, entity)
-    this._persist()
-    const session = this._session
-    if (session) session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+    this.store.upsertEntity(entity, 'cast')
     void this.refresh()
-    this.onEntityLibraryChanged?.()
   }
 
   /** The full entity definition for a character id (for the disclosure editor). */
   entityForCharacter(id: string): EntityDefinition | null {
-    return this._project?.resource?.data?.entityLibrary?.find((e) => e.id === id) ?? null
-  }
-
-  /** Broadcast the current state of one character to peers (no-op solo). */
-  private _broadcastCharacter(id: string): void {
-    const session = this._session
-    if (!session) return
-    const def = this._project?.resource?.data?.entityLibrary?.find((e) => e.id === id)
-    if (!def) return
-    session.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity: def }))
-  }
-
-  /**
-   * Swap the active project. Pass `null` to clear (e.g. when the user
-   * closes the project). Triggers an asynchronous hydration of the
-   * Cast view from the new project's data.
-   */
-  setProject(project: LoadedProject | null): void {
-    this._project = project
-    // A different project (or a re-open) invalidates every wrapped
-    // sprite-set — drop the cache so stale textures can't leak across.
-    this._spriteSetCache.clear()
-    void this.refresh()
+    return this.store.findEntity(id)
   }
 
   /**
    * Push the project's character list + sprite-sheet list + a shared
-   * per-sprite-set preview map into the Cast view. Called by `setProject`
-   * and after every mutation that changes a character, a sheet, or the
-   * sprite-set list.
+   * per-sprite-set preview map into the Cast view. Triggered by store
+   * events (project swap, entity/sprite-set changes) and after every
+   * local mutation that changes a character, a sheet, or the set list.
    *
    * Resolves a GTK preview resource for every sprite-set id referenced by
    * the cast OR exposed as a character sheet (cached by id) so each card
@@ -346,11 +170,11 @@ export class CastController {
    * character detail's sheet picker has the fresh list when it refreshes.
    */
   async refresh(): Promise<void> {
-    const resource = this._project?.resource
+    const resource = this.store.resource
     if (!resource) {
       this.view.setSheets([])
       this.view.setCharacters([], new Map())
-      this.onAppearancesChanged?.([], new Map())
+      this._events.emit('appearances-changed', { sheets: [], spriteSetsById: new Map() })
       return
     }
     this.view.projectName = resource.data?.name ?? _('New Project')
@@ -369,7 +193,7 @@ export class CastController {
     // animation editor now, sharing the memoised cache).
     this.view.setSheets(sheets)
     this.view.setCharacters(characters, spriteSetsById)
-    this.onAppearancesChanged?.(sheets, spriteSetsById)
+    this._events.emit('appearances-changed', { sheets, spriteSetsById })
   }
 
   /**
@@ -380,7 +204,7 @@ export class CastController {
   private async _resolveSpriteSet(id: string): Promise<GdkSpriteSetResource | null> {
     if (this._spriteSetCache.has(id)) return this._spriteSetCache.get(id) ?? null
     let wrapped: GdkSpriteSetResource | null = null
-    const engineSpriteSet = await this._project?.resource?.getSpriteSet(id)
+    const engineSpriteSet = await this.store.resource?.getSpriteSet(id)
     if (engineSpriteSet) {
       try {
         wrapped = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
@@ -403,7 +227,7 @@ export class CastController {
     // The "all components" disclosure needs the character's raw entity +
     // the project ref-picker options.
     getCharacterEntity: (id: string) => this.entityForCharacter(id),
-    getRefOptions: () => this._castRefOptions(),
+    getRefOptions: () => this.store.refOptions(),
     setSpeed: (id: string, tilesPerSec: number) => {
       this._mutate(id, (c) => {
         c.speedTilesPerSec = tilesPerSec
@@ -419,18 +243,19 @@ export class CastController {
     },
     // Sprite-sheet animations are edited in the Sheets view now — those
     // mutations call the public methods (`setAnimationDuration` /
-    // `addAnimation` / … / `deleteSpriteSet`) directly via the host.
+    // `addAnimation` / …) directly via the Sheets-side wiring; sprite-set
+    // CRUD (import / delete / rename) lives on the store.
     deleteCharacter: (id: string) => this._deleteCharacter(id),
     listSpriteSets: () => this._listSpriteSets(),
     createCharacter: (draft: NewCharacterDraft) => this._createCharacter(draft),
-    importSpriteSet: (result: SpriteSetImportResult) => this._importSpriteSet(result),
+    importSpriteSet: (result: SpriteSetImportResult) => this.store.importSpriteSet(result),
     loadSpriteSetPreview: (id: string) => this._loadSpriteSetPreview(id),
   }
 
   /**
    * Every sprite set available to assign to a character: the project's
-   * own sets plus engine built-ins (e.g. the scientist). Sourced from
-   * the loaded resource map so a just-imported set shows up too.
+   * own sets plus engine built-ins. Sourced from the loaded resource
+   * map so a just-imported set shows up too.
    *
    * Sets already used by a character sort first, so the New Character
    * dialog defaults to an actual character sheet (whose first sprite
@@ -438,7 +263,7 @@ export class CastController {
    * sprite 0 is a transparent tile.
    */
   private _listSpriteSets(): SpriteSetChoice[] {
-    const resource = this._project?.resource
+    const resource = this.store.resource
     if (!resource) return []
     // Only sprite SHEETS are assignable to a character — world tilesets
     // are excluded (see `isCharacterSpriteSet`).
@@ -451,18 +276,16 @@ export class CastController {
 
   /**
    * Assemble a full {@link CharacterDefinition} from the dialog draft:
-   * generate a unique id, seed the eight required directional
-   * animations (single frame each — the user refines them in the
-   * animation editor), and enforce the single-player invariant. Persist
-   * + refresh, then focus the new character so the user lands on it.
+   * generate a unique id, reference the chosen sheet (animations live
+   * on the sheet, seeded on import), and enforce the single-player
+   * invariant. Persist + refresh, then focus the new character so the
+   * user lands on it.
    */
   private _createCharacter(draft: NewCharacterDraft): void {
-    const data = this._project?.resource?.data
+    const data = this.store.data
     if (!data) return
     const takenIds = new Set((data.entityLibrary ?? []).map((e) => e.id))
-    const id = this._uniqueId(draft.name, takenIds)
-    // Animations live on the chosen sheet (seeded on sheet import); the
-    // character just references it.
+    const id = uniqueIdFrom(draft.name, takenIds)
     const character: CharacterDefinition = {
       id,
       name: draft.name,
@@ -472,212 +295,25 @@ export class CastController {
       speedTilesPerSec: draft.speedTilesPerSec,
     }
     this._upsertCharacter(character)
-    if (draft.isPlayer) this._setPlayerActor(id)
+    if (draft.isPlayer) this.store.setPlayerActor(id, 'cast')
     void this.refresh().then(() => this.view.focusCharacter(id))
   }
 
   /**
-   * Remove a character from the project: drop its `entityLibrary` entry,
-   * persist, broadcast a `__project/entity.remove` so peers drop it too,
-   * and refresh. `applyEntityRemove` also clears `playerActorId` if this
-   * was the player. The view re-selects the first remaining character.
+   * Remove a character from the project via the store: it drops the
+   * `entityLibrary` entry, persists, and broadcasts a
+   * `__project/entity.remove` so peers drop it too (`applyEntityRemove`
+   * also clears `playerActorId` if this was the player). The view
+   * re-selects the first remaining character on refresh.
    */
   private _deleteCharacter(id: string): void {
-    const data = this._project?.resource?.data
-    if (!data?.entityLibrary?.some((e) => e.id === id)) return
-    applyEntityRemove(data, id)
-    this._persist()
-    const session = this._session
-    if (session) session.sendProjectOp(({ peerId, seq }) => createEntityRemoveOp({ peerId, seq, entityId: id }))
+    if (!this.store.removeEntity(id, 'cast')) return
     void this.refresh()
-    this.onEntityLibraryChanged?.()
-  }
-
-  /**
-   * Import a sprite set into the project: finalise a unique id + a
-   * non-overlapping `firstGid`, copy the source image into
-   * `spritesets/<id>.png`, write `spritesets/<id>.json`, register the
-   * reference in `game-project.json`, and load it into the live
-   * resource map so it's usable without reopening the project. Returns
-   * the new set as a {@link SpriteSetChoice} for the character dialog to
-   * select, or `null` if the copy/write failed.
-   */
-  private async _importSpriteSet({ data, sourcePath }: SpriteSetImportResult): Promise<SpriteSetChoice | null> {
-    const resource = this._project?.resource
-    if (!resource?.data) return null
-    const id = this._uniqueId(data.id, new Set(resource.spriteSets.keys()))
-    const imageFile = `${id}.png`
-    const kind = data.kind ?? ('tileset' as const)
-    const finalData = {
-      ...data,
-      id,
-      // The dialog tags the set by kind ('character' sheet vs 'tileset')
-      // so it surfaces in the right gallery; default to tileset if absent.
-      kind,
-      // A character sheet OWNS its animations — seed the 8 required roles
-      // (single placeholder frame) so a character using it can animate
-      // immediately; the user refines frames in the sheet's editor.
-      characterAnimations:
-        kind === 'character'
-          ? (data.characterAnimations ??
-            REQUIRED_ROLES.map((role) => ({ id: role, frames: [DEFAULT_FRAME], durationMs: DEFAULT_ANIMATION_MS })))
-          : undefined,
-      image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile },
-    }
-
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
-    const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
-
-    if (!copyFile(sourcePath, pngDest)) {
-      this.onToast(_('Could not copy the image into the project'))
-      return null
-    }
-    if (!writeTextFile(jsonDest, SpriteSetFormat.serialize(finalData))) {
-      this.onToast(_('Could not save the sprite set'))
-      return null
-    }
-
-    resource.data.spriteSets.push({
-      id,
-      path: `./spritesets/${id}.json`,
-      type: 'spriteset',
-      firstGid: this._nextFirstGid(),
-    })
-    this._persist()
-
-    // Register into the live resource map so the character dialog's
-    // preview + the cast view resolve it immediately (no reopen).
-    try {
-      const engineSet = new SpriteSetResource(jsonDest, { headless: false })
-      await engineSet.load()
-      resource.spriteSets.set(id, engineSet)
-    } catch (err) {
-      console.warn('[CastController] Imported set written but failed to load live:', err)
-    }
-    // Sync to peers (chunked — carries the image bytes). Best-effort:
-    // a read failure just means peers won't get this set live.
-    if (this._session) {
-      const bytes = readBinaryFile(pngDest)
-      if (bytes) this._session.sendSpriteSetAdd({ data: finalData, imageBase64: GLib.base64_encode(bytes) })
-    }
-    this._spriteSetCache.delete(id)
-    this.onSpriteSetsChanged?.()
-    this.onToast(_(`Imported sprite set “${finalData.name}”`))
-    return { id, name: finalData.name }
-  }
-
-  /**
-   * Public entry for importing a sprite set — used by both the Cast
-   * view (sprite-set for a character) and the Tiles view (a new
-   * tileset). Both surfaces present the same {@link SpriteSetImportDialog}
-   * and route its result here so the copy + register + collab-broadcast
-   * path lives in one place.
-   */
-  importSpriteSet(result: SpriteSetImportResult): Promise<SpriteSetChoice | null> {
-    return this._importSpriteSet(result)
-  }
-
-  /**
-   * Delete a sprite set (tileset) from the project: drop its reference,
-   * delete the `<id>.png` + `<id>.json` files, evict the live resource +
-   * preview cache, persist, broadcast a `__project/spriteset.remove`,
-   * and refresh both views. No-op for an unknown id. Built-in sets
-   * (`built-in:*`, which have no project files) are guarded by the
-   * caller — the Tiles view never offers a delete affordance for them.
-   */
-  deleteSpriteSet(id: string): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    if (!resource.data.spriteSets?.some((s) => s.id === id)) return
-    this._removeSpriteSetFiles(id)
-    applySpriteSetRemove(resource.data, id)
-    resource.spriteSets.delete(id)
-    this._spriteSetCache.delete(id)
-    this._persist()
-    const session = this._session
-    if (session) session.sendProjectOp(({ peerId, seq }) => createSpriteSetRemoveOp({ peerId, seq, spriteSetId: id }))
-    void this.refresh()
-    this.onSpriteSetsChanged?.()
-  }
-
-  /**
-   * Delete the on-disk `<id>.png` + `<id>.json` of a project sprite set.
-   * Best-effort — a failed delete logs but doesn't abort the in-memory
-   * removal (the reference is gone either way; an orphaned file is
-   * harmless).
-   */
-  private _removeSpriteSetFiles(id: string): void {
-    const resource = this._project?.resource
-    if (!resource) return
-    if (!isPlainFilename(id)) return
-    const projectDir = GLib.path_get_dirname(resource.path)
-    deleteFile(GLib.build_filenamev([projectDir, 'spritesets', `${id}.png`]))
-    deleteFile(GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`]))
-  }
-
-  /**
-   * Apply an inbound sprite-set import from a peer: write the image +
-   * descriptor into this project's `spritesets/`, register the
-   * reference (keeping the sender's id so characters that reference it
-   * still resolve), load it live, persist, and refresh. Idempotent —
-   * re-applying overwrites the same files + replaces the ref by id.
-   */
-  applyRemoteSpriteSetAdd(payload: SpriteSetAddPayload): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    const { data } = payload
-    const id = data.id
-    // SECURITY: `id` is peer-supplied and feeds filesystem paths below.
-    // Reject anything that isn't a plain filename so a malicious peer
-    // can't escape `spritesets/` (path traversal). We also DERIVE the
-    // image filename from the validated id rather than trusting the
-    // peer's `image.path`, and normalise the descriptor to match — so
-    // the only peer string that touches the FS is the vetted id.
-    if (!isPlainFilename(id)) {
-      console.warn('[CastController] Rejected peer sprite-set with unsafe id:', id)
-      return
-    }
-    const imageFile = `${id}.png`
-    const safeData: typeof data = {
-      ...data,
-      image: { ...(data.image ?? { id: 'main', type: 'image' }), path: imageFile },
-    }
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
-    const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
-
-    if (!writeBinaryFile(pngDest, GLib.base64_decode(payload.imageBase64))) {
-      console.warn('[CastController] Failed to write peer sprite-set image:', pngDest)
-      return
-    }
-    writeTextFile(jsonDest, SpriteSetFormat.serialize(safeData))
-    applySpriteSetReference(resource.data, {
-      id,
-      path: `./spritesets/${id}.json`,
-      type: 'spriteset',
-      // Recompute on our side — gid space is per-peer; the sender's
-      // value may collide with ours.
-      firstGid: this._nextFirstGid(),
-    })
-    this._persist()
-    void (async () => {
-      try {
-        const engineSet = new SpriteSetResource(jsonDest, { headless: false })
-        await engineSet.load()
-        resource.spriteSets.set(id, engineSet)
-      } catch (err) {
-        console.warn('[CastController] Peer sprite-set written but failed to load live:', err)
-      }
-      this._spriteSetCache.delete(id)
-      void this.refresh()
-      this.onSpriteSetsChanged?.()
-    })()
   }
 
   /** Wrap a project sprite set as a GTK preview resource for the dialogs. */
   private async _loadSpriteSetPreview(id: string): Promise<GdkSpriteSetResource | null> {
-    const engineSet = await this._project?.resource?.getSpriteSet(id)
+    const engineSet = await this.store.resource?.getSpriteSet(id)
     if (!engineSet) return null
     try {
       return await GdkSpriteSetResource.fromEngineResource(engineSet)
@@ -687,56 +323,15 @@ export class CastController {
     }
   }
 
-  /** Lowest unused id derived from `name` (`hero`, `hero-2`, `hero-3`, …). */
-  private _uniqueId(name: string, taken: Set<string>): string {
-    const base =
-      name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'item'
-    let id = base
-    let n = 2
-    while (taken.has(id)) id = `${base}-${n++}`
-    return id
-  }
-
-  /**
-   * Next non-overlapping `firstGid` for a new sprite set: one past the
-   * highest global tile id any existing set occupies. Keeps the
-   * imported set usable as a tileset later without gid collisions.
-   */
-  private _nextFirstGid(): number {
-    const resource = this._project?.resource
-    if (!resource?.data) return 1
-    let next = 1
-    for (const ref of resource.data.spriteSets) {
-      const count = resource.spriteSets.get(ref.id)?.data?.sprites?.length ?? 0
-      const start = typeof ref.firstGid === 'number' ? ref.firstGid : next
-      next = Math.max(next, start + count)
-    }
-    return next
-  }
-
   /**
    * Set / clear the project player. The one-of-N invariant is structural
    * — `playerActorId` is a single id, so no per-character flag to clear.
-   * Refresh moves the "Player" badge. Persists + broadcasts `player.set`.
+   * Refresh moves the "Player" badge. Persists + broadcasts `player.set`
+   * via the store.
    */
   private _setPlayer(id: string, isPlayer: boolean): void {
-    this._setPlayerActor(isPlayer ? id : null)
+    this.store.setPlayerActor(isPlayer ? id : null, 'cast')
     void this.refresh()
-  }
-
-  /** Write + broadcast `playerActorId` (null clears it). */
-  private _setPlayerActor(playerActorId: string | null): void {
-    const data = this._project?.resource?.data
-    if (!data) return
-    applyPlayerSet(data, playerActorId)
-    this._persist()
-    const session = this._session
-    if (session) session.sendProjectOp(({ peerId, seq }) => createPlayerSetOp({ peerId, seq, playerActorId }))
-    this.onEntityLibraryChanged?.()
   }
 
   /**
@@ -754,7 +349,7 @@ export class CastController {
   /**
    * Set one animation's per-loop duration on a sheet. Public so both the
    * Cast detail (via `callbacks`) and the unified Sheets view's animation
-   * editor (via the host) drive the same sheet-owned mutation.
+   * editor drive the same sheet-owned mutation.
    */
   setAnimationDuration(sheetId: string, animId: string, durationMs: number): void {
     this._mutateSheetAnimations(sheetId, (anims) => {
@@ -805,182 +400,19 @@ export class CastController {
   }
 
   /**
-   * Mutate a sprite SHEET's animations (sheet-owned now, shared by every
-   * character using it) + persist the sheet's JSON + refresh. Keyed by
-   * `spriteSetId` — the Sprite-sheets section edits a sheet directly.
+   * Mutate a sprite SHEET's animations (sheet-owned, shared by every
+   * character using it) through the store's descriptor pipeline
+   * (persist + chunked descriptor broadcast), then evict the preview +
+   * refresh. Keyed by `spriteSetId` — the Sprite-sheets section edits a
+   * sheet directly.
    */
   private _mutateSheetAnimations(spriteSetId: string, mutator: (anims: CharacterAnimation[]) => void): void {
-    const resource = this._project?.resource
-    const engineSet = resource?.spriteSets.get(spriteSetId)
-    if (!resource || !engineSet?.data) return
-    const anims = (engineSet.data.characterAnimations ??= [])
-    mutator(anims)
-    this._persistSheet(spriteSetId)
-    this._broadcastSpriteSetUpdate(spriteSetId)
+    const mutated = this.store.mutateSpriteSetData(spriteSetId, (data) => {
+      const anims = (data.characterAnimations ??= [])
+      mutator(anims)
+    })
+    if (!mutated) return
     this._spriteSetCache.delete(spriteSetId)
     void this.refresh()
-  }
-
-  /**
-   * Set a tile's Solid flag on a sprite-set descriptor. Public so the
-   * Tiles view's controller delegates here — the cast controller is the
-   * single owner of sprite-set descriptor writes + collab broadcast
-   * (mirrors {@link renameSpriteSet} / the animation mutations).
-   */
-  setTileSolid(spriteSetId: string, spriteId: number, solid: boolean): void {
-    this._mutateSpriteTile(spriteSetId, spriteId, (def) => {
-      def.solid = solid
-    })
-  }
-
-  /** Set / clear a tile's surface kind (`tileProperties.surface`) on a sprite-set descriptor. */
-  setTileSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
-    this._mutateSpriteTile(spriteSetId, spriteId, (def) => {
-      if (surface) {
-        def.tileProperties = { ...(def.tileProperties ?? {}), surface }
-      } else if (def.tileProperties?.surface !== undefined) {
-        const next = { ...def.tileProperties }
-        delete next.surface
-        def.tileProperties = Object.keys(next).length === 0 ? undefined : next
-      }
-    })
-  }
-
-  /**
-   * Apply a closure to a single sprite definition in a sprite set, then
-   * persist the descriptor JSON, broadcast a chunked
-   * `__project/spriteset.update.chunk` so peers pick the change up, and
-   * notify the host so live engine collision refreshes (when a scene is
-   * open). One write+broadcast path for every tile-property editor.
-   */
-  private _mutateSpriteTile(
-    spriteSetId: string,
-    spriteId: number,
-    mutator: (def: SpriteSetData['sprites'][number]) => void,
-  ): void {
-    const engineSet = this._project?.resource?.spriteSets.get(spriteSetId)
-    const def = engineSet?.data?.sprites.find((s) => s.id === spriteId)
-    if (!def) return
-    mutator(def)
-    this._persistSheet(spriteSetId)
-    this._broadcastSpriteSetUpdate(spriteSetId)
-    this.onTilePropertiesChanged?.(spriteSetId)
-  }
-
-  /**
-   * Rename a sprite set's display name (the `name` in its
-   * `spritesets/<id>.json`). Works for both a character sheet (Cast view)
-   * and a world tileset (Tiles / Data views) — the single owner of the
-   * file write + collab broadcast. Persists, broadcasts a descriptor
-   * update so peers rename too, and re-hydrates every view. No-op on a
-   * blank name or an unknown id.
-   */
-  renameSpriteSet(id: string, name: string): void {
-    const resource = this._project?.resource
-    const engineSet = resource?.spriteSets.get(id)
-    const trimmed = name.trim()
-    if (!resource || !engineSet?.data || !trimmed) return
-    if (engineSet.data.name === trimmed) return
-    engineSet.data.name = trimmed
-    this._persistSheet(id)
-    this._broadcastSpriteSetUpdate(id)
-    this._spriteSetCache.delete(id)
-    void this.refresh()
-    this.onSpriteSetsChanged?.()
-  }
-
-  /**
-   * Rewrite the project's `spriteSets[]` reference order to match
-   * `orderedIds` (the Tiles gallery's display order after a drag).
-   * References whose id isn't in the list keep their relative order at
-   * the end (stable). Persists + re-hydrates both views. **Local +
-   * cosmetic — NOT broadcast over collab**: order carries no editing
-   * state, so a peer's gallery order is independent (new joiners still
-   * get the host's order via the project snapshot). No-op when the order
-   * is already current.
-   */
-  reorderSpriteSets(orderedIds: string[]): void {
-    const data = this._project?.resource?.data
-    if (!data?.spriteSets) return
-    const rank = (id: string): number => {
-      const i = orderedIds.indexOf(id)
-      return i === -1 ? Number.MAX_SAFE_INTEGER : i
-    }
-    const sorted = [...data.spriteSets].sort((a, b) => rank(a.id) - rank(b.id))
-    if (sorted.every((ref, i) => ref === data.spriteSets[i])) return
-    data.spriteSets = sorted
-    this._persist()
-    void this.refresh()
-    this.onSpriteSetsChanged?.()
-  }
-
-  /**
-   * Broadcast a sprite set's current DESCRIPTOR to peers (rename /
-   * animation edit / tile-prop change) — no image bytes, the peer already
-   * has the image. No-op solo. Sent after the local persist so the wire
-   * carries exactly what was saved.
-   */
-  private _broadcastSpriteSetUpdate(spriteSetId: string): void {
-    const session = this._session
-    if (!session) return
-    const data = this._project?.resource?.spriteSets.get(spriteSetId)?.data
-    if (!data) return
-    session.sendSpriteSetUpdate({ data })
-  }
-
-  /**
-   * Apply an inbound sprite-set DESCRIPTOR update from a peer: overwrite
-   * the descriptor JSON + the live in-memory data, evict the preview
-   * cache, refresh both views, and refresh live engine collision (a
-   * tile-property change must land on an open scene immediately).
-   * `applySpriteSetUpdate` keeps the LOCAL image descriptor (the
-   * `<id>.png` bytes are unchanged — only metadata moved) so a peer
-   * can't repoint our image. Ignored when we don't already have the set
-   * (adds come via {@link applyRemoteSpriteSetAdd}) or the id is unsafe.
-   * Does NOT re-broadcast.
-   */
-  applyRemoteSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
-    const resource = this._project?.resource
-    const engineSet = resource?.spriteSets.get(payload.data.id)
-    if (!resource || !engineSet?.data) return
-    if (!isPlainFilename(payload.data.id)) {
-      console.warn('[CastController] Rejected peer sprite-set update with unsafe id:', payload.data.id)
-      return
-    }
-    engineSet.data = applySpriteSetUpdate(engineSet.data, payload)
-    this._persistSheet(payload.data.id)
-    this._spriteSetCache.delete(payload.data.id)
-    this.onTilePropertiesChanged?.(payload.data.id)
-    void this.refresh()
-    this.onSpriteSetsChanged?.()
-  }
-
-  /** Serialise a sprite sheet's `SpriteSetData` back to `spritesets/<id>.json`. */
-  private _persistSheet(spriteSetId: string): void {
-    const resource = this._project?.resource
-    const engineSet = resource?.spriteSets.get(spriteSetId)
-    if (!resource || !engineSet?.data || !isPlainFilename(spriteSetId)) return
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${spriteSetId}.json`])
-    if (!writeTextFile(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
-      this.onToast(_('Could not save the sprite set'))
-    }
-  }
-
-  /**
-   * Serialise the in-memory `GameProjectData` back to disk. Best-
-   * effort — failures toast but the in-memory state still updates so
-   * the UI doesn't snap back to old values.
-   */
-  private _persist(): void {
-    const resource = this._project?.resource
-    if (!resource?.data) return
-    try {
-      const ok = writeTextFile(resource.path, GameProjectFormat.serialize(resource.data))
-      if (!ok) this.onToast(_('Could not save project'))
-    } catch (err) {
-      console.warn('[CastController] Failed to persist project:', err)
-      this.onToast(_('Could not save project'))
-    }
   }
 }
