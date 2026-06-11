@@ -1,4 +1,3 @@
-import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import {

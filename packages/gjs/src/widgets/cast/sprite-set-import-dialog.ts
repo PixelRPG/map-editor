@@ -27,7 +27,7 @@ export interface SpriteSetImportResult {
   sourcePath: string
 }
 
-const DEFAULT_SPRITE_SIZE = 16
+const _DEFAULT_SPRITE_SIZE = 16
 
 /**
  * Turn a display name into a filesystem- and id-safe slug.

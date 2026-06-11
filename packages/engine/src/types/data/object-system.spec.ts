@@ -151,9 +151,9 @@ export default async () => {
     })
 
     await it('rejects bad override shapes', async () => {
-      expect(
-        isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: 0, defId: 'a', overrides: { name: 7 } }),
-      ).toBe(false)
+      expect(isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: 0, defId: 'a', overrides: { name: 7 } })).toBe(
+        false,
+      )
       expect(
         isObjectPlacement({ id: 'p', layerId: 'l', tileX: 0, tileY: 0, defId: 'a', overrides: { components: 'x' } }),
       ).toBe(false)

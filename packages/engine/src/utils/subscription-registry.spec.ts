@@ -6,7 +6,7 @@ export default async () => {
   await describe('SubscriptionRegistry', async () => {
     await it('primes new subscribers with the latest cached value (null if never set)', async () => {
       const reg = new SubscriptionRegistry<string, number>()
-      const listener = spy((value: number | null): void => {})
+      const listener = spy((_value: number | null): void => {})
       reg.subscribe('a', listener)
       expect(listener.calls.length).toBe(1)
       expect(listener.lastCall?.arguments[0]).toBeNull()
@@ -15,15 +15,15 @@ export default async () => {
     await it('primes new subscribers with the cached value when one exists', async () => {
       const reg = new SubscriptionRegistry<string, number>()
       reg.notify('a', 7)
-      const listener = spy((value: number | null): void => {})
+      const listener = spy((_value: number | null): void => {})
       reg.subscribe('a', listener)
       expect(listener.lastCall?.arguments[0]).toBe(7)
     })
 
     await it('broadcasts on notify to every subscriber for the same key', async () => {
       const reg = new SubscriptionRegistry<string, number>()
-      const a = spy((value: number | null): void => {})
-      const b = spy((value: number | null): void => {})
+      const a = spy((_value: number | null): void => {})
+      const b = spy((_value: number | null): void => {})
       reg.subscribe('x', a)
       reg.subscribe('x', b)
       a.reset()
@@ -35,8 +35,8 @@ export default async () => {
 
     await it('isolates broadcasts by key', async () => {
       const reg = new SubscriptionRegistry<string, number>()
-      const a = spy((value: number | null): void => {})
-      const b = spy((value: number | null): void => {})
+      const a = spy((_value: number | null): void => {})
+      const b = spy((_value: number | null): void => {})
       reg.subscribe('one', a)
       reg.subscribe('two', b)
       a.reset()
@@ -49,7 +49,7 @@ export default async () => {
     await it('supports null as the cleared-value marker', async () => {
       const reg = new SubscriptionRegistry<string, number>()
       reg.notify('k', 5)
-      const listener = spy((value: number | null): void => {})
+      const listener = spy((_value: number | null): void => {})
       reg.subscribe('k', listener)
       listener.reset()
       reg.notify('k', null)
@@ -58,7 +58,7 @@ export default async () => {
 
     await it('disconnects via the returned function', async () => {
       const reg = new SubscriptionRegistry<string, number>()
-      const listener = spy((value: number | null): void => {})
+      const listener = spy((_value: number | null): void => {})
       const dispose = reg.subscribe('k', listener)
       listener.reset()
       dispose()
@@ -68,7 +68,7 @@ export default async () => {
 
     await it('cleans empty buckets so size reflects real subscribers', async () => {
       const reg = new SubscriptionRegistry<string, number>()
-      const a = spy((value: number | null): void => {})
+      const a = spy((_value: number | null): void => {})
       const dispose = reg.subscribe('k', a)
       expect(reg.size).toBe(1)
       dispose()
@@ -79,7 +79,7 @@ export default async () => {
       const reg = new SubscriptionRegistry<string, number>()
       let dispose: (() => void) | null = null
       const a = spy<(value: number | null) => void>(() => dispose?.())
-      const b = spy((value: number | null): void => {})
+      const b = spy((_value: number | null): void => {})
       dispose = reg.subscribe('k', a)
       reg.subscribe('k', b)
       a.reset()
@@ -99,7 +99,7 @@ export default async () => {
 
     await it('clear drops listeners + cache; registry remains usable', async () => {
       const reg = new SubscriptionRegistry<string, number>()
-      const a = spy((value: number | null): void => {})
+      const a = spy((_value: number | null): void => {})
       reg.subscribe('k', a)
       reg.notify('k', 1)
       a.reset()
@@ -110,7 +110,7 @@ export default async () => {
       reg.notify('k', 2)
       expect(a.calls.length).toBe(0)
 
-      const b = spy((value: number | null): void => {})
+      const b = spy((_value: number | null): void => {})
       reg.subscribe('k', b)
       expect(b.lastCall?.arguments[0]).toBe(2)
     })

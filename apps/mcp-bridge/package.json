@@ -12,7 +12,13 @@
     "check": "tsc --noEmit",
     "start": "gjsify run dist/mcp-bridge.gjs.mjs"
   },
-  "keywords": ["pixelrpg", "mcp", "dbus", "gjs", "devtools"],
+  "keywords": [
+    "pixelrpg",
+    "mcp",
+    "dbus",
+    "gjs",
+    "devtools"
+  ],
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {

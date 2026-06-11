@@ -29,7 +29,6 @@ import type { ProjectSnapshot } from './project-snapshot.ts'
 import {
   createSnapshotChunkOp,
   createSnapshotRequestOp,
-  createSnapshotResponseOp,
   type SessionProtocolOp,
   SNAPSHOT_CHUNK_KIND,
   SNAPSHOT_REQUEST_KIND,

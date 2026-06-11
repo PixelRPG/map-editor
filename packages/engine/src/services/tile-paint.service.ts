@@ -1,5 +1,5 @@
 import { TileMap } from 'excalibur'
-import { EraseTileCommand, type PaintTilePayload, PaintTileCommand } from '../commands/index.ts'
+import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from '../commands/index.ts'
 import { MapEditorComponent, TileMapTierComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'

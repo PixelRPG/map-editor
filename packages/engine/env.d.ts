@@ -14,5 +14,5 @@ declare global {
   }
 
   declare const process: NodeJS.Process
-  declare const require: (path: string) => any
+  declare const require: (path: string) => unknown
 }

@@ -73,8 +73,7 @@ export function cleanupOrphanedPublishers(): { scanned: number; killed: number; 
   try {
     const procDir = Gio.File.new_for_path(PROC_ROOT)
     const enumerator = procDir.enumerate_children('standard::name', Gio.FileQueryInfoFlags.NONE, null)
-    let info: Gio.FileInfo | null
-    while ((info = enumerator.next_file(null)) !== null) {
+    for (let info = enumerator.next_file(null); info !== null; info = enumerator.next_file(null)) {
       const name = info.get_name()
       if (!/^[0-9]+$/.test(name)) continue
       scanned++
@@ -122,7 +121,7 @@ export function isOrphanedPixelrpgPublisher(pid: number, readers: ProcReaders = 
     return false
   }
   const args = readers.readCmdlineArgs(pid)
-  if (!args || !args.includes(SERVICE_TYPE)) return false
+  if (!args?.includes(SERVICE_TYPE)) return false
   const ppid = readers.readPpid(pid)
   if (ppid == null) return false
   // PID 1 = traditional init. Some systems (Fedora's containers,

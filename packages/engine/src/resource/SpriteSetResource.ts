@@ -7,6 +7,7 @@ import {
   Logger,
   type Sprite,
   SpriteSheet,
+  type SpriteSheetSpacingDimensions,
 } from 'excalibur'
 import { SpriteSetFormat } from '../format/SpriteSetFormat'
 import type { AnimationData, SpriteDataSet, SpriteSetData, SpriteSetResourceOptions } from '../types'
@@ -86,7 +87,7 @@ export class SpriteSetResource {
     let columns = 0
     let tileWidth = 0
     let tileHeight = 0
-    let spacing
+    let spacing: SpriteSheetSpacingDimensions | undefined
 
     // Check if we're using the new images array
     if (data.image) {
@@ -151,7 +152,6 @@ export class SpriteSetResource {
     data.sprites.forEach((sprite: SpriteDataSet) => {
       try {
         // Determine which spritesheet to use
-        let spriteSheet: SpriteSheet | undefined
         let imageId = 'default'
 
         // If using the new format with multiple images
@@ -166,7 +166,7 @@ export class SpriteSetResource {
           }
         }
 
-        spriteSheet = this.spriteSheets.get(imageId)
+        const spriteSheet = this.spriteSheets.get(imageId)
 
         if (!spriteSheet) {
           this.logger.warn(`No spritesheet found for image ID ${imageId}`)

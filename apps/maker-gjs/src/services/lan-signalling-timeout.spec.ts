@@ -15,8 +15,8 @@
  * Runs on both Node (`net`) and GJS (`@gjsify/net` Soup-backed).
  */
 
+import { createServer as createNetServer, type Server as NetServer, type Socket } from 'node:net'
 import { describe, expect, it } from '@gjsify/unit'
-import { createServer as createNetServer, type Server as NetServer, type Socket } from 'net'
 
 import { CollabTimeoutError } from './collab-log.ts'
 import { connectLanJoinerTransport } from './lan-signalling.ts'

@@ -116,7 +116,7 @@ export class MiniMap extends Gtk.Widget {
 
   vfunc_measure(_orientation: Gtk.Orientation, _forSize: number): [number, number, number, number] {
     const w = this.cols * this._tilePx
-    const h = this._rows.length * this._tilePx
+    const _h = this._rows.length * this._tilePx
     return [w, w, -1, -1]
   }
 

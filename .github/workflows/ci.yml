@@ -94,6 +94,13 @@ jobs:
       - name: Install dependencies (gjsify install --immutable)
         run: gjsify install --immutable
 
+      - name: Lint + format check (Biome)
+        # `biome ci` = linter + formatter in check mode. Direct Biome —
+        # the gjsify CLI's own lint/fix subcommands wrap oxlint/oxfmt,
+        # which this repo doesn't use. GTK CSS is excluded in biome.json
+        # (non-web dialect Biome cannot parse).
+        run: ./node_modules/.bin/biome ci packages apps
+
       - name: Type-check workspace
         run: gjsify foreach check -v -t
 

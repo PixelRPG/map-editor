@@ -108,6 +108,7 @@ export class LanBrowser {
   private process: Gio.Subprocess | null = null
   // The avahi-browse subprocess's stdout pipe — held so it stays alive
   // for the lifetime of the reader and is dropped on close().
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: write-only by design — the field exists to pin the stream against GC
   private stdoutPipe: Gio.InputStream | null = null
   private closed = false
   private onEvent: ((event: LanDiscoveryEvent) => void) | null = null

@@ -209,6 +209,7 @@ export function makeTransportPair(): {
  * the shared fake.
  */
 export function rtcFactoryFor(pc: FakeRTCPeerConnection): typeof RTCPeerConnection {
+  // biome-ignore lint/complexity/useArrowFunction: PeerSession invokes the factory with `new` — an arrow function is not a constructor
   return function () {
     return pc
   } as unknown as typeof RTCPeerConnection

@@ -651,7 +651,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const palette = new TilePalette({ tileSize: 32, columns: 6, tiles: this._tiles })
     if (this._activeTileId != null) palette.selectTile(this._activeTileId)
     palette.connect('tile-selected', (_p, id) => {
-      const tile = this._tiles.find((t) => t.id === id)
+      const _tile = this._tiles.find((t) => t.id === id)
       this._setActiveTile(id)
     })
     scrolled.set_child(palette)
@@ -813,7 +813,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     })
     // Global objects visibility (the pinned "Objects" pseudo-row).
     // Pure view state like the grid/dim toggles — not persisted.
-    layers.connect('objects-visibility-toggled', (_l: LayersTab, visible: boolean) => {
+    layers.connect('objects-visibility-toggled', (_l: LayersTab, _visible: boolean) => {
       this.activate_action('win.toggle-objects', null)
       // The stateful action flips engine + row state; activating with no
       // param toggles, which matches the row's already-flipped state via

@@ -108,6 +108,7 @@ function pair(): {
 function factoryFor(pc: FakeRTCPeerConnection): typeof RTCPeerConnection {
   // Regular function, not an arrow — PeerSession does `new factory(...)`
   // and arrows aren't constructable.
+  // biome-ignore lint/complexity/useArrowFunction: must be `new`-able
   return function () {
     return pc
   } as unknown as typeof RTCPeerConnection

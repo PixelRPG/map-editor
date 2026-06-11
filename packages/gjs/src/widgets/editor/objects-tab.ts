@@ -3,9 +3,8 @@ import type Gdk from '@girs/gdk-4.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-
-import { createSwatchWidget } from './tile-palette'
 import Template from './objects-tab.blp'
+import { createSwatchWidget } from './tile-palette'
 
 /** Editor-side description of a single object placement. */
 export interface ObjectDescriptor {

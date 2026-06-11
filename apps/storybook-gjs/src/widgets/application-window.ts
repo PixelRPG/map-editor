@@ -77,7 +77,9 @@ export class StorybookWindow extends Adw.ApplicationWindow {
 
     categories.forEach((stories, category) => {
       this._addCategoryToSidebar(category)
-      stories.forEach((story) => this._addStoryToSidebar(story))
+      stories.forEach((story) => {
+        this._addStoryToSidebar(story)
+      })
     })
   }
 

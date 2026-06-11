@@ -87,7 +87,7 @@ export class RoomManager {
    */
   leave(roomId: string, role: PeerRole, reason: 'disconnect' | 'replaced' | 'closed' = 'disconnect'): void {
     const room = this.rooms.get(roomId)
-    if (!room || !room[role]) return
+    if (!room?.[role]) return
     room[role] = null
     room.lastActivity = this.now()
     this.log({ kind: 'left', roomId, role, reason })

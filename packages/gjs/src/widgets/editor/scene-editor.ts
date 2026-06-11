@@ -41,7 +41,14 @@ export class SceneEditor extends Adw.Bin {
       {
         GTypeName: 'PixelRpgSceneEditor',
         Template,
-        InternalChildren: ['overlay', 'engine_holder', 'top_bar', 'zoom_osd', 'floating_play', 'floating_collaborators'],
+        InternalChildren: [
+          'overlay',
+          'engine_holder',
+          'top_bar',
+          'zoom_osd',
+          'floating_play',
+          'floating_collaborators',
+        ],
       },
       SceneEditor,
     )

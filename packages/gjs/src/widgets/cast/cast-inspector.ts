@@ -36,9 +36,6 @@ export class CastInspector extends Adw.Bin {
   declare _sheet_name_row: Adw.EntryRow
   declare _selected_anim_row: Adw.ActionRow
   declare _duration_row: Adw.SpinRow
-
-  private _character: CharacterDefinition | null = null
-  private _animation: CharacterAnimation | null = null
   /** Set during host-driven refresh so input changes don't loop back. */
   private _silentUpdate = false
   private _sheetIds: string[] = []
@@ -135,7 +132,6 @@ export class CastInspector extends Adw.Bin {
   }
 
   setCharacter(character: CharacterDefinition | null): void {
-    this._character = character
     this._silentUpdate = true
     try {
       if (character) {
@@ -153,7 +149,6 @@ export class CastInspector extends Adw.Bin {
   }
 
   setAnimation(animation: CharacterAnimation | null): void {
-    this._animation = animation
     this._silentUpdate = true
     try {
       if (animation) {

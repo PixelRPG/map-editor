@@ -180,7 +180,6 @@ class LanLoopbackBackend implements SessionBackend {
     peerCallbacks: Array<(t: import('@pixelrpg/engine').SignallingTransport) => void>
   } | null = null
   private discoveryListeners = new Set<(event: LanDiscoveryEvent) => void>()
-  private peerOf: LanLoopbackBackend | null = null
 
   /** Mock LAN browse — fed manually by `simulateDiscovery`. */
   startBrowsing(onEvent: (event: LanDiscoveryEvent) => void): void {

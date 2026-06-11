@@ -1,4 +1,4 @@
-import { type NpcWaypoint, NpcRouteComponent } from '../../components/index.ts'
+import { NpcRouteComponent, type NpcWaypoint } from '../../components/index.ts'
 import type { ComponentData, Facing } from '../../types/data/index.ts'
 import type { ComponentSpec } from '../component-spec.ts'
 

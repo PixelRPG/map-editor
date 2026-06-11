@@ -49,7 +49,7 @@ export class RemoteCursorRenderer {
 
   constructor(
     private readonly engine: Engine,
-    private readonly awareness: AwarenessManager,
+    awareness: AwarenessManager,
   ) {
     this.disposers.push(awareness.on('peer-changed', (peer) => this.applyPeer(peer)))
     this.disposers.push(awareness.on('peer-left', ({ peerId }) => this.removePeer(peerId)))

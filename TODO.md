@@ -27,7 +27,6 @@ Conventions:
 ## Testing
 
 - **Spec-registration guard** — `gjsify test` runs only the suites hand-imported into a package's `src/test.mts`; a `*.spec.ts` that isn't added there silently never runs (CI stays green testing nothing — this bit `project-operations.spec.ts`, dormant from its creation until 2026-06-07). The same hand-maintained pattern exists in **three** packages: `packages/engine`, `apps/maker-gjs`, `apps/signalling-server`. Add a shared meta-test that globs `src/**/*.spec.ts` and asserts each is imported by that package's `test.mts` (the analog of `registry.spec.ts` for commands), applied in all three. *owner: engine + maker, why: silent-skip trap*
-- **Biome cleanup + CI lint gate** — AGENTS.md prescribes `gjsify fix && gjsify lint` pre-commit, but CI has no lint/format step and ~100 Biome violations have accumulated (≈92 errors / 37 warnings via `./node_modules/.bin/biome check .` as of 2026-06-11). Also, `gjsify lint` / `gjsify format --check` on recent CLIs (≥0.4.40) wrap oxlint/oxfmt and fail with "oxlint not found" rather than wrapping Biome as documented. Plan: burn down the violations in a dedicated cleanup PR, decide the lint toolchain (Biome direct, e.g. `npx biome ci .`, vs the gjsify-oxc migration), then add the CI gate — the gate would be red today, which is why the 2026-06-11 CI-hardening PR (maker + signalling suites, CLI pin) deliberately did not add it. *owner: tooling, why: gate is red until the violations are fixed*
 
 ## Engine / runtime
 
