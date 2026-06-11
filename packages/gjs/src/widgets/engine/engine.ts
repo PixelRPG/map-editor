@@ -233,6 +233,11 @@ export class Engine extends Adw.Bin {
     this._excalibur?.refreshTileSolidsForSprite(spriteSetId, spriteId)
   }
 
+  /** Forward — refreshes `tile.solid` on every placement of ANY sprite of a set. */
+  public refreshTileSolidsForSpriteSet(spriteSetId: string): void {
+    this._excalibur?.refreshTileSolidsForSpriteSet(spriteSetId)
+  }
+
   /**
    * Subscribe to view-flag changes. Disposer is captured into
    * {@link _excaliburSubscriptions} so unmap releases it.

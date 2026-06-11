@@ -21,11 +21,11 @@ import {
 import { gettext as _ } from 'gettext'
 import { CastController } from '../services/cast-controller.ts'
 import { DataController } from '../services/data-controller.ts'
-import { ObjectsController } from '../services/objects-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { LanSessionBackend } from '../services/lan-session-backend.ts'
+import { ObjectsController } from '../services/objects-controller.ts'
 import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
@@ -382,13 +382,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // is the general lens, lists characters too); a character edit in one
       // must refresh the other.
       this._castCtl.onEntityLibraryChanged = () => this._objectsCtl?.refresh()
+      // Tile-property edits (Solid / Surface) — local or inbound from a
+      // peer — may change live collision; with a scene open refresh the
+      // engine so the change applies without a reload. The engine ref is
+      // per-scene + lazy, so resolve it on every call.
+      this._castCtl.onTilePropertiesChanged = (spriteSetId) => {
+        this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
+      }
     }
-    if (!this._tilesCtl) {
-      this._tilesCtl = new TilesController(
-        this._tiles_view,
-        () => this._engineCtl.engine,
-        (msg) => this._showToast(msg),
-      )
+    if (!this._tilesCtl && this._castCtl) {
+      // Tile-property mutations delegate to the cast controller — the
+      // single sprite-set descriptor write + collab-broadcast path.
+      this._tilesCtl = new TilesController(this._tiles_view, this._castCtl)
     }
     if (!this._dataCtl) {
       this._dataCtl = new DataController(this._data_view, (msg) => this._showToast(msg))

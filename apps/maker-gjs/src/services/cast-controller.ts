@@ -5,6 +5,7 @@ import {
   applyPlayerSet,
   applySpriteSetReference,
   applySpriteSetRemove,
+  applySpriteSetUpdate,
   type CharacterAnimation,
   type CharacterDefinition,
   characterToEntity,
@@ -16,9 +17,9 @@ import {
   ENTITY_UPSERT_KIND,
   type EntityDefinition,
   entityToCharacter,
-  mergeCharacterIntoEntity,
   GameProjectFormat,
   isCharacterEntity,
+  mergeCharacterIntoEntity,
   PLAYER_SET_KIND,
   type ProjectOp,
   REQUIRED_ROLES,
@@ -115,6 +116,15 @@ export class CastController {
    * reflect there. Null until the host wires it.
    */
   onEntityLibraryChanged: (() => void) | null = null
+  /**
+   * Invoked after a sprite-set descriptor's tile properties changed —
+   * a local Solid/Surface edit ({@link setTileSolid} /
+   * {@link setTileSurface}) or an inbound peer descriptor update
+   * ({@link applyRemoteSpriteSetUpdate}) — so the host can refresh live
+   * engine collision (`Engine.refreshTileSolidsForSpriteSet`) when a
+   * scene is open. Null until the host wires it.
+   */
+  onTilePropertiesChanged: ((spriteSetId: string) => void) | null = null
 
   constructor(
     private readonly view: CastView,
@@ -776,6 +786,52 @@ export class CastController {
   }
 
   /**
+   * Set a tile's Solid flag on a sprite-set descriptor. Public so the
+   * Tiles view's controller delegates here — the cast controller is the
+   * single owner of sprite-set descriptor writes + collab broadcast
+   * (mirrors {@link renameSpriteSet} / the animation mutations).
+   */
+  setTileSolid(spriteSetId: string, spriteId: number, solid: boolean): void {
+    this._mutateSpriteTile(spriteSetId, spriteId, (def) => {
+      def.solid = solid
+    })
+  }
+
+  /** Set / clear a tile's surface kind (`tileProperties.surface`) on a sprite-set descriptor. */
+  setTileSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
+    this._mutateSpriteTile(spriteSetId, spriteId, (def) => {
+      if (surface) {
+        def.tileProperties = { ...(def.tileProperties ?? {}), surface }
+      } else if (def.tileProperties?.surface !== undefined) {
+        const next = { ...def.tileProperties }
+        delete next.surface
+        def.tileProperties = Object.keys(next).length === 0 ? undefined : next
+      }
+    })
+  }
+
+  /**
+   * Apply a closure to a single sprite definition in a sprite set, then
+   * persist the descriptor JSON, broadcast a chunked
+   * `__project/spriteset.update.chunk` so peers pick the change up, and
+   * notify the host so live engine collision refreshes (when a scene is
+   * open). One write+broadcast path for every tile-property editor.
+   */
+  private _mutateSpriteTile(
+    spriteSetId: string,
+    spriteId: number,
+    mutator: (def: SpriteSetData['sprites'][number]) => void,
+  ): void {
+    const engineSet = this._project?.resource?.spriteSets.get(spriteSetId)
+    const def = engineSet?.data?.sprites.find((s) => s.id === spriteId)
+    if (!def) return
+    mutator(def)
+    this._persistSheet(spriteSetId)
+    this._broadcastSpriteSetUpdate(spriteSetId)
+    this.onTilePropertiesChanged?.(spriteSetId)
+  }
+
+  /**
    * Rename a sprite set's display name (the `name` in its
    * `spritesets/<id>.json`). Works for both a character sheet (Cast view)
    * and a world tileset (Tiles / Data views) — the single owner of the
@@ -839,11 +895,13 @@ export class CastController {
   /**
    * Apply an inbound sprite-set DESCRIPTOR update from a peer: overwrite
    * the descriptor JSON + the live in-memory data, evict the preview
-   * cache, and refresh both views. Keeps the LOCAL image descriptor (the
-   * `<id>.png` bytes are unchanged — only metadata moved) so a peer can't
-   * repoint our image. Ignored when we don't already have the set (adds
-   * come via {@link applyRemoteSpriteSetAdd}) or the id is unsafe. Does
-   * NOT re-broadcast.
+   * cache, refresh both views, and refresh live engine collision (a
+   * tile-property change must land on an open scene immediately).
+   * `applySpriteSetUpdate` keeps the LOCAL image descriptor (the
+   * `<id>.png` bytes are unchanged — only metadata moved) so a peer
+   * can't repoint our image. Ignored when we don't already have the set
+   * (adds come via {@link applyRemoteSpriteSetAdd}) or the id is unsafe.
+   * Does NOT re-broadcast.
    */
   applyRemoteSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
     const resource = this._project?.resource
@@ -853,12 +911,10 @@ export class CastController {
       console.warn('[CastController] Rejected peer sprite-set update with unsafe id:', payload.data.id)
       return
     }
-    // Take the peer's descriptor wholesale but pin the image to our local
-    // one — the bytes on disk didn't change, only the metadata.
-    const merged: SpriteSetData = { ...payload.data, image: engineSet.data.image ?? payload.data.image }
-    engineSet.data = merged
+    engineSet.data = applySpriteSetUpdate(engineSet.data, payload)
     this._persistSheet(payload.data.id)
     this._spriteSetCache.delete(payload.data.id)
+    this.onTilePropertiesChanged?.(payload.data.id)
     void this.refresh()
     this.onSpriteSetsChanged?.()
   }
@@ -871,7 +927,7 @@ export class CastController {
     const projectDir = GLib.path_get_dirname(resource.path)
     const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${spriteSetId}.json`])
     if (!writeTextFile(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
-      this.onToast(_('Could not save the appearance'))
+      this.onToast(_('Could not save the sprite set'))
     }
   }
 

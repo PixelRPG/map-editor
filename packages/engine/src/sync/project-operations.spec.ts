@@ -7,9 +7,10 @@ import {
   applyPlayerSet,
   applySpriteSetReference,
   applySpriteSetRemove,
+  applySpriteSetUpdate,
+  ChunkReassembler,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
-  ChunkReassembler,
   createEntityRemoveOp,
   createEntityUpsertOp,
   createPlayerSetOp,
@@ -19,13 +20,13 @@ import {
   isProjectOp,
   PLAYER_SET_KIND,
   PROJECT_OP_PREFIX,
+  SPRITESET_REMOVE_KIND,
+  SPRITESET_UPDATE_CHUNK_KIND,
   type SpriteSetAddChunkOp,
   type SpriteSetAddPayload,
   SpriteSetAddReassembler,
   type SpriteSetUpdateChunkOp,
   type SpriteSetUpdatePayload,
-  SPRITESET_REMOVE_KIND,
-  SPRITESET_UPDATE_CHUNK_KIND,
 } from './project-operations.ts'
 
 function spriteSetData(id: string, imageBase64Len = 8): SpriteSetData {
@@ -230,6 +231,49 @@ export default async () => {
       for (let i = 0; i < chunks.length; i++) result = re.accept(stampUpdate(chunks[i], i)) ?? result
       expect(result?.data.id).toBe('big')
       expect(result?.data.sprites.length).toBe(4000)
+    })
+  })
+
+  await describe('tile-property edits ride spriteset.update.chunk', async () => {
+    await it('a solid-flag change produces a __project/spriteset.update.chunk op', async () => {
+      const data = spriteSetData('forest')
+      data.sprites[0].solid = true
+      const chunks = chunkSpriteSetUpdate({ transferId: 'host:7', payload: { data } })
+      expect(chunks.length).toBe(1)
+      // Lock the literal wire string — a peer on the other side matches on it.
+      expect(chunks[0].kind).toBe('__project/spriteset.update.chunk')
+      expect(isProjectOp(stampUpdate(chunks[0], 0))).toBe(true)
+    })
+
+    await it('applying a reassembled update lands solid + surface on the receiving descriptor', async () => {
+      // Sender: flip solid + set a surface on sprite 0, then chunk.
+      const sender = spriteSetData('forest')
+      sender.sprites[0].solid = true
+      sender.sprites[0].tileProperties = { surface: 'water' }
+      const chunks = chunkSpriteSetUpdate({ transferId: 'host:8', payload: { data: sender } })
+
+      // Receiver: reassemble the wire chunks + apply onto its own copy.
+      const re = new ChunkReassembler<SpriteSetUpdatePayload>()
+      let payload: SpriteSetUpdatePayload | null = null
+      for (let i = 0; i < chunks.length; i++) payload = re.accept(stampUpdate(chunks[i], i)) ?? payload
+      expect(payload).not.toBeNull()
+
+      const local = spriteSetData('forest')
+      expect(local.sprites[0].solid).toBeUndefined()
+      const merged = applySpriteSetUpdate(local, payload as SpriteSetUpdatePayload)
+      expect(merged.sprites[0].solid).toBe(true)
+      expect(merged.sprites[0].tileProperties?.surface).toBe('water')
+    })
+
+    await it('applySpriteSetUpdate pins the local image descriptor', async () => {
+      const local = spriteSetData('forest')
+      const peer = spriteSetData('forest')
+      peer.image = { id: 'main', path: '../../evil.png', type: 'image' }
+      peer.sprites[0].solid = true
+      const merged = applySpriteSetUpdate(local, { data: peer })
+      // Peer metadata lands, but it can't repoint our image file.
+      expect(merged.sprites[0].solid).toBe(true)
+      expect(merged.image?.path).toBe('forest.png')
     })
   })
 
