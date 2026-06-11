@@ -30,6 +30,7 @@ import awarenessSuite from './sync/awareness.spec.js'
 import collabIntegrationSuite from './sync/collab-integration.spec.js'
 import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
 import peerSessionSuite from './sync/peer-session.spec.js'
+import preAttachOpBufferSuite from './sync/pre-attach-op-buffer.spec.js'
 import projectOperationsSuite from './sync/project-operations.spec.js'
 import projectSnapshotSuite from './sync/project-snapshot.spec.js'
 import sessionControllerSuite from './sync/session-controller.spec.js'
@@ -57,6 +58,7 @@ run({
   collabIntegrationSuite,
   inMemoryTransportSuite,
   peerSessionSuite,
+  preAttachOpBufferSuite,
   projectOperationsSuite,
   projectSnapshotSuite,
   sessionControllerSuite,
