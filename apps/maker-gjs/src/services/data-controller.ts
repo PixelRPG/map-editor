@@ -1,8 +1,15 @@
-import { GameProjectFormat, type SpriteSetData, type SpriteSetKind, type SpriteSetResource } from '@pixelrpg/engine'
+import {
+  createProjectMetaUpdateOp,
+  GameProjectFormat,
+  type SpriteSetData,
+  type SpriteSetKind,
+  type SpriteSetResource,
+} from '@pixelrpg/engine'
 import { GdkSpriteSetResource } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { DataAssetRow, DataView, DataViewModel } from '../widgets/data-view.ts'
+import type { CollabSession } from './collab-session.ts'
 import { writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
 import { isCharacterSpriteSet } from './sprite-set-classification.ts'
@@ -21,11 +28,29 @@ const THUMB_PX = 96
  */
 export class DataController {
   private _project: LoadedProject | null = null
+  /**
+   * Active collab session, when one is live. Set by the host window on
+   * session start/stop. While set, every metadata edit also broadcasts
+   * a `__project/meta.update` so peers stay in sync; inbound ops land
+   * via the single applier (`CastController.applyRemoteProjectOp`),
+   * which asks the host to re-hydrate this controller. Null in solo
+   * editing — then edits only persist locally.
+   */
+  private _session: CollabSession | null = null
 
   constructor(
     private readonly view: DataView,
     private readonly onToast: (message: string) => void,
   ) {}
+
+  /**
+   * Attach/detach the live collab session. While attached, metadata
+   * edits broadcast to peers; detaching (null) returns to local-only
+   * editing.
+   */
+  setCollabSession(session: CollabSession | null): void {
+    this._session = session
+  }
 
   setProject(project: LoadedProject | null): void {
     this._project = project
@@ -62,6 +87,11 @@ export class DataController {
       }
     }
     this._persistProject()
+    // Coarse broadcast: the whole name + properties bag, so the
+    // receiver replaces wholesale (idempotent, mirrors entity.upsert).
+    this._session?.sendProjectOp(({ peerId, seq }) =>
+      createProjectMetaUpdateOp({ peerId, seq, name: data.name, properties: props }),
+    )
   }
 
   private _persistProject(): void {

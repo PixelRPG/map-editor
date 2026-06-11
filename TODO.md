@@ -60,7 +60,6 @@ Conventions:
 
 (Keep this list pruned — only entries the editor relies on but the schema doesn't fully formalise yet.)
 
-- `MapData.editorData.atlasX/atlasY` — atlas-space coords per scene. Consumed by `project-loader.ts`; not yet a typed field on `MapData.editorData` (currently loose-typed).
 
 ---
 

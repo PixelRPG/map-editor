@@ -93,29 +93,47 @@ export interface MapData {
   /**
    * Optional editor-specific data
    */
-  editorData?: {
-    /**
-     * Grid settings for the editor
-     */
-    grid?: {
-      visible: boolean
-      color?: string
-      opacity?: number
-      size?: number
-    }
+  editorData?: MapEditorData
+}
 
-    /**
-     * Camera settings for the editor
-     */
-    camera?: {
-      x: number
-      y: number
-      zoom: number
-    }
-
-    /**
-     * Custom editor properties
-     */
-    properties?: Properties
+/**
+ * Editor-specific (non-runtime) data persisted with a map. Every field
+ * is optional — a map without editor data is still a valid map. New
+ * keys land here (and ride the `__project/map.editor-data` sync op as
+ * a partial patch — see `sync/project-operations.ts`).
+ */
+export interface MapEditorData {
+  /**
+   * Grid settings for the editor
+   */
+  grid?: {
+    visible: boolean
+    color?: string
+    opacity?: number
+    size?: number
   }
+
+  /**
+   * Camera settings for the editor
+   */
+  camera?: {
+    x: number
+    y: number
+    zoom: number
+  }
+
+  /**
+   * Position of the map's card in the editor's atlas (world overview),
+   * in atlas-space pixels. Absent until the user first drags the card —
+   * the maker then falls back to an auto-layout.
+   */
+  atlasX?: number
+
+  /** See {@link MapEditorData.atlasX}. */
+  atlasY?: number
+
+  /**
+   * Custom editor properties
+   */
+  properties?: Properties
 }

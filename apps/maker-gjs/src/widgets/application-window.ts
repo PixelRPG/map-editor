@@ -6,6 +6,7 @@ import Gtk from '@girs/gtk-4.0'
 import {
   ASSISTANT_PEER_ID,
   type AwarenessPeerState,
+  createMapEditorDataOp,
   type EditorTool,
   MapFormat,
   type SpriteSetKind,
@@ -389,6 +390,19 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._castCtl.onTilePropertiesChanged = (spriteSetId) => {
         this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
       }
+      // An inbound `__project/meta.update` landed (the cast controller
+      // already applied + persisted it) — re-hydrate the Data view so
+      // the metadata rows show the peer's edit when the view is open.
+      this._castCtl.onProjectMetaChanged = () => {
+        this._dataCtl?.setProject(this._loadedProject)
+      }
+      // An inbound `__project/map.editor-data` patched a map (the cast
+      // controller applied it in memory) — persist that map file here
+      // (this window owns map IO) and reposition its atlas card.
+      this._castCtl.onMapEditorDataChanged = (mapId) => {
+        this._persistMap(mapId, _('Could not save atlas position'))
+        this._refreshAtlasScenePosition(mapId)
+      }
     }
     if (!this._tilesCtl && this._castCtl) {
       // Tile-property mutations delegate to the cast controller — the
@@ -593,6 +607,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // broadcasts character upserts; inbound peer ops route back to it.
     this._castCtl?.setCollabSession(collab)
     this._objectsCtl?.setCollabSession(collab)
+    this._dataCtl?.setCollabSession(collab)
     if (collab) {
       // The cast controller is the single applier of inbound entity ops
       // (it mutates `entityLibrary` + refreshes the Cast view); also
@@ -804,16 +819,38 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /**
    * Write the atlas coordinates the user just dragged back into the
    * map's source JSON. In-memory state always updates so the card
-   * position survives the session even if the disk write fails.
+   * position survives the session even if the disk write fails. In a
+   * live session the move also rides a `__project/map.editor-data`
+   * project-op — atlas drags happen with NO live scene, so the
+   * Command/op-log path isn't available (see AGENTS.md, transport
+   * rule 2's project-op exception).
    */
   private _persistAtlasPosition(mapId: string, x: number, y: number): void {
     const mapResource = this._loadedProject?.resource.maps.get(mapId)
     if (!mapResource?.mapData) return
-    const editorData = (mapResource.mapData.editorData ?? {}) as Record<string, unknown>
-    editorData.atlasX = x
-    editorData.atlasY = y
-    mapResource.mapData.editorData = editorData
+    mapResource.mapData.editorData = { ...mapResource.mapData.editorData, atlasX: x, atlasY: y }
     this._persistMap(mapId, _('Could not save atlas position'))
+    this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
+      createMapEditorDataOp({ peerId, seq, mapId, editorData: { atlasX: x, atlasY: y } }),
+    )
+  }
+
+  /**
+   * Re-read a map's persisted `editorData.atlasX/atlasY` into its atlas
+   * card and re-render the atlas. Called after an inbound peer
+   * `__project/map.editor-data` lands so the card moves live — the
+   * `SampleScene` objects are shared with `_scenesById`, so one in-place
+   * update covers both lookups.
+   */
+  private _refreshAtlasScenePosition(mapId: string): void {
+    const project = this._loadedProject
+    if (!project) return
+    const editorData = project.resource.maps.get(mapId)?.mapData?.editorData
+    const scene = this._scenesById.get(mapId)
+    if (!editorData || !scene) return
+    if (typeof editorData.atlasX === 'number') scene.x = editorData.atlasX
+    if (typeof editorData.atlasY === 'number') scene.y = editorData.atlasY
+    this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
   }
 
   /**

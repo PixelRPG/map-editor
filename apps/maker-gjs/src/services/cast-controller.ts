@@ -2,7 +2,9 @@ import GLib from '@girs/glib-2.0'
 import {
   applyEntityRemove,
   applyEntityUpsert,
+  applyMapEditorData,
   applyPlayerSet,
+  applyProjectMetaUpdate,
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
@@ -19,8 +21,10 @@ import {
   entityToCharacter,
   GameProjectFormat,
   isCharacterEntity,
+  MAP_EDITOR_DATA_KIND,
   mergeCharacterIntoEntity,
   PLAYER_SET_KIND,
+  PROJECT_META_UPDATE_KIND,
   type ProjectOp,
   REQUIRED_ROLES,
   SPRITESET_REMOVE_KIND,
@@ -125,6 +129,21 @@ export class CastController {
    * scene is open. Null until the host wires it.
    */
   onTilePropertiesChanged: ((spriteSetId: string) => void) | null = null
+  /**
+   * Invoked after an inbound `__project/meta.update` landed on the
+   * project data (name / author / version / description /
+   * `defaultTileSize`) so the host can refresh the Data view — the
+   * surface that renders + edits these fields. Null until the host
+   * wires it.
+   */
+  onProjectMetaChanged: (() => void) | null = null
+  /**
+   * Invoked after an inbound `__project/map.editor-data` patched a
+   * map's `editorData` (today: atlas card position) so the host —
+   * the owner of map-file IO — can persist that map + refresh the
+   * atlas view. Null until the host wires it.
+   */
+  onMapEditorDataChanged: ((mapId: string) => void) | null = null
 
   constructor(
     private readonly view: CastView,
@@ -186,6 +205,23 @@ export class CastController {
       applyPlayerSet(data, op.payload.playerActorId)
     } else if (op.kind === SPRITESET_REMOVE_KIND) {
       this._applyRemoteSpriteSetRemove(op.payload.spriteSetId)
+      return
+    } else if (op.kind === PROJECT_META_UPDATE_KIND) {
+      // Coarse replace of name + the whole properties bag; persist the
+      // project JSON here (this controller owns project-file IO), then
+      // let the host refresh the Data view that renders these fields.
+      applyProjectMetaUpdate(data, op.payload)
+      this._persist()
+      this.onProjectMetaChanged?.()
+      return
+    } else if (op.kind === MAP_EDITOR_DATA_KIND) {
+      // Shallow-merge the patch onto the matching map's `editorData`.
+      // Map-file persistence + atlas refresh belong to the host (the
+      // owner of map IO) — hand it the patched map's id.
+      const maps = this._project?.resource?.maps
+      if (!maps) return
+      const mapDatas = [...maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : []))
+      if (applyMapEditorData(mapDatas, op.payload)) this.onMapEditorDataChanged?.(op.payload.mapId)
       return
     } else {
       return
