@@ -1,10 +1,12 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import type { EntityDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
+import type { EntityDefinition, GameProjectData, MapData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
 import {
   applyEntityRemove,
   applyEntityUpsert,
+  applyMapEditorData,
   applyPlayerSet,
+  applyProjectMetaUpdate,
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
@@ -13,12 +15,16 @@ import {
   chunkSpriteSetUpdate,
   createEntityRemoveOp,
   createEntityUpsertOp,
+  createMapEditorDataOp,
   createPlayerSetOp,
+  createProjectMetaUpdateOp,
   createSpriteSetRemoveOp,
   ENTITY_REMOVE_KIND,
   ENTITY_UPSERT_KIND,
   isProjectOp,
+  MAP_EDITOR_DATA_KIND,
   PLAYER_SET_KIND,
+  PROJECT_META_UPDATE_KIND,
   PROJECT_OP_PREFIX,
   SPRITESET_REMOVE_KIND,
   SPRITESET_UPDATE_CHUNK_KIND,
@@ -156,6 +162,104 @@ export default async () => {
       expect(data.playerActorId).toBe('a')
       applyPlayerSet(data, null)
       expect(data.playerActorId).toBe(undefined)
+    })
+  })
+
+  await describe('meta.update', async () => {
+    await it('builds a project op recognised by isProjectOp', async () => {
+      const op = createProjectMetaUpdateOp({ peerId: 'p1', seq: 1, name: 'Renamed', properties: { author: 'alice' } })
+      expect(op.kind).toBe(PROJECT_META_UPDATE_KIND)
+      // Lock the literal wire string — a peer on the other side matches on it.
+      expect(op.kind).toBe('__project/meta.update')
+      expect(PROJECT_META_UPDATE_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(isProjectOp(op)).toBe(true)
+    })
+
+    await it('send → apply replaces name + the whole properties bag', async () => {
+      const data = projectData([])
+      data.properties = { author: 'old', stale: 'gone' }
+      const op = createProjectMetaUpdateOp({
+        peerId: 'p1',
+        seq: 2,
+        name: 'New Name',
+        properties: { author: 'alice', defaultTileSize: 32 },
+      })
+      applyProjectMetaUpdate(data, op.payload)
+      expect(data.name).toBe('New Name')
+      // Replace-on-apply: the whole bag lands, stale keys drop.
+      expect(data.properties).toStrictEqual({ author: 'alice', defaultTileSize: 32 })
+    })
+
+    await it('is idempotent — applying twice equals applying once', async () => {
+      const data = projectData([])
+      const op = createProjectMetaUpdateOp({ peerId: 'p1', seq: 3, name: 'Twice', properties: { version: '2.0' } })
+      applyProjectMetaUpdate(data, op.payload)
+      const once = { name: data.name, properties: { ...data.properties } }
+      applyProjectMetaUpdate(data, op.payload)
+      expect(data.name).toBe(once.name)
+      expect(data.properties).toStrictEqual(once.properties)
+    })
+  })
+
+  await describe('map.editor-data', async () => {
+    function mapData(id: string): MapData {
+      return {
+        id,
+        version: '1',
+        tileWidth: 16,
+        tileHeight: 16,
+        columns: 4,
+        rows: 4,
+        layers: [],
+      }
+    }
+
+    await it('builds a project op recognised by isProjectOp', async () => {
+      const op = createMapEditorDataOp({ peerId: 'p1', seq: 1, mapId: 'overworld', editorData: { atlasX: 5 } })
+      expect(op.kind).toBe(MAP_EDITOR_DATA_KIND)
+      // Lock the literal wire string — a peer on the other side matches on it.
+      expect(op.kind).toBe('__project/map.editor-data')
+      expect(MAP_EDITOR_DATA_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(isProjectOp(op)).toBe(true)
+    })
+
+    await it('send → apply lands atlasX/atlasY on the right map only', async () => {
+      const overworld = mapData('overworld')
+      const dungeon = mapData('dungeon')
+      const op = createMapEditorDataOp({
+        peerId: 'p1',
+        seq: 2,
+        mapId: 'dungeon',
+        editorData: { atlasX: 320, atlasY: 40 },
+      })
+      const patched = applyMapEditorData([overworld, dungeon], op.payload)
+      expect(patched).toBe(dungeon)
+      expect(dungeon.editorData?.atlasX).toBe(320)
+      expect(dungeon.editorData?.atlasY).toBe(40)
+      expect(overworld.editorData).toBeUndefined()
+    })
+
+    await it('merges shallowly — future editor-data keys survive an atlas patch', async () => {
+      const map = mapData('m')
+      map.editorData = { atlasX: 1, atlasY: 2, camera: { x: 0, y: 0, zoom: 2 } }
+      applyMapEditorData([map], { mapId: 'm', editorData: { atlasX: 30, atlasY: 40 } })
+      expect(map.editorData).toStrictEqual({ atlasX: 30, atlasY: 40, camera: { x: 0, y: 0, zoom: 2 } })
+    })
+
+    await it('is idempotent — applying twice equals applying once', async () => {
+      const map = mapData('m')
+      const payload = { mapId: 'm', editorData: { atlasX: 7, atlasY: 9 } }
+      applyMapEditorData([map], payload)
+      const once = { ...map.editorData }
+      applyMapEditorData([map], payload)
+      expect(map.editorData).toStrictEqual(once)
+    })
+
+    await it('ignores an op for a map this peer lacks', async () => {
+      const map = mapData('m')
+      const patched = applyMapEditorData([map], { mapId: 'unknown', editorData: { atlasX: 1 } })
+      expect(patched).toBeNull()
+      expect(map.editorData).toBeUndefined()
     })
   })
 

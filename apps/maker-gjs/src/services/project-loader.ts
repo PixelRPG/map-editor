@@ -67,9 +67,9 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
     const rows = data.rows
     const tilePx = Math.max(2, Math.min(8, Math.floor(180 / Math.max(cols, 1))))
     // Respect persisted atlas coordinates when available — falls back
-    // to a stable auto-layout otherwise. `editorData` is loose-typed,
-    // so guard the lookup.
-    const editor = (data.editorData ?? {}) as { atlasX?: unknown; atlasY?: unknown }
+    // to a stable auto-layout otherwise. The typeof guards keep a
+    // hand-edited map JSON with junk values from breaking the layout.
+    const editor = data.editorData ?? {}
     const fallback = laidOutPosition(index)
     const x = typeof editor.atlasX === 'number' ? editor.atlasX : fallback.x
     const y = typeof editor.atlasY === 'number' ? editor.atlasY : fallback.y

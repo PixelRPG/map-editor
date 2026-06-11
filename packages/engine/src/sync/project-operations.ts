@@ -1,7 +1,8 @@
 /**
  * Project-operation message kinds — reliable-channel messages that
  * mutate PROJECT-LEVEL data (the `entityLibrary` — characters + objects,
- * the `playerActorId`, and sprite-sets) rather than scene/map state. The
+ * the `playerActorId`, sprite-sets, project metadata, and per-map
+ * editor data) rather than scene/map runtime state. The
  * `__project/` prefix is the discriminator that keeps them OUT of the
  * command registry (they aren't `Command`s — they don't operate on a
  * `Scene`) and out of the session-protocol snapshot path.
@@ -29,12 +30,22 @@
  * forward-compat contract as session-protocol.
  */
 
-import type { EntityDefinition, GameProjectData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
+import type {
+  EntityDefinition,
+  GameProjectData,
+  MapData,
+  MapEditorData,
+  Properties,
+  SpriteSetData,
+  SpriteSetReference,
+} from '../types/index.ts'
 
 export const PROJECT_OP_PREFIX = '__project/'
 export const ENTITY_UPSERT_KIND = '__project/entity.upsert'
 export const ENTITY_REMOVE_KIND = '__project/entity.remove'
 export const PLAYER_SET_KIND = '__project/player.set'
+export const PROJECT_META_UPDATE_KIND = '__project/meta.update'
+export const MAP_EDITOR_DATA_KIND = '__project/map.editor-data'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
 export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
 export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
@@ -69,6 +80,38 @@ export interface EntityRemoveOp {
 export interface PlayerSetOp {
   kind: typeof PLAYER_SET_KIND
   payload: { playerActorId: string | null }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: project metadata changed (name / author / version /
+ * description / `defaultTileSize`, …). Coarse like `entity.upsert`:
+ * carries the WHOLE `name` + `properties` bag, the receiver replaces
+ * both wholesale — one field edit re-sends everything, so applying
+ * twice (or applying a stale duplicate) converges. `defaultTileSize`
+ * rides `properties`, so this is NOT cosmetic-only.
+ */
+export interface ProjectMetaUpdateOp {
+  kind: typeof PROJECT_META_UPDATE_KIND
+  payload: { name: string; properties: Properties }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: a map's editor-only data changed (today: the atlas
+ * card position `atlasX`/`atlasY` — atlas drags happen in the atlas
+ * view where there is NO live scene, so this can't be a `Command`).
+ * Keyed by the map's stable `MapData.id`; the payload is a PARTIAL
+ * {@link MapEditorData} merged shallowly onto the map's `editorData`,
+ * so future editor-data keys (grid, camera, …) ride the same op
+ * without a schema change. Idempotent: re-merging the same patch is
+ * a no-op.
+ */
+export interface MapEditorDataOp {
+  kind: typeof MAP_EDITOR_DATA_KIND
+  payload: { mapId: string; editorData: MapEditorData }
   peerId: string
   seq: number
 }
@@ -163,6 +206,8 @@ export type ProjectOp =
   | EntityUpsertOp
   | EntityRemoveOp
   | PlayerSetOp
+  | ProjectMetaUpdateOp
+  | MapEditorDataOp
   | SpriteSetAddChunkOp
   | SpriteSetUpdateChunkOp
   | SpriteSetRemoveOp
@@ -208,6 +253,36 @@ export function createPlayerSetOp(args: { peerId: string; seq: number; playerAct
   }
 }
 
+/** Build a project-meta-update envelope (whole name + properties bag). */
+export function createProjectMetaUpdateOp(args: {
+  peerId: string
+  seq: number
+  name: string
+  properties: Properties
+}): ProjectMetaUpdateOp {
+  return {
+    kind: PROJECT_META_UPDATE_KIND,
+    payload: { name: args.name, properties: args.properties },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/** Build a map-editor-data envelope (partial patch keyed by map id). */
+export function createMapEditorDataOp(args: {
+  peerId: string
+  seq: number
+  mapId: string
+  editorData: MapEditorData
+}): MapEditorDataOp {
+  return {
+    kind: MAP_EDITOR_DATA_KIND,
+    payload: { mapId: args.mapId, editorData: args.editorData },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
 /**
  * Apply an entity upsert to project data IN PLACE: replace the
  * `entityLibrary` entry with the same id, or append a new one.
@@ -231,6 +306,34 @@ export function applyEntityRemove(data: GameProjectData, entityId: string): void
 /** Set the project's player actor IN PLACE. Idempotent. */
 export function applyPlayerSet(data: GameProjectData, playerActorId: string | null): void {
   data.playerActorId = playerActorId ?? undefined
+}
+
+/**
+ * Apply a project-meta update to project data IN PLACE: replace the
+ * `name` and the WHOLE `properties` bag (coarse, like entity.upsert
+ * replaces the whole entity). Idempotent — applying the same payload
+ * twice yields the same state.
+ */
+export function applyProjectMetaUpdate(data: GameProjectData, payload: ProjectMetaUpdateOp['payload']): void {
+  data.name = payload.name
+  data.properties = { ...payload.properties }
+}
+
+/**
+ * Apply a map-editor-data patch to the map with the matching stable id
+ * IN PLACE: shallow-merge the payload's partial {@link MapEditorData}
+ * onto the map's `editorData` (keys present in the patch win, absent
+ * keys stay). Idempotent. Returns the patched map so the caller can
+ * persist it (the engine layer is filesystem-agnostic), or `null` when
+ * no map matches — an op for a map this peer lacks is ignored.
+ */
+export function applyMapEditorData(maps: Iterable<MapData>, payload: MapEditorDataOp['payload']): MapData | null {
+  for (const map of maps) {
+    if (map.id !== payload.mapId) continue
+    map.editorData = { ...map.editorData, ...payload.editorData }
+    return map
+  }
+  return null
 }
 
 /** Build a sprite-set-remove envelope. */
