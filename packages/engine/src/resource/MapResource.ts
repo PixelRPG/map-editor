@@ -406,12 +406,29 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
+    this.refreshTileSolidsWhere((r) => r.spriteSetId === spriteSetId && r.spriteId === spriteId)
+  }
+
+  /**
+   * Re-apply `tile.solid` for every placement of ANY sprite of the
+   * given set. Used when a peer's sprite-set descriptor update arrives
+   * over collab — the wire payload carries the whole descriptor, not
+   * which sprite's flags changed, so the whole set's placements are
+   * recomputed (same single pass over occupied coords as the
+   * per-sprite variant).
+   */
+  refreshTileSolidsForSpriteSet(spriteSetId: string): void {
+    this.refreshTileSolidsWhere((r) => r.spriteSetId === spriteSetId)
+  }
+
+  /** Recompute `tile.solid` for every tile holding a sprite ref matching `matches`. */
+  private refreshTileSolidsWhere(matches: (ref: TileSpriteRef) => boolean): void {
     for (const tilemap of this.tileMapsByTier.values()) {
       const editor = tilemap.get(MapEditorComponent)
       if (!editor) continue
       for (const { tileX, tileY } of iterateOccupiedCoords(editor)) {
         const refs = getSpritesAt(editor, tileX, tileY)
-        if (refs.some((r) => r.spriteSetId === spriteSetId && r.spriteId === spriteId)) {
+        if (refs.some(matches)) {
           const tile = tilemap.getTile(tileX, tileY)
           if (tile) this.refreshTileSolidFromEditor(tilemap, tile)
         }

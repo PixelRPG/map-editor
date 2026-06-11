@@ -994,6 +994,22 @@ export class Engine {
   }
 
   /**
+   * Re-apply `tile.solid` for every placement of ANY sprite of the
+   * given set on the active map. The whole-set variant of
+   * {@link refreshTileSolidsForSprite} — used when a peer's sprite-set
+   * descriptor update arrives (the wire carries the whole descriptor,
+   * not which sprite changed) so a remote tile-property edit takes
+   * effect on an open scene immediately.
+   *
+   * No-op when no `MapScene` is active.
+   */
+  refreshTileSolidsForSpriteSet(spriteSetId: string): void {
+    const scene = this._activeMapScene()
+    if (!scene) return
+    scene.mapResource.refreshTileSolidsForSpriteSet(spriteSetId)
+  }
+
+  /**
    * Subscribe to view-flag changes. Fires once synchronously with
    * the current snapshot (or `{ false, false }` when no scene is
    * active), then again on every flag mutation. Rebinds across map

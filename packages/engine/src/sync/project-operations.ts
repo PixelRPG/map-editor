@@ -365,3 +365,16 @@ export function applySpriteSetReference(data: GameProjectData, reference: Sprite
   if (idx >= 0) sets[idx] = reference
   else sets.push(reference)
 }
+
+/**
+ * Merge an inbound sprite-set DESCRIPTOR update into the locally-held
+ * descriptor: take the peer's data wholesale (name, animations,
+ * `sprites[].solid`/`tileProperties`, …) but pin the image to the local
+ * one — an update never carries image bytes (the `<id>.png` on disk is
+ * unchanged) and a peer must not be able to repoint our image file.
+ * Pure + idempotent; the caller swaps the result into its live resource
+ * and persists.
+ */
+export function applySpriteSetUpdate(local: SpriteSetData, payload: SpriteSetUpdatePayload): SpriteSetData {
+  return { ...payload.data, image: local.image ?? payload.data.image }
+}
