@@ -1,0 +1,189 @@
+{
+  "version": "1.0.0",
+  "id": "link",
+  "name": "Link",
+  "kind": "character",
+  "image": {
+    "id": "main",
+    "path": "link.png",
+    "type": "image"
+  },
+  "spriteWidth": 16,
+  "spriteHeight": 32,
+  "columns": 20,
+  "rows": 1,
+  "margin": 0,
+  "spacing": 0,
+  "sprites": [
+    {
+      "id": 0,
+      "col": 0,
+      "row": 0
+    },
+    {
+      "id": 1,
+      "col": 1,
+      "row": 0
+    },
+    {
+      "id": 2,
+      "col": 2,
+      "row": 0
+    },
+    {
+      "id": 3,
+      "col": 3,
+      "row": 0
+    },
+    {
+      "id": 4,
+      "col": 4,
+      "row": 0
+    },
+    {
+      "id": 5,
+      "col": 5,
+      "row": 0
+    },
+    {
+      "id": 6,
+      "col": 6,
+      "row": 0
+    },
+    {
+      "id": 7,
+      "col": 7,
+      "row": 0
+    },
+    {
+      "id": 8,
+      "col": 8,
+      "row": 0
+    },
+    {
+      "id": 9,
+      "col": 9,
+      "row": 0
+    },
+    {
+      "id": 10,
+      "col": 10,
+      "row": 0
+    },
+    {
+      "id": 11,
+      "col": 11,
+      "row": 0
+    },
+    {
+      "id": 12,
+      "col": 12,
+      "row": 0
+    },
+    {
+      "id": 13,
+      "col": 13,
+      "row": 0
+    },
+    {
+      "id": 14,
+      "col": 14,
+      "row": 0
+    },
+    {
+      "id": 15,
+      "col": 15,
+      "row": 0
+    },
+    {
+      "id": 16,
+      "col": 16,
+      "row": 0
+    },
+    {
+      "id": 17,
+      "col": 17,
+      "row": 0
+    },
+    {
+      "id": 18,
+      "col": 18,
+      "row": 0
+    },
+    {
+      "id": 19,
+      "col": 19,
+      "row": 0
+    }
+  ],
+  "characterAnimations": [
+    {
+      "id": "idle-up",
+      "frames": [
+        0
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "walk-up",
+      "frames": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "idle-down",
+      "frames": [
+        5
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "walk-down",
+      "frames": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "idle-left",
+      "frames": [
+        10
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "walk-left",
+      "frames": [
+        11,
+        12,
+        13,
+        14
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "idle-right",
+      "frames": [
+        15
+      ],
+      "durationMs": 200
+    },
+    {
+      "id": "walk-right",
+      "frames": [
+        16,
+        17,
+        18,
+        19
+      ],
+      "durationMs": 200
+    }
+  ]
+}

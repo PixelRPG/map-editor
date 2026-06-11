@@ -41,6 +41,12 @@
       "path": "./spritesets/scientist.json",
       "type": "spriteset",
       "category": "characters"
+    },
+    {
+      "id": "link",
+      "path": "./spritesets/link.json",
+      "type": "spriteset",
+      "category": "characters"
     }
   ],
   "properties": {
@@ -82,7 +88,27 @@
         "template": "character",
         "category": "hero"
       }
+    },
+    {
+      "id": "link",
+      "name": "Link",
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "link",
+          "spriteId": 5,
+          "animationId": "idle-down"
+        },
+        {
+          "type": "movement",
+          "tilesPerSec": 6
+        }
+      ],
+      "editorData": {
+        "template": "character",
+        "category": "hero"
+      }
     }
   ],
-  "playerActorId": "scientist"
+  "playerActorId": "link"
 }
