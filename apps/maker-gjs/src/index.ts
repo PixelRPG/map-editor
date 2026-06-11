@@ -2,4 +2,5 @@
 
 export * from './application'
 export * from './constants'
+export * from './instance-id'
 export * from './main'

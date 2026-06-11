@@ -11,12 +11,12 @@ import type {
 } from '@pixelrpg/engine'
 import {
   AwarenessManager,
-  ChunkReassembler,
   captureProjectSnapshot,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
   isProjectOp,
   isSessionProtocolOp,
+  OpChunkReassembler,
   type PeerRole,
   PeerSession,
   type PeerSessionState,
@@ -191,7 +191,7 @@ export class CollabSession {
    */
   private snapshotWatermark: SnapshotOpWatermark | null = null
   private readonly spriteSetReassembler = new SpriteSetAddReassembler()
-  private readonly spriteSetUpdateReassembler = new ChunkReassembler<SpriteSetUpdatePayload>()
+  private readonly spriteSetUpdateReassembler = new OpChunkReassembler<SpriteSetUpdatePayload>()
   private readonly subscriptions: Array<() => void> = []
 
   constructor(opts: CollabSessionOptions) {

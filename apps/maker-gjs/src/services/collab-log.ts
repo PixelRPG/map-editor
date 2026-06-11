@@ -51,43 +51,16 @@ export function resetCollabLogSink(): void {
 }
 
 /**
- * Render any value as a printable string. The contract:
- *
- *   - `null` / `undefined` → `'null'` / `'undefined'`.
- *   - `string` → returned verbatim.
- *   - {@link Error} (or subclass) → `'<Name>: <message>\n<stack>'`. The
- *     stack is included when present so a logged failure is self-
- *     locating; `Name` is dropped when it's the unhelpful default
- *     `'Error'`.
- *   - plain object → `JSON.stringify(value)`, with a graceful
- *     fallback to `String(value)` for objects that can't be
- *     stringified (circular refs).
- *   - everything else (numbers, booleans, symbols, functions) →
- *     `String(value)`.
- *
- * The point of this function is to guarantee that NO collab error
- * log ever prints `{}` or `[object Object]` for an Error. That was
- * the proximate cause of the 2026-05-30 hand-test diagnostic gap.
+ * Re-exported from `@pixelrpg/engine` (`utils/format-error.ts`) — the
+ * single shared implementation every subsystem now uses. The contract
+ * (never print `{}` / `[object Object]` for an Error; name + message +
+ * stack when present, JSON for plain objects, `String()` fallback)
+ * lives there; this module keeps the export so its sinks and existing
+ * importers stay source-compatible.
  */
-export function formatError(err: unknown): string {
-  if (err === null) return 'null'
-  if (err === undefined) return 'undefined'
-  if (typeof err === 'string') return err
-  if (err instanceof Error) {
-    const name = err.name && err.name !== 'Error' ? `${err.name}: ` : ''
-    const stack = err.stack ? `\n${err.stack}` : ''
-    return `${name}${err.message}${stack}`
-  }
-  if (typeof err === 'object') {
-    try {
-      return JSON.stringify(err)
-    } catch {
-      // Circular refs, BigInt, etc. — fall through to String().
-      return String(err)
-    }
-  }
-  return String(err)
-}
+export { formatError } from '@pixelrpg/engine'
+
+import { formatError } from '@pixelrpg/engine'
 
 /**
  * Emit a single log line in the canonical `[scope] message` shape.

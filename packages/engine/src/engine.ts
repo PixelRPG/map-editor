@@ -44,6 +44,7 @@ import {
   RemoteCursorRenderer,
 } from './sync/index.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
+import { EDITOR_CONSTANTS } from './utils/constants.ts'
 import { SessionState } from './utils/session-state.ts'
 import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
 
@@ -372,8 +373,8 @@ export class Engine {
     if (!mapData) return false
     const placement = mapData.objectPlacements?.find((p) => p.id === placementId)
     if (!placement) return false
-    const tileWidth = mapData.tileWidth ?? 16
-    const tileHeight = mapData.tileHeight ?? 16
+    const tileWidth = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const tileHeight = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
     const target = new Vector(
       placement.tileX * tileWidth + tileWidth / 2,
       placement.tileY * tileHeight + tileHeight / 2,

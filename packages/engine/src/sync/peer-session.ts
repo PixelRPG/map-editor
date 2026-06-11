@@ -1,4 +1,5 @@
 import { EventEmitter } from 'excalibur'
+import { formatErrorMessage } from '../utils/format-error.ts'
 
 import {
   CHANNEL_AWARENESS,
@@ -187,7 +188,7 @@ export class PeerSession {
       }
       // Joiner waits for the host's offer; arrives via `handleSignal`.
     } catch (err) {
-      plog(this.role, `connect() threw: ${err instanceof Error ? err.message : String(err)}`)
+      plog(this.role, `connect() threw: ${formatErrorMessage(err)}`)
       this.fail(err instanceof Error ? err : new Error(String(err)))
     }
   }
@@ -278,10 +279,7 @@ export class PeerSession {
       try {
         parsed = JSON.parse(raw)
       } catch (err) {
-        plog(
-          this.role,
-          `channel "${channel.label}" dropped malformed JSON: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        plog(this.role, `channel "${channel.label}" dropped malformed JSON: ${formatErrorMessage(err)}`)
         this.events.emit('error', {
           error: new Error(`PeerSession: dropped malformed frame on ${channel.label}`),
         })
@@ -336,7 +334,7 @@ export class PeerSession {
           break
       }
     } catch (err) {
-      plog(this.role, `handleSignal(${msg.type}) threw: ${err instanceof Error ? err.message : String(err)}`)
+      plog(this.role, `handleSignal(${msg.type}) threw: ${formatErrorMessage(err)}`)
       this.fail(err instanceof Error ? err : new Error(String(err)))
     }
   }

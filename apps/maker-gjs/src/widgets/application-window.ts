@@ -8,6 +8,7 @@ import {
   type AwarenessPeerState,
   createMapEditorDataOp,
   type EditorTool,
+  formatError,
   MapFormat,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
@@ -1447,11 +1448,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     try {
       await this._engineCtl.ensureForMap(project.projectPath, sceneId)
     } catch (error) {
-      const details =
-        error instanceof Error
-          ? `${error.name}: ${error.message}\n${error.stack ?? ''}`
-          : `${typeof error} ${JSON.stringify(error)}`
-      console.error('[ApplicationWindow] Failed to bring up engine:', details)
+      console.error('[ApplicationWindow] Failed to bring up engine:', formatError(error))
       this._showToast(_('Failed to load map'))
       // Fall through: still populate the inspector so the user has a
       // usable surface (palette / layers / objects) even when the

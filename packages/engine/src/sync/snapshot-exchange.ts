@@ -23,6 +23,8 @@
  * stop accepting inbound messages.
  */
 
+import { formatError } from '../utils/format-error.ts'
+import { buildChunkEnvelopes, CHUNK_SIZE_BYTES, ChunkReassembler } from './chunking.ts'
 import type { ProjectSnapshot } from './project-snapshot.ts'
 import {
   createSnapshotChunkOp,
@@ -49,7 +51,10 @@ import {
  * 16 KiB chunks produce ~80 sends for a 1.2 MB snapshot — well
  * within ordered-reliable SCTP throughput limits.
  */
-const SNAPSHOT_CHUNK_BYTES = 16 * 1024
+const SNAPSHOT_CHUNK_BYTES = CHUNK_SIZE_BYTES
+
+/** Fixed transfer id — the snapshot path runs one transfer per pending request. */
+const SNAPSHOT_TRANSFER_ID = 'snapshot'
 
 /**
  * Public reference to the canonical chunk-size used by
@@ -119,12 +124,6 @@ interface PendingRequest {
  * transit. `received` counts the populated slots so we don't
  * have to re-scan the array per arrival.
  */
-interface ChunkBuffer {
-  chunks: Array<string | undefined>
-  totalChunks: number
-  received: number
-}
-
 export class SnapshotExchange {
   private readonly peerId: string
   private readonly send: (op: SessionProtocolOp) => void
@@ -132,7 +131,9 @@ export class SnapshotExchange {
   private readonly defaultTimeoutMs: number
   private readonly chunkSizeBytes: number
   private pending: PendingRequest | null = null
-  private chunkBuffer: ChunkBuffer | null = null
+  // Shared validated reassembler (chunking.ts); one transfer at a time
+  // keyed by the fixed id — a new request resets it.
+  private readonly chunks = new ChunkReassembler<ProjectSnapshot>()
   private localSeq = 0
   private disposed = false
 
@@ -216,7 +217,7 @@ export class SnapshotExchange {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
-    this.chunkBuffer = null
+    this.chunks.clear()
     if (this.pending) {
       const p = this.pending
       this.pending = null
@@ -238,7 +239,7 @@ export class SnapshotExchange {
       const result = this.captureSnapshot()
       resolved = Promise.resolve(result)
     } catch (err) {
-      console.warn('[SnapshotExchange] captureSnapshot threw synchronously:', describeSnapshotError(err))
+      console.warn('[SnapshotExchange] captureSnapshot threw synchronously:', formatError(err))
       return
     }
     void resolved
@@ -264,23 +265,20 @@ export class SnapshotExchange {
         // were silently dropped by GStreamer webrtcbin (RFC 8841
         // default).
         const json = JSON.stringify(snapshot)
-        const totalChunks = Math.max(1, Math.ceil(json.length / this.chunkSizeBytes))
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * this.chunkSizeBytes
-          const end = Math.min(start + this.chunkSizeBytes, json.length)
+        for (const chunk of buildChunkEnvelopes(SNAPSHOT_TRANSFER_ID, json, this.chunkSizeBytes)) {
           this.send(
             createSnapshotChunkOp({
               peerId: this.peerId,
               seq: this.nextSeq(),
-              chunkIndex: i,
-              totalChunks,
-              data: json.slice(start, end),
+              chunkIndex: chunk.chunkIndex,
+              totalChunks: chunk.totalChunks,
+              data: chunk.data,
             }),
           )
         }
       })
       .catch((err) => {
-        console.warn('[SnapshotExchange] snapshot capture/send failed:', describeSnapshotError(err))
+        console.warn('[SnapshotExchange] snapshot capture/send failed:', formatError(err))
       })
   }
 
@@ -290,71 +288,16 @@ export class SnapshotExchange {
       // a matching request is misbehaving.
       return
     }
-    // Defensive: a buggy peer could send `totalChunks` of 0 or a
-    // negative `chunkIndex`. Reject the whole batch (which fails
-    // the pending request) rather than corrupt our state.
-    if (
-      !Number.isInteger(payload.totalChunks) ||
-      payload.totalChunks <= 0 ||
-      !Number.isInteger(payload.chunkIndex) ||
-      payload.chunkIndex < 0 ||
-      payload.chunkIndex >= payload.totalChunks
-    ) {
-      this.failPending(
-        new Error(
-          `SnapshotExchange: invalid chunk envelope (chunkIndex=${payload.chunkIndex}, totalChunks=${payload.totalChunks})`,
-        ),
-      )
+    const result = this.chunks.accept({ transferId: SNAPSHOT_TRANSFER_ID, ...payload })
+    if (result.status === 'pending') return
+    if (result.status === 'error') {
+      // Protocol violation or parse failure — fail the pending request
+      // (the strict contract the snapshot path always had; the shared
+      // reassembler carries the same validation now).
+      this.failPending(new Error(`SnapshotExchange: ${result.reason}`))
       return
     }
-
-    // Allocate buffer on first chunk. A subsequent chunk that
-    // disagrees on `totalChunks` is a protocol violation — fail.
-    if (!this.chunkBuffer) {
-      this.chunkBuffer = {
-        chunks: new Array<string | undefined>(payload.totalChunks),
-        totalChunks: payload.totalChunks,
-        received: 0,
-      }
-    } else if (this.chunkBuffer.totalChunks !== payload.totalChunks) {
-      this.failPending(
-        new Error(
-          `SnapshotExchange: chunk batch size changed mid-stream ` +
-            `(saw totalChunks=${this.chunkBuffer.totalChunks}, then ${payload.totalChunks})`,
-        ),
-      )
-      return
-    }
-
-    if (this.chunkBuffer.chunks[payload.chunkIndex] !== undefined) {
-      // Duplicate chunk index — ordered+reliable channel shouldn't
-      // produce these, but be defensive.
-      return
-    }
-    this.chunkBuffer.chunks[payload.chunkIndex] = payload.data
-    this.chunkBuffer.received++
-
-    if (this.chunkBuffer.received < this.chunkBuffer.totalChunks) {
-      return
-    }
-
-    // Last chunk arrived — reassemble + parse + resolve.
-    const json = this.chunkBuffer.chunks.join('')
-    this.chunkBuffer = null
-    let snapshot: ProjectSnapshot
-    try {
-      snapshot = JSON.parse(json) as ProjectSnapshot
-    } catch (err) {
-      this.failPending(
-        new Error(
-          `SnapshotExchange: failed to parse reassembled snapshot (json.length=${json.length}): ${
-            err instanceof Error ? err.message : String(err)
-          }`,
-        ),
-      )
-      return
-    }
-    this.resolveResponse(snapshot)
+    this.resolveResponse(result.payload)
   }
 
   private resolveResponse(snapshot: ProjectSnapshot): void {
@@ -366,32 +309,18 @@ export class SnapshotExchange {
     }
     const p = this.pending
     this.pending = null
-    this.chunkBuffer = null
+    this.chunks.clear()
     if (p.timer) clearTimeout(p.timer)
     p.resolve(snapshot)
   }
 
   /** Reject the pending request and clear any partial buffer. */
   private failPending(err: Error): void {
-    this.chunkBuffer = null
+    this.chunks.clear()
     if (!this.pending) return
     const p = this.pending
     this.pending = null
     if (p.timer) clearTimeout(p.timer)
     p.reject(err)
-  }
-}
-
-/**
- * Render a thrown/rejected value with its message + stack so snapshot
- * failures don't collapse to an opaque `{}` in the log (a bare
- * `console.warn(..., err)` of an Error prints `{}` in GJS).
- */
-function describeSnapshotError(err: unknown): string {
-  if (err instanceof Error) return err.stack ? `${err.message}\n${err.stack}` : err.message
-  try {
-    return JSON.stringify(err)
-  } catch {
-    return String(err)
   }
 }

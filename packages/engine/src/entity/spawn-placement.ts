@@ -5,6 +5,7 @@ import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
 import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER, type LayerData } from '../types/data/LayerData.ts'
+import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
 import { buildPlacementGraphic } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
@@ -26,8 +27,8 @@ export function buildPlacementEntity(
   registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
 ): Entity {
   const mapData = mapResource.mapData
-  const tileWidth = mapData?.tileWidth ?? 16
-  const tileHeight = mapData?.tileHeight ?? 16
+  const tileWidth = mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+  const tileHeight = mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
 
   const actor = new Actor({
     name: `${def.editorData?.template ?? 'entity'}:${placement.id}`,

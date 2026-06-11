@@ -30,6 +30,7 @@ import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import awarenessSuite from './sync/awareness.spec.js'
+import chunkingSuite from './sync/chunking.spec.js'
 import collabIntegrationSuite from './sync/collab-integration.spec.js'
 import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
 import peerSessionSuite from './sync/peer-session.spec.js'
@@ -61,6 +62,7 @@ run({
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   awarenessSuite,
+  chunkingSuite,
   collabIntegrationSuite,
   inMemoryTransportSuite,
   peerSessionSuite,
