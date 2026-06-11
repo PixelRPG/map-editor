@@ -6,8 +6,9 @@ exchange between two `PixelRPG` peers connecting across networks
 
 Runs as a single GJS bundle built by `gjsify build --app gjs` —
 no Node runtime needed at production. The same TypeScript source
-is unit-tested under Node via Vitest because the routing logic
-is pure data shuffling with mockable peer interfaces.
+is unit-tested with `@gjsify/unit` (`gjsify test`; suites are
+`*.spec.ts` registered in `src/test.mts`) because the routing
+logic is pure data shuffling with mockable peer interfaces.
 
 This package doubles as a real-world dogfooding test of gjsify's
 Soup-backed `@gjsify/ws` + `@gjsify/http` server APIs.

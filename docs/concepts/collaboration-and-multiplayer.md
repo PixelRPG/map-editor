@@ -48,7 +48,7 @@ Operations don't carry components directly; they carry **change descriptions** t
 
 Excalibur's `Entity.id` is a runtime-assigned integer that resets per scene load. Useless for cross-peer references — peer A's entity #4 is peer B's entity #17.
 
-Stable identifiers exist on every persistent thing: `ObjectPlacement.id`, `LayerData.id`, `ObjectDefinition.id`, `MapData.id`, future `PlayerIdComponent.id`. **All operation payloads reference these exclusively** — wire keys are always stable IDs.
+Stable identifiers exist on every persistent thing: `ObjectPlacement.id` (carried at runtime by `PlacementIdComponent`), `LayerData.id`, `EntityDefinition.id`, `MapData.id`, `GameProjectData.playerActorId` (a per-peer player id is future work with multiplayer). **All operation payloads reference these exclusively** — wire keys are always stable IDs.
 
 A workspace-wide rule, formalised in `AGENTS.md`: **no code path uses Excalibur runtime IDs as a persistent or wire key.**
 
@@ -77,11 +77,11 @@ Awareness is **separate** from the op-log. It rides over an unreliable channel b
 
 There's a **third** category of mutation that's neither a scene `Command` nor ephemeral awareness: **project-level data** — the cast (characters in `entityLibrary`) and sprite-sets (tilesets + appearances). These are edited in the Cast + Sheets views, where there is *no live scene/engine* (the engine only exists inside the scene editor), so a `Command` (which mutates a `Scene`) can't represent them.
 
-They ride a dedicated **project-op** channel (`packages/engine/src/sync/project-operations.ts`), reusing the reliable op channel like the `__session/*` snapshot protocol does. Kinds are `__project/*` (`entity.upsert`, `entity.remove`, `player.set`, `spriteset.add.chunk`, `spriteset.update.chunk`, `spriteset.remove`); `isProjectOp` filters them out of both the command registry (`SessionController` skips them) and the snapshot path. Semantics are **coarse, idempotent upserts**: every cast mutation re-sends the whole affected `EntityDefinition`, the receiver replaces-by-id. Deletes (`entity.remove`, `spriteset.remove`) carry just the id. Unlike commands, project-ops do **not** land on the undo stack.
+They ride a dedicated **project-op** channel (`packages/engine/src/sync/project-operations.ts`), reusing the reliable op channel like the `__session/*` snapshot protocol does. Kinds are `__project/*` (`entity.upsert`, `entity.remove`, `player.set`, `spriteset.add.chunk`, `spriteset.update.chunk`, `spriteset.remove`); `isProjectOp` filters them out of both the command registry (`SessionController` skips them) and the snapshot path. Semantics are **coarse, idempotent upserts**: every library mutation re-sends the whole affected `EntityDefinition`, the receiver replaces-by-id (`applyEntityUpsert`); the single-player invariant is structural via `player.set` → `applyPlayerSet` writing `playerActorId`. Deletes (`entity.remove`, `spriteset.remove`) carry just the id. Unlike commands, project-ops do **not** land on the undo stack.
 
 Plumbing is maker-side: `CollabSession.sendProjectOp` (stamps peer id + seq, sends on the always-present op channel — works without an attached engine) and `CollabSession.onProjectOpReceived` → `CastController.applyRemoteProjectOp` (mutates the peer's `GameProjectData`, persists, refreshes the Cast view).
 
-**Sprite-set import** carries image bytes, so it can't be one op (a single SCTP send >64 KiB is silently dropped). It rides a chunked `__project/spriteset.add.chunk` transfer (`chunkSpriteSetAdd` → `SpriteSetAddReassembler`, same 16 KiB chunking as the snapshot path), surfaced via `CollabSession.sendSpriteSetAdd` / `onSpriteSetAddReceived` → `CastController.applyRemoteSpriteSetAdd` (writes the PNG + descriptor into the peer's `spritesets/`, registers the set under the *same id* so referencing characters resolve). Because the import broadcasts before the character that uses it (reliable + ordered channel), the peer has the set registered by the time the character upsert lands — no empty-preview window. **Sprite-set delete** is the inverse: a tiny `__project/spriteset.remove` (id only) via `sendProjectOp`; `applyRemoteProjectOp` drops the reference, deletes the local `<id>.png` + `<id>.json`, and refreshes every view that surfaces sprite-sets — the Cast view (character previews), the Sheets view (tileset + appearance galleries), and the Data asset list. The cast controller owns the sprite-set CRUD + broadcast for every surface; the Sheets view routes its tileset create/delete through the host and its appearance/animation edits back through the cast controller's public methods.
+**Sprite-set import** carries image bytes, so it can't be one op (a single SCTP send >64 KiB is silently dropped). It rides a chunked `__project/spriteset.add.chunk` transfer (`chunkSpriteSetAdd` → `SpriteSetAddReassembler`, same 16 KiB chunking as the snapshot path), surfaced via `CollabSession.sendSpriteSetAdd` / `onSpriteSetAddReceived` → `CastController.applyRemoteSpriteSetAdd` (writes the PNG + descriptor into the peer's `spritesets/`, registers the set under the *same id* so referencing characters resolve). Because the import broadcasts before the character that uses it (reliable + ordered channel), the peer has the set registered by the time the character upsert lands — no empty-preview window. **Sprite-set delete** is the inverse: a tiny `__project/spriteset.remove` (id only) via `sendProjectOp`; `applyRemoteProjectOp` drops the reference, deletes the local `<id>.png` + `<id>.json`, and refreshes every view that surfaces sprite-sets — the Cast view (character previews), the Sheets view (tileset + appearance galleries), and the Data asset list. **Sprite-set descriptor edits** (rename, animation add/edit/delete) broadcast as a chunked `__project/spriteset.update.chunk` op (`CollabSession.sendSpriteSetUpdate` → `applyRemoteSpriteSetUpdate`) — same chunking, tagged as an update so the receiver replaces the existing descriptor. The cast controller owns the sprite-set CRUD + broadcast for every surface; the Sheets view routes its tileset create/delete through the host and its appearance/animation edits back through the cast controller's public methods. **Known gap (being closed):** per-tile property edits (the Solid switch / surface on `SpriteData.tileProperties`) are not yet broadcast — a peer currently gets them only via the join snapshot.
 
 **Sprite-set descriptor update** — a rename, an animation edit, or a tile-property change (`sprites[].solid` / `tileProperties.surface`) — rides a chunked `__project/spriteset.update.chunk` transfer (`chunkSpriteSetUpdate` → `ChunkReassembler`; a fat tileset descriptor can exceed the SCTP ceiling too). It carries the **descriptor only, no image bytes**, surfaced via `CollabSession.sendSpriteSetUpdate` / `onSpriteSetUpdateReceived` → `CastController.applyRemoteSpriteSetUpdate`, which merges via the engine's `applySpriteSetUpdate` (the peer's descriptor lands wholesale, but the local `image` reference is pinned so a peer can't repoint our PNG), persists, refreshes the galleries, and — when a scene is open — refreshes live tile collision via `Engine.refreshTileSolidsForSpriteSet` so a peer's Solid edit applies to the open map immediately. On the send side every descriptor mutation flows through `CastController` (`renameSpriteSet`, `_mutateSheetAnimations`, `setTileSolid` / `setTileSurface` — the Tiles view's Solid/Surface switches delegate here via `TilesController`), one write+broadcast path per descriptor.
 
@@ -145,29 +145,32 @@ No persistence, no auth, no per-room state beyond the live socket pair. ~50 line
 
 ### Operation shape
 
+The shipped interface (`packages/engine/src/commands/types.ts`):
+
 ```ts
 interface Operation<K extends string = string, P = unknown> {
-  /** Discriminator — the kind of operation. */
+  /** Discriminator — the kind of operation (the Command's `kind`). */
   kind: K
   /** Operation-specific payload. References only stable IDs. */
   payload: P
-  /** Issuing peer (set by sender, used by host for validation + provenance). */
+  /** Issuing peer (provenance). */
   peerId: string
-  /** Host-assigned sequence number (set by host before broadcast). */
+  /** Sender-assigned sequence number (see "shipped vs target" below). */
   seq: number
   /** Optional client-side id so the sender can reconcile its optimistic copy. */
   localId?: string
+  /** Apply/revert discriminator — 'revert' replicates an undo; missing = 'apply'. */
+  direction?: 'apply' | 'revert'
 }
 ```
 
-The `seq` field is the load-bearing primitive. The host assigns it monotonically. Every peer applies operations strictly in `seq` order, no skipping. This gives us:
+Undo replication is the `direction` field: a peer's undo re-sends the full command payload tagged `'revert'`, and receivers run `command.revert` (an earlier draft specified a `{ kind: 'revert', payload: { targetSeq } }` mirror op — superseded by the direction field, which avoids needing a host-ordered log to resolve `targetSeq` against).
 
-- **Deterministic state** — every peer's view converges given the same op sequence
-- **Mid-session join** — host sends full snapshot at `seq=N`, then catches new peer up with all ops after N
-- **Validation** — host rejects ops whose preconditions don't hold against its own state, never broadcasts them
-- **Undo** — local undo is just "emit a Revert operation" — same wire machinery
+### Host-sequencer: shipped v1 vs target design
 
-### The host-sequencer flow
+**Shipped v1 is apply-on-arrival, not host-sequenced.** Each peer stamps its own locally monotonic `seq` (write-only today — receivers don't depend on it; see the note in `session-controller.ts`), sends on the reliable **ordered** channel, and every receiver applies inbound ops as they arrive. Per-channel SCTP ordering guarantees one peer's ops apply in their send order; there is **no validation, no global ordering, no conflict resolution** between peers. Two peers painting the same tile concurrently converge only because tile-paint is last-writer-wins per receiver — good enough for pair-editing, verified live.
+
+The **target design** keeps the host (Player 1) as sequencer — receive, validate, assign global `seq`, broadcast — which is what mid-session consistency guarantees, op validation (anti-cheat for game ops), and deterministic convergence will need:
 
 ```
    Peer (non-host)              Host (Player 1)              Other Peers
@@ -181,33 +184,26 @@ The `seq` field is the load-bearing primitive. The host assigns it monotonically
    apply locally                  apply locally               apply locally
 ```
 
-Non-host peer's local optimistic application happens **immediately** — the peer applies the op against its local state before sending, then reconciles when the broadcast comes back. If the host rejected the op (validation failed), the peer reverts. If the host accepted it but ordered other ops in between, the peer revises its local state to match host order.
-
-This is the same pattern that web frameworks call "optimistic UI": local feel-fast, host arbitrates eventually-consistent reconciliation.
+Under the sequencer, a non-host peer's local application stays optimistic — apply immediately, reconcile when the broadcast comes back (revert if the host rejected, re-order if the host interleaved other ops). The shipped `Operation` envelope (`peerId` + `seq`) is forward-compatible: the sequencer rewrites `seq` on receipt without changing the wire shape.
 
 ### Editor operation vocabulary
 
-A representative set; the full inventory grows as the editor gains features.
+The implemented kinds (each a `Command` in `packages/engine/src/commands/`, reconstructed via `BUILT_IN_COMMANDS`):
 
 ```ts
 type EditorOp =
-  | { kind: 'tile.paint';     payload: { mapId, layerId, tileX, tileY, spriteSetId, spriteId, prev: PrevSpriteRef|null } }
-  | { kind: 'tile.erase';     payload: { mapId, layerId, tileX, tileY, prev: PrevSpriteRef } }
-  | { kind: 'placement.add';  payload: { mapId, placement: ObjectPlacement } }
-  | { kind: 'placement.move'; payload: { mapId, placementId, tileX, tileY, prev: { tileX, tileY } } }
-  | { kind: 'placement.remove'; payload: { mapId, placementId, prev: ObjectPlacement } }
-  | { kind: 'layer.add';      payload: { mapId, layer: LayerData } }
-  | { kind: 'layer.reorder';  payload: { mapId, layerId, beforeLayerId: string|null, prev: { beforeLayerId: string|null } } }
-  | { kind: 'library.upsert'; payload: { definition: ObjectDefinition, prev: ObjectDefinition|null } }
-  | { kind: 'library.remove'; payload: { definitionId: string, prev: ObjectDefinition } }
-  // … and one more, the universal mirror:
-  | { kind: 'revert';         payload: { targetSeq: number } }  // host reverses op at seq=N
+  | { kind: 'tile.paint';    payload: { layerId, tileX, tileY, spriteId /* global id */, prev /* sprite refs before, [] = empty */ } }
+  | { kind: 'tile.erase';    payload: { layerId, tileX, tileY, prev } }
+  | { kind: 'object.place';  payload: { placement /* full ObjectPlacement — revert removes it */ } }
+  | { kind: 'object.remove'; payload: { placement /* carried whole so revert can restore it */ } }
 ```
+
+(Project-level mutations — `__project/entity.upsert` etc. — ride the project-op channel above, not the command registry.) The inventory grows as more editor mutations land: layer ops, placement move, etc. are future commands.
 
 The `prev` fields are captured at op-creation time and ride along with the op. They serve **two** purposes:
 
-1. **Local revert** — if the host rejects the op, the issuer can restore the prior state without needing to fetch from the host
-2. **Undo** — every op carries enough information to reverse itself, so the Undo system just stacks ops with their prevs
+1. **Local revert** — the issuer can restore the prior state without needing to fetch from anyone
+2. **Undo** — every op carries enough information to reverse itself, so the undo stack just keeps commands with their prevs (and undo replication re-sends them with `direction: 'revert'`)
 
 ### Game operation vocabulary
 
@@ -245,20 +241,20 @@ The architectural payoff: "local solo" and "host of a session of one" are the sa
 Each Component implicitly belongs to a replication strategy. Document the convention so the sync systems know what to ship:
 
 ```ts
-// editor — replicated via editor op-log
-ObjectPlacement                  // shared
-ObjectDefinition (in library)    // shared
-LayerData                        // shared
-SpriteData.tileProperties        // shared (via spriteset.update.chunk descriptor ops)
+// editor — replicated via editor op-log / project-ops
+ObjectPlacement                  // shared (object.place / object.remove commands)
+EntityDefinition (in library)    // shared (__project/entity.upsert / entity.remove)
+LayerData                        // shared (no layer commands yet — joiners get layers via snapshot)
+SpriteData.tileProperties        // shared (via __project/spriteset.update.chunk descriptor ops)
 
-// game — replicated via game op-log (host-authoritative)
+// game — replicated via game op-log (host-authoritative; future)
 TileTransformComponent (player)  // host derives + broadcasts via player.moved
 PlayerHealthComponent (future)   // host-authoritative
 InventoryComponent (future)      // host-authoritative
 
 // local-only — never on the wire
 ActiveToolComponent              // per-user editor state
-GhostSpawnComponent              // per-user editor state
+SpawnOverrideComponent           // per-user editor state
 RuntimeModeComponent             // per-user runtime mode
 EditorModeComponent              // per-user runtime mode
 InputSourceComponent             // per-user; the source itself is local even if its data comes from remote
@@ -320,7 +316,7 @@ On join, the joiner's current project (if any) is closed with a save prompt; the
 - **Header avatar bubbles** — up to 5 peer avatars + "+N" overflow. Each is colour-coded to that peer's id; the colour also tints their cursor + selection-highlight on the map. Click a bubble → camera jumps to that peer's current viewport.
 - **Live cursors** — every peer's pointer position renders as a labelled arrow on the map and (less prominently) on the atlas / cast / tiles views. Awareness-channel only (unreliable, throttled to 10 Hz per peer per § "Awareness payload size" open question).
 - **Selection highlights** — the tile / placement another peer has selected gets a coloured ring in their avatar colour, so two users don't simultaneously edit the same thing without knowing.
-- **No soft-locks, no approval prompts** — anyone can paint anything. Concurrent-edit conflicts on the same tile resolve via host-sequencer ordering, with a brief toast `[PeerName] painted here first` to the loser so the snap-back is explained.
+- **No soft-locks, no approval prompts** — anyone can paint anything. Concurrent edits on the same tile currently resolve last-writer-wins per receiver (apply-on-arrival); host-sequencer ordering + a `[PeerName] painted here first` toast for the loser are part of the target design above.
 - **No voice, no chat** — out of scope for v1. The unreliable channel is reserved for awareness only.
 
 ### Leaving
@@ -348,11 +344,11 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 | 0 | **Substrate constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | **landed (substrate)** (folded into editor-architecture Phases 2–5) |
 | 1 | Op-log skeleton in `packages/engine/src/commands/types.ts` — `Operation`-shape, local sequencer (`UndoStackComponent.cursor`), `Command` applier. Solo mode only (no wire). | **landed** |
 | 2 | Editor op vocabulary — `PaintTileCommand` + `EraseTileCommand` are the first entries; the op-log IS the undo log via `Engine.executeCommand` + `undo` + `redo`. Hook into `editor-architecture.md` Phase 5 is now bi-directional reference. | **landed** (initial vocab; grows as more editor mutations land) |
-| 3a | **LAN + relay signalling** — `lan-signalling.ts` (in-app WebSocket server over `@gjsify/{ws,http}`) + `relay-signalling.ts`. Room-keyed, stateless. | **landed** (LAN); standalone `apps/signalling-server/` + cross-internet relay still stubbed |
+| 3a | **LAN + relay signalling** — `lan-signalling.ts` (in-app WebSocket server over `@gjsify/{ws,http}`) + `relay-signalling.ts` (relay client) + the standalone `apps/signalling-server/` relay. Room-keyed, stateless. | **landed** (LAN verified; relay server + client built, but the default relay endpoint is a placeholder — no deployed relay, so `session-service.ts` skips it) |
 | 3b | **`packages/engine/src/sync/`** — `PeerSession` wrapping `@gjsify/webrtc` `RTCPeerConnection` + `RTCDataChannel`; reliable (op) + unreliable (awareness) channels. Platform-indep. | **landed** |
 | 3c | **`apps/maker-gjs/src/services/lan-discovery.ts`** — Avahi publish + browse. Welcome-view "Sessions on this network" pane + Share dialog. | **landed** |
 | 3d | **Op-log broadcast** — `SessionController` relays `COMMAND_EXECUTED`/`COMMAND_REVERTED` onto `PeerSession`; inbound ops feed `applyRemoteCommand`/`applyRemoteRevert`. **Verified live: host paint → joiner sync.** | **landed** |
-| 3e | **Join-by-room-id + snapshot-on-join** — `SessionService.joinByRoomId` + `SnapshotExchange` (host captures full project, chunked over the wire; joiner sandboxes + loads). LAN path verified. | **landed** (LAN); `pixelrpg://` scheme + cross-internet relay future |
+| 3e | **Join-by-room-id + snapshot-on-join** — `SessionService.joinByRoomId` + `SnapshotExchange` (host captures full project, chunked over the wire; joiner sandboxes + loads). LAN path verified. | **landed** (LAN); `pixelrpg://` URL parse/build shipped (`pixelrpg-url.ts`) — the `x-scheme-handler` `.desktop` registration + a deployed relay are still pending |
 | 4 | Editor awareness layer — live cursors, presence, **per-peer selection outlines in the peer's colour** (`colourForPeer`), participants toolbar w/ follow-camera, + an in-process AI collaborator. | **landed** |
 | 5 | `InputSourceComponent` runtime + local split-screen support. | planned |
 | 6 | Game op vocabulary + host-authoritative simulation + snapshot-on-join. | planned |
@@ -361,7 +357,7 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 
 ## Where this is implemented
 
-- **Op-log / commands** — `packages/engine/src/commands/` (`types.ts` `Command`/`Operation`, `paint-tile.command.ts`, `registry.ts`). New mutations MUST register here — enforced by `registry.spec.ts` (auto-discovery) + CI.
+- **Op-log / commands** — `packages/engine/src/commands/` (`types.ts` `Command`/`Operation`, `paint-tile.command.ts`, `object-placement.command.ts`, `registry.ts`). New mutations MUST register here — enforced by `registry.spec.ts` (auto-discovery) + CI.
 - **Sync layer** — `packages/engine/src/sync/`: `peer-session.ts` (WebRTC), `session-controller.ts` (op-log ↔ peer bridge), `awareness.ts` + `remote-cursor-renderer.ts` (cursors + per-peer selection), `snapshot-exchange.ts` + `project-snapshot.ts` (snapshot-on-join), `project-operations.ts` (`__project/*` cast/sprite-set sync), `in-memory-transport.ts` (test harness/fakes).
 - **Project-op wiring (maker)** — `apps/maker-gjs/src/services/collab-session.ts` (`sendProjectOp` / `onProjectOpReceived` for entities; `sendSpriteSetAdd` / `onSpriteSetAddReceived` + `sendSpriteSetUpdate` / `onSpriteSetUpdateReceived` + reassemblers for chunked sprite-set transfers) ↔ `cast-controller.ts` (`applyRemoteProjectOp` / `applyRemoteSpriteSetAdd` / `applyRemoteSpriteSetUpdate` + per-mutation broadcast; `tiles-controller.ts` delegates Solid/Surface edits here), wired in `application-window.ts` `_wireAssistantRelay`.
 - **App orchestration** — `apps/maker-gjs/src/services/`: `session-service.ts` (lifecycle state machine), `collab-session.ts` (per-session wiring: cursor + selection broadcast, `colourForPeer`), `lan-discovery.ts` / `lan-signalling.ts` / `relay-signalling.ts`.
@@ -371,14 +367,14 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 ## Related concepts
 
 - [`editor-architecture.md`](editor-architecture.md) — the operation-oriented mutation API + `Command` interface defined there **IS** the editor op vocabulary. Phase 5 (Undo) implicitly designs the editor op-log for us. Phase 0 constraints in this doc fold back into editor-architecture's migration phases.
-- [`runtime-modes.md`](runtime-modes.md) — Live Run and Test Run share a single peer's simulation; they're not multiplayer-aware. Full Run with multiplayer is where the game op-log machinery activates. The mode markers themselves are local-only — `EditorMode` / `RuntimeMode` / `GhostSpawn` never replicate.
-- [`object-system.md`](object-system.md) — stable identifiers (`ObjectPlacement.id`, `ObjectDefinition.id`) are the load-bearing primitive for editor op payloads. The transport-compatibility constraint covered in Phase 0 means future schema changes must preserve "stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere".
+- [`runtime-modes.md`](runtime-modes.md) — Live Run and Test Run share a single peer's simulation; they're not multiplayer-aware. Full Run with multiplayer is where the game op-log machinery activates. The mode markers themselves are local-only — `EditorMode` / `RuntimeMode` / `SpawnOverride` never replicate.
+- [`object-system.md`](object-system.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`) are the load-bearing primitive for editor op payloads. The transport-compatibility constraint covered in Phase 0 means future schema changes must preserve "stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere".
 
 ## Open questions
 
 - **Loro as a future option for offline-collab** — Loro runs unmodified under GJS via gjsify (confirmed 2026-05-30 against the `@gjsify/integration-loro-crdt` test suite — no patches, no shims, no GJS-specific code paths needed). The "does it work?" question is answered; the open question is now "is the single-mechanism trade-off still right?" If we ever want offline-collab merges, we'd revisit using Loro for **just the editor flow** while keeping op-log for the game. This would lose the "single mechanism" property but regain offline-collab. The op-log design above does not preclude this — it'd be a parallel sync layer for editor ops, while game ops stay on op-log.
 - **Op validation strictness** — how aggressively does the host re-check editor ops? For `tile.paint`, the host could just trust the `prev` matches its state (cheap) or could ignore the prev and just apply (cheapest). For game ops like `item.granted`, the host MUST validate (player position vs item position) to prevent cheating. The line gets blurry for editor ops that affect game-relevant state. Default proposal: editor ops trust-then-broadcast (cheap), game ops validate-then-broadcast (strict).
-- **Op compression for large mutations** — `placement.add` with a fully-inline definition is ~500 bytes. A user dragging a stamp of 50 placements over a map issues 50 such ops. Worth batching? Probably yes — a `batch` op that wraps an array of sub-ops, applied atomically. Defer until benchmarks show it matters.
+- **Op compression for large mutations** — `object.place` with a fully-inline definition is ~500 bytes. A user dragging a stamp of 50 placements over a map issues 50 such ops. Worth batching? Probably yes — a `batch` op that wraps an array of sub-ops, applied atomically. Defer until benchmarks show it matters.
 - **Awareness payload size** — cursor updates at 30 Hz × N peers can flood the unreliable channel. Throttle to 10 Hz client-side; only send when the cursor actually moved. Track when implementing Phase 4.
 - **Persistence format vs op-log** — the project file on disk is the current state, not an op-log. On save, we serialise the current state (just like today). On load, we initialise the op-log at `seq=0` with the loaded state. Mid-session ops accumulate after that. Do we ever persist the op-log itself (e.g. for "session replay" / debugging)? Default proposal: no in v1, optional debug-only flag later.
 - **Host migration when Player 1 drops** — Phase 8. Non-trivial: requires election protocol between remaining peers + state-snapshot-from-loser. Acceptable to defer; in v1, host disconnect ends the collab session and peers fall back to local state.

@@ -28,10 +28,9 @@ This project follows a code of conduct to ensure a welcoming environment for all
 
 ### Prerequisites
 
-- **Node.js**: Version 18.0 or higher
-- **Yarn**: Version 4.0 or higher
+- **[`@gjsify/cli`](https://github.com/gjsify/gjsify)** — the whole toolchain (installer, builder, formatter, linter, test runner). No Node.js or Yarn required.
+- **GNOME development environment** — GJS, GTK 4, libadwaita, `blueprint-compiler`
 - **Git**: Version 2.30 or higher
-- **GNOME**: For desktop development (optional)
 
 ### Initial Setup
 
@@ -114,9 +113,11 @@ packages/
 └── story-gjs/    # Storybook framework for GTK widgets
 
 apps/
-├── maker-gjs/      # The map editor (primary)
-├── storybook-gjs/  # Widget playground
-└── game-browser/   # Browser-runtime template for game export
+├── maker-gjs/         # The map editor (primary)
+├── storybook-gjs/     # Widget playground
+├── game-browser/      # Browser-runtime template for game export
+├── mcp-bridge/        # Dev-only MCP↔D-Bus orchestrator for agent-driving the maker
+└── signalling-server/ # Stateless WebSocket relay for cross-network WebRTC signalling
 ```
 
 See [README.md](../README.md#workspace) and [AGENTS.md](../AGENTS.md) for the full overview.
@@ -175,7 +176,7 @@ src/
 - **Classes**: PascalCase with clear, descriptive names
 - **Methods**: camelCase, verb-first naming
 - **Constants**: UPPER_SNAKE_CASE
-- **Interfaces**: PascalCase with 'I' prefix (optional)
+- **Interfaces**: PascalCase (no `I` prefix)
 
 ### Documentation Standards
 
@@ -202,14 +203,17 @@ function calculateDistance(point1: Point, point2: Point): number {
 
 ### Automated tests
 
-`packages/engine` runs Vitest. Unit tests live next to the source they cover (`foo.ts` + `foo.test.ts`).
+Tests run under `@gjsify/unit` via `gjsify test`. Unit tests live next to the source they cover (`foo.ts` + `foo.spec.ts`) and **must be registered**: import the suite in that package's `src/test.mts` and pass it to `run()` — `test.mts` is hand-maintained, so an unregistered spec silently never runs while CI stays green (see `TODO.md` "Spec-registration guard").
+
+Three workspaces carry suites today:
 
 ```bash
-gjsify workspace @pixelrpg/engine test            # one-shot
-gjsify workspace @pixelrpg/engine test:watch      # watch mode
+gjsify workspace @pixelrpg/engine test              # engine (also runs in CI)
+gjsify workspace @pixelrpg/maker-gjs test           # maker services (collab transport etc.)
+gjsify workspace @pixelrpg/signalling-server test   # relay room-manager + e2e
 ```
 
-The other workspaces (`packages/gjs`, `apps/*`) are GTK-bound and currently lack a test harness — extend the engine's pure-function coverage first; widget tests come later.
+`packages/gjs` and the remaining apps are GTK-bound and lack widget tests — extend pure-function coverage first.
 
 ### Manual verification
 
@@ -227,7 +231,7 @@ gjsify lint   # report lint issues
 gjsify format # auto-fix and reformat in place
 ```
 
-A `husky` pre-commit hook runs `gjsify format` before each commit. VS Code is configured (`.vscode/settings.json`) to format on save with `biomejs.biome`.
+There is no automated pre-commit hook — run `gjsify fix && gjsify lint` manually before committing (see `AGENTS.md` § Validation & commits). VS Code is configured (`.vscode/settings.json`) to format on save with `biomejs.biome`.
 
 ## 📚 Documentation
 
@@ -318,13 +322,13 @@ Add screenshots of UI changes.
 
 ### Automated Checks
 
-All PRs must pass:
-- TypeScript compilation (`gjsify foreach check`)
-- Build process (`gjsify run build`)
-- Lint (`gjsify lint` — Biome)
+CI (`.github/workflows/ci.yml`) runs on every PR:
+- TypeScript type-check (`gjsify foreach check`)
+- Build (`gjsify foreach build`)
+- Barrel-drift guard (`check:barrels`)
 - Engine unit tests (`gjsify workspace @pixelrpg/engine test`)
 
-Widget-level tests for the GJS packages and apps are not yet in place; see the [Testing](#-testing) section.
+CI does **not** lint or format-check — run `gjsify lint` / `gjsify fix` locally before pushing. The maker-gjs and signalling-server suites also run locally only; see the [Testing](#-testing) section.
 
 ## 🆘 Getting Help
 

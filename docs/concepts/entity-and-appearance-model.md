@@ -1,6 +1,6 @@
 # Entity Composition & Appearance Model
 
-> Status: tracked in the [migration phases](#migration-phases) table — the single source of truth for what's landed vs planned. This is the agreed **target** content model (direction decided 2026-06-09); it supersedes the composition layer of [`object-system.md`](object-system.md) (`ObjectKind`-switch + `ObjectProperties` union) when its phases land — until then object-system.md accurately describes the shipped code.
+> Status: tracked in the [migration phases](#migration-phases) table — the single source of truth for what's landed vs planned. This is the agreed content model (direction decided 2026-06-09); its composition phases (A–C6) have landed and replaced the old `ObjectKind`-switch + `ObjectProperties` union, so this doc — not [`object-system.md`](object-system.md) — owns composition.
 
 ## Why a target model
 
@@ -139,7 +139,7 @@ Each rung is the same substance (components on one entity model) — no cliff wh
 ### Player resolution
 
 - Project-level **`playerActorId`** names the default player definition (replaces `CharacterDefinition.isPlayer`; the one-of-N invariant becomes structural).
-- `PlayerSpawnSystem` (exists) instantiates it at the `spawn-point { spawnId:'player' }` placement and attaches the **existing** `PlayerComponent` marker + `PlayerActorComponent` (runtime state: facing, speed, role-indexed animations).
+- `PlayerSystem` (spawn handling) instantiates it at the `spawn-point { spawnId:'player' }` placement and attaches the **existing** `PlayerComponent` marker + `PlayerActorComponent` (runtime state: facing, speed, role-indexed animations).
 - Simple-maker case stays one toggle in the Cast detail ("is the default player?" → writes `playerActorId`).
 
 ## Editor surfaces
@@ -182,7 +182,7 @@ Unchanged in principle, restated for the new shapes: entity definitions, appeara
 
 ## Cross-references
 
-- [`object-system.md`](object-system.md) — describes the **shipped** substrate this refactors; placements/overrides/tiles/z-order/systems/bus carry over verbatim. Its composition sections (ObjectKind, properties union, kind-switch) are superseded by this doc when Phase B lands.
+- [`object-system.md`](object-system.md) — describes the substrate this sits on; placements/overrides/tiles/z-order/systems/bus carry over verbatim (its historical composition sections were pruned once Phase B landed).
 - [`editor-architecture.md`](editor-architecture.md) — ECS-as-model; generated inspectors and definition editing are views over the same world.
-- [`runtime-modes.md`](runtime-modes.md) — states/scripts/triggers gate on `RuntimeModeComponent` (no effects in pure editor mode).
+- [`runtime-modes.md`](runtime-modes.md) — trigger/state/script effects only run in runtime mode (today indirectly, via the `RuntimeModeComponent`-gated `PlayerSystem` events — see that doc's gating note).
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — op channels + transport constraints for every shape above.

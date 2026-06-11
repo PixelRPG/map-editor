@@ -4,16 +4,17 @@ A modern, GTK4-native RPG map editor for the GNOME platform. Combines [Excalibur
 
 ## Status
 
-Early development. What works today:
+Early development (pre-release file format). What works today:
 
-- Tile placement and removal via brush + eraser tools
-- Multi-layer maps with tileset selection
-- Live preview of edited maps in an embedded Excalibur canvas
+- Tile painting/erasing and object placement on multi-layer maps, with command-based undo/redo
+- Entity-composition content model — reusable entity definitions (`components[]` + registry-generated inspectors) for NPCs, items, teleports, spawn points
+- Editor views: Welcome (templates + recents), Atlas (world overview), Cast (characters), Objects (entity library), Sheets (tilesets + appearances/animations), Scene editor, Data
+- Live editing in an embedded Excalibur canvas + in-editor Play mode (player spawn + grid movement)
+- Collaborative pair-editing over WebRTC (LAN discovery via Avahi, live cursors + presence, snapshot-on-join)
+- An in-process AI collaborator driveable over D-Bus/MCP (`apps/mcp-bridge`), visible as a live participant
+- Responsive chrome from phone width up to desktop (libadwaita breakpoints)
 
-Active focus areas:
-
-- Code stabilization (current branch)
-- UI overhaul (separate work track, planned)
+Deferred work is tracked in [TODO.md](TODO.md); design decisions live in [docs/concepts/](docs/concepts/).
 
 ## Architecture
 
@@ -21,12 +22,12 @@ Single-process GTK4 application — no WebView, no RPC. Excalibur runs directly 
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  Adwaita Window                                            │
+│  Adwaita Window (view stack: welcome/atlas/cast/objects/…) │
 │  ┌─────────────┐  ┌──────────────────────────────────────┐ │
-│  │ Tileset     │  │ Engine Widget (GTK)                  │ │
-│  │ Selector    │  │  └─ Excalibur canvas (TileMap, ECS)  │ │
-│  │ Layers      │  │                                      │ │
-│  │ Tools       │  │                                      │ │
+│  │ Inspector   │  │ Engine Widget (GTK)                  │ │
+│  │ sidebars +  │  │  └─ Excalibur canvas (TileMap, ECS)  │ │
+│  │ floating    │  │                                      │ │
+│  │ OSD chrome  │  │                                      │ │
 │  └─────────────┘  └──────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -43,7 +44,11 @@ The previous architecture (PR #5 and earlier) used a WebKit WebView with RPC bet
 | [`apps/maker-gjs`](apps/maker-gjs) | The map editor application (primary) |
 | [`apps/storybook-gjs`](apps/storybook-gjs) | Component playground for `packages/gjs` widgets |
 | [`apps/game-browser`](apps/game-browser) | Browser-runtime template — seed for multi-platform game export |
-| [`games/zelda-like`](games/zelda-like) | Sample game assets used by the editor and storybook |
+| [`apps/mcp-bridge`](apps/mcp-bridge) | Dev-only MCP↔D-Bus bridge for agent-driving the editor (`org.pixelrpg.maker.Control`) |
+| [`apps/signalling-server`](apps/signalling-server) | Stateless WebSocket relay for cross-network WebRTC signalling |
+| [`games/zelda-like`](games/zelda-like) | Sample game project used by the editor and storybook |
+| [`games/blank-starter`](games/blank-starter) | Empty starter template ("New Project" opens it) |
+| [`games/minimalist-starter`](games/minimalist-starter) | Minimal starter template |
 
 The maker stays GJS-only. Exported games target multiple platforms — Browser is the first export target (`apps/game-browser` is the runtime seed).
 
@@ -70,7 +75,7 @@ gjsify workspace @pixelrpg/storybook-gjs start     # run the widget storybook
 gjsify workspace @pixelrpg/game-browser build      # build the browser-runtime template
 gjsify fix                                         # format + safe-lint-fix (Biome via gjsify)
 gjsify lint                                        # lint-only
-gjsify foreach test -v -p --include @pixelrpg/engine   # engine unit tests (Vitest)
+gjsify foreach test -v -p --include @pixelrpg/engine   # engine unit tests (@gjsify/unit)
 ```
 
 Per-package scripts use the same names: `build`, `check`, `start`. Run them with `gjsify run <script>` from within the package directory.
