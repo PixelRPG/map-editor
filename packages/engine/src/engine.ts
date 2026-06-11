@@ -10,7 +10,13 @@ import {
   TileMap,
   Vector,
 } from 'excalibur'
-import { type Command, PlaceObjectCommand, RemoveObjectCommand } from './commands/index.ts'
+import {
+  type Command,
+  PlaceObjectCommand,
+  RemoveObjectCommand,
+  SetLayerLockedCommand,
+  SetLayerVisibilityCommand,
+} from './commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveObjectComponent,
@@ -22,16 +28,13 @@ import {
   EditorViewModeComponent,
   RuntimeModeComponent,
   SelectedPlacementsComponent,
-  TileMapTierComponent,
-  TileTransformComponent,
   UndoStackComponent,
 } from './components/index.ts'
 import { entityToCharacter } from './entity/convert.ts'
 import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
-import { applyEditorViewMode, areObjectsVisible } from './services/editor-view.ts'
-import { refreshAllTileGraphics } from './services/tile-graphics.manager.ts'
+import { applyEditorViewMode } from './services/editor-view.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import {
   AwarenessManager,
@@ -40,7 +43,6 @@ import {
   parseAwarenessColour,
   RemoteCursorRenderer,
 } from './sync/index.ts'
-import { DEFAULT_LAYER_TIER } from './types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 import { SessionState } from './utils/session-state.ts'
 import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
@@ -390,6 +392,34 @@ export class Engine {
     const scene = this._activeMapScene()
     if (!scene) return
     executeCommandOnScene(scene, this.events, command)
+    this._emitLayerFlagChanged(command, 'apply')
+  }
+
+  /**
+   * UI-sync companion for the layer-flag commands: emit
+   * `LAYER_FLAG_CHANGED` so the host's Layers tab mirrors the new
+   * flag value. Called after EVERY path that applies/reverts a
+   * command — local execute, undo, redo, remote apply, remote
+   * revert — because remote ops deliberately don't emit
+   * `COMMAND_EXECUTED` (relay loop) yet still need the inspector
+   * row's eye/padlock to follow. No-op for non-layer commands.
+   */
+  private _emitLayerFlagChanged(command: Command, direction: 'apply' | 'revert'): void {
+    if (command instanceof SetLayerVisibilityCommand) {
+      const { layerId, visible, previousVisible } = command.payload
+      this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, {
+        layerId,
+        flag: 'visible',
+        value: direction === 'apply' ? visible : previousVisible,
+      })
+    } else if (command instanceof SetLayerLockedCommand) {
+      const { layerId, locked, previousLocked } = command.payload
+      this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, {
+        layerId,
+        flag: 'locked',
+        value: direction === 'apply' ? locked : previousLocked,
+      })
+    }
   }
 
   /**
@@ -669,6 +699,7 @@ export class Engine {
     const scene = this._activeMapScene()
     if (!scene) return
     command.apply(scene)
+    this._emitLayerFlagChanged(command, 'apply')
   }
 
   /**
@@ -686,6 +717,7 @@ export class Engine {
     const scene = this._activeMapScene()
     if (!scene) return
     command.revert(scene)
+    this._emitLayerFlagChanged(command, 'revert')
   }
 
   /**
@@ -722,6 +754,7 @@ export class Engine {
     ctx.stack.cursor -= 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
     this.events.emit(EngineEvent.COMMAND_REVERTED, { command })
+    this._emitLayerFlagChanged(command, 'revert')
     return true
   }
 
@@ -743,6 +776,7 @@ export class Engine {
     ctx.stack.cursor += 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
     this.events.emit(EngineEvent.COMMAND_EXECUTED, { command })
+    this._emitLayerFlagChanged(command, 'apply')
     return true
   }
 
@@ -757,74 +791,53 @@ export class Engine {
   }
 
   /**
-   * Toggle a layer's `visible` flag on the active map. Persists the
-   * change in-memory only (the host is responsible for serialising
-   * `MapResource.mapData` back to disk via `MapFormat.serialize`),
-   * then refreshes everything that renders from the layer:
+   * Toggle a layer's `visible` flag on the active map by dispatching
+   * a {@link SetLayerVisibilityCommand} through {@link executeCommand}
+   * — `visible` is persisted document state on `MapData`, so the
+   * toggle rides the op-log (undo stack + `COMMAND_EXECUTED` → peers),
+   * never a direct field write. The command's `apply` owns the
+   * `MapData` write AND the graphics refresh (tier tilemap rebuild +
+   * placement-actor flips), so a peer applying the same op remotely
+   * refreshes its canvas identically. Disk persistence stays with the
+   * host (`MapFormat.serialize` on `persist-requested`).
    *
-   * - **Tile graphics** on every `TileMap` in the scene — sprites
-   *   painted on the tilemap rebuild via `refreshAllTileGraphics`
-   *   which already filters hidden layers.
-   * - **Object placements** — actors spawned by `ObjectSpawnSystem`
-   *   for `MapData.objectPlacements` get their `graphics.visible`
-   *   flipped. A single layer can carry both, so both surfaces
-   *   have to flip together.
+   * Deliberate consequence: the toggle is undoable (Ctrl+Z un-hides) —
+   * see the command's JSDoc for the document-state-vs-view-state
+   * reasoning.
    *
-   * Returns `true` on success, `false` if there is no active
+   * Returns `true` on success (including a no-op same-value toggle,
+   * which dispatches nothing), `false` if there is no active
    * `MapScene` / no layer matches the id.
-   *
-   * O(columns × rows × sprites-per-tile + placements) — only
-   * called on explicit user toggles, not per frame.
    */
   setLayerVisible(layerId: string, visible: boolean): boolean {
     const layer = this._findLayer(layerId)
-    if (!layer || layer.visible === visible) return layer != null
-    layer.visible = visible
-    // `_findLayer` succeeded above, which only returns non-null when a
-    // MapScene is active — so this lookup is guaranteed to hit.
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const mapResource = scene.mapResource
-    // Refresh only the tilemap that hosts the toggled layer — its
-    // tier alone needs the visibility filter re-applied. The other
-    // tier tilemaps don't carry the layer's sprites, so iterating
-    // them would be a no-op-with-cost.
-    const targetTier = layer.tier ?? DEFAULT_LAYER_TIER
-    for (const entity of scene.world.entityManager.entities) {
-      if (entity instanceof TileMap) {
-        if (entity.get(TileMapTierComponent)?.tier === targetTier) {
-          refreshAllTileGraphics(entity, mapResource)
-        }
-        continue
-      }
-      // Placement actors (decoration objects spawned by
-      // `ObjectSpawnSystem`). The visibility flip is independent of
-      // tier — placements carry the canonical `layerId` on
-      // `TileTransformComponent`, so just match by layer.
-      const transform = entity.get(TileTransformComponent)
-      if (transform?.layerId === layerId && entity instanceof Actor) {
-        // Combine with the global objects toggle (Layers tab "Objects"
-        // row) — a placement renders only when BOTH are on.
-        entity.graphics.visible = visible && areObjectsVisible(scene)
-      }
-    }
+    if (!layer) return false
+    const previousVisible = layer.visible !== false
+    if (previousVisible === visible) return true
+    this.executeCommand(new SetLayerVisibilityCommand({ layerId, visible, previousVisible }))
     return true
   }
 
   /**
-   * Toggle a layer's `locked` flag on the active map. Pure editor
-   * state — no graphics rebuild needed because rendering doesn't
-   * care about lock. Consumers (host + `TileEditorSystem`) check the
-   * flag at the start of their edit paths and short-circuit when
-   * the active layer is locked.
+   * Toggle a layer's `locked` flag on the active map by dispatching a
+   * {@link SetLayerLockedCommand} through {@link executeCommand} —
+   * same Command routing + undo semantics as {@link setLayerVisible}
+   * (`locked` is persisted `MapData` state too). No graphics rebuild;
+   * consumers (host + `TileEditorSystem`) check the flag at the start
+   * of their edit paths and short-circuit when the active layer is
+   * locked — and because the flag now syncs, BOTH peers' edit paths
+   * respect a padlock either of them set.
    *
-   * Returns `true` on success, `false` if there is no active
-   * `MapScene` / no layer matches the id.
+   * Returns `true` on success (a same-value toggle dispatches
+   * nothing), `false` if there is no active `MapScene` / no layer
+   * matches the id.
    */
   setLayerLocked(layerId: string, locked: boolean): boolean {
     const layer = this._findLayer(layerId)
-    if (!layer || (layer.locked ?? false) === locked) return layer != null
-    layer.locked = locked
+    if (!layer) return false
+    const previousLocked = layer.locked ?? false
+    if (previousLocked === locked) return true
+    this.executeCommand(new SetLayerLockedCommand({ layerId, locked, previousLocked }))
     return true
   }
 

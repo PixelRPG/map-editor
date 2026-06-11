@@ -11,9 +11,9 @@ import {
   markerColorFor,
 } from '@pixelrpg/engine'
 import {
+  type CollaboratorEntry,
   type EditorMode,
   type Engine,
-  type CollaboratorEntry,
   GdkSpriteSetResource,
   type GdkSpriteSheet,
   type LayerDescriptor,
@@ -28,9 +28,8 @@ import {
   type TilesTab,
 } from '@pixelrpg/gjs'
 import type { LoadedProject } from '../services/project-loader.ts'
-
-import Template from './scene-editor-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import Template from './scene-editor-view.blp'
 
 /** The sprite reference of a definition's `visual` component, if any. */
 function visualOf(def: EntityDefinition | null): { spriteSetId: string; spriteId: number } | null {
@@ -216,6 +215,21 @@ export class SceneEditorView extends ResponsiveEditorView {
   /** Mirror the global objects visibility into the Layers tab's Objects row (no re-emit). */
   setObjectsVisible(visible: boolean): void {
     this._inspector.layersTab.setObjectsState(this._placementInfo.size, visible)
+  }
+
+  /**
+   * Mirror an engine-side layer-flag change (the `LAYER_FLAG_CHANGED`
+   * event — fired for local toggles, undo/redo AND inbound peer ops)
+   * into this view's `_layers` cache + the Layers tab's eye/padlock
+   * row state. The tab write is re-emit-free, so a mirrored change
+   * never dispatches a second command. This is the single owner of
+   * the cache update — the toggle handlers themselves don't write it
+   * (anti-parallel-state: one mutating path).
+   */
+  setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void {
+    const idx = this._layers.findIndex((l) => l.id === layerId)
+    if (idx >= 0) this._layers[idx] = { ...this._layers[idx], [flag]: value }
+    this._inspector.layersTab.setLayerState(layerId, flag, value)
   }
 
   /** Push the live participant roster (AI + peers) to the collaborators bar. */
@@ -780,24 +794,20 @@ export class SceneEditorView extends ResponsiveEditorView {
       this._setActiveLayer(id)
     })
     // Layer flag toggles. Both signals carry (layerId, newValue). We
-    // forward to the engine (which mutates MapData + triggers any
-    // necessary graphics refresh), persist via the same flow as
-    // `_persistAtlasPosition`, and emit our own re-exported signal so
-    // `ApplicationWindow` can react (specifically: locking the active
-    // layer needs to disable the editing tool actions).
+    // forward to the engine, which dispatches the undoable
+    // `SetLayerVisibilityCommand` / `SetLayerLockedCommand` through
+    // `executeCommand` — MapData write, graphics refresh, undo stack
+    // and collab broadcast all ride the command. The engine's
+    // `LAYER_FLAG_CHANGED` echo (relayed via `setLayerFlag`) keeps
+    // this view's `_layers` cache in sync, so the handlers only
+    // dispatch + persist (same persistence flow as
+    // `_persistAtlasPosition`).
     layers.connect('layer-visibility-toggled', (_l: LayersTab, layerId: string, visible: boolean) => {
       this._engine?.setLayerVisible(layerId, visible)
-      // Mirror the new flag into the local cache so subsequent
-      // `_setActiveLayer` reads see the up-to-date value (the
-      // inspector's own state already updated via property binding).
-      const idx = this._layers.findIndex((l) => l.id === layerId)
-      if (idx >= 0) this._layers[idx] = { ...this._layers[idx], visible }
       this._persistMapData()
     })
     layers.connect('layer-lock-toggled', (_l: LayersTab, layerId: string, locked: boolean) => {
       this._engine?.setLayerLocked(layerId, locked)
-      const idx = this._layers.findIndex((l) => l.id === layerId)
-      if (idx >= 0) this._layers[idx] = { ...this._layers[idx], locked }
       this._persistMapData()
     })
     // Global objects visibility (the pinned "Objects" pseudo-row).

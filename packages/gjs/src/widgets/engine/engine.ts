@@ -193,7 +193,12 @@ export class Engine extends Adw.Bin {
     return true
   }
 
-  /** Forward to `Engine.setLayerVisible` — toggles render visibility + triggers a graphics rebuild. */
+  /**
+   * Forward to `Engine.setLayerVisible` — dispatches an undoable
+   * `SetLayerVisibilityCommand` (graphics rebuild + collab sync ride
+   * the command). The widget relays the resulting
+   * `LAYER_FLAG_CHANGED` on {@link events} for UI mirroring.
+   */
   public setLayerVisible(layerId: string, visible: boolean): boolean {
     return this._excalibur?.setLayerVisible(layerId, visible) ?? false
   }
@@ -249,7 +254,11 @@ export class Engine extends Adw.Bin {
     return true
   }
 
-  /** Forward to `Engine.setLayerLocked` — toggles editor lock; no render change. */
+  /**
+   * Forward to `Engine.setLayerLocked` — dispatches an undoable
+   * `SetLayerLockedCommand` (collab sync rides the command); no
+   * render change.
+   */
   public setLayerLocked(layerId: string, locked: boolean): boolean {
     return this._excalibur?.setLayerLocked(layerId, locked) ?? false
   }
@@ -465,6 +474,10 @@ export class Engine extends Adw.Bin {
       // Select-tool canvas picks — without this relay the host never
       // hears about them and the Objects-list / Props sync stays dead.
       fwd(EngineEvent.PLACEMENT_SELECTED),
+      // Layer eye/padlock mirroring — fires on every application path
+      // of the layer-flag commands (local, undo/redo, remote peer), so
+      // the host's Layers tab follows changes it didn't originate.
+      fwd(EngineEvent.LAYER_FLAG_CHANGED),
     )
   }
 

@@ -37,6 +37,8 @@ export class LayersTab extends Adw.Bin {
   private _activeId: string | null = null
   private _objectsRow: { row: Gtk.ListBoxRow; widget: LayerRow } | null = null
   private _objectsVisible = true
+  /** True while {@link setLayerState} writes — suppresses the toggle re-emit. */
+  private _suppressToggleEmit = false
 
   static {
     GObject.registerClass(
@@ -96,9 +98,11 @@ export class LayersTab extends Adw.Bin {
         active: layer.id === this._activeId,
       })
       row.connect('notify::visible', () => {
+        if (this._suppressToggleEmit) return
         this.emit('layer-visibility-toggled', layer.id, row.visible)
       })
       row.connect('notify::locked', () => {
+        if (this._suppressToggleEmit) return
         this.emit('layer-lock-toggled', layer.id, row.locked)
       })
 
@@ -109,6 +113,26 @@ export class LayersTab extends Adw.Bin {
       this._layers.set(layer.id, { row: boxRow, widget: row })
     }
     this._appendObjectsRow()
+  }
+
+  /**
+   * Reflect an engine-side layer-flag change (remote peer op, undo,
+   * redo) on the matching row's eye / padlock toggle WITHOUT
+   * re-emitting `layer-visibility-toggled` / `layer-lock-toggled` —
+   * the change already rode a command, re-emitting would dispatch a
+   * redundant no-op toggle. Unknown ids are ignored (a peer can
+   * toggle a layer this map no longer lists).
+   */
+  setLayerState(id: string, flag: 'visible' | 'locked', value: boolean): void {
+    const entry = this._layers.get(id)
+    if (!entry) return
+    this._suppressToggleEmit = true
+    try {
+      if (flag === 'visible') entry.widget.visible = value
+      else entry.widget.locked = value
+    } finally {
+      this._suppressToggleEmit = false
+    }
   }
 
   /**

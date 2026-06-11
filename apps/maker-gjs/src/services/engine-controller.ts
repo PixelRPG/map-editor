@@ -3,6 +3,7 @@ import { Engine } from '@pixelrpg/gjs'
 
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
+type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
 
 /**
  * Slot the engine widget gets attached to once it's been (re)created.
@@ -44,6 +45,8 @@ export class EngineController {
   private _tilePickedListener: ((payload: TilePickedPayload) => void) | null = null
   private _placementSelectedHookAttached = false
   private _placementSelectedListener: ((payload: PlacementSelectedPayload) => void) | null = null
+  private _layerFlagHookAttached = false
+  private _layerFlagListener: ((payload: LayerFlagChangedPayload) => void) | null = null
   private _pointerTileHookAttached = false
   private _pointerTileListener: ((payload: { sceneId: string; tileX: number; tileY: number }) => void) | null = null
 
@@ -113,6 +116,22 @@ export class EngineController {
   }
 
   /**
+   * Register a listener for the engine's `LAYER_FLAG_CHANGED` event —
+   * fired on every application path of the layer-flag commands
+   * (local toggle, undo/redo, AND inbound peer ops, which don't emit
+   * `COMMAND_EXECUTED`). Mirrors {@link onPlacementSelected} — the
+   * listener is stored once and re-attached lazily after each
+   * `ensureForMap` via {@link _attachLayerFlagHook}.
+   *
+   * The host responds by mirroring the new eye/padlock value into the
+   * Layers tab row, so a remote peer's toggle (or a local undo) is
+   * visible in the inspector, not just on the canvas.
+   */
+  onLayerFlagChanged(listener: (payload: LayerFlagChangedPayload) => void): void {
+    this._layerFlagListener = listener
+  }
+
+  /**
    * Register a listener fired once per pointer tile-transition over
    * the active map. The host uses this to drive the floating-zoom
    * OSD's coord readout (the label that reads e.g. `12, 7` next to
@@ -163,6 +182,7 @@ export class EngineController {
     this._attachUndoHook()
     this._attachTilePickedHook()
     this._attachPlacementSelectedHook()
+    this._attachLayerFlagHook()
     this._attachPointerTileHook()
   }
 
@@ -197,6 +217,7 @@ export class EngineController {
     this._undoHookAttached = false
     this._tilePickedHookAttached = false
     this._placementSelectedHookAttached = false
+    this._layerFlagHookAttached = false
     this._pointerTileHookAttached = false
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
@@ -260,6 +281,14 @@ export class EngineController {
       this._placementSelectedListener?.(payload)
     })
     this._placementSelectedHookAttached = true
+  }
+
+  private _attachLayerFlagHook(): void {
+    if (this._layerFlagHookAttached || !this._engine) return
+    this._engine.events.on(EngineEvent.LAYER_FLAG_CHANGED, (payload) => {
+      this._layerFlagListener?.(payload)
+    })
+    this._layerFlagHookAttached = true
   }
 
   private _attachPointerTileHook(): void {

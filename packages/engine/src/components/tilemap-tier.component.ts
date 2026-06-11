@@ -8,7 +8,7 @@ import type { LayerTier } from '../types/data/LayerData.ts'
  *
  * Used by every code path that needs to pick the *right* tilemap
  * from a scene with multiple — `TileEditorSystem` (route paint /
- * erase to the active layer's tier), `Engine.setLayerVisible`
+ * erase to the active layer's tier), `SetLayerVisibilityCommand`
  * (refresh only the affected tilemap), the visibility helpers in
  * `tile-graphics.manager`. Without the marker, callers would have
  * to guess by name or iteration order.
