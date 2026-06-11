@@ -415,7 +415,10 @@ export class SceneEditorView extends ResponsiveEditorView {
       if (vis) {
         const sheet = gdkSheets.get(vis.spriteSetId)
         const sprite = sheet?.sprites[vis.spriteId]
-        paintable = sprite?.createPaintable() ?? null
+        // Aspect-preserving — these render in CONTAIN-fit swatches; the
+        // default stretching paintable distorts there (squashed in the
+        // grid cells, sliver-thin in the placement rows).
+        paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
       }
       return {
         id: placement.id,
@@ -452,7 +455,9 @@ export class SceneEditorView extends ResponsiveEditorView {
     const brushOptions = brushDefs.map((def) => {
       let paintable = null
       const vis = visualOf(def)
-      if (vis) paintable = gdkSheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable() ?? null
+      if (vis)
+        paintable =
+          gdkSheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable({ keepAspectRatio: true }) ?? null
       return { id: def.id, name: def.name, paintable, color: paintable ? undefined : markerColorFor(def.components) }
     })
     this._objectBrushes = brushOptions
