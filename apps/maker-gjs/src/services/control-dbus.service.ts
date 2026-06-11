@@ -172,6 +172,15 @@ export class ControlDbusService {
     guardControlAction(actionScope, name)
     guardEngineAction(actionScope, name, this._engineActionContext(win))
     this._surfaceAssistantActivity()
+    // win.undo / win.redo: bypass the GAction (it has no parameter
+    // channel for an initiator) and call the engine through the window
+    // so the revert/apply op carries the assistant origin — remote
+    // peers then attribute the undo to the AI, not the hosting user.
+    // The guards above already rejected no-engine / nothing-to-undo.
+    if (actionScope === 'win' && (name === 'undo' || name === 'redo')) {
+      win.undoRedo(name, ASSISTANT_PEER_ID)
+      return
+    }
     win.activateAction(actionScope, name, valueJson ? JSON.parse(valueJson) : undefined)
   }
 

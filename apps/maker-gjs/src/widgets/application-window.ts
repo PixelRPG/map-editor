@@ -1718,6 +1718,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY, origin) ?? false
   }
 
+  /**
+   * Undo / redo programmatically (Control → MCP) with attribution: the
+   * `win.undo` / `win.redo` GActions have no parameter channel for an
+   * initiator, so the Control service calls this instead and passes
+   * `ASSISTANT_PEER_ID` as `origin` — the resulting revert/apply op
+   * attributes to the AI on remote peers (see {@link paintTile}). The
+   * human's keyboard/menu path keeps using the GActions (origin-less).
+   * Returns `false` if there's no engine or nothing to undo/redo.
+   */
+  undoRedo(which: 'undo' | 'redo', origin?: string): boolean {
+    const engine = this._engineCtl.engine?.excalibur
+    if (!engine) return false
+    return which === 'undo' ? engine.undo(origin) : engine.redo(origin)
+  }
+
   /** Whether the user has paused the assistant (read by the Control plane's pause guard). */
   isAssistantPaused(): boolean {
     return this._assistantState.paused
