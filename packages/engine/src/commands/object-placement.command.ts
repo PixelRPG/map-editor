@@ -7,6 +7,15 @@ import type { Command } from './types.ts'
 export interface ObjectPlacementPayload {
   /** The full placement (stable id) — carried whole so revert can restore it. */
   placement: ObjectPlacement
+  /**
+   * The placement this one REPLACED (same id), captured by
+   * {@link PlaceObjectCommand.apply} when it overwrites an existing
+   * entry — so revert restores the previous placement instead of
+   * deleting it. Absent for a plain place onto an empty id. Stamped
+   * before `COMMAND_EXECUTED` fires, so the wire payload carries it
+   * and a remote revert converges to the same restored state.
+   */
+  replaced?: ObjectPlacement
 }
 
 /** Add the placement to `mapData.objectPlacements`, replacing one with the same id. */
@@ -33,7 +42,9 @@ function removePlacement(scene: MapScene, placementId: string): void {
 /**
  * Place an object on the map: append the placement to
  * `mapData.objectPlacements` and spawn its entity live. Invertible —
- * `revert` removes it. Like every {@link Command} the payload is pure,
+ * `revert` removes it, or — when the place REPLACED an existing
+ * same-id placement (the update path) — restores the captured
+ * previous one. Like every {@link Command} the payload is pure,
  * JSON-serialisable data (stable ids only) so it doubles as the undo
  * entry AND the wire message for peers.
  */
@@ -48,12 +59,28 @@ export class PlaceObjectCommand implements Command<ObjectPlacementPayload> {
   }
 
   apply(scene: Scene): void {
-    if (scene instanceof MapScene) addPlacement(scene, this.payload.placement)
+    if (!(scene instanceof MapScene)) return
+    // Same-id replace (the "update a placement" path): capture what we
+    // overwrite so revert restores it. Re-applies (redo / replayed
+    // duplicate delivery) keep the FIRST capture — overwriting it with
+    // our own placement would make a later revert a no-op.
+    const existing = scene.mapResource.mapData?.objectPlacements?.find((p) => p.id === this.payload.placement.id)
+    if (existing && this.payload.replaced === undefined && !placementsEqual(existing, this.payload.placement)) {
+      this.payload.replaced = existing
+    }
+    addPlacement(scene, this.payload.placement)
   }
 
   revert(scene: Scene): void {
-    if (scene instanceof MapScene) removePlacement(scene, this.payload.placement.id)
+    if (!(scene instanceof MapScene)) return
+    if (this.payload.replaced) addPlacement(scene, this.payload.replaced)
+    else removePlacement(scene, this.payload.placement.id)
   }
+}
+
+/** Structural equality via JSON — placements are small, pure data. */
+function placementsEqual(a: ObjectPlacement, b: ObjectPlacement): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
 }
 
 /**

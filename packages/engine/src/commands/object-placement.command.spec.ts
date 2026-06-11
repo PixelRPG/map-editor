@@ -71,6 +71,42 @@ export default async () => {
       expect(fixture.placements().map((p) => p.id)).toStrictEqual(['keep'])
     })
 
+    await it('revert of a same-id REPLACE restores the previous placement (not delete)', async () => {
+      const fixture = makePlacementScene([makePlacement('p1', 0, 0)])
+      const command = new PlaceObjectCommand({ placement: makePlacement('p1', 3, 3) })
+      command.apply(fixture.scene)
+      expect(fixture.placements()[0].tileX).toBe(3)
+
+      command.revert(fixture.scene)
+      expect(fixture.placements().length).toBe(1)
+      expect(fixture.placements()[0].tileX).toBe(0)
+    })
+
+    await it('replace capture survives undo → redo → undo (first capture wins)', async () => {
+      const fixture = makePlacementScene([makePlacement('p1', 0, 0)])
+      const command = new PlaceObjectCommand({ placement: makePlacement('p1', 3, 3) })
+      command.apply(fixture.scene)
+      command.revert(fixture.scene)
+      command.apply(fixture.scene) // redo — must NOT re-capture its own placement
+      command.revert(fixture.scene)
+
+      expect(fixture.placements()[0].tileX).toBe(0)
+    })
+
+    await it('byte-identical duplicate delivery does not stamp `replaced` (replay stays a fresh place)', async () => {
+      const fixture = makePlacementScene()
+      const first = new PlaceObjectCommand({ placement: makePlacement('p1') })
+      first.apply(fixture.scene)
+      // Same content arrives again (pre-attach replay overlap) — apply
+      // converges and revert still means "delete", not "restore".
+      const dup = new PlaceObjectCommand({ placement: makePlacement('p1') })
+      dup.apply(fixture.scene)
+      expect(dup.payload.replaced).toBe(undefined)
+
+      dup.revert(fixture.scene)
+      expect(fixture.placements().length).toBe(0)
+    })
+
     await it('is a no-op on a non-MapScene scene (defensive)', async () => {
       const command = new PlaceObjectCommand({ placement: makePlacement('p1') })
       // Plain object scene — apply/revert must not throw.
