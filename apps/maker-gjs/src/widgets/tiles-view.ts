@@ -1,6 +1,6 @@
-import Adw from '@girs/adw-1'
+import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
+import type Gtk from '@girs/gtk-4.0'
 import type {
   CharacterAnimation,
   CharacterDefinition,
@@ -14,9 +14,11 @@ import {
   CardGallery,
   CastInspector,
   CharacterPreview,
+  confirmDestructive,
   type GalleryCardItem,
   GdkSpriteSetResource,
   type ModeRail,
+  promptRename,
   reparentWidget,
   SignalScope,
   type SpriteSetChoice,
@@ -28,8 +30,8 @@ import {
 import { gettext as _ } from 'gettext'
 
 import { characterSpriteSetIds, isCharacterSpriteSet } from '../services/sprite-set-classification.ts'
-import Template from './tiles-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import Template from './tiles-view.blp'
 
 /** Appearance card preview edge length (px) — matches the Cast cards. */
 const CARD_PREVIEW_SIZE = 160
@@ -722,18 +724,9 @@ export class TilesView extends ResponsiveEditorView {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry || isBuiltInSpriteSet(id)) return
     const currentName = entry.resource.data?.name ?? id
-    const field = new Gtk.Entry({ text: currentName, activatesDefault: true })
-    const dialog = new Adw.AlertDialog({ heading: _('Rename tileset'), extraChild: field })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('rename', _('Rename'))
-    dialog.set_response_appearance('rename', Adw.ResponseAppearance.SUGGESTED)
-    dialog.set_default_response('rename')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      const name = field.get_text().trim()
-      if (response === 'rename' && name) this.emit('spriteset-rename-requested', id, name)
+    void promptRename(this, { heading: _('Rename tileset'), current: currentName }).then((name) => {
+      if (name) this.emit('spriteset-rename-requested', id, name)
     })
-    dialog.present(this)
   }
 
   /**
@@ -752,19 +745,14 @@ export class TilesView extends ResponsiveEditorView {
     const body =
       usedBy > 0
         ? _(
-            `“${name}” is still used in ${usedBy} place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone.`,
+            '“%s” is still used in %d place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone.',
           )
-        : _(`“${name}” and its image will be removed from the project. This cannot be undone.`)
-    const dialog = new Adw.AlertDialog({ heading: _('Delete tileset?'), body })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('delete', _('Delete'))
-    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
-    dialog.set_default_response('cancel')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'delete') this.emit('spriteset-delete-requested', id)
+            .replace('%s', name)
+            .replace('%d', String(usedBy))
+        : _('“%s” and its image will be removed from the project. This cannot be undone.').replace('%s', name)
+    void confirmDestructive(this, { heading: _('Delete tileset?'), body }).then((confirmed) => {
+      if (confirmed) this.emit('spriteset-delete-requested', id)
     })
-    dialog.present(this)
   }
 
   /**
@@ -985,21 +973,14 @@ export class TilesView extends ResponsiveEditorView {
   private _confirmDeleteAppearance(id: string): void {
     const sheet = this._appearances.find((s) => s.id === id)
     if (!sheet) return
-    const dialog = new Adw.AlertDialog({
+    void confirmDestructive(this, {
       heading: _('Delete appearance?'),
       body: _(
-        `“${sheet.name}” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone.`,
-      ),
+        '“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone.',
+      ).replace('%s', sheet.name),
+    }).then((confirmed) => {
+      if (confirmed) this._onDeleteAppearanceRequested?.(id)
     })
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.add_response('delete', _('Delete'))
-    dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
-    dialog.set_default_response('cancel')
-    dialog.set_close_response('cancel')
-    dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
-      if (response === 'delete') this._onDeleteAppearanceRequested?.(id)
-    })
-    dialog.present(this)
   }
 
   vfunc_unmap(): void {
