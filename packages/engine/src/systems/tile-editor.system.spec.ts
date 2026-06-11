@@ -2,16 +2,16 @@
  * Regression tests for the tile-editor system's collab-broadcast
  * contract.
  *
- * The system's hot-path `dispatchCommand` applies a tile paint /
- * erase to the active scene INLINE (skipping `Engine.executeCommand`
- * to avoid the indirection on every click). It must mirror the
- * engine's emit of `EngineEvent.COMMAND_EXECUTED` afterwards so the
- * collab layer's `SessionController` can relay the paint to peers.
+ * The system's `dispatchCommand` routes every paint / erase through
+ * the shared `executeCommandOnScene` helper (apply + undo-stack push
+ * + `EngineEvent.COMMAND_EXECUTED` emit) so the collab layer's
+ * `SessionController` can relay the operation to peers.
  *
- * 2026-06-01 hand-test: a host that hosted a session + painted tiles
- * sent zero `op` frames on the WebRTC data channel — only awareness
- * frames. The joiner saw the initial snapshot but no live edits.
- * Trace: `dispatchCommand` was missing the COMMAND_EXECUTED emit.
+ * 2026-06-01 hand-test: an earlier INLINE copy of that body in this
+ * system dropped the COMMAND_EXECUTED emit — a host that hosted a
+ * session + painted tiles sent zero `op` frames on the WebRTC data
+ * channel (only awareness frames); the joiner saw the initial
+ * snapshot but no live edits. These tests pin the emit contract.
  */
 
 import { describe, expect, it } from '@gjsify/unit'
@@ -44,8 +44,9 @@ function makeFakePaintCommand(): Command {
     label: 'paint',
     payload: { tileMapId: 't', layerId: 'l', col: 1, row: 2, tile: 5 } as unknown,
     // No-op apply/revert — dispatchCommand only needs the call to
-    // not throw; the actual paint side-effect is exercised by the
-    // command's own spec, not by this regression test.
+    // not throw; the actual paint side-effect is exercised by
+    // `commands/paint-tile.command.spec.ts`, not by this
+    // regression test.
     apply: () => {},
     revert: () => {},
   } as unknown as Command

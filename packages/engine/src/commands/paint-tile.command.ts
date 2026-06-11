@@ -1,9 +1,10 @@
-import { type Scene, TileMap } from 'excalibur'
+import type { Scene } from 'excalibur'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import { MapScene } from '../scenes/map.scene.ts'
 import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../services/layer.manager.ts'
 import { setSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { rebuildAllTileGraphics, updateTileMapZIndex } from '../services/tile-graphics.manager.ts'
+import { findTileMapForLayer } from '../services/tile-paint.service.ts'
 import type { Command } from './types.ts'
 
 /**
@@ -46,7 +47,7 @@ export class PaintTileCommand implements Command<PaintTilePayload> {
   }
 
   apply(scene: Scene): void {
-    const ctx = resolveContext(scene)
+    const ctx = resolveContext(scene, this.payload.layerId)
     if (!ctx) return
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
@@ -54,7 +55,7 @@ export class PaintTileCommand implements Command<PaintTilePayload> {
   }
 
   revert(scene: Scene): void {
-    const ctx = resolveContext(scene)
+    const ctx = resolveContext(scene, this.payload.layerId)
     if (!ctx) return
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
@@ -78,7 +79,7 @@ export class EraseTileCommand implements Command<Omit<PaintTilePayload, 'spriteI
   }
 
   apply(scene: Scene): void {
-    const ctx = resolveContext(scene)
+    const ctx = resolveContext(scene, this.payload.layerId)
     if (!ctx) return
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
@@ -86,7 +87,7 @@ export class EraseTileCommand implements Command<Omit<PaintTilePayload, 'spriteI
   }
 
   revert(scene: Scene): void {
-    const ctx = resolveContext(scene)
+    const ctx = resolveContext(scene, this.payload.layerId)
     if (!ctx) return
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
@@ -131,17 +132,35 @@ function restorePreviousSprites(
 }
 
 /**
- * Find the `TileMap` + `MapResource` on a `MapScene`. Returns `null`
- * if the scene isn't a `MapScene` or its tilemap isn't realised yet.
+ * Resolve the **tier-correct** `TileMap` + `MapResource` for the
+ * command's target layer. A `MapScene` holds one tilemap per
+ * `LayerTier` (ground / hero / overlay — see
+ * `TileMapTierComponent`), so "the" tilemap is ambiguous: an earlier
+ * version of this helper grabbed the *first* tilemap in the scene,
+ * which is always the ground tier (`MapResource.createTileMaps` adds
+ * tiers in ground → hero → overlay order). Every hero/overlay-layer
+ * paint then mutated the wrong tilemap's shadow state — wrong render
+ * z, and undo (whose `previousSprites` snapshot was read from the
+ * tier-correct shadow that never saw the paint) erased earlier paints
+ * instead of restoring them. Delegating to {@link findTileMapForLayer}
+ * keeps this resolution identical to the interactive paths
+ * (`TileEditorSystem`, `Engine.paintTileAt`).
+ *
+ * Returns `null` when the scene isn't a `MapScene` or isn't realised
+ * yet (silent — commands may legitimately arrive before/after a map
+ * is live). An unknown layer id or a missing tier tilemap is warned
+ * explicitly and skipped: it is non-critical (a remote peer can paint
+ * a layer the local map no longer has), but it must NOT silently fall
+ * back to another tier's tilemap.
  */
-function resolveContext(scene: Scene) {
+function resolveContext(scene: Scene, layerId: string) {
   if (!(scene instanceof MapScene)) return null
   const mapResource = scene.mapResource
   if (!mapResource) return null
-  for (const entity of scene.world.entityManager.entities) {
-    if (entity instanceof TileMap) {
-      return { tileMap: entity, mapResource }
-    }
+  const found = findTileMapForLayer(scene, layerId)
+  if (!found) {
+    console.warn(`[PaintTile] no tier tilemap resolves for layer "${layerId}" — command skipped`)
+    return null
   }
-  return null
+  return { tileMap: found.tileMap, mapResource }
 }
