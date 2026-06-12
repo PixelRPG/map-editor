@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "tileWidth": 16,
   "tileHeight": 16,
-  "columns": 11,
-  "rows": 11,
+  "columns": 21,
+  "rows": 15,
   "spriteSets": [
     {
       "id": "tree-house",
@@ -22,435 +22,731 @@
       "tier": "ground",
       "sprites": [
         {
-          "x": 3,
-          "y": 0,
-          "spriteId": 3,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 4,
-          "y": 0,
-          "spriteId": 4,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 5,
-          "y": 0,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        }
+      ]
+    },
+    {
+      "id": "layer_decor",
+      "name": "Decor",
+      "visible": true,
+      "tier": "hero",
+      "sprites": [
+        {
+          "x": 6,
+          "y": 1,
           "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 6,
-          "y": 0,
-          "spriteId": 6,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 7,
-          "y": 0,
-          "spriteId": 7,
+          "y": 1,
+          "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
-          "y": 0,
-          "spriteId": 8,
+          "y": 1,
+          "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 1,
+          "x": 9,
           "y": 1,
-          "spriteId": 12,
+          "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 2,
+          "x": 10,
           "y": 1,
-          "spriteId": 13,
+          "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 3,
+          "x": 11,
           "y": 1,
-          "spriteId": 14,
+          "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 4,
+          "x": 12,
           "y": 1,
-          "spriteId": 15,
+          "spriteId": 5,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 1,
+          "spriteId": 5,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 1,
+          "spriteId": 5,
           "spriteSetId": "tree-house"
         },
         {
           "x": 5,
-          "y": 1,
-          "spriteId": 16,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 6,
-          "y": 1,
+          "y": 2,
           "spriteId": 17,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 7,
-          "y": 1,
-          "spriteId": 18,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 8,
-          "y": 1,
-          "spriteId": 19,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 9,
-          "y": 1,
-          "spriteId": 20,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 1,
-          "y": 2,
-          "spriteId": 23,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 2,
-          "y": 2,
-          "spriteId": 24,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 3,
-          "y": 2,
-          "spriteId": 25,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 4,
-          "y": 2,
-          "spriteId": 26,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 5,
-          "y": 2,
-          "spriteId": 27,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 6,
           "y": 2,
-          "spriteId": 28,
+          "spriteId": 21,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 2,
-          "spriteId": 29,
+          "spriteId": 21,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 2,
-          "spriteId": 30,
+          "spriteId": 21,
           "spriteSetId": "tree-house"
         },
         {
           "x": 9,
           "y": 2,
-          "spriteId": 31,
+          "spriteId": 21,
           "spriteSetId": "tree-house"
         },
         {
           "x": 10,
           "y": 2,
-          "spriteId": 32,
+          "spriteId": 21,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 0,
+          "x": 11,
+          "y": 2,
+          "spriteId": 21,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 2,
+          "spriteId": 21,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 2,
+          "spriteId": 21,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 2,
+          "spriteId": 21,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 2,
+          "spriteId": 41,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 4,
           "y": 3,
-          "spriteId": 33,
+          "spriteId": 17,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 1,
+          "x": 5,
           "y": 3,
-          "spriteId": 34,
+          "spriteId": 21,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 2,
-          "y": 3,
-          "spriteId": 35,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 3,
+          "x": 6,
           "y": 3,
           "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 4,
-          "y": 3,
-          "spriteId": 37,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 5,
-          "y": 3,
-          "spriteId": 38,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 6,
-          "y": 3,
-          "spriteId": 39,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 7,
           "y": 3,
-          "spriteId": 40,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 3,
+          "spriteId": 21,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
           "y": 3,
           "spriteId": 41,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 9,
-          "y": 3,
-          "spriteId": 42,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 10,
-          "y": 3,
-          "spriteId": 43,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 0,
-          "y": 4,
-          "spriteId": 44,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 1,
-          "y": 4,
-          "spriteId": 45,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 2,
-          "y": 4,
-          "spriteId": 46,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 3,
           "y": 4,
-          "spriteId": 47,
+          "spriteId": 80,
           "spriteSetId": "tree-house"
         },
         {
           "x": 4,
           "y": 4,
-          "spriteId": 48,
+          "spriteId": 81,
           "spriteSetId": "tree-house"
         },
         {
           "x": 5,
           "y": 4,
-          "spriteId": 49,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 4,
-          "spriteId": 50,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 4,
-          "spriteId": 51,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
-          "y": 4,
-          "spriteId": 52,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 9,
-          "y": 4,
-          "spriteId": 53,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 10,
           "y": 4,
           "spriteId": 54,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 0,
-          "y": 5,
+          "x": 9,
+          "y": 4,
           "spriteId": 55,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 1,
-          "y": 5,
+          "x": 10,
+          "y": 4,
           "spriteId": 56,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 2,
-          "y": 5,
-          "spriteId": 30,
+          "x": 11,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 4,
+          "spriteId": 101,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 4,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 4,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 4,
+          "spriteId": 90,
           "spriteSetId": "tree-house"
         },
         {
           "x": 3,
           "y": 5,
-          "spriteId": 58,
+          "spriteId": 80,
           "spriteSetId": "tree-house"
         },
         {
           "x": 4,
           "y": 5,
-          "spriteId": 59,
+          "spriteId": 81,
           "spriteSetId": "tree-house"
         },
         {
           "x": 5,
           "y": 5,
-          "spriteId": 60,
+          "spriteId": 140,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 5,
-          "spriteId": 61,
+          "spriteId": 100,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 5,
-          "spriteId": 62,
+          "spriteId": 100,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 5,
-          "spriteId": 63,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 9,
-          "y": 5,
-          "spriteId": 64,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 10,
-          "y": 5,
-          "spriteId": 65,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 0,
-          "y": 6,
-          "spriteId": 66,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 1,
-          "y": 6,
-          "spriteId": 67,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 2,
-          "y": 6,
-          "spriteId": 68,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 3,
-          "y": 6,
-          "spriteId": 69,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 4,
-          "y": 6,
           "spriteId": 70,
           "spriteSetId": "tree-house"
         },
         {
+          "x": 9,
+          "y": 5,
+          "spriteId": 71,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 5,
+          "spriteId": 72,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 5,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 5,
+          "spriteId": 140,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 5,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 18,
+          "y": 5,
+          "spriteId": 90,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 3,
+          "y": 6,
+          "spriteId": 80,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 4,
+          "y": 6,
+          "spriteId": 81,
+          "spriteSetId": "tree-house"
+        },
+        {
           "x": 5,
           "y": 6,
-          "spriteId": 71,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 6,
-          "spriteId": 72,
+          "spriteId": 51,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 6,
-          "spriteId": 73,
+          "spriteId": 52,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 6,
-          "spriteId": 74,
+          "spriteId": 53,
           "spriteSetId": "tree-house"
         },
         {
           "x": 9,
           "y": 6,
-          "spriteId": 75,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 10,
           "y": 6,
-          "spriteId": 76,
+          "spriteId": 208,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 0,
-          "y": 7,
-          "spriteId": 77,
+          "x": 11,
+          "y": 6,
+          "spriteId": 209,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 1,
-          "y": 7,
-          "spriteId": 78,
+          "x": 12,
+          "y": 6,
+          "spriteId": 210,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 2,
-          "y": 7,
-          "spriteId": 79,
+          "x": 13,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 6,
+          "spriteId": 174,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 6,
+          "spriteId": 175,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 6,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 6,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 18,
+          "y": 6,
+          "spriteId": 90,
           "spriteSetId": "tree-house"
         },
         {
@@ -468,187 +764,571 @@
         {
           "x": 5,
           "y": 7,
-          "spriteId": 82,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 7,
-          "spriteId": 83,
+          "spriteId": 67,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 7,
-          "spriteId": 84,
+          "spriteId": 68,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 7,
-          "spriteId": 85,
+          "spriteId": 69,
           "spriteSetId": "tree-house"
         },
         {
           "x": 9,
           "y": 7,
-          "spriteId": 86,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 10,
           "y": 7,
-          "spriteId": 87,
+          "spriteId": 224,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 1,
-          "y": 8,
-          "spriteId": 89,
+          "x": 11,
+          "y": 7,
+          "spriteId": 225,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 2,
-          "y": 8,
+          "x": 12,
+          "y": 7,
+          "spriteId": 226,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 7,
+          "spriteId": 190,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 7,
+          "spriteId": 191,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 7,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 7,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 18,
+          "y": 7,
           "spriteId": 90,
           "spriteSetId": "tree-house"
         },
         {
           "x": 3,
           "y": 8,
-          "spriteId": 91,
+          "spriteId": 80,
           "spriteSetId": "tree-house"
         },
         {
           "x": 4,
           "y": 8,
-          "spriteId": 92,
+          "spriteId": 81,
           "spriteSetId": "tree-house"
         },
         {
           "x": 5,
           "y": 8,
-          "spriteId": 93,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 8,
-          "spriteId": 94,
+          "spriteId": 83,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 8,
+          "spriteId": 84,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 8,
-          "spriteId": 96,
+          "spriteId": 85,
           "spriteSetId": "tree-house"
         },
         {
           "x": 9,
           "y": 8,
-          "spriteId": 97,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 10,
           "y": 8,
-          "spriteId": 98,
+          "spriteId": 240,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 1,
-          "y": 9,
-          "spriteId": 100,
+          "x": 11,
+          "y": 8,
+          "spriteId": 241,
           "spriteSetId": "tree-house"
         },
         {
-          "x": 2,
-          "y": 9,
-          "spriteId": 101,
+          "x": 12,
+          "y": 8,
+          "spriteId": 242,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 8,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 8,
+          "spriteId": 140,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 8,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 18,
+          "y": 8,
+          "spriteId": 90,
           "spriteSetId": "tree-house"
         },
         {
           "x": 3,
           "y": 9,
-          "spriteId": 102,
+          "spriteId": 80,
           "spriteSetId": "tree-house"
         },
         {
           "x": 4,
           "y": 9,
-          "spriteId": 103,
+          "spriteId": 81,
           "spriteSetId": "tree-house"
         },
         {
           "x": 5,
           "y": 9,
-          "spriteId": 104,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 9,
-          "spriteId": 105,
+          "spriteId": 89,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 9,
-          "spriteId": 106,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 9,
-          "spriteId": 107,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 9,
           "y": 9,
-          "spriteId": 108,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 9,
+          "spriteId": 206,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 9,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 9,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 18,
+          "y": 9,
+          "spriteId": 90,
           "spriteSetId": "tree-house"
         },
         {
           "x": 3,
           "y": 10,
-          "spriteId": 113,
+          "spriteId": 80,
           "spriteSetId": "tree-house"
         },
         {
           "x": 4,
           "y": 10,
-          "spriteId": 114,
+          "spriteId": 81,
           "spriteSetId": "tree-house"
         },
         {
           "x": 5,
           "y": 10,
-          "spriteId": 115,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 6,
           "y": 10,
-          "spriteId": 116,
+          "spriteId": 89,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
           "y": 10,
-          "spriteId": 117,
+          "spriteId": 89,
           "spriteSetId": "tree-house"
         },
         {
           "x": 8,
           "y": 10,
-          "spriteId": 118,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 10,
+          "spriteId": 134,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 10,
+          "spriteId": 222,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 10,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 17,
+          "y": 10,
+          "spriteId": 105,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 18,
+          "y": 10,
+          "spriteId": 90,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 4,
+          "y": 11,
+          "spriteId": 145,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 5,
+          "y": 11,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 11,
+          "spriteId": 36,
           "spriteSetId": "tree-house"
         },
         {
           "x": 7,
-          "y": 8,
-          "spriteId": 30,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 11,
+          "spriteId": 36,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 11,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 16,
+          "y": 11,
+          "spriteId": 137,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 5,
+          "y": 12,
+          "spriteId": 145,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 12,
+          "spriteId": 177,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 12,
+          "spriteId": 150,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 15,
+          "y": 12,
+          "spriteId": 137,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 6,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 7,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 8,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 9,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 10,
+          "y": 13,
+          "spriteId": 177,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 11,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 12,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 13,
+          "y": 13,
+          "spriteId": 165,
+          "spriteSetId": "tree-house"
+        },
+        {
+          "x": 14,
+          "y": 13,
+          "spriteId": 165,
           "spriteSetId": "tree-house"
         }
       ]
@@ -665,8 +1345,8 @@
     {
       "id": "tp-exit-to-forest",
       "layerId": "layer_functional",
-      "tileX": 5,
-      "tileY": 9,
+      "tileX": 10,
+      "tileY": 13,
       "inline": {
         "id": "tp-exit-to-forest-def",
         "name": "Door to Kokiri Forest",
@@ -692,8 +1372,8 @@
     {
       "id": "spawn-player",
       "layerId": "layer_functional",
-      "tileX": 5,
-      "tileY": 7,
+      "tileX": 10,
+      "tileY": 10,
       "inline": {
         "id": "spawn-player-def",
         "name": "Player spawn",

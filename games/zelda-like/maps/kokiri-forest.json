@@ -124816,8 +124816,8 @@
           {
             "type": "teleport",
             "targetMapId": "tree-house",
-            "targetTileX": 5,
-            "targetTileY": 8,
+            "targetTileX": 10,
+            "targetTileY": 12,
             "facing": "up",
             "label": "Link's Tree House"
           }
@@ -124843,8 +124843,8 @@
           {
             "type": "teleport",
             "targetMapId": "tree-house",
-            "targetTileX": 5,
-            "targetTileY": 8,
+            "targetTileX": 10,
+            "targetTileY": 12,
             "facing": "up",
             "label": "Link's Tree House"
           }
