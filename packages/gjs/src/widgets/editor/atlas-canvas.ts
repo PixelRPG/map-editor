@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Graphene from '@girs/graphene-1.0'
+import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import Template from './atlas-canvas.blp'
@@ -75,6 +76,12 @@ export class AtlasCanvas extends Adw.Bin {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
+          // Fires when a preview-viewport pan ends, with the new centre
+          // in tile coordinates — hosts persist it as
+          // `editorData.preview` (same flow as `scene-moved`).
+          'preview-moved': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
+          },
         },
       },
       AtlasCanvas,
@@ -97,6 +104,43 @@ export class AtlasCanvas extends Adw.Bin {
     this._rebuildCards()
     this._teleports.setWorld(scenes, teleports, 1)
     this._sizeSurface()
+  }
+
+  constructor() {
+    super()
+    this._wireBackgroundPan()
+  }
+
+  /**
+   * Drag on the empty atlas backdrop pans the scrolled view (cards keep
+   * their own gestures: content drag pans the preview, the corner
+   * handle moves the card). The gesture lives on the SCROLLER — its
+   * coordinates are viewport-stable, so adjusting the scroll position
+   * doesn't shift the gesture's own reference frame (the same feedback
+   * loop the cards' parent-space drag math guards against). It denies
+   * itself when the press landed on a card, so it can't fight them.
+   */
+  private _wireBackgroundPan(): void {
+    const pan = new Gtk.GestureDrag()
+    let startH = 0
+    let startV = 0
+    pan.connect('drag-begin', (gesture: Gtk.GestureDrag, x: number, y: number) => {
+      const point = new Graphene.Point()
+      point.init(x, y)
+      const [ok, inSurface] = this._scroller.compute_point(this._surface, point)
+      const picked = ok ? this._surface.pick(inSurface.x, inSurface.y, Gtk.PickFlags.DEFAULT) : null
+      if (picked && picked !== (this._surface as Gtk.Widget)) {
+        gesture.set_state(Gtk.EventSequenceState.DENIED)
+        return
+      }
+      startH = this._scroller.hadjustment.value
+      startV = this._scroller.vadjustment.value
+    })
+    pan.connect('drag-update', (_g: Gtk.GestureDrag, dx: number, dy: number) => {
+      this._scroller.hadjustment.value = startH - dx
+      this._scroller.vadjustment.value = startV - dy
+    })
+    this._scroller.add_controller(pan)
   }
 
   get selectedId(): string {
@@ -136,15 +180,21 @@ export class AtlasCanvas extends Adw.Bin {
     }
   }
 
+  /** Default native-pixel zoom of card previews (the user's "300%"). */
+  private static readonly PREVIEW_ZOOM = 3
+
   /**
    * For real projects (where the host passed us a `GameProjectResource`),
    * swap the card's default mini-map placeholder for a `MapPreview`
-   * that paints the scene's actual tile data. Falls through to the
-   * default placeholder if the resource has no matching map.
+   * that paints the scene's actual tile data — a section of the map at
+   * a uniform native-pixel zoom, pannable by dragging the preview
+   * (persisted via `preview-moved`). Falls through to the default
+   * placeholder if the resource has no matching map.
    */
   private _injectPreviewIfAvailable(card: SceneCard, scene: SampleScene): void {
     if (!this._projectResource) return
-    if (!this._projectResource.maps.has(scene.id)) return
+    const mapData = this._projectResource.maps.get(scene.id)?.mapData
+    if (!mapData) return
 
     const cols = scene.cols ?? 0
     const previewRows = scene.previewRows ?? 0
@@ -153,7 +203,19 @@ export class AtlasCanvas extends Adw.Bin {
     const preview = new MapPreview()
     preview.set_size_request(cols * scene.tilePx, previewRows * scene.tilePx)
     card.setPreviewWidget(preview)
-    void preview.setFromResource(this._projectResource, scene.id)
+    card.pannablePreview = true
+    void preview.setFromResource(this._projectResource, scene.id, {
+      tileX: scene.previewTileX ?? mapData.columns / 2,
+      tileY: scene.previewTileY ?? mapData.rows / 2,
+      zoom: scene.previewZoom ?? AtlasCanvas.PREVIEW_ZOOM,
+    })
+    card.connect('preview-pan-update', (_c: SceneCard, dx: number, dy: number) => {
+      preview.panViewportBy(dx, dy)
+    })
+    card.connect('preview-pan-end', () => {
+      const centre = preview.commitViewport()
+      if (centre) this.emit('preview-moved', scene.id, centre.tileX, centre.tileY)
+    })
   }
 
   private _wireDrag(sceneId: string, card: SceneCard): void {
@@ -202,8 +264,12 @@ export class AtlasCanvas extends Adw.Bin {
     let maxX = 0
     let maxY = 0
     for (const s of this._scenes) {
-      const w = (s.rows[0]?.length ?? 0) * s.tilePx
-      const h = s.rows.length * s.tilePx
+      // Real-project scenes carry no terrain rows — fall back to the
+      // cols/previewRows card geometry so the surface still spans them.
+      const cols = s.rows[0]?.length || s.cols || 0
+      const rows = s.rows.length || s.previewRows || 0
+      const w = cols * s.tilePx
+      const h = rows * s.tilePx
       maxX = Math.max(maxX, s.x + w)
       maxY = Math.max(maxY, s.y + h)
     }

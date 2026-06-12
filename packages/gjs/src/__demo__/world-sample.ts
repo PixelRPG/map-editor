@@ -31,6 +31,12 @@ export interface SampleScene {
   y: number
   /** Mini-map tile size in CSS pixels. */
   tilePx: number
+  /** Persisted preview-viewport centre (tile coords), if any. */
+  previewTileX?: number
+  /** See {@link previewTileX}. */
+  previewTileY?: number
+  /** Persisted preview zoom (native-pixel factor, default 3). */
+  previewZoom?: number
   npcs?: { x: number; y: number; cast: number }[]
   hero?: { x: number; y: number }
   /** Total events placed in this scene (for the corner badge). */

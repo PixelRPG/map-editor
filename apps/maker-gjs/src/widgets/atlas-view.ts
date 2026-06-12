@@ -66,6 +66,9 @@ export class AtlasView extends ResponsiveEditorView {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
+          'preview-moved': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
+          },
           // mode-changed is inherited from ResponsiveEditorView.
         },
       },
@@ -152,6 +155,9 @@ export class AtlasView extends ResponsiveEditorView {
     })
     this.signals.connect(this._atlas, 'scene-moved', (_a: AtlasCanvas, id: string, x: number, y: number) => {
       this.emit('scene-moved', id, x, y)
+    })
+    this.signals.connect(this._atlas, 'preview-moved', (_a: AtlasCanvas, id: string, tileX: number, tileY: number) => {
+      this.emit('preview-moved', id, tileX, tileY)
     })
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
       this.emit('mode-changed', mode as EditorMode)

@@ -384,6 +384,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._persistAtlasPosition(id, x, y)
     })
+    this.signals.connect(
+      this._atlas_view,
+      'preview-moved',
+      (_v: AtlasView, id: string, tileX: number, tileY: number) => {
+        this._persistPreviewViewport(id, tileX, tileY)
+      },
+    )
     // Every view's mode-rail forwards `mode-changed` at the view
     // level. Re-route all four through the central `win.mode` action
     // so navigation is consistent — the action's change-state handler
@@ -807,6 +814,29 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._persistMap(mapId, _('Could not save atlas position'))
     this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
       createMapEditorDataOp({ peerId, seq, mapId, editorData: { atlasX: x, atlasY: y } }),
+    )
+  }
+
+  /**
+   * Persist the preview-viewport centre the user just panned on an
+   * atlas card. Same flow as {@link _persistAtlasPosition}: in-memory
+   * update + disk write + `__project/map.editor-data` op for peers.
+   * The in-memory `SampleScene` mirror keeps the viewport stable when
+   * the atlas re-renders (e.g. after a card move).
+   */
+  private _persistPreviewViewport(mapId: string, tileX: number, tileY: number): void {
+    const mapResource = this._loadedProject?.resource.maps.get(mapId)
+    if (!mapResource?.mapData) return
+    const preview = { ...mapResource.mapData.editorData?.preview, tileX, tileY }
+    mapResource.mapData.editorData = { ...mapResource.mapData.editorData, preview }
+    const scene = this._scenesById.get(mapId)
+    if (scene) {
+      scene.previewTileX = tileX
+      scene.previewTileY = tileY
+    }
+    this._persistMap(mapId, _('Could not save preview section'))
+    this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
+      createMapEditorDataOp({ peerId, seq, mapId, editorData: { preview } }),
     )
   }
 
