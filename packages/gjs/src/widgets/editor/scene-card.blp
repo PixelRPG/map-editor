@@ -42,17 +42,19 @@ template $PixelRpgSceneCard : Gtk.Button {
         }
       };
 
-      // Dragging the handle moves the card on the atlas; dragging the
-      // preview content pans the map section inside it (viewport mode).
+      // Viewport lock: closed = dragging moves the card on the atlas
+      // (default); open = dragging pans the map section inside it.
+      // Only shown for viewport previews (real projects).
       [overlay]
-      Gtk.Image drag_handle {
-        icon-name: "list-drag-handle-symbolic";
-        pixel-size: 14;
+      Gtk.ToggleButton lock_button {
+        icon-name: "changes-prevent-symbolic";
         halign: end;
         valign: start;
         margin-top: 4;
         margin-end: 4;
-        styles ["scene-card-handle", "osd"]
+        visible: bind template.viewport-lockable;
+        tooltip-text: _("Unlock to pan the preview section");
+        styles ["scene-card-lock", "osd", "flat"]
       }
 
       [overlay]

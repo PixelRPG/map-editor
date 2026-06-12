@@ -21,15 +21,18 @@
   box-shadow: 0 0 0 2px @accent_bg_color;
 }
 
-.scene-card-handle {
+.scene-card-lock {
   border-radius: 6px;
-  padding: 3px;
+  padding: 2px;
+  min-width: 0;
+  min-height: 0;
   opacity: 0;
   transition: opacity 150ms ease;
 }
 
-.scene-card:hover .scene-card-handle,
-.scene-card.selected .scene-card-handle {
+.scene-card:hover .scene-card-lock,
+.scene-card.selected .scene-card-lock,
+.scene-card-lock:checked {
   opacity: 1;
 }
 

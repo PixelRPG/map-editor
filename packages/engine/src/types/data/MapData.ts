@@ -143,17 +143,16 @@ export interface MapEditorData {
 
   /**
    * Viewport of the map's atlas-card preview. Cards render the map at
-   * a uniform native-pixel zoom (default 300%) cropped to the card, so
-   * only a section is visible — this records which one. Absent = map
-   * centre. Adjusted by panning the card's preview content.
+   * a uniform native-pixel zoom (atlas-global, default 200%) cropped
+   * to the card, so only a section is visible — this records which
+   * one. Absent = map centre. Adjusted by panning the card's preview
+   * content with its lock toggle open.
    */
   preview?: {
     /** Viewport centre, in tile coordinates. */
     tileX?: number
     /** See {@link tileX}. */
     tileY?: number
-    /** Native-pixel zoom of the preview (3 = 300%). */
-    zoom?: number
   }
 
   /**

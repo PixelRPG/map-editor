@@ -1226,16 +1226,27 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(toggleInspectorAction)
 
+    // The zoom actions are view-contextual: on the atlas they drive
+    // the global card-preview zoom (the atlas reuses the scene
+    // editor's FloatingZoom pill), everywhere else the engine camera.
+    const zoomTargetsAtlas = () => this._stack.get_visible_child_name() === 'atlas'
+
     const zoomInAction = new Gio.SimpleAction({ name: 'zoom-in' })
-    zoomInAction.connect('activate', () => this._stepZoom(+0.2))
+    zoomInAction.connect('activate', () =>
+      zoomTargetsAtlas() ? this._atlas_view.stepPreviewZoom(+0.2) : this._stepZoom(+0.2),
+    )
     winActions.add_action(zoomInAction)
 
     const zoomOutAction = new Gio.SimpleAction({ name: 'zoom-out' })
-    zoomOutAction.connect('activate', () => this._stepZoom(-0.2))
+    zoomOutAction.connect('activate', () =>
+      zoomTargetsAtlas() ? this._atlas_view.stepPreviewZoom(-0.2) : this._stepZoom(-0.2),
+    )
     winActions.add_action(zoomOutAction)
 
     const zoomResetAction = new Gio.SimpleAction({ name: 'zoom-reset' })
-    zoomResetAction.connect('activate', () => this._applyZoom(1))
+    zoomResetAction.connect('activate', () =>
+      zoomTargetsAtlas() ? this._atlas_view.resetPreviewZoom() : void this._applyZoom(1),
+    )
     winActions.add_action(zoomResetAction)
 
     const newSceneAction = new Gio.SimpleAction({ name: 'new-scene' })

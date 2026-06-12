@@ -161,6 +161,7 @@ export class AtlasCanvas extends Adw.Bin {
   private _rebuildCards(): void {
     for (const [, card] of this._cards) this._surface.remove(card)
     this._cards.clear()
+    this._previews.clear()
 
     for (const scene of this._scenes) {
       const card = new SceneCard()
@@ -180,16 +181,38 @@ export class AtlasCanvas extends Adw.Bin {
     }
   }
 
-  /** Default native-pixel zoom of card previews (the user's "300%"). */
-  private static readonly PREVIEW_ZOOM = 3
+  /** Default native-pixel zoom of card previews (200%). */
+  static readonly DEFAULT_PREVIEW_ZOOM = 2
+
+  /** Current global preview zoom — the atlas zoom control drives it. */
+  private _previewZoom = AtlasCanvas.DEFAULT_PREVIEW_ZOOM
+
+  /** Live `MapPreview`s by scene id, for global zoom changes. */
+  private _previews: Map<string, MapPreview> = new Map()
+
+  get previewZoom(): number {
+    return this._previewZoom
+  }
+
+  /**
+   * Apply a new global preview zoom to every card (and to cards built
+   * later). Clamped to a sane pixel-zoom range.
+   */
+  setPreviewZoom(zoom: number): void {
+    const clamped = Math.min(6, Math.max(0.5, zoom))
+    if (clamped === this._previewZoom) return
+    this._previewZoom = clamped
+    for (const preview of this._previews.values()) preview.setViewportZoom(clamped)
+  }
 
   /**
    * For real projects (where the host passed us a `GameProjectResource`),
    * swap the card's default mini-map placeholder for a `MapPreview`
    * that paints the scene's actual tile data — a section of the map at
-   * a uniform native-pixel zoom, pannable by dragging the preview
-   * (persisted via `preview-moved`). Falls through to the default
-   * placeholder if the resource has no matching map.
+   * a uniform native-pixel zoom. The card's lock toggle switches its
+   * drag between moving the card (locked, default) and panning the
+   * section (unlocked; persisted via `preview-moved`). Falls through
+   * to the default placeholder if the resource has no matching map.
    */
   private _injectPreviewIfAvailable(card: SceneCard, scene: SampleScene): void {
     if (!this._projectResource) return
@@ -203,11 +226,12 @@ export class AtlasCanvas extends Adw.Bin {
     const preview = new MapPreview()
     preview.set_size_request(cols * scene.tilePx, previewRows * scene.tilePx)
     card.setPreviewWidget(preview)
-    card.pannablePreview = true
+    card.viewportLockable = true
+    this._previews.set(scene.id, preview)
     void preview.setFromResource(this._projectResource, scene.id, {
       tileX: scene.previewTileX ?? mapData.columns / 2,
       tileY: scene.previewTileY ?? mapData.rows / 2,
-      zoom: scene.previewZoom ?? AtlasCanvas.PREVIEW_ZOOM,
+      zoom: this._previewZoom,
     })
     card.connect('preview-pan-update', (_c: SceneCard, dx: number, dy: number) => {
       preview.panViewportBy(dx, dy)

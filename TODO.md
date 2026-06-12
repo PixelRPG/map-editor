@@ -47,7 +47,7 @@ Conventions:
 
 ## Atlas / world
 
-- **Viewport scene-card previews — SHIPPED**; remaining polish: the per-map `editorData.preview.zoom` is honoured but has no UI (default 300%) — expose it in the scene inspector; touch devices have no card-move path besides the (small) corner handle; the welcome view still uses fit-whole-map previews by design. *owner: gjs (MapPreview) + maker*
+- **Viewport scene-card previews — SHIPPED** (uniform 200% default zoom, atlas-global zoom via the scene editor's FloatingZoom pill routed through `win.zoom-*`, per-card lock toggle: closed = drag moves the card, open = drag pans the section, persisted as `editorData.preview`). Remaining polish: the global atlas zoom is session-only (not persisted per project); the welcome view still uses fit-whole-map previews by design. *owner: gjs (MapPreview) + maker*
 - **Atlas load time for big projects** — opening `games/oot2d-2014` (19 maps, 18 MB) takes ~19 s to the atlas; the project now loads **twice** (`loadProjectAsAtlas` + the welcome/engine path each construct a `GameProjectResource`) and repeated loads in one session can OOM GJS. Deduplicate to one shared resource per open project (existing "GameProjectResource double copy" debt) and consider lazy map parsing. *owner: maker / engine*
 
 ## Welcome / project lifecycle

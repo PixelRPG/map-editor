@@ -1,5 +1,6 @@
 import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
+import { gettext as _ } from 'gettext'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
@@ -19,14 +20,15 @@ GObject.type_ensure(MiniMap.$gtype)
  * style class on selection — that drives the accent ring.
  *
  * Layout: a free-floating title row (name + dimensions, no header
- * bar) above the subtly-framed preview; the drag handle sits in the
+ * bar) above the subtly-framed preview; the viewport lock sits in the
  * preview's top-right overlay corner, the event-count badge in the
  * bottom-right.
  *
- * Drag semantics: the corner handle always MOVES the card on the
- * atlas; dragging the preview content PANS the map section inside it
- * when the host enabled `pannablePreview` (viewport previews), and
- * falls back to moving the card otherwise (sample worlds).
+ * Drag semantics: with the lock CLOSED (default) a drag moves the
+ * card on the atlas; with the lock OPEN it pans the map section
+ * inside the preview (`preview-pan-*` signals). The lock is only
+ * shown for viewport previews (`viewportLockable`) — sample worlds
+ * keep plain drag-to-move.
  *
  * The card emits the underlying `Gtk.Button::clicked` signal on single
  * click; double-clicks are detected by listening to `clicked` and
@@ -35,7 +37,7 @@ GObject.type_ensure(MiniMap.$gtype)
 export class SceneCard extends Gtk.Button {
   declare _map: MiniMap
   declare _preview_slot: Adw.Bin
-  declare _drag_handle: Gtk.Image
+  declare _lock_button: Gtk.ToggleButton
 
   private _sceneName = ''
   private _cols = 0
@@ -44,11 +46,12 @@ export class SceneCard extends Gtk.Button {
   private _lastClickMs = 0
   private _selected = false
   private _dragging = false
+  private _viewportLockable = false
   /**
-   * When true, dragging the preview content pans the map section
-   * inside the card (`preview-pan-*` signals) and only the corner
-   * handle moves the card. When false (sample worlds, no viewport),
-   * any drag moves the card — the pre-viewport behaviour.
+   * When true (lock open), dragging the preview content pans the map
+   * section inside the card (`preview-pan-*` signals). When false
+   * (lock closed — the default — or no viewport preview at all), any
+   * drag moves the card. Driven by the lock toggle.
    */
   private _pannablePreview = false
   /** Current drag interpretation, decided at gesture-begin. */
@@ -70,7 +73,7 @@ export class SceneCard extends Gtk.Button {
       {
         GTypeName: 'PixelRpgSceneCard',
         Template,
-        InternalChildren: ['map', 'preview_slot', 'drag_handle'],
+        InternalChildren: ['map', 'preview_slot', 'lock_button'],
         Properties: {
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
@@ -98,6 +101,13 @@ export class SceneCard extends Gtk.Button {
             'Has events',
             'Whether the events badge should be visible',
             GObject.ParamFlags.READABLE,
+            false,
+          ),
+          'viewport-lockable': GObject.ParamSpec.boolean(
+            'viewport-lockable',
+            'Viewport lockable',
+            'Whether the preview-viewport lock toggle is shown (viewport previews only)',
+            GObject.ParamFlags.READWRITE,
             false,
           ),
         },
@@ -130,7 +140,7 @@ export class SceneCard extends Gtk.Button {
       this._dragging = false
       // Handle presses always MOVE the card; presses on the preview
       // content PAN the map section when the host enabled it.
-      this._dragMode = !this._pannablePreview || this._isOnHandle(x, y) ? 'move' : 'pan'
+      this._dragMode = !this._pannablePreview || this._isOnLock(x, y) ? 'move' : 'pan'
       this._lastPan = { dx: 0, dy: 0 }
       this._pressLocal = new Graphene.Point()
       this._pressLocal.init(x, y)
@@ -205,28 +215,44 @@ export class SceneCard extends Gtk.Button {
       }
     })
     this.add_controller(drag)
-    this._drag_handle?.set_cursor_from_name('grab')
+
+    // The lock toggle drives the drag interpretation: closed (default)
+    // = drags move the card, open = drags pan the preview section.
+    this._lock_button?.connect('toggled', () => {
+      this._pannablePreview = this._lock_button.active
+      this._lock_button.set_icon_name(this._lock_button.active ? 'changes-allow-symbolic' : 'changes-prevent-symbolic')
+      this._lock_button.set_tooltip_text(
+        this._lock_button.active ? _('Lock to move the card instead') : _('Unlock to pan the preview section'),
+      )
+    })
   }
 
   /**
    * Whether the pointer press at card-local `(x, y)` landed on the
-   * corner drag handle (which always moves the card, never pans).
+   * lock toggle (whose drags should never pan the preview).
    */
-  private _isOnHandle(x: number, y: number): boolean {
+  private _isOnLock(x: number, y: number): boolean {
     const picked = this.pick(x, y, Gtk.PickFlags.DEFAULT)
     let widget: Gtk.Widget | null = picked
     while (widget && widget !== (this as Gtk.Widget)) {
-      if (widget === this._drag_handle) return true
+      if (widget === this._lock_button) return true
       widget = widget.get_parent()
     }
     return false
   }
 
-  /** See {@link _pannablePreview}. Set by the atlas for viewport cards. */
-  set pannablePreview(value: boolean) {
-    this._pannablePreview = value
+  /** Show the viewport lock — set by the atlas for viewport previews. */
+  set viewportLockable(value: boolean) {
+    if (this._viewportLockable === value) return
+    this._viewportLockable = value
+    this.notify('viewport-lockable')
   }
 
+  get viewportLockable(): boolean {
+    return this._viewportLockable ?? false
+  }
+
+  /** See {@link _pannablePreview}. Driven by the lock toggle. */
   get pannablePreview(): boolean {
     return this._pannablePreview ?? false
   }

@@ -305,6 +305,25 @@ export class MapPreview extends Gtk.Widget {
     }
   }
 
+  /**
+   * Change the viewport zoom in place (the atlas's global zoom
+   * control). The stale texture is dropped too — it would paint at
+   * the wrong scale — so the card shows its room colour until the
+   * queued re-bake lands.
+   */
+  setViewportZoom(zoom: number): void {
+    if (!this._viewport || !this._source || this._viewport.zoom === zoom) return
+    this._viewport.zoom = zoom
+    this._viewport.centerX = this._clampCenter(this._viewport.centerX, this._mapWidth, true)
+    this._viewport.centerY = this._clampCenter(this._viewport.centerY, this._mapHeight, false)
+    this._cacheWrite = true
+    if (this._cacheKeyBase) this._cacheKey = `map:${this._cacheKeyBase}${this._viewportKeySuffix()}`
+    this._baked = null
+    this._staleBake = null
+    MapPreview._enqueue(this)
+    this.queue_draw()
+  }
+
   /** `path`/`map` cache-key base without the viewport suffix. */
   private _cacheKeyBase: string | null = null
 
