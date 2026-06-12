@@ -4,12 +4,15 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import {
+  type AgentMapData,
   ASSISTANT_PEER_ID,
   type AwarenessPeerState,
+  buildAgentMapData,
   createMapEditorDataOp,
   type EditorTool,
   formatError,
   MapFormat,
+  type SpriteSetData,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
 import {
@@ -1899,12 +1902,37 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * the scene editor isn't open for `'canvas'`, or the window isn't
    * realised yet).
    */
-  captureScreenshot(scope: 'window' | 'canvas'): Uint8Array | null {
+  async captureScreenshot(scope: 'window' | 'canvas'): Promise<Uint8Array | null> {
     if (scope === 'canvas') {
       const engine = this._engineCtl.engine
+      // Framebuffer first: read during the next frame (postdraw), so
+      // it returns real content even when the window is occluded —
+      // the WidgetPaintable snapshot comes back empty then. Widget
+      // snapshot stays as the fallback for engines without a GL
+      // context yet (or with a paused frame clock: minimised).
+      const fromGl = (await engine?.captureCanvasPng()) ?? null
+      if (fromGl) return fromGl
       if (engine) return captureWidgetPng(engine)
     }
     return captureWidgetPng(this)
+  }
+
+  /**
+   * Agent-oriented projection of a loaded map (walkability grid,
+   * placements, spawn points, teleport targets) — see the engine's
+   * `buildAgentMapData`. Works with no open scene and no engine:
+   * resolved purely from the loaded project data. Returns `null`
+   * when no project is open or the map id is unknown.
+   */
+  agentMapData(mapId: string): AgentMapData | null {
+    const resource = this._projectStore.resource
+    const mapResource = resource?.maps.get(mapId)
+    if (!resource || !mapResource?.mapData) return null
+    const sets = new Map<string, SpriteSetData>()
+    for (const [id, setResource] of resource.spriteSets) {
+      if (setResource.data) sets.set(id, setResource.data)
+    }
+    return buildAgentMapData(mapResource.mapData, sets, resource.data?.entityLibrary ?? [])
   }
 
   /**

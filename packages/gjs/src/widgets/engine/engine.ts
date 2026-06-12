@@ -1,4 +1,6 @@
 import Adw from '@girs/adw-1'
+import GdkPixbuf from '@girs/gdkpixbuf-2.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { Canvas2DBridge } from '@gjsify/canvas2d'
@@ -260,6 +262,74 @@ export class Engine extends Adw.Bin {
 
   public get excalibur(): ExcaliburEngine | null {
     return this._excalibur
+  }
+
+  /**
+   * Capture the engine canvas as PNG bytes by reading the WebGL
+   * framebuffer DURING the next frame (`postdraw` — the only moment
+   * GTK's GLArea framebuffer is bound and holds the finished frame;
+   * an out-of-frame `gl.readPixels` returns blanks). No
+   * `Gtk.WidgetPaintable`, so it works while the window is occluded —
+   * GTK keeps ticking mapped-but-covered windows. Resolves `null`
+   * when no engine is running or no frame arrives within `timeoutMs`
+   * (e.g. minimised/unmapped: no frame clock — callers fall back to
+   * the widget-snapshot path).
+   */
+  public captureCanvasPng(timeoutMs = 1000): Promise<Uint8Array | null> {
+    const area = this._widget
+    if (!area || !(area instanceof WebGLBridge)) return Promise.resolve(null)
+    return new Promise((resolve) => {
+      let done = false
+      let handlerId = 0
+      const finish = (result: Uint8Array | null) => {
+        if (done) return
+        done = true
+        clearTimeout(timer)
+        if (handlerId) area.disconnect(handlerId)
+        resolve(result)
+      }
+      const timer = setTimeout(() => finish(null), timeoutMs)
+      // connect_after('render'): runs after the frame was drawn into
+      // the GLArea framebuffer, which is only bound inside ::render —
+      // an out-of-frame readPixels reads blanks.
+      handlerId = area.connect_after('render', () => {
+        finish(this._readFramebufferPng())
+        return false
+      })
+      // Force a frame even when the clock is idle (nothing animating).
+      area.queue_render()
+    })
+  }
+
+  /** `gl.readPixels` + row flip + PNG encode — call only inside a frame (`postdraw`). */
+  private _readFramebufferPng(): Uint8Array | null {
+    const gl = (this._excalibur?.excalibur?.graphicsContext as unknown as { __gl?: WebGL2RenderingContext })?.__gl
+    if (!gl) return null
+    const width = gl.drawingBufferWidth
+    const height = gl.drawingBufferHeight
+    if (width <= 0 || height <= 0) return null
+
+    const rowBytes = width * 4
+    const pixels = new Uint8Array(rowBytes * height)
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+
+    // GL rows are bottom-up — flip into GdkPixbuf's top-down order.
+    const flipped = new Uint8Array(pixels.length)
+    for (let y = 0; y < height; y++) {
+      flipped.set(pixels.subarray(y * rowBytes, (y + 1) * rowBytes), (height - 1 - y) * rowBytes)
+    }
+
+    const pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
+      GLib.Bytes.new(flipped),
+      GdkPixbuf.Colorspace.RGB,
+      true,
+      8,
+      width,
+      height,
+      rowBytes,
+    )
+    const [ok, buffer] = pixbuf.save_to_bufferv('png', [], [])
+    return ok && buffer ? new Uint8Array(buffer) : null
   }
 
   /** Current camera zoom, or `null` if the engine isn't running yet. */

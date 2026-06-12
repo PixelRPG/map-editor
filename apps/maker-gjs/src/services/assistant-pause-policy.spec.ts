@@ -26,6 +26,7 @@ const EXPECTED_KINDS: Record<string, ControlMethodKind> = {
   ListActions: 'read-only',
   ListRecentProjects: 'read-only',
   ListTemplates: 'read-only',
+  GetMapData: 'read-only',
   GetSessionState: 'read-only',
   PresentWindow: 'read-only',
   SetAssistantInfo: 'presence',

@@ -424,9 +424,12 @@ server.registerTool(
   'screenshot',
   {
     description:
-      'Capture a PNG screenshot. scope "window" (default) = whole app window (chrome + canvas); ' +
-      '"canvas" = just the map/engine canvas. Auto-raises the window and retries once if the first ' +
-      'capture is empty (an occluded / minimized / mid-resize window re-renders to nothing).',
+      'Capture a PNG screenshot. scope "window" (default) = whole app window (chrome + canvas) via the GTK ' +
+      'snapshot pipeline — needs a visible window (auto-raises + retries once when the capture comes back ' +
+      'empty). scope "canvas" = just the rendered engine content, read DIRECTLY from the WebGL framebuffer: ' +
+      'no UI chrome, and it returns the last rendered frame even when the window is occluded or minimised — ' +
+      'prefer it for verifying map/game content. For reasoning about a map (walkability, placements, ' +
+      'teleports) prefer get_map_data over any screenshot.',
     inputSchema: z.object({ scope: z.enum(['window', 'canvas']).optional(), ...instanceArg }),
   },
   async ({ scope, instance }) => {
@@ -499,6 +502,33 @@ server.registerTool(
   async ({ instance }) => {
     try {
       return ok(await jsonCall(instance, 'ListTemplates'))
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'get_map_data',
+  {
+    description:
+      'Agent-oriented JSON projection of a loaded map: a walkability grid (one string per row — "." walkable, ' +
+      '"#" solid, " " void/no tile), placements with resolved names + component types, spawn points, and ' +
+      'teleports with their target map/tile. Kilobytes instead of pixels — use this to plan where to walk or ' +
+      'paint BEFORE reaching for screenshots. Needs an open project (see get_status sceneIds for valid map ids) ' +
+      'but NO open scene, engine or visible window.',
+    inputSchema: z.object({ map_id: z.string(), ...instanceArg }),
+  },
+  async ({ map_id, instance }) => {
+    try {
+      const reply = await control(
+        instance,
+        'GetMapData',
+        GLib.Variant.new_tuple([GLib.Variant.new_string(map_id)]),
+        '(s)',
+      )
+      const [json] = reply.recursiveUnpack() as [string]
+      return ok(JSON.stringify(JSON.parse(json), null, 2))
     } catch (error) {
       return dbusError(error, instance)
     }
