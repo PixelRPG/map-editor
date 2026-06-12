@@ -1,0 +1,825 @@
+{
+ "id": "end",
+ "name": "End",
+ "version": "1.0.0",
+ "tileWidth": 8,
+ "tileHeight": 8,
+ "columns": 33,
+ "rows": 24,
+ "spriteSets": [
+  {
+   "id": "end",
+   "path": "../spritesets/end.json",
+   "type": "spriteset",
+   "firstGid": 1
+  }
+ ],
+ "layers": [
+  {
+   "id": "layer_ground",
+   "name": "Ground",
+   "visible": true,
+   "tier": "ground",
+   "sprites": [
+    {
+     "x": 0,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 2,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 3,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 4,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 5,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 6,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 7,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 8,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 9,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 10,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 11,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 12,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 13,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 14,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 15,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 16,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 17,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 18,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 19,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 20,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 21,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 22,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 23,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 24,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 25,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 26,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 27,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 28,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 29,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 30,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 1,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 1,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 2,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 2,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 2,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 3,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 3,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 3,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 4,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 4,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 4,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 5,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 5,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 5,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 6,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 6,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 6,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 7,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 7,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 7,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 8,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 8,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 8,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 9,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 9,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 9,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 10,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 10,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 10,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 11,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 11,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 11,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 12,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 12,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 12,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 13,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 13,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 13,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 14,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 14,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 14,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 15,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 15,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 15,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 16,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 16,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 16,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 17,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 17,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 17,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 18,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 18,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 18,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 19,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 19,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 19,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 20,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 20,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 20,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 21,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 21,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 21,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 22,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 22,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 22,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 0,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 1,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 2,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 3,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 4,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 5,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 6,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 7,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 8,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 9,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 10,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 11,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 12,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 13,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 14,
+     "y": 23,
+     "spriteId": 1,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 17,
+     "y": 23,
+     "spriteId": 2,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 18,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 19,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 20,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 21,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 22,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 23,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 24,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 25,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 26,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 27,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 28,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 29,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 30,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 31,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    },
+    {
+     "x": 32,
+     "y": 23,
+     "spriteId": 0,
+     "spriteSetId": "end"
+    }
+   ]
+  },
+  {
+   "id": "layer_overlay",
+   "name": "Overlay",
+   "visible": true,
+   "tier": "overlay",
+   "sprites": []
+  },
+  {
+   "id": "layer_functional",
+   "name": "Functional",
+   "visible": true,
+   "sprites": []
+  }
+ ],
+ "properties": {
+  "source": "Maps/End.zmap from 'The Legend of Zelda: Ocarina of Time 2D' v0.10.2 by CheerfulSage & GodsTurf (oot-2d.com, 2014) \u2014 archive the-legend-of-zelda-ocarina-of-time-2d-0-10-2-en-win.zip in the PixelRPG/oot-2d repo; converted by tools/export-pixelrpg-maps.py (zmap parser: fluxcompile/oot2d-map)"
+ },
+ "objectPlacements": [],
+ "editorData": {}
+}

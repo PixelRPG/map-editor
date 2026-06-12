@@ -1,0 +1,4798 @@
+{
+ "id": "windmill",
+ "name": "Windmill",
+ "version": "1.0.0",
+ "tileWidth": 8,
+ "tileHeight": 8,
+ "columns": 32,
+ "rows": 32,
+ "spriteSets": [
+  {
+   "id": "wmil",
+   "path": "../spritesets/wmil.json",
+   "type": "spriteset",
+   "firstGid": 1
+  }
+ ],
+ "layers": [
+  {
+   "id": "layer_ground",
+   "name": "Ground",
+   "visible": true,
+   "tier": "ground",
+   "sprites": [
+    {
+     "x": 9,
+     "y": 0,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 0,
+     "spriteId": 1,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 0,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 1,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 1,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 1,
+     "spriteId": 4,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 1,
+     "spriteId": 5,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 1,
+     "spriteId": 4,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 1,
+     "spriteId": 5,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 1,
+     "spriteId": 6,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 1,
+     "spriteId": 7,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 1,
+     "spriteId": 8,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 1,
+     "spriteId": 9,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 1,
+     "spriteId": 10,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 1,
+     "spriteId": 5,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 1,
+     "spriteId": 4,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 1,
+     "spriteId": 5,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 1,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 1,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 2,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 2,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 2,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 2,
+     "spriteId": 13,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 2,
+     "spriteId": 14,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 2,
+     "spriteId": 13,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 2,
+     "spriteId": 14,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 2,
+     "spriteId": 15,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 2,
+     "spriteId": 16,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 2,
+     "spriteId": 17,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 2,
+     "spriteId": 18,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 2,
+     "spriteId": 19,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 2,
+     "spriteId": 14,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 2,
+     "spriteId": 13,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 2,
+     "spriteId": 14,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 2,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 2,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 2,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 3,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 3,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 3,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 3,
+     "spriteId": 21,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 3,
+     "spriteId": 22,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 3,
+     "spriteId": 23,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 3,
+     "spriteId": 22,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 3,
+     "spriteId": 23,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 3,
+     "spriteId": 22,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 3,
+     "spriteId": 23,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 3,
+     "spriteId": 22,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 3,
+     "spriteId": 23,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 3,
+     "spriteId": 22,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 3,
+     "spriteId": 23,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 3,
+     "spriteId": 22,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 3,
+     "spriteId": 23,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 3,
+     "spriteId": 24,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 3,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 3,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 3,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 4,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 4,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 4,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 4,
+     "spriteId": 25,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 4,
+     "spriteId": 26,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 4,
+     "spriteId": 27,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 4,
+     "spriteId": 28,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 4,
+     "spriteId": 27,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 4,
+     "spriteId": 29,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 4,
+     "spriteId": 30,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 4,
+     "spriteId": 31,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 4,
+     "spriteId": 32,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 4,
+     "spriteId": 33,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 4,
+     "spriteId": 34,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 4,
+     "spriteId": 35,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 4,
+     "spriteId": 27,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 4,
+     "spriteId": 28,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 4,
+     "spriteId": 36,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 4,
+     "spriteId": 37,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 4,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 4,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 4,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 5,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 5,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 5,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 5,
+     "spriteId": 21,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 5,
+     "spriteId": 38,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 5,
+     "spriteId": 39,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 5,
+     "spriteId": 40,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 5,
+     "spriteId": 41,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 5,
+     "spriteId": 42,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 5,
+     "spriteId": 43,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 5,
+     "spriteId": 44,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 5,
+     "spriteId": 45,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 5,
+     "spriteId": 46,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 5,
+     "spriteId": 47,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 5,
+     "spriteId": 48,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 5,
+     "spriteId": 49,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 5,
+     "spriteId": 40,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 5,
+     "spriteId": 41,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 5,
+     "spriteId": 50,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 5,
+     "spriteId": 51,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 5,
+     "spriteId": 24,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 5,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 5,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 5,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 6,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 6,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 6,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 6,
+     "spriteId": 25,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 6,
+     "spriteId": 26,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 6,
+     "spriteId": 52,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 6,
+     "spriteId": 53,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 6,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 6,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 6,
+     "spriteId": 56,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 6,
+     "spriteId": 57,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 6,
+     "spriteId": 30,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 6,
+     "spriteId": 31,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 6,
+     "spriteId": 32,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 6,
+     "spriteId": 33,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 6,
+     "spriteId": 58,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 6,
+     "spriteId": 59,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 6,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 6,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 6,
+     "spriteId": 60,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 6,
+     "spriteId": 61,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 6,
+     "spriteId": 36,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 6,
+     "spriteId": 37,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 6,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 6,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 6,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 7,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 7,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 7,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 7,
+     "spriteId": 62,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 7,
+     "spriteId": 38,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 7,
+     "spriteId": 63,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 7,
+     "spriteId": 64,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 7,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 7,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 7,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 7,
+     "spriteId": 67,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 7,
+     "spriteId": 68,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 7,
+     "spriteId": 44,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 7,
+     "spriteId": 45,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 7,
+     "spriteId": 46,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 7,
+     "spriteId": 47,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 7,
+     "spriteId": 69,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 7,
+     "spriteId": 70,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 7,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 7,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 7,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 7,
+     "spriteId": 71,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 7,
+     "spriteId": 72,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 7,
+     "spriteId": 51,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 7,
+     "spriteId": 73,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 7,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 7,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 7,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 8,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 8,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 8,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 8,
+     "spriteId": 25,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 8,
+     "spriteId": 26,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 8,
+     "spriteId": 52,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 8,
+     "spriteId": 53,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 8,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 8,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 8,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 8,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 8,
+     "spriteId": 56,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 8,
+     "spriteId": 74,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 8,
+     "spriteId": 27,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 8,
+     "spriteId": 28,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 8,
+     "spriteId": 27,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 8,
+     "spriteId": 28,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 8,
+     "spriteId": 75,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 8,
+     "spriteId": 59,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 8,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 8,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 8,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 8,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 8,
+     "spriteId": 60,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 8,
+     "spriteId": 61,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 8,
+     "spriteId": 36,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 8,
+     "spriteId": 37,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 8,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 8,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 8,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 9,
+     "spriteId": 0,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 9,
+     "spriteId": 3,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 9,
+     "spriteId": 12,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 9,
+     "spriteId": 21,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 9,
+     "spriteId": 38,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 9,
+     "spriteId": 63,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 9,
+     "spriteId": 64,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 9,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 9,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 9,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 9,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 9,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 9,
+     "spriteId": 76,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 9,
+     "spriteId": 77,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 9,
+     "spriteId": 40,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 9,
+     "spriteId": 41,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 9,
+     "spriteId": 40,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 9,
+     "spriteId": 41,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 9,
+     "spriteId": 78,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 9,
+     "spriteId": 79,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 9,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 9,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 9,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 9,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 9,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 9,
+     "spriteId": 71,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 9,
+     "spriteId": 72,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 9,
+     "spriteId": 51,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 9,
+     "spriteId": 24,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 9,
+     "spriteId": 20,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 9,
+     "spriteId": 11,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 9,
+     "spriteId": 2,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 10,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 10,
+     "spriteId": 81,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 10,
+     "spriteId": 82,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 10,
+     "spriteId": 83,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 10,
+     "spriteId": 84,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 10,
+     "spriteId": 85,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 10,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 10,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 10,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 10,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 10,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 10,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 10,
+     "spriteId": 86,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 10,
+     "spriteId": 87,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 10,
+     "spriteId": 88,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 10,
+     "spriteId": 89,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 10,
+     "spriteId": 90,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 10,
+     "spriteId": 91,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 10,
+     "spriteId": 92,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 10,
+     "spriteId": 93,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 10,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 10,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 10,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 10,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 10,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 10,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 10,
+     "spriteId": 94,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 10,
+     "spriteId": 95,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 10,
+     "spriteId": 96,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 10,
+     "spriteId": 97,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 10,
+     "spriteId": 98,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 10,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 11,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 11,
+     "spriteId": 100,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 11,
+     "spriteId": 101,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 11,
+     "spriteId": 102,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 11,
+     "spriteId": 103,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 11,
+     "spriteId": 104,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 11,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 11,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 11,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 11,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 11,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 11,
+     "spriteId": 105,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 11,
+     "spriteId": 106,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 11,
+     "spriteId": 107,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 11,
+     "spriteId": 108,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 11,
+     "spriteId": 109,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 11,
+     "spriteId": 110,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 11,
+     "spriteId": 111,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 11,
+     "spriteId": 112,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 11,
+     "spriteId": 113,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 11,
+     "spriteId": 114,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 11,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 11,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 11,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 11,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 11,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 11,
+     "spriteId": 115,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 11,
+     "spriteId": 116,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 11,
+     "spriteId": 117,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 11,
+     "spriteId": 118,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 11,
+     "spriteId": 119,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 11,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 12,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 12,
+     "spriteId": 81,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 12,
+     "spriteId": 82,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 12,
+     "spriteId": 83,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 12,
+     "spriteId": 120,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 12,
+     "spriteId": 121,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 12,
+     "spriteId": 122,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 12,
+     "spriteId": 123,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 12,
+     "spriteId": 122,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 12,
+     "spriteId": 124,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 12,
+     "spriteId": 125,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 12,
+     "spriteId": 126,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 12,
+     "spriteId": 127,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 12,
+     "spriteId": 128,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 12,
+     "spriteId": 129,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 12,
+     "spriteId": 130,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 12,
+     "spriteId": 131,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 12,
+     "spriteId": 132,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 12,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 12,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 12,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 12,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 12,
+     "spriteId": 94,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 12,
+     "spriteId": 95,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 12,
+     "spriteId": 96,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 12,
+     "spriteId": 97,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 12,
+     "spriteId": 98,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 12,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 13,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 13,
+     "spriteId": 100,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 13,
+     "spriteId": 101,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 13,
+     "spriteId": 102,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 13,
+     "spriteId": 133,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 13,
+     "spriteId": 134,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 13,
+     "spriteId": 135,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 13,
+     "spriteId": 136,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 13,
+     "spriteId": 137,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 13,
+     "spriteId": 138,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 13,
+     "spriteId": 139,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 13,
+     "spriteId": 140,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 13,
+     "spriteId": 128,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 13,
+     "spriteId": 129,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 13,
+     "spriteId": 141,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 13,
+     "spriteId": 142,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 13,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 13,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 13,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 13,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 13,
+     "spriteId": 115,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 13,
+     "spriteId": 116,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 13,
+     "spriteId": 117,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 13,
+     "spriteId": 118,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 13,
+     "spriteId": 119,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 13,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 14,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 14,
+     "spriteId": 81,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 14,
+     "spriteId": 82,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 14,
+     "spriteId": 83,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 14,
+     "spriteId": 143,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 14,
+     "spriteId": 144,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 14,
+     "spriteId": 143,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 14,
+     "spriteId": 145,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 14,
+     "spriteId": 84,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 14,
+     "spriteId": 85,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 14,
+     "spriteId": 146,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 14,
+     "spriteId": 147,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 14,
+     "spriteId": 148,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 14,
+     "spriteId": 149,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 14,
+     "spriteId": 150,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 14,
+     "spriteId": 151,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 14,
+     "spriteId": 152,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 14,
+     "spriteId": 153,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 14,
+     "spriteId": 94,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 14,
+     "spriteId": 95,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 14,
+     "spriteId": 96,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 14,
+     "spriteId": 97,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 14,
+     "spriteId": 98,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 14,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 15,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 15,
+     "spriteId": 100,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 15,
+     "spriteId": 101,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 15,
+     "spriteId": 102,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 15,
+     "spriteId": 154,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 15,
+     "spriteId": 155,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 15,
+     "spriteId": 154,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 15,
+     "spriteId": 155,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 15,
+     "spriteId": 103,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 15,
+     "spriteId": 104,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 15,
+     "spriteId": 156,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 15,
+     "spriteId": 157,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 15,
+     "spriteId": 158,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 15,
+     "spriteId": 159,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 15,
+     "spriteId": 160,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 15,
+     "spriteId": 161,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 15,
+     "spriteId": 162,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 15,
+     "spriteId": 163,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 15,
+     "spriteId": 115,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 15,
+     "spriteId": 116,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 15,
+     "spriteId": 117,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 15,
+     "spriteId": 118,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 15,
+     "spriteId": 119,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 15,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 16,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 16,
+     "spriteId": 81,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 16,
+     "spriteId": 82,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 16,
+     "spriteId": 83,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 16,
+     "spriteId": 164,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 16,
+     "spriteId": 165,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 16,
+     "spriteId": 164,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 16,
+     "spriteId": 165,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 16,
+     "spriteId": 84,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 16,
+     "spriteId": 85,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 16,
+     "spriteId": 166,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 16,
+     "spriteId": 167,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 16,
+     "spriteId": 168,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 16,
+     "spriteId": 169,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 16,
+     "spriteId": 170,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 16,
+     "spriteId": 171,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 16,
+     "spriteId": 172,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 16,
+     "spriteId": 173,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 16,
+     "spriteId": 94,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 16,
+     "spriteId": 95,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 16,
+     "spriteId": 96,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 16,
+     "spriteId": 97,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 16,
+     "spriteId": 98,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 16,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 17,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 17,
+     "spriteId": 100,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 17,
+     "spriteId": 101,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 17,
+     "spriteId": 102,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 17,
+     "spriteId": 174,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 17,
+     "spriteId": 175,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 17,
+     "spriteId": 174,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 17,
+     "spriteId": 175,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 17,
+     "spriteId": 103,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 17,
+     "spriteId": 104,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 17,
+     "spriteId": 176,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 17,
+     "spriteId": 177,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 17,
+     "spriteId": 178,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 17,
+     "spriteId": 179,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 17,
+     "spriteId": 180,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 17,
+     "spriteId": 181,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 17,
+     "spriteId": 182,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 17,
+     "spriteId": 183,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 17,
+     "spriteId": 115,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 17,
+     "spriteId": 116,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 17,
+     "spriteId": 117,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 17,
+     "spriteId": 118,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 17,
+     "spriteId": 119,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 17,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 18,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 18,
+     "spriteId": 81,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 18,
+     "spriteId": 82,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 18,
+     "spriteId": 83,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 18,
+     "spriteId": 184,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 18,
+     "spriteId": 185,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 18,
+     "spriteId": 186,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 18,
+     "spriteId": 187,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 18,
+     "spriteId": 188,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 18,
+     "spriteId": 189,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 18,
+     "spriteId": 190,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 18,
+     "spriteId": 191,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 18,
+     "spriteId": 192,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 18,
+     "spriteId": 193,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 18,
+     "spriteId": 194,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 18,
+     "spriteId": 195,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 18,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 18,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 18,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 18,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 18,
+     "spriteId": 94,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 18,
+     "spriteId": 95,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 18,
+     "spriteId": 96,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 18,
+     "spriteId": 97,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 18,
+     "spriteId": 98,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 18,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 19,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 19,
+     "spriteId": 100,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 19,
+     "spriteId": 101,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 19,
+     "spriteId": 102,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 19,
+     "spriteId": 103,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 19,
+     "spriteId": 196,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 19,
+     "spriteId": 197,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 19,
+     "spriteId": 198,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 19,
+     "spriteId": 197,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 19,
+     "spriteId": 199,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 19,
+     "spriteId": 200,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 19,
+     "spriteId": 201,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 19,
+     "spriteId": 202,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 19,
+     "spriteId": 192,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 19,
+     "spriteId": 193,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 19,
+     "spriteId": 203,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 19,
+     "spriteId": 204,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 19,
+     "spriteId": 205,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 19,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 19,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 19,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 19,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 19,
+     "spriteId": 115,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 19,
+     "spriteId": 116,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 19,
+     "spriteId": 117,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 19,
+     "spriteId": 118,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 19,
+     "spriteId": 119,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 19,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 20,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 20,
+     "spriteId": 81,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 20,
+     "spriteId": 82,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 20,
+     "spriteId": 83,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 20,
+     "spriteId": 84,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 20,
+     "spriteId": 85,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 20,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 20,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 20,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 20,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 20,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 20,
+     "spriteId": 206,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 20,
+     "spriteId": 207,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 20,
+     "spriteId": 208,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 20,
+     "spriteId": 209,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 20,
+     "spriteId": 210,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 20,
+     "spriteId": 211,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 20,
+     "spriteId": 212,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 20,
+     "spriteId": 213,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 20,
+     "spriteId": 214,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 20,
+     "spriteId": 215,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 20,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 20,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 20,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 20,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 20,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 20,
+     "spriteId": 94,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 20,
+     "spriteId": 95,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 20,
+     "spriteId": 96,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 20,
+     "spriteId": 97,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 20,
+     "spriteId": 98,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 20,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 21,
+     "spriteId": 80,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 21,
+     "spriteId": 100,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 21,
+     "spriteId": 101,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 21,
+     "spriteId": 102,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 21,
+     "spriteId": 103,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 21,
+     "spriteId": 104,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 21,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 21,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 21,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 21,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 21,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 21,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 21,
+     "spriteId": 216,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 21,
+     "spriteId": 217,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 21,
+     "spriteId": 218,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 21,
+     "spriteId": 219,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 21,
+     "spriteId": 220,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 21,
+     "spriteId": 221,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 21,
+     "spriteId": 222,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 21,
+     "spriteId": 223,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 21,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 21,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 21,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 21,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 21,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 21,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 21,
+     "spriteId": 115,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 21,
+     "spriteId": 116,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 21,
+     "spriteId": 117,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 21,
+     "spriteId": 118,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 21,
+     "spriteId": 119,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 21,
+     "spriteId": 99,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 0,
+     "y": 22,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 22,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 22,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 22,
+     "spriteId": 227,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 22,
+     "spriteId": 228,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 22,
+     "spriteId": 229,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 22,
+     "spriteId": 230,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 22,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 22,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 22,
+     "spriteId": 231,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 22,
+     "spriteId": 232,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 22,
+     "spriteId": 233,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 22,
+     "spriteId": 234,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 22,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 22,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 31,
+     "y": 22,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 1,
+     "y": 23,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 23,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 23,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 23,
+     "spriteId": 238,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 23,
+     "spriteId": 239,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 23,
+     "spriteId": 240,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 23,
+     "spriteId": 241,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 23,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 23,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 23,
+     "spriteId": 242,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 23,
+     "spriteId": 243,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 23,
+     "spriteId": 244,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 23,
+     "spriteId": 245,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 23,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 23,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 30,
+     "y": 23,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 2,
+     "y": 24,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 24,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 24,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 24,
+     "spriteId": 246,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 24,
+     "spriteId": 228,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 24,
+     "spriteId": 229,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 24,
+     "spriteId": 230,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 24,
+     "spriteId": 55,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 24,
+     "spriteId": 54,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 24,
+     "spriteId": 231,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 24,
+     "spriteId": 232,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 24,
+     "spriteId": 233,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 24,
+     "spriteId": 247,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 24,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 24,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 29,
+     "y": 24,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 3,
+     "y": 25,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 25,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 25,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 25,
+     "spriteId": 238,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 25,
+     "spriteId": 239,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 25,
+     "spriteId": 240,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 25,
+     "spriteId": 241,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 25,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 25,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 25,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 25,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 25,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 25,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 25,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 25,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 25,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 25,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 25,
+     "spriteId": 66,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 25,
+     "spriteId": 65,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 25,
+     "spriteId": 242,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 25,
+     "spriteId": 243,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 25,
+     "spriteId": 244,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 25,
+     "spriteId": 245,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 25,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 25,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 28,
+     "y": 25,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 4,
+     "y": 26,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 26,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 26,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 26,
+     "spriteId": 227,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 26,
+     "spriteId": 228,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 26,
+     "spriteId": 248,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 26,
+     "spriteId": 249,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 26,
+     "spriteId": 250,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 26,
+     "spriteId": 249,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 26,
+     "spriteId": 250,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 26,
+     "spriteId": 251,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 26,
+     "spriteId": 252,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 26,
+     "spriteId": 252,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 26,
+     "spriteId": 253,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 26,
+     "spriteId": 249,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 26,
+     "spriteId": 250,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 26,
+     "spriteId": 249,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 26,
+     "spriteId": 250,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 26,
+     "spriteId": 254,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 26,
+     "spriteId": 233,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 26,
+     "spriteId": 234,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 26,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 26,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 27,
+     "y": 26,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 5,
+     "y": 27,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 27,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 27,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 27,
+     "spriteId": 238,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 27,
+     "spriteId": 239,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 27,
+     "spriteId": 255,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 27,
+     "spriteId": 256,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 27,
+     "spriteId": 255,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 27,
+     "spriteId": 256,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 27,
+     "spriteId": 257,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 27,
+     "spriteId": 258,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 27,
+     "spriteId": 258,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 27,
+     "spriteId": 259,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 27,
+     "spriteId": 255,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 27,
+     "spriteId": 256,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 27,
+     "spriteId": 255,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 27,
+     "spriteId": 256,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 27,
+     "spriteId": 244,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 27,
+     "spriteId": 245,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 27,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 27,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 26,
+     "y": 27,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 6,
+     "y": 28,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 28,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 28,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 28,
+     "spriteId": 227,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 28,
+     "spriteId": 260,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 28,
+     "spriteId": 261,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 28,
+     "spriteId": 260,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 28,
+     "spriteId": 261,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 28,
+     "spriteId": 260,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 28,
+     "spriteId": 261,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 28,
+     "spriteId": 234,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 28,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 28,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 25,
+     "y": 28,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 7,
+     "y": 29,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 29,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 29,
+     "spriteId": 226,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 29,
+     "spriteId": 262,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 29,
+     "spriteId": 263,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 29,
+     "spriteId": 262,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 29,
+     "spriteId": 263,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 29,
+     "spriteId": 262,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 29,
+     "spriteId": 263,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 29,
+     "spriteId": 235,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 29,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 24,
+     "y": 29,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 8,
+     "y": 30,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 30,
+     "spriteId": 225,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 30,
+     "spriteId": 264,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 30,
+     "spriteId": 265,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 30,
+     "spriteId": 264,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 30,
+     "spriteId": 265,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 30,
+     "spriteId": 264,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 30,
+     "spriteId": 265,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 30,
+     "spriteId": 236,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 23,
+     "y": 30,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 9,
+     "y": 31,
+     "spriteId": 224,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 10,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 11,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 12,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 19,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 20,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 21,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 22,
+     "y": 31,
+     "spriteId": 237,
+     "spriteSetId": "wmil"
+    }
+   ]
+  },
+  {
+   "id": "layer_overlay",
+   "name": "Overlay",
+   "visible": true,
+   "tier": "overlay",
+   "sprites": [
+    {
+     "x": 14,
+     "y": 0,
+     "spriteId": 267,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 0,
+     "spriteId": 268,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 0,
+     "spriteId": 269,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 0,
+     "spriteId": 270,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 28,
+     "spriteId": 261,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 28,
+     "spriteId": 260,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 28,
+     "spriteId": 261,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 28,
+     "spriteId": 260,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 28,
+     "spriteId": 261,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 28,
+     "spriteId": 260,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 29,
+     "spriteId": 263,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 29,
+     "spriteId": 262,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 29,
+     "spriteId": 263,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 29,
+     "spriteId": 262,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 29,
+     "spriteId": 263,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 29,
+     "spriteId": 262,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 30,
+     "spriteId": 265,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 30,
+     "spriteId": 264,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 30,
+     "spriteId": 265,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 30,
+     "spriteId": 264,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 30,
+     "spriteId": 265,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 30,
+     "spriteId": 264,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 13,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 14,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 15,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 16,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 17,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    },
+    {
+     "x": 18,
+     "y": 31,
+     "spriteId": 266,
+     "spriteSetId": "wmil"
+    }
+   ]
+  },
+  {
+   "id": "layer_functional",
+   "name": "Functional",
+   "visible": true,
+   "sprites": []
+  }
+ ],
+ "properties": {
+  "source": "Maps/Windmill.zmap from 'The Legend of Zelda: Ocarina of Time 2D' v0.10.2 by CheerfulSage & GodsTurf (oot-2d.com, 2014) \u2014 archive the-legend-of-zelda-ocarina-of-time-2d-0-10-2-en-win.zip in the PixelRPG/oot-2d repo; converted by tools/export-pixelrpg-maps.py (zmap parser: fluxcompile/oot2d-map)"
+ },
+ "objectPlacements": [],
+ "editorData": {}
+}
