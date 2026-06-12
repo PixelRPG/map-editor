@@ -7,6 +7,7 @@ import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
 import {
   CameraControlSystem,
+  InputSystem,
   ItemPickupSystem,
   ObjectSpawnSystem,
   PlayerSystem,
@@ -66,6 +67,9 @@ export class MapScene extends Scene {
     this.world.add(new TileEditorSystem(events))
     this.world.add(new SelectionHighlightSystem())
     this.world.add(new ObjectSpawnSystem(mapResource, entityLibrary))
+    // InputSystem BEFORE PlayerSystem (insertion order = tick order at
+    // equal priority): the player consumes the intent the same frame.
+    this.world.add(new InputSystem())
     this.world.add(new PlayerSystem(mapResource, events, playerCharacter, playerSpriteSet))
     this.world.add(new TriggerSystem(events))
     this.world.add(new TeleportSystem(events))

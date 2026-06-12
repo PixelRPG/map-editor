@@ -91,13 +91,11 @@ Plumbing is maker-side: `CollabSession.sendProjectOp` (stamps peer id + seq, sen
 
 ### 5. Input-source abstraction makes split-screen and network multiplayer identical
 
-A single `InputSourceComponent` on each player entity declares where its input comes from:
+**Shipped (v1, single local player):** `InputSourceComponent` on the session singleton is the player's current *intent vector* — pure data (`moveX`/`moveY` normalised, `actionHeld`), written each tick by `InputSystem` (`systems/input.system.ts`, the single device-facing system; it polls the local keyboard and resets the intent to neutral outside runtime mode) and consumed by `PlayerSystem`, which never touches a device. That satisfies transport-ready rule 3: any other writer — a remote peer's input frames, a replay, an AI driver — can drive the player by writing the same component.
+
+**Planned (with split-screen / phase 4):** the component moves from the session singleton onto each *player entity* and gains a source descriptor so several players can coexist:
 
 ```ts
-class InputSourceComponent extends Component {
-  constructor(public source: InputSource) { super() }
-}
-
 type InputSource =
   | { kind: 'keyboard'; bindingId: string }       // local; binding picks which key map
   | { kind: 'gamepad'; controllerIndex: number }  // local; "player 2 = controller 2"
@@ -105,9 +103,9 @@ type InputSource =
   | { kind: 'ai'; agentId: string }               // bot players (later)
 ```
 
-The `InputSystem` reads from whichever source the player's component declares. **Local controller-2 and a remote peer's input frames look identical to the rest of the engine** — they both end up as an "intent vector" on the player entity each tick.
+`InputSystem` then reads from whichever source each player's component declares. **Local controller-2 and a remote peer's input frames look identical to the rest of the engine** — they both end up as the same intent vector each tick.
 
-This is the load-bearing piece that lets multiplayer be incremental — once `InputSourceComponent` exists, "support multiplayer" is "add the `remote` variant + a snapshot-sync layer" rather than "rewrite movement".
+This is the load-bearing piece that lets multiplayer be incremental — with the input seam in place, "support multiplayer" is "add the `remote` variant + a snapshot-sync layer" rather than "rewrite movement".
 
 ### 6. Discovery + signalling
 
