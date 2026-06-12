@@ -1,17 +1,39 @@
 .scene-card {
   padding: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   min-width: 0;
   min-height: 0;
+  background: none;
 }
 
-.scene-card > .card {
-  border-radius: 12px;
-  background-color: @card_bg_color;
+.scene-card .scene-card-title {
+  padding: 0 2px;
 }
 
-.scene-card.selected > .card {
+/* Subtle frame around the preview only — no filled header bar. */
+.scene-card .scene-card-frame {
+  border-radius: 10px;
+  border: 1px solid alpha(currentColor, 0.15);
+  background-color: alpha(@card_bg_color, 0.4);
+}
+
+.scene-card.selected .scene-card-frame {
   box-shadow: 0 0 0 2px @accent_bg_color;
+}
+
+.scene-card-lock {
+  border-radius: 6px;
+  padding: 2px;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.scene-card:hover .scene-card-lock,
+.scene-card.selected .scene-card-lock,
+.scene-card-lock:checked {
+  opacity: 1;
 }
 
 .scene-card-badge {

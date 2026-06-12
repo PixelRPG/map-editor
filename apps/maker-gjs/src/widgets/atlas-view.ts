@@ -4,6 +4,7 @@ import {
   AtlasCanvas,
   type EditorMode,
   FloatingFab,
+  FloatingZoom,
   ModeRail,
   SAMPLE_SCENES,
   SAMPLE_TELEPORTS,
@@ -20,6 +21,7 @@ GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(SceneInspector.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
+GObject.type_ensure(FloatingZoom.$gtype)
 
 /**
  * Maker-app **Atlas** view — composes the mode rail, atlas canvas, and
@@ -36,6 +38,7 @@ GObject.type_ensure(FloatingFab.$gtype)
 export class AtlasView extends ResponsiveEditorView {
   declare _atlas: AtlasCanvas
   declare _inspector: SceneInspector
+  declare _preview_zoom: FloatingZoom
 
   private signals = new SignalScope()
   private _scenes: SampleScene[] = SAMPLE_SCENES
@@ -48,7 +51,7 @@ export class AtlasView extends ResponsiveEditorView {
       {
         GTypeName: 'AtlasView',
         Template,
-        InternalChildren: ['mode_rail', 'atlas', 'inspector'],
+        InternalChildren: ['mode_rail', 'atlas', 'inspector', 'preview_zoom'],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -66,6 +69,9 @@ export class AtlasView extends ResponsiveEditorView {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
+          'preview-moved': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
+          },
           // mode-changed is inherited from ResponsiveEditorView.
         },
       },
@@ -79,6 +85,26 @@ export class AtlasView extends ResponsiveEditorView {
     this._mode_rail.projectTagline = 'Atlas view'
     this._atlas.setWorld(this._scenes, this._teleports)
     this._inspector.setScene(null, this._scenes, this._teleports)
+    this._preview_zoom.setZoom(this._atlas.previewZoom)
+  }
+
+  /**
+   * Step the global card-preview zoom (the window routes `win.zoom-in/
+   * out` here while the atlas is the visible view).
+   */
+  stepPreviewZoom(delta: number): void {
+    this.setPreviewZoom(this._atlas.previewZoom + delta)
+  }
+
+  /** Absolute card-preview zoom; mirrors the value into the OSD pill. */
+  setPreviewZoom(zoom: number): void {
+    this._atlas.setPreviewZoom(zoom)
+    this._preview_zoom.setZoom(this._atlas.previewZoom)
+  }
+
+  /** Back to the 200% default (`win.zoom-reset` in the atlas). */
+  resetPreviewZoom(): void {
+    this.setPreviewZoom(AtlasCanvas.DEFAULT_PREVIEW_ZOOM)
   }
 
   get projectName(): string {
@@ -152,6 +178,9 @@ export class AtlasView extends ResponsiveEditorView {
     })
     this.signals.connect(this._atlas, 'scene-moved', (_a: AtlasCanvas, id: string, x: number, y: number) => {
       this.emit('scene-moved', id, x, y)
+    })
+    this.signals.connect(this._atlas, 'preview-moved', (_a: AtlasCanvas, id: string, tileX: number, tileY: number) => {
+      this.emit('preview-moved', id, tileX, tileY)
     })
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
       this.emit('mode-changed', mode as EditorMode)

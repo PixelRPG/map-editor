@@ -80,6 +80,17 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             tooltip-text: _("Create a new scene");
           }
 
+          // Same zoom pill as the scene editor (fires win.zoom-*);
+          // in the atlas the window routes those actions to the
+          // global card-preview zoom instead of the engine camera.
+          [overlay]
+          $PixelRpgFloatingZoom preview_zoom {
+            halign: start;
+            valign: end;
+            margin-start: 12;
+            margin-bottom: 12;
+          }
+
           child: $PixelRpgAtlasCanvas atlas {};
         };
       };
