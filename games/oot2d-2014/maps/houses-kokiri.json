@@ -2,6 +2,7 @@
  "id": "houses-kokiri",
  "name": "Houses Kokiri",
  "version": "1.0.0",
+ "backgroundColor": "#623E3B",
  "tileWidth": 8,
  "tileHeight": 8,
  "columns": 194,
@@ -27732,5 +27733,8 @@
   "source": "Maps/Houses_Kokiri.zmap from 'The Legend of Zelda: Ocarina of Time 2D' v0.10.2 by CheerfulSage & GodsTurf (oot-2d.com, 2014) \u2014 archive the-legend-of-zelda-ocarina-of-time-2d-0-10-2-en-win.zip in the PixelRPG/oot-2d repo; converted by tools/export-pixelrpg-maps.py (zmap parser: fluxcompile/oot2d-map)"
  },
  "objectPlacements": [],
- "editorData": {}
+ "editorData": {
+  "atlasX": 1145,
+  "atlasY": 532
+ }
 }

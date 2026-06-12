@@ -2,6 +2,7 @@
  "id": "castle",
  "name": "Castle",
  "version": "1.0.0",
+ "backgroundColor": "#409740",
  "tileWidth": 8,
  "tileHeight": 8,
  "columns": 123,
@@ -58254,5 +58255,8 @@
   "source": "Maps/Castle.zmap from 'The Legend of Zelda: Ocarina of Time 2D' v0.10.2 by CheerfulSage & GodsTurf (oot-2d.com, 2014) \u2014 archive the-legend-of-zelda-ocarina-of-time-2d-0-10-2-en-win.zip in the PixelRPG/oot-2d repo; converted by tools/export-pixelrpg-maps.py (zmap parser: fluxcompile/oot2d-map)"
  },
  "objectPlacements": [],
- "editorData": {}
+ "editorData": {
+  "atlasX": 433,
+  "atlasY": 62
+ }
 }
