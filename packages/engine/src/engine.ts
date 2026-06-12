@@ -151,6 +151,7 @@ export class Engine {
       this.loadMap(targetMapId, {
         spawnOverride: { tileX: targetTileX, tileY: targetTileY, facing },
         keepRuntimeMode: true,
+        keepZoom: true,
       }).catch((err) => {
         console.warn(`[Engine] teleport to "${targetMapId}" failed:`, formatError(err))
       })
@@ -232,6 +233,9 @@ export class Engine {
    * (mode markers are per-scene): when the CURRENT scene is in runtime
    * mode, the new scene starts in runtime mode too, so a mid-play
    * teleport stays in play instead of dropping back to the editor.
+   * `options.keepZoom` carries the current camera zoom onto the new
+   * scene's camera (cameras are per-scene and reset to 1 otherwise) —
+   * a teleport should not yank the player to a different zoom level.
    *
    * Re-entering a previously visited map rebuilds the scene from data
    * (no scene instance is reused) — RPG-Maker-style room reset; save
@@ -239,13 +243,18 @@ export class Engine {
    */
   async loadMap(
     mapId: string,
-    options?: { spawnOverride?: { tileX: number; tileY: number; facing?: Facing }; keepRuntimeMode?: boolean },
+    options?: {
+      spawnOverride?: { tileX: number; tileY: number; facing?: Facing }
+      keepRuntimeMode?: boolean
+      keepZoom?: boolean
+    },
   ): Promise<void> {
     if (!this._gameProjectResource) {
       throw new Error('Project not loaded')
     }
-    // Capture BEFORE the switch — isRuntimeMode() reads the current scene.
+    // Capture BEFORE the switch — both read the current scene.
     const carryRuntime = (options?.keepRuntimeMode ?? false) && this.isRuntimeMode()
+    const carryZoom = options?.keepZoom ? this.excalibur.currentScene?.camera.zoom : undefined
 
     this.logger.info(`Loading map: ${mapId}`)
     const mapResource = await this._gameProjectResource.loadMap(mapId)
@@ -282,6 +291,9 @@ export class Engine {
     if (carryRuntime) {
       SessionState.unset(newMapScene, EditorModeComponent)
       SessionState.set(newMapScene, new RuntimeModeComponent())
+    }
+    if (carryZoom !== undefined && carryZoom > 0) {
+      newMapScene.camera.zoom = carryZoom
     }
 
     // Re-entry: drop the stale scene instance so addScene doesn't
