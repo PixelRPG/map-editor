@@ -47,11 +47,12 @@ Conventions:
 
 ## Atlas / world
 
-- **Real scene-card thumbnails for very large maps** — `MapPreview` works but a 176×148 map renders ~26k snapshot ops. Acceptable today; if it becomes a bottleneck cap the max ops per preview (downsample, every Nth tile). *owner: gjs (MapPreview)*
+- **Viewport scene-card previews** — show every map at a uniform pixel zoom (~300%) cropped to an adjustable section (persisted as `editorData.preview`) instead of fit-whole-map, so all cards share one resolution and content stays recognizable. Open design points: card geometry (uniform card size vs map-proportional) and the in-card pan gesture (must not collide with card dragging — candidates: Ctrl/middle-drag, or an edit-viewport toggle). Prereq shipped: `MapPreview` bakes off-frame through a queue + content-fingerprint LRU cache (so a re-bake per pan step is cheap and whole-map data stays available). *owner: gjs (MapPreview) + maker (persistence via the `scene-moved` → `map.editor-data` pattern)*
+- **Atlas load time for big projects** — opening `games/oot2d-2014` (19 maps, 18 MB) takes ~19 s to the atlas; the project now loads **twice** (`loadProjectAsAtlas` + the welcome/engine path each construct a `GameProjectResource`) and repeated loads in one session can OOM GJS. Deduplicate to one shared resource per open project (existing "GameProjectResource double copy" debt) and consider lazy map parsing. *owner: maker / engine*
 
 ## Welcome / project lifecycle
 
-- **Template thumbnail caching** — every welcome show currently reloads each template's project + sprite-sets to render previews. Cache rendered previews in a `WeakMap<projectPath, Gdk.Texture>` once the first paint lands. *owner: maker / gjs*
+- **Template thumbnail caching** — partially shipped: `MapPreview` keeps baked textures in a fingerprint-keyed LRU, so welcome re-shows paint instantly (a per-path entry serves first, then refreshes in the background). Still open: the background refresh re-parses each template project on every welcome show — skip the reload when the project file's mtime is unchanged. *owner: maker / gjs*
 
 ## Cleanup / debt
 
