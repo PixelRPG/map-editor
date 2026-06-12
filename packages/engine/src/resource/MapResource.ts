@@ -116,7 +116,6 @@ export class MapResource implements Loadable<TileMap> {
    * checking "does this tier exist".
    */
   private createTileMaps(data: MapData): void {
-    MapFormat.validate(data)
     for (const tier of LAYER_TIERS) {
       const tilemap = this.buildSingleTileMap(data, tier)
       tilemap.addComponent(new TileMapTierComponent(tier))
@@ -215,35 +214,54 @@ export class MapResource implements Loadable<TileMap> {
     }
   }
 
+  /**
+   * Parse the map JSON + resolve its sprite sets. The Excalibur
+   * `TileMap`s (one `Tile` object per cell per tier — six figures for
+   * the big ported worlds) are NOT built here: projects preload every
+   * map for the atlas/previews/snapshots, which only read `mapData`.
+   * {@link ensureTileMaps} builds them on first scene use.
+   *
+   * `Loadable` consumers gate on {@link isLoaded}; the returned
+   * `TileMap` is only meaningful once the tilemaps exist.
+   */
   async load(): Promise<TileMap> {
     try {
       const mapDataPath = joinPaths(this.basePath, this.filename)
       const mapDataText = await loadTextFile(mapDataPath)
       this._mapData = MapFormat.deserialize(mapDataText)
-
-      this.createTileMaps(this._mapData)
-      // Loadable<TileMap> contract — point `data` at the ground
-      // tilemap. Callers that need a specific tier should walk the
-      // scene by `TileMapTierComponent` instead.
-      const groundTileMap = this.tileMapsByTier.get(DEFAULT_LAYER_TIER)
-      if (!groundTileMap) throw new Error('Failed to build ground tilemap')
-      this.data = groundTileMap
+      MapFormat.validate(this._mapData)
 
       await this.loadSpriteSets()
 
-      this.processLayers(this._mapData)
-
-      return groundTileMap
+      return this.data
     } catch (error) {
       this.logger.error(`Failed to load map: ${error}`)
       throw error
     }
   }
 
+  /**
+   * Build the per-tier `TileMap`s + the editor shadow state from the
+   * loaded map data. Idempotent — the first scene to use this map
+   * pays the (large) tile-allocation cost, later calls are no-ops.
+   */
+  ensureTileMaps(): void {
+    if (this.tileMapsByTier.size > 0) return
+    if (!this._mapData) throw new Error('Map resource not loaded')
+
+    this.createTileMaps(this._mapData)
+    // Loadable<TileMap> contract — point `data` at the ground
+    // tilemap. Callers that need a specific tier should walk the
+    // scene by `TileMapTierComponent` instead.
+    const groundTileMap = this.tileMapsByTier.get(DEFAULT_LAYER_TIER)
+    if (!groundTileMap) throw new Error('Failed to build ground tilemap')
+    this.data = groundTileMap
+
+    this.processLayers(this._mapData)
+  }
+
   addToScene(scene: Scene): void {
-    if (this.tileMapsByTier.size === 0) {
-      throw new Error('Map resource not loaded')
-    }
+    this.ensureTileMaps()
 
     for (const tier of LAYER_TIERS) {
       const tileMap = this.tileMapsByTier.get(tier)
@@ -497,6 +515,8 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   isLoaded(): boolean {
-    return !!this.data
+    // Loaded = map data parsed. The TileMaps build lazily on first
+    // scene use (`ensureTileMaps`) — `data` stays unset until then.
+    return !!this._mapData
   }
 }

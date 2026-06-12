@@ -48,7 +48,7 @@ Conventions:
 ## Atlas / world
 
 - **Viewport scene-card previews — SHIPPED** (uniform 200% default zoom, atlas-global zoom via the scene editor's FloatingZoom pill routed through `win.zoom-*`, per-card lock toggle: closed = drag moves the card, open = drag pans the section, persisted as `editorData.preview`). Remaining polish: the global atlas zoom is session-only (not persisted per project); the welcome view still uses fit-whole-map previews by design. *owner: gjs (MapPreview) + maker*
-- **Atlas load time for big projects** — opening `games/oot2d-2014` (19 maps, 18 MB) takes ~19 s to the atlas; the project now loads **twice** (`loadProjectAsAtlas` + the welcome/engine path each construct a `GameProjectResource`) and repeated loads in one session can OOM GJS. Deduplicate to one shared resource per open project (existing "GameProjectResource double copy" debt) and consider lazy map parsing. *owner: maker / engine*
+- **Atlas load time for big projects — FIXED via lazy TileMap build**: `MapResource.load()` no longer constructs the per-tier Excalibur `TileMap`s (1.25M `Tile` objects across the 19 oot2d maps); they build on first scene use (`ensureTileMaps`). Opening `games/oot2d-2014` is now ~1.3 s to the atlas (was ~19 s), and the GJS OOM after repeated opens disappeared with the object churn. `GameProjectResource.load()` logs per-phase timings (data / sprite sets / maps) at info level. Still open: the project is parsed by several `GameProjectResource` instances per session (welcome template card, atlas, engine at scene open — each ~0.5 s now). Sharing ONE resource per open project (the "double copy" debt) remains the structural cleanup. *owner: maker / engine*
 
 ## Welcome / project lifecycle
 
