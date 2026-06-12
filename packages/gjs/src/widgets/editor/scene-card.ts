@@ -48,6 +48,13 @@ export class SceneCard extends Gtk.Button {
   private _dragging = false
   private _viewportLockable = false
   /**
+   * Whether the current press began on the lock toggle. The card is a
+   * `Gtk.Button`, whose click gesture runs in the CAPTURE phase — the
+   * nested `Gtk.ToggleButton` never receives the press, so the card
+   * routes lock clicks manually in {@link _onClicked}.
+   */
+  private _pressOnLock = false
+  /**
    * When true (lock open), dragging the preview content pans the map
    * section inside the card (`preview-pan-*` signals). When false
    * (lock closed — the default — or no viewport preview at all), any
@@ -121,6 +128,9 @@ export class SceneCard extends Gtk.Button {
           // then one `preview-pan-end` for the host to persist.
           'preview-pan-update': { param_types: [GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE] },
           'preview-pan-end': {},
+          // Lock state flipped (via the card toggle or
+          // `previewUnlocked`). Payload: `true` = open/pannable.
+          'lock-changed': { param_types: [GObject.TYPE_BOOLEAN] },
         },
       },
       SceneCard,
@@ -138,9 +148,11 @@ export class SceneCard extends Gtk.Button {
     drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
     drag.connect('drag-begin', (_g, x, y) => {
       this._dragging = false
-      // Handle presses always MOVE the card; presses on the preview
-      // content PAN the map section when the host enabled it.
-      this._dragMode = !this._pannablePreview || this._isOnLock(x, y) ? 'move' : 'pan'
+      this._pressOnLock = this._isOnLock(x, y)
+      // Lock presses always MOVE the card (a click toggles instead —
+      // see `_onClicked`); presses on the preview content PAN the map
+      // section when the lock is open.
+      this._dragMode = !this._pannablePreview || this._pressOnLock ? 'move' : 'pan'
       this._lastPan = { dx: 0, dy: 0 }
       this._pressLocal = new Graphene.Point()
       this._pressLocal.init(x, y)
@@ -224,7 +236,18 @@ export class SceneCard extends Gtk.Button {
       this._lock_button.set_tooltip_text(
         this._lock_button.active ? _('Lock to move the card instead') : _('Unlock to pan the preview section'),
       )
+      this.emit('lock-changed', this._lock_button.active)
     })
+  }
+
+  /** Lock state — `true` = open (drag pans the preview section). */
+  get previewUnlocked(): boolean {
+    return this._lock_button?.active ?? false
+  }
+
+  set previewUnlocked(value: boolean) {
+    if (!this._lock_button || this._lock_button.active === value) return
+    this._lock_button.active = value
   }
 
   /**
@@ -345,6 +368,21 @@ export class SceneCard extends Gtk.Button {
 
   private _onClicked(): void {
     if (this._dragging) return
+    // Lock clicks: the card button claims every press in its CAPTURE
+    // phase, so the nested toggle never fires — toggle it here and
+    // suppress the host's `clicked` select handler through the same
+    // idle-reset window the drag suppression uses.
+    if (this._pressOnLock && this._viewportLockable) {
+      this._pressOnLock = false
+      this._lock_button.set_active(!this._lock_button.active)
+      this._lastClickMs = 0
+      this._dragging = true
+      GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+        this._dragging = false
+        return false
+      })
+      return
+    }
     const now = Date.now()
     if (now - this._lastClickMs < 350) {
       this.emit('scene-activated')

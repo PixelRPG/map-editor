@@ -82,6 +82,11 @@ export class AtlasCanvas extends Adw.Bin {
           'preview-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
           },
+          // A card's viewport lock flipped (`true` = open/pannable) —
+          // lets hosts mirror the state (e.g. the inspector's switch).
+          'preview-lock-changed': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_BOOLEAN],
+          },
         },
       },
       AtlasCanvas,
@@ -240,6 +245,26 @@ export class AtlasCanvas extends Adw.Bin {
       const centre = preview.commitViewport()
       if (centre) this.emit('preview-moved', scene.id, centre.tileX, centre.tileY)
     })
+    card.connect('lock-changed', (_c: SceneCard, unlocked: boolean) => {
+      this.emit('preview-lock-changed', scene.id, unlocked)
+    })
+  }
+
+  /**
+   * Lock state of a card's preview viewport: `true` = open (drag pans
+   * the section), `false` = closed, `null` = the scene has no viewport
+   * preview (sample worlds / unknown id).
+   */
+  getPreviewLock(sceneId: string): boolean | null {
+    const card = this._cards.get(sceneId)
+    if (!card?.viewportLockable) return null
+    return card.previewUnlocked
+  }
+
+  /** Flip a card's viewport lock (the inspector's switch drives this). */
+  setPreviewLock(sceneId: string, unlocked: boolean): void {
+    const card = this._cards.get(sceneId)
+    if (card?.viewportLockable) card.previewUnlocked = unlocked
   }
 
   private _wireDrag(sceneId: string, card: SceneCard): void {

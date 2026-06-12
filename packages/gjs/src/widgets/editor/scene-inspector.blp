@@ -84,6 +84,18 @@ template $PixelRpgSceneInspector : Adw.Bin {
         margin-top: 6;
       }
 
+      // Mirrors the card's viewport lock — only shown for viewport
+      // previews (real projects). Open = dragging the card pans its
+      // map section instead of moving the card.
+      Adw.PreferencesGroup lock_group {
+        visible: false;
+
+        Adw.SwitchRow lock_row {
+          title: _("Pan preview section");
+          subtitle: _("Dragging the card moves its map section");
+        }
+      }
+
       Adw.PreferencesGroup teleports_group {
         title: _("Teleports");
         visible: bind template.has-teleports;
