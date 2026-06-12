@@ -65,13 +65,9 @@ export class SceneCard extends Gtk.Button {
   private _dragMode: 'move' | 'pan' = 'move'
   /** Last emitted pan offset, for incremental `preview-pan-update`s. */
   private _lastPan = { dx: 0, dy: 0 }
-  // Press point in widget-local coords (captured at drag-begin) and the
-  // same point translated into the parent (atlas Fixed) coordinate
-  // space. We compute deltas in *parent* space so that moving the card
-  // during drag-update doesn't shift the widget-local origin and cause
-  // the gesture to oscillate between positions. Without this trick a
-  // big card visibly flickers between its old and new position on
-  // every mouse motion event.
+  // Press point in widget-local coords (captured at drag-begin) and
+  // the same point in the parent (atlas Fixed) space — move deltas are
+  // computed in parent space (see `_moveDeltaInParent` for why).
   private _pressLocal: Graphene.Point | null = null
   private _pressInParent: Graphene.Point | null = null
 
@@ -170,61 +166,25 @@ export class SceneCard extends Gtk.Button {
         this._lastPan = { dx, dy }
         return
       }
-      if (!this._pressLocal || !this._pressInParent) return
-      // Resolve the current cursor position in PARENT space:
-      //   current_widget_local = press_local + drag_offset (gesture-provided)
-      //   current_in_parent     = compute_point(current_widget_local → parent)
-      // Then the delta against the captured press_in_parent is stable —
-      // it doesn't depend on the card's current fixed-position.
-      const currentLocal = new Graphene.Point()
-      currentLocal.init(this._pressLocal.x + dx, this._pressLocal.y + dy)
-      const currentInParent = this._toParent(currentLocal)
-      if (!currentInParent) return
-      this.emit(
-        'scene-drag-update',
-        currentInParent.x - this._pressInParent.x,
-        currentInParent.y - this._pressInParent.y,
-      )
+      const delta = this._moveDeltaInParent(dx, dy)
+      if (delta) this.emit('scene-drag-update', delta.x, delta.y)
     })
     drag.connect('drag-end', (_g, dx, dy) => {
       const wasRealDrag = this._dragging
       if (wasRealDrag && this._dragMode === 'pan') {
         this.emit('preview-pan-end')
         this._lastClickMs = 0
-      } else if (wasRealDrag && this._pressLocal && this._pressInParent) {
-        const currentLocal = new Graphene.Point()
-        currentLocal.init(this._pressLocal.x + dx, this._pressLocal.y + dy)
-        const currentInParent = this._toParent(currentLocal)
-        if (currentInParent) {
-          this.emit(
-            'scene-drag-end',
-            currentInParent.x - this._pressInParent.x,
-            currentInParent.y - this._pressInParent.y,
-          )
-        }
+      } else if (wasRealDrag) {
+        const delta = this._moveDeltaInParent(dx, dy)
+        if (delta) this.emit('scene-drag-end', delta.x, delta.y)
         // Reset the double-click timer so the trailing click can't
         // chain into a `scene-activated` (open) on the next press.
         this._lastClickMs = 0
       }
       this._pressLocal = null
       this._pressInParent = null
-      if (wasRealDrag) {
-        // Keep `_dragging` true through the trailing `GtkButton::clicked`
-        // signal. GTK fires that synchronously from the same release
-        // event when `GestureDrag` is on the CAPTURE phase, so the
-        // listeners that already guard with `if (card.isDragging)
-        // return` (atlas-canvas's `scene-selected` emit, this card's
-        // own `_onClicked`) bail without firing — no auto-open mid-
-        // reorder, no spurious `scene-activated`. Reset on the next
-        // idle tick so the suppression window doesn't leak into a
-        // subsequent real click.
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-          this._dragging = false
-          return false
-        })
-      } else {
-        this._dragging = false
-      }
+      if (wasRealDrag) this._suppressTrailingClick()
+      else this._dragging = false
     })
     this.add_controller(drag)
 
@@ -237,6 +197,46 @@ export class SceneCard extends Gtk.Button {
         this._lock_button.active ? _('Lock to move the card instead') : _('Unlock to pan the preview section'),
       )
       this.emit('lock-changed', this._lock_button.active)
+    })
+  }
+
+  /**
+   * Resolve the gesture's current pointer position into the PARENT's
+   * coordinate space and return the delta against the captured press
+   * point:
+   *   current_widget_local = press_local + drag_offset (gesture-provided)
+   *   current_in_parent    = compute_point(current_widget_local → parent)
+   * The delta against `press_in_parent` is stable — it doesn't depend
+   * on the card's current fixed-position, so moving the card mid-drag
+   * can't make the gesture oscillate.
+   */
+  private _moveDeltaInParent(dx: number, dy: number): { x: number; y: number } | null {
+    if (!this._pressLocal || !this._pressInParent) return null
+    const currentLocal = new Graphene.Point()
+    currentLocal.init(this._pressLocal.x + dx, this._pressLocal.y + dy)
+    const currentInParent = this._toParent(currentLocal)
+    if (!currentInParent) return null
+    return {
+      x: currentInParent.x - this._pressInParent.x,
+      y: currentInParent.y - this._pressInParent.y,
+    }
+  }
+
+  /**
+   * Keep `_dragging` true through the trailing `GtkButton::clicked`
+   * signal. GTK fires that synchronously from the same release event
+   * when `GestureDrag` is on the CAPTURE phase, so listeners that
+   * guard with `if (card.isDragging) return` (atlas-canvas's
+   * `scene-selected` emit, this card's own `_onClicked`) bail without
+   * firing — no auto-open mid-reorder, no spurious `scene-activated`,
+   * no select on a lock click. Reset on the next idle tick so the
+   * suppression window doesn't leak into a subsequent real click.
+   */
+  private _suppressTrailingClick(): void {
+    this._dragging = true
+    GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+      this._dragging = false
+      return false
     })
   }
 
@@ -370,17 +370,12 @@ export class SceneCard extends Gtk.Button {
     if (this._dragging) return
     // Lock clicks: the card button claims every press in its CAPTURE
     // phase, so the nested toggle never fires — toggle it here and
-    // suppress the host's `clicked` select handler through the same
-    // idle-reset window the drag suppression uses.
+    // suppress the host's `clicked` select handler.
     if (this._pressOnLock && this._viewportLockable) {
       this._pressOnLock = false
       this._lock_button.set_active(!this._lock_button.active)
       this._lastClickMs = 0
-      this._dragging = true
-      GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-        this._dragging = false
-        return false
-      })
+      this._suppressTrailingClick()
       return
     }
     const now = Date.now()
