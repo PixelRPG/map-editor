@@ -22,8 +22,10 @@ distributed as a game.
   recomposed onto a uniform sprite grid for the PixelRPG sprite-set format.
 - **Tree-house interior tileset** — from **OoT2D: Full Steam Ahead**
   (`oot2d_fsa`, `graphics/finalized/tileset_kokiri_forest_interior.png`,
-  authored by **xfixium** and the oot2d_fsa contributors), sliced into the
-  PixelRPG tileset format for the `tree-house` map.
+  authored by **xfixium** and the oot2d_fsa contributors); the room layout
+  follows the FSA project's own `links_house` reference screenshot
+  (`graphics/screens/kokiri_inside_sample_01.png`), rebuilt with the
+  finalized graphics via `tools/build-tree-house.py`.
 - The original pixel art in these projects derives from Nintendo's
   *The Legend of Zelda* games; see the Nintendo notice above.
 
