@@ -57,6 +57,13 @@ export const STARTER_TEMPLATES: ProjectTemplate[] = [
     projectPath: `${TEMPLATES_ROOT}/zelda-like/game-project.json`,
     accentColor: '#3d6b3a',
   },
+  {
+    id: 'oot2d-2014',
+    name: 'OoT2D 2014 World',
+    caption: '19 converted reference maps · 8px tiles',
+    projectPath: `${TEMPLATES_ROOT}/oot2d-2014/game-project.json`,
+    accentColor: '#c4a24c',
+  },
 ]
 
 /** Convenience: look up the template used by the *New Project* flow. */
