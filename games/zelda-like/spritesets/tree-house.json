@@ -345,8 +345,7 @@
     {
       "id": 57,
       "col": 2,
-      "row": 5,
-      "solid": true
+      "row": 5
     },
     {
       "id": 58,
@@ -476,12 +475,14 @@
     {
       "id": 80,
       "col": 3,
-      "row": 7
+      "row": 7,
+      "solid": true
     },
     {
       "id": 81,
       "col": 4,
-      "row": 7
+      "row": 7,
+      "solid": true
     },
     {
       "id": 82,
@@ -496,12 +497,14 @@
     {
       "id": 84,
       "col": 7,
-      "row": 7
+      "row": 7,
+      "solid": true
     },
     {
       "id": 85,
       "col": 8,
-      "row": 7
+      "row": 7,
+      "solid": true
     },
     {
       "id": 86,

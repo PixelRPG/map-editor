@@ -22,18 +22,6 @@
       "tier": "ground",
       "sprites": [
         {
-          "x": 0,
-          "y": 0,
-          "spriteId": 1,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 1,
-          "y": 0,
-          "spriteId": 2,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 3,
           "y": 0,
           "spriteId": 4,
@@ -67,12 +55,6 @@
           "x": 8,
           "y": 0,
           "spriteId": 9,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 0,
-          "y": 1,
-          "spriteId": 12,
           "spriteSetId": "tree-house"
         },
         {
@@ -336,7 +318,7 @@
         {
           "x": 2,
           "y": 5,
-          "spriteId": 58,
+          "spriteId": 31,
           "spriteSetId": "tree-house"
         },
         {
@@ -574,12 +556,6 @@
           "spriteSetId": "tree-house"
         },
         {
-          "x": 0,
-          "y": 9,
-          "spriteId": 100,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 1,
           "y": 9,
           "spriteId": 101,
@@ -634,24 +610,6 @@
           "spriteSetId": "tree-house"
         },
         {
-          "x": 10,
-          "y": 9,
-          "spriteId": 110,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 0,
-          "y": 10,
-          "spriteId": 111,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 1,
-          "y": 10,
-          "spriteId": 112,
-          "spriteSetId": "tree-house"
-        },
-        {
           "x": 3,
           "y": 10,
           "spriteId": 114,
@@ -685,12 +643,6 @@
           "x": 8,
           "y": 10,
           "spriteId": 119,
-          "spriteSetId": "tree-house"
-        },
-        {
-          "x": 10,
-          "y": 10,
-          "spriteId": 121,
           "spriteSetId": "tree-house"
         },
         {
@@ -759,7 +711,7 @@
     }
   ],
   "editorData": {
-    "atlasX": 80,
-    "atlasY": 106
+    "atlasX": 615,
+    "atlasY": 169
   }
 }
