@@ -1,0 +1,293 @@
+{
+  "id": "oot2d-2014",
+  "version": "1.0.0",
+  "name": "OoT2D 2014 World",
+  "properties": {
+    "author": "CheerfulSage & GodsTurf (maps/tilesets); PixelRPG port",
+    "description": "Complete map set of 'The Legend of Zelda: Ocarina of Time 2D' v0.10.2 (2014, oot-2d.com), converted from the .zmap originals \u2014 see CREDITS.md for full provenance. 8px tiles.",
+    "defaultTileSize": 8
+  },
+  "startup": {
+    "initialMapId": "kokiri-forest"
+  },
+  "maps": [
+    {
+      "id": "bombchu",
+      "name": "Bombchu",
+      "path": "./maps/bombchu.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "castle",
+      "name": "Castle",
+      "path": "./maps/castle.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "deku-0",
+      "name": "Deku 0",
+      "path": "./maps/deku-0.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "end",
+      "name": "End",
+      "path": "./maps/end.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "field",
+      "name": "Field",
+      "path": "./maps/field.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "guards",
+      "name": "Guards",
+      "path": "./maps/guards.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "houses",
+      "name": "Houses",
+      "path": "./maps/houses.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "houses-kokiri",
+      "name": "Houses Kokiri",
+      "path": "./maps/houses-kokiri.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "houses-ranch",
+      "name": "Houses Ranch",
+      "path": "./maps/houses-ranch.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "kakariko",
+      "name": "Kakariko",
+      "path": "./maps/kakariko.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "kokiri-forest",
+      "name": "Kokiri Forest",
+      "path": "./maps/kokiri-forest.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "lost-woods",
+      "name": "Lost Woods",
+      "path": "./maps/lost-woods.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "market-central",
+      "name": "Market Central",
+      "path": "./maps/market-central.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "market-enter",
+      "name": "Market Enter",
+      "path": "./maps/market-enter.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "pots",
+      "name": "Pots",
+      "path": "./maps/pots.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "ranch",
+      "name": "Ranch",
+      "path": "./maps/ranch.json",
+      "type": "map",
+      "category": "overworld"
+    },
+    {
+      "id": "smb",
+      "name": "Smb",
+      "path": "./maps/smb.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "shooting-gallery",
+      "name": "Shooting Gallery",
+      "path": "./maps/shooting-gallery.json",
+      "type": "map",
+      "category": "interiors"
+    },
+    {
+      "id": "windmill",
+      "name": "Windmill",
+      "path": "./maps/windmill.json",
+      "type": "map",
+      "category": "interiors"
+    }
+  ],
+  "spriteSets": [
+    {
+      "id": "0crz",
+      "path": "./spritesets/0crz.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "1crz",
+      "path": "./spritesets/1crz.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "2crz",
+      "path": "./spritesets/2crz.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "3crz",
+      "path": "./spritesets/3crz.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "4crz",
+      "path": "./spritesets/4crz.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "bchu",
+      "path": "./spritesets/bchu.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "csle",
+      "path": "./spritesets/csle.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "demo",
+      "path": "./spritesets/demo.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "end",
+      "path": "./spritesets/end.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "grds",
+      "path": "./spritesets/grds.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "hse0",
+      "path": "./spritesets/hse0.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "hse1",
+      "path": "./spritesets/hse1.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "hse3",
+      "path": "./spritesets/hse3.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "hse4",
+      "path": "./spritesets/hse4.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "mkt0",
+      "path": "./spritesets/mkt0.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "mkt1",
+      "path": "./spritesets/mkt1.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "pots",
+      "path": "./spritesets/pots.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "smb",
+      "path": "./spritesets/smb.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "wmil",
+      "path": "./spritesets/wmil.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "link",
+      "path": "./spritesets/link.json",
+      "type": "spriteset",
+      "category": "characters"
+    }
+  ],
+  "entityLibrary": [
+    {
+      "id": "link",
+      "name": "Link",
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "link",
+          "spriteId": 5,
+          "animationId": "idle-down"
+        },
+        {
+          "type": "movement",
+          "tilesPerSec": 6
+        }
+      ],
+      "editorData": {
+        "template": "character",
+        "category": "hero"
+      }
+    }
+  ],
+  "playerActorId": "link"
+}

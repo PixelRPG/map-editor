@@ -1,0 +1,717 @@
+{
+  "id": "tree-house-cozy",
+  "name": "Link's Tree House (cozy)",
+  "version": "1.0.0",
+  "tileWidth": 16,
+  "tileHeight": 16,
+  "columns": 11,
+  "rows": 11,
+  "spriteSets": [
+    {
+      "id": "tree-house-cozy",
+      "path": "../spritesets/tree-house-cozy.json",
+      "type": "spriteset",
+      "firstGid": 1
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer_ground",
+      "name": "Ground",
+      "visible": true,
+      "tier": "ground",
+      "sprites": [
+        {
+          "x": 3,
+          "y": 0,
+          "spriteId": 4,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 0,
+          "spriteId": 5,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 0,
+          "spriteId": 6,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 0,
+          "spriteId": 7,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 0,
+          "spriteId": 8,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 0,
+          "spriteId": 9,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 1,
+          "spriteId": 13,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 1,
+          "spriteId": 14,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 1,
+          "spriteId": 15,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 1,
+          "spriteId": 16,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 1,
+          "spriteId": 17,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 1,
+          "spriteId": 18,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 1,
+          "spriteId": 19,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 1,
+          "spriteId": 20,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 1,
+          "spriteId": 21,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 2,
+          "spriteId": 24,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 2,
+          "spriteId": 25,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 2,
+          "spriteId": 26,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 2,
+          "spriteId": 27,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 2,
+          "spriteId": 28,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 2,
+          "spriteId": 29,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 2,
+          "spriteId": 30,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 2,
+          "spriteId": 31,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 2,
+          "spriteId": 32,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 2,
+          "spriteId": 33,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 0,
+          "y": 3,
+          "spriteId": 34,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 3,
+          "spriteId": 35,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 3,
+          "spriteId": 36,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 3,
+          "spriteId": 37,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 3,
+          "spriteId": 38,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 3,
+          "spriteId": 39,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 3,
+          "spriteId": 40,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 3,
+          "spriteId": 41,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 3,
+          "spriteId": 42,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 3,
+          "spriteId": 43,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 3,
+          "spriteId": 44,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 0,
+          "y": 4,
+          "spriteId": 45,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 4,
+          "spriteId": 46,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 4,
+          "spriteId": 47,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 4,
+          "spriteId": 48,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 4,
+          "spriteId": 49,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 4,
+          "spriteId": 50,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 4,
+          "spriteId": 51,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 4,
+          "spriteId": 52,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 4,
+          "spriteId": 53,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 4,
+          "spriteId": 54,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 4,
+          "spriteId": 55,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 0,
+          "y": 5,
+          "spriteId": 56,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 5,
+          "spriteId": 57,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 5,
+          "spriteId": 31,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 5,
+          "spriteId": 59,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 5,
+          "spriteId": 60,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 5,
+          "spriteId": 61,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 5,
+          "spriteId": 62,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 5,
+          "spriteId": 63,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 5,
+          "spriteId": 64,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 5,
+          "spriteId": 65,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 5,
+          "spriteId": 66,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 0,
+          "y": 6,
+          "spriteId": 67,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 6,
+          "spriteId": 68,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 6,
+          "spriteId": 69,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 6,
+          "spriteId": 70,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 6,
+          "spriteId": 71,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 6,
+          "spriteId": 72,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 6,
+          "spriteId": 73,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 6,
+          "spriteId": 74,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 6,
+          "spriteId": 75,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 6,
+          "spriteId": 76,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 6,
+          "spriteId": 77,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 0,
+          "y": 7,
+          "spriteId": 78,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 7,
+          "spriteId": 79,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 7,
+          "spriteId": 80,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 7,
+          "spriteId": 81,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 7,
+          "spriteId": 82,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 7,
+          "spriteId": 83,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 7,
+          "spriteId": 84,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 7,
+          "spriteId": 85,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 7,
+          "spriteId": 86,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 7,
+          "spriteId": 87,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 7,
+          "spriteId": 88,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 8,
+          "spriteId": 90,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 8,
+          "spriteId": 91,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 8,
+          "spriteId": 92,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 8,
+          "spriteId": 93,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 8,
+          "spriteId": 94,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 8,
+          "spriteId": 95,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 8,
+          "spriteId": 97,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 8,
+          "spriteId": 98,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 10,
+          "y": 8,
+          "spriteId": 99,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 1,
+          "y": 9,
+          "spriteId": 101,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 2,
+          "y": 9,
+          "spriteId": 102,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 9,
+          "spriteId": 103,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 9,
+          "spriteId": 104,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 9,
+          "spriteId": 105,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 9,
+          "spriteId": 106,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 9,
+          "spriteId": 107,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 9,
+          "spriteId": 108,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 9,
+          "y": 9,
+          "spriteId": 109,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 3,
+          "y": 10,
+          "spriteId": 114,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 4,
+          "y": 10,
+          "spriteId": 115,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 5,
+          "y": 10,
+          "spriteId": 116,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 6,
+          "y": 10,
+          "spriteId": 117,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 10,
+          "spriteId": 118,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 8,
+          "y": 10,
+          "spriteId": 119,
+          "spriteSetId": "tree-house-cozy"
+        },
+        {
+          "x": 7,
+          "y": 8,
+          "spriteId": 31,
+          "spriteSetId": "tree-house-cozy"
+        }
+      ]
+    },
+    {
+      "id": "layer_functional",
+      "name": "Functional",
+      "visible": true,
+      "sprites": []
+    }
+  ],
+  "properties": {},
+  "objectPlacements": [
+    {
+      "id": "tp-exit-to-forest-cozy",
+      "layerId": "layer_functional",
+      "tileX": 5,
+      "tileY": 9,
+      "inline": {
+        "id": "tp-exit-to-forest-def-cozy",
+        "name": "Door to Kokiri Forest",
+        "components": [
+          {
+            "type": "trigger",
+            "on": "walk-onto"
+          },
+          {
+            "type": "teleport",
+            "targetMapId": "kokiri-forest",
+            "targetTileX": 76,
+            "targetTileY": 67,
+            "facing": "down",
+            "label": "Kokiri Forest"
+          }
+        ],
+        "editorData": {
+          "template": "teleport"
+        }
+      }
+    },
+    {
+      "id": "spawn-player-cozy",
+      "layerId": "layer_functional",
+      "tileX": 5,
+      "tileY": 6,
+      "inline": {
+        "id": "spawn-player-def-cozy",
+        "name": "Player spawn",
+        "components": [
+          {
+            "type": "spawn-point",
+            "spawnId": "player",
+            "facing": "down"
+          }
+        ],
+        "editorData": {
+          "template": "spawn-point"
+        }
+      }
+    }
+  ],
+  "editorData": {
+    "atlasX": 80,
+    "atlasY": 130
+  }
+}

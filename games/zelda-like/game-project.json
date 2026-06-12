@@ -22,6 +22,13 @@
       "path": "./maps/tree-house.json",
       "type": "map",
       "category": "interiors"
+    },
+    {
+      "id": "tree-house-cozy",
+      "name": "Link's Tree House (cozy)",
+      "path": "./maps/tree-house-cozy.json",
+      "type": "map",
+      "category": "interiors"
     }
   ],
   "mapCategories": [
@@ -58,6 +65,12 @@
     {
       "id": "tree-house",
       "path": "./spritesets/tree-house.json",
+      "type": "spriteset",
+      "category": "environments"
+    },
+    {
+      "id": "tree-house-cozy",
+      "path": "./spritesets/tree-house-cozy.json",
       "type": "spriteset",
       "category": "environments"
     }
