@@ -36,6 +36,8 @@ export class SceneInspector extends Adw.Bin {
   declare _subtitle_label: Gtk.Label
   declare _stats_grid: Gtk.Grid
   declare _teleports_group: Adw.PreferencesGroup
+  declare _lock_group: Adw.PreferencesGroup
+  declare _lock_row: Adw.SwitchRow
   declare _open_button: Gtk.Button
   declare _empty_state: Adw.StatusPage
   declare _body: Gtk.Box
@@ -46,6 +48,8 @@ export class SceneInspector extends Adw.Bin {
   private _statRows: Gtk.Widget[] = []
   private _teleportRows: Adw.ActionRow[] = []
   private _collapsed = false
+  /** Guards the lock switch against programmatic-update feedback. */
+  private _syncingLock = false
 
   static {
     GObject.registerClass(
@@ -58,10 +62,18 @@ export class SceneInspector extends Adw.Bin {
           'subtitle_label',
           'stats_grid',
           'teleports_group',
+          'lock_group',
+          'lock_row',
           'open_button',
           'empty_state',
           'body',
         ],
+        Signals: {
+          // The user flipped the viewport-lock switch — payload
+          // `true` = open/pannable. Programmatic `setPreviewLock`
+          // updates do NOT re-emit.
+          'preview-lock-changed': { param_types: [GObject.TYPE_BOOLEAN] },
+        },
         Properties: {
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
@@ -160,6 +172,29 @@ export class SceneInspector extends Adw.Bin {
     if (this._collapsed === value) return
     this._collapsed = value
     this.notify('collapsed')
+  }
+
+  constructor() {
+    super()
+    this._lock_row.connect('notify::active', () => {
+      if (this._syncingLock) return
+      this.emit('preview-lock-changed', this._lock_row.active)
+    })
+  }
+
+  /**
+   * Mirror the selected card's viewport-lock state into the switch.
+   * `null` hides the row (scene without a viewport preview / no
+   * selection). Programmatic — does not re-emit `preview-lock-changed`.
+   */
+  setPreviewLock(unlocked: boolean | null): void {
+    this._syncingLock = true
+    try {
+      this._lock_group.set_visible(unlocked !== null && this._scene != null)
+      if (unlocked !== null) this._lock_row.set_active(unlocked)
+    } finally {
+      this._syncingLock = false
+    }
   }
 
   private _refreshPreview(): void {
@@ -291,6 +326,8 @@ export class SceneInspector extends Adw.Bin {
     this._stats_grid.set_visible(populated)
     this._open_button.set_visible(populated)
     this._empty_state.set_visible(!populated)
+    // Re-shown per selection via `setPreviewLock` — default hidden.
+    if (!populated) this._lock_group.set_visible(false)
   }
 }
 

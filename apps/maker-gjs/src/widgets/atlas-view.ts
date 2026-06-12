@@ -45,6 +45,7 @@ export class AtlasView extends ResponsiveEditorView {
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
   private _projectName = SAMPLE_SCENES.length ? "Aria's Quest" : 'New Project'
   private _projectResource: GameProjectResource | null = null
+  private _selectedSceneId: string | null = null
 
   static {
     GObject.registerClass(
@@ -144,8 +145,10 @@ export class AtlasView extends ResponsiveEditorView {
    * stays silent).
    */
   private _refreshSelectedScene(id: string): void {
+    this._selectedSceneId = id
     const scene = this._scenes.find((s) => s.id === id) ?? null
     this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
+    this._inspector.setPreviewLock(scene ? this._atlas.getPreviewLock(id) : null)
     this.emit('scene-selected', id)
   }
 
@@ -181,6 +184,16 @@ export class AtlasView extends ResponsiveEditorView {
     })
     this.signals.connect(this._atlas, 'preview-moved', (_a: AtlasCanvas, id: string, tileX: number, tileY: number) => {
       this.emit('preview-moved', id, tileX, tileY)
+    })
+    // Viewport lock, both directions: card toggle → inspector switch,
+    // inspector switch → card. Both ends guard against echo loops
+    // (the card setter no-ops on same value, the inspector suppresses
+    // programmatic updates).
+    this.signals.connect(this._atlas, 'preview-lock-changed', (_a: AtlasCanvas, id: string, unlocked: boolean) => {
+      if (id === this._selectedSceneId) this._inspector.setPreviewLock(unlocked)
+    })
+    this.signals.connect(this._inspector, 'preview-lock-changed', (_i: SceneInspector, unlocked: boolean) => {
+      if (this._selectedSceneId) this._atlas.setPreviewLock(this._selectedSceneId, unlocked)
     })
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
       this.emit('mode-changed', mode as EditorMode)
