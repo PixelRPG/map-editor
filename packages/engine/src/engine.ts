@@ -296,6 +296,16 @@ export class Engine {
       newMapScene.camera.zoom = carryZoom
     }
 
+    // Map-declared room colour → GL clear colour. A colour *actor*
+    // would go through Excalibur's `Rectangle` Raster (2D-canvas
+    // rasterise), which the GJS canvas path doesn't survive — the
+    // clear colour is pure GL and also matches the original-game
+    // semantic (fill the screen, tiles on top). Reset to transparent
+    // for maps without one so the editor backdrop shows through.
+    this.excalibur.backgroundColor = mapResource.mapData.backgroundColor
+      ? Color.fromHex(mapResource.mapData.backgroundColor)
+      : Color.Transparent
+
     // Re-entry: drop the stale scene instance so addScene doesn't
     // collide and the room rebuilds fresh from data.
     if (this.excalibur.scenes[mapId]) this.excalibur.removeScene(mapId)

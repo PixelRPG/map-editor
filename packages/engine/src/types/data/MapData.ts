@@ -59,6 +59,15 @@ export interface MapData {
   version: string
 
   /**
+   * Optional solid fill colour (`#rrggbb`) painted across the map
+   * bounds *below* every tile layer. Sparse maps (ported games often
+   * store only detail tiles over a flat room colour) rely on this to
+   * not render as void — the engine adds a background rect and the
+   * editor's previews fill with it. Absent = transparent.
+   */
+  backgroundColor?: string
+
+  /**
    * Array of layers that make up the map
    * Each layer's tiles will be converted to Excalibur Tiles
    * Multiple layers allow for:

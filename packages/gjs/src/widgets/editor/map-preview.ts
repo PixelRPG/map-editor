@@ -49,6 +49,8 @@ export class MapPreview extends Gtk.Widget {
   private _mapWidth = 0
   private _mapHeight = 0
   private _accentColor: Gdk.RGBA
+  /** Map-declared fill behind the tiles (`MapData.backgroundColor`). */
+  private _mapBackground: Gdk.RGBA | null = null
   private _loaded = false
   // The composited tiles, rasterised to ONE texture so repaints (atlas
   // pan, card hover) are O(1) instead of re-rendering N clipped tile nodes
@@ -141,6 +143,12 @@ export class MapPreview extends Gtk.Widget {
     this._mapWidth = mapData.columns * mapData.tileWidth
     this._mapHeight = mapData.rows * mapData.tileHeight
 
+    this._mapBackground = null
+    if (mapData.backgroundColor) {
+      const rgba = new Gdk.RGBA()
+      if (rgba.parse(mapData.backgroundColor)) this._mapBackground = rgba
+    }
+
     const ops: DrawOp[] = []
     for (const layer of mapData.layers ?? []) {
       if (!layer.visible || !layer.sprites) continue
@@ -175,13 +183,18 @@ export class MapPreview extends Gtk.Widget {
     background.init(0, 0, width, height)
     snapshot.append_color(this._accentColor, background)
 
-    if (!this._loaded || !this._ops.length || !this._mapWidth || !this._mapHeight) return
+    if (!this._loaded || !this._mapWidth || !this._mapHeight) return
 
     const scale = Math.min(width / this._mapWidth, height / this._mapHeight)
     const dw = this._mapWidth * scale
     const dh = this._mapHeight * scale
     const dest = new Graphene.Rect()
     dest.init((width - dw) / 2, (height - dh) / 2, dw, dh)
+
+    // The map's own room colour sits below the tiles (the bake also
+    // includes it; this covers the pre-bake paint + ops-free maps).
+    if (this._mapBackground && !this._baked) snapshot.append_color(this._mapBackground, dest)
+    if (!this._ops.length && !this._baked) return
 
     // Fast path: paint the pre-rasterised composite (one texture).
     if (this._baked) {
@@ -221,11 +234,12 @@ export class MapPreview extends Gtk.Widget {
     // thumbnail texture (it's only ever shown card-sized).
     const bakeScale = Math.min(1, BAKE_MAX_EDGE / Math.max(this._mapWidth, this._mapHeight))
     const sub = Gtk.Snapshot.new()
+    const region = new Graphene.Rect()
+    region.init(0, 0, this._mapWidth * bakeScale, this._mapHeight * bakeScale)
+    if (this._mapBackground) sub.append_color(this._mapBackground, region)
     for (const op of this._ops) this._paintTile(sub, op, bakeScale)
     const node = sub.to_node()
     if (!node) return null
-    const region = new Graphene.Rect()
-    region.init(0, 0, this._mapWidth * bakeScale, this._mapHeight * bakeScale)
     try {
       return renderer.render_texture(node, region)
     } catch (error) {

@@ -2,6 +2,7 @@
  "id": "deku-0",
  "name": "Deku 0",
  "version": "1.0.0",
+ "backgroundColor": "#544429",
  "tileWidth": 8,
  "tileHeight": 8,
  "columns": 325,
