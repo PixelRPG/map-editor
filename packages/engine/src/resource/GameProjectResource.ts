@@ -174,9 +174,11 @@ export class GameProjectResource {
    */
   async load(): Promise<GameProjectData> {
     try {
+      const t0 = Date.now()
       // Load the game project data
       const fullPath = joinPaths(this.baseDir, this.filename)
       this.data = await this.loadGameProjectData(fullPath)
+      const tData = Date.now()
 
       // Determine initial map ID
       const initialMapId = this.customInitialMapId || this.data.startup.initialMapId
@@ -185,6 +187,7 @@ export class GameProjectResource {
       if (this.preloadAllSpriteSets) {
         await this.loadSpriteSets()
       }
+      const tSheets = Date.now()
 
       // Load all maps if configured to preload
       if (this.preloadAllMaps) {
@@ -193,9 +196,13 @@ export class GameProjectResource {
 
       // Load the initial map
       await this.loadMap(initialMapId)
+      const tMaps = Date.now()
 
       this._isLoaded = true
-      this.logger.info(`Game project "${this.data.name}" loaded successfully`)
+      this.logger.info(
+        `Game project "${this.data.name}" loaded successfully ` +
+          `(data ${tData - t0}ms, sprite sets ${tSheets - tData}ms, maps ${tMaps - tSheets}ms)`,
+      )
 
       return this.data
     } catch (error) {
