@@ -124804,7 +124804,7 @@
       "id": "tp-treehouse-door-l",
       "layerId": "layer_functional",
       "tileX": 76,
-      "tileY": 66,
+      "tileY": 67,
       "inline": {
         "id": "tp-treehouse-door-l-def",
         "name": "Link's tree house door",
@@ -124831,7 +124831,7 @@
       "id": "tp-treehouse-door-r",
       "layerId": "layer_functional",
       "tileX": 77,
-      "tileY": 66,
+      "tileY": 67,
       "inline": {
         "id": "tp-treehouse-door-r-def",
         "name": "Link's tree house door",

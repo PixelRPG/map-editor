@@ -52,6 +52,10 @@ const CONTROL_IFACE_XML = `
     <method name="ListRecentProjects">
       <arg type="s" direction="out" name="projects_json"/>
     </method>
+    <method name="GetMapData">
+      <arg type="s" direction="in" name="map_id"/>
+      <arg type="s" direction="out" name="map_json"/>
+    </method>
     <method name="ListTemplates">
       <arg type="s" direction="out" name="templates_json"/>
     </method>
@@ -143,12 +147,16 @@ export class ControlDbusService {
     return JSON.stringify(win.getDebugStatus())
   }
 
-  /** `Screenshot(scope) -> ay` — PNG bytes. `scope`: `window` | `canvas`. */
-  Screenshot(scope: string): Uint8Array {
+  /**
+   * `Screenshot(scope) -> ay` — PNG bytes. `scope`: `window` |
+   * `canvas`. The canvas scope reads the WebGL framebuffer during the
+   * next frame (occlusion-proof); async like `StartSession`.
+   */
+  async Screenshot(scope: string): Promise<Uint8Array> {
     const win = this.window
     if (!win) return new Uint8Array(0)
     const mode = scope === 'canvas' ? 'canvas' : 'window'
-    return win.captureScreenshot(mode) ?? new Uint8Array(0)
+    return (await win.captureScreenshot(mode)) ?? new Uint8Array(0)
   }
 
   /** `ListActions() -> s` — JSON of the `app.*` + `win.*` actions. */
@@ -204,6 +212,23 @@ export class ControlDbusService {
     const win = this._guardMutation('OpenProject')
     this._surfaceAssistantActivity()
     win.openProject(path)
+  }
+
+  /**
+   * `GetMapData(map_id) -> s` — agent-oriented JSON projection of a
+   * loaded map: walkability grid (`.` walkable / `#` solid / ` ` void),
+   * placements with resolved names + component types, spawn points and
+   * teleports with targets. Kilobytes instead of pixels; needs no open
+   * scene, engine or visible window. Read-only (allowed while paused).
+   */
+  GetMapData(mapId: string): string {
+    const data = this.requireWindow().agentMapData(mapId)
+    if (!data) {
+      throw new Error(
+        `unknown-map: "${mapId}" is not part of the loaded project (or no project is open) — see GetStatus.sceneIds`,
+      )
+    }
+    return JSON.stringify(data)
   }
 
   /** `ListRecentProjects() -> s` — JSON list of recently opened projects. */

@@ -679,7 +679,7 @@
             "type": "teleport",
             "targetMapId": "kokiri-forest",
             "targetTileX": 76,
-            "targetTileY": 67,
+            "targetTileY": 68,
             "facing": "down",
             "label": "Kokiri Forest"
           }
@@ -693,7 +693,7 @@
       "id": "spawn-player",
       "layerId": "layer_functional",
       "tileX": 5,
-      "tileY": 6,
+      "tileY": 7,
       "inline": {
         "id": "spawn-player-def",
         "name": "Player spawn",
