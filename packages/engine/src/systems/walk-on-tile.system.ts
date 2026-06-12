@@ -1,5 +1,8 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
 import type { MapResource } from '../resource/MapResource.ts'
+import { MapScene } from '../scenes/map.scene.ts'
+import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
+import { findTileMapForLayer } from '../services/tile-paint.service.ts'
 import type { TileProperties } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 
@@ -32,7 +35,7 @@ export class WalkOnTileSystem extends System {
   public initialize(world: World, scene: Scene): void {
     if (super.initialize) super.initialize(world, scene)
     this.events.on(EngineEvent.PLAYER_TILE_CHANGED, ({ tileX, tileY }) => {
-      const properties = this.resolveTileProperties(tileX, tileY)
+      const properties = this.resolveTileProperties(scene, tileX, tileY)
       this.events.emit(EngineEvent.WALKED_ONTO_TILE, {
         tileX,
         tileY,
@@ -54,11 +57,18 @@ export class WalkOnTileSystem extends System {
    * entry wins; if no layer has a sprite at that coord we return
    * the engine default (walkable, no surface).
    *
-   * Hot path: called on every `PLAYER_TILE_CHANGED`. Walks the
-   * layers in reverse with a plain `for` loop to avoid the
-   * spread + filter + reverse allocation triplet on each step.
+   * Source of truth: the LIVE tilemap shadow (`MapEditorComponent`
+   * via {@link getSpritesAt}) — the same state tile paints mutate
+   * and collision reads — so a tile painted mid-play behaves
+   * immediately. `mapData.layers[].sprites` only updates on the
+   * persistence fold, so reading it here raced live edits. Layers
+   * without a live tilemap (headless contexts) fall back to the
+   * mapData snapshot.
+   *
+   * Hot path: called on every `PLAYER_TILE_CHANGED`; plain reverse
+   * `for` loop, no per-step allocations beyond the shadow lookup.
    */
-  private resolveTileProperties(tileX: number, tileY: number): TileProperties {
+  private resolveTileProperties(scene: Scene, tileX: number, tileY: number): TileProperties {
     const mapData = this.mapResource.mapData
     if (!mapData) return { walkable: true }
 
@@ -66,13 +76,20 @@ export class WalkOnTileSystem extends System {
     for (let i = layers.length - 1; i >= 0; i--) {
       const layer = layers[i]
       if (!layer.visible) continue
-      const sprites = layer.sprites
-      if (!sprites) continue
-      const sprite = sprites.find((s) => s.x === tileX && s.y === tileY)
-      if (!sprite) continue
-      const spriteSet = this.mapResource.getSpriteSetResource(sprite.spriteSetId)
+
+      const found = scene instanceof MapScene ? findTileMapForLayer(scene, layer.id) : null
+      let ref: { spriteSetId: string; spriteId: number } | undefined
+      if (found) {
+        const refs = getSpritesAt(found.editor, tileX, tileY, layer.id)
+        ref = refs[refs.length - 1]
+      } else {
+        ref = layer.sprites?.find((s) => s.x === tileX && s.y === tileY)
+      }
+      if (!ref) continue
+
+      const spriteSet = this.mapResource.getSpriteSetResource(ref.spriteSetId)
       if (!spriteSet) continue
-      const def = spriteSet.data?.sprites.find((s) => s.id === sprite.spriteId)
+      const def = spriteSet.data?.sprites.find((s) => s.id === ref.spriteId)
       if (def?.tileProperties) return def.tileProperties
     }
     return { walkable: true }

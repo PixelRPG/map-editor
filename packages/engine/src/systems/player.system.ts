@@ -29,13 +29,8 @@ import type { CharacterAnimationRole, CharacterDefinition, Facing } from '../typ
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { buildCharacterAnimations } from '../utils/character.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
-import {
-  isActionPressed,
-  type KeyboardLike,
-  pickFacing,
-  readMovementInput,
-  roleFromState,
-} from '../utils/player-input.ts'
+import { pickFacing, roleFromState } from '../utils/player-input.ts'
+import { InputSourceComponent } from '../components/input-source.component.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 const DEFAULT_FACING: Facing = 'down'
@@ -125,11 +120,15 @@ export class PlayerSystem extends System {
       return
     }
 
-    const kb = (scene.engine as { input?: { keyboard?: KeyboardLike } })?.input?.keyboard
-    if (!kb) return
+    // Transport-ready rule 3: input arrives as DATA on the session
+    // singleton (written by InputSystem from the local keyboard today;
+    // by network/replay/AI sources tomorrow) — never read directly
+    // from a device here.
+    const input = SessionState.get(scene, InputSourceComponent)
+    if (!input) return
 
-    this.handleInput(player, pc, kb)
-    this.emitTileChangeAndAction(player, pc, session, kb)
+    this.handleInput(player, pc, input)
+    this.emitTileChangeAndAction(player, pc, session, input)
   }
 
   // ─────────────────────────────────────────────────────────── spawn
@@ -309,8 +308,9 @@ export class PlayerSystem extends System {
    * *changes* so we don't restart the Animation's frame cursor
    * every tick.
    */
-  private handleInput(player: Actor, pc: PlayerActorComponent, kb: KeyboardLike): void {
-    const { dx, dy } = readMovementInput(kb)
+  private handleInput(player: Actor, pc: PlayerActorComponent, input: InputSourceComponent): void {
+    const dx = input.moveX
+    const dy = input.moveY
     const moving = dx !== 0 || dy !== 0
 
     player.vel.x = dx * pc.speedPxPerSec
@@ -338,7 +338,7 @@ export class PlayerSystem extends System {
     player: Actor,
     pc: PlayerActorComponent,
     session: PlayerSessionComponent,
-    kb: KeyboardLike,
+    input: InputSourceComponent,
   ): void {
     const tw = this.mapResource.mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
     const th = this.mapResource.mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
@@ -354,7 +354,7 @@ export class PlayerSystem extends System {
       this.events.emit(EngineEvent.PLAYER_TILE_CHANGED, { tileX, tileY, previous, facing: pc.facing })
     }
 
-    if (isActionPressed(kb)) {
+    if (input.actionHeld) {
       if (!session.actionWasHeld) {
         session.actionWasHeld = true
         this.events.emit(EngineEvent.PLAYER_ACTION_PRESSED, { tileX, tileY, facing: pc.facing })
