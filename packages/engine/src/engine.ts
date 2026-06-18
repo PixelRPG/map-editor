@@ -27,6 +27,7 @@ import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { layerFlagChange } from './services/layer-flag-event.ts'
 import { makePlacementId } from './services/placement-id.ts'
+import { isTileOutOfBounds, tileToWorldCenter } from './services/tile-geometry.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
@@ -420,10 +421,8 @@ export class Engine {
     if (!placement) return false
     const tileWidth = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
     const tileHeight = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-    const target = new Vector(
-      placement.tileX * tileWidth + tileWidth / 2,
-      placement.tileY * tileHeight + tileHeight / 2,
-    )
+    const centre = tileToWorldCenter({ x: 0, y: 0 }, tileWidth, tileHeight, placement.tileX, placement.tileY)
+    const target = new Vector(centre.x, centre.y)
     try {
       await scene.camera.move(target, durationMs)
       return true
@@ -510,7 +509,7 @@ export class Engine {
     if (this.isLayerLocked(resolvedLayer)) return false
     const found = findTileMapForLayer(scene, resolvedLayer)
     if (!found) return false
-    if (tileX < 0 || tileY < 0 || tileX >= found.tileMap.columns || tileY >= found.tileMap.rows) return false
+    if (isTileOutOfBounds(tileX, tileY, found.tileMap.columns, found.tileMap.rows)) return false
     const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
     this.executeCommand(
       buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null),
@@ -544,7 +543,7 @@ export class Engine {
     // paintTileAt. Without this an off-map placement spawns an entity the
     // player can never reach and rides the op-log to peers.
     const mapData = scene.mapResource?.mapData
-    if (mapData && (tileX < 0 || tileY < 0 || tileX >= mapData.columns || tileY >= mapData.rows)) return false
+    if (mapData && isTileOutOfBounds(tileX, tileY, mapData.columns, mapData.rows)) return false
     const placement = {
       id: makePlacementId(tileX, tileY),
       layerId: resolvedLayer,
