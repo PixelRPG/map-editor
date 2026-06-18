@@ -566,6 +566,30 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * Tear down the active project + any live session before returning to the
+   * welcome view. `win.close-project` previously only switched the view,
+   * leaving the project, an active share/session and the engine all live —
+   * leaking those resources and layering any reopened project on stale state.
+   * The reverse of {@link _loadProjectFromPath}.
+   */
+  private async _closeProject(): Promise<void> {
+    // Close any host/join session first — also tears down its awareness,
+    // mDNS publisher and transport.
+    try {
+      await this._sessionSvc?.leaveSession('project-closed')
+    } catch (err) {
+      console.warn('[ApplicationWindow] leaveSession during close failed:', err)
+    }
+    // Detach the collab sink, free the engine (idempotent), drop the project
+    // (clears `_loadedProject`, which reads from the store), disable share.
+    this._projectStore.setCollabSession(null)
+    this._engineCtl.dispose()
+    this._projectStore.setProject(null)
+    this._shareAction?.set_enabled(false)
+    this._setView('welcome')
+  }
+
+  /**
    * Attach the active engine to the current `CollabSession` if (and
    * only if) the session is waiting for one. Called from
    * `_hydrateSceneEditor` immediately after `ensureForMap` resolves,
@@ -1189,7 +1213,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(backAction)
 
     const closeProjectAction = new Gio.SimpleAction({ name: 'close-project' })
-    closeProjectAction.connect('activate', () => this._setView('welcome'))
+    closeProjectAction.connect('activate', () => void this._closeProject())
     winActions.add_action(closeProjectAction)
 
     // Share-session — opens the Share dialog. Disabled until a
