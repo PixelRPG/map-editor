@@ -1,3 +1,5 @@
+import type { Facing } from './data/Facing.ts'
+
 /**
  * Configuration for game project startup
  */
@@ -20,5 +22,5 @@ export interface GameStartupConfig {
   /**
    * Initial player direction
    */
-  initialDirection?: 'up' | 'down' | 'left' | 'right'
+  initialDirection?: Facing
 }

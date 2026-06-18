@@ -82,33 +82,18 @@ export class SpriteSetResource {
    * Creates a SpriteSheet from the sprite set data
    */
   private createSpriteSheet(imageSource: ImageSource, _imageId: string, data: SpriteSetData): SpriteSheet {
-    // Determine the grid dimensions based on whether we're using legacy or new format
     let rows = 0
     let columns = 0
     let tileWidth = 0
     let tileHeight = 0
     let spacing: SpriteSheetSpacingDimensions | undefined
 
-    // Check if we're using the new images array
     if (data.image) {
-      if (data.image) {
-        rows = data.rows
-        columns = data.columns
-        tileWidth = data.spriteWidth
-        tileHeight = data.spriteHeight
-        spacing = data.spacing
-          ? {
-              margin: {
-                x: data.spacing,
-                y: data.spacing,
-              },
-            }
-          : undefined
-      }
-    }
-    // Otherwise use the legacy fields
-    else {
-      this.logger.warn('SpriteSet has no images defined')
+      rows = data.rows
+      columns = data.columns
+      tileWidth = data.spriteWidth
+      tileHeight = data.spriteHeight
+      spacing = data.spacing ? { margin: { x: data.spacing, y: data.spacing } } : undefined
     }
 
     const spriteSheet = SpriteSheet.fromImageSource({

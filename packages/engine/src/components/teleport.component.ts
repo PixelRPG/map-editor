@@ -1,5 +1,5 @@
 import { Component } from 'excalibur'
-import type { Facing } from '../types/data/index'
+import type { Facing } from '../types/data/index.ts'
 
 /**
  * Teleport behaviour. The {@link TeleportSystem} listens for
