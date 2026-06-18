@@ -83,12 +83,21 @@ export function validateEntityDefinition(
     return errors
   }
   const validateList = (components: ComponentData[], where: string) => {
+    // A component `type` must appear at most once per list: getComponentData
+    // (data-access.ts) returns the FIRST match and the spawn pipeline builds
+    // from it, so a second component of the same type is silently ignored at
+    // runtime. Reject it here rather than let that drift go unnoticed.
+    const seenTypes = new Set<string>()
     for (const comp of components) {
       const spec = registry[comp.type]
       if (!spec) {
         errors.push(`Entity "${def.id}" ${where} references unregistered component type "${comp.type}"`)
         continue
       }
+      if (seenTypes.has(comp.type)) {
+        errors.push(`Entity "${def.id}" ${where} has a duplicate component type "${comp.type}"`)
+      }
+      seenTypes.add(comp.type)
       errors.push(...validateComponentData(spec, comp, requireComplete))
     }
   }
