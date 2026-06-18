@@ -108,6 +108,26 @@ export default async () => {
       expect(rm.size).toBe(1) // lastActivity bumped by the forward at t=800
     })
 
+    await it('reaps a half-occupied room even when the lone peer keeps sending', async () => {
+      let t = 0
+      const rm = new RoomManager({ idleMs: 1000, now: () => t })
+      const host = new FakePeer()
+      rm.join('a', 'host', host) // lastActivity = 0, no joiner
+
+      // Host keeps retrying SDP offers with no joiner present. These futile
+      // forwards must NOT refresh lastActivity — otherwise the half-occupied
+      // room would never hit the idle sweep.
+      t = 500
+      rm.forward('a', 'host', '{"type":"sdp"}', 'sdp')
+      t = 900
+      rm.forward('a', 'host', '{"type":"sdp"}', 'sdp')
+
+      t = 1500
+      rm.sweep()
+      expect(rm.size).toBe(0) // reaped — lastActivity stayed at the join (t=0)
+      expect(host.closed).toBe(true)
+    })
+
     await it('logs each high-level event with the room + role context', async () => {
       const log = spy((_event: RoomEvent): void => {})
       const rm = new RoomManager({ log })

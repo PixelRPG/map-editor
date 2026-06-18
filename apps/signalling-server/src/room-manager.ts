@@ -111,8 +111,13 @@ export class RoomManager {
     if (!room) return
     const toRole: PeerRole = fromRole === 'host' ? 'joiner' : 'host'
     const target = room[toRole]
-    room.lastActivity = this.now()
     if (!target) return
+    // Only count activity when a frame was actually relayed (both slots
+    // occupied). Bumping unconditionally let a lone peer that keeps
+    // sending (e.g. a host retrying SDP offers with no joiner) refresh
+    // lastActivity forever, so a half-occupied room never hit the idle
+    // sweep — defeating the documented reap.
+    room.lastActivity = this.now()
     target.send(frame)
     this.log({ kind: 'message', roomId, from: fromRole, to: toRole, type: messageType })
   }
