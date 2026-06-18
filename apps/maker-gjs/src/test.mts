@@ -6,6 +6,7 @@ import collabLogSuite from './services/collab-log.spec.js'
 import collabSessionSuite from './services/collab-session.spec.js'
 import collabSessionE2eSuite from './services/collab-session-e2e.spec.js'
 import engineStateSyncSuite from './services/engine-state-sync.spec.js'
+import gvariantSuite from './services/gvariant.spec.js'
 import lanDiscoverySuite from './services/lan-discovery.spec.js'
 import lanDiscoveryIntegrationSuite from './services/lan-discovery-integration.gjs.spec.js'
 import lanDiscoveryParseSuite from './services/lan-discovery-parse.spec.js'
@@ -26,6 +27,7 @@ run({
   assistantStateServiceSuite,
   instanceIdSuite,
   engineStateSyncSuite,
+  gvariantSuite,
   collabLogSuite,
   collabSessionSuite,
   collabSessionE2eSuite,

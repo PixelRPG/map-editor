@@ -30,6 +30,7 @@ import { AssistantStateService } from '../services/assistant-state.service.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
+import { buildVariant } from '../services/gvariant.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
 import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
@@ -2108,32 +2109,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         stateType: group.get_action_state_type(name)?.dup_string() ?? null,
       }))
   }
-}
-
-/**
- * Build a `GLib.Variant` for an action parameter/state from a plain JS
- * value, using the action's declared type when known and otherwise
- * inferring from the JS runtime type.
- */
-function buildVariant(type: GLib.VariantType | null, value: unknown): GLib.Variant {
-  switch (type?.dup_string() ?? null) {
-    case 's':
-      return GLib.Variant.new_string(String(value))
-    case 'b':
-      return GLib.Variant.new_boolean(Boolean(value))
-    case 'i':
-      return GLib.Variant.new_int32(Number(value))
-    case 'u':
-      return GLib.Variant.new_uint32(Number(value))
-    case 'd':
-      return GLib.Variant.new_double(Number(value))
-  }
-  if (typeof value === 'string') return GLib.Variant.new_string(value)
-  if (typeof value === 'boolean') return GLib.Variant.new_boolean(value)
-  if (typeof value === 'number') {
-    return Number.isInteger(value) ? GLib.Variant.new_int32(value) : GLib.Variant.new_double(value)
-  }
-  throw new Error(`Cannot build a GLib.Variant from ${typeof value}`)
 }
 
 GObject.type_ensure(ApplicationWindow.$gtype)
