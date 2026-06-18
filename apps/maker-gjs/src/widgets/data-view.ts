@@ -4,7 +4,7 @@ import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SpriteSetKind } from '@pixelrpg/engine'
-import type { ModeRail } from '@pixelrpg/gjs'
+import { type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import Template from './data-view.blp'
@@ -68,6 +68,7 @@ export class DataView extends ResponsiveEditorView {
   declare _import_sheet_button: Gtk.Button
   declare _import_tileset_button: Gtk.Button
 
+  private signals = new SignalScope()
   private _callbacks: DataViewCallbacks | null = null
   // True while `setData` writes the row texts, so the `notify`/`apply`
   // handlers don't fire the edit callbacks back during a refresh.
@@ -102,20 +103,32 @@ export class DataView extends ResponsiveEditorView {
     )
   }
 
-  constructor() {
-    super()
-    this._mode_rail.connect('mode-changed', (_r: ModeRail, mode: string) => this.emit('mode-changed', mode))
-    this._import_sheet_button.connect('clicked', () => this._callbacks?.importAsset('character'))
-    this._import_tileset_button.connect('clicked', () => this._callbacks?.importAsset('tileset'))
+  // Signals are connected in vfunc_map / released in vfunc_unmap via
+  // SignalScope (the workspace's GTK lifecycle rule) so a remapped view
+  // doesn't accumulate duplicate handlers and an unmapped one stops firing.
+  vfunc_map(): void {
+    super.vfunc_map()
+    this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) =>
+      this.emit('mode-changed', mode),
+    )
+    this.signals.connect(this._import_sheet_button, 'clicked', () => this._callbacks?.importAsset('character'))
+    this.signals.connect(this._import_tileset_button, 'clicked', () => this._callbacks?.importAsset('tileset'))
 
-    this._name_row.connect('apply', () => this._emitField('name', this._name_row.get_text()))
-    this._author_row.connect('apply', () => this._emitField('author', this._author_row.get_text()))
-    this._version_row.connect('apply', () => this._emitField('version', this._version_row.get_text()))
-    this._description_row.connect('apply', () => this._emitField('description', this._description_row.get_text()))
-    this._tilesize_row.connect('notify::value', () => {
+    this.signals.connect(this._name_row, 'apply', () => this._emitField('name', this._name_row.get_text()))
+    this.signals.connect(this._author_row, 'apply', () => this._emitField('author', this._author_row.get_text()))
+    this.signals.connect(this._version_row, 'apply', () => this._emitField('version', this._version_row.get_text()))
+    this.signals.connect(this._description_row, 'apply', () =>
+      this._emitField('description', this._description_row.get_text()),
+    )
+    this.signals.connect(this._tilesize_row, 'notify::value', () => {
       if (this._loading) return
       this._callbacks?.setProjectField('tileSize', String(Math.round(this._tilesize_row.get_value())))
     })
+  }
+
+  vfunc_unmap(): void {
+    this.signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   private _emitField(field: 'name' | 'author' | 'version' | 'description', value: string): void {
