@@ -85,5 +85,28 @@ export default async () => {
         null,
       )
     })
+
+    await it('deep-clones states on the override path so the library is never aliased', async () => {
+      const stateful: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [{ type: 'collision' }],
+        states: [{ id: 'open', components: [{ type: 'visual', spriteSetId: 's', spriteId: 1 }] }],
+      }
+      const placement = {
+        id: 'p',
+        layerId: 'l1',
+        tileX: 0,
+        tileY: 0,
+        defId: 'door',
+        overrides: { name: 'Side Door' },
+      }
+      const resolved = resolvePlacementDefinition(placement, [stateful])
+      expect(resolved?.states).toStrictEqual(stateful.states)
+      // …but the arrays + their components are fresh copies, not the library's.
+      expect(resolved?.states === stateful.states).toBe(false)
+      expect(resolved?.states?.[0] === stateful.states?.[0]).toBe(false)
+      expect(resolved?.states?.[0].components[0] === stateful.states?.[0].components[0]).toBe(false)
+    })
   })
 }

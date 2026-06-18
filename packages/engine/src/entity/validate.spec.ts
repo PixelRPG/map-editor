@@ -20,6 +20,22 @@ const selectSpec: ComponentSpec = {
   build: () => null,
 }
 
+// A mis-declared select: closed ComboRow in the UI, but no options to
+// validate against — must be rejected rather than accept any string.
+const brokenSelectSpec: ComponentSpec = {
+  type: 'state',
+  editor: { label: 'State', icon: 'x' },
+  fields: [{ key: 'value', label: 'Value', input: 'select' }],
+  build: () => null,
+}
+
+const jsonSpec: ComponentSpec = {
+  type: 'custom-data',
+  editor: { label: 'Custom', icon: 'x' },
+  fields: [{ key: 'data', label: 'Data', input: 'json' }],
+  build: () => null,
+}
+
 export default async () => {
   await describe('validateComponentData', async () => {
     await it('accepts valid data', async () => {
@@ -40,6 +56,20 @@ export default async () => {
       expect(validateComponentData(selectSpec, { type: 'trigger', on: 'nope' }).length).toBe(1)
       expect(validateComponentData(selectSpec, { type: 'trigger', on: 'auto', facing: 'sideways' }).length).toBe(1)
       expect(validateComponentData(selectSpec, { type: 'trigger', on: 'auto', facing: 'up' })).toStrictEqual([])
+    })
+    await it('rejects a select field declared without options', async () => {
+      const errors = validateComponentData(brokenSelectSpec, { type: 'state', value: 'whatever' })
+      expect(errors.some((e) => e.includes('select field has no options'))).toBe(true)
+    })
+    await it('accepts JSON-serialisable data but rejects non-serialisable shapes', async () => {
+      expect(validateComponentData(jsonSpec, { type: 'custom-data', data: { a: 1, b: [2, 3] } })).toStrictEqual([])
+      // Circular reference — JSON.stringify throws.
+      const circular: Record<string, unknown> = {}
+      circular.self = circular
+      expect(validateComponentData(jsonSpec, { type: 'custom-data', data: circular }).length).toBe(1)
+      // BigInt + Map are not JSON-serialisable.
+      expect(validateComponentData(jsonSpec, { type: 'custom-data', data: 10n as unknown }).length).toBe(1)
+      expect(validateComponentData(jsonSpec, { type: 'custom-data', data: new Map() }).length).toBe(1)
     })
   })
 

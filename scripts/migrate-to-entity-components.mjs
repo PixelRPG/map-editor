@@ -40,7 +40,7 @@ function writeJson(path, value) {
 }
 
 /** Mirror of `objectDefinitionToEntity` in entity/convert.ts. */
-function objectDefinitionToEntity(def) {
+function objectDefinitionToEntity(def, onWarn) {
   if (def && Array.isArray(def.components)) return def // already migrated
   const components = []
   const props = def.properties ?? {}
@@ -74,6 +74,8 @@ function objectDefinitionToEntity(def) {
           ...(props.facing ? { facing: props.facing } : {}),
           ...(props.label ? { label: props.label } : {}),
         })
+      } else {
+        onWarn?.(`teleport "${def.id}" dropped: missing/invalid targetMapId`)
       }
       break
     case 'item':
@@ -84,6 +86,8 @@ function objectDefinitionToEntity(def) {
           ...(props.qty !== undefined ? { qty: Number(props.qty) } : {}),
           ...(props.pickupSound ? { pickupSound: props.pickupSound } : {}),
         })
+      } else {
+        onWarn?.(`item "${def.id}" dropped: missing/invalid itemId`)
       }
       break
     case 'npc':
@@ -158,7 +162,9 @@ function migrateProject(projectPath) {
   let dirty = false
   // Object library → entity library (objects).
   if (Array.isArray(data.objectLibrary)) {
-    data.entityLibrary = (data.entityLibrary ?? []).concat(data.objectLibrary.map(objectDefinitionToEntity))
+    data.entityLibrary = (data.entityLibrary ?? []).concat(
+      data.objectLibrary.map((d) => objectDefinitionToEntity(d, console.warn)),
+    )
     delete data.objectLibrary
     dirty = true
   }
@@ -181,7 +187,7 @@ function migrateMap(mapPath) {
   let dirty = false
   for (const placement of data.objectPlacements) {
     if (placement.inline && !Array.isArray(placement.inline.components)) {
-      placement.inline = objectDefinitionToEntity(placement.inline)
+      placement.inline = objectDefinitionToEntity(placement.inline, console.warn)
       dirty = true
     }
     if (placement.overrides) {

@@ -20,6 +20,17 @@ export const npcRouteSpec: ComponentSpec = {
   ],
   build: (data) => {
     const d = data as NpcRouteData
-    return new NpcRouteComponent(d.waypoints ?? [], d.facing)
+    // `waypoints` is a free-form `json` field (and legacy migration pushes
+    // `props.route` verbatim), so guard each entry to a well-formed numeric
+    // tile coord before it reaches the runtime component.
+    const waypoints = (d.waypoints ?? []).filter(isWaypoint)
+    return new NpcRouteComponent(waypoints, d.facing)
   },
+}
+
+/** True when a value is a `{ tileX, tileY }` pair of finite numbers. */
+function isWaypoint(w: unknown): w is NpcWaypoint {
+  if (w == null || typeof w !== 'object') return false
+  const { tileX, tileY } = w as Record<string, unknown>
+  return typeof tileX === 'number' && Number.isFinite(tileX) && typeof tileY === 'number' && Number.isFinite(tileY)
 }

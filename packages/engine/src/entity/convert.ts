@@ -43,8 +43,20 @@ function isAlreadyEntity(value: unknown): value is EntityDefinition {
   return value != null && typeof value === 'object' && Array.isArray((value as { components?: unknown }).components)
 }
 
-/** Convert one legacy object definition to an {@link EntityDefinition}. */
-export function objectDefinitionToEntity(def: LegacyObjectDefinition | EntityDefinition): EntityDefinition {
+/**
+ * Convert one legacy object definition to an {@link EntityDefinition}.
+ *
+ * `onWarn` (optional) is invoked when a legacy `kind` carries no usable
+ * payload — e.g. a `teleport` whose `targetMapId` is missing or not a
+ * string — so the one-shot, irreversible migration surfaces the silent
+ * data loss instead of producing an entity with a dropped component. The
+ * function stays pure (no `console`); the migration script passes
+ * `console.warn`.
+ */
+export function objectDefinitionToEntity(
+  def: LegacyObjectDefinition | EntityDefinition,
+  onWarn?: (message: string) => void,
+): EntityDefinition {
   if (isAlreadyEntity(def)) return def
   const legacy = def as LegacyObjectDefinition
   const components: ComponentData[] = []
@@ -79,6 +91,8 @@ export function objectDefinitionToEntity(def: LegacyObjectDefinition | EntityDef
           ...(props.facing ? { facing: props.facing as Facing } : {}),
           ...(props.label ? { label: props.label as string } : {}),
         })
+      } else {
+        onWarn?.(`teleport "${legacy.id}" dropped: missing/invalid targetMapId`)
       }
       break
     case 'item':
@@ -89,6 +103,8 @@ export function objectDefinitionToEntity(def: LegacyObjectDefinition | EntityDef
           ...(props.qty !== undefined ? { qty: Number(props.qty) } : {}),
           ...(props.pickupSound ? { pickupSound: props.pickupSound as string } : {}),
         })
+      } else {
+        onWarn?.(`item "${legacy.id}" dropped: missing/invalid itemId`)
       }
       break
     case 'npc':

@@ -65,5 +65,12 @@ export function resolvePlacementDefinition(
     ...base,
     name: placement.overrides.name ?? base.name,
     components: mergePlacementComponents(base.components, placement.overrides.components),
+    // `...base` would alias `base.states` by reference. Components are
+    // cloned by mergePlacementComponents; deep-clone states the same way
+    // so a resolved override never shares mutable state data with the
+    // library definition.
+    ...(base.states
+      ? { states: base.states.map((s) => ({ ...s, components: s.components.map((c) => ({ ...c })) })) }
+      : {}),
   }
 }
