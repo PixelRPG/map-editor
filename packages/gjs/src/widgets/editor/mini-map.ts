@@ -114,10 +114,11 @@ export class MiniMap extends Gtk.Widget {
     }
   }
 
-  vfunc_measure(_orientation: Gtk.Orientation, _forSize: number): [number, number, number, number] {
-    const w = this.cols * this._tilePx
-    const _h = this._rows.length * this._tilePx
-    return [w, w, -1, -1]
+  vfunc_measure(orientation: Gtk.Orientation, _forSize: number): [number, number, number, number] {
+    // Report the natural size for the requested orientation. Returning the
+    // width for both axes mis-sized a non-square mini-map vertically.
+    const size = orientation === Gtk.Orientation.HORIZONTAL ? this.cols * this._tilePx : this.rows * this._tilePx
+    return [size, size, -1, -1]
   }
 
   private _updateSize(): void {
