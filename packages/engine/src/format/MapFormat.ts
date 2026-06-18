@@ -169,6 +169,20 @@ export class MapFormat {
             placement.layerId,
           )
         }
+        // Soft integrity check: an off-map placement (hand-edited data or
+        // a map predating the placeObjectAt bounds guard) spawns an entity
+        // the player can't reach. Warn rather than throw so the map still
+        // loads + saves; the editor's placeObjectAt guard prevents new ones.
+        if (
+          placement.tileX < 0 ||
+          placement.tileY < 0 ||
+          placement.tileX >= data.columns ||
+          placement.tileY >= data.rows
+        ) {
+          console.warn(
+            `[MapFormat] Object placement "${placement.id}" at (${placement.tileX}, ${placement.tileY}) is outside the ${data.columns}×${data.rows} map bounds`,
+          )
+        }
         // Registry-aware check for an inline definition: reject
         // unregistered component types loudly (the structural guard above
         // only checks component shape).

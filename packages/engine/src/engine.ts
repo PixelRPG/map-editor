@@ -36,6 +36,7 @@ import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
+import { makePlacementId } from './services/placement-id.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import {
   AwarenessManager,
@@ -578,8 +579,13 @@ export class Engine {
     if (!resolvedLayer) return false
     if (this.isLayerLocked(resolvedLayer)) return false
     if (!scene.entityLibrary.some((e) => e.id === defId)) return false
+    // Bounds-check the target tile against the map dimensions — mirrors
+    // paintTileAt. Without this an off-map placement spawns an entity the
+    // player can never reach and rides the op-log to peers.
+    const mapData = scene.mapResource?.mapData
+    if (mapData && (tileX < 0 || tileY < 0 || tileX >= mapData.columns || tileY >= mapData.rows)) return false
     const placement = {
-      id: `obj_${tileX}_${tileY}_${Math.random().toString(36).slice(2, 8)}`,
+      id: makePlacementId(tileX, tileY),
       layerId: resolvedLayer,
       tileX,
       tileY,

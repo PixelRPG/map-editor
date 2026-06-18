@@ -26,6 +26,7 @@ import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
 import { createObjectPreviewActor, refreshObjectPreview } from '../services/object-preview.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
+import { makePlacementId } from '../services/placement-id.ts'
 import {
   createSelectHoverBorderActor,
   refreshSelectHoverBorder,
@@ -325,7 +326,7 @@ export class TileEditorSystem extends System {
       const defId = SessionState.get(this.scene, ActiveObjectComponent)?.defId ?? null
       if (!defId) return
       const placement = {
-        id: this.makePlacementId(hit.coords.x, hit.coords.y),
+        id: makePlacementId(hit.coords.x, hit.coords.y),
         layerId,
         tileX: hit.coords.x,
         tileY: hit.coords.y,
@@ -384,16 +385,6 @@ export class TileEditorSystem extends System {
   private dispatchCommand(command: Command): void {
     if (!this.scene) return
     executeCommandOnScene(this.scene, this.events, command)
-  }
-
-  /**
-   * Stable, unique placement id for a freshly-stamped object: tile coords
-   * for readability + a random suffix for cross-peer uniqueness (the id is
-   * generated once on the originating peer and carried in the command
-   * payload, so two peers stamping the same tile won't collide).
-   */
-  private makePlacementId(x: number, y: number): string {
-    return `obj_${x}_${y}_${Math.random().toString(36).slice(2, 8)}`
   }
 
   private resolveLayerId(layerId: string | null): string | null {

@@ -170,6 +170,25 @@ export default async () => {
       })
       expect(() => MapFormat.validate(map)).toThrow(/inline definition is invalid/)
     })
+
+    await it('warns (but does not throw) for a placement outside the map bounds', async () => {
+      // 4×4 map (makeMap) — tileX 9 is off-map. A soft warning keeps the
+      // map loadable/savable while surfacing the integrity issue.
+      const map = makeMap({
+        objectPlacements: [{ id: 'oob', layerId: 'l1', tileX: 9, tileY: 1, defId: 'apple' }],
+      })
+      const warnings: string[] = []
+      const originalWarn = console.warn
+      console.warn = (...args: unknown[]) => {
+        warnings.push(args.map((a) => String(a)).join(' '))
+      }
+      try {
+        expect(() => MapFormat.validate(map)).not.toThrow()
+      } finally {
+        console.warn = originalWarn
+      }
+      expect(warnings.some((w) => w.includes('oob') && w.includes('outside'))).toBe(true)
+    })
   })
 
   await describe('SpriteSetFormat — tileProperties', async () => {
