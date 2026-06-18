@@ -2,7 +2,7 @@ import { describe, expect, it } from '@gjsify/unit'
 
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteIndex } from '../types/SpriteIndex.ts'
-import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
+import { findSpriteInfoForTileId, getSpriteGidSpan } from './sprite-info.resolver.ts'
 
 function makeSpriteIndex(spriteIds: number[]): SpriteIndex {
   return {
@@ -92,6 +92,18 @@ export default async () => {
       })
       const result = await muteWarn(() => findSpriteInfoForTileId(mapResource, 1))
       expect(result).toBeNull()
+    })
+  })
+
+  await describe('getSpriteGidSpan', async () => {
+    await it('returns maxLocalId + 1 (a span, not a count) for a sparse set', async () => {
+      // Sparse ids: 5 sprites but the span reaches the largest id + 1.
+      expect(getSpriteGidSpan(makeSpriteIndex([0, 1, 2, 7, 9]))).toBe(10)
+      expect(getSpriteGidSpan(makeSpriteIndex([0, 1, 2, 3]))).toBe(4)
+    })
+
+    await it('returns 0 for an empty sprite set', async () => {
+      expect(getSpriteGidSpan(makeSpriteIndex([]))).toBe(0)
     })
   })
 }

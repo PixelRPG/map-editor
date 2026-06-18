@@ -3,7 +3,7 @@ import { Actor, Circle, Color, Font, GraphicsGroup, type Scene, Text, Vector } f
 import type { Engine } from '../engine.ts'
 import { createSelectionRing, findPlacementActor } from '../services/selection-highlight.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
-import type { AwarenessManager, AwarenessPeerState } from './awareness.ts'
+import { type AwarenessManager, type AwarenessPeerState, DEFAULT_PEER_COLOR } from './awareness.ts'
 
 /**
  * In-canvas renderer for remote peers' cursors.
@@ -225,6 +225,6 @@ export function parseAwarenessColour(token: string): Color {
   try {
     return Color.fromHex(token)
   } catch {
-    return Color.fromHex('#888888')
+    return Color.fromHex(DEFAULT_PEER_COLOR)
   }
 }
