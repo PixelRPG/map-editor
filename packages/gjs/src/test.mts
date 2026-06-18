@@ -7,6 +7,7 @@
 // test that.
 import { run } from '@gjsify/unit'
 
+import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
 
-run({ mapPreviewGeometrySuite })
+run({ bakeCacheSuite, mapPreviewGeometrySuite })

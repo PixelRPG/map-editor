@@ -7,6 +7,7 @@ import Gtk from '@girs/gtk-4.0'
 import { GameProjectResource, type MapData } from '@pixelrpg/engine'
 import type { GdkSpriteSheet } from '../../sprite/objects/GdkSpriteSheet'
 import { GdkSpriteSetResource } from '../../sprite/resource/GdkSpriteSetResource'
+import { BakeCache, buildCacheKey } from './bake-cache.ts'
 import { clampViewportCenter, fingerprintMapData } from './map-preview.geometry.ts'
 
 interface DrawOp {
@@ -122,7 +123,9 @@ export class MapPreview extends Gtk.Widget {
   private _cacheKeyBase: string | null = null
 
   // ── module-wide bake machinery ────────────────────────────────────
-  private static _cache = new Map<string, BakedPreview>()
+  // LRU (least-recently-STORED) bake cache — the bounded-cache + cache-key
+  // logic lives in the GTK-free `bake-cache.ts` so it is unit-tested.
+  private static _cache = new BakeCache<BakedPreview>(BAKE_CACHE_MAX)
   private static _queue: MapPreview[] = []
   private static _pumpScheduled = false
 
@@ -141,16 +144,6 @@ export class MapPreview extends Gtk.Widget {
       MapPreview._pump()
       return GLib.SOURCE_REMOVE
     })
-  }
-
-  private static _cacheStore(key: string, baked: BakedPreview): void {
-    // Refresh insertion order so eviction is least-recently-stored.
-    MapPreview._cache.delete(key)
-    MapPreview._cache.set(key, baked)
-    if (MapPreview._cache.size > BAKE_CACHE_MAX) {
-      const oldest = MapPreview._cache.keys().next().value
-      if (oldest !== undefined) MapPreview._cache.delete(oldest)
-    }
   }
 
   static {
@@ -330,10 +323,7 @@ export class MapPreview extends Gtk.Widget {
 
   /** Full LRU key for the current content + viewport. */
   private _cacheKey(): string | null {
-    if (!this._cacheKeyBase) return null
-    if (!this._viewport) return this._cacheKeyBase
-    const { zoom, centerX, centerY } = this._viewport
-    return `${this._cacheKeyBase}:vp:${zoom}:${Math.round(centerX)}:${Math.round(centerY)}`
+    return buildCacheKey(this._cacheKeyBase, this._viewport)
   }
 
   /** Paint a cached bake without rebuilding anything. */
@@ -455,7 +445,7 @@ export class MapPreview extends Gtk.Widget {
     }
     const cacheKey = this._cacheKey()
     if (cacheKey && this._cacheWrite) {
-      MapPreview._cacheStore(cacheKey, {
+      MapPreview._cache.set(cacheKey, {
         texture,
         mapWidth: this._mapWidth,
         mapHeight: this._mapHeight,
