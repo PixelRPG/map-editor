@@ -397,7 +397,19 @@ export class SessionService {
         peerConnectTimeoutMs: this.peerConnectTimeoutMs,
         rtcFactory: this.rtcFactory,
       })
-      await collab.start()
+      try {
+        await collab.start()
+      } catch (err) {
+        // start() failed (peer-connect timeout, etc.) — tear the session
+        // down before rethrowing so its PeerSession + awareness channel
+        // don't leak. Mirrors the joiner path's close-on-failure.
+        try {
+          collab.close('host-start-failed')
+        } catch {
+          /* best-effort */
+        }
+        throw err
+      }
       this.wireCollabClose(collab)
       this.setState({ kind: 'connected', role, roomId, collab })
       return

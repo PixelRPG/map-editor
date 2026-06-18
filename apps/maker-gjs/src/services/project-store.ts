@@ -448,13 +448,17 @@ export class ProjectStore {
       return
     }
     this.io.writeText(jsonDest, SpriteSetFormat.serialize(safeData))
+    // gid space is per-peer; the sender's value may collide with ours, so we
+    // assign our own. On re-apply REUSE the existing firstGid — recomputing
+    // would shift it (once the set's sprites are loaded `_nextFirstGid` counts
+    // this set too), breaking the documented idempotency and the tile-id space.
+    const existingRef = resource.data.spriteSets.find((r) => r.id === id)
+    const firstGid = typeof existingRef?.firstGid === 'number' ? existingRef.firstGid : this._nextFirstGid()
     applySpriteSetReference(resource.data, {
       id,
       path: `./spritesets/${id}.json`,
       type: 'spriteset',
-      // Recompute on our side — gid space is per-peer; the sender's
-      // value may collide with ours.
-      firstGid: this._nextFirstGid(),
+      firstGid,
     })
     this._persistProject()
     void (async () => {

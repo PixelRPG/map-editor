@@ -1,3 +1,4 @@
+import GLib from '@girs/glib-2.0'
 import { describe, expect, it } from '@gjsify/unit'
 import {
   createEntityRemoveOp,
@@ -323,6 +324,44 @@ export default async () => {
       const store = new ProjectStore(io)
       store.applyRemoteProjectOp(remoteUpsert(npc))
       expect(io.writes).toHaveLength(0)
+    })
+  })
+
+  await describe('ProjectStore — applyRemoteSpriteSetAdd idempotency', async () => {
+    const makeSpriteSetData = (id: string, spriteCount: number) =>
+      ({
+        version: '1.0.0',
+        id,
+        name: id,
+        image: { id: 'main', path: `${id}.png`, type: 'image' },
+        spriteWidth: 16,
+        spriteHeight: 16,
+        columns: spriteCount,
+        rows: 1,
+        margin: 0,
+        spacing: 0,
+        sprites: Array.from({ length: spriteCount }, (_, i) => ({ id: i, col: i, row: 0 })),
+      }) as unknown as SpriteSetAddPayload['data']
+
+    await it('reuses an existing firstGid on re-apply (idempotent gid space)', async () => {
+      // applyRemoteSpriteSetAdd uses GLib path helpers — only real under the
+      // GJS target. Skip gracefully on node where gi:// is stubbed.
+      if (typeof (GLib as { path_get_dirname?: unknown }).path_get_dirname !== 'function') return
+      const { store, data } = makeStore()
+      const payload: SpriteSetAddPayload = { data: makeSpriteSetData('imported', 3), imageBase64: '' }
+
+      store.applyRemoteSpriteSetAdd(payload)
+      const firstGid1 = data.spriteSets.find((r) => r.id === 'imported')?.firstGid
+      expect(firstGid1).toBe(1)
+
+      // Simulate the async live-load completing: the set now reports 3 sprites,
+      // so a naive _nextFirstGid would count this set and shift its gid on the
+      // next apply.
+      store.resource?.spriteSets.set('imported', { data: { sprites: [{}, {}, {}] } } as never)
+
+      store.applyRemoteSpriteSetAdd(payload)
+      const firstGid2 = data.spriteSets.find((r) => r.id === 'imported')?.firstGid
+      expect(firstGid2).toBe(firstGid1) // unchanged — re-apply is idempotent
     })
   })
 }
