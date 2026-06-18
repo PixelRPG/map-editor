@@ -222,9 +222,21 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._populatePalette()
   }
 
-  // Lifecycle hooks — stop the preview timer when the dialog goes
-  // away so the timeout source doesn't outlive the Picture it
-  // updates.
+  // Lifecycle hooks — keep the preview timer scoped to "mapped". A
+  // dialog can be unmapped without a full close (host flows), and the
+  // timeout would otherwise keep churning the hidden Picture's
+  // paintable. Stop on unmap, resume on (re)map — matches
+  // CharacterPreview. vfunc_closed stays the final teardown.
+  vfunc_map(): void {
+    super.vfunc_map?.()
+    this._restartPreviewTimer()
+  }
+
+  vfunc_unmap(): void {
+    this._stopPreviewTimer()
+    super.vfunc_unmap?.()
+  }
+
   vfunc_closed(): void {
     this._stopPreviewTimer()
     super.vfunc_closed?.()
