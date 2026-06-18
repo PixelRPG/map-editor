@@ -1,15 +1,4 @@
-import {
-  Actor,
-  Color,
-  DisplayMode,
-  EventEmitter,
-  Engine as ExcaliburEngine,
-  Loader,
-  Logger,
-  Rectangle,
-  TileMap,
-  Vector,
-} from 'excalibur'
+import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, Vector } from 'excalibur'
 import {
   type Command,
   PlaceObjectCommand,
