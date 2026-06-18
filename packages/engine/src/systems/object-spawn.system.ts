@@ -1,6 +1,6 @@
-import { Actor, type Scene, System, SystemType, type World } from 'excalibur'
+import { Actor, Logger, type Scene, System, SystemType, type World } from 'excalibur'
 import { resolvePlacementDefinition } from '../entity/data-access.ts'
-import { buildPlacementEntity } from '../entity/spawn-placement.ts'
+import { buildPlacementEntity, placementSpawnWarnings } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
 import type { EntityDefinition } from '../types/data/index.ts'
@@ -18,6 +18,7 @@ import type { EntityDefinition } from '../types/data/index.ts'
  */
 export class ObjectSpawnSystem extends System {
   public readonly systemType = SystemType.Update
+  private readonly logger = Logger.getInstance()
 
   constructor(
     private readonly mapResource: MapResource,
@@ -45,6 +46,9 @@ export class ObjectSpawnSystem extends System {
     const objectsVisible = areObjectsVisible(scene)
     for (const placement of mapData.objectPlacements) {
       const def = resolvePlacementDefinition(placement, this.entityLibrary)
+      // Surface integrity gaps (dangling defId, incomplete required fields)
+      // instead of silently skipping — these used to vanish without a trace.
+      for (const warning of placementSpawnWarnings(placement, def)) this.logger.warn(`[ObjectSpawnSystem] ${warning}`)
       if (!def) continue
       const entity = buildPlacementEntity(placement, def, this.mapResource, layersById)
       // Respect the global objects toggle (Layers tab "Objects" row).

@@ -9,6 +9,7 @@ import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
 import { buildPlacementGraphic } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
+import { validateEntityDefinition } from './validate.ts'
 
 /**
  * Build one Excalibur entity from a placement + its resolved definition,
@@ -57,4 +58,31 @@ export function buildPlacementEntity(
   if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.visible = false
 
   return actor
+}
+
+/**
+ * Diagnostic warnings for a placement about to spawn, evaluated against
+ * its resolved definition (`null` when the `defId` didn't resolve against
+ * the entity library, or an inline def was absent). Pure + node-testable;
+ * {@link ObjectSpawnSystem} logs the result.
+ *
+ * Warn-only by design: a leniently-saved draft (a placement whose required
+ * fields aren't filled in yet — the save path allows it, see
+ * {@link validateEntityDefinition}'s `requireComplete`) still spawns
+ * best-effort rather than vanishing from a shipped map, but the integrity
+ * gap is surfaced instead of staying silent. An unresolved `defId` (the
+ * entity it pointed at was deleted) is the only case that can't spawn.
+ */
+export function placementSpawnWarnings(
+  placement: ObjectPlacement,
+  def: EntityDefinition | null,
+  registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
+): string[] {
+  if (!def) {
+    const ref = placement.defId ? `defId "${placement.defId}"` : 'an inline definition'
+    return [`placement "${placement.id}" references ${ref} that did not resolve — not spawned`]
+  }
+  const errors = validateEntityDefinition(def, registry, true)
+  if (errors.length === 0) return []
+  return [`placement "${placement.id}" ("${def.id}") has an incomplete definition: ${errors.join('; ')}`]
 }
