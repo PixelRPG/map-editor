@@ -6,7 +6,6 @@ import Gtk from '@girs/gtk-4.0'
 import {
   type AgentMapData,
   ASSISTANT_PEER_ID,
-  type AwarenessPeerState,
   buildAgentMapData,
   createMapEditorDataOp,
   type EditorTool,
@@ -32,6 +31,7 @@ import { EngineController } from '../services/engine-controller.ts'
 import { buildVariant } from '../services/gvariant.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
+import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import { LanSessionBackend } from '../services/lan-session-backend.ts'
 import { MapPersistenceController } from '../services/map-persistence-controller.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
@@ -215,8 +215,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _objectsAction: Gio.SimpleAction | null = null
   private _gridAction: Gio.SimpleAction | null = null
   private _transparencyAction: Gio.SimpleAction | null = null
-  /** Guards the one-shot "AI assistant joined" toast; re-armed on HideAssistant. */
-  private _assistantAnnounced = false
   /**
    * Single source of truth for the local AI assistant's presence,
    * identity and the user's pause switch. The engine only carries
@@ -225,12 +223,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * the live CollabSession awareness.
    */
   private readonly _assistantState = new AssistantStateService()
-  /** The participant the camera is following (peerId), or null. */
-  private _followedPeerId: string | null = null
-  /** Subscriptions to the live session awareness — torn down on state change. */
-  private _collabAwarenessUnsubs: Array<() => void> = []
-  /** peerIds currently shown in the collaborators bar — to skip rebuilds on cursor-only ticks. */
-  private _renderedPeerIds = new Set<string>()
   /**
    * The `win.mode` GAction. Stateful string — `'world'` / `'cast'` /
    * `'tiles'` / `'audio'` / `'data'`. The change-state handler routes
@@ -261,6 +253,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
         createMapEditorDataOp({ peerId, seq, mapId, editorData }),
       ),
+  })
+  // AI-assistant presence + collaborators-bar roster + camera-follow +
+  // the live-session awareness subscriptions. Injected accessors read this
+  // window's live state; the window keeps thin delegations for the Control
+  // plane's public API. See ApplicationWindow split, step 3.
+  private _collabPresenceCtl = new CollabPresenceController({
+    getEngine: () => this._engineCtl.engine?.excalibur ?? null,
+    getActiveCollab: () => this._activeCollab(),
+    assistantState: this._assistantState,
+    setCollaboratorsOnView: (participants, followedPeerId) =>
+      this._scene_editor_view.setCollaborators(participants, followedPeerId),
+    showToast: (message) => this._showToast(message),
   })
   /**
    * Per-mode controllers — own their view's data + mutation +
@@ -473,7 +477,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // Collaborators bar: clicking a participant chip follows it. Wired
       // once — the signal lives on the scene-editor view for the window's
       // lifetime.
-      this._scene_editor_view.onParticipantActivated((peerId) => this._onParticipantActivated(peerId))
+      this._scene_editor_view.onParticipantActivated((peerId) => this._collabPresenceCtl.onParticipantActivated(peerId))
     }
 
     // Welcome view ↔ SessionService bridge. The window owns the
@@ -654,16 +658,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._projectStore.setCollabSession(collab)
 
     // Track the live session roster for the collaborators bar + follow.
-    for (const unsub of this._collabAwarenessUnsubs) unsub()
-    this._collabAwarenessUnsubs = []
-    if (collab) {
-      this._collabAwarenessUnsubs.push(collab.awareness.on('peer-changed', (peer) => this._onPeerChanged(peer)))
-      this._collabAwarenessUnsubs.push(collab.awareness.on('peer-left', ({ peerId }) => this._onPeerLeft(peerId)))
-    } else if (this._followedPeerId && this._followedPeerId !== ASSISTANT_PEER_ID) {
-      // Session ended — stop following a (now-gone) human peer.
-      this._setFollowedPeer(null)
-    }
-    this._refreshCollaborators()
+    this._collabPresenceCtl.attachSession(collab)
   }
 
   /**
@@ -1139,8 +1134,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     winActions.add_action(assistantPausedAction)
 
     // Camera-follow is now per-participant: clicking a chip in the
-    // collaborators bar follows that participant (see
-    // _onParticipantActivated), so there's no standalone follow action.
+    // collaborators bar follows that participant (the scene-editor view's
+    // onParticipantActivated routes to the collab-presence controller), so
+    // there's no standalone follow action.
 
     // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
     // Ctrl+G = toggle grid, Ctrl+T = toggle non-active-layer
@@ -1519,7 +1515,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       showGrid: boolState(this._gridAction, false),
       dimInactiveLayers: boolState(this._transparencyAction, false),
       assistant: this._assistantState.snapshot(),
-      followAssistant: this._followedPeerId === ASSISTANT_PEER_ID,
+      followAssistant: this.followedPeerId === ASSISTANT_PEER_ID,
     })
     // Re-point the Phase-5 relay (and the collab-roster wiring) at the
     // live session — idempotent, a no-op chain when the session is idle.
@@ -1681,7 +1677,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // copy is a push-down cache that resets on recreation.
       assistantPaused: this._assistantState.paused,
       participants: this.getParticipants(),
-      followedPeerId: this._followedPeerId,
+      followedPeerId: this.followedPeerId,
     }
   }
 
@@ -1749,63 +1745,32 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   /** Whether the user has paused the assistant (read by the Control plane's pause guard). */
   isAssistantPaused(): boolean {
-    return this._assistantState.paused
+    return this._collabPresenceCtl.isAssistantPaused()
   }
 
   /** Show/move the AI-assistant collaborator cursor at tile (x, y). Returns false without an engine. */
   setAssistantCursor(tileX: number, tileY: number): boolean {
-    const applied = this._engineCtl.engine?.excalibur?.setAssistantCursor(tileX, tileY) ?? false
-    if (applied && this._assistantState.setPresent(true)) {
-      this._announceAssistantOnce()
-      this._refreshCollaborators()
-    }
-    return applied
+    return this._collabPresenceCtl.setAssistantCursor(tileX, tileY)
   }
 
   /**
    * Mark the AI assistant present without moving its cursor. The Control
    * D-Bus surface calls this on every mutating method, so ANY external
    * driver (MCP bridge, scripts) shows up in the participants bar the
-   * moment it starts acting — visibility must not depend on the driver
-   * remembering to announce itself via `SetAssistantInfo` /
-   * `SetAssistantCursor` first.
+   * moment it starts acting.
    */
   ensureAssistantPresence(): void {
-    if (!this._assistantState.setPresent(true)) return
-    // Mirror into the engine (when one is live) so `isAssistantActive`
-    // and the participants bar agree about the assistant being around.
-    // A later engine recreation re-mirrors via `_syncEngineUiState`.
-    this._engineCtl.engine?.excalibur?.setAssistantInfo(this._assistantState.name, this._assistantState.color)
-    this._announceAssistantOnce()
-    this._refreshCollaborators()
+    this._collabPresenceCtl.ensureAssistantPresence()
   }
 
   /** Set the AI-assistant cursor's display name + colour. */
   setAssistantInfo(displayName: string, color: string): void {
-    this._engineCtl.engine?.excalibur?.setAssistantInfo(displayName, color)
-    this._assistantState.setInfo(displayName, color)
-    if (this._assistantState.setPresent(true)) this._announceAssistantOnce()
-    this._refreshCollaborators()
+    this._collabPresenceCtl.setAssistantInfo(displayName, color)
   }
 
   /** Remove the AI-assistant cursor/presence. */
   hideAssistant(): void {
-    this._engineCtl.engine?.excalibur?.hideAssistant()
-    this._assistantState.setPresent(false)
-    this._assistantAnnounced = false
-    if (this._followedPeerId === ASSISTANT_PEER_ID) this._setFollowedPeer(null)
-    this._refreshCollaborators()
-  }
-
-  /**
-   * Announce the FIRST assistant activation with a toast — a clear,
-   * consent-style "an AI is now acting here" cue (not a silent takeover).
-   * Re-armed on `HideAssistant`.
-   */
-  private _announceAssistantOnce(): void {
-    if (this._assistantAnnounced) return
-    this._assistantAnnounced = true
-    this._showToast(_('AI assistant is now editing with you'))
+    this._collabPresenceCtl.hideAssistant()
   }
 
   /** The live `CollabSession` (host or joiner) if a session is active, else null. */
@@ -1814,97 +1779,22 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     return state && 'collab' in state ? state.collab : null
   }
 
-  /**
-   * Rebuild the collaborators bar from the live roster: the local AI
-   * assistant (if present) + every networked peer from the session
-   * awareness. A relayed AI on a joiner arrives as a session peer with
-   * `ASSISTANT_PEER_ID` — flagged `isAI` so it gets the assistant styling.
-   */
-  private _refreshCollaborators(): void {
-    const participants = this.getParticipants()
-    this._renderedPeerIds = new Set(participants.map((p) => p.peerId))
-    this._scene_editor_view.setCollaborators(participants, this._followedPeerId)
-  }
-
-  /**
-   * The live participant roster: the local AI assistant (if present) +
-   * every networked peer from the session awareness. A relayed AI on a
-   * joiner arrives as a session peer with `ASSISTANT_PEER_ID` — flagged
-   * `isAI`. Shared by the collaborators bar + `getDebugStatus`.
-   */
+  /** The live participant roster (collaborators bar + `getDebugStatus`). */
   getParticipants(): CollaboratorEntry[] {
-    const participants: CollaboratorEntry[] = []
-    if (this._assistantState.present) {
-      participants.push({
-        peerId: ASSISTANT_PEER_ID,
-        name: this._assistantState.name,
-        color: this._assistantState.color,
-        isAI: true,
-      })
-    }
-    const collab = this._activeCollab()
-    if (collab) {
-      for (const peer of collab.awareness.getPeers()) {
-        if (peer.peerId === ASSISTANT_PEER_ID && this._assistantState.present) continue // already listed locally
-        participants.push({
-          peerId: peer.peerId,
-          name: peer.info.displayName,
-          color: peer.info.color,
-          isAI: peer.peerId === ASSISTANT_PEER_ID,
-        })
-      }
-    }
-    return participants
-  }
-
-  /** Toggle camera-follow for the clicked participant (clicking the followed one stops following). */
-  private _onParticipantActivated(peerId: string): void {
-    this.followParticipant(this._followedPeerId === peerId ? null : peerId)
+    return this._collabPresenceCtl.getParticipants()
   }
 
   /**
    * Follow `peerId` with the camera (pass `null` to stop). Public so the
-   * Control interface can drive it too; chip clicks route through here via
-   * {@link _onParticipantActivated}.
+   * Control interface can drive it too.
    */
   followParticipant(peerId: string | null): void {
-    this._setFollowedPeer(peerId)
-    // Jump straight to a followed human peer's current cursor (the engine
-    // self-pans for the AI).
-    if (peerId && peerId !== ASSISTANT_PEER_ID) {
-      const peer = this._activeCollab()?.awareness.getPeer(peerId)
-      if (peer?.cursor) this._engineCtl.engine?.excalibur?.panCameraTo(peer.cursor.x, peer.cursor.y)
-    }
-    this._refreshCollaborators()
+    this._collabPresenceCtl.followParticipant(peerId)
   }
 
   /** The currently-followed participant peerId, or null. */
   get followedPeerId(): string | null {
-    return this._followedPeerId
-  }
-
-  private _setFollowedPeer(peerId: string | null): void {
-    this._followedPeerId = peerId
-    const engine = this._engineCtl.engine?.excalibur
-    // The engine pans itself for the AI (it owns the AI cursor); human
-    // peers are panned from `_onPeerChanged` as their cursors arrive.
-    engine?.setFollowAssistant(peerId === ASSISTANT_PEER_ID)
-    // Stop the smooth glide when following no one.
-    if (!peerId) engine?.stopCameraFollow()
-  }
-
-  /** A session peer's awareness changed — pan if it's the followed one; rebuild only on roster changes. */
-  private _onPeerChanged(peer: AwarenessPeerState): void {
-    if (peer.peerId === this._followedPeerId && peer.peerId !== ASSISTANT_PEER_ID && peer.cursor) {
-      this._engineCtl.engine?.excalibur?.panCameraTo(peer.cursor.x, peer.cursor.y)
-    }
-    if (!this._renderedPeerIds.has(peer.peerId)) this._refreshCollaborators()
-  }
-
-  /** A session peer left — drop follow if it was followed, rebuild the bar. */
-  private _onPeerLeft(peerId: string): void {
-    if (this._followedPeerId === peerId) this._setFollowedPeer(null)
-    this._refreshCollaborators()
+    return this._collabPresenceCtl.followedPeerId
   }
 
   /**
