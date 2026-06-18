@@ -28,6 +28,7 @@ import objectSystemValidationSuite from './format/object-system-validation.spec.
 import mapResourceSuite from './resource/map-resource.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
+import placementIdSuite from './services/placement-id.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import awarenessSuite from './sync/awareness.spec.js'
@@ -62,6 +63,7 @@ run({
   objectSystemValidationSuite,
   mapResourceSuite,
   layerVisibilitySuite,
+  placementIdSuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   agentMapDataSuite,
