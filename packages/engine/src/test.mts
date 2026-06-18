@@ -27,6 +27,7 @@ import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
 import mapResourceSuite from './resource/map-resource.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
+import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
@@ -67,6 +68,7 @@ run({
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   agentMapDataSuite,
+  assistantPresenceSuite,
   awarenessSuite,
   chunkingSuite,
   collabIntegrationSuite,

@@ -37,14 +37,9 @@ import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
 import { makePlacementId } from './services/placement-id.ts'
+import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
-import {
-  AwarenessManager,
-  type AwarenessMessage,
-  type AwarenessPeerInfo,
-  parseAwarenessColour,
-  RemoteCursorRenderer,
-} from './sync/index.ts'
+import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from './types/index.ts'
 import { EDITOR_CONSTANTS } from './utils/constants.ts'
 import { formatError } from './utils/format-error.ts'
@@ -58,15 +53,10 @@ interface LoaderEventMap {
   afterload: undefined
 }
 
-/** Stable peer id for the in-process AI assistant collaborator. */
-export const ASSISTANT_PEER_ID = 'ai-assistant'
-
-/**
- * Default display identity of the AI assistant collaborator. Single
- * definition — the maker's `AssistantStateService` imports it instead of
- * duplicating the literals (the duplicated copies drifted before).
- */
-export const DEFAULT_ASSISTANT_INFO: AwarenessPeerInfo = { displayName: 'AI Assistant', color: '#9141ac' }
+// The AI-assistant presence subsystem (cursor/awareness/follow/flash) lives
+// in AssistantPresenceController; these constants are defined there and
+// re-exported so existing `@pixelrpg/engine` import sites keep working.
+export { ASSISTANT_PEER_ID, DEFAULT_ASSISTANT_INFO } from './services/assistant-presence.ts'
 
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
@@ -76,35 +66,11 @@ export class Engine {
   private _gameProjectResource: GameProjectResource | null = null
   private logger = Logger.getInstance()
 
-  // Local virtual-collaborator presence (the AI assistant). A
-  // session-less AwarenessManager + RemoteCursorRenderer let an
-  // in-process peer (driven over D-Bus/MCP) render a cursor without any
-  // CollabSession / WebRTC. See docs/concepts/ai-collaborator.md.
-  private _assistantAwareness: AwarenessManager | null = null
-  private _assistantRenderer: RemoteCursorRenderer | null = null
-  private _assistantInfo: AwarenessPeerInfo = { ...DEFAULT_ASSISTANT_INFO }
-  // True while the assistant is present (info/cursor set, not hidden) —
-  // gates the edit-attribution flash so plain paintTileAt callers (tests)
-  // don't grow stray highlight actors.
-  private _assistantActive = false
-  // User-controlled pause: while paused, the assistant's cursor + paints
-  // are rejected (the human stays in control). Presence (the pill) stays
-  // so the user can resume.
-  private _assistantPaused = false
-  // Opt-in: pan the camera to follow the assistant's cursor so the user
-  // can watch it work without manually scrolling. Off by default — we
-  // don't yank the view around unless asked.
-  private _followAssistant = false
-  // Smooth camera-follow target (world space) or null when not following.
-  // Updated cheaply on every followed-peer cursor move; the camera eases
-  // toward it each frame (see `_tickCameraFollow`) so following a fast
-  // cursor reads as a smooth glide, not a hectic per-update jump.
-  private _followTarget: Vector | null = null
-  // When a networked CollabSession is active, the app sets this so the
-  // assistant's presence/cursor are relayed to remote peers too (the AI
-  // shows up as a peer to networked humans). The AI's *edits* already
-  // propagate via the shared op-log; this carries its cursor/presence.
-  private _assistantFrameRelay: ((message: AwarenessMessage) => void) | null = null
+  // In-process AI-assistant presence (cursor/awareness/follow/flash),
+  // driven over D-Bus/MCP without any CollabSession/WebRTC. Extracted into
+  // its own controller; the Engine just delegates. See
+  // docs/concepts/ai-collaborator.md.
+  private readonly _assistant: AssistantPresenceController
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -137,11 +103,21 @@ export class Engine {
       enableCanvasContextMenu: true,
     })
 
-    // Smooth camera-follow: ease the camera toward `_followTarget` every
+    // The assistant-presence subsystem reads the active scene + camera from
+    // the engine and builds its cursor renderer bound to this engine.
+    this._assistant = new AssistantPresenceController({
+      host: {
+        getActiveScene: () => this._activeMapScene(),
+        getCamera: () => this.excalibur.currentScene?.camera ?? null,
+      },
+      createRenderer: (awareness) => new RemoteCursorRenderer(this, awareness),
+    })
+
+    // Smooth camera-follow: ease the camera toward the follow target every
     // frame rather than issuing a fresh `camera.move` tween per cursor
     // update (which fought itself and looked hectic).
     this.excalibur.on('postupdate', (evt: { elapsed?: number; delta?: number }) =>
-      this._tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
+      this._assistant.tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
     )
 
     // Teleport host wiring: `TeleportSystem` emits the intent (it has no
@@ -331,10 +307,7 @@ export class Engine {
   }
 
   async stop(): Promise<void> {
-    this._assistantRenderer?.close()
-    this._assistantRenderer = null
-    this._assistantAwareness = null
-    this._assistantFrameRelay = null
+    this._assistant.dispose()
     this.excalibur.stop()
     this.setStatus(EngineStatus.READY)
   }
@@ -549,7 +522,7 @@ export class Engine {
     // control). The human's own paints take the TileEditorSystem pointer
     // path, never this method. Defense in depth: the maker's Control
     // D-Bus layer already rejects paused mutations with a typed error.
-    if (this._assistantPaused) return false
+    if (this._assistant.isPaused()) return false
     const scene = this._activeMapScene()
     if (!scene) return false
     const resolvedLayer = layerId ?? this.getActiveLayer()
@@ -565,7 +538,7 @@ export class Engine {
     )
     // Attribution: flash the painted tile in the assistant's colour so the
     // user sees the AI act. Only while the assistant is present.
-    if (this._assistantActive) this._flashAssistantTile(found.tileMap, tileX, tileY)
+    if (this._assistant.isActive()) this._assistant.flashTile(found.tileMap, tileX, tileY)
     return true
   }
 
@@ -580,7 +553,7 @@ export class Engine {
    * `defId` isn't in the project's entity library.
    */
   placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): boolean {
-    if (this._assistantPaused) return false
+    if (this._assistant.isPaused()) return false
     const scene = this._activeMapScene()
     if (!scene) return false
     const resolvedLayer = layerId ?? this.getActiveLayer()
@@ -634,55 +607,21 @@ export class Engine {
   // ──────────────────────────────────────────────────────────────
 
   /**
-   * Show (or move) the AI assistant's cursor at tile `(tileX, tileY)` on
-   * the active map — rendered by the same `RemoteCursorRenderer` a human
-   * peer's cursor uses, but fed from a local session-less awareness
-   * channel (no CollabSession / WebRTC). Returns `false` if no map/scene
-   * is active. Coordinates are tile cells; converted to the world centre
-   * of the tile for rendering.
+   * Show (or move) the AI assistant's cursor at tile `(tileX, tileY)` on the
+   * active map. Returns `false` if paused or no map/scene is active.
    */
   setAssistantCursor(tileX: number, tileY: number): boolean {
-    if (this._assistantPaused) return false
-    const scene = this._activeMapScene()
-    const mapId = scene?.mapResource?.mapData?.id
-    if (!scene || !mapId) return false
-    const tm = this._anyTileMap(scene)
-    if (!tm) return false
-    const worldX = tm.pos.x + (tileX + 0.5) * tm.tileWidth
-    const worldY = tm.pos.y + (tileY + 0.5) * tm.tileHeight
-    const aware = this._ensureAssistant()
-    this._assistantActive = true
-    const presence: AwarenessMessage = { type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo }
-    const cursor: AwarenessMessage = {
-      type: 'cursor',
-      peerId: ASSISTANT_PEER_ID,
-      cursor: { sceneId: mapId, x: worldX, y: worldY },
-    }
-    aware.handleInbound(presence)
-    aware.handleInbound(cursor)
-    // Relay to networked peers too (no-op when no session is wired).
-    this._assistantFrameRelay?.(presence)
-    this._assistantFrameRelay?.(cursor)
-    // Opt-in follow: ease the camera toward the assistant (smooth glide).
-    if (this._followAssistant) this.panCameraTo(worldX, worldY)
-    return true
+    return this._assistant.setCursor(tileX, tileY)
   }
 
   /** Update the AI assistant's display name + colour (re-announced immediately). */
   setAssistantInfo(displayName: string, color: string): void {
-    this._assistantInfo = { displayName, color }
-    this._assistantActive = true
-    const presence: AwarenessMessage = { type: 'presence', peerId: ASSISTANT_PEER_ID, info: this._assistantInfo }
-    this._ensureAssistant().handleInbound(presence)
-    this._assistantFrameRelay?.(presence)
+    this._assistant.setInfo(displayName, color)
   }
 
   /** Remove the AI assistant's cursor/presence from the canvas. */
   hideAssistant(): void {
-    this._assistantActive = false
-    const leave: AwarenessMessage = { type: 'leave', peerId: ASSISTANT_PEER_ID }
-    this._assistantAwareness?.handleInbound(leave)
-    this._assistantFrameRelay?.(leave)
+    this._assistant.hide()
   }
 
   /**
@@ -691,125 +630,41 @@ export class Engine {
    * `CollabSession`'s awareness so networked humans see the AI's cursor.
    */
   setAssistantFrameRelay(relay: ((message: AwarenessMessage) => void) | null): void {
-    this._assistantFrameRelay = relay
+    this._assistant.setFrameRelay(relay)
   }
 
   /** Whether the assistant is currently present (cursor/info set, not hidden). */
   isAssistantActive(): boolean {
-    return this._assistantActive
+    return this._assistant.isActive()
   }
 
   /** Whether the user has paused the assistant. */
   isAssistantPaused(): boolean {
-    return this._assistantPaused
+    return this._assistant.isPaused()
   }
 
   /** Pause/resume the assistant. While paused, its cursor + paints are rejected. */
   setAssistantPaused(paused: boolean): void {
-    this._assistantPaused = paused
+    this._assistant.setPaused(paused)
   }
 
   /** Toggle camera-follow of the assistant cursor (off by default). */
   setFollowAssistant(follow: boolean): void {
-    this._followAssistant = follow
+    this._assistant.setFollow(follow)
   }
 
   /**
-   * Set the smooth camera-follow target to world point `(x, y)`. Used to
-   * follow ANY collaborator (human peer or the AI) the user selected in
-   * the participants toolbar — the app feeds the followed peer's awareness
-   * cursor (already world-space) here on each move. The camera eases
-   * toward it in `_tickCameraFollow`, so rapid updates glide instead of
-   * snapping.
+   * Set the smooth camera-follow target to world point `(x, y)`. Follows ANY
+   * collaborator (human peer or the AI) the user selected in the participants
+   * toolbar — the camera eases toward it on each post-update.
    */
   panCameraTo(worldX: number, worldY: number): void {
-    this._followTarget = new Vector(worldX, worldY)
+    this._assistant.panCameraTo(worldX, worldY)
   }
 
   /** Stop following — the camera stays where it is and responds to the user again. */
   stopCameraFollow(): void {
-    this._followTarget = null
-  }
-
-  /**
-   * Per-frame easing toward `_followTarget`. Frame-rate independent: the
-   * lerp factor scales with elapsed time so the glide feels the same at
-   * 30 or 60 fps. Snaps + stops once within a sub-pixel of the target.
-   */
-  private _tickCameraFollow(elapsedMs: number): void {
-    if (!this._followTarget) return
-    const camera = this.excalibur.currentScene?.camera
-    if (!camera) return
-    const dx = this._followTarget.x - camera.pos.x
-    const dy = this._followTarget.y - camera.pos.y
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
-      camera.pos = this._followTarget.clone()
-      return
-    }
-    // Exponential smoothing; ~120ms time constant reads as a gentle glide.
-    const factor = Math.min(1, elapsedMs / 120)
-    camera.pos = new Vector(camera.pos.x + dx * factor, camera.pos.y + dy * factor)
-  }
-
-  /**
-   * Brief fading highlight in the assistant's colour on a tile it just
-   * painted — visible attribution ("the AI did this"). Self-disposing via
-   * `onPostUpdate`, so no external timer. No-op without an active scene.
-   */
-  private _flashAssistantTile(tm: TileMap, tileX: number, tileY: number): void {
-    const scene = this.excalibur?.currentScene
-    if (!scene) return
-    const actor = new Actor({
-      pos: new Vector(tm.pos.x + (tileX + 0.5) * tm.tileWidth, tm.pos.y + (tileY + 0.5) * tm.tileHeight),
-      z: 9_000, // below the cursor (10_000), above the tilemap
-    })
-    const colour = parseAwarenessColour(this._assistantInfo.color)
-    // Outline (not a fill) so the painted tile content stays visible —
-    // a colour-coded border that says "the AI touched this".
-    actor.graphics.use(
-      new Rectangle({
-        width: tm.tileWidth,
-        height: tm.tileHeight,
-        color: Color.Transparent,
-        strokeColor: colour,
-        lineWidth: 2,
-      }),
-    )
-    const peakOpacity = 0.95
-    const fadeMs = 700
-    let elapsed = 0
-    actor.graphics.opacity = peakOpacity
-    actor.onPostUpdate = (_engine, elapsedMs: number) => {
-      elapsed += elapsedMs
-      if (elapsed >= fadeMs) {
-        actor.kill()
-        return
-      }
-      actor.graphics.opacity = peakOpacity * (1 - elapsed / fadeMs)
-    }
-    scene.add(actor)
-  }
-
-  private _ensureAssistant(): AwarenessManager {
-    if (!this._assistantAwareness) {
-      // localPeerId is a sentinel that never matches the assistant peer,
-      // so handleInbound treats the assistant as a "remote" peer and the
-      // renderer draws it. `send` is a no-op — purely local, no wire.
-      this._assistantAwareness = new AwarenessManager({
-        localPeerId: '__local_viewer__',
-        localInfo: { displayName: 'viewer', color: '#000000' },
-        send: () => {},
-      })
-      this._assistantRenderer = new RemoteCursorRenderer(this, this._assistantAwareness)
-    }
-    return this._assistantAwareness
-  }
-
-  private _anyTileMap(scene: MapScene): TileMap | null {
-    for (const entity of scene.world.entityManager.entities) {
-      if (entity instanceof TileMap) return entity
-    }
-    return null
+    this._assistant.stopCameraFollow()
   }
 
   /**
