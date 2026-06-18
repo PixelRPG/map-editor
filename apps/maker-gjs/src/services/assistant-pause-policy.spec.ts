@@ -12,6 +12,7 @@ import {
   HUMAN_ONLY_ACTIONS,
   HumanOnlyActionError,
 } from './assistant-pause-policy.ts'
+import { CONTROL_IFACE_XML } from './control-iface.ts'
 
 /**
  * The expected classification of EVERY `org.pixelrpg.maker.Control`
@@ -153,6 +154,18 @@ export default async () => {
       expect(() => guardEngineAction('win', 'toggle-grid', noEngine)).not.toThrow()
       expect(() => guardEngineAction('win', 'set-tool', noEngine)).not.toThrow()
       expect(() => guardEngineAction('app', 'undo', noEngine)).not.toThrow()
+    })
+  })
+
+  await describe('CONTROL_IFACE_XML ↔ CONTROL_METHOD_KINDS drift guard', async () => {
+    await it('every D-Bus method is classified for the pause policy, and vice-versa', async () => {
+      // guardControlMethod throws at runtime for an unclassified method, but
+      // only one that's actually invoked. This pins the whole set statically:
+      // adding a method to the D-Bus XML without a pause classification (or
+      // removing one and leaving the classification behind) fails here.
+      const xmlMethods = [...CONTROL_IFACE_XML.matchAll(/<method name="([A-Za-z]+)"/g)].map((m) => m[1]).sort()
+      const classified = Object.keys(CONTROL_METHOD_KINDS).sort()
+      expect(xmlMethods).toStrictEqual(classified)
     })
   })
 }
