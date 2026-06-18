@@ -7,6 +7,7 @@ import Gtk from '@girs/gtk-4.0'
 import { GameProjectResource, type MapData } from '@pixelrpg/engine'
 import type { GdkSpriteSheet } from '../../sprite/objects/GdkSpriteSheet'
 import { GdkSpriteSetResource } from '../../sprite/resource/GdkSpriteSetResource'
+import { clampViewportCenter, fingerprintMapData } from './map-preview.geometry.ts'
 
 interface DrawOp {
   texture: Gdk.Texture
@@ -152,25 +153,6 @@ export class MapPreview extends Gtk.Widget {
     }
   }
 
-  /**
-   * Cheap content stamp for cache keys: tile edits change the sum, so
-   * a re-entered atlas re-bakes exactly the maps that changed. Not
-   * cryptographic — a collision merely shows a stale thumbnail.
-   */
-  private static _fingerprint(mapData: MapData): number {
-    let hash = ((mapData.columns * 73856093) ^ (mapData.rows * 19349663)) | 0
-    for (const layer of mapData.layers ?? []) {
-      if (!layer.visible || !layer.sprites) continue
-      hash = (hash * 31 + layer.sprites.length) | 0
-      for (const tile of layer.sprites) {
-        hash = (hash + tile.x * 31 + tile.y * 131 + tile.spriteId * 7) | 0
-      }
-    }
-    const background = mapData.backgroundColor ?? ''
-    for (let i = 0; i < background.length; i++) hash = (hash * 33 + background.charCodeAt(i)) | 0
-    return hash >>> 0
-  }
-
   static {
     GObject.registerClass(
       {
@@ -264,7 +246,7 @@ export class MapPreview extends Gtk.Widget {
             zoom: viewport.zoom,
           }
         : null
-      this._cacheKeyBase = `map:${resource.path}:${mapData.id}:${MapPreview._fingerprint(mapData)}`
+      this._cacheKeyBase = `map:${resource.path}:${mapData.id}:${fingerprintMapData(mapData)}`
       const cacheKey = this._cacheKey()
       const cached = cacheKey ? MapPreview._cache.get(cacheKey) : undefined
       if (cached) {
@@ -295,15 +277,17 @@ export class MapPreview extends Gtk.Widget {
   panViewportBy(dxWidget: number, dyWidget: number): void {
     if (!this._viewport || !this._source) return
     const { zoom } = this._viewport
-    this._viewport.centerX = this._clampCenter(
+    this._viewport.centerX = clampViewportCenter(
       this._viewport.centerX - dxWidget / zoom,
       this._mapWidth,
       this.get_width(),
+      zoom,
     )
-    this._viewport.centerY = this._clampCenter(
+    this._viewport.centerY = clampViewportCenter(
       this._viewport.centerY - dyWidget / zoom,
       this._mapHeight,
       this.get_height(),
+      zoom,
     )
     this._cacheWrite = false
     this._baked = null // stale for the new centre — `_viewportBake` keeps the shifted paint alive
@@ -335,8 +319,8 @@ export class MapPreview extends Gtk.Widget {
   setViewportZoom(zoom: number): void {
     if (!this._viewport || !this._source || this._viewport.zoom === zoom) return
     this._viewport.zoom = zoom
-    this._viewport.centerX = this._clampCenter(this._viewport.centerX, this._mapWidth, this.get_width())
-    this._viewport.centerY = this._clampCenter(this._viewport.centerY, this._mapHeight, this.get_height())
+    this._viewport.centerX = clampViewportCenter(this._viewport.centerX, this._mapWidth, this.get_width(), zoom)
+    this._viewport.centerY = clampViewportCenter(this._viewport.centerY, this._mapHeight, this.get_height(), zoom)
     this._cacheWrite = true
     this._baked = null
     this._viewportBake = null
@@ -350,18 +334,6 @@ export class MapPreview extends Gtk.Widget {
     if (!this._viewport) return this._cacheKeyBase
     const { zoom, centerX, centerY } = this._viewport
     return `${this._cacheKeyBase}:vp:${zoom}:${Math.round(centerX)}:${Math.round(centerY)}`
-  }
-
-  /**
-   * Keep the viewport centre inside the map (centre maps smaller than
-   * the viewport). `widgetExtent` 0 (pre-allocation) also centres —
-   * the bake re-clamps once the real size is known.
-   */
-  private _clampCenter(value: number, mapExtent: number, widgetExtent: number): number {
-    const zoom = this._viewport?.zoom ?? 1
-    const half = widgetExtent > 0 ? widgetExtent / zoom / 2 : 0
-    if (!half || mapExtent <= half * 2) return mapExtent / 2
-    return Math.min(Math.max(value, half), mapExtent - half)
   }
 
   /** Paint a cached bake without rebuilding anything. */
@@ -549,8 +521,8 @@ export class MapPreview extends Gtk.Widget {
     if (!viewport || !renderer || width <= 0 || height <= 0) return null
     // Re-clamp against the now-known widget size (initial centres are
     // set before the first allocation).
-    viewport.centerX = this._clampCenter(viewport.centerX, this._mapWidth, width)
-    viewport.centerY = this._clampCenter(viewport.centerY, this._mapHeight, height)
+    viewport.centerX = clampViewportCenter(viewport.centerX, this._mapWidth, width, viewport.zoom)
+    viewport.centerY = clampViewportCenter(viewport.centerY, this._mapHeight, height, viewport.zoom)
     const viewW = width / viewport.zoom
     const viewH = height / viewport.zoom
     // Whole-map-pixel origin: a fractional origin would land every

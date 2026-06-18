@@ -10,7 +10,7 @@
     "check": "gjsify foreach check -v -t",
     "check:barrels-clean": "gjsify foreach check:barrels -v -t",
     "check:specs": "node scripts/check-spec-registration.mjs",
-    "test": "gjsify foreach test -v -p --include @pixelrpg/engine --include @pixelrpg/maker-gjs --include @pixelrpg/signalling-server",
+    "test": "gjsify foreach test -v -p --include @pixelrpg/engine --include @pixelrpg/gjs --include @pixelrpg/maker-gjs --include @pixelrpg/signalling-server",
     "start": "gjsify workspace @pixelrpg/maker-gjs start",
     "start:storybook": "gjsify workspace @pixelrpg/storybook-gjs start",
     "clear": "gjsify foreach clear -v -p",
