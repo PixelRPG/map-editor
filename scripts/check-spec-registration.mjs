@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Packages whose `test.mts` registers suites (have a `test` script). */
-const PACKAGES = ['packages/engine', 'apps/maker-gjs', 'apps/signalling-server']
+const PACKAGES = ['packages/engine', 'packages/gjs', 'apps/maker-gjs', 'apps/signalling-server']
 
 /** Recursively collect `*.spec.ts` files under `dir` (skips node_modules/dist). */
 function collectSpecs(dir, acc = []) {

@@ -126,6 +126,13 @@ jobs:
         # stay collab-compatible" enforced, not just documented.
         run: gjsify foreach test -v -p --include @pixelrpg/engine
 
+      - name: Run gjs widget tests (GTK-free helper logic)
+        # The @pixelrpg/gjs suite. The widgets themselves subclass
+        # Gtk.Widget and can't run headlessly, so this covers the pure,
+        # GTK-free helpers extracted alongside them (e.g. MapPreview's
+        # fingerprint + viewport-clamp geometry). Runs under both gjs + node.
+        run: gjsify foreach test -v -p --include @pixelrpg/gjs
+
       - name: Run maker tests (collab transport + session services)
         # The @pixelrpg/maker-gjs suite (18 suites): SessionService
         # host/join e2e over REAL LAN signalling (WebSocket on loopback,
