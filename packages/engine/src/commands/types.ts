@@ -73,10 +73,19 @@ export interface Command<P = unknown> {
  * peers without the field send).
  */
 export interface Operation<K extends string = string, P = unknown> {
-  kind: K
-  payload: P
-  peerId: string
-  seq: number
+  readonly kind: K
+  readonly payload: P
+  // `(peerId, seq)` is the op-log's dedupe/echo-suppression + snapshot
+  // watermark key — `readonly` so a relay/forward path can't rewrite the
+  // identity of an already-stamped op (mirrors Command's readonly payload).
+  readonly peerId: string
+  readonly seq: number
+  /**
+   * Correlation id of the local op this envelope echoes — set by the
+   * originating peer so its own broadcast is recognised and suppressed
+   * when it loops back through the transport. Absent on ops minted purely
+   * for remote application.
+   */
   localId?: string
   direction?: 'apply' | 'revert'
   origin?: string

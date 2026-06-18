@@ -36,16 +36,42 @@ function validateField(field: FieldDescriptor, value: unknown, requireComplete: 
       break
     case 'select':
       if (typeof value !== 'string') return `"${field.key}" must be a string`
-      if (field.options && !field.options.some((o) => o.value === value)) return `"${field.key}" has an invalid option`
+      // A `select` with no options is a mis-declared spec: the inspector
+      // renders a closed ComboRow but validation would accept any string.
+      // Reject it as a spec error rather than let it behave as free text.
+      if (!field.options || field.options.length === 0) return `"${field.key}" select field has no options`
+      if (!field.options.some((o) => o.value === value)) return `"${field.key}" has an invalid option`
       break
     case 'facing':
       if (typeof value !== 'string' || !FACINGS.has(value)) return `"${field.key}" must be a facing direction`
       break
     case 'json':
-      // Any JSON-serialisable value is accepted; objects/arrays/primitives all pass.
+      // Accept any JSON-serialisable value, but reject the shapes that
+      // violate transport rule 4 (no functions / BigInt / Map/Set, no
+      // circular references — AGENTS.md): this boundary is where the
+      // op-log's serialisability contract is enforced.
+      if (!isJsonSerialisable(value)) return `"${field.key}" must be JSON-serialisable`
       break
   }
   return null
+}
+
+/**
+ * Cheap structural guard for the `json` field input: rejects functions,
+ * symbols, BigInt and `Map`/`Set` (which `JSON.stringify` silently drops
+ * or mangles) and circular references (which throw). Plain
+ * objects/arrays/primitives pass.
+ */
+function isJsonSerialisable(value: unknown): boolean {
+  const t = typeof value
+  if (t === 'function' || t === 'symbol' || t === 'bigint') return false
+  if (value instanceof Map || value instanceof Set) return false
+  try {
+    JSON.stringify(value)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**

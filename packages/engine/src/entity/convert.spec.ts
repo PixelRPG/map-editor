@@ -91,6 +91,19 @@ export default async () => {
       const already = { id: 'x', name: 'X', components: [{ type: 'collision' }] }
       expect(objectDefinitionToEntity(already)).toBe(already)
     })
+
+    await it('warns when a legacy kind drops its payload (teleport without targetMapId)', async () => {
+      const warnings: string[] = []
+      const entity = objectDefinitionToEntity(
+        { id: 'broken', kind: 'teleport', name: 'Broken', properties: { targetTileX: 1 } },
+        (m) => warnings.push(m),
+      )
+      // The teleport component is dropped (no targetMapId)…
+      expect(types(entity.components)).toStrictEqual([])
+      // …but the loss is surfaced rather than silent.
+      expect(warnings.length).toBe(1)
+      expect(warnings[0]).toContain('broken')
+    })
   })
 
   await describe('characterToEntity / entityToCharacter', async () => {
