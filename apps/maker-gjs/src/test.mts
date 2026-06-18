@@ -21,6 +21,7 @@ import relaySignallingSuite from './services/relay-signalling.spec.js'
 import sandboxPathSuite from './services/sandbox-path.spec.js'
 import sessionServiceSuite from './services/session-service.spec.js'
 import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
+import zoomMathSuite from './services/zoom-math.spec.js'
 
 run({
   assistantPausePolicySuite,
@@ -45,4 +46,5 @@ run({
   sandboxPathSuite,
   sessionServiceSuite,
   sessionServiceE2eSuite,
+  zoomMathSuite,
 })
