@@ -248,6 +248,26 @@ export default async () => {
       expect(data.entityLibrary).toHaveLength(1)
     })
 
+    await it('defers sink registration until a project is present (joiner attach order)', async () => {
+      // Joiner: setCollabSession runs (state-changed) BEFORE the sandbox
+      // project finishes loading (setProject). Until a project is present
+      // the store must NOT register the sinks, so the session keeps
+      // buffering inbound ops instead of feeding a project-less applier.
+      const io = makeIo()
+      const store = new ProjectStore(io)
+      const session = makeSession()
+
+      store.setCollabSession(session)
+      expect(session.onProjectOpReceived).toBe(null)
+
+      // Project arrives → sinks register (which drains the session buffer).
+      store.setProject(makeProject(makeProjectData()))
+      expect(session.onProjectOpReceived).not.toBe(null)
+
+      session.onProjectOpReceived?.(remoteUpsert(npc))
+      expect(store.data?.entityLibrary).toHaveLength(1)
+    })
+
     await it('applies entity.upsert idempotently and never re-broadcasts', async () => {
       const { store, io, data } = makeStore()
       const session = makeSession()

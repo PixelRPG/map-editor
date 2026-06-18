@@ -220,6 +220,11 @@ export class ProjectStore {
   setProject(project: LoadedProject | null): void {
     this._project = project
     this._events.emit('project-changed', project)
+    // (Re)evaluate sink registration: on the joiner the session attaches
+    // (setCollabSession) BEFORE the snapshot project finishes loading, so
+    // the sinks must be (re)registered here once a project is present —
+    // that drains any project ops the session buffered in the meantime.
+    this._refreshSessionSinks()
   }
 
   /**
@@ -230,10 +235,29 @@ export class ProjectStore {
    */
   setCollabSession(session: ProjectSyncSession | null): void {
     this._session = session
+    this._refreshSessionSinks()
+  }
+
+  /**
+   * Register (or clear) the inbound project-op sinks on the active
+   * session. Sinks are registered ONLY once a project is present so the
+   * single-applier (`applyRemote*`) always has a `GameProjectData` to
+   * mutate; until then inbound ops stay buffered in the session and drain
+   * the moment the sink is assigned. Symmetric: with no project (or no
+   * session) the sinks are cleared, returning the session to buffering.
+   */
+  private _refreshSessionSinks(): void {
+    const session = this._session
     if (!session) return
-    session.onProjectOpReceived = (op) => this.applyRemoteProjectOp(op)
-    session.onSpriteSetAddReceived = (payload) => this.applyRemoteSpriteSetAdd(payload)
-    session.onSpriteSetUpdateReceived = (payload) => this.applyRemoteSpriteSetUpdate(payload)
+    if (this._project) {
+      session.onProjectOpReceived = (op) => this.applyRemoteProjectOp(op)
+      session.onSpriteSetAddReceived = (payload) => this.applyRemoteSpriteSetAdd(payload)
+      session.onSpriteSetUpdateReceived = (payload) => this.applyRemoteSpriteSetUpdate(payload)
+    } else {
+      session.onProjectOpReceived = null
+      session.onSpriteSetAddReceived = null
+      session.onSpriteSetUpdateReceived = null
+    }
   }
 
   // ────────────────────────────────────────────────────────────
