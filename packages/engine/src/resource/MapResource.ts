@@ -355,18 +355,6 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Re-apply `tile.solid` for every tile currently displaying a
-   * sprite with id `(spriteSetId, spriteId)`. Called when the user
-   * toggles `solid` on a sprite definition from the Tiles view so
-   * every placement of that sprite flips collision immediately.
-   *
-   * Walks the live editor shadow (`MapEditorComponent`) on every
-   * tilemap rather than `mapData.layers[].sprites[]` — paint/erase
-   * during playtest only mutates the shadow; mapData stays stale
-   * until save. Anchoring on the shadow keeps Tiles-tab toggles and
-   * runtime paints consistent.
-   */
-  /**
    * Fold the live editor shadow (`MapEditorComponent.sprites`) on
    * every tier's tilemap back into `mapData.layers[].sprites[]`.
    *
@@ -431,6 +419,18 @@ export class MapResource implements Loadable<TileMap> {
     return true
   }
 
+  /**
+   * Re-apply `tile.solid` for every tile currently displaying a
+   * sprite with id `(spriteSetId, spriteId)`. Called when the user
+   * toggles `solid` on a sprite definition from the Tiles view so
+   * every placement of that sprite flips collision immediately.
+   *
+   * Walks the live editor shadow (`MapEditorComponent`) on every
+   * tilemap rather than `mapData.layers[].sprites[]` — paint/erase
+   * during playtest only mutates the shadow; mapData stays stale
+   * until save. Anchoring on the shadow keeps Tiles-tab toggles and
+   * runtime paints consistent.
+   */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
     this.refreshTileSolidsWhere((r) => r.spriteSetId === spriteSetId && r.spriteId === spriteId)
   }

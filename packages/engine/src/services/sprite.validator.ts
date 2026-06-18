@@ -15,14 +15,3 @@ export function isValidTileId(tileId: number): boolean {
   }
   return true
 }
-
-export function isValidTileCoords(x: number, y: number): boolean {
-  const isValidX = typeof x === 'number' && x >= 0
-  const isValidY = typeof y === 'number' && y >= 0
-
-  if (!isValidX || !isValidY) {
-    console.warn(`[SpriteValidator] Invalid tile coordinates: (${x}, ${y})`)
-    return false
-  }
-  return true
-}
