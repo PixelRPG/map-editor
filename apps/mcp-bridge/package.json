@@ -10,6 +10,7 @@
     "build:app": "gjsify build src/index.ts --app gjs --globals auto --shebang --outfile dist/mcp-bridge.gjs.mjs",
     "build": "gjsify run build:app",
     "check": "tsc --noEmit",
+    "test": "gjsify test",
     "start": "gjsify run dist/mcp-bridge.gjs.mjs"
   },
   "keywords": [

@@ -150,3 +150,12 @@ jobs:
         # built in the build step above (via the pinned global `gjsify`
         # on PATH) and drives it with real `ws` clients from Node.
         run: gjsify foreach test -v -p --include @pixelrpg/signalling-server
+
+      - name: Run mcp-bridge tests (instance → D-Bus address routing)
+        # The @pixelrpg/mcp-bridge suite. The bridge proper opens a live
+        # session bus at module load (GJS-only), so this covers its
+        # dependency-free helpers — the instance-label → bus-name/path
+        # routing whose `sanitizeLabel` must stay byte-identical to the
+        # maker's `sanitizeInstanceId` (else the bridge dials a name nobody
+        # owns). Runs under both gjs + node.
+        run: gjsify foreach test -v -p --include @pixelrpg/mcp-bridge

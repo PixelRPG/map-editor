@@ -21,36 +21,13 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
+import { BASE_NAME, resolve, sanitizeLabel } from './instance-routing.ts'
 import { GjsStdioTransport } from './stdio-transport.ts'
 
-const BASE_NAME = 'org.pixelrpg.maker'
-const BASE_PATH = '/org/pixelrpg/maker'
 const CONTROL_IFACE = 'org.pixelrpg.maker.Control'
 const DBUS_IFACE = 'org.freedesktop.DBus'
 
 const bus = Gio.bus_get_sync(Gio.BusType.SESSION, null)
-
-// --- instance addressing ---
-
-/**
- * Coerce a label into the same app-id segment the app derives from
- * PIXELRPG_INSTANCE. CONTRACT: byte-identical copy of
- * `apps/maker-gjs/src/application.ts` `sanitizeInstanceId` (this app
- * is deliberately dependency-free, so it cannot import it). The
- * maker-side `instance-id.spec.ts` pins the mapping; change BOTH
- * copies + the spec together.
- */
-function sanitizeLabel(label: string): string {
-  const cleaned = label.toLowerCase().replace(/[^a-z0-9]/g, '')
-  return /^[a-z]/.test(cleaned) ? cleaned : `i${cleaned || '0'}`
-}
-
-/** Resolve an instance label to its D-Bus name + Control object path. */
-function resolve(label?: string): { busName: string; controlPath: string; label: string } {
-  const l = label && label !== 'default' ? sanitizeLabel(label) : 'default'
-  if (l === 'default') return { busName: BASE_NAME, controlPath: `${BASE_PATH}/control`, label: 'default' }
-  return { busName: `${BASE_NAME}.${l}`, controlPath: `${BASE_PATH}/${l}/control`, label: l }
-}
 
 // --- process management ---
 
