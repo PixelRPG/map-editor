@@ -13,6 +13,7 @@ import lanDiscoveryParseSuite from './services/lan-discovery-parse.spec.js'
 import lanSignallingSuite from './services/lan-signalling.spec.js'
 import lanSignallingIntegrationSuite from './services/lan-signalling-integration.spec.js'
 import lanSignallingTimeoutSuite from './services/lan-signalling-timeout.spec.js'
+import mapEditorDataSuite from './services/map-editor-data.spec.js'
 import orphanPublisherCleanupSuite from './services/orphan-publisher-cleanup.spec.js'
 import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
 import projectLoaderSuite from './services/project-loader.spec.js'
@@ -38,6 +39,7 @@ run({
   lanSignallingIntegrationSuite,
   lanSignallingSuite,
   lanSignallingTimeoutSuite,
+  mapEditorDataSuite,
   orphanPublisherCleanupSuite,
   pixelrpgUrlSuite,
   projectLoaderSuite,
