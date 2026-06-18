@@ -25,6 +25,7 @@ import { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { executeCommandOnScene } from './services/command-dispatch.ts'
 import { applyEditorViewMode } from './services/editor-view.ts'
+import { layerFlagChange } from './services/layer-flag-event.ts'
 import { makePlacementId } from './services/placement-id.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
@@ -464,23 +465,13 @@ export class Engine {
    * revert — because remote ops deliberately don't emit
    * `COMMAND_EXECUTED` (relay loop) yet still need the inspector
    * row's eye/padlock to follow. No-op for non-layer commands.
+   *
+   * The command→payload mapping is the pure {@link layerFlagChange}
+   * (unit-tested independently); this method only owns the emit.
    */
   private _emitLayerFlagChanged(command: Command, direction: 'apply' | 'revert'): void {
-    if (command instanceof SetLayerVisibilityCommand) {
-      const { layerId, visible, previousVisible } = command.payload
-      this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, {
-        layerId,
-        flag: 'visible',
-        value: direction === 'apply' ? visible : previousVisible,
-      })
-    } else if (command instanceof SetLayerLockedCommand) {
-      const { layerId, locked, previousLocked } = command.payload
-      this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, {
-        layerId,
-        flag: 'locked',
-        value: direction === 'apply' ? locked : previousLocked,
-      })
-    }
+    const change = layerFlagChange(command, direction)
+    if (change) this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, change)
   }
 
   /**
