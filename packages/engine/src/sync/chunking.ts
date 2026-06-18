@@ -21,6 +21,23 @@ import { formatErrorMessage } from '../utils/format-error.ts'
 /** SCTP-safe chunk size: ~80 sends for a 1.2 MB snapshot. */
 export const CHUNK_SIZE_BYTES = 16 * 1024
 
+/**
+ * Upper bound on `totalChunks` the reassembler will accept — 64 MiB at
+ * {@link CHUNK_SIZE_BYTES}, far above any real snapshot (~80 chunks). A
+ * remote peer controls `totalChunks`, and `accept()` allocates an array
+ * of that length, so without a cap a single envelope claiming
+ * `totalChunks: 2_000_000_000` forces a 2-billion-slot allocation.
+ */
+export const MAX_TOTAL_CHUNKS = 4096
+
+/**
+ * Upper bound on concurrent in-flight transfers per reassembler. A peer
+ * can open many `transferId`s and never complete them, leaking partial
+ * buffers until session close — mirror {@link CHUNK_SIZE_BYTES}'s defensive
+ * posture (and the `PreAttachOpBuffer` cap) with a ceiling on live transfers.
+ */
+export const MAX_CONCURRENT_TRANSFERS = 64
+
 /** One slice of a chunked JSON payload, addressed by transfer + index. */
 export interface ChunkEnvelope {
   /** Groups the slices of one logical payload (multi-transfer reassembly). */
@@ -83,6 +100,7 @@ export class ChunkReassembler<T> {
     if (
       !Number.isInteger(totalChunks) ||
       totalChunks <= 0 ||
+      totalChunks > MAX_TOTAL_CHUNKS ||
       !Number.isInteger(chunkIndex) ||
       chunkIndex < 0 ||
       chunkIndex >= totalChunks
@@ -90,11 +108,19 @@ export class ChunkReassembler<T> {
       this.transfers.delete(transferId)
       return {
         status: 'error',
-        reason: `invalid chunk envelope (chunkIndex=${chunkIndex}, totalChunks=${totalChunks})`,
+        reason: `invalid chunk envelope (chunkIndex=${chunkIndex}, totalChunks=${totalChunks}, cap=${MAX_TOTAL_CHUNKS})`,
       }
     }
     let entry = this.transfers.get(transferId)
     if (!entry) {
+      // Cap concurrent transfers so a peer can't open unbounded partial
+      // buffers (each holds up to MAX_TOTAL_CHUNKS slices until completion).
+      if (this.transfers.size >= MAX_CONCURRENT_TRANSFERS) {
+        return {
+          status: 'error',
+          reason: `too many concurrent transfers (cap=${MAX_CONCURRENT_TRANSFERS})`,
+        }
+      }
       entry = { chunks: new Array<string | undefined>(totalChunks), total: totalChunks, received: 0 }
       this.transfers.set(transferId, entry)
     } else if (entry.total !== totalChunks) {

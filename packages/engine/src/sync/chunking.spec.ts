@@ -7,7 +7,13 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
-import { buildChunkEnvelopes, CHUNK_SIZE_BYTES, ChunkReassembler } from './chunking.ts'
+import {
+  buildChunkEnvelopes,
+  CHUNK_SIZE_BYTES,
+  ChunkReassembler,
+  MAX_CONCURRENT_TRANSFERS,
+  MAX_TOTAL_CHUNKS,
+} from './chunking.ts'
 
 export default async () => {
   await describe('buildChunkEnvelopes', async () => {
@@ -98,6 +104,37 @@ export default async () => {
       const result = reassembler.accept({ transferId: 't', chunkIndex: 0, totalChunks: 1, data: 'not-json' })
       expect(result.status).toBe('error')
       if (result.status === 'error') expect(result.reason.includes('json.length=8')).toBe(true)
+    })
+
+    await it('rejects totalChunks above the cap (unbounded allocation guard)', async () => {
+      const reassembler = new ChunkReassembler<unknown>()
+      const result = reassembler.accept({
+        transferId: 't',
+        chunkIndex: 0,
+        totalChunks: MAX_TOTAL_CHUNKS + 1,
+        data: '',
+      })
+      expect(result.status).toBe('error')
+      // A within-cap transfer still starts normally.
+      expect(reassembler.accept({ transferId: 't2', chunkIndex: 0, totalChunks: 2, data: 'a' }).status).toBe('pending')
+    })
+
+    await it('rejects new transfers past the concurrency cap (partial-buffer leak guard)', async () => {
+      const reassembler = new ChunkReassembler<unknown>()
+      // Open MAX_CONCURRENT_TRANSFERS distinct, never-completed transfers.
+      // t0's two chunks join to valid JSON ('true') so it can complete below.
+      expect(reassembler.accept({ transferId: 't0', chunkIndex: 0, totalChunks: 2, data: 'tr' }).status).toBe('pending')
+      for (let i = 1; i < MAX_CONCURRENT_TRANSFERS; i++) {
+        expect(reassembler.accept({ transferId: `t${i}`, chunkIndex: 0, totalChunks: 2, data: 'a' }).status).toBe(
+          'pending',
+        )
+      }
+      // The next NEW transferId is refused…
+      expect(reassembler.accept({ transferId: 'overflow', chunkIndex: 0, totalChunks: 2, data: 'a' }).status).toBe(
+        'error',
+      )
+      // …but an already-open transfer still makes progress (and frees a slot).
+      expect(reassembler.accept({ transferId: 't0', chunkIndex: 1, totalChunks: 2, data: 'ue' }).status).toBe('done')
     })
 
     await it('clear() drops partial transfers', async () => {

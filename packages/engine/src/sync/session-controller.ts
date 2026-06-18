@@ -117,22 +117,6 @@ export class SessionController {
   }
 
   /**
-   * Send a session-protocol message (e.g. snapshot-request /
-   * snapshot-response). Stamps `peerId` + `seq` so the receiver
-   * can deduplicate the same way it does for commands; the
-   * envelope rides the existing reliable op channel.
-   */
-  sendSessionProtocol(op: Omit<SessionProtocolOp, 'peerId' | 'seq'>): void {
-    if (this.closed) return
-    const stamped = {
-      ...op,
-      peerId: this.peerId,
-      seq: this.localSeq++,
-    } as SessionProtocolOp
-    this.session.sendOp(stamped)
-  }
-
-  /**
    * Detach from both engine + session. Idempotent. The peer
    * session itself is NOT closed — the controller can be replaced
    * mid-session (e.g. host migration in Phase 8) without
