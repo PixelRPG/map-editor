@@ -61,8 +61,10 @@ virtual peers.
 
 ## Phases
 
-1. **Presence + cursor (done).** `Engine` owns a lazily-created local
-   `AwarenessManager` + `RemoteCursorRenderer` for virtual peers. Control:
+1. **Presence + cursor (done).** `Engine` delegates to an
+   `AssistantPresenceController` (`services/assistant-presence.ts`) that owns
+   a lazily-created local `AwarenessManager` + `RemoteCursorRenderer` for the
+   virtual peer; the Engine exposes thin `setAssistant*` pass-throughs. Control:
    `SetAssistantCursor(tileX, tileY)`, `SetAssistantInfo(name, color)`,
    `HideAssistant`. Bridge tools: `assistant_cursor` / `assistant_info` /
    `assistant_hide`. Result: the user watches a labelled "AI Assistant"
@@ -70,7 +72,7 @@ virtual peers.
 2. **Edit attribution (done — visual + wire).** When the assistant paints,
    the tile gets a brief fading outline in the assistant's colour ("AI
    painted here") so edits are visibly the AI's in the moment. Auto-gated
-   on assistant presence (`Engine._flashAssistantTile`). On the wire,
+   on assistant presence (`AssistantPresenceController.flashTile`). On the wire,
    assistant-initiated ops additionally carry
    `Operation.origin = ASSISTANT_PEER_ID` (the initiator is an explicit
    parameter through Control → engine — no ambient "current actor" state),
