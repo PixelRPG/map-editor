@@ -1,6 +1,7 @@
 import { Actor, type Camera, Color, Rectangle, TileMap, Vector } from 'excalibur'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { AwarenessManager, type AwarenessMessage, type AwarenessPeerInfo, parseAwarenessColour } from '../sync/index.ts'
+import { tileToWorldCenter } from './tile-geometry.ts'
 
 /** Stable peer id for the in-process AI assistant collaborator. */
 export const ASSISTANT_PEER_ID = 'ai-assistant'
@@ -106,8 +107,7 @@ export class AssistantPresenceController {
     if (!scene || !mapId) return false
     const tm = this.anyTileMap(scene)
     if (!tm) return false
-    const worldX = tm.pos.x + (tileX + 0.5) * tm.tileWidth
-    const worldY = tm.pos.y + (tileY + 0.5) * tm.tileHeight
+    const { x: worldX, y: worldY } = tileToWorldCenter(tm.pos, tm.tileWidth, tm.tileHeight, tileX, tileY)
     const aware = this.ensure()
     this.active = true
     const presence: AwarenessMessage = { type: 'presence', peerId: ASSISTANT_PEER_ID, info: this.info }
@@ -179,8 +179,9 @@ export class AssistantPresenceController {
   flashTile(tm: TileMap, tileX: number, tileY: number): void {
     const scene = this.host.getActiveScene()
     if (!scene) return
+    const centre = tileToWorldCenter(tm.pos, tm.tileWidth, tm.tileHeight, tileX, tileY)
     const actor = new Actor({
-      pos: new Vector(tm.pos.x + (tileX + 0.5) * tm.tileWidth, tm.pos.y + (tileY + 0.5) * tm.tileHeight),
+      pos: new Vector(centre.x, centre.y),
       z: 9_000, // below the cursor (10_000), above the tilemap
     })
     const colour = parseAwarenessColour(this.info.color)
