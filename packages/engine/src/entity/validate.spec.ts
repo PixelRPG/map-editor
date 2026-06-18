@@ -54,6 +54,21 @@ export default async () => {
       const errors = validateEntityDefinition(def, registry)
       expect(errors.some((e) => e.includes('unregistered component type "teleport"'))).toBe(true)
     })
+    await it('rejects a duplicate component type within one list', async () => {
+      // getComponentData returns the FIRST match, so a second component of
+      // the same type is silently ignored at spawn — validation must catch it.
+      const def: EntityDefinition = {
+        id: 'hero',
+        name: 'Hero',
+        components: [
+          { type: 'movement', tilesPerSec: 4 },
+          { type: 'movement', tilesPerSec: 8 },
+        ],
+      }
+      expect(
+        validateEntityDefinition(def, registry).some((e) => e.includes('duplicate component type "movement"')),
+      ).toBe(true)
+    })
     await it('flags wrong field types always, but required only when requireComplete', async () => {
       // Wrong TYPE is always rejected (even on the lenient save path).
       const wrongType: EntityDefinition = {
