@@ -11,7 +11,6 @@ import {
   createMapEditorDataOp,
   type EditorTool,
   formatError,
-  MapFormat,
   type SpriteSetData,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
@@ -32,9 +31,9 @@ import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { buildVariant } from '../services/gvariant.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
-import { writeTextFile } from '../services/file-io.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { LanSessionBackend } from '../services/lan-session-backend.ts'
+import { MapPersistenceController } from '../services/map-persistence-controller.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
 import { buildPixelrpgJoinUrl } from '../services/pixelrpg-url.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
@@ -249,6 +248,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
     else this._scene_editor_view.setEngineWidget(null)
   })
+  // Map-file persistence (serialise MapData → source JSON, atlas/preview
+  // editor-data writes). Injected accessors read this window's live state;
+  // the op plumbing for editor-data changes stays here (collab is the
+  // window's concern). See ApplicationWindow split, step 2.
+  private _mapPersistCtl = new MapPersistenceController({
+    getMapResource: (mapId) => this._loadedProject?.resource.maps.get(mapId) ?? null,
+    getScene: (mapId) => this._scenesById.get(mapId) ?? null,
+    getCurrentSceneId: () => this._currentSceneId,
+    showError: (message) => this._showToast(message),
+    sendMapEditorDataChange: (mapId, editorData) =>
+      this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
+        createMapEditorDataOp({ peerId, seq, mapId, editorData }),
+      ),
+  })
   /**
    * Per-mode controllers — own their view's data + mutation +
    * persistence path so this window stays a thin coordinator. Both
@@ -354,7 +367,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // applied it in memory) — persist that map file here (this window
     // owns map IO) and reposition its atlas card.
     this._projectStore.on('map-editor-data-changed', ({ mapId }) => {
-      this._persistMap(mapId, _('Could not save atlas position'))
+      this._mapPersistCtl.persistMap(mapId, _('Could not save atlas position'))
       this._refreshAtlasScenePosition(mapId)
     })
   }
@@ -383,13 +396,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._lastAtlasSelection = id
     })
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
-      this._persistAtlasPosition(id, x, y)
+      this._mapPersistCtl.persistAtlasPosition(id, x, y)
     })
     this.signals.connect(
       this._atlas_view,
       'preview-moved',
       (_v: AtlasView, id: string, tileX: number, tileY: number) => {
-        this._persistPreviewViewport(id, tileX, tileY)
+        this._mapPersistCtl.persistPreviewViewport(id, tileX, tileY)
       },
     )
     // Every view's mode-rail forwards `mode-changed` at the view
@@ -409,7 +422,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // `setLayerLocked`, then asks the host to persist. Mirrors the
     // existing `scene-moved` → `_persistAtlasPosition` flow.
     this.signals.connect(this._scene_editor_view, 'persist-requested', () => {
-      this._persistCurrentMap()
+      this._mapPersistCtl.persistCurrentMap()
     })
 
     // A placement was removed via the Props tab — refresh the
@@ -419,7 +432,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (this._loadedProject && this._currentSceneId) {
         void this._scene_editor_view.populateFromProject(this._loadedProject, this._currentSceneId)
       }
-      this._persistCurrentMap()
+      this._mapPersistCtl.persistCurrentMap()
     })
 
     // Per-mode controllers — thin lenses over the shared ProjectStore.
@@ -813,59 +826,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * Serialise the currently-edited map's `MapData` back to disk.
-   * Called by the scene editor's `persist-requested` signal after
-   * an in-place mutation (layer visibility, layer lock — and any
-   * future inspector-driven map mutation).
-   */
-  private _persistCurrentMap(): void {
-    if (!this._currentSceneId) return
-    this._persistMap(this._currentSceneId, _('Could not save layer changes'))
-  }
-
-  /**
-   * Write the atlas coordinates the user just dragged back into the
-   * map's source JSON. In-memory state always updates so the card
-   * position survives the session even if the disk write fails. In a
-   * live session the move also rides a `__project/map.editor-data`
-   * project-op — atlas drags happen with NO live scene, so the
-   * Command/op-log path isn't available (see AGENTS.md, transport
-   * rule 2's project-op exception).
-   */
-  private _persistAtlasPosition(mapId: string, x: number, y: number): void {
-    const mapResource = this._loadedProject?.resource.maps.get(mapId)
-    if (!mapResource?.mapData) return
-    mapResource.mapData.editorData = { ...mapResource.mapData.editorData, atlasX: x, atlasY: y }
-    this._persistMap(mapId, _('Could not save atlas position'))
-    this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
-      createMapEditorDataOp({ peerId, seq, mapId, editorData: { atlasX: x, atlasY: y } }),
-    )
-  }
-
-  /**
-   * Persist the preview-viewport centre the user just panned on an
-   * atlas card. Same flow as {@link _persistAtlasPosition}: in-memory
-   * update + disk write + `__project/map.editor-data` op for peers.
-   * The in-memory `SampleScene` mirror keeps the viewport stable when
-   * the atlas re-renders (e.g. after a card move).
-   */
-  private _persistPreviewViewport(mapId: string, tileX: number, tileY: number): void {
-    const mapResource = this._loadedProject?.resource.maps.get(mapId)
-    if (!mapResource?.mapData) return
-    const preview = { ...mapResource.mapData.editorData?.preview, tileX, tileY }
-    mapResource.mapData.editorData = { ...mapResource.mapData.editorData, preview }
-    const scene = this._scenesById.get(mapId)
-    if (scene) {
-      scene.previewTileX = tileX
-      scene.previewTileY = tileY
-    }
-    this._persistMap(mapId, _('Could not save preview section'))
-    this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
-      createMapEditorDataOp({ peerId, seq, mapId, editorData: { preview } }),
-    )
-  }
-
-  /**
    * Re-read a map's persisted `editorData.atlasX/atlasY` into its atlas
    * card and re-render the atlas. Called after an inbound peer
    * `__project/map.editor-data` lands so the card moves live — the
@@ -881,19 +841,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (typeof editorData.atlasX === 'number') scene.x = editorData.atlasX
     if (typeof editorData.atlasY === 'number') scene.y = editorData.atlasY
     this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
-  }
-
-  /**
-   * Write a map's `MapData` back to its source JSON. Best-effort —
-   * a failure toasts but the in-memory mutation stays so the user
-   * sees their change in the editor even when persistence fails.
-   * Shared between `_persistCurrentMap` and `_persistAtlasPosition`.
-   */
-  private _persistMap(mapId: string, errorMessage: string): void {
-    const mapResource = this._loadedProject?.resource.maps.get(mapId)
-    if (!mapResource?.mapData) return
-    const ok = writeTextFile(mapResource.sourcePath, MapFormat.serialize(mapResource.mapData))
-    if (!ok) this._showToast(errorMessage)
   }
 
   vfunc_unmap(): void {
@@ -1155,7 +1102,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // Save unsaved tile edits before entering runtime so a crash
       // mid-playtest can't lose work. Best-effort — failures surface
       // as a toast but the playtest still proceeds.
-      if (isPlaying) this._persistCurrentMap()
+      if (isPlaying) this._mapPersistCtl.persistCurrentMap()
       this._engineCtl.engine?.setRuntimeMode(isPlaying)
       // Visual feedback on the FloatingPlay pill: icon + label swap
       // to "pause" while in playtest mode so it's clear what the
