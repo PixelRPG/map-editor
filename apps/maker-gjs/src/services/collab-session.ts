@@ -153,14 +153,26 @@ export class CollabSession {
    * editing has no live scene), so they're handled here rather than in
    * the engine-tied SessionController.
    */
-  public onProjectOpReceived: ((op: ProjectOp) => void) | null = null
+  get onProjectOpReceived(): ((op: ProjectOp) => void) | null {
+    return this._onProjectOpReceived
+  }
+  set onProjectOpReceived(fn: ((op: ProjectOp) => void) | null) {
+    this._onProjectOpReceived = fn
+    if (fn) for (const op of this.preSinkProjectOps.splice(0)) fn(op)
+  }
   /**
    * Sink for a completed sprite-set-import transfer. The maker's
    * `ProjectStore` registers itself here to write the image + descriptor
    * into the project and register the set. Fed by the chunk reassembler
    * once all chunks of one transfer arrive.
    */
-  public onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null = null
+  get onSpriteSetAddReceived(): ((payload: SpriteSetAddPayload) => void) | null {
+    return this._onSpriteSetAddReceived
+  }
+  set onSpriteSetAddReceived(fn: ((payload: SpriteSetAddPayload) => void) | null) {
+    this._onSpriteSetAddReceived = fn
+    if (fn) for (const p of this.preSinkSpriteSetAdds.splice(0)) fn(p)
+  }
   /**
    * Sink for a completed sprite-set DESCRIPTOR update (rename / animation
    * edit / tile-property change — no image bytes). The maker's
@@ -168,7 +180,29 @@ export class CollabSession {
    * set it already has. Fed by a dedicated reassembler once all chunks of
    * one transfer arrive.
    */
-  public onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null = null
+  get onSpriteSetUpdateReceived(): ((payload: SpriteSetUpdatePayload) => void) | null {
+    return this._onSpriteSetUpdateReceived
+  }
+  set onSpriteSetUpdateReceived(fn: ((payload: SpriteSetUpdatePayload) => void) | null) {
+    this._onSpriteSetUpdateReceived = fn
+    if (fn) for (const p of this.preSinkSpriteSetUpdates.splice(0)) fn(p)
+  }
+  private _onProjectOpReceived: ((op: ProjectOp) => void) | null = null
+  private _onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null = null
+  private _onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null = null
+  /**
+   * Holding pens for project-level traffic that arrives before its sink is
+   * registered — the joiner's `start()` → `ProjectStore.setCollabSession`
+   * (after the snapshot + sandbox project load) window. Without these the
+   * op was dropped on the floor: a host editing the cast / entity-library /
+   * sprite-sets while a joiner connects silently desynced the joiner.
+   * Drained in arrival order when the matching sink is assigned. The plain
+   * project-op channel is idempotent upserts, so replaying one already
+   * folded into the snapshot is safe.
+   */
+  private readonly preSinkProjectOps: ProjectOp[] = []
+  private readonly preSinkSpriteSetAdds: SpriteSetAddPayload[] = []
+  private readonly preSinkSpriteSetUpdates: SpriteSetUpdatePayload[] = []
   private closed = false
   private engine: Engine | null = null
   private readonly peerId: string
@@ -276,15 +310,27 @@ export class CollabSession {
         // surfacing the (heavy, binary) payload to its own sink.
         if ((op as ProjectOp).kind === SPRITESET_ADD_CHUNK_KIND) {
           const payload = this.spriteSetReassembler.accept(op as SpriteSetAddChunkOp)
-          if (payload) this.onSpriteSetAddReceived?.(payload)
+          // Buffer the completed payload if the sink isn't registered yet
+          // (joiner pre-attach window) so it isn't dropped.
+          if (payload) {
+            if (this._onSpriteSetAddReceived) this._onSpriteSetAddReceived(payload)
+            else this.preSinkSpriteSetAdds.push(payload)
+          }
         } else if ((op as ProjectOp).kind === SPRITESET_UPDATE_CHUNK_KIND) {
           // Descriptor-only updates (rename / animation / tile-prop) are
           // also chunked — a fat tileset descriptor can exceed the SCTP
           // single-send ceiling.
           const payload = this.spriteSetUpdateReassembler.accept(op as SpriteSetUpdateChunkOp)
-          if (payload) this.onSpriteSetUpdateReceived?.(payload)
+          if (payload) {
+            if (this._onSpriteSetUpdateReceived) this._onSpriteSetUpdateReceived(payload)
+            else this.preSinkSpriteSetUpdates.push(payload)
+          }
+        } else if (this._onProjectOpReceived) {
+          this._onProjectOpReceived(op as ProjectOp)
         } else {
-          this.onProjectOpReceived?.(op as ProjectOp)
+          // No sink yet — buffer until ProjectStore registers itself
+          // (drained by the onProjectOpReceived setter).
+          this.preSinkProjectOps.push(op as ProjectOp)
         }
         return
       }
@@ -561,6 +607,9 @@ export class CollabSession {
     }
     this.subscriptions.length = 0
     this.preAttachBuffer.clear()
+    this.preSinkProjectOps.length = 0
+    this.preSinkSpriteSetAdds.length = 0
+    this.preSinkSpriteSetUpdates.length = 0
     this.spriteSetReassembler.clear()
     this.spriteSetUpdateReassembler.clear()
     this.cursorRenderer?.close()

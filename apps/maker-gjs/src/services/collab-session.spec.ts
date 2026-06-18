@@ -334,5 +334,35 @@ export default async () => {
       expect(threw).toBe(true)
       expect(applied).toHaveLength(0)
     })
+
+    await it('buffers project ops received before the sink is registered, then drains on set', async () => {
+      // Joiner window: ops arrive between start() and ProjectStore
+      // registering its sink (after the snapshot + sandbox project load).
+      // Pre-fix these were dropped → silent cast/library/sprite-set desync.
+      const session = makeJoinerSession()
+      const op = (id: string, seq: number): ProjectOp => ({
+        kind: '__project/entity.remove',
+        payload: { id },
+        peerId: 'host-peer',
+        seq,
+      })
+
+      // No onProjectOpReceived sink yet — these must be buffered.
+      session.peer.events.emit('op-received', { op: op('a', 0) })
+      session.peer.events.emit('op-received', { op: op('b', 1) })
+      // Own echo is still ignored, even while buffering.
+      session.peer.events.emit('op-received', { op: { ...op('self', 2), peerId: 'joiner-buffer' } })
+
+      const received: ProjectOp[] = []
+      session.onProjectOpReceived = (o) => received.push(o)
+
+      // Registering the sink drained the buffer, in arrival order.
+      expect(received.map((o) => (o.payload as { id: string }).id)).toStrictEqual(['a', 'b'])
+
+      // Live ops after registration flow straight through.
+      session.peer.events.emit('op-received', { op: op('c', 3) })
+      expect(received.map((o) => (o.payload as { id: string }).id)).toStrictEqual(['a', 'b', 'c'])
+      session.close('test')
+    })
   })
 }
