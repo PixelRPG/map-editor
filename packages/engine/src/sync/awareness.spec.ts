@@ -1,6 +1,12 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { AwarenessManager, type AwarenessMessage, type AwarenessPeerState, isAwarenessMessage } from './awareness.ts'
+import {
+  AwarenessManager,
+  type AwarenessMessage,
+  type AwarenessPeerState,
+  DEFAULT_PEER_COLOR,
+  isAwarenessMessage,
+} from './awareness.ts'
 
 interface FakeClock {
   now: () => number
@@ -244,7 +250,7 @@ export default async () => {
       const bob = mgr.getPeer('peer-bob')
       expect(bob).not.toBeNull()
       expect(bob?.info.displayName).toBe('peer-bob')
-      expect(bob?.info.color).toBe('#888')
+      expect(bob?.info.color).toBe(DEFAULT_PEER_COLOR)
     })
   })
 }

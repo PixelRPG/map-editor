@@ -2,10 +2,16 @@ import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteIndex } from '../types/SpriteIndex.ts'
 import { isValidTileId } from './sprite.validator.ts'
 
-function getSpriteCount(spriteSetResource: SpriteIndex): number {
-  const sprites = spriteSetResource.sprites
-  const ids = Object.keys(sprites).map((id) => Number.parseInt(id, 10))
-  return ids.length > 0 ? Math.max(...ids) + 1 : 0
+/**
+ * The gid extent a sprite set occupies: `maxLocalId + 1`, NOT a count —
+ * sprite ids are sparse, so the span can exceed the number of sprites.
+ * Used to compute `lastGid = firstGid + span - 1`. Uses `reduce` rather
+ * than `Math.max(...ids)`, which would spread every id as a call arg and
+ * RangeError on a very large sprite set.
+ */
+export function getSpriteGidSpan(spriteSetResource: SpriteIndex): number {
+  const ids = Object.keys(spriteSetResource.sprites).map((id) => Number.parseInt(id, 10))
+  return ids.length > 0 ? ids.reduce((max, id) => (id > max ? id : max), 0) + 1 : 0
 }
 
 function spriteExists(spriteSetResource: SpriteIndex, spriteId: number): boolean {
@@ -45,8 +51,7 @@ export function findSpriteInfoForTileId(
     }
 
     const firstGid = spriteSetRef.firstGid
-    const spriteCount = getSpriteCount(spriteSetResource)
-    const lastGid = firstGid + spriteCount - 1
+    const lastGid = firstGid + getSpriteGidSpan(spriteSetResource) - 1
 
     if (tileId >= firstGid && tileId <= lastGid) {
       const localSpriteId = tileId - firstGid

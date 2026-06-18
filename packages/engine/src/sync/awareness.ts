@@ -96,6 +96,14 @@ export interface AwarenessEventMap {
 const DEFAULT_CURSOR_THROTTLE_MS = 30
 
 /**
+ * Fallback colour for a peer (or the AI assistant) whose presence info is
+ * missing or carries a bogus colour token — mid-grey so it still renders.
+ * Shared by the roster fallback ({@link AwarenessManager}) and the cursor
+ * renderer's parse-failure path so the two can't drift.
+ */
+export const DEFAULT_PEER_COLOR = '#888888'
+
+/**
  * Validates a parsed inbound message before applying it. Defends
  * against the relay/transport handing us a buffer that happens to
  * parse as JSON but isn't a real awareness frame (third-party noise
@@ -336,7 +344,7 @@ export class AwarenessManager {
 
   private updatePeer(peerId: string, patch: Partial<Pick<AwarenessPeerState, 'info' | 'cursor' | 'selection'>>): void {
     const prev = this.peers.get(peerId)
-    const info = patch.info ?? prev?.info ?? { displayName: peerId, color: '#888' }
+    const info = patch.info ?? prev?.info ?? { displayName: peerId, color: DEFAULT_PEER_COLOR }
     const cursor = patch.cursor !== undefined ? patch.cursor : (prev?.cursor ?? null)
     const selection = patch.selection !== undefined ? patch.selection : (prev?.selection ?? null)
     const next: AwarenessPeerState = {
