@@ -154,7 +154,15 @@ export class Engine {
         keepRuntimeMode: true,
         keepZoom: true,
       }).catch((err) => {
-        console.warn(`[Engine] teleport to "${targetMapId}" failed:`, formatError(err))
+        // A failed teleport (e.g. missing target map) leaves the player
+        // mid-transition with no scene switch. Surface it as an engine
+        // ERROR so the host can react, instead of only console.warn-ing
+        // (mirrors the loader error path).
+        this.logger.error(`teleport to "${targetMapId}" failed:`, formatError(err))
+        this.events.emit(EngineEvent.ERROR, {
+          message: `Teleport to "${targetMapId}" failed`,
+          cause: err instanceof Error ? err : new Error(String(err)),
+        })
       })
     })
   }

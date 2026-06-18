@@ -505,13 +505,24 @@ export class MapResource implements Loadable<TileMap> {
     return this.spriteSetResources
   }
 
+  /** Ids of the currently-visible layers (for layer-list / picker UI). */
   getAvailableLayerIds(): string[] {
     return this._mapData.layers.filter((layer) => layer.visible).map((layer) => layer.id)
   }
 
+  /**
+   * The first layer that can accept paint — the editor's fallback target
+   * when no active layer is set (pencil/object preview, TileEditorSystem).
+   *
+   * Deliberately NOT filtered by visibility: a hidden first layer must
+   * still be the fallback target (matching its on-disk order). Filtering
+   * by `visible` here meant hiding the first layer silently redirected
+   * paint to a different visible layer — or, with every layer hidden,
+   * returned null so paint landed nowhere.
+   */
   getFirstLayerId(): string | null {
-    const layerIds = this.getAvailableLayerIds()
-    return layerIds.length > 0 ? layerIds[0] : null
+    const first = this._mapData.layers[0]
+    return first ? first.id : null
   }
 
   isLoaded(): boolean {

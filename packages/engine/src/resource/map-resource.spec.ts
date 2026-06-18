@@ -18,4 +18,30 @@ export default async () => {
       expect(resource.getSpriteSetResource('ghost')).toBe(undefined)
     })
   })
+
+  await describe('MapResource.getFirstLayerId', async () => {
+    await it('returns the first layer regardless of visibility (paint-target fallback)', async () => {
+      const resource = new MapResource('maps/main.json', { headless: true })
+      const withData = resource as unknown as { _mapData: unknown }
+      withData._mapData = {
+        layers: [
+          { id: 'background', visible: false },
+          { id: 'ground', visible: true },
+        ],
+      }
+      // The first layer is hidden — it must STILL be the fallback target,
+      // not silently redirected to the first *visible* layer (which would
+      // make paint land on the wrong layer, or nowhere if all are hidden).
+      expect(resource.getFirstLayerId()).toBe('background')
+      // The visible-only query is unchanged — UI uses it for the layer list.
+      expect(resource.getAvailableLayerIds()).toStrictEqual(['ground'])
+    })
+
+    await it('returns null when the map has no layers', async () => {
+      const resource = new MapResource('maps/empty.json', { headless: true })
+      const withData = resource as unknown as { _mapData: unknown }
+      withData._mapData = { layers: [] }
+      expect(resource.getFirstLayerId()).toBe(null)
+    })
+  })
 }
