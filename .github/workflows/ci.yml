@@ -110,6 +110,14 @@ jobs:
       - name: Verify barrel files are not stale
         run: gjsify foreach check:barrels -v -t
 
+      - name: Verify every spec is registered in its package test.mts
+        # `gjsify test` runs only the suites imported + passed to run() in
+        # each package's hand-maintained src/test.mts. A *.spec.ts that
+        # isn't registered there silently never runs (CI green, testing
+        # nothing) — this trap has bitten the repo twice. Fails if any
+        # spec file is missing from its package's test.mts.
+        run: node scripts/check-spec-registration.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the
