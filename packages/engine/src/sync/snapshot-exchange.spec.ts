@@ -363,6 +363,51 @@ export default async () => {
       }
     })
 
+    await it('a timed-out request clears partial chunks so a retry reassembles cleanly', async () => {
+      // Pre-fix: the timeout path nulled `pending` but left the
+      // partially-received chunks in the reassembler. A retry then
+      // mixed the stale chunk (totalChunks=3) with the new transfer
+      // and tripped "chunk batch size changed mid-stream".
+      const sessions = await createConnectedSessionPair()
+      try {
+        const joinerExchange = exchangeFor(sessions.joiner, 'joiner-retry', () => null)
+
+        // Request 1: receive a partial chunk (0 of 3), then time out.
+        const first = joinerExchange.request('room-partial', 50)
+        await flushMicrotasks()
+        sessions.host.sendOp({
+          kind: SNAPSHOT_CHUNK_KIND,
+          payload: { chunkIndex: 0, totalChunks: 3, data: '{"part' },
+          peerId: 'host-retry',
+          seq: 0,
+        })
+        let firstErr: Error | null = null
+        try {
+          await first
+        } catch (err) {
+          firstErr = err as Error
+        }
+        expect(firstErr?.message).toContain('timed out')
+
+        // Request 2: a fresh single-chunk transfer must reassemble
+        // cleanly — no leftover chunk from request 1.
+        const second = joinerExchange.request('room-retry', 2_000)
+        await flushMicrotasks()
+        sessions.host.sendOp({
+          kind: SNAPSHOT_CHUNK_KIND,
+          payload: { chunkIndex: 0, totalChunks: 1, data: JSON.stringify(FAKE_SNAPSHOT) },
+          peerId: 'host-retry',
+          seq: 1,
+        })
+        const received = await second
+        expect(received.project.id).toBe('shared')
+
+        joinerExchange.dispose()
+      } finally {
+        sessions.close()
+      }
+    })
+
     await it('rejects invalid chunk envelopes (negative index, totalChunks=0)', async () => {
       const sessions = await createConnectedSessionPair()
       try {
