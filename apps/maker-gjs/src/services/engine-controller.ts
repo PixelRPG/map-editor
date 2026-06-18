@@ -1,6 +1,7 @@
 import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
 import { Engine } from '@pixelrpg/gjs'
 import { TypedEmitter } from './typed-emitter.ts'
+import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
@@ -224,14 +225,13 @@ export class EngineController {
   stepZoom(delta: number): void {
     const current = this.getCameraZoom()
     if (current == null) return
-    const next = Math.max(0.1, Math.min(4, Math.round((current + delta) * 10) / 10))
-    this.applyZoom(next)
+    this.applyZoom(calculateNextZoom(current, delta))
   }
 
   private _attachZoomHook(): void {
     if (this._zoomHookAttached || !this._engine) return
     this._zoomHookAttached = this._engine.onCameraZoomChanged((zoom) => {
-      if (Math.abs(zoom - this._lastReportedZoom) < 0.01) return
+      if (!shouldReportZoomChange(zoom, this._lastReportedZoom)) return
       this._lastReportedZoom = zoom
       this._events.emit('zoom-changed', zoom)
     })
