@@ -17,10 +17,10 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@gjsify/canvas2d": "^0.4.36",
-    "@gjsify/dom-elements": "^0.4.36",
-    "@gjsify/event-bridge": "^0.4.36",
-    "@gjsify/webgl": "^0.4.36",
+    "@gjsify/canvas2d": "^0.7.2",
+    "@gjsify/dom-elements": "^0.7.2",
+    "@gjsify/event-bridge": "^0.7.2",
+    "@gjsify/webgl": "^0.7.2",
     "@pixelrpg/engine": "workspace:*",
     "@pixelrpg/story-gjs": "workspace:^",
     "excalibur": "^0.32.0"
