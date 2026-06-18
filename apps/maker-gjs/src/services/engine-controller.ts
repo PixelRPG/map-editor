@@ -92,6 +92,16 @@ export class EngineController {
   private _layerFlagHookAttached = false
   private _pointerTileHookAttached = false
   private readonly _events = new TypedEmitter<EngineControllerEvents>()
+  /**
+   * Excalibur `events.on(...)` subscriptions opened on the current engine
+   * (TILE_PICKED / PLACEMENT_SELECTED / LAYER_FLAG_CHANGED). Closed in
+   * {@link dispose} so teardown is deterministic rather than relying on the
+   * engine emitter being GC'd — the closures capture `this`, so a pinned
+   * emitter would otherwise keep firing into a controller whose `_engine`
+   * is a newer instance. (The zoom/undo/pointer hooks return a boolean; the
+   * gjs `Engine` widget owns those subscriptions and drops them on dispose.)
+   */
+  private readonly _hookSubs: Array<{ close(): void }> = []
 
   constructor(private readonly slot: EngineSlot) {}
 
@@ -173,6 +183,10 @@ export class EngineController {
     // critical). Calling `Engine.dispose()` synchronously here keeps
     // teardown in a user-action context where JS callbacks run
     // freely.
+    // Close the excalibur subscriptions we own before tearing the engine
+    // down, so the capturing closures stop firing deterministically.
+    for (const sub of this._hookSubs) sub.close()
+    this._hookSubs.length = 0
     this._engine.dispose()
     this.slot(null)
     this._engine = null
@@ -232,28 +246,31 @@ export class EngineController {
 
   private _attachTilePickedHook(): void {
     if (this._tilePickedHookAttached || !this._engine) return
-    // The gjs Engine widget owns the EventEmitter; on dispose the
-    // widget is dropped and its emitter is GC'd along with this
-    // closure, so we don't track an explicit Subscription handle.
-    this._engine.events.on(EngineEvent.TILE_PICKED, (payload) => {
-      this._events.emit('tile-picked', payload)
-    })
+    this._hookSubs.push(
+      this._engine.events.on(EngineEvent.TILE_PICKED, (payload) => {
+        this._events.emit('tile-picked', payload)
+      }),
+    )
     this._tilePickedHookAttached = true
   }
 
   private _attachPlacementSelectedHook(): void {
     if (this._placementSelectedHookAttached || !this._engine) return
-    this._engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
-      this._events.emit('placement-selected', payload)
-    })
+    this._hookSubs.push(
+      this._engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
+        this._events.emit('placement-selected', payload)
+      }),
+    )
     this._placementSelectedHookAttached = true
   }
 
   private _attachLayerFlagHook(): void {
     if (this._layerFlagHookAttached || !this._engine) return
-    this._engine.events.on(EngineEvent.LAYER_FLAG_CHANGED, (payload) => {
-      this._events.emit('layer-flag-changed', payload)
-    })
+    this._hookSubs.push(
+      this._engine.events.on(EngineEvent.LAYER_FLAG_CHANGED, (payload) => {
+        this._events.emit('layer-flag-changed', payload)
+      }),
+    )
     this._layerFlagHookAttached = true
   }
 
