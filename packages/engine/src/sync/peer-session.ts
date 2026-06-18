@@ -26,6 +26,15 @@ export interface PeerSessionOptions {
   rtcFactory?: RTCPeerConnectionFactory
   /** Override the default STUN-only ICE config. */
   iceServers?: readonly RTCIceServer[]
+  /**
+   * Grace period, in ms, before a transient `connectionState ===
+   * 'disconnected'` is treated as a hard close. WebRTC uses
+   * `disconnected` for a momentary ICE-consent blip (Wi-Fi hiccup,
+   * brief packet loss) that usually recovers to `connected` on its
+   * own — only `failed` is terminal. Defaults to 5 s. Tests pass `0`
+   * to exercise the elapse path on the next macrotask.
+   */
+  disconnectGraceMs?: number
 }
 
 /**
@@ -85,6 +94,9 @@ function plog(role: PeerRole, message: string): void {
   }
 }
 
+/** Default grace before a transient `disconnected` becomes a hard close. */
+const DEFAULT_DISCONNECT_GRACE_MS = 5_000
+
 export class PeerSession {
   public readonly events = new EventEmitter<PeerSessionEventMap>()
 
@@ -97,10 +109,21 @@ export class PeerSession {
   private closed = false
   private iceLocalCount = 0
   private iceRemoteCount = 0
+  // ICE candidates must not be added before the remote description is
+  // set — `addIceCandidate` throws / drops them otherwise. Inbound
+  // candidates that arrive first are buffered here and drained once
+  // `setRemoteDescription` completes (host glare, fast joiners).
+  private remoteDescriptionSet = false
+  private readonly pendingIce: RTCIceCandidateInit[] = []
+  // Running grace timer for a transient `disconnected` state (see
+  // `disconnectGraceMs`); cleared on recovery or close.
+  private disconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly disconnectGraceMs: number
 
   constructor(opts: PeerSessionOptions) {
     this.role = opts.role
     this.signalling = opts.signalling
+    this.disconnectGraceMs = opts.disconnectGraceMs ?? DEFAULT_DISCONNECT_GRACE_MS
 
     const factory = opts.rtcFactory ?? resolveRTCPeerConnection()
     if (!factory) {
@@ -150,11 +173,19 @@ export class PeerSession {
     this.pc.onconnectionstatechange = () => {
       plog(this.role, `pc.connectionState → ${this.pc.connectionState}`)
       switch (this.pc.connectionState) {
+        case 'connected':
+          // Recovered (possibly from a transient `disconnected`) —
+          // cancel any pending grace close.
+          this.clearDisconnectTimer()
+          break
         case 'failed':
           this.fail(new Error('peer connection failed'))
           break
         case 'disconnected':
-          if (!this.closed) this.close('peer-disconnected')
+          // Transient by spec — wait out a grace window before closing,
+          // because the ICE agent often recovers to `connected` on its
+          // own. Only `failed` is terminal.
+          this.scheduleDisconnectClose()
           break
       }
     }
@@ -207,6 +238,7 @@ export class PeerSession {
   close(reason = 'closed'): void {
     if (this.closed) return
     this.closed = true
+    this.clearDisconnectTimer()
     try {
       this.signalling.send({ type: 'bye', payload: { reason } })
     } catch {
@@ -302,6 +334,10 @@ export class PeerSession {
           plog(this.role, `received SDP ${msg.payload.type} (sdp.length=${msg.payload.sdp?.length ?? 0})`)
           await this.pc.setRemoteDescription(msg.payload)
           plog(this.role, `setRemoteDescription(${msg.payload.type}) OK`)
+          this.remoteDescriptionSet = true
+          // Guard the await so the common no-buffered-candidate handshake
+          // keeps its original microtask timing (no extra tick).
+          if (this.pendingIce.length > 0) await this.drainPendingIce()
           if (this.role === 'joiner') {
             plog('joiner', 'createAnswer()…')
             const answer = await this.pc.createAnswer()
@@ -325,6 +361,13 @@ export class PeerSession {
           }
           this.iceRemoteCount++
           plog(this.role, `ICE remote #${this.iceRemoteCount}: ${msg.payload.candidate ?? '<no candidate string>'}`)
+          if (!this.remoteDescriptionSet) {
+            // Arrived before the SDP answer/offer — buffer until the
+            // remote description is in place, then drain (see drainPendingIce).
+            plog(this.role, `ICE remote #${this.iceRemoteCount}: buffered (no remote description yet)`)
+            this.pendingIce.push(msg.payload)
+            return
+          }
           await this.pc.addIceCandidate(msg.payload)
           break
         }
@@ -343,6 +386,54 @@ export class PeerSession {
     if (this.state === 'connected' || this.closed) return
     if (this.opChannel?.readyState === 'open' && this.awarenessChannel?.readyState === 'open') {
       this.transitionTo('connected')
+    }
+  }
+
+  /** Flush ICE candidates buffered before the remote description was set. */
+  private async drainPendingIce(): Promise<void> {
+    if (this.pendingIce.length === 0) return
+    const buffered = this.pendingIce.splice(0)
+    plog(this.role, `ICE: draining ${buffered.length} buffered candidate(s)`)
+    for (const candidate of buffered) {
+      try {
+        await this.pc.addIceCandidate(candidate)
+      } catch (err) {
+        // A single bad candidate must not fail the whole connection —
+        // the ICE agent tolerates losing one. Log and continue.
+        plog(this.role, `ICE: buffered candidate rejected: ${formatErrorMessage(err)}`)
+      }
+    }
+  }
+
+  /**
+   * Start the grace timer for a transient `disconnected` state. If a
+   * timer is already running, leave it — the window measures from the
+   * first `disconnected` transition. Closes only if still disconnected
+   * when the window elapses.
+   */
+  private scheduleDisconnectClose(): void {
+    if (this.closed || this.disconnectTimer !== null) return
+    if (this.disconnectGraceMs <= 0) {
+      this.disconnectTimer = setTimeout(() => this.onDisconnectGraceElapsed(), 0)
+      return
+    }
+    this.disconnectTimer = setTimeout(() => this.onDisconnectGraceElapsed(), this.disconnectGraceMs)
+  }
+
+  private onDisconnectGraceElapsed(): void {
+    this.disconnectTimer = null
+    if (this.closed) return
+    // Recovered to a non-disconnected state during the grace window?
+    // Then leave the connection alone.
+    if (this.pc.connectionState === 'disconnected') {
+      this.close('peer-disconnected')
+    }
+  }
+
+  private clearDisconnectTimer(): void {
+    if (this.disconnectTimer !== null) {
+      clearTimeout(this.disconnectTimer)
+      this.disconnectTimer = null
     }
   }
 

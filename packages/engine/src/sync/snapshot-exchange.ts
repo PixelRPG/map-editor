@@ -131,7 +131,9 @@ export class SnapshotExchange {
   private readonly chunkSizeBytes: number
   private pending: PendingRequest | null = null
   // Shared validated reassembler (chunking.ts); one transfer at a time
-  // keyed by the fixed id — a new request resets it.
+  // keyed by the fixed id. Every settle path (resolve / fail / timeout /
+  // dispose) clears it, and `request()` clears it again defensively so a
+  // retry can never reassemble across a previous transfer's stale chunks.
   private readonly chunks = new ChunkReassembler<ProjectSnapshot>()
   private localSeq = 0
   private disposed = false
@@ -187,16 +189,20 @@ export class SnapshotExchange {
     if (this.pending) {
       return Promise.reject(new Error('SnapshotExchange: a snapshot request is already in flight — await it first'))
     }
+    // Defensive reset: guarantees the reassembler starts empty even if a
+    // previous transfer left partial chunks behind (see `chunks` above).
+    this.chunks.clear()
 
     return new Promise<ProjectSnapshot>((resolve, reject) => {
       const ms = timeoutMs ?? this.defaultTimeoutMs
       const timer =
         ms > 0
           ? setTimeout(() => {
+              // Route through failPending so the partial-chunk buffer is
+              // cleared alongside the pending request — a bare null-out
+              // would strand received chunks for the next retry.
               if (this.pending?.timer === timer) {
-                const p = this.pending
-                this.pending = null
-                p.reject(new Error(`SnapshotExchange: request timed out after ${ms} ms`))
+                this.failPending(new Error(`SnapshotExchange: request timed out after ${ms} ms`))
               }
             }, ms)
           : null

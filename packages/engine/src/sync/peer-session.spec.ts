@@ -170,8 +170,8 @@ export default async () => {
       expect(answer).toBeDefined()
     })
 
-    await it('forwards ICE candidates over signalling and applies inbound ones', async () => {
-      const { hostTransport, joinerTransport } = pair()
+    await it('forwards local ICE candidates over signalling', async () => {
+      const { hostTransport } = pair()
       const fakePc = new FakeRTCPeerConnection()
       const session = new PeerSession({
         role: 'host',
@@ -186,10 +186,94 @@ export default async () => {
       if (last?.type === 'ice-candidate') {
         expect((last.payload as { candidate: string }).candidate).toBe('a=fake')
       }
+    })
 
-      joinerTransport.send({ type: 'ice-candidate', payload: { candidate: 'a=remote' } })
+    await it('buffers inbound ICE until the remote description is set, then drains in order', async () => {
+      const { hostTransport, joinerTransport } = pair()
+      const fakePc = new FakeRTCPeerConnection()
+      const session = new PeerSession({
+        role: 'host',
+        signalling: hostTransport,
+        rtcFactory: factoryFor(fakePc),
+      })
+      void session
+
+      // Two candidates arrive BEFORE the SDP answer — must be buffered,
+      // not applied (addIceCandidate before setRemoteDescription throws).
+      joinerTransport.send({ type: 'ice-candidate', payload: { candidate: 'a=remote-1' } })
+      joinerTransport.send({ type: 'ice-candidate', payload: { candidate: 'a=remote-2' } })
       await new Promise((r) => queueMicrotask(() => r(undefined)))
-      expect(fakePc.addedIce).toStrictEqual([{ candidate: 'a=remote' }])
+      await new Promise((r) => queueMicrotask(() => r(undefined)))
+      expect(fakePc.addedIce).toStrictEqual([])
+
+      // The SDP answer sets the remote description → buffered candidates drain in order.
+      joinerTransport.send({ type: 'sdp', payload: { type: 'answer', sdp: 'fake-answer' } })
+      await new Promise((r) => queueMicrotask(() => r(undefined)))
+      await new Promise((r) => queueMicrotask(() => r(undefined)))
+      expect(fakePc.remoteDescription?.type).toBe('answer')
+      expect(fakePc.addedIce).toStrictEqual([{ candidate: 'a=remote-1' }, { candidate: 'a=remote-2' }])
+
+      // A candidate that arrives AFTER the remote description is applied immediately.
+      joinerTransport.send({ type: 'ice-candidate', payload: { candidate: 'a=remote-3' } })
+      await new Promise((r) => queueMicrotask(() => r(undefined)))
+      expect(fakePc.addedIce).toStrictEqual([
+        { candidate: 'a=remote-1' },
+        { candidate: 'a=remote-2' },
+        { candidate: 'a=remote-3' },
+      ])
+    })
+
+    await it('a transient disconnected within the grace window does not close the session', async () => {
+      const { hostTransport } = pair()
+      const fakePc = new FakeRTCPeerConnection()
+      const session = new PeerSession({
+        role: 'host',
+        signalling: hostTransport,
+        rtcFactory: factoryFor(fakePc),
+        disconnectGraceMs: 10_000,
+      })
+
+      let closed = false
+      session.events.on('closed', () => {
+        closed = true
+      })
+
+      // ICE blip: disconnected → recovers to connected before the grace elapses.
+      fakePc.connectionState = 'disconnected'
+      fakePc.onconnectionstatechange?.()
+      expect(closed).toBe(false)
+      expect(session.getState()).not.toBe('closed')
+
+      fakePc.connectionState = 'connected'
+      fakePc.onconnectionstatechange?.()
+      // Give any (incorrectly scheduled) timer a chance to fire.
+      await new Promise((r) => setTimeout(r, 0))
+      expect(closed).toBe(false)
+      expect(session.getState()).not.toBe('closed')
+    })
+
+    await it('a disconnected state that persists past the grace window closes the session', async () => {
+      const { hostTransport } = pair()
+      const fakePc = new FakeRTCPeerConnection()
+      const session = new PeerSession({
+        role: 'host',
+        signalling: hostTransport,
+        rtcFactory: factoryFor(fakePc),
+        disconnectGraceMs: 0,
+      })
+
+      let reason: string | undefined
+      session.events.on('closed', ({ reason: r }) => {
+        reason = r
+      })
+
+      fakePc.connectionState = 'disconnected'
+      fakePc.onconnectionstatechange?.()
+      // Grace is 0 → close fires on the next macrotask.
+      await new Promise((r) => setTimeout(r, 0))
+      await new Promise((r) => setTimeout(r, 0))
+      expect(session.getState()).toBe('closed')
+      expect(reason).toBe('peer-disconnected')
     })
 
     await it('emits state-changed → connected once both channels open', async () => {
