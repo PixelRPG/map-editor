@@ -18,13 +18,13 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {
-    "@gjsify/cli": "^0.7.2",
-    "@gjsify/unit": "^0.7.2",
+    "@gjsify/cli": "^0.8.0",
+    "@gjsify/unit": "^0.8.0",
     "@types/ws": "^8.5.12",
     "typescript": "^6.0.3",
     "ws": "^8.18.0"
   },
   "dependencies": {
-    "@gjsify/ws": "^0.7.2"
+    "@gjsify/ws": "^0.8.0"
   }
 }

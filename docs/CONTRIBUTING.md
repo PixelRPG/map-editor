@@ -85,7 +85,7 @@ git checkout -b docs/update-readme
 gjsify workspace @pixelrpg/maker-gjs start
 
 # Run the storybook
-gjsify workspace @pixelrpg/storybook-gjs start
+gjsify workspace @pixelrpg/gjs storybook
 
 # Type-check a single package
 gjsify workspace @pixelrpg/<pkg> check
@@ -109,12 +109,10 @@ gjsify lint     # check-only; fails on lint errors
 ```
 packages/
 ├── engine/       # Excalibur-based engine + editor logic
-├── gjs/          # GTK4/libadwaita widgets + Gdk preview pipeline
-└── story-gjs/    # Storybook framework for GTK widgets
+└── gjs/          # GTK4/libadwaita widgets + Gdk preview pipeline
 
 apps/
 ├── maker-gjs/         # The map editor (primary)
-├── storybook-gjs/     # Widget playground
 ├── game-browser/      # Browser-runtime template for game export
 ├── mcp-bridge/        # Dev-only MCP↔D-Bus orchestrator for agent-driving the maker
 └── signalling-server/ # Stateless WebSocket relay for cross-network WebRTC signalling
@@ -220,7 +218,7 @@ gjsify workspace @pixelrpg/signalling-server test   # relay room-manager + e2e
 - **Type-check**: `gjsify foreach check`
 - **Build**: `gjsify run build` — must succeed for all packages
 - **Smoke-test the editor**: `gjsify workspace @pixelrpg/maker-gjs start` — open a map, try the brush/eraser tools
-- **Smoke-test the storybook**: `gjsify workspace @pixelrpg/storybook-gjs start` — render widget stories
+- **Smoke-test the storybook**: `gjsify workspace @pixelrpg/gjs storybook` — render widget stories
 
 ### Linting & formatting
 
@@ -342,7 +340,7 @@ CI does **not** lint or format-check — run `gjsify lint` / `gjsify fix` locall
 
 - [Project README](../README.md) — overview, architecture, workspace layout
 - [AGENTS.md](../AGENTS.md) — coding conventions, ECS patterns, Blueprint, GTK4 lifecycle
-- Storybook: `gjsify workspace @pixelrpg/storybook-gjs start`
+- Storybook: `gjsify workspace @pixelrpg/gjs storybook`
 
 ## 🎉 Recognition
 

@@ -40,9 +40,7 @@ The previous architecture (PR #5 and earlier) used a WebKit WebView with RPC bet
 |---|---|
 | [`packages/engine`](packages/engine) | Excalibur-based engine + editor logic (Resources, Components, Systems, MapFormat) |
 | [`packages/gjs`](packages/gjs) | GTK4/libadwaita widgets that host the engine + Gdk-side preview pipeline |
-| [`packages/story-gjs`](packages/story-gjs) | Storybook-style framework for GTK widget stories |
 | [`apps/maker-gjs`](apps/maker-gjs) | The map editor application (primary) |
-| [`apps/storybook-gjs`](apps/storybook-gjs) | Component playground for `packages/gjs` widgets |
 | [`apps/game-browser`](apps/game-browser) | Browser-runtime template — seed for multi-platform game export |
 | [`apps/mcp-bridge`](apps/mcp-bridge) | Dev-only MCP↔D-Bus bridge for agent-driving the editor (`org.pixelrpg.maker.Control`) |
 | [`apps/signalling-server`](apps/signalling-server) | Stateless WebSocket relay for cross-network WebRTC signalling |
@@ -71,7 +69,7 @@ gjsify workspace @pixelrpg/maker-gjs start
 gjsify foreach check -v -t                         # type-check all packages (topological)
 gjsify foreach build -v -t                         # build all packages
 gjsify workspace @pixelrpg/maker-gjs start         # run the editor
-gjsify workspace @pixelrpg/storybook-gjs start     # run the widget storybook
+gjsify workspace @pixelrpg/gjs storybook           # run the widget storybook
 gjsify workspace @pixelrpg/game-browser build      # build the browser-runtime template
 gjsify fix                                         # format + safe-lint-fix (Biome via gjsify)
 gjsify lint                                        # lint-only
