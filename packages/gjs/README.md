@@ -10,7 +10,7 @@ Also provides a Gdk-side preview pipeline (`Sprite`, `SpriteSheet`, `ImageTextur
 - `widgets/map-editor` — `MapEditorPanel`, `LayerSelector`, `TilesetSelector`
 - `widgets/sprite` — `SpriteWidget`, `SpriteSheetWidget` (Gdk-rendered)
 - `sprite/` — preview-pipeline primitives: `Sprite`, `SpriteSheet`, `ImageTexture`
-- `stories.ts` — Storybook story registrations for the above (consumed by `@pixelrpg/storybook-gjs`)
+- `*.story.ts` — Storybook stories alongside the widgets, auto-discovered and launched via `gjsify storybook`
 
 ## Usage
 
@@ -35,4 +35,4 @@ gjsify workspace @pixelrpg/gjs check
 ## Related
 
 - [`@pixelrpg/engine`](../engine) — the engine being hosted
-- [`@pixelrpg/story-gjs`](../story-gjs) — Storybook framework used by this package's `.story.ts` files
+- [`@gjsify/storybook`](https://www.npmjs.com/package/@gjsify/storybook) — GTK storybook framework used by this package's `.story.ts` files

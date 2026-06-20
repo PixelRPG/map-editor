@@ -1,5 +1,5 @@
 import GObject from '@girs/gobject-2.0'
-import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
 import { SAMPLE_SCENES, SAMPLE_TELEPORTS } from '../../__demo__/world-sample'
 import { AtlasCanvas } from './atlas-canvas'
 

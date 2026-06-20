@@ -20,7 +20,7 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {
-    "@gjsify/unit": "^0.7.2",
+    "@gjsify/unit": "^0.8.0",
     "typescript": "^6.0.3"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 
-import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
 import { GdkSpriteSetResource } from '../../sprite'
 import { SpriteWidget } from './sprite.widget'
 

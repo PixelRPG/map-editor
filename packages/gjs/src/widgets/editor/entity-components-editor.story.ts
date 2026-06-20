@@ -1,6 +1,6 @@
 import GObject from '@girs/gobject-2.0'
 import type { EntityDefinition } from '@pixelrpg/engine'
-import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@pixelrpg/story-gjs'
+import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
 import { EntityComponentsEditor } from './entity-components-editor'
 
 const SAMPLE_ENTITIES: Record<string, EntityDefinition> = {
