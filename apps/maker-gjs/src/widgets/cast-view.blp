@@ -2,18 +2,15 @@ using Gtk 4.0;
 using Adw 1;
 
 template $CastView : $PixelRpgResponsiveEditorView {
-  // Outer OverlaySplitView holds the ModeRail (left navigation) for the
-  // whole view's lifetime. The central content is an `Adw.NavigationView`
-  // master-detail drill-down: the GALLERY page lists every character as a
-  // card (with, on desktop, a right quick-view sidebar for the selected
-  // card); activating one DRILLS into a dedicated DETAIL page (preview +
-  // full inspector). The detail page is its own sub-page with a back
-  // button.
+  // Outer OverlaySplitView holds the ModeRail (left navigation). The
+  // central content is an `Adw.NavigationSplitView` master-detail: a
+  // filterable character LIST on the left (sidebar) and a rich detail
+  // pane on the right (content). On narrow widths the split collapses
+  // to a drill-down (tap a row → detail with a back button).
   //
-  // Cast is a Characters-only lens now — a friendly hero/NPC roster.
-  // Sprite sheets (appearances) + their animation editor live in the
-  // unified Sheets view; the character inspector just *picks* an
-  // appearance and deep-links into the Sheets editor to tweak it.
+  // Cast is a Characters-only lens — a friendly hero/NPC roster. Sprite
+  // sheets (appearances) live in the Sheets view; the detail just picks
+  // an appearance and deep-links into the Sheets editor to tweak it.
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -28,225 +25,244 @@ template $CastView : $PixelRpgResponsiveEditorView {
       project-tagline: _("Cast view");
     };
 
-    content: Adw.NavigationView nav {
-      // ── Gallery (master) ──────────────────────────────────────────
-      Adw.NavigationPage {
-        tag: "gallery";
+    content: Adw.NavigationSplitView cast_split {
+      min-sidebar-width: 300;
+      max-sidebar-width: 340;
+      collapsed: bind template.inspector-collapsed;
+
+      // ── Master: filterable character roster ───────────────────────
+      sidebar: Adw.NavigationPage {
+        tag: "roster";
         title: _("Cast");
 
-        // Desktop: cards (content) + a read-only quick-view sidebar for
-        // the selected card (right). The split collapses on narrow
-        // widths (`inspector-collapsed`), where the sidebar is hidden
-        // and a tap drills straight into the detail page instead.
-        child: Adw.OverlaySplitView gallery_split {
-          sidebar-position: end;
-          min-sidebar-width: 260;
-          max-sidebar-width: 340;
-          pin-sidebar: true;
-          collapsed: bind template.inspector-collapsed;
-          show-sidebar: bind template.show-quickview bidirectional;
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {
+            show-end-title-buttons: false;
 
-          sidebar: Gtk.ScrolledWindow {
-            hscrollbar-policy: never;
-            vscrollbar-policy: automatic;
+            [start]
+            Gtk.ToggleButton library_toggle {
+              icon-name: "sidebar-show-symbolic";
+              tooltip-text: _("Toggle library");
+              active: bind template.show-library bidirectional;
+            }
 
-            child: Gtk.Stack quick_stack {
-              Gtk.StackPage {
-                name: "empty";
-                child: Adw.StatusPage {
-                  icon-name: "people-symbolic";
-                  title: _("No selection");
-                  description: _("Select a character to see its details.");
-                };
-              }
-
-              Gtk.StackPage {
-                name: "info";
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 12;
-                  margin-top: 18;
-                  margin-bottom: 18;
-                  margin-start: 18;
-                  margin-end: 18;
-
-                  $PixelRpgCharacterPreview quick_preview {
-                    frame-size: 160;
-                    halign: center;
-                    show-controls: false;
-                    auto-cycle: true;
-                  }
-
-                  Gtk.Label quick_name {
-                    halign: center;
-                    wrap: true;
-                    justify: center;
-                    styles ["title-2"]
-                  }
-
-                  Gtk.Label quick_kind {
-                    halign: center;
-                    styles ["caption", "dim-label"]
-                  }
-
-                  Gtk.Label quick_player {
-                    label: _("Player character");
-                    halign: center;
-                    visible: false;
-                    styles ["caption", "accent"]
-                  }
-
-                  Gtk.Label quick_speed {
-                    halign: center;
-                    styles ["caption", "dim-label"]
-                  }
-
-                  Gtk.Button quick_edit {
-                    label: _("Edit");
-                    halign: center;
-                    margin-top: 6;
-                    styles ["suggested-action", "pill"]
-                  }
-                };
-              }
+            title-widget: Gtk.Label {
+              label: _("Characters");
+              styles ["heading"]
             };
-          };
 
-          content: Adw.ToolbarView {
-            top-bar-style: flat;
+            [end]
+            Gtk.Button new_character_button {
+              icon-name: "list-add-symbolic";
+              action-name: "win.new-character";
+              tooltip-text: _("Add a new character");
+              styles ["flat"]
+            }
+          }
 
-            [top]
-            Adw.HeaderBar {
-              show-start-title-buttons: false;
-              show-end-title-buttons: false;
+          content: Gtk.Box {
+            orientation: vertical;
+            spacing: 0;
 
-              [start]
-              Gtk.ToggleButton library_toggle {
-                icon-name: "sidebar-show-symbolic";
-                tooltip-text: _("Toggle library");
-                active: bind template.show-library bidirectional;
+            // Role filter — All / Heroes / NPCs.
+            Gtk.Box filter_bar {
+              orientation: horizontal;
+              halign: start;
+              spacing: 6;
+              margin-top: 8;
+              margin-bottom: 8;
+              margin-start: 12;
+              margin-end: 12;
+
+              Gtk.ToggleButton filter_all {
+                label: _("All");
+                active: true;
+                styles ["pill"]
               }
 
-              [end]
-              Gtk.ToggleButton quickview_toggle {
-                icon-name: "sidebar-show-right-symbolic";
-                tooltip-text: _("Toggle details");
-                active: bind template.show-quickview bidirectional;
+              Gtk.ToggleButton filter_heroes {
+                label: _("Heroes");
+                group: filter_all;
+                styles ["pill"]
+              }
+
+              Gtk.ToggleButton filter_npcs {
+                label: _("NPCs");
+                group: filter_all;
+                styles ["pill"]
               }
             }
 
-            content: Gtk.ScrolledWindow {
-              hexpand: true;
-              vexpand: true;
+            Gtk.ScrolledWindow {
               hscrollbar-policy: never;
+              vexpand: true;
 
-              child: Adw.Clamp {
-                maximum-size: 1000;
-                tightening-threshold: 600;
+              child: Gtk.Box {
+                orientation: vertical;
+                spacing: 12;
+                margin-start: 12;
+                margin-end: 12;
+                margin-bottom: 12;
 
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 16;
-                  margin-top: 24;
-                  margin-bottom: 24;
-                  margin-start: 24;
-                  margin-end: 24;
+                Gtk.ListBox roster_list {
+                  selection-mode: single;
+                  styles ["boxed-list"]
+                }
 
-                  Gtk.Box {
-                    orientation: horizontal;
-                    spacing: 8;
+                // Empty-roster hint (shown by TS when no character matches).
+                Adw.StatusPage roster_empty {
+                  icon-name: "people-symbolic";
+                  title: _("No characters");
+                  description: _("Add a hero or an NPC to get started.");
+                  vexpand: false;
+                }
 
-                    Gtk.Label {
-                      label: _("Characters");
-                      halign: start;
-                      hexpand: true;
-                      styles ["title-2"]
-                    }
+                Gtk.Label {
+                  label: _("Add from template");
+                  halign: start;
+                  margin-top: 6;
+                  styles ["caption-heading", "dim-label"]
+                }
 
-                    Gtk.Button new_character_button {
-                      icon-name: "list-add-symbolic";
-                      action-name: "win.new-character";
-                      tooltip-text: _("Add a new character");
-                      valign: center;
-                      styles ["flat", "circular"]
-                    }
-                  }
-
-                  Gtk.Label {
-                    label: _("Heroes and NPCs. Each picks an appearance (its look + animations); the one marked player spawns at the map's player spawn-point.");
-                    halign: start;
-                    wrap: true;
-                    xalign: 0;
-                    styles ["caption", "dim-label"]
-                  }
-
-                  $PixelRpgCardGallery characters_gallery {
-                    empty-title: _("No characters yet. Add a hero or an NPC to get started.");
-                    empty-icon: "people-symbolic";
-                    delete-tooltip: _("Delete character");
-                  }
-                };
+                Gtk.FlowBox template_slots {
+                  selection-mode: none;
+                  min-children-per-line: 2;
+                  max-children-per-line: 2;
+                  column-spacing: 6;
+                  row-spacing: 6;
+                  homogeneous: true;
+                }
               };
-            };
+            }
           };
         };
-      }
+      };
 
-      // ── Detail (drill-down) ───────────────────────────────────────
-      // ONE page, ONE header (the NavigationView back button). The
-      // inspector is INLINED into the content flow — not an overlay
-      // sidebar with its own header — so there's no second back/close
-      // button and no overlay to dismiss. Desktop lays preview +
-      // inspector in a single column (identity is compact); phone too.
-      Adw.NavigationPage detail_page {
+      // ── Detail: rich character view ───────────────────────────────
+      content: Adw.NavigationPage detail_page {
         tag: "detail";
         title: _("Character");
 
         child: Adw.ToolbarView {
-          top-bar-style: flat;
-
           [top]
           Adw.HeaderBar {
-            show-start-title-buttons: false;
             show-end-title-buttons: false;
           }
 
-          // Identity only — animations live on the appearance sheet
-          // (edited in the Sheets view). Just preview + the Character
-          // inspector (with its "Edit appearance →" deep-link).
-          content: Gtk.ScrolledWindow {
-            hexpand: true;
-            vexpand: true;
-            hscrollbar-policy: never;
-
-            child: Adw.Clamp {
-              maximum-size: 560;
-              tightening-threshold: 400;
-
-              child: Gtk.Box {
-                orientation: vertical;
-                spacing: 16;
-                margin-top: 24;
-                margin-bottom: 24;
-                margin-start: 24;
-                margin-end: 24;
-
-                $PixelRpgCharacterPreview preview {
-                  halign: center;
-                }
-
-                $PixelRpgCastInspector inspector {}
-
-                // Progressive disclosure: the advanced "all components"
-                // editor (built in code) lives here, collapsed by default.
-                Gtk.Box advanced_slot {
-                  orientation: vertical;
-                }
+          content: Gtk.Stack detail_stack {
+            Gtk.StackPage {
+              name: "empty";
+              child: Adw.StatusPage {
+                icon-name: "people-symbolic";
+                title: _("No character selected");
+                description: _("Pick a character from the list to see its details.");
               };
-            };
+            }
+
+            Gtk.StackPage {
+              name: "info";
+              child: Gtk.ScrolledWindow {
+                hexpand: true;
+                vexpand: true;
+                hscrollbar-policy: never;
+
+                child: Adw.Clamp {
+                  maximum-size: 640;
+                  tightening-threshold: 460;
+
+                  child: Gtk.Box {
+                    orientation: vertical;
+                    spacing: 18;
+                    margin-top: 24;
+                    margin-bottom: 24;
+                    margin-start: 24;
+                    margin-end: 24;
+
+                    // Header row: preview card + identity (name/subtitle).
+                    // Stats + actions live in full-width rows below so the
+                    // detail reflows cleanly on phone (no horizontal run-off).
+                    Gtk.Box {
+                      orientation: horizontal;
+                      spacing: 24;
+
+                      $PixelRpgCharacterPreview preview {
+                        frame-size: 180;
+                        valign: start;
+                      }
+
+                      Gtk.Box {
+                        orientation: vertical;
+                        spacing: 6;
+                        hexpand: true;
+                        valign: center;
+
+                        Gtk.Box {
+                          orientation: horizontal;
+                          spacing: 10;
+
+                          Gtk.Label detail_name {
+                            halign: start;
+                            xalign: 0;
+                            wrap: true;
+                            hexpand: true;
+                            styles ["title-1"]
+                          }
+
+                          Gtk.Label detail_player_badge {
+                            label: _("Player character");
+                            valign: center;
+                            visible: false;
+                            styles ["caption-heading", "accent"]
+                          }
+                        }
+
+                        Gtk.Label detail_subtitle {
+                          halign: start;
+                          xalign: 0;
+                          wrap: true;
+                          styles ["dim-label"]
+                        }
+                      }
+                    }
+
+                    // 2×2 read-only stat summary (full width).
+                    Gtk.Grid stat_grid {
+                      column-spacing: 10;
+                      row-spacing: 10;
+                      column-homogeneous: true;
+                    }
+
+                    Gtk.Box {
+                      orientation: horizontal;
+                      halign: start;
+                      spacing: 10;
+
+                      Gtk.Button edit_appearance_button {
+                        label: _("Edit appearance");
+                        styles ["suggested-action", "pill"]
+                      }
+
+                      Gtk.Button place_button {
+                        label: _("Place on map");
+                        styles ["pill"]
+                      }
+                    }
+
+                    // Editable fields (name / appearance / player / speed).
+                    $PixelRpgCastInspector inspector {}
+
+                    // Progressive disclosure: raw "all components" editor.
+                    Gtk.Box advanced_slot {
+                      orientation: vertical;
+                    }
+                  };
+                };
+              };
+            }
           };
         };
-      }
+      };
     };
   }
 }
