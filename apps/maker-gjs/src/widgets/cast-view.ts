@@ -4,13 +4,11 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
 import {
-  CardGallery,
   CastInspector,
   CharacterPreview,
   type ComponentRefOptions,
   confirmDestructive,
   EntityComponentsEditor,
-  type GalleryCardItem,
   type GdkSpriteSetResource,
   type ModeRail,
   NewCharacterDialog,
@@ -25,15 +23,16 @@ import { gettext as _ } from 'gettext'
 import Template from './cast-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
-/** Card preview edge length (px) — matches the quick-view sidebar preview. */
-const CARD_PREVIEW_SIZE = 160
+/** Roster-row avatar edge length (px). */
+const ROSTER_AVATAR_SIZE = 40
 
-// Force registration of all referenced cast widgets up-front so the
-// `$PixelRpgModeRail` / `$PixelRpgCharacterPreview` / … references in
-// `cast-view.blp` resolve at template-parse time.
+type RoleFilter = 'all' | 'heroes' | 'npcs'
+
+/** NPC archetypes offered as "Add from template" quick-create slots. */
+const NPC_TEMPLATES = ['Villager', 'Guard', 'Merchant', 'Child'] as const
+
 GObject.type_ensure(CharacterPreview.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
-GObject.type_ensure(CardGallery.$gtype)
 
 export namespace CastView {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
@@ -45,64 +44,50 @@ export namespace CastView {
 
 /**
  * Project-level Cast view — a Characters-only lens (the friendly hero /
- * NPC roster). A master-detail drill-down inside the shared
- * `Adw.NavigationView`: every character is a `CardGallery` card; a card
- * drills into an identity-only DETAIL page (an animated
- * `CharacterPreview` + the `CastInspector` in `character` mode = name,
- * appearance picker, player flag, speed, "Edit appearance" deep-link,
- * plus the "all components" disclosure).
+ * NPC roster) as an `Adw.NavigationSplitView` **master-detail**: a
+ * filterable character LIST on the left, a rich detail pane (animated
+ * preview + stat summary + editable inspector) on the right. The split
+ * collapses to a drill-down on narrow widths.
  *
- * A character just *picks* an appearance — sprite sheets and their
- * animation editor live in the unified **Sheets** view now. The inspector's
- * "Edit appearance →" deep-link activates `win.open-appearance` to drill
- * straight into that editor.
+ * A character just *picks* an appearance — sprite sheets + their
+ * animation editor live in the unified **Sheets** view; the detail's
+ * "Edit appearance →" deep-links there.
  *
- * The `ModeRail` (left navigation) is always present; this view's
- * `mode-changed` signal forwards to the application window to switch
- * between World / Cast / Objects / Sheets / Audio / Data.
- *
- * Mutations land via host-supplied callbacks (set via `bindCallbacks`)
- * so the application window remains the single owner of project data +
- * the persistence path. The cast view is intentionally presentational;
- * it diffs against `setCharacters` and emits `character-changed` once the
- * host has applied the mutation.
+ * Mutations land via host-supplied callbacks (`bindCallbacks`) so the
+ * application window stays the single owner of project data.
  */
 export class CastView extends ResponsiveEditorView {
-  // ── Characters gallery / detail ─────────────────────────────────
-  declare _characters_gallery: CardGallery
+  declare _cast_split: Adw.NavigationSplitView
+  // ── Master (roster) ─────────────────────────────────────────────
+  declare _roster_list: Gtk.ListBox
+  declare _roster_empty: Adw.StatusPage
+  declare _filter_all: Gtk.ToggleButton
+  declare _filter_heroes: Gtk.ToggleButton
+  declare _filter_npcs: Gtk.ToggleButton
+  declare _template_slots: Gtk.FlowBox
+  // ── Detail ──────────────────────────────────────────────────────
   declare _detail_page: Adw.NavigationPage
+  declare _detail_stack: Gtk.Stack
   declare _preview: CharacterPreview
+  declare _detail_name: Gtk.Label
+  declare _detail_player_badge: Gtk.Label
+  declare _detail_subtitle: Gtk.Label
+  declare _stat_grid: Gtk.Grid
+  declare _edit_appearance_button: Gtk.Button
+  declare _place_button: Gtk.Button
   declare _inspector: CastInspector
   declare _advanced_slot: Gtk.Box
-  // ── Shared chrome ───────────────────────────────────────────────
-  declare _nav: Adw.NavigationView
-  declare _quickview_toggle: Gtk.ToggleButton
-  // Desktop gallery quick-view (read-only glance for the selected card).
-  declare _quick_stack: Gtk.Stack
-  declare _quick_preview: CharacterPreview
-  declare _quick_name: Gtk.Label
-  declare _quick_kind: Gtk.Label
-  declare _quick_player: Gtk.Label
-  declare _quick_speed: Gtk.Label
-  declare _quick_edit: Gtk.Button
 
   private _projectName = ''
-  // Quick-view sidebar starts shown on desktop; `_onInspectorCollapsedChanged`
-  // flips it off when the responsive breakpoint collapses (phone).
-  private _showQuickview = true
-
+  private _filter: RoleFilter = 'all'
   private _characters: CharacterDefinition[] = []
-  // The project's appearance choices — drives the inspector's appearance
-  // picker only (the sheets gallery + animation editor moved to Sheets).
   private _sheets: SpriteSetChoice[] = []
   private _activeCharacterId: string | null = null
-  /**
-   * Resolved GTK preview resource per sprite-set id. Keyed by
-   * `spriteSetId` so several characters sharing a set reuse the one
-   * resource. Filled by the controller's `refresh`; a missing/failed set
-   * maps to `null` (the card falls back to an icon and the preview blanks).
-   */
   private _spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
+  /** charId → its roster row, so selection + active-id stay in sync. */
+  private _rows = new Map<string, Gtk.ListBoxRow>()
+  /** Stat-tile value labels, updated on every detail refresh. */
+  private _statValues = new Map<string, Gtk.Label>()
   private signals = new SignalScope()
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
@@ -124,20 +109,24 @@ export class CastView extends ResponsiveEditorView {
         Template,
         InternalChildren: [
           'mode_rail',
-          'characters_gallery',
+          'cast_split',
+          'roster_list',
+          'roster_empty',
+          'filter_all',
+          'filter_heroes',
+          'filter_npcs',
+          'template_slots',
           'detail_page',
+          'detail_stack',
           'preview',
+          'detail_name',
+          'detail_player_badge',
+          'detail_subtitle',
+          'stat_grid',
+          'edit_appearance_button',
+          'place_button',
           'inspector',
           'advanced_slot',
-          'nav',
-          'quickview_toggle',
-          'quick_stack',
-          'quick_preview',
-          'quick_name',
-          'quick_kind',
-          'quick_player',
-          'quick_speed',
-          'quick_edit',
         ],
         Properties: {
           'project-name': GObject.ParamSpec.string(
@@ -147,21 +136,10 @@ export class CastView extends ResponsiveEditorView {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          // show-library/-inspector + *-collapsed are inherited from
-          // ResponsiveEditorView; only the gallery quick-view is local.
-          'show-quickview': GObject.ParamSpec.boolean(
-            'show-quickview',
-            'Show Quick-view',
-            "Whether the gallery's right quick-view sidebar is shown (desktop)",
-            GObject.ParamFlags.READWRITE,
-            true,
-          ),
         },
         Signals: {
-          // mode-changed is inherited from ResponsiveEditorView.
+          // mode-changed inherited from ResponsiveEditorView.
           'character-changed': {},
-          // The active character's raw entity was edited through the "all
-          // components" disclosure — payload is the EntityDefinition JSON.
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
         },
       },
@@ -170,25 +148,21 @@ export class CastView extends ResponsiveEditorView {
   }
 
   private _advancedEditor = new EntityComponentsEditor()
-  /** Suppresses `character-entity-changed` while populating the editor. */
   private _silentAdvanced = false
 
   constructor() {
     super()
-    // Progressive disclosure: the raw "all components" editor lives in a
-    // collapsed expander under the friendly inspector.
     const expander = new Gtk.Expander({ label: _('All components'), marginTop: 8 })
     expander.set_child(this._advancedEditor)
     this._advanced_slot.append(expander)
     this._advancedEditor.connect('entity-changed', (_e: EntityComponentsEditor, json: string) => {
       if (!this._silentAdvanced) this.emit('character-entity-changed', json)
     })
+    this._buildStatGrid()
+    this._buildTemplateSlots()
   }
 
-  /**
-   * Populate the "all components" disclosure with a character's raw entity
-   * definition + the project ref-picker options. Silent — no echo back.
-   */
+  /** Populate the "all components" disclosure with a raw entity def. Silent. */
   setCharacterEntity(def: EntityDefinition, refOptions: ComponentRefOptions): void {
     this._silentAdvanced = true
     try {
@@ -199,20 +173,33 @@ export class CastView extends ResponsiveEditorView {
     }
   }
 
-  /**
-   * Signals wire in `vfunc_map` (not the constructor) so they
-   * re-connect on every (re)map — `vfunc_unmap` does
-   * `SignalScope.disconnectAll`. Constructor-wired signals would
-   * only connect ONCE and stay disconnected after the first navigate-
-   * away (see tiles-view for the same fix).
-   */
   vfunc_map(): void {
     super.vfunc_map()
-    // The detail inspector serves one fixed role — character mode.
     this._inspector.setMode('character')
 
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
+    })
+
+    // Role filter chips.
+    for (const [button, filter] of [
+      [this._filter_all, 'all'],
+      [this._filter_heroes, 'heroes'],
+      [this._filter_npcs, 'npcs'],
+    ] as [Gtk.ToggleButton, RoleFilter][]) {
+      this.signals.connect(button, 'toggled', () => {
+        if (button.get_active() && this._filter !== filter) {
+          this._filter = filter
+          this._rebuildRoster()
+        }
+      })
+    }
+
+    // Roster selection → detail.
+    this.signals.connect(this._roster_list, 'row-selected', (_l: Gtk.ListBox, row: Gtk.ListBoxRow | null) => {
+      if (!row) return
+      const id = (row as Gtk.ListBoxRow & { _charId?: string })._charId
+      if (id) this._selectCharacter(id)
     })
 
     // ── Character detail inspector (mode: character) ───────────────
@@ -228,70 +215,39 @@ export class CastView extends ResponsiveEditorView {
     this.signals.connect(this._inspector, 'sheet-changed', (_v: CastInspector, sheetId: string) => {
       if (this._activeCharacterId) this._onChangeSheetRequested?.(this._activeCharacterId, sheetId)
     })
-    // Deep-link from the character detail into its appearance's animation
-    // editor — animations live on the shared appearance asset (the Sheets
-    // view), not the character. Routes through the window's action group.
-    this.signals.connect(this._inspector, 'edit-appearance-requested', () => {
+    this.signals.connect(this._inspector, 'edit-appearance-requested', () => this._editAppearance())
+    this.signals.connect(this._edit_appearance_button, 'clicked', () => this._editAppearance())
+    this.signals.connect(this._place_button, 'clicked', () => {
       const character = this._currentCharacter()
-      if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))
+      if (character) this.activate_action('win.place-character', GLib.Variant.new_string(character.id))
     })
-
-    // ── Character gallery ──────────────────────────────────────────
-    // Single-click SELECTS (desktop: populates the quick-view sidebar;
-    // phone: drills straight to detail). Double-click / the quick-view
-    // "Edit" button OPENS the full detail page. The three-dots menu's
-    // delete routes through a confirm.
-    this.signals.connect(this._characters_gallery, 'item-activated', (_v: CardGallery, id: string) => {
-      this._selectCharacter(id)
-    })
-    this.signals.connect(this._characters_gallery, 'item-opened', (_v: CardGallery, id: string) => {
-      this._selectCharacter(id)
-      this._openDetail()
-    })
-    this.signals.connect(this._characters_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
-      this._confirmDeleteCharacter(id)
-    })
-    this.signals.connect(this._quick_edit, 'clicked', () => this._openDetail())
   }
 
-  /**
-   * Select a character: make it active, refresh the quick-view + detail
-   * surfaces, and highlight the card. On a NARROW layout (no quick-view
-   * sidebar) this also drills straight into the detail page; on desktop
-   * it just updates the quick-view sidebar (the user opens the detail
-   * explicitly via double-click or the "Edit" button).
-   */
+  vfunc_unmap(): void {
+    this.signals.disconnectAll()
+    super.vfunc_unmap()
+  }
+
+  /** Deep-link into the active character's appearance editor (Sheets view). */
+  private _editAppearance(): void {
+    const character = this._currentCharacter()
+    if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))
+  }
+
   private _selectCharacter(id: string): void {
     const character = this._characters.find((c) => c.id === id)
     if (!character) return
     this._activeCharacterId = id
     this._refreshActive()
-    this._characters_gallery.setActiveId(id)
+    const row = this._rows.get(id)
+    if (row && this._roster_list.get_selected_row() !== row) this._roster_list.select_row(row)
     this._detail_page.title = character.name
-    if (this.inspectorCollapsed) this._openDetail()
+    // Drill into the detail pane when collapsed (phone); on desktop both
+    // panes are already visible so this is a harmless no-op.
+    this._cast_split.set_show_content(true)
   }
 
-  /**
-   * Drill into the Character detail sub-page — identity only (preview +
-   * the `character`-mode inspector). Animations live on the appearance
-   * sheet now, so there's no animation list here. No-op if already on the
-   * page.
-   */
-  private _openDetail(): void {
-    if (!this._activeCharacterId) return
-    if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
-  }
-
-  /**
-   * Present the "New character" dialog (wired to `win.new-character`).
-   * Seeds it with the project's sprite sets, streams a live preview as
-   * the selection changes, and routes the "+" import button through the
-   * sprite-set import dialog — the imported set is appended + selected
-   * so the user can keep going without leaving the flow. The assembled
-   * draft goes to the host's `createCharacter` callback (controller
-   * generates the id, persists).
-   */
-  presentNewCharacterDialog(): void {
+  presentNewCharacterDialog(initialName?: string, initialKind: 'hero' | 'npc' = 'hero'): void {
     const dialog = new NewCharacterDialog()
     dialog.connect('spriteset-activated', (_d: NewCharacterDialog, id: string) => {
       void this._onLoadSpriteSetPreview?.(id).then((res) => dialog.setPreview(res ?? null))
@@ -302,19 +258,11 @@ export class CastView extends ResponsiveEditorView {
     dialog.connect('character-created', (_d: NewCharacterDialog, draft: NewCharacterDraft) => {
       this._onCreateCharacter?.(draft)
     })
-    // Populate AFTER wiring so the initial `spriteset-activated` (fired
-    // by setSpriteSets selecting the first entry) loads its preview.
     dialog.setSpriteSets(this._onListSpriteSets?.() ?? [])
+    if (initialName) dialog.seed(initialName, initialKind)
     dialog.present(this)
   }
 
-  /**
-   * Open the sprite-set import dialog for the New Character flow. On
-   * import the host copies the image + registers the set; `onImported`
-   * (when given) receives the resulting choice — the character dialog
-   * uses it to append + select the new set without leaving its flow.
-   * (Standalone appearance import lives in the Sheets view now.)
-   */
   private _presentSpriteSetImportDialog(onImported?: (choice: SpriteSetChoice) => void): void {
     const dialog = new SpriteSetImportDialog()
     dialog.kind = 'character'
@@ -326,29 +274,17 @@ export class CastView extends ResponsiveEditorView {
     dialog.present(this)
   }
 
-  /**
-   * Reset the navigation to the gallery overview. Called by the host on
-   * a project swap so a freshly-opened project starts on the card list
-   * rather than a stale detail page. (Deliberately NOT done on every
-   * re-map — that fired on window resize / sidebar overlay transitions
-   * and yanked the user out of the editor.)
-   */
+  /** Reset to the roster (used on project swap). */
   resetToOverview(): void {
-    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
+    this._cast_split.set_show_content(false)
   }
 
-  /**
-   * Select a character AND open its detail page. Used after creation
-   * (land on the new character to edit it) and by the `win.open-character`
-   * action (tooling drill-in).
-   */
+  /** Select a character AND reveal its detail (creation landing + tooling drill-in). */
   focusCharacter(id: string): void {
     this._selectCharacter(id)
-    this._openDetail()
   }
 
   get projectName(): string {
-    // Defensive `?? ''` — see character-preview.ts roleLabel for why.
     return this._projectName ?? ''
   }
 
@@ -359,28 +295,6 @@ export class CastView extends ResponsiveEditorView {
     this.notify('project-name')
   }
 
-  get showQuickview(): boolean {
-    return this._showQuickview ?? true
-  }
-
-  set showQuickview(value: boolean) {
-    if (this._showQuickview === value) return
-    this._showQuickview = value
-    this.notify('show-quickview')
-  }
-
-  // Collapsed = narrow/phone → hide the gallery quick-view (a card tap
-  // drills straight into the detail page there). Expanded = desktop →
-  // show it. The user can still toggle it via the header button.
-  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
-    this.showQuickview = !collapsed
-  }
-
-  /**
-   * Set the host callbacks. Called once by `CastController` after
-   * construction. Decouples the view from the project mutation /
-   * persistence layer.
-   */
   bindCallbacks(callbacks: {
     rename: (charId: string, name: string) => void
     setPlayer: (charId: string, isPlayer: boolean) => void
@@ -407,15 +321,6 @@ export class CastView extends ResponsiveEditorView {
     this._onLoadSpriteSetPreview = callbacks.loadSpriteSetPreview
   }
 
-  /**
-   * Push the project's character list into the Cast view. Called by the
-   * host on every cast mutation + on initial project load.
-   *
-   * `spriteSetsById` carries a resolved GTK preview resource for every
-   * sprite-set id (keyed by `spriteSetId`), so each card previews its
-   * OWN character's sheet and the detail preview follows the active
-   * character rather than always the player's set.
-   */
   setCharacters(characters: CharacterDefinition[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
     this._characters = characters
     this._spriteSetsById = spriteSetsById
@@ -425,121 +330,183 @@ export class CastView extends ResponsiveEditorView {
     if (!this._activeCharacterId && characters.length > 0) {
       this._activeCharacterId = characters[0].id
     }
-    this._rebuildGallery()
+    this._rebuildRoster()
     this._refreshActive()
   }
 
-  /**
-   * Push the project's appearance (sprite-sheet) choices into the Cast
-   * view. Called by the host alongside {@link setCharacters}. Cast no
-   * longer renders a sheets gallery (that's the Sheets view) — these only
-   * feed the character detail's appearance PICKER so it can reassign a
-   * character to a different sheet.
-   */
   setSheets(sheets: SpriteSetChoice[]): void {
     this._sheets = sheets
     this._inspector.setSheets(this._sheets, this._currentCharacter()?.spriteSetId ?? null)
   }
 
-  /**
-   * Rebuild the character cards. Each card's preview is a live
-   * {@link CharacterPreview} that auto-cycles walking direction while the
-   * card is the active or hovered one (static otherwise).
-   */
-  private _rebuildGallery(): void {
-    this._characters_gallery.setItems(
-      this._characters.map((c) => this._buildCardItem(c)),
-      (item) => this._buildCardPreview(item.id),
-    )
-    this._characters_gallery.setActiveId(this._activeCharacterId)
+  // ── Roster (master) ─────────────────────────────────────────────
+
+  private _filtered(): CharacterDefinition[] {
+    if (this._filter === 'heroes') return this._characters.filter((c) => c.kind === 'hero')
+    if (this._filter === 'npcs') return this._characters.filter((c) => c.kind === 'npc')
+    return this._characters
   }
 
-  /**
-   * Build the card model for one character: kind as subtitle, a `Player`
-   * badge for the playable character. The preview comes from
-   * {@link _buildCardPreview} (animated), so no static paintable here.
-   * Every character is deletable.
-   */
-  private _buildCardItem(character: CharacterDefinition): GalleryCardItem {
-    return {
-      id: character.id,
-      title: character.name,
-      subtitle: character.kind === 'hero' ? _('Hero') : _('NPC'),
-      badge: character.isPlayer ? _('Player') : null,
-      fallbackIcon: 'person-symbolic',
-      deletable: true,
+  private _rebuildRoster(): void {
+    for (const row of this._rows.values()) this._roster_list.remove(row)
+    this._rows.clear()
+
+    const filtered = this._filtered()
+    this._roster_empty.set_visible(filtered.length === 0)
+    this._roster_list.set_visible(filtered.length > 0)
+
+    for (const character of filtered) {
+      const row = this._buildRosterRow(character)
+      this._roster_list.append(row)
+      this._rows.set(character.id, row)
+    }
+    // Keep the selection highlight in sync with the active character.
+    const activeRow = this._activeCharacterId ? this._rows.get(this._activeCharacterId) : null
+    if (activeRow) this._roster_list.select_row(activeRow)
+  }
+
+  private _buildRosterRow(character: CharacterDefinition): Gtk.ListBoxRow {
+    const row = new Gtk.ListBoxRow() as Gtk.ListBoxRow & { _charId?: string }
+    row._charId = character.id
+    const box = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 12,
+      marginTop: 6,
+      marginBottom: 6,
+      marginStart: 6,
+      marginEnd: 6,
+    })
+
+    const avatar = new CharacterPreview()
+    avatar.showControls = false
+    avatar.autoCycle = false
+    avatar.highlighted = false
+    avatar.frameSize = ROSTER_AVATAR_SIZE
+    avatar.setCharacter(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
+    box.append(avatar)
+
+    const text = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, hexpand: true, valign: Gtk.Align.CENTER })
+    const name = new Gtk.Label({ label: character.name, halign: Gtk.Align.START, cssClasses: ['heading'] })
+    const role = new Gtk.Label({
+      label: character.kind === 'hero' ? _('Hero') : _('NPC'),
+      halign: Gtk.Align.START,
+      cssClasses: ['caption', 'dim-label'],
+    })
+    text.append(name)
+    text.append(role)
+    box.append(text)
+
+    if (character.isPlayer) {
+      const badge = new Gtk.Label({
+        label: _('Player'),
+        valign: Gtk.Align.CENTER,
+        cssClasses: ['caption-heading', 'accent'],
+      })
+      box.append(badge)
+    }
+
+    // Delete affordance — destructive, confirmed.
+    const del = new Gtk.Button({
+      iconName: 'user-trash-symbolic',
+      valign: Gtk.Align.CENTER,
+      cssClasses: ['flat'],
+      tooltipText: _('Delete character'),
+    })
+    del.connect('clicked', () => this._confirmDeleteCharacter(character.id))
+    box.append(del)
+
+    row.set_child(box)
+    return row
+  }
+
+  private _buildTemplateSlots(): void {
+    for (const name of NPC_TEMPLATES) {
+      const button = new Gtk.Button({ cssClasses: ['flat', 'card', 'cast-template-slot'] })
+      const inner = new Gtk.Box({
+        orientation: Gtk.Orientation.HORIZONTAL,
+        spacing: 8,
+        marginTop: 8,
+        marginBottom: 8,
+        marginStart: 10,
+        marginEnd: 10,
+      })
+      inner.append(new Gtk.Image({ iconName: 'list-add-symbolic' }))
+      inner.append(new Gtk.Label({ label: _(name), halign: Gtk.Align.START, hexpand: true }))
+      button.set_child(inner)
+      button.connect('clicked', () => this.presentNewCharacterDialog(_(name), 'npc'))
+      this._template_slots.append(button)
     }
   }
 
-  /**
-   * Build the per-card preview — the SAME `CharacterPreview` used in the
-   * quick-view, in "showcase" mode (no controls, auto-cycling direction).
-   * It starts un-highlighted (static); the gallery highlights the active
-   * / hovered card so only that one animates + circles.
-   */
-  private _buildCardPreview(id: string): CharacterPreview | null {
-    const character = this._characters.find((c) => c.id === id)
-    if (!character) return null
-    return this._buildShowcasePreview(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
+  // ── Detail ──────────────────────────────────────────────────────
+
+  private _buildStatGrid(): void {
+    const specs: [string, string][] = [
+      ['appearance', _('Appearance')],
+      ['movement', _('Movement')],
+      ['role', _('Role')],
+      ['collision', _('Collision')],
+    ]
+    specs.forEach(([key, label], i) => {
+      const tile = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 2,
+        cssClasses: ['card', 'cast-stat-tile'],
+        hexpand: true,
+      })
+      tile.append(new Gtk.Label({ label, halign: Gtk.Align.START, cssClasses: ['caption', 'dim-label'] }))
+      const value = new Gtk.Label({
+        label: '—',
+        halign: Gtk.Align.START,
+        xalign: 0,
+        wrap: true,
+        cssClasses: ['heading'],
+      })
+      tile.append(value)
+      this._statValues.set(key, value)
+      this._stat_grid.attach(tile, i % 2, Math.floor(i / 2), 1, 1)
+    })
   }
 
-  /** Shared showcase-preview factory for the character cards. */
-  private _buildShowcasePreview(
-    character: CharacterDefinition,
-    spriteSet: GdkSpriteSetResource | null,
-  ): CharacterPreview {
-    const preview = new CharacterPreview()
-    preview.showControls = false
-    preview.autoCycle = true
-    preview.frameSize = CARD_PREVIEW_SIZE
-    preview.highlighted = false
-    preview.setCharacter(character, spriteSet)
-    return preview
-  }
-
-  /** The GTK preview resource for the active character's sprite set. */
   private _activeSpriteSet(): GdkSpriteSetResource | null {
     const character = this._currentCharacter()
     if (!character) return null
     return this._spriteSetsById.get(character.spriteSetId) ?? null
   }
 
-  /** Refresh the Character detail surfaces (preview + identity inspector). */
   private _refreshActive(): void {
     const character = this._currentCharacter()
-    const spriteSet = this._activeSpriteSet()
-    this._preview.setCharacter(character, spriteSet)
-    this._inspector.setCharacter(character)
-    this._inspector.setSheets(this._sheets, character?.spriteSetId ?? null)
-    // Share count for the "Edit appearance" deep-link — an animation edit
-    // there affects every character wearing the same appearance.
-    const usage = character ? this._characters.filter((c) => c.spriteSetId === character.spriteSetId).length : 0
-    this._inspector.setAppearanceUsage(usage)
-    // Populate the "all components" disclosure with the active character's
-    // raw entity (the advanced surface editing `components[]` directly).
-    const entity = character ? (this._onGetCharacterEntity?.(character.id) ?? null) : null
-    if (entity) this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {})
-    this._refreshQuickView(character, spriteSet)
-  }
-
-  /**
-   * Populate the desktop quick-view sidebar (read-only glance) for the
-   * active character, or switch it to the empty state when nothing is
-   * selected.
-   */
-  private _refreshQuickView(character: CharacterDefinition | null, spriteSet: GdkSpriteSetResource | null): void {
     if (!character) {
-      this._quick_stack.set_visible_child_name('empty')
-      this._quick_preview.setCharacter(null, null)
+      this._detail_stack.set_visible_child_name('empty')
+      this._preview.setCharacter(null, null)
       return
     }
-    this._quick_stack.set_visible_child_name('info')
-    this._quick_preview.setCharacter(character, spriteSet)
-    this._quick_name.set_label(character.name)
-    this._quick_kind.set_label(character.kind === 'hero' ? _('Hero') : _('NPC'))
-    this._quick_player.set_visible(character.isPlayer === true)
+    this._detail_stack.set_visible_child_name('info')
+    const spriteSet = this._activeSpriteSet()
+    this._preview.setCharacter(character, spriteSet)
+    this._detail_name.set_label(character.name)
+    this._detail_player_badge.set_visible(character.isPlayer === true)
+    this._detail_subtitle.set_label(
+      character.kind === 'hero' ? _("Hero · spawns at the map's player spawn-point") : _('NPC · placed on maps'),
+    )
+    this._refreshStats(character)
+
+    this._inspector.setCharacter(character)
+    this._inspector.setSheets(this._sheets, character.spriteSetId)
+    const usage = this._characters.filter((c) => c.spriteSetId === character.spriteSetId).length
+    this._inspector.setAppearanceUsage(usage)
+
+    const entity = this._onGetCharacterEntity?.(character.id) ?? null
+    if (entity) this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {})
+  }
+
+  private _refreshStats(character: CharacterDefinition): void {
+    const sheet = this._sheets.find((s) => s.id === character.spriteSetId)
     const speed = character.speedTilesPerSec ?? 4
-    this._quick_speed.set_label(_(`${speed} tiles/second`))
+    this._statValues.get('appearance')?.set_label(sheet?.name ?? character.spriteSetId)
+    this._statValues.get('movement')?.set_label(_(`${speed} tiles/second`))
+    this._statValues.get('role')?.set_label(character.kind === 'hero' ? _('Hero') : _('NPC'))
+    this._statValues.get('collision')?.set_label(_('On'))
   }
 
   private _currentCharacter(): CharacterDefinition | null {
@@ -547,12 +514,6 @@ export class CastView extends ResponsiveEditorView {
     return this._characters.find((c) => c.id === this._activeCharacterId) ?? null
   }
 
-  /**
-   * Confirm + delete a character. Deletion is destructive (it drops the
-   * whole {@link CharacterDefinition} and, in collab, broadcasts the
-   * removal) so it routes through an `Adw.AlertDialog` with a
-   * destructive confirm before the host callback fires.
-   */
   private _confirmDeleteCharacter(id: string): void {
     const character = this._characters.find((c) => c.id === id)
     if (!character) return
@@ -562,11 +523,6 @@ export class CastView extends ResponsiveEditorView {
     }).then((confirmed) => {
       if (confirmed) this._onDeleteCharacterRequested?.(id)
     })
-  }
-
-  vfunc_unmap(): void {
-    this.signals.disconnectAll()
-    super.vfunc_unmap()
   }
 }
 

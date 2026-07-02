@@ -87,6 +87,16 @@ export class NewCharacterDialog extends Adw.Dialog {
     this._refreshValidity()
   }
 
+  /**
+   * Pre-fill the name + hero/NPC kind — used by the Cast view's
+   * "Add from template" archetype slots so a click lands on a partly
+   * filled form (the user just picks an appearance and confirms).
+   */
+  seed(name: string, kind: 'hero' | 'npc'): void {
+    this._name_row.set_text(name)
+    this._kind_row.set_selected(kind === 'hero' ? 0 : 1)
+  }
+
   /** Replace the list of sprite sets (and select the first). */
   setSpriteSets(choices: SpriteSetChoice[]): void {
     this._spriteSetIds = choices.map((c) => c.id)

@@ -1,4 +1,5 @@
 @import "@pixelrpg/gjs/index.css";
 @import "./widgets/application-window.css";
 @import "./widgets/atlas-view.css";
+@import "./widgets/cast-view.css";
 @import "./widgets/tiles-view.css";

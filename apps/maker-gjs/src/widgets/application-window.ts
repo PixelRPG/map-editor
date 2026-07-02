@@ -1216,6 +1216,23 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(openCharacterAction)
 
+    // "Place on map" from the Cast detail: jump to the current scene with
+    // the character's entity armed as the object brush (characters live in
+    // the entity library, so the character id IS the brush id). Needs an
+    // open scene — otherwise a hint toast.
+    const placeCharacterAction = Gio.SimpleAction.new('place-character', GLib.VariantType.new('s'))
+    placeCharacterAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (!id) return
+      if (!this._currentSceneId) {
+        this._showToast(_('Open a scene first to place a character'))
+        return
+      }
+      this._showSceneEditor(this._currentSceneId)
+      this.activate_action('win.set-object-brush', GLib.Variant.new_string(id))
+    })
+    winActions.add_action(placeCharacterAction)
+
     const openTilesetAction = Gio.SimpleAction.new('open-tileset', GLib.VariantType.new('s'))
     openTilesetAction.connect('activate', (_a, parameter) => {
       const id = parameter?.get_string()[0]
