@@ -10,6 +10,8 @@ import { sanitizeInstanceId } from './instance-id.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
+import { coerceThemePreference } from './services/theme-preference.ts'
+import { ThemeService } from './services/theme.service.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
 export class Application extends Adw.Application {
@@ -32,6 +34,14 @@ export class Application extends Adw.Application {
    * free, so they need no code here.
    */
   private control: ControlDbusService | null = null
+
+  /**
+   * Auto/light/dark preference (GSettings `theme` key → Adw.StyleManager).
+   * Constructed eagerly so actions can wire against it; the settings
+   * backend + style application happen in {@link onStartup} via `init()`
+   * once libadwaita is up.
+   */
+  readonly themeService = new ThemeService()
 
   static {
     GObject.registerClass(
@@ -73,6 +83,7 @@ export class Application extends Adw.Application {
   protected onStartup(): void {
     this.initResources()
     this.initStyles()
+    this.themeService.init()
     this.initControlInterface()
     // Defensive: kill any `avahi-publish-service` subprocess left
     // behind by a previous maker that crashed without invoking
@@ -166,9 +177,25 @@ export class Application extends Adw.Application {
     const showPreferencesAction = new Gio.SimpleAction({ name: 'preferences' })
     showPreferencesAction.connect('activate', (_action) => {
       const preferencesDialog = new PreferencesDialog()
+      preferencesDialog.setThemeService(this.themeService)
       preferencesDialog.present(this.active_window)
     })
     this.add_action(showPreferencesAction)
+
+    // Theme action — stateful radio (Auto / Light / Dark) surfaced in the
+    // primary menu; state mirrors the persisted preference both ways.
+    const themeAction = Gio.SimpleAction.new_stateful(
+      'theme',
+      GLib.VariantType.new('s'),
+      GLib.Variant.new_string(this.themeService.theme),
+    )
+    themeAction.connect('activate', (_action, parameter) => {
+      this.themeService.theme = coerceThemePreference(parameter?.unpack())
+    })
+    this.themeService.connect('notify::theme', () => {
+      themeAction.set_state(GLib.Variant.new_string(this.themeService.theme))
+    })
+    this.add_action(themeAction)
   }
 
   vfunc_activate() {

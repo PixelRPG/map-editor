@@ -24,6 +24,7 @@ import sandboxPathSuite from './services/sandbox-path.spec.js'
 import sessionServiceSuite from './services/session-service.spec.js'
 import sessionSnapshotSuite from './services/session-snapshot.spec.js'
 import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
+import themePreferenceSuite from './services/theme-preference.spec.js'
 import zoomMathSuite from './services/zoom-math.spec.js'
 
 run({
@@ -52,5 +53,6 @@ run({
   sessionServiceSuite,
   sessionServiceE2eSuite,
   sessionSnapshotSuite,
+  themePreferenceSuite,
   zoomMathSuite,
 })
