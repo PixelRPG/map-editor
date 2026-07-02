@@ -17,7 +17,7 @@ const OPACITY_NORMAL = 0.85
 const OPACITY_DIMMED = 0.25
 const SOURCE_RING_RADIUS = 5
 const SOURCE_CORE_RADIUS = 3.2
-const DEST_RADIUS = 4
+const ARROW_SIZE = 9
 const LABEL_FONT_SIZE_PT = 10
 const LABEL_PADDING_X = 8
 const LABEL_PADDING_Y = 2
@@ -130,10 +130,13 @@ export class TeleportOverlay extends Gtk.Widget {
     snapshot.append_color(accent, this._coverRect())
     snapshot.pop()
 
-    // Source: white core + accent ring. Dest: solid accent disc.
+    // Source: white core + accent ring. Dest: an arrowhead pointing
+    // along the curve tangent (a quad Bézier's tangent at t=1 is the
+    // control→end direction) so the teleport's direction reads at a
+    // glance, matching the design's arrow marker.
     this._drawDisc(snapshot, a.x, a.y, SOURCE_RING_RADIUS, accent)
     this._drawDisc(snapshot, a.x, a.y, SOURCE_CORE_RADIUS, white)
-    this._drawDisc(snapshot, b.x, b.y, DEST_RADIUS, accent)
+    this._drawArrowhead(snapshot, control, b, accent)
 
     if (!dimmed) this._drawLabel(snapshot, control.x, control.y, t.label, accent, white)
 
@@ -163,6 +166,36 @@ export class TeleportOverlay extends Gtk.Widget {
     snapshot.push_fill(path, Gsk.FillRule.WINDING)
     const rect = new Graphene.Rect()
     rect.init(cx - r, cy - r, r * 2, r * 2)
+    snapshot.append_color(color, rect)
+    snapshot.pop()
+  }
+
+  /**
+   * Filled triangle at `tip`, oriented along the incoming direction
+   * `from → tip`. Sits at the destination end of a teleport curve to
+   * indicate direction.
+   */
+  private _drawArrowhead(snapshot: Gtk.Snapshot, from: Endpoint, tip: Endpoint, color: Gdk.RGBA): void {
+    const dx = tip.x - from.x
+    const dy = tip.y - from.y
+    const len = Math.hypot(dx, dy) || 1
+    const ux = dx / len
+    const uy = dy / len
+    // Perpendicular unit vector for the two base corners.
+    const px = -uy
+    const py = ux
+    const size = ARROW_SIZE
+    const half = size * 0.6
+    const baseX = tip.x - ux * size
+    const baseY = tip.y - uy * size
+    const builder = new Gsk.PathBuilder()
+    builder.move_to(tip.x, tip.y)
+    builder.line_to(baseX + px * half, baseY + py * half)
+    builder.line_to(baseX - px * half, baseY - py * half)
+    builder.close()
+    snapshot.push_fill(builder.to_path(), Gsk.FillRule.WINDING)
+    const rect = new Graphene.Rect()
+    rect.init(tip.x - size * 2, tip.y - size * 2, size * 4, size * 4)
     snapshot.append_color(color, rect)
     snapshot.pop()
   }

@@ -1086,6 +1086,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     app?.set_accels_for_action('win.toggle-grid', ['<Primary>g'])
     app?.set_accels_for_action('win.toggle-transparency', ['<Primary>t'])
     app?.set_accels_for_action('win.play', ['F5'])
+    // Fit the atlas world into view. The action guards to the atlas, so
+    // the bare `0` only does anything there (and entries still eat it).
+    app?.set_accels_for_action('win.atlas-fit', ['0'])
 
     for (const name of ['switch-tileset', 'new-layer', 'open-recent-projects']) {
       winActions.add_action(new Gio.SimpleAction({ name }))
@@ -1155,6 +1158,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       zoomTargetsAtlas() ? this._atlas_view.resetPreviewZoom() : void this._applyZoom(1),
     )
     winActions.add_action(zoomResetAction)
+
+    // Fit the whole world into the atlas viewport (Fit button + `0`).
+    // Only meaningful on the atlas; a no-op guard keeps the shared
+    // accelerator harmless elsewhere.
+    const atlasFitAction = new Gio.SimpleAction({ name: 'atlas-fit' })
+    atlasFitAction.connect('activate', () => {
+      if (zoomTargetsAtlas()) this._atlas_view.fitAtlas()
+    })
+    winActions.add_action(atlasFitAction)
 
     const newSceneAction = new Gio.SimpleAction({ name: 'new-scene' })
     newSceneAction.connect('activate', () => this._showToast(_('New Scene — not yet implemented')))
