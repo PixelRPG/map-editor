@@ -20,8 +20,8 @@ const DIRECTION_CYCLE_MS = 1600
 /**
  * Animated preview of a {@link CharacterDefinition}'s sprite. Plays the
  * `<kind>-<direction>` animation for the currently-selected direction
- * (default: `walk-down`), driven by a JS interval keyed off
- * `durationMs`. Four direction-pad buttons set the facing, a fifth
+ * (default: `walk-down`), driven by a JS interval keyed off the
+ * animation's frame durations. Four direction-pad buttons set the facing, a fifth
  * Pause toggle flips the kind between `walk` and `idle` — so the same
  * arrow stays selected while the character switches from walking to
  * standing still.
@@ -510,7 +510,7 @@ export class CharacterPreview extends Adw.Bin {
       this._picture.set_paintable(null)
       return
     }
-    const spriteId = anim.frames[this._frameIndex % anim.frames.length]
+    const spriteId = anim.frames[this._frameIndex % anim.frames.length].spriteId
     const sprite = this._spriteSet.getSprite(spriteId)
     // Single-sprite display → opt in to aspect-preserving snapshot. The
     // sprite-set's character cells are tall (e.g. scientist is 16×32),
@@ -524,7 +524,10 @@ export class CharacterPreview extends Adw.Bin {
   private _scheduleNext(): void {
     const anim = this._activeAnimation()
     if (!anim || anim.frames.length <= 1) return
-    const duration = Math.max(50, anim.durationMs)
+    // Frames now carry per-frame durations; the compact list preview
+    // ticks at the first frame's rate (migrated data is uniform). The
+    // per-frame-accurate playback lives in the timeline editor.
+    const duration = Math.max(50, anim.frames[0]?.duration ?? 200)
     this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, duration, () => {
       this._frameIndex = (this._frameIndex + 1) % anim.frames.length
       this._applyFrame()

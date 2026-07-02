@@ -153,7 +153,9 @@ export class CastInspector extends Adw.Bin {
     try {
       if (animation) {
         this._selected_anim_row.set_subtitle(animation.id)
-        this._duration_row.set_value(animation.durationMs)
+        // Sheet-mode duration row is a single value; per-frame durations
+        // are edited in the timeline editor. Show the first frame's ms.
+        this._duration_row.set_value(animation.frames[0]?.duration ?? 200)
         this._duration_row.set_sensitive(true)
       } else {
         this._selected_anim_row.set_subtitle('(none selected)')
