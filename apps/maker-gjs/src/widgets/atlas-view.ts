@@ -2,6 +2,7 @@ import GObject from '@girs/gobject-2.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import {
   AtlasCanvas,
+  AtlasOverview,
   type EditorMode,
   FloatingFab,
   FloatingZoom,
@@ -22,6 +23,7 @@ GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(SceneInspector.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
+GObject.type_ensure(AtlasOverview.$gtype)
 
 /**
  * Maker-app **Atlas** view — composes the mode rail, atlas canvas, and
@@ -39,6 +41,7 @@ export class AtlasView extends ResponsiveEditorView {
   declare _atlas: AtlasCanvas
   declare _inspector: SceneInspector
   declare _preview_zoom: FloatingZoom
+  declare _atlas_overview: AtlasOverview
 
   private signals = new SignalScope()
   private _scenes: SampleScene[] = SAMPLE_SCENES
@@ -52,7 +55,7 @@ export class AtlasView extends ResponsiveEditorView {
       {
         GTypeName: 'AtlasView',
         Template,
-        InternalChildren: ['mode_rail', 'atlas', 'inspector', 'preview_zoom'],
+        InternalChildren: ['mode_rail', 'atlas', 'inspector', 'preview_zoom', 'atlas_overview'],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -87,6 +90,26 @@ export class AtlasView extends ResponsiveEditorView {
     this._atlas.setWorld(this._scenes, this._teleports)
     this._inspector.setScene(null, this._scenes, this._teleports)
     this._preview_zoom.setZoom(this._atlas.previewZoom)
+    // The atlas is the only view with a fit target, so it opts the
+    // shared zoom pill into showing the Fit button.
+    this._preview_zoom.showFit = true
+  }
+
+  /** Re-sync the overview minimap's scene rects + viewport frame from the canvas. */
+  private _refreshOverview(): void {
+    const { width, height } = this._atlas.contentSize
+    this._atlas_overview.setContent(this._atlas.sceneRects(), width, height)
+    const vp = this._atlas.viewportRect()
+    this._atlas_overview.setViewport(vp.x, vp.y, vp.w, vp.h)
+  }
+
+  /**
+   * Centre the world in the viewport (the Fit affordance). The window
+   * routes `win.atlas-fit` here while the atlas is visible.
+   */
+  fitAtlas(): void {
+    this._atlas.fitToContent()
+    this._refreshOverview()
   }
 
   /**
@@ -134,6 +157,10 @@ export class AtlasView extends ResponsiveEditorView {
     this._projectResource = projectResource
     this._atlas.setWorld(scenes, teleports, projectResource)
     this._inspector.setScene(null, scenes, teleports, projectResource)
+    // Open a real project fitted so every scene is reachable at once,
+    // instead of the old 200% top-left dump that ran off-viewport.
+    this._atlas.fitToContent()
+    this._refreshOverview()
   }
 
   /**
@@ -198,6 +225,15 @@ export class AtlasView extends ResponsiveEditorView {
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
       this.emit('mode-changed', mode as EditorMode)
     })
+    // Overview minimap: redraw scene rects when the world changes, and
+    // track the viewport frame as the user pans/scrolls.
+    this.signals.connect(this._atlas, 'world-changed', () => this._refreshOverview())
+    const { h, v } = this._atlas.adjustments
+    this.signals.connect(h, 'value-changed', () => this._refreshOverview())
+    this.signals.connect(v, 'value-changed', () => this._refreshOverview())
+    this.signals.connect(h, 'notify::page-size', () => this._refreshOverview())
+    this.signals.connect(v, 'notify::page-size', () => this._refreshOverview())
+    this._refreshOverview()
   }
 
   vfunc_unmap(): void {

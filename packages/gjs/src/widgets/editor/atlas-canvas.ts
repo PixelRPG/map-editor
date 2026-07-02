@@ -16,6 +16,12 @@ GObject.type_ensure(MapPreview.$gtype)
 const SURFACE_PADDING = 180
 
 /**
+ * Grid step (atlas-space px) that dragged scene cards snap to on
+ * release — keeps the world tidy + aligned instead of pixel-fuzzy.
+ */
+const ATLAS_GRID = 8
+
+/**
  * Scrollable atlas surface — the "World" home view.
  *
  * Composition:
@@ -87,6 +93,10 @@ export class AtlasCanvas extends Adw.Bin {
           'preview-lock-changed': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_BOOLEAN],
           },
+          // Emitted whenever the surface geometry changes (world set,
+          // card moved) so the overview minimap can re-read scene rects
+          // + content size. No payload — consumers pull via getters.
+          'world-changed': {},
         },
       },
       AtlasCanvas,
@@ -109,6 +119,7 @@ export class AtlasCanvas extends Adw.Bin {
     this._rebuildCards()
     this._teleports.setWorld(scenes, teleports, 1)
     this._sizeSurface()
+    this.emit('world-changed')
   }
 
   constructor() {
@@ -292,14 +303,16 @@ export class AtlasCanvas extends Adw.Bin {
     card.connect('scene-drag-end', (_c: SceneCard, dx: number, dy: number) => {
       const scene = this._scenes.find((s) => s.id === sceneId)
       if (!scene) return
-      const nextX = Math.max(0, Math.round(originX + dx))
-      const nextY = Math.max(0, Math.round(originY + dy))
+      // Snap the release position to the atlas grid so cards line up.
+      const nextX = Math.max(0, Math.round((originX + dx) / ATLAS_GRID) * ATLAS_GRID)
+      const nextY = Math.max(0, Math.round((originY + dy) / ATLAS_GRID) * ATLAS_GRID)
       scene.x = nextX
       scene.y = nextY
       this._surface.move(card, nextX, nextY)
       this._sizeSurface()
       this._teleports.setWorld(this._scenes, this._teleportData, 1)
       this.emit('scene-moved', sceneId, nextX, nextY)
+      this.emit('world-changed')
     })
   }
 
@@ -309,23 +322,88 @@ export class AtlasCanvas extends Adw.Bin {
     this._teleports.setWorld(this._scenes, this._teleportData, 1)
   }
 
+  private _contentW = 0
+  private _contentH = 0
+
+  private _sceneGeometry(s: SampleScene): { w: number; h: number } {
+    // Real-project scenes carry no terrain rows — fall back to the
+    // cols/previewRows card geometry so the surface still spans them.
+    const cols = s.rows[0]?.length || s.cols || 0
+    const rows = s.rows.length || s.previewRows || 0
+    return { w: cols * s.tilePx, h: rows * s.tilePx }
+  }
+
   private _sizeSurface(): void {
     let maxX = 0
     let maxY = 0
     for (const s of this._scenes) {
-      // Real-project scenes carry no terrain rows — fall back to the
-      // cols/previewRows card geometry so the surface still spans them.
-      const cols = s.rows[0]?.length || s.cols || 0
-      const rows = s.rows.length || s.previewRows || 0
-      const w = cols * s.tilePx
-      const h = rows * s.tilePx
+      const { w, h } = this._sceneGeometry(s)
       maxX = Math.max(maxX, s.x + w)
       maxY = Math.max(maxY, s.y + h)
     }
-    const targetW = maxX + SURFACE_PADDING * 2
-    const targetH = maxY + SURFACE_PADDING * 2
-    this._surface.set_size_request(targetW, targetH)
-    this._teleports.set_size_request(targetW, targetH)
+    this._contentW = maxX + SURFACE_PADDING * 2
+    this._contentH = maxY + SURFACE_PADDING * 2
+    this._surface.set_size_request(this._contentW, this._contentH)
+    this._teleports.set_size_request(this._contentW, this._contentH)
+  }
+
+  /** Total scrollable surface size (union of scene bboxes + padding). */
+  get contentSize(): { width: number; height: number } {
+    return { width: this._contentW, height: this._contentH }
+  }
+
+  /** Scene bounding boxes in atlas-surface coords — feeds the overview minimap. */
+  sceneRects(): { x: number; y: number; w: number; h: number }[] {
+    return this._scenes.map((s) => {
+      const { w, h } = this._sceneGeometry(s)
+      return { x: s.x, y: s.y, w, h }
+    })
+  }
+
+  /** Current visible region in surface coords (scroll offset + page size). */
+  viewportRect(): { x: number; y: number; w: number; h: number } {
+    const h = this._scroller.hadjustment
+    const v = this._scroller.vadjustment
+    return { x: h.value, y: v.value, w: h.page_size, h: v.page_size }
+  }
+
+  /** The scroller's adjustments — hosts subscribe to `value-changed` for live overview sync. */
+  get adjustments(): { h: Gtk.Adjustment; v: Gtk.Adjustment } {
+    return { h: this._scroller.hadjustment, v: this._scroller.vadjustment }
+  }
+
+  /**
+   * Scroll so the world's bounding box is centered in the viewport —
+   * the atlas "fit" affordance. The Fixed surface has no fractional
+   * scale (see class docstring), so this centers rather than zooms; the
+   * overview minimap gives the whole-world-at-a-glance view. Deferred
+   * until the scroller has a real page size (first allocation) so the
+   * math isn't run against a zero viewport.
+   */
+  fitToContent(): void {
+    const h = this._scroller.hadjustment
+    const v = this._scroller.vadjustment
+    let maxX = 0
+    let maxY = 0
+    for (const s of this._scenes) {
+      const { w, h: gh } = this._sceneGeometry(s)
+      maxX = Math.max(maxX, s.x + w)
+      maxY = Math.max(maxY, s.y + gh)
+    }
+    const apply = (): void => {
+      h.value = Math.max(0, Math.min(h.upper - h.page_size, maxX / 2 - h.page_size / 2))
+      v.value = Math.max(0, Math.min(v.upper - v.page_size, maxY / 2 - v.page_size / 2))
+    }
+    if (h.page_size > 0) {
+      apply()
+      return
+    }
+    // Not yet allocated — run once the viewport gets a real size.
+    const id = h.connect('notify::page-size', () => {
+      if (h.page_size <= 0) return
+      h.disconnect(id)
+      apply()
+    })
   }
 }
 

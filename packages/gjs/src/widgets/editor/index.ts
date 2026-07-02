@@ -2,6 +2,7 @@
 
 export * from './atlas-canvas.story'
 export * from './atlas-canvas'
+export * from './atlas-overview'
 export * from './bake-cache'
 export * from './component-inspector'
 export * from './entity-components-editor.story'

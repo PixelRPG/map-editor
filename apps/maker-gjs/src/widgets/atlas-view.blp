@@ -68,6 +68,22 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
         }
 
         content: Gtk.Overlay {
+          // Overview minimap — whole-world-at-a-glance, top-right OSD.
+          // The `.osd` Bin supplies the floating-chrome background; the
+          // AtlasOverview inside draws scene rects + the viewport frame.
+          [overlay]
+          Adw.Bin overview_frame {
+            halign: end;
+            valign: start;
+            margin-top: 12;
+            margin-end: 12;
+            width-request: 150;
+            height-request: 100;
+            styles ["osd", "atlas-overview-frame"]
+
+            child: $PixelRpgAtlasOverview atlas_overview {};
+          }
+
           [overlay]
           $PixelRpgFloatingFab new_scene_fab {
             halign: end;
@@ -78,6 +94,25 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             icon-name: "list-add-symbolic";
             action-name: "win.new-scene";
             tooltip-text: _("Create a new scene");
+          }
+
+          // Legend chip — bottom-center OSD explaining the teleport edges.
+          [overlay]
+          Gtk.Box legend_chip {
+            halign: center;
+            valign: end;
+            margin-bottom: 12;
+            spacing: 6;
+            styles ["osd", "toolbar", "atlas-legend"]
+
+            Gtk.Image {
+              icon-name: "mail-send-symbolic";
+            }
+
+            Gtk.Label {
+              label: _("Teleport");
+              styles ["caption"]
+            }
           }
 
           // Same zoom pill as the scene editor (fires win.zoom-*);

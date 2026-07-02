@@ -16,6 +16,7 @@ export class FloatingZoom extends Adw.Bin {
   private _zoom = 1
   private _cursorX: number | null = null
   private _cursorY: number | null = null
+  private _showFit = false
 
   static {
     GObject.registerClass(
@@ -42,6 +43,13 @@ export class FloatingZoom extends Adw.Bin {
             'Show Cursor',
             'Whether the cursor caption is visible',
             GObject.ParamFlags.READABLE,
+            false,
+          ),
+          'show-fit': GObject.ParamSpec.boolean(
+            'show-fit',
+            'Show Fit',
+            'Whether the fit-to-content button is visible (atlas only)',
+            GObject.ParamFlags.READWRITE,
             false,
           ),
         },
@@ -89,6 +97,16 @@ export class FloatingZoom extends Adw.Bin {
 
   get showCursor(): boolean {
     return this._cursorX != null && this._cursorY != null
+  }
+
+  get showFit(): boolean {
+    return this._showFit ?? false
+  }
+
+  set showFit(value: boolean) {
+    if (this._showFit === value) return
+    this._showFit = value
+    this.notify('show-fit')
   }
 }
 
