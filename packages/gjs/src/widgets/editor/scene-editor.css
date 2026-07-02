@@ -57,3 +57,21 @@
   border-radius: 4px;
   padding: 1px;
 }
+
+/*
+ * Left tool rail: give every entry a consistent width so the icon +
+ * label rows line up into a tidy column (labels are left-aligned +
+ * hexpand inside each button). The active tool carries
+ * `.suggested-action` (accent) applied in floating-tool-rail.ts.
+ */
+.tool-rail-button {
+  min-width: 104px;
+}
+
+.tool-rail-button.active-tool,
+.tool-rail-button.active-tool:hover {
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+}
+
+

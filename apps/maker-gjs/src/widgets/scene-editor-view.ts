@@ -249,9 +249,9 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
-   * Forward the active editor tool to the top bar so its tool
-   * MenuButton's icon mirrors the selection. The host calls this
-   * from the `win.set-tool` action's change-state handler.
+   * Forward the active editor tool to the left tool rail so its active
+   * button highlights. The host calls this from the `win.set-tool`
+   * action's change-state handler.
    *
    * The context chip is tool-dependent: under the Object tool its
    * quick-select popover offers the placeable OBJECTS (and the swatch
@@ -259,7 +259,7 @@ export class SceneEditorView extends ResponsiveEditorView {
    * so the chip always quick-selects what the current tool consumes.
    */
   setActiveTool(tool: EditorTool): void {
-    this._editor.topBar.setActiveTool(tool)
+    this._editor.toolRail.setActiveTool(tool)
     if (this._activeTool === tool) return
     this._activeTool = tool
     this._refreshContextPopovers()

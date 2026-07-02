@@ -9,6 +9,8 @@ Conventions:
 
 ## Editor / tooling
 
+- **Phone scene-editor bottom tool bar** — `FloatingToolRail` is a labelled left rail at every width. The `soll-scene-phone` design wants it to reflow into a fixed bottom `AdwToolbarView` bar (icon-over-label columns + Play) on narrow widths, with the zoom pill sitting above it. Needs a window-width-aware reflow (the rail is too narrow to watch its own allocation — mirror `FloatingTopBar`'s full-width BreakpointBin pattern, or drive it from the view's `library-collapsed`) + coordinating the bottom-left OSD stack so nothing overlaps. *owner: gjs*
+- **Fill / bucket tool** — the `soll-scene` tool rail groups Select · Paint · Fill · Erase, but `EditorTool` has no bucket (`packages/engine/src/components/active-tool.component.ts`), so the rail ships without Fill. Add a `'fill'` EditorTool + a floodfill path in `tile-editor.system.ts`, then a Fill entry in `floating-tool-rail.ts`. *owner: engine + gjs*
 - **File-picker "Save as new project"** — `_onCreateProject` opens the blank template in-place rather than scaffolding a new project file in a user-chosen directory. Needs a save-as flow + `editorData.templateOrigin` tracking. *owner: maker*
 - **"Switch tileset" action** — `win.switch-tileset` is registered but no handler. Tiles tab "Switch…" button does nothing. *owner: maker*
 - **"New layer" action** — `win.new-layer` registered, no handler. Layers tab "New layer" footer button does nothing. *owner: maker*

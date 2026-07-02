@@ -3,12 +3,14 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { FloatingCollaborators } from './floating-collaborators'
 import { FloatingPlay } from './floating-play'
+import { FloatingToolRail } from './floating-tool-rail'
 import { FloatingTopBar } from './floating-top-bar'
 import { FloatingZoom } from './floating-zoom'
 
 import Template from './scene-editor.blp'
 
 GObject.type_ensure(FloatingTopBar.$gtype)
+GObject.type_ensure(FloatingToolRail.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
 GObject.type_ensure(FloatingPlay.$gtype)
 GObject.type_ensure(FloatingCollaborators.$gtype)
@@ -30,6 +32,7 @@ export class SceneEditor extends Adw.Bin {
   declare _overlay: Gtk.Overlay
   declare _engine_holder: Gtk.Box
   declare _top_bar: FloatingTopBar
+  declare _tool_rail: FloatingToolRail
   declare _zoom_osd: FloatingZoom
   declare _floating_play: FloatingPlay
   declare _floating_collaborators: FloatingCollaborators
@@ -45,6 +48,7 @@ export class SceneEditor extends Adw.Bin {
           'overlay',
           'engine_holder',
           'top_bar',
+          'tool_rail',
           'zoom_osd',
           'floating_play',
           'floating_collaborators',
@@ -72,6 +76,10 @@ export class SceneEditor extends Adw.Bin {
 
   get topBar(): FloatingTopBar {
     return this._top_bar
+  }
+
+  get toolRail(): FloatingToolRail {
+    return this._tool_rail
   }
 
   get floatingPlay(): FloatingPlay {

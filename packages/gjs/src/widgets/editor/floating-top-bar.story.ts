@@ -81,11 +81,11 @@ export class FloatingTopBarStory extends StoryWidget {
     const transparency = Gio.SimpleAction.new_stateful('toggle-transparency', null, GLib.Variant.new_boolean(false))
     transparency.connect('change-state', (action, value) => action.set_state(value!))
     group.add_action(transparency)
+    // Tool selection moved to the FloatingToolRail; the top bar no
+    // longer owns it. Keep the action registered so any lingering
+    // action-name bindings resolve.
     const tool = Gio.SimpleAction.new_stateful('set-tool', GLib.VariantType.new('s'), GLib.Variant.new_string('pencil'))
-    tool.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      this._bar?.setActiveTool(value!.get_string()[0] as 'pencil' | 'eraser' | 'eyedropper')
-    })
+    tool.connect('change-state', (action, value) => action.set_state(value!))
     group.add_action(tool)
     for (const name of ['back-to-atlas', 'undo', 'redo']) {
       group.add_action(new Gio.SimpleAction({ name }))
