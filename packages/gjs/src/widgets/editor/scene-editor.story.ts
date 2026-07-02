@@ -96,7 +96,7 @@ export class SceneEditorStory extends StoryWidget {
 
     this._editor.topBar.tileName = `Grass A — ${scene.name}`
     this._editor.topBar.layerName = 'Background'
-    this._editor.topBar.setActiveTool((this.args.tool as 'pencil') ?? 'pencil')
+    this._editor.toolRail.setActiveTool((this.args.tool as 'pencil') ?? 'pencil')
 
     const zoomPercent = typeof this.args.zoom === 'number' ? this.args.zoom : 100
     this._editor.zoomOsd.setZoom(zoomPercent / 100)

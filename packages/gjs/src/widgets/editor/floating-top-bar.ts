@@ -1,36 +1,13 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
-import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { EditorTool } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import { SignalScope } from '../../utils/signal-scope'
 
 import Template from './floating-top-bar.blp'
-
-/** Icon used to represent each editor tool — shared between the
- * collapsed MenuButton icon and the tool popover entries. Order in
- * the record drives popover ordering (`Object.keys` is insertion-
- * ordered for string keys); `'select'` is listed first because it's
- * the default and the read-only inspection entry-point. */
-const TOOL_ICONS: Record<EditorTool, string> = {
-  select: 'edit-select-symbolic',
-  pencil: 'document-edit-symbolic',
-  eraser: 'edit-clear-all-symbolic',
-  eyedropper: 'color-select-symbolic',
-  object: 'view-grid-symbolic',
-}
-
-const TOOL_LABELS: Record<EditorTool, () => string> = {
-  select: () => _('Select'),
-  pencil: () => _('Pencil'),
-  eraser: () => _('Eraser'),
-  eyedropper: () => _('Eyedropper'),
-  object: () => _('Place object'),
-}
 
 /**
  * Self-aware top-of-canvas OSD chrome for the scene editor.
@@ -64,7 +41,6 @@ export class FloatingTopBar extends Adw.Bin {
   declare _redo_button_split: Gtk.Button
   declare _grid_button_split: Gtk.ToggleButton
   declare _transparency_button_split: Gtk.ToggleButton
-  declare _tool_button_split: Gtk.MenuButton
   declare _tile_button_split: Gtk.MenuButton
   declare _tile_swatch_split: Gtk.Picture
   declare _layer_button_split: Gtk.MenuButton
@@ -78,7 +54,6 @@ export class FloatingTopBar extends Adw.Bin {
   declare _grid_button_merged: Gtk.ToggleButton
   declare _transparency_button_merged: Gtk.ToggleButton
   declare _overflow_button_merged: Gtk.MenuButton
-  declare _tool_button_merged: Gtk.MenuButton
   declare _tile_button_merged: Gtk.MenuButton
   declare _tile_swatch_merged: Gtk.Picture
   declare _layer_button_merged: Gtk.MenuButton
@@ -108,7 +83,6 @@ export class FloatingTopBar extends Adw.Bin {
           'redo_button_split',
           'grid_button_split',
           'transparency_button_split',
-          'tool_button_split',
           'tile_button_split',
           'tile_swatch_split',
           'layer_button_split',
@@ -120,7 +94,6 @@ export class FloatingTopBar extends Adw.Bin {
           'grid_button_merged',
           'transparency_button_merged',
           'overflow_button_merged',
-          'tool_button_merged',
           'tile_button_merged',
           'tile_swatch_merged',
           'layer_button_merged',
@@ -181,12 +154,6 @@ export class FloatingTopBar extends Adw.Bin {
       swatch.set_valign(Gtk.Align.CENTER)
       swatch.set_paintable(this._loadPlaceholderIcon())
     }
-
-    // Tool popover — separate instance per MenuButton since a single
-    // popover can only have one parent at a time. The popover content
-    // is identical so we just build it twice.
-    this._tool_button_split.set_popover(this._buildToolPopover())
-    this._tool_button_merged.set_popover(this._buildToolPopover())
 
     // Initial overflow contents — listeners are wired in `vfunc_map`
     // per the [DO] connect-in-map / disconnect-in-unmap convention.
@@ -250,17 +217,6 @@ export class FloatingTopBar extends Adw.Bin {
     this.notify('show-inspector')
   }
 
-  /**
-   * Update both tool MenuButtons' icons to reflect the active tool.
-   * The popovers' tool entries don't need updating — they're stateful
-   * action targets, so the menu reads the current state itself.
-   */
-  setActiveTool(tool: EditorTool): void {
-    const icon = TOOL_ICONS[tool]
-    this._tool_button_split.set_icon_name(icon)
-    this._tool_button_merged.set_icon_name(icon)
-  }
-
   setTilePopover(popover: Gtk.Popover): void {
     this._tilePopover = popover
     this._applyHostPopovers()
@@ -301,52 +257,6 @@ export class FloatingTopBar extends Adw.Bin {
       inactive.set_popover(null)
       active.set_popover(this._layerPopover)
     }
-  }
-
-  /**
-   * Custom Gtk.Popover for the tool MenuButton — a vertical Box of
-   * flat Buttons, each with a full-size icon next to its label. Each
-   * button binds the same stateful `win.set-tool` action with a
-   * different target value, so clicking still routes through the
-   * action's `change-state` handler. The trade for the custom popover
-   * vs a Gio.Menu: no radio-style checkmark (the collapsed MenuButton
-   * icon already encodes the active tool).
-   */
-  private _buildToolPopover(): Gtk.Popover {
-    const popover = new Gtk.Popover()
-    popover.add_css_class('menu')
-
-    const box = new Gtk.Box({
-      orientation: Gtk.Orientation.VERTICAL,
-      spacing: 0,
-      margin_top: 4,
-      margin_bottom: 4,
-      margin_start: 4,
-      margin_end: 4,
-    })
-
-    for (const tool of Object.keys(TOOL_ICONS) as EditorTool[]) {
-      const button = new Gtk.Button({
-        action_name: 'win.set-tool',
-        action_target: GLib.Variant.new_string(tool),
-        css_classes: ['flat'],
-      })
-      const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 })
-      row.append(new Gtk.Image({ icon_name: TOOL_ICONS[tool] }))
-      row.append(
-        new Gtk.Label({
-          label: TOOL_LABELS[tool](),
-          halign: Gtk.Align.START,
-          hexpand: true,
-        }),
-      )
-      button.set_child(row)
-      button.connect('clicked', () => popover.popdown())
-      box.append(button)
-    }
-
-    popover.set_child(box)
-    return popover
   }
 
   /**

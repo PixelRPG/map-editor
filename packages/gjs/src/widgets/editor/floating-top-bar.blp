@@ -171,18 +171,6 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
               tooltip-text: _("Dim other layers");
               styles ["flat"]
             }
-
-            Gtk.Separator {
-              orientation: vertical;
-            }
-
-            Gtk.MenuButton tool_button_split {
-              // Initial icon matches the default tool (`'select'`).
-              // `setActiveTool` swaps the icon on every state change.
-              icon-name: "edit-select-symbolic";
-              tooltip-text: _("Tool");
-              styles ["flat"]
-            }
           }
 
           Gtk.Box {
@@ -346,16 +334,9 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
             styles ["flat"]
           }
 
-          Gtk.MenuButton tool_button_merged {
-            // Initial icon matches the default tool (`'select'`).
-            // `setActiveTool` swaps the icon on every state change.
-            icon-name: "edit-select-symbolic";
-            tooltip-text: _("Tool");
-            styles ["flat"]
-          }
-
           // Hexpand spacer — pushes the context cluster + inspector
-          // toggle to the right edge.
+          // toggle to the right edge. (Tool selection lives in the
+          // left tool rail now, not the top bar.)
           Gtk.Box {
             hexpand: true;
           }
