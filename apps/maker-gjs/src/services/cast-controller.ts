@@ -241,15 +241,18 @@ export class CastController {
       })
       void this.refresh()
     },
-    // Sprite-sheet animations are edited in the Sheets view now — those
-    // mutations call the public methods (`setAnimationDuration` /
-    // `addAnimation` / …) directly via the Sheets-side wiring; sprite-set
-    // CRUD (import / delete / rename) lives on the store.
     deleteCharacter: (id: string) => this._deleteCharacter(id),
     listSpriteSets: () => this._listSpriteSets(),
     createCharacter: (draft: NewCharacterDraft) => this._createCharacter(draft),
     importSpriteSet: (result: SpriteSetImportResult) => this.store.importSpriteSet(result),
     loadSpriteSetPreview: (id: string) => this._loadSpriteSetPreview(id),
+    // Sheet-owned animation authoring now lives in the Cast detail's
+    // Action×Direction matrix (moved from the Sheets view). These delegate
+    // to the same public mutators, so persistence + collab are unchanged.
+    addAnimation: (sheetId: string, animation: CharacterAnimation) => this.addAnimation(sheetId, animation),
+    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) =>
+      this.editAnimation(sheetId, originalId, animation),
+    deleteAnimation: (sheetId: string, animId: string) => this.deleteAnimation(sheetId, animId),
   }
 
   /**

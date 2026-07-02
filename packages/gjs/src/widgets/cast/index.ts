@@ -1,3 +1,4 @@
+export * from './action-direction-matrix'
 export * from './add-animation-dialog'
 export * from './animation-list'
 export * from './cast-inspector'

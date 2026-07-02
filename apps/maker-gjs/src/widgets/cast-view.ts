@@ -2,8 +2,10 @@ import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
+import type { CharacterAnimation, CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
 import {
+  ActionDirectionMatrix,
+  AddAnimationDialog,
   CastInspector,
   CharacterPreview,
   type ComponentRefOptions,
@@ -33,6 +35,7 @@ const NPC_TEMPLATES = ['Villager', 'Guard', 'Merchant', 'Child'] as const
 
 GObject.type_ensure(CharacterPreview.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
+GObject.type_ensure(ActionDirectionMatrix.$gtype)
 
 export namespace CastView {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
@@ -76,6 +79,7 @@ export class CastView extends ResponsiveEditorView {
   declare _edit_appearance_button: Gtk.Button
   declare _place_button: Gtk.Button
   declare _inspector: CastInspector
+  declare _matrix: ActionDirectionMatrix
   declare _advanced_slot: Gtk.Box
 
   private _projectName = ''
@@ -101,6 +105,12 @@ export class CastView extends ResponsiveEditorView {
   private _onCreateCharacter: ((draft: NewCharacterDraft) => void) | null = null
   private _onImportSpriteSet: ((result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>) | null = null
   private _onLoadSpriteSetPreview: ((id: string) => Promise<GdkSpriteSetResource | null>) | null = null
+  // Sheet-owned animation mutators — the matrix authors the character's
+  // appearance animations directly in the Cast detail now (moved here
+  // from the Sheets view). `sheetId` is the character's spriteSetId.
+  private _onAddAnimation: ((sheetId: string, animation: CharacterAnimation) => void) | null = null
+  private _onEditAnimation: ((sheetId: string, originalId: string, animation: CharacterAnimation) => void) | null = null
+  private _onDeleteAnimation: ((sheetId: string, animId: string) => void) | null = null
 
   static {
     GObject.registerClass(
@@ -126,6 +136,7 @@ export class CastView extends ResponsiveEditorView {
           'edit_appearance_button',
           'place_button',
           'inspector',
+          'matrix',
           'advanced_slot',
         ],
         Properties: {
@@ -217,6 +228,24 @@ export class CastView extends ResponsiveEditorView {
     })
     this.signals.connect(this._inspector, 'edit-appearance-requested', () => this._editAppearance())
     this.signals.connect(this._edit_appearance_button, 'clicked', () => this._editAppearance())
+
+    // ── Animation matrix (sheet-owned animations) ──────────────────
+    this.signals.connect(this._matrix, 'animation-selected', (_m: ActionDirectionMatrix, id: string) => {
+      this._preview.setActiveAnimation(id)
+    })
+    // Keep the matrix highlight in sync when the preview's direction pad
+    // changes the active animation.
+    this.signals.connect(this._preview, 'notify::active-animation-id', () => {
+      this._matrix.setActiveAnimation(this._preview.activeAnimationId || null)
+    })
+    this.signals.connect(this._matrix, 'add-animation-requested', () => this._presentAnimationDialog(null))
+    this.signals.connect(this._matrix, 'edit-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
+      this._presentAnimationDialog(id)
+    })
+    this.signals.connect(this._matrix, 'delete-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
+      const character = this._currentCharacter()
+      if (character) this._onDeleteAnimation?.(character.spriteSetId, id)
+    })
     this.signals.connect(this._place_button, 'clicked', () => {
       const character = this._currentCharacter()
       if (character) this.activate_action('win.place-character', GLib.Variant.new_string(character.id))
@@ -228,10 +257,41 @@ export class CastView extends ResponsiveEditorView {
     super.vfunc_unmap()
   }
 
-  /** Deep-link into the active character's appearance editor (Sheets view). */
+  /** Deep-link into the active character's raw appearance ASSET (Sheets view). */
   private _editAppearance(): void {
     const character = this._currentCharacter()
     if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))
+  }
+
+  /**
+   * Open the frame editor for a role (`animId`) or a brand-new custom
+   * animation (`null`) on the active character's sheet. Reuses the
+   * existing {@link AddAnimationDialog}; mutations route through the
+   * sheet-owned controller callbacks (the same path the Sheets view used
+   * before authoring moved here).
+   */
+  private _presentAnimationDialog(animId: string | null): void {
+    const character = this._currentCharacter()
+    if (!character) return
+    const spriteSet = this._activeSpriteSet()
+    const sheetId = character.spriteSetId
+    const anims = spriteSet?.data?.characterAnimations ?? character.animations ?? []
+    const existing = animId ? (anims.find((a) => a.id === animId) ?? null) : null
+    const dialog = new AddAnimationDialog()
+    dialog.setContext(character, spriteSet, existing ?? undefined)
+    if (existing) {
+      dialog.connect(
+        'animation-edited',
+        (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
+          this._onEditAnimation?.(sheetId, originalId, animation)
+        },
+      )
+    } else {
+      dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
+        this._onAddAnimation?.(sheetId, animation)
+      })
+    }
+    dialog.present(this)
   }
 
   private _selectCharacter(id: string): void {
@@ -307,6 +367,9 @@ export class CastView extends ResponsiveEditorView {
     createCharacter: (draft: NewCharacterDraft) => void
     importSpriteSet: (result: SpriteSetImportResult) => Promise<SpriteSetChoice | null>
     loadSpriteSetPreview: (id: string) => Promise<GdkSpriteSetResource | null>
+    addAnimation: (sheetId: string, animation: CharacterAnimation) => void
+    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => void
+    deleteAnimation: (sheetId: string, animId: string) => void
   }): void {
     this._onRenameRequested = callbacks.rename
     this._onSetPlayerRequested = callbacks.setPlayer
@@ -319,6 +382,9 @@ export class CastView extends ResponsiveEditorView {
     this._onCreateCharacter = callbacks.createCharacter
     this._onImportSpriteSet = callbacks.importSpriteSet
     this._onLoadSpriteSetPreview = callbacks.loadSpriteSetPreview
+    this._onAddAnimation = callbacks.addAnimation
+    this._onEditAnimation = callbacks.editAnimation
+    this._onDeleteAnimation = callbacks.deleteAnimation
   }
 
   setCharacters(characters: CharacterDefinition[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
@@ -495,6 +561,7 @@ export class CastView extends ResponsiveEditorView {
     this._inspector.setSheets(this._sheets, character.spriteSetId)
     const usage = this._characters.filter((c) => c.spriteSetId === character.spriteSetId).length
     this._inspector.setAppearanceUsage(usage)
+    this._matrix.setCharacter(character, spriteSet)
 
     const entity = this._onGetCharacterEntity?.(character.id) ?? null
     if (entity) this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {})
