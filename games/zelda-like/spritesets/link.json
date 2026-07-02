@@ -120,70 +120,122 @@
     {
       "id": "idle-up",
       "frames": [
-        0
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 0,
+          "duration": 200
+        }
+      ]
     },
     {
       "id": "walk-up",
       "frames": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 1,
+          "duration": 200
+        },
+        {
+          "spriteId": 2,
+          "duration": 200
+        },
+        {
+          "spriteId": 3,
+          "duration": 200
+        },
+        {
+          "spriteId": 4,
+          "duration": 200
+        }
+      ]
     },
     {
       "id": "idle-down",
       "frames": [
-        5
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 5,
+          "duration": 200
+        }
+      ]
     },
     {
       "id": "walk-down",
       "frames": [
-        6,
-        7,
-        8,
-        9
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 6,
+          "duration": 200
+        },
+        {
+          "spriteId": 7,
+          "duration": 200
+        },
+        {
+          "spriteId": 8,
+          "duration": 200
+        },
+        {
+          "spriteId": 9,
+          "duration": 200
+        }
+      ]
     },
     {
       "id": "idle-left",
       "frames": [
-        10
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 10,
+          "duration": 200
+        }
+      ]
     },
     {
       "id": "walk-left",
       "frames": [
-        11,
-        12,
-        13,
-        14
-      ],
-      "durationMs": 130
+        {
+          "spriteId": 11,
+          "duration": 130
+        },
+        {
+          "spriteId": 12,
+          "duration": 130
+        },
+        {
+          "spriteId": 13,
+          "duration": 130
+        },
+        {
+          "spriteId": 14,
+          "duration": 130
+        }
+      ]
     },
     {
       "id": "idle-right",
       "frames": [
-        15
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 15,
+          "duration": 200
+        }
+      ]
     },
     {
       "id": "walk-right",
       "frames": [
-        16,
-        17,
-        18,
-        19
-      ],
-      "durationMs": 200
+        {
+          "spriteId": 16,
+          "duration": 200
+        },
+        {
+          "spriteId": 17,
+          "duration": 200
+        },
+        {
+          "spriteId": 18,
+          "duration": 200
+        },
+        {
+          "spriteId": 19,
+          "duration": 200
+        }
+      ]
     }
   ]
 }

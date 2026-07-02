@@ -27,7 +27,15 @@ const fakeCharacterSheet = {
   sprites: { 0: fakeSprite(), 1: fakeSprite() },
   animations: {},
   data: {
-    characterAnimations: [{ id: 'idle-down', frames: [0, 1], durationMs: 200 }],
+    characterAnimations: [
+      {
+        id: 'idle-down',
+        frames: [
+          { spriteId: 0, duration: 200 },
+          { spriteId: 1, duration: 200 },
+        ],
+      },
+    ],
   },
 } as unknown as SpriteSetResource
 

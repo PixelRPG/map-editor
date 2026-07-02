@@ -201,9 +201,11 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._editingId = existingAnimation?.id ?? null
 
     if (existingAnimation) {
-      this._frames = [...existingAnimation.frames]
+      // This dialog sequences sprite indices with one uniform duration;
+      // unpack the per-frame shape into indices + the first frame's ms.
+      this._frames = existingAnimation.frames.map((f) => f.spriteId)
       this._name_row.set_text(existingAnimation.id)
-      this._duration_row.set_value(existingAnimation.durationMs)
+      this._duration_row.set_value(existingAnimation.frames[0]?.duration ?? 200)
       const isRequiredRole = (REQUIRED_ROLES as readonly string[]).includes(existingAnimation.id)
       this._name_row.set_sensitive(!isRequiredRole)
       this.set_title(_('Edit animation'))
@@ -536,10 +538,12 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _buildAnimation(): CharacterAnimation | null {
     const name = this._name_row.get_text().trim()
     if (!name || this._frames.length === 0) return null
+    // Apply the single dialog duration uniformly across the sequenced
+    // frames (per-frame tuning happens in the timeline editor).
+    const duration = Math.round(this._duration_row.get_value())
     return {
       id: name,
-      frames: [...this._frames],
-      durationMs: Math.round(this._duration_row.get_value()),
+      frames: this._frames.map((spriteId) => ({ spriteId, duration })),
     }
   }
 }

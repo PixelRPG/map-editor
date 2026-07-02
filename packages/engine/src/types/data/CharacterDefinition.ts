@@ -1,3 +1,4 @@
+import type { AnimationFrame } from './AnimationFrame'
 import type { CharacterAnimationRole } from './CharacterAnimationRole'
 
 /**
@@ -8,15 +9,15 @@ import type { CharacterAnimationRole } from './CharacterAnimationRole'
  * `wave`, …) it can be any user-chosen string. One-field-per-thing —
  * no separate `role` slot, no enum-and-id duplication.
  *
- * Frames are sprite indices into the character's `spriteSetId`. The
- * frame duration is uniform across the animation (the user spec —
- * "die geschwindigkeit soll in ms eingestellt werden können, wobei
- * sie alle pro animation gleich sind"). Loop defaults to `true`.
+ * Each {@link AnimationFrame} carries its own `spriteId` (index into the
+ * character's `spriteSetId`) **and** `duration` in ms — the timeline
+ * editor tunes duration per frame (chip width), with an "apply to all"
+ * affordance for the uniform case. Shares the frame shape with the
+ * tile/object {@link AnimationData}. Loop defaults to `true`.
  */
 export interface CharacterAnimation {
   id: string
-  frames: number[]
-  durationMs: number
+  frames: AnimationFrame[]
   loop?: boolean
 }
 

@@ -158,10 +158,11 @@ export class AnimationList extends Adw.Bin {
     row.add_prefix(prefix)
 
     if (anim) {
+      const totalMs = anim.frames.reduce((sum, f) => sum + f.duration, 0)
       const subtitle =
         anim.frames.length === 0
           ? _('No frames')
-          : `${anim.frames.length} ${anim.frames.length === 1 ? _('frame') : _('frames')} · ${anim.durationMs} ms`
+          : `${anim.frames.length} ${anim.frames.length === 1 ? _('frame') : _('frames')} · ${totalMs} ms`
       row.set_subtitle(subtitle)
     } else {
       row.set_subtitle(_('Not configured'))
@@ -235,7 +236,7 @@ export class AnimationList extends Adw.Bin {
     })
     const visible = Math.min(anim.frames.length, ROW_THUMBNAIL_CAP)
     for (let i = 0; i < visible; i++) {
-      const spriteId = anim.frames[i]
+      const spriteId = anim.frames[i].spriteId
       const sprite = this._spriteSet?.getSprite(spriteId) ?? null
       const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
       const picture = new Gtk.Picture({

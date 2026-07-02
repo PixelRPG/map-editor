@@ -51,7 +51,7 @@ export function buildCharacterAnimations(
 
 /**
  * Build a single Excalibur {@link Animation} from a {@link CharacterAnimation}
- * (frame indices into the sheet's sprites, uniform `durationMs`, loop by
+ * (each frame carries its own sprite index + duration, loop by
  * default). Returns `null` when no frame resolves to a loaded sprite.
  *
  * Shared by the player path ({@link buildCharacterAnimations}) and the
@@ -60,9 +60,9 @@ export function buildCharacterAnimations(
  */
 export function buildCharacterAnimation(anim: CharacterAnimation, sprites: Record<number, Sprite>): Animation | null {
   const frames = anim.frames
-    .map((spriteId) => sprites[spriteId])
-    .filter((s): s is Sprite => s != null)
-    .map((sprite) => ({ graphic: sprite.clone(), duration: anim.durationMs }))
+    .map((frame) => ({ sprite: sprites[frame.spriteId], duration: frame.duration }))
+    .filter((f): f is { sprite: Sprite; duration: number } => f.sprite != null)
+    .map(({ sprite, duration }) => ({ graphic: sprite.clone(), duration }))
   if (frames.length === 0) return null
   return new Animation({
     frames,

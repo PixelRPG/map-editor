@@ -347,14 +347,15 @@ export class CastController {
   }
 
   /**
-   * Set one animation's per-loop duration on a sheet. Public so both the
-   * Cast detail (via `callbacks`) and the unified Sheets view's animation
-   * editor drive the same sheet-owned mutation.
+   * Set a uniform per-frame duration across one animation on a sheet
+   * ("apply to all frames"). Public so both the Cast detail (via
+   * `callbacks`) and the animation editor drive the same sheet-owned
+   * mutation; per-frame durations are set frame-by-frame in the editor.
    */
   setAnimationDuration(sheetId: string, animId: string, durationMs: number): void {
     this._mutateSheetAnimations(sheetId, (anims) => {
       const anim = anims.find((a) => a.id === animId)
-      if (anim) anim.durationMs = durationMs
+      if (anim) anim.frames = anim.frames.map((f) => ({ ...f, duration: durationMs }))
     })
   }
 

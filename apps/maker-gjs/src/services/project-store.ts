@@ -529,7 +529,10 @@ export class ProjectStore {
       characterAnimations:
         kind === 'character'
           ? (data.characterAnimations ??
-            REQUIRED_ROLES.map((role) => ({ id: role, frames: [DEFAULT_FRAME], durationMs: DEFAULT_ANIMATION_MS })))
+            REQUIRED_ROLES.map((role) => ({
+              id: role,
+              frames: [{ spriteId: DEFAULT_FRAME, duration: DEFAULT_ANIMATION_MS }],
+            })))
           : undefined,
       image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile },
     }

@@ -36,7 +36,7 @@ Runtime   ECS                 definition+placement flatten into an Excalibur ent
 
 ### Layer 1 — Appearance
 
-An **Appearance** is today's `SpriteSetData { kind:'character' }` — image + grid + `characterAnimations` + the uniform body collision box — renamed and treated as a first-class library asset next to Tilesets. The Cast "Sprite sheet" editor already produces exactly this; it moves conceptually into the asset library instead of being a peer tab of Character. `CharacterAnimation` (frames + durationMs + loop) is unchanged. No file split for Layer 0 until two appearances genuinely share one image (YAGNI).
+An **Appearance** is today's `SpriteSetData { kind:'character' }` — image + grid + `characterAnimations` + the uniform body collision box — renamed and treated as a first-class library asset next to Tilesets. The Cast "Sprite sheet" editor already produces exactly this; it moves conceptually into the asset library instead of being a peer tab of Character. `CharacterAnimation` is `{ id, frames: AnimationFrame[], loop? }` — each frame carries its own `{ spriteId, duration }`, sharing the frame shape with the tile/object `AnimationData` (the animation timeline editor tunes duration per frame). No file split for Layer 0 until two appearances genuinely share one image (YAGNI).
 
 An entity's visual is a union — single sprite for a chest/sign, full animation set for anything that walks:
 
