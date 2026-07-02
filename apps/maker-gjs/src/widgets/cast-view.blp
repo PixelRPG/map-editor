@@ -252,6 +252,14 @@ template $CastView : $PixelRpgResponsiveEditorView {
                     // Editable fields (name / appearance / player / speed).
                     $PixelRpgCastInspector inspector {}
 
+                    // Animation authoring — the Action×Direction matrix
+                    // (moved here from the Sheets view). Reads the
+                    // character's sheet animations; a cell drives the
+                    // preview, double-click edits its frames.
+                    $PixelRpgActionDirectionMatrix matrix {
+                      margin-top: 8;
+                    }
+
                     // Progressive disclosure: raw "all components" editor.
                     Gtk.Box advanced_slot {
                       orientation: vertical;
