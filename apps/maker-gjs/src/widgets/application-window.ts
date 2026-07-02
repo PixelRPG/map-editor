@@ -787,8 +787,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * to every view's own pair. Effect: the sidebars retain their state
    * across view switches — opening the library in atlas keeps it open
    * after navigating to scene-editor, and closing it stays closed when
-   * the user goes back. Welcome's library-less layout binds only the
-   * inspector.
+   * the user goes back.
+   *
+   * Welcome is deliberately NOT bound: its recents column is part of the
+   * home layout (visible by default, inlined below the hero on phone),
+   * not a project inspector — sharing state would hide it whenever the
+   * user last closed an editor inspector.
    */
   private _shareSidebarState(): void {
     const flags = GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL
@@ -802,7 +806,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this.bind_property('show-library', view, 'show-library', flags)
       this.bind_property('show-inspector', view, 'show-inspector', flags)
     }
-    this.bind_property('show-inspector', this._welcome_view, 'show-inspector', flags)
     // The Data view has a mode rail but no inspector — bind only the library.
     this.bind_property('show-library', this._data_view, 'show-library', flags)
   }
@@ -1529,7 +1532,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // welcome list so backing out of the project shows the project we
       // just opened at the top.
       const caption = (project.resource.data?.properties?.description as string | undefined) ?? ''
-      recordRecentProject({ path: projectPath, name: project.projectName, caption })
+      recordRecentProject({ path: projectPath, name: project.projectName, caption, sceneCount: project.scenes.length })
       this._welcome_view.setRecentProjects(loadRecentProjects())
       this._showAtlas()
     } catch (error) {

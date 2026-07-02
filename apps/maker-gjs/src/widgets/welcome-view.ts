@@ -4,6 +4,7 @@ import Gtk from '@girs/gtk-4.0'
 import { MapPreview, ProjectHeroIcon, SignalScope } from '@pixelrpg/gjs'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { parsePixelrpgUrl } from '../services/pixelrpg-url.ts'
+import { formatRelativeTime } from '../services/recent-time.ts'
 import type { RecentProject } from '../services/recent-projects.ts'
 import { STARTER_TEMPLATES } from '../services/templates.ts'
 
@@ -34,18 +35,26 @@ export class WelcomeView extends Adw.Bin {
   declare _browse_button: Gtk.Button
   declare _tour_button: Gtk.Button
   declare _templates_grid: Gtk.FlowBox
+  declare _template_filter: Gtk.SearchEntry
   declare _recents_list: Gtk.ListBox
   declare _empty_recents_row: Adw.ActionRow
   declare _sessions_list: Gtk.ListBox
   declare _empty_sessions_row: Adw.ActionRow
   declare _join_link_row: Adw.EntryRow
   declare _join_link_button: Gtk.Button
+  declare _sidebar_recents_slot: Adw.Bin
+  declare _inline_recents_slot: Adw.Bin
+  declare _recents_column: Gtk.Box
 
   private _recentRows: Gtk.Widget[] = []
   /** `name` → row, so `service-gone` events can remove the right entry. */
   private _sessionRows = new Map<string, Adw.ActionRow>()
+  /** Template card FlowBox child → lowercase searchable text, for the filter. */
+  private _templateSearchText = new Map<Gtk.Widget, string>()
   private _inspectorCollapsed = false
-  private _showInspector = false
+  // Recents are part of the home layout, so the column defaults to
+  // visible (unlike the editor views' project inspectors).
+  private _showInspector = true
 
   private signals = new SignalScope()
 
@@ -61,12 +70,16 @@ export class WelcomeView extends Adw.Bin {
           'browse_button',
           'tour_button',
           'templates_grid',
+          'template_filter',
           'recents_list',
           'empty_recents_row',
           'sessions_list',
           'empty_sessions_row',
           'join_link_row',
           'join_link_button',
+          'sidebar_recents_slot',
+          'inline_recents_slot',
+          'recents_column',
         ],
         Properties: {
           // Mirror SceneEditorView + AtlasView so the same
@@ -84,7 +97,7 @@ export class WelcomeView extends Adw.Bin {
             'Show inspector',
             'Whether the right-side recent-projects panel is visible',
             GObject.ParamFlags.READWRITE,
-            false,
+            true,
           ),
         },
         Signals: {
@@ -117,10 +130,20 @@ export class WelcomeView extends Adw.Bin {
     if (this._inspectorCollapsed === value) return
     this._inspectorCollapsed = value
     this.notify('inspector-collapsed')
+    this._relocateRecents()
+    // Recents live inline on phone, so the split-view drawer would
+    // otherwise show empty. Collapse hides it; expanding restores the
+    // desktop sidebar. (Welcome owns its own inspector state — it's not
+    // bound to the shared window sidebar, so this can't fight the editors.)
+    this.showInspector = !value
   }
 
   get showInspector(): boolean {
-    return this._showInspector ?? false
+    // Fallback matches the ParamSpec default: the template's
+    // `show-sidebar` binding reads this during `super()` BEFORE the
+    // class-field initializer runs, so `?? false` would freeze the
+    // sidebar closed regardless of the field's value.
+    return this._showInspector ?? true
   }
 
   set showInspector(value: boolean) {
@@ -132,6 +155,7 @@ export class WelcomeView extends Adw.Bin {
   constructor() {
     super()
     this._buildTemplateGrid()
+    this._templates_grid.set_filter_func((child) => this._templateFilterFunc(child))
   }
 
   vfunc_map(): void {
@@ -143,6 +167,7 @@ export class WelcomeView extends Adw.Bin {
     this.signals.connect(this._join_link_button, 'clicked', () => this._submitJoinLink())
     // Pressing Enter in the entry submits — same path as the button.
     this.signals.connect(this._join_link_row, 'entry-activated', () => this._submitJoinLink())
+    this.signals.connect(this._template_filter, 'search-changed', () => this._templates_grid.invalidate_filter())
   }
 
   vfunc_unmap(): void {
@@ -166,17 +191,59 @@ export class WelcomeView extends Adw.Bin {
     this._empty_recents_row.set_visible(false)
 
     for (const recent of recents) {
+      // Meta line: "<caption> · <N scenes> · <when>" — parts drop out
+      // when unknown (caption may be empty; sceneCount is absent on
+      // entries recorded before the field existed).
+      const parts: string[] = []
+      if (recent.caption) parts.push(recent.caption)
+      if (recent.sceneCount) parts.push(recent.sceneCount === 1 ? '1 scene' : `${recent.sceneCount} scenes`)
+      if (recent.openedAt) parts.push(formatRelativeTime(recent.openedAt))
       const row = new Adw.ActionRow({
         title: recent.name,
-        subtitle: recent.caption || recent.path,
+        subtitle: parts.join(' · ') || recent.path,
+        subtitle_lines: 2,
+        tooltip_text: recent.path,
         activatable: true,
       })
-      row.add_prefix(new Gtk.Image({ icon_name: 'folder-symbolic', pixel_size: 22 }))
+      // Live map thumbnail — same MapPreview pipeline as the template
+      // cards. Deferred so eight rows don't block the main loop in a
+      // row; a vanished project file just leaves the accent fallback.
+      const preview = new MapPreview()
+      preview.set_size_request(48, 32)
+      preview.add_css_class('engine-canvas')
+      preview.valign = Gtk.Align.CENTER
+      void Promise.resolve()
+        .then(() => preview.loadProject(recent.path))
+        .catch(() => {})
+      row.add_prefix(preview)
       row.add_suffix(new Gtk.Image({ icon_name: 'go-next-symbolic', pixel_size: 12 }))
       row.connect('activated', () => this.emit('recent-selected', recent.path))
       this._recents_list.append(row)
       this._recentRows.push(row)
     }
+  }
+
+  /**
+   * Move the recents column between its desktop home (the end sidebar)
+   * and the inline slot below the hero — the phone layout stacks
+   * recents between the CTAs and the template gallery instead of
+   * hiding them in a drawer.
+   */
+  private _relocateRecents(): void {
+    const target = this._inspectorCollapsed ? this._inline_recents_slot : this._sidebar_recents_slot
+    const source = this._inspectorCollapsed ? this._sidebar_recents_slot : this._inline_recents_slot
+    if (target.get_child() !== this._recents_column) {
+      source.set_child(null)
+      target.set_child(this._recents_column)
+    }
+    this._inline_recents_slot.set_visible(this._inspectorCollapsed)
+  }
+
+  private _templateFilterFunc(child: Gtk.FlowBoxChild): boolean {
+    const query = this._template_filter.get_text().trim().toLowerCase()
+    if (!query) return true
+    const text = this._templateSearchText.get(child.get_child() as Gtk.Widget) ?? ''
+    return text.includes(query)
   }
 
   /**
@@ -270,6 +337,7 @@ export class WelcomeView extends Adw.Bin {
     accentColor: string
   }): Gtk.Button {
     const button = new Gtk.Button({ css_classes: ['card'] })
+    this._templateSearchText.set(button, `${template.name} ${template.caption}`.toLowerCase())
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       spacing: 8,
