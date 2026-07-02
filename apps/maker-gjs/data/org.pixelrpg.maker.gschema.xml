@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="org.pixelrpg.maker">
+  <enum id="org.pixelrpg.maker.Theme">
+    <value nick="default" value="0"/>
+    <value nick="force-light" value="1"/>
+    <value nick="force-dark" value="2"/>
+  </enum>
+  <schema id="org.pixelrpg.maker" path="/org/pixelrpg/maker/">
+    <key name="theme" enum="org.pixelrpg.maker.Theme">
+      <default>'default'</default>
+      <summary>Color scheme preference</summary>
+      <description>
+        Follow the system color scheme ("default") or force the light or
+        dark style regardless of the OS setting.
+      </description>
+    </key>
+  </schema>
+</schemalist>

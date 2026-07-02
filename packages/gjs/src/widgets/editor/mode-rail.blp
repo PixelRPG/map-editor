@@ -256,6 +256,30 @@ menu primary_menu {
     }
   }
   section {
+    submenu {
+      label: _("Style");
+
+      item {
+        label: _("Auto");
+        action: "app.theme";
+        target: "default";
+      }
+
+      item {
+        label: _("Light");
+        action: "app.theme";
+        target: "force-light";
+      }
+
+      item {
+        label: _("Dark");
+        action: "app.theme";
+        target: "force-dark";
+      }
+    }
+  }
+
+  section {
     item {
       label: _("Preferences");
       action: "app.preferences";

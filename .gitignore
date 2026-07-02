@@ -139,3 +139,5 @@ vite.config.js.timestamp*
 # Claude Code
 .agents
 .claude
+gschemas.compiled
+
