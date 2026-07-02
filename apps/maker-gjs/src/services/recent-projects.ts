@@ -13,6 +13,12 @@ export interface RecentProject {
   name: string
   /** Caption (project's `properties.description`, truncated). */
   caption: string
+  /**
+   * Scene (map) count at the time of opening — feeds the welcome row's
+   * "N scenes" meta. Optional: entries written before this field existed
+   * simply omit it from the label.
+   */
+  sceneCount?: number
   /** Unix ms timestamp when the project was last opened by the user. */
   openedAt: number
 }

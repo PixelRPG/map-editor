@@ -18,6 +18,7 @@ import orphanPublisherCleanupSuite from './services/orphan-publisher-cleanup.spe
 import participantRosterSuite from './services/participant-roster.spec.js'
 import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
 import projectLoaderSuite from './services/project-loader.spec.js'
+import recentTimeSuite from './services/recent-time.spec.js'
 import projectStoreSuite from './services/project-store.spec.js'
 import relaySignallingSuite from './services/relay-signalling.spec.js'
 import sandboxPathSuite from './services/sandbox-path.spec.js'
@@ -48,6 +49,7 @@ run({
   pixelrpgUrlSuite,
   projectLoaderSuite,
   projectStoreSuite,
+  recentTimeSuite,
   relaySignallingSuite,
   sandboxPathSuite,
   sessionServiceSuite,
