@@ -459,7 +459,18 @@ export class Engine extends Adw.Bin {
     this._widget = widget
 
     widget.onReady(async (canvas: HTMLCanvasElement) => {
-      widget.grab_focus()
+      // Defer the focus grab out of the engine-init render burst.
+      // Grabbing focus synchronously here queues a focus-outline redraw
+      // that, under the un-paced render ticks of a freshly-created
+      // GLArea (e.g. a headless / D-Bus-driven open where the window
+      // isn't getting steady frame callbacks), can crash GTK inside
+      // `gtk_css_style_snapshot_outline` — the intermittent engine-init
+      // SIGSEGV in TODO.md (confirmed via core-dump backtrace).
+      // Idle-scheduling lets the first frames settle before focus moves.
+      GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        widget.grab_focus()
+        return GLib.SOURCE_REMOVE
+      })
       canvas.width = widget.get_allocated_width() || 800
       canvas.height = widget.get_allocated_height() || 600
 
