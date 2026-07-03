@@ -113,6 +113,13 @@ export interface ComponentSpec {
   fields: readonly FieldDescriptor[]
   editor: ComponentEditorMeta
   build: (data: ComponentData, ctx: SpawnContext) => Component | Component[] | null
+  /**
+   * Optional deep validator for data the flat field DSL can't fully
+   * check — e.g. a heterogeneous list behind a `json` field (the
+   * `actions` spec's discriminated-union entries). Runs AFTER field
+   * validation; returns human-readable error strings (empty = ok).
+   */
+  validate?: (data: ComponentData) => string[]
 }
 
 /** A component type → its spec. Open: spread to add user specs. */

@@ -18,6 +18,7 @@ import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
 import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import registrySuite from './commands/registry.spec.js'
+import actionsSpecSuite from './entity/specs/actions.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
 import entityDataAccessSuite from './entity/data-access.spec.js'
 import entityPlacementGraphicSuite from './entity/placement-graphic.spec.js'
@@ -58,6 +59,7 @@ run({
   layerFlagCommandSuite,
   objectPlacementCommandSuite,
   entityRegistrySuite,
+  actionsSpecSuite,
   entityValidateSuite,
   entityConvertSuite,
   entityDataAccessSuite,
