@@ -22,6 +22,9 @@ export enum EngineEvent {
   WALKED_ONTO_TILE = 'walked-onto-tile',
   TELEPORT_REQUESTED = 'teleport-requested',
   ITEM_PICKED_UP = 'item-picked-up',
+  SHOW_TEXT_REQUESTED = 'show-text-requested',
+  FLAG_SET = 'flag-set',
+  PLAY_SFX_REQUESTED = 'play-sfx-requested',
   POINTER_TAP = 'pointer-tap',
   POINTER_DRAG_START = 'pointer-drag-start',
   POINTER_DRAG_MOVE = 'pointer-drag-move',
@@ -136,6 +139,19 @@ export interface EngineEventMap {
     qty: number
     pickupSound?: string
   }
+  /**
+   * Emitted by `EventActionSystem` for a `show-text` action. The host's
+   * dialogue / text-box overlay listens and displays the line (no store
+   * yet — the text is inline).
+   */
+  [EngineEvent.SHOW_TEXT_REQUESTED]: { text: string; speaker?: string }
+  /**
+   * Emitted by `EventActionSystem` for a `set-flag` action — the write
+   * side of the (future) game-flags store that gates entity states.
+   */
+  [EngineEvent.FLAG_SET]: { flag: string; value: boolean | number | string }
+  /** Emitted by `EventActionSystem` for a `play-sfx` action. */
+  [EngineEvent.PLAY_SFX_REQUESTED]: { sound: string }
   /**
    * High-level "click without drag" emitted by `PointerGestureSystem`
    * on pointer-up when the press never crossed the drag threshold.

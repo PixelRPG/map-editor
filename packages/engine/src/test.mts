@@ -46,6 +46,7 @@ import projectSnapshotSuite from './sync/project-snapshot.spec.js'
 import sessionControllerSuite from './sync/session-controller.spec.js'
 import sessionProtocolSuite from './sync/session-protocol.spec.js'
 import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
+import eventActionSystemSuite from './systems/event-action.system.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
 import tileEditorSystemSuite from './systems/tile-editor.system.spec.js'
 import walkOnTileSuite from './systems/walk-on-tile.system.spec.js'
@@ -87,6 +88,7 @@ run({
   sessionProtocolSuite,
   snapshotExchangeSuite,
   inputSystemSuite,
+  eventActionSystemSuite,
   tileEditorSystemSuite,
   walkOnTileSuite,
   objectSystemSuite,

@@ -7,6 +7,7 @@ import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
 import {
   CameraControlSystem,
+  EventActionSystem,
   InputSystem,
   ItemPickupSystem,
   ObjectSpawnSystem,
@@ -74,6 +75,7 @@ export class MapScene extends Scene {
     this.world.add(new TriggerSystem(events))
     this.world.add(new TeleportSystem(events))
     this.world.add(new ItemPickupSystem(events))
+    this.world.add(new EventActionSystem(events))
     this.world.add(new WalkOnTileSystem(mapResource, events))
 
     // Bootstrap the session-singleton + default to editor mode.
