@@ -3,7 +3,7 @@ import Gdk from '@girs/gdk-4.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
+import type { AnimationFrame, CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import { REQUIRED_ROLES } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
@@ -34,12 +34,12 @@ const DEFAULT_ZOOM_LEVEL = 2
  *   non-empty, not already used by an existing animation on the
  *   character, and not a reserved required-role name (the
  *   walk-/idle- prefixes paired with each of four directions).
- * - Duration (`Adw.SpinRow`) — milliseconds per frame; uniform
- *   across the animation per the spec.
+ * - Default duration (`Adw.SpinRow`) — milliseconds a *new* frame
+ *   starts at; "Apply default to all" pushes it across the sequence.
  * - Frame sequence — built by clicking sprites in the frame picker
- *   (`TilePalette` reused as a sprite-sheet grid). Each click
- *   appends a frame; clicking a thumbnail in the sequence strip
- *   removes it.
+ *   (`TilePalette` reused as a sprite-sheet grid). Each click appends
+ *   a frame; a chip's thumbnail removes it (drag reorders), and each
+ *   chip carries its own −/ms/+ duration stepper (per-frame timing).
  *
  * The dialog adapts to its host:
  *
@@ -68,11 +68,13 @@ export class AddAnimationDialog extends Adw.Dialog {
   declare _sequence_strip: Gtk.Box
   declare _palette: TilePalette
   declare _add_frame_button: Gtk.MenuButton
+  declare _apply_all_button: Gtk.Button
   declare _frame_picker: TilePalette
 
   private _character: CharacterDefinition | null = null
   private _spriteSet: GdkSpriteSetResource | null = null
-  private _frames: number[] = []
+  /** Per-frame sequence — each frame carries its own sprite id + duration (ms). */
+  private _frames: AnimationFrame[] = []
   /** Source index of an in-progress sequence-strip drag-to-reorder. */
   private _dragFromIndex: number | null = null
   private _sequenceState = 'empty'
@@ -108,6 +110,7 @@ export class AddAnimationDialog extends Adw.Dialog {
           'sequence_strip',
           'palette',
           'add_frame_button',
+          'apply_all_button',
           'frame_picker',
         ],
         Properties: {
@@ -201,11 +204,11 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._editingId = existingAnimation?.id ?? null
 
     if (existingAnimation) {
-      // This dialog sequences sprite indices with one uniform duration;
-      // unpack the per-frame shape into indices + the first frame's ms.
-      this._frames = existingAnimation.frames.map((f) => f.spriteId)
+      // Per-frame durations round-trip verbatim; seed the default row
+      // from the first frame so "Apply default to all" is a sane no-op.
+      this._frames = existingAnimation.frames.map((f) => ({ ...f }))
       this._name_row.set_text(existingAnimation.id)
-      this._duration_row.set_value(existingAnimation.frames[0]?.duration ?? 200)
+      this._duration_row.set_value(existingAnimation.frames[0]?.duration ?? DEFAULT_DURATION_MS)
       const isRequiredRole = (REQUIRED_ROLES as readonly string[]).includes(existingAnimation.id)
       this._name_row.set_sensitive(!isRequiredRole)
       this.set_title(_('Edit animation'))
@@ -330,12 +333,10 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._name_row.connect('changed', () => {
       this._refreshValidity()
     })
-    this._duration_row.connect('notify::value', () => {
-      // A duration change retimes the preview without resetting
-      // the frame index — keeps the loop running smoothly while
-      // the user drags the spinner.
-      this._restartPreviewTimer()
-    })
+    // The duration row is now the DEFAULT for new frames (per-frame
+    // durations are edited on each chip); "Apply default to all" pushes
+    // it across the whole sequence.
+    this._apply_all_button.connect('clicked', () => this._applyDurationToAll())
   }
 
   private _wirePalette(): void {
@@ -351,13 +352,22 @@ export class AddAnimationDialog extends Adw.Dialog {
     })
   }
 
-  /** Append a sprite to the frame sequence + refresh the dependent surfaces. */
+  /** Append a sprite to the frame sequence (at the default duration) + refresh. */
   private _appendFrame(spriteId: number): void {
-    this._frames = [...this._frames, spriteId]
+    const duration = Math.round(this._duration_row.get_value())
+    this._frames = [...this._frames, { spriteId, duration }]
     this._previewIndex = 0
     this._rebuildSequenceStrip()
     this._refreshPreview()
     this._refreshValidity()
+  }
+
+  /** Set every frame's duration to the current default-duration value. */
+  private _applyDurationToAll(): void {
+    const duration = Math.round(this._duration_row.get_value())
+    this._frames = this._frames.map((f) => ({ ...f, duration }))
+    this._rebuildSequenceStrip()
+    this._refreshPreview()
   }
 
   private _populatePalette(): void {
@@ -391,28 +401,27 @@ export class AddAnimationDialog extends Adw.Dialog {
     }
 
     for (let i = 0; i < this._frames.length; i++) {
-      const spriteId = this._frames[i]
-      const index = i
-      const button = this._buildSequenceThumbnail(spriteId, index)
-      this._sequence_strip.append(button)
+      this._sequence_strip.append(this._buildSequenceChip(this._frames[i], i))
     }
 
     this.sequenceState = this._frames.length === 0 ? 'empty' : 'populated'
   }
 
   /**
-   * Build one thumbnail button for the sequence strip. Each button
-   * carries its frame's sprite. Click removes the frame; dragging it
-   * onto another thumbnail reorders the sequence (a `Gtk.DragSource` +
-   * `Gtk.DropTarget` pair carrying the frame's index). Click and drag
-   * coexist — GTK suppresses the click once a press turns into a drag.
+   * Build one chip for the sequence strip: the frame's sprite thumbnail
+   * (click removes, drag reorders — a `Gtk.DragSource` + `Gtk.DropTarget`
+   * pair carrying the frame's index) stacked over a per-frame duration
+   * stepper (−/ms/+). Click and drag coexist — GTK suppresses the click
+   * once a press turns into a drag.
    */
-  private _buildSequenceThumbnail(spriteId: number, indexInSequence: number): Gtk.Button {
+  private _buildSequenceChip(frame: AnimationFrame, indexInSequence: number): Gtk.Box {
+    const chip = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
+
     const button = new Gtk.Button({
       tooltipText: _('Drag to reorder · click to remove'),
       cssClasses: ['flat'],
     })
-    const sprite = this._spriteSet?.getSprite(spriteId)
+    const sprite = this._spriteSet?.getSprite(frame.spriteId)
     const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
     const picture = new Gtk.Picture({
       contentFit: Gtk.ContentFit.CONTAIN,
@@ -461,7 +470,49 @@ export class AddAnimationDialog extends Adw.Dialog {
     })
     button.add_controller(dropTarget)
 
-    return button
+    chip.append(button)
+    chip.append(this._buildDurationStepper(indexInSequence))
+    return chip
+  }
+
+  /**
+   * Compact −/ms/+ stepper for one frame's duration. Adjusts
+   * `_frames[index].duration` in ±50 ms steps (clamped 50–2000) and
+   * retimes the live preview so a mixed-duration loop reads correctly.
+   */
+  private _buildDurationStepper(index: number): Gtk.Box {
+    const row = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: 0,
+      halign: Gtk.Align.CENTER,
+      cssClasses: ['linked'],
+    })
+    const label = new Gtk.Label({ cssClasses: ['caption', 'numeric'], widthChars: 6 })
+    const setLabel = () => label.set_label(`${this._frames[index]?.duration ?? 0} ms`)
+    const nudge = (delta: number) => {
+      const frame = this._frames[index]
+      if (!frame) return
+      frame.duration = Math.max(50, Math.min(2000, frame.duration + delta))
+      setLabel()
+      this._refreshPreview()
+    }
+    const minus = new Gtk.Button({
+      iconName: 'list-remove-symbolic',
+      cssClasses: ['flat', 'circular'],
+      tooltipText: _('Shorter'),
+    })
+    minus.connect('clicked', () => nudge(-50))
+    const plus = new Gtk.Button({
+      iconName: 'list-add-symbolic',
+      cssClasses: ['flat', 'circular'],
+      tooltipText: _('Longer'),
+    })
+    plus.connect('clicked', () => nudge(50))
+    setLabel()
+    row.append(minus)
+    row.append(label)
+    row.append(plus)
+    return row
   }
 
   /**
@@ -489,11 +540,18 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _restartPreviewTimer(): void {
     this._stopPreviewTimer()
     if (this._frames.length <= 1) return
-    const duration = Math.max(50, this._duration_row.get_value())
+    // Per-frame timing: schedule off the CURRENT frame's own duration and
+    // reschedule each tick so a mixed-duration loop plays back accurately.
+    const duration = Math.max(
+      50,
+      this._frames[this._previewIndex % this._frames.length]?.duration ?? DEFAULT_DURATION_MS,
+    )
     this._previewTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, duration, () => {
       this._previewIndex = (this._previewIndex + 1) % Math.max(1, this._frames.length)
       this._applyPreviewFrame()
-      return GLib.SOURCE_CONTINUE
+      this._previewTimeoutId = 0
+      this._restartPreviewTimer()
+      return GLib.SOURCE_REMOVE
     })
   }
 
@@ -509,7 +567,7 @@ export class AddAnimationDialog extends Adw.Dialog {
       this._preview_picture.set_paintable(null)
       return
     }
-    const spriteId = this._frames[this._previewIndex % this._frames.length]
+    const spriteId = this._frames[this._previewIndex % this._frames.length].spriteId
     const sprite = this._spriteSet.getSprite(spriteId)
     const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
     this._preview_picture.set_paintable(paintable)
@@ -538,12 +596,11 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _buildAnimation(): CharacterAnimation | null {
     const name = this._name_row.get_text().trim()
     if (!name || this._frames.length === 0) return null
-    // Apply the single dialog duration uniformly across the sequenced
-    // frames (per-frame tuning happens in the timeline editor).
-    const duration = Math.round(this._duration_row.get_value())
+    // Frames already carry their per-frame durations; copy so the caller
+    // can't mutate our working array.
     return {
       id: name,
-      frames: this._frames.map((spriteId) => ({ spriteId, duration })),
+      frames: this._frames.map((f) => ({ ...f })),
     }
   }
 }
