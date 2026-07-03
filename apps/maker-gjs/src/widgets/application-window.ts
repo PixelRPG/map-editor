@@ -979,6 +979,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._scene_editor_view.setLayerFlag(layerId, flag, value)
     })
 
+    // Runtime event-script effects (playtest): the engine's
+    // `EventActionSystem` emits these when a trigger fires. Surface them
+    // as toasts so the user can verify their events without a console.
+    // These fire in runtime mode only, so they never spam while editing.
+    // A real in-game dialogue box / inventory / audio layer is future
+    // work (see TODO.md) — the toast is the current host effect, matching
+    // the maturity of the teleport / item hosts.
+    this._engineCtl.on('show-text', ({ text, speaker }) => {
+      this._showToast(speaker ? `${speaker}: ${text}` : text)
+    })
+    this._engineCtl.on('item-picked-up', ({ itemId, qty }) => {
+      this._showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`)
+    })
+    this._engineCtl.on('flag-set', ({ flag, value }) => {
+      this._showToast(`Flag "${flag}" = ${String(value)}`)
+    })
+    this._engineCtl.on('play-sfx', ({ sound }) => {
+      this._showToast(`Play sound: ${sound}`)
+    })
+
     // Grid lines + non-active-layer dimming are two INDEPENDENT
     // editor view flags. The user can have grid on / off and the
     // dimming on / off in any combination — they help with

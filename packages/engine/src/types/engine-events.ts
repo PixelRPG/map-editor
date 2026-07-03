@@ -131,8 +131,8 @@ export interface EngineEventMap {
   }
   /**
    * Emitted by `ItemPickupSystem` when a player triggers an
-   * item-bearing entity. The project layer's inventory system
-   * listens for this and adds the item.
+   * item-bearing entity. The maker host surfaces it as a playtest toast
+   * today; a real inventory system (add the item) is future work.
    */
   [EngineEvent.ITEM_PICKED_UP]: {
     itemId: string
@@ -140,9 +140,10 @@ export interface EngineEventMap {
     pickupSound?: string
   }
   /**
-   * Emitted by `EventActionSystem` for a `show-text` action. The host's
-   * dialogue / text-box overlay listens and displays the line (no store
-   * yet — the text is inline).
+   * Emitted by `EventActionSystem` for a `show-text` action. The maker
+   * host surfaces the line as a playtest toast today (no store yet — the
+   * text is inline); a real in-game dialogue / text-box overlay is
+   * future work.
    */
   [EngineEvent.SHOW_TEXT_REQUESTED]: { text: string; speaker?: string }
   /**

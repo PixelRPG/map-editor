@@ -6,6 +6,10 @@ import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
 type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
+type ShowTextPayload = EngineEventMap[EngineEvent.SHOW_TEXT_REQUESTED]
+type ItemPickedUpPayload = EngineEventMap[EngineEvent.ITEM_PICKED_UP]
+type FlagSetPayload = EngineEventMap[EngineEvent.FLAG_SET]
+type PlaySfxPayload = EngineEventMap[EngineEvent.PLAY_SFX_REQUESTED]
 
 /**
  * Slot the engine widget gets attached to once it's been (re)created.
@@ -59,6 +63,17 @@ export interface EngineControllerEvents {
    * the floating-zoom OSD's coord readout (the `12, 7` label).
    */
   'pointer-tile-changed': { sceneId: string; tileX: number; tileY: number }
+  /**
+   * Runtime event-script effects (playtest). The engine's
+   * `EventActionSystem` emits these when a trigger fires; the host
+   * surfaces them as toasts today. A real in-game dialogue box (show
+   * text), inventory (item pickup) and audio layer (sfx) are future
+   * work — see TODO.md.
+   */
+  'show-text': ShowTextPayload
+  'item-picked-up': ItemPickedUpPayload
+  'flag-set': FlagSetPayload
+  'play-sfx': PlaySfxPayload
 }
 
 /**
@@ -92,6 +107,7 @@ export class EngineController {
   private _placementSelectedHookAttached = false
   private _layerFlagHookAttached = false
   private _pointerTileHookAttached = false
+  private _runtimeEffectHooksAttached = false
   private readonly _events = new TypedEmitter<EngineControllerEvents>()
   /**
    * Excalibur `events.on(...)` subscriptions opened on the current engine
@@ -160,6 +176,7 @@ export class EngineController {
     this._attachPlacementSelectedHook()
     this._attachLayerFlagHook()
     this._attachPointerTileHook()
+    this._attachRuntimeEffectHooks()
   }
 
   /**
@@ -199,6 +216,7 @@ export class EngineController {
     this._placementSelectedHookAttached = false
     this._layerFlagHookAttached = false
     this._pointerTileHookAttached = false
+    this._runtimeEffectHooksAttached = false
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
     // last loaded scene reported.
@@ -279,5 +297,24 @@ export class EngineController {
     this._pointerTileHookAttached = this._engine.onPointerTileChanged((payload) => {
       this._events.emit('pointer-tile-changed', payload)
     })
+  }
+
+  /**
+   * Subscribe to the runtime event-script effects (`show-text`,
+   * `item-picked-up`, `flag-set`, `play-sfx`) the engine's
+   * `EventActionSystem` emits during playtest, re-emitting each as a
+   * typed controller event. One method covers all four (they share the
+   * same lifecycle + teardown); the host decides how to present them.
+   */
+  private _attachRuntimeEffectHooks(): void {
+    if (this._runtimeEffectHooksAttached || !this._engine) return
+    const engine = this._engine
+    this._hookSubs.push(
+      engine.events.on(EngineEvent.SHOW_TEXT_REQUESTED, (payload) => this._events.emit('show-text', payload)),
+      engine.events.on(EngineEvent.ITEM_PICKED_UP, (payload) => this._events.emit('item-picked-up', payload)),
+      engine.events.on(EngineEvent.FLAG_SET, (payload) => this._events.emit('flag-set', payload)),
+      engine.events.on(EngineEvent.PLAY_SFX_REQUESTED, (payload) => this._events.emit('play-sfx', payload)),
+    )
+    this._runtimeEffectHooksAttached = true
   }
 }
