@@ -538,6 +538,13 @@ export class Engine extends Adw.Bin {
       // of the layer-flag commands (local, undo/redo, remote peer), so
       // the host's Layers tab follows changes it didn't originate.
       fwd(EngineEvent.LAYER_FLAG_CHANGED),
+      // Runtime event-script effects (playtest). The `EventActionSystem`
+      // emits these on `TRIGGER_FIRED`; the host surfaces them (toasts
+      // today — a real dialogue box / inventory / audio layer later).
+      fwd(EngineEvent.SHOW_TEXT_REQUESTED),
+      fwd(EngineEvent.ITEM_PICKED_UP),
+      fwd(EngineEvent.FLAG_SET),
+      fwd(EngineEvent.PLAY_SFX_REQUESTED),
     )
   }
 
