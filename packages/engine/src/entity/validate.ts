@@ -85,6 +85,9 @@ export function validateComponentData(spec: ComponentSpec, data: ComponentData, 
     const err = validateField(field, data[field.key], requireComplete)
     if (err) errors.push(`${spec.type}: ${err}`)
   }
+  // Deep validation the flat field DSL can't express (e.g. the actions
+  // spec's discriminated-union list behind a single `json` field).
+  if (spec.validate) errors.push(...spec.validate(data).map((e) => `${spec.type}: ${e}`))
   return errors
 }
 

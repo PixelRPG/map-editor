@@ -73,6 +73,61 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     components: [{ type: 'trigger', on: 'walk-onto' }],
   },
   {
+    id: 'chest',
+    label: 'Chest',
+    icon: 'package-x-generic-symbolic',
+    description: 'A container the player opens to receive an item.',
+    components: [
+      { type: 'visual', spriteSetId: '', spriteId: 0 },
+      { type: 'collision', solid: true },
+      { type: 'trigger', on: 'action-button' },
+      {
+        type: 'actions',
+        actions: [
+          { id: 'a-give', type: 'give-item', itemId: '', qty: 1 },
+          { id: 'a-flag', type: 'set-flag', flag: '', value: true },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'sign',
+    label: 'Sign',
+    icon: 'view-list-symbolic',
+    description: 'A signpost that shows a line of text when read.',
+    components: [
+      { type: 'visual', spriteSetId: '', spriteId: 0 },
+      { type: 'collision', solid: true },
+      { type: 'trigger', on: 'action-button' },
+      { type: 'actions', actions: [{ id: 'a-text', type: 'show-text', text: '' }] },
+    ],
+  },
+  {
+    id: 'door',
+    label: 'Door',
+    icon: 'go-next-symbolic',
+    description: 'A door the player opens to travel to another map.',
+    components: [
+      { type: 'visual', spriteSetId: '', spriteId: 0 },
+      { type: 'collision', solid: true },
+      { type: 'trigger', on: 'action-button' },
+      {
+        type: 'actions',
+        actions: [{ id: 'a-tp', type: 'teleport', targetMapId: '', targetTileX: 0, targetTileY: 0 }],
+      },
+    ],
+  },
+  {
+    id: 'trigger',
+    label: 'Trigger',
+    icon: 'media-playback-start-symbolic',
+    description: 'An invisible zone that runs an action list on entry.',
+    components: [
+      { type: 'trigger', on: 'walk-onto' },
+      { type: 'actions', actions: [] },
+    ],
+  },
+  {
     id: 'spawn-point',
     label: 'Spawn point',
     icon: 'go-home-symbolic',

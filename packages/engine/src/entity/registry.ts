@@ -1,3 +1,4 @@
+import { actionsSpec } from './specs/actions.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
 import { collisionSpec } from './specs/collision.ts'
 import { customDataSpec } from './specs/custom-data.ts'
@@ -39,4 +40,5 @@ export const BUILT_IN_COMPONENT_SPECS: ComponentSpecRegistry = {
   [spawnPointSpec.type]: spawnPointSpec,
   [customDataSpec.type]: customDataSpec,
   [scriptSpec.type]: scriptSpec,
+  [actionsSpec.type]: actionsSpec,
 }

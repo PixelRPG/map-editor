@@ -1,3 +1,4 @@
+export * from './ActionData'
 export * from './AnimationData'
 export * from './AnimationFrame'
 export * from './AnimationStrategy'
