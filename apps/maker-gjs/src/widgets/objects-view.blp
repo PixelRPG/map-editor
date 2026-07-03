@@ -70,10 +70,48 @@ template $ObjectsView : $PixelRpgResponsiveEditorView {
                 Gtk.StackPage {
                   name: "empty";
 
-                  child: Adw.StatusPage {
-                    icon-name: "view-grid-symbolic";
-                    title: _("No objects yet");
-                    description: _("Create reusable NPCs, items, teleports and events from a template.");
+                  // Deliberate empty-state (soll-objects): what objects are
+                  // (the Sheets → Cast → Objects relationship diagram) + a
+                  // row of template tiles to create one. The diagram + tiles
+                  // are built in objects-view.ts and dropped into the slots.
+                  child: Gtk.Box {
+                    orientation: vertical;
+                    spacing: 24;
+                    valign: center;
+
+                    Adw.StatusPage {
+                      icon-name: "view-grid-symbolic";
+                      title: _("No objects yet");
+                      description: _("Objects are the placeable things in your scenes — chests, signs, doors, triggers. Build one from a template, then drop it onto any map.");
+                      vexpand: false;
+                    }
+
+                    Gtk.Box empty_diagram_slot {
+                      orientation: horizontal;
+                      halign: center;
+                    }
+
+                    Gtk.Box {
+                      orientation: vertical;
+                      spacing: 8;
+                      halign: center;
+
+                      Gtk.Label {
+                        label: _("Start from a template");
+                        halign: center;
+                        styles ["caption-heading", "dim-label"]
+                      }
+
+                      Gtk.FlowBox empty_templates {
+                        selection-mode: none;
+                        halign: center;
+                        min-children-per-line: 2;
+                        max-children-per-line: 4;
+                        column-spacing: 8;
+                        row-spacing: 8;
+                        homogeneous: true;
+                      }
+                    }
                   };
                 }
 

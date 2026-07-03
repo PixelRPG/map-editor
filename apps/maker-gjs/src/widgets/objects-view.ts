@@ -31,6 +31,8 @@ export class ObjectsView extends ResponsiveEditorView {
   declare _new_object_button: Gtk.Button
   declare _list_stack: Gtk.Stack
   declare _objects_list: Gtk.ListBox
+  declare _empty_diagram_slot: Gtk.Box
+  declare _empty_templates: Gtk.FlowBox
   declare _detail_page: Adw.NavigationPage
   declare _delete_button: Gtk.Button
   declare _detail_slot: Gtk.Box
@@ -57,6 +59,8 @@ export class ObjectsView extends ResponsiveEditorView {
           'new_object_button',
           'list_stack',
           'objects_list',
+          'empty_diagram_slot',
+          'empty_templates',
           'detail_page',
           'delete_button',
           'detail_slot',
@@ -97,6 +101,56 @@ export class ObjectsView extends ResponsiveEditorView {
     this._editor = new EntityComponentsEditor()
     this._detail_slot.append(nameGroup)
     this._detail_slot.append(this._editor)
+
+    this._buildEmptyState()
+  }
+
+  /**
+   * Populate the empty-state's relationship diagram (Sheets → Cast →
+   * Objects) + the template tiles (chest / sign / door / trigger). The
+   * tiles reuse the same `object-create-requested` path as the "New
+   * object" chooser (soll-objects).
+   */
+  private _buildEmptyState(): void {
+    // Relationship diagram — Sheets (art) → Cast (characters) → Objects.
+    const chips: [string, string, boolean][] = [
+      [_('Sheets'), _('art'), false],
+      [_('Cast'), _('characters'), false],
+      [_('Objects'), _('placed in scenes'), true],
+    ]
+    chips.forEach(([title, sub, accent], i) => {
+      if (i > 0) {
+        this._empty_diagram_slot.append(
+          new Gtk.Image({
+            iconName: 'go-next-symbolic',
+            cssClasses: ['dim-label'],
+            valign: Gtk.Align.CENTER,
+            marginStart: 8,
+            marginEnd: 8,
+          }),
+        )
+      }
+      const chip = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        cssClasses: accent ? ['card', 'objects-rel-chip', 'objects-rel-accent'] : ['card', 'objects-rel-chip'],
+      })
+      chip.append(new Gtk.Label({ label: title, cssClasses: accent ? ['heading', 'accent'] : ['heading'] }))
+      chip.append(new Gtk.Label({ label: sub, cssClasses: ['caption', 'dim-label'] }))
+      this._empty_diagram_slot.append(chip)
+    })
+
+    // Template tiles — the placeable-object archetypes.
+    for (const id of ['chest', 'sign', 'door', 'trigger']) {
+      const template = ENTITY_TEMPLATES.find((t) => t.id === id)
+      if (!template) continue
+      const button = new Gtk.Button({ cssClasses: ['flat', 'objects-template-tile'] })
+      const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
+      row.append(new Gtk.Image({ iconName: template.icon }))
+      row.append(new Gtk.Label({ label: template.label }))
+      button.set_child(row)
+      button.connect('clicked', () => this.emit('object-create-requested', template.id))
+      this._empty_templates.append(button)
+    }
   }
 
   vfunc_map(): void {
