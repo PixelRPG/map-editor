@@ -29,6 +29,7 @@ import { layerFlagChange } from './services/layer-flag-event.ts'
 import { makePlacementId } from './services/placement-id.ts'
 import { isTileOutOfBounds, tileToWorldCenter } from './services/tile-geometry.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
+import { buildTileFillCommand } from './services/tile-fill.service.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from './types/index.ts'
@@ -517,6 +518,50 @@ export class Engine {
     )
     // Attribution: flash the painted tile in the assistant's colour so the
     // user sees the AI act. Only while the assistant is present.
+    if (this._assistant.isActive()) this._assistant.flashTile(found.tileMap, tileX, tileY)
+    return true
+  }
+
+  /**
+   * Bucket-fill from `(tileX, tileY)` programmatically — the headless
+   * equivalent of a fill-tool click, for external tooling (D-Bus/MCP)
+   * and scripted edits. Flood-fills the contiguous region matching the
+   * origin tile on the resolved layer with `spriteId`, as one atomic
+   * {@link FillTileCommand} through {@link executeCommand} (so undo/redo
+   * + collab op-sync behave exactly like a user fill).
+   *
+   * - `layerId` null/omitted → the active layer.
+   * - `spriteId` omitted → the active tile. Fill is a paint tool: a
+   *   null / non-positive resolved sprite is rejected (no erase-fill).
+   * - `origin` — initiating actor id for peer-side attribution.
+   *
+   * Returns `false` if there's no active map, no resolvable / unlocked
+   * layer, the coords are out of bounds, no fill tile resolves, or the
+   * region is already the fill tile (nothing to change).
+   */
+  fillTileAt(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null, origin?: string): boolean {
+    if (this._assistant.isPaused()) return false
+    const scene = this._activeMapScene()
+    if (!scene) return false
+    const resolvedLayer = layerId ?? this.getActiveLayer()
+    if (!resolvedLayer) return false
+    if (this.isLayerLocked(resolvedLayer)) return false
+    const found = findTileMapForLayer(scene, resolvedLayer)
+    if (!found) return false
+    if (isTileOutOfBounds(tileX, tileY, found.tileMap.columns, found.tileMap.rows)) return false
+    const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
+    if (!resolvedSprite || resolvedSprite <= 0) return false
+    const command = buildTileFillCommand(
+      found.editor,
+      scene.mapResource,
+      { columns: found.tileMap.columns, rows: found.tileMap.rows },
+      resolvedLayer,
+      tileX,
+      tileY,
+      resolvedSprite,
+    )
+    if (!command) return false
+    this.executeCommand(command, origin)
     if (this._assistant.isActive()) this._assistant.flashTile(found.tileMap, tileX, tileY)
     return true
   }

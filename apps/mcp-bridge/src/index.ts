@@ -626,7 +626,10 @@ server.registerTool(
       'Select the active editor tool. `object` stamps the armed object brush on canvas clicks — arm a ' +
       'brush first via activate_action win.set-object-brush with an entityLibrary id (place_object places ' +
       'directly and does NOT arm the brush).',
-    inputSchema: z.object({ tool: z.enum(['select', 'pencil', 'eraser', 'eyedropper', 'object']), ...instanceArg }),
+    inputSchema: z.object({
+      tool: z.enum(['select', 'pencil', 'fill', 'eraser', 'eyedropper', 'object']),
+      ...instanceArg,
+    }),
   },
   async ({ tool, instance }) => {
     try {
@@ -703,6 +706,37 @@ server.registerTool(
       return applied
         ? ok(`Painted tile (${x}, ${y})${tileId === undefined ? '' : ` with ${tileId}`}`)
         : fail('Paint not applied (no engine/scene, layer locked, or coords out of bounds).')
+    } catch (error) {
+      return dbusError(error, instance)
+    }
+  },
+)
+
+server.registerTool(
+  'fill_tile',
+  {
+    description:
+      'Bucket-fill from tile (x, y): flood-fills the contiguous region of tiles matching the origin tile ' +
+      '(on the active or given layer) with a tile, as one undoable + collab-synced command. Omit tileId to ' +
+      'use the active tile, or pass a global tile id. Fill is a paint tool — it does not erase. Needs an open scene.',
+    inputSchema: z.object({
+      x: z.number().int(),
+      y: z.number().int(),
+      tileId: z.number().int().optional(),
+      layerId: z.string().optional(),
+      ...instanceArg,
+    }),
+  },
+  async ({ x, y, tileId, layerId, instance }) => {
+    try {
+      const params = new GLib.Variant('(siii)', [layerId ?? '', x, y, tileId === undefined ? -1 : tileId])
+      const reply = await control(instance, 'FillTile', params, '(b)')
+      const [applied] = reply.recursiveUnpack() as [boolean]
+      return applied
+        ? ok(`Filled from tile (${x}, ${y})${tileId === undefined ? '' : ` with ${tileId}`}`)
+        : fail(
+            'Fill not applied (no engine/scene, layer locked, no fill tile, coords out of bounds, or nothing to change).',
+          )
     } catch (error) {
       return dbusError(error, instance)
     }

@@ -5,7 +5,7 @@ import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWid
 import type { EditorTool } from '@pixelrpg/engine'
 import { FloatingToolRail } from './floating-tool-rail'
 
-const TOOL_VALUES: EditorTool[] = ['select', 'pencil', 'eraser', 'eyedropper', 'object']
+const TOOL_VALUES: EditorTool[] = ['select', 'pencil', 'fill', 'eraser', 'eyedropper', 'object']
 
 /** Showcase for the labelled scene-editor tool rail. */
 export class FloatingToolRailStory extends StoryWidget {
@@ -26,7 +26,7 @@ export class FloatingToolRailStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Editor/Floating Tool Rail',
-      description: 'Labelled, grouped tool rail (select / paint / erase · pick / object) bound to win.set-tool.',
+      description: 'Labelled, grouped tool rail (select / paint / fill / erase · pick / object) bound to win.set-tool.',
       component: FloatingToolRail.$gtype,
       controls: [
         {

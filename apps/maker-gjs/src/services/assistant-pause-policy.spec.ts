@@ -41,6 +41,7 @@ const EXPECTED_KINDS: Record<string, ControlMethodKind> = {
   SetZoom: 'mutating',
   ResizeWindow: 'mutating',
   PaintTile: 'mutating',
+  FillTile: 'mutating',
   PlaceObject: 'mutating',
   FollowParticipant: 'mutating',
 }

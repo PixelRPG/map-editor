@@ -96,6 +96,58 @@ export class EraseTileCommand implements Command<Omit<PaintTilePayload, 'spriteI
 }
 
 /**
+ * Payload of {@link FillTileCommand}. A single flood-fill spans many
+ * cells but is one undo step / one collab op — each cell carries its
+ * own `previousSprites` snapshot so revert restores the exact prior
+ * state per tile.
+ */
+export interface FillTilePayload {
+  layerId: string
+  /** Global tile id to flood with (always `> 0` — fill is a paint tool, not an eraser). */
+  spriteId: number
+  cells: Array<{ tileX: number; tileY: number; previousSprites: PaintTilePayload['previousSprites'] }>
+}
+
+/**
+ * Bucket-fill: paint `spriteId` onto every cell in `cells` (the
+ * contiguous region resolved by {@link computeFloodFillRegion}) on
+ * `layerId`, as one atomic command. Apply/revert resolve the tier
+ * tilemap once and loop — mirroring {@link PaintTileCommand} per cell —
+ * so a fill is a single entry on the undo stack and a single op on the
+ * collab log.
+ */
+export class FillTileCommand implements Command<FillTilePayload> {
+  static readonly KIND = 'tile.fill'
+  readonly kind = FillTileCommand.KIND
+
+  constructor(readonly payload: FillTilePayload) {}
+
+  get label(): string {
+    return `Fill ${this.payload.cells.length} tiles`
+  }
+
+  apply(scene: Scene): void {
+    const ctx = resolveContext(scene, this.payload.layerId)
+    if (!ctx) return
+    for (const cell of this.payload.cells) {
+      const tile = ctx.tileMap.getTile(cell.tileX, cell.tileY)
+      if (!tile) continue
+      addSpriteToTileForLayer(ctx.tileMap, ctx.mapResource, tile, this.payload.layerId, this.payload.spriteId)
+    }
+  }
+
+  revert(scene: Scene): void {
+    const ctx = resolveContext(scene, this.payload.layerId)
+    if (!ctx) return
+    for (const cell of this.payload.cells) {
+      const tile = ctx.tileMap.getTile(cell.tileX, cell.tileY)
+      if (!tile) continue
+      restorePreviousSprites(ctx, tile, this.payload.layerId, cell.previousSprites)
+    }
+  }
+}
+
+/**
  * Shared revert helper for paint + erase commands.
  *
  * If `previousSprites` is empty the tile was empty before the

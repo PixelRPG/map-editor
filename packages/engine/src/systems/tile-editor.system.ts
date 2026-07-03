@@ -33,6 +33,7 @@ import {
   type SelectHoverBorderContext,
 } from '../services/select-hover-border.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
+import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerTier } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
@@ -296,6 +297,14 @@ export class TileEditorSystem extends System {
         tileId,
         layerId,
       })
+    } else if (tool === 'fill') {
+      if (tileId === null) return
+      this.applyFill(hit, layerId, tileId)
+      this.events.emit(EngineEvent.TILE_PLACED, {
+        coords: hit.coords,
+        tileId,
+        layerId,
+      })
     } else if (tool === 'eraser') {
       this.dispatchCommand(makeTilePaintCommand(layerId, hit.coords.x, hit.coords.y, null, previousSprites))
       this.events.emit(EngineEvent.TILE_PLACED, {
@@ -340,6 +349,29 @@ export class TileEditorSystem extends System {
       coords: hit.coords,
       tileMapId: hit.tileMap.id.toString(),
     })
+  }
+
+  /**
+   * Fill-tool click handler. Flood-fills the contiguous region of tiles
+   * whose sprite signature (on the active layer) matches the clicked
+   * tile, replacing each with `tileId`. The whole region is one atomic
+   * {@link FillTileCommand} → a single undo step + a single collab op.
+   * No-op when the clicked tile already shows the fill tile.
+   */
+  private applyFill(hit: TileHit, layerId: string, tileId: number): void {
+    if (!this.scene) return
+    const mapResource = (this.scene as MapScene).mapResource
+    if (!mapResource) return
+    const command = buildTileFillCommand(
+      hit.editor,
+      mapResource,
+      { columns: hit.tileMap.columns, rows: hit.tileMap.rows },
+      layerId,
+      hit.coords.x,
+      hit.coords.y,
+      tileId,
+    )
+    if (command) this.dispatchCommand(command)
   }
 
   /**
