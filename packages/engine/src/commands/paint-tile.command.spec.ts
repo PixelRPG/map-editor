@@ -23,6 +23,7 @@ import { TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
 import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
+import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { findTileMapForLayer, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerTier } from '../types/data/index.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
@@ -244,6 +245,74 @@ export default async () => {
 
       expect(refsAt(fixture.hero, 1, 1, 'hero-layer')).toStrictEqual(['terrain#0'])
       expect(getSpritesAt(editorOf(fixture.ground), 1, 1).length).toBe(0)
+    })
+  })
+
+  await describe('buildTileFillCommand + FillTileCommand — flood fill', async () => {
+    await it('fills the whole empty layer as one command; revert clears it', async () => {
+      const fixture = makeTierScene()
+      const cmd = buildTileFillCommand(
+        editorOf(fixture.ground),
+        fixture.scene.mapResource,
+        { columns: 4, rows: 4 },
+        'ground-layer',
+        0,
+        0,
+        1,
+      )
+      if (!cmd) throw new Error('expected a fill command')
+      expect(cmd.payload.cells.length).toBe(16) // full 4×4
+
+      cmd.apply(fixture.scene)
+      expect(refsAt(fixture.ground, 0, 0, 'ground-layer')).toStrictEqual(['terrain#0'])
+      expect(refsAt(fixture.ground, 3, 3, 'ground-layer')).toStrictEqual(['terrain#0'])
+      // Fill targets one tier only — other tiers stay empty.
+      expect(getSpritesAt(editorOf(fixture.hero), 0, 0).length).toBe(0)
+
+      cmd.revert(fixture.scene)
+      expect(getSpritesAt(editorOf(fixture.ground), 0, 0).length).toBe(0)
+      expect(getSpritesAt(editorOf(fixture.ground), 3, 3).length).toBe(0)
+    })
+
+    await it('stops at a wall of a different tile (bounded region)', async () => {
+      const fixture = makeTierScene()
+      // Wall down column x=2 with tile 2 (terrain#1), partitioning the map.
+      for (let y = 0; y < 4; y++) paint(fixture, 'ground-layer', 2, y, 2)
+
+      const cmd = buildTileFillCommand(
+        editorOf(fixture.ground),
+        fixture.scene.mapResource,
+        { columns: 4, rows: 4 },
+        'ground-layer',
+        0,
+        0,
+        1,
+      )
+      if (!cmd) throw new Error('expected a fill command')
+      // Left of the wall only: x∈{0,1} × y∈{0..3} = 8 tiles.
+      expect(cmd.payload.cells.length).toBe(8)
+
+      cmd.apply(fixture.scene)
+      expect(refsAt(fixture.ground, 0, 0, 'ground-layer')).toStrictEqual(['terrain#0'])
+      expect(refsAt(fixture.ground, 1, 3, 'ground-layer')).toStrictEqual(['terrain#0'])
+      // Wall untouched; the region right of the wall was never reached.
+      expect(refsAt(fixture.ground, 2, 0, 'ground-layer')).toStrictEqual(['terrain#1'])
+      expect(getSpritesAt(editorOf(fixture.ground), 3, 0, 'ground-layer').length).toBe(0)
+    })
+
+    await it('no-ops (returns null) when the origin already shows the fill tile', async () => {
+      const fixture = makeTierScene()
+      paint(fixture, 'ground-layer', 0, 0, 1)
+      const cmd = buildTileFillCommand(
+        editorOf(fixture.ground),
+        fixture.scene.mapResource,
+        { columns: 4, rows: 4 },
+        'ground-layer',
+        0,
+        0,
+        1,
+      )
+      expect(cmd).toBe(null)
     })
   })
 }

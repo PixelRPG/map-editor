@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <g transform="rotate(-38 7.5 7)" fill="#222222">
+    <!-- handle arch over the rim -->
+    <path d="M4.4 3.3 C5.2 0.2 10.8 0.2 11.6 3.3 L10.5 3.6 C9.9 1.4 6.1 1.4 5.5 3.6 Z"/>
+    <!-- bucket body: open rim + tapered, rounded base -->
+    <path d="M3 3.6 A5 1.4 0 0 0 13 3.6 L11.2 12.2 A3.2 1.2 0 0 1 4.8 12.2 Z"/>
+  </g>
+  <!-- paint drop falling from the spout -->
+  <path d="M12.7 10.6 C14.1 12.3 14.1 13.7 12.7 14.2 C11.3 13.7 11.3 12.3 12.7 10.6 Z" fill="#222222"/>
+</svg>

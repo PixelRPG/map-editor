@@ -29,6 +29,7 @@ import objectSystemValidationSuite from './format/object-system-validation.spec.
 import mapResourceSuite from './resource/map-resource.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
+import floodFillSuite from './services/flood-fill.spec.js'
 import layerFlagEventSuite from './services/layer-flag-event.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
@@ -75,6 +76,7 @@ run({
   tileGeometrySuite,
   agentMapDataSuite,
   assistantPresenceSuite,
+  floodFillSuite,
   layerFlagEventSuite,
   awarenessSuite,
   chunkingSuite,

@@ -16,12 +16,13 @@ interface ToolEntry {
   group: 'paint' | 'inspect'
 }
 
-// NB: the engine's EditorTool set has no bucket/fill tool — the design's
-// "Fill" is intentionally omitted here rather than inventing a tool (see
-// TODO.md). Labels are the design's short verbs.
+// Labels are the design's short verbs. `color-fill-symbolic` is a
+// bundled app icon (apps/maker-gjs/data/icons) — the system Adwaita
+// theme has no bucket-fill glyph.
 const TOOLS: ToolEntry[] = [
   { id: 'select', icon: 'edit-select-symbolic', label: () => _('Select'), group: 'paint' },
   { id: 'pencil', icon: 'document-edit-symbolic', label: () => _('Paint'), group: 'paint' },
+  { id: 'fill', icon: 'color-fill-symbolic', label: () => _('Fill'), group: 'paint' },
   { id: 'eraser', icon: 'edit-clear-all-symbolic', label: () => _('Erase'), group: 'paint' },
   { id: 'eyedropper', icon: 'color-select-symbolic', label: () => _('Pick'), group: 'inspect' },
   { id: 'object', icon: 'view-grid-symbolic', label: () => _('Object'), group: 'inspect' },

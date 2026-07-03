@@ -1686,6 +1686,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * Bucket-fill from a tile programmatically (Control → MCP). Same
+   * semantics + attribution as {@link paintTile}, but flood-fills the
+   * contiguous region matching the origin tile. Returns `false` if it
+   * couldn't be applied.
+   */
+  fillTile(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null, origin?: string): boolean {
+    return this._engineCtl.engine?.excalibur?.fillTileAt(layerId, tileX, tileY, spriteId, origin) ?? false
+  }
+
+  /**
    * Place a library object on the active map programmatically (Control →
    * MCP). `layerId` null = active layer. Goes through the engine command
    * path (undo + collab). `origin` — initiating actor id for peer-side

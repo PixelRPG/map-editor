@@ -5,7 +5,13 @@ import {
   type SetLayerVisibilityPayload,
 } from './layer-flag.command.ts'
 import { type ObjectPlacementPayload, PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
-import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from './paint-tile.command.ts'
+import {
+  EraseTileCommand,
+  FillTileCommand,
+  type FillTilePayload,
+  PaintTileCommand,
+  type PaintTilePayload,
+} from './paint-tile.command.ts'
 import type { CommandRegistry } from './types.ts'
 
 /**
@@ -29,6 +35,7 @@ import type { CommandRegistry } from './types.ts'
 export const BUILT_IN_COMMANDS: CommandRegistry = {
   [PaintTileCommand.KIND]: (payload) => new PaintTileCommand(payload as PaintTilePayload),
   [EraseTileCommand.KIND]: (payload) => new EraseTileCommand(payload as Omit<PaintTilePayload, 'spriteId'>),
+  [FillTileCommand.KIND]: (payload) => new FillTileCommand(payload as FillTilePayload),
   [PlaceObjectCommand.KIND]: (payload) => new PlaceObjectCommand(payload as ObjectPlacementPayload),
   [RemoveObjectCommand.KIND]: (payload) => new RemoveObjectCommand(payload as ObjectPlacementPayload),
   [SetLayerVisibilityCommand.KIND]: (payload) => new SetLayerVisibilityCommand(payload as SetLayerVisibilityPayload),
