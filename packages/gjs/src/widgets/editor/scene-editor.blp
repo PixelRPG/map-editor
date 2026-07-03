@@ -3,16 +3,20 @@ using Adw 1;
 
 template $PixelRpgSceneEditor : Adw.Bin {
   // Responsive density is handled by FloatingTopBar's own internal
-  // `Adw.BreakpointBin` — it watches its own allocated width and
-  // toggles between split (≥880sp) and merged-with-disclosure
-  // (<880sp) without any external property chain.
+  // `Adw.BreakpointBin` (split ≥880sp ↔ merged). The tool rail's
+  // desktop-vs-phone reflow is driven from `SceneEditor.setCompact`
+  // (called by SceneEditorView on the `inspector-collapsed` breakpoint,
+  // which fires only <768sp) rather than a widget-internal breakpoint —
+  // the engine canvas keeps this overlay's allocation wide, so a local
+  // `Adw.BreakpointBin` never observes the narrow window width.
   Gtk.Overlay overlay {
     [overlay]
     $PixelRpgFloatingTopBar top_bar {}
 
     // Labelled tool rail on the left edge, tucked just under the top
     // bar. Owns tool selection (the top bar no longer carries a tool
-    // button) so every tool is discoverable at a glance.
+    // button) so every tool is discoverable at a glance. On phone
+    // widths `SceneEditor.setCompact` reflows it into a bottom bar.
     [overlay]
     $PixelRpgFloatingToolRail tool_rail {
       halign: start;

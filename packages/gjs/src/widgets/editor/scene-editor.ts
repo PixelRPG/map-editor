@@ -1,6 +1,6 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import { FloatingCollaborators } from './floating-collaborators'
 import { FloatingPlay } from './floating-play'
 import { FloatingToolRail } from './floating-tool-rail'
@@ -36,6 +36,7 @@ export class SceneEditor extends Adw.Bin {
   declare _zoom_osd: FloatingZoom
   declare _floating_play: FloatingPlay
   declare _floating_collaborators: FloatingCollaborators
+  declare _bottom_left_osds: Gtk.Box
 
   private _engineWidget: Gtk.Widget | null = null
 
@@ -52,6 +53,7 @@ export class SceneEditor extends Adw.Bin {
           'zoom_osd',
           'floating_play',
           'floating_collaborators',
+          'bottom_left_osds',
         ],
       },
       SceneEditor,
@@ -80,6 +82,41 @@ export class SceneEditor extends Adw.Bin {
 
   get toolRail(): FloatingToolRail {
     return this._tool_rail
+  }
+
+  /**
+   * Reflow the tool rail for phone widths: a horizontal bottom bar
+   * (compact) instead of the vertical left rail, with the bottom-left
+   * OSD stack + Play button lifted above it so nothing overlaps. Driven
+   * by `SceneEditorView` on the `inspector-collapsed` (<768sp)
+   * breakpoint; a widget-internal `Adw.BreakpointBin` can't observe the
+   * narrow width because the engine canvas keeps this overlay wide.
+   */
+  setCompact(compact: boolean): void {
+    const rail = this._tool_rail
+    rail.compact = compact
+    if (compact) {
+      // Centred pill (not FILL): the rail sizes to its six natural-width
+      // tool columns and centres at the bottom, so nothing overflows /
+      // clips at phone width.
+      rail.set_halign(Gtk.Align.CENTER)
+      rail.set_valign(Gtk.Align.END)
+      rail.set_margin_top(0)
+      rail.set_margin_start(0)
+      rail.set_margin_end(0)
+      rail.set_margin_bottom(0)
+      this._bottom_left_osds.set_margin_bottom(76)
+      this._floating_play.set_margin_bottom(76)
+    } else {
+      rail.set_halign(Gtk.Align.START)
+      rail.set_valign(Gtk.Align.START)
+      rail.set_margin_top(64)
+      rail.set_margin_start(12)
+      rail.set_margin_end(0)
+      rail.set_margin_bottom(0)
+      this._bottom_left_osds.set_margin_bottom(12)
+      this._floating_play.set_margin_bottom(12)
+    }
   }
 
   get floatingPlay(): FloatingPlay {

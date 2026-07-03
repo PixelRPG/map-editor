@@ -68,6 +68,16 @@
   min-width: 104px;
 }
 
+/*
+ * Compact (phone) bottom bar: the desktop 104px column min-width would
+ * make six tools overflow a ~400px bar. Reset it so the icon-only
+ * buttons shrink to their natural size and the whole rail fits.
+ */
+.tool-rail-compact .tool-rail-button {
+  min-width: 0;
+  padding: 8px 10px;
+}
+
 .tool-rail-button.active-tool,
 .tool-rail-button.active-tool:hover {
   background-color: @accent_bg_color;

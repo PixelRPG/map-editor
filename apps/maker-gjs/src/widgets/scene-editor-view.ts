@@ -249,6 +249,14 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
+   * On phone widths (`inspector-collapsed` is set only <768sp — tablet
+   * collapses just the library), reflow the tool rail into a bottom bar.
+   */
+  protected _onInspectorCollapsedChanged(collapsed: boolean): void {
+    this._editor.setCompact(collapsed)
+  }
+
+  /**
    * Forward the active editor tool to the left tool rail so its active
    * button highlights. The host calls this from the `win.set-tool`
    * action's change-state handler.

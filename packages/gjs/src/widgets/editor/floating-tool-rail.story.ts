@@ -35,6 +35,11 @@ export class FloatingToolRailStory extends StoryWidget {
           type: ControlType.SELECT,
           options: TOOL_VALUES.map((t) => ({ label: t, value: t })),
         },
+        {
+          name: 'compact',
+          label: 'Compact (phone bottom bar)',
+          type: ControlType.BOOLEAN,
+        },
       ],
     }
   }
@@ -52,11 +57,13 @@ export class FloatingToolRailStory extends StoryWidget {
     this.insert_action_group('win', group)
 
     this._rail = new FloatingToolRail()
+    this._rail.compact = this.args.compact === true
     this._rail.setActiveTool((this.args.tool as EditorTool) ?? 'pencil')
     this.addContent(this._rail)
   }
 
   updateArgs(_args: StoryArgs): void {
+    if (this._rail) this._rail.compact = this.args.compact === true
     this._rail?.setActiveTool((this.args.tool as EditorTool) ?? 'pencil')
   }
 }
