@@ -164,6 +164,31 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                     styles ["dim-label"]
                   }
 
+                  // Search + sort over the sheet cards (soll-sheets).
+                  Gtk.Box {
+                    orientation: horizontal;
+                    spacing: 8;
+
+                    Gtk.SearchEntry search_entry {
+                      placeholder-text: _("Search sheets…");
+                      hexpand: true;
+                    }
+
+                    Gtk.DropDown sort_dropdown {
+                      valign: center;
+                      tooltip-text: _("Sort tilesets");
+
+                      model: Gtk.StringList {
+                        strings [
+                          _("Default order"),
+                          _("Name"),
+                          _("Tile size"),
+                          _("Usage"),
+                        ]
+                      };
+                    }
+                  }
+
                   Gtk.Box gallery_header {
                     orientation: horizontal;
                     spacing: 8;
