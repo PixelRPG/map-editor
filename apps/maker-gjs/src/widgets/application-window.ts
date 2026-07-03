@@ -10,6 +10,7 @@ import {
   createMapEditorDataOp,
   type EditorTool,
   formatError,
+  type LayerData,
   type SpriteSetData,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
@@ -36,7 +37,7 @@ import { LanSessionBackend } from '../services/lan-session-backend.ts'
 import { MapPersistenceController } from '../services/map-persistence-controller.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
 import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
-import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
+import { ProjectStore, type ProjectStoreNotice, uniqueIdFrom } from '../services/project-store.ts'
 import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
 import { generatePeerId, SessionService, type SessionState } from '../services/session-service.ts'
@@ -1110,9 +1111,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // the bare `0` only does anything there (and entries still eat it).
     app?.set_accels_for_action('win.atlas-fit', ['0'])
 
-    for (const name of ['switch-tileset', 'new-layer', 'open-recent-projects']) {
+    for (const name of ['switch-tileset', 'open-recent-projects']) {
       winActions.add_action(new Gio.SimpleAction({ name }))
     }
+
+    // Add a new layer to the active scene's map. Instant-add (no name
+    // prompt) — the common editor gesture; the layer is a fresh empty
+    // one the user can immediately paint on. Rides an undoable +
+    // collab-synced `AddLayerCommand`; the host re-populates the Layers
+    // tab + persists, mirroring the object-removed flow.
+    const newLayerAction = new Gio.SimpleAction({ name: 'new-layer' })
+    newLayerAction.connect('activate', () => this._createLayer())
+    winActions.add_action(newLayerAction)
 
     const backAction = new Gio.SimpleAction({ name: 'back-to-atlas' })
     backAction.connect('activate', () => this._showAtlas())
@@ -1606,6 +1616,31 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   private _showToast(message: string): void {
     this._toast_overlay.add_toast(new Adw.Toast({ title: message, timeout: 3 }))
+  }
+
+  /**
+   * `win.new-layer` handler: append a fresh empty layer to the active
+   * scene's map. Builds a unique `LayerData` (id + "Layer N" name),
+   * dispatches it through the engine's undoable + collab-synced
+   * `AddLayerCommand`, then re-populates the Layers tab + persists —
+   * the same refresh flow as `object-removed`. No-op when no scene is
+   * open. The engine mutates the shared project `MapResource`, so the
+   * re-populate + persist see the new layer.
+   */
+  private _createLayer(): void {
+    const sceneId = this._currentSceneId
+    if (!sceneId) return
+    const layers = this._loadedProject?.resource.maps.get(sceneId)?.mapData?.layers
+    if (!layers) return
+    const taken = new Set(layers.map((l) => l.id))
+    const name = `Layer ${layers.length + 1}`
+    const layer: LayerData = { id: uniqueIdFrom(name, taken, 'layer'), name, visible: true }
+    if (!this._engineCtl.engine?.addLayer(layer)) return
+    if (this._loadedProject) {
+      void this._scene_editor_view.populateFromProject(this._loadedProject, sceneId)
+    }
+    this._mapPersistCtl.persistCurrentMap()
+    this._showToast(_(`Added “${name}”`))
   }
 
   /** Bump the engine camera zoom and mirror the new value into the OSD. */

@@ -1,5 +1,6 @@
 import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, Vector } from 'excalibur'
 import {
+  AddLayerCommand,
   type Command,
   PlaceObjectCommand,
   RemoveObjectCommand,
@@ -32,6 +33,7 @@ import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { buildTileFillCommand } from './services/tile-fill.service.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
+import type { LayerData } from './types/data/index.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from './types/index.ts'
 import { EDITOR_CONSTANTS } from './utils/constants.ts'
 import { formatError } from './utils/format-error.ts'
@@ -860,6 +862,25 @@ export class Engine {
     const previousLocked = layer.locked ?? false
     if (previousLocked === locked) return true
     this.executeCommand(new SetLayerLockedCommand({ layerId, locked, previousLocked }))
+    return true
+  }
+
+  /**
+   * Append a new layer to the active map by dispatching an
+   * {@link AddLayerCommand} through {@link executeCommand} — the layer
+   * list is persisted `MapData` state, so it rides the same undo +
+   * collab pipeline as the flag commands. The caller supplies a fully
+   * built {@link LayerData} (unique id + name); disk persistence stays
+   * with the host. Returns `false` if there's no active map or a layer
+   * with the same id already exists.
+   */
+  addLayer(layer: LayerData, origin?: string): boolean {
+    const scene = this._activeMapScene()
+    if (!scene) return false
+    const layers = scene.mapResource?.mapData?.layers
+    if (!layers) return false
+    if (layers.some((l) => l.id === layer.id)) return false
+    this.executeCommand(new AddLayerCommand({ layer }), origin)
     return true
   }
 
