@@ -1111,9 +1111,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // the bare `0` only does anything there (and entries still eat it).
     app?.set_accels_for_action('win.atlas-fit', ['0'])
 
-    for (const name of ['switch-tileset', 'open-recent-projects']) {
+    for (const name of ['open-recent-projects']) {
       winActions.add_action(new Gio.SimpleAction({ name }))
     }
+
+    // Switch which of the active scene's tilesets feeds the Tiles-tab
+    // palette. Only meaningful for maps that reference more than one
+    // sprite set (e.g. terrain + water); a single-tileset map toasts.
+    const switchTilesetAction = new Gio.SimpleAction({ name: 'switch-tileset' })
+    switchTilesetAction.connect('activate', () => this._presentTilesetSwitcher())
+    winActions.add_action(switchTilesetAction)
 
     // Add a new layer to the active scene's map. Instant-add (no name
     // prompt) — the common editor gesture; the layer is a fresh empty
@@ -1641,6 +1648,44 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     }
     this._mapPersistCtl.persistCurrentMap()
     this._showToast(_(`Added “${name}”`))
+  }
+
+  /**
+   * `win.switch-tileset` handler: pick which of the active scene's
+   * tilesets feeds the Tiles-tab palette. Maps that reference a single
+   * sprite set have nothing to switch to (toast); otherwise present a
+   * chooser and re-point the palette via `SceneEditorView.loadTileset`.
+   */
+  private _presentTilesetSwitcher(): void {
+    const project = this._loadedProject
+    const sceneId = this._currentSceneId
+    if (!project || !sceneId) return
+    const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
+    if (refs.length <= 1) {
+      this._showToast(_('This scene uses a single tileset.'))
+      return
+    }
+    const dialog = new Adw.AlertDialog({
+      heading: _('Switch tileset'),
+      body: _('Choose which of this scene’s tilesets to paint from.'),
+    })
+    const activeId = this._scene_editor_view.activeTilesetId
+    const list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE, cssClasses: ['boxed-list'] })
+    for (const ref of refs) {
+      const row = new Adw.ActionRow({
+        title: ref.id,
+        subtitle: ref.id === activeId ? _('Currently painting') : '',
+        activatable: true,
+      })
+      row.connect('activated', () => {
+        dialog.close()
+        void this._scene_editor_view.loadTileset(project, ref.id, ref.firstGid ?? 1)
+      })
+      list.append(row)
+    }
+    dialog.set_extra_child(list)
+    dialog.add_response('cancel', _('Cancel'))
+    dialog.present(this)
   }
 
   /** Bump the engine camera zoom and mirror the new value into the OSD. */
