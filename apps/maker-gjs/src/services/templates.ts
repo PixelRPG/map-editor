@@ -9,8 +9,9 @@ import { PREFIX } from '../constants.ts'
  * same code path as "Open Project" with a different starting file.
  *
  * Two flows route through templates:
- * - **New Project** → opens the `blank-starter` template, then in a
- *   future iteration scaffolds it into a user directory.
+ * - **New Project** → scaffolds a fresh copy of the `blank-starter`
+ *   template into a user-chosen folder, then opens it (see
+ *   `project-scaffold.ts`).
  * - **Start from Template** (welcome cards) → opens the picked template
  *   directly.
  */

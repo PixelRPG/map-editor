@@ -43,6 +43,7 @@ import { captureWidgetPng } from '../services/screenshot.ts'
 import { generatePeerId, SessionService, type SessionState } from '../services/session-service.ts'
 import { type SessionSnapshot, toSessionSnapshot } from '../services/session-snapshot.ts'
 import { ShareSessionController } from '../services/share-session-controller.ts'
+import { hasProjectFile, scaffoldProjectFrom } from '../services/project-scaffold.ts'
 import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
 import Template from './application-window.blp'
@@ -1536,15 +1537,41 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     void this._loadProjectFromPath(template.projectPath)
   }
 
-  /** "New Project" → open the blank starter template. The user can
-   * customise + save-as from there. */
+  /**
+   * "New Project" → scaffold a fresh copy of the blank starter into a
+   * user-chosen folder, then open it. Previously this opened the blank
+   * template *in place*, so editing a new project silently overwrote the
+   * repo's `games/blank-starter` template files — the scaffold fixes that
+   * footgun (and gives the project a real home on disk).
+   */
   private _onCreateProject(): void {
     const blank = findBlankTemplate()
     if (!blank) {
       this._showToast(_('No blank template available'))
       return
     }
-    void this._loadProjectFromPath(blank.projectPath)
+    const dialog = new Gtk.FileDialog({ title: _('New Project — choose an empty folder'), modal: true })
+    dialog.select_folder(this, null, (_d, result) => {
+      let dir: string | null = null
+      try {
+        dir = dialog.select_folder_finish(result)?.get_path() ?? null
+      } catch (error) {
+        if (error instanceof Error && !error.message.includes('Dismissed')) {
+          console.warn('[ApplicationWindow] New-project folder dialog failed:', error)
+        }
+        return
+      }
+      if (!dir) return
+      if (hasProjectFile(dir)) {
+        this._showToast(_('That folder already contains a project.'))
+        return
+      }
+      if (!scaffoldProjectFrom(GLib.path_get_dirname(blank.projectPath), dir)) {
+        this._showToast(_('Could not create the project.'))
+        return
+      }
+      void this._loadProjectFromPath(GLib.build_filenamev([dir, 'game-project.json']))
+    })
   }
 
   /** "Open Project" → real file picker (Gtk.FileDialog). Filter to
