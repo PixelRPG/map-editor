@@ -15,6 +15,7 @@ import { run } from '@gjsify/unit'
 // its import + `run()` entry here. (Tracked in TODO.md as a guard
 // follow-up — a test that asserts every spec file is registered.)
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
+import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
 import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
 import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import registrySuite from './commands/registry.spec.js'
@@ -59,6 +60,7 @@ run({
   registrySuite,
   paintTileCommandSuite,
   layerFlagCommandSuite,
+  layerLifecycleCommandSuite,
   objectPlacementCommandSuite,
   entityRegistrySuite,
   actionsSpecSuite,
