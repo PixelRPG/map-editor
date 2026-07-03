@@ -10,6 +10,10 @@ import {
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 import { ComponentInspector, type ComponentRefOptions } from './component-inspector.ts'
+import { EventActionListEditor } from './event-action-list-editor.ts'
+
+/** A per-component editor widget in the stack — the generic inspector or the actions editor. */
+type ComponentEditor = ComponentInspector | EventActionListEditor
 
 /**
  * The advanced "all components" editor for one {@link EntityDefinition}: a
@@ -64,7 +68,7 @@ export class EntityComponentsEditor extends Adw.Bin {
   /** Project-scoped picker options for the `*-ref` fields. */
   setRefOptions(options: ComponentRefOptions): void {
     this._refOptions = options
-    for (const inspector of this._inspectors()) inspector.setRefOptions(options)
+    for (const editor of this._componentEditors()) editor.setRefOptions(options)
   }
 
   /** Populate from an entity definition (no `entity-changed` echo). */
@@ -77,11 +81,11 @@ export class EntityComponentsEditor extends Adw.Bin {
     this._rebuild()
   }
 
-  private _inspectors(): ComponentInspector[] {
-    const out: ComponentInspector[] = []
+  private _componentEditors(): ComponentEditor[] {
+    const out: ComponentEditor[] = []
     let child = this._box.get_first_child()
     while (child) {
-      if (child instanceof ComponentInspector) out.push(child)
+      if (child instanceof ComponentInspector || child instanceof EventActionListEditor) out.push(child)
       child = child.get_next_sibling()
     }
     return out
@@ -89,9 +93,32 @@ export class EntityComponentsEditor extends Adw.Bin {
 
   private _rebuild(): void {
     this._silent = true
-    for (const inspector of this._inspectors()) this._box.remove(inspector)
+    for (const editor of this._componentEditors()) this._box.remove(editor)
     for (let i = 0; i < this._components.length; i++) {
       const comp = this._components[i]
+      const index = i
+      const onDataChanged = (json: string) => {
+        try {
+          this._components[index] = JSON.parse(json) as ComponentData
+        } catch {
+          return
+        }
+        this._emitChange()
+      }
+
+      // The `actions` component gets the friendly list editor instead of
+      // the generic JSON-field inspector; it feeds the same change chain.
+      if (comp.type === 'actions') {
+        const editor = new EventActionListEditor()
+        editor.setRefOptions(this._refOptions)
+        editor.setRemovable(true)
+        editor.setData(comp)
+        editor.connect('data-changed', (_w: EventActionListEditor, json: string) => onDataChanged(json))
+        editor.connect('remove-requested', () => this._removeComponent(index))
+        this._box.insert_child_after(editor, this._lastEditorOrNull())
+        continue
+      }
+
       const spec = BUILT_IN_COMPONENT_SPECS[comp.type]
       if (!spec) continue // unknown type — skip (validation flags it elsewhere)
       const inspector = new ComponentInspector()
@@ -99,26 +126,18 @@ export class EntityComponentsEditor extends Adw.Bin {
       inspector.setRefOptions(this._refOptions)
       inspector.setRemovable(true)
       inspector.setData(comp)
-      const index = i
-      inspector.connect('data-changed', (_w: ComponentInspector, json: string) => {
-        try {
-          this._components[index] = JSON.parse(json) as ComponentData
-        } catch {
-          return
-        }
-        this._emitChange()
-      })
+      inspector.connect('data-changed', (_w: ComponentInspector, json: string) => onDataChanged(json))
       inspector.connect('remove-requested', () => this._removeComponent(index))
       // Insert before the add button (which is the last child).
-      this._box.insert_child_after(inspector, this._lastInspectorOrNull())
+      this._box.insert_child_after(inspector, this._lastEditorOrNull())
     }
     this._rebuildAddMenu()
     this._silent = false
   }
 
-  private _lastInspectorOrNull(): Gtk.Widget | null {
-    const inspectors = this._inspectors()
-    return inspectors.length > 0 ? inspectors[inspectors.length - 1] : null
+  private _lastEditorOrNull(): Gtk.Widget | null {
+    const editors = this._componentEditors()
+    return editors.length > 0 ? editors[editors.length - 1] : null
   }
 
   private _removeComponent(index: number): void {

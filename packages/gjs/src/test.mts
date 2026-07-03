@@ -8,6 +8,7 @@
 import { run } from '@gjsify/unit'
 
 import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
+import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
 
-run({ bakeCacheSuite, mapPreviewGeometrySuite })
+run({ bakeCacheSuite, eventActionModelSuite, mapPreviewGeometrySuite })
