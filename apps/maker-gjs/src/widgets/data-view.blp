@@ -45,7 +45,7 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
 
         Adw.PreferencesGroup {
           title: _("Project");
-          description: _("Project-wide settings saved into game-project.json.");
+          description: _("Settings saved into game-project.json.");
 
           Adw.EntryRow name_row {
             show-apply-button: true;
@@ -66,6 +66,10 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
             show-apply-button: true;
             title: _("Description");
           }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Tile settings");
 
           Adw.SpinRow tilesize_row {
             title: _("Default tile size");
@@ -85,28 +89,36 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
           }
         }
 
-        Adw.PreferencesGroup sheets_group {
-          title: _("Appearances");
-          description: _("Character animation sheets used by the Cast.");
+        // Assets are OWNED + edited in Cast / Sheets — Data only links to
+        // them (no duplicated import/rename/delete here). Suffix links jump
+        // to the managing view (soll-data).
+        Adw.PreferencesGroup {
+          title: _("Linked assets");
+          description: _("Managed in the Cast and Sheets views — Data just references them.");
 
-          header-suffix: Gtk.Button import_sheet_button {
-            valign: center;
-            icon-name: "list-add-symbolic";
-            tooltip-text: _("Import an appearance from an image");
-            styles ["flat", "circular"]
-          };
-        }
+          Adw.ActionRow appearances_ref_row {
+            title: _("Appearances");
+            activatable-widget: appearances_open_button;
 
-        Adw.PreferencesGroup tilesets_group {
-          title: _("Tilesets");
-          description: _("World-building tile images used by the map editor.");
+            [suffix]
+            Gtk.Button appearances_open_button {
+              valign: center;
+              label: _("Open in Cast");
+              styles ["flat"]
+            }
+          }
 
-          header-suffix: Gtk.Button import_tileset_button {
-            valign: center;
-            icon-name: "list-add-symbolic";
-            tooltip-text: _("Import a tileset from an image");
-            styles ["flat", "circular"]
-          };
+          Adw.ActionRow tilesets_ref_row {
+            title: _("Tilesets");
+            activatable-widget: tilesets_open_button;
+
+            [suffix]
+            Gtk.Button tilesets_open_button {
+              valign: center;
+              label: _("Open in Sheets");
+              styles ["flat"]
+            }
+          }
         }
       };
     };
