@@ -486,24 +486,38 @@ export class SceneEditorView extends ResponsiveEditorView {
     const mapSpriteSetRef = mapData.spriteSets?.[0]
     const firstSet = mapSpriteSetRef ?? project.resource.data?.spriteSets?.[0]
     if (firstSet) {
-      try {
-        const engineSet = await project.resource.getSpriteSet(firstSet.id)
-        if (engineSet) {
-          const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
-          if (gdkSet.spriteSheet) {
-            this._inspector.tilesTab.tilesetName = firstSet.id
-            this._tilesetName = firstSet.id
-            this._tilesetFirstGid = mapSpriteSetRef?.firstGid ?? 1
-            const tiles = this._sheetToTiles(gdkSet.spriteSheet)
-            this._tiles = tiles
-            this._inspector.tilesTab.setTiles(tiles)
-            this._refreshContextPopovers()
-            if (tiles.length) this._setActiveTile(tiles[0].id)
-          }
-        }
-      } catch (error) {
-        console.warn('[SceneEditorView] Failed to load sprite set for tiles tab:', error)
-      }
+      await this.loadTileset(project, firstSet.id, mapSpriteSetRef?.firstGid ?? 1)
+    }
+  }
+
+  /** The sprite-set id currently feeding the Tiles-tab palette. */
+  get activeTilesetId(): string {
+    return this._tilesetName
+  }
+
+  /**
+   * Load `spriteSetId` into the Tiles-tab palette as the active painting
+   * tileset, offsetting tile ids by `firstGid`. Extracted from
+   * {@link populateFromProject} so the "Switch…" tileset action can
+   * re-point the palette to another of the map's tilesets (the win
+   * action resolves the set + firstGid from the map's `spriteSets`).
+   */
+  async loadTileset(project: LoadedProject, spriteSetId: string, firstGid: number): Promise<void> {
+    try {
+      const engineSet = await project.resource.getSpriteSet(spriteSetId)
+      if (!engineSet) return
+      const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
+      if (!gdkSet.spriteSheet) return
+      this._inspector.tilesTab.tilesetName = spriteSetId
+      this._tilesetName = spriteSetId
+      this._tilesetFirstGid = firstGid
+      const tiles = this._sheetToTiles(gdkSet.spriteSheet)
+      this._tiles = tiles
+      this._inspector.tilesTab.setTiles(tiles)
+      this._refreshContextPopovers()
+      if (tiles.length) this._setActiveTile(tiles[0].id)
+    } catch (error) {
+      console.warn('[SceneEditorView] Failed to load sprite set for tiles tab:', error)
     }
   }
 
