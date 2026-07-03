@@ -24,10 +24,13 @@ import {
   type SpriteSetChoice,
   SpriteSetImportDialog,
   type SpriteSetImportResult,
+  TileGridThumbnail,
   TileInspector,
   TilePalette,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
+
+import { countMapUsers } from '../services/sprite-set-usage.ts'
 
 import { characterSpriteSetIds, isCharacterSpriteSet } from '../services/sprite-set-classification.ts'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
@@ -78,6 +81,8 @@ export class TilesView extends ResponsiveEditorView {
   declare _inspector: TileInspector
   declare _palette: TilePalette
   declare _tilesets_gallery: CardGallery
+  declare _search_entry: Gtk.SearchEntry
+  declare _sort_dropdown: Gtk.DropDown
   declare _nav: Adw.NavigationView
   declare _detail_page: Adw.NavigationPage
   // Responsive tile inspector. On desktop the inspector lives in the
@@ -112,6 +117,10 @@ export class TilesView extends ResponsiveEditorView {
 
   private signals = new SignalScope()
   private _spriteSets: TilesetEntry[] = []
+  /** tileset id → how many maps reference it (for the card's "used by K" line). */
+  private _mapUsage = new Map<string, number>()
+  private _search = ''
+  private _sort: 'default' | 'name' | 'size' | 'usage' = 'default'
   private _activeSpriteSetId: string | null = null
   private _selectedSpriteId: number | null = null
   // Which kind the quick-view + single gallery highlight currently reflect.
@@ -155,6 +164,8 @@ export class TilesView extends ResponsiveEditorView {
           'inspector',
           'palette',
           'tilesets_gallery',
+          'search_entry',
+          'sort_dropdown',
           'nav',
           'detail_page',
           'tile_split',
@@ -255,6 +266,15 @@ export class TilesView extends ResponsiveEditorView {
     super.vfunc_map()
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
+    })
+    // Search + sort the tileset cards.
+    this.signals.connect(this._search_entry, 'search-changed', () => {
+      this._search = this._search_entry.get_text()
+      this._rebuildGallery()
+    })
+    this.signals.connect(this._sort_dropdown, 'notify::selected', () => {
+      this._sort = (['default', 'name', 'size', 'usage'] as const)[this._sort_dropdown.get_selected()] ?? 'default'
+      this._rebuildGallery()
     })
     this.signals.connect(this._tilesets_gallery, 'item-activated', (_v: CardGallery, id: string) => {
       this._selectTileset(id)
@@ -495,6 +515,7 @@ export class TilesView extends ResponsiveEditorView {
     const order = new Map((project.data?.spriteSets ?? []).map((ref, i) => [ref.id, i]))
     items.sort((a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER))
     this._spriteSets = items
+    this._mapUsage = countMapUsers(project)
 
     // Keep the active selection if still present; otherwise fall back
     // to the first set.
@@ -566,9 +587,34 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   private _rebuildGallery(): void {
-    this._tilesets_gallery.setItems(this._spriteSets.map((entry) => this._buildTilesetItem(entry)))
+    const entries = this._filteredSortedTilesets()
+    const byId = new Map(entries.map((e) => [e.id, e]))
+    this._tilesets_gallery.setItems(
+      entries.map((entry) => this._buildTilesetItem(entry)),
+      (item) => {
+        const entry = byId.get(item.id)
+        return entry ? this._buildTilesetPreview(entry) : null
+      },
+    )
     // Only one card across both galleries is lit — the active selection's.
     this._tilesets_gallery.setActiveId(this._activeKind === 'tileset' ? this._activeSpriteSetId : null)
+  }
+
+  /** Apply the search filter + sort order to the tileset list for the gallery. */
+  private _filteredSortedTilesets(): TilesetEntry[] {
+    const query = this._search.trim().toLowerCase()
+    const filtered = query
+      ? this._spriteSets.filter((e) => (e.resource.data?.name ?? e.id).toLowerCase().includes(query))
+      : [...this._spriteSets]
+    if (this._sort === 'name') {
+      filtered.sort((a, b) => (a.resource.data?.name ?? a.id).localeCompare(b.resource.data?.name ?? b.id))
+    } else if (this._sort === 'size') {
+      filtered.sort((a, b) => (b.resource.data?.spriteWidth ?? 0) - (a.resource.data?.spriteWidth ?? 0))
+    } else if (this._sort === 'usage') {
+      filtered.sort((a, b) => (this._mapUsage.get(b.id) ?? 0) - (this._mapUsage.get(a.id) ?? 0))
+    }
+    // 'default' keeps the project's sprite-set order (set in the hydrate).
+    return filtered
   }
 
   /**
@@ -579,16 +625,34 @@ export class TilesView extends ResponsiveEditorView {
    * only for project sets (built-ins have no files + can't be removed).
    */
   private _buildTilesetItem(entry: TilesetEntry): GalleryCardItem {
-    const count = entry.resource.data?.sprites?.length ?? 0
+    const data = entry.resource.data
+    const count = data?.sprites?.length ?? 0
+    const w = data?.spriteWidth ?? 0
+    const h = data?.spriteHeight ?? 0
+    const users = this._mapUsage.get(entry.id) ?? 0
+    // "N tiles · W×H · used by K maps" — surfaces the tile dimensions +
+    // where the set is used, right on the card (soll-sheets).
+    const parts = [count === 1 ? _('1 tile') : _(`${count} tiles`)]
+    if (w && h) parts.push(`${w}×${h}`)
+    parts.push(users === 1 ? _('used by 1 map') : _(`used by ${users} maps`))
     return {
       id: entry.id,
-      title: entry.resource.data?.name ?? entry.id,
-      subtitle: count === 1 ? _('1 tile') : _(`${count} tiles`),
-      paintable: entry.gdk?.createSheetThumbnail() ?? null,
+      title: data?.name ?? entry.id,
+      subtitle: parts.join(' · '),
+      // Tile-size chip.
+      badge: w ? _(`${w}px tiles`) : null,
       fallbackIcon: 'view-grid-symbolic',
       deletable: !isBuiltInSpriteSet(entry.id),
       renamable: !isBuiltInSpriteSet(entry.id),
     }
+  }
+
+  /** Representative tile-grid excerpt for a tileset card (soll-sheets). */
+  private _buildTilesetPreview(entry: TilesetEntry): Gtk.Widget | null {
+    if (!entry.gdk) return null
+    const thumb = new TileGridThumbnail()
+    thumb.setSpriteSet(entry.gdk, entry.resource.data?.columns ?? 6)
+    return thumb
   }
 
   /**
