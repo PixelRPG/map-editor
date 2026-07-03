@@ -226,11 +226,13 @@ export class ActionDirectionMatrix extends Adw.Bin {
       thumb.set_paintable(sprite?.createPaintable({ keepAspectRatio: true }) ?? null)
     }
     box.append(thumb)
-    const caption = anim
-      ? _('%n frames · %m ms')
-          .replace('%n', String(anim.frames.length))
-          .replace('%m', String(anim.frames.reduce((s, f) => s + f.duration, 0)))
-      : _('Empty')
+    let caption = _('Empty')
+    if (anim) {
+      const n = anim.frames.length
+      const ms = anim.frames.reduce((s, f) => s + f.duration, 0)
+      const frames = n === 1 ? _('1 frame') : _('%n frames').replace('%n', String(n))
+      caption = `${frames} · ${ms} ms`
+    }
     box.append(new Gtk.Label({ label: caption, cssClasses: ['caption', 'dim-label'] }))
     return box
   }

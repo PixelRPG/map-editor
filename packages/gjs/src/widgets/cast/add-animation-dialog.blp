@@ -130,8 +130,8 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
             }
 
             Adw.SpinRow duration_row {
-              title: _("Frame duration");
-              subtitle: _("Milliseconds per frame");
+              title: _("Default frame duration");
+              subtitle: _("New frames start here — tune each frame below");
 
               adjustment: Gtk.Adjustment {
                 lower: 50;
@@ -200,6 +200,13 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
                 styles ["caption-heading"]
               }
 
+              Gtk.Button apply_all_button {
+                label: _("Apply default to all");
+                tooltip-text: _("Set every frame to the default duration");
+                valign: center;
+                styles ["flat"]
+              }
+
               Gtk.MenuButton add_frame_button {
                 icon-name: "list-add-symbolic";
                 tooltip-text: _("Add a frame");
@@ -248,7 +255,7 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
                 child: Gtk.ScrolledWindow {
                   hscrollbar-policy: automatic;
                   vscrollbar-policy: never;
-                  height-request: 56;
+                  height-request: 92;
 
                   child: Gtk.Box sequence_strip {
                     orientation: horizontal;
