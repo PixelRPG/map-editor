@@ -1,43 +1,36 @@
-import { EDITOR_CONSTANTS, type SpriteSetData, type SpriteSetKind, type SpriteSetResource } from '@pixelrpg/engine'
-import { GdkSpriteSetResource } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
+import { EDITOR_CONSTANTS, type SpriteSetKind } from '@pixelrpg/engine'
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
-import type { DataAssetRow, DataView, DataViewModel } from '../widgets/data-view.ts'
+import type { DataView, DataViewModel } from '../widgets/data-view.ts'
 import type { ProjectStore } from './project-store.ts'
 import { isCharacterSpriteSet } from './sprite-set-classification.ts'
-import { countCharacterUsers, countMapUsers } from './sprite-set-usage.ts'
+import { countCharacterUsers } from './sprite-set-usage.ts'
 import { TypedEmitter } from './typed-emitter.ts'
 
-/** Thumbnail edge passed to the sheet downscaler (≥ the row size, for sharpness). */
-const THUMB_PX = 96
-
 /**
- * Typed event map for {@link DataController.on} — asset actions the
- * host window resolves (dialogs + cross-view navigation; this
- * controller stays dialog-free).
+ * Typed event map for {@link DataController.on}. The Data view no longer
+ * manages assets (that moved to Cast / Sheets — it just references them),
+ * so these are currently dormant; kept as the seam for any future
+ * project-level action the Data view might route to the host window.
+ * TODO: remove once confirmed no consumer needs them (also drop the
+ * window's now-inert `_presentAssetImport`/`_openAsset`/`_presentRenameAsset`/
+ * `_presentDeleteAsset` handlers + their subscriptions).
  */
 export interface DataControllerEvents {
-  /** The user asked to import an asset of `kind` (file-picker dialog). */
   'import-requested': { kind: SpriteSetKind }
-  /** The user asked to open an asset in its editor (the Sheets view). */
   'open-requested': { id: string; kind: SpriteSetKind }
-  /** The user asked to rename an asset (rename dialog). */
   'rename-requested': { id: string; currentName: string }
-  /** The user asked to delete an asset (usage-aware confirm dialog). */
   'delete-requested': { id: string; name: string; usedBy: number }
 }
 
 /**
- * Owns the Data view's "Assets and project" model: builds the asset
- * list (sprite sheets + tilesets, each with a thumbnail, metadata and a
- * "used by" count from the reference graph) and routes project-metadata
- * edits into the {@link ProjectStore} — the single owner of project
- * persistence + the `__project/meta.update` collab broadcast. Asset
- * import / delete / rename / "open" need host dialogs, so they surface
- * as typed events the window subscribes to; the resulting mutations
- * land on the store, whose `sprite-sets-changed` /
- * `project-meta-changed` events re-hydrate this view.
+ * Owns the Data view's model: project metadata (name / author / version /
+ * description / tile size) routed into the {@link ProjectStore} (the
+ * single owner of project persistence + the `__project/meta.update` collab
+ * broadcast), plus asset COUNTS for the "Linked assets" reference rows.
+ * Assets themselves are owned + edited in Cast / Sheets — Data only links
+ * to them. The store's `sprite-sets-changed` / `project-meta-changed`
+ * events re-hydrate this view.
  */
 export class DataController {
   private readonly _events = new TypedEmitter<DataControllerEvents>()
@@ -47,10 +40,6 @@ export class DataController {
     private readonly store: ProjectStore,
   ) {
     view.bindCallbacks({
-      importAsset: (kind) => this._events.emit('import-requested', { kind }),
-      openAsset: (id, kind) => this._events.emit('open-requested', { id, kind }),
-      renameAsset: (id, currentName) => this._events.emit('rename-requested', { id, currentName }),
-      deleteAsset: (id, name, usedBy) => this._events.emit('delete-requested', { id, name, usedBy }),
       setProjectField: (field, value) => this.setProjectField(field, value),
     })
     store.on('project-changed', (project) => {
@@ -58,16 +47,16 @@ export class DataController {
         this.view.setData(null)
         return
       }
-      void this._rebuild()
+      this._rebuild()
     })
-    // The asset list mirrors the sprite-set library — re-hydrate on any
-    // set change; an inbound peer meta update re-renders the metadata
-    // rows (local edits don't, by design — no row re-render mid-typing).
+    // The counts mirror the sprite-set library — re-hydrate on any set
+    // change; an inbound peer meta update re-renders the metadata rows
+    // (local edits don't, by design — no row re-render mid-typing).
     store.on('sprite-sets-changed', () => {
-      if (this.store.project) void this._rebuild()
+      if (this.store.project) this._rebuild()
     })
     store.on('project-meta-changed', () => {
-      if (this.store.project) void this._rebuild()
+      if (this.store.project) this._rebuild()
     })
   }
 
@@ -107,8 +96,13 @@ export class DataController {
     this.store.commitProjectMeta()
   }
 
-  /** Rebuild the whole view model: project metadata + asset rows + usage. */
-  private async _rebuild(): Promise<void> {
+  /**
+   * Rebuild the view model: project metadata + asset COUNTS. Assets are
+   * owned + edited in Cast / Sheets; Data only references them, so this
+   * just tallies how many appearances vs tilesets exist (classified the
+   * same way the Cast/Sheets split does).
+   */
+  private _rebuild(): void {
     const resource = this.store.resource
     if (!resource?.data) {
       this.view.setData(null)
@@ -118,27 +112,14 @@ export class DataController {
     const props = data.properties ?? {}
 
     const charUsers = countCharacterUsers(resource)
-    const mapUsers = countMapUsers(resource)
-
-    const sheets: DataAssetRow[] = []
-    const tilesets: DataAssetRow[] = []
+    let appearanceCount = 0
+    let tilesetCount = 0
     for (const [id, engineSet] of resource.spriteSets) {
       const sd = engineSet.data
       if (!sd) continue
-      const usedByChars = charUsers.get(id) ?? 0
-      const isCharacter = isCharacterSpriteSet(sd.kind, usedByChars > 0)
-      const row = await this._buildRow(
-        id,
-        engineSet,
-        sd,
-        isCharacter ? 'character' : 'tileset',
-        usedByChars,
-        mapUsers.get(id) ?? 0,
-      )
-      ;(isCharacter ? sheets : tilesets).push(row)
+      if (isCharacterSpriteSet(sd.kind, (charUsers.get(id) ?? 0) > 0)) appearanceCount++
+      else tilesetCount++
     }
-    sheets.sort((a, b) => a.name.localeCompare(b.name))
-    tilesets.sort((a, b) => a.name.localeCompare(b.name))
 
     const model: DataViewModel = {
       name: data.name ?? '',
@@ -147,42 +128,9 @@ export class DataController {
       description: typeof props.description === 'string' ? props.description : '',
       tileSize: typeof props.defaultTileSize === 'number' ? props.defaultTileSize : EDITOR_CONSTANTS.DEFAULT_TILE_SIZE,
       path: resource.path,
-      sheets,
-      tilesets,
+      appearanceCount,
+      tilesetCount,
     }
     this.view.setData(model)
-  }
-
-  private async _buildRow(
-    id: string,
-    engineSet: SpriteSetResource,
-    sd: SpriteSetData,
-    kind: SpriteSetKind,
-    usedByChars: number,
-    usedByMaps: number,
-  ): Promise<DataAssetRow> {
-    const width = sd.columns * sd.spriteWidth
-    const height = sd.rows * sd.spriteHeight
-    const count = sd.sprites?.length ?? 0
-    const unit =
-      kind === 'character' ? (count === 1 ? _('sprite') : _('sprites')) : count === 1 ? _('tile') : _('tiles')
-    let paintable = null
-    try {
-      const gdk = await GdkSpriteSetResource.fromEngineResource(engineSet)
-      paintable =
-        kind === 'character'
-          ? (gdk.getSprite(0)?.createPaintable({ keepAspectRatio: true }) ?? null)
-          : gdk.createSheetThumbnail(THUMB_PX)
-    } catch (err) {
-      console.warn('[DataController] Failed to build asset thumbnail:', err)
-    }
-    return {
-      id,
-      name: sd.name || id,
-      kind,
-      paintable,
-      meta: `${width}×${height} · ${count} ${unit}`,
-      usedBy: usedByChars + usedByMaps,
-    }
   }
 }
