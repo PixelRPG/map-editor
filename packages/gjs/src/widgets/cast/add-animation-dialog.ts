@@ -9,12 +9,15 @@ import { gettext as _ } from 'gettext'
 
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
 import { TilePalette } from '../editor/tile-palette.ts'
+import { AnimationTimeline } from './animation-timeline.ts'
+import { frameAtTime, frameStartTime, totalDuration } from './animation-timeline.geometry.ts'
 import { OnionSkinPreview } from './onion-skin-preview.ts'
 
 import Template from './add-animation-dialog.blp'
 
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(OnionSkinPreview.$gtype)
+GObject.type_ensure(AnimationTimeline.$gtype)
 
 const SEQUENCE_THUMB_SIZE = 40
 const DEFAULT_DURATION_MS = 200
@@ -77,6 +80,9 @@ export class AddAnimationDialog extends Adw.Dialog {
   declare _onion_toggle: Gtk.ToggleButton
   declare _sequence_stack: Gtk.Stack
   declare _sequence_strip: Gtk.Box
+  declare _timeline: AnimationTimeline
+  declare _play_toggle: Gtk.ToggleButton
+  declare _time_label: Gtk.Label
   declare _palette: TilePalette
   declare _add_frame_button: Gtk.MenuButton
   declare _apply_all_button: Gtk.Button
@@ -91,6 +97,8 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _sequenceState = 'empty'
   private _previewIndex = 0
   private _previewTimeoutId = 0
+  /** Whether the preview loop is running (timeline transport + auto-play). */
+  private _playing = true
   private _zoomLevel = DEFAULT_ZOOM_LEVEL
   private _zoomLabel = ''
   private _cellAspect: number | null = null
@@ -120,6 +128,9 @@ export class AddAnimationDialog extends Adw.Dialog {
           'onion_toggle',
           'sequence_stack',
           'sequence_strip',
+          'timeline',
+          'play_toggle',
+          'time_label',
           'palette',
           'add_frame_button',
           'apply_all_button',
@@ -168,6 +179,7 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._wireZoom()
     this._wireInputs()
     this._wirePalette()
+    this._wireTimeline()
     this._refreshValidity()
     this._applyZoom()
   }
@@ -363,6 +375,53 @@ export class AddAnimationDialog extends Adw.Dialog {
       this._appendFrame(spriteId)
       this._add_frame_button.popdown()
     })
+  }
+
+  /**
+   * Wire the timeline dock: the play/pause transport toggles the preview
+   * loop, and dragging the timeline playhead scrubs — pausing playback and
+   * jumping the preview to the frame under the playhead.
+   */
+  private _wireTimeline(): void {
+    this._play_toggle.connect('toggled', () => this._setPlaying(this._play_toggle.get_active()))
+    this._timeline.connect('scrubbed', (_t: AnimationTimeline, timeMs: number) => this._onScrub(timeMs))
+  }
+
+  /** Per-frame durations (ms) in sequence order — the timeline's model. */
+  private _durationList(): number[] {
+    return this._frames.map((f) => f.duration)
+  }
+
+  /** Start / stop the preview loop + reflect it in the transport icon. */
+  private _setPlaying(playing: boolean): void {
+    this._playing = playing
+    this._play_toggle.set_icon_name(playing ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic')
+    if (playing) this._restartPreviewTimer()
+    else this._stopPreviewTimer()
+  }
+
+  /**
+   * Handle a timeline scrub: pause playback (via the transport, so the icon
+   * stays in sync) and snap the preview to the frame under the playhead,
+   * leaving the playhead at the exact drag position.
+   */
+  private _onScrub(timeMs: number): void {
+    if (this._frames.length === 0) return
+    if (this._play_toggle.get_active()) this._play_toggle.set_active(false)
+    else this._setPlaying(false)
+    const idx = frameAtTime(this._durationList(), timeMs)
+    if (idx >= 0) {
+      this._previewIndex = idx
+      this._onion_preview.setCurrentIndex(idx)
+    }
+    this._timeline.setPlayheadTime(timeMs)
+    this._updateTimeLabel(timeMs)
+  }
+
+  /** Update the "current / total ms" caption beside the timeline. */
+  private _updateTimeLabel(timeMs: number): void {
+    const total = this._frames.length === 0 ? 0 : totalDuration(this._durationList())
+    this._time_label.set_label(`${Math.round(timeMs)} / ${total} ms`)
   }
 
   /** Append a sprite to the frame sequence (at the default duration) + refresh. */
@@ -580,10 +639,13 @@ export class AddAnimationDialog extends Adw.Dialog {
       ? this._frames.map((f) => set.getSprite(f.spriteId)?.createPaintable({ keepAspectRatio: true }) ?? null)
       : []
     this._onion_preview.setFrames(paintables)
+    // The timeline shares the sequence's per-frame durations.
+    this._timeline.setFrames(this._durationList())
   }
 
   private _restartPreviewTimer(): void {
     this._stopPreviewTimer()
+    if (!this._playing) return
     if (this._frames.length <= 1) return
     // Per-frame timing: schedule off the CURRENT frame's own duration and
     // reschedule each tick so a mixed-duration loop plays back accurately.
@@ -608,8 +670,14 @@ export class AddAnimationDialog extends Adw.Dialog {
   }
 
   private _applyPreviewFrame(): void {
-    if (this._frames.length === 0) return
-    this._onion_preview.setCurrentIndex(this._previewIndex % this._frames.length)
+    if (this._frames.length === 0) {
+      this._updateTimeLabel(0)
+      return
+    }
+    const idx = this._previewIndex % this._frames.length
+    this._onion_preview.setCurrentIndex(idx)
+    this._timeline.setPlayheadFrame(idx)
+    this._updateTimeLabel(frameStartTime(this._durationList(), idx))
   }
 
   /**
