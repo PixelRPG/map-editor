@@ -9,10 +9,12 @@ import { gettext as _ } from 'gettext'
 
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
 import { TilePalette } from '../editor/tile-palette.ts'
+import { OnionSkinPreview } from './onion-skin-preview.ts'
 
 import Template from './add-animation-dialog.blp'
 
 GObject.type_ensure(TilePalette.$gtype)
+GObject.type_ensure(OnionSkinPreview.$gtype)
 
 const SEQUENCE_THUMB_SIZE = 40
 const DEFAULT_DURATION_MS = 200
@@ -63,7 +65,8 @@ export class AddAnimationDialog extends Adw.Dialog {
   declare _zoom_in_button: Gtk.Button
   declare _name_row: Adw.EntryRow
   declare _duration_row: Adw.SpinRow
-  declare _preview_picture: Gtk.Picture
+  declare _onion_preview: OnionSkinPreview
+  declare _onion_toggle: Gtk.ToggleButton
   declare _sequence_stack: Gtk.Stack
   declare _sequence_strip: Gtk.Box
   declare _palette: TilePalette
@@ -105,7 +108,8 @@ export class AddAnimationDialog extends Adw.Dialog {
           'zoom_in_button',
           'name_row',
           'duration_row',
-          'preview_picture',
+          'onion_preview',
+          'onion_toggle',
           'sequence_stack',
           'sequence_strip',
           'palette',
@@ -326,10 +330,11 @@ export class AddAnimationDialog extends Adw.Dialog {
       w = Math.max(1, Math.round(tileSize * aspect))
       h = tileSize
     }
-    this._preview_picture.set_size_request(w, h)
+    this._onion_preview.set_size_request(w, h)
   }
 
   private _wireInputs(): void {
+    this._onion_toggle.connect('toggled', () => this._onion_preview.setOnion(this._onion_toggle.get_active()))
     this._name_row.connect('changed', () => {
       this._refreshValidity()
     })
@@ -532,9 +537,24 @@ export class AddAnimationDialog extends Adw.Dialog {
   }
 
   private _refreshPreview(): void {
+    this._syncPreviewFrames()
     this._stopPreviewTimer()
     this._applyPreviewFrame()
     this._restartPreviewTimer()
+  }
+
+  /**
+   * Rebuild the onion-skin preview's frame paintables from the current
+   * sequence (1:1 with `_frames`, `null` for an unresolved sprite so the
+   * playback index stays aligned). Called on every sequence mutation;
+   * the per-tick path only moves the current index.
+   */
+  private _syncPreviewFrames(): void {
+    const set = this._spriteSet
+    const paintables = set
+      ? this._frames.map((f) => set.getSprite(f.spriteId)?.createPaintable({ keepAspectRatio: true }) ?? null)
+      : []
+    this._onion_preview.setFrames(paintables)
   }
 
   private _restartPreviewTimer(): void {
@@ -563,14 +583,8 @@ export class AddAnimationDialog extends Adw.Dialog {
   }
 
   private _applyPreviewFrame(): void {
-    if (this._frames.length === 0 || !this._spriteSet) {
-      this._preview_picture.set_paintable(null)
-      return
-    }
-    const spriteId = this._frames[this._previewIndex % this._frames.length].spriteId
-    const sprite = this._spriteSet.getSprite(spriteId)
-    const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
-    this._preview_picture.set_paintable(paintable)
+    if (this._frames.length === 0) return
+    this._onion_preview.setCurrentIndex(this._previewIndex % this._frames.length)
   }
 
   /**

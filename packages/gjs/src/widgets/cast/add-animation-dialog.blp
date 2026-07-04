@@ -161,8 +161,7 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
               halign: center;
               styles ["card"]
 
-              child: Gtk.Picture preview_picture {
-                content-fit: contain;
+              child: $PixelRpgOnionSkinPreview onion_preview {
                 halign: center;
                 valign: center;
                 margin-top: 8;
@@ -172,9 +171,24 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
               };
             }
 
-            Gtk.Label preview_label {
-              label: _("Preview");
-              styles ["caption", "dim-label"]
+            Gtk.Box {
+              orientation: horizontal;
+              spacing: 8;
+              halign: center;
+
+              Gtk.Label {
+                label: _("Preview");
+                valign: center;
+                styles ["caption", "dim-label"]
+              }
+
+              Gtk.ToggleButton onion_toggle {
+                label: _("Onion skin");
+                active: true;
+                tooltip-text: _("Ghost the previous + next frames behind the current one");
+                valign: center;
+                styles ["flat", "caption"]
+              }
             }
           }
 
