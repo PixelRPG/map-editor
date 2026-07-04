@@ -63,11 +63,26 @@ export function frameInset(tileWidth: number, tileHeight: number): number {
   return Math.max(1, Math.round(Math.min(tileWidth, tileHeight) * 0.07))
 }
 
+/** Options for {@link buildPlacementGraphic}. */
+export interface PlacementGraphicOptions {
+  /**
+   * Runtime (playtest) mode: drop the editor-only cell frame, and render
+   * *nothing* for a sprite-less placement (spawn-point / teleport /
+   * trigger markers are editor chrome — the player must not see the
+   * diamonds). In editor mode (default) the frame + marker/sprite show.
+   */
+  runtime?: boolean
+}
+
 /**
  * Build the tile-like graphic for one resolved placement definition:
  * a `GraphicsGroup` of [cell frame, content]. Content is the `visual`
  * component's sprite/animation contain-fitted into the framed cell, or
  * the type-coloured diamond marker when no sprite resolves.
+ *
+ * In `runtime` mode the editor cell frame is dropped and a marker-only
+ * placement renders as an empty group (invisible) — so a playtest shows
+ * just the actual sprites, not the editor's frames + logic markers.
  *
  * The group's local bounds are exactly `tileWidth × tileHeight`, so an
  * anchor of (0.5, 0.5) centres it on a tile-centre actor and (0, 0)
@@ -79,15 +94,21 @@ export function buildPlacementGraphic(
   tileWidth: number,
   tileHeight: number,
   registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
+  options: PlacementGraphicOptions = {},
 ): GraphicsGroup {
-  const frame = new Rectangle({
-    width: tileWidth,
-    height: tileHeight,
-    color: Color.Transparent,
-    strokeColor: Color.fromHex(EDITOR_CONSTANTS.HOVER_OBJECT_BORDER_COLOR),
-    lineWidth: 1,
-  })
-  const members: GraphicsGrouping[] = [{ offset: vec(0, 0), graphic: frame }]
+  const members: GraphicsGrouping[] = []
+  // Editor-only cell frame — omitted in runtime so the player sees no
+  // outline around placed objects.
+  if (!options.runtime) {
+    const frame = new Rectangle({
+      width: tileWidth,
+      height: tileHeight,
+      color: Color.Transparent,
+      strokeColor: Color.fromHex(EDITOR_CONSTANTS.HOVER_OBJECT_BORDER_COLOR),
+      lineWidth: 1,
+    })
+    members.push({ offset: vec(0, 0), graphic: frame })
+  }
 
   const visualData = def.components.find((c) => c.type === 'visual')
   const sprite = visualData ? buildVisualGraphic(visualData, mapResource) : null
@@ -100,7 +121,10 @@ export function buildPlacementGraphic(
       offset: vec((tileWidth - sprite.width) / 2, (tileHeight - sprite.height) / 2),
       graphic: sprite,
     })
-  } else {
+  } else if (!options.runtime) {
+    // Sprite-less placement: the editor diamond marker. Skipped in
+    // runtime — spawn-point / teleport / trigger placements are
+    // invisible logic in-game, so the group renders empty.
     const r = Math.max(2, Math.round(Math.min(tileWidth, tileHeight) * 0.25))
     const diamond = new Polygon({
       points: [vec(r, 0), vec(2 * r, r), vec(r, 2 * r), vec(0, r)],

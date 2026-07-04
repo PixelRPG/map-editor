@@ -165,5 +165,25 @@ export default async () => {
       // Contain-fitted into the 14×14 framed area: 16×32 cell → bound by height.
       expect((content as Animation).scale.y).toBe(14 / 32)
     })
+
+    await it('runtime mode: sprite-less placement renders nothing (no frame, no marker)', async () => {
+      if (!domAvailable) return
+      const def: EntityDefinition = { id: 'tp', name: 'Door', components: [{ type: 'trigger', on: 'walk-onto' }] }
+      const group = buildPlacementGraphic(def, fakeMapResource, 16, 16, undefined, { runtime: true })
+      expect(group.members.length).toBe(0)
+    })
+
+    await it('runtime mode: sprite placement shows only the sprite, no editor frame', async () => {
+      if (!domAvailable) return
+      const def: EntityDefinition = {
+        id: 'scientist',
+        name: 'Scientist',
+        components: [{ type: 'visual', spriteSetId: 'scientist', spriteId: 0, animationId: 'idle-down' }],
+      }
+      const group = buildPlacementGraphic(def, characterMapResource, 16, 16, undefined, { runtime: true })
+      expect(group.members.length).toBe(1)
+      expect(memberGraphic(group, 0) instanceof Rectangle).toBe(false) // no cell frame
+      expect(memberGraphic(group, 0) instanceof Animation).toBe(true)
+    })
   })
 }

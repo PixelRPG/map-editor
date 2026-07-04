@@ -7,7 +7,7 @@ import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import { DEFAULT_LAYER_TIER, type LayerData } from '../types/data/LayerData.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
-import { buildPlacementGraphic } from './placement-graphic.ts'
+import { buildPlacementGraphic, type PlacementGraphicOptions } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
 import { validateEntityDefinition } from './validate.ts'
 
@@ -26,6 +26,7 @@ export function buildPlacementEntity(
   mapResource: MapResource,
   layersById: ReadonlyMap<string, LayerData>,
   registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
+  options: PlacementGraphicOptions = {},
 ): Entity {
   const mapData = mapResource.mapData
   const tileWidth = mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
@@ -50,14 +51,34 @@ export function buildPlacementEntity(
       for (const c of Array.isArray(built) ? built : [built]) actor.addComponent(c)
     }
   }
-  actor.graphics.use(buildPlacementGraphic(def, mapResource, tileWidth, tileHeight, registry))
-  actor.graphics.anchor = vec(0.5, 0.5)
+  applyPlacementGraphic(actor, def, mapResource, registry, options)
 
   const layer = layersById.get(placement.layerId)
   actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]
   if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.visible = false
 
   return actor
+}
+
+/**
+ * (Re)apply a placement actor's tile-like graphic for the given mode.
+ * Shared by {@link buildPlacementEntity} (spawn) and the editor↔runtime
+ * toggle (`MapScene.refreshPlacementGraphicsForMode`), so switching into
+ * playtest re-renders every placement without its editor chrome (frame +
+ * logic markers) and switching back restores it.
+ */
+export function applyPlacementGraphic(
+  actor: Actor,
+  def: EntityDefinition,
+  mapResource: MapResource,
+  registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
+  options: PlacementGraphicOptions = {},
+): void {
+  const mapData = mapResource.mapData
+  const tileWidth = mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+  const tileHeight = mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+  actor.graphics.use(buildPlacementGraphic(def, mapResource, tileWidth, tileHeight, registry, options))
+  actor.graphics.anchor = vec(0.5, 0.5)
 }
 
 /**
