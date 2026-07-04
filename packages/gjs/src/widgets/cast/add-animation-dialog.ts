@@ -19,6 +19,14 @@ GObject.type_ensure(OnionSkinPreview.$gtype)
 const SEQUENCE_THUMB_SIZE = 40
 const DEFAULT_DURATION_MS = 200
 
+// Sequence chips scale their WIDTH with the frame's duration so the strip
+// reads as a timeline (a 400 ms frame is twice as wide as a 200 ms one).
+// `DURATION_REF_MS` maps to the base thumb width; clamped so very short
+// frames stay clickable and very long ones don't dominate the strip.
+const DURATION_REF_MS = 200
+const CHIP_MIN_WIDTH = 28
+const CHIP_MAX_WIDTH = 120
+
 /**
  * Discrete tile-size stops for the bottom-right zoom OSD. Both the
  * picker cells AND the preview frame use this — the on-screen sprite
@@ -431,7 +439,7 @@ export class AddAnimationDialog extends Adw.Dialog {
     const picture = new Gtk.Picture({
       contentFit: Gtk.ContentFit.CONTAIN,
       canShrink: true,
-      widthRequest: SEQUENCE_THUMB_SIZE,
+      widthRequest: this._chipWidthFor(frame.duration),
       heightRequest: SEQUENCE_THUMB_SIZE,
     })
     picture.set_paintable(paintable)
@@ -476,8 +484,24 @@ export class AddAnimationDialog extends Adw.Dialog {
     button.add_controller(dropTarget)
 
     chip.append(button)
-    chip.append(this._buildDurationStepper(indexInSequence))
+    // Resize this chip live as its duration changes (timeline width),
+    // without a full strip rebuild (which would destroy the stepper the
+    // user is clicking).
+    chip.append(
+      this._buildDurationStepper(indexInSequence, () => {
+        picture.set_size_request(
+          this._chipWidthFor(this._frames[indexInSequence]?.duration ?? DEFAULT_DURATION_MS),
+          SEQUENCE_THUMB_SIZE,
+        )
+      }),
+    )
     return chip
+  }
+
+  /** Sequence-chip width for a frame duration (timeline metaphor; clamped). */
+  private _chipWidthFor(duration: number): number {
+    const scaled = Math.round((duration / DURATION_REF_MS) * SEQUENCE_THUMB_SIZE)
+    return Math.max(CHIP_MIN_WIDTH, Math.min(CHIP_MAX_WIDTH, scaled))
   }
 
   /**
@@ -485,7 +509,7 @@ export class AddAnimationDialog extends Adw.Dialog {
    * `_frames[index].duration` in ±50 ms steps (clamped 50–2000) and
    * retimes the live preview so a mixed-duration loop reads correctly.
    */
-  private _buildDurationStepper(index: number): Gtk.Box {
+  private _buildDurationStepper(index: number, onChange: () => void): Gtk.Box {
     const row = new Gtk.Box({
       orientation: Gtk.Orientation.HORIZONTAL,
       spacing: 0,
@@ -499,6 +523,7 @@ export class AddAnimationDialog extends Adw.Dialog {
       if (!frame) return
       frame.duration = Math.max(50, Math.min(2000, frame.duration + delta))
       setLabel()
+      onChange()
       this._refreshPreview()
     }
     const minus = new Gtk.Button({
