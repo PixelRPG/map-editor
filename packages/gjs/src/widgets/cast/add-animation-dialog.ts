@@ -9,6 +9,7 @@ import { gettext as _ } from 'gettext'
 
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
 import { TilePalette } from '../editor/tile-palette.ts'
+import { insertAt, moveTo } from './animation-sequence.ts'
 import { AnimationTimeline } from './animation-timeline.ts'
 import { frameAtTime, frameStartTime, totalDuration } from './animation-timeline.geometry.ts'
 import { OnionSkinPreview } from './onion-skin-preview.ts'
@@ -92,8 +93,12 @@ export class AddAnimationDialog extends Adw.Dialog {
   private _spriteSet: GdkSpriteSetResource | null = null
   /** Per-frame sequence — each frame carries its own sprite id + duration (ms). */
   private _frames: AnimationFrame[] = []
-  /** Source index of an in-progress sequence-strip drag-to-reorder. */
-  private _dragFromIndex: number | null = null
+  /**
+   * The in-progress drag's payload, armed by the source (a sequence chip or
+   * a draggable picker swatch) and read by a gap drop-zone. `move` reorders
+   * the frame at `from`; `insert` adds a new frame for `spriteId`.
+   */
+  private _dragPayload: { kind: 'move'; from: number } | { kind: 'insert'; spriteId: number } | null = null
   private _sequenceState = 'empty'
   private _previewIndex = 0
   private _previewTimeoutId = 0
@@ -375,6 +380,17 @@ export class AddAnimationDialog extends Adw.Dialog {
       this._appendFrame(spriteId)
       this._add_frame_button.popdown()
     })
+    // Dragging a swatch arms an INSERT so a gap drop-zone adds a new frame
+    // at that caret (vs. click, which appends). Both pickers are drag-source
+    // enabled in the blp.
+    for (const picker of [this._palette, this._frame_picker]) {
+      picker.connect('tile-drag-started', (_p: TilePalette, spriteId: number) => {
+        this._dragPayload = { kind: 'insert', spriteId }
+      })
+      picker.connect('tile-drag-ended', () => {
+        this._dragPayload = null
+      })
+    }
   }
 
   /**
@@ -472,19 +488,72 @@ export class AddAnimationDialog extends Adw.Dialog {
       child = next
     }
 
+    // Interleave a caret gap around every chip: gap 0, chip 0, gap 1, …,
+    // chip n-1, gap n. Each gap is a drop-zone that inserts/moves a frame
+    // AT that position (see `_buildGap`).
+    this._sequence_strip.append(this._buildGap(0))
     for (let i = 0; i < this._frames.length; i++) {
       this._sequence_strip.append(this._buildSequenceChip(this._frames[i], i))
+      this._sequence_strip.append(this._buildGap(i + 1))
     }
 
     this.sequenceState = this._frames.length === 0 ? 'empty' : 'populated'
   }
 
   /**
+   * Build one caret gap for the sequence strip. A thin drop-zone that
+   * accepts either a dragged picker swatch (insert a new frame here) or a
+   * dragged chip (move the frame here) — `gapIndex` is the insertion index.
+   * Highlights while a drag hovers so the drop position reads as a caret.
+   */
+  private _buildGap(gapIndex: number): Gtk.Widget {
+    const gap = new Gtk.Box({ cssClasses: ['timeline-caret'], valign: Gtk.Align.FILL })
+    gap.set_size_request(8, -1)
+    const drop = new Gtk.DropTarget({ actions: Gdk.DragAction.COPY | Gdk.DragAction.MOVE })
+    // Accept both a picker swatch (string tile id) + a chip (int index); the
+    // payload side-channel decides what to do, matching the repo's DnD style.
+    drop.set_gtypes([GObject.TYPE_STRING, GObject.TYPE_INT])
+    drop.connect('enter', () => {
+      gap.add_css_class('drop-active')
+      return this._dragPayload?.kind === 'insert' ? Gdk.DragAction.COPY : Gdk.DragAction.MOVE
+    })
+    drop.connect('leave', () => gap.remove_css_class('drop-active'))
+    drop.connect('drop', () => {
+      gap.remove_css_class('drop-active')
+      return this._applyDrop(gapIndex)
+    })
+    gap.add_controller(drop)
+    return gap
+  }
+
+  /**
+   * Apply the armed drag payload at `gapIndex`: insert a new frame (default
+   * duration) for a picker swatch, or move the dragged chip there. Returns
+   * whether the drop was handled (GTK's `drop` contract).
+   */
+  private _applyDrop(gapIndex: number): boolean {
+    const payload = this._dragPayload
+    this._dragPayload = null
+    if (!payload) return false
+    if (payload.kind === 'insert') {
+      const duration = Math.round(this._duration_row.get_value())
+      this._frames = insertAt(this._frames, gapIndex, { spriteId: payload.spriteId, duration })
+    } else {
+      this._frames = moveTo(this._frames, payload.from, gapIndex)
+    }
+    this._previewIndex = 0
+    this._rebuildSequenceStrip()
+    this._refreshPreview()
+    this._refreshValidity()
+    return true
+  }
+
+  /**
    * Build one chip for the sequence strip: the frame's sprite thumbnail
-   * (click removes, drag reorders — a `Gtk.DragSource` + `Gtk.DropTarget`
-   * pair carrying the frame's index) stacked over a per-frame duration
-   * stepper (−/ms/+). Click and drag coexist — GTK suppresses the click
-   * once a press turns into a drag.
+   * (click removes; drag it onto a caret gap to reorder — the chip is a
+   * `Gtk.DragSource`, the gaps are the drop-zones) stacked over a per-frame
+   * duration stepper (−/ms/+). Click and drag coexist — GTK suppresses the
+   * click once a press turns into a drag.
    */
   private _buildSequenceChip(frame: AnimationFrame, indexInSequence: number): Gtk.Box {
     const chip = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
@@ -511,11 +580,11 @@ export class AddAnimationDialog extends Adw.Dialog {
       this._refreshValidity()
     })
 
-    // Drag source — carries this frame's index (an int) so the drop
-    // target can reorder. The dragged sprite shows as the drag icon.
+    // Drag source — arms a MOVE of this frame's index; a gap drop-zone
+    // reads the payload + reorders. The dragged sprite shows as the icon.
     const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
     dragSource.connect('prepare', () => {
-      this._dragFromIndex = indexInSequence
+      this._dragPayload = { kind: 'move', from: indexInSequence }
       const value = new GObject.Value()
       value.init(GObject.TYPE_INT)
       value.set_int(indexInSequence)
@@ -527,20 +596,9 @@ export class AddAnimationDialog extends Adw.Dialog {
       })
     }
     dragSource.connect('drag-end', () => {
-      this._dragFromIndex = null
+      this._dragPayload = null
     })
     button.add_controller(dragSource)
-
-    // Drop target — accepts a dragged frame index and reorders so the
-    // dragged frame lands at this thumbnail's slot.
-    const dropTarget = Gtk.DropTarget.new(GObject.TYPE_INT, Gdk.DragAction.MOVE)
-    dropTarget.connect('drop', () => {
-      const from = this._dragFromIndex
-      if (from === null) return false
-      this._reorderFrame(from, indexInSequence)
-      return true
-    })
-    button.add_controller(dropTarget)
 
     chip.append(button)
     // Resize this chip live as its duration changes (timeline width),
@@ -602,22 +660,6 @@ export class AddAnimationDialog extends Adw.Dialog {
     row.append(label)
     row.append(plus)
     return row
-  }
-
-  /**
-   * Move the frame at `from` to `to` in the sequence + refresh the
-   * dependent surfaces. No-op for an out-of-range or unchanged move.
-   */
-  private _reorderFrame(from: number, to: number): void {
-    if (from === to || from < 0 || from >= this._frames.length || to < 0 || to >= this._frames.length) return
-    const next = [...this._frames]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
-    this._frames = next
-    this._previewIndex = 0
-    this._rebuildSequenceStrip()
-    this._refreshPreview()
-    this._refreshValidity()
   }
 
   private _refreshPreview(): void {

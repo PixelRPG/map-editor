@@ -7,9 +7,16 @@
 // test that.
 import { run } from '@gjsify/unit'
 
+import animationSequenceSuite from './widgets/cast/animation-sequence.spec.js'
 import animationTimelineGeometrySuite from './widgets/cast/animation-timeline.geometry.spec.js'
 import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
 
-run({ animationTimelineGeometrySuite, bakeCacheSuite, eventActionModelSuite, mapPreviewGeometrySuite })
+run({
+  animationSequenceSuite,
+  animationTimelineGeometrySuite,
+  bakeCacheSuite,
+  eventActionModelSuite,
+  mapPreviewGeometrySuite,
+})
