@@ -1,7 +1,7 @@
 import { Actor, type EventEmitter, Logger, Scene } from 'excalibur'
 import { EditorModeComponent, PlacementIdComponent } from '../components/index.ts'
 import { resolvePlacementDefinition } from '../entity/data-access.ts'
-import { buildPlacementEntity } from '../entity/spawn-placement.ts'
+import { applyPlacementGraphic, buildPlacementEntity } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
@@ -104,6 +104,28 @@ export class MapScene extends Scene {
     // Respect the global objects toggle for live spawns (place / undo).
     if (entity instanceof Actor && !areObjectsVisible(this)) entity.graphics.visible = false
     this.add(entity)
+  }
+
+  /**
+   * Rebuild every placement actor's graphic for editor vs runtime mode.
+   * In runtime the editor cell frame + logic markers (spawn-point /
+   * teleport / trigger diamonds) are dropped so a playtest shows only
+   * the real sprites; switching back restores the editor chrome. Called
+   * by `Engine.setRuntimeMode`.
+   */
+  refreshPlacementGraphicsForMode(runtime: boolean): void {
+    const placements = this.mapResource.mapData?.objectPlacements ?? []
+    const byId = new Map(placements.map((p) => [p.id, p]))
+    for (const entity of this.world.entityManager.entities) {
+      if (!(entity instanceof Actor)) continue
+      const placementId = entity.get(PlacementIdComponent)?.id
+      if (!placementId) continue
+      const placement = byId.get(placementId)
+      if (!placement) continue
+      const def = resolvePlacementDefinition(placement, this.entityLibrary)
+      if (!def) continue
+      applyPlacementGraphic(entity, def, this.mapResource, undefined, { runtime })
+    }
   }
 
   /** Despawn the live entity for a placement id (used by `RemoveObjectCommand`). */

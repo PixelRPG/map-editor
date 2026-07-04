@@ -1025,6 +1025,9 @@ export class Engine {
       SessionState.unset(scene, RuntimeModeComponent)
       SessionState.set(scene, new EditorModeComponent())
     }
+    // Swap placement chrome (cell frames + logic markers) out of / back
+    // into the render so a playtest shows only the real sprites.
+    scene.refreshPlacementGraphicsForMode(active)
   }
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */
