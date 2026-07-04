@@ -156,7 +156,7 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   }
 
                   Gtk.Label {
-                    label: _("Every sprite sheet in the project. Tilesets paint maps; appearances dress characters. Both are edited here.");
+                    label: _("Every sprite sheet in the project. Tilesets paint maps; appearances dress characters. Configure tiles here; edit an appearance's animations in Cast.");
                     halign: start;
                     wrap: true;
                     xalign: 0;
@@ -225,8 +225,9 @@ template $TilesView : $PixelRpgResponsiveEditorView {
 
                   // ── Appearances (character sprite sheets) ──────────
                   // The other kind of sprite sheet: a character's look +
-                  // its animations. A tap drills straight into the
-                  // animation editor (`appearance-detail`).
+                  // its animations. Managed here as raw assets (import /
+                  // delete / glance); a tap jumps to the Cast matrix to
+                  // author the animations (`win.edit-appearance`).
                   Gtk.Box appearance_header {
                     orientation: horizontal;
                     spacing: 8;
@@ -249,7 +250,7 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   }
 
                   Gtk.Label {
-                    label: _("Animation sheets characters wear. Open one to edit its animations; several characters can share an appearance.");
+                    label: _("Animation sheets characters wear. Open one to edit its animations in Cast; several characters can share an appearance.");
                     halign: start;
                     wrap: true;
                     xalign: 0;
@@ -398,79 +399,6 @@ template $TilesView : $PixelRpgResponsiveEditorView {
         };
       }
 
-      // ── Appearance detail (animation editor) ──────────────────────
-      // The appearance sheet's animation editor: preview + the Animations
-      // list + the selected-animation duration. Shared by every character
-      // wearing this appearance. Two-column on desktop (preview/duration
-      // beside the list), stacked + page-scrolled on phone. Mirrors the
-      // (now-removed) Cast Sprite-sheet detail — this is its new home.
-      Adw.NavigationPage appearance_detail_page {
-        tag: "appearance-detail";
-        title: _("Appearance");
-
-        child: Adw.ToolbarView {
-          top-bar-style: flat;
-
-          [top]
-          Adw.HeaderBar {
-            show-start-title-buttons: false;
-            show-end-title-buttons: false;
-          }
-
-          content: Adw.BreakpointBin {
-            width-request: 1;
-            height-request: 1;
-
-            Adw.Breakpoint {
-              condition ("min-width: 680sp")
-
-              setters {
-                appearance_detail_box.orientation: horizontal;
-                appearance_detail_box.spacing: 24;
-                appearance_main_col.width-request: 320;
-                appearance_main_col.valign: start;
-                anim_list.hexpand: true;
-                anim_list.valign: start;
-              }
-            }
-
-            child: Gtk.ScrolledWindow {
-              hexpand: true;
-              vexpand: true;
-              hscrollbar-policy: never;
-
-              child: Adw.Clamp {
-                maximum-size: 900;
-                tightening-threshold: 600;
-
-                child: Gtk.Box appearance_detail_box {
-                  orientation: vertical;
-                  spacing: 24;
-                  margin-top: 24;
-                  margin-bottom: 24;
-                  margin-start: 24;
-                  margin-end: 24;
-
-                  Gtk.Box appearance_main_col {
-                    orientation: vertical;
-                    spacing: 16;
-
-                    $PixelRpgCharacterPreview appearance_preview {
-                      halign: center;
-                    }
-
-                    $PixelRpgCastInspector appearance_inspector {}
-                  }
-
-                  $PixelRpgAnimationList anim_list {
-                    hexpand: true;
-                  }
-                };
-              };
-            };
-          };
-        };
-      }
     };
   }
 }

@@ -1,4 +1,5 @@
 import type Adw from '@girs/adw-1'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type {
@@ -9,10 +10,7 @@ import type {
   SpriteSetResource,
 } from '@pixelrpg/engine'
 import {
-  AddAnimationDialog,
-  AnimationList,
   CardGallery,
-  CastInspector,
   CharacterPreview,
   confirmDestructive,
   type GalleryCardItem,
@@ -44,8 +42,6 @@ GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
 GObject.type_ensure(CharacterPreview.$gtype)
-GObject.type_ensure(CastInspector.$gtype)
-GObject.type_ensure(AnimationList.$gtype)
 
 /** Built-in sprite sets (engine-provided) have no project files to remove. */
 function isBuiltInSpriteSet(id: string): boolean {
@@ -103,12 +99,11 @@ export class TilesView extends ResponsiveEditorView {
   declare _quick_name: Gtk.Label
   declare _quick_subtitle: Gtk.Label
   declare _quick_edit: Gtk.Button
-  // ── Appearances (character sprite sheets) gallery + animation editor ──
+  // ── Appearances (character sprite sheets) gallery ──
+  // Asset management only: import / delete / glance. Editing an
+  // appearance's animations happens in the Cast matrix — a card's "edit"
+  // affordance jumps there (`win.edit-appearance`).
   declare _appearances_gallery: CardGallery
-  declare _appearance_detail_page: Adw.NavigationPage
-  declare _appearance_preview: CharacterPreview
-  declare _appearance_inspector: CastInspector
-  declare _anim_list: AnimationList
 
   private _projectName = ''
   // Quick-view shown on desktop; flipped off when the breakpoint collapses
@@ -124,10 +119,10 @@ export class TilesView extends ResponsiveEditorView {
   private _activeSpriteSetId: string | null = null
   private _selectedSpriteId: number | null = null
   // Which kind the quick-view + single gallery highlight currently reflect.
-  // Both sections share one quick-view sidebar (desktop) and the same
-  // select→glance / open→detail / collapsed→drill-in interaction; this
-  // tracks which one is showing so a re-hydrate keeps the right card lit
-  // and the Edit button opens the right detail page.
+  // Both sections share one quick-view sidebar (desktop) and a select→glance
+  // interaction; this tracks which one is showing so a re-hydrate keeps the
+  // right card lit and the Edit button routes correctly (tileset → its
+  // detail page; appearance → the Cast matrix).
   private _activeKind: 'tileset' | 'appearance' = 'tileset'
 
   // Appearance state. Sourced from the cast controller (the owner of
@@ -137,21 +132,12 @@ export class TilesView extends ResponsiveEditorView {
   private _appearances: SpriteSetChoice[] = []
   private _appearanceSetsById = new Map<string, GdkSpriteSetResource | null>()
   private _activeAppearanceId: string | null = null
-  /** Active animation in the appearance detail (preview ↔ list ↔ duration). */
-  private _activeAnimationId: string | null = null
 
   private _onSolidChanged: ((spriteSetId: string, spriteId: number, solid: boolean) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
   private _onTilesetUsage: ((spriteSetId: string) => number) | null = null
-  // Appearance (sprite-sheet) edits route to the cast controller via the
-  // host (it owns sprite-set data + collab broadcast); keyed by sheet id.
-  private _onSetDurationRequested: ((sheetId: string, animId: string, durationMs: number) => void) | null = null
-  private _onAddAnimationRequested: ((sheetId: string, animation: CharacterAnimation) => void) | null = null
-  private _onEditAnimationRequested:
-    | ((sheetId: string, originalId: string, animation: CharacterAnimation) => void)
-    | null = null
-  private _onDeleteAnimationRequested: ((sheetId: string, animId: string) => void) | null = null
-  private _onRenameSheetRequested: ((sheetId: string, name: string) => void) | null = null
+  // Deleting an appearance routes to the host (it owns sprite-set data +
+  // collab broadcast); keyed by sheet id. Animation edits live in Cast.
   private _onDeleteAppearanceRequested: ((sheetId: string) => void) | null = null
 
   static {
@@ -181,10 +167,6 @@ export class TilesView extends ResponsiveEditorView {
           'quick_subtitle',
           'quick_edit',
           'appearances_gallery',
-          'appearance_detail_page',
-          'appearance_preview',
-          'appearance_inspector',
-          'anim_list',
         ],
         Properties: {
           'project-name': GObject.ParamSpec.string(
@@ -296,11 +278,14 @@ export class TilesView extends ResponsiveEditorView {
     this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteTileset(id)
     })
-    // The quick-view "Edit" button opens the detail of whichever kind the
-    // glance is currently showing.
+    // The quick-view "Edit" button opens the tileset detail, or — for an
+    // appearance — jumps to the Cast matrix where its animations are edited.
     this.signals.connect(this._quick_edit, 'clicked', () => {
-      if (this._activeKind === 'appearance') this._openAppearanceDetailPage()
-      else this._openTilesetDetail()
+      if (this._activeKind === 'appearance') {
+        if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
+      } else {
+        this._openTilesetDetail()
+      }
     })
     this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
       // Picking a tile refreshes the inspector. On phone that means
@@ -327,51 +312,19 @@ export class TilesView extends ResponsiveEditorView {
       this._onSurfaceChanged?.(active.id, this._selectedSpriteId, surface === '' ? null : surface)
     })
 
-    // ── Appearance editor (sprite-sheet animations) ─────────────────
-    // The appearance inspector serves one fixed role — sheet mode (the
-    // selected-animation duration + sheet rename).
-    this._appearance_inspector.setMode('sheet')
-
-    // Appearances behave exactly like tilesets: a single tap SELECTS
-    // (desktop → updates the quick-view; phone → drills into the animation
-    // editor); a double tap OPENS the detail. The three-dots delete confirms.
+    // ── Appearances gallery (asset management) ──────────────────────
+    // A single tap SELECTS (desktop → updates the quick-view glance;
+    // phone → jumps to the Cast matrix to author); a double tap goes
+    // straight to Cast. The three-dots delete confirms + removes the asset.
     this.signals.connect(this._appearances_gallery, 'item-activated', (_v: CardGallery, id: string) => {
       this._selectAppearance(id)
     })
     this.signals.connect(this._appearances_gallery, 'item-opened', (_v: CardGallery, id: string) => {
       this._selectAppearance(id)
-      this._openAppearanceDetailPage()
+      this._editAppearanceInCast(id)
     })
     this.signals.connect(this._appearances_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
       this._confirmDeleteAppearance(id)
-    })
-
-    // Bidirectional active-animation sync across the three surfaces — the
-    // preview's direction/pause buttons, the list row highlight, and the
-    // inspector's duration field. Idempotent `_setActiveAnimation` breaks
-    // the `preview-notify → setActive → list-highlight` round trip.
-    this.signals.connect(this._anim_list, 'animation-selected', (_v: AnimationList, animId: string) => {
-      this._setActiveAnimation(animId)
-    })
-    this.signals.connect(this._appearance_preview, 'notify::active-animation-id', () => {
-      this._setActiveAnimation(this._appearance_preview.activeAnimationId)
-    })
-    this.signals.connect(this._appearance_inspector, 'duration-changed', (_v: CastInspector, ms: number) => {
-      if (this._activeAppearanceId && this._activeAnimationId) {
-        this._onSetDurationRequested?.(this._activeAppearanceId, this._activeAnimationId, ms)
-      }
-    })
-    this.signals.connect(this._appearance_inspector, 'sheet-renamed', (_v: CastInspector, name: string) => {
-      if (this._activeAppearanceId) this._onRenameSheetRequested?.(this._activeAppearanceId, name)
-    })
-    this.signals.connect(this._anim_list, 'add-animation-requested', () => {
-      this._presentAddAnimationDialog()
-    })
-    this.signals.connect(this._anim_list, 'edit-animation-requested', (_v: AnimationList, animId: string) => {
-      this._presentEditAnimationDialog(animId)
-    })
-    this.signals.connect(this._anim_list, 'delete-animation-requested', (_v: AnimationList, animId: string) => {
-      if (this._activeAppearanceId) this._onDeleteAnimationRequested?.(this._activeAppearanceId, animId)
     })
   }
 
@@ -421,25 +374,12 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   /**
-   * Wire the appearance (sprite-sheet) animation-editor callbacks. Set
-   * once by the host, which routes them to the cast controller — the
-   * single owner of sprite-set data + collab broadcast. Keyed by sheet
-   * id (animations are sheet-owned, shared by every character using the
-   * sheet). Mirrors `CastView.bindCallbacks`' animation half.
+   * Wire the appearance (sprite-sheet) asset callbacks. Set once by the
+   * host, which routes them to the project store — the single owner of
+   * sprite-set data + collab broadcast. Only deletion lives here now;
+   * animation authoring moved to the Cast view.
    */
-  bindAppearanceCallbacks(callbacks: {
-    setDuration: (sheetId: string, animId: string, durationMs: number) => void
-    addAnimation: (sheetId: string, animation: CharacterAnimation) => void
-    editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => void
-    deleteAnimation: (sheetId: string, animId: string) => void
-    renameSheet: (sheetId: string, name: string) => void
-    deleteAppearance: (sheetId: string) => void
-  }): void {
-    this._onSetDurationRequested = callbacks.setDuration
-    this._onAddAnimationRequested = callbacks.addAnimation
-    this._onEditAnimationRequested = callbacks.editAnimation
-    this._onDeleteAnimationRequested = callbacks.deleteAnimation
-    this._onRenameSheetRequested = callbacks.renameSheet
+  bindAppearanceCallbacks(callbacks: { deleteAppearance: (sheetId: string) => void }): void {
     this._onDeleteAppearanceRequested = callbacks.deleteAppearance
   }
 
@@ -460,7 +400,6 @@ export class TilesView extends ResponsiveEditorView {
       this._activeAppearanceId = sheets[0].id
     }
     this._rebuildAppearancesGallery()
-    this._refreshActiveAppearance()
     // If the user is currently glancing at an appearance, refresh it (e.g.
     // an animation edit changed the count). Tileset glances are untouched.
     if (this._activeKind === 'appearance') this._refreshQuickView()
@@ -546,13 +485,13 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   /**
-   * Select an appearance (sprite-sheet) by id + open its animation-editor
-   * detail page. Used by the `win.open-appearance` action (tooling
-   * drill-in) + the character detail's "Edit appearance" deep-link.
+   * Select an appearance (sprite-sheet) by id + show its glance. Used by
+   * the `win.open-appearance` action + the character detail's "Edit
+   * appearance" deep-link (asset management). Animations are authored in
+   * Cast — a narrow layout (no glance) jumps there via {@link _selectAppearance}.
    */
   focusAppearance(id: string): void {
     this._selectAppearance(id)
-    this._openAppearanceDetailPage()
   }
 
   /**
@@ -887,9 +826,9 @@ export class TilesView extends ResponsiveEditorView {
 
   /**
    * Select an appearance: make it the active selection, refresh the
-   * quick-view + the (ready-to-open) animation editor, and highlight the
-   * card (clearing any tileset highlight). On a NARROW layout this drills
-   * straight into the editor; on desktop it just updates the quick-view.
+   * quick-view glance, and highlight the card (clearing any tileset
+   * highlight). On a NARROW layout (no glance) a tap jumps straight to the
+   * Cast matrix — an appearance's animations are authored there now.
    * Mirrors {@link _selectTileset} so both sections behave identically.
    */
   private _selectAppearance(id: string): void {
@@ -899,51 +838,17 @@ export class TilesView extends ResponsiveEditorView {
     this._activeKind = 'appearance'
     this._appearances_gallery.setActiveId(id)
     this._tilesets_gallery.setActiveId(null)
-    this._appearance_detail_page.title = sheet.name
-    this._refreshActiveAppearance()
     this._refreshQuickView()
-    if (this.inspectorCollapsed) this._openAppearanceDetailPage()
+    if (this.inspectorCollapsed) this._editAppearanceInCast(id)
   }
 
   /**
-   * Drill into the active appearance's animation-editor sub-page (preview +
-   * animation list + selected-animation duration), shared by every
-   * character wearing the sheet. No-op if already there or none active.
+   * Jump to the Cast view to edit an appearance's animations — the
+   * authoring home. The window action selects the first character wearing
+   * the sheet (or toasts when it's an orphan appearance).
    */
-  private _openAppearanceDetailPage(): void {
-    if (!this._activeAppearanceId) return
-    if (this._nav.get_visible_page()?.tag !== 'appearance-detail') this._nav.push_by_tag('appearance-detail')
-  }
-
-  /**
-   * Refresh the appearance detail surfaces (preview + animation list +
-   * duration inspector), all bound to the active sheet via a synthetic
-   * character. Re-derives the active animation from the preview default
-   * so the list highlight + duration line up immediately.
-   */
-  private _refreshActiveAppearance(): void {
-    const synthetic = this._sheetAsCharacter(this._activeAppearanceId)
-    const sheet = this._activeAppearanceId ? (this._appearanceSetsById.get(this._activeAppearanceId) ?? null) : null
-    this._appearance_preview.setCharacter(synthetic, sheet)
-    this._anim_list.setCharacter(synthetic, sheet)
-    this._appearance_inspector.setSheetName(synthetic?.name ?? '')
-    this._activeAnimationId = null
-    this._setActiveAnimation(this._appearance_preview.activeAnimationId)
-  }
-
-  /**
-   * Single-entry helper that keeps the three active-animation surfaces in
-   * lock-step: the `_activeAnimationId` field, the `AnimationList` row
-   * highlight, the `CharacterPreview` direction + paused, and the
-   * `CastInspector` duration row. Idempotent on `id === current` to break
-   * the `preview-notify → setActive → list-highlight` round trip.
-   */
-  private _setActiveAnimation(animId: string | null): void {
-    if (this._activeAnimationId === animId) return
-    this._activeAnimationId = animId
-    this._anim_list.setActiveAnimation(animId)
-    if (animId) this._appearance_preview.setActiveAnimation(animId)
-    this._appearance_inspector.setAnimation(this._currentAppearanceAnimation())
+  private _editAppearanceInCast(id: string): void {
+    this.activate_action('win.edit-appearance', GLib.Variant.new_string(id))
   }
 
   /** The animations owned by the appearance sheet with `spriteSetId`. */
@@ -951,20 +856,12 @@ export class TilesView extends ResponsiveEditorView {
     return this._appearanceSetsById.get(spriteSetId)?.data?.characterAnimations ?? []
   }
 
-  /** The currently-selected animation in the appearance detail. */
-  private _currentAppearanceAnimation(): CharacterAnimation | null {
-    if (!this._activeAppearanceId || !this._activeAnimationId) return null
-    return this._sheetAnimations(this._activeAppearanceId).find((a) => a.id === this._activeAnimationId) ?? null
-  }
-
   /**
    * A throwaway {@link CharacterDefinition} bound to an appearance sheet,
-   * so the character-keyed widgets ({@link CharacterPreview},
-   * {@link AnimationList}, {@link AddAnimationDialog}) can render a SHEET
-   * directly. The sheet owns the animations (read via
-   * `spriteSet.data.characterAnimations`); the synthetic character just
-   * carries the same list so the dialog's name-uniqueness check sees the
-   * existing ids. Never persisted.
+   * so the character-keyed {@link CharacterPreview} can render a SHEET
+   * directly in the gallery cards + the quick-view glance. The sheet owns
+   * the animations (read via `spriteSet.data.characterAnimations`). Never
+   * persisted.
    */
   private _sheetAsCharacter(sheetId: string | null): CharacterDefinition | null {
     if (!sheetId) return null
@@ -977,55 +874,6 @@ export class TilesView extends ResponsiveEditorView {
       defaultAnimation: 'idle-down',
       animations: this._sheetAnimations(sheetId),
     }
-  }
-
-  /**
-   * Construct a fresh {@link AddAnimationDialog} against the active
-   * appearance, seed it with a synthetic character bound to the sheet (so
-   * its picker + preview render and name-uniqueness validates against the
-   * sheet's animations), and present it. Save forwards to the host's
-   * `addAnimation` callback keyed by the sheet id.
-   */
-  private _presentAddAnimationDialog(): void {
-    const sheetId = this._activeAppearanceId
-    const synthetic = this._sheetAsCharacter(sheetId)
-    if (!sheetId || !synthetic) return
-    const dialog = new AddAnimationDialog()
-    dialog.setContext(synthetic, this._appearanceSetsById.get(sheetId) ?? null)
-    dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
-      this._onAddAnimationRequested?.(sheetId, animation)
-    })
-    dialog.present(this)
-  }
-
-  /**
-   * Same dialog as {@link _presentAddAnimationDialog} but seeded with the
-   * sheet's existing animation so the user edits in place (the dialog's
-   * third `setContext` argument flips it to edit mode).
-   */
-  private _presentEditAnimationDialog(animId: string): void {
-    const sheetId = this._activeAppearanceId
-    const synthetic = this._sheetAsCharacter(sheetId)
-    if (!sheetId || !synthetic) return
-    const existing = this._sheetAnimations(sheetId).find((a) => a.id === animId)
-    if (!existing) return
-    const dialog = new AddAnimationDialog()
-    dialog.setContext(synthetic, this._appearanceSetsById.get(sheetId) ?? null, existing)
-    dialog.connect('animation-edited', (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
-      this._onEditAnimationRequested?.(sheetId, originalId, animation)
-    })
-    dialog.present(this)
-  }
-
-  /**
-   * Present the "New animation" dialog for an appearance sheet (host /
-   * MCP entry, wired to `win.new-animation`). When `sheetId` is given it
-   * drills into that appearance first so the dialog has a context in one
-   * call; otherwise it targets the active appearance.
-   */
-  presentNewAnimationDialog(sheetId?: string): void {
-    if (sheetId) this.focusAppearance(sheetId)
-    this._presentAddAnimationDialog()
   }
 
   /**
