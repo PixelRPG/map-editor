@@ -23,16 +23,11 @@ export class TilesController {
     private readonly cast: CastController,
   ) {
     view.bindCallbacks(this.callbacks)
-    // The unified Sheets view hosts the appearance animation editor; the
-    // cast controller owns appearance data and pushes the list + shared
-    // preview map on every refresh, while the editor's mutations route
-    // back to the same controller methods (one mutation + broadcast path).
+    // The Sheets view lists appearances as raw assets (import / delete /
+    // glance); animation authoring lives in the Cast matrix now. The cast
+    // controller still owns appearance data + pushes the list + shared
+    // preview map on every refresh so the gallery + glance stay current.
     view.bindAppearanceCallbacks({
-      setDuration: (sheetId, animId, ms) => this.cast.setAnimationDuration(sheetId, animId, ms),
-      addAnimation: (sheetId, animation) => this.cast.addAnimation(sheetId, animation),
-      editAnimation: (sheetId, originalId, animation) => this.cast.editAnimation(sheetId, originalId, animation),
-      deleteAnimation: (sheetId, animId) => this.cast.deleteAnimation(sheetId, animId),
-      renameSheet: (sheetId, name) => this.store.renameSpriteSet(sheetId, name),
       deleteAppearance: (sheetId) => this.store.deleteSpriteSet(sheetId),
     })
     cast.on('appearances-changed', ({ sheets, spriteSetsById }) => {

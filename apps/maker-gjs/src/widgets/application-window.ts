@@ -143,8 +143,9 @@ export type { SessionSnapshot }
  * - `win.undo / redo / play`
  * - `win.back-to-atlas` / `win.open-scene` (string param)
  * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
- * - `win.new-animation` (string appearance id, empty = active — opens the Add-animation dialog in the Sheets view)
- * - `win.open-character` / `win.open-tileset` / `win.open-appearance` (string id — drill into the detail sub-page)
+ * - `win.new-animation` (string appearance id, empty = active — opens the Add-animation dialog in the Cast matrix)
+ * - `win.open-character` / `win.open-tileset` (string id — drill into the detail sub-page)
+ * - `win.open-appearance` (string id — appearance ASSET glance in Sheets) / `win.edit-appearance` (string id — edit its animations in Cast)
  *
  * Atlas/scene state lives in the views; the window orchestrates the
  * transitions and the dialogs (file pickers, toasts).
@@ -725,11 +726,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     dialog.present(this)
   }
 
-  /** Jump from a Data-view asset row to its editor (the unified Sheets view). */
+  /** Jump from a Data-view asset row to its home view. */
   private _openAsset(id: string, kind: SpriteSetKind): void {
     if (!this._loadedProject) return
-    // Both kinds live in the Sheets view now: tilesets → tile inspector,
-    // appearances (character sheets) → the animation editor.
+    // Both kinds live in the Sheets view: tilesets → tile inspector,
+    // appearances (character sheets) → the asset glance. (Animation
+    // authoring for an appearance lives in the Cast matrix — reachable
+    // from the glance's "edit in Cast" jump.)
     this._setView('tiles')
     if (kind === 'tileset') this._tiles_view.focusTileset(id)
     else this._tiles_view.focusAppearance(id)
@@ -1311,10 +1314,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(toggleObjectCastAction)
 
-    // Drill into an appearance (sprite-sheet) animation editor in the
-    // unified Sheets view — the home of appearance editing. Switches to
-    // the Sheets view + focuses the appearance detail page. (Replaces the
-    // old `win.open-sheet`, which targeted the removed Cast sheet section.)
+    // Jump to an appearance (character sprite-sheet) as a raw ASSET in the
+    // Sheets view — select its card + show the glance. Asset management
+    // (glance / delete / re-import) lives here; animation authoring moved
+    // to the Cast matrix (see `win.edit-appearance`). (Replaces the old
+    // `win.open-sheet`, which targeted the removed Cast sheet section.)
     const openAppearanceAction = Gio.SimpleAction.new('open-appearance', GLib.VariantType.new('s'))
     openAppearanceAction.connect('activate', (_a, parameter) => {
       const id = parameter?.get_string()[0]
@@ -1324,20 +1328,40 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     winActions.add_action(openAppearanceAction)
 
+    // Edit an appearance's animations — the Cast matrix is the authoring
+    // home. Switches to Cast + selects the first character wearing the
+    // sheet. Toasts when no character wears it yet (an orphan appearance:
+    // assign it to a character in Cast to edit its animations). The Sheets
+    // appearance gallery "edit" affordance + `_openAsset` route here.
+    const editAppearanceAction = Gio.SimpleAction.new('edit-appearance', GLib.VariantType.new('s'))
+    editAppearanceAction.connect('activate', (_a, parameter) => {
+      const id = parameter?.get_string()[0]
+      if (!id) return
+      this._setView('cast')
+      if (!this._cast_view.focusCharacterBySheet(id)) {
+        this._showToast(
+          _('No character wears this appearance yet — assign it to a character in Cast to edit its animations'),
+        )
+      }
+    })
+    winActions.add_action(editAppearanceAction)
+
     // Present the "New animation" dialog for an appearance sheet in the
-    // Sheets view. Optional string id drills into that appearance first
-    // (so tooling can open it in one call); empty targets the active one.
-    // Mainly for the MCP bridge — the in-UI path is the appearance
-    // detail's "Add custom animation" row.
+    // Cast view (the authoring home). Optional string id targets the
+    // character wearing that appearance; empty targets the active one.
+    // Mainly for the MCP bridge — the in-UI path is the matrix's
+    // "Add custom animation" affordance.
     const newAnimationAction = Gio.SimpleAction.new('new-animation', GLib.VariantType.new('s'))
     newAnimationAction.connect('activate', (_a, parameter) => {
       if (!this._loadedProject) {
         this._showToast(_('Open a project first'))
         return
       }
-      this._setView('tiles')
+      this._setView('cast')
       const id = parameter?.get_string()[0]
-      this._tiles_view.presentNewAnimationDialog(id || undefined)
+      if (!this._cast_view.presentNewAnimationForSheet(id || undefined)) {
+        this._showToast(_('Select or create a character first to add an animation'))
+      }
     })
     winActions.add_action(newAnimationAction)
 

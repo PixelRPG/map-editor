@@ -52,9 +52,11 @@ export namespace CastView {
  * preview + stat summary + editable inspector) on the right. The split
  * collapses to a drill-down on narrow widths.
  *
- * A character just *picks* an appearance — sprite sheets + their
- * animation editor live in the unified **Sheets** view; the detail's
- * "Edit appearance →" deep-links there.
+ * Animation authoring lives here: the {@link ActionDirectionMatrix} in
+ * the detail edits the character's appearance animations directly. The
+ * raw sprite-sheet *asset* (import / delete / glance) lives in the
+ * unified **Sheets** view; the detail's "Edit appearance →" deep-links
+ * there for asset management.
  *
  * Mutations land via host-supplied callbacks (`bindCallbacks`) so the
  * application window stays the single owner of project data.
@@ -342,6 +344,34 @@ export class CastView extends ResponsiveEditorView {
   /** Select a character AND reveal its detail (creation landing + tooling drill-in). */
   focusCharacter(id: string): void {
     this._selectCharacter(id)
+  }
+
+  /**
+   * Select the first character wearing `sheetId` and reveal its detail —
+   * the animation matrix is the authoring home for an appearance's
+   * animations. Returns `false` when no character uses the appearance yet
+   * (an orphan sheet), so the caller can surface that instead of silently
+   * doing nothing. Entry for the Sheets view's "edit in Cast" jump +
+   * `win.edit-appearance`.
+   */
+  focusCharacterBySheet(sheetId: string): boolean {
+    const character = this._characters.find((c) => c.spriteSetId === sheetId)
+    if (!character) return false
+    this._selectCharacter(character.id)
+    return true
+  }
+
+  /**
+   * Open the add-animation dialog on a sheet's character (the `win.new-animation`
+   * tooling/MCP entry). Targets the character wearing `sheetId`, or the
+   * active character when no id is given. Returns `false` when there's no
+   * such character (orphan sheet / empty roster) so the caller can toast.
+   */
+  presentNewAnimationForSheet(sheetId?: string): boolean {
+    if (sheetId && !this.focusCharacterBySheet(sheetId)) return false
+    if (!this._currentCharacter()) return false
+    this._presentAnimationDialog(null)
+    return true
   }
 
   get projectName(): string {
