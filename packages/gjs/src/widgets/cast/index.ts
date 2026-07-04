@@ -1,6 +1,7 @@
 export * from './action-direction-matrix'
 export * from './add-animation-dialog'
 export * from './animation-list'
+export * from './animation-timeline'
 export * from './cast-inspector'
 export * from './character-preview'
 export * from './collision-preview'

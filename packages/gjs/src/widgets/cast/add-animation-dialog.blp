@@ -266,16 +266,50 @@ template $PixelRpgAddAnimationDialog : Adw.Dialog {
               Gtk.StackPage {
                 name: "populated";
 
-                child: Gtk.ScrolledWindow {
-                  hscrollbar-policy: automatic;
-                  vscrollbar-policy: never;
-                  height-request: 92;
+                child: Gtk.Box {
+                  orientation: vertical;
+                  spacing: 6;
 
-                  child: Gtk.Box sequence_strip {
+                  Gtk.ScrolledWindow {
+                    hscrollbar-policy: automatic;
+                    vscrollbar-policy: never;
+                    height-request: 92;
+
+                    child: Gtk.Box sequence_strip {
+                      orientation: horizontal;
+                      spacing: 4;
+                      valign: center;
+                    };
+                  }
+
+                  // Timeline dock — a ruler + scrubbing playhead over the
+                  // sequence (proportional to each frame's duration), with a
+                  // play/pause transport + the current/total time. Dragging
+                  // the playhead pauses playback + jumps the preview.
+                  Gtk.Box {
                     orientation: horizontal;
-                    spacing: 4;
-                    valign: center;
-                  };
+                    spacing: 8;
+
+                    Gtk.ToggleButton play_toggle {
+                      icon-name: "media-playback-pause-symbolic";
+                      active: true;
+                      tooltip-text: _("Play / pause the preview");
+                      valign: center;
+                      styles ["flat", "circular"]
+                    }
+
+                    $PixelRpgAnimationTimeline timeline {
+                      hexpand: true;
+                      valign: center;
+                    }
+
+                    Gtk.Label time_label {
+                      valign: center;
+                      width-chars: 11;
+                      xalign: 1;
+                      styles ["caption", "numeric", "dim-label"]
+                    }
+                  }
                 };
               }
             }
