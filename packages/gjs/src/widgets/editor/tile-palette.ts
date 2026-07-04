@@ -73,6 +73,7 @@ export class TilePalette extends Adw.Bin {
   private _selectedId: number | null = null
   private _aspectMode: TilePaletteAspectMode = 'fill'
   private _wrap = false
+  private _dragSource = false
   /**
    * Aspect ratio (width / height) of the active sprite-sheet's
    * sprites — populated by `setFromSpriteSheet` from the first
@@ -144,9 +145,26 @@ export class TilePalette extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          // When on, each swatch becomes a `Gtk.DragSource` carrying its
+          // tile id, so cells can be DRAGGED out (e.g. into the animation
+          // editor's timeline to insert a frame at a caret) in addition to
+          // click-to-select. Off by default — the map/scene pickers only
+          // click. See `tile-drag-started` / `tile-drag-ended`.
+          'drag-source': GObject.ParamSpec.boolean(
+            'drag-source',
+            'Drag Source',
+            'Whether swatches can be dragged out (carrying their tile id)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
         },
         Signals: {
           'tile-selected': { param_types: [GObject.TYPE_INT] },
+          // A swatch drag began / ended (only fired in `drag-source` mode).
+          // The host uses these to arm/disarm its own drop handling — the
+          // dragged tile id rides `tile-drag-started`.
+          'tile-drag-started': { param_types: [GObject.TYPE_INT] },
+          'tile-drag-ended': {},
         },
       },
       TilePalette,
@@ -225,6 +243,19 @@ export class TilePalette extends Adw.Bin {
     // Reapply the current column setting under the new policy so
     // `set columns` picks the right min/max-children-per-line.
     this.columns = this.columns
+  }
+
+  get dragSource(): boolean {
+    return this._dragSource ?? false
+  }
+
+  set dragSource(value: boolean) {
+    if (this._dragSource === value) return
+    this._dragSource = value
+    this.notify('drag-source')
+    // Existing swatches need a rebuild so the DragSource controller is
+    // added/removed (mirrors `aspectMode`).
+    if (this._tiles.length > 0) this.setTiles(this._tiles)
   }
 
   get selectedId(): number | null {
@@ -333,7 +364,30 @@ export class TilePalette extends Adw.Bin {
     const swatch = createSwatchWidget(tile, w, h, this._aspectMode)
     if (tile.name) child.set_tooltip_text(tile.name)
     child.set_child(swatch)
+    if (this._dragSource) this._attachDragSource(child, tile, w, h)
     return child
+  }
+
+  /**
+   * Make a swatch draggable: a `Gtk.DragSource` carrying the tile id as a
+   * string (the drop handler reads it via the host's side-channel, armed by
+   * `tile-drag-started`). Coexists with click-to-select — GTK only starts
+   * the drag once the press passes the movement threshold.
+   */
+  private _attachDragSource(child: Gtk.FlowBoxChild, tile: TileDescriptor, w: number, h: number): void {
+    const source = new Gtk.DragSource({ actions: Gdk.DragAction.COPY })
+    source.connect('prepare', () => {
+      const value = new GObject.Value()
+      value.init(GObject.TYPE_STRING)
+      value.set_string(String(tile.id))
+      return Gdk.ContentProvider.new_for_value(value)
+    })
+    source.connect('drag-begin', () => {
+      if (tile.paintable) source.set_icon(tile.paintable, Math.round(w / 2), Math.round(h / 2))
+      this.emit('tile-drag-started', tile.id)
+    })
+    source.connect('drag-end', () => this.emit('tile-drag-ended'))
+    child.add_controller(source)
   }
 }
 
