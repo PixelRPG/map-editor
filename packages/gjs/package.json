@@ -24,11 +24,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@gjsify/canvas2d": "^0.16.5",
-    "@gjsify/dom-elements": "^0.16.5",
-    "@gjsify/event-bridge": "^0.16.5",
-    "@gjsify/storybook": "^0.16.5",
-    "@gjsify/webgl": "^0.16.5",
+    "@gjsify/canvas2d": "^0.16.6",
+    "@gjsify/dom-elements": "^0.16.6",
+    "@gjsify/event-bridge": "^0.16.6",
+    "@gjsify/storybook": "^0.16.6",
+    "@gjsify/webgl": "^0.16.6",
     "@pixelrpg/engine": "workspace:*",
     "excalibur": "^0.32.0"
   },
@@ -45,7 +45,7 @@
     "@girs/gtk-4.0": "^4.1.0",
     "@girs/gtksource-5": "^4.1.0",
     "@girs/pango-1.0": "^4.1.0",
-    "@gjsify/cli": "^0.16.5",
+    "@gjsify/cli": "^0.16.6",
     "typescript": "^6.0.3"
   }
 }

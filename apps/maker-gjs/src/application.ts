@@ -4,6 +4,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { installDevtools } from '@gjsify/devtools'
 import applicationStyle from './application.css'
 import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
 import { sanitizeInstanceId } from './instance-id.ts'
@@ -85,6 +86,17 @@ export class Application extends Adw.Application {
     this.initStyles()
     this.themeService.init()
     this.initControlInterface()
+    // Opt-in @gjsify/devtools control plane (`org.gjsify.Devtools`) — the
+    // standard interface `gjsify debug` (MCP) + a `gdbus` Screenshot speak,
+    // adding DumpTree/GetProperty/ListActions/DumpCss alongside the app's own
+    // `org.pixelrpg.maker.Control`. No-op unless `GJSIFY_DEVTOOLS` is set
+    // (`installDevtools` gates on it via `GLib.getenv`), so it is safe to leave
+    // in release builds. Guarded so a devtools hiccup never blocks startup.
+    try {
+      installDevtools(this)
+    } catch (error) {
+      console.warn(`[Application] @gjsify/devtools setup skipped: ${error}`)
+    }
     // Defensive: kill any `avahi-publish-service` subprocess left
     // behind by a previous maker that crashed without invoking
     // `LanPublisher.close()`. Skipped when the scan returns
