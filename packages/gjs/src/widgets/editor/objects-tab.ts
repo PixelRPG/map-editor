@@ -4,7 +4,8 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Template from './objects-tab.blp'
-import { createSwatchWidget } from './tile-palette'
+import { createSwatchWidget } from './tile-swatch.ts'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 /** Editor-side description of a single object placement. */
 export interface ObjectDescriptor {
@@ -61,6 +62,7 @@ export class ObjectsTab extends Adw.Bin {
   private _activeId: string | null = null
   /** Guards {@link selectObject} from re-emitting `object-selected`. */
   private _silentSelect = false
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -76,15 +78,20 @@ export class ObjectsTab extends Adw.Bin {
     )
   }
 
-  constructor() {
-    super()
-    this._list.connect('row-selected', (_list, row) => {
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._list, 'row-selected', (_list: Gtk.ListBox, row: Gtk.ListBoxRow | null) => {
       if (!row) return
       const id = (row as Gtk.ListBoxRow & { objectId?: string }).objectId
       if (!id || id === this._activeId) return
       this._activeId = id
       if (!this._silentSelect) this.emit('object-selected', id)
     })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   /**

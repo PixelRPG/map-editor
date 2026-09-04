@@ -5,6 +5,7 @@ import { type CharacterAnimation, type CharacterDefinition, REQUIRED_ROLES } fro
 import { gettext as _ } from 'gettext'
 
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './animation-list.blp'
 
@@ -30,6 +31,7 @@ export class AnimationList extends Adw.Bin {
   private _spriteSet: GdkSpriteSetResource | null = null
   private _rowsById = new Map<string, Adw.ActionRow>()
   private _activeId: string | null = null
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -53,11 +55,14 @@ export class AnimationList extends Adw.Bin {
     )
   }
 
-  constructor() {
-    super()
-    this._add_button.connect('clicked', () => {
-      this.emit('add-animation-requested')
-    })
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._add_button, 'clicked', () => this.emit('add-animation-requested'))
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   setCharacter(character: CharacterDefinition | null, spriteSet: GdkSpriteSetResource | null = null): void {

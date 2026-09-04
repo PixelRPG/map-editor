@@ -1,20 +1,22 @@
 import type { Loadable } from 'excalibur'
-import { Logger, type Scene, type Tile, TileMap, Vector } from 'excalibur'
+import { Logger, type Scene, type Tile, type TileMap } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
-import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import { MapFormat } from '../format/MapFormat'
 import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
 import {
   getSpritesAt,
   iterateOccupiedCoords,
+  parseShadowCoordKey,
   setInitialSprites,
-  shadowCoordKey,
 } from '../services/map-editor-shadow.service.ts'
-import type { LayerData, LayerTier, MapData, MapResourceOptions, SpriteDataMap } from '../types'
+import type { LayerTier, MapData, MapResourceOptions } from '../types'
 import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
+import { foldShadowToLayerSprites } from './shadow-fold.ts'
+import { isSpriteRefSolid } from './sprite-solidity.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
+import { buildTierTileMaps, collectInitialSprites } from './tilemap-builder.ts'
 
 /**
  * Resource class for loading custom Map format into Excalibur.
@@ -37,7 +39,7 @@ export class MapResource implements Loadable<TileMap> {
 
   /**
    * One `TileMap` per {@link LayerTier} — built up-front in
-   * {@link createTileMaps} so callers can always grab the
+   * {@link buildTierTileMaps} so callers can always grab the
    * tier-matching tilemap by component lookup, even before any
    * sprites for that tier are loaded. The `data` field (Loadable
    * contract) points at the ground-tier tilemap for backwards
@@ -104,117 +106,6 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Build one `TileMap` entity per tier — same dimensions across
-   * all of them, so a tile at `(x, y)` resolves to congruent tiles
-   * on every tilemap. Each gets a {@link TileMapTierComponent}
-   * marker + a stable z derived from {@link TIER_Z}.
-   *
-   * Always builds all three tiers, even when the map only has
-   * layers on one. The unused tilemaps cost a few KB of empty
-   * tile-grid memory but let `TileEditorSystem` blindly look up
-   * the tier-matching tilemap on every click without first
-   * checking "does this tier exist".
-   */
-  private createTileMaps(data: MapData): void {
-    for (const tier of LAYER_TIERS) {
-      const tilemap = this.buildSingleTileMap(data, tier)
-      tilemap.addComponent(new TileMapTierComponent(tier))
-      tilemap.z = TIER_Z[tier]
-      this.tileMapsByTier.set(tier, tilemap)
-      this.initialSpritesByTier.set(tier, new Map())
-    }
-  }
-
-  private buildSingleTileMap(data: MapData, tier: LayerTier): TileMap {
-    return new TileMap({
-      name: `${data.name}:${tier}`,
-      pos: data.pos ? new Vector(data.pos.x, data.pos.y) : undefined,
-      tileWidth: data.tileWidth,
-      tileHeight: data.tileHeight,
-      columns: data.columns,
-      rows: data.rows,
-      renderFromTopOfGraphic: data.renderFromTopOfGraphic,
-    })
-  }
-
-  private processLayers(data: MapData): void {
-    const sortedLayers = [...data.layers].sort((a, b) => {
-      const zIndexA = Number(a.properties?.z ?? 0)
-      const zIndexB = Number(b.properties?.z ?? 0)
-      return zIndexA - zIndexB
-    })
-
-    // Every layer is a tile layer in the object-system schema. Object
-    // placements (NPCs, items, teleports, …) live on
-    // `MapData.objectPlacements` and are spawned by the engine's
-    // `ObjectSpawnSystem`, not at resource-load time.
-    //
-    // We process ALL layers (even invisible ones) so the editor's
-    // shadow-state (`MapEditorComponent`) holds a complete picture of
-    // every layer's content. The visibility filter has moved to the
-    // *render* path (`applyInitialGraphics` + `rebuildAllTileGraphics`)
-    // so toggling `layer.visible` at runtime is a pure graphics
-    // refresh — no re-loading of sprites from the JSON.
-    //
-    // Tier routing: each layer's sprites are written to the tilemap
-    // matching its `tier` (default `'ground'`). A layer's sprite
-    // positions remain global tile-coordinates — the same `(x, y)`
-    // resolves to congruent tiles on every tier's tilemap.
-    for (const layer of sortedLayers) {
-      this.processTileLayer(layer)
-    }
-  }
-
-  private processTileLayer(layer: LayerData): void {
-    if (!layer.sprites || !Array.isArray(layer.sprites) || layer.sprites.length === 0) {
-      return
-    }
-    const tier: LayerTier = layer.tier ?? DEFAULT_LAYER_TIER
-    const tileMap = this.tileMapsByTier.get(tier)
-    const initialSprites = this.initialSpritesByTier.get(tier)
-    if (!tileMap || !initialSprites) return
-
-    const layerZIndex = layer.properties?.z !== undefined ? Number(layer.properties.z) : 0
-
-    for (const spriteData of layer.sprites) {
-      if (spriteData.x < 0 || spriteData.x >= tileMap.columns || spriteData.y < 0 || spriteData.y >= tileMap.rows) {
-        continue
-      }
-
-      if (spriteData.spriteId === undefined || !spriteData.spriteSetId) {
-        continue
-      }
-
-      const tile = tileMap.getTile(spriteData.x, spriteData.y)
-      if (!tile) continue
-
-      if (spriteData.properties) {
-        Object.entries(spriteData.properties).forEach(([key, value]) => {
-          tile.data.set(key, value)
-        })
-      }
-
-      // A tile becomes solid as soon as any layer's sprite at this
-      // position contributes solidity. Sticky — once true on this
-      // load pass we don't let later non-solid sprites unset it.
-      if (this._isSolidRef(spriteData.spriteSetId, spriteData.spriteId, spriteData.solid)) {
-        tile.solid = true
-      }
-
-      const key = shadowCoordKey(spriteData.x, spriteData.y)
-      const existingRefs = initialSprites.get(key) ?? []
-      existingRefs.push({
-        spriteSetId: spriteData.spriteSetId,
-        spriteId: spriteData.spriteId,
-        animationId: spriteData.animationId,
-        zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
-        layerId: layer.id,
-      })
-      initialSprites.set(key, existingRefs)
-    }
-  }
-
-  /**
    * Parse the map JSON + resolve its sprite sets. The Excalibur
    * `TileMap`s (one `Tile` object per cell per tier — six figures for
    * the big ported worlds) are NOT built here: projects preload every
@@ -249,7 +140,7 @@ export class MapResource implements Loadable<TileMap> {
     if (this.tileMapsByTier.size > 0) return
     if (!this._mapData) throw new Error('Map resource not loaded')
 
-    this.createTileMaps(this._mapData)
+    this.tileMapsByTier = buildTierTileMaps(this._mapData)
     // Loadable<TileMap> contract — point `data` at the ground
     // tilemap. Callers that need a specific tier should walk the
     // scene by `TileMapTierComponent` instead.
@@ -257,7 +148,9 @@ export class MapResource implements Loadable<TileMap> {
     if (!groundTileMap) throw new Error('Failed to build ground tilemap')
     this.data = groundTileMap
 
-    this.processLayers(this._mapData)
+    this.initialSpritesByTier = collectInitialSprites(this._mapData, this.tileMapsByTier, (setId, spriteId, solid) =>
+      this.isSolidRef(setId, spriteId, solid),
+    )
   }
 
   addToScene(scene: Scene): void {
@@ -291,9 +184,7 @@ export class MapResource implements Loadable<TileMap> {
           const bZ = b.zIndex ?? 0
           return aZ - bZ
         })
-        const comma = key.indexOf(',')
-        const tileX = Number(key.slice(0, comma))
-        const tileY = Number(key.slice(comma + 1))
+        const { tileX, tileY } = parseShadowCoordKey(key)
         const tile = tileMap.getTile(tileX, tileY)
         if (!tile) return
 
@@ -372,7 +263,7 @@ export class MapResource implements Loadable<TileMap> {
    * `SpriteDataMap` entries are lost during this fold — the shadow
    * tracks only the gameplay-loaded fields (spriteSetId, spriteId,
    * animationId, zIndex, layerId). This matches the pre-existing
-   * limitation called out by `_isSolidRef`: live edits already
+   * limitation called out by `isSolidRef`: live edits already
    * dropped the per-placement `solid` override. Same caveat applies
    * now to the persisted shape.
    *
@@ -387,34 +278,12 @@ export class MapResource implements Loadable<TileMap> {
     // loaded on-disk sprites with an empty shadow (data loss).
     if (this.tileMapsByTier.size === 0) return false
 
-    const spritesPerLayer = new Map<string, SpriteDataMap[]>()
-    for (const tileMap of this.tileMapsByTier.values()) {
-      const editor = tileMap.get(MapEditorComponent)
-      if (!editor) continue
-      for (const [key, refs] of Object.entries(editor.sprites)) {
-        const comma = key.indexOf(',')
-        const tileX = Number(key.slice(0, comma))
-        const tileY = Number(key.slice(comma + 1))
-        for (const ref of refs) {
-          const list = spritesPerLayer.get(ref.layerId) ?? []
-          const entry: SpriteDataMap = {
-            x: tileX,
-            y: tileY,
-            spriteSetId: ref.spriteSetId,
-            spriteId: ref.spriteId,
-          }
-          if (ref.animationId !== undefined) entry.animationId = ref.animationId
-          if (ref.zIndex !== undefined) entry.zIndex = ref.zIndex
-          list.push(entry)
-          spritesPerLayer.set(ref.layerId, list)
-        }
-      }
-    }
-
+    const shadows = [...this.tileMapsByTier.values()]
+      .map((tileMap) => tileMap.get(MapEditorComponent)?.sprites)
+      .filter((sprites) => sprites !== undefined)
+    const spritesPerLayer = foldShadowToLayerSprites(shadows)
     for (const layer of this._mapData.layers) {
-      const sprites = spritesPerLayer.get(layer.id) ?? []
-      sprites.sort((a, b) => a.y - b.y || a.x - b.x || (a.zIndex ?? 0) - (b.zIndex ?? 0))
-      layer.sprites = sprites
+      layer.sprites = spritesPerLayer.get(layer.id) ?? []
     }
     return true
   }
@@ -467,38 +336,23 @@ export class MapResource implements Loadable<TileMap> {
    * shadow state. Called by `layer.manager.ts` after every paint /
    * erase so collision tracks edits in real time. A tile is solid
    * iff at least one sprite currently placed on it contributes
-   * solidity per {@link _isSolidRef}.
+   * solidity per {@link isSolidRef}.
    */
   refreshTileSolidFromEditor(tilemap: TileMap, tile: Tile): void {
     const editor = tilemap.get(MapEditorComponent)
     if (!editor) return
     const refs = getSpritesAt(editor, tile.x, tile.y)
-    tile.solid = refs.some((r) => this._isSolidRef(r.spriteSetId, r.spriteId))
+    tile.solid = refs.some((r) => this.isSolidRef(r.spriteSetId, r.spriteId))
   }
 
   /**
-   * Resolve whether a single sprite reference makes a tile solid.
-   *
-   * Priority:
-   *   1. `placementSolid` — explicit per-placement override (only the
-   *      load-time path carries this; live edits via
-   *      `MapEditorComponent` lose the field — pre-existing
-   *      limitation, no UI for placement-level overrides yet).
-   *   2. `def.solid` — sprite-set wall flag (TilesTab Solid switch
-   *      + Tiled `<objectgroup>` porter).
-   *   3. `def.tileProperties.walkable === false` — semantic
-   *      "can't walk here" path that carries surface metadata.
-   *
-   * Returns `false` when none of the above declare solidity — the
-   * tile stays whatever it was. Caller can union across stacked
-   * refs to get "any sprite blocks" semantics.
+   * Whether a sprite reference makes its tile solid, resolved against
+   * this map's loaded sprite-set definitions. The precedence rules are
+   * the pure {@link isSpriteRefSolid}; this only owns the lookup.
    */
-  private _isSolidRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): boolean {
-    if (placementSolid !== undefined) return placementSolid
-    const def = this.spriteSetResources.get(spriteSetId)?.data?.sprites.find((s) => s.id === spriteId)
-    if (def?.solid === true) return true
-    if (def?.solid === false) return false
-    return def?.tileProperties?.walkable === false
+  private isSolidRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): boolean {
+    const definition = this.spriteSetResources.get(spriteSetId)?.data?.sprites.find((s) => s.id === spriteId)
+    return isSpriteRefSolid(definition, placementSolid)
   }
 
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {

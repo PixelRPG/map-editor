@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './props-tab.blp'
 
@@ -62,6 +63,7 @@ export class PropsTab extends Adw.Bin {
 
   private _scene: ScenePropsDescriptor = {}
   private _selectedObject: SelectedObjectDescriptor | null = null
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -124,17 +126,27 @@ export class PropsTab extends Adw.Bin {
     )
   }
 
-  constructor() {
-    super()
-    this._name_row.connect('changed', () => this.emit('prop-changed', 'name', this._name_row.get_text()))
-    this._music_row.connect('changed', () => this.emit('prop-changed', 'music', this._music_row.get_text()))
-    this._battle_bg_row.connect('changed', () => this.emit('prop-changed', 'battleBg', this._battle_bg_row.get_text()))
-    this._object_open_button.connect('clicked', () => {
+  vfunc_map(): void {
+    super.vfunc_map()
+    const fields: Array<[Adw.EntryRow, string]> = [
+      [this._name_row, 'name'],
+      [this._music_row, 'music'],
+      [this._battle_bg_row, 'battleBg'],
+    ]
+    for (const [row, key] of fields) {
+      this._signals.connect(row, 'changed', () => this.emit('prop-changed', key, row.get_text()))
+    }
+    this._signals.connect(this._object_open_button, 'clicked', () => {
       if (this._selectedObject?.defId) this.emit('object-open-requested', this._selectedObject.defId)
     })
-    this._object_remove_row.connect('activated', () => {
+    this._signals.connect(this._object_remove_row, 'activated', () => {
       if (this._selectedObject) this.emit('object-remove-requested', this._selectedObject.placementId)
     })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   /**

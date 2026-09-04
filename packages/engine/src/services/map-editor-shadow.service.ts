@@ -15,7 +15,13 @@ function coordKey(tileX: number, tileY: number): string {
   return `${tileX},${tileY}`
 }
 
-function parseCoordKey(key: string): { tileX: number; tileY: number } {
+/**
+ * Split a `"x,y"` shadow key back into coordinates. Exported because the
+ * shadow's key encoding is owned here — `MapResource` reads the shadow
+ * back on save and on the initial graphics pass, and used to re-spell
+ * the split inline at both sites.
+ */
+export function parseShadowCoordKey(key: string): { tileX: number; tileY: number } {
   const comma = key.indexOf(',')
   return {
     tileX: Number(key.slice(0, comma)),
@@ -91,7 +97,7 @@ export function* iterateOccupiedCoords(
   component: MapEditorComponent,
 ): IterableIterator<{ tileX: number; tileY: number }> {
   for (const key of Object.keys(component.sprites)) {
-    yield parseCoordKey(key)
+    yield parseShadowCoordKey(key)
   }
 }
 

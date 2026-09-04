@@ -20,6 +20,8 @@
  * manager will recurse.
  */
 
+import { CursorThrottle } from './cursor-throttle.ts'
+
 export interface AwarenessPeerInfo {
   /** Human-readable label shown next to the cursor / in roster lists. */
   readonly displayName: string
@@ -187,19 +189,11 @@ export class AwarenessManager {
   private readonly listeners = new Map<keyof AwarenessEventMap, Set<Listener<unknown>>>()
   private readonly peers = new Map<string, AwarenessPeerState>()
   private readonly now: () => number
-  private readonly cursorThrottleMs: number
-
-  // `-Infinity` so the FIRST call always passes the throttle check
-  // — regardless of where the wall-clock starts. A literal `0` would
-  // accidentally throttle the first frame when `now()` itself returns
-  // something close to 0 (test clocks, monotonic clocks reset at
-  // process start, etc.).
-  private lastCursorSentMs = -Infinity
-  private pendingCursor: AwarenessCursor | null = null
+  private readonly cursorThrottle: CursorThrottle
 
   constructor(private readonly opts: AwarenessManagerOptions) {
     this.now = opts.now ?? Date.now
-    this.cursorThrottleMs = opts.cursorThrottleMs ?? DEFAULT_CURSOR_THROTTLE_MS
+    this.cursorThrottle = new CursorThrottle(opts.cursorThrottleMs ?? DEFAULT_CURSOR_THROTTLE_MS)
   }
 
   // ────────────────────────────────────────────────────────────
@@ -226,17 +220,8 @@ export class AwarenessManager {
    * coalesced `pendingCursor` on the next call past the window).
    */
   sendCursor(cursor: AwarenessCursor): void {
-    const now = this.now()
-    const gap = now - this.lastCursorSentMs
-    if (gap >= this.cursorThrottleMs) {
-      this.lastCursorSentMs = now
-      this.pendingCursor = null
-      this.opts.send({ type: 'cursor', peerId: this.opts.localPeerId, cursor })
-      return
-    }
-    // Within the throttle window — coalesce. The next sendCursor /
-    // flushCursor call past the window will pick up `pendingCursor`.
-    this.pendingCursor = cursor
+    const due = this.cursorThrottle.offer(cursor, this.now())
+    if (due) this.opts.send({ type: 'cursor', peerId: this.opts.localPeerId, cursor: due })
   }
 
   /**
@@ -246,14 +231,8 @@ export class AwarenessManager {
    * stops moving mid-throttle-window.
    */
   flushCursor(): void {
-    if (!this.pendingCursor) return
-    const now = this.now()
-    const gap = now - this.lastCursorSentMs
-    if (gap < this.cursorThrottleMs) return
-    const cursor = this.pendingCursor
-    this.pendingCursor = null
-    this.lastCursorSentMs = now
-    this.opts.send({ type: 'cursor', peerId: this.opts.localPeerId, cursor })
+    const due = this.cursorThrottle.flush(this.now())
+    if (due) this.opts.send({ type: 'cursor', peerId: this.opts.localPeerId, cursor: due })
   }
 
   /**

@@ -1,19 +1,9 @@
 import { type WebSocket, WebSocketServer } from 'ws'
 
-import { type RoomEvent, RoomManager } from './room-manager.ts'
-import type { PeerRole, SignallingMessage, SignallingPeer } from './types.ts'
-
-/**
- * `ws.WebSocketServer`'s `'connection'` event passes a Node-shaped
- * `http.IncomingMessage` under Node, but @gjsify/ws passes the raw
- * `Soup.ServerMessage` (which has `get_uri()` instead of `.url`).
- * The two surfaces overlap on nothing, so we sniff for whichever is
- * actually present and normalise to a single string.
- */
-interface ConnectionRequest {
-  url?: string | undefined
-  get_uri?: () => { get_path: () => string | null; get_query: () => string | null }
-}
+import { type LogLevel, logEvent } from './event-log.ts'
+import { type ConnectionRequest, extractUrl, parsePath, peekType } from './request-routing.ts'
+import { RoomManager } from './room-manager.ts'
+import type { SignallingPeer } from './types.ts'
 
 /**
  * Periodic sweep cadence — runs the idle-room reaper. The sweep
@@ -23,12 +13,10 @@ interface ConnectionRequest {
  */
 const SWEEP_INTERVAL_MS = 30 * 1000
 
-const PATH_PATTERN = /^\/room\/([A-Za-z0-9_-]{1,64})$/
-
 export interface ServerOptions {
   host: string
   port: number
-  log?: 'quiet' | 'info' | 'debug'
+  log?: LogLevel
 }
 
 export interface ServerHandle {
@@ -67,46 +55,7 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
     wss.once('error', reject)
   })
 
-  wss.on('connection', (ws: WebSocket, req: ConnectionRequest) => {
-    const parsed = parsePath(extractUrl(req))
-    if (!parsed.ok) {
-      // verifyClient should have rejected — defensive close.
-      ws.close(1008, parsed.reason)
-      return
-    }
-    const { roomId, role } = parsed
-
-    const peer = makePeer(ws)
-    const accepted = rooms.join(roomId, role, peer)
-    if (!accepted) {
-      ws.close(1008, 'slot-taken')
-      return
-    }
-
-    ws.on('message', (raw, isBinary) => {
-      if (isBinary) {
-        // The protocol is text-only — silently drop binary frames.
-        return
-      }
-      const frame = raw.toString()
-      const type = peekType(frame)
-      if (!type) {
-        if (logLevel === 'debug') {
-          console.warn(`[signalling] dropped malformed frame from ${roomId}/${role}`)
-        }
-        return
-      }
-      rooms.forward(roomId, role, frame, type)
-    })
-
-    ws.on('close', () => {
-      rooms.leave(roomId, role, 'disconnect')
-    })
-
-    ws.on('error', () => {
-      // close-handler will run anyway; nothing to do here.
-    })
-  })
+  wss.on('connection', (ws: WebSocket, req: ConnectionRequest) => acceptConnection(rooms, ws, req, logLevel))
 
   const sweep = setInterval(() => rooms.sweep(), SWEEP_INTERVAL_MS)
   // GJS's setInterval has no unref(); Node's polyfill returns a
@@ -124,52 +73,42 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
   }
 }
 
-interface ParsedPath {
-  ok: true
-  roomId: string
-  role: PeerRole
-}
-
-interface RejectedPath {
-  ok: false
-  reason: string
-}
-
-function extractUrl(req: ConnectionRequest): string {
-  if (typeof req.url === 'string') return req.url
-  if (typeof req.get_uri === 'function') {
-    const uri = req.get_uri()
-    const path = uri.get_path() ?? '/'
-    const query = uri.get_query()
-    return query ? `${path}?${query}` : path
+/** Seat one upgraded socket in its room and relay its frames until it closes. */
+function acceptConnection(rooms: RoomManager, ws: WebSocket, req: ConnectionRequest, logLevel: LogLevel): void {
+  const parsed = parsePath(extractUrl(req))
+  if (!parsed.ok) {
+    // verifyClient should have rejected — defensive close.
+    ws.close(1008, parsed.reason)
+    return
   }
-  return ''
-}
+  const { roomId, role } = parsed
 
-function parsePath(url: string): ParsedPath | RejectedPath {
-  let parsed: URL
-  try {
-    parsed = new URL(url, 'http://relay')
-  } catch {
-    return { ok: false, reason: 'bad-url' }
+  if (!rooms.join(roomId, role, makePeer(ws))) {
+    ws.close(1008, 'slot-taken')
+    return
   }
-  const m = PATH_PATTERN.exec(parsed.pathname)
-  if (!m) return { ok: false, reason: 'bad-path' }
-  const roomId = m[1]
-  if (!roomId) return { ok: false, reason: 'bad-room-id' }
-  const role = parsed.searchParams.get('role')
-  if (role !== 'host' && role !== 'joiner') return { ok: false, reason: 'bad-role' }
-  return { ok: true, roomId, role }
-}
 
-function peekType(frame: string): string | null {
-  try {
-    const parsed = JSON.parse(frame) as Partial<SignallingMessage>
-    if (typeof parsed?.type !== 'string') return null
-    return parsed.type
-  } catch {
-    return null
-  }
+  ws.on('message', (raw, isBinary) => {
+    // The protocol is text-only — silently drop binary frames.
+    if (isBinary) return
+    const frame = raw.toString()
+    const type = peekType(frame)
+    if (!type) {
+      if (logLevel === 'debug') {
+        console.warn(`[signalling] dropped malformed frame from ${roomId}/${role}`)
+      }
+      return
+    }
+    rooms.forward(roomId, role, frame, type)
+  })
+
+  ws.on('close', () => {
+    rooms.leave(roomId, role, 'disconnect')
+  })
+
+  ws.on('error', () => {
+    // close-handler will run anyway; nothing to do here.
+  })
 }
 
 function makePeer(ws: WebSocket): SignallingPeer {
@@ -180,26 +119,5 @@ function makePeer(ws: WebSocket): SignallingPeer {
     close() {
       ws.close(1000, 'closed-by-relay')
     },
-  }
-}
-
-function logEvent(event: RoomEvent, level: 'quiet' | 'info' | 'debug'): void {
-  if (level === 'quiet') return
-  if (event.kind === 'message' && level !== 'debug') return
-  console.log(`[signalling] ${formatEvent(event)}`)
-}
-
-function formatEvent(event: RoomEvent): string {
-  switch (event.kind) {
-    case 'joined':
-      return `joined ${event.roomId} as ${event.role}`
-    case 'left':
-      return `left ${event.roomId} (${event.role}, ${event.reason})`
-    case 'message':
-      return `${event.roomId}: ${event.from} → ${event.to} (${event.type})`
-    case 'rejected':
-      return `rejected ${event.roomId}/${event.role}: ${event.reason}`
-    case 'reaped':
-      return `reaped ${event.roomId} (${event.reason})`
   }
 }

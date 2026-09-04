@@ -12,7 +12,7 @@ Before the migration, the editor's session state was fragmented: `SceneEditorVie
 
 **Goal**: the engine's ECS world is the single source of truth for editor session state. GTK widgets observe, render, and emit "intent" — they don't *own* state.
 
-The engine side of this is shipped (session-singleton, `SessionState` subscription bridge, the editor-state components, the `Command`/undo machinery). Widget adoption is **not** finished: `SceneEditorView` still mirrors `_activeTileId` / `_activeLayerId` next to the per-scene components (see the phase tracker).
+The engine side of this is shipped (session-singleton, `SessionState` subscription bridge, the editor-state components, the `Command`/undo machinery). Widget adoption is complete: `SceneEditorView` writes the active tile/layer through the engine and reads them back off the components, holding no copy.
 
 ## The three-layer split
 
@@ -49,8 +49,8 @@ Editor-state components, all on the session-singleton entity:
 | Component | Purpose | Former home (pre-migration) |
 |---|---|---|
 | `ActiveToolComponent` | `{ tool: 'select' \| 'pencil' \| 'eraser' \| 'eyedropper' \| 'object' }` (see note below) | `engine.setEditorState({ tool })` callback |
-| `ActiveTileComponent` | `{ spriteSetId, spriteId }` | `SceneEditorView._activeTileId` field (the view still mirrors it — see phase tracker) |
-| `ActiveLayerComponent` | `{ layerId }` | `SceneEditorView._activeLayerId` field (same caveat) |
+| `ActiveTileComponent` | `{ spriteSetId, spriteId }` | `SceneEditorView._activeTileId` field (removed — the view reads the component) |
+| `ActiveLayerComponent` | `{ layerId }` | `SceneEditorView._activeLayerId` field (removed — same) |
 | `ActiveObjectComponent` | the armed object brush (entity `defId`) | new with the object tool |
 | `SelectedPlacementsComponent` | selected placement ids | new (built ECS-first) |
 | `UndoStackComponent` | `{ commands: Command[], cursor: number }` | new (built ECS-first) |
@@ -240,7 +240,9 @@ Replaced the `engine.setEditorState({ tool })` callback with component mutation.
 
 ### Phase 3 — `ActiveTileComponent` + `ActiveLayerComponent`
 
-The active tile + layer became per-scene components; the `FloatingTopBar` chips, the inspector and `TileEditorSystem` consume them. **Caveat — widget adoption incomplete:** `SceneEditorView` still keeps `_activeTileId` / `_activeLayerId` instance fields alongside the components (the per-scene component resets on scene-switch while the view's value persists, and the view re-syncs by hand). That is the parallel-state shape the migration rule below forbids — either the cross-scene persistence moves to the app-level restore path (per the singleton-lifetime section) or the exception gets designed in deliberately. Tracked in `TODO.md`.
+The active tile + layer became per-scene components; the `FloatingTopBar` chips, the inspector and `TileEditorSystem` consume them. `SceneEditorView` holds no copy: it writes through the engine and reads back via derived getters over `ActiveTileComponent` / `ActiveLayerComponent`, under the same condition that drops the write, so read and write cannot disagree.
+
+The cross-scene-persistence worry that once justified the mirrors was unfounded — entering a scene always runs `populateFromProject`, which unconditionally resets both, so the fields never survived a switch. `_tilesetFirstGid` stays view-owned; it bridges the sheet-local index to the global id and is not a second copy of the state.
 
 ### Phase 4 — `SelectionComponent` + `SelectionSystem`
 
@@ -274,11 +276,11 @@ Phase tracker — fill in as PRs land.
 |---|---|---|
 | 1 | Mode markers + session-singleton + `SessionState` subscription bridge | **landed** |
 | 2 | `ActiveToolComponent` + system migration | **landed** |
-| 3 | `ActiveTileComponent` + `ActiveLayerComponent` migration | **landed (engine side)** — `SceneEditorView` still mirrors `_activeTileId` / `_activeLayerId`; widget adoption pending (see Phase 3 caveat) |
+| 3 | `ActiveTileComponent` + `ActiveLayerComponent` migration | **landed** |
 | 4 | `SelectedPlacementsComponent` (foundation; marquee `SelectionSystem` is Phase 4b, pending) | **landed** |
 | 5 | `UndoStackComponent` + `Command` interface + paint/erase/object commands + Engine `executeCommand` / `undo` / `redo` | **landed** |
 
-**Subscription bridge implementation** — the `SessionState.subscribe` helper shipped with Phase 1 (`packages/engine/src/utils/session-state.ts`). The open work is widget-side: moving the remaining `SceneEditorView` mirrors onto subscriptions (Phase 3 caveat above).
+**Subscription bridge implementation** — the `SessionState.subscribe` helper shipped with Phase 1 (`packages/engine/src/utils/session-state.ts`).
 
 ## Related concepts
 

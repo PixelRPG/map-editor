@@ -4,6 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { ACTION_TYPES, type ActionData, type ComponentData } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
+import { comboRow, entryRow, type RowOption, spinRow } from '../common/preference-rows.ts'
 import type { ComponentRefOptions } from './component-inspector.ts'
 import {
   ACTION_ICONS,
@@ -13,6 +14,20 @@ import {
   makeActionId,
   parseFlagValue,
 } from './event-action-model.ts'
+
+/** Bounds shared by every numeric action field (tile coords, quantities, ms). */
+const COUNT_RANGE = { min: 0, max: 100000, step: 1 }
+const QUANTITY_RANGE = { min: 1, max: 100000, step: 1 }
+const WAIT_RANGE = { min: 0, max: 100000, step: 50 }
+
+/** Teleport facing choices — a function so the labels follow the active locale. */
+const FACING_OPTIONS = (): RowOption[] => [
+  { value: '', label: _('(None)') },
+  { value: 'up', label: _('Up') },
+  { value: 'down', label: _('Down') },
+  { value: 'left', label: _('Left') },
+  { value: 'right', label: _('Right') },
+]
 
 /**
  * Friendly editor for an entity's ordered `actions` list (the event
@@ -31,7 +46,6 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
   private _rows: Adw.PreferencesRow[] = []
   private _addButton: Gtk.MenuButton
   private _removeButton: Gtk.Button
-  private _headerBox: Gtk.Box
   /** Suppresses `data-changed` while (re)building rows from data. */
   private _silent = false
 
@@ -53,24 +67,7 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
   constructor() {
     super({ title: _('Actions') })
 
-    const menu = Gio.Menu.new()
-    const group = new Gio.SimpleActionGroup()
-    for (const type of ACTION_TYPES) {
-      const action = new Gio.SimpleAction({ name: `add-${type}` })
-      action.connect('activate', () => this._add(type))
-      group.add_action(action)
-      menu.append(_(ACTION_LABELS[type]), `actions.add-${type}`)
-    }
-    this._addButton = new Gtk.MenuButton({
-      label: _('Add action'),
-      iconName: 'list-add-symbolic',
-      alwaysShowArrow: true,
-      cssClasses: ['flat'],
-      valign: Gtk.Align.CENTER,
-    })
-    this._addButton.set_menu_model(menu)
-    this._addButton.insert_action_group('actions', group)
-
+    this._addButton = this._buildAddButton()
     this._removeButton = new Gtk.Button({
       iconName: 'user-trash-symbolic',
       tooltipText: _('Remove component'),
@@ -80,10 +77,10 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     })
     this._removeButton.connect('clicked', () => this.emit('remove-requested'))
 
-    this._headerBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6 })
-    this._headerBox.append(this._addButton)
-    this._headerBox.append(this._removeButton)
-    this.set_header_suffix(this._headerBox)
+    const headerBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6 })
+    headerBox.append(this._addButton)
+    headerBox.append(this._removeButton)
+    this.set_header_suffix(headerBox)
 
     this._rebuild()
   }
@@ -104,6 +101,28 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
   /** Show / hide the header remove (🗑) button. */
   setRemovable(removable: boolean): void {
     this._removeButton.set_visible(removable)
+  }
+
+  /** "Add action" menu — one entry per registered action type. */
+  private _buildAddButton(): Gtk.MenuButton {
+    const menu = Gio.Menu.new()
+    const group = new Gio.SimpleActionGroup()
+    for (const type of ACTION_TYPES) {
+      const action = new Gio.SimpleAction({ name: `add-${type}` })
+      action.connect('activate', () => this._add(type))
+      group.add_action(action)
+      menu.append(_(ACTION_LABELS[type]), `actions.add-${type}`)
+    }
+    const button = new Gtk.MenuButton({
+      label: _('Add action'),
+      iconName: 'list-add-symbolic',
+      alwaysShowArrow: true,
+      cssClasses: ['flat'],
+      valign: Gtk.Align.CENTER,
+    })
+    button.set_menu_model(menu)
+    button.insert_action_group('actions', group)
+    return button
   }
 
   private _mapLabel(id: string): string {
@@ -172,17 +191,7 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
   private _buildActionRow(action: ActionData, index: number): Adw.ExpanderRow {
     const row = new Adw.ExpanderRow({ title: actionSummary(action, (id) => this._mapLabel(id)) })
     row.add_prefix(new Gtk.Image({ iconName: ACTION_ICONS[action.type] }))
-
-    const controls = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, valign: Gtk.Align.CENTER })
-    const up = this._iconButton('go-up-symbolic', _('Move up'), () => this._move(index, -1))
-    up.set_sensitive(index > 0)
-    const down = this._iconButton('go-down-symbolic', _('Move down'), () => this._move(index, 1))
-    down.set_sensitive(index < this._actions.length - 1)
-    const del = this._iconButton('user-trash-symbolic', _('Remove action'), () => this._remove(index))
-    controls.append(up)
-    controls.append(down)
-    controls.append(del)
-    row.add_suffix(controls)
+    row.add_suffix(this._buildRowControls(index))
 
     const afterEdit = () => {
       if (this._silent) return
@@ -193,6 +202,19 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     return row
   }
 
+  /** Per-row reorder + delete cluster shown in the expander's suffix. */
+  private _buildRowControls(index: number): Gtk.Box {
+    const controls = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, valign: Gtk.Align.CENTER })
+    const up = this._iconButton('go-up-symbolic', _('Move up'), () => this._move(index, -1))
+    up.set_sensitive(index > 0)
+    const down = this._iconButton('go-down-symbolic', _('Move down'), () => this._move(index, 1))
+    down.set_sensitive(index < this._actions.length - 1)
+    controls.append(up)
+    controls.append(down)
+    controls.append(this._iconButton('user-trash-symbolic', _('Remove action'), () => this._remove(index)))
+    return controls
+  }
+
   private _iconButton(iconName: string, tooltip: string, onClick: () => void): Gtk.Button {
     const btn = new Gtk.Button({ iconName, tooltipText: tooltip, cssClasses: ['flat'], valign: Gtk.Align.CENTER })
     btn.connect('clicked', onClick)
@@ -201,127 +223,46 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
 
   /** Build the inline editable field rows for one action. */
   private _buildFields(action: ActionData, index: number, afterEdit: () => void): Adw.PreferencesRow[] {
+    // Every field writes its patch and then re-summarises the row; the
+    // per-type builders below only decide WHICH fields exist.
+    const patch = (fields: Record<string, unknown>) => {
+      this._patch(index, fields)
+      afterEdit()
+    }
     switch (action.type) {
       case 'show-text':
         return [
-          this._entry(_('Text'), action.text, (v) => {
-            this._patch(index, { text: v })
-            afterEdit()
-          }),
-          this._entry(_('Speaker (optional)'), action.speaker ?? '', (v) => {
-            this._patch(index, { speaker: v || undefined })
-            afterEdit()
-          }),
+          entryRow(_('Text'), action.text, (v) => patch({ text: v })),
+          entryRow(_('Speaker (optional)'), action.speaker ?? '', (v) => patch({ speaker: v || undefined })),
         ]
       case 'teleport':
         return [
-          this._combo(_('Target map'), this._mapOptions(), action.targetMapId, (v) => {
-            this._patch(index, { targetMapId: v })
-            afterEdit()
-          }),
-          this._spin(_('Tile X'), action.targetTileX, 0, 100000, 1, (v) => {
-            this._patch(index, { targetTileX: v })
-            afterEdit()
-          }),
-          this._spin(_('Tile Y'), action.targetTileY, 0, 100000, 1, (v) => {
-            this._patch(index, { targetTileY: v })
-            afterEdit()
-          }),
-          this._combo(_('Facing'), this._facingOptions(), action.facing ?? '', (v) => {
-            this._patch(index, { facing: v || undefined })
-            afterEdit()
-          }),
+          comboRow(_('Target map'), this._mapOptions(), action.targetMapId, (v) => patch({ targetMapId: v })),
+          spinRow(_('Tile X'), action.targetTileX, COUNT_RANGE, (v) => patch({ targetTileX: v })),
+          spinRow(_('Tile Y'), action.targetTileY, COUNT_RANGE, (v) => patch({ targetTileY: v })),
+          comboRow(_('Facing'), FACING_OPTIONS(), action.facing ?? '', (v) => patch({ facing: v || undefined })),
         ]
       case 'give-item':
         return [
-          this._entry(_('Item id'), action.itemId, (v) => {
-            this._patch(index, { itemId: v })
-            afterEdit()
-          }),
-          this._spin(_('Quantity'), action.qty ?? 1, 1, 100000, 1, (v) => {
-            this._patch(index, { qty: v })
-            afterEdit()
-          }),
+          entryRow(_('Item id'), action.itemId, (v) => patch({ itemId: v })),
+          spinRow(_('Quantity'), action.qty ?? 1, QUANTITY_RANGE, (v) => patch({ qty: v })),
         ]
       case 'set-flag':
         return [
-          this._entry(_('Flag'), action.flag, (v) => {
-            this._patch(index, { flag: v })
-            afterEdit()
-          }),
-          this._entry(_('Value (true/false, a number, or text)'), String(action.value), (v) => {
-            this._patch(index, { value: parseFlagValue(v) })
-            afterEdit()
-          }),
+          entryRow(_('Flag'), action.flag, (v) => patch({ flag: v })),
+          entryRow(_('Value (true/false, a number, or text)'), String(action.value), (v) =>
+            patch({ value: parseFlagValue(v) }),
+          ),
         ]
       case 'play-sfx':
-        return [
-          this._entry(_('Sound'), action.sound, (v) => {
-            this._patch(index, { sound: v })
-            afterEdit()
-          }),
-        ]
+        return [entryRow(_('Sound'), action.sound, (v) => patch({ sound: v }))]
       case 'wait':
-        return [
-          this._spin(_('Milliseconds'), action.ms, 0, 100000, 50, (v) => {
-            this._patch(index, { ms: v })
-            afterEdit()
-          }),
-        ]
+        return [spinRow(_('Milliseconds'), action.ms, WAIT_RANGE, (v) => patch({ ms: v }))]
     }
   }
 
-  private _mapOptions(): ReadonlyArray<{ value: string; label: string }> {
+  private _mapOptions(): RowOption[] {
     return [{ value: '', label: _('(None)') }, ...(this._refOptions.maps ?? [])]
-  }
-
-  private _facingOptions(): ReadonlyArray<{ value: string; label: string }> {
-    return [
-      { value: '', label: _('(None)') },
-      { value: 'up', label: _('Up') },
-      { value: 'down', label: _('Down') },
-      { value: 'left', label: _('Left') },
-      { value: 'right', label: _('Right') },
-    ]
-  }
-
-  private _entry(title: string, value: string, onChange: (v: string) => void): Adw.EntryRow {
-    const row = new Adw.EntryRow({ title })
-    row.set_text(value)
-    row.connect('changed', () => onChange(row.get_text()))
-    return row
-  }
-
-  private _spin(
-    title: string,
-    value: number,
-    min: number,
-    max: number,
-    step: number,
-    onChange: (v: number) => void,
-  ): Adw.SpinRow {
-    const adjustment = new Gtk.Adjustment({ lower: min, upper: max, stepIncrement: step, value })
-    const row = new Adw.SpinRow({ title, adjustment, digits: 0 })
-    row.connect('notify::value', () => onChange(Math.round(row.get_value())))
-    return row
-  }
-
-  private _combo(
-    title: string,
-    options: ReadonlyArray<{ value: string; label: string }>,
-    current: string,
-    onChange: (v: string) => void,
-  ): Adw.ComboRow {
-    const values = options.map((o) => o.value)
-    const model = Gtk.StringList.new(options.map((o) => o.label))
-    const row = new Adw.ComboRow({ title, model })
-    const initial = values.indexOf(current)
-    if (initial >= 0) row.set_selected(initial)
-    row.connect('notify::selected', () => {
-      const i = row.get_selected()
-      if (i >= 0 && i < values.length) onChange(values[i])
-    })
-    return row
   }
 }
 

@@ -2,4 +2,8 @@
 
 export * from './GameProjectResource'
 export * from './MapResource'
+export * from './shadow-fold'
+export * from './sprite-solidity'
+export * from './spriteset-graphics'
 export * from './SpriteSetResource'
+export * from './tilemap-builder'

@@ -29,7 +29,7 @@ Conventions:
 - **Object-system editor UI follow-ups** — the tile-like object UX landed 2026-06-10 (#179–#184: framed placement rendering + shared hover ghost, object brushes in the Tiles tab via the shared `TilePalette`/`createSwatchWidget`, tool-dependent quick-select chip, Props "Selected object" group with undoable remove + `win.select-placement`, Objects visibility row in Layers + `win.toggle-objects`). Remaining: (a) **per-placement override editing** in Props (name/components) — the command layer is ready: a same-id `PlaceObjectCommand` now captures the replaced placement and its revert RESTORES it (update-by-replace is undo-safe); what's missing is the Props editing UI on top; (b) the Tiles tab's Objects grid sits **below a long tile palette** — consider moving it above or making the tileset section collapsible if it feels buried; (c) per-placement inline editor on canvas selection. See [`docs/concepts/object-system.md`](docs/concepts/object-system.md) § "How the editor surfaces this". *owner: maker + gjs*
 - **Pre-attach replay relies on idempotent `Command.apply`** — joiners buffer scene Command ops during the snapshot → engine-init window and replay them on `attachEngine` (`PreAttachOpBuffer` + snapshot `opWatermark`, host seq read at capture start). A command the host executes *during* its async snapshot capture can be both inside the snapshot and replayed — safe today because every built-in command converges under re-apply (incl. the layer-flag pair, and `object.place`'s replace-capture skips byte-identical re-deliveries); a future NON-idempotent command kind needs an atomic capture (or per-map watermarks) first. See `docs/concepts/collaboration-and-multiplayer.md` § "The pre-attach window". *owner: engine + maker, why: design constraint guarding future command-vocabulary growth*
 - **Runtime modes — Editor / Full Run / Live Run** — Mario-Maker-style edit-while-playing flow, full design in [`docs/concepts/runtime-modes.md`](docs/concepts/runtime-modes.md). Five phases tracked in that doc's "Where this is implemented" section: mode-marker components + system gating, maker controls (Play / Stop / Reset), ghost-spawn handling in `PlayerSystem`, Full-Run windowing (GJS-native window + WebKit WebView variant), and future in-game-editor compatibility check. *owner: engine + maker*
-- **Editor architecture migration — GTK View / ECS Model+Controller hybrid** — session state moves into components on a singleton entity in the engine's world; widgets become subscribing views. Design + 5-phase migration in [`docs/concepts/editor-architecture.md`](docs/concepts/editor-architecture.md). The engine side landed (mode markers + singleton + `SessionState` bridge, `ActiveTool` / `ActiveTile` + `ActiveLayer`, `SelectedPlacements`, `UndoStack` + `Command`s). Remaining: **widget adoption is incomplete** — `SceneEditorView` still mirrors `_activeTileId` / `_activeLayerId` next to the per-scene components (the parallel-state shape AGENTS.md forbids; either finish the move or document the cross-scene-cache exception), plus Phase 4b marquee selection. Foundation for the future console-port path. *owner: engine + maker*
+- **Editor architecture migration — GTK View / ECS Model+Controller hybrid** — session state moves into components on a singleton entity in the engine's world; widgets become subscribing views. Design + 5-phase migration in [`docs/concepts/editor-architecture.md`](docs/concepts/editor-architecture.md). The engine side landed (mode markers + singleton + `SessionState` bridge, `ActiveTool` / `ActiveTile` + `ActiveLayer`, `SelectedPlacements`, `UndoStack` + `Command`s). Remaining: **Phase 4b marquee selection**. Widget adoption is done — `SceneEditorView` reads active tile/layer off the per-scene components; no mirrored fields. Foundation for the future console-port path. *owner: engine + maker*
 - **Collaboration & multiplayer — op-log + host-sequencer** — single sync mechanism for both collaborative editing and networked multiplayer (Player 1 = host). Design in [`docs/concepts/collaboration-and-multiplayer.md`](docs/concepts/collaboration-and-multiplayer.md). Phase 0 ("substrate constraints") is active and folds into the editor-architecture migration phases: stable IDs audited, mutation API operation-oriented (so Undo == op-log), `InputSourceComponent` introduced with player-movement, schema kept transport-friendly. Phases 1–7 (op-log skeleton → WebRTC transport → editor awareness → split-screen → game ops → prediction → mid-session join) follow once the editor architecture lands. Phase 8 (host migration on disconnect) deferred. *owner: engine + maker, blocks: nothing critical — all current PRs are forward-compatible*
 - **Loro evaluation (parallel)** — separate gjsify integration test underway evaluating Loro as a CRDT option. If Loro proves stable in GJS + WebRTC-capable, we may reconsider a hybrid where the editor uses Loro for offline-merge while the game keeps op-log. Decide once the integration test reports — see open question in `docs/concepts/collaboration-and-multiplayer.md`. *owner: external (gjsify track)*
 - **Lock enforcement on remote command apply** — layer `locked` now syncs as a `SetLayerLockedCommand`, so both peers' edit-input paths respect a padlock; but `Engine.applyRemoteCommand` itself doesn't re-check the flag, so an op already in flight when the lock landed still applies. Decide whether remote apply should hard-block (and how to reconcile the sender's optimistic apply). *owner: engine, why: race window only — input-side checks cover the common case*
@@ -52,11 +52,70 @@ Conventions:
 
 ## Cleanup / debt
 
+- **Correctness defects found during the 2026-09-04 refactor sweep, none fixed** — each is a
+  behaviour change, so all were left in place deliberately. (a) `Engine.removeObject` does **not**
+  check the layer lock, while `paintTileAt` / `fillTileAt` / `placeObjectAt` all do — a padlocked
+  layer protects its tiles and blocks new placements but its existing objects stay deletable, and
+  the deletion rides the op-log to peers who also set that padlock (`engine/edit-operations.ts`;
+  the JSDoc there justifies skipping the *assistant-pause* gate, not the lock). (b)
+  `MapResource.getAvailableLayerIds()` filters `layer.visible` truthily while `setVisible` and
+  `services/layer-visibility.ts` read absent-as-visible — a layer with no `visible` key renders and
+  can be toggled but never appears in the picker. (c) `TileEditorSystem.applyObjectStamp` bounds-
+  checks against the *tilemap*, the programmatic path against `mapData`; they agree today, which is
+  how the programmatic path came to be missing its check originally. (d) `CardGallery.reorderable`
+  set *after* `setItems` silently does nothing — the drag source is attached per card in the build
+  loop and the setter only fires `notify`. (e) `AtlasCanvas.fitToContent()` leaks a
+  `notify::page-size` handler when called before first allocation. (f) `project-store`'s sprite-set
+  persist path has no throw guard where the project path does, and `engineSet.data` is assigned
+  before the persist — a `SpriteSetFormat.serialize()` failure leaves the in-memory descriptor
+  replaced with no change event, reachable from an inbound peer chunk. (g) `cast-controller`'s
+  `_mutateSheetAnimations` persists and broadcasts a full-sheet upsert even when the edit was
+  rejected, so a local no-op can clobber a peer's concurrent edit. (h) `tiles-view`'s
+  `_loadActivePalette` leaves the previous tileset's tiles on screen when a load fails, after which
+  a tile click routes the old grid's sprite id to the new set's id. *owner: engine + maker + gjs*
+- **`(peerId, seq)` is not unique on the reliable channel** — `CollabSession`'s project-op counter
+  and `SessionController`'s command counter both start at 0 and stamp the same `peerId` onto ops
+  sharing one channel, and `pre-attach-op-buffer.ts` dedupes on `peerId` + `seq` with no category
+  check. Safe only because `CollabSession` routes `__project/*` away before `preAttachBuffer.push` —
+  an invariant nothing enforces. Works solo, desyncs a joiner. *owner: engine + maker*
+- **`win.toggle-inspector` is stateless where it should be a `PropertyAction`** — the window used to
+  register both under one name (the `PropertyAction` bound to `show-inspector` first, then a
+  stateless `SimpleAction`); `g_action_map_add_action` replaces, so the `PropertyAction` was dead.
+  The dead registration is gone, but the stateless one still wins, so OSD toggle buttons in
+  `right-inspector.blp` / `scene-inspector.blp` get no action state to reflect and
+  `scene-editor-view.ts` carries a hand-rolled `bind_property` working around it. Switching to the
+  `PropertyAction` is the real fix. *owner: maker*
+- **Recent projects are never pruned** — the welcome view retries and logs a full stack trace for
+  every recent entry whose `game-project.json` no longer exists (five times over for a moved
+  checkout). Entries pointing at a missing file should be dropped or greyed out. *owner: maker*
+- **Maker app icon is missing** — `apps/maker-gjs/package.json#gjsify.flatpak.icon` points at
+  `data/icons/hicolor/scalable/apps/org.pixelrpg.maker.svg`, which does not exist (`data/icons/`
+  holds only three `scalable/actions/*-symbolic.svg`). Every packaged build — the current Flatpak
+  included — installs without an application icon. *owner: maker*
+- **`gjsify ship` (.deb/.rpm) evaluated, deferred** — deb+rpm need no extra tooling (`finishOn:
+  'any'`, `requiredTools: []`) and `gjsify.flatpak` already supplies the metadata, but
+  `__PKGDATADIR__` is a build-time define, so one bundle cannot serve `/usr` and `/app`. Make
+  `PKGDATADIR` runtime-derived (ADR 0024 § 3), fix the app icon, then add a `gjsify.ship` block with
+  `bundle` + the `.gresource` in `extraFiles`. Revisit at the first tagged release.
+  *owner: maker + gjsify*
+- **`@pixelrpg/mcp-bridge` does not declare `@gjsify/unit`** — its specs resolve it via root
+  hoisting only. Add it to `devDependencies` and regenerate `gjsify-lock.json` in one commit (CI
+  runs `gjsify install --immutable`). *owner: mcp-bridge*
+- **`@gjsify/adwaita-app` evaluated, not adopted** — it would remove ~31 lines of genuine
+  boilerplate (quit action, `initStyles`, the devtools try/catch, `vfunc_activate`) but nothing
+  distinctive transfers: `HANDLES_COMMAND_LINE` + `vfunc_command_line` + the `pixelrpg-intent`
+  signal, `set_resource_base_path` pinning, GResource registration order, the Control export, the
+  theme actions and orphan cleanup all need a subclass, which rules out `runAdwaitaApp`. Its
+  `about` helper builds `Adw.AboutDialog` from a field bag where the maker reads the metainfo XML
+  `flatpak:check` lints, so adopting it would duplicate appstream metadata in TS. Its standalone
+  `runApplication(app, argv)` export **is** cleanly adoptable in `main.ts` (it reports "already
+  running" instead of exiting 0 silently) — deferred only because that is user-visible output.
+  *owner: maker*
+
 - **`mockups/PixelRPGEditor_01.pdf`** — design PDF, untracked. Decide whether to commit (under `design/`?) or `.gitignore`. *owner: human*
 
 ## Storybook
 
-- **Story for `MapPreview`** — the widget ships without a story; should at least demo solid placeholder + a real loaded project.
 - **Storybook as documentation vehicle for cross-cutting behaviour patterns** — the right-inspector auto-open policy (and similar future conventions like keyboard-shortcut tables, signal-emission contracts, breakpoint behaviour) currently live as prose in `docs/concepts/*.md`. Investigate whether the storybook framework should grow a "behaviour story" type that renders a runnable demonstration of the pattern alongside the prose — e.g. a story that shows two views side by side, one with a selection triggering inspector auto-open and one without, so contributors can interact with the rule rather than just read it. Scope larger than a single widget story — would need `@gjsify/storybook` framework changes (a new `StoryKind` discriminator, layout for two-pane demos, doc-string rendering). *owner: @gjsify/storybook framework (upstream) + maker (consumer stories)*
 
 ## Format / breaking-change tracker

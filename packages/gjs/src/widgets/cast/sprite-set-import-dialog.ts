@@ -9,8 +9,17 @@ import { gettext as _ } from 'gettext'
 
 import { GdkImageTexture, GdkSpriteSheet } from '../../sprite/index.ts'
 import { reparentWidget } from '../../utils/index.ts'
+import { SignalScope } from '../../utils/signal-scope.ts'
 import { TilePalette } from '../editor/tile-palette.ts'
 import { CollisionPreview } from './collision-preview.ts'
+import {
+  cellOrigin,
+  colliderBound,
+  gridDimensions,
+  isUsableGrid,
+  slugifySpriteSetName,
+  type SpriteGrid,
+} from './sprite-set-import.model.ts'
 
 import Template from './sprite-set-import-dialog.blp'
 
@@ -25,22 +34,6 @@ export interface SpriteSetImportResult {
   data: SpriteSetData
   /** Absolute path of the source image the user picked — the caller copies it into the project. */
   sourcePath: string
-}
-
-const _DEFAULT_SPRITE_SIZE = 16
-
-/**
- * Turn a display name into a filesystem- and id-safe slug.
- * (`"Hero Sheet!" → "hero-sheet"`.) Empty input yields a stable
- * fallback so the emitted descriptor always has an id.
- */
-export function slugifySpriteSetName(name: string): string {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return slug || 'sprite-set'
 }
 
 /**
@@ -98,6 +91,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   // ONE collision box across its frames; a tileset's collision is
   // per-tile (set later in the Tiles inspector), so it has no box here.
   private _kind: SpriteSetKind = 'character'
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -153,16 +147,25 @@ export class SpriteSetImportDialog extends Adw.Dialog {
 
   constructor() {
     super()
-    this._wireButtons()
-    this._wireInputs()
     this._refreshGrid()
     this._refreshValidity()
+    this._applyKind()
+  }
+
+  vfunc_map(): void {
+    super.vfunc_map?.()
+    this._wireButtons()
+    this._wireInputs()
     // Desktop (≥720sp): preview beside the settings. Phone: preview under
     // the file picker (its blp home). apply/unapply only fire on a
     // transition, so the initial phone layout needs no action.
-    this._desktop_breakpoint.connect('apply', () => this._movePreview(this._desktop_preview_slot))
-    this._desktop_breakpoint.connect('unapply', () => this._movePreview(this._phone_preview_slot))
-    this._applyKind()
+    this._signals.connect(this._desktop_breakpoint, 'apply', () => this._movePreview(this._desktop_preview_slot))
+    this._signals.connect(this._desktop_breakpoint, 'unapply', () => this._movePreview(this._phone_preview_slot))
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap?.()
   }
 
   /** What's being imported. Callers set this to tailor the dialog to its domain. */
@@ -221,18 +224,18 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   }
 
   private _wireButtons(): void {
-    this._cancel_button.connect('clicked', () => this.close())
-    this._import_button.connect('clicked', () => {
+    this._signals.connect(this._cancel_button, 'clicked', () => this.close())
+    this._signals.connect(this._import_button, 'clicked', () => {
       const result = this._buildResult()
       if (!result) return
       this.emit('spriteset-imported', result)
       this.close()
     })
-    this._choose_button.connect('clicked', () => this._chooseImage())
+    this._signals.connect(this._choose_button, 'clicked', () => this._chooseImage())
   }
 
   private _wireInputs(): void {
-    this._name_row.connect('changed', () => this._refreshValidity())
+    this._signals.connect(this._name_row, 'changed', () => this._refreshValidity())
     const onSizeChanged = () => {
       if (this._syncing) return
       this._refreshGrid()
@@ -240,20 +243,20 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       this._refreshPreview()
       this._refreshValidity()
     }
-    this._width_row.connect('notify::value', onSizeChanged)
-    this._height_row.connect('notify::value', onSizeChanged)
+    for (const row of [this._width_row, this._height_row]) {
+      this._signals.connect(row, 'notify::value', onSizeChanged)
+    }
 
     const onColliderChanged = () => {
       if (this._syncing) return
       this._refreshPreview()
     }
-    this._collision_row.connect('notify::active', onColliderChanged)
-    this._collider_x_row.connect('notify::value', onColliderChanged)
-    this._collider_y_row.connect('notify::value', onColliderChanged)
-    this._collider_w_row.connect('notify::value', onColliderChanged)
-    this._collider_h_row.connect('notify::value', onColliderChanged)
+    this._signals.connect(this._collision_row, 'notify::active', onColliderChanged)
+    for (const row of [this._collider_x_row, this._collider_y_row, this._collider_w_row, this._collider_h_row]) {
+      this._signals.connect(row, 'notify::value', onColliderChanged)
+    }
 
-    this._palette.connect('tile-selected', (_p: TilePalette, spriteId: number) => {
+    this._signals.connect(this._palette, 'tile-selected', (_p: TilePalette, spriteId: number) => {
       this._selectedCell = spriteId
       this._refreshPreview()
     })
@@ -320,50 +323,36 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     return Math.max(1, Math.round(this._height_row.get_value()))
   }
 
-  private _columns(): number {
-    if (!this._texture) return 0
-    return Math.floor(this._texture.get_width() / this._spriteWidth)
-  }
-
-  private _rows(): number {
-    if (!this._texture) return 0
-    return Math.floor(this._texture.get_height() / this._spriteHeight)
+  /** How the current image divides at the chosen sprite size. */
+  private _grid(): SpriteGrid {
+    if (!this._texture) return { columns: 0, rows: 0 }
+    return gridDimensions(this._texture.get_width(), this._texture.get_height(), this._spriteWidth, this._spriteHeight)
   }
 
   /** Recompute the grid summary + rebuild the sliced-cell palette. */
   private _refreshGrid(): void {
-    const columns = this._columns()
-    const rows = this._rows()
-    if (!this._texture || columns < 1 || rows < 1) {
+    const grid = this._grid()
+    if (!this._texture || !isUsableGrid(grid)) {
       this.gridSummary = this._texture ? _('Sprite larger than the image') : '—'
       this._palette.setTiles([])
       return
     }
     const unit = this._kind === 'character' ? _('sprites') : _('tiles')
-    this.gridSummary = `${columns} × ${rows} — ${columns * rows} ${unit}`
-    const data = this._buildSpriteSetData(columns, rows, false)
+    this.gridSummary = `${grid.columns} × ${grid.rows} — ${grid.columns * grid.rows} ${unit}`
+    const data = this._buildSpriteSetData(grid, false)
     const sheet = new GdkSpriteSheet(data, GdkImageTexture.fromTexture(this._texture))
     this._palette.setFromSpriteSheet(sheet)
   }
 
   /** Push the selected cell + collider into the zoomed preview. */
   private _refreshPreview(): void {
-    const columns = this._columns()
-    const rows = this._rows()
-    if (!this._texture || columns < 1 || rows < 1) {
+    const grid = this._grid()
+    if (!this._texture || !isUsableGrid(grid)) {
       this._collision_preview.setCell(null, 0, 0, this._spriteWidth, this._spriteHeight)
       return
     }
-    const cell = Math.min(this._selectedCell, columns * rows - 1)
-    const col = cell % columns
-    const row = Math.floor(cell / columns)
-    this._collision_preview.setCell(
-      this._texture,
-      col * this._spriteWidth,
-      row * this._spriteHeight,
-      this._spriteWidth,
-      this._spriteHeight,
-    )
+    const [x, y] = cellOrigin(this._selectedCell, grid, this._spriteWidth, this._spriteHeight)
+    this._collision_preview.setCell(this._texture, x, y, this._spriteWidth, this._spriteHeight)
     this._collision_preview.setCollider(
       Math.round(this._collider_x_row.get_value()),
       Math.round(this._collider_y_row.get_value()),
@@ -376,49 +365,57 @@ export class SpriteSetImportDialog extends Adw.Dialog {
 
   /** Set the collider to cover the whole cell + sync the spin upper bounds. */
   private _resetColliderToCell(): void {
-    this._syncing = true
     const w = this._spriteWidth
     const h = this._spriteHeight
-    this._setSpin(this._collider_x_row, 0, w)
-    this._setSpin(this._collider_y_row, 0, h)
-    this._setSpin(this._collider_w_row, w, w)
-    this._setSpin(this._collider_h_row, h, h)
-    this._syncing = false
+    this._syncColliderSpins([0, 0, w, h])
   }
 
   /** Clamp the existing collider to a (possibly resized) cell. */
   private _refitCollider(): void {
+    const w = this._spriteWidth
+    const h = this._spriteHeight
+    this._syncColliderSpins([
+      Math.min(this._collider_x_row.get_value(), w - 1),
+      Math.min(this._collider_y_row.get_value(), h - 1),
+      Math.min(this._collider_w_row.get_value(), w),
+      Math.min(this._collider_h_row.get_value(), h),
+    ])
+  }
+
+  /** Write `[x, y, w, h]` into the collider spins, bounded by the cell size. */
+  private _syncColliderSpins(values: [number, number, number, number]): void {
     this._syncing = true
     const w = this._spriteWidth
     const h = this._spriteHeight
-    this._setSpin(this._collider_x_row, Math.min(this._collider_x_row.get_value(), w - 1), w)
-    this._setSpin(this._collider_y_row, Math.min(this._collider_y_row.get_value(), h - 1), h)
-    this._setSpin(this._collider_w_row, Math.min(this._collider_w_row.get_value(), w), w)
-    this._setSpin(this._collider_h_row, Math.min(this._collider_h_row.get_value(), h), h)
+    const rows: Array<[Adw.SpinRow, number, number]> = [
+      [this._collider_x_row, values[0], w],
+      [this._collider_y_row, values[1], h],
+      [this._collider_w_row, values[2], w],
+      [this._collider_h_row, values[3], h],
+    ]
+    for (const [row, value, upper] of rows) {
+      const bound = colliderBound(value, upper)
+      const adjustment = row.get_adjustment()
+      adjustment.set_upper(bound.upper)
+      row.set_value(Math.max(adjustment.get_lower(), bound.value))
+    }
     this._syncing = false
-  }
-
-  private _setSpin(row: Adw.SpinRow, value: number, upper: number): void {
-    const adj = row.get_adjustment()
-    adj.set_upper(Math.max(1, upper))
-    row.set_value(Math.max(adj.get_lower(), Math.min(value, upper)))
   }
 
   private _refreshValidity(): void {
     const hasImage = this._texture !== null
     const hasName = this._name_row.get_text().trim().length > 0
-    const fits = this._columns() >= 1 && this._rows() >= 1
-    this._import_button.set_sensitive(hasImage && hasName && fits)
+    this._import_button.set_sensitive(hasImage && hasName && isUsableGrid(this._grid()))
   }
 
   /** Assemble the descriptor for the preview grid or the final emit. */
-  private _buildSpriteSetData(columns: number, rows: number, withCollision: boolean): SpriteSetData {
+  private _buildSpriteSetData(grid: SpriteGrid, withCollision: boolean): SpriteSetData {
     const id = slugifySpriteSetName(this._name_row.get_text())
     const collider = withCollision && this._collision_row.get_active() ? this._buildCollider() : null
     const sprites: SpriteDataSet[] = []
     for (const cell of iterateSpriteGrid({
-      columns,
-      rows,
+      columns: grid.columns,
+      rows: grid.rows,
       spriteWidth: this._spriteWidth,
       spriteHeight: this._spriteHeight,
     } as SpriteSetData)) {
@@ -434,8 +431,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       image: { id: 'main', path: `${id}.png`, type: 'image' },
       spriteWidth: this._spriteWidth,
       spriteHeight: this._spriteHeight,
-      columns,
-      rows,
+      columns: grid.columns,
+      rows: grid.rows,
       margin: 0,
       spacing: 0,
       sprites,
@@ -455,13 +452,11 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   }
 
   private _buildResult(): SpriteSetImportResult | null {
-    if (!this._texture || !this._sourcePath) return null
-    const columns = this._columns()
-    const rows = this._rows()
-    if (columns < 1 || rows < 1) return null
+    const grid = this._grid()
+    if (!this._texture || !this._sourcePath || !isUsableGrid(grid)) return null
     // Tilesets carry no shared collider — collision is per-tile.
     return {
-      data: this._buildSpriteSetData(columns, rows, this._kind === 'character'),
+      data: this._buildSpriteSetData(grid, this._kind === 'character'),
       sourcePath: this._sourcePath,
     }
   }

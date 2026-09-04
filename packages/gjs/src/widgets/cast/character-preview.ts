@@ -2,20 +2,29 @@ import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { CharacterAnimation, CharacterAnimationRole, CharacterDefinition } from '@pixelrpg/engine'
+import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
+import { SignalScope } from '../../utils/signal-scope.ts'
+import {
+  animationIdFor,
+  type DirectionRole,
+  nextDirection,
+  parseAnimationRole,
+  resolveAnimation,
+} from './character-animation.ts'
 
 import Template from './character-preview.blp'
 
-type DirectionRole = 'up' | 'down' | 'left' | 'right'
-type AnimationKind = 'walk' | 'idle'
-
-const ANIMATION_ID_PATTERN = /^(walk|idle)-(up|down|left|right)$/
-
 /** Auto-cycle dwell time per direction (ms) — ~2 walk loops before turning. */
 const DIRECTION_CYCLE_MS = 1600
+
+/** Frame dwell time (ms) used when an animation frame declares none. */
+const DEFAULT_FRAME_MS = 200
+
+/** Floor on a frame's dwell time so a bad value can't spin the main loop. */
+const MIN_FRAME_MS = 50
 
 /**
  * Animated preview of a {@link CharacterDefinition}'s sprite. Plays the
@@ -72,6 +81,7 @@ export class CharacterPreview extends Adw.Bin {
   private _showControls = true
   private _autoCycle = false
   private _highlighted = true
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -159,8 +169,6 @@ export class CharacterPreview extends Adw.Bin {
 
   constructor() {
     super()
-    this._wireDirectionPad()
-    this._wirePauseToggle()
     this._setActive('down', /* skipRestart */ true)
   }
 
@@ -254,9 +262,7 @@ export class CharacterPreview extends Adw.Bin {
    * id picked from the animation list (`sword-swing`, etc.).
    */
   get activeAnimationId(): string {
-    if (this._customAnimationId !== null) return this._customAnimationId
-    const kind: AnimationKind = this._paused ? 'idle' : 'walk'
-    return `${kind}-${this._activeDirection}`
+    return this._customAnimationId ?? animationIdFor(this._activeDirection, this._paused)
   }
 
   /**
@@ -303,44 +309,18 @@ export class CharacterPreview extends Adw.Bin {
    * from looping; the second pass sees no change and exits early.
    */
   setActiveAnimation(animId: string): void {
-    const match = ANIMATION_ID_PATTERN.exec(animId)
-    if (match) {
-      const [, kind, dir] = match as unknown as [string, AnimationKind, DirectionRole]
-      const wantPaused = kind === 'idle'
-      const wasCustom = this._customAnimationId !== null
-      const directionChanged = this._activeDirection !== dir
-      const pausedChanged = this._paused !== wantPaused
-      if (!wasCustom && !directionChanged && !pausedChanged) return
-
-      this._customAnimationId = null
-      if (pausedChanged) {
-        this._paused = wantPaused
-        this._btn_pause?.set_active(wantPaused)
-        this._refreshDirectionTooltips()
-      }
-      if (directionChanged || wasCustom) {
-        // `_setActive` handles button toggles + frame reset + restart +
-        // animation-id publish. We also route here on `wasCustom` so
-        // the direction toggles re-light after leaving custom mode.
-        this._setActive(dir, false)
-      } else {
-        this._frameIndex = 0
-        this._publishAnimationState()
-        this._restart()
-      }
+    const role = parseAnimationRole(animId)
+    if (role) {
+      this._applyRole(role.direction, role.kind === 'idle')
       return
     }
-
     // Custom animation — play by id, clear the walk/idle UI state
     // so it's visually obvious the direction pad isn't driving the
     // current sequence.
     if (this._customAnimationId === animId) return
     this._customAnimationId = animId
     this._frameIndex = 0
-    this._btn_up.set_active(false)
-    this._btn_down.set_active(false)
-    this._btn_left.set_active(false)
-    this._btn_right.set_active(false)
+    for (const button of this._directionButtons()) button.set_active(false)
     this._btn_pause?.set_active(false)
     this._paused = false
     this._refreshDirectionTooltips()
@@ -348,64 +328,78 @@ export class CharacterPreview extends Adw.Bin {
     this._restart()
   }
 
+  vfunc_map(): void {
+    super.vfunc_map()
+    // Any direction click leaves custom mode behind and resumes the
+    // walk-/idle- × direction lookup so the buttons are always the
+    // canonical way back from a custom-animation selection. Pause
+    // clears custom mode for the same reason.
+    for (const [direction, button] of this._directionEntries()) {
+      this._signals.connect(button, 'toggled', () => {
+        if (!button.active) return
+        this._customAnimationId = null
+        this._setActive(direction, false)
+      })
+    }
+    this._signals.connect(this._btn_pause, 'toggled', () => {
+      this._customAnimationId = null
+      this.paused = this._btn_pause.get_active()
+    })
+    this._restart()
+  }
+
   vfunc_unmap(): void {
+    this._signals.disconnectAll()
     this._stopTimer()
     this._stopCycleTimer()
     super.vfunc_unmap()
   }
 
-  vfunc_map(): void {
-    super.vfunc_map()
+  /** The four direction toggles paired with the facing each selects. */
+  private _directionEntries(): ReadonlyArray<[DirectionRole, Gtk.ToggleButton]> {
+    return [
+      ['up', this._btn_up],
+      ['down', this._btn_down],
+      ['left', this._btn_left],
+      ['right', this._btn_right],
+    ]
+  }
+
+  private _directionButtons(): Gtk.ToggleButton[] {
+    return [this._btn_up, this._btn_down, this._btn_left, this._btn_right]
+  }
+
+  /** Adopt a required-role selection (direction + paused), idempotently. */
+  private _applyRole(direction: DirectionRole, wantPaused: boolean): void {
+    const wasCustom = this._customAnimationId !== null
+    const directionChanged = this._activeDirection !== direction
+    const pausedChanged = this._paused !== wantPaused
+    if (!wasCustom && !directionChanged && !pausedChanged) return
+
+    this._customAnimationId = null
+    if (pausedChanged) {
+      this._paused = wantPaused
+      this._btn_pause?.set_active(wantPaused)
+      this._refreshDirectionTooltips()
+    }
+    if (directionChanged || wasCustom) {
+      // `_setActive` handles button toggles + frame reset + restart +
+      // animation-id publish. We also route here on `wasCustom` so
+      // the direction toggles re-light after leaving custom mode.
+      this._setActive(direction, false)
+      return
+    }
+    this._frameIndex = 0
+    this._publishAnimationState()
     this._restart()
-  }
-
-  private _wireDirectionPad(): void {
-    // Any direction click leaves custom mode behind and resumes the
-    // walk-/idle- × direction lookup so the buttons are always the
-    // canonical way back from a custom-animation selection.
-    this._btn_up.connect('toggled', () => {
-      if (this._btn_up.active) {
-        this._customAnimationId = null
-        this._setActive('up', false)
-      }
-    })
-    this._btn_down.connect('toggled', () => {
-      if (this._btn_down.active) {
-        this._customAnimationId = null
-        this._setActive('down', false)
-      }
-    })
-    this._btn_left.connect('toggled', () => {
-      if (this._btn_left.active) {
-        this._customAnimationId = null
-        this._setActive('left', false)
-      }
-    })
-    this._btn_right.connect('toggled', () => {
-      if (this._btn_right.active) {
-        this._customAnimationId = null
-        this._setActive('right', false)
-      }
-    })
-  }
-
-  private _wirePauseToggle(): void {
-    // Pause clears custom mode too — see the direction-pad rationale.
-    this._btn_pause.connect('toggled', () => {
-      this._customAnimationId = null
-      this.paused = this._btn_pause.get_active()
-    })
   }
 
   private _setActive(dir: DirectionRole, skipRestart: boolean): void {
     this._activeDirection = dir
     this._frameIndex = 0
-    // Manage toggle states so only one is shown active. Block signals
-    // during the bulk update so we don't loop back into `_setActive`.
-    this._btn_up.set_active(dir === 'up')
-    this._btn_down.set_active(dir === 'down')
-    this._btn_left.set_active(dir === 'left')
-    this._btn_right.set_active(dir === 'right')
+    // Only one toggle stays lit; the handlers ignore a deactivation, so
+    // the bulk update can't loop back into `_setActive`.
+    for (const [direction, button] of this._directionEntries()) button.set_active(direction === dir)
     this._refreshDirectionTooltips()
     this._publishAnimationState()
     if (!skipRestart) this._restart()
@@ -423,17 +417,10 @@ export class CharacterPreview extends Adw.Bin {
    * paused state will produce when the user clicks an arrow.
    */
   private _refreshDirectionTooltips(): void {
-    if (this._paused) {
-      this._btn_up.set_tooltip_text(_('Idle up'))
-      this._btn_down.set_tooltip_text(_('Idle down'))
-      this._btn_left.set_tooltip_text(_('Idle left'))
-      this._btn_right.set_tooltip_text(_('Idle right'))
-    } else {
-      this._btn_up.set_tooltip_text(_('Walk up'))
-      this._btn_down.set_tooltip_text(_('Walk down'))
-      this._btn_left.set_tooltip_text(_('Walk left'))
-      this._btn_right.set_tooltip_text(_('Walk right'))
-    }
+    const labels: Record<DirectionRole, string> = this._paused
+      ? { up: _('Idle up'), down: _('Idle down'), left: _('Idle left'), right: _('Idle right') }
+      : { up: _('Walk up'), down: _('Walk down'), left: _('Walk left'), right: _('Walk right') }
+    for (const [direction, button] of this._directionEntries()) button.set_tooltip_text(labels[direction])
   }
 
   private _restart(): void {
@@ -463,45 +450,26 @@ export class CharacterPreview extends Adw.Bin {
   }
 
   /**
-   * Rotate the facing every {@link DIRECTION_CYCLE_MS} (down → left →
-   * up → right → …) so an auto-cycling preview walks a full circle.
-   * `_setActive` reschedules both timers, so this source removes itself.
+   * Rotate the facing every {@link DIRECTION_CYCLE_MS} so an auto-cycling
+   * preview walks a full circle. `_setActive` reschedules both timers, so
+   * this source removes itself.
    */
   private _scheduleDirectionCycle(): void {
     this._cycleTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, DIRECTION_CYCLE_MS, () => {
       this._cycleTimeoutId = 0
-      const order: DirectionRole[] = ['down', 'left', 'up', 'right']
-      const next = order[(order.indexOf(this._activeDirection) + 1) % order.length]
       this._customAnimationId = null
-      this._setActive(next, false)
+      this._setActive(nextDirection(this._activeDirection), false)
       return GLib.SOURCE_REMOVE
     })
   }
 
-  /**
-   * Resolve the animation to play. Two routes:
-   *
-   * - **Custom mode**: lookup by `_customAnimationId` directly.
-   *   Returns `null` (and the picture clears) if the id no longer
-   *   exists — e.g. the user deleted it elsewhere.
-   * - **Normal mode**: walk-/idle- × direction with cross-kind
-   *   fallback so a character with only walk frames (no idle, or
-   *   vice versa) still previews — better to show something than
-   *   blank the picture.
-   */
+  /** The sequence to play — see {@link resolveAnimation} for the fallback rules. */
   private _activeAnimation(): CharacterAnimation | null {
     if (!this._character) return null
     // Animations are owned by the sheet now (shared across characters);
     // fall back to the deprecated per-character list.
     const anims = this._spriteSet?.data?.characterAnimations ?? this._character.animations ?? []
-    if (this._customAnimationId !== null) {
-      return anims.find((a) => a.id === this._customAnimationId) ?? null
-    }
-    const primaryKind: AnimationKind = this._paused ? 'idle' : 'walk'
-    const fallbackKind: AnimationKind = primaryKind === 'idle' ? 'walk' : 'idle'
-    const primary = `${primaryKind}-${this._activeDirection}` as CharacterAnimationRole
-    const fallback = `${fallbackKind}-${this._activeDirection}` as CharacterAnimationRole
-    return anims.find((a) => a.id === primary) ?? anims.find((a) => a.id === fallback) ?? null
+    return resolveAnimation(anims, this._customAnimationId, this._activeDirection, this._paused)
   }
 
   private _applyFrame(): void {
@@ -517,8 +485,7 @@ export class CharacterPreview extends Adw.Bin {
     // but the frame is square — without this the snapshot stretches
     // the sprite horizontally and the character looks squashed (see
     // the `keepAspectRatio` note on `GdkSpritePaintable`).
-    const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
-    this._picture.set_paintable(paintable)
+    this._picture.set_paintable(sprite?.createPaintable({ keepAspectRatio: true }) ?? null)
   }
 
   private _scheduleNext(): void {
@@ -527,7 +494,7 @@ export class CharacterPreview extends Adw.Bin {
     // Frames now carry per-frame durations; the compact list preview
     // ticks at the first frame's rate (migrated data is uniform). The
     // per-frame-accurate playback lives in the timeline editor.
-    const duration = Math.max(50, anim.frames[0]?.duration ?? 200)
+    const duration = Math.max(MIN_FRAME_MS, anim.frames[0]?.duration ?? DEFAULT_FRAME_MS)
     this._timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, duration, () => {
       this._frameIndex = (this._frameIndex + 1) % anim.frames.length
       this._applyFrame()

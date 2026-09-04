@@ -2,6 +2,7 @@
 
 export * from './camera-control.system'
 export * from './event-action.system'
+export * from './hover-overlays'
 export * from './input.system'
 export * from './item-pickup.system'
 export * from './object-spawn.system'

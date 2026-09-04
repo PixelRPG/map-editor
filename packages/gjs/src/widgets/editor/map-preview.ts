@@ -5,31 +5,22 @@ import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import { GameProjectResource, type MapData } from '@pixelrpg/engine'
-import type { GdkSpriteSheet } from '../../sprite/objects/GdkSpriteSheet'
-import { GdkSpriteSetResource } from '../../sprite/resource/GdkSpriteSetResource'
 import { BakeCache, buildCacheKey } from './bake-cache.ts'
-import { clampViewportCenter, fingerprintMapData } from './map-preview.geometry.ts'
-
-interface DrawOp {
-  texture: Gdk.Texture
-  /** Sprite location in the atlas (source coordinates, source pixels). */
-  sx: number
-  sy: number
-  sw: number
-  sh: number
-  /** Tile position in the map (pre-scale, in map-pixel units). */
-  tx: number
-  ty: number
-  tw: number
-  th: number
-}
-
-interface SheetRange {
-  spriteSetId: string
-  start: number
-  end: number
-  sheet: GdkSpriteSheet
-}
+import {
+  type BakePlacement,
+  buildDrawOps,
+  collectSheets,
+  type DrawOp,
+  renderOps,
+  type SheetRange,
+} from './map-preview.bake.ts'
+import {
+  clampViewportCenter,
+  fingerprintMapData,
+  fitBakeScale,
+  fitDestRect,
+  viewportSourceRect,
+} from './map-preview.geometry.ts'
 
 /** A finished bake, kept so widget rebuilds don't re-render the map. */
 interface BakedPreview {
@@ -63,7 +54,8 @@ const BAKE_CACHE_MAX = 48
  * up its own Excalibur runtime + GL context, which is wasteful for
  * tiny static previews. This widget loads the project, decodes the
  * sprite-sheets via the existing `GdkSpriteSetResource` pipeline and
- * rasterises the tiles ONCE into a small texture (the "bake").
+ * rasterises the tiles ONCE into a small texture (the "bake",
+ * assembled by `map-preview.bake.ts`).
  *
  * Two content modes:
  *
@@ -94,6 +86,13 @@ const BAKE_CACHE_MAX = 48
  *   the cache; the drag-end commit writes it.
  */
 export class MapPreview extends Gtk.Widget {
+  // ── module-wide bake machinery ────────────────────────────────────
+  // LRU (least-recently-STORED) bake cache — the bounded-cache + cache-key
+  // logic lives in the GTK-free `bake-cache.ts` so it is unit-tested.
+  private static _cache = new BakeCache<BakedPreview>(BAKE_CACHE_MAX)
+  private static _queue: MapPreview[] = []
+  private static _pumpScheduled = false
+
   private _mapWidth = 0
   private _mapHeight = 0
   private _accentColor: Gdk.RGBA
@@ -122,30 +121,6 @@ export class MapPreview extends Gtk.Widget {
    */
   private _cacheKeyBase: string | null = null
 
-  // ── module-wide bake machinery ────────────────────────────────────
-  // LRU (least-recently-STORED) bake cache — the bounded-cache + cache-key
-  // logic lives in the GTK-free `bake-cache.ts` so it is unit-tested.
-  private static _cache = new BakeCache<BakedPreview>(BAKE_CACHE_MAX)
-  private static _queue: MapPreview[] = []
-  private static _pumpScheduled = false
-
-  private static _enqueue(preview: MapPreview): void {
-    if (!MapPreview._queue.includes(preview)) MapPreview._queue.push(preview)
-    MapPreview._pump()
-  }
-
-  /** One bake per idle tick so the frame clock breathes between bakes. */
-  private static _pump(): void {
-    if (MapPreview._pumpScheduled || !MapPreview._queue.length) return
-    MapPreview._pumpScheduled = true
-    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-      MapPreview._pumpScheduled = false
-      MapPreview._queue.shift()?._runBake()
-      MapPreview._pump()
-      return GLib.SOURCE_REMOVE
-    })
-  }
-
   static {
     GObject.registerClass(
       {
@@ -169,6 +144,27 @@ export class MapPreview extends Gtk.Widget {
     this._accentColor = new Gdk.RGBA()
     this._accentColor.parse('#3a3a40')
     this.can_target = false
+  }
+
+  private static _enqueue(preview: MapPreview): void {
+    if (!MapPreview._queue.includes(preview)) MapPreview._queue.push(preview)
+    MapPreview._pump()
+  }
+
+  /** One bake per idle tick so the frame clock breathes between bakes. */
+  private static _pump(): void {
+    if (MapPreview._pumpScheduled || !MapPreview._queue.length) return
+    MapPreview._pumpScheduled = true
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      MapPreview._pumpScheduled = false
+      MapPreview._queue.shift()?._runBake()
+      MapPreview._pump()
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
+  get accentColor(): string {
+    return this._accentColor.to_string()
   }
 
   set accentColor(value: string) {
@@ -202,7 +198,7 @@ export class MapPreview extends Gtk.Widget {
         this._loaded = true
         return
       }
-      this._setSource(firstMap, await this._collectSheets(resource, firstMap.spriteSets ?? []))
+      this._setSource(firstMap, await collectSheets(resource, firstMap.spriteSets ?? []))
     } catch (error) {
       console.warn('[MapPreview] Failed to render preview:', error)
       this._loaded = true
@@ -250,12 +246,12 @@ export class MapPreview extends Gtk.Widget {
             center: { x: this._viewport.centerX, y: this._viewport.centerY },
           }
           // Pans re-bake from source — collect it even on a hit.
-          this._source = { mapData, ranges: await this._collectSheets(resource, mapData.spriteSets ?? []) }
+          this._source = { mapData, ranges: await collectSheets(resource, mapData.spriteSets ?? []) }
           this._readBackground(mapData)
         }
         return
       }
-      this._setSource(mapData, await this._collectSheets(resource, mapData.spriteSets ?? []))
+      this._setSource(mapData, await collectSheets(resource, mapData.spriteSets ?? []))
     } catch (error) {
       console.warn('[MapPreview] Failed to render preview:', error)
       this._loaded = true
@@ -268,20 +264,9 @@ export class MapPreview extends Gtk.Widget {
    * immediately and queues a non-cached re-bake.
    */
   panViewportBy(dxWidget: number, dyWidget: number): void {
-    if (!this._viewport || !this._source) return
-    const { zoom } = this._viewport
-    this._viewport.centerX = clampViewportCenter(
-      this._viewport.centerX - dxWidget / zoom,
-      this._mapWidth,
-      this.get_width(),
-      zoom,
-    )
-    this._viewport.centerY = clampViewportCenter(
-      this._viewport.centerY - dyWidget / zoom,
-      this._mapHeight,
-      this.get_height(),
-      zoom,
-    )
+    const viewport = this._viewport
+    if (!viewport || !this._source) return
+    this._clampViewport(viewport.centerX - dxWidget / viewport.zoom, viewport.centerY - dyWidget / viewport.zoom)
     this._cacheWrite = false
     this._baked = null // stale for the new centre — `_viewportBake` keeps the shifted paint alive
     MapPreview._enqueue(this)
@@ -310,10 +295,10 @@ export class MapPreview extends Gtk.Widget {
    * re-bake lands.
    */
   setViewportZoom(zoom: number): void {
-    if (!this._viewport || !this._source || this._viewport.zoom === zoom) return
-    this._viewport.zoom = zoom
-    this._viewport.centerX = clampViewportCenter(this._viewport.centerX, this._mapWidth, this.get_width(), zoom)
-    this._viewport.centerY = clampViewportCenter(this._viewport.centerY, this._mapHeight, this.get_height(), zoom)
+    const viewport = this._viewport
+    if (!viewport || !this._source || viewport.zoom === zoom) return
+    viewport.zoom = zoom
+    this._clampViewport(viewport.centerX, viewport.centerY)
     this._cacheWrite = true
     this._baked = null
     this._viewportBake = null
@@ -321,9 +306,50 @@ export class MapPreview extends Gtk.Widget {
     this.queue_draw()
   }
 
+  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
+    const width = this.get_width()
+    const height = this.get_height()
+    if (width <= 0 || height <= 0) return
+
+    const background = new Graphene.Rect()
+    background.init(0, 0, width, height)
+    snapshot.append_color(this._accentColor, background)
+
+    if (!this._loaded || !this._mapWidth || !this._mapHeight) return
+
+    if (this._viewport) {
+      this._snapshotViewport(snapshot, width, height)
+      return
+    }
+
+    const fit = fitDestRect(width, height, this._mapWidth, this._mapHeight)
+    const dest = new Graphene.Rect()
+    dest.init(fit.x, fit.y, fit.w, fit.h)
+
+    if (this._baked) {
+      snapshot.append_scaled_texture(this._baked, Gsk.ScalingFilter.NEAREST, dest)
+      return
+    }
+
+    // Bake not ready: show the map's own room colour as a stand-in.
+    // Individual tiles are NEVER painted here — for the big ported
+    // worlds that node tree is millions of GI calls. The queued bake
+    // repaints us when its texture lands.
+    if (this._mapBackground) snapshot.append_color(this._mapBackground, dest)
+    if (this._source) MapPreview._enqueue(this)
+  }
+
   /** Full LRU key for the current content + viewport. */
   private _cacheKey(): string | null {
     return buildCacheKey(this._cacheKeyBase, this._viewport)
+  }
+
+  /** Re-centre the viewport, clamped to the map on both axes. */
+  private _clampViewport(centerX: number, centerY: number): void {
+    const viewport = this._viewport
+    if (!viewport) return
+    viewport.centerX = clampViewportCenter(centerX, this._mapWidth, this.get_width(), viewport.zoom)
+    viewport.centerY = clampViewportCenter(centerY, this._mapHeight, this.get_height(), viewport.zoom)
   }
 
   /** Paint a cached bake without rebuilding anything. */
@@ -355,41 +381,6 @@ export class MapPreview extends Gtk.Widget {
     this._cacheWrite = true
     MapPreview._enqueue(this)
     this.queue_draw()
-  }
-
-  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
-    const width = this.get_width()
-    const height = this.get_height()
-    if (width <= 0 || height <= 0) return
-
-    const background = new Graphene.Rect()
-    background.init(0, 0, width, height)
-    snapshot.append_color(this._accentColor, background)
-
-    if (!this._loaded || !this._mapWidth || !this._mapHeight) return
-
-    if (this._viewport) {
-      this._snapshotViewport(snapshot, width, height)
-      return
-    }
-
-    const scale = Math.min(width / this._mapWidth, height / this._mapHeight)
-    const dw = this._mapWidth * scale
-    const dh = this._mapHeight * scale
-    const dest = new Graphene.Rect()
-    dest.init((width - dw) / 2, (height - dh) / 2, dw, dh)
-
-    if (this._baked) {
-      snapshot.append_scaled_texture(this._baked, Gsk.ScalingFilter.NEAREST, dest)
-      return
-    }
-
-    // Bake not ready: show the map's own room colour as a stand-in.
-    // Individual tiles are NEVER painted here — for the big ported
-    // worlds that node tree is millions of GI calls. The queued bake
-    // repaints us when its texture lands.
-    if (this._mapBackground) snapshot.append_color(this._mapBackground, dest)
-    if (this._source) MapPreview._enqueue(this)
   }
 
   /**
@@ -445,61 +436,20 @@ export class MapPreview extends Gtk.Widget {
     }
     const cacheKey = this._cacheKey()
     if (cacheKey && this._cacheWrite) {
-      MapPreview._cache.set(cacheKey, {
-        texture,
-        mapWidth: this._mapWidth,
-        mapHeight: this._mapHeight,
-      })
+      MapPreview._cache.set(cacheKey, { texture, mapWidth: this._mapWidth, mapHeight: this._mapHeight })
     }
     this.queue_draw()
-  }
-
-  /** Build the per-tile draw ops, optionally clipped to a map-px rect. */
-  private _buildOps(clip: { x: number; y: number; w: number; h: number } | null): DrawOp[] {
-    const source = this._source
-    if (!source) return []
-    const { mapData, ranges } = source
-    const ops: DrawOp[] = []
-    for (const layer of mapData.layers ?? []) {
-      if (!layer.visible || !layer.sprites) continue
-      for (const tile of layer.sprites) {
-        const tx = tile.x * mapData.tileWidth
-        const ty = tile.y * mapData.tileHeight
-        if (
-          clip &&
-          (tx + mapData.tileWidth <= clip.x ||
-            tx >= clip.x + clip.w ||
-            ty + mapData.tileHeight <= clip.y ||
-            ty >= clip.y + clip.h)
-        ) {
-          continue
-        }
-        const resolved = this._resolveSpriteByLocalId(ranges, tile.spriteSetId, tile.spriteId)
-        if (!resolved) continue
-        ops.push({
-          texture: resolved.texture,
-          sx: resolved.x,
-          sy: resolved.y,
-          sw: resolved.width,
-          sh: resolved.height,
-          tx,
-          ty,
-          tw: mapData.tileWidth,
-          th: mapData.tileHeight,
-        })
-      }
-    }
-    return ops
   }
 
   /** Fit mode: whole map, longest texture edge capped. */
   private _bakeFitTexture(): Gdk.Texture | null {
     const renderer = this.get_native()?.get_renderer()
-    if (!renderer || !this._mapWidth || !this._mapHeight) return null
-    const bakeScale = Math.min(1, BAKE_MAX_EDGE / Math.max(this._mapWidth, this._mapHeight))
+    if (!renderer || !this._source || !this._mapWidth || !this._mapHeight) return null
+    const scale = fitBakeScale(this._mapWidth, this._mapHeight, BAKE_MAX_EDGE)
     const region = new Graphene.Rect()
-    region.init(0, 0, this._mapWidth * bakeScale, this._mapHeight * bakeScale)
-    return this._renderOps(renderer, this._buildOps(null), bakeScale, 0, 0, region)
+    region.init(0, 0, this._mapWidth * scale, this._mapHeight * scale)
+    const ops = buildDrawOps(this._source.mapData, this._source.ranges, null)
+    return this._render(renderer, ops, { scale, offsetXMapPx: 0, offsetYMapPx: 0, region })
   }
 
   /** Viewport mode: the visible section at native-pixel zoom. */
@@ -508,139 +458,24 @@ export class MapPreview extends Gtk.Widget {
     const renderer = this.get_native()?.get_renderer()
     const width = this.get_width()
     const height = this.get_height()
-    if (!viewport || !renderer || width <= 0 || height <= 0) return null
+    if (!viewport || !renderer || !this._source || width <= 0 || height <= 0) return null
     // Re-clamp against the now-known widget size (initial centres are
     // set before the first allocation).
-    viewport.centerX = clampViewportCenter(viewport.centerX, this._mapWidth, width, viewport.zoom)
-    viewport.centerY = clampViewportCenter(viewport.centerY, this._mapHeight, height, viewport.zoom)
-    const viewW = width / viewport.zoom
-    const viewH = height / viewport.zoom
-    // Whole-map-pixel origin: a fractional origin would land every
-    // tile's clip edge between device pixels, and the NEAREST-sampled
-    // atlas bleeds a hairline of the neighbouring sheet cell through —
-    // visible as faint seams across the preview.
-    const originX = Math.round(viewport.centerX - viewW / 2)
-    const originY = Math.round(viewport.centerY - viewH / 2)
+    this._clampViewport(viewport.centerX, viewport.centerY)
+    const source = viewportSourceRect(viewport.centerX, viewport.centerY, width, height, viewport.zoom)
     const region = new Graphene.Rect()
     region.init(0, 0, width, height)
-    const ops = this._buildOps({ x: originX, y: originY, w: viewW, h: viewH })
-    return this._renderOps(renderer, ops, viewport.zoom, -originX, -originY, region)
+    const ops = buildDrawOps(this._source.mapData, this._source.ranges, source)
+    return this._render(renderer, ops, {
+      scale: viewport.zoom,
+      offsetXMapPx: -source.x,
+      offsetYMapPx: -source.y,
+      region,
+    })
   }
 
-  /** Rasterise ops (scaled + translated in map px) into `region`. */
-  private _renderOps(
-    renderer: Gsk.Renderer,
-    ops: DrawOp[],
-    scale: number,
-    offsetXMapPx: number,
-    offsetYMapPx: number,
-    region: Graphene.Rect,
-  ): Gdk.Texture | null {
-    const sub = Gtk.Snapshot.new()
-    if (this._mapBackground) {
-      const fill = new Graphene.Rect()
-      // Background covers the map bounds only (fit mode shows the
-      // accent outside them; viewport clamps inside the map anyway).
-      fill.init(
-        Math.max(0, offsetXMapPx * scale),
-        Math.max(0, offsetYMapPx * scale),
-        Math.min(region.get_width(), this._mapWidth * scale),
-        Math.min(region.get_height(), this._mapHeight * scale),
-      )
-      sub.append_color(this._mapBackground, fill)
-    }
-    const target = new Graphene.Rect()
-    const translatePoint = new Graphene.Point()
-    const fullRect = new Graphene.Rect()
-    for (const op of ops) {
-      this._paintTile(sub, op, scale, offsetXMapPx, offsetYMapPx, target, translatePoint, fullRect)
-    }
-    const node = sub.to_node()
-    if (!node) return null
-    try {
-      return renderer.render_texture(node, region)
-    } catch (error) {
-      console.warn('[MapPreview] Failed to bake preview texture:', error)
-      return null
-    }
-  }
-
-  /**
-   * Append one tile to the bake snapshot. The three Graphene temps are
-   * caller-owned and reused across the whole loop — allocating them
-   * per tile triples the GI overhead of the hottest loop in here.
-   */
-  private _paintTile(
-    snapshot: Gtk.Snapshot,
-    op: DrawOp,
-    scale: number,
-    offsetXMapPx: number,
-    offsetYMapPx: number,
-    target: Graphene.Rect,
-    translatePoint: Graphene.Point,
-    fullRect: Graphene.Rect,
-  ): void {
-    const tx = (op.tx + offsetXMapPx) * scale
-    const ty = (op.ty + offsetYMapPx) * scale
-    target.init(tx, ty, op.tw * scale, op.th * scale)
-    snapshot.push_clip(target)
-    snapshot.save()
-
-    // The texture is the full atlas. Translate so the wanted sub-region
-    // lines up with `target`, then paint the whole atlas at the same
-    // scale. Push_clip keeps the rest invisible.
-    const textureScale = (op.tw * scale) / op.sw
-    translatePoint.init(tx - op.sx * textureScale, ty - op.sy * textureScale)
-    snapshot.translate(translatePoint)
-
-    fullRect.init(0, 0, op.texture.get_width() * textureScale, op.texture.get_height() * textureScale)
-    snapshot.append_scaled_texture(op.texture, Gsk.ScalingFilter.NEAREST, fullRect)
-
-    snapshot.restore()
-    snapshot.pop()
-  }
-
-  private async _collectSheets(
-    resource: GameProjectResource,
-    spriteSetRefs: { id: string; firstGid: number }[],
-  ): Promise<SheetRange[]> {
-    const ranges: SheetRange[] = []
-    for (const ref of spriteSetRefs) {
-      try {
-        const engineSet = await resource.getSpriteSet(ref.id)
-        if (!engineSet) continue
-        const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
-        if (!gdkSet.spriteSheet) continue
-        ranges.push({
-          spriteSetId: ref.id,
-          start: ref.firstGid,
-          end: ref.firstGid + gdkSet.spriteSheet.sprites.length - 1,
-          sheet: gdkSet.spriteSheet,
-        })
-      } catch (error) {
-        console.warn(`[MapPreview] Failed to load sprite set ${ref.id}:`, error)
-      }
-    }
-    return ranges
-  }
-
-  /**
-   * Look up a sprite by its `(spriteSetId, spriteId)` reference and
-   * resolve it to a renderable atlas region. The map format stores
-   * `spriteId` as a **local** 0-based index within the named set.
-   */
-  private _resolveSpriteByLocalId(
-    ranges: SheetRange[],
-    spriteSetId: string,
-    localId: number,
-  ): { texture: Gdk.Texture; x: number; y: number; width: number; height: number } | null {
-    const range = ranges.find((r) => r.spriteSetId === spriteSetId)
-    if (!range) return null
-    const sprite = range.sheet.sprites[localId]
-    if (!sprite) return null
-    const texture = sprite.sourceTexture
-    if (!texture) return null
-    return { texture, x: sprite.x, y: sprite.y, width: sprite.width, height: sprite.height }
+  private _render(renderer: Gsk.Renderer, ops: DrawOp[], placement: BakePlacement): Gdk.Texture | null {
+    return renderOps(renderer, ops, placement, this._mapWidth, this._mapHeight, this._mapBackground)
   }
 }
 

@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { LayerRow } from './layer-row'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './layers-tab.blp'
 
@@ -39,6 +40,7 @@ export class LayersTab extends Adw.Bin {
   private _objectsVisible = true
   /** True while {@link setLayerState} writes — suppresses the toggle re-emit. */
   private _suppressToggleEmit = false
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -62,9 +64,9 @@ export class LayersTab extends Adw.Bin {
     )
   }
 
-  constructor() {
-    super()
-    this._list.connect('row-selected', (_list, row) => {
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._list, 'row-selected', (_list: Gtk.ListBox, row: Gtk.ListBoxRow | null) => {
       if (!row) return
       const id = (row as Gtk.ListBoxRow & { layerId?: string }).layerId
       if (!id) return
@@ -74,6 +76,11 @@ export class LayersTab extends Adw.Bin {
       }
       this.emit('layer-selected', id)
     })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   get activeId(): string | null {

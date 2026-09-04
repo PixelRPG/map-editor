@@ -4,9 +4,7 @@ import type {
   ProjectOp,
   ProjectSnapshot,
   SignallingTransport,
-  SpriteSetAddChunkOp,
   SpriteSetAddPayload,
-  SpriteSetUpdateChunkOp,
   SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 import {
@@ -14,56 +12,27 @@ import {
   captureProjectSnapshot,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
-  isProjectOp,
-  isSessionProtocolOp,
   OpChunkReassembler,
   type PeerRole,
   PeerSession,
-  type PeerSessionState,
   PreAttachOpBuffer,
   RemoteCursorRenderer,
   SessionController,
   SnapshotExchange,
   type SnapshotOpWatermark,
-  SPRITESET_ADD_CHUNK_KIND,
-  SPRITESET_UPDATE_CHUNK_KIND,
   SpriteSetAddReassembler,
 } from '@pixelrpg/engine'
 
-import { CollabTimeoutError, scopedLogger, withTimeout } from './collab-log.ts'
+import { scopedLogger, withTimeout } from './collab-log.ts'
+import { routeInboundOp } from './collab-inbound-route.ts'
+import { OutboundOpStamper } from './collab-op-stamper.ts'
+import { PEER_CONNECT_TIMEOUT_MS, waitForPeerConnected } from './collab-peer-connect.ts'
+import { colourForPeer } from './collab-peer-colour.ts'
+import { SinkBuffer } from './collab-sink-buffer.ts'
 
 const log = scopedLogger('collab-session')
 
-/**
- * Distinct accent palette for collaborators (Adwaita-ish), deliberately
- * excluding the AI assistant's default purple (`#9141ac`) so a human peer
- * and the AI don't collide. Each peer's colour is its peerId hashed into
- * this palette — stable across reconnects, distinct between peers.
- */
-const PEER_COLOURS = ['#3584e4', '#33d17a', '#f6d32d', '#ff7800', '#e01b24', '#c061cb', '#986a44', '#33c7de']
-
-function colourForPeer(peerId: string): string {
-  let hash = 0
-  for (let i = 0; i < peerId.length; i++) hash = (hash * 31 + peerId.charCodeAt(i)) >>> 0
-  return PEER_COLOURS[hash % PEER_COLOURS.length]
-}
-
-/**
- * Default deadline for the WebRTC handshake — from the moment
- * `peer.connect()` is called to the moment both data channels open
- * and the peer's state transitions to `'connected'`. Generous to
- * accommodate slow ICE on busy networks, but short enough to fail
- * fast on a misconfigured relay or a network-unreachable peer.
- *
- * Pre-2026-05-30 there was no deadline here at all. The joiner-side
- * `collab.start()` would resolve as soon as ICE GATHERING started
- * (PeerSession's `connect()` contract) and `requestSnapshot()` would
- * await the host's response — which never arrived if the actual SDP
- * round-trip silently failed. Symptom: "joiner WS connects but
- * nothing else happens." Now: the joiner times out after 15s with
- * a typed CollabTimeoutError naming the unmet condition.
- */
-export const PEER_CONNECT_TIMEOUT_MS = 15_000
+export { PEER_CONNECT_TIMEOUT_MS } from './collab-peer-connect.ts'
 
 export interface CollabSessionOptions {
   /**
@@ -144,6 +113,7 @@ export class CollabSession {
   /** Set once {@link attachEngine} runs. `null` in the joiner-pre-snapshot phase. */
   public controller: SessionController | null = null
   public cursorRenderer: RemoteCursorRenderer | null = null
+
   /**
    * Sink for inbound project-level ops (`__project/*` — entity-library /
    * player / meta / map-editor-data / sprite-set-remove mutations). The
@@ -154,11 +124,10 @@ export class CollabSession {
    * the engine-tied SessionController.
    */
   get onProjectOpReceived(): ((op: ProjectOp) => void) | null {
-    return this._onProjectOpReceived
+    return this.projectOps.get()
   }
   set onProjectOpReceived(fn: ((op: ProjectOp) => void) | null) {
-    this._onProjectOpReceived = fn
-    if (fn) for (const op of this.preSinkProjectOps.splice(0)) fn(op)
+    this.projectOps.set(fn)
   }
   /**
    * Sink for a completed sprite-set-import transfer. The maker's
@@ -167,11 +136,10 @@ export class CollabSession {
    * once all chunks of one transfer arrive.
    */
   get onSpriteSetAddReceived(): ((payload: SpriteSetAddPayload) => void) | null {
-    return this._onSpriteSetAddReceived
+    return this.spriteSetAdds.get()
   }
   set onSpriteSetAddReceived(fn: ((payload: SpriteSetAddPayload) => void) | null) {
-    this._onSpriteSetAddReceived = fn
-    if (fn) for (const p of this.preSinkSpriteSetAdds.splice(0)) fn(p)
+    this.spriteSetAdds.set(fn)
   }
   /**
    * Sink for a completed sprite-set DESCRIPTOR update (rename / animation
@@ -181,35 +149,21 @@ export class CollabSession {
    * one transfer arrive.
    */
   get onSpriteSetUpdateReceived(): ((payload: SpriteSetUpdatePayload) => void) | null {
-    return this._onSpriteSetUpdateReceived
+    return this.spriteSetUpdates.get()
   }
   set onSpriteSetUpdateReceived(fn: ((payload: SpriteSetUpdatePayload) => void) | null) {
-    this._onSpriteSetUpdateReceived = fn
-    if (fn) for (const p of this.preSinkSpriteSetUpdates.splice(0)) fn(p)
+    this.spriteSetUpdates.set(fn)
   }
-  private _onProjectOpReceived: ((op: ProjectOp) => void) | null = null
-  private _onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null = null
-  private _onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null = null
-  /**
-   * Holding pens for project-level traffic that arrives before its sink is
-   * registered — the joiner's `start()` → `ProjectStore.setCollabSession`
-   * (after the snapshot + sandbox project load) window. Without these the
-   * op was dropped on the floor: a host editing the cast / entity-library /
-   * sprite-sets while a joiner connects silently desynced the joiner.
-   * Drained in arrival order when the matching sink is assigned. The plain
-   * project-op channel is idempotent upserts, so replaying one already
-   * folded into the snapshot is safe.
-   */
-  private readonly preSinkProjectOps: ProjectOp[] = []
-  private readonly preSinkSpriteSetAdds: SpriteSetAddPayload[] = []
-  private readonly preSinkSpriteSetUpdates: SpriteSetUpdatePayload[] = []
+
+  private readonly projectOps = new SinkBuffer<ProjectOp>()
+  private readonly spriteSetAdds = new SinkBuffer<SpriteSetAddPayload>()
+  private readonly spriteSetUpdates = new SinkBuffer<SpriteSetUpdatePayload>()
   private closed = false
   private engine: Engine | null = null
   private readonly peerId: string
   private readonly roomId: string
   private readonly peerConnectTimeoutMs: number
-  private projectSeq = 0
-  private transferCounter = 0
+  private readonly stamper: OutboundOpStamper
   /**
    * Holding pen for scene Command ops that arrive before
    * {@link attachEngine} builds the SessionController (the joiner's
@@ -232,6 +186,7 @@ export class CollabSession {
     this.peerId = opts.peerId
     this.roomId = opts.roomId ?? ''
     this.peerConnectTimeoutMs = opts.peerConnectTimeoutMs ?? PEER_CONNECT_TIMEOUT_MS
+    this.stamper = new OutboundOpStamper(opts.peerId)
     this.peer = new PeerSession({
       role: opts.role,
       signalling: opts.signalling,
@@ -279,74 +234,69 @@ export class CollabSession {
     this.snapshotExchange = new SnapshotExchange({
       peerId: opts.peerId,
       send: (op) => this.peer.sendOp(op),
-      captureSnapshot: async () => {
-        if (!this.engine) return null
-        // Read the command-seq watermark SYNCHRONOUSLY before the
-        // (async) capture touches any state: every op we sent with
-        // `seq < nextSeq` was applied to our engine before this line
-        // ran, so its effect is guaranteed inside the snapshot and the
-        // joiner can skip its buffered copy. Ops sequenced during the
-        // capture replay on the joiner — safe, because every built-in
-        // command's apply is idempotent (see attachEngine).
-        const watermark: SnapshotOpWatermark | null = this.controller
-          ? { peerId: this.peerId, nextSeq: this.controller.peekNextSeq() }
-          : null
-        const snapshot = await captureProjectSnapshot(this.engine)
-        if (!snapshot) return null
-        return watermark ? { ...snapshot, opWatermark: watermark } : snapshot
-      },
+      captureSnapshot: () => this.captureWatermarkedSnapshot(),
     })
     const opSub = this.peer.events.on('op-received', ({ op }) => {
-      if (isSessionProtocolOp(op)) {
-        this.snapshotExchange.handle(op)
-        return
-      }
-      // Project-level ops apply even with no engine attached (cast
-      // editing has no scene) — hand them to the maker-side sink.
-      // Drop our own echoes defensively (point-to-point shouldn't
-      // loop them back, but mirrors SessionController's guard).
-      if (isProjectOp(op) && (op as ProjectOp).peerId !== this.peerId) {
-        // Sprite-set imports arrive chunked — reassemble before
-        // surfacing the (heavy, binary) payload to its own sink.
-        if ((op as ProjectOp).kind === SPRITESET_ADD_CHUNK_KIND) {
-          const payload = this.spriteSetReassembler.accept(op as SpriteSetAddChunkOp)
-          // Buffer the completed payload if the sink isn't registered yet
-          // (joiner pre-attach window) so it isn't dropped.
-          if (payload) {
-            if (this._onSpriteSetAddReceived) this._onSpriteSetAddReceived(payload)
-            else this.preSinkSpriteSetAdds.push(payload)
-          }
-        } else if ((op as ProjectOp).kind === SPRITESET_UPDATE_CHUNK_KIND) {
-          // Descriptor-only updates (rename / animation / tile-prop) are
-          // also chunked — a fat tileset descriptor can exceed the SCTP
-          // single-send ceiling.
-          const payload = this.spriteSetUpdateReassembler.accept(op as SpriteSetUpdateChunkOp)
-          if (payload) {
-            if (this._onSpriteSetUpdateReceived) this._onSpriteSetUpdateReceived(payload)
-            else this.preSinkSpriteSetUpdates.push(payload)
-          }
-        } else if (this._onProjectOpReceived) {
-          this._onProjectOpReceived(op as ProjectOp)
-        } else {
-          // No sink yet — buffer until ProjectStore registers itself
-          // (drained by the onProjectOpReceived setter).
-          this.preSinkProjectOps.push(op as ProjectOp)
-        }
-        return
-      }
-      // Scene Command ops are consumed by the SessionController —
-      // which only exists once attachEngine() runs. Buffer them in
-      // the meantime (joiner pre-attach window) so a host paint /
-      // place / undo during snapshot-load + engine-init isn't lost;
-      // attachEngine replays the buffer in arrival order. Own echoes
-      // are skipped defensively (mirrors SessionController's guard).
-      if (!this.controller && (op as { peerId?: unknown }).peerId !== this.peerId) {
-        this.preAttachBuffer.push(op)
-      }
+      this.handleInboundOp(op)
     })
     this.subscriptions.push(() => opSub.close())
 
     if (opts.engine) this.attachEngine(opts.engine)
+  }
+
+  /**
+   * Read the command-seq watermark SYNCHRONOUSLY before the (async)
+   * capture touches any state: every op we sent with `seq < nextSeq` was
+   * applied to our engine before this line ran, so its effect is
+   * guaranteed inside the snapshot and the joiner can skip its buffered
+   * copy. Ops sequenced during the capture replay on the joiner — safe,
+   * because every built-in command's apply is idempotent (see
+   * {@link attachEngine}).
+   */
+  private async captureWatermarkedSnapshot(): Promise<ProjectSnapshot | null> {
+    if (!this.engine) return null
+    const watermark: SnapshotOpWatermark | null = this.controller
+      ? { peerId: this.peerId, nextSeq: this.controller.peekNextSeq() }
+      : null
+    const snapshot = await captureProjectSnapshot(this.engine)
+    if (!snapshot) return null
+    return watermark ? { ...snapshot, opWatermark: watermark } : snapshot
+  }
+
+  /**
+   * Fan one inbound op out to its destination (see
+   * {@link routeInboundOp}). Sprite-set transfers arrive chunked —
+   * reassemble before surfacing the (heavy, binary) payload. Scene
+   * Command ops are consumed by the `SessionController`, which only
+   * exists once {@link attachEngine} runs; buffer them in the meantime
+   * so a host paint / place / undo during the joiner's snapshot-load +
+   * engine-init window isn't lost.
+   */
+  private handleInboundOp(op: unknown): void {
+    const route = routeInboundOp(op, this.peerId)
+    switch (route.kind) {
+      case 'session-protocol':
+        this.snapshotExchange.handle(route.op)
+        return
+      case 'sprite-set-add': {
+        const payload = this.spriteSetReassembler.accept(route.op)
+        if (payload) this.spriteSetAdds.deliver(payload)
+        return
+      }
+      case 'sprite-set-update': {
+        const payload = this.spriteSetUpdateReassembler.accept(route.op)
+        if (payload) this.spriteSetUpdates.deliver(payload)
+        return
+      }
+      case 'project':
+        this.projectOps.deliver(route.op)
+        return
+      case 'command':
+        if (!this.controller) this.preAttachBuffer.push(op)
+        return
+      case 'own-echo':
+        return
+    }
   }
 
   /**
@@ -407,20 +357,7 @@ export class CollabSession {
       // SessionController's own filter drops them via the no-hook
       // path; we deliberately don't double-route through here.
     })
-    // Replay ops buffered during the pre-attach window BEFORE any live
-    // op can interleave (this method is synchronous — the controller's
-    // own `op-received` subscription can't fire until we return to the
-    // event loop). Arrival order on the ordered-reliable channel equals
-    // the host's send order, so replaying in buffer order preserves
-    // host-side causality.
-    if (this.preAttachBuffer.dropped > 0) {
-      log.warn(`pre-attach buffer overflowed — ${this.preAttachBuffer.dropped} oldest op(s) were dropped`)
-    }
-    const buffered = this.preAttachBuffer.drain(this.snapshotWatermark)
-    if (buffered.length > 0) {
-      log.info(`replaying ${buffered.length} buffered pre-attach op(s)`)
-      for (const op of buffered) this.controller.applyRemoteOperation(op)
-    }
+    this.replayPreAttachOps()
     this.cursorRenderer = new RemoteCursorRenderer(engine, this.awareness)
     // Bridge engine pointer → awareness cursor stream. The engine
     // hook fires on every Excalibur `pointermove`; the manager
@@ -438,21 +375,32 @@ export class CollabSession {
   }
 
   /**
+   * Replay ops buffered during the pre-attach window BEFORE any live op
+   * can interleave — `attachEngine` is synchronous, so the controller's
+   * own `op-received` subscription can't fire until we return to the
+   * event loop. Arrival order on the ordered-reliable channel equals the
+   * host's send order, so replaying in buffer order preserves host-side
+   * causality.
+   */
+  private replayPreAttachOps(): void {
+    if (this.preAttachBuffer.dropped > 0) {
+      log.warn(`pre-attach buffer overflowed — ${this.preAttachBuffer.dropped} oldest op(s) were dropped`)
+    }
+    const buffered = this.preAttachBuffer.drain(this.snapshotWatermark)
+    if (buffered.length === 0) return
+    log.info(`replaying ${buffered.length} buffered pre-attach op(s)`)
+    for (const op of buffered) this.controller?.applyRemoteOperation(op)
+  }
+
+  /**
    * Drive the WebRTC handshake to a fully-connected state.
    *
    * Resolves once the underlying {@link PeerSession} transitions to
    * `'connected'` — i.e. both data channels are open and ready for
-   * traffic. Rejects with a {@link CollabTimeoutError} if the
-   * negotiation doesn't reach `'connected'` within
-   * {@link PEER_CONNECT_TIMEOUT_MS} (or the override passed via
+   * traffic. Rejects with a `CollabTimeoutError` if the negotiation
+   * doesn't reach `'connected'` within {@link PEER_CONNECT_TIMEOUT_MS}
+   * (or the override passed via
    * {@link CollabSessionOptions.peerConnectTimeoutMs}).
-   *
-   * Why wait for `'connected'`, not just `peer.connect()`?
-   * `PeerSession.connect()` resolves once ICE gathering kicks off —
-   * which happens almost immediately for the host, and instantly
-   * for the joiner (its role is to wait for the host's offer).
-   * Without an extra wait, callers (notably {@link requestSnapshot})
-   * would start sending traffic on still-closed channels.
    *
    * Once `'connected'`, an initial `presence` frame goes out so the
    * remote peer's roster + cursor UI populate immediately. Repeat
@@ -472,45 +420,26 @@ export class CollabSession {
       // (minus what peer.connect() already consumed — we don't track
       // elapsed precisely; the remaining budget is approximately
       // `timeout - 0`, which is fine for the typical sub-second LAN).
-      await withTimeout('CollabSession reach connected state', this.peerConnectTimeoutMs, this.waitForConnected())
+      await withTimeout(
+        'CollabSession reach connected state',
+        this.peerConnectTimeoutMs,
+        waitForPeerConnected(
+          () => this.peer.getState(),
+          (listener) => {
+            const sub = this.peer.events.on('state-changed', ({ state }) => listener(state))
+            return () => sub.close()
+          },
+        ),
+      )
     } catch (err) {
       log.warn('start() failed during peer negotiation', err)
       throw err
     }
-    // If `waitForConnected` resolved synchronously (already connected
+    // If `waitForPeerConnected` resolved synchronously (already connected
     // before we subscribed), the announce-on-connect listener never
     // fired. Fire once immediately so late wires don't lose the
     // first presence frame.
     if (this.peer.getState() === 'connected') this.awareness.announce()
-  }
-
-  /**
-   * Resolve once {@link PeerSession} state is `'connected'`; reject
-   * on any terminal state (`'closed'`, `'error'`). Used by
-   * {@link start} to gate on the actual handshake completion rather
-   * than ICE-gather-started.
-   */
-  private waitForConnected(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      const current = this.peer.getState()
-      if (current === 'connected') {
-        resolve()
-        return
-      }
-      if (current === 'closed' || current === 'error') {
-        reject(new Error(`CollabSession: peer is already "${current}"`))
-        return
-      }
-      const sub = this.peer.events.on('state-changed', ({ state }: { state: PeerSessionState }) => {
-        if (state === 'connected') {
-          sub.close()
-          resolve()
-        } else if (state === 'closed' || state === 'error') {
-          sub.close()
-          reject(new Error(`CollabSession: peer transitioned to "${state}" before connect`))
-        }
-      })
-    })
   }
 
   /**
@@ -545,7 +474,7 @@ export class CollabSession {
    */
   sendProjectOp(build: (ctx: { peerId: string; seq: number }) => ProjectOp): void {
     if (this.closed) return
-    this.peer.sendOp(build({ peerId: this.peerId, seq: this.projectSeq++ }))
+    this.peer.sendOp(build(this.stamper.next()))
   }
 
   /**
@@ -556,9 +485,9 @@ export class CollabSession {
    */
   sendSpriteSetAdd(payload: SpriteSetAddPayload): void {
     if (this.closed) return
-    const transferId = `${this.peerId}:s${this.transferCounter++}`
+    const transferId = this.stamper.nextTransferId('s')
     for (const chunk of chunkSpriteSetAdd({ transferId, payload })) {
-      this.peer.sendOp({ ...chunk, peerId: this.peerId, seq: this.projectSeq++ })
+      this.peer.sendOp(this.stamper.stamp(chunk))
     }
   }
 
@@ -570,9 +499,9 @@ export class CollabSession {
    */
   sendSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
     if (this.closed) return
-    const transferId = `${this.peerId}:u${this.transferCounter++}`
+    const transferId = this.stamper.nextTransferId('u')
     for (const chunk of chunkSpriteSetUpdate({ transferId, payload })) {
-      this.peer.sendOp({ ...chunk, peerId: this.peerId, seq: this.projectSeq++ })
+      this.peer.sendOp(this.stamper.stamp(chunk))
     }
   }
 
@@ -607,9 +536,9 @@ export class CollabSession {
     }
     this.subscriptions.length = 0
     this.preAttachBuffer.clear()
-    this.preSinkProjectOps.length = 0
-    this.preSinkSpriteSetAdds.length = 0
-    this.preSinkSpriteSetUpdates.length = 0
+    this.projectOps.clear()
+    this.spriteSetAdds.clear()
+    this.spriteSetUpdates.clear()
     this.spriteSetReassembler.clear()
     this.spriteSetUpdateReassembler.clear()
     this.cursorRenderer?.close()

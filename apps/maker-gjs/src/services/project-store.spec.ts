@@ -325,6 +325,63 @@ export default async () => {
       store.applyRemoteProjectOp(remoteUpsert(npc))
       expect(io.writes).toHaveLength(0)
     })
+
+    await it('ignores an unrecognised __project/* kind (forward compat)', async () => {
+      const { store, io } = makeStore()
+      let events = 0
+      store.on('entity-library-changed', () => events++)
+
+      store.applyRemoteProjectOp({
+        kind: '__project/future.thing',
+        payload: {},
+        peerId: 'peer-b',
+        seq: 0,
+      } as unknown as ProjectOp)
+
+      expect(io.writes).toHaveLength(0)
+      expect(events).toBe(0)
+    })
+  })
+
+  await describe('ProjectStore — sprite-set list', async () => {
+    const refs = () => [
+      { id: 'a', path: './spritesets/a.json', type: 'spriteset' as const, firstGid: 1 },
+      { id: 'b', path: './spritesets/b.json', type: 'spriteset' as const, firstGid: 5 },
+    ]
+
+    await it('reorderSpriteSets rewrites the order, persists and notifies list-wide', async () => {
+      const { store, io, data } = makeStore(makeProjectData({ spriteSets: refs() }))
+      const session = makeSession()
+      store.setCollabSession(session)
+      const events: Array<{ spriteSetId?: string }> = []
+      store.on('sprite-sets-changed', (e) => events.push(e))
+
+      store.reorderSpriteSets(['b', 'a'])
+
+      expect(data.spriteSets.map((r) => r.id)).toStrictEqual(['b', 'a'])
+      expect(io.writes).toHaveLength(1)
+      // No `spriteSetId`: the LIST changed, not a set.
+      expect(events).toStrictEqual([{}])
+      // Order is local + cosmetic — deliberately never broadcast.
+      expect(session.sent).toHaveLength(0)
+    })
+
+    await it('reorderSpriteSets is a no-op when the order is already current', async () => {
+      const { store, io } = makeStore(makeProjectData({ spriteSets: refs() }))
+      let events = 0
+      store.on('sprite-sets-changed', () => events++)
+
+      store.reorderSpriteSets(['a', 'b'])
+
+      expect(io.writes).toHaveLength(0)
+      expect(events).toBe(0)
+    })
+
+    await it('mutateSpriteSetData reports false for an unknown set without writing', async () => {
+      const { store, io } = makeStore()
+      expect(store.mutateSpriteSetData('ghost', () => {})).toBe(false)
+      expect(io.writes).toHaveLength(0)
+    })
   })
 
   await describe('ProjectStore — applyRemoteSpriteSetAdd idempotency', async () => {

@@ -28,26 +28,37 @@ import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
 import mapResourceSuite from './resource/map-resource.spec.js'
+import shadowFoldSuite from './resource/shadow-fold.spec.js'
+import spriteSoliditySuite from './resource/sprite-solidity.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
+import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
 import floodFillSuite from './services/flood-fill.spec.js'
 import layerFlagEventSuite from './services/layer-flag-event.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
+import placementGeometrySuite from './services/placement-geometry.spec.js'
+import placementPickingSuite from './services/placement-picking.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
+import playerCharacterSuite from './services/player-character.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
+import tileEditTargetSuite from './services/tile-edit-target.spec.js'
 import tileGeometrySuite from './services/tile-geometry.spec.js'
 import awarenessSuite from './sync/awareness.spec.js'
 import chunkingSuite from './sync/chunking.spec.js'
 import collabIntegrationSuite from './sync/collab-integration.spec.js'
+import cursorThrottleSuite from './sync/cursor-throttle.spec.js'
+import disconnectGraceSuite from './sync/disconnect-grace.spec.js'
 import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
 import peerSessionSuite from './sync/peer-session.spec.js'
+import pendingIceBufferSuite from './sync/pending-ice-buffer.spec.js'
 import preAttachOpBufferSuite from './sync/pre-attach-op-buffer.spec.js'
 import projectOperationsSuite from './sync/project-operations.spec.js'
 import projectSnapshotSuite from './sync/project-snapshot.spec.js'
 import sessionControllerSuite from './sync/session-controller.spec.js'
 import sessionProtocolSuite from './sync/session-protocol.spec.js'
 import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
+import snapshotPathsSuite from './sync/snapshot-paths.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
 import tileEditorSystemSuite from './systems/tile-editor.system.spec.js'
@@ -71,11 +82,18 @@ run({
   entitySpawnPlacementSuite,
   objectSystemValidationSuite,
   mapResourceSuite,
+  shadowFoldSuite,
+  spriteSoliditySuite,
   layerVisibilitySuite,
+  placementGeometrySuite,
   placementIdSuite,
+  placementPickingSuite,
+  playerCharacterSuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
+  tileEditTargetSuite,
   tileGeometrySuite,
+  editorViewFlagsSuite,
   agentMapDataSuite,
   assistantPresenceSuite,
   floodFillSuite,
@@ -83,14 +101,18 @@ run({
   awarenessSuite,
   chunkingSuite,
   collabIntegrationSuite,
+  cursorThrottleSuite,
+  disconnectGraceSuite,
   inMemoryTransportSuite,
   peerSessionSuite,
+  pendingIceBufferSuite,
   preAttachOpBufferSuite,
   projectOperationsSuite,
   projectSnapshotSuite,
   sessionControllerSuite,
   sessionProtocolSuite,
   snapshotExchangeSuite,
+  snapshotPathsSuite,
   inputSystemSuite,
   eventActionSystemSuite,
   tileEditorSystemSuite,

@@ -5,7 +5,9 @@ import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene } from '../../__demo__/world-sample'
+import { SignalScope } from '../../utils/signal-scope.ts'
 import { MiniMap } from './mini-map'
+import { dragModeFor, hasPassedDragThreshold, isDoubleClick, type SceneDragMode } from './scene-card.drag.ts'
 
 import Template from './scene-card.blp'
 
@@ -62,7 +64,7 @@ export class SceneCard extends Gtk.Button {
    */
   private _pannablePreview = false
   /** Current drag interpretation, decided at gesture-begin. */
-  private _dragMode: 'move' | 'pan' = 'move'
+  private _dragMode: SceneDragMode = 'move'
   /** Last emitted pan offset, for incremental `preview-pan-update`s. */
   private _lastPan = { dx: 0, dy: 0 }
   // Press point in widget-local coords (captured at drag-begin) and
@@ -70,6 +72,9 @@ export class SceneCard extends Gtk.Button {
   // computed in parent space (see `_moveDeltaInParent` for why).
   private _pressLocal: Graphene.Point | null = null
   private _pressInParent: Graphene.Point | null = null
+  /** Drag gesture on the card itself; created on first map, kept for life. */
+  private _dragGesture: Gtk.GestureDrag | null = null
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -133,71 +138,93 @@ export class SceneCard extends Gtk.Button {
     )
   }
 
-  constructor() {
-    super()
-    this.connect('clicked', this._onClicked.bind(this))
-
-    // Drag support: GtkButton normally swallows drags into clicks; add a
-    // dedicated GestureDrag with `propagation-phase: capture` so we can
-    // intercept presses before the button's own click handling.
-    const drag = new Gtk.GestureDrag()
-    drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-    drag.connect('drag-begin', (_g, x, y) => {
-      this._dragging = false
-      this._pressOnLock = this._isOnLock(x, y)
-      // Lock presses always MOVE the card (a click toggles instead —
-      // see `_onClicked`); presses on the preview content PAN the map
-      // section when the lock is open.
-      this._dragMode = !this._pannablePreview || this._pressOnLock ? 'move' : 'pan'
-      this._lastPan = { dx: 0, dy: 0 }
-      this._pressLocal = new Graphene.Point()
-      this._pressLocal.init(x, y)
-      this._pressInParent = this._toParent(this._pressLocal)
-    })
-    drag.connect('drag-update', (_g, dx, dy) => {
-      const dist = Math.hypot(dx, dy)
-      if (!this._dragging && dist > 4) {
-        this._dragging = true
-        if (this._dragMode === 'move') this.emit('scene-drag-begin')
-      }
-      if (!this._dragging) return
-      if (this._dragMode === 'pan') {
-        this.emit('preview-pan-update', dx - this._lastPan.dx, dy - this._lastPan.dy)
-        this._lastPan = { dx, dy }
-        return
-      }
-      const delta = this._moveDeltaInParent(dx, dy)
-      if (delta) this.emit('scene-drag-update', delta.x, delta.y)
-    })
-    drag.connect('drag-end', (_g, dx, dy) => {
-      const wasRealDrag = this._dragging
-      if (wasRealDrag && this._dragMode === 'pan') {
-        this.emit('preview-pan-end')
-        this._lastClickMs = 0
-      } else if (wasRealDrag) {
-        const delta = this._moveDeltaInParent(dx, dy)
-        if (delta) this.emit('scene-drag-end', delta.x, delta.y)
-        // Reset the double-click timer so the trailing click can't
-        // chain into a `scene-activated` (open) on the next press.
-        this._lastClickMs = 0
-      }
-      this._pressLocal = null
-      this._pressInParent = null
-      if (wasRealDrag) this._suppressTrailingClick()
-      else this._dragging = false
-    })
-    this.add_controller(drag)
-
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this, 'clicked', () => this._onClicked())
+    const drag = this._ensureDragGesture()
+    this._signals.connect(drag, 'drag-begin', (_g: Gtk.GestureDrag, x: number, y: number) => this._onDragBegin(x, y))
+    this._signals.connect(drag, 'drag-update', (_g: Gtk.GestureDrag, dx: number, dy: number) =>
+      this._onDragUpdate(dx, dy),
+    )
+    this._signals.connect(drag, 'drag-end', (_g: Gtk.GestureDrag, dx: number, dy: number) => this._onDragEnd(dx, dy))
     // The lock toggle drives the drag interpretation: closed (default)
     // = drags move the card, open = drags pan the preview section.
-    this._lock_button?.connect('toggled', () => {
-      this._pannablePreview = this._lock_button.active
-      this._lock_button.set_icon_name(this._lock_button.active ? 'changes-allow-symbolic' : 'changes-prevent-symbolic')
-      this._lock_button.set_tooltip_text(
-        this._lock_button.active ? _('Lock to move the card instead') : _('Unlock to pan the preview section'),
-      )
-      this.emit('lock-changed', this._lock_button.active)
-    })
+    if (this._lock_button) {
+      this._signals.connect(this._lock_button, 'toggled', () => this._onLockToggled())
+    }
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
+  }
+
+  /**
+   * `GtkButton` normally swallows drags into clicks; a dedicated
+   * `GestureDrag` on the CAPTURE phase intercepts presses before the
+   * button's own click handling. Created once and kept — `vfunc_unmap`
+   * releases its handlers, not the controller.
+   */
+  private _ensureDragGesture(): Gtk.GestureDrag {
+    if (this._dragGesture) return this._dragGesture
+    const drag = new Gtk.GestureDrag()
+    drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+    this.add_controller(drag)
+    this._dragGesture = drag
+    return drag
+  }
+
+  private _onDragBegin(x: number, y: number): void {
+    this._dragging = false
+    this._pressOnLock = this._isOnLock(x, y)
+    this._dragMode = dragModeFor(this._pannablePreview, this._pressOnLock)
+    this._lastPan = { dx: 0, dy: 0 }
+    this._pressLocal = new Graphene.Point()
+    this._pressLocal.init(x, y)
+    this._pressInParent = this._toParent(this._pressLocal)
+  }
+
+  private _onDragUpdate(dx: number, dy: number): void {
+    if (!this._dragging && hasPassedDragThreshold(dx, dy)) {
+      this._dragging = true
+      if (this._dragMode === 'move') this.emit('scene-drag-begin')
+    }
+    if (!this._dragging) return
+    if (this._dragMode === 'pan') {
+      this.emit('preview-pan-update', dx - this._lastPan.dx, dy - this._lastPan.dy)
+      this._lastPan = { dx, dy }
+      return
+    }
+    const delta = this._moveDeltaInParent(dx, dy)
+    if (delta) this.emit('scene-drag-update', delta.x, delta.y)
+  }
+
+  private _onDragEnd(dx: number, dy: number): void {
+    const wasRealDrag = this._dragging
+    if (wasRealDrag && this._dragMode === 'pan') {
+      this.emit('preview-pan-end')
+      this._lastClickMs = 0
+    } else if (wasRealDrag) {
+      const delta = this._moveDeltaInParent(dx, dy)
+      if (delta) this.emit('scene-drag-end', delta.x, delta.y)
+      // Reset the double-click timer so the trailing click can't
+      // chain into a `scene-activated` (open) on the next press.
+      this._lastClickMs = 0
+    }
+    this._pressLocal = null
+    this._pressInParent = null
+    if (wasRealDrag) this._suppressTrailingClick()
+    else this._dragging = false
+  }
+
+  private _onLockToggled(): void {
+    const open = this._lock_button.active
+    this._pannablePreview = open
+    this._lock_button.set_icon_name(open ? 'changes-allow-symbolic' : 'changes-prevent-symbolic')
+    this._lock_button.set_tooltip_text(
+      open ? _('Lock to move the card instead') : _('Unlock to pan the preview section'),
+    )
+    this.emit('lock-changed', open)
   }
 
   /**
@@ -379,7 +406,7 @@ export class SceneCard extends Gtk.Button {
       return
     }
     const now = Date.now()
-    if (now - this._lastClickMs < 350) {
+    if (isDoubleClick(now, this._lastClickMs)) {
       this.emit('scene-activated')
       this._lastClickMs = 0
       return

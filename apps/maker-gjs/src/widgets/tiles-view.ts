@@ -2,57 +2,64 @@ import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type {
-  CharacterAnimation,
-  CharacterDefinition,
-  GameProjectResource,
-  SpriteDataSet,
-  SpriteSetResource,
-} from '@pixelrpg/engine'
+import type { CharacterDefinition, GameProjectResource, SpriteDataSet } from '@pixelrpg/engine'
 import {
   CardGallery,
-  CharacterPreview,
-  confirmDestructive,
-  type GalleryCardItem,
-  GdkSpriteSetResource,
+  type GdkSpriteSetResource,
   type ModeRail,
-  promptRename,
   reparentWidget,
   SignalScope,
   type SpriteSetChoice,
-  SpriteSetImportDialog,
-  type SpriteSetImportResult,
-  TileGridThumbnail,
   TileInspector,
   TilePalette,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import { countMapUsers } from '../services/sprite-set-usage.ts'
-
-import { characterSpriteSetIds, isCharacterSpriteSet } from '../services/sprite-set-classification.ts'
+import {
+  filterSortTilesets,
+  isBuiltInSpriteSet,
+  moveBefore,
+  sheetAsCharacter,
+  type TilesetSort,
+} from '../services/tiles-view-model.ts'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import {
+  confirmAppearanceDelete,
+  confirmTilesetDelete,
+  presentSpriteSetImport,
+  promptTilesetRename,
+} from './tiles/tiles-dialogs.ts'
+import { TilesQuickView } from './tiles/quick-view.ts'
+import {
+  wireAppearanceGallery,
+  wireGalleryQuery,
+  wireTileEditing,
+  wireTilesetGallery,
+} from './tiles/tiles-view.wiring.ts'
+import {
+  animationCountLabel,
+  buildAppearanceCard,
+  buildAppearancePreview,
+  buildTilesetCard,
+  buildTilesetPreview,
+  tileCountLabel,
+} from './tiles/tileset-cards.ts'
+import {
+  ensureSpriteSetLoaded,
+  loadTilesetEntries,
+  type TilesetEntry,
+  tilesetCardFacts,
+  tilesetName,
+  tilesetSortKey,
+} from './tiles/tileset-entries.ts'
 import Template from './tiles-view.blp'
-
-/** Appearance card preview edge length (px) — matches the Cast cards. */
-const CARD_PREVIEW_SIZE = 160
 
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
-GObject.type_ensure(CharacterPreview.$gtype)
-
-/** Built-in sprite sets (engine-provided) have no project files to remove. */
-function isBuiltInSpriteSet(id: string): boolean {
-  return id.startsWith('built-in:')
-}
-
-interface TilesetEntry {
-  id: string
-  resource: SpriteSetResource
-  gdk: GdkSpriteSetResource | null
-}
+GObject.type_ensure(TilesQuickView.$gtype)
 
 /**
  * Tileset editor view. Lives at the same level as cast-view + atlas-view:
@@ -89,16 +96,9 @@ export class TilesView extends ResponsiveEditorView {
   declare _sheet_close: Gtk.Button
   declare _sheet_slot: Gtk.Box
   declare _side_slot: Gtk.Box
-  // Desktop gallery quick-view (read-only glance for the selected card of
-  // either section). The preview swaps by kind: a static `quick_thumb`
-  // (tileset sheet) or an animated `quick_preview` (appearance).
-  declare _quick_stack: Gtk.Stack
-  declare _quick_preview_stack: Gtk.Stack
-  declare _quick_thumb: Gtk.Picture
-  declare _quick_preview: CharacterPreview
-  declare _quick_name: Gtk.Label
-  declare _quick_subtitle: Gtk.Label
-  declare _quick_edit: Gtk.Button
+  // Desktop gallery quick-view: one read-only glance shared by both
+  // sections, swapping its preview by kind (see `TilesQuickView`).
+  declare _quick_view: TilesQuickView
   // ── Appearances (character sprite sheets) gallery ──
   // Asset management only: import / delete / glance. Editing an
   // appearance's animations happens in the Cast matrix — a card's "edit"
@@ -115,7 +115,7 @@ export class TilesView extends ResponsiveEditorView {
   /** tileset id → how many maps reference it (for the card's "used by K" line). */
   private _mapUsage = new Map<string, number>()
   private _search = ''
-  private _sort: 'default' | 'name' | 'size' | 'usage' = 'default'
+  private _sort: TilesetSort = 'default'
   private _activeSpriteSetId: string | null = null
   private _selectedSpriteId: number | null = null
   // Which kind the quick-view + single gallery highlight currently reflect.
@@ -159,13 +159,7 @@ export class TilesView extends ResponsiveEditorView {
           'sheet_close',
           'sheet_slot',
           'side_slot',
-          'quick_stack',
-          'quick_preview_stack',
-          'quick_thumb',
-          'quick_preview',
-          'quick_name',
-          'quick_subtitle',
-          'quick_edit',
+          'quick_view',
           'appearances_gallery',
         ],
         Properties: {
@@ -220,23 +214,6 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   /**
-   * Move the single tile inspector into the slot that matches the
-   * current responsive layout: the pinned right `side_panel` on desktop,
-   * or the `tile_sheet` bottom-sheet revealer on phone. Toggles the
-   * sidebar's visibility to match.
-   */
-  private _placeInspector(): void {
-    const collapsed = this.inspectorCollapsed
-    reparentWidget(this._inspector, collapsed ? this._sheet_slot : this._side_slot)
-    // Desktop: show the split's pinned sidebar. Phone: hide it (the
-    // inspector lives in the bottom sheet instead).
-    this._tile_split.set_show_sidebar(!collapsed)
-    // The phone bottom sheet only reveals on tile-select; on desktop the
-    // sidebar is always shown, so keep the sheet closed.
-    if (!collapsed) this._tile_sheet.set_reveal_child(false)
-  }
-
-  /**
    * Signals wire in `vfunc_map` (not the constructor) so they
    * re-connect on every (re)map — `vfunc_unmap` does
    * `SignalScope.disconnectAll`. Without this, navigating away from
@@ -249,83 +226,48 @@ export class TilesView extends ResponsiveEditorView {
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
-    // Search + sort the tileset cards.
-    this.signals.connect(this._search_entry, 'search-changed', () => {
-      this._search = this._search_entry.get_text()
-      this._rebuildGallery()
-    })
-    this.signals.connect(this._sort_dropdown, 'notify::selected', () => {
-      this._sort = (['default', 'name', 'size', 'usage'] as const)[this._sort_dropdown.get_selected()] ?? 'default'
-      this._rebuildGallery()
-    })
-    this.signals.connect(this._tilesets_gallery, 'item-activated', (_v: CardGallery, id: string) => {
-      this._selectTileset(id)
-    })
-    this.signals.connect(this._tilesets_gallery, 'item-opened', (_v: CardGallery, id: string) => {
-      this._selectTileset(id)
-      this._openTilesetDetail()
-    })
-    this.signals.connect(this._tilesets_gallery, 'rename-requested', (_v: CardGallery, id: string) => {
-      this._presentRenameTileset(id)
-    })
-    this.signals.connect(
-      this._tilesets_gallery,
-      'reorder-requested',
-      (_v: CardGallery, draggedId: string, targetId: string) => {
-        this._reorderTilesets(draggedId, targetId)
+    wireGalleryQuery(
+      this.signals,
+      { searchEntry: this._search_entry, sortDropdown: this._sort_dropdown },
+      {
+        setSearch: (search) => {
+          this._search = search
+          this._rebuildGallery()
+        },
+        setSort: (sort) => {
+          this._sort = sort
+          this._rebuildGallery()
+        },
       },
     )
-    this.signals.connect(this._tilesets_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
-      this._confirmDeleteTileset(id)
+    wireTilesetGallery(this.signals, this._tilesets_gallery, {
+      select: (id) => this._selectTileset(id),
+      openDetail: () => this._openTilesetDetail(),
+      requestRename: (id) => this._presentRenameTileset(id),
+      requestReorder: (draggedId, targetId) => this._reorderTilesets(draggedId, targetId),
+      requestDelete: (id) => this._confirmDeleteTileset(id),
     })
-    // The quick-view "Edit" button opens the tileset detail, or — for an
-    // appearance — jumps to the Cast matrix where its animations are edited.
-    this.signals.connect(this._quick_edit, 'clicked', () => {
-      if (this._activeKind === 'appearance') {
-        if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
-      } else {
-        this._openTilesetDetail()
-      }
+    wireAppearanceGallery(this.signals, this._appearances_gallery, {
+      select: (id) => this._selectAppearance(id),
+      editInCast: (id) => this._editAppearanceInCast(id),
+      requestDelete: (id) => this._confirmDeleteAppearance(id),
     })
-    this.signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) => {
-      // Picking a tile refreshes the inspector. On phone that means
-      // sliding the bottom sheet up; on desktop the sidebar is already
-      // visible, so it just updates in place.
-      this._selectedSpriteId = tileId
-      this._refreshInspector()
-      if (this.inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
-    })
-    // The sheet's close button slides it back down + clears the selection.
-    this.signals.connect(this._sheet_close, 'clicked', () => {
-      this._tile_sheet.set_reveal_child(false)
-      this._selectedSpriteId = null
-      this._refreshInspector()
-    })
-    this.signals.connect(this._inspector, 'solid-changed', (_v: TileInspector, solid: boolean) => {
-      const active = this._activeSpriteSet()
-      if (!active || this._selectedSpriteId == null) return
-      this._onSolidChanged?.(active.id, this._selectedSpriteId, solid)
-    })
-    this.signals.connect(this._inspector, 'surface-changed', (_v: TileInspector, surface: string) => {
-      const active = this._activeSpriteSet()
-      if (!active || this._selectedSpriteId == null) return
-      this._onSurfaceChanged?.(active.id, this._selectedSpriteId, surface === '' ? null : surface)
-    })
+    wireTileEditing(
+      this.signals,
+      { palette: this._palette, inspector: this._inspector, sheetClose: this._sheet_close },
+      {
+        selectTile: (tileId) => this._selectTile(tileId),
+        clearTileSelection: () => this._clearTileSelection(),
+        setSolid: (solid) => this._applySolid(solid),
+        setSurface: (surface) => this._applySurface(surface),
+      },
+    )
+    this.signals.connect(this._quick_view, 'edit-requested', () => this._editActiveSelection())
+  }
 
-    // ── Appearances gallery (asset management) ──────────────────────
-    // A single tap SELECTS (desktop → updates the quick-view glance;
-    // phone → jumps to the Cast matrix to author); a double tap goes
-    // straight to Cast. The three-dots delete confirms + removes the asset.
-    this.signals.connect(this._appearances_gallery, 'item-activated', (_v: CardGallery, id: string) => {
-      this._selectAppearance(id)
-    })
-    this.signals.connect(this._appearances_gallery, 'item-opened', (_v: CardGallery, id: string) => {
-      this._selectAppearance(id)
-      this._editAppearanceInCast(id)
-    })
-    this.signals.connect(this._appearances_gallery, 'delete-requested', (_v: CardGallery, id: string) => {
-      this._confirmDeleteAppearance(id)
-    })
+  vfunc_unmap(): void {
+    this.signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   get projectName(): string {
@@ -416,50 +358,17 @@ export class TilesView extends ResponsiveEditorView {
     if (this._mode_rail) this._mode_rail.projectName = this._projectName
 
     if (!project) {
-      this._spriteSets = []
-      this._activeSpriteSetId = null
-      this._selectedSpriteId = null
-      this._activeKind = 'tileset'
-      this._tilesets_gallery.setItems([])
-      this._palette.setTiles([])
-      this._inspector.setSprite(null, null)
-      this._refreshQuickView()
+      this._clearProject()
       return
     }
 
-    // Tiles shows ONLY world tilesets — character animation sheets
-    // belong to the Cast view (see `isCharacterSpriteSet`).
-    const usedByCharacter = characterSpriteSetIds(project.data?.entityLibrary)
-
-    // Snapshot sprite-sets in project order, wrapping each as a GTK
-    // resource up-front so its card can show a sheet thumbnail. Tilesets
-    // are few (a handful per project) so eager wrapping is cheap and
-    // keeps the gallery from popping in thumbnails one by one.
-    const items: TilesetEntry[] = []
-    for (const [id, resource] of project.spriteSets) {
-      if (isCharacterSpriteSet(resource.data?.kind, usedByCharacter.has(id))) continue
-      let gdk: GdkSpriteSetResource | null = null
-      try {
-        gdk = await GdkSpriteSetResource.fromEngineResource(resource)
-      } catch (err) {
-        console.warn('[TilesView] Failed to wrap sprite-set for thumbnail:', err)
-      }
-      items.push({ id, resource, gdk })
-    }
-    // Order the cards by the project's `spriteSets[]` order so a live
-    // drag-reorder (which rewrites that array) reflects on the next
-    // re-hydration — the live `project.spriteSets` Map keeps its original
-    // insertion order. Sets absent from the array (built-ins) sort to the
-    // end in their existing order (stable sort).
-    const order = new Map((project.data?.spriteSets ?? []).map((ref, i) => [ref.id, i]))
-    items.sort((a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER))
-    this._spriteSets = items
+    this._spriteSets = await loadTilesetEntries(project)
     this._mapUsage = countMapUsers(project)
 
     // Keep the active selection if still present; otherwise fall back
     // to the first set.
-    if (!this._activeSpriteSetId || !items.some((i) => i.id === this._activeSpriteSetId)) {
-      this._activeSpriteSetId = items[0]?.id ?? null
+    if (!this._activeSpriteSetId || !this._spriteSets.some((entry) => entry.id === this._activeSpriteSetId)) {
+      this._activeSpriteSetId = this._spriteSets[0]?.id ?? null
     }
     this._rebuildGallery()
     // Only steal the quick-view glance if the user is currently on a
@@ -501,12 +410,9 @@ export class TilesView extends ResponsiveEditorView {
    * view. Reuses the exact dialog the Cast view uses for sprite-sets.
    */
   presentTilesetImportDialog(): void {
-    const dialog = new SpriteSetImportDialog()
-    dialog.kind = 'tileset'
-    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
+    presentSpriteSetImport(this, 'tileset', (result) => {
       this.emit('spriteset-imported', result)
     })
-    dialog.present(this)
   }
 
   /**
@@ -517,81 +423,67 @@ export class TilesView extends ResponsiveEditorView {
    * `spriteset-imported` signal → the cast controller's import path.
    */
   presentAppearanceImportDialog(): void {
-    const dialog = new SpriteSetImportDialog()
-    dialog.kind = 'character'
-    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
+    presentSpriteSetImport(this, 'character', (result) => {
       this.emit('spriteset-imported', result)
     })
-    dialog.present(this)
+  }
+
+  /**
+   * Push the selected tile's properties into the inspector. Called
+   * after every selection change + after host-driven mutations so
+   * the inspector mirrors the latest persisted state.
+   */
+  refreshInspectorForSelection(): void {
+    this._refreshInspector()
+  }
+
+  /**
+   * Move the single tile inspector into the slot that matches the
+   * current responsive layout: the pinned right `side_panel` on desktop,
+   * or the `tile_sheet` bottom-sheet revealer on phone. Toggles the
+   * sidebar's visibility to match.
+   */
+  private _placeInspector(): void {
+    const collapsed = this.inspectorCollapsed
+    reparentWidget(this._inspector, collapsed ? this._sheet_slot : this._side_slot)
+    // Desktop: show the split's pinned sidebar. Phone: hide it (the
+    // inspector lives in the bottom sheet instead).
+    this._tile_split.set_show_sidebar(!collapsed)
+    // The phone bottom sheet only reveals on tile-select; on desktop the
+    // sidebar is always shown, so keep the sheet closed.
+    if (!collapsed) this._tile_sheet.set_reveal_child(false)
+  }
+
+  private _clearProject(): void {
+    this._spriteSets = []
+    this._activeSpriteSetId = null
+    this._selectedSpriteId = null
+    this._activeKind = 'tileset'
+    this._tilesets_gallery.setItems([])
+    this._palette.setTiles([])
+    this._inspector.setSprite(null, null)
+    this._refreshQuickView()
+  }
+
+  private _mapUsers(id: string): number {
+    return this._mapUsage.get(id) ?? 0
   }
 
   private _rebuildGallery(): void {
-    const entries = this._filteredSortedTilesets()
-    const byId = new Map(entries.map((e) => [e.id, e]))
+    const entries = filterSortTilesets(this._spriteSets, (entry) => tilesetSortKey(entry, this._mapUsers(entry.id)), {
+      search: this._search,
+      sort: this._sort,
+    })
+    const byId = new Map(entries.map((entry) => [entry.id, entry]))
     this._tilesets_gallery.setItems(
-      entries.map((entry) => this._buildTilesetItem(entry)),
+      entries.map((entry) => buildTilesetCard(tilesetCardFacts(entry, this._mapUsers(entry.id)))),
       (item) => {
         const entry = byId.get(item.id)
-        return entry ? this._buildTilesetPreview(entry) : null
+        return entry ? buildTilesetPreview(entry.gdk, entry.resource.data?.columns ?? 6) : null
       },
     )
     // Only one card across both galleries is lit — the active selection's.
     this._tilesets_gallery.setActiveId(this._activeKind === 'tileset' ? this._activeSpriteSetId : null)
-  }
-
-  /** Apply the search filter + sort order to the tileset list for the gallery. */
-  private _filteredSortedTilesets(): TilesetEntry[] {
-    const query = this._search.trim().toLowerCase()
-    const filtered = query
-      ? this._spriteSets.filter((e) => (e.resource.data?.name ?? e.id).toLowerCase().includes(query))
-      : [...this._spriteSets]
-    if (this._sort === 'name') {
-      filtered.sort((a, b) => (a.resource.data?.name ?? a.id).localeCompare(b.resource.data?.name ?? b.id))
-    } else if (this._sort === 'size') {
-      filtered.sort((a, b) => (b.resource.data?.spriteWidth ?? 0) - (a.resource.data?.spriteWidth ?? 0))
-    } else if (this._sort === 'usage') {
-      filtered.sort((a, b) => (this._mapUsage.get(b.id) ?? 0) - (this._mapUsage.get(a.id) ?? 0))
-    }
-    // 'default' keeps the project's sprite-set order (set in the hydrate).
-    return filtered
-  }
-
-  /**
-   * Card model for one tileset: a downscaled thumbnail of the whole
-   * sheet as the preview (the recognisable mosaic — far more useful than
-   * any single tile, which is often an empty eraser cell — bounded so
-   * the card grids compactly), the sprite count as subtitle, deletable
-   * only for project sets (built-ins have no files + can't be removed).
-   */
-  private _buildTilesetItem(entry: TilesetEntry): GalleryCardItem {
-    const data = entry.resource.data
-    const count = data?.sprites?.length ?? 0
-    const w = data?.spriteWidth ?? 0
-    const h = data?.spriteHeight ?? 0
-    const users = this._mapUsage.get(entry.id) ?? 0
-    // "N tiles · W×H · used by K maps" — surfaces the tile dimensions +
-    // where the set is used, right on the card (soll-sheets).
-    const parts = [count === 1 ? _('1 tile') : _(`${count} tiles`)]
-    if (w && h) parts.push(`${w}×${h}`)
-    parts.push(users === 1 ? _('used by 1 map') : _(`used by ${users} maps`))
-    return {
-      id: entry.id,
-      title: data?.name ?? entry.id,
-      subtitle: parts.join(' · '),
-      // Tile-size chip.
-      badge: w ? _(`${w}px tiles`) : null,
-      fallbackIcon: 'view-grid-symbolic',
-      deletable: !isBuiltInSpriteSet(entry.id),
-      renamable: !isBuiltInSpriteSet(entry.id),
-    }
-  }
-
-  /** Representative tile-grid excerpt for a tileset card (soll-sheets). */
-  private _buildTilesetPreview(entry: TilesetEntry): Gtk.Widget | null {
-    if (!entry.gdk) return null
-    const thumb = new TileGridThumbnail()
-    thumb.setSpriteSet(entry.gdk, entry.resource.data?.columns ?? 6)
-    return thumb
   }
 
   /**
@@ -612,7 +504,7 @@ export class TilesView extends ResponsiveEditorView {
     this._tile_sheet.set_reveal_child(false)
     this._tilesets_gallery.setActiveId(id)
     this._appearances_gallery.setActiveId(null)
-    this._detail_page.title = entry.resource.data?.name ?? id
+    this._detail_page.title = tilesetName(entry)
     this._refreshQuickView()
     void this._loadActivePalette()
     if (this.inspectorCollapsed) this._openTilesetDetail()
@@ -629,40 +521,50 @@ export class TilesView extends ResponsiveEditorView {
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
 
+  /** The quick-view "Edit" button: a tileset opens its detail, an appearance jumps to Cast. */
+  private _editActiveSelection(): void {
+    if (this._activeKind !== 'appearance') {
+      this._openTilesetDetail()
+      return
+    }
+    if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
+  }
+
   /**
    * Populate the shared desktop quick-view sidebar for the active
    * selection — a static sheet thumbnail for a tileset, an animated
-   * preview for an appearance (`_activeKind`). Switches to the empty state
-   * when the active kind has nothing selected.
+   * preview for an appearance (`_activeKind`).
    */
   private _refreshQuickView(): void {
-    if (this._activeKind === 'appearance') {
-      const synthetic = this._sheetAsCharacter(this._activeAppearanceId)
-      if (!synthetic) {
-        this._quick_stack.set_visible_child_name('empty')
-        return
-      }
-      const sheet = this._activeAppearanceId ? (this._appearanceSetsById.get(this._activeAppearanceId) ?? null) : null
-      this._quick_stack.set_visible_child_name('info')
-      this._quick_preview_stack.set_visible_child_name('appearance')
-      this._quick_preview.setCharacter(synthetic, sheet)
-      this._quick_name.set_label(synthetic.name)
-      const count = sheet?.data?.characterAnimations?.length ?? 0
-      this._quick_subtitle.set_label(count === 1 ? _('1 animation') : _(`${count} animations`))
+    if (this._activeKind === 'appearance') this._showAppearanceGlance()
+    else this._showTilesetGlance()
+  }
+
+  private _showAppearanceGlance(): void {
+    const character = this._sheetAsCharacter(this._activeAppearanceId)
+    if (!character) {
+      this._quick_view.showEmpty()
       return
     }
+    const sheet = this._activeAppearanceId ? (this._appearanceSetsById.get(this._activeAppearanceId) ?? null) : null
+    this._quick_view.showAppearance({
+      character,
+      spriteSet: sheet,
+      subtitle: animationCountLabel(sheet?.data?.characterAnimations?.length ?? 0),
+    })
+  }
+
+  private _showTilesetGlance(): void {
     const active = this._activeSpriteSet()
     if (!active) {
-      this._quick_stack.set_visible_child_name('empty')
-      this._quick_thumb.set_paintable(null)
+      this._quick_view.clearTileset()
       return
     }
-    this._quick_stack.set_visible_child_name('info')
-    this._quick_preview_stack.set_visible_child_name('tileset')
-    this._quick_thumb.set_paintable(active.gdk?.createSheetThumbnail(240) ?? null)
-    this._quick_name.set_label(active.resource.data?.name ?? active.id)
-    const count = active.resource.data?.sprites?.length ?? 0
-    this._quick_subtitle.set_label(count === 1 ? _('1 tile') : _(`${count} tiles`))
+    this._quick_view.showTileset({
+      thumbnail: active.gdk?.createSheetThumbnail(240) ?? null,
+      title: tilesetName(active),
+      subtitle: tileCountLabel(active.resource.data?.sprites?.length ?? 0),
+    })
   }
 
   private _activeSpriteSet(): TilesetEntry | null {
@@ -677,32 +579,29 @@ export class TilesView extends ResponsiveEditorView {
       this._inspector.setSprite(null, null)
       return
     }
-    if (!active.gdk) {
-      try {
-        active.gdk = await GdkSpriteSetResource.fromEngineResource(active.resource)
-      } catch (err) {
-        console.warn('[TilesView] Failed to load sprite-set for palette:', err)
-        return
-      }
-    }
-    const sheet = active.gdk.spriteSheet
+    if (!(await ensureSpriteSetLoaded(active))) return
+    const sheet = active.gdk?.spriteSheet
     if (!sheet) return
-    // Use the palette's sprite-sheet aware loader — it auto-adopts the
-    // sheet's native column count (32 for lokiri-forest, so the
-    // tile-set renders in its canonical 32×N grid). Pattern mirrors
-    // the `TilePaletteSpriteSheetStory` reference impl that the user
-    // pointed at: native columns + tile-size 32 + a horizontal scroll
-    // on the surrounding ScrolledWindow.
+    // The sprite-sheet aware loader auto-adopts the sheet's native column
+    // count, so a set renders in its canonical grid (32×N for
+    // lokiri-forest) instead of an arbitrary wrap.
     this._palette.setFromSpriteSheet(sheet)
     this._refreshInspector()
   }
 
-  /**
-   * Push the selected tile's properties into the inspector. Called
-   * after every selection change + after host-driven mutations so
-   * the inspector mirrors the latest persisted state.
-   */
-  refreshInspectorForSelection(): void {
+  private _selectTile(tileId: number): void {
+    // Picking a tile refreshes the inspector. On phone that means sliding
+    // the bottom sheet up; on desktop the sidebar is already visible, so it
+    // just updates in place.
+    this._selectedSpriteId = tileId
+    this._refreshInspector()
+    if (this.inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
+  }
+
+  /** The phone sheet's close button: slide it back down + drop the selection. */
+  private _clearTileSelection(): void {
+    this._tile_sheet.set_reveal_child(false)
+    this._selectedSpriteId = null
     this._refreshInspector()
   }
 
@@ -717,6 +616,18 @@ export class TilesView extends ResponsiveEditorView {
     this._inspector.setSprite(def ?? null, sprite?.createPaintable() ?? null)
   }
 
+  private _applySolid(solid: boolean): void {
+    const active = this._activeSpriteSet()
+    if (!active || this._selectedSpriteId == null) return
+    this._onSolidChanged?.(active.id, this._selectedSpriteId, solid)
+  }
+
+  private _applySurface(surface: string | null): void {
+    const active = this._activeSpriteSet()
+    if (!active || this._selectedSpriteId == null) return
+    this._onSurfaceChanged?.(active.id, this._selectedSpriteId, surface)
+  }
+
   /**
    * Prompt for a new display name for a tileset, then emit
    * `spriteset-rename-requested` (id + name) so the host re-persists the
@@ -726,8 +637,7 @@ export class TilesView extends ResponsiveEditorView {
   private _presentRenameTileset(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry || isBuiltInSpriteSet(id)) return
-    const currentName = entry.resource.data?.name ?? id
-    void promptRename(this, { heading: _('Rename tileset'), current: currentName }).then((name) => {
+    void promptTilesetRename(this, tilesetName(entry)).then((name) => {
       if (name) this.emit('spriteset-rename-requested', id, name)
     })
   }
@@ -736,24 +646,12 @@ export class TilesView extends ResponsiveEditorView {
    * Confirm + request deletion of a tileset. Destructive (removes the
    * project's `<id>.png` + `<id>.json` and, in collab, broadcasts the
    * removal) so it routes through an `Adw.AlertDialog` first; the host
-   * does the actual removal on confirm. When the set is still referenced
-   * (by characters or maps) the body names the count so the user knows
-   * what they'd break — vs the generic "this cannot be undone" otherwise.
+   * does the actual removal on confirm.
    */
   private _confirmDeleteTileset(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry || isBuiltInSpriteSet(id)) return
-    const name = entry.resource.data?.name ?? id
-    const usedBy = this._onTilesetUsage?.(id) ?? 0
-    const body =
-      usedBy > 0
-        ? _(
-            '“%s” is still used in %d place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone.',
-          )
-            .replace('%s', name)
-            .replace('%d', String(usedBy))
-        : _('“%s” and its image will be removed from the project. This cannot be undone.').replace('%s', name)
-    void confirmDestructive(this, { heading: _('Delete tileset?'), body }).then((confirmed) => {
+    void confirmTilesetDelete(this, tilesetName(entry), this._onTilesetUsage?.(id) ?? 0).then((confirmed) => {
       if (confirmed) this.emit('spriteset-delete-requested', id)
     })
   }
@@ -761,20 +659,11 @@ export class TilesView extends ResponsiveEditorView {
   /**
    * Move `draggedId` to just before `targetId` in the gallery, rebuild
    * for instant feedback, and emit the full ordered id list so the host
-   * rewrites `data.spriteSets[]` order + persists. No-op on a self-drop
-   * or an unknown id.
+   * rewrites `data.spriteSets[]` order + persists.
    */
   private _reorderTilesets(draggedId: string, targetId: string): void {
-    if (draggedId === targetId) return
-    const from = this._spriteSets.findIndex((s) => s.id === draggedId)
-    if (from === -1 || !this._spriteSets.some((s) => s.id === targetId)) return
-    const next = [...this._spriteSets]
-    const [moved] = next.splice(from, 1)
-    next.splice(
-      next.findIndex((s) => s.id === targetId),
-      0,
-      moved,
-    )
+    const next = moveBefore(this._spriteSets, (entry) => entry.id, draggedId, targetId)
+    if (!next) return
     this._spriteSets = next
     this._rebuildGallery()
     this.emit(
@@ -787,41 +676,16 @@ export class TilesView extends ResponsiveEditorView {
 
   /**
    * Rebuild the appearance cards. Each previews the sheet's animations
-   * via a showcase {@link CharacterPreview} (bound to a synthetic
-   * character — see {@link _sheetAsCharacter}).
+   * via a showcase {@link CharacterPreview} bound to a synthetic character
+   * (see {@link _sheetAsCharacter}).
    */
   private _rebuildAppearancesGallery(): void {
     this._appearances_gallery.setItems(
-      this._appearances.map((s) => this._buildAppearanceItem(s)),
-      (item) => this._buildAppearancePreview(item.id),
+      this._appearances.map((sheet) => buildAppearanceCard(sheet, this._sheetAnimations(sheet.id).length)),
+      (item) => buildAppearancePreview(this._sheetAsCharacter(item.id), this._appearanceSetsById.get(item.id) ?? null),
     )
     // Lit only when an appearance is the active selection (see `_rebuildGallery`).
     this._appearances_gallery.setActiveId(this._activeKind === 'appearance' ? this._activeAppearanceId : null)
-  }
-
-  /** Card model for one appearance sheet: animation count as subtitle. */
-  private _buildAppearanceItem(sheet: SpriteSetChoice): GalleryCardItem {
-    const count = this._appearanceSetsById.get(sheet.id)?.data?.characterAnimations?.length ?? 0
-    return {
-      id: sheet.id,
-      title: sheet.name,
-      subtitle: count === 1 ? _('1 animation') : _(`${count} animations`),
-      fallbackIcon: 'image-x-generic-symbolic',
-      deletable: true,
-    }
-  }
-
-  /** Showcase preview for an appearance card (synthetic character bound to the sheet). */
-  private _buildAppearancePreview(id: string): CharacterPreview | null {
-    const synthetic = this._sheetAsCharacter(id)
-    if (!synthetic) return null
-    const preview = new CharacterPreview()
-    preview.showControls = false
-    preview.autoCycle = true
-    preview.frameSize = CARD_PREVIEW_SIZE
-    preview.highlighted = false
-    preview.setCharacter(synthetic, this._appearanceSetsById.get(id) ?? null)
-    return preview
   }
 
   /**
@@ -852,52 +716,25 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   /** The animations owned by the appearance sheet with `spriteSetId`. */
-  private _sheetAnimations(spriteSetId: string): CharacterAnimation[] {
+  private _sheetAnimations(spriteSetId: string) {
     return this._appearanceSetsById.get(spriteSetId)?.data?.characterAnimations ?? []
   }
 
-  /**
-   * A throwaway {@link CharacterDefinition} bound to an appearance sheet,
-   * so the character-keyed {@link CharacterPreview} can render a SHEET
-   * directly in the gallery cards + the quick-view glance. The sheet owns
-   * the animations (read via `spriteSet.data.characterAnimations`). Never
-   * persisted.
-   */
   private _sheetAsCharacter(sheetId: string | null): CharacterDefinition | null {
-    if (!sheetId) return null
-    const name = this._appearances.find((s) => s.id === sheetId)?.name ?? sheetId
-    return {
-      id: sheetId,
-      name,
-      kind: 'hero',
-      spriteSetId: sheetId,
-      defaultAnimation: 'idle-down',
-      animations: this._sheetAnimations(sheetId),
-    }
+    return sheetAsCharacter(sheetId, this._appearances, (id) => this._sheetAnimations(id))
   }
 
   /**
    * Confirm + delete an appearance sheet. Destructive — drops the sheet
    * (and its animations); any character still referencing it falls back
-   * to a blank preview until reassigned. Confirms before the host
-   * callback fires.
+   * to a blank preview until reassigned.
    */
   private _confirmDeleteAppearance(id: string): void {
     const sheet = this._appearances.find((s) => s.id === id)
     if (!sheet) return
-    void confirmDestructive(this, {
-      heading: _('Delete appearance?'),
-      body: _(
-        '“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone.',
-      ).replace('%s', sheet.name),
-    }).then((confirmed) => {
+    void confirmAppearanceDelete(this, sheet.name).then((confirmed) => {
       if (confirmed) this._onDeleteAppearanceRequested?.(id)
     })
-  }
-
-  vfunc_unmap(): void {
-    this.signals.disconnectAll()
-    super.vfunc_unmap()
   }
 }
 

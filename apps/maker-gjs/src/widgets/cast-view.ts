@@ -5,33 +5,45 @@ import Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
 import {
   ActionDirectionMatrix,
-  AddAnimationDialog,
   CastInspector,
   CharacterPreview,
   type ComponentRefOptions,
-  confirmDestructive,
   EntityComponentsEditor,
   type GdkSpriteSetResource,
   type ModeRail,
-  NewCharacterDialog,
   type NewCharacterDraft,
   SignalScope,
   type SpriteSetChoice,
-  SpriteSetImportDialog,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
+import {
+  countSheetUsers,
+  filterCharactersByRole,
+  findAnimationToEdit,
+  findCharacterById,
+  findCharacterBySheet,
+  type RoleFilter,
+} from '../services/cast-view-model.ts'
+import {
+  confirmCharacterDelete,
+  type NewCharacterActions,
+  presentAnimationDialog,
+  presentNewCharacterDialog as presentNewCharacter,
+} from './cast/cast-dialogs.ts'
+import { attachStatTiles, characterSubtitle, STAT_KEYS, type StatKey, statValues } from './cast/cast-detail.ts'
+import {
+  wireAnimationMatrix,
+  wireCastInspector,
+  wireDetailActions,
+  wireRoleFilter,
+  wireRosterSelection,
+} from './cast/cast-view.wiring.ts'
+import { CastRosterRow } from './cast/roster-row.ts'
+import { attachTemplateSlots } from './cast/template-slots.ts'
 import Template from './cast-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
-
-/** Roster-row avatar edge length (px). */
-const ROSTER_AVATAR_SIZE = 40
-
-type RoleFilter = 'all' | 'heroes' | 'npcs'
-
-/** NPC archetypes offered as "Add from template" quick-create slots. */
-const NPC_TEMPLATES = ['Villager', 'Guard', 'Merchant', 'Child'] as const
 
 GObject.type_ensure(CharacterPreview.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
@@ -91,9 +103,9 @@ export class CastView extends ResponsiveEditorView {
   private _activeCharacterId: string | null = null
   private _spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
   /** charId → its roster row, so selection + active-id stay in sync. */
-  private _rows = new Map<string, Gtk.ListBoxRow>()
+  private _rows = new Map<string, CastRosterRow>()
   /** Stat-tile value labels, updated on every detail refresh. */
-  private _statValues = new Map<string, Gtk.Label>()
+  private _statValues = new Map<StatKey, Gtk.Label>()
   private signals = new SignalScope()
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
@@ -171,8 +183,8 @@ export class CastView extends ResponsiveEditorView {
     this._advancedEditor.connect('entity-changed', (_e: EntityComponentsEditor, json: string) => {
       if (!this._silentAdvanced) this.emit('character-entity-changed', json)
     })
-    this._buildStatGrid()
-    this._buildTemplateSlots()
+    this._statValues = attachStatTiles(this._stat_grid)
+    attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
   }
 
   /** Populate the "all components" disclosure with a raw entity def. Silent. */
@@ -193,65 +205,33 @@ export class CastView extends ResponsiveEditorView {
     this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
       this.emit('mode-changed', mode)
     })
-
-    // Role filter chips.
-    for (const [button, filter] of [
-      [this._filter_all, 'all'],
-      [this._filter_heroes, 'heroes'],
-      [this._filter_npcs, 'npcs'],
-    ] as [Gtk.ToggleButton, RoleFilter][]) {
-      this.signals.connect(button, 'toggled', () => {
-        if (button.get_active() && this._filter !== filter) {
-          this._filter = filter
-          this._rebuildRoster()
-        }
-      })
-    }
-
-    // Roster selection → detail.
-    this.signals.connect(this._roster_list, 'row-selected', (_l: Gtk.ListBox, row: Gtk.ListBoxRow | null) => {
-      if (!row) return
-      const id = (row as Gtk.ListBoxRow & { _charId?: string })._charId
-      if (id) this._selectCharacter(id)
+    wireRoleFilter(
+      this.signals,
+      { all: this._filter_all, heroes: this._filter_heroes, npcs: this._filter_npcs },
+      (filter) => this._setFilter(filter),
+    )
+    wireRosterSelection(this.signals, this._roster_list, (charId) => this._selectCharacter(charId))
+    wireCastInspector(this.signals, this._inspector, {
+      rename: (name) => this._withActiveCharacter((id) => this._onRenameRequested?.(id, name)),
+      setPlayer: (isPlayer) => this._withActiveCharacter((id) => this._onSetPlayerRequested?.(id, isPlayer)),
+      setSpeed: (tilesPerSec) => this._withActiveCharacter((id) => this._onSetSpeedRequested?.(id, tilesPerSec)),
+      changeSheet: (sheetId) => this._withActiveCharacter((id) => this._onChangeSheetRequested?.(id, sheetId)),
+      editAppearance: () => this._editAppearance(),
     })
-
-    // ── Character detail inspector (mode: character) ───────────────
-    this.signals.connect(this._inspector, 'name-changed', (_v: CastInspector, name: string) => {
-      if (this._activeCharacterId) this._onRenameRequested?.(this._activeCharacterId, name)
-    })
-    this.signals.connect(this._inspector, 'player-changed', (_v: CastInspector, isPlayer: boolean) => {
-      if (this._activeCharacterId) this._onSetPlayerRequested?.(this._activeCharacterId, isPlayer)
-    })
-    this.signals.connect(this._inspector, 'speed-changed', (_v: CastInspector, tilesPerSec: number) => {
-      if (this._activeCharacterId) this._onSetSpeedRequested?.(this._activeCharacterId, tilesPerSec)
-    })
-    this.signals.connect(this._inspector, 'sheet-changed', (_v: CastInspector, sheetId: string) => {
-      if (this._activeCharacterId) this._onChangeSheetRequested?.(this._activeCharacterId, sheetId)
-    })
-    this.signals.connect(this._inspector, 'edit-appearance-requested', () => this._editAppearance())
-    this.signals.connect(this._edit_appearance_button, 'clicked', () => this._editAppearance())
-
-    // ── Animation matrix (sheet-owned animations) ──────────────────
-    this.signals.connect(this._matrix, 'animation-selected', (_m: ActionDirectionMatrix, id: string) => {
-      this._preview.setActiveAnimation(id)
-    })
-    // Keep the matrix highlight in sync when the preview's direction pad
-    // changes the active animation.
-    this.signals.connect(this._preview, 'notify::active-animation-id', () => {
-      this._matrix.setActiveAnimation(this._preview.activeAnimationId || null)
-    })
-    this.signals.connect(this._matrix, 'add-animation-requested', () => this._presentAnimationDialog(null))
-    this.signals.connect(this._matrix, 'edit-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
-      this._presentAnimationDialog(id)
-    })
-    this.signals.connect(this._matrix, 'delete-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
-      const character = this._currentCharacter()
-      if (character) this._onDeleteAnimation?.(character.spriteSetId, id)
-    })
-    this.signals.connect(this._place_button, 'clicked', () => {
-      const character = this._currentCharacter()
-      if (character) this.activate_action('win.place-character', GLib.Variant.new_string(character.id))
-    })
+    wireAnimationMatrix(
+      this.signals,
+      { matrix: this._matrix, preview: this._preview },
+      {
+        addAnimation: () => this._presentAnimationDialog(null),
+        editAnimation: (animId) => this._presentAnimationDialog(animId),
+        deleteAnimation: (animId) => this._deleteAnimation(animId),
+      },
+    )
+    wireDetailActions(
+      this.signals,
+      { editAppearance: this._edit_appearance_button, place: this._place_button },
+      { editAppearance: () => this._editAppearance(), placeOnMap: () => this._placeActiveOnMap() },
+    )
   }
 
   vfunc_unmap(): void {
@@ -259,81 +239,12 @@ export class CastView extends ResponsiveEditorView {
     super.vfunc_unmap()
   }
 
-  /** Deep-link into the active character's raw appearance ASSET (Sheets view). */
-  private _editAppearance(): void {
-    const character = this._currentCharacter()
-    if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))
-  }
-
-  /**
-   * Open the frame editor for a role (`animId`) or a brand-new custom
-   * animation (`null`) on the active character's sheet. Reuses the
-   * existing {@link AddAnimationDialog}; mutations route through the
-   * sheet-owned controller callbacks (the same path the Sheets view used
-   * before authoring moved here).
-   */
-  private _presentAnimationDialog(animId: string | null): void {
-    const character = this._currentCharacter()
-    if (!character) return
-    const spriteSet = this._activeSpriteSet()
-    const sheetId = character.spriteSetId
-    const anims = spriteSet?.data?.characterAnimations ?? character.animations ?? []
-    const existing = animId ? (anims.find((a) => a.id === animId) ?? null) : null
-    const dialog = new AddAnimationDialog()
-    dialog.setContext(character, spriteSet, existing ?? undefined)
-    if (existing) {
-      dialog.connect(
-        'animation-edited',
-        (_d: AddAnimationDialog, originalId: string, animation: CharacterAnimation) => {
-          this._onEditAnimation?.(sheetId, originalId, animation)
-        },
-      )
-    } else {
-      dialog.connect('animation-created', (_d: AddAnimationDialog, animation: CharacterAnimation) => {
-        this._onAddAnimation?.(sheetId, animation)
-      })
-    }
-    dialog.present(this)
-  }
-
-  private _selectCharacter(id: string): void {
-    const character = this._characters.find((c) => c.id === id)
-    if (!character) return
-    this._activeCharacterId = id
-    this._refreshActive()
-    const row = this._rows.get(id)
-    if (row && this._roster_list.get_selected_row() !== row) this._roster_list.select_row(row)
-    this._detail_page.title = character.name
-    // Drill into the detail pane when collapsed (phone); on desktop both
-    // panes are already visible so this is a harmless no-op.
-    this._cast_split.set_show_content(true)
-  }
-
   presentNewCharacterDialog(initialName?: string, initialKind: 'hero' | 'npc' = 'hero'): void {
-    const dialog = new NewCharacterDialog()
-    dialog.connect('spriteset-activated', (_d: NewCharacterDialog, id: string) => {
-      void this._onLoadSpriteSetPreview?.(id).then((res) => dialog.setPreview(res ?? null))
-    })
-    dialog.connect('import-spriteset-requested', () =>
-      this._presentSpriteSetImportDialog((choice) => dialog.addSpriteSet(choice)),
+    presentNewCharacter(
+      this,
+      this._newCharacterActions(),
+      initialName ? { name: initialName, kind: initialKind } : undefined,
     )
-    dialog.connect('character-created', (_d: NewCharacterDialog, draft: NewCharacterDraft) => {
-      this._onCreateCharacter?.(draft)
-    })
-    dialog.setSpriteSets(this._onListSpriteSets?.() ?? [])
-    if (initialName) dialog.seed(initialName, initialKind)
-    dialog.present(this)
-  }
-
-  private _presentSpriteSetImportDialog(onImported?: (choice: SpriteSetChoice) => void): void {
-    const dialog = new SpriteSetImportDialog()
-    dialog.kind = 'character'
-    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
-      void this._onImportSpriteSet?.(result).then((choice) => {
-        if (choice) onImported?.(choice)
-      })
-    })
-    dialog.present(this)
   }
 
   /** Reset to the roster (used on project swap). */
@@ -355,7 +266,7 @@ export class CastView extends ResponsiveEditorView {
    * `win.edit-appearance`.
    */
   focusCharacterBySheet(sheetId: string): boolean {
-    const character = this._characters.find((c) => c.spriteSetId === sheetId)
+    const character = findCharacterBySheet(this._characters, sheetId)
     if (!character) return false
     this._selectCharacter(character.id)
     return true
@@ -437,22 +348,23 @@ export class CastView extends ResponsiveEditorView {
 
   // ── Roster (master) ─────────────────────────────────────────────
 
-  private _filtered(): CharacterDefinition[] {
-    if (this._filter === 'heroes') return this._characters.filter((c) => c.kind === 'hero')
-    if (this._filter === 'npcs') return this._characters.filter((c) => c.kind === 'npc')
-    return this._characters
+  private _setFilter(filter: RoleFilter): void {
+    if (this._filter === filter) return
+    this._filter = filter
+    this._rebuildRoster()
   }
 
   private _rebuildRoster(): void {
     for (const row of this._rows.values()) this._roster_list.remove(row)
     this._rows.clear()
 
-    const filtered = this._filtered()
+    const filtered = filterCharactersByRole(this._characters, this._filter)
     this._roster_empty.set_visible(filtered.length === 0)
     this._roster_list.set_visible(filtered.length > 0)
 
     for (const character of filtered) {
-      const row = this._buildRosterRow(character)
+      const row = new CastRosterRow(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
+      row.connect('delete-requested', () => this._confirmDeleteCharacter(character.id))
       this._roster_list.append(row)
       this._rows.set(character.id, row)
     }
@@ -461,113 +373,42 @@ export class CastView extends ResponsiveEditorView {
     if (activeRow) this._roster_list.select_row(activeRow)
   }
 
-  private _buildRosterRow(character: CharacterDefinition): Gtk.ListBoxRow {
-    const row = new Gtk.ListBoxRow() as Gtk.ListBoxRow & { _charId?: string }
-    row._charId = character.id
-    const box = new Gtk.Box({
-      orientation: Gtk.Orientation.HORIZONTAL,
-      spacing: 12,
-      marginTop: 6,
-      marginBottom: 6,
-      marginStart: 6,
-      marginEnd: 6,
-    })
-
-    const avatar = new CharacterPreview()
-    avatar.showControls = false
-    avatar.autoCycle = false
-    avatar.highlighted = false
-    avatar.frameSize = ROSTER_AVATAR_SIZE
-    avatar.setCharacter(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
-    box.append(avatar)
-
-    const text = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, hexpand: true, valign: Gtk.Align.CENTER })
-    const name = new Gtk.Label({ label: character.name, halign: Gtk.Align.START, cssClasses: ['heading'] })
-    const role = new Gtk.Label({
-      label: character.kind === 'hero' ? _('Hero') : _('NPC'),
-      halign: Gtk.Align.START,
-      cssClasses: ['caption', 'dim-label'],
-    })
-    text.append(name)
-    text.append(role)
-    box.append(text)
-
-    if (character.isPlayer) {
-      const badge = new Gtk.Label({
-        label: _('Player'),
-        valign: Gtk.Align.CENTER,
-        cssClasses: ['caption-heading', 'accent'],
-      })
-      box.append(badge)
-    }
-
-    // Delete affordance — destructive, confirmed.
-    const del = new Gtk.Button({
-      iconName: 'user-trash-symbolic',
-      valign: Gtk.Align.CENTER,
-      cssClasses: ['flat'],
-      tooltipText: _('Delete character'),
-    })
-    del.connect('clicked', () => this._confirmDeleteCharacter(character.id))
-    box.append(del)
-
-    row.set_child(box)
-    return row
+  private _selectCharacter(id: string): void {
+    const character = findCharacterById(this._characters, id)
+    if (!character) return
+    this._activeCharacterId = id
+    this._refreshActive()
+    const row = this._rows.get(id)
+    if (row && this._roster_list.get_selected_row() !== row) this._roster_list.select_row(row)
+    this._detail_page.title = character.name
+    // Drill into the detail pane when collapsed (phone); on desktop both
+    // panes are already visible so this is a harmless no-op.
+    this._cast_split.set_show_content(true)
   }
 
-  private _buildTemplateSlots(): void {
-    for (const name of NPC_TEMPLATES) {
-      const button = new Gtk.Button({ cssClasses: ['flat', 'card', 'cast-template-slot'] })
-      const inner = new Gtk.Box({
-        orientation: Gtk.Orientation.HORIZONTAL,
-        spacing: 8,
-        marginTop: 8,
-        marginBottom: 8,
-        marginStart: 10,
-        marginEnd: 10,
-      })
-      inner.append(new Gtk.Image({ iconName: 'list-add-symbolic' }))
-      inner.append(new Gtk.Label({ label: _(name), halign: Gtk.Align.START, hexpand: true }))
-      button.set_child(inner)
-      button.connect('clicked', () => this.presentNewCharacterDialog(_(name), 'npc'))
-      this._template_slots.append(button)
-    }
+  private _confirmDeleteCharacter(id: string): void {
+    const character = findCharacterById(this._characters, id)
+    if (!character) return
+    void confirmCharacterDelete(this, character.name).then((confirmed) => {
+      if (confirmed) this._onDeleteCharacterRequested?.(id)
+    })
   }
 
   // ── Detail ──────────────────────────────────────────────────────
 
-  private _buildStatGrid(): void {
-    const specs: [string, string][] = [
-      ['appearance', _('Appearance')],
-      ['movement', _('Movement')],
-      ['role', _('Role')],
-      ['collision', _('Collision')],
-    ]
-    specs.forEach(([key, label], i) => {
-      const tile = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        spacing: 2,
-        cssClasses: ['card', 'cast-stat-tile'],
-        hexpand: true,
-      })
-      tile.append(new Gtk.Label({ label, halign: Gtk.Align.START, cssClasses: ['caption', 'dim-label'] }))
-      const value = new Gtk.Label({
-        label: '—',
-        halign: Gtk.Align.START,
-        xalign: 0,
-        wrap: true,
-        cssClasses: ['heading'],
-      })
-      tile.append(value)
-      this._statValues.set(key, value)
-      this._stat_grid.attach(tile, i % 2, Math.floor(i / 2), 1, 1)
-    })
+  private _currentCharacter(): CharacterDefinition | null {
+    return findCharacterById(this._characters, this._activeCharacterId)
   }
 
   private _activeSpriteSet(): GdkSpriteSetResource | null {
     const character = this._currentCharacter()
     if (!character) return null
     return this._spriteSetsById.get(character.spriteSetId) ?? null
+  }
+
+  /** Run `apply` with the active character's id, if the roster has one. */
+  private _withActiveCharacter(apply: (charId: string) => void): void {
+    if (this._activeCharacterId) apply(this._activeCharacterId)
   }
 
   private _refreshActive(): void {
@@ -582,44 +423,74 @@ export class CastView extends ResponsiveEditorView {
     this._preview.setCharacter(character, spriteSet)
     this._detail_name.set_label(character.name)
     this._detail_player_badge.set_visible(character.isPlayer === true)
-    this._detail_subtitle.set_label(
-      character.kind === 'hero' ? _("Hero · spawns at the map's player spawn-point") : _('NPC · placed on maps'),
-    )
+    this._detail_subtitle.set_label(characterSubtitle(character))
     this._refreshStats(character)
-
-    this._inspector.setCharacter(character)
-    this._inspector.setSheets(this._sheets, character.spriteSetId)
-    const usage = this._characters.filter((c) => c.spriteSetId === character.spriteSetId).length
-    this._inspector.setAppearanceUsage(usage)
-    this._matrix.setCharacter(character, spriteSet)
+    this._refreshEditors(character, spriteSet)
 
     const entity = this._onGetCharacterEntity?.(character.id) ?? null
     if (entity) this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {})
   }
 
   private _refreshStats(character: CharacterDefinition): void {
-    const sheet = this._sheets.find((s) => s.id === character.spriteSetId)
-    const speed = character.speedTilesPerSec ?? 4
-    this._statValues.get('appearance')?.set_label(sheet?.name ?? character.spriteSetId)
-    this._statValues.get('movement')?.set_label(_(`${speed} tiles/second`))
-    this._statValues.get('role')?.set_label(character.kind === 'hero' ? _('Hero') : _('NPC'))
-    this._statValues.get('collision')?.set_label(_('On'))
+    const values = statValues(character, this._sheets)
+    for (const key of STAT_KEYS) this._statValues.get(key)?.set_label(values[key])
   }
 
-  private _currentCharacter(): CharacterDefinition | null {
-    if (!this._activeCharacterId) return null
-    return this._characters.find((c) => c.id === this._activeCharacterId) ?? null
+  private _refreshEditors(character: CharacterDefinition, spriteSet: GdkSpriteSetResource | null): void {
+    this._inspector.setCharacter(character)
+    this._inspector.setSheets(this._sheets, character.spriteSetId)
+    this._inspector.setAppearanceUsage(countSheetUsers(this._characters, character.spriteSetId))
+    this._matrix.setCharacter(character, spriteSet)
   }
 
-  private _confirmDeleteCharacter(id: string): void {
-    const character = this._characters.find((c) => c.id === id)
+  /** Deep-link into the active character's raw appearance ASSET (Sheets view). */
+  private _editAppearance(): void {
+    const character = this._currentCharacter()
+    if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))
+  }
+
+  private _placeActiveOnMap(): void {
+    const character = this._currentCharacter()
+    if (character) this.activate_action('win.place-character', GLib.Variant.new_string(character.id))
+  }
+
+  private _deleteAnimation(animId: string): void {
+    const character = this._currentCharacter()
+    if (character) this._onDeleteAnimation?.(character.spriteSetId, animId)
+  }
+
+  /**
+   * Open the frame editor for a role (`animId`) or a brand-new custom
+   * animation (`null`) on the active character's sheet. Mutations route
+   * through the sheet-owned controller callbacks (the same path the Sheets
+   * view used before authoring moved here).
+   */
+  private _presentAnimationDialog(animId: string | null): void {
+    const character = this._currentCharacter()
     if (!character) return
-    void confirmDestructive(this, {
-      heading: _('Delete character?'),
-      body: _('“%s” will be removed from the project. This cannot be undone.').replace('%s', character.name),
-    }).then((confirmed) => {
-      if (confirmed) this._onDeleteCharacterRequested?.(id)
-    })
+    const spriteSet = this._activeSpriteSet()
+    const sheetId = character.spriteSetId
+    presentAnimationDialog(
+      this,
+      {
+        character,
+        spriteSet,
+        existing: findAnimationToEdit(animId, spriteSet?.data?.characterAnimations, character.animations),
+      },
+      {
+        add: (animation) => this._onAddAnimation?.(sheetId, animation),
+        edit: (originalId, animation) => this._onEditAnimation?.(sheetId, originalId, animation),
+      },
+    )
+  }
+
+  private _newCharacterActions(): NewCharacterActions {
+    return {
+      listSpriteSets: () => this._onListSpriteSets?.() ?? [],
+      loadPreview: (id) => this._onLoadSpriteSetPreview?.(id),
+      importSpriteSet: (result) => this._onImportSpriteSet?.(result),
+      createCharacter: (draft) => this._onCreateCharacter?.(draft),
+    }
   }
 }
 

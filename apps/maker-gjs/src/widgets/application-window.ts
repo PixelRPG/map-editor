@@ -2,50 +2,59 @@ import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
 import {
   type AgentMapData,
   ASSISTANT_PEER_ID,
   buildAgentMapData,
   createMapEditorDataOp,
   type EditorTool,
-  formatError,
-  type LayerData,
   type SpriteSetData,
   type SpriteSetKind,
 } from '@pixelrpg/engine'
-import {
-  type CollaboratorEntry,
-  confirmDestructive,
-  type EditorMode,
-  promptRename,
-  type SampleScene,
-  SignalScope,
-  SpriteSetImportDialog,
-  type SpriteSetImportResult,
-} from '@pixelrpg/gjs'
+import { type CollaboratorEntry, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
+import { installWindowAccels } from '../actions/accels.ts'
+import { installCastActions } from '../actions/cast-actions.ts'
+import { installEditingActions } from '../actions/editing-actions.ts'
+import { installInspectorActions } from '../actions/inspector-actions.ts'
+import { installObjectActions } from '../actions/object-actions.ts'
+import { installPlaytestActions } from '../actions/playtest-actions.ts'
+import { installProjectActions } from '../actions/project-actions.ts'
+import { installSessionActions } from '../actions/session-actions.ts'
+import { booleanState, type StatefulWindowActions, stringState } from '../actions/stateful-actions.ts'
+import { installTileActions } from '../actions/tile-actions.ts'
+import { installViewActions } from '../actions/view-actions.ts'
+import { installZoomActions } from '../actions/zoom-actions.ts'
+import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
+import {
+  presentAssetImport,
+  presentDeleteAsset,
+  presentRenameAsset,
+  presentTilesetSwitcher,
+} from '../services/asset-dialogs.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
 import { CastController } from '../services/cast-controller.ts'
+import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
-import { buildVariant } from '../services/gvariant.ts'
+import { wireEngineEvents } from '../services/engine-event-bridge.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
+import { buildVariant } from '../services/gvariant.ts'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
-import { CollabPresenceController } from '../services/collab-presence-controller.ts'
-import { LanSessionBackend } from '../services/lan-session-backend.ts'
+import { nextLayerDraft } from '../services/layer-draft.ts'
 import { MapPersistenceController } from '../services/map-persistence-controller.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
-import { type LoadedProject, loadProjectAsAtlas } from '../services/project-loader.ts'
-import { ProjectStore, type ProjectStoreNotice, uniqueIdFrom } from '../services/project-store.ts'
-import { loadRecentProjects, recordRecentProject } from '../services/recent-projects.ts'
+import { ProjectLifecycle } from '../services/project-lifecycle.ts'
+import type { LoadedProject } from '../services/project-loader.ts'
+import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
+import { loadRecentProjects } from '../services/recent-projects.ts'
+import { SceneNavigator } from '../services/scene-navigator.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
-import { generatePeerId, SessionService, type SessionState } from '../services/session-service.ts'
+import { SessionCoordinator } from '../services/session-coordinator.ts'
 import { type SessionSnapshot, toSessionSnapshot } from '../services/session-snapshot.ts'
-import { ShareSessionController } from '../services/share-session-controller.ts'
-import { hasProjectFile, scaffoldProjectFrom } from '../services/project-scaffold.ts'
-import { findBlankTemplate, findTemplateById } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
+import type { ViewName } from '../services/view-mode-map.ts'
+import { ViewRouter } from '../services/view-router.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
@@ -62,8 +71,6 @@ GObject.type_ensure(CastView.$gtype)
 GObject.type_ensure(ObjectsView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
 GObject.type_ensure(DataView.$gtype)
-
-type ViewName = 'welcome' | 'atlas' | 'cast' | 'objects' | 'tiles' | 'scene-editor' | 'data'
 
 /**
  * Read-only snapshot of the editor's live state, surfaced to external
@@ -108,15 +115,9 @@ export interface DebugStatus {
   followedPeerId: string | null
 }
 
-/** One `Gio.Action` as surfaced to external tooling via Control. */
-export interface ActionDescriptor {
-  name: string
-  enabled: boolean
-  /** D-Bus signature of the action's parameter, or `null` if it takes none. */
-  parameterType: string | null
-  /** D-Bus signature of the action's state, or `null` if it is stateless. */
-  stateType: string | null
-}
+// The action projection behind Control lives in `services/action-inspector.ts`;
+// re-exported so existing import sites keep working.
+export type { ActionDescriptor }
 
 /** `app.*` and `win.*` actions surfaced together. */
 export interface ActionList {
@@ -133,22 +134,20 @@ export type { SessionSnapshot }
 /**
  * Top-level window.
  *
- * Hosts an `Adw.ViewStack` that switches between the welcome screen,
- * the atlas (world overview) and the scene editor. Registers
- * window-level actions used by the floating chrome and headers:
- * - `win.mode` (string state) — picks the active mode in the rail
- * - `win.set-tool` (string state) — picks the active tool in the editor
- * - `win.set-inspector-tab` (string) — switches the scene inspector tab (tiles/layers/objects/props)
- * - `win.zoom-in / zoom-out / zoom-reset`
- * - `win.undo / redo / play`
- * - `win.back-to-atlas` / `win.open-scene` (string param)
- * - `win.new-scene`, `win.new-character`, `win.new-spriteset`, `win.new-tileset`, `win.open-recent-projects`
- * - `win.new-animation` (string appearance id, empty = active — opens the Add-animation dialog in the Cast matrix)
- * - `win.open-character` / `win.open-tileset` (string id — drill into the detail sub-page)
- * - `win.open-appearance` (string id — appearance ASSET glance in Sheets) / `win.edit-appearance` (string id — edit its animations in Cast)
+ * Hosts an `Adw.ViewStack` that switches between the welcome screen, the
+ * atlas (world overview), the per-mode views and the scene editor, and
+ * composes the collaborators that do the actual work:
  *
- * Atlas/scene state lives in the views; the window orchestrates the
- * transitions and the dialogs (file pickers, toasts).
+ * - {@link ViewRouter} — page switching + mode-rail sync
+ * - {@link SceneNavigator} — which scene is open, engine + inspector hydration
+ * - {@link ProjectLifecycle} — open / create / close a project
+ * - {@link SessionCoordinator} — pair-editing, the Share dialog, awareness relay
+ * - {@link ProjectStore} — the single owner of project-level writes
+ * - the `installXActions` modules under `src/actions/` — the `win.*` action group
+ *
+ * The window itself only owns what none of them can: the composite
+ * template, the toast surface, the shared sidebar properties, and the
+ * public surface the `org.pixelrpg.maker.Control` D-Bus interface drives.
  */
 export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _welcome_view: WelcomeView
@@ -164,15 +163,19 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private signals = new SignalScope()
   /**
    * The `win` action group, kept for the Control D-Bus interface to
-   * enumerate + drive (see {@link _installActions}). Set once actions
-   * are installed.
+   * enumerate + drive. `Adw.ApplicationWindow` (unlike
+   * `Gtk.ApplicationWindow`) has no GActionMap that GtkApplication would
+   * export over `org.gtk.Actions`, so external tooling reaches them
+   * through Control.
    */
   private _winActions: Gio.SimpleActionGroup | null = null
-  // Populated by `_loadProjectFromPath` from the project's atlas
-  // scenes. Empty until a project is opened — `_showSceneEditor`
-  // is only reachable from the atlas, which itself only renders
-  // once a project loaded, so the empty initial state is fine.
-  private _scenesById = new Map<string, SampleScene>()
+  /**
+   * The stateful actions whose state outlives the engine — re-pushed into
+   * every freshly recreated engine by {@link _syncEngineUiState}. Without
+   * that re-push the view flags silently reset (and a paused assistant
+   * resumed) after any scene-editor exit + re-entry.
+   */
+  private _actions: StatefulWindowActions | null = null
   /**
    * The single owner of the active project + every project-level write
    * (entity library, sprite-sets, metadata) including persistence +
@@ -185,55 +188,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     return this._projectStore.project
   }
   /**
-   * The `win.set-tool` GAction. Kept as a field so `_hydrateSceneEditor`
-   * can push its current state into the engine after every map load —
-   * the engine's `ActiveToolComponent` is per-scene and resets on each
-   * `loadMap`, while this GAction preserves the user's selection across
-   * scenes.
-   */
-  private _toolAction: Gio.SimpleAction | null = null
-  /**
-   * The `win.play` GAction. Stateful boolean — true when the editor
-   * is in runtime (playtest) mode. Held as a field so `_setView` can
-   * reset it back to `false` when the user leaves the scene editor,
-   * since leaving disposes the engine and we don't want a stale
-   * "playing" state to require an extra click on re-entry.
-   */
-  private _playAction: Gio.SimpleAction | null = null
-  /**
-   * The stateful view-flag GActions (`win.toggle-objects` /
-   * `win.toggle-grid` / `win.toggle-transparency`). Held as fields so
-   * {@link _syncEngineUiState} can re-push their current state into
-   * every freshly recreated engine — without the re-push, the flags
-   * silently reset (and the paused assistant resumed) after any
-   * scene-editor exit + re-entry. Assistant pause is re-pushed from
-   * {@link _assistantState}, the single source the
-   * `win.toggle-assistant-paused` handler writes.
-   */
-  private _objectsAction: Gio.SimpleAction | null = null
-  private _gridAction: Gio.SimpleAction | null = null
-  private _transparencyAction: Gio.SimpleAction | null = null
-  /**
    * Single source of truth for the local AI assistant's presence,
    * identity and the user's pause switch. The engine only carries
-   * push-down caches of these (it is disposed/recreated per scene —
-   * see {@link _syncEngineUiState}); networked human peers come from
-   * the live CollabSession awareness.
+   * push-down caches of these (it is disposed/recreated per scene);
+   * networked human peers come from the live CollabSession awareness.
    */
   private readonly _assistantState = new AssistantStateService()
-  /**
-   * The `win.mode` GAction. Stateful string — `'world'` / `'cast'` /
-   * `'tiles'` / `'audio'` / `'data'`. The change-state handler routes
-   * the ViewStack so clicking a mode-rail row navigates to the
-   * matching view.
-   */
-  private _modeAction: Gio.SimpleAction | null = null
-  /**
-   * Which map the scene editor is currently editing. Tracks
-   * `_showSceneEditor` so the persist-requested handler knows which
-   * MapResource to serialise.
-   */
-  private _currentSceneId: string | null = null
   private _engineCtl = new EngineController((engine) => {
     if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
     else this._scene_editor_view.setEngineWidget(null)
@@ -241,64 +201,112 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   // Map-file persistence (serialise MapData → source JSON, atlas/preview
   // editor-data writes). Injected accessors read this window's live state;
   // the op plumbing for editor-data changes stays here (collab is the
-  // window's concern). See ApplicationWindow split, step 2.
+  // window's concern).
   private _mapPersistCtl = new MapPersistenceController({
     getMapResource: (mapId) => this._loadedProject?.resource.maps.get(mapId) ?? null,
-    getScene: (mapId) => this._scenesById.get(mapId) ?? null,
-    getCurrentSceneId: () => this._currentSceneId,
+    getScene: (mapId) => this._scenes.getScene(mapId),
+    getCurrentSceneId: () => this._scenes.currentSceneId,
     showError: (message) => this._showToast(message),
     sendMapEditorDataChange: (mapId, editorData) =>
-      this._activeCollab()?.sendProjectOp(({ peerId, seq }) =>
-        createMapEditorDataOp({ peerId, seq, mapId, editorData }),
-      ),
+      this._session
+        .activeCollab()
+        ?.sendProjectOp(({ peerId, seq }) => createMapEditorDataOp({ peerId, seq, mapId, editorData })),
   })
   // AI-assistant presence + collaborators-bar roster + camera-follow +
-  // the live-session awareness subscriptions. Injected accessors read this
-  // window's live state; the window keeps thin delegations for the Control
-  // plane's public API. See ApplicationWindow split, step 3.
+  // the live-session awareness subscriptions. The window keeps thin
+  // delegations for the Control plane's public API.
   private _collabPresenceCtl = new CollabPresenceController({
     getEngine: () => this._engineCtl.engine?.excalibur ?? null,
-    getActiveCollab: () => this._activeCollab(),
+    getActiveCollab: () => this._session.activeCollab(),
     assistantState: this._assistantState,
     setCollaboratorsOnView: (participants, followedPeerId) =>
       this._scene_editor_view.setCollaborators(participants, followedPeerId),
     showToast: (message) => this._showToast(message),
   })
-  // Share-dialog lifecycle (the self-contained UI surface). The
-  // session-event subscription it opens is funnelled back into this
-  // window's `_sessionUnsubscribes` so teardown stays atomic. The session
-  // lifecycle itself stays in the window. See ApplicationWindow split, step 4.
-  private _shareSessionCtl = new ShareSessionController({
-    getSessionService: () => this._sessionSvc,
-    getProjectName: () => this._loadedProject?.projectName ?? null,
+  private readonly _router = new ViewRouter({
+    getStack: () => this._stack,
+    getRails: () => [
+      this._atlas_view,
+      this._cast_view,
+      this._objects_view,
+      this._tiles_view,
+      this._scene_editor_view,
+      this._data_view,
+    ],
+    getMode: () => (this._actions ? stringState(this._actions.mode) : null),
+    // set_state (not change_state) so the change-state handler doesn't
+    // re-enter: the view is already being set explicitly.
+    setModeState: (mode) => this._actions?.mode.set_state(GLib.Variant.new_string(mode)),
+    isRailOverlay: () => this._cast_view.libraryCollapsed,
+    hideLibrary: () => this.set_property('show-library', false),
+    onLeaveSceneEditor: () => {
+      this._engineCtl.dispose()
+      // The engine is gone; a re-entry starts a fresh MapScene in editor
+      // mode, so leaving "playing" set would cost an extra click.
+      this._actions?.play.change_state(GLib.Variant.new_boolean(false))
+    },
+  })
+  private readonly _scenes = new SceneNavigator({
+    getProject: () => this._loadedProject,
     showToast: (message) => this._showToast(message),
+    showSceneEditorPage: () => this._router.setView('scene-editor'),
+    setScene: (scene) => this._scene_editor_view.setScene(scene),
+    ensureEngineForMap: (projectPath, sceneId) => this._engineCtl.ensureForMap(projectPath, sceneId),
+    onEngineReady: () => {
+      this._syncEngineUiState()
+      this._session.attachEngineIfAwaiting()
+    },
+    populateInspector: (project, sceneId) => this._scene_editor_view.populateFromProject(project, sceneId),
+    refreshAtlasWorld: (project) => this._atlas_view.setWorld(project.scenes, project.teleports, project.resource),
+  })
+  private readonly _session = new SessionCoordinator({
+    // The gjs Engine widget wraps the same core `@pixelrpg/engine` Engine
+    // the CollabSession expects, so this is an unwrap, not a cast.
+    getEngine: () => this._engineCtl.engine?.excalibur ?? null,
+    showToast: (message) => this._showToast(message),
+    getProjectName: () => this._loadedProject?.projectName ?? null,
     getParentWindow: () => this,
     getDisplay: () => this.get_display(),
-    getHostDisplayName: () => GLib.get_user_name() ?? 'host',
-    registerSessionUnsub: (unsub) => this._sessionUnsubscribes.push(unsub),
+    addDiscoveredService: (service) => this._welcome_view.addDiscoveredService(service),
+    removeDiscoveredService: (name) => this._welcome_view.removeDiscoveredService(name),
+    onSandboxProjectReady: (path) => void this._projects.loadSandbox(path),
+    setStoreCollabSession: (collab) => this._projectStore.setCollabSession(collab),
+    setPresenceSession: (collab) => this._collabPresenceCtl.attachSession(collab),
+  })
+  private readonly _projects = new ProjectLifecycle({
+    getWindow: () => this,
+    showToast: (message) => this._showToast(message),
+    setProject: (project) => this._projectStore.setProject(project),
+    adoptProject: (project) => {
+      this._atlas_view.projectName = project.projectName
+      this._scene_editor_view.projectName = project.projectName
+      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
+      this._scenes.setScenes(project.scenes)
+    },
+    // A fresh project starts on the card overview, not a stale detail page
+    // left over from the previous one.
+    resetViews: () => {
+      this._cast_view.resetToOverview()
+      this._tiles_view.resetToOverview()
+    },
+    refreshRecentProjects: (recent) => this._welcome_view.setRecentProjects(recent),
+    setShareEnabled: (enabled) => this._actions?.share.set_enabled(enabled),
+    showAtlas: () => this._router.setView('atlas'),
+    showWelcome: () => this._router.setView('welcome'),
+    invalidateEngine: () => this._engineCtl.invalidateCache(),
+    disposeEngine: () => this._engineCtl.dispose(),
+    leaveSession: () => this._session.leave('project-closed'),
+    detachCollab: () => this._projectStore.setCollabSession(null),
   })
   /**
-   * Per-mode controllers — own their view's data + mutation +
-   * persistence path so this window stays a thin coordinator. Both
-   * are constructed in `vfunc_map` once the template-instantiated
-   * views are reachable.
+   * Per-mode controllers — thin lenses over the shared {@link ProjectStore}.
+   * Constructed in `vfunc_map`, once the template-instantiated views are
+   * reachable.
    */
   private _castCtl: CastController | null = null
   private _objectsCtl: ObjectsController | null = null
   private _tilesCtl: TilesController | null = null
   private _dataCtl: DataController | null = null
-  /**
-   * Pair-Editing orchestration. Constructed once in `vfunc_map` with
-   * a lazy engine provider — Welcome-view discovery flows work
-   * without a loaded project, and `joinLan` / `joinByRoomId` reject
-   * until an engine is available.
-   */
-  private _sessionSvc: SessionService | null = null
-  /**
-   * Stateful `win.share-session` action. Disabled when no project is
-   * loaded so the mode-rail share button greys out.
-   */
-  private _shareAction: Gio.SimpleAction | null = null
 
   static {
     GObject.registerClass(
@@ -352,23 +360,39 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     super({ application })
     this._installActions()
     this._shareSidebarState()
-    // Mirror engine-driven zoom (scroll-wheel + Ctrl+= etc.) into the OSD label.
-    this._engineCtl.on('zoom-changed', (zoom) => this._scene_editor_view.setZoom(zoom))
-    // Same idea for the cursor coord readout on the OSD pill —
-    // each tile-crossing of the pointer over the canvas updates the
-    // `12, 7`-style label next to the zoom buttons. Engine handles
-    // screen → world → tile + per-tile dedupe; we just forward.
-    this._engineCtl.on('pointer-tile-changed', ({ tileX, tileY }) => {
-      this._scene_editor_view.setCursorTile(tileX, tileY)
+    wireEngineEvents(this._engineCtl, {
+      showToast: (message) => this._showToast(message),
+      setZoom: (zoom) => this._scene_editor_view.setZoom(zoom),
+      setCursorTile: (tileX, tileY) => this._scene_editor_view.setCursorTile(tileX, tileY),
+      setHistoryEnabled: (canUndo, canRedo) => {
+        this._actions?.undo.set_enabled(canUndo)
+        this._actions?.redo.set_enabled(canRedo)
+      },
+      adoptPickedTile: (globalTileId) => {
+        this._scene_editor_view.selectTileByGlobalId(globalTileId)
+        this._actions?.tool.change_state(GLib.Variant.new_string('pencil'))
+      },
+      selectPlacement: (placementId) => {
+        this._scene_editor_view.highlightPlacement(placementId)
+        if (placementId) this.set_property('show-inspector', true)
+      },
+      setLayerFlag: (layerId, flag, value) => this._scene_editor_view.setLayerFlag(layerId, flag, value),
     })
-    // Store events that need window-owned resources. Tile-property
-    // edits (Solid / Surface) — local or inbound from a peer — may
-    // change live collision; with a scene open refresh the engine so
-    // the change applies without a reload. The engine ref is per-scene
-    // + lazy, so resolve it on every call.
-    // The store is UI-free: it emits semantic notices, the window
-    // translates + toasts them (msgids stay literal for extraction).
+    this._wireStoreEvents()
+  }
+
+  /**
+   * Store events that need window-owned resources: the live engine and
+   * map-file IO. The store itself is UI-free — it emits semantic notices
+   * and this window translates + toasts them (msgids stay literal for
+   * extraction).
+   */
+  private _wireStoreEvents(): void {
     this._projectStore.on('notice', (notice) => this._showToast(this._noticeText(notice)))
+    // Tile-property edits (Solid / Surface), local or inbound from a peer,
+    // may change live collision; with a scene open, refresh the engine so
+    // the change applies without a reload. The engine ref is per-scene +
+    // lazy, so resolve it on every call.
     this._projectStore.on('tile-properties-changed', ({ spriteSetId }) => {
       this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
     })
@@ -377,21 +401,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // owns map IO) and reposition its atlas card.
     this._projectStore.on('map-editor-data-changed', ({ mapId }) => {
       this._mapPersistCtl.persistMap(mapId, _('Could not save atlas position'))
-      this._refreshAtlasScenePosition(mapId)
+      this._scenes.refreshAtlasPosition(mapId)
     })
   }
 
   vfunc_map(): void {
     super.vfunc_map()
 
-    this.signals.connect(this._welcome_view, 'create-project', () => this._onCreateProject())
-    this.signals.connect(this._welcome_view, 'open-project', () => this._onOpenProject())
-    this.signals.connect(this._welcome_view, 'browse-projects', () => this._onOpenProject())
+    this.signals.connect(this._welcome_view, 'create-project', () => this._projects.create())
+    this.signals.connect(this._welcome_view, 'open-project', () => this._projects.openFromDialog())
+    this.signals.connect(this._welcome_view, 'browse-projects', () => this._projects.openFromDialog())
     this.signals.connect(this._welcome_view, 'template-selected', (_v: WelcomeView, templateId: string) => {
-      this._onTemplateSelected(templateId)
+      this._projects.openTemplate(templateId)
     })
     this.signals.connect(this._welcome_view, 'recent-selected', (_v: WelcomeView, path: string) => {
-      void this._loadProjectFromPath(path)
+      void this._projects.load(path)
     })
 
     // Render the user's persisted recent-projects list on every map.
@@ -399,10 +423,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._welcome_view.setRecentProjects(loadRecentProjects())
 
     this.signals.connect(this._atlas_view, 'scene-opened', (_v: AtlasView, id: string) => {
-      this._showSceneEditor(id)
+      this._scenes.open(id)
     })
     this.signals.connect(this._atlas_view, 'scene-selected', (_v: AtlasView, id: string) => {
-      this._lastAtlasSelection = id
+      this._scenes.selectedAtlasSceneId = id
     })
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
@@ -414,43 +438,71 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         this._mapPersistCtl.persistPreviewViewport(id, tileX, tileY)
       },
     )
-    // Every view's mode-rail forwards `mode-changed` at the view
-    // level. Re-route all four through the central `win.mode` action
-    // so navigation is consistent — the action's change-state handler
-    // picks the right ViewStack page. Mutation handling + persistence
-    // belongs to the per-mode controllers (constructed below);
-    // view-side stays presentational.
-    const setMode = (mode: string) => this._modeAction?.change_state(GLib.Variant.new_string(mode))
-    this.signals.connect(this._atlas_view, 'mode-changed', (_v: AtlasView, mode: string) => setMode(mode))
-    this.signals.connect(this._scene_editor_view, 'mode-changed', (_v: SceneEditorView, mode: string) => setMode(mode))
-    this.signals.connect(this._cast_view, 'mode-changed', (_v: CastView, mode: string) => setMode(mode))
-    this.signals.connect(this._tiles_view, 'mode-changed', (_v: TilesView, mode: string) => setMode(mode))
+    // Every view's mode-rail forwards `mode-changed` at the view level.
+    // Re-route all of them through the central `win.mode` action so
+    // navigation is consistent — the action's change-state handler picks
+    // the right ViewStack page. Mutation handling + persistence belongs to
+    // the per-mode controllers; view-side stays presentational.
+    const setMode = (mode: string) => this._actions?.mode.change_state(GLib.Variant.new_string(mode))
+    for (const view of [
+      this._atlas_view,
+      this._scene_editor_view,
+      this._cast_view,
+      this._tiles_view,
+      this._objects_view,
+      this._data_view,
+    ]) {
+      this.signals.connect(view, 'mode-changed', (_v: unknown, mode: string) => setMode(mode))
+    }
 
-    // Scene editor → host bridge. The inspector mutates
-    // `MapResource.mapData` in place via `engine.setLayerVisible` /
-    // `setLayerLocked`, then asks the host to persist. Mirrors the
-    // existing `scene-moved` → `_persistAtlasPosition` flow.
+    // Scene editor → host bridge. The inspector mutates `MapResource
+    // .mapData` in place via `engine.setLayerVisible` / `setLayerLocked`,
+    // then asks the host to persist.
     this.signals.connect(this._scene_editor_view, 'persist-requested', () => {
       this._mapPersistCtl.persistCurrentMap()
     })
 
-    // A placement was removed via the Props tab — refresh the
-    // inspector's placement list (the command already mutated the live
-    // MapData) and persist, mirroring the layer-flag flow.
+    // A placement was removed via the Props tab — refresh the inspector's
+    // placement list (the command already mutated the live MapData) and
+    // persist, mirroring the layer-flag flow.
     this.signals.connect(this._scene_editor_view, 'object-removed', () => {
-      if (this._loadedProject && this._currentSceneId) {
-        void this._scene_editor_view.populateFromProject(this._loadedProject, this._currentSceneId)
+      const sceneId = this._scenes.currentSceneId
+      if (this._loadedProject && sceneId) {
+        void this._scene_editor_view.populateFromProject(this._loadedProject, sceneId)
       }
       this._mapPersistCtl.persistCurrentMap()
     })
 
-    // Per-mode controllers — thin lenses over the shared ProjectStore.
-    // Cross-lens refreshes ride the store's typed events (each lens
-    // subscribes itself in its constructor); this window only wires the
-    // pieces that need window-owned resources (dialogs, navigation).
-    if (!this._castCtl) {
-      this._castCtl = new CastController(this._cast_view, this._projectStore)
-    }
+    this._ensureControllers()
+
+    // Welcome view ↔ session bridge. The window owns the coordinator (it
+    // spans every view's lifetime); the Welcome view is just the visual
+    // surface for browse + join.
+    this.signals.connect(this._welcome_view, 'session-selected', (_v: WelcomeView, service: DiscoveredService) => {
+      void this._session.joinLan(service)
+    })
+    this.signals.connect(this._welcome_view, 'join-by-code', (_v: WelcomeView, roomId: string) => {
+      void this._session.joinByRoomId(roomId)
+    })
+    this._session.start()
+
+    this._refreshSessionBrowsing()
+    this.signals.connect(this._stack, 'notify::visible-child-name', () => this._refreshSessionBrowsing())
+  }
+
+  vfunc_unmap(): void {
+    this.signals.disconnectAll()
+    this._session.stop()
+    super.vfunc_unmap()
+  }
+
+  /**
+   * Per-mode lenses over the shared store. Cross-lens refreshes ride the
+   * store's typed events (each lens subscribes itself); this window only
+   * wires the pieces that need window-owned resources (dialogs, navigation).
+   */
+  private _ensureControllers(): void {
+    if (!this._castCtl) this._castCtl = new CastController(this._cast_view, this._projectStore)
     if (!this._tilesCtl && this._castCtl) {
       // Sprite-set CRUD + tile properties delegate to the store (the
       // single descriptor write + collab-broadcast path); appearance /
@@ -462,329 +514,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // Asset actions that need host dialogs / navigation.
       this._dataCtl.on('import-requested', ({ kind }) => this._presentAssetImport(kind))
       this._dataCtl.on('open-requested', ({ id, kind }) => this._openAsset(id, kind))
-      this._dataCtl.on('rename-requested', ({ id, currentName }) => this._presentRenameAsset(id, currentName))
-      this._dataCtl.on('delete-requested', ({ id, name, usedBy }) => this._presentDeleteAsset(id, name, usedBy))
+      this._dataCtl.on('rename-requested', ({ id, currentName }) => {
+        presentRenameAsset(this, currentName, (name) => this._projectStore.renameSpriteSet(id, name))
+      })
+      this._dataCtl.on('delete-requested', ({ id, name, usedBy }) => {
+        presentDeleteAsset(this, { name, usedBy }, () => this._projectStore.deleteSpriteSet(id))
+      })
     }
-    if (!this._objectsCtl) {
-      this._objectsCtl = new ObjectsController(this._objects_view, this._projectStore)
-    }
-    this.signals.connect(this._objects_view, 'mode-changed', (_v: ObjectsView, mode: string) => setMode(mode))
-    this.signals.connect(this._data_view, 'mode-changed', (_v: DataView, mode: string) => setMode(mode))
-    if (!this._sessionSvc) {
-      // Resolve the core `@pixelrpg/engine` instance through the GJS
-      // Engine widget — `widget.excalibur` is the same Engine class
-      // (`executeCommand` / `applyRemoteCommand` / op-log etc.) that
-      // CollabSession expects, so this is just an unwrap, not a
-      // cross-API cast. Returns `null` until a project is loaded;
-      // discovery flows work regardless.
-      const engineProvider = () => this._engineCtl.engine?.excalibur ?? null
-      this._sessionSvc = new SessionService(engineProvider, new LanSessionBackend(), generatePeerId())
-      // Collaborators bar: clicking a participant chip follows it. Wired
-      // once — the signal lives on the scene-editor view for the window's
-      // lifetime.
-      this._scene_editor_view.onParticipantActivated((peerId) => this._collabPresenceCtl.onParticipantActivated(peerId))
-    }
-
-    // Welcome view ↔ SessionService bridge. The window owns the
-    // service (it spans the lifetime of every view), the Welcome
-    // view is just the visual surface for browse + join. Start /
-    // stop browsing tied to whether the welcome page is visible —
-    // mDNS pings every couple of seconds and we don't want to
-    // burn the network while the user is editing.
-    this.signals.connect(this._welcome_view, 'session-selected', (_v: WelcomeView, service: DiscoveredService) => {
-      void this._onJoinLanSession(service)
-    })
-    this.signals.connect(this._welcome_view, 'join-by-code', (_v: WelcomeView, roomId: string) => {
-      void this._onJoinByRoomId(roomId)
-    })
-    // SessionService is not a GObject — use its typed `.on` instead
-    // of `this.signals`. The unsubscribe closures live in
-    // `_sessionUnsubscribes` so vfunc_unmap can tear them down
-    // symmetrically.
-    const svc = this._sessionSvc
-    this._sessionUnsubscribes = [
-      svc.on('service-discovered', (service) => this._welcome_view.addDiscoveredService(service)),
-      svc.on('service-gone', (name) => this._welcome_view.removeDiscoveredService(name)),
-      svc.on('error', (err) => this._showToast(_(`Session error: ${err.message}`))),
-      // Joiner sandbox flow: host's project has been pulled into
-      // a per-room sandbox directory. Open it as the active project
-      // and once the engine is ready, attach it back to the
-      // CollabSession so command sync + cursor rendering start.
-      svc.on('sandbox-project-ready', (event) => {
-        void this._loadSandboxProject(event.sandboxProjectPath)
-      }),
-      // Relay the AI assistant's cursor/presence to networked peers
-      // while a session is live, so a remote human sees the AI too. The
-      // AI's edits already sync via the shared op-log; this carries its
-      // awareness frames. Cleared when the session goes idle.
-      svc.on('state-changed', (state) => this._wireAssistantRelay(state)),
-    ]
-
-    // Start browsing whenever the welcome view is the visible page.
-    this._refreshSessionBrowsing()
-    this.signals.connect(this._stack, 'notify::visible-child-name', () => this._refreshSessionBrowsing())
-  }
-
-  /** Active subscriptions to {@link SessionService} events — torn down on unmap. */
-  private _sessionUnsubscribes: Array<() => void> = []
-
-  private _refreshSessionBrowsing(): void {
-    if (!this._sessionSvc) return
-    const visible = this._stack.get_visible_child_name()
-    if (visible === 'welcome') this._sessionSvc.startBrowsing()
-    else this._sessionSvc.stopBrowsing()
-  }
-
-  private async _onJoinLanSession(service: DiscoveredService): Promise<void> {
-    // Joiner no longer requires a local project — SessionService
-    // pulls the host's snapshot into a sandbox directory and
-    // emits `sandbox-project-ready` which we load below.
-    this._showToast(_(`Joining ${service.txt.project ?? service.name}…`))
-    try {
-      await this._sessionSvc?.joinLan(service)
-    } catch (err) {
-      this._showToast(_(`Could not join: ${(err as Error).message}`))
-    }
-  }
-
-  private async _onJoinByRoomId(roomId: string): Promise<void> {
-    this._showToast(_(`Joining room ${roomId}…`))
-    try {
-      await this._sessionSvc?.joinByRoomId(roomId)
-    } catch (err) {
-      this._showToast(_(`Could not join: ${(err as Error).message}`))
-    }
-  }
-
-  /**
-   * Load a shared-session sandbox project at the given path. Engine
-   * attachment is **deferred** — `_hydrateSceneEditor`'s post-
-   * `ensureForMap` hook (see {@link _maybeAttachEngineToSession})
-   * actually wires the `CollabSession` to the engine once the user
-   * navigates to a scene.
-   *
-   * Triggered by the SessionService's `sandbox-project-ready` event.
-   *
-   * Why deferred? The atlas view loads BEFORE any scene-editor
-   * navigation, so `engineCtl.engine` is `null` at this point on the
-   * joiner's first session. Pre-fix code attempted to attach here
-   * and silently bailed when the engine was null — that left the
-   * `SessionController` un-attached, so the joiner's own paints
-   * never fired `COMMAND_EXECUTED`-driven `op` sends AND incoming
-   * `tile.paint` ops from the host had no `applyInbound` to route
-   * through. Bidirectional sync was structurally dead from the
-   * joiner's perspective, even when the wire transport worked.
-   *
-   * On failure (project-load throws) the session stays in the
-   * `awaiting-engine` state — the user can leave the session via
-   * the existing controls.
-   */
-  private async _loadSandboxProject(projectPath: string): Promise<void> {
-    try {
-      await this._loadProjectFromPath(projectPath)
-      this._showToast(_('Joined shared session — open a scene to start editing.'))
-    } catch (err) {
-      this._showToast(_(`Could not open shared session: ${(err as Error).message}`))
-    }
-  }
-
-  /**
-   * Tear down the active project + any live session before returning to the
-   * welcome view. `win.close-project` previously only switched the view,
-   * leaving the project, an active share/session and the engine all live —
-   * leaking those resources and layering any reopened project on stale state.
-   * The reverse of {@link _loadProjectFromPath}.
-   */
-  private async _closeProject(): Promise<void> {
-    // Close any host/join session first — also tears down its awareness,
-    // mDNS publisher and transport.
-    try {
-      await this._sessionSvc?.leaveSession('project-closed')
-    } catch (err) {
-      console.warn('[ApplicationWindow] leaveSession during close failed:', err)
-    }
-    // Detach the collab sink, free the engine (idempotent), drop the project
-    // (clears `_loadedProject`, which reads from the store), disable share.
-    this._projectStore.setCollabSession(null)
-    this._engineCtl.dispose()
-    this._projectStore.setProject(null)
-    this._shareAction?.set_enabled(false)
-    this._setView('welcome')
-  }
-
-  /**
-   * Attach the active engine to the current `CollabSession` if (and
-   * only if) the session is waiting for one. Called from
-   * `_hydrateSceneEditor` immediately after `ensureForMap` resolves,
-   * which guarantees `_engineCtl.engine?.excalibur` is non-null.
-   *
-   * Idempotent / safe to call on every scene-editor entry:
-   *   - no session              → no-op (`_sessionSvc` is undefined or state ≠ awaiting-engine)
-   *   - host / already attached → no-op (state is `connected`, not `awaiting-engine`)
-   *   - joiner waiting          → attach + flip state to `connected`
-   *
-   * Failures are toasted but don't reset the session — the user can
-   * leave via the existing controls.
-   */
-  private _maybeAttachEngineToSession(): void {
-    if (!this._sessionSvc) return
-    if (this._sessionSvc.getState().kind !== 'awaiting-engine') return
-    const engine = this._engineCtl.engine?.excalibur
-    if (!engine) return
-    try {
-      this._sessionSvc.attachEngineToCurrentSession(engine)
-      this._showToast(_('Live editing — your changes sync with the host.'))
-    } catch (err) {
-      console.warn('[ApplicationWindow] attachEngineToCurrentSession failed:', err)
-      this._showToast(_('Could not start live sync — see logs.'))
-    }
-  }
-
-  /**
-   * Point the engine's assistant-awareness relay at the live
-   * `CollabSession` (or clear it when the session goes idle), so the AI
-   * collaborator's cursor/presence reach networked human peers too. The
-   * AI's edits already propagate via the shared op-log — this is just the
-   * awareness channel. See docs/concepts/ai-collaborator.md (Phase 5).
-   */
-  private _wireAssistantRelay(state: SessionState): void {
-    const engine = this._engineCtl.engine?.excalibur
-    const collab = 'collab' in state ? state.collab : null
-
-    // Phase 5: relay the AI's awareness frames out to networked peers.
-    engine?.setAssistantFrameRelay(collab ? (frame) => collab.awareness.relay(frame) : null)
-
-    // Project-level sync — works without an engine, since cast/library
-    // editing has no live scene. While a session is up the store
-    // broadcasts every project-level mutation; it also registers itself
-    // as the single applier of inbound peer ops (entity, player, meta,
-    // map editor-data, sprite-set add/update/remove) and the lenses
-    // re-hydrate via its typed events.
-    this._projectStore.setCollabSession(collab)
-
-    // Track the live session roster for the collaborators bar + follow.
-    this._collabPresenceCtl.attachSession(collab)
-  }
-
-  /** `win.share-session` — open the Share dialog (delegated to the controller). */
-  private _onShareSession(): void {
-    this._shareSessionCtl.present()
-  }
-
-  /**
-   * Route a mode-rail mode change. `world` returns to the atlas;
-   * `cast` opens the new Cast view (Phase 3); other modes still toast
-   * "Coming soon" until their respective views are built.
-   */
-  private _onModeChanged(mode: string): void {
-    switch (mode) {
-      case 'world':
-        // Only switch if we're not already showing the atlas. From the
-        // welcome view, the user has to "Open Project" first; we don't
-        // want clicking the mode rail in atlas/cast/scene-editor to
-        // bounce them back to the welcome.
-        if (this._loadedProject) this._setView('atlas')
-        break
-      case 'cast':
-        if (this._loadedProject) {
-          void this._castCtl?.refresh()
-          this._setView('cast')
-        }
-        break
-      case 'objects':
-        if (this._loadedProject) {
-          this._objectsCtl?.refresh()
-          this._setView('objects')
-        }
-        break
-      case 'tiles':
-        if (this._loadedProject) this._setView('tiles')
-        break
-      case 'data':
-        if (this._loadedProject) this._setView('data')
-        break
-      case 'audio': {
-        this._showToast(_('Coming soon — this mode is not yet implemented'))
-        // Reset back to whichever view we were on; the action state
-        // already advanced to the new mode but no view exists.
-        const current = this._stack.get_visible_child_name()
-        const fallback =
-          current === 'cast' ? 'cast' : current === 'tiles' ? 'tiles' : current === 'data' ? 'data' : 'world'
-        this._modeAction?.set_state(GLib.Variant.new_string(fallback))
-        break
-      }
-    }
-  }
-
-  /** Present the unified import dialog for a Data-view asset of `kind`. */
-  private _presentAssetImport(kind: SpriteSetKind): void {
-    const dialog = new SpriteSetImportDialog()
-    dialog.kind = kind
-    dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
-      void this._projectStore.importSpriteSet(result)
-    })
-    dialog.present(this)
-  }
-
-  /** Jump from a Data-view asset row to its home view. */
-  private _openAsset(id: string, kind: SpriteSetKind): void {
-    if (!this._loadedProject) return
-    // Both kinds live in the Sheets view: tilesets → tile inspector,
-    // appearances (character sheets) → the asset glance. (Animation
-    // authoring for an appearance lives in the Cast matrix — reachable
-    // from the glance's "edit in Cast" jump.)
-    this._setView('tiles')
-    if (kind === 'tileset') this._tiles_view.focusTileset(id)
-    else this._tiles_view.focusAppearance(id)
-  }
-
-  /** Rename an asset's display name via a small dialog (Data view). */
-  private _presentRenameAsset(id: string, currentName: string): void {
-    void promptRename(this, { heading: _('Rename asset'), current: currentName }).then((name) => {
-      // Route through the project store — the single owner of sprite-set
-      // file writes + collab broadcast (it re-hydrates the Data view via
-      // its `sprite-sets-changed` event).
-      if (name) this._projectStore.renameSpriteSet(id, name)
-    })
-  }
-
-  /** Confirm + delete an asset (sprite set) through the shared project store. */
-  private _presentDeleteAsset(id: string, name: string, usedBy: number): void {
-    const body =
-      usedBy > 0
-        ? _('“%s” is still used in %d place(s). Deleting it may break them. Continue?')
-            .replace('%s', name)
-            .replace('%d', String(usedBy))
-        : _('“%s” will be removed from the project, including its files. This cannot be undone.').replace('%s', name)
-    void confirmDestructive(this, { heading: _('Delete asset?'), body }).then((confirmed) => {
-      if (confirmed) this._projectStore.deleteSpriteSet(id)
-    })
-  }
-
-  /**
-   * Re-read a map's persisted `editorData.atlasX/atlasY` into its atlas
-   * card and re-render the atlas. Called after an inbound peer
-   * `__project/map.editor-data` lands so the card moves live — the
-   * `SampleScene` objects are shared with `_scenesById`, so one in-place
-   * update covers both lookups.
-   */
-  private _refreshAtlasScenePosition(mapId: string): void {
-    const project = this._loadedProject
-    if (!project) return
-    const editorData = project.resource.maps.get(mapId)?.mapData?.editorData
-    const scene = this._scenesById.get(mapId)
-    if (!editorData || !scene) return
-    if (typeof editorData.atlasX === 'number') scene.x = editorData.atlasX
-    if (typeof editorData.atlasY === 'number') scene.y = editorData.atlasY
-    this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
-  }
-
-  vfunc_unmap(): void {
-    this.signals.disconnectAll()
-    for (const dispose of this._sessionUnsubscribes) dispose()
-    this._sessionUnsubscribes = []
-    this._sessionSvc?.stopBrowsing()
-    super.vfunc_unmap()
+    if (!this._objectsCtl) this._objectsCtl = new ObjectsController(this._objects_view, this._projectStore)
   }
 
   /**
@@ -815,847 +552,222 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.bind_property('show-library', this._data_view, 'show-library', flags)
   }
 
+  /**
+   * Build the `win` action group. Each group gets a context listing only
+   * what it needs; the returned handles are the stateful actions the
+   * window keeps driving afterwards.
+   */
   private _installActions(): void {
-    const winActions = new Gio.SimpleActionGroup()
+    const group = new Gio.SimpleActionGroup()
+    const hasProject = () => this._loadedProject != null
+    const showToast = (message: string) => this._showToast(message)
 
-    const modeAction = Gio.SimpleAction.new_stateful(
-      'mode',
-      GLib.VariantType.new('s'),
-      GLib.Variant.new_string('world'),
-    )
-    modeAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      const mode = value!.get_string()[0]
-      this._onModeChanged(mode)
-    })
-    winActions.add_action(modeAction)
-    this._modeAction = modeAction
-
-    const toolAction = Gio.SimpleAction.new_stateful(
-      'set-tool',
-      GLib.VariantType.new('s'),
-      // Default to the read-only `'select'` tool — clicking on the
-      // canvas selects an object placement at that tile (or clears
-      // the selection on empty tiles) without mutating the map.
-      // Mutating tools (`pencil`, `eraser`) need an explicit pick
-      // from the tool menu so a misclick can't accidentally paint
-      // over existing artwork.
-      GLib.Variant.new_string('select'),
-    )
-    toolAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      const tool = value!.get_string()[0] as EditorTool
-      // Tool ids are shared with the engine's `EditorTool` union, so
-      // the GAction state string can be passed straight through.
-      this._engineCtl.engine?.setActiveTool(tool)
-      // Refresh the top-bar tool MenuButton's icon to match. The
-      // popover-menu inside it already auto-updates its checkmark
-      // from the stateful action; only the collapsed icon needs us.
-      this._scene_editor_view.setActiveTool(tool)
-    })
-    winActions.add_action(toolAction)
-    this._toolAction = toolAction
-
-    // Pick the "object brush" (a library entity id) for the object tool +
-    // switch to that tool, so choosing what to place activates placement
-    // mode in one step. Empty string clears the brush.
-    const setObjectBrushAction = Gio.SimpleAction.new('set-object-brush', GLib.VariantType.new('s'))
-    setObjectBrushAction.connect('activate', (_a, parameter) => {
-      const defId = parameter?.get_string()[0] ?? ''
-      this._engineCtl.engine?.setObjectBrush(defId || null)
-      if (defId) this._toolAction?.change_state(GLib.Variant.new_string('object'))
-      // Mirror into the editor view so the Tiles-tab grid highlight +
-      // the context chip track the armed brush wherever it was set from.
-      this._scene_editor_view.setArmedObjectBrush(defId || null)
-    })
-    winActions.add_action(setObjectBrushAction)
-
-    // Select a placement by id (`''` clears) — the driveable equivalent
-    // of a select-tool canvas click, so external tooling (MCP bridge,
-    // tests) can exercise the selection → Objects-row → Props flow.
-    const selectPlacementAction = Gio.SimpleAction.new('select-placement', GLib.VariantType.new('s'))
-    selectPlacementAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0] ?? ''
-      this._engineCtl.engine?.setSelectedPlacements(id ? [id] : [])
-      this._scene_editor_view.highlightPlacement(id || null)
-      if (id) this.set_property('show-inspector', true)
-    })
-    winActions.add_action(selectPlacementAction)
-
-    // Switch the scene-editor inspector to a tab by name (tiles / layers /
-    // objects / props). The tab bar is otherwise click-only — this lets
-    // tooling (the MCP bridge) reach the Objects brush palette etc.
-    const setInspectorTabAction = Gio.SimpleAction.new('set-inspector-tab', GLib.VariantType.new('s'))
-    setInspectorTabAction.connect('activate', (_a, parameter) => {
-      const name = parameter?.get_string()[0]
-      if (name) this._scene_editor_view.setInspectorTab(name)
-    })
-    winActions.add_action(setInspectorTabAction)
-
-    // Undo / redo route through the engine's command stack
-    // (\`docs/concepts/editor-architecture.md\` § Phase 5). The engine
-    // mutates the active scene's `UndoStackComponent` and applies /
-    // reverts the recorded `PaintTileCommand` / `EraseTileCommand`s
-    // built by `TileEditorSystem`.
-    const undoAction = new Gio.SimpleAction({ name: 'undo' })
-    undoAction.connect('activate', () => {
-      this._engineCtl.engine?.undo()
-    })
-    winActions.add_action(undoAction)
-
-    const redoAction = new Gio.SimpleAction({ name: 'redo' })
-    redoAction.connect('activate', () => {
-      this._engineCtl.engine?.redo()
-    })
-    winActions.add_action(redoAction)
-
-    // Default both to disabled — they switch on once a map is loaded
-    // and the engine reports `canUndo` / `canRedo` (see the
-    // `_engineCtl.on('undo-changed', …)` registration below). Without this
-    // they would be enabled on the welcome view, where pressing
-    // Ctrl+Z is a no-op but the UI affordance suggests otherwise.
-    undoAction.set_enabled(false)
-    redoAction.set_enabled(false)
-
-    // Sidebar toggle actions. `Gio.PropertyAction` wraps the
-    // SceneEditorView's boolean `show-library` / `show-inspector`
-    // properties bi-directionally — the OSD toggle buttons that
-    // live in the cross-package `FloatingTopBar` widget can't reach
-    // a cross-package template binding, so PropertyAction is the
-    // action-shaped bridge. Atlas + welcome stay inline + use
-    // direct `bind template.show-…` bindings because their toggles
-    // live in the same template. See `docs/concepts/responsive-chrome.md`.
-    winActions.add_action(
-      new Gio.PropertyAction({
-        name: 'toggle-library',
-        object: this,
-        property_name: 'show-library',
-      }),
-    )
-    winActions.add_action(
-      new Gio.PropertyAction({
-        name: 'toggle-inspector',
-        object: this,
-        property_name: 'show-inspector',
-      }),
-    )
-    this._engineCtl.on('undo-changed', ({ canUndo, canRedo }) => {
-      undoAction.set_enabled(canUndo)
-      redoAction.set_enabled(canRedo)
+    const { mode } = installViewActions(group, {
+      hasProject,
+      showToast,
+      currentView: () => this._router.currentView,
+      setView: (view) => this._router.setView(view),
+      prepareView: (view) => this._prepareView(view),
+      selectedSceneId: () => this._scenes.selectedAtlasSceneId,
+      openScene: (sceneId) => this._scenes.open(sceneId),
     })
 
-    // Eyedropper: the engine's `TileEditorSystem` emits `TILE_PICKED`
-    // when the user clicks a tile while the eyedropper tool is
-    // active. We route the picked tile back through the
-    // scene-editor's existing local-id flow (so palette highlight +
-    // context chip + engine's `ActiveTileComponent` stay in lock-step)
-    // and then flip the tool action back to `pencil` for a Tiled-style
-    // "pick → paint immediately" workflow.
-    this._engineCtl.on('tile-picked', ({ globalTileId }) => {
-      this._scene_editor_view.selectTileByGlobalId(globalTileId)
-      toolAction.change_state(GLib.Variant.new_string('pencil'))
+    installProjectActions(group, {
+      showToast,
+      openProject: () => this._projects.openFromDialog(),
+      closeProject: () => void this._projects.close(),
     })
 
-    // Select tool: the engine's `TileEditorSystem` emits
-    // `PLACEMENT_SELECTED` when the user clicks while the select tool
-    // is active — the system already mutated
-    // `SelectedPlacementsComponent` so the canvas-side selection ring
-    // updates; we mirror the pick into the right-inspector's
-    // objects-tab row highlight. Empty-tile clicks land here with
-    // `placementId: null` and clear the row highlight.
-    //
-    // Auto-open the right inspector on a hit (per the project-wide
-    // policy in `docs/concepts/responsive-chrome.md`). Empty-tile
-    // clicks leave it alone — there's no inspector content for an
-    // empty selection, so popping the sidebar open would feel
-    // surprising. The window-level `show-inspector` setter is a no-
-    // op when already open.
-    this._engineCtl.on('placement-selected', ({ placementId }) => {
-      this._scene_editor_view.highlightPlacement(placementId)
-      if (placementId) this.set_property('show-inspector', true)
+    installZoomActions(group, {
+      targetsAtlas: () => this._router.currentView === 'atlas',
+      stepAtlasZoom: (delta) => this._atlas_view.stepPreviewZoom(delta),
+      resetAtlasZoom: () => this._atlas_view.resetPreviewZoom(),
+      fitAtlas: () => this._atlas_view.fitAtlas(),
+      stepEngineZoom: (delta) => this._stepZoom(delta),
+      resetEngineZoom: () => void this._applyZoom(1),
     })
 
-    // Layer eye/padlock mirroring: `LAYER_FLAG_CHANGED` fires on every
-    // application path of the layer-flag commands — local toggle,
-    // undo/redo, and inbound peer ops (which don't emit
-    // `COMMAND_EXECUTED`) — so the Layers tab follows changes the
-    // inspector didn't originate, just like the canvas does.
-    this._engineCtl.on('layer-flag-changed', ({ layerId, flag, value }) => {
-      this._scene_editor_view.setLayerFlag(layerId, flag, value)
+    const { tool, undo, redo } = installEditingActions(group, {
+      setEngineTool: (next) => this._engineCtl.engine?.setActiveTool(next),
+      setViewTool: (next) => this._scene_editor_view.setActiveTool(next),
+      setEngineObjectBrush: (defId) => this._engineCtl.engine?.setObjectBrush(defId),
+      setViewObjectBrush: (defId) => this._scene_editor_view.setArmedObjectBrush(defId),
+      setSelectedPlacements: (ids) => this._engineCtl.engine?.setSelectedPlacements([...ids]),
+      highlightPlacement: (id) => this._scene_editor_view.highlightPlacement(id),
+      revealInspector: () => this.set_property('show-inspector', true),
+      undo: () => this._engineCtl.engine?.undo(),
+      redo: () => this._engineCtl.engine?.redo(),
+      createLayer: () => this._createLayer(),
     })
 
-    // Runtime event-script effects (playtest): the engine's
-    // `EventActionSystem` emits these when a trigger fires. Surface them
-    // as toasts so the user can verify their events without a console.
-    // These fire in runtime mode only, so they never spam while editing.
-    // A real in-game dialogue box / inventory / audio layer is future
-    // work (see TODO.md) — the toast is the current host effect, matching
-    // the maturity of the teleport / item hosts.
-    this._engineCtl.on('show-text', ({ text, speaker }) => {
-      this._showToast(speaker ? `${speaker}: ${text}` : text)
-    })
-    this._engineCtl.on('item-picked-up', ({ itemId, qty }) => {
-      this._showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`)
-    })
-    this._engineCtl.on('flag-set', ({ flag, value }) => {
-      this._showToast(`Flag "${flag}" = ${String(value)}`)
-    })
-    this._engineCtl.on('play-sfx', ({ sound }) => {
-      this._showToast(`Play sound: ${sound}`)
+    const { objects, grid, transparency } = installInspectorActions(group, {
+      sidebarOwner: this,
+      setInspectorTab: (name) => this._scene_editor_view.setInspectorTab(name),
+      toggleVisibleInspector: () => this._toggleVisibleInspector(),
+      setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
+      setViewObjectsVisible: (visible) => this._scene_editor_view.setObjectsVisible(visible),
+      setEngineShowGrid: (showGrid) => this._engineCtl.engine?.setShowGrid(showGrid),
+      setEngineDimInactiveLayers: (dim) => this._engineCtl.engine?.setDimInactiveLayers(dim),
     })
 
-    // Grid lines + non-active-layer dimming are two INDEPENDENT
-    // editor view flags. The user can have grid on / off and the
-    // dimming on / off in any combination — they help with
-    // different tasks (grid = tile alignment, dimming = layer
-    // focus). The engine mirrors that split as `setShowGrid` +
-    // `setDimInactiveLayers` against the same session-singleton
-    // component, so each toggle drives just its own flag.
-    // Global objects visibility — the Layers tab's "Objects" row as a
-    // driveable stateful action (MCP bridge / shortcuts).
-    const objectsAction = Gio.SimpleAction.new_stateful('toggle-objects', null, GLib.Variant.new_boolean(true))
-    objectsAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      const visible = value!.get_boolean()
-      this._engineCtl.engine?.setObjectsVisible(visible)
-      this._scene_editor_view.setObjectsVisible(visible)
+    const { play } = installPlaytestActions(group, {
+      persistCurrentMap: () => this._mapPersistCtl.persistCurrentMap(),
+      setRuntimeMode: (playing) => this._engineCtl.engine?.setRuntimeMode(playing),
+      setViewPlaying: (playing) => this._scene_editor_view.setPlaying(playing),
     })
-    winActions.add_action(objectsAction)
-    this._objectsAction = objectsAction
 
-    const gridAction = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
-    gridAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      this._engineCtl.engine?.setShowGrid(value!.get_boolean())
+    const { share } = installSessionActions(group, {
+      presentShareDialog: () => this._session.presentShareDialog(),
+      setAssistantPaused: (paused) => this._assistantState.setPaused(paused),
+      setEngineAssistantPaused: (paused) => this._engineCtl.engine?.excalibur?.setAssistantPaused(paused),
+      setViewAssistantPaused: (paused) => this._scene_editor_view.setAssistantPaused(paused),
     })
-    winActions.add_action(gridAction)
-    this._gridAction = gridAction
 
-    const transparencyAction = Gio.SimpleAction.new_stateful(
-      'toggle-transparency',
-      null,
-      GLib.Variant.new_boolean(false),
-    )
-    transparencyAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      this._engineCtl.engine?.setDimInactiveLayers(value!.get_boolean())
+    installCastActions(group, {
+      hasProject,
+      showToast,
+      showCastView: () => this._router.setView('cast'),
+      presentNewCharacter: () => this._cast_view.presentNewCharacterDialog(),
+      focusCharacter: (id) => this._cast_view.focusCharacter(id),
+      focusCharacterBySheet: (sheetId) => this._cast_view.focusCharacterBySheet(sheetId),
+      presentNewAnimation: (sheetId) => this._cast_view.presentNewAnimationForSheet(sheetId),
+      currentSceneId: () => this._scenes.currentSceneId,
+      openScene: (sceneId) => this._scenes.open(sceneId),
+      armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
     })
-    winActions.add_action(transparencyAction)
-    this._transparencyAction = transparencyAction
 
-    // Play / playtest toggle. Stateful boolean — clicking the
-    // FloatingPlay button (action-name="win.play") activates the
-    // action; the activate handler flips the state, the
-    // change-state handler forwards into the engine to swap
-    // `EditorModeComponent` ↔ `RuntimeModeComponent` on the active
-    // scene. The engine's `PlayerSystem` reveals + drives the
-    // player actor in runtime, hides it again on editor mode.
-    const playAction = Gio.SimpleAction.new_stateful('play', null, GLib.Variant.new_boolean(false))
-    playAction.connect('activate', () => {
-      const current = playAction.get_state()?.get_boolean() ?? false
-      playAction.change_state(GLib.Variant.new_boolean(!current))
+    installTileActions(group, {
+      hasProject,
+      showToast,
+      showTilesView: () => this._router.setView('tiles'),
+      presentAppearanceImport: () => this._tiles_view.presentAppearanceImportDialog(),
+      presentTilesetImport: () => this._tiles_view.presentTilesetImportDialog(),
+      focusTileset: (id) => this._tiles_view.focusTileset(id),
+      focusAppearance: (id) => this._tiles_view.focusAppearance(id),
+      switchTileset: () => this._switchTileset(),
     })
-    playAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      const isPlaying = value!.get_boolean()
-      // Save unsaved tile edits before entering runtime so a crash
-      // mid-playtest can't lose work. Best-effort — failures surface
-      // as a toast but the playtest still proceeds.
-      if (isPlaying) this._mapPersistCtl.persistCurrentMap()
-      this._engineCtl.engine?.setRuntimeMode(isPlaying)
-      // Visual feedback on the FloatingPlay pill: icon + label swap
-      // to "pause" while in playtest mode so it's clear what the
-      // button will do on the next click.
-      this._scene_editor_view.setPlaying(isPlaying)
+
+    installObjectActions(group, {
+      hasProject,
+      showToast,
+      showObjectsView: () => this._router.setView('objects'),
+      createFromTemplate: (templateId) => this._objectsCtl?.createFromTemplate(templateId),
+      focusObject: (id) => this._objects_view.focusObject(id),
+      toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
     })
-    winActions.add_action(playAction)
-    this._playAction = playAction
 
-    // AI-assistant pause toggle — the user's stay-in-control switch over
-    // the AI collaborator. The collaborators bar's pause button
-    // (action-name="win.toggle-assistant-paused") activates this; the
-    // change-state handler writes the AssistantStateService (the single
-    // source) and mirrors into the engine (canvas-channel rejection) +
-    // the pill icon. HUMAN-ONLY: the Control plane rejects driving this
-    // action (the AI must not un-pause itself — see
-    // assistant-pause-policy.ts / ai-collaborator.md § Pause contract).
-    const assistantPausedAction = Gio.SimpleAction.new_stateful(
-      'toggle-assistant-paused',
-      null,
-      GLib.Variant.new_boolean(false),
-    )
-    assistantPausedAction.connect('activate', () => {
-      const current = assistantPausedAction.get_state()?.get_boolean() ?? false
-      assistantPausedAction.change_state(GLib.Variant.new_boolean(!current))
-    })
-    assistantPausedAction.connect('change-state', (action, value) => {
-      action.set_state(value!)
-      const paused = value!.get_boolean()
-      this._assistantState.setPaused(paused)
-      this._engineCtl.engine?.excalibur?.setAssistantPaused(paused)
-      this._scene_editor_view.setAssistantPaused(paused)
-    })
-    winActions.add_action(assistantPausedAction)
+    installWindowAccels(this.get_application())
 
-    // Camera-follow is now per-participant: clicking a chip in the
-    // collaborators bar follows that participant (the scene-editor view's
-    // onParticipantActivated routes to the collab-presence controller), so
-    // there's no standalone follow action.
-
-    // Keyboard accelerators: Ctrl+Z = undo, Ctrl+Shift+Z = redo,
-    // Ctrl+G = toggle grid, Ctrl+T = toggle non-active-layer
-    // transparency, F5 = play / pause playtest.
-    const app = this.get_application() as Adw.Application | null
-    app?.set_accels_for_action('win.undo', ['<Primary>z'])
-    app?.set_accels_for_action('win.redo', ['<Primary><Shift>z', '<Primary>y'])
-    app?.set_accels_for_action('win.toggle-grid', ['<Primary>g'])
-    app?.set_accels_for_action('win.toggle-transparency', ['<Primary>t'])
-    app?.set_accels_for_action('win.play', ['F5'])
-    // Fit the atlas world into view. The action guards to the atlas, so
-    // the bare `0` only does anything there (and entries still eat it).
-    app?.set_accels_for_action('win.atlas-fit', ['0'])
-
-    for (const name of ['open-recent-projects']) {
-      winActions.add_action(new Gio.SimpleAction({ name }))
-    }
-
-    // Switch which of the active scene's tilesets feeds the Tiles-tab
-    // palette. Only meaningful for maps that reference more than one
-    // sprite set (e.g. terrain + water); a single-tileset map toasts.
-    const switchTilesetAction = new Gio.SimpleAction({ name: 'switch-tileset' })
-    switchTilesetAction.connect('activate', () => this._presentTilesetSwitcher())
-    winActions.add_action(switchTilesetAction)
-
-    // Add a new layer to the active scene's map. Instant-add (no name
-    // prompt) — the common editor gesture; the layer is a fresh empty
-    // one the user can immediately paint on. Rides an undoable +
-    // collab-synced `AddLayerCommand`; the host re-populates the Layers
-    // tab + persists, mirroring the object-removed flow.
-    const newLayerAction = new Gio.SimpleAction({ name: 'new-layer' })
-    newLayerAction.connect('activate', () => this._createLayer())
-    winActions.add_action(newLayerAction)
-
-    const backAction = new Gio.SimpleAction({ name: 'back-to-atlas' })
-    backAction.connect('activate', () => this._showAtlas())
-    winActions.add_action(backAction)
-
-    const closeProjectAction = new Gio.SimpleAction({ name: 'close-project' })
-    closeProjectAction.connect('activate', () => void this._closeProject())
-    winActions.add_action(closeProjectAction)
-
-    // Share-session — opens the Share dialog. Disabled until a
-    // project loads; the mode-rail's share button binds to this
-    // GAction so it greys out at the same time.
-    const shareAction = new Gio.SimpleAction({ name: 'share-session' })
-    shareAction.set_enabled(false)
-    shareAction.connect('activate', () => this._onShareSession())
-    winActions.add_action(shareAction)
-    this._shareAction = shareAction
-    app?.set_accels_for_action('win.share-session', ['<Primary><Shift>s'])
-
-    // Convenience action — drives the file picker so tooling / scripts
-    // can exercise the same path as the welcome view's "Open Project".
-    const openProjectAction = new Gio.SimpleAction({ name: 'open-project' })
-    openProjectAction.connect('activate', () => this._onOpenProject())
-    winActions.add_action(openProjectAction)
-
-    const openSceneByIdAction = Gio.SimpleAction.new('open-scene-by-id', GLib.VariantType.new('s'))
-    openSceneByIdAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (id) this._showSceneEditor(id)
-    })
-    winActions.add_action(openSceneByIdAction)
-
-    const toggleInspectorAction = new Gio.SimpleAction({ name: 'toggle-inspector' })
-    toggleInspectorAction.connect('activate', () => {
-      const current = this._stack.get_visible_child_name()
-      if (current === 'atlas') {
-        this._atlas_view.showInspector = !this._atlas_view.showInspector
-      } else if (current === 'scene-editor') {
-        this._scene_editor_view.showInspector = !this._scene_editor_view.showInspector
-      }
-    })
-    winActions.add_action(toggleInspectorAction)
-
-    // The zoom actions are view-contextual: on the atlas they drive
-    // the global card-preview zoom (the atlas reuses the scene
-    // editor's FloatingZoom pill), everywhere else the engine camera.
-    const zoomTargetsAtlas = () => this._stack.get_visible_child_name() === 'atlas'
-
-    const zoomInAction = new Gio.SimpleAction({ name: 'zoom-in' })
-    zoomInAction.connect('activate', () =>
-      zoomTargetsAtlas() ? this._atlas_view.stepPreviewZoom(+0.2) : this._stepZoom(+0.2),
-    )
-    winActions.add_action(zoomInAction)
-
-    const zoomOutAction = new Gio.SimpleAction({ name: 'zoom-out' })
-    zoomOutAction.connect('activate', () =>
-      zoomTargetsAtlas() ? this._atlas_view.stepPreviewZoom(-0.2) : this._stepZoom(-0.2),
-    )
-    winActions.add_action(zoomOutAction)
-
-    const zoomResetAction = new Gio.SimpleAction({ name: 'zoom-reset' })
-    zoomResetAction.connect('activate', () =>
-      zoomTargetsAtlas() ? this._atlas_view.resetPreviewZoom() : void this._applyZoom(1),
-    )
-    winActions.add_action(zoomResetAction)
-
-    // Fit the whole world into the atlas viewport (Fit button + `0`).
-    // Only meaningful on the atlas; a no-op guard keeps the shared
-    // accelerator harmless elsewhere.
-    const atlasFitAction = new Gio.SimpleAction({ name: 'atlas-fit' })
-    atlasFitAction.connect('activate', () => {
-      if (zoomTargetsAtlas()) this._atlas_view.fitAtlas()
-    })
-    winActions.add_action(atlasFitAction)
-
-    const newSceneAction = new Gio.SimpleAction({ name: 'new-scene' })
-    newSceneAction.connect('activate', () => this._showToast(_('New Scene — not yet implemented')))
-    winActions.add_action(newSceneAction)
-
-    const newCharacterAction = new Gio.SimpleAction({ name: 'new-character' })
-    newCharacterAction.connect('activate', () => {
-      if (!this._loadedProject) {
-        this._showToast(_('Open a project first'))
-        return
-      }
-      this._cast_view.presentNewCharacterDialog()
-    })
-    winActions.add_action(newCharacterAction)
-
-    // Import an appearance (character sprite sheet) — lives in the unified
-    // Sheets view now (the Appearances "+" button), alongside tileset import.
-    const newSpriteSetAction = new Gio.SimpleAction({ name: 'new-spriteset' })
-    newSpriteSetAction.connect('activate', () => {
-      if (!this._loadedProject) {
-        this._showToast(_('Open a project first'))
-        return
-      }
-      this._setView('tiles')
-      this._tiles_view.presentAppearanceImportDialog()
-    })
-    winActions.add_action(newSpriteSetAction)
-
-    const newTilesetAction = new Gio.SimpleAction({ name: 'new-tileset' })
-    newTilesetAction.connect('activate', () => {
-      if (!this._loadedProject) {
-        this._showToast(_('Open a project first'))
-        return
-      }
-      this._tiles_view.presentTilesetImportDialog()
-    })
-    winActions.add_action(newTilesetAction)
-
-    // Drill into a character / tileset detail sub-page by id — the
-    // master-detail equivalent of `open-scene-by-id`. Card clicks do this
-    // in the UI; the action lets tooling (the MCP bridge) + scripts reach
-    // the detail page too.
-    const openCharacterAction = Gio.SimpleAction.new('open-character', GLib.VariantType.new('s'))
-    openCharacterAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (id) this._cast_view.focusCharacter(id)
-    })
-    winActions.add_action(openCharacterAction)
-
-    // "Place on map" from the Cast detail: jump to the current scene with
-    // the character's entity armed as the object brush (characters live in
-    // the entity library, so the character id IS the brush id). Needs an
-    // open scene — otherwise a hint toast.
-    const placeCharacterAction = Gio.SimpleAction.new('place-character', GLib.VariantType.new('s'))
-    placeCharacterAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (!id) return
-      if (!this._currentSceneId) {
-        this._showToast(_('Open a scene first to place a character'))
-        return
-      }
-      this._showSceneEditor(this._currentSceneId)
-      this.activate_action('win.set-object-brush', GLib.Variant.new_string(id))
-    })
-    winActions.add_action(placeCharacterAction)
-
-    const openTilesetAction = Gio.SimpleAction.new('open-tileset', GLib.VariantType.new('s'))
-    openTilesetAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (id) this._tiles_view.focusTileset(id)
-    })
-    winActions.add_action(openTilesetAction)
-
-    // Create a library object from a template id (default `npc`), switch to
-    // the Objects view, and focus the new entry. The in-view "New object"
-    // button shows a template chooser; this action is the driveable form.
-    const newObjectAction = Gio.SimpleAction.new('new-object', GLib.VariantType.new('s'))
-    newObjectAction.connect('activate', (_a, parameter) => {
-      if (!this._loadedProject) {
-        this._showToast(_('Open a project first'))
-        return
-      }
-      this._setView('objects')
-      this._objectsCtl?.createFromTemplate(parameter?.get_string()[0] || 'npc')
-    })
-    winActions.add_action(newObjectAction)
-
-    const openObjectAction = Gio.SimpleAction.new('open-object', GLib.VariantType.new('s'))
-    openObjectAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (!id) return
-      this._setView('objects')
-      this._objects_view.focusObject(id)
-    })
-    winActions.add_action(openObjectAction)
-
-    // Flip an entity's Cast membership (promote a world object into the
-    // friendly Cast roster, or demote it back). The in-UI path is the
-    // Objects detail's "Cast member" switch; this is the driveable form.
-    const toggleObjectCastAction = Gio.SimpleAction.new('toggle-object-cast', GLib.VariantType.new('s'))
-    toggleObjectCastAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (id) this._objectsCtl?.toggleCastMember(id)
-    })
-    winActions.add_action(toggleObjectCastAction)
-
-    // Jump to an appearance (character sprite-sheet) as a raw ASSET in the
-    // Sheets view — select its card + show the glance. Asset management
-    // (glance / delete / re-import) lives here; animation authoring moved
-    // to the Cast matrix (see `win.edit-appearance`). (Replaces the old
-    // `win.open-sheet`, which targeted the removed Cast sheet section.)
-    const openAppearanceAction = Gio.SimpleAction.new('open-appearance', GLib.VariantType.new('s'))
-    openAppearanceAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (!id) return
-      this._setView('tiles')
-      this._tiles_view.focusAppearance(id)
-    })
-    winActions.add_action(openAppearanceAction)
-
-    // Edit an appearance's animations — the Cast matrix is the authoring
-    // home. Switches to Cast + selects the first character wearing the
-    // sheet. Toasts when no character wears it yet (an orphan appearance:
-    // assign it to a character in Cast to edit its animations). The Sheets
-    // appearance gallery "edit" affordance + `_openAsset` route here.
-    const editAppearanceAction = Gio.SimpleAction.new('edit-appearance', GLib.VariantType.new('s'))
-    editAppearanceAction.connect('activate', (_a, parameter) => {
-      const id = parameter?.get_string()[0]
-      if (!id) return
-      this._setView('cast')
-      if (!this._cast_view.focusCharacterBySheet(id)) {
-        this._showToast(
-          _('No character wears this appearance yet — assign it to a character in Cast to edit its animations'),
-        )
-      }
-    })
-    winActions.add_action(editAppearanceAction)
-
-    // Present the "New animation" dialog for an appearance sheet in the
-    // Cast view (the authoring home). Optional string id targets the
-    // character wearing that appearance; empty targets the active one.
-    // Mainly for the MCP bridge — the in-UI path is the matrix's
-    // "Add custom animation" affordance.
-    const newAnimationAction = Gio.SimpleAction.new('new-animation', GLib.VariantType.new('s'))
-    newAnimationAction.connect('activate', (_a, parameter) => {
-      if (!this._loadedProject) {
-        this._showToast(_('Open a project first'))
-        return
-      }
-      this._setView('cast')
-      const id = parameter?.get_string()[0]
-      if (!this._cast_view.presentNewAnimationForSheet(id || undefined)) {
-        this._showToast(_('Select or create a character first to add an animation'))
-      }
-    })
-    winActions.add_action(newAnimationAction)
-
-    const openSceneAction = new Gio.SimpleAction({ name: 'open-scene' })
-    openSceneAction.connect('activate', () => {
-      const id = this._currentAtlasSelection()
-      if (id) this._showSceneEditor(id)
-    })
-    winActions.add_action(openSceneAction)
-
-    this.insert_action_group('win', winActions)
-    // Keep a reference so the Control D-Bus interface can list / drive
-    // these actions. Adw.ApplicationWindow (unlike Gtk.ApplicationWindow)
-    // has no GActionMap that GtkApplication would export over
-    // org.gtk.Actions, so external tooling reaches them through Control.
-    this._winActions = winActions
+    this.insert_action_group('win', group)
+    this._winActions = group
+    this._actions = { mode, tool, play, objects, grid, transparency, share, undo, redo }
   }
 
-  private _lastAtlasSelection: string | null = null
-
-  private _currentAtlasSelection(): string | null {
-    return this._lastAtlasSelection
+  /** Re-hydrate the lens behind `view` before the router shows it. */
+  private _prepareView(view: ViewName): void {
+    if (view === 'cast') void this._castCtl?.refresh()
+    else if (view === 'objects') this._objectsCtl?.refresh()
   }
 
-  private _setView(name: ViewName): void {
-    // Dispose the engine when leaving the scene editor. The gjs Engine
-    // widget nulls out its internal Excalibur instance in
-    // `vfunc_unmap` (so we don't leak GL contexts when the scene
-    // editor is off-screen), which leaves our cached reference
-    // pointing at a dead wrapper. Forcing a fresh engine on re-entry
-    // sidesteps that.
-    const current = this._stack.get_visible_child_name()
-    if (current === 'scene-editor' && name !== 'scene-editor') {
-      this._engineCtl.dispose()
-      // Reset play state — the engine is gone; re-entering the scene
-      // editor starts a fresh MapScene defaulted to editor mode. Without
-      // this the stateful action would still report "playing" and the
-      // first click would have to flip to false before actually playing.
-      this._playAction?.change_state(GLib.Variant.new_boolean(false))
+  /** `win.toggle-inspector` — flip whichever view is on screen. */
+  private _toggleVisibleInspector(): void {
+    const current = this._router.currentView
+    if (current === 'atlas') {
+      this._atlas_view.showInspector = !this._atlas_view.showInspector
+    } else if (current === 'scene-editor') {
+      this._scene_editor_view.showInspector = !this._scene_editor_view.showInspector
     }
-    this._stack.set_visible_child_name(name)
+  }
 
-    // When the mode rail is an overlay (narrow widths, `library-collapsed`),
-    // selecting a page through it should dismiss it so the chosen view
-    // isn't left covered. On wide layouts the rail is pinned and stays.
-    if (name !== 'welcome' && this._cast_view.libraryCollapsed) {
-      this.set_property('show-library', false)
-    }
-
-    // Keep `win.mode` in sync with the visible view so the mode rail's
-    // active row matches what's on screen. `welcome` doesn't have a
-    // mode — leave the action where it was so going welcome → back-to-
-    // atlas restores the previous mode highlight.
-    const modeForView: Record<ViewName, EditorMode | null> = {
-      welcome: null,
-      atlas: 'world',
-      cast: 'cast',
-      objects: 'objects',
-      tiles: 'tiles',
-      'scene-editor': 'world',
-      data: 'data',
-    }
-    const targetMode = modeForView[name]
-    if (targetMode && this._modeAction?.get_state()?.get_string()[0] !== targetMode) {
-      // Use set_state (not change_state) to avoid recursing through
-      // `_onModeChanged` — the view is already being set explicitly.
-      this._modeAction.set_state(GLib.Variant.new_string(targetMode))
-    }
-    if (targetMode) this._syncModeRails(targetMode)
+  /** Present the unified import dialog for a Data-view asset of `kind`. */
+  private _presentAssetImport(kind: SpriteSetKind): void {
+    presentAssetImport(this, kind, (result) => void this._projectStore.importSpriteSet(result))
   }
 
   /**
-   * Push the active mode into every view's ModeRail instance. Each
-   * view owns its own ModeRail (atlas / cast / tiles / scene-editor),
-   * and the rails only auto-update on their OWN row clicks. Without
-   * this push, navigating via a path that bypasses a rail's click
-   * (e.g. opening a scene from the atlas, or a programmatic
-   * `_setView`) would leave the destination view's rail showing a
-   * stale active row — the user-visible bug from #71's first review.
-   *
-   * Pushing to ALL rails (not just the active view's) keeps state in
-   * sync for any future toggle to a different view.
+   * Jump from a Data-view asset row to its home view. Both kinds live in
+   * the Sheets view: tilesets → tile inspector, appearances (character
+   * sheets) → the asset glance. (Animation authoring lives in the Cast
+   * matrix, reachable from the glance's "edit in Cast" jump.)
    */
-  private _syncModeRails(mode: EditorMode): void {
-    this._atlas_view.syncActiveMode(mode)
-    this._cast_view.syncActiveMode(mode)
-    this._objects_view.syncActiveMode(mode)
-    this._tiles_view.syncActiveMode(mode)
-    this._scene_editor_view.syncActiveMode(mode)
-    this._data_view.syncActiveMode(mode)
+  private _openAsset(id: string, kind: SpriteSetKind): void {
+    if (!this._loadedProject) return
+    this._router.setView('tiles')
+    if (kind === 'tileset') this._tiles_view.focusTileset(id)
+    else this._tiles_view.focusAppearance(id)
   }
 
-  private _showAtlas(): void {
-    this._setView('atlas')
-  }
-
-  private _showSceneEditor(sceneId: string): void {
-    const scene = this._scenesById.get(sceneId)
-    if (!scene) {
-      this._showToast(_('Scene not found'))
+  /**
+   * `win.switch-tileset` — pick which of the active scene's tilesets feeds
+   * the Tiles-tab palette. Maps referencing a single sprite set have
+   * nothing to switch to.
+   */
+  private _switchTileset(): void {
+    const project = this._loadedProject
+    const sceneId = this._scenes.currentSceneId
+    if (!project || !sceneId) return
+    const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
+    if (refs.length <= 1) {
+      this._showToast(_('This scene uses a single tileset.'))
       return
     }
-    this._currentSceneId = sceneId
-    this._scene_editor_view.setScene(scene)
-    this._setView('scene-editor')
-
-    // Real-data hydration (engine + inspector tabs) only happens once a
-    // project is loaded. Plain demo scenes fall back to placeholders.
-    if (this._loadedProject) {
-      void this._hydrateSceneEditor(sceneId)
-    }
+    const activeId = this._scene_editor_view.activeTilesetId
+    const choices = refs.map((ref) => ({ id: ref.id, active: ref.id === activeId }))
+    presentTilesetSwitcher(this, choices, (spriteSetId) => {
+      const ref = refs.find((r) => r.id === spriteSetId)
+      void this._scene_editor_view.loadTileset(project, spriteSetId, ref?.firstGid ?? 1)
+    })
   }
 
-  private async _hydrateSceneEditor(sceneId: string): Promise<void> {
-    const project = this._loadedProject
-    if (!project) return
-
-    // Order is load-bearing: `ensureForMap` must complete before
-    // `populateFromProject` so the inspector's initial
-    // `_setActiveTile` / `_setActiveLayer` writes land on a live
-    // Excalibur engine. The reverse order leaves the engine's
-    // `ActiveTile` / `ActiveLayer` session-state null until the user
-    // manually picks a swatch, breaking the brush hover preview at
-    // startup (the slot fires before Excalibur is initialised, so the
-    // gjs widget's `setActiveTile/Layer` forwarders silently no-op
-    // — see `SceneEditorView.setEngineWidget`).
-    try {
-      await this._engineCtl.ensureForMap(project.projectPath, sceneId)
-    } catch (error) {
-      console.error('[ApplicationWindow] Failed to bring up engine:', formatError(error))
-      this._showToast(_('Failed to load map'))
-      // Fall through: still populate the inspector so the user has a
-      // usable surface (palette / layers / objects) even when the
-      // canvas couldn't come up. `populateFromProject`'s engine writes
-      // will no-op gracefully since the controller's `_engine` stays
-      // null on a failed bring-up.
+  /**
+   * `win.new-layer` — append a fresh empty layer to the active scene's
+   * map through the engine's undoable + collab-synced `AddLayerCommand`,
+   * then re-populate the Layers tab + persist (the same refresh flow as
+   * `object-removed`). The engine mutates the shared project
+   * `MapResource`, so both see the new layer.
+   */
+  private _createLayer(): void {
+    const sceneId = this._scenes.currentSceneId
+    if (!sceneId) return
+    const layers = this._loadedProject?.resource.maps.get(sceneId)?.mapData?.layers
+    if (!layers) return
+    const layer = nextLayerDraft(layers)
+    if (!this._engineCtl.engine?.addLayer(layer)) return
+    if (this._loadedProject) {
+      void this._scene_editor_view.populateFromProject(this._loadedProject, sceneId)
     }
-
-    // Re-push EVERY piece of window-owned stateful editor state into the
-    // freshly-(re)created engine: active tool, view flags (objects /
-    // grid / dimming), assistant pause + identity, follow state and the
-    // Phase-5 awareness relay. The engine's per-scene/per-instance state
-    // resets on every `loadMap` / recreation while the GActions + the
-    // AssistantStateService preserve the user's choices — without this
-    // sync, e.g. a paused assistant silently resumed after a Cast-view
-    // detour. See engine-state-sync.ts for the full re-push list.
-    this._syncEngineUiState()
-
-    // If we joined a shared session before any scene was open, the
-    // engine was null at `_loadSandboxProject` time and the collab
-    // wiring was deferred. Now that `ensureForMap` has booted the
-    // engine, attach it so commands start flowing both ways.
-    // No-op when there's no awaiting-engine session.
-    this._maybeAttachEngineToSession()
-
-    try {
-      await this._scene_editor_view.populateFromProject(project, sceneId)
-    } catch (error) {
-      console.warn('[ApplicationWindow] Failed to populate inspector:', error)
-    }
+    this._mapPersistCtl.persistCurrentMap()
+    this._showToast(_(`Added “${layer.name}”`))
   }
 
   /**
    * Push the window-owned stateful editor state into the current engine —
    * called after every `ensureForMap` so a recreated engine starts from
-   * the user's actual state instead of the engine defaults. The push
-   * list lives in `engine-state-sync.ts` (spec-guarded); this method only
-   * adapts the GAction states + the AssistantStateService snapshot into
-   * the sync call and re-wires the assistant awareness relay (a fresh
-   * engine has `setAssistantFrameRelay(null)`).
+   * the user's actual state instead of the engine defaults. The push list
+   * lives in `engine-state-sync.ts` (spec-guarded); this only adapts the
+   * GAction states + the AssistantStateService snapshot into the sync call
+   * and re-points the assistant awareness relay (a fresh engine has
+   * `setAssistantFrameRelay(null)`).
    */
   private _syncEngineUiState(): void {
     const widget = this._engineCtl.engine
     const ex = widget?.excalibur
-    if (!widget || !ex) return
-    const boolState = (action: Gio.SimpleAction | null, fallback: boolean) =>
-      action?.get_state()?.get_boolean() ?? fallback
+    const actions = this._actions
+    if (!widget || !ex || !actions) return
     syncEngineState(widget, ex, {
-      tool: (this._toolAction?.get_state()?.get_string()[0] as EditorTool | undefined) ?? null,
-      objectsVisible: boolState(this._objectsAction, true),
-      showGrid: boolState(this._gridAction, false),
-      dimInactiveLayers: boolState(this._transparencyAction, false),
+      tool: stringState(actions.tool) as EditorTool | null,
+      objectsVisible: booleanState(actions.objects, true),
+      showGrid: booleanState(actions.grid, false),
+      dimInactiveLayers: booleanState(actions.transparency, false),
       assistant: this._assistantState.snapshot(),
       followAssistant: this.followedPeerId === ASSISTANT_PEER_ID,
     })
-    // Re-point the Phase-5 relay (and the collab-roster wiring) at the
-    // live session — idempotent, a no-op chain when the session is idle.
-    if (this._sessionSvc) this._wireAssistantRelay(this._sessionSvc.getState())
+    this._session.refreshWiring()
   }
 
-  private _onTemplateSelected(templateId: string): void {
-    const template = findTemplateById(templateId)
-    if (!template) {
-      this._showToast(_('Template not found'))
-      return
-    }
-    void this._loadProjectFromPath(template.projectPath)
-  }
-
-  /**
-   * "New Project" → scaffold a fresh copy of the blank starter into a
-   * user-chosen folder, then open it. Previously this opened the blank
-   * template *in place*, so editing a new project silently overwrote the
-   * repo's `games/blank-starter` template files — the scaffold fixes that
-   * footgun (and gives the project a real home on disk).
-   */
-  private _onCreateProject(): void {
-    const blank = findBlankTemplate()
-    if (!blank) {
-      this._showToast(_('No blank template available'))
-      return
-    }
-    const dialog = new Gtk.FileDialog({ title: _('New Project — choose an empty folder'), modal: true })
-    dialog.select_folder(this, null, (_d, result) => {
-      let dir: string | null = null
-      try {
-        dir = dialog.select_folder_finish(result)?.get_path() ?? null
-      } catch (error) {
-        if (error instanceof Error && !error.message.includes('Dismissed')) {
-          console.warn('[ApplicationWindow] New-project folder dialog failed:', error)
-        }
-        return
-      }
-      if (!dir) return
-      if (hasProjectFile(dir)) {
-        this._showToast(_('That folder already contains a project.'))
-        return
-      }
-      if (!scaffoldProjectFrom(GLib.path_get_dirname(blank.projectPath), dir)) {
-        this._showToast(_('Could not create the project.'))
-        return
-      }
-      void this._loadProjectFromPath(GLib.build_filenamev([dir, 'game-project.json']))
-    })
-  }
-
-  /** "Open Project" → real file picker (Gtk.FileDialog). Filter to
-   * `game-project.json`-style files; any project file in the workspace
-   * (including the starter templates) works. */
-  private _onOpenProject(): void {
-    const dialog = new Gtk.FileDialog({ title: _('Open Project'), modal: true })
-
-    const filter = new Gtk.FileFilter()
-    filter.set_name(_('PixelRPG Project (game-project.json)'))
-    filter.add_pattern('game-project.json')
-    filter.add_pattern('*.json')
-    const filters = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype })
-    filters.append(filter)
-    dialog.set_filters(filters)
-    dialog.set_default_filter(filter)
-
-    dialog.open(this, null, (_d, result) => {
-      try {
-        const file = dialog.open_finish(result)
-        const path = file?.get_path()
-        if (path) void this._loadProjectFromPath(path)
-      } catch (error) {
-        // User cancelled or dialog failed — ignore.
-        if (error instanceof Error && !error.message.includes('Dismissed')) {
-          console.warn('[ApplicationWindow] Open dialog failed:', error)
-        }
-      }
-    })
-  }
-
-  private async _loadProjectFromPath(projectPath: string): Promise<void> {
-    this._showToast(_('Loading project…'))
-    try {
-      const project = await loadProjectAsAtlas(projectPath)
-      this._shareAction?.set_enabled(true)
-      this._atlas_view.projectName = project.projectName
-      this._scene_editor_view.projectName = project.projectName
-      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
-      this._scenesById = new Map(project.scenes.map((s) => [s.id, s]))
-      // Hand the new project to the store — its `project-changed` event
-      // hydrates every per-mode lens (cast / objects / tiles / data).
-      this._projectStore.setProject(project)
-      // A fresh project starts on the card overview, not a stale detail
-      // page left over from the previous project.
-      this._cast_view.resetToOverview()
-      this._tiles_view.resetToOverview()
-      // Force the engine to reload its project on the next scene-editor entry.
-      this._engineCtl.invalidateCache()
-      // Record success in the recent-projects store + refresh the
-      // welcome list so backing out of the project shows the project we
-      // just opened at the top.
-      const caption = (project.resource.data?.properties?.description as string | undefined) ?? ''
-      recordRecentProject({ path: projectPath, name: project.projectName, caption, sceneCount: project.scenes.length })
-      this._welcome_view.setRecentProjects(loadRecentProjects())
-      this._showAtlas()
-    } catch (error) {
-      console.error('[ApplicationWindow] Failed to load project:', error)
-      this._showToast(_('Failed to load project'))
-    }
+  /** mDNS pings every couple of seconds — only browse on the welcome page. */
+  private _refreshSessionBrowsing(): void {
+    this._session.setBrowsing(this._router.currentView === 'welcome')
   }
 
   /** Translate a {@link ProjectStoreNotice} into its user-facing toast text. */
@@ -1674,69 +786,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   private _showToast(message: string): void {
     this._toast_overlay.add_toast(new Adw.Toast({ title: message, timeout: 3 }))
-  }
-
-  /**
-   * `win.new-layer` handler: append a fresh empty layer to the active
-   * scene's map. Builds a unique `LayerData` (id + "Layer N" name),
-   * dispatches it through the engine's undoable + collab-synced
-   * `AddLayerCommand`, then re-populates the Layers tab + persists —
-   * the same refresh flow as `object-removed`. No-op when no scene is
-   * open. The engine mutates the shared project `MapResource`, so the
-   * re-populate + persist see the new layer.
-   */
-  private _createLayer(): void {
-    const sceneId = this._currentSceneId
-    if (!sceneId) return
-    const layers = this._loadedProject?.resource.maps.get(sceneId)?.mapData?.layers
-    if (!layers) return
-    const taken = new Set(layers.map((l) => l.id))
-    const name = `Layer ${layers.length + 1}`
-    const layer: LayerData = { id: uniqueIdFrom(name, taken, 'layer'), name, visible: true }
-    if (!this._engineCtl.engine?.addLayer(layer)) return
-    if (this._loadedProject) {
-      void this._scene_editor_view.populateFromProject(this._loadedProject, sceneId)
-    }
-    this._mapPersistCtl.persistCurrentMap()
-    this._showToast(_(`Added “${name}”`))
-  }
-
-  /**
-   * `win.switch-tileset` handler: pick which of the active scene's
-   * tilesets feeds the Tiles-tab palette. Maps that reference a single
-   * sprite set have nothing to switch to (toast); otherwise present a
-   * chooser and re-point the palette via `SceneEditorView.loadTileset`.
-   */
-  private _presentTilesetSwitcher(): void {
-    const project = this._loadedProject
-    const sceneId = this._currentSceneId
-    if (!project || !sceneId) return
-    const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
-    if (refs.length <= 1) {
-      this._showToast(_('This scene uses a single tileset.'))
-      return
-    }
-    const dialog = new Adw.AlertDialog({
-      heading: _('Switch tileset'),
-      body: _('Choose which of this scene’s tilesets to paint from.'),
-    })
-    const activeId = this._scene_editor_view.activeTilesetId
-    const list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE, cssClasses: ['boxed-list'] })
-    for (const ref of refs) {
-      const row = new Adw.ActionRow({
-        title: ref.id,
-        subtitle: ref.id === activeId ? _('Currently painting') : '',
-        activatable: true,
-      })
-      row.connect('activated', () => {
-        dialog.close()
-        void this._scene_editor_view.loadTileset(project, ref.id, ref.firstGid ?? 1)
-      })
-      list.append(row)
-    }
-    dialog.set_extra_child(list)
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.present(this)
   }
 
   /** Bump the engine camera zoom and mirror the new value into the OSD. */
@@ -1760,19 +809,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /**
    * Read-only snapshot of the editor's live state for external tooling
    * (the `org.pixelrpg.maker.Control` D-Bus interface → MCP bridge).
-   * Pulls together view + project + engine state that is otherwise
-   * scattered across private fields and the engine controller.
    */
   getDebugStatus(): DebugStatus {
     const engine = this._engineCtl.engine
     const ex = engine?.excalibur ?? null
+    const scenes = this._scenes.scenes
     return {
-      view: this._stack.get_visible_child_name(),
+      view: this._router.currentView,
       projectName: this._loadedProject?.projectName ?? null,
       projectPath: this._loadedProject?.projectPath ?? null,
-      currentSceneId: this._currentSceneId,
-      sceneIds: [...this._scenesById.keys()],
-      scenes: [...this._scenesById.values()].map((s) => ({ id: s.id, name: s.name })),
+      currentSceneId: this._scenes.currentSceneId,
+      sceneIds: scenes.map((s) => s.id),
+      scenes: scenes.map((s) => ({ id: s.id, name: s.name })),
       enginePresent: engine != null,
       // engineReady = Excalibur actually initialised (vs. just the widget
       // existing). It's null until the window is realised + the GLArea's
@@ -1902,12 +950,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._collabPresenceCtl.hideAssistant()
   }
 
-  /** The live `CollabSession` (host or joiner) if a session is active, else null. */
-  private _activeCollab() {
-    const state = this._sessionSvc?.getState()
-    return state && 'collab' in state ? state.collab : null
-  }
-
   /** The live participant roster (collaborators bar + `getDebugStatus`). */
   getParticipants(): CollaboratorEntry[] {
     return this._collabPresenceCtl.getParticipants()
@@ -1978,7 +1020,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (!Gio.File.new_for_path(path).query_exists(null)) {
       throw new Error(`Project file not found: ${path}`)
     }
-    void this._loadProjectFromPath(path)
+    void this._projects.load(path)
   }
 
   /**
@@ -1988,13 +1030,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * engine must be live (open a scene) by the time a joiner connects.
    */
   async startSession(): Promise<string> {
-    if (!this._sessionSvc) throw new Error('Session service not ready (window not mapped yet)')
-    if (!this._loadedProject) throw new Error('Open a project before hosting a session')
-    return this._sessionSvc.startHosting({
-      sessionName: this._loadedProject.projectName,
-      projectName: this._loadedProject.projectName,
-      hostDisplayName: GLib.get_user_name() ?? 'host',
-    })
+    if (!this._session.isReady) throw new Error('Session service not ready (window not mapped yet)')
+    const project = this._loadedProject
+    if (!project) throw new Error('Open a project before hosting a session')
+    return this._session.startHosting(project.projectName)
   }
 
   /**
@@ -2005,24 +1044,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * open a scene afterwards to attach the engine.
    */
   async joinSession(roomId: string): Promise<void> {
-    if (!this._sessionSvc) throw new Error('Session service not ready (window not mapped yet)')
-    await this._sessionSvc.joinByRoomId(roomId)
+    await this._session.join(roomId)
   }
 
   /** JSON-safe snapshot of the current collaboration session state. */
   getSessionState(): SessionSnapshot {
-    return toSessionSnapshot(this._sessionSvc?.getState() ?? null)
+    return toSessionSnapshot(this._session.getState())
   }
 
   /**
    * Enumerate the `app.*` and `win.*` actions for external tooling
-   * (Control D-Bus → MCP bridge). `Adw.ApplicationWindow` has no
-   * GtkApplicationWindow-style auto-export, so this is how a client
-   * discovers what {@link activateAction} / {@link changeActionState}
-   * can drive.
+   * (Control D-Bus → MCP bridge).
    */
   listActions(): ActionList {
-    return { app: this._describeActions('app'), win: this._describeActions('win') }
+    return { app: describeActions(this._actionGroup('app')), win: describeActions(this._actionGroup('win')) }
   }
 
   /**
@@ -2031,9 +1066,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * parameter type, so a plain JS value is enough.
    */
   activateAction(scope: ActionScope, name: string, value?: unknown): void {
-    const group = this._actionGroup(scope)
-    if (!group) throw new Error(`No '${scope}' action group`)
-    if (!group.has_action(name)) throw new Error(`Unknown action ${scope}.${name}`)
+    const group = requireActionGroup(this._actionGroup(scope), scope, name)
     const paramType = group.get_action_parameter_type(name)
     const param = value === undefined || value === null ? null : buildVariant(paramType, value)
     group.activate_action(name, param)
@@ -2045,29 +1078,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * activation alone would only flip the current value.
    */
   changeActionState(scope: ActionScope, name: string, value: unknown): void {
-    const group = this._actionGroup(scope)
-    if (!group) throw new Error(`No '${scope}' action group`)
-    if (!group.has_action(name)) throw new Error(`Unknown action ${scope}.${name}`)
+    const group = requireActionGroup(this._actionGroup(scope), scope, name)
     group.change_action_state(name, buildVariant(group.get_action_state_type(name), value))
   }
 
   private _actionGroup(scope: ActionScope): Gio.ActionGroup | null {
     if (scope === 'app') return this.get_application()
     return this._winActions
-  }
-
-  private _describeActions(scope: ActionScope): ActionDescriptor[] {
-    const group = this._actionGroup(scope)
-    if (!group) return []
-    return group
-      .list_actions()
-      .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({
-        name,
-        enabled: group.get_action_enabled(name),
-        parameterType: group.get_action_parameter_type(name)?.dup_string() ?? null,
-        stateType: group.get_action_state_type(name)?.dup_string() ?? null,
-      }))
   }
 }
 

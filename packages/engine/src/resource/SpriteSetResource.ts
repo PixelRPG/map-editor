@@ -1,18 +1,17 @@
 import {
-  Animation,
-  type AnimationStrategy,
+  type Animation,
   ImageFiltering,
   ImageSource,
   ImageWrapping,
   Logger,
   type Sprite,
-  SpriteSheet,
-  type SpriteSheetSpacingDimensions,
+  type SpriteSheet,
 } from 'excalibur'
 import { SpriteSetFormat } from '../format/SpriteSetFormat'
-import type { AnimationData, SpriteDataSet, SpriteSetData, SpriteSetResourceOptions } from '../types'
+import type { SpriteSetData, SpriteSetResourceOptions } from '../types'
 import { loadTextFile, toFetchUrl } from '../utils'
 import { extractDirectoryPath, getFilename, isAbsoluteOrUrl, joinPaths } from '../utils/url'
+import { createAnimations, createSprites, createSpriteSheet } from './spriteset-graphics.ts'
 
 /**
  * Resource class for loading custom SpriteSet format into Excalibur
@@ -76,162 +75,6 @@ export class SpriteSetResource {
    */
   get imageBasePath(): string {
     return this.basePath
-  }
-
-  /**
-   * Creates a SpriteSheet from the sprite set data
-   */
-  private createSpriteSheet(imageSource: ImageSource, _imageId: string, data: SpriteSetData): SpriteSheet {
-    let rows = 0
-    let columns = 0
-    let tileWidth = 0
-    let tileHeight = 0
-    let spacing: SpriteSheetSpacingDimensions | undefined
-
-    if (data.image) {
-      rows = data.rows
-      columns = data.columns
-      tileWidth = data.spriteWidth
-      tileHeight = data.spriteHeight
-      spacing = data.spacing ? { margin: { x: data.spacing, y: data.spacing } } : undefined
-    }
-
-    const spriteSheet = SpriteSheet.fromImageSource({
-      image: imageSource,
-      grid: {
-        rows,
-        columns,
-        spriteHeight: tileHeight,
-        spriteWidth: tileWidth,
-      },
-      spacing,
-    })
-
-    // Ensure all sprites in the sheet have proper transparency settings
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < columns; col++) {
-        const sprite = spriteSheet.getSprite(col, row)
-        if (sprite) {
-          // Make sure the sprite preserves transparency
-          sprite.destSize.width = tileWidth
-          sprite.destSize.height = tileHeight
-        }
-      }
-    }
-
-    return spriteSheet
-  }
-
-  /**
-   * Creates sprites from the sprite set data and spritesheet
-   */
-  private createSprites(data: SpriteSetData): Record<number, Sprite> {
-    const sprites: Record<number, Sprite> = {}
-
-    if (data.sprites.length === 0) {
-      this.logger.warn('SpriteSet has no sprites defined')
-      return sprites
-    }
-
-    // Create a sprite for each sprite in the sprite set
-    data.sprites.forEach((sprite: SpriteDataSet) => {
-      try {
-        // Determine which spritesheet to use
-        let imageId = 'default'
-
-        // If using the new format with multiple images
-        if (data.image) {
-          // Check if the sprite has an imageId property
-          const spriteImageId = sprite.properties?.imageId as string
-          if (spriteImageId && this.spriteSheets.has(spriteImageId)) {
-            imageId = spriteImageId
-          } else {
-            // Default to the first image
-            imageId = data.image.id
-          }
-        }
-
-        const spriteSheet = this.spriteSheets.get(imageId)
-
-        if (!spriteSheet) {
-          this.logger.warn(`No spritesheet found for image ID ${imageId}`)
-          return
-        }
-
-        if (sprite.col < 0 || sprite.row < 0 || sprite.col >= spriteSheet.columns || sprite.row >= spriteSheet.rows) {
-          this.logger.warn(`Sprite ID ${sprite.id} has invalid position (${sprite.col}, ${sprite.row}). Skipping.`)
-          return
-        }
-
-        const spriteGraphic = spriteSheet.getSprite(sprite.col, sprite.row)
-        if (spriteGraphic) {
-          sprites[sprite.id] = spriteGraphic
-        } else {
-          this.logger.warn(`Failed to get sprite for sprite ID ${sprite.id} at position (${sprite.col}, ${sprite.row})`)
-        }
-      } catch (error) {
-        this.logger.error(`Error creating sprite for sprite ID ${sprite.id}: ${error}`)
-      }
-    })
-
-    // If no sprites were created, this is a serious problem
-    if (Object.keys(sprites).length === 0) {
-      this.logger.error('Failed to create any sprites from the sprite set')
-    }
-
-    return sprites
-  }
-
-  /**
-   * Creates animations from the sprite set data and sprites
-   */
-  private createAnimations(sprites: Record<number, Sprite>, data: SpriteSetData): Record<string, Animation> {
-    const animations: Record<string, Animation> = {}
-
-    if (data.animations && data.animations.length > 0) {
-      data.animations.forEach((animation: AnimationData) => {
-        // Create animation frames with proper cloning of sprites to avoid reference issues
-        const frames = animation.frames
-          .filter((frame) => {
-            // Filter out frames with missing sprites
-            const sprite = sprites[frame.spriteId]
-            if (!sprite) {
-              this.logger.warn(`Animation ${animation.id} references missing sprite ID ${frame.spriteId}`)
-              return false
-            }
-            return true
-          })
-          .map((frame) => {
-            const sprite = sprites[frame.spriteId]
-            // Create a clone of the sprite to ensure each frame has its own instance
-            const spriteClone = sprite.clone()
-
-            return {
-              graphic: spriteClone,
-              duration: frame.duration,
-            }
-          })
-
-        // Only create animation if it has frames
-        if (frames.length > 0) {
-          this.logger.debug(`Creating animation ${animation.id} with ${frames.length} frames`)
-
-          // Create the animation with the frames
-          animations[animation.id] = new Animation({
-            frames,
-            strategy: animation.strategy as AnimationStrategy,
-          })
-
-          // Log the created animation for debugging
-          this.logger.debug(`Animation ${animation.id} created with strategy ${animation.strategy}`)
-        } else {
-          this.logger.warn(`Animation ${animation.id} has no valid frames and will be skipped`)
-        }
-      })
-    }
-
-    this.logger.info(`Created ${Object.keys(animations).length} animations`)
-    return animations
   }
 
   /**
@@ -318,15 +161,11 @@ export class SpriteSetResource {
       // Load all images
       this.imageLoaders = await this.loadImages(this.spriteSetData)
 
-      // Create sprite sheets
       for (const [imageId, imageSource] of this.imageLoaders) {
-        const spriteSheet = this.createSpriteSheet(imageSource, imageId, this.spriteSetData)
-        this.spriteSheets.set(imageId, spriteSheet)
+        this.spriteSheets.set(imageId, createSpriteSheet(imageSource, this.spriteSetData))
       }
-
-      // Create sprites and animations
-      this.sprites = this.createSprites(this.spriteSetData)
-      this.animations = this.createAnimations(this.sprites, this.spriteSetData)
+      this.sprites = createSprites(this.spriteSetData, this.spriteSheets)
+      this.animations = createAnimations(this.spriteSetData, this.sprites)
 
       return this.spriteSetData
     } catch (error) {

@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "clear": "rm -rf dist",
+    "clear": "gjsify clear dist",
     "build:app": "gjsify build src/index.ts --app gjs --globals auto --shebang --outfile dist/mcp-bridge.gjs.mjs",
     "build": "gjsify run build:app",
     "check": "tsc --noEmit",
@@ -23,14 +23,14 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {
-    "@gjsify/cli": "^0.16.7",
+    "@gjsify/cli": "^0.47.0",
     "@types/node": "^25.0.0",
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@girs/gio-2.0": "^4.1.0",
-    "@girs/gjs": "^4.1.0",
-    "@girs/glib-2.0": "^4.1.0",
+    "@girs/gio-2.0": "^4.6.0",
+    "@girs/gjs": "^4.6.0",
+    "@girs/glib-2.0": "^4.6.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.4.3"
   }

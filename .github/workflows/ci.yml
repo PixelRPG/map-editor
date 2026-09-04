@@ -29,10 +29,14 @@ jobs:
         # engine test bundle pulls in (collab/PeerSession) — without them
         # the gjs test run aborts at module load with "Typelib for Gst not
         # found". The tests themselves use fakes, so no gst runtime needed.
+        # `pkg-config` is declared explicitly rather than inherited from a
+        # `-dev` package: `gjsify system-check` treats it as a REQUIRED
+        # dependency and reads library versions through it.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             gjs \
+            pkg-config \
             libglib2.0-bin \
             libgirepository1.0-dev \
             libgtk-4-dev \
@@ -81,12 +85,18 @@ jobs:
         # Bootstrap chicken-and-egg: the global CLI is needed for the
         # initial `gjsify install`, so it can't come from node_modules.
         # Pin it to the exact version gjsify-lock.json resolves for the
-        # workspace (apps pin `@gjsify/cli: ^0.4.36`), so the bootstrap
-        # CLI and the workspace-local CLI are always the same build and
-        # CI never silently adopts a newer release — a broken latest must
-        # not break CI without a repo change (global 0.4.40 e.g. could
-        # not even build the test bundles). Bumps happen by updating the
-        # lockfile in dedicated commits.
+        # workspace (packages pin `@gjsify/cli: ^0.47.0`), so the
+        # bootstrap CLI and the workspace-local CLI are always the same
+        # build and CI never silently adopts a newer release — a broken
+        # latest must not break CI without a repo change (global 0.4.40
+        # e.g. could not even build the test bundles). Bumps happen by
+        # updating the lockfile in dedicated commits.
+        #
+        # `packages['node_modules/@gjsify/cli'].version` is the lockfile-v2
+        # shape gjsify-lock.json still uses at 0.47; if a future lockfile
+        # version moves it, this read prints `undefined` and `npm install
+        # -g @gjsify/cli@undefined` fails loudly rather than installing
+        # latest.
         run: |
           version=$(node -p "require('./gjsify-lock.json').packages['node_modules/@gjsify/cli'].version")
           npm install -g "@gjsify/cli@${version}"
@@ -94,12 +104,33 @@ jobs:
       - name: Install dependencies (gjsify install --immutable)
         run: gjsify install --immutable
 
+      - name: Verify system dependencies (gjsify system-check)
+        # Preflight: GJS, GTK4, libadwaita, libsoup3 and gobject-introspection
+        # are checked by their TYPELIB (what an app actually loads), not by a
+        # `.pc` file — so this states the runtime the later steps assume rather
+        # than the dev packages apt happened to install. Exits non-zero only on
+        # a missing REQUIRED dependency; the optional block and the @girs↔library
+        # skew report are informational. Runs after `gjsify install` because the
+        # optional half is detected from the @gjsify/* packages in node_modules,
+        # and before the type-check/build so a missing runtime fails in seconds
+        # with an install hint instead of ten minutes later inside a bundle.
+        run: gjsify system-check
+
       - name: Lint + format check (Biome)
         # `biome ci` = linter + formatter in check mode. Direct Biome —
         # the gjsify CLI's own lint/fix subcommands wrap oxlint/oxfmt,
         # which this repo doesn't use. GTK CSS is excluded in biome.json
         # (non-web dialect Biome cannot parse).
         run: ./node_modules/.bin/biome ci packages apps
+
+      - name: Verify dependency declarations are consistent (gjsify upgrade --check)
+        # Offline drift gate — no registry calls. Fails when one dep is
+        # declared at two different ranges across the workspace (the state
+        # that makes `gjsify install` hoist one version while a package
+        # believes it pinned another). A claim about the CHECKOUT, like the
+        # Biome step above it, so it is deliberately not scoped to changed
+        # packages. `gjsify upgrade --align` is the fix.
+        run: gjsify upgrade --check
 
       - name: Type-check workspace
         run: gjsify foreach check -v -t

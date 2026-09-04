@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
-import { isTileOutOfBounds, tileToWorldCenter } from './tile-geometry.ts'
+import { isTileOutOfBounds, tileToWorldCenter, worldToTile } from './tile-geometry.ts'
 
 export default async () => {
   await describe('tileToWorldCenter', async () => {
@@ -58,6 +58,28 @@ export default async () => {
 
     await it('treats a zero-sized map as all-out-of-bounds', async () => {
       expect(isTileOutOfBounds(0, 0, 0, 0)).toBe(true)
+    })
+  })
+
+  await describe('worldToTile', async () => {
+    await it('floors a world point into its cell', async () => {
+      expect(worldToTile(0, 0, 16, 16)).toStrictEqual({ x: 0, y: 0 })
+      expect(worldToTile(15.9, 15.9, 16, 16)).toStrictEqual({ x: 0, y: 0 })
+      expect(worldToTile(16, 16, 16, 16)).toStrictEqual({ x: 1, y: 1 })
+    })
+
+    await it('handles non-square cells', async () => {
+      expect(worldToTile(33, 17, 32, 16)).toStrictEqual({ x: 1, y: 1 })
+    })
+
+    await it('does not clamp past the grid — negatives floor away from zero', async () => {
+      expect(worldToTile(-1, -1, 16, 16)).toStrictEqual({ x: -1, y: -1 })
+      expect(worldToTile(1_000, 1_000, 16, 16)).toStrictEqual({ x: 62, y: 62 })
+    })
+
+    await it('round-trips the centre of a tile back to that tile', async () => {
+      const centre = tileToWorldCenter({ x: 0, y: 0 }, 16, 16, 3, 4)
+      expect(worldToTile(centre.x, centre.y, 16, 16)).toStrictEqual({ x: 3, y: 4 })
     })
   })
 }
