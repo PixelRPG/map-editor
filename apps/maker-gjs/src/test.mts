@@ -28,33 +28,76 @@ import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 import themePreferenceSuite from './services/theme-preference.spec.js'
 import zoomMathSuite from './services/zoom-math.spec.js'
 
+import castControllerAnimationsSuite from './services/cast-controller-animations.spec.js'
+import castControllerPreviewCacheSuite from './services/cast-controller-preview-cache.spec.js'
+import castControllerViewModelSuite from './services/cast-controller-view-model.spec.js'
+import castViewModelSuite from './services/cast-view-model.spec.js'
+import collabInboundRouteSuite from './services/collab-inbound-route.spec.js'
+import collabOpStamperSuite from './services/collab-op-stamper.spec.js'
+import collabPeerColourSuite from './services/collab-peer-colour.spec.js'
+import collabPeerConnectSuite from './services/collab-peer-connect.spec.js'
+import collabSinkBufferSuite from './services/collab-sink-buffer.spec.js'
+import entityVisualsSuite from './services/entity-visuals.spec.js'
+import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
+import layerDraftSuite from './services/layer-draft.spec.js'
+import projectStoreBroadcastSuite from './services/project-store-broadcast.spec.js'
+import projectStoreEntitiesSuite from './services/project-store-entities.spec.js'
+import projectStorePersistenceSuite from './services/project-store-persistence.spec.js'
+import projectStoreSpriteSetsSuite from './services/project-store-sprite-sets.spec.js'
+import sessionDiscoveryIndexSuite from './services/session-discovery-index.spec.js'
+import sessionOpenFlowSuite from './services/session-open-flow.spec.js'
+import sessionStateSuite from './services/session-state.spec.js'
+import tilesViewModelSuite from './services/tiles-view-model.spec.js'
+import viewModeMapSuite from './services/view-mode-map.spec.js'
+
 run({
   assistantPausePolicySuite,
   assistantStateServiceSuite,
-  instanceIdSuite,
-  engineStateSyncSuite,
-  gvariantSuite,
+  castControllerAnimationsSuite,
+  castControllerPreviewCacheSuite,
+  castControllerViewModelSuite,
+  castViewModelSuite,
+  collabInboundRouteSuite,
   collabLogSuite,
-  collabSessionSuite,
+  collabOpStamperSuite,
+  collabPeerColourSuite,
+  collabPeerConnectSuite,
   collabSessionE2eSuite,
-  lanDiscoverySuite,
+  collabSessionSuite,
+  collabSinkBufferSuite,
+  engineStateSyncSuite,
+  entityVisualsSuite,
+  gvariantSuite,
+  instanceIdSuite,
   lanDiscoveryIntegrationSuite,
   lanDiscoveryParseSuite,
+  lanDiscoverySuite,
   lanSignallingIntegrationSuite,
   lanSignallingSuite,
   lanSignallingTimeoutSuite,
+  layerDescriptorsSuite,
+  layerDraftSuite,
   mapEditorDataSuite,
   orphanPublisherCleanupSuite,
   participantRosterSuite,
   pixelrpgUrlSuite,
   projectLoaderSuite,
+  projectStoreBroadcastSuite,
+  projectStoreEntitiesSuite,
+  projectStorePersistenceSuite,
+  projectStoreSpriteSetsSuite,
   projectStoreSuite,
   recentTimeSuite,
   relaySignallingSuite,
   sandboxPathSuite,
-  sessionServiceSuite,
+  sessionDiscoveryIndexSuite,
+  sessionOpenFlowSuite,
   sessionServiceE2eSuite,
+  sessionServiceSuite,
   sessionSnapshotSuite,
+  sessionStateSuite,
   themePreferenceSuite,
+  tilesViewModelSuite,
+  viewModeMapSuite,
   zoomMathSuite,
 })

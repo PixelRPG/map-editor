@@ -1,0 +1,54 @@
+using Gtk 4.0;
+
+// One character in the Cast roster: animated avatar, name + role, an
+// accent "Player" badge for the player character, and a destructive
+// delete affordance that only requests the deletion (the view confirms).
+template $CastRosterRow : Gtk.ListBoxRow {
+  child: Gtk.Box {
+    orientation: horizontal;
+    spacing: 12;
+    margin-top: 6;
+    margin-bottom: 6;
+    margin-start: 6;
+    margin-end: 6;
+
+    $PixelRpgCharacterPreview avatar {
+      frame-size: 40;
+      show-controls: false;
+      auto-cycle: false;
+      highlighted: false;
+    }
+
+    Gtk.Box {
+      orientation: vertical;
+      hexpand: true;
+      valign: center;
+
+      Gtk.Label {
+        label: bind template.character-name;
+        halign: start;
+        styles ["heading"]
+      }
+
+      Gtk.Label {
+        label: bind template.role-label;
+        halign: start;
+        styles ["caption", "dim-label"]
+      }
+    }
+
+    Gtk.Label {
+      label: _("Player");
+      valign: center;
+      visible: bind template.player;
+      styles ["caption-heading", "accent"]
+    }
+
+    Gtk.Button delete_button {
+      icon-name: "user-trash-symbolic";
+      valign: center;
+      tooltip-text: _("Delete character");
+      styles ["flat"]
+    }
+  };
+}

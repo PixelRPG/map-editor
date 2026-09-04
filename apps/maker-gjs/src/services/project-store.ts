@@ -8,149 +8,58 @@ import {
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
-  createEntityRemoveOp,
-  createEntityUpsertOp,
-  createPlayerSetOp,
-  createProjectMetaUpdateOp,
-  createSpriteSetRemoveOp,
-  ENTITY_REMOVE_KIND,
-  ENTITY_UPSERT_KIND,
   type EntityDefinition,
-  GameProjectFormat,
+  type GameProjectData,
   MAP_EDITOR_DATA_KIND,
-  PLAYER_SET_KIND,
+  type MapEditorDataOp,
   PROJECT_META_UPDATE_KIND,
+  type ProjectMetaUpdateOp,
   type ProjectOp,
-  REQUIRED_ROLES,
   SPRITESET_REMOVE_KIND,
   type SpriteSetAddPayload,
   type SpriteSetData,
-  SpriteSetFormat,
   SpriteSetResource,
   type SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
-import { copyFile, deleteFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
 import type { LoadedProject } from './project-loader.ts'
+import {
+  bindProjectSinks,
+  broadcastEntityRemove,
+  broadcastEntityUpsert,
+  broadcastPlayerSet,
+  broadcastProjectMeta,
+  broadcastSpriteSetAdd,
+  broadcastSpriteSetRemove,
+  broadcastSpriteSetUpdate,
+  type ProjectSyncSession,
+} from './project-store-broadcast.ts'
+import { applyEntityLibraryOp, buildRefOptions, findEntityById, type RefOption } from './project-store-entities.ts'
+import type { EntityLibraryChangeSource, ProjectStoreEvents } from './project-store-events.ts'
+import {
+  DEFAULT_PROJECT_STORE_IO,
+  deleteSpriteSetFiles,
+  isPlainFilename,
+  type ProjectStoreIo,
+  type SpriteSetPaths,
+  spriteSetPaths,
+  writeProjectData,
+  writeSpriteSetDescriptor,
+} from './project-store-persistence.ts'
+import {
+  buildImportedSpriteSetData,
+  nextFirstGid,
+  orderSpriteSetReferences,
+  uniqueIdFrom,
+  withImagePath,
+  writeTileSurface,
+} from './project-store-sprite-sets.ts'
 import { TypedEmitter } from './typed-emitter.ts'
 
-/** Default per-frame duration (ms) seeded into a new character sheet's animations. */
-const DEFAULT_ANIMATION_MS = 200
-/** Default frame index seeded into every required animation role. */
-const DEFAULT_FRAME = 0
-
-/**
- * True when `name` is a plain single-path-segment filename — no path
- * separators, no `..`, no NUL. Used to vet a peer-supplied sprite-set
- * id before it's used to build filesystem paths, so a malicious peer
- * can't write outside the project's `spritesets/` directory.
- */
-function isPlainFilename(name: string): boolean {
-  return name.length > 0 && !/[\\/]/.test(name) && !name.includes('..') && !name.includes('\0')
-}
-
-/**
- * Lowest unused id derived from `name` (`hero`, `hero-2`, `hero-3`, …).
- * Falls back to `fallback` when the name slugs to nothing.
- */
-export function uniqueIdFrom(name: string, taken: ReadonlySet<string>, fallback = 'item'): string {
-  const base =
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || fallback
-  let id = base
-  let n = 2
-  while (taken.has(id)) id = `${base}-${n++}`
-  return id
-}
-
-/**
- * Which local surface initiated an entity-library mutation. Lenses use
- * it to skip re-hydrating themselves for edits they originated (their
- * view already reflects the change optimistically) while every OTHER
- * lens refreshes. `'remote'` (an inbound peer op) refreshes everyone.
- */
-export type EntityLibraryChangeSource = 'cast' | 'objects' | 'remote'
-
-/** Typed event map for {@link ProjectStore.on}. */
-/**
- * User-facing notification from the store. The store is UI-free (it also
- * runs in the node test bundle, where GJS's `gettext` builtin does not
- * exist), so it emits semantic notices and the window translates +
- * toasts them — the same pattern `SessionService` uses for its toasts.
- */
-export type ProjectStoreNotice =
-  | { kind: 'image-copy-failed' }
-  | { kind: 'sprite-set-save-failed' }
-  | { kind: 'project-save-failed' }
-  | { kind: 'sprite-set-imported'; name: string }
-
-export interface ProjectStoreEvents {
-  /** A user-facing notice — the host translates + shows it as a toast. */
-  notice: ProjectStoreNotice
-  /** The active project was swapped (or cleared with `null`). */
-  'project-changed': LoadedProject | null
-  /** `entityLibrary` / `playerActorId` changed (local mutation or inbound peer op). */
-  'entity-library-changed': { source: EntityLibraryChangeSource }
-  /**
-   * The sprite-set list or a set's descriptor changed (import / delete /
-   * rename / reorder / inbound peer add, remove or update). `spriteSetId`
-   * names the affected set when the change is per-set; absent for
-   * list-order changes.
-   */
-  'sprite-sets-changed': { spriteSetId?: string }
-  /**
-   * A sprite-set descriptor's tile properties changed — a local Solid /
-   * Surface edit or an inbound peer descriptor update — so the host can
-   * refresh live engine collision when a scene is open.
-   */
-  'tile-properties-changed': { spriteSetId: string }
-  /**
-   * An inbound `__project/meta.update` landed on the project data
-   * (name / author / version / description / `defaultTileSize`).
-   */
-  'project-meta-changed': undefined
-  /**
-   * An inbound `__project/map.editor-data` patched a map's `editorData`
-   * (today: atlas card position). The host — the owner of map-file IO —
-   * persists that map + refreshes the atlas.
-   */
-  'map-editor-data-changed': { mapId: string }
-}
-
-/**
- * The slice of `CollabSession` the store drives: outbound project-op /
- * sprite-set broadcast plus the inbound sinks the store registers
- * itself on. Structural so tests can pass an in-memory fake without
- * constructing a real WebRTC session.
- */
-export interface ProjectSyncSession {
-  sendProjectOp(build: (ctx: { peerId: string; seq: number }) => ProjectOp): void
-  sendSpriteSetAdd(payload: SpriteSetAddPayload): void
-  sendSpriteSetUpdate(payload: SpriteSetUpdatePayload): void
-  onProjectOpReceived: ((op: ProjectOp) => void) | null
-  onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null
-  onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null
-}
-
-/** Injectable file-IO seam (defaults to the shared Gio helpers) so specs can record writes. */
-export interface ProjectStoreIo {
-  writeText: typeof writeTextFile
-  writeBinary: typeof writeBinaryFile
-  copy: typeof copyFile
-  readBinary: typeof readBinaryFile
-  remove: typeof deleteFile
-}
-
-const DEFAULT_IO: ProjectStoreIo = {
-  writeText: writeTextFile,
-  writeBinary: writeBinaryFile,
-  copy: copyFile,
-  readBinary: readBinaryFile,
-  remove: deleteFile,
-}
+export { uniqueIdFrom } from './project-store-sprite-sets.ts'
+export type { ProjectStoreIo } from './project-store-persistence.ts'
+export type { ProjectSyncSession } from './project-store-broadcast.ts'
+export type { EntityLibraryChangeSource, ProjectStoreEvents, ProjectStoreNotice } from './project-store-events.ts'
 
 /**
  * THE single write pipeline for project-level data — the one owner of:
@@ -158,15 +67,21 @@ const DEFAULT_IO: ProjectStoreIo = {
  *   - the active {@link LoadedProject} reference (controllers are
  *     lenses over it, they hold NO project copy of their own),
  *   - persistence of `game-project.json` + `spritesets/<id>.json`
- *     (atomic Gio writes via the shared file-io helpers),
+ *     (atomic Gio writes via `project-store-persistence.ts`),
  *   - every `entityLibrary` / `playerActorId` mutation,
  *   - sprite-set CRUD (import / delete / rename / reorder / descriptor
  *     mutation) including the on-disk `<id>.png` + `<id>.json` pair,
- *   - the collab broadcast for all of the above (`sendProjectOp` +
- *     the chunked sprite-set channels), and
+ *   - the collab broadcast for all of the above
+ *     (`project-store-broadcast.ts`), and
  *   - the application of inbound peer ops (the single-applier role) —
  *     {@link applyRemoteProjectOp} / {@link applyRemoteSpriteSetAdd} /
  *     {@link applyRemoteSpriteSetUpdate}.
+ *
+ * The class itself is the coordinator: it holds the state, the write
+ * ORDER and the event emission. The decisions each step makes are pure
+ * module functions in the three `project-store-*` siblings (data
+ * transforms, wire construction, disk paths) so they unit-test without
+ * a project, a session or a filesystem.
  *
  * Every mutation follows the same sequence: mutate the in-memory
  * `GameProjectData` (via the engine's idempotent `apply*` functions),
@@ -191,7 +106,7 @@ export class ProjectStore {
   private _session: ProjectSyncSession | null = null
   private readonly _events = new TypedEmitter<ProjectStoreEvents>()
 
-  constructor(private readonly io: ProjectStoreIo = DEFAULT_IO) {}
+  constructor(private readonly io: ProjectStoreIo = DEFAULT_PROJECT_STORE_IO) {}
 
   /** Subscribe to a store event. Returns an unsubscribe closure. */
   on<K extends keyof ProjectStoreEvents>(event: K, listener: (payload: ProjectStoreEvents[K]) => void): () => void {
@@ -247,17 +162,17 @@ export class ProjectStore {
    * session) the sinks are cleared, returning the session to buffering.
    */
   private _refreshSessionSinks(): void {
-    const session = this._session
-    if (!session) return
-    if (this._project) {
-      session.onProjectOpReceived = (op) => this.applyRemoteProjectOp(op)
-      session.onSpriteSetAddReceived = (payload) => this.applyRemoteSpriteSetAdd(payload)
-      session.onSpriteSetUpdateReceived = (payload) => this.applyRemoteSpriteSetUpdate(payload)
-    } else {
-      session.onProjectOpReceived = null
-      session.onSpriteSetAddReceived = null
-      session.onSpriteSetUpdateReceived = null
-    }
+    if (!this._session) return
+    bindProjectSinks(
+      this._session,
+      this._project
+        ? {
+            projectOp: (op) => this.applyRemoteProjectOp(op),
+            spriteSetAdd: (payload) => this.applyRemoteSpriteSetAdd(payload),
+            spriteSetUpdate: (payload) => this.applyRemoteSpriteSetUpdate(payload),
+          }
+        : null,
+    )
   }
 
   // ────────────────────────────────────────────────────────────
@@ -271,18 +186,13 @@ export class ProjectStore {
 
   /** The entity definition with the given id, or `null`. */
   findEntity(id: string): EntityDefinition | null {
-    return this.entities().find((e) => e.id === id) ?? null
+    return findEntityById(this.entities(), id)
   }
 
   /** Project ref-picker options (maps + appearance sheets) for the component inspectors. */
-  refOptions(): { maps: { value: string; label: string }[]; appearances: { value: string; label: string }[] } {
+  refOptions(): { maps: RefOption[]; appearances: RefOption[] } {
     const resource = this.resource
-    return {
-      maps: (resource?.data?.maps ?? []).map((m) => ({ value: m.id, label: m.name ?? m.id })),
-      appearances: resource?.spriteSets
-        ? [...resource.spriteSets.entries()].map(([id, set]) => ({ value: id, label: set.data?.name ?? id }))
-        : [],
-    }
+    return buildRefOptions(resource?.data?.maps, resource?.spriteSets)
   }
 
   /**
@@ -295,7 +205,7 @@ export class ProjectStore {
     if (!data) return
     applyEntityUpsert(data, entity)
     this._persistProject()
-    this._session?.sendProjectOp(({ peerId, seq }) => createEntityUpsertOp({ peerId, seq, entity }))
+    broadcastEntityUpsert(this._session, entity)
     this._events.emit('entity-library-changed', { source })
   }
 
@@ -307,10 +217,10 @@ export class ProjectStore {
    */
   removeEntity(entityId: string, source: EntityLibraryChangeSource): boolean {
     const data = this.data
-    if (!data?.entityLibrary?.some((e) => e.id === entityId)) return false
+    if (!data || !findEntityById(data.entityLibrary ?? [], entityId)) return false
     applyEntityRemove(data, entityId)
     this._persistProject()
-    this._session?.sendProjectOp(({ peerId, seq }) => createEntityRemoveOp({ peerId, seq, entityId }))
+    broadcastEntityRemove(this._session, entityId)
     this._events.emit('entity-library-changed', { source })
     return true
   }
@@ -321,7 +231,7 @@ export class ProjectStore {
     if (!data) return
     applyPlayerSet(data, playerActorId)
     this._persistProject()
-    this._session?.sendProjectOp(({ peerId, seq }) => createPlayerSetOp({ peerId, seq, playerActorId }))
+    broadcastPlayerSet(this._session, playerActorId)
     this._events.emit('entity-library-changed', { source })
   }
 
@@ -342,10 +252,7 @@ export class ProjectStore {
     if (!data) return
     this._persistProject()
     if (!data.properties) data.properties = {}
-    const properties = data.properties
-    this._session?.sendProjectOp(({ peerId, seq }) =>
-      createProjectMetaUpdateOp({ peerId, seq, name: data.name, properties }),
-    )
+    broadcastProjectMeta(this._session, data.name, data.properties)
   }
 
   // ────────────────────────────────────────────────────────────
@@ -361,39 +268,41 @@ export class ProjectStore {
   applyRemoteProjectOp(op: ProjectOp): void {
     const data = this.data
     if (!data) return
-    if (op.kind === ENTITY_UPSERT_KIND) {
-      applyEntityUpsert(data, op.payload.entity)
-    } else if (op.kind === ENTITY_REMOVE_KIND) {
-      applyEntityRemove(data, op.payload.entityId)
-    } else if (op.kind === PLAYER_SET_KIND) {
-      applyPlayerSet(data, op.payload.playerActorId)
+    if (applyEntityLibraryOp(data, op)) {
+      this._persistProject()
+      this._events.emit('entity-library-changed', { source: 'remote' })
     } else if (op.kind === SPRITESET_REMOVE_KIND) {
       this._applyRemoteSpriteSetRemove(op.payload.spriteSetId)
-      return
     } else if (op.kind === PROJECT_META_UPDATE_KIND) {
-      // Coarse replace of name + the whole properties bag; persist the
-      // project JSON, then let the Data view (the surface that renders
-      // these fields) re-hydrate.
-      applyProjectMetaUpdate(data, op.payload)
-      this._persistProject()
-      this._events.emit('project-meta-changed', undefined)
-      return
+      this._applyRemoteProjectMeta(data, op.payload)
     } else if (op.kind === MAP_EDITOR_DATA_KIND) {
-      // Shallow-merge the patch onto the matching map's `editorData`.
-      // Map-file persistence + atlas refresh belong to the host (the
-      // owner of map IO) — hand it the patched map's id.
-      const maps = this.resource?.maps
-      if (!maps) return
-      const mapDatas = [...maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : []))
-      if (applyMapEditorData(mapDatas, op.payload)) {
-        this._events.emit('map-editor-data-changed', { mapId: op.payload.mapId })
-      }
-      return
-    } else {
-      return
+      this._applyRemoteMapEditorData(op.payload)
     }
+  }
+
+  /**
+   * Coarse replace of name + the whole properties bag; persist the
+   * project JSON, then let the Data view (the surface that renders these
+   * fields) re-hydrate.
+   */
+  private _applyRemoteProjectMeta(data: GameProjectData, payload: ProjectMetaUpdateOp['payload']): void {
+    applyProjectMetaUpdate(data, payload)
     this._persistProject()
-    this._events.emit('entity-library-changed', { source: 'remote' })
+    this._events.emit('project-meta-changed', undefined)
+  }
+
+  /**
+   * Shallow-merge the patch onto the matching map's `editorData`.
+   * Map-file persistence + atlas refresh belong to the host (the owner
+   * of map IO) — hand it the patched map's id.
+   */
+  private _applyRemoteMapEditorData(payload: MapEditorDataOp['payload']): void {
+    const maps = this.resource?.maps
+    if (!maps) return
+    const mapDatas = [...maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : []))
+    if (applyMapEditorData(mapDatas, payload)) {
+      this._events.emit('map-editor-data-changed', { mapId: payload.mapId })
+    }
   }
 
   /**
@@ -403,8 +312,7 @@ export class ProjectStore {
    */
   private _applyRemoteSpriteSetRemove(id: string): void {
     const resource = this.resource
-    if (!resource?.data) return
-    if (!resource.data.spriteSets?.some((s) => s.id === id)) return
+    if (!resource?.data?.spriteSets?.some((s) => s.id === id)) return
     this._removeSpriteSetFiles(id)
     applySpriteSetRemove(resource.data, id)
     resource.spriteSets.delete(id)
@@ -422,32 +330,23 @@ export class ProjectStore {
   applyRemoteSpriteSetAdd(payload: SpriteSetAddPayload): void {
     const resource = this.resource
     if (!resource?.data) return
-    const { data } = payload
-    const id = data.id
-    // SECURITY: `id` is peer-supplied and feeds filesystem paths below.
-    // Reject anything that isn't a plain filename so a malicious peer
+    const id = payload.data.id
+    // SECURITY: `id` is peer-supplied and feeds filesystem paths. The
+    // path builder is gated on `isPlainFilename` so a malicious peer
     // can't escape `spritesets/` (path traversal). We also DERIVE the
     // image filename from the validated id rather than trusting the
     // peer's `image.path`, and normalise the descriptor to match — so
     // the only peer string that touches the FS is the vetted id.
-    if (!isPlainFilename(id)) {
+    const paths = this._spriteSetPaths(id)
+    if (!paths) {
       console.warn('[ProjectStore] Rejected peer sprite-set with unsafe id:', id)
       return
     }
-    const imageFile = `${id}.png`
-    const safeData: typeof data = {
-      ...data,
-      image: { ...(data.image ?? { id: 'main', type: 'image' }), path: imageFile },
-    }
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
-    const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
-
-    if (!this.io.writeBinary(pngDest, GLib.base64_decode(payload.imageBase64))) {
-      console.warn('[ProjectStore] Failed to write peer sprite-set image:', pngDest)
+    if (!this.io.writeBinary(paths.image, GLib.base64_decode(payload.imageBase64))) {
+      console.warn('[ProjectStore] Failed to write peer sprite-set image:', paths.image)
       return
     }
-    this.io.writeText(jsonDest, SpriteSetFormat.serialize(safeData))
+    writeSpriteSetDescriptor(this.io, paths.descriptor, withImagePath(payload.data, paths.imageFile))
     // gid space is per-peer; the sender's value may collide with ours, so we
     // assign our own. On re-apply REUSE the existing firstGid — recomputing
     // would shift it (once the set's sprites are loaded `_nextFirstGid` counts
@@ -462,13 +361,7 @@ export class ProjectStore {
     })
     this._persistProject()
     void (async () => {
-      try {
-        const engineSet = new SpriteSetResource(jsonDest, { headless: false })
-        await engineSet.load()
-        resource.spriteSets.set(id, engineSet)
-      } catch (err) {
-        console.warn('[ProjectStore] Peer sprite-set written but failed to load live:', err)
-      }
+      await this._loadSpriteSetLive(paths.descriptor, id, 'Peer')
       this._events.emit('sprite-sets-changed', { spriteSetId: id })
     })()
   }
@@ -484,17 +377,17 @@ export class ProjectStore {
    * or the id is unsafe. Does NOT re-broadcast.
    */
   applyRemoteSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
-    const resource = this.resource
-    const engineSet = resource?.spriteSets.get(payload.data.id)
-    if (!resource || !engineSet?.data) return
-    if (!isPlainFilename(payload.data.id)) {
-      console.warn('[ProjectStore] Rejected peer sprite-set update with unsafe id:', payload.data.id)
+    const id = payload.data.id
+    const engineSet = this.resource?.spriteSets.get(id)
+    if (!engineSet?.data) return
+    if (!isPlainFilename(id)) {
+      console.warn('[ProjectStore] Rejected peer sprite-set update with unsafe id:', id)
       return
     }
     engineSet.data = applySpriteSetUpdate(engineSet.data, payload)
-    this._persistSpriteSet(payload.data.id)
-    this._events.emit('tile-properties-changed', { spriteSetId: payload.data.id })
-    this._events.emit('sprite-sets-changed', { spriteSetId: payload.data.id })
+    this._persistSpriteSet(id)
+    this._events.emit('tile-properties-changed', { spriteSetId: id })
+    this._events.emit('sprite-sets-changed', { spriteSetId: id })
   }
 
   // ────────────────────────────────────────────────────────────
@@ -515,37 +408,14 @@ export class ProjectStore {
     const resource = this.resource
     if (!resource?.data) return null
     const id = uniqueIdFrom(data.id, new Set(resource.spriteSets.keys()))
-    const imageFile = `${id}.png`
-    const kind = data.kind ?? ('tileset' as const)
-    const finalData = {
-      ...data,
-      id,
-      // The dialog tags the set by kind ('character' sheet vs 'tileset')
-      // so it surfaces in the right gallery; default to tileset if absent.
-      kind,
-      // A character sheet OWNS its animations — seed the 8 required roles
-      // (single placeholder frame) so a character using it can animate
-      // immediately; the user refines frames in the sheet's editor.
-      characterAnimations:
-        kind === 'character'
-          ? (data.characterAnimations ??
-            REQUIRED_ROLES.map((role) => ({
-              id: role,
-              frames: [{ spriteId: DEFAULT_FRAME, duration: DEFAULT_ANIMATION_MS }],
-            })))
-          : undefined,
-      image: { ...(data.image ?? { id: 'main', type: 'image' as const }), path: imageFile },
-    }
+    const paths = spriteSetPaths(resource.path, id)
+    const finalData = buildImportedSpriteSetData(data, id, paths.imageFile)
 
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const pngDest = GLib.build_filenamev([projectDir, 'spritesets', imageFile])
-    const jsonDest = GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`])
-
-    if (!this.io.copy(sourcePath, pngDest)) {
+    if (!this.io.copy(sourcePath, paths.image)) {
       this._events.emit('notice', { kind: 'image-copy-failed' })
       return null
     }
-    if (!this.io.writeText(jsonDest, SpriteSetFormat.serialize(finalData))) {
+    if (!writeSpriteSetDescriptor(this.io, paths.descriptor, finalData)) {
       this._events.emit('notice', { kind: 'sprite-set-save-failed' })
       return null
     }
@@ -557,21 +427,12 @@ export class ProjectStore {
       firstGid: this._nextFirstGid(),
     })
     this._persistProject()
-
-    // Register into the live resource map so the character dialog's
-    // preview + the cast view resolve it immediately (no reopen).
-    try {
-      const engineSet = new SpriteSetResource(jsonDest, { headless: false })
-      await engineSet.load()
-      resource.spriteSets.set(id, engineSet)
-    } catch (err) {
-      console.warn('[ProjectStore] Imported set written but failed to load live:', err)
-    }
+    await this._loadSpriteSetLive(paths.descriptor, id, 'Imported')
     // Sync to peers (chunked — carries the image bytes). Best-effort:
     // a read failure just means peers won't get this set live.
     if (this._session) {
-      const bytes = this.io.readBinary(pngDest)
-      if (bytes) this._session.sendSpriteSetAdd({ data: finalData, imageBase64: GLib.base64_encode(bytes) })
+      const bytes = this.io.readBinary(paths.image)
+      if (bytes) broadcastSpriteSetAdd(this._session, finalData, GLib.base64_encode(bytes))
     }
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
     this._events.emit('notice', { kind: 'sprite-set-imported', name: finalData.name })
@@ -588,13 +449,12 @@ export class ProjectStore {
    */
   deleteSpriteSet(id: string): void {
     const resource = this.resource
-    if (!resource?.data) return
-    if (!resource.data.spriteSets?.some((s) => s.id === id)) return
+    if (!resource?.data?.spriteSets?.some((s) => s.id === id)) return
     this._removeSpriteSetFiles(id)
     applySpriteSetRemove(resource.data, id)
     resource.spriteSets.delete(id)
     this._persistProject()
-    this._session?.sendProjectOp(({ peerId, seq }) => createSpriteSetRemoveOp({ peerId, seq, spriteSetId: id }))
+    broadcastSpriteSetRemove(this._session, id)
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
   }
 
@@ -630,12 +490,8 @@ export class ProjectStore {
   reorderSpriteSets(orderedIds: string[]): void {
     const data = this.data
     if (!data?.spriteSets) return
-    const rank = (id: string): number => {
-      const i = orderedIds.indexOf(id)
-      return i === -1 ? Number.MAX_SAFE_INTEGER : i
-    }
-    const sorted = [...data.spriteSets].sort((a, b) => rank(a.id) - rank(b.id))
-    if (sorted.every((ref, i) => ref === data.spriteSets[i])) return
+    const sorted = orderSpriteSetReferences(data.spriteSets, orderedIds)
+    if (!sorted) return
     data.spriteSets = sorted
     this._persistProject()
     this._events.emit('sprite-sets-changed', {})
@@ -668,15 +524,7 @@ export class ProjectStore {
 
   /** Set / clear a tile's surface kind (`tileProperties.surface`) on a sprite-set descriptor. */
   setTileSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
-    this._mutateSpriteTile(spriteSetId, spriteId, (def) => {
-      if (surface) {
-        def.tileProperties = { ...(def.tileProperties ?? {}), surface }
-      } else if (def.tileProperties?.surface !== undefined) {
-        const next = { ...def.tileProperties }
-        delete next.surface
-        def.tileProperties = Object.keys(next).length === 0 ? undefined : next
-      }
-    })
+    this._mutateSpriteTile(spriteSetId, spriteId, (def) => writeTileSurface(def, surface))
   }
 
   /**
@@ -711,53 +559,64 @@ export class ProjectStore {
    * carries exactly what was saved.
    */
   private _broadcastSpriteSetUpdate(spriteSetId: string): void {
-    const session = this._session
-    if (!session) return
     const data = this.resource?.spriteSets.get(spriteSetId)?.data
     if (!data) return
-    session.sendSpriteSetUpdate({ data })
+    broadcastSpriteSetUpdate(this._session, data)
+  }
+
+  /**
+   * Load a freshly-written descriptor into the live resource map so the
+   * set is usable without reopening the project. Best-effort: a load
+   * failure leaves the files + the reference in place, only the live
+   * preview is missing until the project is reopened.
+   */
+  private async _loadSpriteSetLive(descriptorPath: string, id: string, origin: 'Peer' | 'Imported'): Promise<void> {
+    const resource = this.resource
+    if (!resource) return
+    try {
+      const engineSet = new SpriteSetResource(descriptorPath, { headless: false })
+      await engineSet.load()
+      resource.spriteSets.set(id, engineSet)
+    } catch (err) {
+      console.warn(`[ProjectStore] ${origin} sprite-set written but failed to load live:`, err)
+    }
+  }
+
+  /**
+   * Where a sprite set's files live in the OPEN project — `null` when
+   * no project is open or the id could escape `spritesets/`. The one
+   * gate every filesystem path for a (possibly peer-supplied) sprite-set
+   * id passes through.
+   */
+  private _spriteSetPaths(id: string): SpriteSetPaths | null {
+    const resource = this.resource
+    if (!resource || !isPlainFilename(id)) return null
+    return spriteSetPaths(resource.path, id)
   }
 
   /**
    * Delete the on-disk `<id>.png` + `<id>.json` of a project sprite set.
-   * Best-effort — a failed delete logs but doesn't abort the in-memory
-   * removal (the reference is gone either way; an orphaned file is
-   * harmless).
+   * Best-effort — a failed delete doesn't abort the in-memory removal
+   * (the reference is gone either way; an orphaned file is harmless).
    */
   private _removeSpriteSetFiles(id: string): void {
-    const resource = this.resource
-    if (!resource) return
-    if (!isPlainFilename(id)) return
-    const projectDir = GLib.path_get_dirname(resource.path)
-    this.io.remove(GLib.build_filenamev([projectDir, 'spritesets', `${id}.png`]))
-    this.io.remove(GLib.build_filenamev([projectDir, 'spritesets', `${id}.json`]))
+    const paths = this._spriteSetPaths(id)
+    if (paths) deleteSpriteSetFiles(this.io, paths)
   }
 
-  /**
-   * Next non-overlapping `firstGid` for a new sprite set: one past the
-   * highest global tile id any existing set occupies. Keeps the
-   * imported set usable as a tileset later without gid collisions.
-   */
+  /** Next non-overlapping `firstGid` for a new sprite set in this project. */
   private _nextFirstGid(): number {
     const resource = this.resource
     if (!resource?.data) return 1
-    let next = 1
-    for (const ref of resource.data.spriteSets) {
-      const count = resource.spriteSets.get(ref.id)?.data?.sprites?.length ?? 0
-      const start = typeof ref.firstGid === 'number' ? ref.firstGid : next
-      next = Math.max(next, start + count)
-    }
-    return next
+    return nextFirstGid(resource.data.spriteSets, (id) => resource.spriteSets.get(id)?.data?.sprites?.length ?? 0)
   }
 
   /** Serialise a sprite set's `SpriteSetData` back to `spritesets/<id>.json`. */
   private _persistSpriteSet(spriteSetId: string): void {
-    const resource = this.resource
-    const engineSet = resource?.spriteSets.get(spriteSetId)
-    if (!resource || !engineSet?.data || !isPlainFilename(spriteSetId)) return
-    const projectDir = GLib.path_get_dirname(resource.path)
-    const jsonPath = GLib.build_filenamev([projectDir, 'spritesets', `${spriteSetId}.json`])
-    if (!this.io.writeText(jsonPath, SpriteSetFormat.serialize(engineSet.data))) {
+    const data = this.resource?.spriteSets.get(spriteSetId)?.data
+    const paths = this._spriteSetPaths(spriteSetId)
+    if (!data || !paths) return
+    if (!writeSpriteSetDescriptor(this.io, paths.descriptor, data)) {
       this._events.emit('notice', { kind: 'sprite-set-save-failed' })
     }
   }
@@ -770,11 +629,7 @@ export class ProjectStore {
   private _persistProject(): void {
     const resource = this.resource
     if (!resource?.data) return
-    try {
-      const ok = this.io.writeText(resource.path, GameProjectFormat.serialize(resource.data))
-      if (!ok) this._events.emit('notice', { kind: 'project-save-failed' })
-    } catch (err) {
-      console.warn('[ProjectStore] Failed to persist project:', err)
+    if (!writeProjectData(this.io, resource.path, resource.data)) {
       this._events.emit('notice', { kind: 'project-save-failed' })
     }
   }

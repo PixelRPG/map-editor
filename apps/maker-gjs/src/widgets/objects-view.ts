@@ -1,16 +1,13 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
-import { type EntityDefinition, getComponentData, isCharacterEntity } from '@pixelrpg/engine'
-import {
-  type ComponentRefOptions,
-  confirmDestructive,
-  EntityComponentsEditor,
-  type ModeRail,
-  SignalScope,
-} from '@pixelrpg/gjs'
+import type Gtk from '@girs/gtk-4.0'
+import type { EntityDefinition } from '@pixelrpg/engine'
+import { isCharacterEntity } from '@pixelrpg/engine'
+import { type ComponentRefOptions, EntityComponentsEditor, type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
-import { ENTITY_TEMPLATES } from '../services/entity-templates.ts'
+import { canBeCastMember } from '../services/entity-visuals.ts'
+import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
+import { buildObjectRow, buildRelationshipDiagram, buildTemplateTiles } from './objects/object-gallery.ts'
 import Template from './objects-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
@@ -106,51 +103,13 @@ export class ObjectsView extends ResponsiveEditorView {
   }
 
   /**
-   * Populate the empty-state's relationship diagram (Sheets → Cast →
-   * Objects) + the template tiles (chest / sign / door / trigger). The
-   * tiles reuse the same `object-create-requested` path as the "New
-   * object" chooser (soll-objects).
+   * Populate the empty state: the relationship diagram (Sheets → Cast →
+   * Objects) plus the template tiles, which reuse the same
+   * `object-create-requested` path as the "New object" chooser.
    */
   private _buildEmptyState(): void {
-    // Relationship diagram — Sheets (art) → Cast (characters) → Objects.
-    const chips: [string, string, boolean][] = [
-      [_('Sheets'), _('art'), false],
-      [_('Cast'), _('characters'), false],
-      [_('Objects'), _('placed in scenes'), true],
-    ]
-    chips.forEach(([title, sub, accent], i) => {
-      if (i > 0) {
-        this._empty_diagram_slot.append(
-          new Gtk.Image({
-            iconName: 'go-next-symbolic',
-            cssClasses: ['dim-label'],
-            valign: Gtk.Align.CENTER,
-            marginStart: 8,
-            marginEnd: 8,
-          }),
-        )
-      }
-      const chip = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        cssClasses: accent ? ['card', 'objects-rel-chip', 'objects-rel-accent'] : ['card', 'objects-rel-chip'],
-      })
-      chip.append(new Gtk.Label({ label: title, cssClasses: accent ? ['heading', 'accent'] : ['heading'] }))
-      chip.append(new Gtk.Label({ label: sub, cssClasses: ['caption', 'dim-label'] }))
-      this._empty_diagram_slot.append(chip)
-    })
-
-    // Template tiles — the placeable-object archetypes.
-    for (const id of ['chest', 'sign', 'door', 'trigger']) {
-      const template = ENTITY_TEMPLATES.find((t) => t.id === id)
-      if (!template) continue
-      const button = new Gtk.Button({ cssClasses: ['flat', 'objects-template-tile'] })
-      const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
-      row.append(new Gtk.Image({ iconName: template.icon }))
-      row.append(new Gtk.Label({ label: template.label }))
-      button.set_child(row)
-      button.connect('clicked', () => this.emit('object-create-requested', template.id))
-      this._empty_templates.append(button)
-    }
+    buildRelationshipDiagram(this._empty_diagram_slot)
+    buildTemplateTiles(this._empty_templates, (templateId) => this.emit('object-create-requested', templateId))
   }
 
   vfunc_map(): void {
@@ -196,19 +155,7 @@ export class ObjectsView extends ResponsiveEditorView {
       child = next
     }
     for (const obj of objects) {
-      // Objects is the GENERAL lens, so it lists characters too — flag
-      // them with a person icon + a "Cast" badge so it's clear they're
-      // also the friendly Cast members (edited nicely over there).
-      const isCharacter = isCharacterEntity(obj)
-      const row = new Adw.ActionRow({ title: obj.name || obj.id, activatable: true })
-      const icon = isCharacter ? 'avatar-default-symbolic' : (obj.editorData?.icon ?? 'view-grid-symbolic')
-      row.add_prefix(new Gtk.Image({ iconName: icon }))
-      if (isCharacter) {
-        row.add_suffix(new Gtk.Label({ label: _('Cast'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }))
-      }
-      row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic', cssClasses: ['dim-label'] }))
-      row.connect('activated', () => this.focusObject(obj.id))
-      this._objects_list.append(row)
+      this._objects_list.append(buildObjectRow(obj, () => this.focusObject(obj.id)))
     }
     this._list_stack.set_visible_child_name(objects.length > 0 ? 'list' : 'empty')
     // If the open object vanished (deleted), drop back to the gallery.
@@ -236,13 +183,7 @@ export class ObjectsView extends ResponsiveEditorView {
     this._silentName = true
     this._nameRow.set_text(obj.name)
     this._silentName = false
-    // The "Cast member" toggle only makes sense for entities that can
-    // render in the Cast roster — i.e. with a `visual` that names a real
-    // appearance (a `spriteSetId`). Hide it for teleports / events and for
-    // visual-but-appearance-less entities (promoting those would flip the
-    // marker but they'd still be filtered out of Cast — confusing).
-    const visualSpriteSet = getComponentData(obj, 'visual')?.spriteSetId
-    this._castRow.set_visible(typeof visualSpriteSet === 'string' && visualSpriteSet.length > 0)
+    this._castRow.set_visible(canBeCastMember(obj))
     this._silentCast = true
     this._castRow.set_active(isCharacterEntity(obj))
     this._silentCast = false
@@ -252,33 +193,11 @@ export class ObjectsView extends ResponsiveEditorView {
 
   /** Present the template chooser; the chosen template id drives creation. */
   private _presentTemplateChooser(): void {
-    const dialog = new Adw.AlertDialog({
-      heading: _('New object'),
-      body: _('Pick a starting template — you can change everything afterwards.'),
-    })
-    const list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE, cssClasses: ['boxed-list'] })
-    for (const template of ENTITY_TEMPLATES) {
-      if (template.id === 'character') continue // characters live in the Cast view
-      const row = new Adw.ActionRow({ title: template.label, subtitle: template.description, activatable: true })
-      row.add_prefix(new Gtk.Image({ iconName: template.icon }))
-      row.connect('activated', () => {
-        dialog.close()
-        this.emit('object-create-requested', template.id)
-      })
-      list.append(row)
-    }
-    dialog.set_extra_child(list)
-    dialog.add_response('cancel', _('Cancel'))
-    dialog.present(this)
+    presentTemplateChooser(this, (templateId) => this.emit('object-create-requested', templateId))
   }
 
   private _confirmDelete(id: string): void {
-    const obj = this._objects.find((o) => o.id === id)
-    void confirmDestructive(this, {
-      heading: _('Delete object?'),
-      body: _('“%s” will be removed from the project library.').replace('%s', obj?.name ?? id),
-    }).then((confirmed) => {
-      if (confirmed) this.emit('object-delete-requested', id)
-    })
+    const name = this._objects.find((o) => o.id === id)?.name ?? id
+    confirmObjectDelete(this, name, () => this.emit('object-delete-requested', id))
   }
 }

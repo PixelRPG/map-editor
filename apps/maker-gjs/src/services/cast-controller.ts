@@ -3,10 +3,7 @@ import {
   type CharacterDefinition,
   characterToEntity,
   type EntityDefinition,
-  entityToCharacter,
-  isCharacterEntity,
   mergeCharacterIntoEntity,
-  REQUIRED_ROLES,
 } from '@pixelrpg/engine'
 import {
   GdkSpriteSetResource,
@@ -16,8 +13,16 @@ import {
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
+import {
+  appendAnimation,
+  isProtectedAnimation,
+  removeAnimation,
+  replaceAnimation,
+  retimeAnimation,
+} from './cast-controller-animations.ts'
+import { PreviewCache } from './cast-controller-preview-cache.ts'
+import { listAssignableSpriteSets, listCharacterViewModels } from './cast-controller-view-model.ts'
 import { type ProjectStore, uniqueIdFrom } from './project-store.ts'
-import { characterSpriteSetIds, isCharacterSpriteSet } from './sprite-set-classification.ts'
 import { TypedEmitter } from './typed-emitter.ts'
 
 /** Typed event map for {@link CastController.on}. */
@@ -59,12 +64,12 @@ export interface CastControllerEvents {
  */
 export class CastController {
   /**
-   * Cache of GTK preview resources keyed by sprite-set id, so the cast
-   * gallery can preview every character on its own sheet without
-   * re-wrapping a set per refresh. Rebuilt lazily in {@link refresh};
-   * invalidated wholesale on project swap, per-id on set changes.
+   * Preview resources keyed by sprite-set id, so the cast gallery can
+   * preview every character on its own sheet without re-wrapping a set
+   * per refresh. Invalidated wholesale on project swap, per-id on set
+   * changes.
    */
-  private _spriteSetCache = new Map<string, GdkSpriteSetResource | null>()
+  private readonly _previews = new PreviewCache<GdkSpriteSetResource>((id) => this._loadSpriteSetPreview(id))
   private readonly _events = new TypedEmitter<CastControllerEvents>()
 
   constructor(
@@ -83,15 +88,15 @@ export class CastController {
     // A different project (or a re-open) invalidates every wrapped
     // sprite-set — drop the cache so stale textures can't leak across.
     store.on('project-changed', () => {
-      this._spriteSetCache.clear()
+      this._previews.clear()
       void this.refresh()
     })
     // Sprite-sets are shared project assets (a character's sheet) —
     // evict the affected preview + re-hydrate on any set change,
     // whether it came from this lens, the Sheets view, or a peer.
     store.on('sprite-sets-changed', ({ spriteSetId }) => {
-      if (spriteSetId) this._spriteSetCache.delete(spriteSetId)
-      else this._spriteSetCache.clear()
+      if (spriteSetId) this._previews.evict(spriteSetId)
+      else this._previews.clear()
       void this.refresh()
     })
     // Another lens (Objects) or a peer edited the shared entityLibrary —
@@ -105,40 +110,6 @@ export class CastController {
   /** Subscribe to a controller event. Returns an unsubscribe closure. */
   on<K extends keyof CastControllerEvents>(event: K, listener: (payload: CastControllerEvents[K]) => void): () => void {
     return this._events.on(event, listener)
-  }
-
-  /**
-   * The project's characters as flat view models — derived from the
-   * `character`-template entities in `entityLibrary`, with `isPlayer`
-   * resolved from `playerActorId`. The cast view consumes these; mutations
-   * write back through {@link _upsertCharacter}.
-   */
-  private _listCharacters(): CharacterDefinition[] {
-    const data = this.store.data
-    if (!data?.entityLibrary) return []
-    const out: CharacterDefinition[] = []
-    for (const def of data.entityLibrary) {
-      if (!isCharacterEntity(def)) continue
-      const char = entityToCharacter(def, data.playerActorId)
-      if (char) out.push(char)
-    }
-    return out
-  }
-
-  /**
-   * Write a character view model back as its `entityLibrary` entry
-   * (`characterToEntity`) through the store (persist + broadcast).
-   * Single write path for create / rename / speed / sheet-change. Does
-   * NOT touch the player flag — that rides `playerActorId` via
-   * {@link _setPlayer}.
-   */
-  private _upsertCharacter(char: CharacterDefinition): void {
-    // Merge onto the existing entity so the basic fields (name / sheet /
-    // speed) don't drop components the user added via the "all components"
-    // disclosure; a brand-new character has no entity yet → build fresh.
-    const existing = this.store.findEntity(char.id)
-    const entity = existing ? mergeCharacterIntoEntity(existing, char) : characterToEntity(char)
-    this.store.upsertEntity(entity, 'cast')
   }
 
   /**
@@ -179,14 +150,14 @@ export class CastController {
     }
     this.view.projectName = resource.data?.name ?? _('New Project')
 
-    const characters = this._listCharacters()
+    const characters = listCharacterViewModels(this.store.data)
     const sheets = this._listSpriteSets()
     // Resolve every sprite-set a character references OR that the
     // Sprite-sheets section lists, into one shared map.
     const neededIds = new Set<string>([...characters.map((c) => c.spriteSetId), ...sheets.map((s) => s.id)])
     const spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
     for (const id of neededIds) {
-      spriteSetsById.set(id, await this._resolveSpriteSet(id))
+      spriteSetsById.set(id, await this._previews.get(id))
     }
     // Cast gets the appearance choices for its picker; the Sheets view
     // gets the full list + shared preview map (it owns the gallery +
@@ -194,26 +165,6 @@ export class CastController {
     this.view.setSheets(sheets)
     this.view.setCharacters(characters, spriteSetsById)
     this._events.emit('appearances-changed', { sheets, spriteSetsById })
-  }
-
-  /**
-   * Wrap a project sprite-set as a GTK preview resource, memoised by
-   * id. A failed/absent set caches `null` so a broken reference doesn't
-   * retry-storm on every refresh.
-   */
-  private async _resolveSpriteSet(id: string): Promise<GdkSpriteSetResource | null> {
-    if (this._spriteSetCache.has(id)) return this._spriteSetCache.get(id) ?? null
-    let wrapped: GdkSpriteSetResource | null = null
-    const engineSpriteSet = await this.store.resource?.getSpriteSet(id)
-    if (engineSpriteSet) {
-      try {
-        wrapped = await GdkSpriteSetResource.fromEngineResource(engineSpriteSet)
-      } catch (err) {
-        console.warn('[CastController] Failed to wrap sprite set for preview:', err)
-      }
-    }
-    this._spriteSetCache.set(id, wrapped)
-    return wrapped
   }
 
   /** Wire once into `CastView.bindCallbacks`. */
@@ -256,25 +207,52 @@ export class CastController {
   }
 
   /**
-   * Every sprite set available to assign to a character: the project's
-   * own sets plus engine built-ins. Sourced from the loaded resource
-   * map so a just-imported set shows up too.
-   *
-   * Sets already used by a character sort first, so the New Character
-   * dialog defaults to an actual character sheet (whose first sprite
-   * previews well) rather than, say, an environment tileset whose
-   * sprite 0 is a transparent tile.
+   * Set a uniform per-frame duration across one animation on a sheet
+   * ("apply to all frames"). Public so both the Cast detail (via
+   * `callbacks`) and the animation editor drive the same sheet-owned
+   * mutation; per-frame durations are set frame-by-frame in the editor.
    */
+  setAnimationDuration(sheetId: string, animId: string, durationMs: number): void {
+    this._mutateSheetAnimations(sheetId, (anims) => retimeAnimation(anims, animId, durationMs))
+  }
+
+  /** Append a new animation to a sheet (dialog-validated; defensive re-check here). */
+  addAnimation(sheetId: string, animation: CharacterAnimation): void {
+    this._mutateSheetAnimations(sheetId, (anims) => appendAnimation(anims, animation))
+  }
+
+  /** Replace `originalId`'s animation on a sheet (treats a lost original as an add). */
+  editAnimation(sheetId: string, originalId: string, animation: CharacterAnimation): void {
+    this._mutateSheetAnimations(sheetId, (anims) => replaceAnimation(anims, originalId, animation))
+  }
+
+  /** Remove a custom animation from a sheet (required roles are protected). */
+  deleteAnimation(sheetId: string, animId: string): void {
+    if (isProtectedAnimation(animId)) return
+    this._mutateSheetAnimations(sheetId, (anims) => removeAnimation(anims, animId))
+  }
+
+  /** Every sprite sheet assignable to a character, in picker order. */
   private _listSpriteSets(): SpriteSetChoice[] {
     const resource = this.store.resource
     if (!resource) return []
-    // Only sprite SHEETS are assignable to a character — world tilesets
-    // are excluded (see `isCharacterSpriteSet`).
-    const usedByCharacter = characterSpriteSetIds(resource.data?.entityLibrary)
-    return [...resource.spriteSets.entries()]
-      .filter(([id, set]) => isCharacterSpriteSet(set.data?.kind, usedByCharacter.has(id)))
-      .map(([id, set]) => ({ id, name: set.data?.name ?? id }))
-      .sort((a, b) => Number(usedByCharacter.has(b.id)) - Number(usedByCharacter.has(a.id)))
+    return listAssignableSpriteSets(resource.spriteSets, resource.data?.entityLibrary)
+  }
+
+  /**
+   * Write a character view model back as its `entityLibrary` entry
+   * (`characterToEntity`) through the store (persist + broadcast).
+   * Single write path for create / rename / speed / sheet-change. Does
+   * NOT touch the player flag — that rides `playerActorId` via
+   * {@link _setPlayer}.
+   */
+  private _upsertCharacter(char: CharacterDefinition): void {
+    // Merge onto the existing entity so the basic fields (name / sheet /
+    // speed) don't drop components the user added via the "all components"
+    // disclosure; a brand-new character has no entity yet → build fresh.
+    const existing = this.store.findEntity(char.id)
+    const entity = existing ? mergeCharacterIntoEntity(existing, char) : characterToEntity(char)
+    this.store.upsertEntity(entity, 'cast')
   }
 
   /**
@@ -314,7 +292,7 @@ export class CastController {
     void this.refresh()
   }
 
-  /** Wrap a project sprite set as a GTK preview resource for the dialogs. */
+  /** Wrap a project sprite set as a GTK preview resource. */
   private async _loadSpriteSetPreview(id: string): Promise<GdkSpriteSetResource | null> {
     const engineSet = await this.store.resource?.getSpriteSet(id)
     if (!engineSet) return null
@@ -343,81 +321,29 @@ export class CastController {
    * broadcast). Returns silently when the character isn't found.
    */
   private _mutate(id: string, mutator: (c: CharacterDefinition) => void): void {
-    const character = this._listCharacters().find((c) => c.id === id)
+    const character = listCharacterViewModels(this.store.data).find((c) => c.id === id)
     if (!character) return
     mutator(character)
     this._upsertCharacter(character)
   }
 
   /**
-   * Set a uniform per-frame duration across one animation on a sheet
-   * ("apply to all frames"). Public so both the Cast detail (via
-   * `callbacks`) and the animation editor drive the same sheet-owned
-   * mutation; per-frame durations are set frame-by-frame in the editor.
+   * Apply a sheet-owned animation edit (see `cast-controller-animations`)
+   * through the store's descriptor pipeline — persist + chunked
+   * descriptor broadcast — then evict the preview + refresh. Keyed by
+   * `spriteSetId`: animations belong to the sheet, not to a character.
    */
-  setAnimationDuration(sheetId: string, animId: string, durationMs: number): void {
-    this._mutateSheetAnimations(sheetId, (anims) => {
-      const anim = anims.find((a) => a.id === animId)
-      if (anim) anim.frames = anim.frames.map((f) => ({ ...f, duration: durationMs }))
-    })
-  }
-
-  /** Append a new animation to a sheet (dialog-validated; defensive re-check here). */
-  addAnimation(sheetId: string, animation: CharacterAnimation): void {
-    this._mutateSheetAnimations(sheetId, (anims) => {
-      // Dialog-side validation already rejected duplicate ids + empty
-      // frames; defensive double-check so a mismatch can't corrupt it.
-      if (animation.frames.length === 0) return
-      if (anims.some((a) => a.id === animation.id)) return
-      anims.push(animation)
-    })
-  }
-
-  /** Replace `originalId`'s animation on a sheet (treats a lost original as an add). */
-  editAnimation(sheetId: string, originalId: string, animation: CharacterAnimation): void {
-    this._mutateSheetAnimations(sheetId, (anims) => {
-      if (animation.frames.length === 0) return
-      const idx = anims.findIndex((a) => a.id === originalId)
-      if (idx === -1) {
-        // The original is gone (edited in another session, …) — treat
-        // as an add so the user's frames aren't lost.
-        if (!anims.some((a) => a.id === animation.id)) anims.push(animation)
-        return
-      }
-      // A rename must not collide with an existing entry.
-      if (animation.id !== originalId) {
-        const collision = anims.findIndex((a) => a.id === animation.id)
-        if (collision !== -1 && collision !== idx) return
-      }
-      anims[idx] = animation
-    })
-  }
-
-  /** Remove a custom animation from a sheet (required roles are protected). */
-  deleteAnimation(sheetId: string, animId: string): void {
-    // Required roles can't be removed (part of the character contract).
-    if ((REQUIRED_ROLES as readonly string[]).includes(animId)) return
-    this._mutateSheetAnimations(sheetId, (anims) => {
-      const idx = anims.findIndex((a) => a.id === animId)
-      if (idx !== -1) anims.splice(idx, 1)
-    })
-  }
-
-  /**
-   * Mutate a sprite SHEET's animations (sheet-owned, shared by every
-   * character using it) through the store's descriptor pipeline
-   * (persist + chunked descriptor broadcast), then evict the preview +
-   * refresh. Keyed by `spriteSetId` — the Sprite-sheets section edits a
-   * sheet directly.
-   */
-  private _mutateSheetAnimations(spriteSetId: string, mutator: (anims: CharacterAnimation[]) => void): void {
+  private _mutateSheetAnimations(
+    spriteSetId: string,
+    edit: (anims: readonly CharacterAnimation[]) => CharacterAnimation[] | null,
+  ): void {
     const mutated = this.store.mutateSpriteSetData(spriteSetId, (data) => {
       data.characterAnimations ??= []
-      const anims = data.characterAnimations
-      mutator(anims)
+      const next = edit(data.characterAnimations)
+      if (next) data.characterAnimations = next
     })
     if (!mutated) return
-    this._spriteSetCache.delete(spriteSetId)
+    this._previews.evict(spriteSetId)
     void this.refresh()
   }
 }

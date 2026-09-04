@@ -1,0 +1,78 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Shared read-only glance for the selected card of EITHER Sheets section.
+// The preview swaps by kind (a static sheet thumbnail for a tileset, an
+// animated `CharacterPreview` for an appearance); the name, subtitle and
+// Edit button are shared, which is what makes one sidebar enough.
+template $TilesQuickView : Adw.Bin {
+  child: Gtk.ScrolledWindow {
+    hscrollbar-policy: never;
+    vscrollbar-policy: automatic;
+
+    child: Gtk.Stack stack {
+      Gtk.StackPage {
+        name: "empty";
+        child: Adw.StatusPage {
+          icon-name: "view-grid-symbolic";
+          title: _("No selection");
+          description: _("Select a tileset or appearance to see its details.");
+        };
+      }
+
+      Gtk.StackPage {
+        name: "info";
+        child: Gtk.Box {
+          orientation: vertical;
+          spacing: 12;
+          margin-top: 18;
+          margin-bottom: 18;
+          margin-start: 18;
+          margin-end: 18;
+
+          Gtk.Stack preview_stack {
+            Gtk.StackPage {
+              name: "tileset";
+              child: Gtk.Picture thumb {
+                content-fit: contain;
+                can-shrink: true;
+                halign: center;
+                height-request: 160;
+                styles ["card", "card-gallery-preview"]
+              };
+            }
+
+            Gtk.StackPage {
+              name: "appearance";
+              child: $PixelRpgCharacterPreview preview {
+                frame-size: 160;
+                halign: center;
+                show-controls: false;
+                auto-cycle: true;
+              };
+            }
+          }
+
+          Gtk.Label name_label {
+            halign: center;
+            wrap: true;
+            justify: center;
+            styles ["title-2"]
+          }
+
+          Gtk.Label subtitle_label {
+            halign: center;
+            styles ["caption", "dim-label"]
+          }
+
+          Gtk.Button edit_button {
+            label: _("Edit");
+            halign: center;
+            margin-top: 6;
+            styles ["suggested-action", "pill"]
+          }
+        };
+      }
+    };
+  };
+}
