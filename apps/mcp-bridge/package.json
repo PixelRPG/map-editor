@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "clear": "rm -rf dist",
+    "clear": "gjsify clear dist",
     "build:app": "gjsify build src/index.ts --app gjs --globals auto --shebang --outfile dist/mcp-bridge.gjs.mjs",
     "build": "gjsify run build:app",
     "check": "tsc --noEmit",
