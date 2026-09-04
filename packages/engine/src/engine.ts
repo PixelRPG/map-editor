@@ -1,74 +1,72 @@
-import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Loader, Logger, Vector } from 'excalibur'
+import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Logger, Vector } from 'excalibur'
+import type { Command } from './commands/index.ts'
+import type { EditorTool, EditorViewFlags } from './components/index.ts'
+import { CommandHistory } from './engine/command-history.ts'
+import { EditOperations } from './engine/edit-operations.ts'
+import { EditorSession } from './engine/editor-session.ts'
+import { LayerOperations } from './engine/layer-operations.ts'
 import {
-  AddLayerCommand,
-  type Command,
-  PlaceObjectCommand,
-  RemoveObjectCommand,
-  SetLayerLockedCommand,
-  SetLayerVisibilityCommand,
-} from './commands/index.ts'
-import {
-  ActiveLayerComponent,
-  ActiveObjectComponent,
-  ActiveTileComponent,
-  ActiveToolComponent,
-  EditorModeComponent,
-  type EditorTool,
-  type EditorViewFlags,
-  EditorViewModeComponent,
-  RuntimeModeComponent,
-  SelectedPlacementsComponent,
-  SpawnOverrideComponent,
-  UndoStackComponent,
-} from './components/index.ts'
-import { entityToCharacter } from './entity/convert.ts'
-import { GameProjectResource } from './resource/GameProjectResource.ts'
+  observePointerTile,
+  observePointerWorld,
+  type PointerTileEvent,
+  type PointerWorldEvent,
+} from './engine/pointer-observers.ts'
+import { type MapLoadOptions, ProjectLoader } from './engine/project-loader.ts'
+import { ViewModeController } from './engine/view-mode.controller.ts'
+import type { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
-import { executeCommandOnScene } from './services/command-dispatch.ts'
-import { applyEditorViewMode } from './services/editor-view.ts'
-import { layerFlagChange } from './services/layer-flag-event.ts'
-import { makePlacementId } from './services/placement-id.ts'
-import { isTileOutOfBounds, tileToWorldCenter } from './services/tile-geometry.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
-import { buildTileFillCommand } from './services/tile-fill.service.ts'
-import { buildTilePaintCommand, findTileMapForLayer } from './services/tile-paint.service.ts'
+import { placementTileCentre } from './services/placement-geometry.ts'
+import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { LayerData } from './types/data/index.ts'
-import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from './types/index.ts'
-import { EDITOR_CONSTANTS } from './utils/constants.ts'
-import { formatError } from './utils/format-error.ts'
-import { SessionState } from './utils/session-state.ts'
-import { canRedo, canUndo } from './utils/undo-stack.utils.ts'
-
-interface LoaderEventMap {
-  progress: { progress: number }
-  error: unknown
-  complete: undefined
-  afterload: undefined
-}
+import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 
 // The AI-assistant presence subsystem (cursor/awareness/follow/flash) lives
 // in AssistantPresenceController; these constants are defined there and
 // re-exported so existing `@pixelrpg/engine` import sites keep working.
 export { ASSISTANT_PEER_ID, DEFAULT_ASSISTANT_INFO } from './services/assistant-presence.ts'
+export type { MapLoadOptions } from './engine/project-loader.ts'
+export type { PointerTileEvent, PointerWorldEvent } from './engine/pointer-observers.ts'
 
+/**
+ * The editor's façade over Excalibur.
+ *
+ * Every public method here delegates to one collaborator, each of which
+ * owns a single slice of engine behaviour:
+ *
+ * - {@link ProjectLoader} — project + map loading and scene switching
+ * - {@link EditorSession} — the per-scene tool / tile / brush / layer /
+ *   selection state on the session-singleton
+ * - {@link ViewModeController} — render-only editor view flags
+ * - {@link CommandHistory} — the op-log: execute, undo, redo, remote apply
+ * - {@link LayerOperations} — layer list + its persisted flags
+ * - {@link EditOperations} — programmatic (D-Bus/MCP) map edits
+ * - {@link AssistantPresenceController} — the in-process AI collaborator's
+ *   cursor, presence and camera follow
+ *
+ * The façade itself owns only what is genuinely engine-wide: the
+ * Excalibur instance, the status field, and the narrowing of Excalibur's
+ * current scene to a `MapScene`.
+ */
 export class Engine {
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
 
   public readonly excalibur: ExcaliburEngine
-  private _gameProjectResource: GameProjectResource | null = null
-  private logger = Logger.getInstance()
+  private readonly logger = Logger.getInstance()
 
-  // In-process AI-assistant presence (cursor/awareness/follow/flash),
-  // driven over D-Bus/MCP without any CollabSession/WebRTC. Extracted into
-  // its own controller; the Engine just delegates. See
-  // docs/concepts/ai-collaborator.md.
-  private readonly _assistant: AssistantPresenceController
+  private readonly assistant: AssistantPresenceController
+  private readonly loader: ProjectLoader
+  private readonly session: EditorSession
+  private readonly viewMode: ViewModeController
+  private readonly history: CommandHistory
+  private readonly layers: LayerOperations
+  private readonly edits: EditOperations
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
-    return this._gameProjectResource
+    return this.loader.gameProjectResource
   }
 
   constructor(canvas: HTMLCanvasElement) {
@@ -97,44 +95,49 @@ export class Engine {
       enableCanvasContextMenu: true,
     })
 
+    const activeScene = () => this.activeMapScene()
+
     // The assistant-presence subsystem reads the active scene + camera from
     // the engine and builds its cursor renderer bound to this engine.
-    this._assistant = new AssistantPresenceController({
+    this.assistant = new AssistantPresenceController({
       host: {
-        getActiveScene: () => this._activeMapScene(),
+        getActiveScene: activeScene,
         getCamera: () => this.excalibur.currentScene?.camera ?? null,
       },
       createRenderer: (awareness) => new RemoteCursorRenderer(this, awareness),
+    })
+
+    this.loader = new ProjectLoader({
+      excalibur: this.excalibur,
+      events: this.events,
+      setStatus: (status) => this.setStatus(status),
+      isRuntimeMode: () => this.isRuntimeMode(),
+    })
+    this.session = new EditorSession(activeScene, this.events)
+    this.viewMode = new ViewModeController(this.excalibur, activeScene, this.events)
+    this.history = new CommandHistory(activeScene, this.events)
+    this.layers = new LayerOperations(activeScene, (command, origin) => this.executeCommand(command, origin))
+    this.edits = new EditOperations({
+      activeScene,
+      session: this.session,
+      layers: this.layers,
+      assistant: this.assistant,
+      execute: (command, origin) => this.executeCommand(command, origin),
     })
 
     // Smooth camera-follow: ease the camera toward the follow target every
     // frame rather than issuing a fresh `camera.move` tween per cursor
     // update (which fought itself and looked hectic).
     this.excalibur.on('postupdate', (evt: { elapsed?: number; delta?: number }) =>
-      this._assistant.tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
+      this.assistant.tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
     )
 
     // Teleport host wiring: `TeleportSystem` emits the intent (it has no
     // engine reference); the engine — the only owner of scene switching —
-    // performs it. Carries the play state to the target scene and plants
-    // the arrival tile as a spawn override (see `loadMap`'s options).
-    this.events.on(EngineEvent.TELEPORT_REQUESTED, ({ targetMapId, targetTileX, targetTileY, facing }) => {
-      this.loadMap(targetMapId, {
-        spawnOverride: { tileX: targetTileX, tileY: targetTileY, facing },
-        keepRuntimeMode: true,
-        keepZoom: true,
-      }).catch((err) => {
-        // A failed teleport (e.g. missing target map) leaves the player
-        // mid-transition with no scene switch. Surface it as an engine
-        // ERROR so the host can react, instead of only console.warn-ing
-        // (mirrors the loader error path).
-        this.logger.error(`teleport to "${targetMapId}" failed:`, formatError(err))
-        this.events.emit(EngineEvent.ERROR, {
-          message: `Teleport to "${targetMapId}" failed`,
-          cause: err instanceof Error ? err : new Error(String(err)),
-        })
-      })
-    })
+    // performs it.
+    this.events.on(EngineEvent.TELEPORT_REQUESTED, ({ targetMapId, targetTileX, targetTileY, facing }) =>
+      this.loader.teleport(targetMapId, targetTileX, targetTileY, facing),
+    )
   }
 
   async initialize(): Promise<void> {
@@ -143,156 +146,12 @@ export class Engine {
   }
 
   async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
-    this.setStatus(EngineStatus.LOADING)
-    this.logger.info(`[Engine] Loading project: ${projectPath}`)
-
-    this._gameProjectResource = new GameProjectResource(projectPath, {
-      preloadAllSpriteSets: options?.preloadAllSpriteSets ?? true,
-      preloadAllMaps: options?.preloadAllMaps ?? false,
-    })
-
-    const loader = new Loader([this._gameProjectResource])
-    // Excalibur's `Loader` exposes events via an untyped `on` method; we wrap
-    // it in a narrow interface so each handler receives a typed payload.
-    const loaderEvents = loader as unknown as {
-      on<E extends keyof LoaderEventMap>(name: E, handler: (payload: LoaderEventMap[E]) => void): void
-    }
-
-    loaderEvents.on('progress', (event) => {
-      if (typeof event?.progress === 'number') {
-        this.logger.debug(`Loading progress: ${Math.round(event.progress * 100)}%`)
-      }
-    })
-
-    loaderEvents.on('error', (error) => {
-      this.logger.error('Loader error:', error)
-      this.setStatus(EngineStatus.ERROR)
-      this.events.emit(EngineEvent.ERROR, {
-        message: 'Loader error',
-        cause: error instanceof Error ? error : new Error(String(error)),
-      })
-    })
-
-    loaderEvents.on('complete', () => {
-      this.logger.info('Loading complete')
-    })
-
-    loaderEvents.on('afterload', async () => {
-      this.logger.info('GameProjectResource loaded successfully')
-      this._gameProjectResource?.debugInfo()
-
-      this.events.emit(EngineEvent.PROJECT_LOADED, { projectPath, options })
-
-      if (this._gameProjectResource?.data.startup.initialMapId) {
-        await this.loadMap(this._gameProjectResource.data.startup.initialMapId)
-      }
-
-      this.setStatus(EngineStatus.READY)
-    })
-
-    await this.excalibur.start(loader)
-    // Re-apply resolution + viewport after the canvas size is settled (gjsify
-    // widget emits the final size asynchronously). Mirrors jelly-jumper.
-    try {
-      this.excalibur.screen.applyResolutionAndViewport()
-    } catch {
-      // screen not ready yet — ignore
-    }
+    return this.loader.loadProject(projectPath, options)
   }
 
-  /**
-   * Load a map and switch the active scene to it.
-   *
-   * `options.spawnOverride` plants a {@link SpawnOverrideComponent} on
-   * the NEW scene's session-singleton BEFORE `goToScene`, so
-   * `PlayerSystem.resolveSpawnTile` deterministically sees it when the
-   * scene initialises — no reliance on event-tick ordering. Used by the
-   * teleport flow to position the player at the arrival tile.
-   * `options.keepRuntimeMode` carries the play state across the switch
-   * (mode markers are per-scene): when the CURRENT scene is in runtime
-   * mode, the new scene starts in runtime mode too, so a mid-play
-   * teleport stays in play instead of dropping back to the editor.
-   * `options.keepZoom` carries the current camera zoom onto the new
-   * scene's camera (cameras are per-scene and reset to 1 otherwise) —
-   * a teleport should not yank the player to a different zoom level.
-   *
-   * Re-entering a previously visited map rebuilds the scene from data
-   * (no scene instance is reused) — RPG-Maker-style room reset; save
-   * state is a future concern.
-   */
-  async loadMap(
-    mapId: string,
-    options?: {
-      spawnOverride?: { tileX: number; tileY: number; facing?: Facing }
-      keepRuntimeMode?: boolean
-      keepZoom?: boolean
-    },
-  ): Promise<void> {
-    if (!this._gameProjectResource) {
-      throw new Error('Project not loaded')
-    }
-    // Capture BEFORE the switch — both read the current scene.
-    const carryRuntime = (options?.keepRuntimeMode ?? false) && this.isRuntimeMode()
-    const carryZoom = options?.keepZoom ? this.excalibur.currentScene?.camera.zoom : undefined
-
-    this.logger.info(`Loading map: ${mapId}`)
-    const mapResource = await this._gameProjectResource.loadMap(mapId)
-
-    const projectData = this._gameProjectResource.data
-    const entityLibrary = projectData?.entityLibrary ?? []
-    // The player is the entity named by `playerActorId`, mapped to the
-    // flat character view model `PlayerSystem` consumes. Projects ship a
-    // starter character (the scientist); if none is set the scene falls
-    // back to a procedural placeholder. Cast view edits flow through the
-    // same data → next `loadMap` picks up the new player.
-    const playerEntity = projectData?.playerActorId
-      ? entityLibrary.find((e) => e.id === projectData.playerActorId)
-      : undefined
-    const playerCharacter = playerEntity
-      ? (entityToCharacter(playerEntity, projectData?.playerActorId) ?? undefined)
-      : undefined
-    // Resolve the player's sprite-set directly from the project —
-    // character-only sprite-sets (e.g. the scientist) live on the
-    // project, not in any map JSON. (`MapResource.getSpriteSetResource`
-    // also falls back to these project-level sets now, but the player
-    // sheet is project data, so look it up at the project level.)
-    const playerSpriteSet = playerCharacter
-      ? this._gameProjectResource.spriteSets.get(playerCharacter.spriteSetId)
-      : undefined
-    const newMapScene = new MapScene(mapResource, this.events, entityLibrary, playerCharacter, playerSpriteSet)
-
-    // Session-singleton state must be in place BEFORE goToScene so the
-    // scene's systems read it during their initialize pass.
-    if (options?.spawnOverride) {
-      const { tileX, tileY, facing } = options.spawnOverride
-      SessionState.set(newMapScene, new SpawnOverrideComponent(tileX, tileY, facing))
-    }
-    if (carryRuntime) {
-      SessionState.unset(newMapScene, EditorModeComponent)
-      SessionState.set(newMapScene, new RuntimeModeComponent())
-    }
-    if (carryZoom !== undefined && carryZoom > 0) {
-      newMapScene.camera.zoom = carryZoom
-    }
-
-    // Map-declared room colour → GL clear colour. A colour *actor*
-    // would go through Excalibur's `Rectangle` Raster (2D-canvas
-    // rasterise), which the GJS canvas path doesn't survive — the
-    // clear colour is pure GL and also matches the original-game
-    // semantic (fill the screen, tiles on top). Reset to transparent
-    // for maps without one so the editor backdrop shows through.
-    this.excalibur.backgroundColor = mapResource.mapData.backgroundColor
-      ? Color.fromHex(mapResource.mapData.backgroundColor)
-      : Color.Transparent
-
-    // Re-entry: drop the stale scene instance so addScene doesn't
-    // collide and the room rebuilds fresh from data.
-    if (this.excalibur.scenes[mapId]) this.excalibur.removeScene(mapId)
-    this.excalibur.addScene(mapId, newMapScene)
-    this.excalibur.goToScene(mapId)
-
-    this.logger.info(`Map ${mapResource.mapData.name} loaded`)
-    this.events.emit(EngineEvent.MAP_LOADED, { mapId })
+  /** Load a map and switch the active scene to it. See {@link ProjectLoader.loadMap}. */
+  async loadMap(mapId: string, options?: MapLoadOptions): Promise<void> {
+    return this.loader.loadMap(mapId, options)
   }
 
   async start(): Promise<void> {
@@ -301,197 +160,136 @@ export class Engine {
   }
 
   async stop(): Promise<void> {
-    this._assistant.dispose()
+    this.assistant.dispose()
     this.excalibur.stop()
     this.setStatus(EngineStatus.READY)
   }
 
-  /**
-   * Set the active editor tool. Writes to the session-singleton on
-   * the currently-active `MapScene` so the `TileEditorSystem` reads
-   * it directly via `SessionState.get`. No-op when no `MapScene` is
-   * active yet.
-   */
+  // ──────────────────────────────────────────────────────────────
+  // Editor session state — tool, brushes, layer, selection
+  // ──────────────────────────────────────────────────────────────
+
+  /** Set the active editor tool. No-op when no `MapScene` is active yet. */
   setActiveTool(tool: EditorTool): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    SessionState.set(scene, new ActiveToolComponent(tool))
+    this.session.activeTool = tool
   }
 
-  /** Read the currently-active editor tool from the session-singleton. */
   getActiveTool(): EditorTool | null {
-    const scene = this._activeMapScene()
-    if (!scene) return null
-    return SessionState.get(scene, ActiveToolComponent)?.tool ?? null
+    return this.session.activeTool
   }
 
-  /**
-   * Set the active tile sprite id (global = local sprite index +
-   * sprite-set's `firstGid`). Lives on the session-singleton.
-   */
+  /** Set the active tile sprite id (global = local index + `firstGid`). */
   setActiveTile(spriteId: number): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    SessionState.set(scene, new ActiveTileComponent(spriteId))
+    this.session.activeTile = spriteId
   }
 
   getActiveTile(): number | null {
-    const scene = this._activeMapScene()
-    if (!scene) return null
-    return SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null
+    return this.session.activeTile
   }
 
-  /**
-   * Set the "object brush" — the entity-library definition id the
-   * `'object'` tool stamps on click. `null` clears it. Lives on the
-   * session-singleton (see {@link ActiveObjectComponent}).
-   */
+  /** Set the "object brush" — the entity id the `'object'` tool stamps. `null` clears it. */
   setObjectBrush(defId: string | null): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    SessionState.set(scene, new ActiveObjectComponent(defId))
+    this.session.objectBrush = defId
   }
 
   getObjectBrush(): string | null {
-    const scene = this._activeMapScene()
-    if (!scene) return null
-    return SessionState.get(scene, ActiveObjectComponent)?.defId ?? null
+    return this.session.objectBrush
   }
 
   /** Set the active layer for tile painting. Matches a `LayerData.id`. */
   setActiveLayer(layerId: string): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    SessionState.set(scene, new ActiveLayerComponent(layerId))
-    // The `dimInactiveLayers` flag dims non-active layers — switching
-    // the active layer changes which layer's content stays at full
-    // opacity. No-op when the flag is off (the helper short-circuits
-    // on `dim === false` by returning 1.0 from its opacity provider).
-    if (SessionState.get(scene, EditorViewModeComponent)?.dimInactiveLayers) {
-      applyEditorViewMode(scene)
-    }
+    this.session.activeLayer = layerId
   }
 
   getActiveLayer(): string | null {
-    const scene = this._activeMapScene()
-    if (!scene) return null
-    return SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null
+    return this.session.activeLayer
   }
 
-  /**
-   * Replace the current placement selection. Passing an empty array
-   * (or never calling this) means "nothing selected". Callers don't
-   * need to distinguish between absent component and empty array —
-   * `getSelectedPlacements()` collapses both to `[]`.
-   */
+  /** Replace the placement selection; an empty array means "nothing selected". */
   setSelectedPlacements(placementIds: readonly string[]): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    if (placementIds.length === 0) {
-      SessionState.unset(scene, SelectedPlacementsComponent)
-      return
-    }
-    SessionState.set(scene, new SelectedPlacementsComponent([...placementIds]))
+    this.session.selectedPlacements = placementIds
   }
 
   /** Current placement-selection. Empty array when no selection. */
   getSelectedPlacements(): string[] {
-    const scene = this._activeMapScene()
-    if (!scene) return []
-    return SessionState.get(scene, SelectedPlacementsComponent)?.placementIds ?? []
+    return this.session.selectedPlacements
   }
 
   /**
-   * Smoothly pan the camera so the tile centre of the placement
-   * with id `placementId` becomes the viewport centre. Uses
-   * Excalibur's `Camera.move` with `EaseInOutCubic` easing — the
-   * default duration of 400ms reads as a clear "the editor moved
-   * me" cue without dragging on long enough to be annoying when
-   * stepping through a list of objects.
+   * Smoothly pan the camera so a placement becomes the viewport centre.
+   * The 400ms default reads as a clear "the editor moved me" cue without
+   * dragging when stepping through a list of objects.
    *
-   * No-op (returns `false`) when there's no active `MapScene`, no
-   * loaded map data, or the placement id doesn't match anything in
-   * the current map. Returned promise resolves `true` when the
-   * pan completes (or `false` if Excalibur's `move()` rejects, e.g.
-   * because the camera is currently following an actor).
+   * `false` when there is no active map, the id matches nothing, or
+   * Excalibur's `move()` rejects (e.g. the camera is following an actor).
    */
   async focusOnPlacement(placementId: string, durationMs = 400): Promise<boolean> {
-    const scene = this._activeMapScene()
+    const scene = this.activeMapScene()
     if (!scene) return false
-    const mapData = scene.mapResource?.mapData
-    if (!mapData) return false
-    const placement = mapData.objectPlacements?.find((p) => p.id === placementId)
-    if (!placement) return false
-    const tileWidth = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-    const tileHeight = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-    const centre = tileToWorldCenter({ x: 0, y: 0 }, tileWidth, tileHeight, placement.tileX, placement.tileY)
-    const target = new Vector(centre.x, centre.y)
+    const centre = placementTileCentre(scene.mapResource?.mapData, placementId)
+    if (!centre) return false
     try {
-      await scene.camera.move(target, durationMs)
+      await scene.camera.move(new Vector(centre.x, centre.y), durationMs)
       return true
     } catch {
       return false
     }
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // Commands — the op-log every mutation flows through
+  // ──────────────────────────────────────────────────────────────
+
   /**
-   * Execute a {@link Command} against the current scene and push it
-   * onto the undo stack. If the user previously undid and the cursor
-   * is mid-stack, the redo tail is truncated (the abandoned branch
-   * cannot be re-redone).
+   * Execute a {@link Command} and push it onto the undo stack — see
+   * {@link CommandHistory.execute}. No-op without an active `MapScene`.
    *
-   * `origin` attributes the mutation to an initiating actor other
-   * than the local user — pass {@link ASSISTANT_PEER_ID} for AI-
-   * collaborator edits driven via Control/MCP. It rides
-   * `COMMAND_EXECUTED` → `Operation.origin` so remote peers can
-   * show "AI" instead of the hosting user. Deliberately NOT a
-   * stored "current actor" flag: the initiator is an explicit
-   * per-call parameter so it cannot leak across async boundaries.
-   * The undo-stack push stays origin-agnostic — AI edits land on
-   * the host's stack so the human can Ctrl+Z an AI mistake.
-   *
-   * No-op when no `MapScene` is active.
+   * `origin` attributes the mutation to an actor other than the local
+   * user; pass {@link ASSISTANT_PEER_ID} for AI-collaborator edits
+   * driven via Control/MCP. Deliberately a per-call parameter rather
+   * than a stored "current actor" flag, so it cannot leak across async
+   * boundaries.
    */
   executeCommand(command: Command, origin?: string): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    executeCommandOnScene(scene, this.events, command, origin)
-    this._emitLayerFlagChanged(command, 'apply')
+    this.history.execute(command, origin)
   }
 
-  /**
-   * UI-sync companion for the layer-flag commands: emit
-   * `LAYER_FLAG_CHANGED` so the host's Layers tab mirrors the new
-   * flag value. Called after EVERY path that applies/reverts a
-   * command — local execute, undo, redo, remote apply, remote
-   * revert — because remote ops deliberately don't emit
-   * `COMMAND_EXECUTED` (relay loop) yet still need the inspector
-   * row's eye/padlock to follow. No-op for non-layer commands.
-   *
-   * The command→payload mapping is the pure {@link layerFlagChange}
-   * (unit-tested independently); this method only owns the emit.
-   */
-  private _emitLayerFlagChanged(command: Command, direction: 'apply' | 'revert'): void {
-    const change = layerFlagChange(command, direction)
-    if (change) this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, change)
+  /** Apply a command received from a peer — see {@link CommandHistory.applyRemote}. */
+  applyRemoteCommand(command: Command, origin?: string): void {
+    this.history.applyRemote(command, origin)
   }
 
+  /** Revert a command a remote peer undid. Same guarantees as {@link applyRemoteCommand}. */
+  applyRemoteRevert(command: Command, origin?: string): void {
+    this.history.revertRemote(command, origin)
+  }
+
+  /** Revert the most recent command; peers mirror it. `origin` as in {@link executeCommand}. */
+  undo(origin?: string): boolean {
+    return this.history.undo(origin)
+  }
+
+  /** Re-apply the next command in the stack; peers follow. */
+  redo(origin?: string): boolean {
+    return this.history.redo(origin)
+  }
+
+  canUndo(): boolean {
+    return this.history.canUndo()
+  }
+
+  canRedo(): boolean {
+    return this.history.canRedo()
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Programmatic edits — the headless equivalent of a pointer click
+  // ──────────────────────────────────────────────────────────────
+
   /**
-   * Paint (or erase) a tile at `(tileX, tileY)` programmatically — the
-   * headless equivalent of a pointer click, for external tooling
-   * (D-Bus/MCP) and scripted edits. Routes through {@link executeCommand}
-   * (the shared {@link buildTilePaintCommand}), so undo/redo + collab
-   * op-sync behave exactly like a user paint.
-   *
-   * - `layerId` null/omitted → the active layer.
-   * - `spriteId` omitted → the active tile; `0`/`null` → erase; else paint
-   *   that global tile id.
-   * - `origin` — initiating actor id (e.g. {@link ASSISTANT_PEER_ID}
-   *   from the Control plane); stamped onto the outgoing op for
-   *   peer-side attribution. See {@link executeCommand}.
-   *
-   * Returns `false` if there's no active map, no resolvable layer, the
-   * layer is locked, or the coords are out of bounds.
+   * Paint (or erase) a tile — see {@link EditOperations.paintTile} for
+   * the refusal reasons. `layerId` null → the active layer; `spriteId`
+   * omitted → the active tile, `0`/`null` → erase.
    */
   paintTileAt(
     layerId: string | null,
@@ -500,131 +298,22 @@ export class Engine {
     spriteId?: number | null,
     origin?: string,
   ): boolean {
-    // The user paused the assistant — reject its paints (the human is in
-    // control). The human's own paints take the TileEditorSystem pointer
-    // path, never this method. Defense in depth: the maker's Control
-    // D-Bus layer already rejects paused mutations with a typed error.
-    if (this._assistant.isPaused()) return false
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const resolvedLayer = layerId ?? this.getActiveLayer()
-    if (!resolvedLayer) return false
-    if (this.isLayerLocked(resolvedLayer)) return false
-    const found = findTileMapForLayer(scene, resolvedLayer)
-    if (!found) return false
-    if (isTileOutOfBounds(tileX, tileY, found.tileMap.columns, found.tileMap.rows)) return false
-    const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
-    this.executeCommand(
-      buildTilePaintCommand(found.editor, resolvedLayer, tileX, tileY, resolvedSprite ?? null),
-      origin,
-    )
-    // Attribution: flash the painted tile in the assistant's colour so the
-    // user sees the AI act. Only while the assistant is present.
-    if (this._assistant.isActive()) this._assistant.flashTile(found.tileMap, tileX, tileY)
-    return true
+    return this.edits.paintTile({ layerId, tileX, tileY, spriteId, origin })
   }
 
-  /**
-   * Bucket-fill from `(tileX, tileY)` programmatically — the headless
-   * equivalent of a fill-tool click, for external tooling (D-Bus/MCP)
-   * and scripted edits. Flood-fills the contiguous region matching the
-   * origin tile on the resolved layer with `spriteId`, as one atomic
-   * {@link FillTileCommand} through {@link executeCommand} (so undo/redo
-   * + collab op-sync behave exactly like a user fill).
-   *
-   * - `layerId` null/omitted → the active layer.
-   * - `spriteId` omitted → the active tile. Fill is a paint tool: a
-   *   null / non-positive resolved sprite is rejected (no erase-fill).
-   * - `origin` — initiating actor id for peer-side attribution.
-   *
-   * Returns `false` if there's no active map, no resolvable / unlocked
-   * layer, the coords are out of bounds, no fill tile resolves, or the
-   * region is already the fill tile (nothing to change).
-   */
+  /** Bucket-fill from `(tileX, tileY)` as one atomic command — see {@link EditOperations.fillTile}. */
   fillTileAt(layerId: string | null, tileX: number, tileY: number, spriteId?: number | null, origin?: string): boolean {
-    if (this._assistant.isPaused()) return false
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const resolvedLayer = layerId ?? this.getActiveLayer()
-    if (!resolvedLayer) return false
-    if (this.isLayerLocked(resolvedLayer)) return false
-    const found = findTileMapForLayer(scene, resolvedLayer)
-    if (!found) return false
-    if (isTileOutOfBounds(tileX, tileY, found.tileMap.columns, found.tileMap.rows)) return false
-    const resolvedSprite = spriteId === undefined ? this.getActiveTile() : spriteId
-    if (!resolvedSprite || resolvedSprite <= 0) return false
-    const command = buildTileFillCommand(
-      found.editor,
-      scene.mapResource,
-      { columns: found.tileMap.columns, rows: found.tileMap.rows },
-      resolvedLayer,
-      tileX,
-      tileY,
-      resolvedSprite,
-    )
-    if (!command) return false
-    this.executeCommand(command, origin)
-    if (this._assistant.isActive()) this._assistant.flashTile(found.tileMap, tileX, tileY)
-    return true
+    return this.edits.fillTile({ layerId, tileX, tileY, spriteId, origin })
   }
 
-  /**
-   * Place a library object on the active map programmatically (Control →
-   * MCP, or the AI collaborator) — the driveable equivalent of the object
-   * tool's canvas click. Goes through {@link PlaceObjectCommand} so it
-   * undoes + syncs to peers. `layerId` null → the active layer.
-   * `origin` — initiating actor id for peer-side attribution (see
-   * {@link executeCommand}). Returns
-   * `false` if there's no active map, no resolvable / unlocked layer, or
-   * `defId` isn't in the project's entity library.
-   */
+  /** Stamp a library object on the active map — see {@link EditOperations.placeObject}. */
   placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): boolean {
-    if (this._assistant.isPaused()) return false
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const resolvedLayer = layerId ?? this.getActiveLayer()
-    if (!resolvedLayer) return false
-    if (this.isLayerLocked(resolvedLayer)) return false
-    if (!scene.entityLibrary.some((e) => e.id === defId)) return false
-    // Bounds-check the target tile against the map dimensions — mirrors
-    // paintTileAt. Without this an off-map placement spawns an entity the
-    // player can never reach and rides the op-log to peers.
-    const mapData = scene.mapResource?.mapData
-    if (mapData && isTileOutOfBounds(tileX, tileY, mapData.columns, mapData.rows)) return false
-    const placement = {
-      id: makePlacementId(tileX, tileY),
-      layerId: resolvedLayer,
-      tileX,
-      tileY,
-      defId,
-    }
-    this.executeCommand(new PlaceObjectCommand({ placement }), origin)
-    return true
+    return this.edits.placeObject({ defId, layerId, tileX, tileY, origin })
   }
 
-  /**
-   * Remove an object placement by id — the driveable equivalent of a
-   * delete action in the inspector. Goes through
-   * {@link RemoveObjectCommand} so it undoes (restoring the captured
-   * placement) + syncs to peers. `origin` — initiating actor id for
-   * peer-side attribution; the human's Props "Remove" button passes
-   * none (see {@link executeCommand}). Returns `false` if there's no
-   * active map or the id doesn't resolve to a placement.
-   *
-   * Deliberately NOT assistant-pause-gated (unlike {@link paintTileAt} /
-   * {@link placeObjectAt}): this is the ONLY remove path and the human's
-   * Props "Remove" button routes through it — an engine-level gate
-   * silently disabled the user's own button while the AI was paused.
-   * The assistant's access is gated at the maker's Control/D-Bus
-   * boundary instead, where the caller is known to be the assistant.
-   */
+  /** Remove an object placement by id — see {@link EditOperations.removeObject}. */
   removeObject(placementId: string, origin?: string): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const placement = scene.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId)
-    if (!placement) return false
-    this.executeCommand(new RemoveObjectCommand({ placement }), origin)
-    return true
+    return this.edits.removeObject(placementId, origin)
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -637,17 +326,17 @@ export class Engine {
    * active map. Returns `false` if paused or no map/scene is active.
    */
   setAssistantCursor(tileX: number, tileY: number): boolean {
-    return this._assistant.setCursor(tileX, tileY)
+    return this.assistant.setCursor(tileX, tileY)
   }
 
   /** Update the AI assistant's display name + colour (re-announced immediately). */
   setAssistantInfo(displayName: string, color: string): void {
-    this._assistant.setInfo(displayName, color)
+    this.assistant.setInfo(displayName, color)
   }
 
   /** Remove the AI assistant's cursor/presence from the canvas. */
   hideAssistant(): void {
-    this._assistant.hide()
+    this.assistant.hide()
   }
 
   /**
@@ -656,27 +345,27 @@ export class Engine {
    * `CollabSession`'s awareness so networked humans see the AI's cursor.
    */
   setAssistantFrameRelay(relay: ((message: AwarenessMessage) => void) | null): void {
-    this._assistant.setFrameRelay(relay)
+    this.assistant.setFrameRelay(relay)
   }
 
   /** Whether the assistant is currently present (cursor/info set, not hidden). */
   isAssistantActive(): boolean {
-    return this._assistant.isActive()
+    return this.assistant.isActive()
   }
 
   /** Whether the user has paused the assistant. */
   isAssistantPaused(): boolean {
-    return this._assistant.isPaused()
+    return this.assistant.isPaused()
   }
 
   /** Pause/resume the assistant. While paused, its cursor + paints are rejected. */
   setAssistantPaused(paused: boolean): void {
-    this._assistant.setPaused(paused)
+    this.assistant.setPaused(paused)
   }
 
   /** Toggle camera-follow of the assistant cursor (off by default). */
   setFollowAssistant(follow: boolean): void {
-    this._assistant.setFollow(follow)
+    this.assistant.setFollow(follow)
   }
 
   /**
@@ -685,346 +374,78 @@ export class Engine {
    * toolbar — the camera eases toward it on each post-update.
    */
   panCameraTo(worldX: number, worldY: number): void {
-    this._assistant.panCameraTo(worldX, worldY)
+    this.assistant.panCameraTo(worldX, worldY)
   }
 
   /** Stop following — the camera stays where it is and responds to the user again. */
   stopCameraFollow(): void {
-    this._assistant.stopCameraFollow()
+    this.assistant.stopCameraFollow()
   }
 
-  /**
-   * Apply a command that arrived from a remote peer over a
-   * `PeerSession`. Mirrors {@link executeCommand}'s apply step
-   * but deliberately
-   *
-   *  - does NOT push to the undo stack (each peer owns its own
-   *    undo history; remote commands are not undoable locally), and
-   *  - does NOT emit `COMMAND_EXECUTED` (would relay the command
-   *    back through `SessionController` and bounce indefinitely).
-   *
-   * Emits `REMOTE_COMMAND_APPLIED` instead (receive-side only, so
-   * no relay loop) carrying the op's `origin` — the hook UI
-   * attribution of remote AI edits subscribes to.
-   *
-   * No-op when no `MapScene` is active.
-   */
-  applyRemoteCommand(command: Command, origin?: string): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    command.apply(scene)
-    this.events.emit(EngineEvent.REMOTE_COMMAND_APPLIED, { command, direction: 'apply', origin })
-    this._emitLayerFlagChanged(command, 'apply')
-  }
+  // ──────────────────────────────────────────────────────────────
+  // Layers
+  // ──────────────────────────────────────────────────────────────
 
-  /**
-   * Revert a command that arrived from a remote peer (with
-   * `Operation.direction === 'revert'`). Mirrors
-   * {@link applyRemoteCommand}'s shape — same no-stack-push +
-   * no-emit guarantees — but routes to the command's `revert`
-   * method instead of `apply`. The originating peer already
-   * popped its local undo cursor and emitted `COMMAND_REVERTED`,
-   * which the collab `SessionController` relayed here.
-   *
-   * No-op when no `MapScene` is active.
-   */
-  applyRemoteRevert(command: Command, origin?: string): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    command.revert(scene)
-    this.events.emit(EngineEvent.REMOTE_COMMAND_APPLIED, { command, direction: 'revert', origin })
-    this._emitLayerFlagChanged(command, 'revert')
-  }
-
-  /**
-   * Resolve `(scene, stack)` for the active map, or `null` when there
-   * is no active map scene or no undo stack on it. Callers gate on a
-   * single tuple lookup instead of duplicating the scene + component
-   * fetch across every undo/redo entry point.
-   */
-  private _undoContext(): { scene: MapScene; stack: UndoStackComponent } | null {
-    const scene = this._activeMapScene()
-    if (!scene) return null
-    const stack = SessionState.get(scene, UndoStackComponent)
-    if (!stack) return null
-    return { scene, stack }
-  }
-
-  /**
-   * Undo the most recent applied command. Reverts the command, drops
-   * the cursor by one, fires the `notifyMutation` so subscribers
-   * refresh button enabled-states. No-op when `!canUndo()`.
-   *
-   * Emits `COMMAND_REVERTED` so the collab `SessionController` can
-   * relay the revert to peers (with `Operation.direction = 'revert'`),
-   * mirroring the local undo on every connected peer. Without this
-   * emit, a peer's undo of their own paint would leave the host
-   * showing the paint forever.
-   *
-   * `origin` attributes the undo to an initiating actor other than
-   * the local user (see {@link executeCommand}). The Control plane
-   * passes `ASSISTANT_PEER_ID` via the maker window's `undoRedo`;
-   * the human's win.undo GAction stays origin-less.
-   */
-  undo(origin?: string): boolean {
-    const ctx = this._undoContext()
-    if (!ctx || !canUndo(ctx.stack)) return false
-    const command = ctx.stack.commands[ctx.stack.cursor - 1]
-    if (!command) return false
-    command.revert(ctx.scene)
-    ctx.stack.cursor -= 1
-    SessionState.notifyMutation(ctx.scene, ctx.stack)
-    this.events.emit(EngineEvent.COMMAND_REVERTED, { command, origin })
-    this._emitLayerFlagChanged(command, 'revert')
-    return true
-  }
-
-  /**
-   * Redo the next command in the stack (if any). Re-applies the
-   * command and advances the cursor. No-op when `!canRedo()`.
-   *
-   * Emits `COMMAND_EXECUTED` so peers re-apply the command too.
-   * Bypasses `executeCommandOnScene` because the command is already
-   * in the local undo stack — we only need the apply + relay halves,
-   * not the stack push.
-   *
-   * `origin` attributes the redo to an initiating actor other than
-   * the local user (see {@link undo}).
-   */
-  redo(origin?: string): boolean {
-    const ctx = this._undoContext()
-    if (!ctx || !canRedo(ctx.stack)) return false
-    const command = ctx.stack.commands[ctx.stack.cursor]
-    if (!command) return false
-    command.apply(ctx.scene)
-    ctx.stack.cursor += 1
-    SessionState.notifyMutation(ctx.scene, ctx.stack)
-    this.events.emit(EngineEvent.COMMAND_EXECUTED, { command, origin })
-    this._emitLayerFlagChanged(command, 'apply')
-    return true
-  }
-
-  canUndo(): boolean {
-    const stack = this._undoContext()?.stack
-    return stack ? canUndo(stack) : false
-  }
-
-  canRedo(): boolean {
-    const stack = this._undoContext()?.stack
-    return stack ? canRedo(stack) : false
-  }
-
-  /**
-   * Toggle a layer's `visible` flag on the active map by dispatching
-   * a {@link SetLayerVisibilityCommand} through {@link executeCommand}
-   * — `visible` is persisted document state on `MapData`, so the
-   * toggle rides the op-log (undo stack + `COMMAND_EXECUTED` → peers),
-   * never a direct field write. The command's `apply` owns the
-   * `MapData` write AND the graphics refresh (tier tilemap rebuild +
-   * placement-actor flips), so a peer applying the same op remotely
-   * refreshes its canvas identically. Disk persistence stays with the
-   * host (`MapFormat.serialize` on `persist-requested`).
-   *
-   * Deliberate consequence: the toggle is undoable (Ctrl+Z un-hides) —
-   * see the command's JSDoc for the document-state-vs-view-state
-   * reasoning.
-   *
-   * Returns `true` on success (including a no-op same-value toggle,
-   * which dispatches nothing), `false` if there is no active
-   * `MapScene` / no layer matches the id.
-   */
+  /** Toggle a layer's `visible` flag through the op-log — see {@link LayerOperations.setVisible}. */
   setLayerVisible(layerId: string, visible: boolean): boolean {
-    const layer = this._findLayer(layerId)
-    if (!layer) return false
-    const previousVisible = layer.visible !== false
-    if (previousVisible === visible) return true
-    this.executeCommand(new SetLayerVisibilityCommand({ layerId, visible, previousVisible }))
-    return true
+    return this.layers.setVisible(layerId, visible)
   }
 
-  /**
-   * Toggle a layer's `locked` flag on the active map by dispatching a
-   * {@link SetLayerLockedCommand} through {@link executeCommand} —
-   * same Command routing + undo semantics as {@link setLayerVisible}
-   * (`locked` is persisted `MapData` state too). No graphics rebuild;
-   * consumers (host + `TileEditorSystem`) check the flag at the start
-   * of their edit paths and short-circuit when the active layer is
-   * locked — and because the flag now syncs, BOTH peers' edit paths
-   * respect a padlock either of them set.
-   *
-   * Returns `true` on success (a same-value toggle dispatches
-   * nothing), `false` if there is no active `MapScene` / no layer
-   * matches the id.
-   */
+  /** Toggle a layer's `locked` flag — same routing as {@link setLayerVisible}; padlocks sync. */
   setLayerLocked(layerId: string, locked: boolean): boolean {
-    const layer = this._findLayer(layerId)
-    if (!layer) return false
-    const previousLocked = layer.locked ?? false
-    if (previousLocked === locked) return true
-    this.executeCommand(new SetLayerLockedCommand({ layerId, locked, previousLocked }))
-    return true
+    return this.layers.setLocked(layerId, locked)
   }
 
-  /**
-   * Append a new layer to the active map by dispatching an
-   * {@link AddLayerCommand} through {@link executeCommand} — the layer
-   * list is persisted `MapData` state, so it rides the same undo +
-   * collab pipeline as the flag commands. The caller supplies a fully
-   * built {@link LayerData} (unique id + name); disk persistence stays
-   * with the host. Returns `false` if there's no active map or a layer
-   * with the same id already exists.
-   */
+  /** Append a fully built layer to the active map through the op-log. */
   addLayer(layer: LayerData, origin?: string): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    const layers = scene.mapResource?.mapData?.layers
-    if (!layers) return false
-    if (layers.some((l) => l.id === layer.id)) return false
-    this.executeCommand(new AddLayerCommand({ layer }), origin)
-    return true
+    return this.layers.add(layer, origin)
   }
 
-  /**
-   * Read the `locked` flag on a specific layer. Used by the host to
-   * decide whether to enable the editing tool actions in response to
-   * an `ActiveLayerComponent` change. Returns `false` on missing
-   * layer / scene — "treat as editable" is the safer default for an
-   * unknown id (the paint path will then no-op via
-   * `TileEditorSystem`'s own checks).
-   */
+  /** Read the `locked` flag on a layer. `false` for an unknown id / no scene. */
   isLayerLocked(layerId: string): boolean {
-    return this._findLayer(layerId)?.locked ?? false
+    return this.layers.isLocked(layerId)
   }
 
-  /**
-   * Resolve a `LayerData` on the active `MapScene` by id. Returns
-   * `null` when there is no active `MapScene`, no loaded map data,
-   * or the layer id doesn't match anything in the current map.
-   * Centralised so the three `setLayer…` / `isLayer…` methods agree
-   * on what "active map" means.
-   */
-  private _findLayer(layerId: string) {
-    const scene = this._activeMapScene()
-    if (!scene) return null
-    return scene.mapResource?.mapData?.layers.find((l) => l.id === layerId) ?? null
-  }
+  // ──────────────────────────────────────────────────────────────
+  // View flags + runtime mode
+  // ──────────────────────────────────────────────────────────────
 
-  /**
-   * Active `MapScene` or `null` if Excalibur's current scene isn't
-   * a map (boot screen, loader, etc.). Centralises the
-   * `instanceof MapScene` narrowing so consumers can early-out on
-   * a single line and TypeScript sees a fully-narrowed scene.
-   */
-  private _activeMapScene(): MapScene | null {
-    const scene = this.excalibur.currentScene
-    return scene instanceof MapScene ? scene : null
-  }
-
-  /**
-   * Toggle Excalibur's debug grid lines on every tilemap of the
-   * active `MapScene`. Independent of {@link setDimInactiveLayers}
-   * — the user can have grid + full opacity, grid + dimming, no
-   * grid + dimming, or neither.
-   *
-   * Excalibur's debug renderer carries the grid; we configure
-   * `engine.debug.tilemap.showGrid` true + every other debug
-   * visualisation off so the editor doesn't accidentally show
-   * physics colliders.
-   *
-   * No-op if the active scene isn't a `MapScene`.
-   */
+  /** Toggle the debug grid lines. Independent of {@link setDimInactiveLayers}. */
   setShowGrid(showGrid: boolean): void {
-    this._updateViewFlags({ showGrid })
+    this.viewMode.update({ showGrid })
   }
 
   /**
-   * Dim non-active-layer sprites + placements to
-   * {@link GRID_MODE_DIM_OPACITY} so the active layer's content is
-   * the dominant signal. Independent of {@link setShowGrid}.
-   *
-   * The dimming follows {@link setActiveLayer} automatically — flip
-   * the active layer and the previously-dimmed layer reads at full
-   * opacity, the new non-active layers fade.
-   *
-   * No-op if the active scene isn't a `MapScene`.
+   * Dim non-active-layer sprites + placements so the active layer is the
+   * dominant signal. Follows {@link setActiveLayer} automatically.
    */
   setDimInactiveLayers(dimInactiveLayers: boolean): void {
-    this._updateViewFlags({ dimInactiveLayers })
+    this.viewMode.update({ dimInactiveLayers })
   }
 
   /**
-   * Globally show / hide object placements — the Layers tab's
-   * "Objects" row toggle. Combined with each placement's per-layer
-   * visibility ({@link setLayerVisible}): a placement renders only when
-   * its layer is visible AND objects are globally visible. Pure view
-   * state (like {@link setShowGrid}) — never persisted to map data.
+   * Globally show / hide object placements — the Layers tab's "Objects"
+   * toggle. A placement renders only when its layer is visible AND
+   * objects are globally visible. Pure view state, never persisted.
    */
   setObjectsVisible(objectsVisible: boolean): void {
-    this._updateViewFlags({ objectsVisible })
+    this.viewMode.update({ objectsVisible })
   }
 
-  /** Read both flags from the active scene (defaults to `{ false, false }`). */
+  /** Read the view flags from the active scene (defaults without one). */
   getEditorViewFlags(): EditorViewFlags {
-    const scene = this._activeMapScene()
-    if (!scene) return { showGrid: false, dimInactiveLayers: false, objectsVisible: true }
-    const current = SessionState.get(scene, EditorViewModeComponent)
-    return {
-      showGrid: current?.showGrid ?? false,
-      dimInactiveLayers: current?.dimInactiveLayers ?? false,
-      objectsVisible: current?.objectsVisible ?? true,
-    }
-  }
-
-  /**
-   * Merge `partial` over the current flags + re-apply the scene's
-   * render passes. Centralised so the two public setters share the
-   * same component-write + debug-config + render-refresh sequence.
-   */
-  private _updateViewFlags(partial: Partial<EditorViewFlags>): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    const current = SessionState.get(scene, EditorViewModeComponent)
-    const next: EditorViewFlags = {
-      showGrid: partial.showGrid ?? current?.showGrid ?? false,
-      dimInactiveLayers: partial.dimInactiveLayers ?? current?.dimInactiveLayers ?? false,
-      objectsVisible: partial.objectsVisible ?? current?.objectsVisible ?? true,
-    }
-    if (
-      current &&
-      current.showGrid === next.showGrid &&
-      current.dimInactiveLayers === next.dimInactiveLayers &&
-      current.objectsVisible === next.objectsVisible
-    )
-      return
-    SessionState.set(scene, new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers, next.objectsVisible))
-    this._configureExcaliburDebugForShowGrid(next.showGrid)
-    applyEditorViewMode(scene)
+    return this.viewMode.getFlags()
   }
 
   /**
    * Toggle between editor and runtime mode on the active `MapScene`.
-   *
-   * - `active === true`  — remove `EditorModeComponent`, set
-   *   `RuntimeModeComponent`. `PlayerSystem` reveals the player Actor,
-   *   reads input each frame, and locks the camera to follow.
-   * - `active === false` — opposite. Player hidden, camera unlocked,
-   *   editor tool systems run again.
-   *
-   * Position state is continuous across toggles — the player actor
-   * stays at its last position, so re-entering runtime feels seamless.
-   *
-   * No-op when no `MapScene` is active.
+   * Position state is continuous across toggles, so re-entering runtime
+   * feels seamless. No-op without an active scene.
    */
   setRuntimeMode(active: boolean): void {
-    const scene = this._activeMapScene()
+    const scene = this.activeMapScene()
     if (!scene) return
-    if (active) {
-      SessionState.unset(scene, EditorModeComponent)
-      SessionState.set(scene, new RuntimeModeComponent())
-    } else {
-      SessionState.unset(scene, RuntimeModeComponent)
-      SessionState.set(scene, new EditorModeComponent())
-    }
+    applyRuntimeMode(scene, active)
     // Swap placement chrome (cell frames + logic markers) out of / back
     // into the render so a playtest shows only the real sprites.
     scene.refreshPlacementGraphicsForMode(active)
@@ -1032,286 +453,84 @@ export class Engine {
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */
   isRuntimeMode(): boolean {
-    const scene = this._activeMapScene()
-    if (!scene) return false
-    return SessionState.get(scene, RuntimeModeComponent) !== null
+    const scene = this.activeMapScene()
+    return scene ? isRuntimeModeActive(scene) : false
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // Tile collision refresh
+  // ──────────────────────────────────────────────────────────────
+
   /**
-   * Re-apply `tile.solid` for every placement of a sprite definition
-   * on the active map. Called by the host (Tiles tab Solid toggle) so
-   * that flipping a sprite's `solid` flag in the sprite-set takes
-   * effect immediately — no engine reload, no scene rebuild. Without
-   * this the change only matters on the next map load.
-   *
-   * No-op when no `MapScene` is active.
+   * Re-apply `tile.solid` for every placement of a sprite definition, so
+   * flipping its `solid` flag takes effect without a scene rebuild.
    */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    scene.mapResource.refreshTileSolidsForSprite(spriteSetId, spriteId)
+    this.activeMapScene()?.mapResource.refreshTileSolidsForSprite(spriteSetId, spriteId)
   }
 
   /**
-   * Re-apply `tile.solid` for every placement of ANY sprite of the
-   * given set on the active map. The whole-set variant of
-   * {@link refreshTileSolidsForSprite} — used when a peer's sprite-set
-   * descriptor update arrives (the wire carries the whole descriptor,
-   * not which sprite changed) so a remote tile-property edit takes
-   * effect on an open scene immediately.
-   *
-   * No-op when no `MapScene` is active.
+   * Whole-set variant of {@link refreshTileSolidsForSprite} — a peer's
+   * descriptor update carries the whole set, not which sprite changed.
    */
   refreshTileSolidsForSpriteSet(spriteSetId: string): void {
-    const scene = this._activeMapScene()
-    if (!scene) return
-    scene.mapResource.refreshTileSolidsForSpriteSet(spriteSetId)
+    this.activeMapScene()?.mapResource.refreshTileSolidsForSpriteSet(spriteSetId)
   }
 
+  // ──────────────────────────────────────────────────────────────
+  // Observers — all rebind across map switches
+  // ──────────────────────────────────────────────────────────────
+
   /**
-   * Subscribe to view-flag changes. Fires once synchronously with
-   * the current snapshot (or `{ false, false }` when no scene is
-   * active), then again on every flag mutation. Rebinds across map
-   * switches like {@link onUndoStackChanged}.
+   * Subscribe to view-flag changes. Fires once synchronously with the
+   * current snapshot, then on every flag mutation.
    */
   onEditorViewModeChanged(cb: (flags: EditorViewFlags) => void): () => void {
-    let inner: (() => void) | null = null
-    const rebind = () => {
-      inner?.()
-      inner = null
-      const scene = this._activeMapScene()
-      if (!scene) {
-        cb({ showGrid: false, dimInactiveLayers: false, objectsVisible: true })
-        return
-      }
-      inner = SessionState.subscribe(scene, EditorViewModeComponent, (component) => {
-        cb({
-          showGrid: component?.showGrid ?? false,
-          dimInactiveLayers: component?.dimInactiveLayers ?? false,
-          objectsVisible: component?.objectsVisible ?? true,
-        })
-      })
-    }
-    rebind()
-    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
-    return () => {
-      inner?.()
-      mapSub.close()
-    }
+    return this.viewMode.onChanged(cb)
   }
 
   /**
-   * Tweak Excalibur's debug-render config + flip the global debug
-   * flag depending on whether the editor wants the grid drawn.
-   *
-   * Disables every debug visualisation that isn't the tilemap grid
-   * so the editor surface stays clean — no collider boxes, no
-   * camera viewport rectangles. Done as a single block (rather
-   * than scattered field touches) so toggling is a predictable
-   * reset, not a sticky-accumulating set of debug flags from prior
-   * toggles.
-   */
-  private _configureExcaliburDebugForShowGrid(showGrid: boolean): void {
-    if (showGrid) {
-      const debug = this.excalibur.debug
-      debug.tilemap.showAll = false
-      debug.tilemap.showGrid = true
-      debug.tilemap.gridColor = Color.fromHex('#ffffff66')
-      debug.tilemap.gridWidth = 1
-      debug.tilemap.showSolidBounds = false
-      debug.tilemap.showColliderGeometry = false
-      // Other categories: hard off — we only want the tilemap grid.
-      debug.entity.showAll = false
-      debug.collider.showAll = false
-      debug.body.showAll = false
-      debug.camera.showAll = false
-      this.excalibur.showDebug(true)
-    } else {
-      this.excalibur.showDebug(false)
-    }
-  }
-
-  /**
-   * Subscribe to undo-stack changes on the **currently-active** scene.
-   * Fires once synchronously with the present `canUndo` / `canRedo`
-   * snapshot (or `false, false` when no `MapScene` is active yet), and
-   * again on every stack mutation. Also rebinds across map switches —
-   * subscribers do not need to re-register after a `loadMap` call.
-   *
-   * Returns a disposer that drops both the inner `SessionState`
-   * subscription and the `MAP_LOADED` listener.
-   *
-   * Use case: keeping `win.undo` / `win.redo` `GAction.enabled` in
-   * sync with the stack so the OSD buttons + accelerator keys grey
-   * out at the boundaries.
+   * Subscribe to undo-stack changes — see {@link CommandHistory.onChanged}.
+   * Keeps `win.undo` / `win.redo` `GAction.enabled` in sync.
    */
   onUndoStackChanged(cb: (state: { canUndo: boolean; canRedo: boolean }) => void): () => void {
-    let inner: (() => void) | null = null
-    const rebind = () => {
-      inner?.()
-      inner = null
-      const scene = this._activeMapScene()
-      if (!scene) {
-        cb({ canUndo: false, canRedo: false })
-        return
-      }
-      inner = SessionState.subscribe(scene, UndoStackComponent, (stack) => {
-        cb({ canUndo: stack ? canUndo(stack) : false, canRedo: stack ? canRedo(stack) : false })
-      })
-    }
-    rebind()
-    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
-    return () => {
-      inner?.()
-      mapSub.close()
-    }
+    return this.history.onChanged(cb)
+  }
+
+  /** Subscribe to the pointer's world position — see {@link observePointerWorld}. */
+  onPointerMoved(cb: (event: PointerWorldEvent) => void): () => void {
+    return observePointerWorld(this.pointerHost(), cb)
+  }
+
+  /** Subscribe to the pointer's tile position, deduped per tile — see {@link observePointerTile}. */
+  onPointerTileChanged(cb: (event: PointerTileEvent) => void): () => void {
+    return observePointerTile(this.pointerHost(), cb)
   }
 
   /**
-   * Subscribe to the primary pointer's world-space position.
-   *
-   * Used by the awareness layer to broadcast the local user's cursor
-   * to remote peers. Fires on every Excalibur `pointermove` — the
-   * caller is expected to throttle (the {@link AwarenessManager}
-   * does, via `cursorThrottleMs`).
-   *
-   * Payload carries the **scene-local world coordinates** (already
-   * camera/zoom-resolved by Excalibur's `screenToWorldCoordinates`)
-   * plus the `sceneId` (== map id) so the receiver can drop frames
-   * for scenes it is not currently viewing.
-   *
-   * Returns the disposer; calling it disconnects the `pointer.on`
-   * subscription. No-op when no scene is active yet (the
-   * subscription rebinds via `MAP_LOADED` so a caller that
-   * subscribes before the first map loads still gets events once
-   * one does).
-   */
-  onPointerMoved(cb: (event: { sceneId: string; worldX: number; worldY: number }) => void): () => void {
-    let disposeMove: (() => void) | null = null
-    const rebind = () => {
-      disposeMove?.()
-      disposeMove = null
-      const pointer = this.excalibur?.input?.pointers?.primary
-      if (!pointer) return
-      const handler = (event: { screenPos: { x: number; y: number } }) => {
-        const scene = this._activeMapScene()
-        if (!scene) return
-        const sceneId = scene.mapResource.mapData.id
-        if (!sceneId) return
-        const world = this.excalibur.screen.screenToWorldCoordinates(new Vector(event.screenPos.x, event.screenPos.y))
-        // Opt-in coord trace — set
-        // `globalThis.__PIXELRPG_CURSOR_DEBUG = true` in DevTools /
-        // a debugger session to dump screen→world conversions. Used
-        // to investigate the 2026-06-01 "remote cursor is ~3 tiles
-        // off" report — both paint (POINTER_TAP) and cursor (this
-        // handler) read `event.screenPos` from the same source AND
-        // call `screenToWorldCoordinates` identically, so if the
-        // logged worldX/worldY here match the painted tile the
-        // offset is on the receiver / actor render side; if they
-        // mismatch, the offset is in `pointer.on('move')` vs
-        // `pointer.on('down/up')` screenPos divergence.
-        if ((globalThis as { __PIXELRPG_CURSOR_DEBUG?: boolean }).__PIXELRPG_CURSOR_DEBUG === true) {
-          const cam = this.excalibur.currentScene?.camera
-          console.log(
-            `[cursor-debug] screen=(${event.screenPos.x.toFixed(1)},${event.screenPos.y.toFixed(1)})` +
-              ` → world=(${world.x.toFixed(1)},${world.y.toFixed(1)})` +
-              ` camera=(${cam?.x.toFixed(1) ?? '?'},${cam?.y.toFixed(1) ?? '?'},zoom=${cam?.zoom.toFixed(2) ?? '?'})`,
-          )
-        }
-        cb({ sceneId, worldX: world.x, worldY: world.y })
-      }
-      pointer.on('move', handler)
-      disposeMove = () => pointer.off('move', handler)
-    }
-    rebind()
-    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
-    return () => {
-      disposeMove?.()
-      mapSub.close()
-    }
-  }
-
-  /**
-   * Subscribe to the local placement-selection set. Fires with the
-   * current selection immediately and on every change (select tool,
-   * inspector, programmatic `setSelectedPlacements`). Re-binds across
-   * `MAP_LOADED`. Used by `CollabSession` to broadcast our selection over
-   * awareness so peers can see what we've selected. Returns a disposer.
+   * Subscribe to the local placement-selection set. Used by
+   * `CollabSession` to broadcast our selection over awareness.
    */
   onSelectionChanged(cb: (placementIds: string[]) => void): () => void {
-    let unsub: (() => void) | null = null
-    const rebind = () => {
-      unsub?.()
-      unsub = null
-      const scene = this._activeMapScene()
-      if (!scene) return
-      unsub = SessionState.subscribe(scene, SelectedPlacementsComponent, () => cb(this.getSelectedPlacements()))
-    }
-    rebind()
-    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
-    return () => {
-      unsub?.()
-      mapSub.close()
+    return this.session.onSelectionChanged(cb)
+  }
+
+  private pointerHost() {
+    return {
+      excalibur: this.excalibur,
+      events: this.events,
+      activeScene: () => this.activeMapScene(),
     }
   }
 
   /**
-   * Subscribe to the primary pointer's tile-space position over the
-   * active map.
-   *
-   * Like {@link onPointerMoved} but deduped at tile granularity: the
-   * callback fires only when the pointer crosses a tile boundary
-   * (`floor(world/tileSize)` change), which is the right cadence for
-   * the OSD coord readout — once per actual tile transition rather
-   * than once per pixel of motion.
-   *
-   * Payload carries `{ sceneId, tileX, tileY }`. `tileX/tileY` can be
-   * negative or beyond `mapData.columns/rows`: we do **not** clamp,
-   * because the editor sometimes wants to know the pointer is just
-   * past the map's edge (cursor-clearing on out-of-canvas is handled
-   * by the caller).
-   *
-   * Rebinds across `MAP_LOADED` (same lifecycle as
-   * {@link onPointerMoved}). Disposer detaches the pointer + map
-   * listeners.
+   * Active `MapScene` or `null` if Excalibur's current scene isn't a map
+   * (boot screen, loader, etc.). Centralises the `instanceof` narrowing
+   * so every collaborator agrees on what "the active map" means.
    */
-  onPointerTileChanged(cb: (event: { sceneId: string; tileX: number; tileY: number }) => void): () => void {
-    let disposeMove: (() => void) | null = null
-    let lastTileX: number | null = null
-    let lastTileY: number | null = null
-    const rebind = () => {
-      disposeMove?.()
-      disposeMove = null
-      lastTileX = null
-      lastTileY = null
-      const pointer = this.excalibur?.input?.pointers?.primary
-      if (!pointer) return
-      const handler = (event: { screenPos: { x: number; y: number } }) => {
-        const scene = this._activeMapScene()
-        if (!scene) return
-        const mapData = scene.mapResource?.mapData
-        if (!mapData) return
-        const sceneId = mapData.id
-        if (!sceneId) return
-        const tileWidth = mapData.tileWidth || 16
-        const tileHeight = mapData.tileHeight || 16
-        const world = this.excalibur.screen.screenToWorldCoordinates(new Vector(event.screenPos.x, event.screenPos.y))
-        const tileX = Math.floor(world.x / tileWidth)
-        const tileY = Math.floor(world.y / tileHeight)
-        if (tileX === lastTileX && tileY === lastTileY) return
-        lastTileX = tileX
-        lastTileY = tileY
-        cb({ sceneId, tileX, tileY })
-      }
-      pointer.on('move', handler)
-      disposeMove = () => pointer.off('move', handler)
-    }
-    rebind()
-    const mapSub = this.events.on(EngineEvent.MAP_LOADED, () => rebind())
-    return () => {
-      disposeMove?.()
-      mapSub.close()
-    }
+  private activeMapScene(): MapScene | null {
+    const scene = this.excalibur.currentScene
+    return scene instanceof MapScene ? scene : null
   }
 
   private setStatus(status: EngineStatus): void {

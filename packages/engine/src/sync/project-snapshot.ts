@@ -32,15 +32,13 @@
  * so a future v2 host doesn't silently corrupt a v1 joiner.
  */
 
-import type { Engine } from '../engine.ts'
 import { GameProjectFormat } from '../format/GameProjectFormat.ts'
 import { MapFormat } from '../format/MapFormat.ts'
 import { SpriteSetFormat } from '../format/SpriteSetFormat.ts'
 import type { GameProjectData, MapData, SpriteSetData } from '../types/index.ts'
-import { base64ToBytes, bytesToBase64 } from '../utils/base64.ts'
-import { loadBinaryFile } from '../utils/file.ts'
-import { isAbsoluteOrUrl, joinPaths } from '../utils/url.ts'
+import { base64ToBytes } from '../utils/base64.ts'
 import type { SnapshotOpWatermark } from './pre-attach-op-buffer.ts'
+import { assertProjectFilename, assertSafeRelativePath, assertStaysInside, snapshotDirname } from './snapshot-paths.ts'
 
 export const PROJECT_SNAPSHOT_VERSION = 1
 
@@ -106,104 +104,6 @@ export interface ProjectSnapshot {
 }
 
 /**
- * Capture the current project state as a {@link ProjectSnapshot}.
- *
- * Returns `null` when no project is loaded — caller should refuse
- * to host a session in that case (there is nothing to share).
- *
- * Pure read-only operation; safe to call mid-edit. The returned
- * object holds references to the engine's in-memory data — copy
- * before mutating (or `JSON.parse(JSON.stringify(...))` if a true
- * snapshot semantics is needed).
- */
-export async function captureProjectSnapshot(engine: Engine): Promise<ProjectSnapshot | null> {
-  const resource = engine.gameProjectResource
-  if (!resource) return null
-  const project = resource.data
-  if (!project) return null
-
-  const maps: ProjectSnapshot['maps'] = []
-  for (const ref of project.maps) {
-    // The editor lazy-loads maps (only the opened scene's map is in
-    // memory), but the snapshot must be complete. Load any map the host
-    // hasn't opened yet on demand — `resource.loadMap` only loads the
-    // map DATA (no scene switch), so the host's active view is
-    // untouched. A freshly-loaded map has no tilemap shadow, so the
-    // `syncShadowToMapData` below correctly no-ops for it.
-    const mapResource = resource.getMapResource(ref.id) ?? (await resource.loadMap(ref.id))
-    // Fold the live editor shadow (MapEditorComponent.sprites) on
-    // every tier's tilemap back into mapData.layers[].sprites[].
-    // Paints mutate the shadow only — without this sync, the
-    // snapshot would ship the load-time state and a late-joining
-    // peer would see the map as it was when the host opened it,
-    // missing every paint applied since.
-    mapResource.syncShadowToMapData()
-    maps.push({ path: ref.path, data: mapResource.mapData })
-  }
-
-  // Per-spriteset JSON + binary images. Every entry from
-  // `project.spriteSets[]` MUST resolve through the resource map
-  // — a missing entry means the host hasn't loaded its own
-  // project yet (sprite-sets are loaded eagerly at project-open
-  // time) and shipping the snapshot would leave the joiner with
-  // broken sandbox references.
-  //
-  // For each loaded sprite-set we ALSO read the referenced PNG
-  // off disk and base64-encode it inline. Without the binary the
-  // joiner's sandbox has the JSON descriptor but no pixels — the
-  // 2026-06-01 hand-test surfaced this as a hang on the joiner
-  // (Excalibur's `ImageSource.load()` plus GdkPixbuf's SVG-fallback
-  // path on the 404 body).
-  //
-  // `data:`/`http(s)://`/`file://` URLs in `data.image.path` are
-  // skipped — the bytes are already inside the JSON (engine-
-  // bundled scientist sprite via data URL) or reachable over the
-  // network from any peer.
-  //
-  // `engine.gameProjectResource.spriteSets` is the in-memory
-  // Map<id, SpriteSetResource> populated by `loadProject`.
-  const spriteSets: ProjectSnapshot['spriteSets'] = []
-  for (const ref of project.spriteSets) {
-    const spriteSetResource = resource.spriteSets.get(ref.id)
-    if (!spriteSetResource) {
-      throw new Error(
-        `captureProjectSnapshot: sprite-set "${ref.id}" referenced by project but not loaded — ` +
-          `call engine.loadProject(...) first or check the project file for stale references.`,
-      )
-    }
-    const data = spriteSetResource.data
-    const images: Array<{ path: string; base64: string }> = []
-    if (data.image && !isAbsoluteOrUrl(data.image.path)) {
-      const imageDiskPath = joinPaths(spriteSetResource.imageBasePath, data.image.path)
-      try {
-        const bytes = await loadBinaryFile(imageDiskPath)
-        images.push({ path: data.image.path, base64: bytesToBase64(bytes) })
-      } catch (err) {
-        // Failure here is fatal for the snapshot — the joiner cannot
-        // render this sprite-set without the bytes. Surface a typed
-        // error so the host-side `respondToRequest` can decline the
-        // request cleanly (timeout on the joiner) rather than ship
-        // a half-state snapshot.
-        const msg = err instanceof Error ? err.message : String(err)
-        throw new Error(
-          `captureProjectSnapshot: failed to read sprite-set image "${imageDiskPath}" ` +
-            `for sprite-set "${ref.id}": ${msg}`,
-        )
-      }
-    }
-    spriteSets.push({ path: ref.path, data, images })
-  }
-
-  return {
-    version: PROJECT_SNAPSHOT_VERSION,
-    projectFilename: 'game-project.json',
-    project,
-    maps,
-    spriteSets,
-  }
-}
-
-/**
  * Serialize a snapshot for the wire. Uses the project's normal
  * Format classes so the same JSON dialect ships over the wire as
  * lands on disk.
@@ -217,73 +117,6 @@ export function serializeProjectSnapshot(snapshot: ProjectSnapshot): string {
     spriteSets: snapshot.spriteSets,
     ...(snapshot.opWatermark ? { opWatermark: snapshot.opWatermark } : {}),
   })
-}
-
-/**
- * Reject path strings that could escape a sandbox directory or
- * smuggle filesystem control characters.
- *
- * The snapshot wire format carries paths supplied by a REMOTE peer
- * over WebRTC — a malicious / compromised peer must not be able to
- * make the receiver write to `../../etc/passwd`,
- * `C:\Windows\system32\foo`, or `/dev/null`. All path attacks here
- * are filesystem-write attacks; there's no read leakage to worry
- * about because the only operation the snapshot drives is
- * `writeFile`.
- *
- * Rules:
- *
- *  - Reject empty paths.
- *  - Reject absolute paths: POSIX leading `/`, Windows leading
- *    `\\` (UNC), or `<drive>:` prefixes.
- *  - Reject any `..` segment after splitting on `/` or `\` — this
- *    is the simple parent-directory escape.
- *  - Reject any NUL byte (`\0`) — some filesystem APIs truncate at
- *    NUL, so a string like `"safe.json\0/etc/passwd"` could land
- *    in the wrong place depending on the writer.
- *  - Reject backslashes entirely. We always emit `/` separators
- *    on the wire (POSIX-style), so a `\` is either an attempt to
- *    smuggle a Windows path or a parser quirk we don't want to
- *    inherit.
- *
- *  Throws on rejection with a path-tagged message so callers can
- *  surface "snapshot rejected: unsafe path …" cleanly.
- */
-function assertSafeRelativePath(path: string, field: string): void {
-  if (typeof path !== 'string' || path.length === 0) {
-    throw new Error(`parseProjectSnapshot: ${field} must be a non-empty string`)
-  }
-  if (path.includes('\0')) {
-    throw new Error(`parseProjectSnapshot: ${field} contains a NUL byte`)
-  }
-  if (path.includes('\\')) {
-    throw new Error(`parseProjectSnapshot: ${field} contains a backslash`)
-  }
-  if (path.startsWith('/')) {
-    throw new Error(`parseProjectSnapshot: ${field} must be relative, got absolute "${path}"`)
-  }
-  if (/^[A-Za-z]:/.test(path)) {
-    throw new Error(`parseProjectSnapshot: ${field} must be relative, got drive-letter "${path}"`)
-  }
-  const segments = path.split('/')
-  for (const segment of segments) {
-    if (segment === '..') {
-      throw new Error(`parseProjectSnapshot: ${field} contains a parent-directory segment ("${path}")`)
-    }
-  }
-}
-
-/**
- * `projectFilename` carries the entry point — it MUST be a single
- * path component, no separators at all. The docstring on
- * `ProjectSnapshot.projectFilename` already says "filename"; this
- * enforces that contract instead of trusting the wire.
- */
-function assertProjectFilename(filename: string): void {
-  assertSafeRelativePath(filename, 'projectFilename')
-  if (filename.includes('/')) {
-    throw new Error(`parseProjectSnapshot: projectFilename must be a single segment, got "${filename}"`)
-  }
 }
 
 /**
@@ -423,11 +256,6 @@ export type SnapshotPathJoin = (...segments: string[]) => string
  */
 export type SnapshotPathDirname = (path: string) => string
 
-function defaultDirname(path: string): string {
-  const idx = path.replace(/\\/g, '/').lastIndexOf('/')
-  return idx === -1 ? '' : path.slice(0, idx)
-}
-
 /**
  * Write every file in the snapshot to `targetDir`. Mutates nothing
  * in memory — the only side effect is the `writeFile` invocations.
@@ -451,7 +279,7 @@ export async function applyProjectSnapshot(
   writeFile: SnapshotWriteFile,
   joinPath: SnapshotPathJoin,
   writeBinaryFile?: SnapshotWriteBinaryFile,
-  dirname: SnapshotPathDirname = defaultDirname,
+  dirname: SnapshotPathDirname = snapshotDirname,
 ): Promise<void> {
   // Pre-flight: the snapshot may have been constructed locally
   // (parseProjectSnapshot wouldn't have run), so re-assert every
@@ -517,28 +345,5 @@ export async function applyProjectSnapshot(
       // is defined when images.length > 0.
       await writeBinaryFile!(imagePath, bytes)
     }
-  }
-}
-
-/**
- * Verify `joinedPath` is still under `targetDir`. Catches a buggy
- * or hostile `joinPath` callback that produces a path-traversal
- * even from a sandbox-safe relative input.
- *
- * Comparison is **string-prefix** with a trailing-separator
- * guard — both inputs are normalised to use `/` separators and
- * the targetDir gets a trailing `/` appended if missing. This is
- * weaker than a fully-resolved-on-disk check but matches what we
- * can do in a platform-agnostic engine layer (no `realpath`, no
- * `Gio.File`). The CALLER is expected to use a sensible joinPath
- * — this is the last-ditch tripwire for the case where they don't.
- */
-function assertStaysInside(targetDir: string, joinedPath: string, field: string): void {
-  const normTarget = `${targetDir.replace(/\\/g, '/').replace(/\/+$/, '')}/`
-  const normJoined = joinedPath.replace(/\\/g, '/')
-  if (!normJoined.startsWith(normTarget)) {
-    throw new Error(
-      `applyProjectSnapshot: ${field} resolved outside targetDir (target="${targetDir}", got="${joinedPath}")`,
-    )
   }
 }

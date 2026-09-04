@@ -1,6 +1,10 @@
 import { EventEmitter } from 'excalibur'
 import { formatErrorMessage } from '../utils/format-error.ts'
 
+import { DisconnectGrace } from './disconnect-grace.ts'
+import { peerLog } from './peer-debug.ts'
+import { PendingIceBuffer } from './pending-ice-buffer.ts'
+import { resolveRtcFactory } from './rtc-factory.ts'
 import {
   CHANNEL_AWARENESS,
   CHANNEL_OP,
@@ -37,6 +41,9 @@ export interface PeerSessionOptions {
   disconnectGraceMs?: number
 }
 
+/** Default grace before a transient `disconnected` becomes a hard close. */
+const DEFAULT_DISCONNECT_GRACE_MS = 5_000
+
 /**
  * Owns the WebRTC peer-connection for one editor / game session.
  *
@@ -68,35 +75,6 @@ export interface PeerSessionOptions {
  * runtime's event loop; this class re-emits them through its own
  * `EventEmitter` after collapsing to the typed surface.
  */
-/**
- * Diagnostic-logging gate. Set `globalThis.__PIXELRPG_PEER_DEBUG`
- * to a truthy value to enable verbose `[peer-session]` logs (SDP
- * exchange, ICE candidate flow, channel + state transitions).
- *
- * Off by default so production logs stay readable. The pair-edit
- * hand-test workflow flips it on:
- *
- *   globalThis.__PIXELRPG_PEER_DEBUG = true
- *
- * before constructing the session, or set it in main.ts behind a
- * `PIXELRPG_DEBUG_PEER` env var. We deliberately stay below the
- * scoped-logger machinery in `@pixelrpg/maker-gjs` because the
- * engine is platform-independent (no maker imports allowed).
- */
-function peerDebugEnabled(): boolean {
-  const g = globalThis as { __PIXELRPG_PEER_DEBUG?: unknown }
-  return Boolean(g.__PIXELRPG_PEER_DEBUG)
-}
-
-function plog(role: PeerRole, message: string): void {
-  if (peerDebugEnabled()) {
-    console.log(`[peer-session/${role}] ${message}`)
-  }
-}
-
-/** Default grace before a transient `disconnected` becomes a hard close. */
-const DEFAULT_DISCONNECT_GRACE_MS = 5_000
-
 export class PeerSession {
   public readonly events = new EventEmitter<PeerSessionEventMap>()
 
@@ -109,29 +87,17 @@ export class PeerSession {
   private closed = false
   private iceLocalCount = 0
   private iceRemoteCount = 0
-  // ICE candidates must not be added before the remote description is
-  // set — `addIceCandidate` throws / drops them otherwise. Inbound
-  // candidates that arrive first are buffered here and drained once
-  // `setRemoteDescription` completes (host glare, fast joiners).
-  private remoteDescriptionSet = false
-  private readonly pendingIce: RTCIceCandidateInit[] = []
-  // Running grace timer for a transient `disconnected` state (see
-  // `disconnectGraceMs`); cleared on recovery or close.
-  private disconnectTimer: ReturnType<typeof setTimeout> | null = null
-  private readonly disconnectGraceMs: number
+  private readonly pendingIce = new PendingIceBuffer()
+  private readonly disconnectGrace: DisconnectGrace
 
   constructor(opts: PeerSessionOptions) {
     this.role = opts.role
     this.signalling = opts.signalling
-    this.disconnectGraceMs = opts.disconnectGraceMs ?? DEFAULT_DISCONNECT_GRACE_MS
+    this.disconnectGrace = new DisconnectGrace(opts.disconnectGraceMs ?? DEFAULT_DISCONNECT_GRACE_MS, () =>
+      this.onDisconnectGraceElapsed(),
+    )
 
-    const factory = opts.rtcFactory ?? resolveRTCPeerConnection()
-    if (!factory) {
-      throw new Error(
-        'PeerSession: no RTCPeerConnection factory available — ' +
-          'register `@gjsify/webrtc/register` under GJS, or inject `rtcFactory` in tests.',
-      )
-    }
+    const factory = resolveRtcFactory(opts.rtcFactory)
     this.pc = new factory({ iceServers: [...(opts.iceServers ?? DEFAULT_ICE_SERVERS)] })
 
     // Host creates the channels; joiner attaches in `ondatachannel`.
@@ -163,29 +129,27 @@ export class PeerSession {
     this.pc.onicecandidate = (event) => {
       const json = event.candidate?.toJSON() ?? null
       if (json === null) {
-        plog(this.role, `ICE local: end-of-candidates (sent ${this.iceLocalCount} so far)`)
+        peerLog(this.role, `ICE local: end-of-candidates (sent ${this.iceLocalCount} so far)`)
       } else {
         this.iceLocalCount++
-        plog(this.role, `ICE local #${this.iceLocalCount}: ${json.candidate ?? '<no candidate string>'}`)
+        peerLog(this.role, `ICE local #${this.iceLocalCount}: ${json.candidate ?? '<no candidate string>'}`)
       }
       this.signalling.send({ type: 'ice-candidate', payload: json })
     }
     this.pc.onconnectionstatechange = () => {
-      plog(this.role, `pc.connectionState → ${this.pc.connectionState}`)
+      peerLog(this.role, `pc.connectionState → ${this.pc.connectionState}`)
       switch (this.pc.connectionState) {
         case 'connected':
           // Recovered (possibly from a transient `disconnected`) —
           // cancel any pending grace close.
-          this.clearDisconnectTimer()
+          this.disconnectGrace.cancel()
           break
         case 'failed':
           this.fail(new Error('peer connection failed'))
           break
         case 'disconnected':
-          // Transient by spec — wait out a grace window before closing,
-          // because the ICE agent often recovers to `connected` on its
-          // own. Only `failed` is terminal.
-          this.scheduleDisconnectClose()
+          // Transient by spec — see DisconnectGrace.
+          if (!this.closed) this.disconnectGrace.schedule()
           break
       }
     }
@@ -200,26 +164,26 @@ export class PeerSession {
    */
   async connect(): Promise<void> {
     if (this.state !== 'idle') return
-    plog(this.role, `connect() starting (state ${this.state} → negotiating)`)
+    peerLog(this.role, `connect() starting (state ${this.state} → negotiating)`)
     this.transitionTo('negotiating')
     try {
       if (this.role === 'host') {
-        plog('host', 'createOffer()…')
+        peerLog('host', 'createOffer()…')
         const offer = await this.pc.createOffer()
-        plog('host', `createOffer OK (sdp.length=${offer.sdp?.length ?? 0})`)
+        peerLog('host', `createOffer OK (sdp.length=${offer.sdp?.length ?? 0})`)
         await this.pc.setLocalDescription(offer)
-        plog('host', 'setLocalDescription(offer) OK')
+        peerLog('host', 'setLocalDescription(offer) OK')
         // `pc.localDescription` reflects the actual SDP after
         // ICE-restart adjustments; prefer it over the offer object.
         const local = this.pc.localDescription ?? offer
-        plog('host', `sending SDP offer over signalling (sdp.length=${local.sdp?.length ?? 0})`)
+        peerLog('host', `sending SDP offer over signalling (sdp.length=${local.sdp?.length ?? 0})`)
         this.signalling.send({ type: 'sdp', payload: { type: local.type, sdp: local.sdp ?? undefined } })
       } else {
-        plog('joiner', 'waiting for host SDP offer over signalling')
+        peerLog('joiner', 'waiting for host SDP offer over signalling')
       }
       // Joiner waits for the host's offer; arrives via `handleSignal`.
     } catch (err) {
-      plog(this.role, `connect() threw: ${formatErrorMessage(err)}`)
+      peerLog(this.role, `connect() threw: ${formatErrorMessage(err)}`)
       this.fail(err instanceof Error ? err : new Error(String(err)))
     }
   }
@@ -238,7 +202,7 @@ export class PeerSession {
   close(reason = 'closed'): void {
     if (this.closed) return
     this.closed = true
-    this.clearDisconnectTimer()
+    this.disconnectGrace.cancel()
     try {
       this.signalling.send({ type: 'bye', payload: { reason } })
     } catch {
@@ -271,17 +235,17 @@ export class PeerSession {
       // A drop on ops would mean state divergence; surface so the
       // caller can retry or escalate.
       if (kind === 'op') {
-        plog(this.role, `sendOp DROPPED: op channel not open (state=${channel?.readyState ?? 'absent'})`)
+        peerLog(this.role, `sendOp DROPPED: op channel not open (state=${channel?.readyState ?? 'absent'})`)
         this.events.emit('error', {
           error: new Error(`PeerSession.sendOp: op channel not open (state=${channel?.readyState ?? 'absent'})`),
         })
       } else {
-        plog(this.role, `sendAwareness DROPPED: channel not open (state=${channel?.readyState ?? 'absent'})`)
+        peerLog(this.role, `sendAwareness DROPPED: channel not open (state=${channel?.readyState ?? 'absent'})`)
       }
       return
     }
     const json = JSON.stringify(payload)
-    plog(
+    peerLog(
       this.role,
       `→ channel "${channel.label}" send ${kind} (len=${json.length}, kind=${(payload as { kind?: string })?.kind ?? '<no kind>'})`,
     )
@@ -290,11 +254,11 @@ export class PeerSession {
 
   private wireChannel(channel: RTCDataChannel): void {
     channel.onopen = () => {
-      plog(this.role, `channel "${channel.label}" → open`)
+      peerLog(this.role, `channel "${channel.label}" → open`)
       this.maybeMarkConnected()
     }
     channel.onclose = () => {
-      plog(this.role, `channel "${channel.label}" → close`)
+      peerLog(this.role, `channel "${channel.label}" → close`)
       if (!this.closed) this.close(`channel-${channel.label}-closed`)
     }
     channel.onerror = (event) => {
@@ -306,18 +270,18 @@ export class PeerSession {
     }
     channel.onmessage = (event) => {
       const raw = typeof event.data === 'string' ? event.data : ''
-      plog(this.role, `← channel "${channel.label}" recv frame (len=${raw.length})`)
+      peerLog(this.role, `← channel "${channel.label}" recv frame (len=${raw.length})`)
       let parsed: unknown
       try {
         parsed = JSON.parse(raw)
       } catch (err) {
-        plog(this.role, `channel "${channel.label}" dropped malformed JSON: ${formatErrorMessage(err)}`)
+        peerLog(this.role, `channel "${channel.label}" dropped malformed JSON: ${formatErrorMessage(err)}`)
         this.events.emit('error', {
           error: new Error(`PeerSession: dropped malformed frame on ${channel.label}`),
         })
         return
       }
-      plog(
+      peerLog(
         this.role,
         `channel "${channel.label}" delivered (kind=${(parsed as { kind?: string })?.kind ?? '<no kind>'})`,
       )
@@ -331,21 +295,21 @@ export class PeerSession {
     try {
       switch (msg.type) {
         case 'sdp': {
-          plog(this.role, `received SDP ${msg.payload.type} (sdp.length=${msg.payload.sdp?.length ?? 0})`)
+          peerLog(this.role, `received SDP ${msg.payload.type} (sdp.length=${msg.payload.sdp?.length ?? 0})`)
           await this.pc.setRemoteDescription(msg.payload)
-          plog(this.role, `setRemoteDescription(${msg.payload.type}) OK`)
-          this.remoteDescriptionSet = true
+          peerLog(this.role, `setRemoteDescription(${msg.payload.type}) OK`)
+          this.pendingIce.markRemoteDescriptionSet()
           // Guard the await so the common no-buffered-candidate handshake
           // keeps its original microtask timing (no extra tick).
-          if (this.pendingIce.length > 0) await this.drainPendingIce()
+          if (this.pendingIce.size > 0) await this.drainPendingIce()
           if (this.role === 'joiner') {
-            plog('joiner', 'createAnswer()…')
+            peerLog('joiner', 'createAnswer()…')
             const answer = await this.pc.createAnswer()
-            plog('joiner', `createAnswer OK (sdp.length=${answer.sdp?.length ?? 0})`)
+            peerLog('joiner', `createAnswer OK (sdp.length=${answer.sdp?.length ?? 0})`)
             await this.pc.setLocalDescription(answer)
-            plog('joiner', 'setLocalDescription(answer) OK')
+            peerLog('joiner', 'setLocalDescription(answer) OK')
             const local = this.pc.localDescription ?? answer
-            plog('joiner', `sending SDP answer over signalling (sdp.length=${local.sdp?.length ?? 0})`)
+            peerLog('joiner', `sending SDP answer over signalling (sdp.length=${local.sdp?.length ?? 0})`)
             this.signalling.send({
               type: 'sdp',
               payload: { type: local.type, sdp: local.sdp ?? undefined },
@@ -356,28 +320,25 @@ export class PeerSession {
         case 'ice-candidate': {
           if (msg.payload === null) {
             // Null candidate marks end-of-candidates per W3C spec.
-            plog(this.role, `ICE remote: end-of-candidates (received ${this.iceRemoteCount} so far)`)
+            peerLog(this.role, `ICE remote: end-of-candidates (received ${this.iceRemoteCount} so far)`)
             return
           }
           this.iceRemoteCount++
-          plog(this.role, `ICE remote #${this.iceRemoteCount}: ${msg.payload.candidate ?? '<no candidate string>'}`)
-          if (!this.remoteDescriptionSet) {
-            // Arrived before the SDP answer/offer — buffer until the
-            // remote description is in place, then drain (see drainPendingIce).
-            plog(this.role, `ICE remote #${this.iceRemoteCount}: buffered (no remote description yet)`)
-            this.pendingIce.push(msg.payload)
+          peerLog(this.role, `ICE remote #${this.iceRemoteCount}: ${msg.payload.candidate ?? '<no candidate string>'}`)
+          if (!this.pendingIce.accept(msg.payload)) {
+            peerLog(this.role, `ICE remote #${this.iceRemoteCount}: buffered (no remote description yet)`)
             return
           }
           await this.pc.addIceCandidate(msg.payload)
           break
         }
         case 'bye':
-          plog(this.role, `received bye: ${msg.payload?.reason ?? '<no reason>'}`)
+          peerLog(this.role, `received bye: ${msg.payload?.reason ?? '<no reason>'}`)
           this.close(msg.payload?.reason ?? 'peer-bye')
           break
       }
     } catch (err) {
-      plog(this.role, `handleSignal(${msg.type}) threw: ${formatErrorMessage(err)}`)
+      peerLog(this.role, `handleSignal(${msg.type}) threw: ${formatErrorMessage(err)}`)
       this.fail(err instanceof Error ? err : new Error(String(err)))
     }
   }
@@ -391,37 +352,26 @@ export class PeerSession {
 
   /** Flush ICE candidates buffered before the remote description was set. */
   private async drainPendingIce(): Promise<void> {
-    if (this.pendingIce.length === 0) return
-    const buffered = this.pendingIce.splice(0)
-    plog(this.role, `ICE: draining ${buffered.length} buffered candidate(s)`)
+    const buffered = this.pendingIce.drain()
+    if (buffered.length === 0) return
+    peerLog(this.role, `ICE: draining ${buffered.length} buffered candidate(s)`)
     for (const candidate of buffered) {
       try {
         await this.pc.addIceCandidate(candidate)
       } catch (err) {
         // A single bad candidate must not fail the whole connection —
         // the ICE agent tolerates losing one. Log and continue.
-        plog(this.role, `ICE: buffered candidate rejected: ${formatErrorMessage(err)}`)
+        peerLog(this.role, `ICE: buffered candidate rejected: ${formatErrorMessage(err)}`)
       }
     }
   }
 
   /**
-   * Start the grace timer for a transient `disconnected` state. If a
-   * timer is already running, leave it — the window measures from the
-   * first `disconnected` transition. Closes only if still disconnected
-   * when the window elapses.
+   * The grace window closed. Only act if the connection is STILL
+   * disconnected — it usually recovered in the meantime, and the
+   * `connected` handler already cancelled the window in that case.
    */
-  private scheduleDisconnectClose(): void {
-    if (this.closed || this.disconnectTimer !== null) return
-    if (this.disconnectGraceMs <= 0) {
-      this.disconnectTimer = setTimeout(() => this.onDisconnectGraceElapsed(), 0)
-      return
-    }
-    this.disconnectTimer = setTimeout(() => this.onDisconnectGraceElapsed(), this.disconnectGraceMs)
-  }
-
   private onDisconnectGraceElapsed(): void {
-    this.disconnectTimer = null
     if (this.closed) return
     // Recovered to a non-disconnected state during the grace window?
     // Then leave the connection alone.
@@ -430,16 +380,9 @@ export class PeerSession {
     }
   }
 
-  private clearDisconnectTimer(): void {
-    if (this.disconnectTimer !== null) {
-      clearTimeout(this.disconnectTimer)
-      this.disconnectTimer = null
-    }
-  }
-
   private transitionTo(state: PeerSessionState): void {
     if (this.state === state) return
-    plog(this.role, `state ${this.state} → ${state}`)
+    peerLog(this.role, `state ${this.state} → ${state}`)
     this.state = state
     this.events.emit('state-changed', { state })
   }
@@ -450,15 +393,4 @@ export class PeerSession {
     this.transitionTo('error')
     this.close(`error: ${error.message}`)
   }
-}
-
-/**
- * Resolve the WebRTC constructor from the host runtime. Browser +
- * GJS (with `@gjsify/webrtc/register`) both expose it as a global;
- * Node has no native impl, so callers without an injected factory
- * receive a clear error.
- */
-function resolveRTCPeerConnection(): RTCPeerConnectionFactory | null {
-  const global = globalThis as { RTCPeerConnection?: RTCPeerConnectionFactory }
-  return global.RTCPeerConnection ?? null
 }

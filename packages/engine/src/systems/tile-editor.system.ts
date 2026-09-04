@@ -1,5 +1,4 @@
 import {
-  type Actor,
   type Engine,
   type EventEmitter,
   type Scene,
@@ -11,7 +10,7 @@ import {
   vec,
   type World,
 } from 'excalibur'
-import { type Command, PlaceObjectCommand } from '../commands/index.ts'
+import { type Command, PlaceObjectCommand, type PaintTilePayload } from '../commands/index.ts'
 import {
   ActiveLayerComponent,
   ActiveObjectComponent,
@@ -24,15 +23,11 @@ import {
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
-import { createObjectPreviewActor, refreshObjectPreview } from '../services/object-preview.ts'
-import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
+import { HoverOverlays } from './hover-overlays.ts'
+import { pickTopmostPlacementAt } from '../services/placement-picking.ts'
 import { makePlacementId } from '../services/placement-id.ts'
-import {
-  createSelectHoverBorderActor,
-  refreshSelectHoverBorder,
-  type SelectHoverBorderContext,
-} from '../services/select-hover-border.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
+import { isTileOutOfBounds, worldToTile } from '../services/tile-geometry.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerTier } from '../types/data/index.ts'
@@ -40,6 +35,16 @@ import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
+
+/** Everything a mutating tool handler needs about one resolved tap. */
+interface ToolContext {
+  readonly scene: MapScene
+  readonly hit: TileHit
+  readonly layerId: string
+  readonly previousSprites: PaintTilePayload['previousSprites']
+  /** The armed tile sprite id, or `null` when none is selected. */
+  readonly tileId: number | null
+}
 
 interface TileHit {
   tileMap: TileMap
@@ -59,10 +64,12 @@ interface TileHit {
  * tracks the cursor through pan-drags so the user always sees where a click
  * would land.
  *
- * Pencil hover preview is delegated to `services/pencil-preview.ts`. This
- * system owns the actor lifecycle (create on scene init, route hover state
- * + session-state mutations into the helper); the helper owns the visual
- * logic.
+ * The hover ghosts + select border live in {@link HoverOverlays}; this
+ * system only feeds them the tile under the pointer.
+ *
+ * `initialize` runs before `MapResource` has added the tilemaps for some
+ * scenes, which is why the per-tier lookup below is a lazy cache rather
+ * than an eager scan.
  */
 export class TileEditorSystem extends System {
   public readonly systemType = SystemType.Update
@@ -70,17 +77,11 @@ export class TileEditorSystem extends System {
   private engine?: Engine
   private scene?: Scene
 
-  private previewActor: Actor | null = null
-  private objectPreviewActor: Actor | null = null
-  private hoverContext: PencilPreviewHover | null = null
-  private selectHoverBorderActor: Actor | null = null
+  private readonly overlays = new HoverOverlays()
 
   /**
-   * Lazy cache of the per-tier `TileMap`s. Populated on first lookup
-   * (initialize runs before `MapResource.processTileLayer` adds tilemaps
-   * for some scenes, so we cannot fill this eagerly). Each `MapScene` is
-   * constructed fresh per `Engine.loadMap`, so the cache lives for one
-   * map and dies with the system instance.
+   * Per-tier `TileMap` cache. Each `MapScene` is constructed fresh per
+   * `Engine.loadMap`, so it lives for one map and dies with the system.
    */
   private tileMapsByTier: Map<LayerTier, TileMap> | null = null
 
@@ -95,34 +96,7 @@ export class TileEditorSystem extends System {
     this.engine = scene.engine
     this.scene = scene
 
-    this.previewActor = createPencilPreviewActor()
-    scene.add(this.previewActor)
-
-    this.objectPreviewActor = createObjectPreviewActor()
-    scene.add(this.objectPreviewActor)
-
-    this.selectHoverBorderActor = createSelectHoverBorderActor()
-    scene.add(this.selectHoverBorderActor)
-
-    // Refresh the preview when the active tool / tile / layer changes,
-    // so the user doesn't have to wiggle the mouse to see the effect of
-    // switching tool or picking a new swatch. Subscriptions are tied
-    // to the scene's lifetime via `SessionState`'s per-scene WeakMap
-    // registry, so no explicit teardown is needed.
-    SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshPreview())
-    SessionState.subscribe(scene, ActiveTileComponent, () => this.refreshPreview())
-    SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshPreview())
-
-    // The object-brush ghost mirrors the pencil preview: re-evaluate it
-    // when the tool, the armed object brush, or the active layer changes.
-    SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshObjectPreview())
-    SessionState.subscribe(scene, ActiveObjectComponent, () => this.refreshObjectPreview())
-    SessionState.subscribe(scene, ActiveLayerComponent, () => this.refreshObjectPreview())
-
-    // Tool changes also re-evaluate the select-hover border so
-    // switching to / from `'select'` doesn't strand the previous
-    // tool's overlay until the next pointer move.
-    SessionState.subscribe(scene, ActiveToolComponent, () => this.refreshSelectHoverBorder())
+    this.overlays.attach(scene)
 
     // Paint fires on the high-level `POINTER_TAP` from
     // `PointerGestureSystem`, NOT on raw `pointer.on('down')` — the
@@ -143,33 +117,12 @@ export class TileEditorSystem extends System {
     pointer.on('move', (event) => {
       const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
       if (hit) this.applyHover(hit)
-      this.hoverContext = hit ? { tileMap: hit.tileMap, coords: hit.coords } : null
-      this.refreshPreview()
-      this.refreshObjectPreview()
-      this.refreshSelectHoverBorder()
+      this.overlays.setHover(hit ? { tileMap: hit.tileMap, coords: hit.coords } : null)
     })
   }
 
   public update(_elapsed: number): void {
     // All work is event-driven.
-  }
-
-  private refreshPreview(): void {
-    if (!this.previewActor || !this.scene) return
-    refreshPencilPreview(this.previewActor, this.scene, this.hoverContext)
-  }
-
-  private refreshObjectPreview(): void {
-    if (!this.objectPreviewActor || !this.scene) return
-    refreshObjectPreview(this.objectPreviewActor, this.scene, this.hoverContext)
-  }
-
-  private refreshSelectHoverBorder(): void {
-    if (!this.selectHoverBorderActor || !this.scene) return
-    const ctx: SelectHoverBorderContext | null = this.hoverContext
-      ? { tileMap: this.hoverContext.tileMap, coords: this.hoverContext.coords }
-      : null
-    refreshSelectHoverBorder(this.selectHoverBorderActor, this.scene, ctx)
   }
 
   private findTileUnderPointer(screenPos: Vector): TileHit | null {
@@ -235,14 +188,14 @@ export class TileEditorSystem extends System {
   }
 
   private toTileCoords(tileMap: TileMap, worldPos: Vector): { x: number; y: number } | null {
-    const localX = worldPos.x - tileMap.pos.x
-    const localY = worldPos.y - tileMap.pos.y
-    const tileX = Math.floor(localX / tileMap.tileWidth)
-    const tileY = Math.floor(localY / tileMap.tileHeight)
-    if (tileX < 0 || tileY < 0 || tileX >= tileMap.columns || tileY >= tileMap.rows) {
-      return null
-    }
-    return { x: tileX, y: tileY }
+    const coords = worldToTile(
+      worldPos.x - tileMap.pos.x,
+      worldPos.y - tileMap.pos.y,
+      tileMap.tileWidth,
+      tileMap.tileHeight,
+    )
+    if (isTileOutOfBounds(coords.x, coords.y, tileMap.columns, tileMap.rows)) return null
+    return coords
   }
 
   private applyHover(hit: TileHit): void {
@@ -252,99 +205,117 @@ export class TileEditorSystem extends System {
     })
   }
 
+  /**
+   * Route a tap to the active tool. `'select'` returns early: it needs
+   * neither an active tile nor an active layer and ignores the lock
+   * (selection is read-only), so keeping it out of the way lets the
+   * mutating-tool guards below stay tight.
+   */
   private applyClick(hit: TileHit): void {
-    if (!this.scene) return
-    const tool: EditorTool = SessionState.get(this.scene, ActiveToolComponent)?.tool ?? 'select'
+    const scene = this.scene as MapScene | undefined
+    if (!scene) return
+    const tool: EditorTool = SessionState.get(scene, ActiveToolComponent)?.tool ?? 'select'
 
-    // The `'select'` tool is a self-contained branch — it doesn't
-    // need an active tile / layer (it picks placements at the
-    // clicked coords across all layers) and doesn't care about lock
-    // (selection is read-only). Handle it first + early-return so
-    // the mutating-tool guards below stay tight.
     if (tool === 'select') {
       this.applySelect(hit)
-      this.events.emit(EngineEvent.TILE_CLICKED, {
-        coords: hit.coords,
-        tileMapId: hit.tileMap.id.toString(),
-      })
+      this.emitTileClicked(hit)
       return
     }
 
-    const tileId = SessionState.get(this.scene, ActiveTileComponent)?.spriteId ?? null
-    const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
-    const layerId = this.resolveLayerId(explicitLayerId)
+    const layerId = this.resolveLayerId(SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null)
     if (!layerId) return
-
-    // Lock guard. Apply only to mutating tools — the eyedropper is a
-    // read-only sample so it still works on locked layers (matches
-    // most tile-editor UX: you can pick from a locked layer to use
-    // its tile elsewhere, you just can't paint into it).
+    // Lock guard on mutating tools only — the eyedropper is a read-only
+    // sample, so it still works on locked layers (matching most tile
+    // editors: you can pick from a locked layer to use its tile
+    // elsewhere, you just can't paint into it).
     if (tool !== 'eyedropper' && this.isLayerLocked(layerId)) return
 
-    // Capture the previous sprites on this (tile, layer) so the command
-    // can revert (also reused by the eyedropper branch below). The hit
-    // already carries the `MapEditorComponent` resolved by
-    // `findTileUnderPointer`. Command construction is shared with the
-    // programmatic paint path (`Engine.paintTileAt`) via
-    // `makeTilePaintCommand`.
-    const previousSprites = snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y)
+    this.applyMutatingTool(tool, {
+      scene,
+      hit,
+      layerId,
+      // Captured once for BOTH the command's revert payload and the
+      // eyedropper's read.
+      previousSprites: snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y),
+      tileId: SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null,
+    })
+    this.emitTileClicked(hit)
+  }
 
-    if (tool === 'pencil') {
-      if (tileId === null) return
-      this.dispatchCommand(makeTilePaintCommand(layerId, hit.coords.x, hit.coords.y, tileId, previousSprites))
-      this.events.emit(EngineEvent.TILE_PLACED, {
-        coords: hit.coords,
-        tileId,
-        layerId,
-      })
-    } else if (tool === 'fill') {
-      if (tileId === null) return
-      this.applyFill(hit, layerId, tileId)
-      this.events.emit(EngineEvent.TILE_PLACED, {
-        coords: hit.coords,
-        tileId,
-        layerId,
-      })
-    } else if (tool === 'eraser') {
-      this.dispatchCommand(makeTilePaintCommand(layerId, hit.coords.x, hit.coords.y, null, previousSprites))
-      this.events.emit(EngineEvent.TILE_PLACED, {
-        coords: hit.coords,
-        tileId: 0,
-        layerId,
-      })
-    } else if (tool === 'eyedropper') {
-      // Pick the **top** sprite from the active layer at this tile —
-      // sprites on a single (tile, layer) slot are stacked back-to-front,
-      // so the last entry is what the user actually sees.
-      const top = previousSprites[previousSprites.length - 1]
-      if (!top) return
-      const mapResource = (this.scene as MapScene).mapResource
-      if (!mapResource) return
-      const globalTileId = findTileIdForSpriteInfo(mapResource, top.spriteSetId, top.spriteId)
-      if (globalTileId === null) return
-      this.events.emit(EngineEvent.TILE_PICKED, {
-        coords: hit.coords,
-        layerId,
-        spriteSetId: top.spriteSetId,
-        localSpriteId: top.spriteId,
-        globalTileId,
-      })
-    } else if (tool === 'object') {
-      // Stamp the active "object brush" (a library entity id) onto the
-      // map at the clicked tile via an undoable + collab-synced command.
-      const defId = SessionState.get(this.scene, ActiveObjectComponent)?.defId ?? null
-      if (!defId) return
-      const placement = {
-        id: makePlacementId(hit.coords.x, hit.coords.y),
-        layerId,
-        tileX: hit.coords.x,
-        tileY: hit.coords.y,
-        defId,
-      }
-      this.dispatchCommand(new PlaceObjectCommand({ placement }))
-      this.events.emit(EngineEvent.TILE_PLACED, { coords: hit.coords, tileId: 0, layerId })
+  private applyMutatingTool(tool: EditorTool, ctx: ToolContext): void {
+    switch (tool) {
+      // Pencil + fill need an armed tile; the eraser is the one mutating
+      // tool that works without one.
+      case 'pencil':
+        if (ctx.tileId !== null) this.applyPaint(ctx, ctx.tileId)
+        break
+      case 'eraser':
+        this.applyPaint(ctx, null)
+        break
+      case 'fill':
+        if (ctx.tileId !== null) this.applyFill(ctx, ctx.tileId)
+        break
+      case 'eyedropper':
+        this.applyEyedropper(ctx)
+        break
+      case 'object':
+        this.applyObjectStamp(ctx)
+        break
     }
+  }
 
+  /** Pencil + eraser — one builder; `null` erases, and reports as tile `0`. */
+  private applyPaint(ctx: ToolContext, spriteId: number | null): void {
+    this.dispatchCommand(
+      makeTilePaintCommand(ctx.layerId, ctx.hit.coords.x, ctx.hit.coords.y, spriteId, ctx.previousSprites),
+    )
+    this.events.emit(EngineEvent.TILE_PLACED, {
+      coords: ctx.hit.coords,
+      tileId: spriteId ?? 0,
+      layerId: ctx.layerId,
+    })
+  }
+
+  /**
+   * Eyedropper: pick the **top** sprite from the active layer at this
+   * tile — sprites on a single (tile, layer) slot are stacked
+   * back-to-front, so the last entry is what the user actually sees.
+   */
+  private applyEyedropper(ctx: ToolContext): void {
+    const top = ctx.previousSprites[ctx.previousSprites.length - 1]
+    if (!top) return
+    const mapResource = ctx.scene.mapResource
+    if (!mapResource) return
+    const globalTileId = findTileIdForSpriteInfo(mapResource, top.spriteSetId, top.spriteId)
+    if (globalTileId === null) return
+    this.events.emit(EngineEvent.TILE_PICKED, {
+      coords: ctx.hit.coords,
+      layerId: ctx.layerId,
+      spriteSetId: top.spriteSetId,
+      localSpriteId: top.spriteId,
+      globalTileId,
+    })
+  }
+
+  /** Object tool: stamp the armed "object brush" (a library entity id) at the clicked tile. */
+  private applyObjectStamp(ctx: ToolContext): void {
+    const defId = SessionState.get(ctx.scene, ActiveObjectComponent)?.defId ?? null
+    if (!defId) return
+    this.dispatchCommand(
+      new PlaceObjectCommand({
+        placement: {
+          id: makePlacementId(ctx.hit.coords.x, ctx.hit.coords.y),
+          layerId: ctx.layerId,
+          tileX: ctx.hit.coords.x,
+          tileY: ctx.hit.coords.y,
+          defId,
+        },
+      }),
+    )
+    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId: 0, layerId: ctx.layerId })
+  }
+
+  private emitTileClicked(hit: TileHit): void {
     this.events.emit(EngineEvent.TILE_CLICKED, {
       coords: hit.coords,
       tileMapId: hit.tileMap.id.toString(),
@@ -358,46 +329,37 @@ export class TileEditorSystem extends System {
    * {@link FillTileCommand} → a single undo step + a single collab op.
    * No-op when the clicked tile already shows the fill tile.
    */
-  private applyFill(hit: TileHit, layerId: string, tileId: number): void {
-    if (!this.scene) return
-    const mapResource = (this.scene as MapScene).mapResource
+  private applyFill(ctx: ToolContext, tileId: number): void {
+    const mapResource = ctx.scene.mapResource
     if (!mapResource) return
     const command = buildTileFillCommand(
-      hit.editor,
+      ctx.hit.editor,
       mapResource,
-      { columns: hit.tileMap.columns, rows: hit.tileMap.rows },
-      layerId,
-      hit.coords.x,
-      hit.coords.y,
+      { columns: ctx.hit.tileMap.columns, rows: ctx.hit.tileMap.rows },
+      ctx.layerId,
+      ctx.hit.coords.x,
+      ctx.hit.coords.y,
       tileId,
     )
     if (command) this.dispatchCommand(command)
+    // Emitted even when the region already showed the fill tile (no
+    // command): the host's "a tile was placed here" signal is about the
+    // click, not about whether the map changed.
+    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId, layerId: ctx.layerId })
   }
 
   /**
-   * Select-tool click handler. Scans the active map's object
-   * placements across every layer for one occupying the clicked tile
-   * coords. Picks the topmost (= last in array order, since
-   * `MapResource` renders later entries above earlier ones) so
-   * stacked placements behave the same way the eyedropper picks the
-   * topmost sprite. Mutates `SelectedPlacementsComponent` on the
-   * session-singleton (the highlight system reacts via its own
+   * Select-tool click handler. Writes the pick from
+   * {@link pickTopmostPlacementAt} to `SelectedPlacementsComponent` on
+   * the session-singleton (the highlight system reacts via its own
    * subscription) and emits {@link EngineEvent.PLACEMENT_SELECTED} for
-   * the host UI to mirror in the inspector. Empty-tile clicks clear
-   * the selection by setting an empty array.
+   * the host UI to mirror in the inspector. An empty-tile click clears
+   * the selection.
    */
   private applySelect(hit: TileHit): void {
     if (!this.scene) return
-    const mapResource = (this.scene as MapScene).mapResource
-    const placements = mapResource?.mapData?.objectPlacements ?? []
-    let picked: { id: string } | null = null
-    for (let i = placements.length - 1; i >= 0; i--) {
-      const p = placements[i]
-      if (p.tileX === hit.coords.x && p.tileY === hit.coords.y) {
-        picked = { id: p.id }
-        break
-      }
-    }
+    const placements = (this.scene as MapScene).mapResource?.mapData?.objectPlacements ?? []
+    const picked = pickTopmostPlacementAt(placements, hit.coords.x, hit.coords.y)
     SessionState.set(this.scene, new SelectedPlacementsComponent(picked ? [picked.id] : []))
     this.events.emit(EngineEvent.PLACEMENT_SELECTED, {
       placementId: picked?.id ?? null,

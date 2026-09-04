@@ -42,3 +42,21 @@ export function tileToWorldCenter(
 export function isTileOutOfBounds(tileX: number, tileY: number, columns: number, rows: number): boolean {
   return tileX < 0 || tileY < 0 || tileX >= columns || tileY >= rows
 }
+
+/**
+ * Tile the world point `(worldX, worldY)` falls into on a grid of
+ * `tileWidth × tileHeight` cells whose origin is `(0, 0)`.
+ *
+ * Deliberately unclamped: the editor wants to know when the pointer is
+ * just past the map's edge (the OSD coord readout shows it; clearing on
+ * out-of-canvas is the caller's decision), so negative coordinates and
+ * coordinates beyond `columns`/`rows` are real results. Pair with
+ * {@link isTileOutOfBounds} where a bounded answer is needed. Callers
+ * with a non-zero grid origin subtract it before calling.
+ */
+export function worldToTile(worldX: number, worldY: number, tileWidth: number, tileHeight: number): Point2 {
+  return {
+    x: Math.floor(worldX / tileWidth),
+    y: Math.floor(worldY / tileHeight),
+  }
+}
