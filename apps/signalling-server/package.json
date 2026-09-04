@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "clear": "rm -rf dist org.pixelrpg.signalling-server",
+    "clear": "gjsify clear dist org.pixelrpg.signalling-server",
     "build:barrels": "gjsify barrels src --exclude '\\.spec\\.' --exclude '\\.test\\.' --exclude '\\.test-data\\.' --exclude '^test\\.mts$'",
     "check:barrels": "gjsify barrels --check src --exclude '\\.spec\\.' --exclude '\\.test\\.' --exclude '\\.test-data\\.' --exclude '^test\\.mts$'",
     "build:app": "gjsify build src/main.ts --app gjs --globals auto --shebang --outfile org.pixelrpg.signalling-server",
