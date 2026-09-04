@@ -89,7 +89,7 @@ virtual peers.
    control plane can never flip the pause action itself. Full semantics
    in [Pause contract](#pause-contract).
 4. **Follow-cam + activation UX (done).** An opt-in "follow the assistant"
-   toggle on the pill (`win.toggle-follow-assistant` → `Engine._followAssistant`)
+   toggle on the pill (`win.toggle-follow-assistant` → `Engine.setFollowAssistant`)
    pans the camera to the assistant's cursor on each move; off by default
    so the view isn't yanked around. The first time the assistant becomes
    present, a toast ("AI assistant is now editing with you") announces it —
