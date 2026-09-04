@@ -1,9 +1,7 @@
 import Adw from '@girs/adw-1'
-import GdkPixbuf from '@girs/gdkpixbuf-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { Canvas2DBridge } from '@gjsify/canvas2d'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
   type EditorTool,
@@ -17,6 +15,8 @@ import {
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription } from 'excalibur'
+import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
+import { forwardEngineEvents } from './engine-events.ts'
 import Template from './engine.blp'
 
 /**
@@ -51,11 +51,13 @@ export namespace Engine {
 export class Engine extends Adw.Bin {
   private declare _canvasContainer: Gtk.Box
 
-  private _widget: WebGLBridge | Canvas2DBridge | null = null
+  private _widget: CanvasBridge | null = null
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
   private _closeRequestHandlerId = 0
+  /** `notify::dark` on the global `Adw.StyleManager`; released in `_teardown`. */
+  private _styleManagerHandlerId = 0
   private _teardownComplete = false
 
   public status: EngineStatus = EngineStatus.INITIALIZING
@@ -303,7 +305,8 @@ export class Engine extends Adw.Bin {
       // the GLArea framebuffer, which is only bound inside ::render —
       // an out-of-frame readPixels reads blanks.
       handlerId = area.connect_after('render', () => {
-        finish(this._readFramebufferPng())
+        const gl = this._glContext()
+        finish(gl ? readFramebufferPng(gl) : null)
         return false
       })
       // Force a frame even when the clock is idle (nothing animating).
@@ -311,35 +314,9 @@ export class Engine extends Adw.Bin {
     })
   }
 
-  /** `gl.readPixels` + row flip + PNG encode — call only inside a frame (`postdraw`). */
-  private _readFramebufferPng(): Uint8Array | null {
-    const gl = (this._excalibur?.excalibur?.graphicsContext as unknown as { __gl?: WebGL2RenderingContext })?.__gl
-    if (!gl) return null
-    const width = gl.drawingBufferWidth
-    const height = gl.drawingBufferHeight
-    if (width <= 0 || height <= 0) return null
-
-    const rowBytes = width * 4
-    const pixels = new Uint8Array(rowBytes * height)
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
-
-    // GL rows are bottom-up — flip into GdkPixbuf's top-down order.
-    const flipped = new Uint8Array(pixels.length)
-    for (let y = 0; y < height; y++) {
-      flipped.set(pixels.subarray(y * rowBytes, (y + 1) * rowBytes), (height - 1 - y) * rowBytes)
-    }
-
-    const pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
-      GLib.Bytes.new(flipped),
-      GdkPixbuf.Colorspace.RGB,
-      true,
-      8,
-      width,
-      height,
-      rowBytes,
-    )
-    const [ok, buffer] = pixbuf.save_to_bufferv('png', [], [])
-    return ok && buffer ? new Uint8Array(buffer) : null
+  /** The live WebGL context, or `null` when no GL engine is running. */
+  private _glContext(): WebGL2RenderingContext | null {
+    return (this._excalibur?.excalibur?.graphicsContext as unknown as { __gl?: WebGL2RenderingContext })?.__gl ?? null
   }
 
   /** Current camera zoom, or `null` if the engine isn't running yet. */
@@ -407,11 +384,8 @@ export class Engine extends Adw.Bin {
     update()
     // Track future theme switches; clean up via the existing
     // disconnect helper on unmap.
-    const handlerId = styleManager.connect('notify::dark', update)
-    this._styleManagerHandlerId = handlerId
+    this._styleManagerHandlerId = styleManager.connect('notify::dark', update)
   }
-
-  private _styleManagerHandlerId = 0
 
   private _startWithWidget(useFallback: boolean): void {
     let child = this._canvasContainer.get_first_child()
@@ -420,40 +394,13 @@ export class Engine extends Adw.Bin {
       child = this._canvasContainer.get_first_child()
     }
 
-    const widget = useFallback ? new Canvas2DBridge() : new WebGLBridge()
-    widget.set_hexpand(true)
-    widget.set_vexpand(true)
     // Size-propagation note: the bridge widget's natural width can be
     // wide (matches the WebGL framebuffer). The ScrolledWindow wrap
     // around `canvasContainer` in `engine.blp` detaches that min
     // from bubbling up to the ApplicationWindow — see
     // `docs/concepts/responsive-chrome.md` § "Size-propagation
     // hazards" for the full chain.
-    //
-    // The WebGL bridge is a `Gtk.GLArea`, which defaults to an opaque
-    // framebuffer. Excalibur clears with `Color.Transparent`, but
-    // without `has-alpha` the alpha channel is dropped by GLArea
-    // before composition — the GTK widgets behind the canvas (the
-    // editor scratchpad backdrop) stay invisible. Opting into alpha
-    // here lets the canvas composite against the GTK background.
-    //
-    // `set_has_alpha` MUST happen before the area is realized; doing
-    // it right after construction (and before `append`) keeps the
-    // ordering safe.
-    if (typeof (widget as { set_has_alpha?: (v: boolean) => void }).set_has_alpha === 'function') {
-      ;(widget as unknown as { set_has_alpha: (v: boolean) => void }).set_has_alpha(true)
-    } else {
-      // Fallback for GIR bindings that expose the GObject property
-      // directly instead of the explicit setter.
-      try {
-        ;(widget as unknown as { has_alpha?: boolean }).has_alpha = true
-      } catch {
-        // Property may not be settable in this binding; ignore.
-      }
-    }
-    // The Canvas2D fallback isn't a GLArea — paint over a transparent
-    // CSS background so it composites the same way.
-    widget.add_css_class('engine-canvas')
+    const widget = createCanvasBridge(useFallback)
     widget.installGlobals()
     this._canvasContainer.append(widget)
     this._widget = widget
@@ -502,7 +449,7 @@ export class Engine extends Adw.Bin {
 
       try {
         const engine = new ExcaliburEngine(canvas)
-        this._forwardEvents(engine)
+        this._excaliburSubscriptions.push(...forwardEngineEvents(engine, this))
         this._excalibur = engine
         await engine.initialize()
         // Apply the scratchpad backdrop colour as the engine clear
@@ -524,49 +471,6 @@ export class Engine extends Adw.Bin {
         // Re-enable once Excalibur cleanup is deterministic.
       }
     })
-  }
-
-  private _forwardEvents(engine: ExcaliburEngine): void {
-    // Relays each event to the widget's own EventEmitter (typed payload
-    // for engine-aware consumers) and — if `gobjectArg` is provided —
-    // also emits a GObject signal carrying a single extracted field
-    // for Blueprint bindings + classic signal handlers.
-    const fwd = <K extends keyof EngineEventMap>(event: K, gobjectArg?: (payload: EngineEventMap[K]) => unknown) =>
-      engine.events.on(event, (p) => {
-        this.events.emit(event, p)
-        if (gobjectArg) this.emit(event, gobjectArg(p))
-      })
-
-    this._excaliburSubscriptions.push(
-      engine.events.on(EngineEvent.STATUS_CHANGED, (p) => {
-        // STATUS_CHANGED additionally drives `this.status` (a GObject
-        // property), so it stays out of the `fwd` factory.
-        this.status = p.status
-        this.events.emit(EngineEvent.STATUS_CHANGED, p)
-        this.emit(EngineEvent.STATUS_CHANGED, p.status)
-      }),
-      fwd(EngineEvent.PROJECT_LOADED, (p) => p.projectPath),
-      fwd(EngineEvent.MAP_LOADED, (p) => p.mapId),
-      fwd(EngineEvent.ERROR, (p) => p.message),
-      fwd(EngineEvent.TILE_CLICKED),
-      fwd(EngineEvent.TILE_HOVERED),
-      fwd(EngineEvent.TILE_PLACED),
-      fwd(EngineEvent.TILE_PICKED),
-      // Select-tool canvas picks — without this relay the host never
-      // hears about them and the Objects-list / Props sync stays dead.
-      fwd(EngineEvent.PLACEMENT_SELECTED),
-      // Layer eye/padlock mirroring — fires on every application path
-      // of the layer-flag commands (local, undo/redo, remote peer), so
-      // the host's Layers tab follows changes it didn't originate.
-      fwd(EngineEvent.LAYER_FLAG_CHANGED),
-      // Runtime event-script effects (playtest). The `EventActionSystem`
-      // emits these on `TRIGGER_FIRED`; the host surfaces them (toasts
-      // today — a real dialogue box / inventory / audio layer later).
-      fwd(EngineEvent.SHOW_TEXT_REQUESTED),
-      fwd(EngineEvent.ITEM_PICKED_UP),
-      fwd(EngineEvent.FLAG_SET),
-      fwd(EngineEvent.PLAY_SFX_REQUESTED),
-    )
   }
 
   // Engine teardown is hooked at TWO points to cover the two paths a

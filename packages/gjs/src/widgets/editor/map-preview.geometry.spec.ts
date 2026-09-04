@@ -1,7 +1,14 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { MapData } from '@pixelrpg/engine'
 
-import { clampViewportCenter, fingerprintMapData } from './map-preview.geometry.ts'
+import {
+  clampViewportCenter,
+  fingerprintMapData,
+  fitBakeScale,
+  fitDestRect,
+  tileIntersectsClip,
+  viewportSourceRect,
+} from './map-preview.geometry.ts'
 
 function makeMap(overrides: Partial<MapData> = {}): MapData {
   return {
@@ -83,6 +90,60 @@ export default async () => {
 
     await it('centres when the widget extent is unknown (0, pre-allocation)', async () => {
       expect(clampViewportCenter(123, 800, 0, 1)).toBe(400)
+    })
+  })
+
+  await describe('fitDestRect', async () => {
+    await it('fills the widget and centres on the unconstrained axis', async () => {
+      expect(fitDestRect(400, 200, 100, 100)).toStrictEqual({ x: 100, y: 0, w: 200, h: 200 })
+    })
+
+    await it('picks the limiting axis', async () => {
+      expect(fitDestRect(200, 400, 100, 100)).toStrictEqual({ x: 0, y: 100, w: 200, h: 200 })
+    })
+
+    await it('preserves a non-square map aspect', async () => {
+      expect(fitDestRect(400, 400, 200, 100)).toStrictEqual({ x: 0, y: 100, w: 400, h: 200 })
+    })
+  })
+
+  await describe('fitBakeScale', async () => {
+    await it('never upscales a map smaller than the cap', async () => {
+      expect(fitBakeScale(100, 80, 512)).toBe(1)
+    })
+
+    await it('caps the longest edge', async () => {
+      expect(fitBakeScale(1024, 256, 512)).toBe(0.5)
+    })
+  })
+
+  await describe('viewportSourceRect', async () => {
+    await it('spans widget size divided by zoom, centred on the focus point', async () => {
+      expect(viewportSourceRect(100, 100, 200, 100, 2)).toStrictEqual({ x: 50, y: 75, w: 100, h: 50 })
+    })
+
+    await it('rounds the origin to a whole map pixel (NEAREST seam guard)', async () => {
+      expect(viewportSourceRect(100.4, 100, 101, 100, 1)).toStrictEqual({ x: 50, y: 50, w: 101, h: 100 })
+    })
+  })
+
+  await describe('tileIntersectsClip', async () => {
+    const clip = { x: 32, y: 32, w: 64, h: 64 }
+
+    await it('keeps a tile inside the clip', async () => {
+      expect(tileIntersectsClip(48, 48, 16, 16, clip)).toBe(true)
+    })
+
+    await it('drops a tile that ends exactly on the clip start', async () => {
+      expect(tileIntersectsClip(16, 48, 16, 16, clip)).toBe(false)
+    })
+
+    await it('drops a tile that starts exactly on the clip end', async () => {
+      expect(tileIntersectsClip(96, 48, 16, 16, clip)).toBe(false)
+    })
+
+    await it('keeps a tile straddling the clip edge', async () => {
+      expect(tileIntersectsClip(24, 48, 16, 16, clip)).toBe(true)
     })
   })
 }

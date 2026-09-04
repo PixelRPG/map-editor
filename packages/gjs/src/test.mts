@@ -7,16 +7,30 @@
 // test that.
 import { run } from '@gjsify/unit'
 
+import addAnimationDialogModelSuite from './widgets/cast/add-animation-dialog.model.spec.js'
 import animationSequenceSuite from './widgets/cast/animation-sequence.spec.js'
 import animationTimelineGeometrySuite from './widgets/cast/animation-timeline.geometry.spec.js'
+import characterAnimationSuite from './widgets/cast/character-animation.spec.js'
+import spriteSetImportModelSuite from './widgets/cast/sprite-set-import.model.spec.js'
+import atlasCanvasGeometrySuite from './widgets/editor/atlas-canvas.geometry.spec.js'
 import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
+import sceneCardDragSuite from './widgets/editor/scene-card.drag.spec.js'
+import sceneInspectorModelSuite from './widgets/editor/scene-inspector.model.spec.js'
+import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
 
 run({
+  addAnimationDialogModelSuite,
   animationSequenceSuite,
   animationTimelineGeometrySuite,
+  atlasCanvasGeometrySuite,
   bakeCacheSuite,
+  characterAnimationSuite,
   eventActionModelSuite,
   mapPreviewGeometrySuite,
+  sceneCardDragSuite,
+  sceneInspectorModelSuite,
+  spriteSetImportModelSuite,
+  tilePaletteGeometrySuite,
 })

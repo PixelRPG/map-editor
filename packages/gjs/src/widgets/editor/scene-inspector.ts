@@ -3,22 +3,25 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
+import { SignalScope } from '../../utils/signal-scope.ts'
 import { MapPreview } from './map-preview'
 import { MiniMap } from './mini-map'
+import {
+  previewTilePx,
+  sceneStats,
+  sceneSubtitleText,
+  sceneTileSize,
+  teleportSummaries,
+} from './scene-inspector.model.ts'
 
 import Template from './scene-inspector.blp'
 
 GObject.type_ensure(MiniMap.$gtype)
 GObject.type_ensure(MapPreview.$gtype)
 
-interface TeleportSummary {
-  label: string
-  /** Other-scene id (destination when outgoing, source when incoming). */
-  otherSceneId: string
-  /** Pre-formatted display name of the other scene. */
-  otherSceneName: string
-  direction: 'in' | 'out'
-}
+/** Inspector preview box (px) the scene's mini-map / MapPreview fills. */
+const PREVIEW_WIDTH = 240
+const PREVIEW_HEIGHT = 180
 
 /**
  * Right-pane inspector for the **Atlas (World)** view.
@@ -50,6 +53,7 @@ export class SceneInspector extends Adw.Bin {
   private _collapsed = false
   /** Guards the lock switch against programmatic-update feedback. */
   private _syncingLock = false
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -149,11 +153,7 @@ export class SceneInspector extends Adw.Bin {
   }
 
   get subtitleText(): string {
-    if (!this._scene) return ''
-    const cols = this._scene.rows[0]?.length || this._scene.cols || 0
-    const rows = this._scene.rows.length || this._scene.previewRows || 0
-    const music = this._scene.music ?? 'no music'
-    return `${cols}×${rows} tiles · ${music}`
+    return this._scene ? sceneSubtitleText(this._scene) : ''
   }
 
   get empty(): boolean {
@@ -174,12 +174,17 @@ export class SceneInspector extends Adw.Bin {
     this.notify('collapsed')
   }
 
-  constructor() {
-    super()
-    this._lock_row.connect('notify::active', () => {
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._lock_row, 'notify::active', () => {
       if (this._syncingLock) return
       this.emit('preview-lock-changed', this._lock_row.active)
     })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   /**
@@ -204,17 +209,16 @@ export class SceneInspector extends Adw.Bin {
     }
     if (!this._scene) return
 
-    const cols = this._scene.rows[0]?.length || this._scene.cols || 1
-    const rows = this._scene.rows.length || this._scene.previewRows || 1
-    const desiredWidth = 240
-    const desiredHeight = 180
-    const tilePx = Math.max(1, Math.floor(Math.min(desiredWidth / cols, desiredHeight / rows)))
+    const size = sceneTileSize(this._scene)
+    const cols = size.cols || 1
+    const rows = size.rows || 1
+    const tilePx = previewTilePx(cols, rows, PREVIEW_WIDTH, PREVIEW_HEIGHT)
 
     // Real-project path: render the scene's tile data via MapPreview.
     if (this._projectResource?.maps.has(this._scene.id)) {
       const preview = new MapPreview()
       preview.accentColor = this._scene.previewColor ?? '#3a3a40'
-      preview.set_size_request(desiredWidth, desiredHeight)
+      preview.set_size_request(PREVIEW_WIDTH, PREVIEW_HEIGHT)
       this._preview_slot.set_child(preview)
       this._preview = preview
       void preview.setFromResource(this._projectResource, this._scene.id)
@@ -238,17 +242,7 @@ export class SceneInspector extends Adw.Bin {
 
     if (!scene) return
 
-    const incoming = teleports.filter((t) => t.to === scene.id).length
-    const outgoing = teleports.filter((t) => t.from === scene.id).length
-
-    const stats: { label: string; value: string }[] = [
-      { label: 'NPCs', value: String(scene.npcs?.length ?? 0) },
-      { label: 'Events', value: String(scene.events) },
-      { label: 'In', value: String(incoming) },
-      { label: 'Out', value: String(outgoing) },
-    ]
-
-    stats.forEach((stat, index) => {
+    sceneStats(scene, teleports).forEach((stat, index) => {
       const card = this._buildStatCard(stat.label, stat.value)
       this._stats_grid.attach(card, index % 2, Math.floor(index / 2), 1, 1)
       this._statRows.push(card)
@@ -284,27 +278,7 @@ export class SceneInspector extends Adw.Bin {
 
     if (!scene) return
 
-    const byId = new Map(allScenes.map((s) => [s.id, s]))
-    const summaries: TeleportSummary[] = []
-    for (const t of teleports) {
-      if (t.from === scene.id) {
-        summaries.push({
-          label: t.label,
-          otherSceneId: t.to,
-          otherSceneName: byId.get(t.to)?.name ?? t.to,
-          direction: 'out',
-        })
-      } else if (t.to === scene.id) {
-        summaries.push({
-          label: t.label,
-          otherSceneId: t.from,
-          otherSceneName: byId.get(t.from)?.name ?? t.from,
-          direction: 'in',
-        })
-      }
-    }
-
-    for (const t of summaries) {
+    for (const t of teleportSummaries(scene, allScenes, teleports)) {
       const row = new Adw.ActionRow({
         title: t.label,
         subtitle: t.direction === 'out' ? `→ ${t.otherSceneName}` : `← ${t.otherSceneName}`,

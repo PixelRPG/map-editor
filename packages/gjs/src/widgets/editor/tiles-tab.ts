@@ -3,6 +3,7 @@ import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { type TileDescriptor, TilePalette } from './tile-palette'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './tiles-tab.blp'
 
@@ -44,6 +45,7 @@ export class TilesTab extends Adw.Bin {
   private _tilesetName = ''
   /** defIds by palette index — `TilePalette` ids are numeric, objects are strings. */
   private _objectBrushIds: string[] = []
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -70,13 +72,20 @@ export class TilesTab extends Adw.Bin {
     )
   }
 
-  constructor() {
-    super()
-    this._palette.connect('tile-selected', (_p, tileId) => this.emit('tile-selected', tileId))
-    this._object_palette.connect('tile-selected', (_p, idx: number) => {
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) =>
+      this.emit('tile-selected', tileId),
+    )
+    this._signals.connect(this._object_palette, 'tile-selected', (_p: TilePalette, idx: number) => {
       const defId = this._objectBrushIds[idx]
       if (defId) this.emit('object-brush-selected', defId)
     })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   get tilesetName(): string {

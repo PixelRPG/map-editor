@@ -1,10 +1,11 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
-import Graphene from '@girs/graphene-1.0'
-import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GdkSpriteSheet } from '../../sprite'
+import { SignalScope } from '../../utils/signal-scope.ts'
+import { cellAspectOf, linePolicy, swatchDimensions, type TilePaletteAspectMode } from './tile-palette.geometry.ts'
+import { createSwatchWidget } from './tile-swatch.ts'
 
 import Template from './tile-palette.blp'
 
@@ -29,32 +30,6 @@ export interface TileDescriptor {
 }
 
 /**
- * Build the swatch widget for one palette cell: a `Gtk.Picture` for a
- * paintable, else a solid-colour {@link TileSwatch}. The single shared
- * renderer for tile-like previews — {@link TilePalette} cells and the
- * Objects tab's placement rows both go through here, so a sprite looks
- * identical wherever it appears.
- */
-export function createSwatchWidget(
-  desc: { color?: string; paintable?: Gdk.Paintable | null },
-  width: number,
-  height: number,
-  contentFit: 'fill' | 'contain' = 'fill',
-): Gtk.Widget {
-  let swatch: Gtk.Widget
-  if (desc.paintable) {
-    const picture = new Gtk.Picture()
-    picture.set_paintable(desc.paintable)
-    picture.set_content_fit(contentFit === 'contain' ? Gtk.ContentFit.CONTAIN : Gtk.ContentFit.FILL)
-    swatch = picture
-  } else {
-    swatch = new TileSwatch(desc.color ?? '#9aa0a6')
-  }
-  swatch.set_size_request(width, height)
-  return swatch
-}
-
-/**
  * 5-column FlowBox of tile swatches. Emits `tile-selected::<id>` when a
  * swatch is activated. Used by `tiles-tab` and the active-tile popover
  * surfaced inside `floating-top-bar`.
@@ -62,9 +37,6 @@ export function createSwatchWidget(
  * The swatch size is configurable; default 42px matches the design
  * handoff §"Tiles tab" spec.
  */
-/** Two rendering modes for sprite swatches. */
-export type TilePaletteAspectMode = 'fill' | 'contain'
-
 export class TilePalette extends Adw.Bin {
   declare _flow: Gtk.FlowBox
 
@@ -82,6 +54,7 @@ export class TilePalette extends Adw.Bin {
    * with no shared aspect or when `aspectMode === 'fill'`.
    */
   private _cellAspect: number | null = null
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -125,19 +98,9 @@ export class TilePalette extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             'fill',
           ),
-          // Whether the FlowBox is allowed to wrap to available width.
-          //
-          //  - `false` (default — scene-editor tile-tab + popover
-          //    use cases that want a fixed column count): `columns`
-          //    pins both `min-children-per-line` and
-          //    `max-children-per-line` so the grid stays rectangular
-          //    and the host scrolls horizontally if the sheet is wide.
-          //  - `true` (tiles-view + custom-animation picker — the user
-          //    wants to see as many frames at once as possible without
-          //    scrolling sideways): `min-children-per-line` stays at
-          //    1, `max-children-per-line` becomes the cap. The FlowBox
-          //    then flows freely against whatever width the host
-          //    allocates.
+          // Whether the FlowBox is allowed to wrap to available width —
+          // see `linePolicy` in `tile-palette.geometry.ts` for what the
+          // two modes do to the children-per-line bounds.
           wrap: GObject.ParamSpec.boolean(
             'wrap',
             'Wrap',
@@ -176,13 +139,6 @@ export class TilePalette extends Adw.Bin {
     if (params.tileSize !== undefined) this.tileSize = params.tileSize
     if (params.columns !== undefined) this.columns = params.columns
     if (params.tiles) this.setTiles(params.tiles)
-    this._flow.connect('child-activated', (_box, child) => {
-      const idx = child.get_index()
-      const tile = this._tiles[idx]
-      if (!tile) return
-      this._selectedId = tile.id
-      this.emit('tile-selected', tile.id)
-    })
   }
 
   get tileSize(): number {
@@ -215,15 +171,9 @@ export class TilePalette extends Adw.Bin {
   }
 
   set columns(value: number) {
-    // `wrap` decides the line policy:
-    //  - off → both min + max = value (rectangular grid that stretches
-    //    to fill, scrolls horizontally if the sheet is wider).
-    //  - on  → min 1, max = a high cap (NOT `value`), so the available
-    //    width — not the sheet's column count — decides how many
-    //    fixed-size tiles fit per row. Pinning max to the column count
-    //    made a wide window stretch each cell to `width / columns`.
-    this._flow.set_min_children_per_line(this._wrap ? 1 : value)
-    this._flow.set_max_children_per_line(this._wrap ? WRAP_MAX_CHILDREN : value)
+    const [min, max] = linePolicy(value, this._wrap, WRAP_MAX_CHILDREN)
+    this._flow.set_min_children_per_line(min)
+    this._flow.set_max_children_per_line(max)
     this.notify('columns')
   }
 
@@ -262,6 +212,21 @@ export class TilePalette extends Adw.Bin {
     return this._selectedId
   }
 
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._flow, 'child-activated', (_box: Gtk.FlowBox, child: Gtk.FlowBoxChild) => {
+      const tile = this._tiles[child.get_index()]
+      if (!tile) return
+      this._selectedId = tile.id
+      this.emit('tile-selected', tile.id)
+    })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
+  }
+
   /**
    * Load tiles from a `GdkSpriteSheet`, automatically reflowing the
    * palette to match the sheet's native column count (so 32-column
@@ -276,12 +241,7 @@ export class TilePalette extends Adw.Bin {
     // native column count must NOT cap the line — that's what stretched
     // a wide window's tiles.
     if (!this._wrap) this.columns = sheet.columns
-    // Capture the per-cell aspect from the first sprite so swatch
-    // sizing can match (aspect-mode `contain` only — `fill` ignores
-    // this and stays square). Character sprite-sheets are uniform so
-    // sprite[0] is representative for the whole set.
-    const first = sheet.sprites[0]
-    this._cellAspect = first && first.height > 0 ? first.width / first.height : null
+    this._cellAspect = cellAspectOf(sheet.sprites[0])
     const keepAspectRatio = this._aspectMode === 'contain'
     this.setTiles(
       sheet.sprites.map((sprite, idx) => ({
@@ -313,44 +273,24 @@ export class TilePalette extends Adw.Bin {
     this._selectedId = id
   }
 
-  private _reflowSwatchSize(): void {
-    const [w, h] = this._swatchDimensions()
-    let child = this._flow.get_first_child() as Gtk.FlowBoxChild | null
-    while (child) {
-      const swatch = child.get_child()
-      if (swatch) {
-        swatch.set_size_request(w, h)
-      }
-      child = child.get_next_sibling() as Gtk.FlowBoxChild | null
-    }
-  }
-
-  /**
-   * Return `[width, height]` for a single swatch. In `fill` mode
-   * stays square at `tileSize × tileSize` — that's what the
-   * tile-tab / scene-editor pickers expect. In `contain` mode with
-   * a known cell aspect (set by `setFromSpriteSheet`), the cell is
-   * sized so the LONGER axis equals `tileSize` and the shorter
-   * derives from the aspect: 16×32 sprites with `tileSize=48` →
-   * 24×48 cells; 32×16 sprites with `tileSize=48` → 48×24 cells.
-   * Square sprites still fall through to `tileSize × tileSize`.
-   */
-  private _swatchDimensions(): [number, number] {
-    if (this._aspectMode === 'fill' || this._cellAspect === null) {
-      return [this._tileSize, this._tileSize]
-    }
-    if (this._cellAspect >= 1) {
-      // Wider than tall — width is the longer axis.
-      return [this._tileSize, Math.max(1, Math.round(this._tileSize / this._cellAspect))]
-    }
-    // Taller than wide — height is the longer axis.
-    return [Math.max(1, Math.round(this._tileSize * this._cellAspect)), this._tileSize]
-  }
-
   /** Clear the visual selection (no tile armed). */
   clearSelection(): void {
     this._flow.unselect_all()
     this._selectedId = null
+  }
+
+  /** `[width, height]` of one swatch under the current sizing policy. */
+  private _swatchDimensions(): [number, number] {
+    return swatchDimensions(this._tileSize, this._aspectMode, this._cellAspect)
+  }
+
+  private _reflowSwatchSize(): void {
+    const [w, h] = this._swatchDimensions()
+    let child = this._flow.get_first_child() as Gtk.FlowBoxChild | null
+    while (child) {
+      child.get_child()?.set_size_request(w, h)
+      child = child.get_next_sibling() as Gtk.FlowBoxChild | null
+    }
   }
 
   private _buildSwatch(tile: TileDescriptor): Gtk.FlowBoxChild {
@@ -391,40 +331,4 @@ export class TilePalette extends Adw.Bin {
   }
 }
 
-/**
- * Internal: a Gtk.Widget that paints a solid-colored rounded rectangle.
- * Used as the fallback swatch when no `Gdk.Paintable` is provided.
- */
-class TileSwatch extends Gtk.Widget {
-  private _color: Gdk.RGBA
-
-  static {
-    GObject.registerClass(
-      {
-        GTypeName: 'PixelRpgTileSwatch',
-      },
-      TileSwatch,
-    )
-  }
-
-  constructor(color: string) {
-    super()
-    this._color = new Gdk.RGBA()
-    if (!this._color.parse(color)) this._color.parse('#9aa0a6')
-  }
-
-  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
-    const w = this.get_width()
-    const h = this.get_height()
-    const rect = new Graphene.Rect()
-    rect.init(0, 0, w, h)
-    const rounded = new Gsk.RoundedRect()
-    rounded.init_from_rect(rect, 6)
-    snapshot.push_rounded_clip(rounded)
-    snapshot.append_color(this._color, rect)
-    snapshot.pop()
-  }
-}
-
-GObject.type_ensure(TileSwatch.$gtype)
 GObject.type_ensure(TilePalette.$gtype)

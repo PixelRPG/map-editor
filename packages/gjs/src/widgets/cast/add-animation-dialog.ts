@@ -1,44 +1,35 @@
 import Adw from '@girs/adw-1'
-import Gdk from '@girs/gdk-4.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
-import type { AnimationFrame, CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
+import type Gtk from '@girs/gtk-4.0'
+import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import { REQUIRED_ROLES } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import type { GdkSpriteSetResource } from '../../sprite/index.ts'
+import { SignalScope } from '../../utils/signal-scope.ts'
+import { cellAspectOf, cellDimensions } from '../editor/tile-palette.geometry.ts'
 import { TilePalette } from '../editor/tile-palette.ts'
-import { insertAt, moveTo } from './animation-sequence.ts'
+import {
+  clampZoomLevel,
+  DEFAULT_DURATION_MS,
+  DEFAULT_ZOOM_LEVEL,
+  isAnimationNameValid,
+  reservedAnimationNames,
+  ZOOM_LEVELS,
+  zoomPercent,
+} from './add-animation-dialog.model.ts'
 import { AnimationTimeline } from './animation-timeline.ts'
 import { frameAtTime, frameStartTime, totalDuration } from './animation-timeline.geometry.ts'
 import { OnionSkinPreview } from './onion-skin-preview.ts'
+import { SequenceStrip } from './sequence-strip.ts'
 
 import Template from './add-animation-dialog.blp'
 
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(OnionSkinPreview.$gtype)
 GObject.type_ensure(AnimationTimeline.$gtype)
-
-const SEQUENCE_THUMB_SIZE = 40
-const DEFAULT_DURATION_MS = 200
-
-// Sequence chips scale their WIDTH with the frame's duration so the strip
-// reads as a timeline (a 400 ms frame is twice as wide as a 200 ms one).
-// `DURATION_REF_MS` maps to the base thumb width; clamped so very short
-// frames stay clickable and very long ones don't dominate the strip.
-const DURATION_REF_MS = 200
-const CHIP_MIN_WIDTH = 28
-const CHIP_MAX_WIDTH = 120
-
-/**
- * Discrete tile-size stops for the bottom-right zoom OSD. Both the
- * picker cells AND the preview frame use this — the on-screen sprite
- * size matches the picker cells the user is selecting from. Index 2
- * is the default; the OSD label shows the percentage relative to it.
- */
-const ZOOM_LEVELS: ReadonlyArray<number> = [24, 36, 48, 72, 96]
-const DEFAULT_ZOOM_LEVEL = 2
+GObject.type_ensure(SequenceStrip.$gtype)
 
 /**
  * Modal dialog for creating a custom `CharacterAnimation`. Three
@@ -50,10 +41,9 @@ const DEFAULT_ZOOM_LEVEL = 2
  *   walk-/idle- prefixes paired with each of four directions).
  * - Default duration (`Adw.SpinRow`) — milliseconds a *new* frame
  *   starts at; "Apply default to all" pushes it across the sequence.
- * - Frame sequence — built by clicking sprites in the frame picker
- *   (`TilePalette` reused as a sprite-sheet grid). Each click appends
- *   a frame; a chip's thumbnail removes it (drag reorders), and each
- *   chip carries its own −/ms/+ duration stepper (per-frame timing).
+ * - Frame sequence — a {@link SequenceStrip} owning the frame list,
+ *   built by clicking sprites in the frame picker (`TilePalette`
+ *   reused as a sprite-sheet grid) and edited chip by chip.
  *
  * The dialog adapts to its host:
  *
@@ -80,7 +70,7 @@ export class AddAnimationDialog extends Adw.Dialog {
   declare _onion_preview: OnionSkinPreview
   declare _onion_toggle: Gtk.ToggleButton
   declare _sequence_stack: Gtk.Stack
-  declare _sequence_strip: Gtk.Box
+  declare _sequence_strip: SequenceStrip
   declare _timeline: AnimationTimeline
   declare _play_toggle: Gtk.ToggleButton
   declare _time_label: Gtk.Label
@@ -91,14 +81,6 @@ export class AddAnimationDialog extends Adw.Dialog {
 
   private _character: CharacterDefinition | null = null
   private _spriteSet: GdkSpriteSetResource | null = null
-  /** Per-frame sequence — each frame carries its own sprite id + duration (ms). */
-  private _frames: AnimationFrame[] = []
-  /**
-   * The in-progress drag's payload, armed by the source (a sequence chip or
-   * a draggable picker swatch) and read by a gap drop-zone. `move` reorders
-   * the frame at `from`; `insert` adds a new frame for `spriteId`.
-   */
-  private _dragPayload: { kind: 'move'; from: number } | { kind: 'insert'; spriteId: number } | null = null
   private _sequenceState = 'empty'
   private _previewIndex = 0
   private _previewTimeoutId = 0
@@ -115,6 +97,7 @@ export class AddAnimationDialog extends Adw.Dialog {
    * its uniqueness check.
    */
   private _editingId: string | null = null
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -180,11 +163,6 @@ export class AddAnimationDialog extends Adw.Dialog {
 
   constructor() {
     super()
-    this._wireButtons()
-    this._wireZoom()
-    this._wireInputs()
-    this._wirePalette()
-    this._wireTimeline()
     this._refreshValidity()
     this._applyZoom()
   }
@@ -231,18 +209,19 @@ export class AddAnimationDialog extends Adw.Dialog {
     this._character = character
     this._spriteSet = spriteSet
     this._editingId = existingAnimation?.id ?? null
+    this._sequence_strip.setSpriteSet(spriteSet)
 
     if (existingAnimation) {
       // Per-frame durations round-trip verbatim; seed the default row
       // from the first frame so "Apply default to all" is a sane no-op.
-      this._frames = existingAnimation.frames.map((f) => ({ ...f }))
+      this._sequence_strip.setFrames(existingAnimation.frames)
       this._name_row.set_text(existingAnimation.id)
       this._duration_row.set_value(existingAnimation.frames[0]?.duration ?? DEFAULT_DURATION_MS)
       const isRequiredRole = (REQUIRED_ROLES as readonly string[]).includes(existingAnimation.id)
       this._name_row.set_sensitive(!isRequiredRole)
       this.set_title(_('Edit animation'))
     } else {
-      this._frames = []
+      this._sequence_strip.setFrames([])
       this._name_row.set_text('')
       this._duration_row.set_value(DEFAULT_DURATION_MS)
       this._name_row.set_sensitive(true)
@@ -250,7 +229,8 @@ export class AddAnimationDialog extends Adw.Dialog {
     }
 
     this._previewIndex = 0
-    this._rebuildSequenceStrip()
+    this._syncDefaultDuration()
+    this._refreshSequenceState()
     this._refreshPreview()
     this._refreshValidity()
     this._populatePalette()
@@ -263,10 +243,16 @@ export class AddAnimationDialog extends Adw.Dialog {
   // CharacterPreview. vfunc_closed stays the final teardown.
   vfunc_map(): void {
     super.vfunc_map?.()
+    this._wireButtons()
+    this._wireZoom()
+    this._wireInputs()
+    this._wirePalette()
+    this._wireSequence()
     this._restartPreviewTimer()
   }
 
   vfunc_unmap(): void {
+    this._signals.disconnectAll()
     this._stopPreviewTimer()
     super.vfunc_unmap?.()
   }
@@ -277,17 +263,12 @@ export class AddAnimationDialog extends Adw.Dialog {
   }
 
   private _wireButtons(): void {
-    this._cancel_button.connect('clicked', () => {
-      this.close()
-    })
-    this._save_button.connect('clicked', () => {
+    this._signals.connect(this._cancel_button, 'clicked', () => this.close())
+    this._signals.connect(this._save_button, 'clicked', () => {
       const animation = this._buildAnimation()
       if (!animation) return
-      if (this._editingId !== null) {
-        this.emit('animation-edited', this._editingId, animation)
-      } else {
-        this.emit('animation-created', animation)
-      }
+      if (this._editingId !== null) this.emit('animation-edited', this._editingId, animation)
+      else this.emit('animation-created', animation)
       this.close()
     })
   }
@@ -299,23 +280,16 @@ export class AddAnimationDialog extends Adw.Dialog {
    * the default level.
    */
   private _wireZoom(): void {
-    this._zoom_out_button.connect('clicked', () => {
-      if (this._zoomLevel > 0) {
-        this._zoomLevel -= 1
-        this._applyZoom()
-      }
-    })
-    this._zoom_in_button.connect('clicked', () => {
-      if (this._zoomLevel < ZOOM_LEVELS.length - 1) {
-        this._zoomLevel += 1
-        this._applyZoom()
-      }
-    })
-    this._zoom_reset_button.connect('clicked', () => {
-      if (this._zoomLevel === DEFAULT_ZOOM_LEVEL) return
-      this._zoomLevel = DEFAULT_ZOOM_LEVEL
-      this._applyZoom()
-    })
+    this._signals.connect(this._zoom_out_button, 'clicked', () => this._setZoomLevel(this._zoomLevel - 1))
+    this._signals.connect(this._zoom_in_button, 'clicked', () => this._setZoomLevel(this._zoomLevel + 1))
+    this._signals.connect(this._zoom_reset_button, 'clicked', () => this._setZoomLevel(DEFAULT_ZOOM_LEVEL))
+  }
+
+  private _setZoomLevel(level: number): void {
+    const next = clampZoomLevel(level)
+    if (next === this._zoomLevel) return
+    this._zoomLevel = next
+    this._applyZoom()
   }
 
   /**
@@ -326,86 +300,90 @@ export class AddAnimationDialog extends Adw.Dialog {
    * endpoint buttons.
    */
   private _applyZoom(): void {
-    const tileSize = ZOOM_LEVELS[this._zoomLevel]
-    this._palette.tileSize = tileSize
+    this._palette.tileSize = ZOOM_LEVELS[this._zoomLevel]
     this._refreshPreviewSize()
-    const percent = Math.round((tileSize / ZOOM_LEVELS[DEFAULT_ZOOM_LEVEL]) * 100)
-    this.zoomLabel = `${percent}%`
+    this.zoomLabel = `${zoomPercent(this._zoomLevel)}%`
     this._zoom_out_button.set_sensitive(this._zoomLevel > 0)
     this._zoom_in_button.set_sensitive(this._zoomLevel < ZOOM_LEVELS.length - 1)
   }
 
   /**
    * Resize the preview picture so its render rect matches the
-   * picker's swatch dimensions: `tileSize` for the longer axis and
-   * `tileSize × aspect` (or `tileSize / aspect`) for the shorter.
-   * The frame wraps to fit the picture + its 8px margins, so the
-   * on-screen character ends up at the SAME pixel size as in the
-   * picker cells the user is selecting from.
+   * picker's swatch dimensions. The frame wraps to fit the picture +
+   * its 8px margins, so the on-screen character ends up at the SAME
+   * pixel size as in the picker cells the user is selecting from.
    */
   private _refreshPreviewSize(): void {
-    const aspect = this._cellAspect ?? 1
-    const tileSize = this._palette.tileSize
-    let w: number
-    let h: number
-    if (aspect >= 1) {
-      w = tileSize
-      h = Math.max(1, Math.round(tileSize / aspect))
-    } else {
-      w = Math.max(1, Math.round(tileSize * aspect))
-      h = tileSize
-    }
+    const [w, h] = cellDimensions(this._palette.tileSize, this._cellAspect)
     this._onion_preview.set_size_request(w, h)
   }
 
   private _wireInputs(): void {
-    this._onion_toggle.connect('toggled', () => this._onion_preview.setOnion(this._onion_toggle.get_active()))
-    this._name_row.connect('changed', () => {
-      this._refreshValidity()
-    })
+    this._signals.connect(this._onion_toggle, 'toggled', () =>
+      this._onion_preview.setOnion(this._onion_toggle.get_active()),
+    )
+    this._signals.connect(this._name_row, 'changed', () => this._refreshValidity())
     // The duration row is now the DEFAULT for new frames (per-frame
     // durations are edited on each chip); "Apply default to all" pushes
     // it across the whole sequence.
-    this._apply_all_button.connect('clicked', () => this._applyDurationToAll())
+    this._signals.connect(this._duration_row, 'notify::value', () => this._syncDefaultDuration())
+    this._signals.connect(this._apply_all_button, 'clicked', () =>
+      this._sequence_strip.applyDurationToAll(this._defaultDuration()),
+    )
   }
 
   private _wirePalette(): void {
     // Both pickers (the big side grid + the compact header popover) append
     // the clicked sprite to the end of the sequence. The popover also
     // pops down so the user lands back on the timeline.
-    this._palette.connect('tile-selected', (_p: TilePalette, spriteId: number) => {
-      this._appendFrame(spriteId)
-    })
-    this._frame_picker.connect('tile-selected', (_p: TilePalette, spriteId: number) => {
-      this._appendFrame(spriteId)
+    this._signals.connect(this._palette, 'tile-selected', (_p: TilePalette, spriteId: number) =>
+      this._sequence_strip.appendFrame(spriteId),
+    )
+    this._signals.connect(this._frame_picker, 'tile-selected', (_p: TilePalette, spriteId: number) => {
+      this._sequence_strip.appendFrame(spriteId)
       this._add_frame_button.popdown()
     })
     // Dragging a swatch arms an INSERT so a gap drop-zone adds a new frame
     // at that caret (vs. click, which appends). Both pickers are drag-source
     // enabled in the blp.
     for (const picker of [this._palette, this._frame_picker]) {
-      picker.connect('tile-drag-started', (_p: TilePalette, spriteId: number) => {
-        this._dragPayload = { kind: 'insert', spriteId }
-      })
-      picker.connect('tile-drag-ended', () => {
-        this._dragPayload = null
-      })
+      this._signals.connect(picker, 'tile-drag-started', (_p: TilePalette, spriteId: number) =>
+        this._sequence_strip.armInsert(spriteId),
+      )
+      this._signals.connect(picker, 'tile-drag-ended', () => this._sequence_strip.disarm())
     }
   }
 
   /**
-   * Wire the timeline dock: the play/pause transport toggles the preview
-   * loop, and dragging the timeline playhead scrubs — pausing playback and
-   * jumping the preview to the frame under the playhead.
+   * Wire the sequence strip + the timeline dock: structural edits restart
+   * playback from the first frame, a retime only re-times it, the
+   * play/pause transport toggles the loop, and dragging the playhead
+   * scrubs — pausing playback and jumping the preview to the frame under
+   * the playhead.
    */
-  private _wireTimeline(): void {
-    this._play_toggle.connect('toggled', () => this._setPlaying(this._play_toggle.get_active()))
-    this._timeline.connect('scrubbed', (_t: AnimationTimeline, timeMs: number) => this._onScrub(timeMs))
+  private _wireSequence(): void {
+    this._signals.connect(this._sequence_strip, 'frames-changed', () => {
+      this._previewIndex = 0
+      this._refreshSequenceState()
+      this._refreshPreview()
+      this._refreshValidity()
+    })
+    this._signals.connect(this._sequence_strip, 'duration-changed', () => this._refreshPreview())
+    this._signals.connect(this._play_toggle, 'toggled', () => this._setPlaying(this._play_toggle.get_active()))
+    this._signals.connect(this._timeline, 'scrubbed', (_t: AnimationTimeline, timeMs: number) => this._onScrub(timeMs))
   }
 
-  /** Per-frame durations (ms) in sequence order — the timeline's model. */
-  private _durationList(): number[] {
-    return this._frames.map((f) => f.duration)
+  /** Duration (ms) a newly added frame starts at — the settings spin row. */
+  private _defaultDuration(): number {
+    return Math.round(this._duration_row.get_value())
+  }
+
+  private _syncDefaultDuration(): void {
+    this._sequence_strip.defaultDuration = this._defaultDuration()
+  }
+
+  private _refreshSequenceState(): void {
+    this.sequenceState = this._sequence_strip.frameCount === 0 ? 'empty' : 'populated'
   }
 
   /** Start / stop the preview loop + reflect it in the transport icon. */
@@ -422,10 +400,11 @@ export class AddAnimationDialog extends Adw.Dialog {
    * leaving the playhead at the exact drag position.
    */
   private _onScrub(timeMs: number): void {
-    if (this._frames.length === 0) return
+    const durations = this._sequence_strip.durations
+    if (durations.length === 0) return
     if (this._play_toggle.get_active()) this._play_toggle.set_active(false)
     else this._setPlaying(false)
-    const idx = frameAtTime(this._durationList(), timeMs)
+    const idx = frameAtTime(durations, timeMs)
     if (idx >= 0) {
       this._previewIndex = idx
       this._onion_preview.setCurrentIndex(idx)
@@ -436,26 +415,9 @@ export class AddAnimationDialog extends Adw.Dialog {
 
   /** Update the "current / total ms" caption beside the timeline. */
   private _updateTimeLabel(timeMs: number): void {
-    const total = this._frames.length === 0 ? 0 : totalDuration(this._durationList())
+    const durations = this._sequence_strip.durations
+    const total = durations.length === 0 ? 0 : totalDuration(durations)
     this._time_label.set_label(`${Math.round(timeMs)} / ${total} ms`)
-  }
-
-  /** Append a sprite to the frame sequence (at the default duration) + refresh. */
-  private _appendFrame(spriteId: number): void {
-    const duration = Math.round(this._duration_row.get_value())
-    this._frames = [...this._frames, { spriteId, duration }]
-    this._previewIndex = 0
-    this._rebuildSequenceStrip()
-    this._refreshPreview()
-    this._refreshValidity()
-  }
-
-  /** Set every frame's duration to the current default-duration value. */
-  private _applyDurationToAll(): void {
-    const duration = Math.round(this._duration_row.get_value())
-    this._frames = this._frames.map((f) => ({ ...f, duration }))
-    this._rebuildSequenceStrip()
-    this._refreshPreview()
   }
 
   private _populatePalette(): void {
@@ -469,197 +431,10 @@ export class AddAnimationDialog extends Adw.Dialog {
     }
     this._palette.setFromSpriteSheet(sheet)
     this._frame_picker.setFromSpriteSheet(sheet)
-    // Capture the per-cell aspect from the first sprite — character
-    // sprite-sheets are uniform so it's representative for the whole
-    // set. Drives `_refreshPreviewSize` so the preview frame matches
-    // the picker's swatch dimensions.
-    const first = sheet.sprites[0]
-    this._cellAspect = first && first.height > 0 ? first.width / first.height : 1
+    // Drives `_refreshPreviewSize` so the preview frame matches the
+    // picker's swatch dimensions.
+    this._cellAspect = cellAspectOf(sheet.sprites[0]) ?? 1
     this._refreshPreviewSize()
-  }
-
-  private _rebuildSequenceStrip(): void {
-    // Drop existing thumbnails before re-adding so removal +
-    // append produce the same DOM shape (no append-only growth).
-    let child = this._sequence_strip.get_first_child()
-    while (child) {
-      const next = child.get_next_sibling()
-      this._sequence_strip.remove(child)
-      child = next
-    }
-
-    // Interleave a caret gap around every chip: gap 0, chip 0, gap 1, …,
-    // chip n-1, gap n. Each gap is a drop-zone that inserts/moves a frame
-    // AT that position (see `_buildGap`).
-    this._sequence_strip.append(this._buildGap(0))
-    for (let i = 0; i < this._frames.length; i++) {
-      this._sequence_strip.append(this._buildSequenceChip(this._frames[i], i))
-      this._sequence_strip.append(this._buildGap(i + 1))
-    }
-
-    this.sequenceState = this._frames.length === 0 ? 'empty' : 'populated'
-  }
-
-  /**
-   * Build one caret gap for the sequence strip. A thin drop-zone that
-   * accepts either a dragged picker swatch (insert a new frame here) or a
-   * dragged chip (move the frame here) — `gapIndex` is the insertion index.
-   * Highlights while a drag hovers so the drop position reads as a caret.
-   */
-  private _buildGap(gapIndex: number): Gtk.Widget {
-    const gap = new Gtk.Box({ cssClasses: ['timeline-caret'], valign: Gtk.Align.FILL })
-    gap.set_size_request(8, -1)
-    const drop = new Gtk.DropTarget({ actions: Gdk.DragAction.COPY | Gdk.DragAction.MOVE })
-    // Accept both a picker swatch (string tile id) + a chip (int index); the
-    // payload side-channel decides what to do, matching the repo's DnD style.
-    drop.set_gtypes([GObject.TYPE_STRING, GObject.TYPE_INT])
-    drop.connect('enter', () => {
-      gap.add_css_class('drop-active')
-      return this._dragPayload?.kind === 'insert' ? Gdk.DragAction.COPY : Gdk.DragAction.MOVE
-    })
-    drop.connect('leave', () => gap.remove_css_class('drop-active'))
-    drop.connect('drop', () => {
-      gap.remove_css_class('drop-active')
-      return this._applyDrop(gapIndex)
-    })
-    gap.add_controller(drop)
-    return gap
-  }
-
-  /**
-   * Apply the armed drag payload at `gapIndex`: insert a new frame (default
-   * duration) for a picker swatch, or move the dragged chip there. Returns
-   * whether the drop was handled (GTK's `drop` contract).
-   */
-  private _applyDrop(gapIndex: number): boolean {
-    const payload = this._dragPayload
-    this._dragPayload = null
-    if (!payload) return false
-    if (payload.kind === 'insert') {
-      const duration = Math.round(this._duration_row.get_value())
-      this._frames = insertAt(this._frames, gapIndex, { spriteId: payload.spriteId, duration })
-    } else {
-      this._frames = moveTo(this._frames, payload.from, gapIndex)
-    }
-    this._previewIndex = 0
-    this._rebuildSequenceStrip()
-    this._refreshPreview()
-    this._refreshValidity()
-    return true
-  }
-
-  /**
-   * Build one chip for the sequence strip: the frame's sprite thumbnail
-   * (click removes; drag it onto a caret gap to reorder — the chip is a
-   * `Gtk.DragSource`, the gaps are the drop-zones) stacked over a per-frame
-   * duration stepper (−/ms/+). Click and drag coexist — GTK suppresses the
-   * click once a press turns into a drag.
-   */
-  private _buildSequenceChip(frame: AnimationFrame, indexInSequence: number): Gtk.Box {
-    const chip = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
-
-    const button = new Gtk.Button({
-      tooltipText: _('Drag to reorder · click to remove'),
-      cssClasses: ['flat'],
-    })
-    const sprite = this._spriteSet?.getSprite(frame.spriteId)
-    const paintable = sprite?.createPaintable({ keepAspectRatio: true }) ?? null
-    const picture = new Gtk.Picture({
-      contentFit: Gtk.ContentFit.CONTAIN,
-      canShrink: true,
-      widthRequest: this._chipWidthFor(frame.duration),
-      heightRequest: SEQUENCE_THUMB_SIZE,
-    })
-    picture.set_paintable(paintable)
-    button.set_child(picture)
-    button.connect('clicked', () => {
-      this._frames = this._frames.filter((_v, i) => i !== indexInSequence)
-      this._previewIndex = 0
-      this._rebuildSequenceStrip()
-      this._refreshPreview()
-      this._refreshValidity()
-    })
-
-    // Drag source — arms a MOVE of this frame's index; a gap drop-zone
-    // reads the payload + reorders. The dragged sprite shows as the icon.
-    const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
-    dragSource.connect('prepare', () => {
-      this._dragPayload = { kind: 'move', from: indexInSequence }
-      const value = new GObject.Value()
-      value.init(GObject.TYPE_INT)
-      value.set_int(indexInSequence)
-      return Gdk.ContentProvider.new_for_value(value)
-    })
-    if (paintable) {
-      dragSource.connect('drag-begin', () => {
-        dragSource.set_icon(paintable, Math.round(SEQUENCE_THUMB_SIZE / 2), Math.round(SEQUENCE_THUMB_SIZE / 2))
-      })
-    }
-    dragSource.connect('drag-end', () => {
-      this._dragPayload = null
-    })
-    button.add_controller(dragSource)
-
-    chip.append(button)
-    // Resize this chip live as its duration changes (timeline width),
-    // without a full strip rebuild (which would destroy the stepper the
-    // user is clicking).
-    chip.append(
-      this._buildDurationStepper(indexInSequence, () => {
-        picture.set_size_request(
-          this._chipWidthFor(this._frames[indexInSequence]?.duration ?? DEFAULT_DURATION_MS),
-          SEQUENCE_THUMB_SIZE,
-        )
-      }),
-    )
-    return chip
-  }
-
-  /** Sequence-chip width for a frame duration (timeline metaphor; clamped). */
-  private _chipWidthFor(duration: number): number {
-    const scaled = Math.round((duration / DURATION_REF_MS) * SEQUENCE_THUMB_SIZE)
-    return Math.max(CHIP_MIN_WIDTH, Math.min(CHIP_MAX_WIDTH, scaled))
-  }
-
-  /**
-   * Compact −/ms/+ stepper for one frame's duration. Adjusts
-   * `_frames[index].duration` in ±50 ms steps (clamped 50–2000) and
-   * retimes the live preview so a mixed-duration loop reads correctly.
-   */
-  private _buildDurationStepper(index: number, onChange: () => void): Gtk.Box {
-    const row = new Gtk.Box({
-      orientation: Gtk.Orientation.HORIZONTAL,
-      spacing: 0,
-      halign: Gtk.Align.CENTER,
-      cssClasses: ['linked'],
-    })
-    const label = new Gtk.Label({ cssClasses: ['caption', 'numeric'], widthChars: 6 })
-    const setLabel = () => label.set_label(`${this._frames[index]?.duration ?? 0} ms`)
-    const nudge = (delta: number) => {
-      const frame = this._frames[index]
-      if (!frame) return
-      frame.duration = Math.max(50, Math.min(2000, frame.duration + delta))
-      setLabel()
-      onChange()
-      this._refreshPreview()
-    }
-    const minus = new Gtk.Button({
-      iconName: 'list-remove-symbolic',
-      cssClasses: ['flat', 'circular'],
-      tooltipText: _('Shorter'),
-    })
-    minus.connect('clicked', () => nudge(-50))
-    const plus = new Gtk.Button({
-      iconName: 'list-add-symbolic',
-      cssClasses: ['flat', 'circular'],
-      tooltipText: _('Longer'),
-    })
-    plus.connect('clicked', () => nudge(50))
-    setLabel()
-    row.append(minus)
-    row.append(label)
-    row.append(plus)
-    return row
   }
 
   private _refreshPreview(): void {
@@ -671,32 +446,33 @@ export class AddAnimationDialog extends Adw.Dialog {
 
   /**
    * Rebuild the onion-skin preview's frame paintables from the current
-   * sequence (1:1 with `_frames`, `null` for an unresolved sprite so the
-   * playback index stays aligned). Called on every sequence mutation;
-   * the per-tick path only moves the current index.
+   * sequence (1:1 with the strip's frames, `null` for an unresolved sprite
+   * so the playback index stays aligned). Called on every sequence
+   * mutation; the per-tick path only moves the current index.
    */
   private _syncPreviewFrames(): void {
     const set = this._spriteSet
-    const paintables = set
-      ? this._frames.map((f) => set.getSprite(f.spriteId)?.createPaintable({ keepAspectRatio: true }) ?? null)
-      : []
-    this._onion_preview.setFrames(paintables)
+    this._onion_preview.setFrames(
+      set
+        ? this._sequence_strip.frames.map(
+            (f) => set.getSprite(f.spriteId)?.createPaintable({ keepAspectRatio: true }) ?? null,
+          )
+        : [],
+    )
     // The timeline shares the sequence's per-frame durations.
-    this._timeline.setFrames(this._durationList())
+    this._timeline.setFrames(this._sequence_strip.durations)
   }
 
   private _restartPreviewTimer(): void {
     this._stopPreviewTimer()
     if (!this._playing) return
-    if (this._frames.length <= 1) return
+    const durations = this._sequence_strip.durations
+    if (durations.length <= 1) return
     // Per-frame timing: schedule off the CURRENT frame's own duration and
     // reschedule each tick so a mixed-duration loop plays back accurately.
-    const duration = Math.max(
-      50,
-      this._frames[this._previewIndex % this._frames.length]?.duration ?? DEFAULT_DURATION_MS,
-    )
+    const duration = Math.max(50, durations[this._previewIndex % durations.length] ?? DEFAULT_DURATION_MS)
     this._previewTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, duration, () => {
-      this._previewIndex = (this._previewIndex + 1) % Math.max(1, this._frames.length)
+      this._previewIndex = (this._previewIndex + 1) % Math.max(1, this._sequence_strip.frameCount)
       this._applyPreviewFrame()
       this._previewTimeoutId = 0
       this._restartPreviewTimer()
@@ -712,45 +488,29 @@ export class AddAnimationDialog extends Adw.Dialog {
   }
 
   private _applyPreviewFrame(): void {
-    if (this._frames.length === 0) {
+    const durations = this._sequence_strip.durations
+    if (durations.length === 0) {
       this._updateTimeLabel(0)
       return
     }
-    const idx = this._previewIndex % this._frames.length
+    const idx = this._previewIndex % durations.length
     this._onion_preview.setCurrentIndex(idx)
     this._timeline.setPlayheadFrame(idx)
-    this._updateTimeLabel(frameStartTime(this._durationList(), idx))
+    this._updateTimeLabel(frameStartTime(durations, idx))
   }
 
-  /**
-   * Recompute Save-button sensitivity from the current name +
-   * frames state. Three rules need to hold:
-   *
-   * 1. Name is non-empty.
-   * 2. Name doesn't collide with another animation on the
-   *    character — required role OR previously-added custom anim.
-   *    In edit mode the entry being edited is excluded so the user
-   *    can keep the same name.
-   * 3. At least one frame is in the sequence.
-   */
+  /** Recompute Save-button sensitivity from the current name + frames state. */
   private _refreshValidity(): void {
+    const reserved = reservedAnimationNames(REQUIRED_ROLES, this._character?.animations ?? [], this._editingId)
     const name = this._name_row.get_text().trim()
-    const reserved = new Set<string>(REQUIRED_ROLES)
-    for (const anim of this._character?.animations ?? []) reserved.add(anim.id)
-    if (this._editingId !== null) reserved.delete(this._editingId)
-    const isValid = name.length > 0 && !reserved.has(name) && this._frames.length > 0
-    this._save_button.set_sensitive(isValid)
+    this._save_button.set_sensitive(isAnimationNameValid(name, reserved, this._sequence_strip.frameCount))
   }
 
   private _buildAnimation(): CharacterAnimation | null {
     const name = this._name_row.get_text().trim()
-    if (!name || this._frames.length === 0) return null
-    // Frames already carry their per-frame durations; copy so the caller
-    // can't mutate our working array.
-    return {
-      id: name,
-      frames: this._frames.map((f) => ({ ...f })),
-    }
+    const frames = this._sequence_strip.frames
+    if (!name || frames.length === 0) return null
+    return { id: name, frames }
   }
 }
 

@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 
+import { SignalScope } from '../../utils/signal-scope.ts'
 import {
   frameAtTime,
   frameSpans,
@@ -45,6 +46,9 @@ export class AnimationTimeline extends Gtk.Widget {
   /** Playhead position in ms. */
   private _playheadTime = 0
   private _accent: Gdk.RGBA
+  /** Playhead scrub gesture; handlers are wired in `vfunc_map`. */
+  private _scrub: Gtk.GestureDrag
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -66,17 +70,28 @@ export class AnimationTimeline extends Gtk.Widget {
     this._accent.parse(ACCENT_FALLBACK)
     this.set_hexpand(true)
 
-    // A single drag gesture covers both a tap (drag-begin fires on press)
-    // and a scrub (drag-update as the pointer moves). No separate click
-    // gesture needed — a plain press scrubs to the press point.
-    const drag = new Gtk.GestureDrag()
-    drag.connect('drag-begin', (_g: Gtk.GestureDrag, startX: number) => this._scrubTo(startX))
-    drag.connect('drag-update', (g: Gtk.GestureDrag) => {
+    this._scrub = new Gtk.GestureDrag()
+    this.add_controller(this._scrub)
+  }
+
+  /**
+   * A single drag gesture covers both a tap (drag-begin fires on press)
+   * and a scrub (drag-update as the pointer moves). No separate click
+   * gesture needed — a plain press scrubs to the press point.
+   */
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._scrub, 'drag-begin', (_g: Gtk.GestureDrag, startX: number) => this._scrubTo(startX))
+    this._signals.connect(this._scrub, 'drag-update', (g: Gtk.GestureDrag) => {
       const [ok, startX] = g.get_start_point()
       const [, offsetX] = g.get_offset()
       if (ok) this._scrubTo(startX + offsetX)
     })
-    this.add_controller(drag)
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   /** Replace the per-frame durations (ms). Keeps the playhead in range. */

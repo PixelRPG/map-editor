@@ -4,6 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SpriteDataSet } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './tile-inspector.blp'
 
@@ -31,6 +32,7 @@ export class TileInspector extends Adw.Bin {
   private _sprite: SpriteDataSet | null = null
   /** Set during host-driven refresh so input changes don't loop back. */
   private _silentUpdate = false
+  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -62,19 +64,26 @@ export class TileInspector extends Adw.Bin {
     this._preview.set_vexpand(false)
     this._preview.set_halign(Gtk.Align.CENTER)
     this._preview.set_valign(Gtk.Align.CENTER)
+  }
 
-    this._solid_row.connect('notify::active', () => {
+  vfunc_map(): void {
+    super.vfunc_map()
+    this._signals.connect(this._solid_row, 'notify::active', () => {
       if (this._silentUpdate || !this._sprite) return
       this.emit('solid-changed', this._solid_row.get_active())
     })
-    this._surface_row.connect('notify::selected', () => {
+    this._signals.connect(this._surface_row, 'notify::selected', () => {
       if (this._silentUpdate || !this._sprite) return
-      const idx = this._surface_row.get_selected()
-      const key = SURFACE_KEYS[idx] ?? null
+      const key = SURFACE_KEYS[this._surface_row.get_selected()] ?? null
       // GObject signals expect concrete types — emit '' for "none" so
       // listeners can `value || undefined` cleanly.
       this.emit('surface-changed', key ?? '')
     })
+  }
+
+  vfunc_unmap(): void {
+    this._signals.disconnectAll()
+    super.vfunc_unmap()
   }
 
   /**

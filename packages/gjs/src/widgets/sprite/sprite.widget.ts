@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { GdkSprite } from '../../sprite'
+import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './sprite.widget.blp'
 
@@ -15,8 +16,7 @@ export class SpriteWidget extends Adw.Bin {
   // GObject internal children - Gtk.Picture is the modern image widget
   declare _image: Gtk.Picture | null
 
-  // Signal management
-  private _signalHandlers: number[] = []
+  private _signals = new SignalScope()
 
   // Private fields for sprite data
   private _sprite: GdkSprite | null = null
@@ -119,29 +119,15 @@ export class SpriteWidget extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
-
-    if (this._signalHandlers.length === 0) {
-      // Connect property change handlers
-      const scaleHandlerId = this.connect('notify::scale', () => this._updateScale())
-      const spriteHandlerId = this.connect('notify::sprite', () => this._initializeSprite())
-      this._signalHandlers.push(scaleHandlerId, spriteHandlerId)
-    }
+    this._signals.connect(this, 'notify::scale', () => this._updateScale())
+    this._signals.connect(this, 'notify::sprite', () => this._initializeSprite())
   }
 
   /**
    * Disconnect signals when widget becomes invisible (GC-safe cleanup)
    */
   vfunc_unmap(): void {
-    if (this._signalHandlers.length > 0) {
-      // Disconnect all signal handlers
-      for (const handlerId of this._signalHandlers) {
-        if (handlerId > 0) {
-          this.disconnect(handlerId)
-        }
-      }
-      this._signalHandlers = []
-    }
-
+    this._signals.disconnectAll()
     super.vfunc_unmap()
   }
 }

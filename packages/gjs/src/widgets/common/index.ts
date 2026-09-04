@@ -3,3 +3,5 @@
 export * from './card-gallery'
 export * from './dialogs'
 export * from './floating-fab'
+export * from './gallery-card'
+export * from './preference-rows'
