@@ -52,6 +52,20 @@ Conventions:
 
 ## Cleanup / debt
 
+- **`gjsify install --refresh-lockfile` is blocked repo-wide by a partial `@girs` 4.7.0 release** —
+  four packages were published alone at `4.7.0` (`adw-1`, `cairo-1.0`, `avahi-0.6`,
+  `avahicore-0.6`) while the rest of the family stayed at `4.6.0`. Each 4.7.0 declares its
+  dependencies on `^4.7.0`, so resolving one demands `@girs/gjs@^4.7.0`, which does not exist.
+  A refresh re-resolves every range to its newest match and dies on
+  `@girs/cairo-1.0@4.7.0 ← ^4.6.0`. Cairo is **transitive** — no workspace declares it, so it
+  cannot be pinned here, and gjsify has no `overrides`/`resolutions` mechanism. `@girs/adw-1` is
+  pinned to an exact `4.6.0` in `packages/gjs` and `apps/maker-gjs` because we DO declare it;
+  that pin stops adw-1 itself resolving to the broken release but does **not** unblock refresh.
+  Consequence: in-range bumps (biome, zod, ws, the MCP SDK) cannot be picked up until upstream
+  publishes the family together. Plain `gjsify install` resolves from the lockfile and is fine.
+  Un-pin adw-1 and drop this entry once `@girs/gjs` reaches 4.7.0.
+  *owner: external (ts-for-gir), why: a broken upstream publish, not our defect*
+
 - **Repo guards added 2026-09-05 — four scripts, all CI-gated** — `check-spec-registration.mjs`
   (a spec not passed to `run()` in its package's `test.mts` never runs while CI stays green),
   `check-declared-assets.mjs` (a path declared under `package.json#gjsify.*` must resolve on disk —
