@@ -32,7 +32,7 @@
   "devDependencies": {
     "@gjsify/cli": "^0.48.0",
     "@gjsify/unit": "^0.48.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "@girs/adw-1": "4.6.0",

@@ -47,6 +47,6 @@
     "@girs/pango-1.0": "^4.6.0",
     "@gjsify/cli": "^0.48.0",
     "@gjsify/unit": "^0.48.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
