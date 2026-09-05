@@ -93,7 +93,11 @@ function objectDefinitionToEntity(def, onWarn) {
     case 'npc':
       if (typeof props.dialogueId === 'string') components.push({ type: 'dialogue', dialogueId: props.dialogueId })
       if (Array.isArray(props.route)) {
-        components.push({ type: 'npc-route', waypoints: props.route, ...(props.facing ? { facing: props.facing } : {}) })
+        components.push({
+          type: 'npc-route',
+          waypoints: props.route,
+          ...(props.facing ? { facing: props.facing } : {}),
+        })
       }
       break
     case 'spawn-point':
@@ -170,7 +174,8 @@ function migrateProject(projectPath) {
   }
   // Characters → entity-library `character`-template entries + playerActorId.
   if (Array.isArray(data.characters)) {
-    const library = (data.entityLibrary ??= [])
+    data.entityLibrary ??= []
+    const library = data.entityLibrary
     for (const char of data.characters) {
       if (char.isPlayer && data.playerActorId === undefined) data.playerActorId = char.id
       if (!library.some((e) => e.id === char.id)) library.push(characterToEntity(char))

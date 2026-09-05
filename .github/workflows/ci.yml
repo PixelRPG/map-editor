@@ -121,7 +121,7 @@ jobs:
         # the gjsify CLI's own lint/fix subcommands wrap oxlint/oxfmt,
         # which this repo doesn't use. GTK CSS is excluded in biome.json
         # (non-web dialect Biome cannot parse).
-        run: ./node_modules/.bin/biome ci packages apps
+        run: ./node_modules/.bin/biome ci packages apps scripts
 
       - name: Verify dependency declarations are consistent (gjsify upgrade --check)
         # Offline drift gate — no registry calls. Fails when one dep is

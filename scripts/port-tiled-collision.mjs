@@ -20,23 +20,20 @@ const PAIRS = [
 function parseAttrs(text) {
   const out = {}
   const re = /(\w+)="([^"]*)"/g
-  let m
-  while ((m = re.exec(text)) !== null) out[m[1]] = m[2]
+  for (const m of text.matchAll(re)) out[m[1]] = m[2]
   return out
 }
 
 function parseTiledColliders(tsxText) {
   const out = new Map()
   const tileRe = /<tile id="(\d+)">([\s\S]*?)<\/tile>/g
-  let tileMatch
-  while ((tileMatch = tileRe.exec(tsxText)) !== null) {
+  for (const tileMatch of tsxText.matchAll(tileRe)) {
     const id = Number(tileMatch[1])
     const body = tileMatch[2]
     if (!body.includes('<objectgroup')) continue
     const colliders = []
     const objRe = /<object\b([^>]*?)(?:\/>|>([\s\S]*?)<\/object>)/g
-    let objMatch
-    while ((objMatch = objRe.exec(body)) !== null) {
+    for (const objMatch of body.matchAll(objRe)) {
       const attrs = parseAttrs(objMatch[1])
       const inner = objMatch[2] ?? ''
       const x = Number(attrs.x ?? 0)
