@@ -33,7 +33,7 @@
     "excalibur": "^0.32.0"
   },
   "devDependencies": {
-    "@girs/adw-1": "^4.6.0",
+    "@girs/adw-1": "4.6.0",
     "@girs/gdk-4.0": "^4.6.0",
     "@girs/gdkpixbuf-2.0": "^4.6.0",
     "@girs/gio-2.0": "^4.6.0",
