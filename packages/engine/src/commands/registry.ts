@@ -5,6 +5,12 @@ import {
   type SetLayerVisibilityPayload,
 } from './layer-flag.command.ts'
 import { AddLayerCommand, type AddLayerPayload } from './layer-lifecycle.command.ts'
+import {
+  ReorderLayerCommand,
+  type ReorderLayerPayload,
+  SetLayerPlaneCommand,
+  type SetLayerPlanePayload,
+} from './layer-order.command.ts'
 import { type ObjectPlacementPayload, PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
 import {
   EraseTileCommand,
@@ -42,4 +48,6 @@ export const BUILT_IN_COMMANDS: CommandRegistry = {
   [SetLayerVisibilityCommand.KIND]: (payload) => new SetLayerVisibilityCommand(payload as SetLayerVisibilityPayload),
   [SetLayerLockedCommand.KIND]: (payload) => new SetLayerLockedCommand(payload as SetLayerLockedPayload),
   [AddLayerCommand.KIND]: (payload) => new AddLayerCommand(payload as AddLayerPayload),
+  [ReorderLayerCommand.KIND]: (payload) => new ReorderLayerCommand(payload as ReorderLayerPayload),
+  [SetLayerPlaneCommand.KIND]: (payload) => new SetLayerPlaneCommand(payload as SetLayerPlanePayload),
 }

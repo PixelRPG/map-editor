@@ -12,8 +12,15 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
-import { type Command, SetLayerLockedCommand, SetLayerVisibilityCommand } from '../commands/index.ts'
-import { layerFlagChange } from './layer-flag-event.ts'
+import {
+  AddLayerCommand,
+  type Command,
+  ReorderLayerCommand,
+  SetLayerLockedCommand,
+  SetLayerPlaneCommand,
+  SetLayerVisibilityCommand,
+} from '../commands/index.ts'
+import { layerFlagChange, layerListChange } from './layer-flag-event.ts'
 
 /** A command that is NOT a layer-flag toggle, for the null path. */
 const nonLayerCommand: Command = {
@@ -63,6 +70,39 @@ export default async () => {
       await it('returns null on revert', async () => {
         expect(layerFlagChange(nonLayerCommand, 'revert')).toBe(null)
       })
+    })
+  })
+
+  await describe('layerListChange', async () => {
+    await it('reports an added layer by its stable id', async () => {
+      const cmd = new AddLayerCommand({ layer: { id: 'decor', name: 'Decor', visible: true } })
+      expect(layerListChange(cmd)).toStrictEqual({ layerId: 'decor' })
+    })
+
+    await it('reports a reorder and a change of plane', async () => {
+      expect(layerListChange(new ReorderLayerCommand({ layerId: 'bg', index: 1, previousIndex: 0 }))).toStrictEqual({
+        layerId: 'bg',
+      })
+      const setPlane = new SetLayerPlaneCommand({
+        layerId: 'roofs',
+        plane: 'overlay',
+        previousPlane: 'hero',
+        index: 2,
+        previousIndex: 2,
+      })
+      expect(layerListChange(setPlane)).toStrictEqual({ layerId: 'roofs' })
+    })
+
+    await it('is null for the flag commands and for non-layer commands', async () => {
+      // The flags have their own mirror; a flag toggle must not make the
+      // Layers tab rebuild its rows.
+      expect(
+        layerListChange(new SetLayerVisibilityCommand({ layerId: 'g', visible: false, previousVisible: true })),
+      ).toBe(null)
+      expect(layerListChange(new SetLayerLockedCommand({ layerId: 'g', locked: true, previousLocked: false }))).toBe(
+        null,
+      )
+      expect(layerListChange(nonLayerCommand)).toBe(null)
     })
   })
 }

@@ -22,6 +22,8 @@ export interface EngineEventBridgeContext {
    */
   selectPlacement(placementId: string | null): void
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void
+  /** Re-read the active map's layer list into the Layers tab (add / reorder / change of plane, any path). */
+  refreshLayers(): void
 }
 
 /**
@@ -39,6 +41,7 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('tile-picked', ({ globalTileId }) => ctx.adoptPickedTile(globalTileId))
   engine.on('placement-selected', ({ placementId }) => ctx.selectPlacement(placementId))
   engine.on('layer-flag-changed', ({ layerId, flag, value }) => ctx.setLayerFlag(layerId, flag, value))
+  engine.on('layer-list-changed', () => ctx.refreshLayers())
   engine.on('show-text', ({ text, speaker }) => ctx.showToast(speaker ? `${speaker}: ${text}` : text))
   engine.on('item-picked-up', ({ itemId, qty }) => ctx.showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`))
   engine.on('flag-set', ({ flag, value }) => ctx.showToast(`Flag "${flag}" = ${String(value)}`))

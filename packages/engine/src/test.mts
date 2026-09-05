@@ -17,6 +17,7 @@ import { run } from '@gjsify/unit'
 import editOperationsSuite from './engine/edit-operations.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
+import layerOrderCommandSuite from './commands/layer-order.command.spec.js'
 import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
 import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import registrySuite from './commands/registry.spec.js'
@@ -78,6 +79,7 @@ run({
   paintTileCommandSuite,
   layerFlagCommandSuite,
   layerLifecycleCommandSuite,
+  layerOrderCommandSuite,
   tilemapPlaneSuite,
   objectPlacementCommandSuite,
   entityRegistrySuite,

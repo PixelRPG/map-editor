@@ -1,0 +1,60 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgLayerSection : Adw.Bin {
+  styles ["layer-section"]
+
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 6;
+
+    // The header IS the explanation: the glyph shows where this plane
+    // sits relative to the hero, the words name it. It stays even when
+    // the section is empty, so the child meets the three words before
+    // needing them.
+    Gtk.Box header {
+      spacing: 10;
+      margin-start: 4;
+      margin-end: 4;
+
+      $PixelRpgDepthGlyph glyph {
+        size: 40;
+        plane: bind template.plane;
+        valign: center;
+      }
+
+      Gtk.Box {
+        orientation: vertical;
+        valign: center;
+        hexpand: true;
+
+        Gtk.Label title_label {
+          label: bind template.title;
+          halign: start;
+          xalign: 0;
+          styles ["heading"]
+        }
+
+        Gtk.Label subtitle_label {
+          label: bind template.subtitle;
+          halign: start;
+          xalign: 0;
+          wrap: true;
+          styles ["caption", "dim-label"]
+        }
+      }
+    }
+
+    Gtk.ListBox list {
+      selection-mode: single;
+      styles ["boxed-list"]
+    }
+
+    Gtk.Label empty_label {
+      label: _("Nothing here yet");
+      halign: start;
+      margin-start: 12;
+      styles ["caption", "dim-label"]
+    }
+  }
+}

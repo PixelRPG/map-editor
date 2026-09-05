@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 import * as Commands from './index.ts'
+import { ReorderLayerCommand, SetLayerPlaneCommand } from './layer-order.command.ts'
 import { PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
 import { BUILT_IN_COMMANDS } from './registry.ts'
@@ -56,6 +57,21 @@ export default async () => {
       const remove = BUILT_IN_COMMANDS[RemoveObjectCommand.KIND]?.({ placement })
       expect(remove).toBeInstanceOf(RemoveObjectCommand)
       expect(remove?.kind).toBe('object.remove')
+    })
+
+    await it('roundtrips the layer reorder / set-plane kinds → instances', async () => {
+      const reorder = BUILT_IN_COMMANDS[ReorderLayerCommand.KIND]?.({ layerId: 'decor', index: 2, previousIndex: 0 })
+      expect(reorder).toBeInstanceOf(ReorderLayerCommand)
+      expect(reorder?.kind).toBe('layer.reorder')
+      const setPlane = BUILT_IN_COMMANDS[SetLayerPlaneCommand.KIND]?.({
+        layerId: 'decor',
+        plane: 'overlay',
+        previousPlane: 'hero',
+        index: 1,
+        previousIndex: 1,
+      })
+      expect(setPlane).toBeInstanceOf(SetLayerPlaneCommand)
+      expect(setPlane?.kind).toBe('layer.set-plane')
     })
 
     await it('every shipped Command class is registered in BUILT_IN_COMMANDS', async () => {

@@ -2,6 +2,7 @@
 
 export * from './layer-flag.command'
 export * from './layer-lifecycle.command'
+export * from './layer-order.command'
 export * from './object-placement.command'
 export * from './paint-tile.command'
 export * from './registry'

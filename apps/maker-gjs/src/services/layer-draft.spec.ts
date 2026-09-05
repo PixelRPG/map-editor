@@ -16,6 +16,11 @@ export default async () => {
       expect(nextLayerDraft([]).visible).toBe(true)
     })
 
+    await it('takes the plane it is given and omits the key otherwise', async () => {
+      expect(nextLayerDraft([], 'overlay').plane).toBe('overlay')
+      expect('plane' in nextLayerDraft([])).toBe(false)
+    })
+
     await it('never reuses an id already on the map', async () => {
       const existing = [layer('background', 'Background'), layer('layer-2', 'Layer 2')]
       const draft = nextLayerDraft(existing)

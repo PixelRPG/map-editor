@@ -1,7 +1,8 @@
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { type EditorTool, type MapData, resolvePlacementDefinition } from '@pixelrpg/engine'
+import type Gdk from '@girs/gdk-4.0'
+import { type EditorTool, type LayerPlane, type MapData, resolvePlacementDefinition } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
   type EditorMode,
@@ -9,6 +10,7 @@ import {
   GdkSpriteSetResource,
   type GdkSpriteSheet,
   type LayerDescriptor,
+  planeOf,
   ModeRail,
   RightInspector,
   type SampleScene,
@@ -21,6 +23,7 @@ import type { LoadedProject } from '../services/project-loader.ts'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
 import Template from './scene-editor-view.blp'
 import { buildLayerPopover, buildObjectPopover, buildTilePopover } from './scene-editor/context-popovers.ts'
+import { paintableFor } from './scene-editor/object-descriptors.ts'
 import { wireLayersTab, wireObjectsTab, wirePropsTab, wireTilesTab } from './scene-editor/inspector-wiring.ts'
 import {
   buildBrushOptions,
@@ -63,6 +66,8 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _sceneName = ''
   private _engine: Engine | null = null
   private _layers: LayerDescriptor[] = []
+  /** The project's player sprite, drawn in every depth glyph (`null` = silhouette). */
+  private _heroPaintable: Gdk.Paintable | null = null
   private _tiles: TileDescriptor[] = []
   /** Placeable library objects — feeds the Tiles-tab grid + the context-chip popover. */
   private _objectBrushes: ObjectBrushOption[] = []
@@ -358,10 +363,16 @@ export class SceneEditorView extends ResponsiveEditorView {
     // actor — it spawns at the player spawn-point, not via the brush.
     const playerId = project.resource.data?.playerActorId
     const brushDefs = library.filter((e) => e.id !== playerId)
+    const playerDef = library.find((e) => e.id === playerId) ?? null
     const sheets = await loadObjectSheets(
       project.resource,
-      spriteSetIdsFor([...resolved.map((r) => r.def), ...brushDefs]),
+      spriteSetIdsFor([...resolved.map((r) => r.def), ...brushDefs, playerDef]),
     )
+    // The depth glyphs draw the project's own hero, so "above the hero"
+    // is above THIS hero; a project without a player gets the silhouette.
+    this._heroPaintable = paintableFor(playerDef, sheets)
+    this._inspector.layersTab.heroPaintable = this._heroPaintable
+    this._editor.topBar.setHeroPaintable(this._heroPaintable)
 
     this._inspector.objectsTab.setObjects(buildPlacementRows(resolved, sheets))
     this._placementInfo = new Map(
@@ -471,6 +482,35 @@ export class SceneEditorView extends ResponsiveEditorView {
     return this._engine?.excalibur?.getActiveLayer() ?? null
   }
 
+  /** The active layer id, for hosts that create relative to it (a new layer lands in its plane). */
+  get activeLayerId(): string | null {
+    return this._activeLayerId
+  }
+
+  /** Make `layerId` the active layer — engine, top-bar chip and Layers tab together. */
+  selectLayer(layerId: string): void {
+    this._setActiveLayer(layerId)
+  }
+
+  /**
+   * Re-read the map's layer list into the Layers tab + popover after a
+   * `LAYER_LIST_CHANGED` (add / reorder / change of plane on ANY path —
+   * local drop, undo, redo, a peer's op). Keeps the active layer; the
+   * caller passes the live `mapData`, which is the single owner of the
+   * order, so the tab never holds an order of its own.
+   */
+  refreshLayers(mapData: MapData): void {
+    this._layers = toLayerDescriptors(mapData)
+    this._inspector.layersTab.setLayers(this._layers)
+    const activeId = this._activeLayerId
+    if (activeId) {
+      this._inspector.layersTab.selectLayer(activeId)
+      const layer = this._layers.find((l) => l.id === activeId)
+      if (layer) this._editor.topBar.layerPlane = planeOf(layer)
+    }
+    this._refreshContextPopovers()
+  }
+
   /**
    * Push a tile id given in **global** form (the engine's
    * `ActiveTileComponent.spriteId` shape — `firstGid` already added)
@@ -503,8 +543,22 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._engine?.setActiveLayer(layerId)
     const layer = this._layers.find((l) => l.id === layerId)
     this._editor.topBar.layerName = layer?.name ?? layerId
+    this._editor.topBar.layerPlane = layer ? planeOf(layer) : 'ground'
     // Mirror selection back to the inspector layers tab.
     this._inspector.layersTab.selectLayer(layerId)
+  }
+
+  /**
+   * A row dropped in the Layers tab: same plane → a reorder, another
+   * plane → a change of plane (which carries the position too). Both
+   * are registered commands, so undo and peers follow; the resulting
+   * `LAYER_LIST_CHANGED` re-reads the list into the tab.
+   */
+  private _moveLayer(layerId: string, plane: LayerPlane, index: number): void {
+    const layer = this._layers.find((l) => l.id === layerId)
+    if (!layer) return
+    if (planeOf(layer) === plane) this._engine?.reorderLayer(layerId, index)
+    else this._engine?.setLayerPlane(layerId, plane, index)
   }
 
   /**
@@ -538,8 +592,9 @@ export class SceneEditorView extends ResponsiveEditorView {
           ),
     )
     this._editor.topBar.setLayerPopover(
-      buildLayerPopover({ layers: this._layers, activeId: this._activeLayerId }, (layerId) =>
-        this._setActiveLayer(layerId),
+      buildLayerPopover(
+        { layers: this._layers, activeId: this._activeLayerId, heroPaintable: this._heroPaintable },
+        (layerId) => this._setActiveLayer(layerId),
       ),
     )
   }
@@ -573,6 +628,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       setActiveLayer: (layerId) => this._setActiveLayer(layerId),
       setLayerVisible: (layerId, visible) => this._engine?.setLayerVisible(layerId, visible),
       setLayerLocked: (layerId, locked) => this._engine?.setLayerLocked(layerId, locked),
+      moveLayer: (layerId, plane, index) => this._moveLayer(layerId, plane, index),
       persistMapData: () => this._persistMapData(),
       toggleObjectsVisibility: () => this.activate_action('win.toggle-objects', null),
     })

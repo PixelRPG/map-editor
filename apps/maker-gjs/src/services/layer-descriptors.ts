@@ -21,5 +21,8 @@ export function toLayerDescriptors(mapData: MapData): LayerDescriptor[] {
     // copy here is how the engine's three readers drifted apart.
     visible: isLayerDataVisible(layer),
     locked: layer.locked ?? false,
+    // Absent stays absent: the tab applies the engine's ground default
+    // itself (`planeOf`), so the descriptor mirrors the file.
+    ...(layer.plane ? { plane: layer.plane } : {}),
   }))
 }

@@ -2,7 +2,7 @@ import type { EventEmitter } from 'excalibur'
 import type { Command } from '../commands/index.ts'
 import { UndoStackComponent } from '../components/index.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
-import { layerFlagChange } from '../services/layer-flag-event.ts'
+import { layerFlagChange, layerListChange } from '../services/layer-flag-event.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -25,8 +25,9 @@ import { type ActiveSceneAccessor, rebindOnMapLoaded } from './scene-binding.ts'
  *    nothing onto the stack — relaying a received op back would bounce
  *    indefinitely, and each peer owns its own undo history.
  *
- * All four end with the layer-flag mirror, because the inspector's
- * eye/padlock has to follow a flag change regardless of which path
+ * All four end with the layer mirror, because the inspector's
+ * eye/padlock — and, for add / reorder / change-of-plane, its row
+ * order — has to follow a layer change regardless of which path
  * produced it — including the remote ones that deliberately stay off
  * `COMMAND_EXECUTED`.
  */
@@ -48,7 +49,7 @@ export class CommandHistory {
     const scene = this.activeScene()
     if (!scene) return
     executeCommandOnScene(scene, this.events, command, origin)
-    this.mirrorLayerFlag(command, 'apply')
+    this.mirrorLayerChange(command, 'apply')
   }
 
   /** Apply a command received from a peer: no stack push, no relay. */
@@ -57,7 +58,7 @@ export class CommandHistory {
     if (!scene) return
     command.apply(scene)
     this.events.emit(EngineEvent.REMOTE_COMMAND_APPLIED, { command, direction: 'apply', origin })
-    this.mirrorLayerFlag(command, 'apply')
+    this.mirrorLayerChange(command, 'apply')
   }
 
   /** Revert a command received from a peer that undid it on its side. */
@@ -66,7 +67,7 @@ export class CommandHistory {
     if (!scene) return
     command.revert(scene)
     this.events.emit(EngineEvent.REMOTE_COMMAND_APPLIED, { command, direction: 'revert', origin })
-    this.mirrorLayerFlag(command, 'revert')
+    this.mirrorLayerChange(command, 'revert')
   }
 
   /** Revert the most recent applied command. No-op at the stack floor. */
@@ -79,7 +80,7 @@ export class CommandHistory {
     ctx.stack.cursor -= 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
     this.events.emit(EngineEvent.COMMAND_REVERTED, { command, origin })
-    this.mirrorLayerFlag(command, 'revert')
+    this.mirrorLayerChange(command, 'revert')
     return true
   }
 
@@ -97,7 +98,7 @@ export class CommandHistory {
     ctx.stack.cursor += 1
     SessionState.notifyMutation(ctx.scene, ctx.stack)
     this.events.emit(EngineEvent.COMMAND_EXECUTED, { command, origin })
-    this.mirrorLayerFlag(command, 'apply')
+    this.mirrorLayerChange(command, 'apply')
     return true
   }
 
@@ -140,12 +141,16 @@ export class CommandHistory {
   }
 
   /**
-   * Mirror a layer-flag command's effective value to the host's Layers
-   * tab. The command→payload mapping is the pure {@link layerFlagChange};
-   * this only owns the emit. No-op for non-layer commands.
+   * Mirror a layer command to the host's Layers tab: a flag command's
+   * effective value, or the fact that the layer list changed. The
+   * command→payload mappings are the pure {@link layerFlagChange} /
+   * {@link layerListChange}; this only owns the emits. No-op for
+   * non-layer commands.
    */
-  private mirrorLayerFlag(command: Command, direction: 'apply' | 'revert'): void {
-    const change = layerFlagChange(command, direction)
-    if (change) this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, change)
+  private mirrorLayerChange(command: Command, direction: 'apply' | 'revert'): void {
+    const flag = layerFlagChange(command, direction)
+    if (flag) this.events.emit(EngineEvent.LAYER_FLAG_CHANGED, flag)
+    const list = layerListChange(command)
+    if (list) this.events.emit(EngineEvent.LAYER_LIST_CHANGED, list)
   }
 }

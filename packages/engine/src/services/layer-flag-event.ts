@@ -1,8 +1,18 @@
-import { type Command, SetLayerLockedCommand, SetLayerVisibilityCommand } from '../commands/index.ts'
+import {
+  AddLayerCommand,
+  type Command,
+  ReorderLayerCommand,
+  SetLayerLockedCommand,
+  SetLayerPlaneCommand,
+  SetLayerVisibilityCommand,
+} from '../commands/index.ts'
 import type { EngineEvent, EngineEventMap } from '../types/index.ts'
 
 /** The `LAYER_FLAG_CHANGED` event payload shape, re-exported for callers. */
 export type LayerFlagChange = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
+
+/** The `LAYER_LIST_CHANGED` event payload shape, re-exported for callers. */
+export type LayerListChange = EngineEventMap[EngineEvent.LAYER_LIST_CHANGED]
 
 /**
  * Map a layer-flag command + the direction it is being applied in to the
@@ -27,6 +37,21 @@ export function layerFlagChange(command: Command, direction: 'apply' | 'revert')
   if (command instanceof SetLayerLockedCommand) {
     const { layerId, locked, previousLocked } = command.payload
     return { layerId, flag: 'locked', value: direction === 'apply' ? locked : previousLocked }
+  }
+  return null
+}
+
+/**
+ * Map a command that changes the layer LIST (add, reorder, change of
+ * plane) to the `LAYER_LIST_CHANGED` payload the host's Layers tab
+ * re-reads the map on — or `null` for any other command. Direction is
+ * irrelevant: apply and revert both leave the list different from
+ * what the tab shows, and the tab reads the list back from the map.
+ */
+export function layerListChange(command: Command): LayerListChange | null {
+  if (command instanceof AddLayerCommand) return { layerId: command.payload.layer.id }
+  if (command instanceof ReorderLayerCommand || command instanceof SetLayerPlaneCommand) {
+    return { layerId: command.payload.layerId }
   }
   return null
 }

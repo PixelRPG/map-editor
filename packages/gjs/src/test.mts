@@ -16,7 +16,10 @@ import spriteSetImportModelSuite from './widgets/cast/sprite-set-import.model.sp
 import atlasCanvasGeometrySuite from './widgets/editor/atlas-canvas.geometry.spec.js'
 import atlasOverviewGeometrySuite from './widgets/editor/atlas-overview.geometry.spec.js'
 import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
+import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.js'
+import depthGlyphProbeSuite from './widgets/editor/depth-glyph.probe.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
+import layerSectionsSuite from './widgets/editor/layer-sections.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
 import mapPreviewOpsSuite from './widgets/editor/map-preview.ops.spec.js'
 import sceneCardDragSuite from './widgets/editor/scene-card.drag.spec.js'
@@ -32,7 +35,10 @@ run({
   atlasOverviewGeometrySuite,
   bakeCacheSuite,
   characterAnimationSuite,
+  depthGlyphGeometrySuite,
+  depthGlyphProbeSuite,
   eventActionModelSuite,
+  layerSectionsSuite,
   mapPreviewGeometrySuite,
   mapPreviewOpsSuite,
   sceneCardDragSuite,

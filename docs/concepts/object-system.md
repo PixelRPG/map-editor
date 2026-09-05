@@ -166,6 +166,10 @@ player.z = zFor('hero') + 50                                     // systems/play
 
 The plane offsets are not exported; `zFor` is the only way any code obtains a tilemap or actor z, so nothing treats 0 / 100 / 200 as an exhaustive enum once storeys exist. A placement lands on exactly the render plane of the layer it references, and the gaps leave room for actors to interleave (`hero` is where the player sits, alongside decorations). Inside one plane the array order of `MapData.layers` decides which of two layers' sprites shows on top of a shared cell (`services/layer-order.ts`).
 
+The editor shows this as three fixed sections in the Layers tab (`packages/gjs/src/widgets/editor/layers-tab.ts`, `layer-section.ts`), ordered top-down as the world is, each headed by the depth glyph (`depth-glyph.ts`: a side view of the hero with the plane's element in its colour — green ground slab, orange block beside the legs, blue roof slab); every row and the top-bar layer chip carry the same glyph at 24 / 14 px. The nine rendered states, as `depth-glyph.probe.spec.ts` reads them back on a workstation:
+
+![Depth glyph states at 40, 24 and 14 px](../screenshots/depth-glyph-states.png) Dragging a row inside a section is a `ReorderLayerCommand`, into another section a `SetLayerPlaneCommand` (`commands/layer-order.command.ts`); both are registered commands, and every application path emits `LAYER_LIST_CHANGED` so the tab follows undo and peers. The words "tier", "z-index" and "elevation" appear in no UI string.
+
 What the planes cannot do, named rather than hidden: a bridge over a river bed, with one hero on the deck and one under it in the same frame, needs the actor's z to depend on where the actor is — an elevation, which is the next step below. Walking behind a rock on the same plane is y-sorting, which the engine does not have.
 
 ### Elevation — pinned as data, not built (decision 11)
@@ -225,7 +229,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
 | 7 | Editor UI — Objects authoring view, object tool + brush palette, Props selected-object group, Objects visibility row, atlas-from-placements | **landed** (#170–#174 + #179–#184; remaining polish in `TODO.md`) |
-| 8 | Depth — one ordering rule (plane + array order), `elevation` + `elevation-step` pinned as types | **landed** |
+| 8 | Depth — one ordering rule (plane + array order), the three-section Layers tab with the depth glyph, reorder / change-of-plane commands, `elevation` + `elevation-step` pinned as types | **landed** |
 | 9 | Elevation runtime — per-storey tilemap triples via `zFor(plane, elevation)`, `ElevationComponent` + `ElevationStepComponent` + their system arriving together, the walk-on storey filter, stamps and the floor switcher | **planned** (see § Elevation; `TODO.md` § Engine / runtime) |
 
 ## Where this is implemented
@@ -255,7 +259,9 @@ These citations update as the work lands. Anything referenced here must exist in
 - `packages/engine/src/types/data/ElevationStepData.ts` — the `elevation-step` data shape, no component class
 - `packages/engine/src/components/tilemap-plane.component.ts` — `TileMapPlaneComponent`, `zFor`
 - `packages/engine/src/services/layer-order.ts` — `layerOrderIndex`, `sortRefsByLayerOrder`, `orderLayersForWalkOn`
+- `packages/engine/src/commands/layer-order.command.ts` + `services/layer-plane.service.ts` — `layer.reorder`, `layer.set-plane`
 - `packages/engine/src/format/MapFormat.ts` — plane / elevation validation, `properties.z` warning
+- `packages/gjs/src/widgets/editor/depth-glyph.ts` (+ `.geometry.ts`, `.probe.ts`), `layer-section.ts`, `layer-sections.ts`, `layers-tab.ts` — the glyph and the three-section tab
 - Editor UI: `apps/maker-gjs/src/widgets/objects-view.ts` + the scene-editor inspector tabs in `scene-editor-view.ts`
 
 ## What's NOT on the table

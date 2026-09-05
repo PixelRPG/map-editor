@@ -73,8 +73,9 @@ export async function loadObjectSheets(
  * The definition's sprite as a paintable, or `null`. Aspect-preserving:
  * these render in CONTAIN-fit swatches, where the default stretching
  * paintable distorts (squashed in grid cells, sliver-thin in rows).
+ * Also how the depth glyphs get the project's player sprite.
  */
-function paintableFor(def: EntityDefinition | null, sheets: ObjectSheets): Gdk.Paintable | null {
+export function paintableFor(def: EntityDefinition | null, sheets: ObjectSheets): Gdk.Paintable | null {
   const vis = visualOf(def)
   if (!vis) return null
   return sheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable({ keepAspectRatio: true }) ?? null

@@ -198,13 +198,19 @@ The implemented kinds (each a `Command` in `packages/engine/src/commands/`, reco
 
 ```ts
 type EditorOp =
-  | { kind: 'tile.paint';    payload: { layerId, tileX, tileY, spriteId /* global id */, prev /* sprite refs before, [] = empty */ } }
-  | { kind: 'tile.erase';    payload: { layerId, tileX, tileY, prev } }
-  | { kind: 'object.place';  payload: { placement /* full ObjectPlacement — revert removes it */ } }
-  | { kind: 'object.remove'; payload: { placement /* carried whole so revert can restore it */ } }
+  | { kind: 'tile.paint';           payload: { layerId, tileX, tileY, spriteId /* global id */, previousSprites /* refs before, [] = empty */ } }
+  | { kind: 'tile.erase';           payload: { layerId, tileX, tileY, previousSprites } }
+  | { kind: 'tile.fill';            payload: { layerId, spriteId, cells: { tileX, tileY, previousSprites }[] } }
+  | { kind: 'object.place';         payload: { placement /* full ObjectPlacement — revert removes it */ } }
+  | { kind: 'object.remove';        payload: { placement /* carried whole so revert can restore it */ } }
+  | { kind: 'layer.set-visibility'; payload: { layerId, visible, previousVisible } }
+  | { kind: 'layer.set-locked';     payload: { layerId, locked, previousLocked } }
+  | { kind: 'layer.add';            payload: { layer /* full LayerData */, index? } }
+  | { kind: 'layer.reorder';        payload: { layerId, index, previousIndex } }
+  | { kind: 'layer.set-plane';      payload: { layerId, plane, previousPlane, index, previousIndex } }
 ```
 
-(Project-level mutations — `__project/entity.upsert` etc. — ride the project-op channel above, not the command registry.) The inventory grows as more editor mutations land: layer ops, placement move, etc. are future commands.
+(Project-level mutations — `__project/entity.upsert` etc. — ride the project-op channel above, not the command registry.) The inventory grows as more editor mutations land: placement move, layer rename / duplicate / delete are future commands.
 
 The `prev` fields are captured at op-creation time and ride along with the op. They serve **two** purposes:
 

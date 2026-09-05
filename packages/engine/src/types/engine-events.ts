@@ -33,6 +33,7 @@ export enum EngineEvent {
   COMMAND_REVERTED = 'command-reverted',
   REMOTE_COMMAND_APPLIED = 'remote-command-applied',
   LAYER_FLAG_CHANGED = 'layer-flag-changed',
+  LAYER_LIST_CHANGED = 'layer-list-changed',
 }
 
 export interface EngineEventMap {
@@ -249,4 +250,15 @@ export interface EngineEventMap {
     flag: 'visible' | 'locked'
     value: boolean
   }
+  /**
+   * The active map's layer LIST changed — a layer was added, moved
+   * inside its plane or moved to another plane — so the host's Layers
+   * tab has to re-read `mapData.layers`. Same contract as
+   * `LAYER_FLAG_CHANGED`: fired on EVERY application path of
+   * `AddLayerCommand` / `ReorderLayerCommand` / `SetLayerPlaneCommand`
+   * (local execute, undo, redo, remote apply/revert). Carries the
+   * stable id of the layer the command targeted; the list itself is
+   * read back from the map, which is the single owner of the order.
+   */
+  [EngineEvent.LAYER_LIST_CHANGED]: { layerId: string }
 }

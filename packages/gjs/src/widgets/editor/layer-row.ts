@@ -1,15 +1,20 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
+import type { LayerPlane } from '@pixelrpg/engine'
+import { DepthGlyph } from './depth-glyph'
 
 import Template from './layer-row.blp'
+
+GObject.type_ensure(DepthGlyph.$gtype)
 
 /**
  * Single row in the Layers tab.
  *
- * Composition: visibility toggle, layer name, tile-count caption, lock
- * toggle. The `active` style class is added when the row represents the
- * editor's active layer.
+ * Composition: visibility toggle, depth glyph (the layer's plane), layer
+ * name, tile-count caption, lock toggle. The `active` style class is
+ * added when the row represents the editor's active layer.
  *
  * Emits no signals of its own — state is exposed via `visible` /
  * `locked` properties (bidirectional bindings drive the toggle buttons)
@@ -18,19 +23,21 @@ import Template from './layer-row.blp'
 export class LayerRow extends Adw.Bin {
   declare _visibility_button: Gtk.ToggleButton
   declare _lock_button: Gtk.ToggleButton
+  declare _glyph: DepthGlyph
 
   private _layerName = ''
   private _tileCount = 0
   private _visible = true
   private _locked = false
   private _active = false
+  private _plane: LayerPlane = 'ground'
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgLayerRow',
         Template,
-        InternalChildren: ['visibility_button', 'lock_button'],
+        InternalChildren: ['visibility_button', 'lock_button', 'glyph'],
         Properties: {
           'layer-name': GObject.ParamSpec.string(
             'layer-name',
@@ -90,6 +97,13 @@ export class LayerRow extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          plane: GObject.ParamSpec.string(
+            'plane',
+            'Plane',
+            'The plane the layer draws on: ground, hero or overlay',
+            GObject.ParamFlags.READWRITE,
+            'ground',
+          ),
         },
       },
       LayerRow,
@@ -103,6 +117,7 @@ export class LayerRow extends Adw.Bin {
       visible: boolean
       locked: boolean
       active: boolean
+      plane: LayerPlane
     }> = {},
   ) {
     super()
@@ -111,6 +126,22 @@ export class LayerRow extends Adw.Bin {
     if (params.visible !== undefined) this.visible = params.visible
     if (params.locked !== undefined) this.locked = params.locked
     if (params.active !== undefined) this.active = params.active
+    if (params.plane !== undefined) this.plane = params.plane
+  }
+
+  get plane(): LayerPlane {
+    return this._plane ?? 'ground'
+  }
+
+  set plane(value: LayerPlane) {
+    if (this._plane === value) return
+    this._plane = value
+    this.notify('plane')
+  }
+
+  /** The hero sprite drawn in the row's glyph (`null` = silhouette). */
+  set heroPaintable(value: Gdk.Paintable | null) {
+    this._glyph.heroPaintable = value
   }
 
   get layerName(): string {

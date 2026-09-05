@@ -45,9 +45,9 @@ export class RightInspectorStory extends StoryWidget {
     inspector.tilesTab.tilesetName = 'Lokiri Forest'
     inspector.tilesTab.setTiles(buildDemoTiles(20))
     inspector.layersTab.setLayers([
-      { id: 'bg', name: 'Background', tileCount: 248 },
-      { id: 'mid', name: 'Midground', tileCount: 96 },
-      { id: 'fg', name: 'Foreground', tileCount: 18 },
+      { id: 'bg', name: 'Background', tileCount: 248, plane: 'ground' },
+      { id: 'mid', name: 'Midground', tileCount: 96, plane: 'hero' },
+      { id: 'fg', name: 'Foreground', tileCount: 18, plane: 'overlay' },
       { id: 'events', name: 'Events', tileCount: 6, locked: true },
     ])
     inspector.layersTab.selectLayer('bg')
