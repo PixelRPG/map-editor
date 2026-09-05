@@ -1,4 +1,6 @@
+import { Logger } from 'excalibur'
 import { validateEntityDefinition } from '../entity/validate'
+import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
 import { isEntityDefinition } from '../types/data/index'
 
@@ -79,7 +81,25 @@ export class GameProjectFormat {
       })
     }
 
+    GameProjectFormat.reportUnknownGameSystems(data)
+
     return true
+  }
+
+  /**
+   * A project naming a game system this build does not have is REPORTED,
+   * never rejected: a template downloaded from a newer editor must still
+   * open, with that system's components dormant. Rejecting it here would
+   * make forward compatibility a broken file; ignoring it silently would
+   * make a typo indistinguishable from a newer feature.
+   */
+  private static reportUnknownGameSystems(data: GameProjectData): void {
+    const unknown = unknownGameSystemIds(data)
+    if (unknown.length === 0) return
+    Logger.getInstance().warn(
+      `[GameProjectFormat] project enables unknown game system(s) ${unknown.map((id) => `"${id}"`).join(', ')} — ` +
+        'this editor does not have them installed. The project opens; their components stay dormant.',
+    )
   }
 
   /**

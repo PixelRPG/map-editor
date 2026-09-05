@@ -5,6 +5,7 @@ import { validateComponentData, validateEntityDefinition, validateEntityDefiniti
 
 const speedSpec: ComponentSpec = {
   type: 'movement',
+  system: 'test',
   editor: { label: 'Movement', icon: 'x' },
   fields: [{ key: 'tilesPerSec', label: 'Speed', input: 'int', required: true, min: 1, max: 16 }],
   build: () => null,
@@ -12,6 +13,7 @@ const speedSpec: ComponentSpec = {
 
 const selectSpec: ComponentSpec = {
   type: 'trigger',
+  system: 'test',
   editor: { label: 'Trigger', icon: 'x' },
   fields: [
     { key: 'on', label: 'On', input: 'select', required: true, options: [{ value: 'auto', label: 'Auto' }] },
@@ -24,6 +26,7 @@ const selectSpec: ComponentSpec = {
 // validate against — must be rejected rather than accept any string.
 const brokenSelectSpec: ComponentSpec = {
   type: 'state',
+  system: 'test',
   editor: { label: 'State', icon: 'x' },
   fields: [{ key: 'value', label: 'Value', input: 'select' }],
   build: () => null,
@@ -31,6 +34,7 @@ const brokenSelectSpec: ComponentSpec = {
 
 const jsonSpec: ComponentSpec = {
   type: 'custom-data',
+  system: 'test',
   editor: { label: 'Custom', icon: 'x' },
   fields: [{ key: 'data', label: 'Data', input: 'json' }],
   build: () => null,

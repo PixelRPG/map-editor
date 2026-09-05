@@ -15,6 +15,7 @@ interface ScriptData extends ComponentData {
 
 export const scriptSpec: ComponentSpec = {
   type: 'script',
+  system: 'core',
   editor: { label: 'Script', icon: 'text-x-script-symbolic' },
   fields: [
     { key: 'scriptId', label: 'Script id', input: 'text', required: true, basic: true },

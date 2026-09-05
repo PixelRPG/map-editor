@@ -18,6 +18,7 @@ interface VisualData extends ComponentData {
 
 export const visualSpec: ComponentSpec = {
   type: 'visual',
+  system: 'core',
   editor: { label: 'Appearance', icon: 'image-x-generic-symbolic', basic: true },
   fields: [
     { key: 'spriteSetId', label: 'Appearance', input: 'appearance-ref', required: true, basic: true },
