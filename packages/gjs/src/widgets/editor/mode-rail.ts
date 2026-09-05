@@ -9,9 +9,9 @@ GObject.type_ensure(ProjectHeroIcon.$gtype)
 /**
  * Editor mode discriminator emitted by {@link ModeRail}.
  */
-export type EditorMode = 'world' | 'cast' | 'objects' | 'tiles' | 'audio' | 'data'
+export type EditorMode = 'world' | 'cast' | 'objects' | 'tiles' | 'data'
 
-const MODE_ORDER: EditorMode[] = ['world', 'cast', 'objects', 'tiles', 'audio', 'data']
+const MODE_ORDER: EditorMode[] = ['world', 'cast', 'objects', 'tiles', 'data']
 
 /**
  * Library mode rail — the editor's primary navigation column.
@@ -31,7 +31,6 @@ export class ModeRail extends Adw.Bin {
   declare _row_cast: Adw.ActionRow
   declare _row_objects: Adw.ActionRow
   declare _row_tiles: Adw.ActionRow
-  declare _row_audio: Adw.ActionRow
   declare _row_data: Adw.ActionRow
   declare _share_button: Gtk.Button
 
@@ -52,7 +51,6 @@ export class ModeRail extends Adw.Bin {
           'row_cast',
           'row_objects',
           'row_tiles',
-          'row_audio',
           'row_data',
           'share_button',
         ],
@@ -140,8 +138,6 @@ export class ModeRail extends Adw.Bin {
         return this._row_objects
       case 'tiles':
         return this._row_tiles
-      case 'audio':
-        return this._row_audio
       case 'data':
         return this._row_data
     }
