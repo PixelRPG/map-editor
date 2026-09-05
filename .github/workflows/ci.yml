@@ -150,6 +150,29 @@ jobs:
         # spec file is missing from its package's test.mts.
         run: node scripts/check-spec-registration.mjs
 
+      - name: Verify every declared gjsify asset path exists
+        # package.json#gjsify blocks (flatpak/ship/storybook) name source
+        # assets by path. Nothing checked that they resolve, so the maker
+        # shipped — Flatpak included — with no application icon, found by
+        # a human reading the file. Fails if a declared path is missing.
+        run: node scripts/check-declared-assets.mjs
+
+      - name: Verify no phantom dependencies
+        # A package's src/** must declare every bare specifier it imports.
+        # @pixelrpg/mcp-bridge resolved @gjsify/unit through root hoisting
+        # alone — one hoisting change from a red build blamed on an
+        # unrelated commit. Found five; four were unknown.
+        run: node scripts/check-phantom-deps.mjs
+
+      - name: Verify layer visibility has one owner
+        # LayerData visibility (absent key == visible) must be decided
+        # only by the engine's isLayerDataVisible. Three engine readers
+        # had drifted apart, two of them into real bugs: a key-less layer
+        # read as walkable to an agent and never had its tile properties
+        # applied at runtime. Scopes by receiver — GTK's own widget
+        # `visible` property shares the name.
+        run: node scripts/check-layer-visibility.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the
