@@ -192,6 +192,14 @@ jobs:
         # apps/maker-gjs, so neither type-check sees the other side.
         run: node scripts/check-blp-actions.mjs
 
+      - name: Verify no GObject signal is declared but never emitted
+        # Only the owning class can EMIT a signal, so "never emitted" is
+        # fully decidable from this tree — unlike "never connected",
+        # which a package's external consumers can legitimately do.
+        # CastView's `character-changed` and TilesView's `tile-changed`
+        # were both declared and emitted by nobody.
+        run: node scripts/check-unemitted-signals.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the

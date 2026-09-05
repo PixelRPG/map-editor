@@ -53,7 +53,6 @@ export namespace CastView {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
   export interface SignalProps {
     'mode-changed': [string]
-    'character-changed': []
   }
 }
 
@@ -164,7 +163,6 @@ export class CastView extends ResponsiveEditorView {
         },
         Signals: {
           // mode-changed inherited from ResponsiveEditorView.
-          'character-changed': {},
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
         },
       },

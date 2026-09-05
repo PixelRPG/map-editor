@@ -68,7 +68,7 @@ Conventions:
   Un-pin adw-1 and drop this entry once `@girs/gjs` reaches 4.7.0.
   *owner: external (ts-for-gir), why: a broken upstream publish, not our defect*
 
-- **Repo guards — six scripts in `scripts/`, all CI-gated.** Each exists because the bug class it
+- **Repo guards — seven scripts in `scripts/`, all CI-gated.** Each exists because the bug class it
   covers had already shipped; add the mechanism with the fix, not just the fix.
   - `check-spec-registration.mjs` — a spec not passed to `run()` in its package's `test.mts` never
     runs while CI stays green.
@@ -82,6 +82,8 @@ Conventions:
     row advertised a view that did not exist and three layers of code hid the fact.
   - `check-blp-actions.mjs` — every `action-name:` in a `.blp` resolves to a registered action;
     the "Keyboard Shortcuts" menu item was greyed out in every build ever made and said nothing.
+  - `check-unemitted-signals.mjs` — a declared GObject signal must be emitted somewhere; only the
+    owning class can emit one, so unlike "never connected" this is fully decidable from the tree.
 - **Project ops and command ops still share one `(peerId, seq)` counter space** — the engine now
   refuses the collision loudly (`sync/op-category.ts`; `PreAttachOpBuffer.push` throws
   `OpCategoryError`, `isCoveredByWatermark` is category-aware), but `OutboundOpStamper`
