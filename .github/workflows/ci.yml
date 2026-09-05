@@ -173,6 +173,16 @@ jobs:
         # `visible` property shares the name.
         run: node scripts/check-layer-visibility.mjs
 
+      - name: Verify every editor mode has a view
+        # A mode-rail row is a promise: click here and you land
+        # somewhere. `audio` had a row, a member in the EditorMode union
+        # and no ViewStackPage — and three layers of code (an
+        # `unimplemented` navigation variant, a "Coming soon" toast, a
+        # spec pinning it) existed so the dead end would not show. The
+        # four declarations of a mode live in two packages and two
+        # languages; only a cross-file check holds them together.
+        run: node scripts/check-mode-routes.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the
