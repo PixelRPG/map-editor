@@ -97,6 +97,14 @@ Conventions:
     `CollisionComponent` shipped a "Blocks movement" toggle that blocked nothing. Four deliberate
     gaps are pinned in the script AND marked `orphan-component-ok:` in their own file.
 - **The progressive-disclosure tier is declared and unimplemented** — `FieldDescriptor.basic` (12 fields) and `ComponentEditorMeta.basic` (3 components) mark the friendly default surface that `ComponentInspector` / `EntityComponentsEditor` were meant to honour; nothing in `apps/` or `packages/` reads either flag. Either build the simple/full split or drop the flags — a declared tier no UI honours makes the specs LOOK consistent while the gap stays. See [`docs/concepts/entity-and-appearance-model.md`](docs/concepts/entity-and-appearance-model.md) § The component registry. *owner: engine + gjs*
+- **The signalling-server test suite leaks a process per run** — every
+  `gjsify foreach test --include @pixelrpg/signalling-server` invocation leaves a `signalling-server`
+  GJS process alive: the relay e2e test spawns the built bundle and nothing reaps it, on success or
+  on a failed assertion. On 2026-09-06 34 of them were alive at once, the oldest a day and ten hours
+  old; they were killed by PID. The suite must kill what it spawned when the run ends (an `afterAll`
+  / exit hook that also fires on failure), and a guard could assert no child outlives the run.
+  Recorded here by the depth milestone, which met the symptom (a busy display during screenshot
+  runs); the fix belongs to the suite's owner. *owner: signalling-server*
 - **Project ops and command ops still share one `(peerId, seq)` counter space** — the engine now
   refuses the collision loudly (`sync/op-category.ts`; `PreAttachOpBuffer.push` throws
   `OpCategoryError`, `isCoveredByWatermark` is category-aware), but `OutboundOpStamper`
