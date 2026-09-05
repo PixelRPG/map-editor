@@ -94,11 +94,12 @@ interface LayerData {
   id: string
   name: string
   visible: boolean
-  opacity?: number
-  zIndex?: number
+  locked?: boolean
+  tier?: LayerTier
   sprites?: SpriteDataMap[]
   properties?: Properties
   /** REMOVED — `type: 'tile' | 'object'` + `objects[]`. */
+  /** REMOVED — `opacity` + `zIndex`: declared for a year, read by nobody. */
 }
 ```
 

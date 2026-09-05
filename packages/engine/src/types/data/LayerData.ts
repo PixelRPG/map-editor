@@ -77,12 +77,6 @@ export interface LayerData {
    */
   tier?: LayerTier
 
-  /** Optional opacity value (0-1) */
-  opacity?: number
-
-  /** Optional z-index for layer ordering */
-  zIndex?: number
-
   /**
    * Tile sprites placed on this layer. Empty / missing for layers
    * that purely host object placements via `layerId` (e.g. a
