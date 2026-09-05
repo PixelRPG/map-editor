@@ -23,6 +23,17 @@ export interface RecentProject {
   openedAt: number
 }
 
+/**
+ * A recent entry plus whether its `game-project.json` is reachable
+ * right now. Derived, never persisted: a project on an unmounted drive
+ * is missing today and back tomorrow, so dropping it from the file
+ * would throw away a working bookmark.
+ */
+export interface RecentProjectEntry extends RecentProject {
+  /** `true` when `path` does not currently exist. */
+  missing: boolean
+}
+
 const STORE_DIR_NAME = 'pixelrpg'
 const STORE_FILE_NAME = 'recent-projects.json'
 const MAX_RECENTS = 8
@@ -32,18 +43,14 @@ function storePath(): string {
 }
 
 /**
- * Read the recent-projects list from `$XDG_DATA_HOME/pixelrpg/recent-projects.json`.
- * Returns an empty list if the file is missing or malformed — the
- * welcome view shows its empty-state row in that case.
+ * Parse the stored JSON into well-formed entries, capped at
+ * {@link MAX_RECENTS}. Anything unparseable or not array-shaped yields
+ * an empty list — the welcome view shows its empty-state row then.
+ * Pure (no Gio) so the shape rules are unit-testable.
  */
-export function loadRecentProjects(): RecentProject[] {
+export function parseRecentProjects(text: string): RecentProject[] {
   try {
-    const file = Gio.File.new_for_path(storePath())
-    if (!file.query_exists(null)) return []
-    const [ok, bytes] = file.load_contents(null)
-    if (!ok) return []
-    const text = new TextDecoder().decode(bytes)
-    const parsed = JSON.parse(text)
+    const parsed: unknown = JSON.parse(text)
     if (!Array.isArray(parsed)) return []
     return parsed
       .filter(
@@ -55,9 +62,57 @@ export function loadRecentProjects(): RecentProject[] {
       )
       .slice(0, MAX_RECENTS)
   } catch (error) {
+    console.warn('[RecentProjects] Failed to parse:', error)
+    return []
+  }
+}
+
+/**
+ * Flag every entry whose project file is gone.
+ *
+ * This is the ONE place the list crosses from "what we recorded" to
+ * "what is openable now", and it is why {@link loadRecentProjects}
+ * returns {@link RecentProjectEntry} rather than the stored shape: a
+ * caller cannot render a recents row without having been handed the
+ * answer. Before, nothing checked, so every vanished entry got a
+ * thumbnail load attempt that failed with a full stack trace — five of
+ * them for a moved checkout, on every visit to the welcome view.
+ *
+ * `exists` is injected so the rule is testable without a filesystem.
+ */
+export function markMissingRecents(
+  recents: readonly RecentProject[],
+  exists: (path: string) => boolean,
+): RecentProjectEntry[] {
+  return recents.map((recent) => ({ ...recent, missing: !exists(recent.path) }))
+}
+
+/** Whether a path exists on disk right now. */
+function pathExists(path: string): boolean {
+  return Gio.File.new_for_path(path).query_exists(null)
+}
+
+/** Read the stored list, or `[]` when the file is missing/unreadable. */
+function readStoredRecents(): RecentProject[] {
+  try {
+    const file = Gio.File.new_for_path(storePath())
+    if (!file.query_exists(null)) return []
+    const [ok, bytes] = file.load_contents(null)
+    if (!ok) return []
+    return parseRecentProjects(new TextDecoder().decode(bytes))
+  } catch (error) {
     console.warn('[RecentProjects] Failed to read:', error)
     return []
   }
+}
+
+/**
+ * Read the recent-projects list from
+ * `$XDG_DATA_HOME/pixelrpg/recent-projects.json`, each entry flagged
+ * with whether its project file still exists.
+ */
+export function loadRecentProjects(): RecentProjectEntry[] {
+  return markMissingRecents(readStoredRecents(), pathExists)
 }
 
 /**
@@ -67,7 +122,7 @@ export function loadRecentProjects(): RecentProject[] {
  * persist shouldn't break opening a project).
  */
 export function recordRecentProject(entry: Omit<RecentProject, 'openedAt'>): void {
-  const current = loadRecentProjects().filter((r) => r.path !== entry.path)
+  const current = readStoredRecents().filter((r) => r.path !== entry.path)
   const updated: RecentProject[] = [{ ...entry, openedAt: Date.now() }, ...current].slice(0, MAX_RECENTS)
   writeJsonFile(storePath(), updated)
 }

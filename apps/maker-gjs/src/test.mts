@@ -1,4 +1,6 @@
 import { run } from '@gjsify/unit'
+import actionRegistrySuite from './actions/action-registry.spec.js'
+import windowActionsSuite from './actions/window-actions.gjs.spec.js'
 import instanceIdSuite from './instance-id.spec.js'
 import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
@@ -18,6 +20,7 @@ import orphanPublisherCleanupSuite from './services/orphan-publisher-cleanup.spe
 import participantRosterSuite from './services/participant-roster.spec.js'
 import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
 import projectLoaderSuite from './services/project-loader.spec.js'
+import recentProjectsSuite from './services/recent-projects.spec.js'
 import recentTimeSuite from './services/recent-time.spec.js'
 import projectStoreSuite from './services/project-store.spec.js'
 import relaySignallingSuite from './services/relay-signalling.spec.js'
@@ -51,6 +54,7 @@ import tilesViewModelSuite from './services/tiles-view-model.spec.js'
 import viewModeMapSuite from './services/view-mode-map.spec.js'
 
 run({
+  actionRegistrySuite,
   assistantPausePolicySuite,
   assistantStateServiceSuite,
   castControllerAnimationsSuite,
@@ -87,6 +91,7 @@ run({
   projectStorePersistenceSuite,
   projectStoreSpriteSetsSuite,
   projectStoreSuite,
+  recentProjectsSuite,
   recentTimeSuite,
   relaySignallingSuite,
   sandboxPathSuite,
@@ -99,5 +104,6 @@ run({
   themePreferenceSuite,
   tilesViewModelSuite,
   viewModeMapSuite,
+  windowActionsSuite,
   zoomMathSuite,
 })

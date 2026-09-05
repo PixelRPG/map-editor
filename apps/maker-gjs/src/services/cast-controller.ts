@@ -15,6 +15,7 @@ import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
 import {
   appendAnimation,
+  applyAnimationEdit,
   isProtectedAnimation,
   removeAnimation,
   replaceAnimation,
@@ -332,16 +333,18 @@ export class CastController {
    * through the store's descriptor pipeline — persist + chunked
    * descriptor broadcast — then evict the preview + refresh. Keyed by
    * `spriteSetId`: animations belong to the sheet, not to a character.
+   *
+   * `edit` returning `null` is a REJECTION (duplicate id, protected
+   * role, unknown animation). Rejecting the store mutation is what stops
+   * the persist AND the full-sheet broadcast: a local no-op that still
+   * broadcast would overwrite a peer's concurrent edit of the same sheet
+   * with our stale copy.
    */
   private _mutateSheetAnimations(
     spriteSetId: string,
     edit: (anims: readonly CharacterAnimation[]) => CharacterAnimation[] | null,
   ): void {
-    const mutated = this.store.mutateSpriteSetData(spriteSetId, (data) => {
-      data.characterAnimations ??= []
-      const next = edit(data.characterAnimations)
-      if (next) data.characterAnimations = next
-    })
+    const mutated = this.store.mutateSpriteSetData(spriteSetId, (draft) => applyAnimationEdit(draft, edit))
     if (!mutated) return
     this._previews.evict(spriteSetId)
     void this.refresh()

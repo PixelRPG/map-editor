@@ -17,9 +17,12 @@ import { gettext as _ } from 'gettext'
 
 import { countMapUsers } from '../services/sprite-set-usage.ts'
 import {
+  type ActiveTileset,
+  editableTilesetId,
   filterSortTilesets,
   isBuiltInSpriteSet,
   moveBefore,
+  resolvePaletteTarget,
   sheetAsCharacter,
   type TilesetSort,
 } from '../services/tiles-view-model.ts'
@@ -116,7 +119,14 @@ export class TilesView extends ResponsiveEditorView {
   private _mapUsage = new Map<string, number>()
   private _search = ''
   private _sort: TilesetSort = 'default'
-  private _activeSpriteSetId: string | null = null
+  /**
+   * The selected tileset AND the state of the grid on screen for it —
+   * one field, written only by {@link _syncPalette}. Two separate fields
+   * (an id plus whatever the palette happened to be showing) is how a
+   * failed sheet load left the previous set's tiles under the new set's
+   * id, after which a tile click wrote that sprite id into the new set.
+   */
+  private _active: ActiveTileset | null = null
   private _selectedSpriteId: number | null = null
   // Which kind the quick-view + single gallery highlight currently reflect.
   // Both sections share one quick-view sidebar (desktop) and a select→glance
@@ -367,15 +377,13 @@ export class TilesView extends ResponsiveEditorView {
 
     // Keep the active selection if still present; otherwise fall back
     // to the first set.
-    if (!this._activeSpriteSetId || !this._spriteSets.some((entry) => entry.id === this._activeSpriteSetId)) {
-      this._activeSpriteSetId = this._spriteSets[0]?.id ?? null
-    }
+    const keep = this._active && this._spriteSets.some((entry) => entry.id === this._active?.id)
+    await this._syncPalette(keep ? (this._active?.id ?? null) : (this._spriteSets[0]?.id ?? null))
     this._rebuildGallery()
     // Only steal the quick-view glance if the user is currently on a
     // tileset; a tileset re-hydrate (e.g. reorder) shouldn't yank a
     // showing appearance glance away.
     if (this._activeKind === 'tileset') this._refreshQuickView()
-    await this._loadActivePalette()
   }
 
   /**
@@ -456,7 +464,7 @@ export class TilesView extends ResponsiveEditorView {
 
   private _clearProject(): void {
     this._spriteSets = []
-    this._activeSpriteSetId = null
+    this._active = null
     this._selectedSpriteId = null
     this._activeKind = 'tileset'
     this._tilesets_gallery.setItems([])
@@ -483,7 +491,7 @@ export class TilesView extends ResponsiveEditorView {
       },
     )
     // Only one card across both galleries is lit — the active selection's.
-    this._tilesets_gallery.setActiveId(this._activeKind === 'tileset' ? this._activeSpriteSetId : null)
+    this._tilesets_gallery.setActiveId(this._activeKind === 'tileset' ? (this._active?.id ?? null) : null)
   }
 
   /**
@@ -497,16 +505,16 @@ export class TilesView extends ResponsiveEditorView {
   private _selectTileset(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry) return
-    this._activeSpriteSetId = id
     this._activeKind = 'tileset'
-    this._selectedSpriteId = null
     // Start with the tile-properties sheet closed — no tile picked yet.
     this._tile_sheet.set_reveal_child(false)
     this._tilesets_gallery.setActiveId(id)
     this._appearances_gallery.setActiveId(null)
     this._detail_page.title = tilesetName(entry)
+    // `_syncPalette` moves `_active` synchronously before its first
+    // await, so the glance below already describes the new selection.
+    void this._syncPalette(id)
     this._refreshQuickView()
-    void this._loadActivePalette()
     if (this.inspectorCollapsed) this._openTilesetDetail()
   }
 
@@ -517,7 +525,7 @@ export class TilesView extends ResponsiveEditorView {
    * matching the palette's tile-selected auto-open.
    */
   private _openTilesetDetail(): void {
-    if (!this._activeSpriteSetId) return
+    if (!this._active) return
     if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
   }
 
@@ -568,31 +576,50 @@ export class TilesView extends ResponsiveEditorView {
   }
 
   private _activeSpriteSet(): TilesetEntry | null {
-    if (!this._activeSpriteSetId) return null
-    return this._spriteSets.find((s) => s.id === this._activeSpriteSetId) ?? null
+    const id = this._active?.id
+    return id ? (this._spriteSets.find((s) => s.id === id) ?? null) : null
   }
 
-  private async _loadActivePalette(): Promise<void> {
-    const active = this._activeSpriteSet()
-    if (!active) {
-      this._palette.setTiles([])
-      this._inspector.setSprite(null, null)
-      return
-    }
-    if (!(await ensureSpriteSetLoaded(active))) return
-    const sheet = active.gdk?.spriteSheet
-    if (!sheet) return
+  /**
+   * The ONE writer of {@link _active} and of the palette's contents.
+   *
+   * Moves the selection to `id` (synchronously, before the first await,
+   * so the gallery + glance already describe it), loads that set's
+   * sheet, and applies exactly one of the three outcomes
+   * `resolvePaletteTarget` can produce. There is deliberately no
+   * "leave the palette as it was" branch: a failed load CLEARS the grid
+   * and marks the selection `unavailable`, because the previous set's
+   * tiles under the new set's id is how a tile click ended up writing a
+   * stale sprite id into a different set's id space.
+   *
+   * A slower load losing the race to a newer selection drops its result
+   * — the newest selection owns the palette.
+   */
+  private async _syncPalette(id: string | null): Promise<void> {
+    if (this._active?.id !== id) this._selectedSpriteId = null
+    // Grid not valid for this id until the load lands.
+    this._active = id ? { id, palette: 'unavailable' } : null
+    const { active, sheet } = await resolvePaletteTarget(id, async (setId) => {
+      const entry = this._spriteSets.find((s) => s.id === setId)
+      if (!entry || !(await ensureSpriteSetLoaded(entry))) return null
+      return entry.gdk?.spriteSheet ?? null
+    })
+    if (this._active?.id !== id) return
+    this._active = active
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
     // lokiri-forest) instead of an arbitrary wrap.
-    this._palette.setFromSpriteSheet(sheet)
+    if (sheet) this._palette.setFromSpriteSheet(sheet)
+    else this._palette.setTiles([])
     this._refreshInspector()
   }
 
   private _selectTile(tileId: number): void {
     // Picking a tile refreshes the inspector. On phone that means sliding
     // the bottom sheet up; on desktop the sidebar is already visible, so it
-    // just updates in place.
+    // just updates in place. A palette that isn't this set's own grid has
+    // no tile to select (see `_syncPalette`).
+    if (!editableTilesetId(this._active)) return
     this._selectedSpriteId = tileId
     this._refreshInspector()
     if (this.inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
@@ -616,16 +643,24 @@ export class TilesView extends ResponsiveEditorView {
     this._inspector.setSprite(def ?? null, sprite?.createPaintable() ?? null)
   }
 
+  /**
+   * The sprite-set id a tile-property edit is attributed to. Only a set
+   * whose OWN grid is on screen qualifies — see {@link _syncPalette}.
+   */
+  private _editableTilesetId(): string | null {
+    return editableTilesetId(this._active)
+  }
+
   private _applySolid(solid: boolean): void {
-    const active = this._activeSpriteSet()
-    if (!active || this._selectedSpriteId == null) return
-    this._onSolidChanged?.(active.id, this._selectedSpriteId, solid)
+    const id = this._editableTilesetId()
+    if (!id || this._selectedSpriteId == null) return
+    this._onSolidChanged?.(id, this._selectedSpriteId, solid)
   }
 
   private _applySurface(surface: string | null): void {
-    const active = this._activeSpriteSet()
-    if (!active || this._selectedSpriteId == null) return
-    this._onSurfaceChanged?.(active.id, this._selectedSpriteId, surface)
+    const id = this._editableTilesetId()
+    if (!id || this._selectedSpriteId == null) return
+    this._onSurfaceChanged?.(id, this._selectedSpriteId, surface)
   }
 
   /**

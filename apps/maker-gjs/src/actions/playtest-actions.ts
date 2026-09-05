@@ -1,5 +1,6 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
+import { addAction } from './action-registry.ts'
 
 /** What the playtest toggle needs from the window. */
 export interface PlaytestActionsContext {
@@ -32,7 +33,7 @@ export function installPlaytestActions(
     ctx.setRuntimeMode(isPlaying)
     ctx.setViewPlaying(isPlaying)
   })
-  group.add_action(play)
+  addAction(group, play)
 
   return { play }
 }

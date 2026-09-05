@@ -2,6 +2,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
 import { resolveModeNavigation, type ViewName } from '../services/view-mode-map.ts'
+import { addAction } from './action-registry.ts'
 
 /** What the navigation actions need from the window. */
 export interface ViewActionsContext {
@@ -39,25 +40,25 @@ export function installViewActions(group: Gio.SimpleActionGroup, ctx: ViewAction
       mode.set_state(GLib.Variant.new_string(nav.fallback))
     }
   })
-  group.add_action(mode)
+  addAction(group, mode)
 
   const backToAtlas = new Gio.SimpleAction({ name: 'back-to-atlas' })
   backToAtlas.connect('activate', () => ctx.setView('atlas'))
-  group.add_action(backToAtlas)
+  addAction(group, backToAtlas)
 
   const openScene = new Gio.SimpleAction({ name: 'open-scene' })
   openScene.connect('activate', () => {
     const id = ctx.selectedSceneId()
     if (id) ctx.openScene(id)
   })
-  group.add_action(openScene)
+  addAction(group, openScene)
 
   const openSceneById = Gio.SimpleAction.new('open-scene-by-id', GLib.VariantType.new('s'))
   openSceneById.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (id) ctx.openScene(id)
   })
-  group.add_action(openSceneById)
+  addAction(group, openSceneById)
 
   return { mode }
 }

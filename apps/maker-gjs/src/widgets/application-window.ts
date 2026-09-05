@@ -603,7 +603,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const { objects, grid, transparency } = installInspectorActions(group, {
       sidebarOwner: this,
       setInspectorTab: (name) => this._scene_editor_view.setInspectorTab(name),
-      toggleVisibleInspector: () => this._toggleVisibleInspector(),
       setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
       setViewObjectsVisible: (visible) => this._scene_editor_view.setObjectsVisible(visible),
       setEngineShowGrid: (showGrid) => this._engineCtl.engine?.setShowGrid(showGrid),
@@ -667,16 +666,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _prepareView(view: ViewName): void {
     if (view === 'cast') void this._castCtl?.refresh()
     else if (view === 'objects') this._objectsCtl?.refresh()
-  }
-
-  /** `win.toggle-inspector` — flip whichever view is on screen. */
-  private _toggleVisibleInspector(): void {
-    const current = this._router.currentView
-    if (current === 'atlas') {
-      this._atlas_view.showInspector = !this._atlas_view.showInspector
-    } else if (current === 'scene-editor') {
-      this._scene_editor_view.showInspector = !this._scene_editor_view.showInspector
-    }
   }
 
   /** Present the unified import dialog for a Data-view asset of `kind`. */

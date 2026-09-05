@@ -1,5 +1,6 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
+import { addAction } from './action-registry.ts'
 
 /** What the collaboration actions need from the window. */
 export interface SessionActionsContext {
@@ -29,7 +30,7 @@ export function installSessionActions(
   const share = new Gio.SimpleAction({ name: 'share-session' })
   share.set_enabled(false)
   share.connect('activate', () => ctx.presentShareDialog())
-  group.add_action(share)
+  addAction(group, share)
 
   const assistantPaused = Gio.SimpleAction.new_stateful(
     'toggle-assistant-paused',
@@ -46,7 +47,7 @@ export function installSessionActions(
     ctx.setEngineAssistantPaused(paused)
     ctx.setViewAssistantPaused(paused)
   })
-  group.add_action(assistantPaused)
+  addAction(group, assistantPaused)
 
   return { share }
 }

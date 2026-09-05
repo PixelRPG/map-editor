@@ -119,3 +119,54 @@ export function sheetAsCharacter(
     animations: animationsOf(sheetId),
   }
 }
+
+/**
+ * The tileset the Sheets view is on, paired with the state of the grid
+ * actually on screen for it.
+ *
+ * ONE value, never two fields. The palette is loaded asynchronously
+ * *after* the id moves, so a failed load used to leave the PREVIOUS
+ * set's tiles under the NEW set's id — and the next tile click routed
+ * that stale sprite id into the new set's id space (silent data
+ * corruption, not a cosmetic glitch). Pairing them means the id and the
+ * grid move together or not at all.
+ */
+export interface ActiveTileset {
+  /** The selected tileset's id — what the gallery highlights. */
+  id: string
+  /**
+   * `loaded`: the palette shows THIS set's grid.
+   * `unavailable`: the sheet failed to load, so the palette was cleared —
+   * there is no grid to click and no sprite id to attribute.
+   */
+  palette: 'loaded' | 'unavailable'
+}
+
+/**
+ * The sprite-set id a tile-property edit may be attributed to: only a
+ * set whose own grid is on screen. `null` for no selection or a failed
+ * load — the caller must then write nothing.
+ */
+export function editableTilesetId(active: ActiveTileset | null): string | null {
+  return active?.palette === 'loaded' ? active.id : null
+}
+
+/**
+ * Resolve what the palette must show for `activeId`, loading the sheet
+ * through `loadSheet` (which reports `null` when it cannot).
+ *
+ * The point of returning a value instead of calling widget setters in
+ * sequence: "leave the previous grid up" is not one of the outcomes, so
+ * the failure path cannot fall through to it. Every caller must apply
+ * exactly one of the three.
+ */
+export async function resolvePaletteTarget<TSheet>(
+  activeId: string | null,
+  loadSheet: (id: string) => Promise<TSheet | null>,
+): Promise<{ active: ActiveTileset | null; sheet: TSheet | null }> {
+  if (!activeId) return { active: null, sheet: null }
+  const sheet = await loadSheet(activeId)
+  return sheet
+    ? { active: { id: activeId, palette: 'loaded' }, sheet }
+    : { active: { id: activeId, palette: 'unavailable' }, sheet: null }
+}

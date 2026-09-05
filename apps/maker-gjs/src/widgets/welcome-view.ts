@@ -2,10 +2,11 @@ import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { MapPreview, ProjectHeroIcon, SignalScope } from '@pixelrpg/gjs'
+import { gettext as _ } from 'gettext'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { parsePixelrpgUrl } from '../services/pixelrpg-url.ts'
 import { formatRelativeTime } from '../services/recent-time.ts'
-import type { RecentProject } from '../services/recent-projects.ts'
+import type { RecentProjectEntry } from '../services/recent-projects.ts'
 import { STARTER_TEMPLATES } from '../services/templates.ts'
 
 import Template from './welcome-view.blp'
@@ -179,8 +180,17 @@ export class WelcomeView extends Adw.Bin {
    * Populate the recent-projects list. Passing an empty array (or
    * never calling this) keeps the built-in "No recent projects"
    * placeholder visible.
+   *
+   * An entry whose project file has vanished is rendered as a greyed-out
+   * "missing" row rather than dropped: the path may be an unmounted
+   * drive or a checkout that comes back, and silently deleting a
+   * bookmark the user still recognises is worse than showing it as
+   * unavailable. Such a row is insensitive (it cannot be opened into a
+   * guaranteed load failure) and — the part that actually cost
+   * something — gets no {@link MapPreview}, which is what used to log a
+   * full `FetchError` stack trace per entry, on every visit here.
    */
-  setRecentProjects(recents: RecentProject[]): void {
+  setRecentProjects(recents: RecentProjectEntry[]): void {
     for (const row of this._recentRows) this._recents_list.remove(row)
     this._recentRows = []
 
@@ -191,23 +201,33 @@ export class WelcomeView extends Adw.Bin {
     this._empty_recents_row.set_visible(false)
 
     for (const recent of recents) {
-      // Meta line: "<caption> · <N scenes> · <when>" — parts drop out
-      // when unknown (caption may be empty; sceneCount is absent on
-      // entries recorded before the field existed).
-      const parts: string[] = []
-      if (recent.caption) parts.push(recent.caption)
-      if (recent.sceneCount) parts.push(recent.sceneCount === 1 ? '1 scene' : `${recent.sceneCount} scenes`)
-      if (recent.openedAt) parts.push(formatRelativeTime(recent.openedAt))
-      const row = new Adw.ActionRow({
-        title: recent.name,
-        subtitle: parts.join(' · ') || recent.path,
-        subtitle_lines: 2,
-        tooltip_text: recent.path,
-        activatable: true,
-      })
+      this._recentRows.push(this._buildRecentRow(recent))
+    }
+  }
+
+  private _buildRecentRow(recent: RecentProjectEntry): Gtk.Widget {
+    // Meta line: "<caption> · <N scenes> · <when>" — parts drop out
+    // when unknown (caption may be empty; sceneCount is absent on
+    // entries recorded before the field existed).
+    const parts: string[] = []
+    if (recent.missing) parts.push(_('Missing — file not found'))
+    if (recent.caption) parts.push(recent.caption)
+    if (recent.sceneCount) parts.push(recent.sceneCount === 1 ? '1 scene' : `${recent.sceneCount} scenes`)
+    if (recent.openedAt) parts.push(formatRelativeTime(recent.openedAt))
+    const row = new Adw.ActionRow({
+      title: recent.name,
+      subtitle: parts.join(' · ') || recent.path,
+      subtitle_lines: 2,
+      tooltip_text: recent.path,
+      activatable: !recent.missing,
+      sensitive: !recent.missing,
+    })
+    if (recent.missing) {
+      row.add_prefix(new Gtk.Image({ icon_name: 'dialog-warning-symbolic', pixel_size: 16 }))
+      row.add_suffix(new Gtk.Image({ icon_name: 'action-unavailable-symbolic', pixel_size: 12 }))
+    } else {
       // Live map thumbnail — same MapPreview pipeline as the template
-      // cards. Deferred so eight rows don't block the main loop in a
-      // row; a vanished project file just leaves the accent fallback.
+      // cards. Deferred so eight rows don't block the main loop in a row.
       const preview = new MapPreview()
       preview.set_size_request(48, 32)
       preview.add_css_class('engine-canvas')
@@ -218,9 +238,9 @@ export class WelcomeView extends Adw.Bin {
       row.add_prefix(preview)
       row.add_suffix(new Gtk.Image({ icon_name: 'go-next-symbolic', pixel_size: 12 }))
       row.connect('activated', () => this.emit('recent-selected', recent.path))
-      this._recents_list.append(row)
-      this._recentRows.push(row)
     }
+    this._recents_list.append(row)
+    return row
   }
 
   /**

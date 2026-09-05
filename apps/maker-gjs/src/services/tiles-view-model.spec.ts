@@ -2,10 +2,13 @@ import { describe, expect, it } from '@gjsify/unit'
 import type { CharacterAnimation } from '@pixelrpg/engine'
 
 import {
+  type ActiveTileset,
+  editableTilesetId,
   filterSortTilesets,
   isBuiltInSpriteSet,
   moveBefore,
   orderByProjectSpriteSets,
+  resolvePaletteTarget,
   sheetAsCharacter,
   type TilesetSortKey,
   tilesetSortAtIndex,
@@ -144,6 +147,62 @@ export default async () => {
 
     await it('has nothing to render without a sheet', async () => {
       expect(sheetAsCharacter(null, sheets, animationsOf)).toBe(null)
+    })
+  })
+
+  await describe('editableTilesetId', async () => {
+    await it('names the set only while its OWN grid is on screen', async () => {
+      expect(editableTilesetId({ id: 'forest', palette: 'loaded' })).toBe('forest')
+    })
+
+    await it('names nothing when the grid could not be loaded', async () => {
+      // The corruption this closes: the id had already moved to the new
+      // set while the palette still showed the previous set's tiles, so a
+      // tile click routed the OLD grid's sprite id into the NEW set.
+      expect(editableTilesetId({ id: 'forest', palette: 'unavailable' })).toBe(null)
+    })
+
+    await it('names nothing without a selection', async () => {
+      expect(editableTilesetId(null)).toBe(null)
+    })
+  })
+
+  await describe('resolvePaletteTarget', async () => {
+    await it('reports the loaded sheet for the active set', async () => {
+      const target = await resolvePaletteTarget('forest', async () => 'forest-sheet')
+      expect(target.active).toStrictEqual({ id: 'forest', palette: 'loaded' })
+      expect(target.sheet).toBe('forest-sheet')
+    })
+
+    await it('reports NO sheet when the load fails — never the previous one', async () => {
+      const target = await resolvePaletteTarget('desert', async () => null)
+      expect(target.active).toStrictEqual({ id: 'desert', palette: 'unavailable' })
+      // There is deliberately no "keep what was there" outcome: the
+      // caller has nothing to fall through to, so it must clear.
+      expect(target.sheet).toBe(null)
+    })
+
+    await it('reports an empty palette for no selection, without loading', async () => {
+      let loads = 0
+      const target = await resolvePaletteTarget(null, async () => {
+        loads++
+        return 'never'
+      })
+      expect(target.active).toBe(null)
+      expect(target.sheet).toBe(null)
+      expect(loads).toBe(0)
+    })
+
+    await it('has exactly three outcomes, all of which state a palette', async () => {
+      const outcomes: Array<{ active: ActiveTileset | null; sheet: string | null }> = [
+        await resolvePaletteTarget(null, async () => null),
+        await resolvePaletteTarget('a', async () => null),
+        await resolvePaletteTarget('a', async () => 'sheet'),
+      ]
+      // `sheet === null` ⟺ the palette must be cleared. No outcome
+      // leaves the decision to the caller's previous state.
+      expect(outcomes.map((o) => (o.sheet === null ? 'clear' : 'show'))).toStrictEqual(['clear', 'clear', 'show'])
+      expect(outcomes.map((o) => o.active?.palette ?? 'none')).toStrictEqual(['none', 'unavailable', 'loaded'])
     })
   })
 }

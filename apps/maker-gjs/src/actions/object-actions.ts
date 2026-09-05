@@ -1,6 +1,7 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
+import { addAction } from './action-registry.ts'
 
 /** What the entity-library actions need from the window. */
 export interface ObjectActionsContext {
@@ -28,7 +29,7 @@ export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectAc
     ctx.showObjectsView()
     ctx.createFromTemplate(parameter?.get_string()[0] || 'npc')
   })
-  group.add_action(newObject)
+  addAction(group, newObject)
 
   const openObject = Gio.SimpleAction.new('open-object', GLib.VariantType.new('s'))
   openObject.connect('activate', (_a, parameter) => {
@@ -37,12 +38,12 @@ export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectAc
     ctx.showObjectsView()
     ctx.focusObject(id)
   })
-  group.add_action(openObject)
+  addAction(group, openObject)
 
   const toggleObjectCast = Gio.SimpleAction.new('toggle-object-cast', GLib.VariantType.new('s'))
   toggleObjectCast.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (id) ctx.toggleCastMember(id)
   })
-  group.add_action(toggleObjectCast)
+  addAction(group, toggleObjectCast)
 }

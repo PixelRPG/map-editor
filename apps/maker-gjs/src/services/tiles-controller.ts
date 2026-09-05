@@ -7,10 +7,10 @@ import { countSpriteSetUsers } from './sprite-set-usage.ts'
 /**
  * Owns the Tiles (Sheets) view's data + read path — a delegating shell:
  * every mutation routes to the {@link ProjectStore} (sprite-set CRUD +
- * tile properties: the single persist + collab-broadcast pipeline) or,
- * for appearance/animation edits, to the {@link CastController}'s
- * public methods (the owner of appearance data, which itself writes
- * through the store).
+ * tile properties: the single persist + collab-broadcast pipeline).
+ * Animation authoring moved to the Cast matrix, so this controller no
+ * longer calls the {@link CastController} — it only SUBSCRIBES to it,
+ * which is why `cast` is a plain constructor parameter and not a field.
  *
  * Hydration is event-driven: the view re-loads on the store's
  * `project-changed` / `sprite-sets-changed`, and the Appearances
@@ -20,7 +20,7 @@ export class TilesController {
   constructor(
     private readonly view: TilesView,
     private readonly store: ProjectStore,
-    private readonly cast: CastController,
+    cast: CastController,
   ) {
     view.bindCallbacks(this.callbacks)
     // The Sheets view lists appearances as raw assets (import / delete /

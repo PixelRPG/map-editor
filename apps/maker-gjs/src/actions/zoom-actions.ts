@@ -1,4 +1,5 @@
 import Gio from '@girs/gio-2.0'
+import { addAction } from './action-registry.ts'
 
 /** One click of the zoom pill. */
 const ZOOM_STEP = 0.2
@@ -23,17 +24,17 @@ export function installZoomActions(group: Gio.SimpleActionGroup, ctx: ZoomAction
   zoomIn.connect('activate', () =>
     ctx.targetsAtlas() ? ctx.stepAtlasZoom(+ZOOM_STEP) : ctx.stepEngineZoom(+ZOOM_STEP),
   )
-  group.add_action(zoomIn)
+  addAction(group, zoomIn)
 
   const zoomOut = new Gio.SimpleAction({ name: 'zoom-out' })
   zoomOut.connect('activate', () =>
     ctx.targetsAtlas() ? ctx.stepAtlasZoom(-ZOOM_STEP) : ctx.stepEngineZoom(-ZOOM_STEP),
   )
-  group.add_action(zoomOut)
+  addAction(group, zoomOut)
 
   const zoomReset = new Gio.SimpleAction({ name: 'zoom-reset' })
   zoomReset.connect('activate', () => (ctx.targetsAtlas() ? ctx.resetAtlasZoom() : ctx.resetEngineZoom()))
-  group.add_action(zoomReset)
+  addAction(group, zoomReset)
 
   // Only meaningful on the atlas; the guard keeps the shared bare-`0`
   // accelerator harmless everywhere else.
@@ -41,5 +42,5 @@ export function installZoomActions(group: Gio.SimpleActionGroup, ctx: ZoomAction
   atlasFit.connect('activate', () => {
     if (ctx.targetsAtlas()) ctx.fitAtlas()
   })
-  group.add_action(atlasFit)
+  addAction(group, atlasFit)
 }

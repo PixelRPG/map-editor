@@ -48,6 +48,7 @@ import {
 } from './project-store-persistence.ts'
 import {
   buildImportedSpriteSetData,
+  draftSpriteSetData,
   nextFirstGid,
   orderSpriteSetReferences,
   uniqueIdFrom,
@@ -91,8 +92,27 @@ export type { EntityLibraryChangeSource, ProjectStoreEvents, ProjectStoreNotice 
  * makes "persisted but not broadcast" structurally impossible — the
  * drift class the anti-parallel-state rule exists to prevent.
  *
- * Error policy: persistence is best-effort — failures toast but the
- * in-memory state still updates so the UI doesn't snap back.
+ * **Error policy — two families, deliberately different:**
+ *
+ * - `game-project.json` (entity library, player, metadata, sprite-set
+ *   REFERENCES): best-effort. {@link _persistProject} toasts on failure
+ *   but the in-memory state still updates, so the UI doesn't snap back
+ *   on a transient disk error. The in-memory project is the source of
+ *   truth for the whole open session.
+ * - `spritesets/<id>.json` (descriptor CONTENT — name, animations, tile
+ *   properties): write-then-commit via {@link _commitSpriteSet}. The
+ *   next descriptor is built as a detached object, serialised + written
+ *   FIRST, and only replaces the live one once the write succeeded.
+ *   A rejected or unwritable edit therefore persists nothing,
+ *   broadcasts nothing and emits nothing. Broadcasting a descriptor we
+ *   could not save would put peers and disk permanently out of step,
+ *   and this path is reachable from an inbound peer chunk, not just
+ *   from local UI.
+ *
+ * Every descriptor write path goes through {@link _commitSpriteSet} —
+ * a new one that hand-rolls its own persist re-opens the exact drift
+ * this class exists to prevent. `project-store.spec.ts` keeps a
+ * table-driven guard over that family; extend it with the path.
  */
 export class ProjectStore {
   private _project: LoadedProject | null = null
@@ -375,17 +395,18 @@ export class ProjectStore {
    * moved) so a peer can't repoint our image. Ignored when we don't
    * already have the set (adds come via {@link applyRemoteSpriteSetAdd})
    * or the id is unsafe. Does NOT re-broadcast.
+   *
+   * Rides {@link _commitSpriteSet}, so a peer chunk this project cannot
+   * serialise or write leaves the local descriptor untouched instead of
+   * replacing it and swallowing the change event.
    */
   applyRemoteSpriteSetUpdate(payload: SpriteSetUpdatePayload): void {
     const id = payload.data.id
-    const engineSet = this.resource?.spriteSets.get(id)
-    if (!engineSet?.data) return
     if (!isPlainFilename(id)) {
       console.warn('[ProjectStore] Rejected peer sprite-set update with unsafe id:', id)
       return
     }
-    engineSet.data = applySpriteSetUpdate(engineSet.data, payload)
-    this._persistSpriteSet(id)
+    if (!this._commitSpriteSet(id, (current) => applySpriteSetUpdate(current, payload))) return
     this._events.emit('tile-properties-changed', { spriteSetId: id })
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
   }
@@ -463,16 +484,16 @@ export class ProjectStore {
    * `spritesets/<id>.json`). Works for both a character sheet and a
    * world tileset — the single owner of the file write + collab
    * broadcast. Persists, broadcasts a descriptor update so peers rename
-   * too, and notifies so every view re-hydrates. No-op on a blank name
-   * or an unknown id.
+   * too, and notifies so every view re-hydrates. No-op on a blank name,
+   * an unchanged name, an unknown id, or a failed write.
    */
   renameSpriteSet(id: string, name: string): void {
-    const engineSet = this.resource?.spriteSets.get(id)
     const trimmed = name.trim()
-    if (!engineSet?.data || !trimmed) return
-    if (engineSet.data.name === trimmed) return
-    engineSet.data.name = trimmed
-    this._persistSpriteSet(id)
+    if (!trimmed) return
+    const renamed = this._commitSpriteSet(id, (current) =>
+      current.name === trimmed ? null : { ...current, name: trimmed },
+    )
+    if (!renamed) return
     this._broadcastSpriteSetUpdate(id)
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
   }
@@ -498,19 +519,27 @@ export class ProjectStore {
   }
 
   /**
-   * Apply a closure to a sprite set's live descriptor data, then persist
-   * the descriptor JSON + broadcast a chunked
+   * Apply a closure to a DRAFT of a sprite set's descriptor data, then
+   * persist the descriptor JSON + broadcast a chunked
    * `__project/spriteset.update.chunk` so peers pick the change up. The
    * one write+broadcast path for descriptor content edits (animations).
    * Deliberately does NOT emit `sprite-sets-changed` — the initiating
-   * lens refreshes itself; the set LIST didn't change. Returns `false`
-   * for an unknown id.
+   * lens refreshes itself; the set LIST didn't change.
+   *
+   * `mutator` receives a detached copy and returns `false` to REJECT the
+   * edit. A rejected edit persists nothing and broadcasts nothing — a
+   * local no-op must never ship a full-sheet upsert that clobbers a
+   * peer's concurrent edit with stale data. Returns whether the
+   * descriptor actually changed (`false` for an unknown id, a rejected
+   * mutation, or a failed write).
    */
-  mutateSpriteSetData(spriteSetId: string, mutator: (data: SpriteSetData) => void): boolean {
-    const engineSet = this.resource?.spriteSets.get(spriteSetId)
-    if (!engineSet?.data) return false
-    mutator(engineSet.data)
-    this._persistSpriteSet(spriteSetId)
+  // biome-ignore lint/suspicious/noConfusingVoidType: the everyday mutator is a void-returning block (`(d) => { d.name = x }`), which `boolean | undefined` would reject; only an explicit `false` means "rejected"
+  mutateSpriteSetData(spriteSetId: string, mutator: (data: SpriteSetData) => boolean | void): boolean {
+    const changed = this._commitSpriteSet(spriteSetId, (current) => {
+      const draft = draftSpriteSetData(current)
+      return mutator(draft) === false ? null : draft
+    })
+    if (!changed) return false
     this._broadcastSpriteSetUpdate(spriteSetId)
     return true
   }
@@ -532,18 +561,22 @@ export class ProjectStore {
    * persist the descriptor JSON, broadcast the descriptor update, and
    * emit `tile-properties-changed` so live engine collision refreshes
    * (when a scene is open). One write+broadcast path for every
-   * tile-property editor.
+   * tile-property editor. No-op for an unknown set / sprite id or a
+   * failed write.
    */
   private _mutateSpriteTile(
     spriteSetId: string,
     spriteId: number,
     mutator: (def: SpriteSetData['sprites'][number]) => void,
   ): void {
-    const engineSet = this.resource?.spriteSets.get(spriteSetId)
-    const def = engineSet?.data?.sprites.find((s) => s.id === spriteId)
-    if (!def) return
-    mutator(def)
-    this._persistSpriteSet(spriteSetId)
+    const changed = this._commitSpriteSet(spriteSetId, (current) => {
+      const draft = draftSpriteSetData(current)
+      const def = draft.sprites.find((s) => s.id === spriteId)
+      if (!def) return null
+      mutator(def)
+      return draft
+    })
+    if (!changed) return
     this._broadcastSpriteSetUpdate(spriteSetId)
     this._events.emit('tile-properties-changed', { spriteSetId })
   }
@@ -611,14 +644,35 @@ export class ProjectStore {
     return nextFirstGid(resource.data.spriteSets, (id) => resource.spriteSets.get(id)?.data?.sprites?.length ?? 0)
   }
 
-  /** Serialise a sprite set's `SpriteSetData` back to `spritesets/<id>.json`. */
-  private _persistSpriteSet(spriteSetId: string): void {
-    const data = this.resource?.spriteSets.get(spriteSetId)?.data
+  /**
+   * The ONE write+commit step for a sprite-set descriptor
+   * (`spritesets/<id>.json`) — every content edit goes through here.
+   *
+   * `next` receives the live descriptor and returns the DETACHED next
+   * one, or `null` to reject the edit (unknown target, no-op, protected
+   * role). The returned descriptor is serialised + written FIRST and
+   * only then replaces `engineSet.data`, so neither a rejected edit nor
+   * a `SpriteSetFormat.serialize` throw can leave the in-memory
+   * descriptor ahead of the disk — the shape a per-call-site persist
+   * kept getting wrong (and the throw escaped straight out of the
+   * inbound-peer sink).
+   *
+   * Returns whether the descriptor changed. `false` means: persisted
+   * nothing — so the caller must not broadcast and must not emit.
+   */
+  private _commitSpriteSet(spriteSetId: string, next: (current: SpriteSetData) => SpriteSetData | null): boolean {
+    const engineSet = this.resource?.spriteSets.get(spriteSetId)
+    if (!engineSet?.data) return false
     const paths = this._spriteSetPaths(spriteSetId)
-    if (!data || !paths) return
-    if (!writeSpriteSetDescriptor(this.io, paths.descriptor, data)) {
+    if (!paths) return false
+    const committed = next(engineSet.data)
+    if (!committed) return false
+    if (!writeSpriteSetDescriptor(this.io, paths.descriptor, committed)) {
       this._events.emit('notice', { kind: 'sprite-set-save-failed' })
+      return false
     }
+    engineSet.data = committed
+    return true
   }
 
   /**

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d3846"/>
+      <stop offset="1" stop-color="#1d1d20"/>
+    </linearGradient>
+    <linearGradient id="shaft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f9f06b"/>
+      <stop offset="1" stop-color="#f5c211"/>
+    </linearGradient>
+    <clipPath id="plateClip">
+      <rect x="8" y="8" width="112" height="112" rx="26"/>
+    </clipPath>
+  </defs>
+
+  <!-- Editor canvas: the standard 128 grid, 8px HIG margin on every side. -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#plate)"/>
+
+  <g clip-path="url(#plateClip)">
+    <!-- The map: 3x3 of 28px tiles, checkered so the tile grid reads at 32px. -->
+    <g fill="#33d17a">
+      <rect x="22" y="22" width="28" height="28"/>
+      <rect x="50" y="50" width="28" height="28"/>
+      <rect x="22" y="78" width="28" height="28"/>
+    </g>
+    <g fill="#26a269">
+      <rect x="50" y="22" width="28" height="28"/>
+      <rect x="22" y="50" width="28" height="28"/>
+      <rect x="50" y="78" width="28" height="28"/>
+    </g>
+    <!-- water along the map's east edge -->
+    <rect x="78" y="22" width="28" height="42" fill="#3584e4"/>
+    <rect x="78" y="64" width="28" height="42" fill="#1c71d8"/>
+
+    <!-- tile seams -->
+    <g stroke="#1d1d20" stroke-opacity="0.5" stroke-width="2" fill="none">
+      <path d="M50 22V106M78 22V106M22 50H106M22 78H106"/>
+    </g>
+
+    <!-- the tile the brush is on -->
+    <rect x="24" y="24" width="24" height="24" fill="none" stroke="#f6d32d" stroke-width="5"/>
+  </g>
+
+  <!-- Pencil: the app's own paint tool, laid across the canvas corner.
+       Sized so every corner stays inside the plate's 8px HIG margin. -->
+  <g transform="translate(56,110) rotate(45)">
+    <path d="M0 0 -7 -12h14z" fill="#1d1d20"/>
+    <path d="M-7 -12h14l3 -10h-20z" fill="#f9f06b"/>
+    <rect x="-10" y="-57" width="20" height="35" rx="2" fill="url(#shaft)"/>
+    <rect x="-10" y="-65" width="20" height="8" fill="#c0bfbc"/>
+    <rect x="-10" y="-74" width="20" height="10" rx="4" fill="#f66151"/>
+  </g>
+</svg>

@@ -1,6 +1,7 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
+import { addAction } from './action-registry.ts'
 
 /** What the Cast actions need from the window. */
 export interface CastActionsContext {
@@ -34,14 +35,14 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
     }
     ctx.presentNewCharacter()
   })
-  group.add_action(newCharacter)
+  addAction(group, newCharacter)
 
   const openCharacter = Gio.SimpleAction.new('open-character', GLib.VariantType.new('s'))
   openCharacter.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (id) ctx.focusCharacter(id)
   })
-  group.add_action(openCharacter)
+  addAction(group, openCharacter)
 
   // "Place on map" from the Cast detail: characters live in the entity
   // library, so the character id IS the brush id.
@@ -57,7 +58,7 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
     ctx.openScene(sceneId)
     ctx.armObjectBrush(id)
   })
-  group.add_action(placeCharacter)
+  addAction(group, placeCharacter)
 
   // The Cast matrix is where animations are authored; Sheets only manages
   // appearances as raw assets and links here.
@@ -72,7 +73,7 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
       )
     }
   })
-  group.add_action(editAppearance)
+  addAction(group, editAppearance)
 
   // Optional string id targets the character wearing that appearance;
   // empty targets the active one.
@@ -87,5 +88,5 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
       ctx.showToast(_('Select or create a character first to add an animation'))
     }
   })
-  group.add_action(newAnimation)
+  addAction(group, newAnimation)
 }
