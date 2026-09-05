@@ -18,6 +18,33 @@ export class SignalScope {
     this.bindings.push({ source, id })
   }
 
+  /**
+   * Connect a handler that keeps running until it returns `true`, then
+   * disconnects itself — a one-shot that can wait for a CONDITION (the
+   * first non-zero allocation, the first ready frame) rather than the
+   * first emission.
+   *
+   * Use this instead of the hand-rolled
+   * `const id = src.connect(sig, () => { src.disconnect(id) … })`: that
+   * shape leaks whenever the condition never arrives, because the only
+   * release path runs inside the handler. Here the binding is tracked
+   * like any other, so `disconnectAll()` releases it on teardown even if
+   * it never fired, and re-arming is a `disconnectAll()` away.
+   */
+  connectUntil<T extends GObject.Object>(source: T, signal: string, handler: () => boolean): void {
+    const binding = { source, id: 0 }
+    binding.id = source.connect(signal, () => {
+      if (!handler()) return
+      // Drop the tracked binding first: disconnecting a handler from
+      // inside its own emission is fine, but a later `disconnectAll()`
+      // must not disconnect the same id twice.
+      const index = this.bindings.indexOf(binding)
+      if (index >= 0) this.bindings.splice(index, 1)
+      source.disconnect(binding.id)
+    })
+    this.bindings.push(binding)
+  }
+
   disconnectAll(): void {
     for (const { source, id } of this.bindings) {
       source.disconnect(id)

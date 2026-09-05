@@ -3,7 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
-import { GalleryCard, type GalleryCardItem } from './gallery-card.ts'
+import { GalleryCard, type GalleryCardItem, type GalleryCardLabels } from './gallery-card.ts'
 
 import Template from './card-gallery.blp'
 
@@ -146,6 +146,7 @@ export class CardGallery extends Adw.Bin {
   set deleteTooltip(value: string) {
     if (this._deleteTooltip === value) return
     this._deleteTooltip = value
+    this._applyLabels()
     this.notify('delete-tooltip')
   }
 
@@ -156,6 +157,7 @@ export class CardGallery extends Adw.Bin {
   set openLabel(value: string) {
     if (this._openLabel === value) return
     this._openLabel = value
+    this._applyLabels()
     this.notify('open-label')
   }
 
@@ -166,6 +168,7 @@ export class CardGallery extends Adw.Bin {
   set renameLabel(value: string) {
     if (this._renameLabel === value) return
     this._renameLabel = value
+    this._applyLabels()
     this.notify('rename-label')
   }
 
@@ -173,9 +176,15 @@ export class CardGallery extends Adw.Bin {
     return this._reorderable ?? false
   }
 
+  /**
+   * Cards install their drag controllers unconditionally and read this
+   * flag when a drag starts, so flipping it reaches cards that already
+   * exist — setting it after `setItems` used to be a silent no-op.
+   */
   set reorderable(value: boolean) {
     if (this._reorderable === value) return
     this._reorderable = value
+    for (const card of this._cardsById.values()) card.reorderable = value
     this.notify('reorderable')
   }
 
@@ -237,9 +246,18 @@ export class CardGallery extends Adw.Bin {
     }
   }
 
+  /** Push the current menu wording onto every live card. */
+  private _applyLabels(): void {
+    const labels = this._labels()
+    for (const card of this._cardsById.values()) card.labels = labels
+  }
+
+  private _labels(): GalleryCardLabels {
+    return { open: this.openLabel, rename: this.renameLabel, delete: this.deleteTooltip }
+  }
+
   private _buildCard(item: GalleryCardItem, preview: Gtk.Widget | null): GalleryCard {
-    const labels = { open: this.openLabel, rename: this.renameLabel, delete: this.deleteTooltip }
-    const card = new GalleryCard(item, labels, preview)
+    const card = new GalleryCard(item, this._labels(), preview)
     card.connect('activated', () => this.emit('item-activated', item.id))
     card.connect('opened', () => this.emit('item-opened', item.id))
     card.connect('rename-requested', () => this.emit('rename-requested', item.id))
@@ -249,20 +267,19 @@ export class CardGallery extends Adw.Bin {
       else if (this._hoveredId === item.id) this._hoveredId = null
       this._applyHighlight()
     })
-    if (this._reorderable) {
-      card.connect('reorder-requested', (_c: GalleryCard, draggedId: string) =>
-        this.emit('reorder-requested', draggedId, item.id),
-      )
-      card.enableReorder(
-        () => this._dragId,
-        (id) => {
-          this._dragId = id
-        },
-        () => {
-          this._dragId = null
-        },
-      )
-    }
+    card.connect('reorder-requested', (_c: GalleryCard, draggedId: string) =>
+      this.emit('reorder-requested', draggedId, item.id),
+    )
+    card.enableReorder(
+      () => this._dragId,
+      (id) => {
+        this._dragId = id
+      },
+      () => {
+        this._dragId = null
+      },
+    )
+    card.reorderable = this._reorderable
     return card
   }
 }

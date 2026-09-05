@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { isLayerDataVisible } from '@pixelrpg/engine'
 import { LayerRow } from './layer-row'
 import { SignalScope } from '../../utils/signal-scope.ts'
 
@@ -15,6 +16,7 @@ export interface LayerDescriptor {
   id: string
   name: string
   tileCount: number
+  /** Absent counts as VISIBLE — the engine's `isLayerDataVisible` rule. */
   visible?: boolean
   locked?: boolean
 }
@@ -31,6 +33,12 @@ export interface LayerDescriptor {
  * - `layer-lock-toggled::<id, locked>` for the lock toggle.
  * - `objects-visibility-toggled::<visible>` for the Objects row's eye.
  */
+// Two different `visible` live in this file. `LayerDescriptor.visible` is
+// LAYER DATA and is decided ONLY by the engine's `isLayerDataVisible`
+// (absent = visible). Every other `.visible` below is the `LayerRow`
+// GObject property — the eye toggle's UI state, whose absent-means-hidden
+// GTK default is correct and unrelated. Each of those carries a
+// `layer-visibility-ok:` marker so the repo guard can tell them apart.
 export class LayersTab extends Adw.Bin {
   declare _list: Gtk.ListBox
 
@@ -100,12 +108,14 @@ export class LayersTab extends Adw.Bin {
       const row = new LayerRow({
         layerName: layer.name,
         tileCount: layer.tileCount,
-        visible: layer.visible ?? true,
+        visible: isLayerDataVisible(layer),
         locked: layer.locked ?? false,
         active: layer.id === this._activeId,
       })
       row.connect('notify::visible', () => {
         if (this._suppressToggleEmit) return
+        // layer-visibility-ok: `row.visible` is the LayerRow eye toggle's
+        // GObject property, not the layer descriptor's flag.
         this.emit('layer-visibility-toggled', layer.id, row.visible)
       })
       row.connect('notify::locked', () => {
@@ -135,6 +145,8 @@ export class LayersTab extends Adw.Bin {
     if (!entry) return
     this._suppressToggleEmit = true
     try {
+      // layer-visibility-ok: writing the row widget's eye state to mirror
+      // an engine-side change that already went through the command path.
       if (flag === 'visible') entry.widget.visible = value
       else entry.widget.locked = value
     } finally {
@@ -150,6 +162,8 @@ export class LayersTab extends Adw.Bin {
     this._objectsVisible = visible
     if (!this._objectsRow) return
     this._objectsRow.widget.tileCount = count
+    // layer-visibility-ok: the Objects pseudo-row is not a map layer; this
+    // is its own widget eye state.
     if (this._objectsRow.widget.visible !== visible) this._objectsRow.widget.visible = visible
   }
 
@@ -169,6 +183,8 @@ export class LayersTab extends Adw.Bin {
     })
     widget._lock_button.set_visible(false)
     widget.connect('notify::visible', () => {
+      // layer-visibility-ok: the Objects pseudo-row has no LayerData at
+      // all — it toggles object placements globally.
       if (this._objectsVisible === widget.visible) return
       this._objectsVisible = widget.visible
       this.emit('objects-visibility-toggled', widget.visible)

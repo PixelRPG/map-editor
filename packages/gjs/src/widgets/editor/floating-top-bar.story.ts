@@ -17,6 +17,7 @@ import { FloatingTopBar } from './floating-top-bar'
  */
 export class FloatingTopBarStory extends StoryWidget {
   private _bar: FloatingTopBar | null = null
+  private _inspectorAction: Gio.SimpleAction | null = null
 
   static {
     GObject.registerClass({ GTypeName: 'FloatingTopBarStory' }, FloatingTopBarStory)
@@ -67,7 +68,7 @@ export class FloatingTopBarStory extends StoryWidget {
     if (!this._bar) return
     if (typeof this.args.tileName === 'string') this._bar.tileName = this.args.tileName
     if (typeof this.args.layerName === 'string') this._bar.layerName = this.args.layerName
-    this._bar.showInspector = Boolean(this.args.showInspector)
+    this._inspectorAction?.set_state(GLib.Variant.new_boolean(Boolean(this.args.showInspector)))
   }
 
   private _installActions(): void {
@@ -75,6 +76,15 @@ export class FloatingTopBarStory extends StoryWidget {
     const lib = Gio.SimpleAction.new_stateful('toggle-library', null, GLib.Variant.new_boolean(false))
     lib.connect('change-state', (action, value) => action.set_state(value!))
     group.add_action(lib)
+    // Both inspector toggles bind `action-name: "win.toggle-inspector"`,
+    // exactly like the library toggle beside them. The real window backs
+    // that name with a `Gio.PropertyAction` over `show-inspector`; here a
+    // stateful stub stands in so the `showInspector` control still drives
+    // the buttons' pressed state.
+    const inspector = Gio.SimpleAction.new_stateful('toggle-inspector', null, GLib.Variant.new_boolean(false))
+    inspector.connect('change-state', (action, value) => action.set_state(value!))
+    group.add_action(inspector)
+    this._inspectorAction = inspector
     const grid = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
     grid.connect('change-state', (action, value) => action.set_state(value!))
     group.add_action(grid)

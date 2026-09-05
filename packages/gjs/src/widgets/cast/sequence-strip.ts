@@ -83,6 +83,11 @@ export class SequenceStrip extends Gtk.Box {
     return this._defaultDuration ?? DEFAULT_DURATION_MS
   }
 
+  // notify-only: read per USE, not per build — `_defaultDuration` seeds
+  // the duration of frames appended or dropped from here on. Existing
+  // chips carry their own duration, so a change deliberately does not
+  // retime them; `_rebuild`'s `?? this._defaultDuration` is a fallback
+  // for a frame that somehow has none, not a build-time capture.
   set defaultDuration(value: number) {
     if (this._defaultDuration === value) return
     this._defaultDuration = value

@@ -48,6 +48,10 @@ export class GdkImageTexture extends GObject.Object {
     return this._texture
   }
 
+  // notify-only: `_texture` has no build path — every consumer
+  // (`load`, `getWidth`, `getHeight`, `isLoaded`) reads the field on
+  // each call, so storing it IS the effect and the notify is purely
+  // for observers of the `texture` property.
   set texture(value: Gdk.Texture | null) {
     if (this._texture === value) return
     this._texture = value

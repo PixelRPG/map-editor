@@ -35,6 +35,10 @@ export function gridDimensions(
   spriteWidth: number,
   spriteHeight: number,
 ): SpriteGrid {
+  // A non-positive sprite size divides to Infinity, which `isUsableGrid`
+  // then reports as a perfectly good grid of infinitely many cells.
+  // Report the "doesn't fit" state instead.
+  if (spriteWidth <= 0 || spriteHeight <= 0) return { columns: 0, rows: 0 }
   return {
     columns: Math.floor(imageWidth / spriteWidth),
     rows: Math.floor(imageHeight / spriteHeight),
@@ -57,6 +61,10 @@ export function cellOrigin(
   spriteWidth: number,
   spriteHeight: number,
 ): [number, number] {
+  // An empty grid would make the modulo NaN and put NaN coordinates into
+  // the preview. Callers guard with `isUsableGrid`, but the origin of a
+  // grid with no cells is the origin.
+  if (grid.columns <= 0 || grid.rows <= 0) return [0, 0]
   const cell = Math.max(0, Math.min(index, grid.columns * grid.rows - 1))
   return [(cell % grid.columns) * spriteWidth, Math.floor(cell / grid.columns) * spriteHeight]
 }

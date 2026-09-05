@@ -15,6 +15,7 @@ import {
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription } from 'excalibur'
+import { SignalScope } from '../../utils/signal-scope.ts'
 import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
 import { forwardEngineEvents } from './engine-events.ts'
 import Template from './engine.blp'
@@ -56,8 +57,22 @@ export class Engine extends Adw.Bin {
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
   private _closeRequestHandlerId = 0
+  /**
+   * The window the `close-request` handler is attached to. Tracked
+   * alongside the id because a re-root gives the widget a DIFFERENT
+   * toplevel — releasing against `get_root()` at teardown time would
+   * aim the disconnect at the wrong window and leave the old one
+   * holding a handler that outlives this widget.
+   */
+  private _closeRequestRoot: Gtk.Window | null = null
   /** `notify::dark` on the global `Adw.StyleManager`; released in `_teardown`. */
   private _styleManagerHandlerId = 0
+  /**
+   * Handlers waiting for `ready`. Scoped rather than self-disconnecting
+   * so a widget torn down before the engine starts still releases them
+   * (see {@link SignalScope.connectUntil}).
+   */
+  private _readyWaiters = new SignalScope()
   private _teardownComplete = false
 
   public status: EngineStatus = EngineStatus.INITIALIZING
@@ -382,8 +397,11 @@ export class Engine extends Adw.Bin {
       if (excalibur) excalibur.backgroundColor = colour
     }
     update()
-    // Track future theme switches; clean up via the existing
-    // disconnect helper on unmap.
+    // Track future theme switches; released in `_teardown`. Drop any
+    // previous attachment first — this is the GLOBAL style manager, so
+    // an overwritten handler id would pin this widget for the lifetime
+    // of the process.
+    if (this._styleManagerHandlerId) styleManager.disconnect(this._styleManagerHandlerId)
     this._styleManagerHandlerId = styleManager.connect('notify::dark', update)
   }
 
@@ -505,12 +523,29 @@ export class Engine extends Adw.Bin {
   // because that always runs mid-GC.
   vfunc_root(): void {
     super.vfunc_root()
+    // A re-root (view swap inside the same window) runs this again —
+    // release the previous attachment first, or the old toplevel keeps
+    // a handler nothing can reach any more.
+    this._releaseCloseRequest()
     const root = this.get_root() as Gtk.Window | null
     if (!root || typeof (root as unknown as { connect?: unknown }).connect !== 'function') return
+    this._closeRequestRoot = root
     this._closeRequestHandlerId = root.connect('close-request', () => {
       this._teardown()
       return false
     })
+  }
+
+  /** Drop the `close-request` handler from the window it was attached to. */
+  private _releaseCloseRequest(): void {
+    if (this._closeRequestHandlerId === 0) return
+    try {
+      this._closeRequestRoot?.disconnect(this._closeRequestHandlerId)
+    } catch {
+      // root may already be disposed
+    }
+    this._closeRequestHandlerId = 0
+    this._closeRequestRoot = null
   }
 
   /**
@@ -538,14 +573,8 @@ export class Engine extends Adw.Bin {
     if (this._teardownComplete) return
     this._teardownComplete = true
 
-    if (this._closeRequestHandlerId !== 0) {
-      try {
-        ;(this.get_root() as Gtk.Window | null)?.disconnect(this._closeRequestHandlerId)
-      } catch {
-        // root may already be disposed
-      }
-      this._closeRequestHandlerId = 0
-    }
+    this._releaseCloseRequest()
+    this._readyWaiters.disconnectAll()
 
     for (const subscription of this._excaliburSubscriptions) {
       try {
@@ -574,12 +603,19 @@ export class Engine extends Adw.Bin {
     this._excalibur = null
   }
 
+  /**
+   * Resolve once the engine has emitted `ready`. A widget torn down
+   * before that keeps the promise pending on purpose: every caller
+   * dereferences `this._excalibur!` right after awaiting, so resolving
+   * on teardown would swap a stalled call for a `TypeError`. The
+   * HANDLER is still released, which is what teardown owes.
+   */
   private async _waitForReady(): Promise<void> {
     if (this._ready) return
     await new Promise<void>((resolve) => {
-      const id = this.connect('ready', () => {
-        this.disconnect(id)
+      this._readyWaiters.connectUntil(this, 'ready', () => {
         resolve()
+        return true
       })
     })
   }

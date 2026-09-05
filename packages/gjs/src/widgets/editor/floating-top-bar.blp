@@ -247,7 +247,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
 
             Gtk.ToggleButton inspector_toggle_split {
               icon-name: "sidebar-show-right-symbolic";
-              active: bind template.show-inspector bidirectional;
+              action-name: "win.toggle-inspector";
               tooltip-text: _("Toggle inspector");
               styles ["flat"]
             }
@@ -405,7 +405,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
 
           Gtk.ToggleButton inspector_toggle_merged {
             icon-name: "sidebar-show-right-symbolic";
-            active: bind template.show-inspector bidirectional;
+            action-name: "win.toggle-inspector";
             tooltip-text: _("Toggle inspector");
             styles ["flat"]
           }
