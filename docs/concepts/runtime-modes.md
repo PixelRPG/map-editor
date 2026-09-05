@@ -103,7 +103,7 @@ This decision is part of the broader editor architecture in [`editor-architectur
 
 ## Windowing (Full Run only)
 
-Live Run + Test Run reuse the **same** `Gtk.GLArea` widget the maker already hosts — no extra window, that's the whole point of the seamless flow.
+Live Run + Test Run reuse the **same** `Gtk.GLArea` widget the maker already hosts — no extra window, that's the whole point: you never leave the editor.
 
 Full Run is different. The user wants a clean "this is what shipping looks like" experience. Two transports, picked by the user:
 

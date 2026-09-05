@@ -34,7 +34,7 @@ Under op-log-with-host:
 - Every peer applies operations in the order received
 - Same machinery, two vocabularies (editor ops, game ops), simultaneous over multiplexed channels
 
-## The shared substrate
+## What both flows share
 
 Five things are the same in both flows. Built once, used twice.
 
@@ -62,7 +62,7 @@ Both flows run over WebRTC data channels:
 - Reliable + ordered channels for op-log (mutations must arrive + apply in order)
 - Unreliable channel reserved for awareness data (presence, cursors — losing one update is fine)
 
-Initial signalling: see [§ 6 Discovery + signalling](#6-discovery--signalling) below — LAN sessions discover peers via Avahi mDNS (zero infra), cross-network sessions broker SDP via a workspace-owned `apps/signalling-server/` (GJS-runnable via gjsify, also serves as a dogfood test of `@gjsify/{ws,http}`).
+Initial signalling: see [§ 6 Discovery + signalling](#6-discovery--signalling) below — LAN sessions discover peers via Avahi mDNS (zero infra), cross-network sessions broker SDP via a workspace-owned `apps/signalling-server/` (GJS-runnable via gjsify, also a dogfood test of `@gjsify/{ws,http}`).
 
 ### 4. Awareness layer (presence, cursors)
 
@@ -345,11 +345,11 @@ On join, the joiner's current project (if any) is closed with a save prompt; the
 
 ## Phase plan
 
-Most "shared substrate" work happens *implicitly* as we land the earlier object-system and editor-architecture phases (constraint enforcement at PR-review time). The dedicated phases are the actual collab + multiplayer features.
+Most of the shared work lands *implicitly* as we land the earlier object-system and editor-architecture phases (constraint enforcement at PR-review time). The dedicated phases are the actual collab + multiplayer features.
 
 | # | Scope | Status |
 |---|---|---|
-| 0 | **Substrate constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | **landed (substrate)** (folded into editor-architecture Phases 2–5) |
+| 0 | **Groundwork constraints** in earlier PR series — stable IDs audited, mutation API operation-oriented, `InputSourceComponent` introduced when player-movement lands, project schema kept transport-friendly (stable keys in arrays, no circular refs, JSON-serialisable) | **landed (groundwork)** (folded into editor-architecture Phases 2–5) |
 | 1 | Op-log skeleton in `packages/engine/src/commands/types.ts` — `Operation`-shape, local sequencer (`UndoStackComponent.cursor`), `Command` applier. Solo mode only (no wire). | **landed** |
 | 2 | Editor op vocabulary — `PaintTileCommand` + `EraseTileCommand` are the first entries; the op-log IS the undo log via `Engine.executeCommand` + `undo` + `redo`. Hook into `editor-architecture.md` Phase 5 is now bi-directional reference. | **landed** (initial vocab; grows as more editor mutations land) |
 | 3a | **LAN + relay signalling** — `lan-signalling.ts` (in-app WebSocket server over `@gjsify/{ws,http}`) + `relay-signalling.ts` (relay client) + the standalone `apps/signalling-server/` relay. Room-keyed, stateless. | **landed** (LAN verified; relay server + client built, but the default relay endpoint is a placeholder — no deployed relay, so `session-service.ts` skips it) |
@@ -376,7 +376,7 @@ Most "shared substrate" work happens *implicitly* as we land the earlier object-
 
 - [`editor-architecture.md`](editor-architecture.md) — the operation-oriented mutation API + `Command` interface defined there **IS** the editor op vocabulary. Phase 5 (Undo) implicitly designs the editor op-log for us. Phase 0 constraints in this doc fold back into editor-architecture's migration phases.
 - [`runtime-modes.md`](runtime-modes.md) — Live Run and Test Run share a single peer's simulation; they're not multiplayer-aware. Full Run with multiplayer is where the game op-log machinery activates. The mode markers themselves are local-only — `EditorMode` / `RuntimeMode` / `SpawnOverride` never replicate.
-- [`object-system.md`](object-system.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`) are the load-bearing primitive for editor op payloads. The transport-compatibility constraint covered in Phase 0 means future schema changes must preserve "stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere".
+- [`object-system.md`](object-system.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`) are what editor op payloads are keyed on. The transport-compatibility constraint covered in Phase 0 means future schema changes must preserve "stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere".
 
 ## Open questions
 
