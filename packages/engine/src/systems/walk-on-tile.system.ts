@@ -1,6 +1,7 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
+import { isLayerDataVisible } from '../services/layer-visibility.ts'
 import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { findTileMapForLayer } from '../services/tile-paint.service.ts'
 import type { TileProperties } from '../types/data/index.ts'
@@ -75,7 +76,7 @@ export class WalkOnTileSystem extends System {
     const layers = mapData.layers
     for (let i = layers.length - 1; i >= 0; i--) {
       const layer = layers[i]
-      if (!layer.visible) continue
+      if (!isLayerDataVisible(layer)) continue
 
       const found = scene instanceof MapScene ? findTileMapForLayer(scene, layer.id) : null
       let ref: { spriteSetId: string; spriteId: number } | undefined

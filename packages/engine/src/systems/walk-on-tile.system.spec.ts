@@ -33,7 +33,7 @@ interface WalkFixture {
  * (1,1) while the live shadow holds sprite 1 — the divergence the
  * resolution contract is about.
  */
-function makeWalkScene(): WalkFixture {
+function makeWalkScene(options: { layerVisible?: boolean } = { layerVisible: true }): WalkFixture {
   const events = new EventEmitter<EngineEventMap>()
   const spriteSet = {
     data: {
@@ -49,7 +49,7 @@ function makeWalkScene(): WalkFixture {
         {
           id: 'ground-layer',
           name: 'Ground',
-          visible: true,
+          visible: options.layerVisible,
           tier: 'ground',
           // STALE snapshot: claims grass at (1,1).
           sprites: [{ x: 1, y: 1, spriteId: 0, spriteSetId: 'terrain' }],
@@ -98,6 +98,17 @@ export default async () => {
       events.emit(EngineEvent.PLAYER_TILE_CHANGED, { tileX: 2, tileY: 1, previous: null, facing: 'right' })
 
       expect(walkedOnto[0].properties.surface).toBe('grass')
+    })
+
+    await it('reads a layer whose descriptor has NO visible key (absent = visible)', async () => {
+      // Truthy filtering skipped such a layer, so every tile on it
+      // reported the walkable default even where a `surface` was
+      // painted — while the very same layer rendered on screen.
+      const { events, walkedOnto } = makeWalkScene({})
+      events.emit(EngineEvent.PLAYER_TILE_CHANGED, { tileX: 1, tileY: 1, previous: null, facing: 'down' })
+
+      expect(walkedOnto.length).toBe(1)
+      expect(walkedOnto[0].properties.surface).toBe('water')
     })
 
     await it('returns the walkable default for empty tiles', async () => {

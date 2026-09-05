@@ -2,40 +2,13 @@ import type Gdk from '@girs/gdk-4.0'
 import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
-import type { GameProjectResource, MapData } from '@pixelrpg/engine'
+import type { GameProjectResource } from '@pixelrpg/engine'
 
-import type { GdkSpriteSheet } from '../../sprite/objects/GdkSpriteSheet'
 import { GdkSpriteSetResource } from '../../sprite/resource/GdkSpriteSetResource'
-import { type MapRect, tileIntersectsClip } from './map-preview.geometry.ts'
-
-/** One tile of a bake: where to read from the atlas and where to put it. */
-export interface DrawOp {
-  texture: Gdk.Texture
-  /** Sprite location in the atlas (source coordinates, source pixels). */
-  sx: number
-  sy: number
-  sw: number
-  sh: number
-  /** Tile position in the map (pre-scale, in map-pixel units). */
-  tx: number
-  ty: number
-  tw: number
-  th: number
-}
-
-/** A sprite-set's decoded sheet plus the global id range it covers. */
-export interface SheetRange {
-  spriteSetId: string
-  start: number
-  end: number
-  sheet: GdkSpriteSheet
-}
+import { type BakeOffset, type DrawOp, type SheetRange, tileTransform } from './map-preview.ops.ts'
 
 /** Where and how a bake paints: scale, map-pixel offset and the target region. */
-export interface BakePlacement {
-  scale: number
-  offsetXMapPx: number
-  offsetYMapPx: number
+export interface BakePlacement extends BakeOffset {
   region: Graphene.Rect
 }
 
@@ -66,49 +39,6 @@ export async function collectSheets(
     }
   }
   return ranges
-}
-
-/**
- * Look up a sprite by its `(spriteSetId, spriteId)` reference and resolve it
- * to a renderable atlas region. The map format stores `spriteId` as a
- * **local** 0-based index within the named set.
- */
-function resolveSpriteByLocalId(
-  ranges: SheetRange[],
-  spriteSetId: string,
-  localId: number,
-): { texture: Gdk.Texture; x: number; y: number; width: number; height: number } | null {
-  const sprite = ranges.find((r) => r.spriteSetId === spriteSetId)?.sheet.sprites[localId]
-  const texture = sprite?.sourceTexture
-  if (!sprite || !texture) return null
-  return { texture, x: sprite.x, y: sprite.y, width: sprite.width, height: sprite.height }
-}
-
-/** Build the per-tile draw ops for a map, optionally clipped to a map-px rect. */
-export function buildDrawOps(mapData: MapData, ranges: SheetRange[], clip: MapRect | null): DrawOp[] {
-  const ops: DrawOp[] = []
-  for (const layer of mapData.layers ?? []) {
-    if (!layer.visible || !layer.sprites) continue
-    for (const tile of layer.sprites) {
-      const tx = tile.x * mapData.tileWidth
-      const ty = tile.y * mapData.tileHeight
-      if (clip && !tileIntersectsClip(tx, ty, mapData.tileWidth, mapData.tileHeight, clip)) continue
-      const resolved = resolveSpriteByLocalId(ranges, tile.spriteSetId, tile.spriteId)
-      if (!resolved) continue
-      ops.push({
-        texture: resolved.texture,
-        sx: resolved.x,
-        sy: resolved.y,
-        sw: resolved.width,
-        sh: resolved.height,
-        tx,
-        ty,
-        tw: mapData.tileWidth,
-        th: mapData.tileHeight,
-      })
-    }
-  }
-  return ops
 }
 
 /**
@@ -154,7 +84,11 @@ export function renderOps(
   }
 }
 
-/** Append one tile to the bake snapshot, reusing the caller-owned temps. */
+/**
+ * Append one tile to the bake snapshot, reusing the caller-owned temps.
+ * The arithmetic lives in {@link tileTransform} (GTK-free, unit-tested);
+ * this only feeds it into the snapshot.
+ */
 function paintTile(
   snapshot: Gtk.Snapshot,
   op: DrawOp,
@@ -163,21 +97,18 @@ function paintTile(
   translatePoint: Graphene.Point,
   fullRect: Graphene.Rect,
 ): void {
-  const { scale, offsetXMapPx, offsetYMapPx } = placement
-  const tx = (op.tx + offsetXMapPx) * scale
-  const ty = (op.ty + offsetYMapPx) * scale
-  target.init(tx, ty, op.tw * scale, op.th * scale)
+  const t = tileTransform(op, placement)
+  target.init(t.targetX, t.targetY, t.targetW, t.targetH)
   snapshot.push_clip(target)
   snapshot.save()
 
   // The texture is the full atlas. Translate so the wanted sub-region
   // lines up with `target`, then paint the whole atlas at the same
   // scale. Push_clip keeps the rest invisible.
-  const textureScale = (op.tw * scale) / op.sw
-  translatePoint.init(tx - op.sx * textureScale, ty - op.sy * textureScale)
+  translatePoint.init(t.translateX, t.translateY)
   snapshot.translate(translatePoint)
 
-  fullRect.init(0, 0, op.texture.get_width() * textureScale, op.texture.get_height() * textureScale)
+  fullRect.init(0, 0, op.texture.get_width() * t.atlasScale, op.texture.get_height() * t.atlasScale)
   snapshot.append_scaled_texture(op.texture, Gsk.ScalingFilter.NEAREST, fullRect)
 
   snapshot.restore()

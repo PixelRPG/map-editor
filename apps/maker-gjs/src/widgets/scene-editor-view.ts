@@ -135,23 +135,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._mode_rail.projectName = this._projectName
     this._mode_rail.projectTagline = 'Scene editor'
     this._wireInspectorSignals()
-    // Round-trip the top bar's inspector_toggle pressed state with
-    // this view's `show-inspector`. Without this, the toggle button is
-    // only wired to the stateless `win.toggle-inspector` action and its
-    // visual `active` never matches the sidebar's actual visibility on
-    // first show — the first click is consumed resyncing the button and
-    // the inspector only opens on the second click. The atlas-view's
-    // inspector_toggle uses the same `bind template.show-inspector
-    // bidirectional` pattern directly in its template; we have to do it
-    // in code here because FloatingTopBar is a packaged widget two
-    // levels down from SceneEditorView and the blueprint binding can't
-    // reach up through that nesting.
-    this.bind_property(
-      'show-inspector',
-      this._editor.topBar,
-      'show-inspector',
-      GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL,
-    )
   }
 
   /** Forward the current zoom level to the floating zoom OSD. */

@@ -9,7 +9,7 @@ Two findings forced this document:
 1. **Two parallel entity systems.** The Cast view (PRs #145–#158) models characters as `CharacterDefinition`; the object system models NPCs/items/teleports as `ObjectDefinition`. Both model "an NPC", "a player", "a thing with behaviour". Every further Cast feature deepens the split.
 2. **`kind` as a composition switch doesn't scale.** The shipped `ObjectSpawnSystem` composes components via a `kind`-switch over a kind-discriminated `properties` union. Every new capability needs a new switch arm *in engine code* — which walls off the planned **built-in code editor** (user-defined behaviour can never enter the switch) and made even our own "place a character as an NPC" question awkward.
 
-The shipped engine substrate was an exploratory prototype (by design). What carries over and what changes:
+The engine we shipped was an exploratory prototype (by design). What carries over and what changes:
 
 | Keep (proven) | Replace (prototype) |
 |---|---|
@@ -21,7 +21,7 @@ The shipped engine substrate was an exploratory prototype (by design). What carr
 
 ## The model
 
-Prior art, deliberately: **flecs prefabs / Minecraft-Bedrock component bags** (explicit component lists on data-driven definitions), **RPG-Maker database** (templates as the approachable authoring surface), **RPG-Maker event pages, modernised** (declarative states), on the existing **Excalibur ECS** substrate (Overwatch-style data/logic split).
+Prior art, deliberately: **flecs prefabs / Minecraft-Bedrock component bags** (explicit component lists on data-driven definitions), **RPG-Maker database** (templates as the approachable authoring surface), **RPG-Maker event pages, modernised** (declarative states), on the existing **Excalibur ECS** runtime (Overwatch-style data/logic split).
 
 ```
 Layer 0   Sprite Sheet        raw image + grid (conceptual — stays embedded in the asset file)
@@ -182,7 +182,7 @@ Unchanged in principle, restated for the new shapes: entity definitions, appeara
 
 ## Cross-references
 
-- [`object-system.md`](object-system.md) — describes the substrate this sits on; placements/overrides/tiles/z-order/systems/bus carry over verbatim (its historical composition sections were pruned once Phase B landed).
+- [`object-system.md`](object-system.md) — describes what this sits on; placements/overrides/tiles/z-order/systems/bus carry over verbatim (its historical composition sections were pruned once Phase B landed).
 - [`editor-architecture.md`](editor-architecture.md) — ECS-as-model; generated inspectors and definition editing are views over the same world.
 - [`runtime-modes.md`](runtime-modes.md) — trigger/state/script effects only run in runtime mode (today indirectly, via the `RuntimeModeComponent`-gated `PlayerSystem` events — see that doc's gating note).
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — op channels + transport constraints for every shape above.

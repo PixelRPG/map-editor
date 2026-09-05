@@ -2,10 +2,15 @@ import type { TileMap } from 'excalibur'
 import { type Command, PlaceObjectCommand, RemoveObjectCommand } from '../commands/index.ts'
 import type { MapEditorComponent } from '../components/index.ts'
 import { makePlacementId } from '../services/placement-id.ts'
-import { isTileOutOfBounds } from '../services/tile-geometry.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from '../services/tile-paint.service.ts'
-import { resolveEditLayer, type TileEditTarget, resolveTileEditTarget } from '../services/tile-edit-target.ts'
+import {
+  isTileOutsideMap,
+  resolveEditLayer,
+  resolveMapBounds,
+  type TileEditTarget,
+  resolveTileEditTarget,
+} from '../services/tile-edit-target.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { EditorSession } from './editor-session.ts'
 import type { LayerOperations } from './layer-operations.ts'
@@ -69,7 +74,16 @@ export interface EditOperationsOptions {
  * route them through the same op-log, so an AI paint undoes and syncs
  * to peers exactly like a human one. What is unique to this side is the
  * guard chain in front of the command — resolved once by
- * {@link resolveTileEditTarget} rather than re-spelled per operation.
+ * {@link resolveEditLayer} / {@link resolveTileEditTarget} rather than
+ * re-spelled per operation.
+ *
+ * **Every public method here is a mutating entry point and MUST run the
+ * guard chain**, naming the gates it skips (`AssistantPauseGate`)
+ * instead of omitting them. `edit-operations.spec.ts` enumerates this
+ * class's public methods and fails on any it does not know about, so a
+ * fifth operation cannot quietly ship without its gates — which is
+ * exactly how `removeObject` went for as long as it did without a lock
+ * check.
  */
 export class EditOperations {
   private readonly activeScene: ActiveSceneAccessor
@@ -92,15 +106,15 @@ export class EditOperations {
    * out-of-bounds coords.
    */
   paintTile(request: TileEditRequest): boolean {
-    const context = this.resolveContext(request)
+    const context = this.#resolveContext(request)
     if (!context) return false
     const { target } = context
-    const spriteId = this.resolveSpriteId(request.spriteId)
+    const spriteId = this.#resolveSpriteId(request.spriteId)
     this.execute(
       buildTilePaintCommand(target.editor, target.layerId, request.tileX, request.tileY, spriteId ?? null),
       request.origin,
     )
-    this.flash(target.tileMap, request)
+    this.#flash(target.tileMap, request)
     return true
   }
 
@@ -110,15 +124,17 @@ export class EditOperations {
    * resolves (no erase-fill) or the region already shows it.
    */
   fillTile(request: TileEditRequest): boolean {
-    const context = this.resolveContext(request)
+    const context = this.#resolveContext(request)
     if (!context) return false
     const { scene, target } = context
-    const spriteId = this.resolveSpriteId(request.spriteId)
+    const spriteId = this.#resolveSpriteId(request.spriteId)
     if (!spriteId || spriteId <= 0) return false
     const command = buildTileFillCommand(
       target.editor,
       scene.mapResource,
-      { columns: target.tileMap.columns, rows: target.tileMap.rows },
+      // Region bounds come from the persisted extent, like every other
+      // bounds reader — see `resolveMapBounds`.
+      resolveMapBounds(scene.mapResource?.mapData, target.tileMap),
       target.layerId,
       request.tileX,
       request.tileY,
@@ -126,7 +142,7 @@ export class EditOperations {
     )
     if (!command) return false
     this.execute(command, request.origin)
-    this.flash(target.tileMap, request)
+    this.#flash(target.tileMap, request)
     return true
   }
 
@@ -139,7 +155,7 @@ export class EditOperations {
   placeObject(request: ObjectPlaceRequest): boolean {
     const scene = this.activeScene()
     const layer = resolveEditLayer({
-      assistantPaused: this.assistant.isPaused(),
+      assistantPause: { mode: 'enforce', paused: this.assistant.isPaused() },
       hasActiveMap: scene !== null,
       requestedLayerId: request.layerId,
       activeLayerId: this.session.activeLayer,
@@ -147,8 +163,9 @@ export class EditOperations {
     })
     if (layer.type === 'rejected' || !scene) return false
     if (!scene.entityLibrary.some((entity) => entity.id === request.defId)) return false
-    const mapData = scene.mapResource?.mapData
-    if (mapData && isTileOutOfBounds(request.tileX, request.tileY, mapData.columns, mapData.rows)) return false
+    // Same bounds predicate + same authoritative source (persisted
+    // `MapData.columns/rows`) as the tile paths and the pointer path.
+    if (isTileOutsideMap(scene.mapResource?.mapData, request.tileX, request.tileY)) return false
     const placement = {
       id: makePlacementId(request.tileX, request.tileY),
       layerId: layer.layerId,
@@ -163,27 +180,45 @@ export class EditOperations {
   /**
    * Remove an object placement by id, restoring it on undo.
    *
-   * Deliberately NOT assistant-pause-gated (unlike the others): this is
-   * the ONLY remove path and the human's Props "Remove" button routes
-   * through it, so an engine-level gate silently disabled the user's own
-   * button while the AI was paused. The assistant's access is gated at
-   * the maker's Control/D-Bus boundary instead, where the caller is
-   * known to be the assistant.
+   * Two things make this entry point different from the other three,
+   * and both are deliberate:
+   *
+   * 1. **The assistant-pause gate is skipped** (`{ mode: 'skip' }`).
+   *    This is the ONLY remove path and the human's Props "Remove"
+   *    button routes through it, so an engine-level gate silently
+   *    disabled the user's own button while the AI was paused. The
+   *    assistant's access is gated at the maker's Control/D-Bus
+   *    boundary instead, where the caller is known to be the assistant.
+   * 2. **The layer is dictated by the placement**, not resolved from
+   *    the request / active layer. The lock that matters is the one on
+   *    `placement.layerId` — the layer that actually owns the object.
+   *
+   * The lock itself is NOT skipped: a padlocked layer protects its
+   * objects exactly as it protects its tiles. It used to not, and the
+   * deletion rode the op-log to peers who had set that same padlock.
    */
   removeObject(placementId: string, origin?: string): boolean {
     const scene = this.activeScene()
     if (!scene) return false
     const placement = scene.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId)
     if (!placement) return false
+    const layer = resolveEditLayer({
+      assistantPause: { mode: 'skip' },
+      hasActiveMap: true,
+      requestedLayerId: placement.layerId,
+      activeLayerId: null,
+      isLayerLocked: (layerId) => this.layers.isLocked(layerId),
+    })
+    if (layer.type === 'rejected') return false
     this.execute(new RemoveObjectCommand({ placement }), origin)
     return true
   }
 
   /** The scene + resolved tile target, or `null` when a guard refused. */
-  private resolveContext(request: TileEditRequest): TileEditContext | null {
+  #resolveContext(request: TileEditRequest): TileEditContext | null {
     const scene = this.activeScene()
     const target = resolveTileEditTarget<TileMap, MapEditorComponent>({
-      assistantPaused: this.assistant.isPaused(),
+      assistantPause: { mode: 'enforce', paused: this.assistant.isPaused() },
       hasActiveMap: scene !== null,
       requestedLayerId: request.layerId,
       activeLayerId: this.session.activeLayer,
@@ -191,13 +226,14 @@ export class EditOperations {
       tileX: request.tileX,
       tileY: request.tileY,
       findTileMap: (layerId) => (scene ? findTileMapForLayer(scene, layerId) : null),
+      mapBounds: scene?.mapResource?.mapData ?? null,
     })
     if (!scene || target.type === 'rejected') return null
     return { scene, target }
   }
 
   /** `undefined` means "use the armed tile"; an explicit value wins. */
-  private resolveSpriteId(spriteId: number | null | undefined): number | null {
+  #resolveSpriteId(spriteId: number | null | undefined): number | null {
     return spriteId === undefined ? this.session.activeTile : spriteId
   }
 
@@ -206,7 +242,7 @@ export class EditOperations {
    * AI act. Only while the assistant is present — plain programmatic
    * callers (tests) must not grow stray highlight actors.
    */
-  private flash(tileMap: TileMap, request: TileEditRequest): void {
+  #flash(tileMap: TileMap, request: TileEditRequest): void {
     if (this.assistant.isActive()) this.assistant.flashTile(tileMap, request.tileX, request.tileY)
   }
 }

@@ -1,6 +1,7 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import type { EditorTool } from '@pixelrpg/engine'
+import { addAction } from './action-registry.ts'
 
 /** What the canvas-editing actions need from the window. */
 export interface EditingActionsContext {
@@ -50,7 +51,7 @@ export function installEditingActions(
     ctx.setEngineTool(next)
     ctx.setViewTool(next)
   })
-  group.add_action(tool)
+  addAction(group, tool)
 
   // Picking what to place also activates placement mode, so choosing a
   // brush is a single step. An empty string clears the brush.
@@ -61,7 +62,7 @@ export function installEditingActions(
     if (defId) tool.change_state(GLib.Variant.new_string('object'))
     ctx.setViewObjectBrush(defId || null)
   })
-  group.add_action(setObjectBrush)
+  addAction(group, setObjectBrush)
 
   // The driveable equivalent of a select-tool canvas click, so external
   // tooling can exercise the selection → Objects-row → Props flow.
@@ -72,15 +73,15 @@ export function installEditingActions(
     ctx.highlightPlacement(id || null)
     if (id) ctx.revealInspector()
   })
-  group.add_action(selectPlacement)
+  addAction(group, selectPlacement)
 
   const undo = new Gio.SimpleAction({ name: 'undo' })
   undo.connect('activate', () => ctx.undo())
-  group.add_action(undo)
+  addAction(group, undo)
 
   const redo = new Gio.SimpleAction({ name: 'redo' })
   redo.connect('activate', () => ctx.redo())
-  group.add_action(redo)
+  addAction(group, redo)
 
   undo.set_enabled(false)
   redo.set_enabled(false)
@@ -89,7 +90,7 @@ export function installEditingActions(
   // undoable + collab-synced `AddLayerCommand`.
   const newLayer = new Gio.SimpleAction({ name: 'new-layer' })
   newLayer.connect('activate', () => ctx.createLayer())
-  group.add_action(newLayer)
+  addAction(group, newLayer)
 
   return { tool, undo, redo }
 }

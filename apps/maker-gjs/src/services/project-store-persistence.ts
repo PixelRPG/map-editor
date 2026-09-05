@@ -79,9 +79,23 @@ export function writeProjectData(io: ProjectStoreIo, projectPath: string, data: 
   }
 }
 
-/** Serialise a sprite set's descriptor back to `spritesets/<id>.json`. */
+/**
+ * Serialise a sprite set's descriptor back to `spritesets/<id>.json`.
+ * Returns `false` when the write failed or the data did not survive the
+ * format's validation — same two-outcome contract as
+ * {@link writeProjectData}, so no caller has to wrap this in a
+ * try/catch of its own. Without the guard a `SpriteSetFormat.serialize`
+ * throw escaped all the way out of `ProjectStore`, which — on the
+ * inbound-peer path — meant the in-memory descriptor was already
+ * replaced and no change event ever fired.
+ */
 export function writeSpriteSetDescriptor(io: ProjectStoreIo, descriptorPath: string, data: SpriteSetData): boolean {
-  return io.writeText(descriptorPath, SpriteSetFormat.serialize(data))
+  try {
+    return io.writeText(descriptorPath, SpriteSetFormat.serialize(data))
+  } catch (err) {
+    console.warn('[ProjectStore] Failed to persist sprite set:', err)
+    return false
+  }
 }
 
 /**

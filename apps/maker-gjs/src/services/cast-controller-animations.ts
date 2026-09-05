@@ -71,3 +71,25 @@ export function retimeAnimation(
   const retimed: CharacterAnimation = { ...anim, frames: anim.frames.map((f) => ({ ...f, duration: durationMs })) }
   return anims.map((a, i) => (i === idx ? retimed : a))
 }
+
+/**
+ * The sprite-set descriptor mutator behind every sheet-owned animation
+ * edit: apply `edit` to the draft's animation list and report whether
+ * the descriptor changed.
+ *
+ * Returning `false` for a rejected edit is the whole point — that is
+ * what makes `ProjectStore.mutateSpriteSetData` skip BOTH the persist
+ * and the chunked full-sheet broadcast. A local no-op that still
+ * broadcast would overwrite a peer's concurrent edit of the same sheet
+ * with our stale copy, which works fine solo and only shows up with a
+ * second participant.
+ */
+export function applyAnimationEdit(
+  draft: { characterAnimations?: CharacterAnimation[] },
+  edit: (anims: readonly CharacterAnimation[]) => CharacterAnimation[] | null,
+): boolean {
+  const next = edit(draft.characterAnimations ?? [])
+  if (!next) return false
+  draft.characterAnimations = next
+  return true
+}

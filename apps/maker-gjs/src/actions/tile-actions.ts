@@ -1,6 +1,7 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
+import { addAction } from './action-registry.ts'
 
 /** What the Sheets (tilesets + appearances) actions need from the window. */
 export interface TileActionsContext {
@@ -30,7 +31,7 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
     ctx.showTilesView()
     ctx.presentAppearanceImport()
   })
-  group.add_action(newSpriteSet)
+  addAction(group, newSpriteSet)
 
   const newTileset = new Gio.SimpleAction({ name: 'new-tileset' })
   newTileset.connect('activate', () => {
@@ -40,14 +41,14 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
     }
     ctx.presentTilesetImport()
   })
-  group.add_action(newTileset)
+  addAction(group, newTileset)
 
   const openTileset = Gio.SimpleAction.new('open-tileset', GLib.VariantType.new('s'))
   openTileset.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (id) ctx.focusTileset(id)
   })
-  group.add_action(openTileset)
+  addAction(group, openTileset)
 
   // The asset-management counterpart of `win.edit-appearance`: select the
   // appearance's card and show its glance.
@@ -58,9 +59,9 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
     ctx.showTilesView()
     ctx.focusAppearance(id)
   })
-  group.add_action(openAppearance)
+  addAction(group, openAppearance)
 
   const switchTileset = new Gio.SimpleAction({ name: 'switch-tileset' })
   switchTileset.connect('activate', () => ctx.switchTileset())
-  group.add_action(switchTileset)
+  addAction(group, switchTileset)
 }

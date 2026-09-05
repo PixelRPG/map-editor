@@ -9,10 +9,23 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import type { Operation } from '../commands/types.ts'
+import { OpCategoryError } from './op-category.ts'
+import { ENTITY_UPSERT_KIND } from './project-operations.ts'
+import { SNAPSHOT_REQUEST_KIND } from './session-protocol.ts'
 import { isCoveredByWatermark, PRE_ATTACH_OP_BUFFER_CAP, PreAttachOpBuffer } from './pre-attach-op-buffer.ts'
 
 function op(peerId: string, seq: number, kind = 'tile.paint'): Operation {
   return { kind, payload: { seq }, peerId, seq }
+}
+
+/**
+ * A project op with the SAME `(peerId, seq)` as a command op — the
+ * collision the category exists to resolve. `CollabSession`'s
+ * project-op counter and `SessionController`'s command counter both
+ * start at 0 and both stamp this peer's id.
+ */
+function projectOp(peerId: string, seq: number): unknown {
+  return { kind: ENTITY_UPSERT_KIND, payload: { entity: { id: 'e1' } }, peerId, seq }
 }
 
 async function muteWarn<T>(fn: () => Promise<T> | T): Promise<T> {
@@ -132,6 +145,37 @@ export default async () => {
     await it('default cap is a few thousand ops', async () => {
       expect(PRE_ATTACH_OP_BUFFER_CAP).toBeGreaterThanOrEqual(1000)
     })
+
+    await it('REFUSES a project op loudly instead of buffering it', async () => {
+      // `(peerId, seq)` is not unique across the channel's three message
+      // families, so a project op in a command buffer is either dropped
+      // by a command watermark or replayed into the command registry.
+      // Both desync a joiner silently; a throw does not. The path is
+      // unreachable while CollabSession routes correctly — that routing
+      // is exactly what nothing else enforces.
+      const buffer = new PreAttachOpBuffer()
+      let thrown: unknown = null
+      try {
+        buffer.push(projectOp('host', 0))
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown instanceof OpCategoryError).toBe(true)
+      expect((thrown as OpCategoryError).actual).toBe('project')
+      expect(buffer.size).toBe(0)
+    })
+
+    await it('REFUSES a session-protocol frame loudly too', async () => {
+      const buffer = new PreAttachOpBuffer()
+      let thrown: unknown = null
+      try {
+        buffer.push({ kind: SNAPSHOT_REQUEST_KIND, payload: { roomId: 'r' }, peerId: 'host', seq: 0 })
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown instanceof OpCategoryError).toBe(true)
+      expect((thrown as OpCategoryError).actual).toBe('session-protocol')
+    })
   })
 
   await describe('isCoveredByWatermark', async () => {
@@ -144,6 +188,22 @@ export default async () => {
       expect(isCoveredByWatermark({ peerId: 'host' }, wm)).toBe(false)
       expect(isCoveredByWatermark(null, wm)).toBe(false)
       expect(isCoveredByWatermark('not-an-op', wm)).toBe(false)
+    })
+
+    await it('never covers a project op that collides on (peerId, seq)', async () => {
+      // The watermark counts COMMAND seqs. The project-op counter is an
+      // independent sequence carrying the same peerId, so this project
+      // op looks "already in the snapshot" to a category-blind check —
+      // and would be dropped, losing an entity-library edit on a joiner.
+      const wm = { peerId: 'host', nextSeq: 5 }
+      expect(isCoveredByWatermark(op('host', 1), wm)).toBe(true)
+      expect(isCoveredByWatermark(projectOp('host', 1), wm)).toBe(false)
+    })
+
+    await it('never covers a session-protocol frame either', async () => {
+      const wm = { peerId: 'host', nextSeq: 5 }
+      const frame = { kind: SNAPSHOT_REQUEST_KIND, payload: { roomId: 'r' }, peerId: 'host', seq: 1 }
+      expect(isCoveredByWatermark(frame, wm)).toBe(false)
     })
   })
 }

@@ -76,7 +76,9 @@ for (const pkg of PACKAGES) {
       console.error(`✗ [${pkg}] ${rel} is NOT imported in test.mts — it will silently never run`)
       failures++
     } else if (!runNames.has(name)) {
-      console.error(`✗ [${pkg}] ${rel} is imported as "${name}" but NOT passed to run({...}) — it will silently never run`)
+      console.error(
+        `✗ [${pkg}] ${rel} is imported as "${name}" but NOT passed to run({...}) — it will silently never run`,
+      )
       failures++
     }
   }

@@ -5,12 +5,11 @@ import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
+import { arrowheadPoints, controlPoint, type OverlayPoint, teleportEndpoint } from './teleport-overlay.geometry.ts'
 
 const TITLE_BAR_HEIGHT = 24
 const ACCENT_FALLBACK = '#3584e4'
 
-const CURVE_OFFSET_MAX = 80
-const CURVE_OFFSET_FACTOR = 0.25
 const STROKE_WIDTH = 2
 const STROKE_DASH: [number, number] = [6, 4]
 const OPACITY_NORMAL = 0.85
@@ -21,11 +20,6 @@ const ARROW_SIZE = 9
 const LABEL_FONT_SIZE_PT = 10
 const LABEL_PADDING_X = 8
 const LABEL_PADDING_Y = 2
-
-interface Endpoint {
-  x: number
-  y: number
-}
 
 /**
  * Vector overlay that draws teleport connections on top of the atlas
@@ -110,8 +104,8 @@ export class TeleportOverlay extends Gtk.Widget {
   private _drawTeleport(
     snapshot: Gtk.Snapshot,
     t: SampleTeleport,
-    a: Endpoint,
-    b: Endpoint,
+    a: OverlayPoint,
+    b: OverlayPoint,
     stroke: Gsk.Stroke,
     accent: Gdk.RGBA,
     white: Gdk.RGBA,
@@ -143,14 +137,10 @@ export class TeleportOverlay extends Gtk.Widget {
     snapshot.pop()
   }
 
-  private _endpoint(byId: Map<string, SampleScene>, sceneId: string, tx: number, ty: number): Endpoint | null {
-    const s = byId.get(sceneId)
-    if (!s) return null
-    const scale = this._scale
-    return {
-      x: (s.x + (tx + 0.5) * s.tilePx) * scale,
-      y: (s.y + (ty + 0.5) * s.tilePx) * scale + TITLE_BAR_HEIGHT,
-    }
+  private _endpoint(byId: Map<string, SampleScene>, sceneId: string, tx: number, ty: number): OverlayPoint | null {
+    const scene = byId.get(sceneId)
+    if (!scene) return null
+    return teleportEndpoint(scene, tx, ty, this._scale, TITLE_BAR_HEIGHT)
   }
 
   private _coverRect(): Graphene.Rect {
@@ -175,23 +165,13 @@ export class TeleportOverlay extends Gtk.Widget {
    * `from → tip`. Sits at the destination end of a teleport curve to
    * indicate direction.
    */
-  private _drawArrowhead(snapshot: Gtk.Snapshot, from: Endpoint, tip: Endpoint, color: Gdk.RGBA): void {
-    const dx = tip.x - from.x
-    const dy = tip.y - from.y
-    const len = Math.hypot(dx, dy) || 1
-    const ux = dx / len
-    const uy = dy / len
-    // Perpendicular unit vector for the two base corners.
-    const px = -uy
-    const py = ux
+  private _drawArrowhead(snapshot: Gtk.Snapshot, from: OverlayPoint, tip: OverlayPoint, color: Gdk.RGBA): void {
     const size = ARROW_SIZE
-    const half = size * 0.6
-    const baseX = tip.x - ux * size
-    const baseY = tip.y - uy * size
+    const [apex, left, right] = arrowheadPoints(from, tip, size)
     const builder = new Gsk.PathBuilder()
-    builder.move_to(tip.x, tip.y)
-    builder.line_to(baseX + px * half, baseY + py * half)
-    builder.line_to(baseX - px * half, baseY - py * half)
+    builder.move_to(apex.x, apex.y)
+    builder.line_to(left.x, left.y)
+    builder.line_to(right.x, right.y)
     builder.close()
     snapshot.push_fill(builder.to_path(), Gsk.FillRule.WINDING)
     const rect = new Graphene.Rect()
@@ -244,21 +224,6 @@ export class TeleportOverlay extends Gtk.Widget {
     }
     return this._accentColor
   }
-}
-
-/**
- * Quadratic-Bézier control point biased perpendicular to the segment
- * midpoint — `offset = min(80, length × 0.25)`. Mirrors the curve math
- * from the original design exports (`option-g-synthesis.jsx`).
- */
-function controlPoint(a: Endpoint, b: Endpoint): Endpoint {
-  const mx = (a.x + b.x) / 2
-  const my = (a.y + b.y) / 2
-  const dx = b.x - a.x
-  const dy = b.y - a.y
-  const len = Math.hypot(dx, dy) || 1
-  const off = Math.min(CURVE_OFFSET_MAX, len * CURVE_OFFSET_FACTOR)
-  return { x: mx - (dy / len) * off, y: my + (dx / len) * off }
 }
 
 GObject.type_ensure(TeleportOverlay.$gtype)

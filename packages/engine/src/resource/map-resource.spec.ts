@@ -37,6 +37,23 @@ export default async () => {
       expect(resource.getAvailableLayerIds()).toStrictEqual(['ground'])
     })
 
+    await it('lists a layer whose descriptor has NO visible key (absent = visible)', async () => {
+      // This used to filter truthily: such a layer rendered on screen
+      // and could be toggled via `Engine.setLayerVisible`, but never
+      // appeared in the picker. `services/layer-visibility.ts` owns the
+      // absent-is-visible default and every reader must use it.
+      const resource = new MapResource('maps/main.json', { headless: true })
+      const withData = resource as unknown as { _mapData: unknown }
+      withData._mapData = {
+        layers: [
+          { id: 'legacy', name: 'Legacy' },
+          { id: 'ground', visible: true },
+          { id: 'hidden', visible: false },
+        ],
+      }
+      expect(resource.getAvailableLayerIds()).toStrictEqual(['legacy', 'ground'])
+    })
+
     await it('returns null when the map has no layers', async () => {
       const resource = new MapResource('maps/empty.json', { headless: true })
       const withData = resource as unknown as { _mapData: unknown }

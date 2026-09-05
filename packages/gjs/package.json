@@ -8,7 +8,7 @@
     "build:barrels": "gjsify barrels src/widgets/common src/widgets/editor src/widgets/sprite",
     "check:barrels": "gjsify barrels --check src/widgets/common src/widgets/editor src/widgets/sprite",
     "build": "gjsify run build:barrels",
-    "check": "gjsify run build:barrels && tsc",
+    "check": "gjsify run build:barrels && tsc && node scripts/check-widget-invariants.mjs",
     "test": "gjsify test",
     "storybook": "gjsify storybook"
   },
@@ -46,6 +46,7 @@
     "@girs/gtksource-5": "^4.6.0",
     "@girs/pango-1.0": "^4.6.0",
     "@gjsify/cli": "^0.47.0",
+    "@gjsify/unit": "^0.47.0",
     "typescript": "^6.0.3"
   }
 }

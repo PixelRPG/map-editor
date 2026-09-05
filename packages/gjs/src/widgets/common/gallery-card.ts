@@ -71,10 +71,20 @@ export interface GalleryCardLabels {
  */
 export class GalleryCard extends Gtk.Overlay {
   private _id = ''
+  /** The item this card renders — re-read whenever the menu is rebuilt. */
+  private _item: GalleryCardItem
+  /** Current menu wording; {@link labels} swaps it on a live card. */
+  private _labels: GalleryCardLabels
   /** The card button, so the gallery can move the selection ring onto it. */
   private _button: Gtk.Button
   /** The preview widget when it can be told about highlight state, else null. */
   private _preview: CardPreview | null = null
+  /** The three-dots menu model, refilled by {@link _populateMenu}. */
+  private _menu = Gio.Menu.new()
+  /** True once {@link enableReorder} installed the drag controllers. */
+  private _reorderInstalled = false
+  /** Whether the installed drag controllers currently act. */
+  private _reorderable = false
 
   static {
     GObject.registerClass(
@@ -98,13 +108,40 @@ export class GalleryCard extends Gtk.Overlay {
   constructor(item: GalleryCardItem, labels: GalleryCardLabels, preview: Gtk.Widget | null) {
     super()
     this._id = item.id
+    this._item = item
+    this._labels = labels
     this._button = this._buildButton(item, preview ?? buildDefaultPreview(item))
     this.set_child(this._button)
-    this.add_overlay(this._buildMenuButton(item, labels))
+    this.add_overlay(this._buildMenuButton())
   }
 
   get id(): string {
     return this._id
+  }
+
+  /**
+   * Swap the three-dots menu wording on a LIVE card. The gallery's
+   * label properties are settable at any time, so baking them in at
+   * construction would make a post-`setItems` change a silent no-op.
+   */
+  set labels(value: GalleryCardLabels) {
+    this._labels = value
+    this._populateMenu()
+  }
+
+  /**
+   * Whether the installed drag controllers act. Kept separate from
+   * {@link enableReorder} so the controllers are installed exactly once
+   * per card and the gallery can flip reordering on and off afterwards
+   * — re-installing them would stack a second `Gtk.DragSource` on the
+   * same button.
+   */
+  get reorderable(): boolean {
+    return this._reorderable
+  }
+
+  set reorderable(value: boolean) {
+    this._reorderable = value
   }
 
   /** The highlightable preview, or `null` when the preview can't animate. */
@@ -119,14 +156,23 @@ export class GalleryCard extends Gtk.Overlay {
   }
 
   /**
-   * Make the card drag-reorderable: a `Gtk.DragSource` carrying the id
-   * (string) + a `Gtk.DropTarget` that emits `reorder-requested` with the
-   * dragged id on drop. Click vs drag is disambiguated by GTK's drag
-   * threshold, so single-click select still works.
+   * Install the drag-reorder controllers: a `Gtk.DragSource` carrying
+   * the id (string) + a `Gtk.DropTarget` that emits `reorder-requested`
+   * with the dragged id on drop. Click vs drag is disambiguated by
+   * GTK's drag threshold, so single-click select still works.
+   *
+   * Installing is idempotent and independent of {@link reorderable}:
+   * every card gets the controllers, and the flag decides whether they
+   * do anything. Gating the INSTALL on the flag instead is what made
+   * `CardGallery.reorderable` a silent no-op when set after `setItems`.
    */
   enableReorder(draggedId: () => string | null, onDragStart: (id: string) => void, onDragEnd: () => void): void {
+    if (this._reorderInstalled) return
+    this._reorderInstalled = true
+
     const dragSource = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
     dragSource.connect('prepare', () => {
+      if (!this._reorderable) return null
       onDragStart(this._id)
       const value = new GObject.Value()
       value.init(GObject.TYPE_STRING)
@@ -139,6 +185,7 @@ export class GalleryCard extends Gtk.Overlay {
 
     const dropTarget = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE)
     dropTarget.connect('drop', () => {
+      if (!this._reorderable) return false
       const dragged = draggedId()
       if (dragged === null || dragged === this._id) return false
       this.emit('reorder-requested', dragged)
@@ -194,19 +241,19 @@ export class GalleryCard extends Gtk.Overlay {
    * icon. "Edit" (→ open the detail page) is always offered; "Rename" and
    * "Delete" only for items that allow them (built-ins can't be removed).
    */
-  private _buildMenuButton(item: GalleryCardItem, labels: GalleryCardLabels): Gtk.MenuButton {
-    const menu = Gio.Menu.new()
+  private _buildMenuButton(): Gtk.MenuButton {
     const group = new Gio.SimpleActionGroup()
-    const add = (name: string, label: string, signal: string) => {
-      menu.append(label, `card.${name}`)
+    const addAction = (name: string, signal: string) => {
       const action = new Gio.SimpleAction({ name })
       action.connect('activate', () => this.emit(signal))
       group.add_action(action)
     }
-    add('open', labels.open, 'opened')
-    if (item.renamable) add('rename', labels.rename, 'rename-requested')
-    if (item.deletable) add('delete', labels.delete, 'delete-requested')
+    addAction('open', 'opened')
+    if (this._item.renamable) addAction('rename', 'rename-requested')
+    if (this._item.deletable) addAction('delete', 'delete-requested')
+    this._populateMenu()
 
+    const menu = this._menu
     const menuButton = new Gtk.MenuButton({
       iconName: 'view-more-symbolic',
       tooltipText: _('More options'),
@@ -219,6 +266,18 @@ export class GalleryCard extends Gtk.Overlay {
     })
     menuButton.insert_action_group('card', group)
     return menuButton
+  }
+
+  /**
+   * Fill (or refill) the menu model from the current {@link _labels}.
+   * `Gio.Menu` is live — the open popover picks the new wording up — so
+   * a label change never has to rebuild the button or the action group.
+   */
+  private _populateMenu(): void {
+    this._menu.remove_all()
+    this._menu.append(this._labels.open, 'card.open')
+    if (this._item.renamable) this._menu.append(this._labels.rename, 'card.rename')
+    if (this._item.deletable) this._menu.append(this._labels.delete, 'card.delete')
   }
 }
 

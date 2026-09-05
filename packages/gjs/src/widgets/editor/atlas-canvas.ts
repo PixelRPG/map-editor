@@ -71,6 +71,13 @@ export class AtlasCanvas extends Adw.Bin {
   /** Scroll offsets captured at pan start, so the drag delta is absolute. */
   private _panStart = { h: 0, v: 0 }
   private _signals = new SignalScope()
+  /**
+   * Holds the single deferred `fitToContent` waiting for the scroller's
+   * first allocation. Separate from {@link _signals} so `fitToContent`
+   * can supersede a pending fit without dropping the map-scoped
+   * gesture handlers.
+   */
+  private _pendingFit = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -231,15 +238,20 @@ export class AtlasCanvas extends Adw.Bin {
       h.value = centeredScrollValue(extent.width, h.upper, h.page_size)
       v.value = centeredScrollValue(extent.height, v.upper, v.page_size)
     }
+    // At most one deferred fit is ever pending: a second call before the
+    // first allocation supersedes the first instead of stacking another
+    // handler on the adjustment, and `vfunc_unmap` releases one that
+    // never got its allocation.
+    this._pendingFit.disconnectAll()
     if (h.page_size > 0) {
       apply()
       return
     }
     // Not yet allocated — run once the viewport gets a real size.
-    const id = h.connect('notify::page-size', () => {
-      if (h.page_size <= 0) return
-      h.disconnect(id)
+    this._pendingFit.connectUntil(h, 'notify::page-size', () => {
+      if (h.page_size <= 0) return false
       apply()
+      return true
     })
   }
 
@@ -257,6 +269,7 @@ export class AtlasCanvas extends Adw.Bin {
 
   vfunc_unmap(): void {
     this._signals.disconnectAll()
+    this._pendingFit.disconnectAll()
     super.vfunc_unmap()
   }
 

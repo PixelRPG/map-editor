@@ -39,7 +39,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { basename, dirname, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -72,11 +72,6 @@ function legacyTypeToKind(legacyType) {
       return 'spawn-point'
     case 'trigger':
       return 'event'
-    case 'collider':
-      return 'custom'
-    case 'sprite':
-      return 'custom'
-    case 'custom':
     default:
       return 'custom'
   }
@@ -199,7 +194,8 @@ function migrateProject(projectPath) {
       continue
     }
     ensureEventsLayer(sourceMap.mapData)
-    const placements = (sourceMap.mapData.objectPlacements ??= [])
+    sourceMap.mapData.objectPlacements ??= []
+    const placements = sourceMap.mapData.objectPlacements
     placements.push({
       id: `p-${t.id}`,
       layerId: EVENTS_LAYER_ID,

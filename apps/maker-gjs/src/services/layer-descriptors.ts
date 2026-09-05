@@ -1,4 +1,4 @@
-import type { MapData } from '@pixelrpg/engine'
+import { isLayerDataVisible, type MapData } from '@pixelrpg/engine'
 import type { LayerDescriptor } from '@pixelrpg/gjs'
 
 /**
@@ -17,7 +17,9 @@ export function toLayerDescriptors(mapData: MapData): LayerDescriptor[] {
     id: layer.id,
     name: layer.name,
     tileCount: (layer.sprites?.length ?? 0) + (placementsByLayer.get(layer.id) ?? 0),
-    visible: layer.visible ?? true,
+    // The absent-is-visible rule lives in ONE engine predicate; a second
+    // copy here is how the engine's three readers drifted apart.
+    visible: isLayerDataVisible(layer),
     locked: layer.locked ?? false,
   }))
 }

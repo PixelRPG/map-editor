@@ -13,9 +13,11 @@ import {
   PROJECT_META_UPDATE_KIND,
   type ProjectOp,
   type SpriteSetAddPayload,
+  type SpriteSetData,
   type SpriteSetUpdatePayload,
 } from '@pixelrpg/engine'
 
+import { applyAnimationEdit, removeAnimation } from './cast-controller-animations.ts'
 import type { LoadedProject } from './project-loader.ts'
 import {
   type EntityLibraryChangeSource,
@@ -64,40 +66,54 @@ function makeProject(data: GameProjectData): LoadedProject {
   } as unknown as LoadedProject
 }
 
-/** Recording file-IO fake — nothing touches the disk. */
-function makeIo(): ProjectStoreIo & { writes: Array<{ path: string; contents: string }> } {
+/**
+ * Recording file-IO fake — nothing touches the disk.
+ *
+ * `behaviour` models the three ways a persist ends: it lands (`ok`), the
+ * write reports failure (`fail`), or the write/serialise raises
+ * (`throw`). The last one is the shape that used to escape `ProjectStore`
+ * entirely on the inbound-peer path.
+ */
+function makeIo(
+  behaviour: 'ok' | 'fail' | 'throw' = 'ok',
+): ProjectStoreIo & { writes: Array<{ path: string; contents: string }> } {
   const writes: Array<{ path: string; contents: string }> = []
   return {
     writes,
     writeText: (path: string, contents: string) => {
+      if (behaviour === 'throw') throw new Error('disk on fire')
       writes.push({ path, contents })
-      return true
+      return behaviour === 'ok'
     },
-    writeBinary: () => true,
-    copy: () => true,
+    writeBinary: () => behaviour === 'ok',
+    copy: () => behaviour === 'ok',
     readBinary: () => null,
-    remove: () => true,
+    remove: () => behaviour === 'ok',
   }
 }
 
 /** Recording collab-session fake satisfying {@link ProjectSyncSession}. */
-function makeSession(): ProjectSyncSession & { sent: ProjectOp[] } {
+function makeSession(): ProjectSyncSession & { sent: ProjectOp[]; sentSpriteSets: SpriteSetUpdatePayload[] } {
   const sent: ProjectOp[] = []
+  const sentSpriteSets: SpriteSetUpdatePayload[] = []
   return {
     sent,
+    sentSpriteSets,
     sendProjectOp(build) {
       sent.push(build({ peerId: 'local-peer', seq: sent.length }))
     },
     sendSpriteSetAdd(_payload: SpriteSetAddPayload) {},
-    sendSpriteSetUpdate(_payload: SpriteSetUpdatePayload) {},
+    sendSpriteSetUpdate(payload: SpriteSetUpdatePayload) {
+      sentSpriteSets.push(payload)
+    },
     onProjectOpReceived: null,
     onSpriteSetAddReceived: null,
     onSpriteSetUpdateReceived: null,
   }
 }
 
-function makeStore(data = makeProjectData()) {
-  const io = makeIo()
+function makeStore(data = makeProjectData(), behaviour: 'ok' | 'fail' | 'throw' = 'ok') {
+  const io = makeIo(behaviour)
   const toasts: string[] = []
   const store = new ProjectStore(io)
   store.on('notice', (n) => toasts.push(n.kind))
@@ -106,6 +122,9 @@ function makeStore(data = makeProjectData()) {
 }
 
 const npc: EntityDefinition = { id: 'npc-1', name: 'NPC', components: [] }
+
+/** GLib path helpers are only real under the GJS target; node stubs `gi://`. */
+const hasGLibPaths = typeof (GLib as { path_get_dirname?: unknown }).path_get_dirname === 'function'
 
 export default async () => {
   await describe('uniqueIdFrom', async () => {
@@ -381,6 +400,185 @@ export default async () => {
       const { store, io } = makeStore()
       expect(store.mutateSpriteSetData('ghost', () => {})).toBe(false)
       expect(io.writes).toHaveLength(0)
+    })
+  })
+
+  // ────────────────────────────────────────────────────────────
+  // Sprite-set DESCRIPTOR writes (`spritesets/<id>.json`)
+  //
+  // These paths all go through the store's one write-then-commit step.
+  // The invariant they share: a write that did not land changes NOTHING
+  // observable — not the in-memory descriptor, not the collab wire, not
+  // a change event. Add every new descriptor write path to
+  // `descriptorWritePaths` below; that table is what makes a hand-rolled
+  // persist in a new method visible instead of silently drifting.
+  // ────────────────────────────────────────────────────────────
+
+  const spriteSetData = (overrides: Partial<Record<string, unknown>> = {}) =>
+    ({
+      version: '1.0.0',
+      id: 'tiles',
+      name: 'Tiles',
+      image: { id: 'main', type: 'image', path: 'tiles.png' },
+      spriteWidth: 16,
+      spriteHeight: 16,
+      columns: 2,
+      rows: 1,
+      sprites: [
+        { id: 0, col: 0, row: 0 },
+        { id: 1, col: 1, row: 0 },
+      ],
+      characterAnimations: [{ id: 'idle-down', frames: [{ spriteId: 0, duration: 200 }] }],
+      ...overrides,
+    }) as unknown as SpriteSetData
+
+  /**
+   * A store with one live sprite set registered. Descriptor paths build
+   * filesystem paths through GLib, which is only real under the GJS
+   * target — callers skip on node (`hasGLibPaths`).
+   */
+  function makeStoreWithSpriteSet(behaviour: 'ok' | 'fail' | 'throw' = 'ok') {
+    const { store, io, toasts } = makeStore(makeProjectData(), behaviour)
+    const engineSet = { data: spriteSetData(), path: '/tmp/project-store-spec/spritesets/tiles.json' }
+    store.resource?.spriteSets.set('tiles', engineSet as never)
+    const session = makeSession()
+    store.setCollabSession(session)
+    const events: string[] = []
+    for (const name of ['sprite-sets-changed', 'tile-properties-changed'] as const) {
+      store.on(name, () => events.push(name))
+    }
+    return { store, io, toasts, session, events, engineSet }
+  }
+
+  /** Every write path that persists `spritesets/<id>.json`. Keep in sync with `ProjectStore`. */
+  const descriptorWritePaths: Array<[string, (store: ProjectStore) => void]> = [
+    ['renameSpriteSet', (store) => store.renameSpriteSet('tiles', 'Renamed')],
+    ['setTileSolid', (store) => store.setTileSolid('tiles', 1, true)],
+    ['setTileSurface', (store) => store.setTileSurface('tiles', 1, 'water')],
+    [
+      'mutateSpriteSetData',
+      (store) =>
+        void store.mutateSpriteSetData('tiles', (draft) => {
+          draft.name = 'Mutated'
+        }),
+    ],
+    [
+      'applyRemoteSpriteSetUpdate',
+      (store) => store.applyRemoteSpriteSetUpdate({ data: spriteSetData({ name: 'Peer' }) } as SpriteSetUpdatePayload),
+    ],
+  ]
+
+  await describe('ProjectStore — sprite-set descriptor writes', async () => {
+    for (const [label, run] of descriptorWritePaths) {
+      await it(`${label} commits nothing when the write reports failure`, async () => {
+        if (!hasGLibPaths) return
+        const { store, session, events, engineSet, toasts } = makeStoreWithSpriteSet('fail')
+        const before = JSON.stringify(engineSet.data)
+
+        run(store)
+
+        expect(JSON.stringify(engineSet.data)).toBe(before)
+        expect(session.sentSpriteSets).toHaveLength(0)
+        expect(events).toHaveLength(0)
+        expect(toasts).toStrictEqual(['sprite-set-save-failed'])
+      })
+
+      await it(`${label} commits nothing (and does not throw) when the write raises`, async () => {
+        if (!hasGLibPaths) return
+        const { store, session, events, engineSet } = makeStoreWithSpriteSet('throw')
+        const before = JSON.stringify(engineSet.data)
+
+        run(store)
+
+        expect(JSON.stringify(engineSet.data)).toBe(before)
+        expect(session.sentSpriteSets).toHaveLength(0)
+        expect(events).toHaveLength(0)
+      })
+    }
+
+    await it('applyRemoteSpriteSetUpdate keeps the local descriptor when the peer chunk fails to serialise', async () => {
+      if (!hasGLibPaths) return
+      // The exact reachable-from-the-network case: a peer sends a
+      // descriptor `SpriteSetFormat.serialize` rejects. Before the guard
+      // the throw escaped the store — after `engineSet.data` had already
+      // been replaced and before any change event was emitted.
+      const { store, engineSet, events } = makeStoreWithSpriteSet()
+      const invalid = spriteSetData({ version: '' })
+
+      store.applyRemoteSpriteSetUpdate({ data: invalid } as SpriteSetUpdatePayload)
+
+      expect(engineSet.data.version).toBe('1.0.0')
+      expect(engineSet.data.name).toBe('Tiles')
+      expect(events).toHaveLength(0)
+    })
+
+    await it('applyRemoteSpriteSetUpdate replaces the descriptor and notifies on a good chunk', async () => {
+      if (!hasGLibPaths) return
+      const { store, engineSet, events, io } = makeStoreWithSpriteSet()
+
+      store.applyRemoteSpriteSetUpdate({ data: spriteSetData({ name: 'Peer' }) } as SpriteSetUpdatePayload)
+
+      expect(engineSet.data.name).toBe('Peer')
+      expect(io.writes).toHaveLength(1)
+      expect(events).toStrictEqual(['tile-properties-changed', 'sprite-sets-changed'])
+    })
+
+    await it('a REJECTED mutateSpriteSetData persists nothing and broadcasts nothing', async () => {
+      if (!hasGLibPaths) return
+      // A rejected sheet edit (duplicate animation id, protected role,
+      // unknown target) must not ship a full-sheet upsert: that would
+      // clobber a peer's concurrent edit with our unchanged copy.
+      const { store, io, session, engineSet } = makeStoreWithSpriteSet()
+      const before = JSON.stringify(engineSet.data)
+
+      const changed = store.mutateSpriteSetData('tiles', (draft) => {
+        draft.name = 'Should be discarded'
+        return false
+      })
+
+      expect(changed).toBe(false)
+      expect(io.writes).toHaveLength(0)
+      expect(session.sentSpriteSets).toHaveLength(0)
+      expect(JSON.stringify(engineSet.data)).toBe(before)
+    })
+
+    await it('an ACCEPTED mutateSpriteSetData persists once and broadcasts once', async () => {
+      if (!hasGLibPaths) return
+      const { store, io, session, engineSet } = makeStoreWithSpriteSet()
+
+      const changed = store.mutateSpriteSetData('tiles', (draft) => {
+        draft.name = 'Mutated'
+      })
+
+      expect(changed).toBe(true)
+      expect(engineSet.data.name).toBe('Mutated')
+      expect(io.writes).toHaveLength(1)
+      expect(session.sentSpriteSets).toHaveLength(1)
+      expect(session.sentSpriteSets[0].data.name).toBe('Mutated')
+    })
+
+    await it('a rejected sheet-animation edit produces zero broadcasts', async () => {
+      if (!hasGLibPaths) return
+      // The cast controller's exact composition: `removeAnimation`
+      // rejects an unknown id, `applyAnimationEdit` turns that into a
+      // store rejection, and the store then skips persist + broadcast.
+      const { store, io, session } = makeStoreWithSpriteSet()
+
+      const changed = store.mutateSpriteSetData('tiles', (draft) =>
+        applyAnimationEdit(draft, (anims) => removeAnimation(anims, 'no-such-animation')),
+      )
+
+      expect(changed).toBe(false)
+      expect(io.writes).toHaveLength(0)
+      expect(session.sentSpriteSets).toHaveLength(0)
+    })
+
+    await it('renameSpriteSet to the same name writes and broadcasts nothing', async () => {
+      if (!hasGLibPaths) return
+      const { store, io, session } = makeStoreWithSpriteSet()
+      store.renameSpriteSet('tiles', '  Tiles  ')
+      expect(io.writes).toHaveLength(0)
+      expect(session.sentSpriteSets).toHaveLength(0)
     })
   })
 

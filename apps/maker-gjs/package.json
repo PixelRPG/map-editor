@@ -42,6 +42,7 @@
     "@girs/gjs": "^4.6.0",
     "@girs/glib-2.0": "^4.6.0",
     "@girs/gobject-2.0": "^4.6.0",
+    "@girs/graphene-1.0": "^4.6.0",
     "@girs/gtk-4.0": "^4.6.0",
     "@gjsify/canvas2d": "^0.47.0",
     "@gjsify/devtools": "^0.47.0",
@@ -53,7 +54,8 @@
     "@gjsify/xmlhttprequest": "^0.47.0",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
-    "excalibur": "^0.32.0"
+    "excalibur": "^0.32.0",
+    "ws": "^8.18.0"
   },
   "gjsify": {
     "flatpak": {

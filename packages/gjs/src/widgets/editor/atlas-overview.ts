@@ -4,18 +4,12 @@ import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 
+import { mapOverviewRect, type OverviewRect, overviewTransform } from './atlas-overview.geometry.ts'
+
 const ACCENT_FALLBACK = '#3584e4'
 const SCENE_FILL = new Gdk.RGBA()
 SCENE_FILL.parse('rgba(255,255,255,0.28)')
 const VIEWPORT_BORDER_WIDTH = 1.5
-
-/** One scene's bounding box in atlas-surface coordinates. */
-export interface OverviewRect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
 
 /**
  * Atlas overview minimap — a scaled-down schematic of the whole world
@@ -62,17 +56,13 @@ export class AtlasOverview extends Gtk.Widget {
   }
 
   vfunc_snapshot(snapshot: Gtk.Snapshot): void {
-    const W = this.get_width()
-    const H = this.get_height()
-    if (!W || !H || this._contentW <= 0 || this._contentH <= 0) return
-
     // Uniform fit of the whole content box into the widget, centered.
-    const scale = Math.min(W / this._contentW, H / this._contentH)
-    const offX = (W - this._contentW * scale) / 2
-    const offY = (H - this._contentH * scale) / 2
+    const transform = overviewTransform(this.get_width(), this.get_height(), this._contentW, this._contentH)
+    if (!transform) return
     const map = (r: OverviewRect): Graphene.Rect => {
+      const mapped = mapOverviewRect(r, transform)
       const rect = new Graphene.Rect()
-      rect.init(offX + r.x * scale, offY + r.y * scale, Math.max(1, r.w * scale), Math.max(1, r.h * scale))
+      rect.init(mapped.x, mapped.y, mapped.w, mapped.h)
       return rect
     }
 

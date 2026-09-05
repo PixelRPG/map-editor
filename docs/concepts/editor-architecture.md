@@ -226,7 +226,7 @@ Decisions captured here so future PRs don't re-relitigate them:
 
 ## Migration strategy
 
-Five phases, ordered by leverage. Each is its own PR. The current code keeps working at every step — no big bang.
+Five phases, ordered by what pays off first. Each is its own PR. The current code keeps working at every step — no big bang.
 
 ### Phase 1 — Foundation: mode-marker components
 

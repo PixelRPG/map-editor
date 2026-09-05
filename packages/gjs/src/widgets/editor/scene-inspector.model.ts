@@ -89,7 +89,13 @@ export function teleportSummaries(
  * Tile size (px) that fits a `cols × rows` map into the inspector's
  * preview box. Floored to whole pixels so the mini-map stays crisp, with
  * a floor of 1 so a huge map still renders something.
+ *
+ * A non-positive map size returns 1 rather than dividing by zero:
+ * `sceneTileSize` yields `0 × 0` for a scene with neither terrain rows
+ * nor card geometry, and an `Infinity` tile size propagates into
+ * `MiniMap`'s `width_request` as NaN.
  */
 export function previewTilePx(cols: number, rows: number, boxWidth: number, boxHeight: number): number {
+  if (cols <= 0 || rows <= 0) return 1
   return Math.max(1, Math.floor(Math.min(boxWidth / cols, boxHeight / rows)))
 }

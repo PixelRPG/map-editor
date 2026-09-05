@@ -20,6 +20,20 @@ export default async () => {
         insertAt(input, 1, 'x')
         expect(input).toStrictEqual(['a', 'b'])
       })
+
+      await it('seeds an empty sequence', async () => {
+        expect(insertAt([], 0, 'x')).toStrictEqual(['x'])
+        expect(insertAt([], 7, 'x')).toStrictEqual(['x'])
+      })
+
+      await it('clamps a negative gap to the head', async () => {
+        expect(insertAt(['a', 'b'], -3, 'x')).toStrictEqual(['x', 'a', 'b'])
+      })
+
+      await it('inserts at the last gap, not one before it', async () => {
+        // Off-by-one guard: gap `length` means "after the last frame".
+        expect(insertAt(['a', 'b', 'c'], 3, 'x')).toStrictEqual(['a', 'b', 'c', 'x'])
+      })
     })
 
     await describe('moveTo', async () => {
@@ -43,6 +57,31 @@ export default async () => {
         expect(out).toStrictEqual(['a', 'b'])
         expect(out).not.toBe(input)
       })
+
+      await it('returns a copy for a negative source', async () => {
+        expect(moveTo(['a', 'b'], -1, 1)).toStrictEqual(['a', 'b'])
+      })
+
+      await it('clamps an over-range destination to the tail', async () => {
+        expect(moveTo(['a', 'b', 'c'], 0, 99)).toStrictEqual(['b', 'c', 'a'])
+      })
+
+      await it('clamps a negative destination to the head', async () => {
+        expect(moveTo(['a', 'b', 'c'], 2, -5)).toStrictEqual(['c', 'a', 'b'])
+      })
+
+      await it('is a copy for a single-item sequence', async () => {
+        expect(moveTo(['a'], 0, 1)).toStrictEqual(['a'])
+        expect(moveTo(['a'], 0, 0)).toStrictEqual(['a'])
+      })
+
+      await it('handles an empty sequence', async () => {
+        expect(moveTo([], 0, 0)).toStrictEqual([])
+      })
+
+      await it('moves the LAST item to the head', async () => {
+        expect(moveTo(['a', 'b', 'c', 'd'], 3, 0)).toStrictEqual(['d', 'a', 'b', 'c'])
+      })
     })
 
     await describe('removeAt', async () => {
@@ -54,6 +93,23 @@ export default async () => {
         const out = removeAt(input, 9)
         expect(out).toStrictEqual(['a', 'b'])
         expect(out).not.toBe(input)
+      })
+
+      await it('removes the first and the last item', async () => {
+        expect(removeAt(['a', 'b', 'c'], 0)).toStrictEqual(['b', 'c'])
+        expect(removeAt(['a', 'b', 'c'], 2)).toStrictEqual(['a', 'b'])
+      })
+
+      await it('empties a single-item sequence', async () => {
+        expect(removeAt(['a'], 0)).toStrictEqual([])
+      })
+
+      await it('ignores a negative index', async () => {
+        expect(removeAt(['a', 'b'], -1)).toStrictEqual(['a', 'b'])
+      })
+
+      await it('ignores the index one past the end', async () => {
+        expect(removeAt(['a', 'b'], 2)).toStrictEqual(['a', 'b'])
       })
     })
   })

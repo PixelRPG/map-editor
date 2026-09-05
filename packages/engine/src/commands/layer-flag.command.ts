@@ -77,6 +77,9 @@ function resolveLayer(scene: Scene, layerId: string) {
 function applyLayerVisibility(scene: Scene, layerId: string, visible: boolean): void {
   const layer = resolveLayer(scene, layerId)
   if (!layer || !(scene instanceof MapScene)) return
+  // layer-visibility-ok: the WRITE that owns the flag. This command is
+  // what `services/layer-visibility.ts` reads back — a predicate call
+  // here would be circular.
   layer.visible = visible
   const targetTier = layer.tier ?? DEFAULT_LAYER_TIER
   for (const entity of scene.world.entityManager.entities) {

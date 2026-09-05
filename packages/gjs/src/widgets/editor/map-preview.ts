@@ -6,14 +6,8 @@ import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import { GameProjectResource, type MapData } from '@pixelrpg/engine'
 import { BakeCache, buildCacheKey } from './bake-cache.ts'
-import {
-  type BakePlacement,
-  buildDrawOps,
-  collectSheets,
-  type DrawOp,
-  renderOps,
-  type SheetRange,
-} from './map-preview.bake.ts'
+import { type BakePlacement, collectSheets, renderOps } from './map-preview.bake.ts'
+import { buildDrawOps, type DrawOp, type SheetRange } from './map-preview.ops.ts'
 import {
   clampViewportCenter,
   fingerprintMapData,

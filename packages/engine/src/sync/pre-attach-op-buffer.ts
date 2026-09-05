@@ -26,7 +26,20 @@
  * end up both in the snapshot and replayed, which is safe because
  * every built-in command's `apply` (and `revert`) is idempotent —
  * see the analysis on `CollabSession.attachEngine`.
+ *
+ * COMMAND-CATEGORY ONLY. The watermark counts COMMAND ops, but the
+ * project-op counter on the same channel is a second sequence stamped
+ * with the same `peerId` and also starting at 0 — so `(peerId, seq)`
+ * alone cannot tell a project op from a command op, and a project op
+ * reaching this buffer would be silently swallowed by a command
+ * watermark. The buffer therefore refuses non-command ops LOUDLY
+ * (`OpCategoryError`) and {@link isCoveredByWatermark} answers
+ * `false` for anything that is not a command op — the invariant
+ * `CollabSession`'s routing relies on is now enforced here rather than
+ * merely assumed. See `op-category.ts`.
  */
+
+import { assertCommandOp, classifyOp } from './op-category.ts'
 
 /** Default cap — see {@link PreAttachOpBuffer}. */
 export const PRE_ATTACH_OP_BUFFER_CAP = 4096
@@ -40,21 +53,34 @@ export interface SnapshotOpWatermark {
   /** The snapshot host's stable peer id — only its ops are covered. */
   peerId: string
   /**
-   * The host's next command-op sequence number, read synchronously at
-   * snapshot-capture start. Every op from `peerId` with
+   * The host's next COMMAND-op sequence number, read synchronously at
+   * snapshot-capture start. Every command op from `peerId` with
    * `seq < nextSeq` was applied to the host's engine before the
    * capture read any state, so its effect is inside the snapshot.
+   *
+   * Scoped to the command category on purpose: the project-op counter
+   * on the same channel is an independent sequence carrying the same
+   * `peerId`, so a project op with a low `seq` would otherwise look
+   * "already in the snapshot" and be dropped.
    */
   nextSeq: number
 }
 
 /**
- * `true` when the op is covered by the watermark — i.e. it carries the
- * watermark peer's id and a seq strictly below `nextSeq`, meaning its
- * effect is already part of the snapshot the joiner loaded.
+ * `true` when the op is covered by the watermark — i.e. it is a COMMAND
+ * op carrying the watermark peer's id and a seq strictly below
+ * `nextSeq`, meaning its effect is already part of the snapshot the
+ * joiner loaded.
+ *
+ * The category is part of the key. `origin` (AI attribution) is
+ * deliberately NOT: an op the assistant initiated still rides the
+ * hosting peer's `(peerId, seq)` and must dedupe identically.
  */
 export function isCoveredByWatermark(op: unknown, watermark: SnapshotOpWatermark): boolean {
   if (!op || typeof op !== 'object') return false
+  // A project / session-protocol op shares the peerId but not the
+  // sequence space the watermark counts, so it can never be covered.
+  if (classifyOp(op) !== 'command') return false
   const candidate = op as { peerId?: unknown; seq?: unknown }
   return (
     candidate.peerId === watermark.peerId &&
@@ -93,8 +119,20 @@ export class PreAttachOpBuffer {
     return this.droppedCount
   }
 
-  /** Append an op; beyond the cap the oldest buffered op is dropped. */
+  /**
+   * Append a COMMAND op; beyond the cap the oldest buffered op is
+   * dropped.
+   *
+   * Throws `OpCategoryError` (see `op-category.ts`) for a project or
+   * session-protocol op.
+   * That path is unreachable today — `CollabSession.handleInboundOp`
+   * routes those elsewhere — but the routing was the ONLY thing keeping
+   * the `(peerId, seq)` keyspace unambiguous, and nothing enforced it.
+   * A throw in a currently-unreachable path is the right trade against
+   * a joiner that silently desyncs.
+   */
   push(op: unknown): void {
+    assertCommandOp(op)
     if (this.ops.length >= this.cap) {
       this.ops.shift()
       this.droppedCount++

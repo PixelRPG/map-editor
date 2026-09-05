@@ -14,6 +14,7 @@ import { run } from '@gjsify/unit'
 // stays green while testing nothing). When you add a `*.spec.ts`, add
 // its import + `run()` entry here. (Tracked in TODO.md as a guard
 // follow-up — a test that asserts every spec file is registered.)
+import editOperationsSuite from './engine/edit-operations.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
 import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
@@ -27,6 +28,7 @@ import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
+import boundsDerivationSuite from './resource/bounds-derivation.spec.js'
 import mapResourceSuite from './resource/map-resource.spec.js'
 import shadowFoldSuite from './resource/shadow-fold.spec.js'
 import spriteSoliditySuite from './resource/sprite-solidity.spec.js'
@@ -50,6 +52,7 @@ import collabIntegrationSuite from './sync/collab-integration.spec.js'
 import cursorThrottleSuite from './sync/cursor-throttle.spec.js'
 import disconnectGraceSuite from './sync/disconnect-grace.spec.js'
 import inMemoryTransportSuite from './sync/in-memory-transport.spec.js'
+import opCategorySuite from './sync/op-category.spec.js'
 import peerSessionSuite from './sync/peer-session.spec.js'
 import pendingIceBufferSuite from './sync/pending-ice-buffer.spec.js'
 import preAttachOpBufferSuite from './sync/pre-attach-op-buffer.spec.js'
@@ -69,6 +72,7 @@ import subscriptionRegistrySuite from './utils/subscription-registry.spec.js'
 
 run({
   registrySuite,
+  editOperationsSuite,
   paintTileCommandSuite,
   layerFlagCommandSuite,
   layerLifecycleCommandSuite,
@@ -82,6 +86,7 @@ run({
   entitySpawnPlacementSuite,
   objectSystemValidationSuite,
   mapResourceSuite,
+  boundsDerivationSuite,
   shadowFoldSuite,
   spriteSoliditySuite,
   layerVisibilitySuite,
@@ -104,6 +109,7 @@ run({
   cursorThrottleSuite,
   disconnectGraceSuite,
   inMemoryTransportSuite,
+  opCategorySuite,
   peerSessionSuite,
   pendingIceBufferSuite,
   preAttachOpBufferSuite,

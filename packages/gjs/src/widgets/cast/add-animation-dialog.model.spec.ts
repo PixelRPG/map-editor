@@ -28,6 +28,19 @@ export default async () => {
         expect(chipWidthForDuration(10)).toBe(28)
       })
 
+      await it('rounds rather than truncating the scaled width', async () => {
+        // 210 / 200 * 40 = 42.0; 209 → 41.8 → 42.
+        expect(chipWidthForDuration(209)).toBe(42)
+      })
+
+      await it('floors a zero-duration frame at the minimum width', async () => {
+        expect(chipWidthForDuration(0)).toBe(28)
+      })
+
+      await it('floors a negative duration at the minimum width', async () => {
+        expect(chipWidthForDuration(-100)).toBe(28)
+      })
+
       await it('stops very long frames from dominating the strip', async () => {
         expect(chipWidthForDuration(5000)).toBe(120)
       })
@@ -55,6 +68,10 @@ export default async () => {
     })
 
     await describe('clampZoomLevel', async () => {
+      await it('keeps every level in range', async () => {
+        for (let level = 0; level < 5; level++) expect(clampZoomLevel(level)).toBe(level)
+      })
+
       await it('stops at both ends', async () => {
         expect(clampZoomLevel(-1)).toBe(0)
         expect(clampZoomLevel(ZOOM_LEVELS.length)).toBe(ZOOM_LEVELS.length - 1)
@@ -66,6 +83,17 @@ export default async () => {
         const reserved = reservedAnimationNames(REQUIRED, [{ id: 'wave' }], null)
         expect(reserved.has('walk-up')).toBe(true)
         expect(reserved.has('wave')).toBe(true)
+      })
+
+      await it('is just the required roles for a character with no animations', async () => {
+        expect([...reservedAnimationNames(['walk-up'], [], null)]).toStrictEqual(['walk-up'])
+      })
+
+      await it('does not remove a required role when editing an entry named after one', async () => {
+        // `editingId` deletes from the merged set, so editing an animation
+        // whose id IS a required role frees that role's name — correct,
+        // since the entry keeping its own name is the point.
+        expect(reservedAnimationNames(['walk-up'], [{ id: 'walk-up' }], 'walk-up').has('walk-up')).toBe(false)
       })
 
       await it('lets the edited animation keep its own name', async () => {
@@ -85,6 +113,12 @@ export default async () => {
 
       await it('rejects a reserved name', async () => {
         expect(isAnimationNameValid('wave', new Set(['wave']), 2)).toBe(false)
+      })
+
+      await it('rejects a name that is only whitespace? (it does NOT — no trim)', async () => {
+        // Documents today's rule: validity is length-based, so a
+        // whitespace name passes. The dialog has no trim step.
+        expect(isAnimationNameValid(' ', new Set(), 1)).toBe(true)
       })
 
       await it('rejects an empty sequence', async () => {

@@ -2,7 +2,7 @@
 
 > Status: tracked in the [implementation phases](#implementation-phases) table — the single source of truth for what's landed vs pending.
 
-The PixelRPG editor models **tiles**, **NPCs**, **items**, **teleports**, **spawn points**, **events**, and **collider zones** under one unified concept: the *Definition / Placement* split, with Excalibur ECS as the runtime substrate.
+The PixelRPG editor models **tiles**, **NPCs**, **items**, **teleports**, **spawn points**, **events**, and **collider zones** under one concept: the *Definition / Placement* split, with Excalibur ECS as the runtime.
 
 This document is the source of truth for the data model + ECS layout. When schema or system responsibilities change, update this file in the same commit.
 
@@ -235,7 +235,7 @@ Decisions captured here so future PRs don't re-litigate them:
 
 - [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (Objects view, object tool, inspector tabs) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.entityLibrary` (project data), not on the session-singleton.
 - [`runtime-modes.md`](runtime-modes.md) — trigger *effects* only fire while runtime is active because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`, the system that gates on `RuntimeModeComponent`. In pure editor mode the placements render but walk-onto/action triggers can't fire. (`auto` triggers fire on scene init regardless — no shipped template uses them yet.)
-- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`, `LayerData.id`) are the load-bearing primitive for op-log payloads. The transport-compatibility constraint applies to all future schema changes: stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere.
+- [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`, `LayerData.id`) are what op-log payloads are keyed on. The transport-compatibility constraint applies to all future schema changes: stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere.
 
 ## Open questions
 

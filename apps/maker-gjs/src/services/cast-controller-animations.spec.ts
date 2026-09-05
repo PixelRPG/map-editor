@@ -3,6 +3,7 @@ import { type CharacterAnimation, REQUIRED_ROLES } from '@pixelrpg/engine'
 
 import {
   appendAnimation,
+  applyAnimationEdit,
   isProtectedAnimation,
   removeAnimation,
   replaceAnimation,
@@ -105,6 +106,35 @@ export default async () => {
       const anims = [anim('a', [10])]
       retimeAnimation(anims, 'a', 50)
       expect(anims[0].frames[0].duration).toBe(10)
+    })
+  })
+
+  await describe('applyAnimationEdit', async () => {
+    await it('writes the next list onto the draft and reports a change', async () => {
+      const draft: { characterAnimations?: CharacterAnimation[] } = { characterAnimations: [anim('a')] }
+      expect(applyAnimationEdit(draft, (anims) => appendAnimation(anims, anim('b')))).toBe(true)
+      expect(draft.characterAnimations?.map((a) => a.id)).toStrictEqual(['a', 'b'])
+    })
+
+    await it('seeds an absent animation list', async () => {
+      const draft: { characterAnimations?: CharacterAnimation[] } = {}
+      expect(applyAnimationEdit(draft, (anims) => appendAnimation(anims, anim('a')))).toBe(true)
+      expect(draft.characterAnimations?.map((a) => a.id)).toStrictEqual(['a'])
+    })
+
+    await it('REJECTS without touching the draft — the store then skips persist AND broadcast', async () => {
+      // The defect this covers: a rejected edit used to persist and
+      // broadcast a full-sheet upsert anyway, so a local no-op could
+      // overwrite a peer's concurrent edit of the same sheet.
+      const draft: { characterAnimations?: CharacterAnimation[] } = { characterAnimations: [anim('a')] }
+      expect(applyAnimationEdit(draft, (anims) => removeAnimation(anims, 'nope'))).toBe(false)
+      expect(draft.characterAnimations?.map((a) => a.id)).toStrictEqual(['a'])
+    })
+
+    await it('leaves an absent list absent when the edit is rejected', async () => {
+      const draft: { characterAnimations?: CharacterAnimation[] } = {}
+      expect(applyAnimationEdit(draft, () => null)).toBe(false)
+      expect(draft.characterAnimations).toBe(undefined)
     })
   })
 }

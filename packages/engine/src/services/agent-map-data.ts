@@ -1,4 +1,5 @@
 import { resolvePlacementDefinition } from '../entity/data-access.ts'
+import { isLayerDataVisible } from './layer-visibility.ts'
 import type { EntityDefinition, GameProjectData, MapData, SpriteSetData } from '../types/data/index.ts'
 
 /**
@@ -78,7 +79,7 @@ export function buildAgentMapData(
   const SOLID = 2
   const grid = new Uint8Array(columns * rows)
   for (const layer of mapData.layers ?? []) {
-    if (!layer.visible || !layer.sprites) continue
+    if (!isLayerDataVisible(layer) || !layer.sprites) continue
     for (const sprite of layer.sprites) {
       if (sprite.x < 0 || sprite.y < 0 || sprite.x >= columns || sprite.y >= rows) continue
       const i = sprite.y * columns + sprite.x
@@ -138,7 +139,13 @@ export function buildAgentMapData(
     }
   }
 
-  const chars = [' ', '.', '#']
+  // Indexed by the grid's cell state, so the three constants above are
+  // the mapping — not a hand-ordered array that silently drifts if a
+  // fourth state lands.
+  const chars: string[] = []
+  chars[VOID] = ' '
+  chars[WALKABLE] = '.'
+  chars[SOLID] = '#'
   const walkability: string[] = []
   for (let y = 0; y < rows; y++) {
     let row = ''

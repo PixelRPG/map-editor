@@ -113,3 +113,19 @@ export function writeTileSurface(def: SpriteSetData['sprites'][number], surface:
   delete next.surface
   def.tileProperties = Object.keys(next).length === 0 ? undefined : next
 }
+
+/**
+ * A detached deep copy of a sprite-set descriptor, for the store's
+ * write-then-commit step: the draft is mutated + persisted first and
+ * only replaces the live descriptor once the write succeeded, so a
+ * rejected or unserialisable edit can never leave the in-memory state
+ * ahead of the disk.
+ *
+ * A JSON round-trip is the right clone here (and works on both the GJS
+ * and node targets): `SpriteSetData` is JSON-serialisable by contract —
+ * the same contract that lets it ride the collab wire (AGENTS.md §
+ * Transport-ready primitives, "transport-friendly schema").
+ */
+export function draftSpriteSetData(data: SpriteSetData): SpriteSetData {
+  return JSON.parse(JSON.stringify(data)) as SpriteSetData
+}
