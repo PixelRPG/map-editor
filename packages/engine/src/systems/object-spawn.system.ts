@@ -1,5 +1,7 @@
 import { Actor, Logger, type Scene, System, SystemType, type World } from 'excalibur'
+import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
 import { resolvePlacementDefinition } from '../entity/data-access.ts'
+import { BUILT_IN_COMPONENT_SPECS } from '../entity/registry.ts'
 import { buildPlacementEntity, placementSpawnWarnings } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
@@ -23,6 +25,13 @@ export class ObjectSpawnSystem extends System {
   constructor(
     private readonly mapResource: MapResource,
     private readonly entityLibrary: readonly EntityDefinition[] = [],
+    /**
+     * The components this project may use — normally
+     * `effectiveComponentRegistry(projectData)`. A component whose game
+     * system is switched off is absent from it and is therefore skipped
+     * at build time: dormant, not missing.
+     */
+    private readonly registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
   ) {
     super()
   }
@@ -48,9 +57,11 @@ export class ObjectSpawnSystem extends System {
       const def = resolvePlacementDefinition(placement, this.entityLibrary)
       // Surface integrity gaps (dangling defId, incomplete required fields)
       // instead of silently skipping — these used to vanish without a trace.
-      for (const warning of placementSpawnWarnings(placement, def)) this.logger.warn(`[ObjectSpawnSystem] ${warning}`)
+      for (const warning of placementSpawnWarnings(placement, def, this.registry)) {
+        this.logger.warn(`[ObjectSpawnSystem] ${warning}`)
+      }
       if (!def) continue
-      const entity = buildPlacementEntity(placement, def, this.mapResource, layersById)
+      const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.registry)
       // Respect the global objects toggle (Layers tab "Objects" row).
       if (entity instanceof Actor && !objectsVisible) entity.graphics.visible = false
       scene.add(entity)

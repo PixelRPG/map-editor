@@ -10,6 +10,7 @@ interface CustomData extends ComponentData {
 
 export const customDataSpec: ComponentSpec = {
   type: 'custom-data',
+  system: 'core',
   editor: { label: 'Custom data', icon: 'view-list-symbolic' },
   fields: [{ key: 'data', label: 'Data (JSON)', input: 'json' }],
   build: (data) => {

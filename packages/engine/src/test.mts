@@ -28,6 +28,7 @@ import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
+import gameSystemsRegistrySuite from './game-systems/registry.spec.js'
 import boundsDerivationSuite from './resource/bounds-derivation.spec.js'
 import mapResourceSuite from './resource/map-resource.spec.js'
 import shadowFoldSuite from './resource/shadow-fold.spec.js'
@@ -64,6 +65,7 @@ import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
 import snapshotPathsSuite from './sync/snapshot-paths.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
+import stateSystemSuite from './systems/state.system.spec.js'
 import tileEditorSystemSuite from './systems/tile-editor.system.spec.js'
 import walkOnTileSuite from './systems/walk-on-tile.system.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
@@ -78,6 +80,7 @@ run({
   layerLifecycleCommandSuite,
   objectPlacementCommandSuite,
   entityRegistrySuite,
+  gameSystemsRegistrySuite,
   actionsSpecSuite,
   entityValidateSuite,
   entityConvertSuite,
@@ -121,6 +124,7 @@ run({
   snapshotPathsSuite,
   inputSystemSuite,
   eventActionSystemSuite,
+  stateSystemSuite,
   tileEditorSystemSuite,
   walkOnTileSuite,
   objectSystemSuite,

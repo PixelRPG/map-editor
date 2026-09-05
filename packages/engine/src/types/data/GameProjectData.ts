@@ -73,6 +73,23 @@ export interface GameProjectData {
   playerActorId?: string
 
   /**
+   * Which optional {@link GameSystemSpec}s this project has switched on,
+   * keyed by stable system id, plus their per-project settings.
+   *
+   * Absent — or an absent entry — means "base systems only": a project
+   * written before a system existed opens with it off rather than
+   * silently gaining it. `enabled: false` is DORMANT, not deleted: every
+   * component that system owns stays in the file, stays editable and
+   * stops running. An id this build does not know is reported at load
+   * and the project still opens, so a template from a newer editor is
+   * never a dead file.
+   *
+   * See `docs/concepts/game-systems.md`. Edits ride the
+   * `__project/systems.set` op through the maker's `ProjectStore`.
+   */
+  gameSystems?: Record<string, { enabled: boolean; config?: Record<string, unknown> }>
+
+  /**
    * Optional editor-specific data
    */
   editorData?: GameProjectEditorMetadata

@@ -2,7 +2,7 @@ import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { CharacterAnimation, CharacterDefinition, EntityDefinition } from '@pixelrpg/engine'
+import type { CharacterAnimation, CharacterDefinition, ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import {
   ActionDirectionMatrix,
   CastInspector,
@@ -111,6 +111,7 @@ export class CastView extends ResponsiveEditorView {
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
   private _onGetCharacterEntity: ((charId: string) => EntityDefinition | null) | null = null
   private _onGetRefOptions: (() => ComponentRefOptions) | null = null
+  private _onGetComponentRegistry: (() => ComponentSpecRegistry) | null = null
   private _onSetSpeedRequested: ((charId: string, tilesPerSec: number) => void) | null = null
   private _onChangeSheetRequested: ((charId: string, sheetId: string) => void) | null = null
   private _onDeleteCharacterRequested: ((charId: string) => void) | null = null
@@ -185,10 +186,15 @@ export class CastView extends ResponsiveEditorView {
     attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
   }
 
-  /** Populate the "all components" disclosure with a raw entity def. Silent. */
-  setCharacterEntity(def: EntityDefinition, refOptions: ComponentRefOptions): void {
+  /**
+   * Populate the "all components" disclosure with a raw entity def.
+   * Silent. `registry` is the project's EFFECTIVE component registry, so
+   * a component whose game system is off is not offered here either.
+   */
+  setCharacterEntity(def: EntityDefinition, refOptions: ComponentRefOptions, registry?: ComponentSpecRegistry): void {
     this._silentAdvanced = true
     try {
+      if (registry) this._advancedEditor.setRegistry(registry)
       this._advancedEditor.setRefOptions(refOptions)
       this._advancedEditor.setEntity(def)
     } finally {
@@ -299,6 +305,7 @@ export class CastView extends ResponsiveEditorView {
     setPlayer: (charId: string, isPlayer: boolean) => void
     getCharacterEntity: (charId: string) => EntityDefinition | null
     getRefOptions: () => ComponentRefOptions
+    getComponentRegistry: () => ComponentSpecRegistry
     setSpeed: (charId: string, tilesPerSec: number) => void
     changeSheet: (charId: string, sheetId: string) => void
     deleteCharacter: (charId: string) => void
@@ -314,6 +321,7 @@ export class CastView extends ResponsiveEditorView {
     this._onSetPlayerRequested = callbacks.setPlayer
     this._onGetCharacterEntity = callbacks.getCharacterEntity
     this._onGetRefOptions = callbacks.getRefOptions
+    this._onGetComponentRegistry = callbacks.getComponentRegistry
     this._onSetSpeedRequested = callbacks.setSpeed
     this._onChangeSheetRequested = callbacks.changeSheet
     this._onDeleteCharacterRequested = callbacks.deleteCharacter
@@ -426,7 +434,9 @@ export class CastView extends ResponsiveEditorView {
     this._refreshEditors(character, spriteSet)
 
     const entity = this._onGetCharacterEntity?.(character.id) ?? null
-    if (entity) this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {})
+    if (entity) {
+      this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {}, this._onGetComponentRegistry?.())
+    }
   }
 
   private _refreshStats(character: CharacterDefinition): void {

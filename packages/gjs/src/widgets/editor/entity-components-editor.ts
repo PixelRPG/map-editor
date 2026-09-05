@@ -6,6 +6,7 @@ import {
   BUILT_IN_COMPONENT_SPECS,
   type ComponentData,
   type ComponentSpec,
+  type ComponentSpecRegistry,
   type EntityDefinition,
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
@@ -35,6 +36,14 @@ export class EntityComponentsEditor extends Adw.Bin {
   private _states: EntityDefinition['states']
   private _components: ComponentData[] = []
   private _refOptions: ComponentRefOptions = {}
+  /**
+   * Which component types this project may edit. The host injects the
+   * project's EFFECTIVE registry (`effectiveComponentRegistry`), so a
+   * component whose game system is switched off never appears in the Add
+   * menu. The full built-in set is the fallback for hosts without a
+   * project — the storybook, and any consumer outside this repo.
+   */
+  private _registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS
   /** Suppresses `entity-changed` while the host populates. */
   private _silent = false
 
@@ -63,6 +72,17 @@ export class EntityComponentsEditor extends Adw.Bin {
     })
     this._box.append(this._addButton)
     this.set_child(this._box)
+  }
+
+  /**
+   * Set the component types this editor offers and renders — normally
+   * `effectiveComponentRegistry(projectData)`. Components already on the
+   * definition whose type is absent from it are left alone (dormant data
+   * is preserved, never rewritten); they simply render no inspector.
+   */
+  setRegistry(registry: ComponentSpecRegistry): void {
+    this._registry = registry
+    this._rebuild()
   }
 
   /** Project-scoped picker options for the `*-ref` fields. */
@@ -119,8 +139,10 @@ export class EntityComponentsEditor extends Adw.Bin {
         continue
       }
 
-      const spec = BUILT_IN_COMPONENT_SPECS[comp.type]
-      if (!spec) continue // unknown type — skip (validation flags it elsewhere)
+      const spec = this._registry[comp.type]
+      // Unknown OR dormant — no inspector. The data stays on the
+      // definition either way; validation tells the two apart.
+      if (!spec) continue
       const inspector = new ComponentInspector()
       inspector.setSpec(spec)
       inspector.setRefOptions(this._refOptions)
@@ -152,7 +174,7 @@ export class EntityComponentsEditor extends Adw.Bin {
     const menu = Gio.Menu.new()
     const group = new Gio.SimpleActionGroup()
     let any = false
-    for (const spec of Object.values(BUILT_IN_COMPONENT_SPECS) as ComponentSpec[]) {
+    for (const spec of Object.values(this._registry) as ComponentSpec[]) {
       if (present.has(spec.type)) continue
       any = true
       const actionName = `add-${spec.type}`

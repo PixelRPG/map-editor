@@ -2,14 +2,19 @@ import GLib from '@girs/glib-2.0'
 import {
   applyEntityRemove,
   applyEntityUpsert,
+  applyGameSystemsSet,
   applyMapEditorData,
   applyPlayerSet,
   applyProjectMetaUpdate,
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
+  type ComponentSpecRegistry,
+  effectiveComponentRegistry,
   type EntityDefinition,
+  GAME_SYSTEMS_SET_KIND,
   type GameProjectData,
+  type GameSystemsSetOp,
   MAP_EDITOR_DATA_KIND,
   type MapEditorDataOp,
   PROJECT_META_UPDATE_KIND,
@@ -20,6 +25,7 @@ import {
   type SpriteSetData,
   SpriteSetResource,
   type SpriteSetUpdatePayload,
+  withGameSystemEnabled,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
 import type { LoadedProject } from './project-loader.ts'
@@ -27,6 +33,7 @@ import {
   bindProjectSinks,
   broadcastEntityRemove,
   broadcastEntityUpsert,
+  broadcastGameSystems,
   broadcastPlayerSet,
   broadcastProjectMeta,
   broadcastSpriteSetAdd,
@@ -276,6 +283,39 @@ export class ProjectStore {
   }
 
   // ────────────────────────────────────────────────────────────
+  // Game systems
+  // ────────────────────────────────────────────────────────────
+
+  /**
+   * The component types this project may edit and spawn — base systems
+   * plus whatever it switched on. Every surface that renders or builds
+   * components takes this rather than `BUILT_IN_COMPONENT_SPECS`, so a
+   * component whose game system is off stays dormant instead of looking
+   * live.
+   */
+  componentRegistry(): ComponentSpecRegistry {
+    return effectiveComponentRegistry(this.data)
+  }
+
+  /**
+   * Switch one game system on or off: persist + broadcast a
+   * `__project/systems.set` carrying the whole record + notify.
+   *
+   * Switching off writes `enabled: false` and removes NO component —
+   * disabled data is preserved and inert. Switching on also enables
+   * whatever the system requires.
+   */
+  setGameSystemEnabled(id: string, enabled: boolean): void {
+    const data = this.data
+    if (!data) return
+    const next = withGameSystemEnabled(data.gameSystems, id, enabled)
+    applyGameSystemsSet(data, next)
+    this._persistProject()
+    broadcastGameSystems(this._session, next)
+    this._events.emit('game-systems-changed', undefined)
+  }
+
+  // ────────────────────────────────────────────────────────────
   // Remote-op application (single applier)
   // ────────────────────────────────────────────────────────────
 
@@ -297,7 +337,20 @@ export class ProjectStore {
       this._applyRemoteProjectMeta(data, op.payload)
     } else if (op.kind === MAP_EDITOR_DATA_KIND) {
       this._applyRemoteMapEditorData(op.payload)
+    } else if (op.kind === GAME_SYSTEMS_SET_KIND) {
+      this._applyRemoteGameSystems(data, op.payload)
     }
+  }
+
+  /**
+   * Coarse replace of the whole enabled-systems record; persist, then let
+   * every component surface re-hydrate against the new effective
+   * registry.
+   */
+  private _applyRemoteGameSystems(data: GameProjectData, payload: GameSystemsSetOp['payload']): void {
+    applyGameSystemsSet(data, payload.gameSystems)
+    this._persistProject()
+    this._events.emit('game-systems-changed', undefined)
   }
 
   /**

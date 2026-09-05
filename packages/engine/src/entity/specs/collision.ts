@@ -15,6 +15,7 @@ import type { ComponentSpec } from '../component-spec.ts'
  */
 export const collisionSpec: ComponentSpec = {
   type: 'collision',
+  system: 'core',
   editor: { label: 'Blocks movement', icon: 'security-high-symbolic', basic: true },
   fields: [],
   build: () => new CollisionComponent(),

@@ -1,30 +1,18 @@
-import type { ComponentData } from '@pixelrpg/engine'
+import { effectiveGameSystems, type EntityTemplate, type GameProjectData } from '@pixelrpg/engine'
 
 /**
- * An editor **template** — a named starting point for a new entity
- * definition: a label, an icon, and the component set it seeds. Templates
- * are the friendly "what kind of thing is this" front door to the
- * component model (RPG-Maker-style database UX). They are an EDITOR
- * concern only — the persisted entity is just `components[]` +
- * `editorData.template` (the stamp recording which template seeded it).
+ * Editor templates — the friendly "what kind of thing is this" front
+ * door to the component model (RPG-Maker-style database UX).
  *
- * See `docs/concepts/entity-and-appearance-model.md`. New templates can be
- * added freely; they compose the same `BUILT_IN_COMPONENT_SPECS` the
- * generated inspector edits, so a template never adds capability the
- * registry lacks.
+ * {@link EntityTemplate} itself now lives in `@pixelrpg/engine` because a
+ * game system ships templates of its own, and the ownership guard checks
+ * that a template only seeds components its system can actually render.
+ * Re-exported here so the editor's existing imports keep working.
+ *
+ * See `docs/concepts/entity-and-appearance-model.md` and
+ * `docs/concepts/game-systems.md`.
  */
-export interface EntityTemplate {
-  /** Stable id, stamped into `editorData.template`. */
-  id: string
-  /** Display label in the "New object" chooser. */
-  label: string
-  /** Symbolic icon for the chooser row. */
-  icon: string
-  /** One-line description for the chooser row subtitle. */
-  description: string
-  /** The component set a fresh entity of this template starts with. */
-  components: ComponentData[]
-}
+export type { EntityTemplate }
 
 /**
  * The v1 built-in template set. `character` is owned by the Cast view;
@@ -143,7 +131,23 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
 ]
 
-/** Look a template up by id. */
-export function findEntityTemplate(id: string): EntityTemplate | undefined {
-  return ENTITY_TEMPLATES.find((t) => t.id === id)
+/**
+ * Every template the "New object" chooser offers for a project: the
+ * built-in set plus the templates of each switched-on game system.
+ *
+ * A system's templates appear the moment it is enabled and disappear
+ * when it is switched off — the chooser must never offer a template that
+ * seeds components the project cannot render.
+ */
+export function entityTemplatesFor(project?: Pick<GameProjectData, 'gameSystems'> | null): EntityTemplate[] {
+  const fromSystems = effectiveGameSystems(project).flatMap((system) => [...(system.templates ?? [])])
+  return [...ENTITY_TEMPLATES, ...fromSystems]
+}
+
+/** Look a template up by id, across the built-ins and `project`'s systems. */
+export function findEntityTemplate(
+  id: string,
+  project?: Pick<GameProjectData, 'gameSystems'> | null,
+): EntityTemplate | undefined {
+  return entityTemplatesFor(project).find((t) => t.id === id)
 }

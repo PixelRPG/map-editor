@@ -1,5 +1,6 @@
 import { Color, type EventEmitter, type Engine as ExcaliburEngine, Loader, Logger } from 'excalibur'
 import { SpawnOverrideComponent } from '../components/index.ts'
+import { effectiveComponentRegistry, effectiveGameSystems } from '../game-systems/registry.ts'
 import { GameProjectResource } from '../resource/GameProjectResource.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
@@ -149,13 +150,18 @@ export class ProjectLoader {
     const projectData = this.resource?.data
     const playerCharacter = resolvePlayerCharacter(projectData) ?? undefined
     const playerSpriteSet = playerCharacter ? this.resource?.spriteSets.get(playerCharacter.spriteSetId) : undefined
-    return new MapScene(
-      mapResource,
-      this.host.events,
-      projectData?.entityLibrary ?? [],
+    // Where the project's switched-on game systems become runtime: the
+    // effective system list contributes its ECS systems, and the
+    // effective component registry gates what the spawn pipeline builds
+    // so a component whose system is off stays dormant instead of running.
+    return new MapScene(mapResource, this.host.events, {
+      entityLibrary: projectData?.entityLibrary ?? [],
       playerCharacter,
       playerSpriteSet,
-    )
+      gameSystems: effectiveGameSystems(projectData),
+      gameSystemConfig: gameSystemConfigOf(projectData),
+      componentRegistry: effectiveComponentRegistry(projectData),
+    })
   }
 
   private wireLoaderEvents(loader: Loader, projectPath: string, options?: ProjectLoadOptions): void {
@@ -218,4 +224,16 @@ export class ProjectLoader {
       })
     })
   }
+}
+
+/**
+ * Flatten `gameSystems[id].config` into the per-system settings bag the
+ * scene hands each system's `runtime(ctx)`.
+ */
+function gameSystemConfigOf(
+  projectData?: { gameSystems?: Record<string, { config?: Record<string, unknown> }> } | null,
+): Record<string, Record<string, unknown>> {
+  const out: Record<string, Record<string, unknown>> = {}
+  for (const [id, entry] of Object.entries(projectData?.gameSystems ?? {})) out[id] = entry.config ?? {}
+  return out
 }

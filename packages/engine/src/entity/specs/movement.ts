@@ -14,6 +14,7 @@ interface MovementData extends ComponentData {
 
 export const movementSpec: ComponentSpec = {
   type: 'movement',
+  system: 'core',
   editor: { label: 'Movement', icon: 'find-location-symbolic', basic: true },
   fields: [
     {

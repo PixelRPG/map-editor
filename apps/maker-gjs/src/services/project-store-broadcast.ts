@@ -1,10 +1,12 @@
 import {
   createEntityRemoveOp,
   createEntityUpsertOp,
+  createGameSystemsSetOp,
   createPlayerSetOp,
   createProjectMetaUpdateOp,
   createSpriteSetRemoveOp,
   type EntityDefinition,
+  type GameProjectData,
   type ProjectOp,
   type ProjectMetaUpdateOp,
   type SpriteSetAddPayload,
@@ -80,6 +82,20 @@ export function broadcastProjectMeta(
   properties: ProjectMetaUpdateOp['payload']['properties'],
 ): void {
   session?.sendProjectOp(({ peerId, seq }) => createProjectMetaUpdateOp({ peerId, seq, name, properties }))
+}
+
+/**
+ * Broadcast the project's whole enabled-game-systems record; peers
+ * replace it wholesale. Coarse + idempotent like `meta.update` — a peer
+ * that predates this kind ignores it and keeps editing as if the system
+ * were off, which is the dormant behaviour, so nothing diverges beyond
+ * "that peer sees fewer rows".
+ */
+export function broadcastGameSystems(
+  session: ProjectSyncSession | null,
+  gameSystems: NonNullable<GameProjectData['gameSystems']>,
+): void {
+  session?.sendProjectOp(({ peerId, seq }) => createGameSystemsSetOp({ peerId, seq, gameSystems }))
 }
 
 /** Broadcast a sprite-set deletion; peers drop the reference and its files. */
