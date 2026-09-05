@@ -112,6 +112,23 @@ export class MapFormat {
           layer.plane,
         )
       }
+      // `elevation` is a typed forward declaration (see `LayerData`):
+      // the shape is enforced now, the rendering is not built yet, so
+      // a storey above 0 loads and says why it looks flat.
+      if (layer.elevation !== undefined) {
+        if (!Number.isInteger(layer.elevation) || layer.elevation < 0) {
+          throw new MapValidationError(
+            `Layer "${layer.id}" elevation must be an integer ≥ 0`,
+            `layers[${index}].elevation`,
+            layer.elevation,
+          )
+        }
+        if (layer.elevation > 0) {
+          console.warn(
+            `[MapFormat] Layer "${layer.id}": Floor ${layer.elevation} is not rendered yet — the elevation runtime is not built, so this layer draws at storey 0`,
+          )
+        }
+      }
       // The untyped `properties.z` convention was one of five ways to
       // order tiles and was deleted with the others. A file that still
       // carries it opens unchanged, but the author should hear that the

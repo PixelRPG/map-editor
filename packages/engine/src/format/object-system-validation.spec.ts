@@ -225,6 +225,22 @@ export default async () => {
       expect(() => MapFormat.validate(map)).toThrow(/unknown plane/)
     })
 
+    await it('accepts elevation 0 silently and warns for a storey above 0 (typed, not rendered yet)', async () => {
+      const flat = makeMap({ layers: [{ id: 'g', name: 'G', visible: true, elevation: 0 }] })
+      expect(captureWarnings(() => MapFormat.validate(flat))).toStrictEqual([])
+
+      const deck = makeMap({ layers: [{ id: 'deck', name: 'Deck', visible: true, plane: 'ground', elevation: 1 }] })
+      const warnings = captureWarnings(() => expect(() => MapFormat.validate(deck)).not.toThrow())
+      expect(warnings.some((w) => w.includes('deck') && w.includes('Floor 1 is not rendered yet'))).toBe(true)
+    })
+
+    await it('rejects a negative or fractional elevation', async () => {
+      const negative = makeMap({ layers: [{ id: 'g', name: 'G', visible: true, elevation: -1 }] })
+      expect(() => MapFormat.validate(negative)).toThrow(/integer ≥ 0/)
+      const fractional = makeMap({ layers: [{ id: 'g', name: 'G', visible: true, elevation: 0.5 }] })
+      expect(() => MapFormat.validate(fractional)).toThrow(/integer ≥ 0/)
+    })
+
     await it('warns (but does not throw) for the deleted properties.z convention', async () => {
       const map = makeMap({ layers: [{ id: 'decor', name: 'Decor', visible: true, properties: { z: 7 } }] })
       const warnings = captureWarnings(() => expect(() => MapFormat.validate(map)).not.toThrow())

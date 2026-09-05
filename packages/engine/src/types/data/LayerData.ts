@@ -90,6 +90,24 @@ export interface LayerData {
   plane?: LayerPlane
 
   /**
+   * The storey this layer belongs to: an integer ≥ 0, absent means 0.
+   *
+   * A forward declaration with no runtime behind it yet — pinned as a
+   * type so the later elevation step (a bridge deck at storey 1 over a
+   * river bed at storey 0) cannot be foreclosed by today's code. A map's
+   * storeys are the distinct `elevation` values its layers carry,
+   * derived and never stored: there is no `MapData.floors[]` table.
+   * Each storey owns its own ground / hero / overlay triple, and the z
+   * of anything on it is `zFor(plane, elevation)`
+   * (`components/tilemap-plane.component.ts`). Today the tilemap
+   * builder ignores the field and `MapFormat.validate` warns for every
+   * layer above storey 0 ("Floor n is not rendered yet"), so a file
+   * from a later editor opens and says why it looks flat. Full
+   * paragraph: `docs/concepts/object-system.md` § Elevation.
+   */
+  elevation?: number
+
+  /**
    * Tile sprites placed on this layer. Empty / missing for layers
    * that purely host object placements via `layerId` (e.g. a
    * convention "events" layer).

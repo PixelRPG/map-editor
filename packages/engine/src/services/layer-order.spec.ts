@@ -10,11 +10,12 @@ import { describe, expect, it } from '@gjsify/unit'
 import type { LayerData } from '../types/data/index.ts'
 import { layerOrderIndex, orderLayersForWalkOn, sortRefsByLayerOrder } from './layer-order.ts'
 
-const layer = (id: string, plane?: LayerData['plane']): LayerData => ({
+const layer = (id: string, plane?: LayerData['plane'], elevation?: number): LayerData => ({
   id,
   name: id,
   visible: true,
   ...(plane ? { plane } : {}),
+  ...(elevation !== undefined ? { elevation } : {}),
 })
 
 const ref = (layerId: string, spriteId: number) => ({ spriteSetId: 'tiles', spriteId, layerId })
@@ -77,6 +78,17 @@ export default async () => {
     await it('treats a plane-less layer as ground', async () => {
       const layers = [layer('legacy'), layer('decor', 'hero')]
       expect(orderLayersForWalkOn(layers).map((l) => l.id)).toStrictEqual(['decor', 'legacy'])
+    })
+
+    await it('answers the same over a list filtered to one storey while every layer is storey 0', async () => {
+      // Decision 11: elevation enters this lookup later as a FILTER on the
+      // list (the walker's storey), never as a third sort key. With every
+      // layer at storey 0 the filter is the identity, which this pins.
+      const layers = [layer('roofs', 'overlay', 0), layer('bg', 'ground'), layer('decor', 'hero', 0)]
+      const storey0 = layers.filter((l) => (l.elevation ?? 0) === 0)
+      expect(orderLayersForWalkOn(storey0).map((l) => l.id)).toStrictEqual(
+        orderLayersForWalkOn(layers).map((l) => l.id),
+      )
     })
   })
 }

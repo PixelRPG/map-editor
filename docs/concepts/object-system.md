@@ -96,6 +96,7 @@ interface LayerData {
   visible: boolean
   locked?: boolean
   plane?: LayerPlane          // 'ground' | 'hero' | 'overlay'; absent = ground
+  elevation?: number          // storey, integer ≥ 0; absent = 0 — typed, not rendered yet (see § Elevation)
   sprites?: SpriteDataMap[]
   properties?: Properties
   /** REMOVED — `type: 'tile' | 'object'` + `objects[]`. */
@@ -167,6 +168,19 @@ The plane offsets are not exported; `zFor` is the only way any code obtains a ti
 
 What the planes cannot do, named rather than hidden: a bridge over a river bed, with one hero on the deck and one under it in the same frame, needs the actor's z to depend on where the actor is — an elevation, which is the next step below. Walking behind a rock on the same plane is y-sorting, which the engine does not have.
 
+### Elevation — pinned as data, not built (decision 11)
+
+`LayerData.elevation?: number` (integer ≥ 0, absent = 0) and the `elevation-step` component (`types/data/ElevationStepData.ts`: `{ type: 'elevation-step'; to: number }`) exist as **types and this paragraph only**, so that "the bridge is not foreclosed" is something the format checks rather than a promise:
+
+- A map's storeys are the distinct `elevation` values its layers carry, derived and never stored: there is no `MapData.floors[]` table; adding a storey means adding a layer with `elevation: n`, and deleting a storey's last layer deletes the storey.
+- Each storey owns its own ground / hero / overlay triple. A tilemap sits at `zFor(plane, elevation)` and an actor at `zFor('hero', elevation) + 50`, so 0 / 100 / 200 are offsets inside a storey, not the z axis (pinned by `components/tilemap-plane.spec.ts`: `zFor('hero', 1) === 1100`).
+- Actors will carry an `ElevationComponent` seeded from their layer and change storey only by walking onto a cell where an `elevation-step` **placement** sits: an ordinary `EntityDefinition` carrying the component, placed on a layer like any other object — never a marker inside `LayerData.sprites`, because sprites are visuals and the last per-sprite ordering field was deleted for exactly that reason. Steps are placed by a stamp (a multi-cell prefab with `{ dx, dy, spriteSetId, spriteId, plane, elevation: 0 | 1, step?: 'up' | 'down' }` cells) authored in Graphics.
+- The walk-on lookup takes the layer list as a parameter (`orderLayersForWalkOn`) so the walker's storey enters later as a **filter** on that list, never as a third sort key; `services/layer-order.spec.ts` pins that a list filtered to storey 0 answers the same as the whole list while every layer is storey 0.
+
+What the pin costs today: `MapFormat.validate` accepts `elevation` as an optional integer ≥ 0, the tilemap builder ignores it, and a layer above storey 0 loads with one warning naming it — "Floor n is not rendered yet" — so a file from a later editor opens and says why it looks flat. There is deliberately **no** `ElevationStepComponent` class and no spec: a component without a reader is what `scripts/check-orphan-components.mjs` rejects, so the component and its system arrive together with the runtime (the "planned" row in the phases table).
+
+Refused for good, not deferred: per-layer numeric z (it existed twice and no map used it; position in the section is the number), parallax, layer opacity, a fourth plane (the extension axis is elevation), layer folders, and per-layer collision override.
+
 ### Cross-system communication
 
 Systems talk **only via the engine event bus** — `engine.events.emit(…)` / `.on(…)`. No direct method calls between systems, no shared mutable globals. This keeps systems independently testable and replaceable.
@@ -211,7 +225,8 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
 | 7 | Editor UI — Objects authoring view, object tool + brush palette, Props selected-object group, Objects visibility row, atlas-from-placements | **landed** (#170–#174 + #179–#184; remaining polish in `TODO.md`) |
-| 8 | Depth — one ordering rule (plane + array order) | **landed** |
+| 8 | Depth — one ordering rule (plane + array order), `elevation` + `elevation-step` pinned as types | **landed** |
+| 9 | Elevation runtime — per-storey tilemap triples via `zFor(plane, elevation)`, `ElevationComponent` + `ElevationStepComponent` + their system arriving together, the walk-on storey filter, stamps and the floor switcher | **planned** (see § Elevation; `TODO.md` § Engine / runtime) |
 
 ## Where this is implemented
 
@@ -236,10 +251,11 @@ These citations update as the work lands. Anything referenced here must exist in
 - Placement commands: `packages/engine/src/commands/object-placement.command.ts` (`object.place` / `object.remove`)
 
 **Phase 8 (depth) — landed:**
-- `packages/engine/src/types/data/LayerData.ts` — `plane`, `isLayerPlane`
+- `packages/engine/src/types/data/LayerData.ts` — `plane`, `elevation` (typed forward declaration), `isLayerPlane`
+- `packages/engine/src/types/data/ElevationStepData.ts` — the `elevation-step` data shape, no component class
 - `packages/engine/src/components/tilemap-plane.component.ts` — `TileMapPlaneComponent`, `zFor`
 - `packages/engine/src/services/layer-order.ts` — `layerOrderIndex`, `sortRefsByLayerOrder`, `orderLayersForWalkOn`
-- `packages/engine/src/format/MapFormat.ts` — plane validation, `properties.z` warning
+- `packages/engine/src/format/MapFormat.ts` — plane / elevation validation, `properties.z` warning
 - Editor UI: `apps/maker-gjs/src/widgets/objects-view.ts` + the scene-editor inspector tabs in `scene-editor-view.ts`
 
 ## What's NOT on the table
