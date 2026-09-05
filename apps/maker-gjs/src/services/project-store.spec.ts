@@ -3,10 +3,12 @@ import { describe, expect, it } from '@gjsify/unit'
 import {
   createEntityRemoveOp,
   createEntityUpsertOp,
+  createGameSystemsSetOp,
   createPlayerSetOp,
   ENTITY_REMOVE_KIND,
   ENTITY_UPSERT_KIND,
   type EntityDefinition,
+  GAME_SYSTEMS_SET_KIND,
   type GameProjectData,
   GameProjectFormat,
   PLAYER_SET_KIND,
@@ -251,6 +253,66 @@ export default async () => {
       store.setPlayerActor('npc-1', 'cast')
       expect(store.removeEntity('npc-1', 'cast')).toBe(false)
       expect(io.writes).toHaveLength(0)
+    })
+  })
+
+  await describe('ProjectStore — game systems', async () => {
+    await it('switching a system on persists, broadcasts systems.set and notifies', async () => {
+      const { store, io, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      let notified = 0
+      store.on('game-systems-changed', () => notified++)
+
+      store.setGameSystemEnabled('combat-action', true)
+
+      expect(data.gameSystems).toStrictEqual({ 'combat-action': { enabled: true } })
+      expect(io.writes).toHaveLength(1)
+      // Round-trips through the file: an id this build does not know must
+      // survive a save by an editor that does not have it.
+      expect(GameProjectFormat.deserialize(io.writes[0].contents).gameSystems).toStrictEqual({
+        'combat-action': { enabled: true },
+      })
+      expect(session.sent).toHaveLength(1)
+      expect(session.sent[0].kind).toBe(GAME_SYSTEMS_SET_KIND)
+      expect(notified).toBe(1)
+    })
+
+    await it('switching off is dormant, never destructive', async () => {
+      // The line this whole design turns on: disabled data is preserved
+      // and inert. Nothing about the library or the entry is removed.
+      const { store, data } = makeStore(makeProjectData({ entityLibrary: [{ ...npc }] }))
+      store.setGameSystemEnabled('combat-action', true)
+      store.setGameSystemEnabled('combat-action', false)
+
+      expect(data.gameSystems).toStrictEqual({ 'combat-action': { enabled: false } })
+      expect(data.entityLibrary).toHaveLength(1)
+    })
+
+    await it('componentRegistry follows the enabled set', async () => {
+      const { store } = makeStore()
+      // Only base systems ship in this build, so the effective registry is
+      // the full built-in set — and an unknown id never adds to it.
+      const base = Object.keys(store.componentRegistry()).sort()
+      store.setGameSystemEnabled('combat-action', true)
+      expect(Object.keys(store.componentRegistry()).sort()).toStrictEqual(base)
+      expect(base).toContain('item')
+    })
+
+    await it('applies a remote systems.set without re-broadcasting', async () => {
+      const { store, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      let notified = 0
+      store.on('game-systems-changed', () => notified++)
+
+      const op = createGameSystemsSetOp({ peerId: 'peer-b', seq: 0, gameSystems: { economy: { enabled: true } } })
+      store.applyRemoteProjectOp(op)
+      store.applyRemoteProjectOp(op)
+
+      expect(data.gameSystems).toStrictEqual({ economy: { enabled: true } })
+      expect(session.sent).toHaveLength(0)
+      expect(notified).toBe(2)
     })
   })
 

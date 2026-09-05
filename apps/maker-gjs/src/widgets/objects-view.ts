@@ -1,10 +1,11 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { EntityDefinition } from '@pixelrpg/engine'
+import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import { isCharacterEntity } from '@pixelrpg/engine'
 import { type ComponentRefOptions, EntityComponentsEditor, type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
+import { ENTITY_TEMPLATES, type EntityTemplate } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
 import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
 import { buildObjectRow, buildRelationshipDiagram, buildTemplateTiles } from './objects/object-gallery.ts'
@@ -40,6 +41,7 @@ export class ObjectsView extends ResponsiveEditorView {
   private _castRow: Adw.SwitchRow
   private _editor: EntityComponentsEditor
   private _refOptions: ComponentRefOptions = {}
+  private _templates: readonly EntityTemplate[] = ENTITY_TEMPLATES
   private _silentName = false
   private _silentCast = false
   private signals = new SignalScope()
@@ -109,7 +111,7 @@ export class ObjectsView extends ResponsiveEditorView {
    */
   private _buildEmptyState(): void {
     buildRelationshipDiagram(this._empty_diagram_slot)
-    buildTemplateTiles(this._empty_templates, (templateId) => this.emit('object-create-requested', templateId))
+    this._rebuildTemplateTiles()
   }
 
   vfunc_map(): void {
@@ -143,6 +145,24 @@ export class ObjectsView extends ResponsiveEditorView {
   setRefOptions(options: ComponentRefOptions): void {
     this._refOptions = options
     this._editor.setRefOptions(options)
+  }
+
+  /**
+   * The components this project may edit — `effectiveComponentRegistry`,
+   * so a component whose game system is switched off is not offered in
+   * the Add menu. Data already on an entity is left untouched either way.
+   */
+  setComponentRegistry(registry: ComponentSpecRegistry): void {
+    this._editor.setRegistry(registry)
+  }
+
+  /**
+   * The templates the "New object" chooser offers — built-ins plus the
+   * templates of every switched-on game system.
+   */
+  setTemplates(templates: readonly EntityTemplate[]): void {
+    this._templates = templates
+    this._rebuildTemplateTiles()
   }
 
   /** Replace the object list + rebuild the gallery rows. */
@@ -193,7 +213,19 @@ export class ObjectsView extends ResponsiveEditorView {
 
   /** Present the template chooser; the chosen template id drives creation. */
   private _presentTemplateChooser(): void {
-    presentTemplateChooser(this, (templateId) => this.emit('object-create-requested', templateId))
+    presentTemplateChooser(this, this._templates, (templateId) => this.emit('object-create-requested', templateId))
+  }
+
+  private _rebuildTemplateTiles(): void {
+    let child = this._empty_templates.get_first_child()
+    while (child) {
+      const next = child.get_next_sibling()
+      this._empty_templates.remove(child)
+      child = next
+    }
+    buildTemplateTiles(this._empty_templates, this._templates, (templateId) =>
+      this.emit('object-create-requested', templateId),
+    )
   }
 
   private _confirmDelete(id: string): void {

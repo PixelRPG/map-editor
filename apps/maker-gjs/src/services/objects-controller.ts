@@ -1,6 +1,6 @@
 import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
 import type { ObjectsView } from '../widgets/objects-view.ts'
-import { type EntityTemplate, findEntityTemplate } from './entity-templates.ts'
+import { entityTemplatesFor, type EntityTemplate, findEntityTemplate } from './entity-templates.ts'
 import { type ProjectStore, uniqueIdFrom } from './project-store.ts'
 
 /**
@@ -51,6 +51,10 @@ export class ObjectsController {
       return
     }
     this.view.setRefOptions(this.store.refOptions())
+    // The project's EFFECTIVE registry: a component whose game system is
+    // off must not be offered in the Add menu even though the spec exists.
+    this.view.setComponentRegistry(this.store.componentRegistry())
+    this.view.setTemplates(entityTemplatesFor(this.store.data))
     this.view.setObjects(this._objects())
   }
 
@@ -70,7 +74,7 @@ export class ObjectsController {
   createFromTemplate(templateId: string): void {
     const data = this.store.data
     if (!data) return
-    const template = findEntityTemplate(templateId)
+    const template = findEntityTemplate(templateId, this.store.data)
     if (!template) return
     const id = uniqueIdFrom(template.label, new Set((data.entityLibrary ?? []).map((e) => e.id)), 'object')
     const entity = this._seedEntity(id, template)
