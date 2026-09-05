@@ -200,6 +200,15 @@ jobs:
         # were both declared and emitted by nobody.
         run: node scripts/check-unemitted-signals.mjs
 
+      - name: Verify every engine component is read by a system
+        # A component built on every spawn and read by no system is a
+        # feature that round-trips through save/load and does nothing.
+        # CollisionComponent ships a "Blocks movement" label, is seeded
+        # by three templates, is asserted by a spec — and no system
+        # consults it, so the player walks through every chest. Known
+        # gaps need a marker in the file AND an entry in the script.
+        run: node scripts/check-orphan-components.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the

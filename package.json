@@ -16,6 +16,7 @@
     "check:mode-routes": "node scripts/check-mode-routes.mjs",
     "check:blp-actions": "node scripts/check-blp-actions.mjs",
     "check:signals": "node scripts/check-unemitted-signals.mjs",
+    "check:orphan-components": "node scripts/check-orphan-components.mjs",
     "test": "gjsify foreach test -v -p --include @pixelrpg/engine --include @pixelrpg/gjs --include @pixelrpg/maker-gjs --include @pixelrpg/signalling-server --include @pixelrpg/mcp-bridge",
     "start": "gjsify workspace @pixelrpg/maker-gjs start",
     "start:storybook": "gjsify workspace @pixelrpg/gjs storybook",

@@ -14,6 +14,10 @@ export interface NpcWaypoint {
  * registry spec. Pure data; a future `NpcMovementSystem` reads it and
  * keeps per-NPC runtime state (current waypoint index) on a separate
  * component so this one stays serialisable.
+ *
+ * orphan-component-ok: KNOWN GAP — that `NpcMovementSystem` does not
+ * exist yet, so waypoints authored in the inspector are persisted and
+ * spawned but never walked. Tracked in TODO.md, "Engine / runtime".
  */
 export class NpcRouteComponent extends Component {
   constructor(
