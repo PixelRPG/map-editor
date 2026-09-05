@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { fallbackModeForView, modeForView, resolveModeNavigation } from './view-mode-map.ts'
+import { modeForView, resolveModeNavigation } from './view-mode-map.ts'
 
 export default async () => {
   await describe('modeForView', async () => {
@@ -16,41 +16,29 @@ export default async () => {
 
   await describe('resolveModeNavigation', async () => {
     await it('navigates to the mode’s view when a project is open', async () => {
-      expect(resolveModeNavigation('world', true, 'welcome')).toStrictEqual({ kind: 'navigate', view: 'atlas' })
-      expect(resolveModeNavigation('cast', true, 'atlas')).toStrictEqual({ kind: 'navigate', view: 'cast' })
-      expect(resolveModeNavigation('data', true, 'atlas')).toStrictEqual({ kind: 'navigate', view: 'data' })
+      expect(resolveModeNavigation('world', true)).toStrictEqual({ kind: 'navigate', view: 'atlas' })
+      expect(resolveModeNavigation('cast', true)).toStrictEqual({ kind: 'navigate', view: 'cast' })
+      expect(resolveModeNavigation('data', true)).toStrictEqual({ kind: 'navigate', view: 'data' })
+    })
+
+    await it('resolves EVERY mode to a view — no mode is advertised without one', async () => {
+      // The Audio row was the one exception: it toasted "Coming soon" and
+      // snapped the rail back. It is gone, and `check-mode-routes.mjs`
+      // fails the build if a mode without a view reappears.
+      for (const mode of ['world', 'cast', 'objects', 'tiles', 'data']) {
+        expect(resolveModeNavigation(mode, true).kind).toBe('navigate')
+      }
     })
 
     await it('ignores every project-scoped mode without a project', async () => {
       for (const mode of ['world', 'cast', 'objects', 'tiles', 'data']) {
-        expect(resolveModeNavigation(mode, false, 'welcome')).toStrictEqual({ kind: 'ignore' })
+        expect(resolveModeNavigation(mode, false)).toStrictEqual({ kind: 'ignore' })
       }
     })
 
     await it('ignores an unknown mode id', async () => {
-      expect(resolveModeNavigation('nope', true, 'atlas')).toStrictEqual({ kind: 'ignore' })
-    })
-
-    await it('reports audio as unimplemented regardless of the project state', async () => {
-      expect(resolveModeNavigation('audio', false, 'tiles')).toStrictEqual({ kind: 'unimplemented', fallback: 'tiles' })
-      expect(resolveModeNavigation('audio', true, 'atlas')).toStrictEqual({ kind: 'unimplemented', fallback: 'world' })
-    })
-  })
-
-  await describe('fallbackModeForView', async () => {
-    await it('keeps the rail on views that own a rail row', async () => {
-      expect(fallbackModeForView('cast')).toBe('cast')
-      expect(fallbackModeForView('tiles')).toBe('tiles')
-      expect(fallbackModeForView('data')).toBe('data')
-    })
-
-    await it('falls back to world for every other view', async () => {
-      // `objects` and `scene-editor` deliberately land on `world` — the
-      // fallback list predates both views and snapping to `world` is the
-      // conservative default (see resolveModeNavigation).
-      expect(fallbackModeForView('objects')).toBe('world')
-      expect(fallbackModeForView('scene-editor')).toBe('world')
-      expect(fallbackModeForView(null)).toBe('world')
+      expect(resolveModeNavigation('nope', true)).toStrictEqual({ kind: 'ignore' })
+      expect(resolveModeNavigation('audio', true)).toStrictEqual({ kind: 'ignore' })
     })
   })
 }

@@ -564,8 +564,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     const { mode } = installViewActions(group, {
       hasProject,
-      showToast,
-      currentView: () => this._router.currentView,
       setView: (view) => this._router.setView(view),
       prepareView: (view) => this._prepareView(view),
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,

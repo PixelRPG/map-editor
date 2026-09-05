@@ -192,7 +192,7 @@ export class TilesView extends ResponsiveEditorView {
         },
         Signals: {
           // mode-changed is inherited from ResponsiveEditorView.
-          'tile-changed': {},
+
           // A tileset was imported via this view's dialog — payload is
           // the `SpriteSetImportResult`. The host routes it to the
           // shared sprite-set import path (copy + register + broadcast).

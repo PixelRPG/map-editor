@@ -123,48 +123,6 @@ template $WelcomeView : Adw.Bin {
           Gtk.Box {
             vexpand: true;
           }
-
-          Gtk.Button tour_button {
-            styles ["card"]
-            halign: fill;
-
-            child: Gtk.Box {
-              spacing: 12;
-              margin-top: 8;
-              margin-bottom: 8;
-              margin-start: 12;
-              margin-end: 12;
-
-              Gtk.Image {
-                icon-name: "media-playback-start-symbolic";
-                pixel-size: 18;
-                styles ["accent"]
-              }
-
-              Gtk.Box {
-                orientation: vertical;
-                hexpand: true;
-                halign: start;
-
-                Gtk.Label {
-                  label: _("Take the tour");
-                  halign: start;
-                  styles ["heading"]
-                }
-
-                Gtk.Label {
-                  label: _("Three-minute walkthrough of the editor.");
-                  halign: start;
-                  styles ["caption", "dim-label"]
-                }
-              }
-
-              Gtk.Image {
-                icon-name: "go-next-symbolic";
-                styles ["dim-label"]
-              }
-            };
-          }
         };
       };
     };

@@ -159,26 +159,6 @@ template $PixelRpgModeRail : Adw.Bin {
         }
       }
 
-      Adw.ActionRow row_audio {
-        title: _("Audio");
-        subtitle: _("Music and SFX");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'audio'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "audio-speakers-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
       Adw.ActionRow row_data {
         title: _("Data");
         subtitle: _("Assets and project");
@@ -283,10 +263,6 @@ menu primary_menu {
     item {
       label: _("Preferences");
       action: "app.preferences";
-    }
-    item {
-      label: _("Keyboard Shortcuts");
-      action: "win.show-help-overlay";
     }
     item {
       label: _("About PixelRPG Maker");

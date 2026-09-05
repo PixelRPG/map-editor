@@ -79,7 +79,7 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     description: 'A container the player opens to receive an item.',
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
-      { type: 'collision', solid: true },
+      { type: 'collision' },
       { type: 'trigger', on: 'action-button' },
       {
         type: 'actions',
@@ -97,7 +97,7 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     description: 'A signpost that shows a line of text when read.',
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
-      { type: 'collision', solid: true },
+      { type: 'collision' },
       { type: 'trigger', on: 'action-button' },
       { type: 'actions', actions: [{ id: 'a-text', type: 'show-text', text: '' }] },
     ],
@@ -109,7 +109,7 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     description: 'A door the player opens to travel to another map.',
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
-      { type: 'collision', solid: true },
+      { type: 'collision' },
       { type: 'trigger', on: 'action-button' },
       {
         type: 'actions',
