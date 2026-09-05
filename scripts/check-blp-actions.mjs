@@ -208,7 +208,10 @@ if (failed > 0) {
   console.error(
     `\n${failed} unregistered .blp action reference(s). Register the action (and declare it in ` +
       `WINDOW_ACTION_NAMES_BY_MODULE, ${ACTION_REGISTRY_TS}), or remove the widget — GTK renders a ` +
-      'widget bound to a missing action permanently insensitive, silently.',
+      'widget bound to a missing action permanently insensitive, silently.\n' +
+      'If the action is installed by GTK/libadwaita itself rather than by this app ' +
+      '(`navigation.push` on an Adw.NavigationView, `clipboard.copy` on a Gtk.Text, …), it is not ours ' +
+      'to register: add the exact name to TOOLKIT_ACTIONS in this script instead, with a one-line source.',
   )
   process.exit(1)
 }
