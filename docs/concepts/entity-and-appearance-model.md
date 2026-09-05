@@ -88,17 +88,32 @@ Key consequences:
 
 ### The component registry
 
+As shipped (`packages/engine/src/entity/component-spec.ts`):
+
 ```ts
-interface ComponentSpec<T extends ComponentData = ComponentData> {
+interface ComponentSpec {
   type: string                                    // 'visual', 'movement', …
-  schema: JSONSchema                              // validation + GENERATED inspector UI
-  build: (data: T, ctx: SpawnContext) => Component | Component[]   // ECS instantiation
-  editor?: { label: string; icon?: string; basic?: boolean }       // disclosure tier
+  fields: readonly FieldDescriptor[]              // validation + GENERATED inspector UI
+  editor: ComponentEditorMeta                     // label, icon, markerColor, disclosure tier
+  build: (data: ComponentData, ctx: SpawnContext) => Component | Component[] | null
+  validate?: (data: ComponentData) => string[]    // deep check for `json` fields
 }
 ```
 
-- Engine ships the built-in specs (visual, movement, collision, trigger, teleport, item, dialogue, npc-route, spawn-point, custom-data).
-- **The inspector is generated from `schema`** — no per-kind hand-built inspector pages. `editor.basic` marks which fields/components a template surfaces by default (progressive disclosure lives in data, not just in UI code).
+The design sketch said `schema: JSONSchema`; what landed is a **flat field
+DSL** — `FieldDescriptor[]`, one entry per editable key, each naming a
+`FieldInput` (`text` / `int` / `float` / `bool` / `select` / `json` /
+`appearance-ref` / `map-ref` / `facing` / …). It is strictly less
+expressive than JSON Schema and deliberately so: every descriptor maps to
+exactly one inspector row, so the generated UI needs no schema
+interpreter. The one shape it cannot express — a heterogeneous list
+behind a `json` field, e.g. the `actions` component's
+discriminated-union entries — gets the optional `validate` hook instead.
+`build` returns `null` for data-only components that carry no runtime
+component (`movement`, read from the definition by `PlayerSystem`).
+
+- Engine ships the built-in specs (visual, movement, collision, trigger, teleport, item, dialogue, npc-route, spawn-point, custom-data, script, actions).
+- **The inspector is generated from `fields`** — no per-kind hand-built inspector pages. `editor.basic` and `FieldDescriptor.basic` mark which fields/components a template surfaces by default (progressive disclosure lives in data, not just in UI code) — **but nothing reads either flag yet**: the disclosure tier is declared on 12 fields and 3 components and is read nowhere in `apps/` or `packages/` (TODO.md, "Cleanup / debt").
 - **The future code editor registers new specs** through the same registry. User components are first-class, not bolted on.
 - Registry mirrors the existing `BUILT_IN_COMMANDS` registry discipline: a component type that isn't registered fails validation loudly (no silent-skip).
 

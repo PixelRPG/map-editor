@@ -105,6 +105,8 @@ interface LayerData {
 
 Every layer is now a tile layer with optional empty content. Objects don't live "in" a layer in the data sense — they reference a layer for sorting / visibility via `layerId`. A user wanting an RPG-Maker-style "Events" layer creates a normal layer named "Events" with no sprites and parks all event placements there. Pure convention.
 
+Ordering is `tier`'s job (see [Layer z-ordering between tiles and objects](#layer-z-ordering-between-tiles-and-objects)), not a per-layer `zIndex`; ordering *within* one cell is `SpriteDataMap.zIndex`, which `tilemap-builder.ts` seeds from the layer's `properties.z` convention.
+
 ## Excalibur ECS layout
 
 Each object placement becomes one Excalibur `Entity` composed of components. Tiles stay as `TileMap` cells (batched rendering). Tile gameplay properties get queried lazily by systems via the sprite-set lookup.
@@ -120,7 +122,8 @@ Each object placement becomes one Excalibur `Entity` composed of components. Til
 | `CollisionComponent` | shape: 'tile' (single-tile, future-extensible to 'rect'/'circle') | `collision` component config |
 | `TeleportComponent` | targetMapId, targetTileX, targetTileY, facing? | `teleport` component config |
 | `ItemComponent` | itemId, qty, pickupSound? | `item` component config |
-| `NpcComponent` | dialogueId?, route?, facing? | `dialogue` / `npc-route` component configs |
+| `DialogueComponent` | dialogueId | `dialogue` component config |
+| `NpcRouteComponent` | waypoints[], facing? | `npc-route` component config |
 | `SpawnPointComponent` | spawnId, facing? | `spawn-point` component config |
 | `CustomDataComponent` | bag: Record<string, unknown> | `custom-data` component config |
 | `EventActionsComponent` | actions: ActionData[] | `actions` component config — the ordered event body |
@@ -130,6 +133,8 @@ The registry (`BUILT_IN_COMPONENT_SPECS` in `packages/engine/src/entity/registry
 **Events are objects, not a separate layer.** An "event" (RPG-Maker's event-page) is an `ObjectPlacement` whose definition carries a `trigger` (WHEN it fires) + an `actions` component (the ordered `ActionData[]` body — `show-text` / `teleport` / `give-item` / `set-flag` / `play-sfx` / `wait`). This keeps the unified model — no parallel `scenes[].events[]` array. The `actions` list rides a `json` field with a custom `ComponentSpec.validate` (the flat field DSL can't express a discriminated-union list); the `EventActionsComponent` is inert until the runtime `EventActionSystem` executes it on `TRIGGER_FIRED`. Editor templates `chest` / `sign` / `door` / `trigger` seed the trigger+actions pair. Collision is its own component, orthogonal to what the entity "is" — an NPC, a chest and a Zelda-stone item all opt into blocking by carrying `collision`; the `trigger { on: 'action-button' }` + `collision` pair is the canonical "interact from an adjacent tile" recipe. Editor **templates** (`apps/maker-gjs/src/services/entity-templates.ts`) seed sensible component sets for new library entries.
 
 Component rule: data only. No methods that mutate state, no references to systems. Components are serialisable.
+
+**Four of these are built but not yet read by any system** — `collision` blocks nothing, `npc-route` walks nobody, `sprite-ref` is bypassed by the graphic builder (which reads the *definition*), and `custom-data` is the project layer's escape hatch and must stay unread by the engine. Each carries an `orphan-component-ok:` note in its own file stating which; `scripts/check-orphan-components.mjs` fails the build if a fifth appears without one, or if one of the four quietly gains a reader and the note goes stale.
 
 ### Systems (logic only — no state)
 
@@ -146,15 +151,19 @@ System rule: no state beyond per-tick scratch buffers. All persistent state live
 
 ### Layer z-ordering between tiles and objects
 
-Tiles render through Excalibur's batched `TileMap` (one draw call per tile-layer). Object placements render as individual `Actor` entities. To keep them visually consistent with the layer they reference via `layerId`, the spawn system derives the actor's z-index from the layer's position in `MapData.layers`:
+Tiles render through Excalibur's batched `TileMap`; object placements render as individual `Actor` entities. Both are ordered by **tier**, not by layer index. A layer declares `tier: 'ground' | 'hero' | 'overlay'` (see [Layer changes](#layer-changes)), one `TileMap` entity is built per tier, and both sides read the same table:
 
 ```ts
-actor.z = layerIndex(placement.layerId) * Z_LAYER_STRIDE + Z_OBJECTS_WITHIN_LAYER
+// packages/engine/src/components/tilemap-tier.component.ts
+export const TIER_Z: Record<LayerTier, number> = { ground: 0, hero: 100, overlay: 200 }
+
+tilemap.z = TIER_Z[tier]                                         // resource/tilemap-builder.ts
+actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]              // entity/spawn-placement.ts
 ```
 
-Where `Z_LAYER_STRIDE` is a wide enough integer (e.g. `1000`) that all object placements on layer N stack between the tiles of layer N and the tiles of layer N+1, and `Z_OBJECTS_WITHIN_LAYER` is a small offset within that band so objects sit just on top of their layer's tiles. Tile-layer z is `layerIndex * Z_LAYER_STRIDE`.
+So a placement lands on exactly the render plane of the layer it references, and the gaps between the three values leave room for actors to interleave (`hero` is where the player sits, alongside decorations). The design sketch of a `layerIndex * Z_LAYER_STRIDE + Z_OBJECTS_WITHIN_LAYER` formula was never built — the tier model replaced it, and neither constant exists in the code.
 
-Practical consequence: objects on the "events" layer appear in front of "ground" tiles and behind "overhead" tiles — which is what every RPG-style level wants. Per-placement fine-tuning is possible by adding a `zOffset?: number` to `ObjectPlacement` later; not in v1 since none of the canonical recipes need it.
+Practical consequence: objects on an "events" layer tiered `hero` appear in front of `ground` tiles and behind `overlay` tiles — which is what every RPG-style level wants. Ordering *within* one cell is a separate, finer mechanism: `SpriteDataMap.zIndex`, which `tilemap-builder.ts` seeds per sprite from the layer's `properties.z` convention when the sprite does not carry its own.
 
 ### Cross-system communication
 
@@ -195,7 +204,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 |---|---|---|
 | 1 | Schema + types in `@pixelrpg/engine`, format validators accept new fields, spec coverage | **landed** |
 | 2 | Migration script + all `games/*` migrated to the new schema + old fields removed | **landed** |
-| 3 | Components (pure data) — `TileTransform`, `SpriteRef`, `Trigger`, `Collision`, `Teleport`, `Item`, `Npc`, `SpawnPoint`, `CustomData`, `PlacementId` | **landed** |
+| 3 | Components (pure data) — `TileTransform`, `SpriteRef`, `Trigger`, `Collision`, `Teleport`, `Item`, `Dialogue`, `NpcRoute`, `SpawnPoint`, `CustomData`, `PlacementId` | **landed** |
 | 4 | `ObjectSpawnSystem` + player spawn handling in `PlayerSystem` | **landed** |
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
@@ -218,7 +227,7 @@ These citations update as the work lands. Anything referenced here must exist in
 
 **Phases 2–7 — landed** (paths corrected in the 2026-06-09 docs audit; this block had drifted while the phases table above was already accurate):
 - Migration scripts: `scripts/migrate-objects-and-teleports.mjs`, `scripts/migrate-to-entity-components.mjs`
-- Components: `packages/engine/src/components/` — `tile-transform`, `sprite-ref`, `trigger`, `collision`, `teleport`, `item`, `npc`, `spawn-point`, `custom-data`, `placement-id` (one file per component)
+- Components: `packages/engine/src/components/` — `tile-transform`, `sprite-ref`, `trigger`, `collision`, `teleport`, `item`, `dialogue`, `npc-route`, `spawn-point`, `placement-id`, `custom-data` (one file per component; the old single `npc` component was split into `dialogue` + `npc-route` so each maps 1:1 onto a registry spec)
 - Systems: `packages/engine/src/systems/` — `object-spawn.system.ts`, `trigger.system.ts`, `teleport.system.ts`, `item-pickup.system.ts`, `walk-on-tile.system.ts`, player spawn handling in `player.system.ts`
 - Composition layer: `packages/engine/src/entity/` — registry, specs, validation, `spawn-placement.ts`
 - Placement commands: `packages/engine/src/commands/object-placement.command.ts` (`object.place` / `object.remove`)

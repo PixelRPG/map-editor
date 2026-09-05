@@ -88,6 +88,7 @@ Conventions:
   - `check-orphan-components.mjs` — an engine component built by a spec must be read by something;
     `CollisionComponent` shipped a "Blocks movement" toggle that blocked nothing. Four deliberate
     gaps are pinned in the script AND marked `orphan-component-ok:` in their own file.
+- **The progressive-disclosure tier is declared and unimplemented** — `FieldDescriptor.basic` (12 fields) and `ComponentEditorMeta.basic` (3 components) mark the friendly default surface that `ComponentInspector` / `EntityComponentsEditor` were meant to honour; nothing in `apps/` or `packages/` reads either flag. Either build the simple/full split or drop the flags — a declared tier no UI honours makes the specs LOOK consistent while the gap stays. See [`docs/concepts/entity-and-appearance-model.md`](docs/concepts/entity-and-appearance-model.md) § The component registry. *owner: engine + gjs*
 - **Project ops and command ops still share one `(peerId, seq)` counter space** — the engine now
   refuses the collision loudly (`sync/op-category.ts`; `PreAttachOpBuffer.push` throws
   `OpCategoryError`, `isCoveredByWatermark` is category-aware), but `OutboundOpStamper`
