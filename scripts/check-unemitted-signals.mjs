@@ -30,6 +30,15 @@
  *    so an engine event that happens to share a widget signal's name
  *    would suppress a report. That is the safe direction: this guard
  *    only ever under-reports, never accuses a live signal.
+ *  - Because that promise has to hold, `emit(CONSTANT)` is resolved too,
+ *    not only `emit('literal')`. AGENTS.md § Events asks for typed event
+ *    maps over raw string literals, so the constant form is the one the
+ *    repo is heading towards — and a gate that reported a genuinely
+ *    emitted signal as dead, telling the author to "drop the
+ *    declaration", would be worse than no gate. Resolution is by NAME
+ *    across the whole tree (the constant and its `emit` are often in
+ *    different files); over-collecting there can only suppress a report,
+ *    never invent one.
  *  - `*.spec.ts` and `*.story.ts` are scanned as emitters too. A signal
  *    emitted only by a story is still emitted — whether that is ENOUGH
  *    is a review question, not something a scanner can decide.
@@ -123,9 +132,35 @@ function emittedNames(source) {
   return [...source.matchAll(/\.emit\(\s*['"`]([^'"`]+)['"`]/g)].map((m) => m[1].split('::')[0])
 }
 
+/**
+ * String literals bound to a `const NAME = '…'` or an `as const` object
+ * member, indexed by their binding name.
+ *
+ * Needed because a signal may be emitted through a constant rather than a
+ * literal (`this.emit(CHARACTER_CHANGED)`) — a pattern this repo's own
+ * AGENTS.md pushes towards for event names. Resolving those keeps the
+ * guard's central promise true: it must never accuse a signal that is
+ * really emitted.
+ */
+function stringConstants(source) {
+  return [...source.matchAll(/(?:^|[\s{,])([A-Z_][A-Z0-9_]*|[a-z][\w$]*)\s*[:=]\s*'([^']+)'/g)].map((m) => [m[1], m[2]])
+}
+
+/** Names passed to a `.emit(IDENTIFIER)` call — resolved via {@link stringConstants}. */
+function emittedIdentifiers(source) {
+  return [...source.matchAll(/\.emit\(\s*([A-Za-z_$][\w$]*(?:\.[\w$]+)*)\s*[,)]/g)].map((m) =>
+    // `Signals.CHARACTER_CHANGED` resolves on its last segment.
+    m[1].split('.').pop(),
+  )
+}
+
 /** @type {Map<string, {file: string, line: number}[]>} signal name → declaration sites */
 const declarations = new Map()
 const emitted = new Set()
+/** @type {Map<string, string[]>} constant name → every string literal bound to it, tree-wide */
+const constants = new Map()
+/** @type {string[]} identifiers seen as the sole argument of a `.emit(…)` */
+const emittedVia = []
 let scanned = 0
 
 for (const dir of listWorkspacePackageDirs(ROOT)) {
@@ -144,7 +179,20 @@ for (const dir of listWorkspacePackageDirs(ROOT)) {
       declarations.get(name).push({ file: rel, line })
     }
     for (const name of emittedNames(source)) emitted.add(name)
+    for (const [name, value] of stringConstants(source)) {
+      if (!constants.has(name)) constants.set(name, [])
+      constants.get(name).push(value)
+    }
+    emittedVia.push(...emittedIdentifiers(source))
   }
+}
+
+// Resolved after the whole tree is read: the constant and the `emit` that
+// uses it are regularly in different files. Matching by NAME across the
+// tree over-collects, which is the safe direction here — an extra name in
+// `emitted` can only ever suppress a report, never create one.
+for (const identifier of emittedVia) {
+  for (const value of constants.get(identifier) ?? []) emitted.add(value.split('::')[0])
 }
 
 let failures = 0
