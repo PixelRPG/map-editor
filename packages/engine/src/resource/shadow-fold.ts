@@ -12,21 +12,22 @@ import { parseShadowCoordKey } from '../services/map-editor-shadow.service.ts'
  * project snapshot for a late-joining peer) goes through this fold
  * first.
  *
- * The result is deterministic — sorted by `(y, x, zIndex)` — so wire
- * bytes are stable across runs of the host, and a file that lands on
- * disk diffs cleanly.
+ * The result is deterministic — sorted by `(y, x)` — so wire bytes are
+ * stable across runs of the host, and a file that lands on disk diffs
+ * cleanly. No depth is written per sprite: the order of two layers'
+ * sprites on one cell is the layers' order in `MapData.layers`.
  *
  * Lossy in one documented way: per-placement `properties` and `solid`
  * overrides on the original `SpriteDataMap` entries do not survive,
  * because the shadow only tracks the gameplay-loaded fields
- * (`spriteSetId`, `spriteId`, `animationId`, `zIndex`, `layerId`).
+ * (`spriteSetId`, `spriteId`, `animationId`, `layerId`).
  */
 
-/** The `"x,y" → refs` record a single tier's `MapEditorComponent` holds. */
+/** The `"x,y" → refs` record a single plane's `MapEditorComponent` holds. */
 export type ShadowSprites = Readonly<Record<string, readonly TileSpriteRef[]>>
 
 /**
- * Collect every tier's shadow into `layerId → sprites[]`, sorted.
+ * Collect every plane's shadow into `layerId → sprites[]`, sorted.
  * Layers with no painted tile are absent from the result; the caller
  * writes an empty array for those.
  */
@@ -43,7 +44,7 @@ export function foldShadowToLayerSprites(shadows: Iterable<ShadowSprites>): Map<
     }
   }
   for (const sprites of spritesPerLayer.values()) {
-    sprites.sort((a, b) => a.y - b.y || a.x - b.x || (a.zIndex ?? 0) - (b.zIndex ?? 0))
+    sprites.sort((a, b) => a.y - b.y || a.x - b.x)
   }
   return spritesPerLayer
 }
@@ -57,6 +58,5 @@ function toSpriteData(ref: TileSpriteRef, tileX: number, tileY: number): SpriteD
     spriteId: ref.spriteId,
   }
   if (ref.animationId !== undefined) entry.animationId = ref.animationId
-  if (ref.zIndex !== undefined) entry.zIndex = ref.zIndex
   return entry
 }

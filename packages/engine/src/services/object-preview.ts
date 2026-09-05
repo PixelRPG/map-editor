@@ -1,5 +1,5 @@
 import { Actor, type GraphicsGroup, type Scene, type TileMap, Vector, vec } from 'excalibur'
-import { ActiveLayerComponent, ActiveObjectComponent, ActiveToolComponent, TIER_Z } from '../components/index.ts'
+import { ActiveLayerComponent, ActiveObjectComponent, ActiveToolComponent, zFor } from '../components/index.ts'
 import { buildPlacementGraphic } from '../entity/placement-graphic.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { EntityDefinition } from '../types/data/index.ts'
@@ -41,11 +41,11 @@ const ghostCache = new WeakMap<
 /**
  * Construct the preview actor. Top-left anchored so `pos` maps directly
  * to a tile's world-space origin; z-pinned above the highest tilemap
- * tier so the ghost sits on top of every painted tile + placed object.
+ * plane so the ghost sits on top of every painted tile + placed object.
  */
 export function createObjectPreviewActor(): Actor {
   const actor = new Actor({ name: 'object-place-preview', anchor: vec(0, 0) })
-  actor.z = TIER_Z.overlay + 50
+  actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
   actor.graphics.visible = false
   return actor

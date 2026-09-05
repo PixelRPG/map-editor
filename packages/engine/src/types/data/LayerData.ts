@@ -1,39 +1,51 @@
 import type { Properties, SpriteDataMap } from './index'
 
 /**
- * Rendering tier a {@link LayerData} belongs to. Maps directly to
- * which Excalibur `TileMap` entity the layer's tile sprites render
- * on:
+ * Render plane a {@link LayerData} belongs to — the one depth word the
+ * editor shows the user. Maps directly to which Excalibur `TileMap`
+ * entity the layer's tile sprites render on:
  *
- * - **ground** — under the player (z = 0). Floors, paths, water,
- *   the static "you walk on this" world.
- * - **hero** — same render plane as the player (z = 100).
- *   Decoration objects (rocks, shrubs, signs) live here so the
- *   player passes them at the same depth.
- * - **overlay** — over the player (z = 200). Treetops, ceilings,
- *   anything that should obscure the player from above.
+ * - **ground** — under the player ("Below the hero"). Floors, paths,
+ *   water, the static "you walk on this" world.
+ * - **hero** — the player's own plane ("At hero height"). Rocks,
+ *   shrubs, signs: things the player walks around.
+ * - **overlay** — over the player ("Above the hero"). Treetops,
+ *   roofs, anything that should obscure the player from above.
  *
  * Optional + defaults to `'ground'` when missing — legacy map files
- * that predate the tier model continue to render as a single
- * ground-tier tilemap, matching the pre-refactor behaviour.
+ * that predate the plane model continue to render as a single
+ * ground-plane tilemap, matching the pre-refactor behaviour.
  *
  * Layers that only host functional placements (collision /
  * trigger / camera markers, no visible sprites) typically leave
- * `tier` unset and `visible: false`. The engine doesn't render
+ * `plane` unset and `visible: false`. The engine doesn't render
  * them on any tilemap; `ObjectSpawnSystem` still spawns their
  * placement entities for runtime systems to consume.
+ *
+ * The plane is the ONLY cross-layer depth key. Inside one plane the
+ * order is the layer's position in `MapData.layers`: a later layer
+ * draws over an earlier one, and `WalkOnTileSystem` asks the later
+ * one first. There is no per-layer or per-sprite z anywhere else —
+ * `LayerData.zIndex`, `SpriteDataMap.zIndex` and the untyped
+ * `properties.z` convention all existed once, disagreed silently, and
+ * were removed together.
  */
-export type LayerTier = 'ground' | 'hero' | 'overlay'
+export type LayerPlane = 'ground' | 'hero' | 'overlay'
 
-/** All `LayerTier` values in render order (low → high z). */
-export const LAYER_TIERS: readonly LayerTier[] = ['ground', 'hero', 'overlay'] as const
+/** All `LayerPlane` values in render order (low → high z). */
+export const LAYER_PLANES: readonly LayerPlane[] = ['ground', 'hero', 'overlay'] as const
 
 /**
- * Fallback tier when `LayerData.tier` is missing — matches the
- * pre-tier-model rendering (everything on the ground-plane tilemap)
+ * Fallback plane when `LayerData.plane` is missing — matches the
+ * pre-plane-model rendering (everything on the ground-plane tilemap)
  * so legacy project files continue to work.
  */
-export const DEFAULT_LAYER_TIER: LayerTier = 'ground'
+export const DEFAULT_LAYER_PLANE: LayerPlane = 'ground'
+
+/** Whether `value` names one of the three planes. */
+export function isLayerPlane(value: unknown): value is LayerPlane {
+  return typeof value === 'string' && (LAYER_PLANES as readonly string[]).includes(value)
+}
 
 /**
  * One layer within a tile map. Every layer is a tile layer in the
@@ -67,15 +79,15 @@ export interface LayerData {
   locked?: boolean
 
   /**
-   * Render tier this layer's tile sprites paint to. See
-   * {@link LayerTier}. Optional + defaults to `'ground'`.
+   * Render plane this layer's tile sprites paint to. See
+   * {@link LayerPlane}. Optional + defaults to `'ground'`.
    *
    * Layers carrying only placements (no tile sprites at all) may
    * leave this unset — the engine never creates a tilemap for
    * those and the placements render based on their own layer's
-   * tier via `ObjectSpawnSystem`.
+   * plane via `ObjectSpawnSystem`.
    */
-  tier?: LayerTier
+  plane?: LayerPlane
 
   /**
    * Tile sprites placed on this layer. Empty / missing for layers

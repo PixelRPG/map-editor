@@ -1,10 +1,15 @@
 import { Component } from 'excalibur'
 
+/**
+ * One sprite on one tile of the editor shadow. Order within a cell is
+ * NOT stored here: the renderer sorts a cell's refs by the position of
+ * `layerId` in `MapData.layers` (`services/layer-order.ts`), so the
+ * shadow's insertion order never has to agree with the file.
+ */
 export interface TileSpriteRef {
   spriteSetId: string
   spriteId: number
   animationId?: string
-  zIndex?: number
   layerId: string
 }
 

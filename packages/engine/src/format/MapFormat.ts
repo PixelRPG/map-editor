@@ -1,5 +1,6 @@
 import { validateEntityDefinition } from '../entity/validate'
 import type { MapData } from '../types'
+import { isLayerPlane, LAYER_PLANES } from '../types/data/LayerData'
 import { isObjectPlacement } from '../types/data/ObjectPlacement'
 
 /**
@@ -100,6 +101,27 @@ export class MapFormat {
     if (data.layers.length === 0) {
       throw new MapValidationError('Map must have at least one layer', 'layers')
     }
+
+    data.layers.forEach((layer, index) => {
+      // A misspelt plane used to fall back to `ground` in silence — the
+      // layer rendered, just on the wrong tilemap, and nothing said so.
+      if (layer.plane !== undefined && !isLayerPlane(layer.plane)) {
+        throw new MapValidationError(
+          `Layer "${layer.id}" has unknown plane "${String(layer.plane)}" — expected one of ${LAYER_PLANES.join(', ')}`,
+          `layers[${index}].plane`,
+          layer.plane,
+        )
+      }
+      // The untyped `properties.z` convention was one of five ways to
+      // order tiles and was deleted with the others. A file that still
+      // carries it opens unchanged, but the author should hear that the
+      // key does nothing now.
+      if (layer.properties && Object.hasOwn(layer.properties, 'z')) {
+        console.warn(
+          `[MapFormat] Layer "${layer.id}" carries properties.z, which nothing reads — a layer's order inside its plane is its position in "layers"`,
+        )
+      }
+    })
 
     // Validate sprite sets — optional. Empty / missing means the map has
     // no painted tiles yet (e.g. the blank-starter template). Layers

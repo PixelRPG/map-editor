@@ -95,17 +95,18 @@ interface LayerData {
   name: string
   visible: boolean
   locked?: boolean
-  tier?: LayerTier
+  plane?: LayerPlane          // 'ground' | 'hero' | 'overlay'; absent = ground
   sprites?: SpriteDataMap[]
   properties?: Properties
   /** REMOVED — `type: 'tile' | 'object'` + `objects[]`. */
   /** REMOVED — `opacity` + `zIndex`: declared for a year, read by nobody. */
+  /** REMOVED — the untyped `properties.z` convention and `SpriteDataMap.zIndex`: two more depth keys, replaced by array order. */
 }
 ```
 
 Every layer is now a tile layer with optional empty content. Objects don't live "in" a layer in the data sense — they reference a layer for sorting / visibility via `layerId`. A user wanting an RPG-Maker-style "Events" layer creates a normal layer named "Events" with no sprites and parks all event placements there. Pure convention.
 
-Ordering is `tier`'s job (see [Layer z-ordering between tiles and objects](#layer-z-ordering-between-tiles-and-objects)), not a per-layer `zIndex`; ordering *within* one cell is `SpriteDataMap.zIndex`, which `tilemap-builder.ts` seeds from the layer's `properties.z` convention.
+**One ordering rule.** `plane` decides which of the three tilemaps a layer paints to; the layer's position in `MapData.layers` decides the order inside a plane — a later layer draws over an earlier one, and `WalkOnTileSystem` asks the later one first. Nothing else orders tiles. Five things used to (`tier`, `LayerData.zIndex`, `properties.z`, `SpriteDataMap.zIndex`, array order) and they disagreed in silence: a live paint appended to a cell's ref list while the reload sorted by an all-zero z, so the canvas showed one order until the next open. `services/layer-order.ts` holds the rule as three pure functions and every reader of "which is on top" — the initial paint, every rebuild, the walk-on lookup — goes through it. `MapFormat.validate` rejects an unknown plane loudly and warns for a leftover `properties.z`.
 
 ## Excalibur ECS layout
 
@@ -151,19 +152,20 @@ System rule: no state beyond per-tick scratch buffers. All persistent state live
 
 ### Layer z-ordering between tiles and objects
 
-Tiles render through Excalibur's batched `TileMap`; object placements render as individual `Actor` entities. Both are ordered by **tier**, not by layer index. A layer declares `tier: 'ground' | 'hero' | 'overlay'` (see [Layer changes](#layer-changes)), one `TileMap` entity is built per tier, and both sides read the same table:
+Tiles render through Excalibur's batched `TileMap`; object placements render as individual `Actor` entities. Both are ordered across layers by **plane** — the one depth word the editor shows: "Below the hero" (`ground`), "At hero height" (`hero`), "Above the hero" (`overlay`). One `TileMap` entity is built per plane, and every z in the engine comes from one function:
 
 ```ts
-// packages/engine/src/components/tilemap-tier.component.ts
-export const TIER_Z: Record<LayerTier, number> = { ground: 0, hero: 100, overlay: 200 }
+// packages/engine/src/components/tilemap-plane.component.ts
+export function zFor(plane: LayerPlane, elevation = 0): number   // elevation * 1000 + { ground: 0, hero: 100, overlay: 200 }[plane]
 
-tilemap.z = TIER_Z[tier]                                         // resource/tilemap-builder.ts
-actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]              // entity/spawn-placement.ts
+tilemap.z = zFor(plane)                                          // resource/tilemap-builder.ts
+actor.z = zFor(layer?.plane ?? DEFAULT_LAYER_PLANE)              // entity/spawn-placement.ts
+player.z = zFor('hero') + 50                                     // systems/player.system.ts
 ```
 
-So a placement lands on exactly the render plane of the layer it references, and the gaps between the three values leave room for actors to interleave (`hero` is where the player sits, alongside decorations). The design sketch of a `layerIndex * Z_LAYER_STRIDE + Z_OBJECTS_WITHIN_LAYER` formula was never built — the tier model replaced it, and neither constant exists in the code.
+The plane offsets are not exported; `zFor` is the only way any code obtains a tilemap or actor z, so nothing treats 0 / 100 / 200 as an exhaustive enum once storeys exist. A placement lands on exactly the render plane of the layer it references, and the gaps leave room for actors to interleave (`hero` is where the player sits, alongside decorations). Inside one plane the array order of `MapData.layers` decides which of two layers' sprites shows on top of a shared cell (`services/layer-order.ts`).
 
-Practical consequence: objects on an "events" layer tiered `hero` appear in front of `ground` tiles and behind `overlay` tiles — which is what every RPG-style level wants. Ordering *within* one cell is a separate, finer mechanism: `SpriteDataMap.zIndex`, which `tilemap-builder.ts` seeds per sprite from the layer's `properties.z` convention when the sprite does not carry its own.
+What the planes cannot do, named rather than hidden: a bridge over a river bed, with one hero on the deck and one under it in the same frame, needs the actor's z to depend on where the actor is — an elevation, which is the next step below. Walking behind a rock on the same plane is y-sorting, which the engine does not have.
 
 ### Cross-system communication
 
@@ -209,6 +211,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
 | 7 | Editor UI — Objects authoring view, object tool + brush palette, Props selected-object group, Objects visibility row, atlas-from-placements | **landed** (#170–#174 + #179–#184; remaining polish in `TODO.md`) |
+| 8 | Depth — one ordering rule (plane + array order) | **landed** |
 
 ## Where this is implemented
 
@@ -231,6 +234,12 @@ These citations update as the work lands. Anything referenced here must exist in
 - Systems: `packages/engine/src/systems/` — `object-spawn.system.ts`, `trigger.system.ts`, `teleport.system.ts`, `item-pickup.system.ts`, `walk-on-tile.system.ts`, player spawn handling in `player.system.ts`
 - Composition layer: `packages/engine/src/entity/` — registry, specs, validation, `spawn-placement.ts`
 - Placement commands: `packages/engine/src/commands/object-placement.command.ts` (`object.place` / `object.remove`)
+
+**Phase 8 (depth) — landed:**
+- `packages/engine/src/types/data/LayerData.ts` — `plane`, `isLayerPlane`
+- `packages/engine/src/components/tilemap-plane.component.ts` — `TileMapPlaneComponent`, `zFor`
+- `packages/engine/src/services/layer-order.ts` — `layerOrderIndex`, `sortRefsByLayerOrder`, `orderLayersForWalkOn`
+- `packages/engine/src/format/MapFormat.ts` — plane validation, `properties.z` warning
 - Editor UI: `apps/maker-gjs/src/widgets/objects-view.ts` + the scene-editor inspector tabs in `scene-editor-view.ts`
 
 ## What's NOT on the table

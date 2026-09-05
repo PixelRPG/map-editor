@@ -20,7 +20,7 @@ import { type Entity, EventEmitter, type Scene, TileMap, Vector } from 'excalibu
 import type { Command, ObjectPlacementPayload } from '../commands/index.ts'
 import { ActiveObjectComponent } from '../components/active-object.component.ts'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
-import { TileMapTierComponent } from '../components/tilemap-tier.component.ts'
+import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import { EditOperations } from '../engine/edit-operations.ts'
 import type { EditorSession } from '../engine/editor-session.ts'
 import type { LayerOperations } from '../engine/layer-operations.ts'
@@ -114,7 +114,7 @@ export default async () => {
     /**
      * A scene whose PERSISTED extent is smaller than the tilemap it was
      * (supposedly) derived from. The mismatch never happens in practice
-     * — `buildTierTileMaps` copies `columns`/`rows` verbatim, pinned by
+     * — `buildPlaneTileMaps` copies `columns`/`rows` verbatim, pinned by
      * `resource/bounds-derivation.spec.ts` — but it is the only way to
      * observe WHICH source the pointer path trusts.
      */
@@ -168,14 +168,14 @@ export default async () => {
 
     function makeScene(): MapScene {
       const tileMap = new TileMap({ tileWidth: 16, tileHeight: 16, columns: 4, rows: 4 })
-      tileMap.addComponent(new TileMapTierComponent('ground'))
+      tileMap.addComponent(new TileMapPlaneComponent('ground'))
       tileMap.addComponent(new MapEditorComponent())
       const mapResource = {
         mapData: {
           id: 'm1',
           columns: 4,
           rows: 4,
-          layers: [{ id: LAYER, name: 'Ground', visible: true, tier: 'ground' }],
+          layers: [{ id: LAYER, name: 'Ground', visible: true, plane: 'ground' }],
           objectPlacements: [],
         },
         getFirstLayerId: () => LAYER,

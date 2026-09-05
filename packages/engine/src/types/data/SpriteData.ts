@@ -5,6 +5,11 @@ import { isSpriteDataBase } from './SpriteDataBase'
  * Represents a sprite instance placed in a map.
  * Extends SpriteDataBase with positioning and sprite reference information.
  *
+ * Carries no depth of its own: which of two sprites on the same cell
+ * draws on top is decided by their layers' order in `MapData.layers`
+ * (see `LayerData`). A per-sprite `zIndex` used to exist here and was
+ * removed with the other parallel ordering fields.
+ *
  * @interface SpriteDataMap
  * @extends SpriteDataBase
  * @since 0.1.0
@@ -53,16 +58,6 @@ export interface SpriteDataMap extends SpriteDataBase {
    * @optional
    */
   animationId?: string
-
-  /**
-   * Optional z-index for layering within the same tile.
-   * Higher values appear above lower values. Defaults to 0.
-   *
-   * @type {number}
-   * @optional
-   * @default 0
-   */
-  zIndex?: number
 }
 
 /**
@@ -85,8 +80,7 @@ export function isSpriteDataMap(obj: unknown): obj is SpriteDataMap {
     typeof (obj as SpriteDataMap).y === 'number' &&
     typeof (obj as SpriteDataMap).spriteSetId === 'string' &&
     typeof (obj as SpriteDataMap).spriteId === 'number' &&
-    ((obj as SpriteDataMap).animationId === undefined || typeof (obj as SpriteDataMap).animationId === 'string') &&
-    ((obj as SpriteDataMap).zIndex === undefined || typeof (obj as SpriteDataMap).zIndex === 'number')
+    ((obj as SpriteDataMap).animationId === undefined || typeof (obj as SpriteDataMap).animationId === 'string')
   )
 }
 

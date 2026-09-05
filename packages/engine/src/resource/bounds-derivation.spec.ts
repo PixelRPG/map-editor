@@ -21,9 +21,9 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import { isTileOutsideMap } from '../services/tile-edit-target.ts'
-import { LAYER_TIERS } from '../types/data/LayerData.ts'
+import { LAYER_PLANES } from '../types/data/LayerData.ts'
 import type { MapData } from '../types/data/index.ts'
-import { buildTierTileMaps } from './tilemap-builder.ts'
+import { buildPlaneTileMaps } from './tilemap-builder.ts'
 
 function makeMapData(columns: number, rows: number): MapData {
   return {
@@ -40,12 +40,12 @@ function makeMapData(columns: number, rows: number): MapData {
 
 export default async () => {
   await describe('map bounds — one authority', async () => {
-    await it('derives every tier tilemap from MapData.columns/rows', async () => {
+    await it('derives every plane tilemap from MapData.columns/rows', async () => {
       const mapData = makeMapData(7, 5)
-      const byTier = buildTierTileMaps(mapData)
-      expect([...byTier.keys()].sort()).toStrictEqual([...LAYER_TIERS].sort())
-      for (const tier of LAYER_TIERS) {
-        const tilemap = byTier.get(tier)
+      const byPlane = buildPlaneTileMaps(mapData)
+      expect([...byPlane.keys()].sort()).toStrictEqual([...LAYER_PLANES].sort())
+      for (const plane of LAYER_PLANES) {
+        const tilemap = byPlane.get(plane)
         expect(tilemap?.columns).toBe(mapData.columns)
         expect(tilemap?.rows).toBe(mapData.rows)
       }

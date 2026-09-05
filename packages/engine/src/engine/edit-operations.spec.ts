@@ -28,10 +28,10 @@ import { TileMap } from 'excalibur'
 
 import type { Command } from '../commands/index.ts'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
-import { TileMapTierComponent } from '../components/tilemap-tier.component.ts'
+import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
-import type { LayerTier } from '../types/data/index.ts'
+import type { LayerPlane } from '../types/data/index.ts'
 import { EditOperations } from './edit-operations.ts'
 import type { EditorSession } from './editor-session.ts'
 import type { LayerOperations } from './layer-operations.ts'
@@ -62,7 +62,7 @@ function makeFakeSprite(): { clone: () => unknown } {
 /**
  * A duck-typed `MapScene` (via `Object.create`, so `instanceof MapScene`
  * holds without the constructor's engine wiring) with one real `TileMap`
- * per tier, one object placement on {@link TARGET_LAYER}, and a sprite
+ * per plane, one object placement on {@link TARGET_LAYER}, and a sprite
  * set whose global tile id 1 is paintable.
  */
 function makeScene(): MapScene {
@@ -73,8 +73,8 @@ function makeScene(): MapScene {
       columns: 4,
       rows: 4,
       layers: [
-        { id: TARGET_LAYER, name: 'Ground', visible: true, tier: 'ground' },
-        { id: OTHER_LAYER, name: 'Decor', visible: true, tier: 'hero' },
+        { id: TARGET_LAYER, name: 'Ground', visible: true, plane: 'ground' },
+        { id: OTHER_LAYER, name: 'Decor', visible: true, plane: 'hero' },
       ],
       spriteSets: [{ id: 'terrain', firstGid: 1 }],
       objectPlacements: [{ id: PLACEMENT_ID, layerId: TARGET_LAYER, tileX: 1, tileY: 1, defId: 'npc' }],
@@ -85,9 +85,9 @@ function makeScene(): MapScene {
     // biome-ignore lint/suspicious/noExplicitAny: stub mirrors only the surface these operations touch
   } as any as MapResource
 
-  const makeTierTileMap = (tier: LayerTier): TileMap => {
+  const makePlaneTileMap = (plane: LayerPlane): TileMap => {
     const tileMap = new TileMap({ tileWidth: 16, tileHeight: 16, columns: 4, rows: 4 })
-    tileMap.addComponent(new TileMapTierComponent(tier))
+    tileMap.addComponent(new TileMapPlaneComponent(plane))
     tileMap.addComponent(new MapEditorComponent())
     return tileMap
   }
@@ -96,7 +96,7 @@ function makeScene(): MapScene {
   Object.assign(scene, {
     mapResource,
     entityLibrary: [{ id: 'npc', name: 'NPC' }],
-    world: { entityManager: { entities: [makeTierTileMap('ground'), makeTierTileMap('hero')] } },
+    world: { entityManager: { entities: [makePlaneTileMap('ground'), makePlaneTileMap('hero')] } },
   })
   return scene
 }

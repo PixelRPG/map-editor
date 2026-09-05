@@ -1,5 +1,5 @@
 import { Actor, Color, Rectangle, type Scene, vec } from 'excalibur'
-import { PlacementIdComponent, TIER_Z } from '../components/index.ts'
+import { PlacementIdComponent, zFor } from '../components/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
 /**
@@ -20,9 +20,9 @@ import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 
 /**
  * Build a fresh overlay actor for `placement`. Position / size match
- * the target actor, z-pinned one step above the highest tilemap tier
+ * the target actor, z-pinned one step above the highest tilemap plane
  * so the ring sits above every tile (and above the placement actor
- * itself, which renders at its layer's tier z).
+ * itself, which renders at its layer's plane z).
  */
 export function createSelectionRing(target: Actor, strokeColor: Color, lineWidth: number): Actor {
   const ring = new Actor({
@@ -41,7 +41,7 @@ export function createSelectionRing(target: Actor, strokeColor: Color, lineWidth
   })
   ring.graphics.use(rect)
   ring.graphics.anchor = vec(0.5, 0.5)
-  ring.z = TIER_Z.overlay + 25
+  ring.z = zFor('overlay') + 25
   return ring
 }
 

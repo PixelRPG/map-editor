@@ -1,8 +1,8 @@
 import { TileMap } from 'excalibur'
 import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from '../commands/index.ts'
-import { MapEditorComponent, TileMapTierComponent } from '../components/index.ts'
+import { MapEditorComponent, TileMapPlaneComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
-import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
+import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'
 import { getSpritesAt } from './map-editor-shadow.service.ts'
 
 /**
@@ -23,7 +23,6 @@ export function snapshotPreviousSprites(
   return getSpritesAt(editor, tileX, tileY, layerId).map((ref) => ({
     spriteSetId: ref.spriteSetId,
     spriteId: ref.spriteId,
-    zIndex: ref.zIndex,
     animationId: ref.animationId,
   }))
 }
@@ -54,7 +53,7 @@ export function buildTilePaintCommand(
 }
 
 /**
- * Resolve the per-tier `TileMap` + its `MapEditorComponent` for a layer
+ * Resolve the per-plane `TileMap` + its `MapEditorComponent` for a layer
  * (fresh entity scan — fine for occasional programmatic paint; the
  * pointer path caches its own lookup). `null` if not found.
  */
@@ -63,11 +62,11 @@ export function findTileMapForLayer(
   layerId: string,
 ): { tileMap: TileMap; editor: MapEditorComponent } | null {
   const layer = scene.mapResource?.mapData?.layers.find((l) => l.id === layerId)
-  if (!layer) return null // reject unknown layer ids (don't silently fall back to the default tier)
-  const tier = layer.tier ?? DEFAULT_LAYER_TIER
+  if (!layer) return null // reject unknown layer ids (don't silently fall back to the default plane)
+  const plane = layer.plane ?? DEFAULT_LAYER_PLANE
   for (const entity of scene.world.entityManager.entities) {
     if (!(entity instanceof TileMap)) continue
-    if (entity.get(TileMapTierComponent)?.tier !== tier) continue
+    if (entity.get(TileMapPlaneComponent)?.plane !== plane) continue
     const editor = entity.get(MapEditorComponent)
     if (editor) return { tileMap: entity, editor }
   }

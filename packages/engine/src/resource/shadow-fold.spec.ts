@@ -12,9 +12,9 @@ import { describe, expect, it } from '@gjsify/unit'
 import { foldShadowToLayerSprites, type ShadowSprites } from './shadow-fold.ts'
 
 const ground: ShadowSprites = {
-  '1,0': [{ spriteSetId: 'tiles', spriteId: 5, layerId: 'ground', zIndex: 0 }],
-  '0,0': [{ spriteSetId: 'tiles', spriteId: 4, layerId: 'ground', zIndex: 0 }],
-  '0,1': [{ spriteSetId: 'tiles', spriteId: 6, layerId: 'ground', zIndex: 0 }],
+  '1,0': [{ spriteSetId: 'tiles', spriteId: 5, layerId: 'ground' }],
+  '0,0': [{ spriteSetId: 'tiles', spriteId: 4, layerId: 'ground' }],
+  '0,1': [{ spriteSetId: 'tiles', spriteId: 6, layerId: 'ground' }],
 }
 
 export default async () => {
@@ -31,7 +31,7 @@ export default async () => {
       expect(result.get('decor')).toStrictEqual([{ x: 0, y: 0, spriteSetId: 'tiles', spriteId: 2 }])
     })
 
-    await it('sorts by row, then column, then z-index', async () => {
+    await it('sorts by row, then column', async () => {
       const result = foldShadowToLayerSprites([ground])
       expect(result.get('ground')?.map((s) => [s.x, s.y])).toStrictEqual([
         [0, 0],
@@ -40,21 +40,22 @@ export default async () => {
       ])
     })
 
-    await it('breaks ties on the same cell by z-index', async () => {
+    await it('writes no depth per sprite — two sprites of one layer on one cell keep insertion order', async () => {
+      // The per-sprite `zIndex` that used to break this tie is gone; the
+      // only order that matters is between LAYERS, and it is not stored
+      // per sprite at all (see `services/layer-order.ts`).
       const stacked: ShadowSprites = {
         '2,2': [
-          { spriteSetId: 'tiles', spriteId: 9, layerId: 'ground', zIndex: 3 },
-          { spriteSetId: 'tiles', spriteId: 8, layerId: 'ground', zIndex: 1 },
+          { spriteSetId: 'tiles', spriteId: 9, layerId: 'ground' },
+          { spriteSetId: 'tiles', spriteId: 8, layerId: 'ground' },
         ],
       }
-      expect(
-        foldShadowToLayerSprites([stacked])
-          .get('ground')
-          ?.map((s) => s.spriteId),
-      ).toStrictEqual([8, 9])
+      const sprites = foldShadowToLayerSprites([stacked]).get('ground') ?? []
+      expect(sprites.map((s) => s.spriteId)).toStrictEqual([9, 8])
+      expect(sprites.every((s) => !('zIndex' in s))).toBe(true)
     })
 
-    await it('merges the shadows of every tier into one per-layer view', async () => {
+    await it('merges the shadows of every plane into one per-layer view', async () => {
       const background: ShadowSprites = { '0,0': [{ spriteSetId: 'tiles', spriteId: 1, layerId: 'sky' }] }
       const foreground: ShadowSprites = { '0,0': [{ spriteSetId: 'tiles', spriteId: 2, layerId: 'roofs' }] }
       const result = foldShadowToLayerSprites([background, foreground])
@@ -67,12 +68,12 @@ export default async () => {
       expect(Object.keys(entry ?? {}).sort()).toStrictEqual(['spriteId', 'spriteSetId', 'x', 'y'])
     })
 
-    await it('carries animationId and zIndex through when present', async () => {
+    await it('carries animationId through when present', async () => {
       const shadow: ShadowSprites = {
-        '3,4': [{ spriteSetId: 'tiles', spriteId: 7, layerId: 'ground', animationId: 'torch', zIndex: 2 }],
+        '3,4': [{ spriteSetId: 'tiles', spriteId: 7, layerId: 'ground', animationId: 'torch' }],
       }
       expect(foldShadowToLayerSprites([shadow]).get('ground')).toStrictEqual([
-        { x: 3, y: 4, spriteSetId: 'tiles', spriteId: 7, animationId: 'torch', zIndex: 2 },
+        { x: 3, y: 4, spriteSetId: 'tiles', spriteId: 7, animationId: 'torch' },
       ])
     })
 

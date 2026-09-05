@@ -1,10 +1,10 @@
 import { Actor, type Entity, vec } from 'excalibur'
 import { PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
-import { TIER_Z } from '../components/tilemap-tier.component.ts'
+import { zFor } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
 import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
-import { DEFAULT_LAYER_TIER, type LayerData } from '../types/data/LayerData.ts'
+import { DEFAULT_LAYER_PLANE, type LayerData } from '../types/data/LayerData.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
 import { buildPlacementGraphic, type PlacementGraphicOptions } from './placement-graphic.ts'
@@ -18,7 +18,7 @@ import { validateEntityDefinition } from './validate.ts'
  * each component instantiated by its spec, the tile-like framed graphic
  * from {@link buildPlacementGraphic} (sprite fitted into the cell, or a
  * type-coloured marker for sprite-less placements), z from the layer's
- * tier, and the layer's visibility flag respected.
+ * plane, and the layer's visibility flag respected.
  */
 export function buildPlacementEntity(
   placement: ObjectPlacement,
@@ -54,7 +54,7 @@ export function buildPlacementEntity(
   applyPlacementGraphic(actor, def, mapResource, registry, options)
 
   const layer = layersById.get(placement.layerId)
-  actor.z = TIER_Z[layer?.tier ?? DEFAULT_LAYER_TIER]
+  actor.z = zFor(layer?.plane ?? DEFAULT_LAYER_PLANE)
   if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.visible = false
 
   return actor

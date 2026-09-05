@@ -39,7 +39,7 @@ export async function captureProjectSnapshot(engine: Engine): Promise<ProjectSna
     // `syncShadowToMapData` below correctly no-ops for it.
     const mapResource = resource.getMapResource(ref.id) ?? (await resource.loadMap(ref.id))
     // Fold the live editor shadow (MapEditorComponent.sprites) on every
-    // tier's tilemap back into mapData.layers[].sprites[]. Paints mutate
+    // plane's tilemap back into mapData.layers[].sprites[]. Paints mutate
     // the shadow only — without this sync the snapshot would ship the
     // load-time state and a late-joining peer would see the map as it
     // was when the host opened it, missing every paint since.

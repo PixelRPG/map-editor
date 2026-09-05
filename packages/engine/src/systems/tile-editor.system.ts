@@ -19,7 +19,7 @@ import {
   type EditorTool,
   MapEditorComponent,
   SelectedPlacementsComponent,
-  TileMapTierComponent,
+  TileMapPlaneComponent,
 } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
@@ -31,8 +31,8 @@ import { worldToTile } from '../services/tile-geometry.ts'
 import { isTileOutsideMap, resolveMapBounds } from '../services/tile-edit-target.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
-import type { LayerTier } from '../types/data/index.ts'
-import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
+import type { LayerPlane } from '../types/data/index.ts'
+import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -69,7 +69,7 @@ interface TileHit {
  * system only feeds them the tile under the pointer.
  *
  * `initialize` runs before `MapResource` has added the tilemaps for some
- * scenes, which is why the per-tier lookup below is a lazy cache rather
+ * scenes, which is why the per-plane lookup below is a lazy cache rather
  * than an eager scan.
  */
 export class TileEditorSystem extends System {
@@ -81,10 +81,10 @@ export class TileEditorSystem extends System {
   private readonly overlays = new HoverOverlays()
 
   /**
-   * Per-tier `TileMap` cache. Each `MapScene` is constructed fresh per
+   * Per-plane `TileMap` cache. Each `MapScene` is constructed fresh per
    * `Engine.loadMap`, so it lives for one map and dies with the system.
    */
-  private tileMapsByTier: Map<LayerTier, TileMap> | null = null
+  private tileMapsByPlane: Map<LayerPlane, TileMap> | null = null
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -130,13 +130,13 @@ export class TileEditorSystem extends System {
     if (!this.scene?.engine) return null
 
     const worldPos = this.scene.engine.screen.screenToWorldCoordinates(screenPos)
-    // The active layer's tier determines which of the (typically
+    // The active layer's plane determines which of the (typically
     // three) tilemaps in the scene this click should land on. All
-    // tier tilemaps share identical dimensions + position, so we can
+    // plane tilemaps share identical dimensions + position, so we can
     // compute tile coords from whichever tilemap we look up — the
-    // result resolves congruent tiles on every tier.
-    const tier = this.resolveActiveTier()
-    const tileMap = this.findTileMapForTier(tier)
+    // result resolves congruent tiles on every plane.
+    const plane = this.resolveActivePlane()
+    const tileMap = this.findTileMapForPlane(plane)
     if (!tileMap) return null
 
     const editor = tileMap.get(MapEditorComponent)
@@ -152,40 +152,40 @@ export class TileEditorSystem extends System {
   }
 
   /**
-   * Resolve which tier the active layer maps to. Falls back to
-   * `DEFAULT_LAYER_TIER` when no active layer has been picked yet
+   * Resolve which plane the active layer maps to. Falls back to
+   * `DEFAULT_LAYER_PLANE` when no active layer has been picked yet
    * (typical for a freshly-loaded map before any inspector
    * interaction) or when the active layer id no longer exists in
    * the map data.
    */
-  private resolveActiveTier(): LayerTier {
-    if (!this.scene) return DEFAULT_LAYER_TIER
+  private resolveActivePlane(): LayerPlane {
+    if (!this.scene) return DEFAULT_LAYER_PLANE
     const explicitLayerId = SessionState.get(this.scene, ActiveLayerComponent)?.layerId ?? null
     const layerId = this.resolveLayerId(explicitLayerId)
-    if (!layerId) return DEFAULT_LAYER_TIER
+    if (!layerId) return DEFAULT_LAYER_PLANE
     const mapResource = (this.scene as MapScene).mapResource
     const layer = mapResource?.mapData?.layers.find((l) => l.id === layerId)
-    return layer?.tier ?? DEFAULT_LAYER_TIER
+    return layer?.plane ?? DEFAULT_LAYER_PLANE
   }
 
   /**
-   * Resolve the per-tier `TileMap` for a pointer interaction. There's one
-   * `TileMap` per tier per `MapScene`, fixed for the scene's lifetime, so
+   * Resolve the per-plane `TileMap` for a pointer interaction. There's one
+   * `TileMap` per plane per `MapScene`, fixed for the scene's lifetime, so
    * we walk the scene entities exactly once (on first lookup) and cache
-   * the `tier → TileMap` mapping. Subsequent pointer moves are O(1).
+   * the `plane → TileMap` mapping. Subsequent pointer moves are O(1).
    */
-  private findTileMapForTier(tier: LayerTier): TileMap | null {
+  private findTileMapForPlane(plane: LayerPlane): TileMap | null {
     if (!this.scene) return null
-    if (!this.tileMapsByTier) {
-      const cache = new Map<LayerTier, TileMap>()
+    if (!this.tileMapsByPlane) {
+      const cache = new Map<LayerPlane, TileMap>()
       for (const entity of this.scene.world.entityManager.entities) {
         if (!(entity instanceof TileMap)) continue
-        const t = entity.get(TileMapTierComponent)?.tier
-        if (t) cache.set(t, entity)
+        const p = entity.get(TileMapPlaneComponent)?.plane
+        if (p) cache.set(p, entity)
       }
-      this.tileMapsByTier = cache
+      this.tileMapsByPlane = cache
     }
-    return this.tileMapsByTier.get(tier) ?? null
+    return this.tileMapsByPlane.get(plane) ?? null
   }
 
   /**

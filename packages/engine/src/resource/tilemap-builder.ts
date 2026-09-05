@@ -1,9 +1,9 @@
 import { TileMap, Vector } from 'excalibur'
 import type { TileSpriteRef } from '../components/map-editor.component.ts'
-import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
+import { TileMapPlaneComponent, zFor } from '../components/tilemap-plane.component.ts'
 import { shadowCoordKey } from '../services/map-editor-shadow.service.ts'
-import type { LayerData, LayerTier, MapData } from '../types/index.ts'
-import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
+import type { LayerData, LayerPlane, MapData } from '../types/index.ts'
+import { DEFAULT_LAYER_PLANE, LAYER_PLANES } from '../types/data/LayerData.ts'
 
 /**
  * Turning parsed {@link MapData} into the Excalibur tile grid.
@@ -14,28 +14,28 @@ import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
  * else `MapResource` does is a query or a live edit against the result.
  */
 
-/** Refs a layer contributed to one tier, keyed by the `"x,y"` shadow key. */
+/** Refs a layer contributed to one plane, keyed by the `"x,y"` shadow key. */
 export type InitialSprites = Map<string, TileSpriteRef[]>
 
 /** Whether a sprite reference makes its tile solid at load time. */
 export type SolidityProbe = (spriteSetId: string, spriteId: number, placementSolid?: boolean) => boolean
 
 /**
- * Build one `TileMap` per {@link LayerTier}, all with identical
+ * Build one `TileMap` per {@link LayerPlane}, all with identical
  * dimensions and position so tile `(x, y)` resolves to congruent tiles
- * on every tier. Each carries a {@link TileMapTierComponent} marker and
- * a stable z from {@link TIER_Z}.
+ * on every plane. Each carries a {@link TileMapPlaneComponent} marker
+ * and its z from {@link zFor}.
  *
- * All three tiers are always built, even when the map only has layers on
- * one. The unused tilemaps cost a few KB of empty grid but let
- * `TileEditorSystem` look the tier-matching tilemap up on every click
- * without first checking whether that tier exists.
+ * All three planes are always built, even when the map only has layers
+ * on one. The unused tilemaps cost a few KB of empty grid but let
+ * `TileEditorSystem` look the plane-matching tilemap up on every click
+ * without first checking whether that plane exists.
  */
-export function buildTierTileMaps(data: MapData): Map<LayerTier, TileMap> {
-  const byTier = new Map<LayerTier, TileMap>()
-  for (const tier of LAYER_TIERS) {
+export function buildPlaneTileMaps(data: MapData): Map<LayerPlane, TileMap> {
+  const byPlane = new Map<LayerPlane, TileMap>()
+  for (const plane of LAYER_PLANES) {
     const tilemap = new TileMap({
-      name: `${data.name}:${tier}`,
+      name: `${data.name}:${plane}`,
       pos: data.pos ? new Vector(data.pos.x, data.pos.y) : undefined,
       tileWidth: data.tileWidth,
       tileHeight: data.tileHeight,
@@ -43,16 +43,16 @@ export function buildTierTileMaps(data: MapData): Map<LayerTier, TileMap> {
       rows: data.rows,
       renderFromTopOfGraphic: data.renderFromTopOfGraphic,
     })
-    tilemap.addComponent(new TileMapTierComponent(tier))
-    tilemap.z = TIER_Z[tier]
-    byTier.set(tier, tilemap)
+    tilemap.addComponent(new TileMapPlaneComponent(plane))
+    tilemap.z = zFor(plane)
+    byPlane.set(plane, tilemap)
   }
-  return byTier
+  return byPlane
 }
 
 /**
- * Route every layer's sprites into the tilemap matching its `tier`,
- * returning the per-tier initial shadow state.
+ * Route every layer's sprites into the tilemap matching its `plane`,
+ * returning the per-plane initial shadow state.
  *
  * ALL layers are processed, including invisible ones, so the editor's
  * shadow holds a complete picture of every layer's content — the
@@ -60,26 +60,26 @@ export function buildTierTileMaps(data: MapData): Map<LayerTier, TileMap> {
  * toggling `layer.visible` at runtime a pure graphics refresh with no
  * re-read of the JSON.
  *
- * Layers are processed in ascending `properties.z` order, and sprite
- * positions stay global tile coordinates (the same `(x, y)` resolves to
- * congruent tiles on every tier).
+ * Layers are walked in array order and sprite positions stay global
+ * tile coordinates (the same `(x, y)` resolves to congruent tiles on
+ * every plane). The shadow's insertion order carries no meaning: the
+ * render path sorts each cell by layer order (`services/layer-order.ts`).
  */
 export function collectInitialSprites(
   data: MapData,
-  tileMapsByTier: ReadonlyMap<LayerTier, TileMap>,
+  tileMapsByPlane: ReadonlyMap<LayerPlane, TileMap>,
   isSolid: SolidityProbe,
-): Map<LayerTier, InitialSprites> {
-  const byTier = new Map<LayerTier, InitialSprites>()
-  for (const tier of LAYER_TIERS) byTier.set(tier, new Map())
+): Map<LayerPlane, InitialSprites> {
+  const byPlane = new Map<LayerPlane, InitialSprites>()
+  for (const plane of LAYER_PLANES) byPlane.set(plane, new Map())
 
-  const sortedLayers = [...data.layers].sort((a, b) => Number(a.properties?.z ?? 0) - Number(b.properties?.z ?? 0))
-  for (const layer of sortedLayers) {
-    const tier: LayerTier = layer.tier ?? DEFAULT_LAYER_TIER
-    const tileMap = tileMapsByTier.get(tier)
-    const initialSprites = byTier.get(tier)
+  for (const layer of data.layers) {
+    const plane: LayerPlane = layer.plane ?? DEFAULT_LAYER_PLANE
+    const tileMap = tileMapsByPlane.get(plane)
+    const initialSprites = byPlane.get(plane)
     if (tileMap && initialSprites) collectLayer(layer, tileMap, initialSprites, isSolid)
   }
-  return byTier
+  return byPlane
 }
 
 function collectLayer(
@@ -89,7 +89,6 @@ function collectLayer(
   isSolid: SolidityProbe,
 ): void {
   if (!Array.isArray(layer.sprites) || layer.sprites.length === 0) return
-  const layerZIndex = layer.properties?.z !== undefined ? Number(layer.properties.z) : 0
 
   for (const spriteData of layer.sprites) {
     if (spriteData.x < 0 || spriteData.x >= tileMap.columns || spriteData.y < 0 || spriteData.y >= tileMap.rows) {
@@ -119,7 +118,6 @@ function collectLayer(
       spriteSetId: spriteData.spriteSetId,
       spriteId: spriteData.spriteId,
       animationId: spriteData.animationId,
-      zIndex: spriteData.zIndex !== undefined ? spriteData.zIndex : layerZIndex,
       layerId: layer.id,
     })
     initialSprites.set(key, existingRefs)
