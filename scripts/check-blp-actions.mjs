@@ -38,6 +38,12 @@
  *    reconciled against a really-installed action group by
  *    `window-actions.gjs.spec.ts`. Chaining onto that reconciliation
  *    keeps this guard free of GTK.
+ *  - A BOUND action name (`action-name: bind template.action-name;`,
+ *    `floating-fab.blp`) carries no literal and is skipped. That is the
+ *    one blind spot, and it costs nothing today: `FloatingFab` forwards
+ *    a property to its inner button, and every consumer sets the real
+ *    name as a literal in its own `.blp` (`win.play`, `win.new-scene`),
+ *    where this guard does see it.
  *
  * Runs in CI (Node is already provisioned for the gjsify CLI bootstrap)
  * and locally via `gjsify run check:blp-actions` at the workspace root.
