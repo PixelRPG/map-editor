@@ -67,11 +67,27 @@ const MIN_VIEWS = 4
 
 const read = (rel) => readFileSync(join(ROOT, rel), 'utf8')
 
-/** Quoted members of `export type <name> = 'a' | 'b' | …` (single line). */
+/**
+ * Quoted members of `export type <name> = 'a' | 'b' | …`.
+ *
+ * Read across lines, not just the first one: Biome wraps a union one
+ * member per line as soon as it passes the 120-column limit, so a
+ * single-line matcher would silently see one member the day someone adds
+ * a mode — which the MIN_ floors would then report as "the matcher is
+ * broken" on a tree that is perfectly fine. The alias ends at the first
+ * line that continues neither with `|` nor with a quoted member.
+ */
 function unionMembers(source, name) {
-  const m = source.match(new RegExp(`export type ${name}\\s*=\\s*([^\\n]+)`))
+  const m = source.match(new RegExp(`export type ${name}\\s*=`))
   if (!m) return []
-  return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
+  const lines = source.slice(m.index + m[0].length).split('\n')
+  const body = []
+  for (const [index, line] of lines.entries()) {
+    const trimmed = line.trim()
+    if (index > 0 && !trimmed.startsWith('|') && !trimmed.startsWith("'")) break
+    body.push(line)
+  }
+  return [...body.join('\n').matchAll(/'([^']+)'/g)].map((x) => x[1])
 }
 
 /** Quoted entries of `const <name>: … = ['a', 'b']` (single line). */
@@ -81,10 +97,35 @@ function arrayLiteral(source, name) {
   return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
 }
 
+/** Split `text` on every `separator` that is not inside `{}`, `[]` or `()`. */
+function splitTopLevel(text, separator) {
+  const parts = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '{' || ch === '[' || ch === '(') depth++
+    else if (ch === '}' || ch === ']' || ch === ')') depth--
+    else if (ch === separator && depth === 0) {
+      parts.push(text.slice(start, i))
+      start = i + 1
+    }
+  }
+  parts.push(text.slice(start))
+  return parts
+}
+
 /**
  * `key: 'value'` / `'key': 'value'` / `key: null` pairs of a
  * `const <name>… = { … }` object literal, brace-matched so a nested
  * object cannot end the scan early.
+ *
+ * Entries are split on TOP-LEVEL commas rather than on line starts: a
+ * record written on one line is the same record, and a matcher that only
+ * saw the first entry of it would report every other mode as having no
+ * route — a false failure on correct code, with a remedy ("add the view,
+ * or drop the mode") that does not apply. Each entry must match whole, so
+ * a nested value is skipped rather than half-parsed.
  */
 function objectLiteral(source, name) {
   const start = source.search(new RegExp(`const ${name}\\b`))
@@ -97,11 +138,16 @@ function objectLiteral(source, name) {
     if (source[end] === '{') depth++
     else if (source[end] === '}' && --depth === 0) break
   }
-  const body = source.slice(open + 1, end)
-  return [...body.matchAll(/(?:^|\n)\s*'?([\w-]+)'?\s*:\s*(?:'([^']*)'|(null))/g)].map((m) => ({
-    key: m[1],
-    value: m[2] ?? null,
-  }))
+  const body = source
+    .slice(open + 1, end)
+    .split('\n')
+    .map((line) => line.replace(/\/\/.*$/, ''))
+    .join('\n')
+
+  return splitTopLevel(body, ',')
+    .map((chunk) => chunk.match(/^\s*'?([\w-]+)'?\s*:\s*(?:'([^']*)'|(null))\s*$/))
+    .filter((m) => m !== null)
+    .map((m) => ({ key: m[1], value: m[2] ?? null }))
 }
 
 /**
@@ -118,15 +164,36 @@ function viewStackPageNames(source) {
  * Rail rows: the `action-target` of every row bound to `win.mode`.
  * Blueprint writes the GVariant string target as `"'world'"` — quotes
  * inside quotes — so the inner pair is stripped.
+ *
+ * The two properties are collected PER `{ … }` BLOCK, not in line order.
+ * Blueprint imposes no property order, so a row writing `action-target`
+ * above `action-name` is the same row; a line-order matcher attributed
+ * that target to whichever action-name it had last seen — in a rail where
+ * a non-mode row (`win.share-session`) precedes it, that loses a working
+ * row and reports the mode as unreachable, which is a false failure on
+ * correct markup.
  */
 function modeRailRowTargets(source) {
   const targets = []
-  let boundToMode = false
-  for (const line of source.split('\n')) {
-    const action = line.match(/\baction-name:\s*"([^"]+)"/)
-    if (action) boundToMode = action[1] === 'win.mode'
-    const target = line.match(/\baction-target:\s*"'([^']+)'"/)
-    if (target && boundToMode) targets.push(target[1])
+  /** One frame per open block; a row's properties land on its own frame. */
+  const stack = []
+  for (const raw of source.split('\n')) {
+    const line = raw.replace(/\/\/.*$/, '')
+    const frame = stack.at(-1)
+    if (frame) {
+      const action = line.match(/\baction-name:\s*"([^"]+)"/)
+      if (action) frame.action = action[1]
+      const target = line.match(/\baction-target:\s*"'([^']+)'"/)
+      if (target) frame.target = target[1]
+    }
+    // Braces inside a string are text, not structure.
+    for (const ch of line.replace(/"[^"]*"/g, '""')) {
+      if (ch === '{') stack.push({})
+      else if (ch === '}') {
+        const closed = stack.pop()
+        if (closed?.action === 'win.mode' && closed.target !== undefined) targets.push(closed.target)
+      }
+    }
   }
   return targets
 }
