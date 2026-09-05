@@ -183,6 +183,15 @@ jobs:
         # languages; only a cross-file check holds them together.
         run: node scripts/check-mode-routes.mjs
 
+      - name: Verify every .blp action has a handler
+        # `action-name:` in a .blp is a name lookup at map time. A widget
+        # bound to an unregistered action is rendered permanently
+        # insensitive with no error, warning or log — the primary menu's
+        # "Keyboard Shortcuts" item was greyed out in every build ever
+        # made. The .blp files are in packages/gjs, the registry in
+        # apps/maker-gjs, so neither type-check sees the other side.
+        run: node scripts/check-blp-actions.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the
