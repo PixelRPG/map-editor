@@ -92,10 +92,11 @@ jobs:
         # e.g. could not even build the test bundles). Bumps happen by
         # updating the lockfile in dedicated commits.
         #
-        # `packages['node_modules/@gjsify/cli'].version` is the lockfile-v2
-        # shape gjsify-lock.json still uses at 0.47; if a future lockfile
-        # version moves it, this read prints `undefined` and `npm install
-        # -g @gjsify/cli@undefined` fails loudly rather than installing
+        # `packages['node_modules/@gjsify/cli'].version` is the shape
+        # gjsify-lock.json uses at lockfile v4 (and used at v2 before the
+        # 2026-09-05 regeneration); if a future lockfile version moves it,
+        # this read prints `undefined` and `npm install -g
+        # @gjsify/cli@undefined` fails loudly rather than installing
         # latest.
         run: |
           version=$(node -p "require('./gjsify-lock.json').packages['node_modules/@gjsify/cli'].version")
