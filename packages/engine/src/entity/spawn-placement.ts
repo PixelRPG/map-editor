@@ -1,15 +1,17 @@
 import { Actor, type Entity, vec } from 'excalibur'
-import { PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
+import { EntityStatesComponent, PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
 import { zFor } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
+import type { ActionData } from '../types/data/ActionData.ts'
 import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import { DEFAULT_LAYER_PLANE, type LayerData } from '../types/data/LayerData.ts'
+import { getComponentData } from './data-access.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
 import { buildPlacementGraphic, type PlacementGraphicOptions } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
-import { validateEntityDefinition } from './validate.ts'
+import { validateEntityDefinitionDetailed } from './validate.ts'
 
 /**
  * Build one Excalibur entity from a placement + its resolved definition,
@@ -51,6 +53,13 @@ export function buildPlacementEntity(
       for (const c of Array.isArray(built) ? built : [built]) actor.addComponent(c)
     }
   }
+  // Conditional states are definition-level, not a component, so the
+  // registry walk above never sees them — attach the runtime half here so
+  // `StateSystem` can resolve them against the flag store.
+  if (def.states && def.states.length > 0) {
+    const baseActions = (getComponentData(def, 'actions')?.actions as ActionData[] | undefined) ?? []
+    actor.addComponent(new EntityStatesComponent(def.states, baseActions))
+  }
   applyPlacementGraphic(actor, def, mapResource, registry, options)
 
   const layer = layersById.get(placement.layerId)
@@ -89,7 +98,7 @@ export function applyPlacementGraphic(
  *
  * Warn-only by design: a leniently-saved draft (a placement whose required
  * fields aren't filled in yet — the save path allows it, see
- * {@link validateEntityDefinition}'s `requireComplete`) still spawns
+ * {@link validateEntityDefinitionDetailed}'s `requireComplete`) still spawns
  * best-effort rather than vanishing from a shipped map, but the integrity
  * gap is surfaced instead of staying silent. An unresolved `defId` (the
  * entity it pointed at was deleted) is the only case that can't spawn.
@@ -103,7 +112,14 @@ export function placementSpawnWarnings(
     const ref = placement.defId ? `defId "${placement.defId}"` : 'an inline definition'
     return [`placement "${placement.id}" references ${ref} that did not resolve — not spawned`]
   }
-  const errors = validateEntityDefinition(def, registry, true)
+  // `knownRegistry` is the full built-in set, so a component belonging to
+  // a switched-OFF game system lands in `dormant` and warns about nothing:
+  // it is deliberately inert, not a broken definition.
+  const { errors } = validateEntityDefinitionDetailed(def, {
+    registry,
+    requireComplete: true,
+    knownRegistry: BUILT_IN_COMPONENT_SPECS,
+  })
   if (errors.length === 0) return []
   return [`placement "${placement.id}" ("${def.id}") has an incomplete definition: ${errors.join('; ')}`]
 }

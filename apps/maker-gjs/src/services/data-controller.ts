@@ -1,7 +1,8 @@
-import { EDITOR_CONSTANTS, type SpriteSetKind } from '@pixelrpg/engine'
+import { EDITOR_CONSTANTS, type MapData, type SpriteSetKind } from '@pixelrpg/engine'
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
 import type { DataView, DataViewModel } from '../widgets/data-view.ts'
+import { buildGameRulesModel } from './game-rules-model.ts'
 import type { ProjectStore } from './project-store.ts'
 import { isCharacterSpriteSet } from './sprite-set-classification.ts'
 import { countCharacterUsers } from './sprite-set-usage.ts'
@@ -24,6 +25,15 @@ export interface DataControllerEvents {
 }
 
 /**
+ * The map data currently in memory. Placements in unloaded maps are not
+ * counted by the Game-rules usage numbers — the alternative is parsing
+ * every map file to draw one subtitle.
+ */
+function loadedMapData(maps: Iterable<{ mapData?: MapData | null }>): MapData[] {
+  return [...maps].flatMap((m) => (m.mapData ? [m.mapData] : []))
+}
+
+/**
  * Owns the Data view's model: project metadata (name / author / version /
  * description / tile size) routed into the {@link ProjectStore} (the
  * single owner of project persistence + the `__project/meta.update` collab
@@ -41,6 +51,7 @@ export class DataController {
   ) {
     view.bindCallbacks({
       setProjectField: (field, value) => this.setProjectField(field, value),
+      setGameSystemEnabled: (id, enabled) => this.store.setGameSystemEnabled(id, enabled),
     })
     store.on('project-changed', (project) => {
       if (!project) {
@@ -56,6 +67,15 @@ export class DataController {
       if (this.store.project) this._rebuild()
     })
     store.on('project-meta-changed', () => {
+      if (this.store.project) this._rebuild()
+    })
+    // A switch flip here or on a peer changes which rows the page shows
+    // and what "Used by" counts.
+    store.on('game-systems-changed', () => {
+      if (this.store.project) this._rebuild()
+    })
+    // The library is what "Used by" counts, so it re-hydrates with it.
+    store.on('entity-library-changed', () => {
       if (this.store.project) this._rebuild()
     })
   }
@@ -130,6 +150,7 @@ export class DataController {
       path: resource.path,
       appearanceCount,
       tilesetCount,
+      gameRules: buildGameRulesModel({ project: data, maps: loadedMapData(resource.maps.values()) }),
     }
     this.view.setData(model)
   }

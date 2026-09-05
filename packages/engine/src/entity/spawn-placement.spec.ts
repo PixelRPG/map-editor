@@ -2,6 +2,8 @@ import { describe, expect, it } from '@gjsify/unit'
 import { type Actor, GraphicsGroup } from 'excalibur'
 import {
   CollisionComponent,
+  EntityStatesComponent,
+  EventActionsComponent,
   PlacementIdComponent,
   SpriteRefComponent,
   TeleportComponent,
@@ -118,6 +120,50 @@ export default async () => {
       const warnings = placementSpawnWarnings({ ...placement, defId: undefined, inline: def }, def)
       expect(warnings.length).toBe(1)
       expect(warnings[0]).toContain('incomplete definition')
+    })
+  })
+
+  await describe('conditional states', async () => {
+    const domAvailable = typeof document !== 'undefined'
+
+    await it('attaches the runtime states component with the base actions', async () => {
+      if (!domAvailable) return
+      // States are definition-level, not a component, so the registry walk
+      // never sees them — the spawn pipeline has to attach the runtime half
+      // or `StateSystem` has nothing to resolve.
+      const def: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [
+          { type: 'trigger', on: 'action-button' },
+          { type: 'actions', actions: [{ id: 'a1', type: 'show-text', text: 'Locked' }] },
+        ],
+        states: [{ id: 'open', when: { flag: 'has-key' }, components: [{ type: 'actions', actions: [] }] }],
+      }
+      const entity = buildPlacementEntity(
+        { id: 'door-1', layerId: 'l1', tileX: 0, tileY: 0, inline: def },
+        def,
+        fakeMapResource,
+        layersById,
+      ) as Actor
+      const states = entity.get(EntityStatesComponent)
+      expect(states).toBeDefined()
+      expect(states?.states.length).toBe(1)
+      expect(states?.baseActions.length).toBe(1)
+      expect(states?.activeStateId).toBe(null)
+      expect(entity.get(EventActionsComponent)?.actions.length).toBe(1)
+    })
+
+    await it('attaches nothing when the definition declares no states', async () => {
+      if (!domAvailable) return
+      const def: EntityDefinition = { id: 'sign', name: 'Sign', components: [{ type: 'trigger', on: 'auto' }] }
+      const entity = buildPlacementEntity(
+        { id: 'sign-1', layerId: 'l1', tileX: 0, tileY: 0, inline: def },
+        def,
+        fakeMapResource,
+        layersById,
+      ) as Actor
+      expect(entity.has(EntityStatesComponent)).toBe(false)
     })
   })
 }

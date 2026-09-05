@@ -20,6 +20,7 @@ interface ActionsData extends ComponentData {
  */
 export const actionsSpec: ComponentSpec = {
   type: 'actions',
+  system: 'core',
   editor: { label: 'Actions', icon: 'view-list-ordered-symbolic', markerColor: '#66ffcc' },
   fields: [{ key: 'actions', label: 'Actions', input: 'json', default: [] }],
   // Messages are prefixed with the component type by `validateComponentData`.

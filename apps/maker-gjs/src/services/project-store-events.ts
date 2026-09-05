@@ -55,6 +55,13 @@ export interface ProjectStoreEvents {
    */
   'project-meta-changed': undefined
   /**
+   * The project's enabled game systems changed — a local switch flip or
+   * an inbound `__project/systems.set`. Every surface that renders
+   * components (Cast, Objects) re-hydrates with the new effective
+   * registry; the Game rules page re-renders its rows.
+   */
+  'game-systems-changed': undefined
+  /**
    * An inbound `__project/map.editor-data` patched a map's `editorData`
    * (today: atlas card position). The host — the owner of map-file IO —
    * persists that map + refreshes the atlas.

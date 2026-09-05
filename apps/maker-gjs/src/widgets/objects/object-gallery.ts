@@ -2,7 +2,7 @@ import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
-import { ENTITY_TEMPLATES } from '../../services/entity-templates.ts'
+import type { EntityTemplate } from '../../services/entity-templates.ts'
 
 /**
  * One gallery row. Objects is the GENERAL lens, so it lists characters
@@ -59,9 +59,13 @@ export function buildRelationshipDiagram(slot: Gtk.Box): void {
  * Fill the empty state's template tiles. They reuse the same creation
  * path as the "New object" chooser.
  */
-export function buildTemplateTiles(slot: Gtk.FlowBox, onPick: (templateId: string) => void): void {
+export function buildTemplateTiles(
+  slot: Gtk.FlowBox,
+  templates: readonly EntityTemplate[],
+  onPick: (templateId: string) => void,
+): void {
   for (const id of EMPTY_STATE_TEMPLATE_IDS) {
-    const template = ENTITY_TEMPLATES.find((t) => t.id === id)
+    const template = templates.find((t) => t.id === id)
     if (!template) continue
     const button = new Gtk.Button({ cssClasses: ['flat', 'objects-template-tile'] })
     const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })

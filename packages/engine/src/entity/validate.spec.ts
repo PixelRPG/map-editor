@@ -1,10 +1,11 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { EntityDefinition } from '../types/data/index.ts'
 import type { ComponentSpec } from './component-spec.ts'
-import { validateComponentData, validateEntityDefinition } from './validate.ts'
+import { validateComponentData, validateEntityDefinition, validateEntityDefinitionDetailed } from './validate.ts'
 
 const speedSpec: ComponentSpec = {
   type: 'movement',
+  system: 'test',
   editor: { label: 'Movement', icon: 'x' },
   fields: [{ key: 'tilesPerSec', label: 'Speed', input: 'int', required: true, min: 1, max: 16 }],
   build: () => null,
@@ -12,6 +13,7 @@ const speedSpec: ComponentSpec = {
 
 const selectSpec: ComponentSpec = {
   type: 'trigger',
+  system: 'test',
   editor: { label: 'Trigger', icon: 'x' },
   fields: [
     { key: 'on', label: 'On', input: 'select', required: true, options: [{ value: 'auto', label: 'Auto' }] },
@@ -24,6 +26,7 @@ const selectSpec: ComponentSpec = {
 // validate against — must be rejected rather than accept any string.
 const brokenSelectSpec: ComponentSpec = {
   type: 'state',
+  system: 'test',
   editor: { label: 'State', icon: 'x' },
   fields: [{ key: 'value', label: 'Value', input: 'select' }],
   build: () => null,
@@ -31,6 +34,7 @@ const brokenSelectSpec: ComponentSpec = {
 
 const jsonSpec: ComponentSpec = {
   type: 'custom-data',
+  system: 'test',
   editor: { label: 'Custom', icon: 'x' },
   fields: [{ key: 'data', label: 'Data', input: 'json' }],
   build: () => null,
@@ -120,6 +124,95 @@ export default async () => {
         states: [{ id: 'open', components: [{ type: 'bogus' }] }],
       }
       expect(validateEntityDefinition(def, registry).some((e) => e.includes('state "open"'))).toBe(true)
+    })
+  })
+
+  await describe('validateEntityDefinitionDetailed — dormant, unknown, warned', async () => {
+    const registry = { movement: speedSpec }
+    const known = { movement: speedSpec, trigger: selectSpec }
+
+    await it('separates a disabled system component from an unknown one', async () => {
+      // The single most important line in this design: disabled data is
+      // preserved and inert, unknown data is rejected. Merged, either a
+      // typo goes silent or a switch becomes destructive.
+      const def: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [{ type: 'movement', tilesPerSec: 4 }, { type: 'trigger', on: 'auto' }, { type: 'bogus' }],
+      }
+      const result = validateEntityDefinitionDetailed(def, { registry, knownRegistry: known })
+      expect(result.dormant).toStrictEqual(['trigger'])
+      expect(result.errors.length).toBe(1)
+      expect(result.errors[0].includes('unregistered component type "bogus"')).toBe(true)
+    })
+
+    await it('never blocks a spawn on an incomplete dormant component', async () => {
+      // A dormant component is not validated: its required fields are
+      // nobody's business while its system is off, and warning about them
+      // would make switching a system off look like breakage.
+      const def: EntityDefinition = { id: 'x', name: 'X', components: [{ type: 'trigger' }] }
+      const result = validateEntityDefinitionDetailed(def, {
+        registry,
+        knownRegistry: known,
+        requireComplete: true,
+      })
+      expect(result.errors).toStrictEqual([])
+      expect(result.dormant).toStrictEqual(['trigger'])
+    })
+
+    await it('treats everything as unknown when no knownRegistry is given', async () => {
+      const def: EntityDefinition = { id: 'x', name: 'X', components: [{ type: 'trigger', on: 'auto' }] }
+      const result = validateEntityDefinitionDetailed(def, { registry })
+      expect(result.dormant).toStrictEqual([])
+      expect(result.errors.length).toBe(1)
+    })
+
+    await it('warns — never errors — on a condition shape this build cannot evaluate', async () => {
+      // Forward compatibility: a template from a newer editor must open.
+      const def: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [],
+        states: [{ id: 'night', when: { hour: 20 } as never, components: [] }],
+      }
+      const result = validateEntityDefinitionDetailed(def, { registry })
+      expect(result.errors).toStrictEqual([])
+      expect(result.warnings.length).toBe(1)
+      expect(result.warnings[0].includes('does not understand')).toBe(true)
+    })
+
+    await it('accepts the one supported condition shape, with and without equals', async () => {
+      const def: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [],
+        states: [
+          { id: 'open', when: { flag: 'has-key' }, components: [] },
+          { id: 'done', when: { flag: 'quest', equals: 'done' }, components: [] },
+          { id: 'manual', components: [] },
+        ],
+      }
+      expect(validateEntityDefinitionDetailed(def, { registry }).warnings).toStrictEqual([])
+    })
+
+    await it('warns that only an actions overlay has a runtime', async () => {
+      // Named honestly rather than hidden: the chest still looks closed.
+      const def: EntityDefinition = {
+        id: 'chest',
+        name: 'Chest',
+        components: [],
+        states: [
+          {
+            id: 'open',
+            when: { flag: 'opened' },
+            components: [{ type: 'movement', tilesPerSec: 1 }],
+          },
+        ],
+      }
+      const result = validateEntityDefinitionDetailed(def, { registry })
+      expect(result.errors).toStrictEqual([])
+      expect(result.warnings.length).toBe(1)
+      expect(result.warnings[0].includes('only Behaviour can change with a flag yet')).toBe(true)
     })
   })
 }

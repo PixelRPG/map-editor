@@ -14,6 +14,7 @@ interface TeleportData extends ComponentData {
 
 export const teleportSpec: ComponentSpec = {
   type: 'teleport',
+  system: 'core',
   editor: { label: 'Teleport', icon: 'send-to-symbolic', markerColor: '#66ccff' },
   fields: [
     { key: 'targetMapId', label: 'Target map', input: 'map-ref', required: true, basic: true },

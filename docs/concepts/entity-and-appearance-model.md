@@ -112,10 +112,10 @@ discriminated-union entries — gets the optional `validate` hook instead.
 `build` returns `null` for data-only components that carry no runtime
 component (`movement`, read from the definition by `PlayerSystem`).
 
-- Engine ships the built-in specs (visual, movement, collision, trigger, teleport, item, dialogue, npc-route, spawn-point, custom-data, script, actions).
+- Engine ships the built-in specs (visual, movement, collision, trigger, teleport, item, dialogue, npc-route, spawn-point, custom-data, script, actions). Each declares `system:` — the **game system that owns it** — and `BUILT_IN_COMPONENT_SPECS` is derived from the `specs/` barrel rather than hand-listed, with an ownership guard failing CI on an unowned or doubly-owned spec. Which of them a given project may actually use is `effectiveComponentRegistry(project)`; see [`game-systems.md`](game-systems.md).
 - **The inspector is generated from `fields`** — no per-kind hand-built inspector pages. `editor.basic` and `FieldDescriptor.basic` mark which fields/components a template surfaces by default (progressive disclosure lives in data, not just in UI code) — **but nothing reads either flag yet**: the disclosure tier is declared on 12 fields and 3 components and is read nowhere in `apps/` or `packages/` (TODO.md, "Cleanup / debt").
 - **The future code editor registers new specs** through the same registry. User components are first-class, not bolted on.
-- Registry mirrors the existing `BUILT_IN_COMMANDS` registry discipline: a component type that isn't registered fails validation loudly (no silent-skip).
+- Registry mirrors the existing `BUILT_IN_COMMANDS` registry discipline: a component type that isn't registered fails validation loudly (no silent-skip). A type that IS registered but whose game system the project switched off is *dormant* instead — preserved, inert, reported apart from errors. Merging the two would make a typo silent or a switch destructive.
 
 ### Templates (the "RPG-Maker database" surface)
 
@@ -127,13 +127,17 @@ RPG Maker's most-loved feature is event *pages*: same object, different appearan
 
 ```ts
 interface EntityState {
-  id: string                 // 'open', 'night', 'quest-done'
-  when?: Condition           // e.g. { flag: 'door-key-used' } — first matching state wins; no `when` = manual/scripted switch
+  id: string                  // 'open', 'night', 'quest-done'
+  when?: StateCondition       // { flag, equals? } — first matching state wins; no `when` = manual/scripted switch
   components: ComponentData[] // overlays base components, wholesale-replace PER TYPE (same override discipline as placements)
 }
 ```
 
-A door (closed/open), a day/night NPC, a quest-stage marker — all without code. State evaluation is a system (`StateSystem`) reading project flags; a state switch swaps the overlaid components on the live entity. The condition vocabulary starts tiny (project flags) and grows. **Phase 2** — designed now so `components[]` and the override discipline anticipate it, built after the composition refactor.
+A door (closed/open), a day/night NPC, a quest-stage marker. State evaluation is `StateSystem` (`packages/engine/src/systems/state.system.ts`) reading the flag store `FlagSystem` folds `FLAG_SET` into (`GameSaveStateComponent` on the session singleton).
+
+The condition vocabulary is **exactly one shape**, `{ flag: string; equals?: boolean | number | string }` with `equals` defaulting to `true` — the same one-flat-equality discipline the conditional-row design uses. An expression DSL nobody validates is refused. Any other `when` is a validation warning and never matches, so a project from a newer editor still opens.
+
+**Actions only, so far.** `StateSystem` swaps the entity's `actions` list, which is what makes the key-and-door loop work end to end; a state carrying any other component type validates with a warning and is inert at runtime. The visible cost is real: a door teleports once the flag is set but never *looks* open, and a chest still looks closed after it gave you its item. Applying a `visual` / `collision` overlay means rebuilding a live entity mid-frame while keeping its runtime companions alive — its own piece of work, see [`game-systems.md`](game-systems.md) and TODO.md.
 
 ### The behaviour ladder
 
@@ -179,7 +183,7 @@ Each rung is the same substance (components on one entity model) — no cliff wh
 | C4 | **Cast view "all components" disclosure** — the cast detail gains a collapsed `EntityComponentsEditor` disclosure editing the character's raw `components[]`; the friendly inspector (name / appearance / speed) now **merges** onto the existing entity (`mergeCharacterIntoEntity`) so it never drops disclosure-added components. (New-character already seeds the `character` component set via `characterToEntity`.) | **landed** |
 | C5 | **Sheets-view unification (maker)** — the Tiles view becomes the unified **Sheets** view; appearances + the animation editor relocate from Cast into it (one editor for both sprite-sheet kinds — Tilesets + Appearances). Cast slims to a Characters-only lens (appearance picker + "Edit appearance" deep-link via `win.open-appearance`). Appearance data still owned by `CastController` (pushed via its `appearances-changed` event; animation mutations route back through its public methods, which persist + broadcast via the shared `ProjectStore`); appearance import + `win.new-animation` + Data "open appearance" all route to the Sheets view; `win.open-sheet` removed. | **landed** |
 | C6 | **Objects = general lens (maker)** — Objects lists EVERY entity (drop the `!isCharacterEntity` filter), characters flagged with a "Cast" badge + person icon; the scene-editor object brush lists every entity except the player actor (Cast NPCs become placeable). Cast stays the specialised character-only lens; the two lenses cross-refresh via the `ProjectStore`'s `entity-library-changed` event since they now overlap on the shared library. The friendly Cast picker still restricts to character sheets; the general Objects inspector exposes the raw `appearance-ref` (any sprite-set + index — a tileset tile works as an item's look). | **landed** |
-| D | **States** — `EntityState` + `StateSystem` + flags vocabulary + state UI. | **planned** |
+| D | **States** — `EntityState` + `StateSystem` + flags vocabulary. Landed: the flag store (`GameSaveStateComponent` + `FlagSystem`, giving the never-heard `FLAG_SET` its first reader), `EntityStatesComponent` attached by the spawn pipeline, `StateSystem` resolving the first matching state per tick under `RuntimeModeComponent`, and the one-shape `StateCondition` vocabulary with warn-don't-fail validation. Still open: overlays of component types other than `actions` (live sprite + collider rebuild), and the "Only when …" authoring row. | **partly landed** |
 | E | **Code editor** — script representation (likely TS — the whole stack is TS and gjsify can bundle/run it; sandboxing TBD), `script` component spec, editor surface. The `scriptId` seam already exists on `trigger`. | **planned** |
 
 Phases B+C land together or B slightly ahead; do **not** build the object-tool UX on the kind model first (it would be built twice).
@@ -190,7 +194,7 @@ Unchanged in principle, restated for the new shapes: entity definitions, appeara
 
 ## Open questions
 
-1. **Condition vocabulary for states** — start with project flags only; switches/variables RPG-Maker-style? Decide at Phase D.
+1. ~~**Condition vocabulary for states**~~ — **decided**: exactly one shape, `{ flag, equals? }`, `equals` defaulting to `true`. Not an expression DSL — a second language nobody validates. Richer conditions (a time-of-day condition beside the flag one) arrive with the system that has a clock to read.
 2. **Multiple appearances per entity** (paperdoll/equipment) — `Visual` stays single; the union leaves room for a `layers` variant later.
 3. **Script sandboxing** — TS in-process vs sandboxed; decide at Phase E (object-system.md carries the same question).
 4. **Definition variants** (`extends`, Unity-prefab-variant style: "guard" extends "villager") — deliberately **not** in v1; single-level prototype→instance (definition→placement) must prove insufficient first.
@@ -200,4 +204,5 @@ Unchanged in principle, restated for the new shapes: entity definitions, appeara
 - [`object-system.md`](object-system.md) — describes what this sits on; placements/overrides/tiles/z-order/systems/bus carry over verbatim (its historical composition sections were pruned once Phase B landed).
 - [`editor-architecture.md`](editor-architecture.md) — ECS-as-model; generated inspectors and definition editing are views over the same world.
 - [`runtime-modes.md`](runtime-modes.md) — trigger/state/script effects only run in runtime mode (today indirectly, via the `RuntimeModeComponent`-gated `PlayerSystem` events — see that doc's gating note).
+- [`game-systems.md`](game-systems.md) — who OWNS each component spec, which of them a project may use, and the flag store + state runtime this doc's Phase D describes.
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — op channels + transport constraints for every shape above.

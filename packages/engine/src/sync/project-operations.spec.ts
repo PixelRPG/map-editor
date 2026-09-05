@@ -6,6 +6,7 @@ import {
   applyEntityUpsert,
   applyMapEditorData,
   applyPlayerSet,
+  applyGameSystemsSet,
   applyProjectMetaUpdate,
   applySpriteSetReference,
   applySpriteSetRemove,
@@ -24,6 +25,8 @@ import {
   MAP_EDITOR_DATA_KIND,
   OpChunkReassembler,
   PLAYER_SET_KIND,
+  createGameSystemsSetOp,
+  GAME_SYSTEMS_SET_KIND,
   PROJECT_META_UPDATE_KIND,
   PROJECT_OP_PREFIX,
   SPRITESET_REMOVE_KIND,
@@ -198,6 +201,40 @@ export default async () => {
       applyProjectMetaUpdate(data, op.payload)
       expect(data.name).toBe(once.name)
       expect(data.properties).toStrictEqual(once.properties)
+    })
+  })
+
+  await describe('systems.set', async () => {
+    await it('builds a project op recognised by isProjectOp', async () => {
+      const op = createGameSystemsSetOp({ peerId: 'p1', seq: 1, gameSystems: { 'combat-action': { enabled: true } } })
+      expect(op.kind).toBe(GAME_SYSTEMS_SET_KIND)
+      // Lock the literal wire string — a peer on the other side matches on it.
+      expect(op.kind).toBe('__project/systems.set')
+      expect(GAME_SYSTEMS_SET_KIND.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+      expect(isProjectOp(op)).toBe(true)
+    })
+
+    await it('send → apply replaces the whole record, keeping disabled entries', async () => {
+      // `enabled: false` is dormancy, not deletion — the record is what
+      // remembers a system was switched off rather than never known.
+      const data = projectData([])
+      data.gameSystems = { 'combat-action': { enabled: true } }
+      const op = createGameSystemsSetOp({
+        peerId: 'p1',
+        seq: 2,
+        gameSystems: { 'combat-action': { enabled: false, config: { pace: 2 } } },
+      })
+      applyGameSystemsSet(data, op.payload.gameSystems)
+      expect(data.gameSystems).toStrictEqual({ 'combat-action': { enabled: false, config: { pace: 2 } } })
+    })
+
+    await it('is idempotent — applying twice equals applying once', async () => {
+      const data = projectData([])
+      const op = createGameSystemsSetOp({ peerId: 'p1', seq: 3, gameSystems: { economy: { enabled: true } } })
+      applyGameSystemsSet(data, op.payload.gameSystems)
+      const once = { ...data.gameSystems }
+      applyGameSystemsSet(data, op.payload.gameSystems)
+      expect(data.gameSystems).toStrictEqual(once)
     })
   })
 

@@ -1,36 +1,38 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { NpcRouteComponent } from '../components/index.ts'
 import type { ComponentData } from '../types/data/index.ts'
-import { type ComponentSpec, isComponentSpec } from './component-spec.ts'
-import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
-import * as Specs from './specs/index.ts'
+import { BUILT_IN_COMPONENT_SPECS, discoverComponentSpecs } from './registry.ts'
 
 /**
- * Auto-discover every shipped component spec from the specs barrel. A
- * spec is any export passing `isComponentSpec`. `check:barrels`
- * guarantees the barrel re-exports every `specs/*.ts`, so this finds
- * every spec without a hand-maintained list (same discipline as
- * `commands/registry.spec.ts`).
+ * A healthy walk of the specs barrel finds at least this many specs. The
+ * registry is DERIVED from that walk, so a walk that silently returned
+ * nothing would produce an empty registry and a green "every discovered
+ * spec is registered" — indistinguishable from a clean tree. Same
+ * lower-bound discipline as the repo's `scripts/check-*.mjs` guards.
  */
-function discoverSpecs(): ComponentSpec[] {
-  return (Object.values(Specs) as unknown[]).filter(isComponentSpec)
-}
+const MIN_COMPONENT_SPECS = 12
 
 export default async () => {
   await describe('BUILT_IN_COMPONENT_SPECS registry', async () => {
-    await it('every shipped component spec is registered (and no stale entries)', async () => {
-      // An unregistered component type fails validation loudly and can't be
-      // spawned — so a `specs/*.ts` without a registry entry is a silent
-      // composition hole. This fails here if one is added without registering.
-      const discovered = discoverSpecs()
-      expect(discovered.length).toBeGreaterThan(0)
+    await it('is exactly the specs barrel, and the barrel walk is not broken', async () => {
+      // The registry is derived, so "every discovered spec is registered"
+      // cannot fail on its own — what CAN fail is the walk finding
+      // nothing, or two specs colliding on one `type` and one silently
+      // winning. Both are checked here; WHO owns each spec is checked by
+      // `game-systems/registry.spec.ts`.
+      const discovered = discoverComponentSpecs()
+      expect(discovered.length).toBeGreaterThanOrEqual(MIN_COMPONENT_SPECS)
+      expect(Object.keys(BUILT_IN_COMPONENT_SPECS).length).toBe(discovered.length)
       for (const spec of discovered) {
         expect(BUILT_IN_COMPONENT_SPECS[spec.type]).toBe(spec)
       }
-      const registeredTypes = Object.keys(BUILT_IN_COMPONENT_SPECS)
-      const discoveredTypes = discovered.map((s) => s.type)
-      for (const type of registeredTypes) {
-        expect(discoveredTypes).toContain(type)
+    })
+
+    await it('every spec names an owning game system', async () => {
+      // Without an owner a spec can never reach an effective registry.
+      for (const spec of discoverComponentSpecs()) {
+        expect(typeof spec.system).toBe('string')
+        expect(spec.system.length).toBeGreaterThan(0)
       }
     })
 

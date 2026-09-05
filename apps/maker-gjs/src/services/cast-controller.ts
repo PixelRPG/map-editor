@@ -180,6 +180,9 @@ export class CastController {
     // the project ref-picker options.
     getCharacterEntity: (id: string) => this.entityForCharacter(id),
     getRefOptions: () => this.store.refOptions(),
+    // The project's EFFECTIVE registry — a component whose game system is
+    // off is not offered in the disclosure's Add menu.
+    getComponentRegistry: () => this.store.componentRegistry(),
     setSpeed: (id: string, tilesPerSec: number) => {
       this._mutate(id, (c) => {
         c.speedTilesPerSec = tilesPerSec

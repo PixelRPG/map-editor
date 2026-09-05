@@ -11,6 +11,7 @@ interface SpawnPointData extends ComponentData {
 
 export const spawnPointSpec: ComponentSpec = {
   type: 'spawn-point',
+  system: 'core',
   editor: { label: 'Spawn point', icon: 'mark-location-symbolic', markerColor: '#cc66ff' },
   fields: [
     { key: 'spawnId', label: 'Spawn id', input: 'text', required: true, basic: true, default: 'player' },

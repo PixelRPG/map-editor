@@ -11,6 +11,7 @@ interface NpcRouteData extends ComponentData {
 
 export const npcRouteSpec: ComponentSpec = {
   type: 'npc-route',
+  system: 'core',
   editor: { label: 'NPC route', icon: 'route-symbolic', markerColor: '#66cc66' },
   fields: [
     // A bespoke waypoint-on-map editor is a follow-up; a JSON field is the

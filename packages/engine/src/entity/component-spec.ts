@@ -6,7 +6,9 @@ import type { ComponentData } from '../types/data/EntityDefinition.ts'
  * how to validate + edit its data (`fields`), how to instantiate it at
  * spawn (`build`), and how the editor presents it (`editor`).
  *
- * Specs are registered in `BUILT_IN_COMPONENT_SPECS` (registry.ts).
+ * Specs are collected into `BUILT_IN_COMPONENT_SPECS` (registry.ts) by
+ * barrel discovery, and each one names its owning game system
+ * (`system`) — see `docs/concepts/game-systems.md`.
  * Mirrors the `BUILT_IN_COMMANDS` discipline: an `EntityDefinition`
  * referencing an unregistered component `type` fails validation loudly
  * (no silent-skip), and the registry is open — the future code editor
@@ -110,6 +112,13 @@ export interface SpawnContext {
  */
 export interface ComponentSpec {
   type: string
+  /**
+   * Id of the {@link GameSystemSpec} that OWNS this component. Exactly
+   * one game system may claim a given component type — the ownership
+   * guard (`game-systems/registry.spec.ts`) fails the build otherwise, so
+   * a component cannot exist without a system that can render and run it.
+   */
+  system: string
   fields: readonly FieldDescriptor[]
   editor: ComponentEditorMeta
   build: (data: ComponentData, ctx: SpawnContext) => Component | Component[] | null
@@ -131,6 +140,7 @@ export function isComponentSpec(value: unknown): value is ComponentSpec {
   const s = value as Record<string, unknown>
   return (
     typeof s.type === 'string' &&
+    typeof s.system === 'string' &&
     Array.isArray(s.fields) &&
     typeof s.build === 'function' &&
     typeof s.editor === 'object' &&
