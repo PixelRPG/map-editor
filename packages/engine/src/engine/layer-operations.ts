@@ -1,4 +1,5 @@
 import { AddLayerCommand, type Command, SetLayerLockedCommand, SetLayerVisibilityCommand } from '../commands/index.ts'
+import { isLayerDataVisible } from '../services/layer-visibility.ts'
 import type { LayerData } from '../types/data/index.ts'
 import type { ActiveSceneAccessor } from './scene-binding.ts'
 
@@ -46,7 +47,7 @@ export class LayerOperations {
   setVisible(layerId: string, visible: boolean): boolean {
     const layer = this.find(layerId)
     if (!layer) return false
-    const previousVisible = layer.visible !== false
+    const previousVisible = isLayerDataVisible(layer)
     if (previousVisible === visible) return true
     this.execute(new SetLayerVisibilityCommand({ layerId, visible, previousVisible }))
     return true

@@ -2,7 +2,7 @@ import type { Loadable } from 'excalibur'
 import { Logger, type Scene, type Tile, type TileMap } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
 import { MapFormat } from '../format/MapFormat'
-import { collectHiddenLayerIds } from '../services/layer-visibility.ts'
+import { collectHiddenLayerIds, isLayerDataVisible } from '../services/layer-visibility.ts'
 import {
   getSpritesAt,
   iterateOccupiedCoords,
@@ -359,9 +359,17 @@ export class MapResource implements Loadable<TileMap> {
     return this.spriteSetResources
   }
 
-  /** Ids of the currently-visible layers (for layer-list / picker UI). */
+  /**
+   * Ids of the currently-visible layers (for layer-list / picker UI).
+   *
+   * Visibility is decided by the SHARED predicate, not a truthiness
+   * test: this used to filter `layer.visible` truthily, so a layer whose
+   * descriptor carried no `visible` key rendered on screen and could be
+   * toggled via `Engine.setLayerVisible` but never appeared in the
+   * picker. See `services/layer-visibility.ts`.
+   */
   getAvailableLayerIds(): string[] {
-    return this._mapData.layers.filter((layer) => layer.visible).map((layer) => layer.id)
+    return this._mapData.layers.filter((layer) => isLayerDataVisible(layer)).map((layer) => layer.id)
   }
 
   /**

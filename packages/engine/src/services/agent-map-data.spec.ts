@@ -104,6 +104,20 @@ export default async () => {
       expect(data.walkability[1]).toBe('.  ')
     })
 
+    await it('counts a layer with NO visible key (absent = visible)', async () => {
+      // Truthy filtering dropped such a layer from the walkability fold
+      // entirely: its solid tiles read as walkable to an agent, and its
+      // tiles read as void. Same absent-is-visible default as the
+      // renderer, via `services/layer-visibility.ts`.
+      const { mapData, sets, library } = makeFixture()
+      const layers = mapData.layers as unknown as Array<Record<string, unknown>>
+      // Drop the key rather than set it — this is the legacy shape.
+      layers[0].visible = undefined
+      const data = buildAgentMapData(mapData, sets, library)
+      expect(data.walkability[0]).toBe('## ')
+      expect(data.walkability[1]).toBe('.  ')
+    })
+
     await it('summarises placements with resolved names + component types', async () => {
       const { mapData, sets, library } = makeFixture()
       const data = buildAgentMapData(mapData, sets, library)

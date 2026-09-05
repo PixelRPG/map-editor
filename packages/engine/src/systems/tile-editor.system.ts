@@ -27,7 +27,8 @@ import { HoverOverlays } from './hover-overlays.ts'
 import { pickTopmostPlacementAt } from '../services/placement-picking.ts'
 import { makePlacementId } from '../services/placement-id.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
-import { isTileOutOfBounds, worldToTile } from '../services/tile-geometry.ts'
+import { worldToTile } from '../services/tile-geometry.ts'
+import { isTileOutsideMap, resolveMapBounds } from '../services/tile-edit-target.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerTier } from '../types/data/index.ts'
@@ -187,6 +188,14 @@ export class TileEditorSystem extends System {
     return this.tileMapsByTier.get(tier) ?? null
   }
 
+  /**
+   * World point → tile coords, or `null` when the point falls off the
+   * map. The tilemap supplies the GEOMETRY (origin + cell size); the
+   * BOUNDS come from the persisted `MapData.columns/rows` via the same
+   * {@link isTileOutsideMap} the programmatic paths use — the tilemap's
+   * own dimensions are derived from those two fields and are only a
+   * fallback for a scene with no parsed map data.
+   */
   private toTileCoords(tileMap: TileMap, worldPos: Vector): { x: number; y: number } | null {
     const coords = worldToTile(
       worldPos.x - tileMap.pos.x,
@@ -194,7 +203,8 @@ export class TileEditorSystem extends System {
       tileMap.tileWidth,
       tileMap.tileHeight,
     )
-    if (isTileOutOfBounds(coords.x, coords.y, tileMap.columns, tileMap.rows)) return null
+    const mapData = (this.scene as MapScene | undefined)?.mapResource?.mapData
+    if (isTileOutsideMap(resolveMapBounds(mapData, tileMap), coords.x, coords.y)) return null
     return coords
   }
 
@@ -335,7 +345,9 @@ export class TileEditorSystem extends System {
     const command = buildTileFillCommand(
       ctx.hit.editor,
       mapResource,
-      { columns: ctx.hit.tileMap.columns, rows: ctx.hit.tileMap.rows },
+      // The flood-fill region is bounded by the map's persisted extent,
+      // same authority as the hit test above.
+      resolveMapBounds(mapResource.mapData, ctx.hit.tileMap),
       ctx.layerId,
       ctx.hit.coords.x,
       ctx.hit.coords.y,
