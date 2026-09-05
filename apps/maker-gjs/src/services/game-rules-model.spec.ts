@@ -47,7 +47,7 @@ export default async () => {
       // titled empty group that reads as broken.
       const model = buildGameRulesModel()
       expect(model.switchable).toStrictEqual([])
-      expect(model.alwaysOn.map((r) => r.id)).toStrictEqual(['core', 'stats', 'inventory'])
+      expect(model.alwaysOn.map((r) => r.id)).toStrictEqual(['core', 'inventory'])
       expect(model.alwaysOn.every((r) => r.enabled)).toBe(true)
       expect(model.alwaysOn.every((r) => r.kidLabel.length > 0)).toBe(true)
     })

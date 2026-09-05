@@ -38,7 +38,7 @@ Every `ComponentSpec` carries `system: string`, the id of the game system that o
 2. **every component spec in the repo is owned by exactly one game system**, and by the one its own `system` field names;
 3. `requires` closes over registered ids and has no cycle;
 4. a `templates[].components[].type` is always reachable from its system (own components ∪ `requires`' ∪ `core`'s) — a template may not seed a component its system cannot render;
-5. the base layer is exactly `core`, `stats`, `inventory` — pinned, because a base system is always on and therefore costs every project its components and its runtime.
+5. the base layer is exactly `core` and `inventory` — pinned, because a base system is always on and therefore costs every project its components and its runtime; and **every base system contributes at least one ECS system**, because an always-on bundle that runs nothing is the "declared but nobody reads it" shape with a UI row in front of it.
 
 Discovery is the same barrel trick `entity/registry.spec.ts` uses: every `game-systems/specs/*.ts` export passing `isGameSystemSpec`, with `check:barrels` guaranteeing the barrel is complete and `gjsify run check:specs` guaranteeing the spec file actually runs.
 
@@ -124,12 +124,12 @@ The base layer's payload this round is the thing that makes the simple view able
 |---|---|
 | `GameSystemSpec` + registry + ownership guard | **landed** |
 | Derived `BUILT_IN_COMPONENT_SPECS`, `effectiveComponentRegistry` threaded to every consumer | **landed** |
-| Base layer `core` / `stats` / `inventory` | **landed** |
+| Base layer `core` / `inventory` | **landed** |
 | Flag store, `EntityState.when` runtime, actions-only overlays | **landed** |
 | `__project/systems.set` + the Game-rules page | **landed** |
-| `stats` runtime — live hp, `DAMAGE_DEALT` / `ENTITY_DEFEATED` / `LEVEL_UP`, `StatsSystem` | planned, with `combat-action` (the only thing that deals damage) |
 | `inventory` bag — `InventoryComponent`, `item-def` library entities, `INVENTORY_CHANGED` | planned, with the first system that reads a bag |
-| `combat-action` — `weapon` / `hostile` / `hurtbox` / `invulnerable`, melee, aggro, knockback, defeat, HUD | planned |
+| `stats` — a `stats` spec (`hp`, `maxHp` basic; `attack`, `defense`, `speed`, `level`, `exp`, `expToNext`), live hp as a runtime component, `DAMAGE_DEALT` / `ENTITY_DEFEATED` / `LEVEL_UP` and `StatsSystem` | planned, **in the same commit as `combat-action`** — see below |
+| `combat-action` — requires `stats` + `inventory`; `weapon` / `hostile` / `hurtbox` / `invulnerable`, melee, aggro, knockback, defeat, HUD | planned |
 | `combat-turn` — a second Excalibur scene, encounter tables, party, skills (`GameSystemSpec.scenes`) | planned |
 | `economy` + `time` — shop, crop, tool, stamina, the clock, `schedule`, `GameClockComponent` | planned |
 | Regions as a map primitive (`regionKinds`) | planned, with the two systems that want them |
@@ -138,6 +138,8 @@ The base layer's payload this round is the thing that makes the simple view able
 | User-defined component schemas and the TypeScript script tier | planned |
 
 Each planned row is a registration rather than a refactor — that is what the frame buys. None of them is declared in the type today, because a field nothing renders or runs is the shape the deletion milestone removed.
+
+**Why `stats` is not in the base layer yet, even though the design puts it there.** Its only reader is `combat-action`. Registering it now would put eight editable fields — Max HP, HP, Attack, Defense, Speed, Level, Experience, Experience to next — in front of a child, under an always-on row, where setting HP to 10 changes nothing about the game. That is the same shape `time` was dropped for (its only reader, `economy`, is deferred), so it gets the same answer: `stats` ships in the commit that gives it a reader. Note that the `movement` precedent — a data-only spec with `build: () => null` — does *not* cover it: `movement.tilesPerSec` has a reader, `PlayerSystem`, which reads it off the definition instead of a runtime component. Data-only **with** a consumer is a design choice; data-only **without** one is the defect class.
 
 ## Cross-references
 

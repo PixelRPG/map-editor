@@ -3,7 +3,6 @@ import type { GameProjectData } from '../types/data/GameProjectData.ts'
 import type { GameSystemSpec } from './game-system-spec.ts'
 import { coreGameSystem } from './specs/core.ts'
 import { inventoryGameSystem } from './specs/inventory.ts'
-import { statsGameSystem } from './specs/stats.ts'
 
 /**
  * Built-in game systems, keyed by stable `id` — the same discipline as
@@ -16,7 +15,6 @@ import { statsGameSystem } from './specs/stats.ts'
  */
 export const BUILT_IN_GAME_SYSTEMS: Record<string, GameSystemSpec> = {
   [coreGameSystem.id]: coreGameSystem,
-  [statsGameSystem.id]: statsGameSystem,
   [inventoryGameSystem.id]: inventoryGameSystem,
 }
 

@@ -143,22 +143,41 @@ export default async () => {
       }
     })
 
-    await it('the base layer is core, stats and inventory', async () => {
-      // Pinned deliberately: a base system is always on and therefore
-      // costs every project its components and its runtime. Adding one is
-      // a decision, not a default — `time` was dropped from this layer
-      // exactly because its only reader is deferred.
+    await it('the base layer is core and inventory', async () => {
+      // Pinned deliberately: a base system is always on, so it costs every
+      // project its components and its runtime whether or not anything
+      // reads them. Adding one is a decision, not a default — `time` and
+      // `stats` are both out of this layer for the same reason, that their
+      // only reader (`economy`, `combat-action`) ships later.
       const base = Object.values(BUILT_IN_GAME_SYSTEMS)
         .filter((s) => s.editor.base)
         .map((s) => s.id)
-      expect(base.sort()).toStrictEqual(['core', 'inventory', 'stats'])
+      expect(base.sort()).toStrictEqual(['core', 'inventory'])
+    })
+
+    await it('every base system has a reader for what it owns', async () => {
+      // The rule the base layer is pinned FOR: a system that is always on
+      // and contributes nothing is the "declared but nobody reads it"
+      // shape, now with a switch-less UI row in front of it. `core` and
+      // `inventory` both contribute ECS systems; a base system that
+      // contributes none has to justify itself here first.
+      const ctx = {
+        events: { on: () => undefined, emit: () => undefined },
+        mapResource: {},
+        entityLibrary: [],
+        config: {},
+      } as unknown as Parameters<GameSystemSpec['runtime']>[0]
+      for (const system of Object.values(BUILT_IN_GAME_SYSTEMS)) {
+        if (!system.editor.base) continue
+        expect(`${system.id}: ${system.runtime(ctx).length > 0}`).toBe(`${system.id}: true`)
+      }
     })
   })
 
   await describe('effective game systems', async () => {
     await it('base systems are on with no project data at all', async () => {
-      expect(effectiveGameSystems(null).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory'])
-      expect(effectiveGameSystems({}).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory'])
+      expect(effectiveGameSystems(null).map((s) => s.id)).toStrictEqual(['core', 'inventory'])
+      expect(effectiveGameSystems({}).map((s) => s.id)).toStrictEqual(['core', 'inventory'])
     })
 
     await it('an optional system is off until the project enables it', async () => {
@@ -196,7 +215,6 @@ export default async () => {
       // `item` proves the move out of core landed: it is inventory's now.
       expect(registry.item).toBeDefined()
       expect(registry.visual).toBeDefined()
-      expect(registry.stats).toBeDefined()
       expect(Object.keys(registry).length).toBe(discoverComponentSpecs().length)
     })
 
@@ -215,7 +233,7 @@ export default async () => {
       const project = { gameSystems: { core: { enabled: true }, 'combat-turn': { enabled: true } } }
       expect(unknownGameSystemIds(project)).toStrictEqual(['combat-turn'])
       // …and the project still resolves to its known systems.
-      expect(effectiveGameSystems(project).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory'])
+      expect(effectiveGameSystems(project).map((s) => s.id)).toStrictEqual(['core', 'inventory'])
     })
   })
 }
