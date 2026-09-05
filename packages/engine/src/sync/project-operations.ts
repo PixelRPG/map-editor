@@ -51,6 +51,7 @@ export const ENTITY_UPSERT_KIND = '__project/entity.upsert'
 export const ENTITY_REMOVE_KIND = '__project/entity.remove'
 export const PLAYER_SET_KIND = '__project/player.set'
 export const PROJECT_META_UPDATE_KIND = '__project/meta.update'
+export const GAME_SYSTEMS_SET_KIND = '__project/systems.set'
 export const MAP_EDITOR_DATA_KIND = '__project/map.editor-data'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
 export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
@@ -101,6 +102,27 @@ export interface PlayerSetOp {
 export interface ProjectMetaUpdateOp {
   kind: typeof PROJECT_META_UPDATE_KIND
   payload: { name: string; properties: Properties }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: the project's enabled game systems changed.
+ *
+ * Carries the WHOLE `gameSystems` record, wholesale — the same coarse,
+ * idempotent discipline as `meta.update`: one switch flip re-sends
+ * everything, so applying twice (or applying a stale duplicate)
+ * converges. The record is small and the alternative (per-system deltas)
+ * would need ordering guarantees the op channel does not give.
+ *
+ * A peer that does not know this kind ignores it (the `__project/*`
+ * forward-compat contract) and keeps editing as if the system were off —
+ * which is exactly the dormant behaviour, so nothing diverges beyond
+ * "that peer sees fewer rows".
+ */
+export interface GameSystemsSetOp {
+  kind: typeof GAME_SYSTEMS_SET_KIND
+  payload: { gameSystems: NonNullable<GameProjectData['gameSystems']> }
   peerId: string
   seq: number
 }
@@ -213,6 +235,7 @@ export type ProjectOp =
   | EntityRemoveOp
   | PlayerSetOp
   | ProjectMetaUpdateOp
+  | GameSystemsSetOp
   | MapEditorDataOp
   | SpriteSetAddChunkOp
   | SpriteSetUpdateChunkOp
@@ -274,6 +297,20 @@ export function createProjectMetaUpdateOp(args: {
   }
 }
 
+/** Build a game-systems envelope (the whole enabled-set record). */
+export function createGameSystemsSetOp(args: {
+  peerId: string
+  seq: number
+  gameSystems: NonNullable<GameProjectData['gameSystems']>
+}): GameSystemsSetOp {
+  return {
+    kind: GAME_SYSTEMS_SET_KIND,
+    payload: { gameSystems: args.gameSystems },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
 /** Build a map-editor-data envelope (partial patch keyed by map id). */
 export function createMapEditorDataOp(args: {
   peerId: string
@@ -324,6 +361,21 @@ export function applyPlayerSet(data: GameProjectData, playerActorId: string | nu
 export function applyProjectMetaUpdate(data: GameProjectData, payload: ProjectMetaUpdateOp['payload']): void {
   data.name = payload.name
   data.properties = { ...payload.properties }
+}
+
+/**
+ * Replace the project's whole `gameSystems` record IN PLACE. Idempotent.
+ *
+ * Wholesale on purpose: an entry the sender does not have is an entry the
+ * project no longer has. Note that this preserves `enabled: false`
+ * entries — switching a system off is dormancy, not deletion, and the
+ * record is what remembers it.
+ */
+export function applyGameSystemsSet(
+  data: GameProjectData,
+  gameSystems: NonNullable<GameProjectData['gameSystems']>,
+): void {
+  data.gameSystems = { ...gameSystems }
 }
 
 /**
