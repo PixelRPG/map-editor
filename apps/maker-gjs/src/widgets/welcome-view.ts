@@ -18,7 +18,7 @@ GObject.type_ensure(MapPreview.$gtype)
  * Welcome / home view.
  *
  * Two columns at desktop width — hero + CTA + template strip on the
- * left, recent projects + tour CTA on the right. Below the
+ * left, recent projects + LAN sessions on the right. Below the
  * `tightening-threshold` of the `Adw.Clamp`, both columns reflow to a
  * single stacked layout.
  *
@@ -34,7 +34,6 @@ export class WelcomeView extends Adw.Bin {
   declare _create_button: Gtk.Button
   declare _open_button: Gtk.Button
   declare _browse_button: Gtk.Button
-  declare _tour_button: Gtk.Button
   declare _templates_grid: Gtk.FlowBox
   declare _template_filter: Gtk.SearchEntry
   declare _recents_list: Gtk.ListBox
@@ -69,7 +68,6 @@ export class WelcomeView extends Adw.Bin {
           'create_button',
           'open_button',
           'browse_button',
-          'tour_button',
           'templates_grid',
           'template_filter',
           'recents_list',
@@ -105,7 +103,6 @@ export class WelcomeView extends Adw.Bin {
           'create-project': {},
           'open-project': {},
           'browse-projects': {},
-          'take-tour': {},
           'template-selected': { param_types: [GObject.TYPE_STRING] },
           'recent-selected': { param_types: [GObject.TYPE_STRING] },
           // Emitted when the user picks a discovered LAN session.
@@ -164,7 +161,6 @@ export class WelcomeView extends Adw.Bin {
     this.signals.connect(this._create_button, 'clicked', () => this.emit('create-project'))
     this.signals.connect(this._open_button, 'clicked', () => this.emit('open-project'))
     this.signals.connect(this._browse_button, 'clicked', () => this.emit('browse-projects'))
-    this.signals.connect(this._tour_button, 'clicked', () => this.emit('take-tour'))
     this.signals.connect(this._join_link_button, 'clicked', () => this._submitJoinLink())
     // Pressing Enter in the entry submits — same path as the button.
     this.signals.connect(this._join_link_row, 'entry-activated', () => this._submitJoinLink())
