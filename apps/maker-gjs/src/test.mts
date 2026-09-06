@@ -44,6 +44,7 @@ import collabSinkBufferSuite from './services/collab-sink-buffer.spec.js'
 import entityVisualsSuite from './services/entity-visuals.spec.js'
 import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
 import layerDraftSuite from './services/layer-draft.spec.js'
+import libraryChipSuite from './services/library-chip.spec.js'
 import projectStoreBroadcastSuite from './services/project-store-broadcast.spec.js'
 import projectStoreEntitiesSuite from './services/project-store-entities.spec.js'
 import projectStorePersistenceSuite from './services/project-store-persistence.spec.js'
@@ -83,6 +84,7 @@ run({
   lanSignallingTimeoutSuite,
   layerDescriptorsSuite,
   layerDraftSuite,
+  libraryChipSuite,
   mapEditorDataSuite,
   orphanPublisherCleanupSuite,
   participantRosterSuite,

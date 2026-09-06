@@ -3,11 +3,12 @@ import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
 
-/** What the Sheets (tilesets + appearances) actions need from the window. */
+/** What the Graphics (tilesets + appearances) actions need from the window. */
 export interface TileActionsContext {
   hasProject(): boolean
   showToast(message: string): void
-  showTilesView(): void
+  /** Show the Library on its Graphics chip. */
+  showGraphics(): void
   presentAppearanceImport(): void
   presentTilesetImport(): void
   focusTileset(id: string): void
@@ -17,9 +18,9 @@ export interface TileActionsContext {
 }
 
 /**
- * Sheets actions. Tilesets and appearances (character sprite sheets) are
- * both raw sprite-set assets and share this one view; animation authoring
- * for an appearance lives in the Cast matrix.
+ * Graphics actions. Tilesets and appearances (character sprite sheets)
+ * are both raw sprite-set assets and share this one page; animation
+ * authoring for an appearance lives in the Characters matrix.
  */
 export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileActionsContext): void {
   const newSpriteSet = new Gio.SimpleAction({ name: 'new-spriteset' })
@@ -28,7 +29,7 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
       ctx.showToast(_('Open a project first'))
       return
     }
-    ctx.showTilesView()
+    ctx.showGraphics()
     ctx.presentAppearanceImport()
   })
   addAction(group, newSpriteSet)
@@ -56,7 +57,7 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
   openAppearance.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (!id) return
-    ctx.showTilesView()
+    ctx.showGraphics()
     ctx.focusAppearance(id)
   })
   addAction(group, openAppearance)

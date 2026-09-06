@@ -11,7 +11,6 @@ import {
   type SpriteSetChoice,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 import type { CastView } from '../widgets/cast-view.ts'
 import {
   appendAnimation,
@@ -149,7 +148,6 @@ export class CastController {
       this._events.emit('appearances-changed', { sheets: [], spriteSetsById: new Map() })
       return
     }
-    this.view.projectName = resource.data?.name ?? _('New Project')
 
     const characters = listCharacterViewModels(this.store.data)
     const sheets = this._listSpriteSets()

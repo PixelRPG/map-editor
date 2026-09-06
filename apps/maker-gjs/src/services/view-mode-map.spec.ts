@@ -17,7 +17,7 @@ export default async () => {
   await describe('resolveModeNavigation', async () => {
     await it('navigates to the mode’s view when a project is open', async () => {
       expect(resolveModeNavigation('world', true)).toStrictEqual({ kind: 'navigate', view: 'atlas' })
-      expect(resolveModeNavigation('cast', true)).toStrictEqual({ kind: 'navigate', view: 'cast' })
+      expect(resolveModeNavigation('library', true)).toStrictEqual({ kind: 'navigate', view: 'library' })
       expect(resolveModeNavigation('game', true)).toStrictEqual({ kind: 'navigate', view: 'game' })
     })
 
@@ -25,13 +25,13 @@ export default async () => {
       // The Audio row was the one exception: it toasted "Coming soon" and
       // snapped the rail back. It is gone, and `check-mode-routes.mjs`
       // fails the build if a mode without a view reappears.
-      for (const mode of ['world', 'cast', 'objects', 'tiles', 'game']) {
+      for (const mode of ['world', 'library', 'game']) {
         expect(resolveModeNavigation(mode, true).kind).toBe('navigate')
       }
     })
 
     await it('ignores every project-scoped mode without a project', async () => {
-      for (const mode of ['world', 'cast', 'objects', 'tiles', 'game']) {
+      for (const mode of ['world', 'library', 'game']) {
         expect(resolveModeNavigation(mode, false)).toStrictEqual({ kind: 'ignore' })
       }
     })
@@ -39,6 +39,14 @@ export default async () => {
     await it('ignores an unknown mode id', async () => {
       expect(resolveModeNavigation('nope', true)).toStrictEqual({ kind: 'ignore' })
       expect(resolveModeNavigation('audio', true)).toStrictEqual({ kind: 'ignore' })
+    })
+
+    await it('ignores the three rows that merged into the Library', async () => {
+      // Cast, Objects and Sheets are chips of one row now; a stale
+      // `win.mode` target must not fall through to some other page.
+      for (const old of ['cast', 'objects', 'tiles']) {
+        expect(resolveModeNavigation(old, true)).toStrictEqual({ kind: 'ignore' })
+      }
     })
   })
 }

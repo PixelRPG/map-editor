@@ -6,20 +6,23 @@ import { dbusError } from '../dbus/dbus-error.ts'
 import { fail, ok } from '../tool-result.ts'
 import { instanceArg } from './instance-arg.ts'
 
-const VIEWS = ['welcome', 'atlas', 'cast', 'objects', 'tiles', 'game', 'scene-editor'] as const
+/** A literal copy of the maker's `ViewName` (`apps/maker-gjs/src/services/view-mode-map.ts`). */
+const VIEWS = ['welcome', 'atlas', 'library', 'game', 'scene-editor'] as const
 type ViewName = (typeof VIEWS)[number]
+
+/** A literal copy of the maker's `LibraryChip` (`apps/maker-gjs/src/services/library-chip.ts`). */
+const LIBRARY_CHIPS = ['characters', 'things', 'graphics'] as const
 
 /**
  * The `win.` action each top-level view is reached through, with its
  * parameter where one is needed. `scene-editor` is deliberately absent:
- * entering it needs a scene id, so open_scene owns that route.
+ * entering it needs a scene id, so open_scene owns that route. The
+ * Library's chip is a second step (`win.library-chip`), applied after.
  */
 const VIEW_ACTIONS: Partial<Record<ViewName, readonly [string, string?]>> = {
   welcome: ['close-project'],
   atlas: ['mode', 'world'],
-  cast: ['mode', 'cast'],
-  objects: ['mode', 'objects'],
-  tiles: ['mode', 'tiles'],
+  library: ['mode', 'library'],
   game: ['mode', 'game'],
 }
 
@@ -67,16 +70,20 @@ export function registerEditingTools(server: McpServer): void {
     'set_view',
     {
       description:
-        'Switch the top-level view. "atlas"/"cast"/"objects"/"tiles"/"game" need a loaded project; "welcome" closes it; ' +
-        'for "scene-editor" use open_scene. "game" is the project\'s own page: name, tile size and game rules.',
-      inputSchema: z.object({ view: z.enum(VIEWS), ...instanceArg }),
+        'Switch the top-level view. "atlas", "library" and "game" need a loaded project; "welcome" closes it; ' +
+        'for "scene-editor" use open_scene. "library" holds the characters, the things (entity library) and the ' +
+        'graphics (tilesets + appearances) behind three chips — pass `chip` to pick one, or keep the current one. ' +
+        '"game" is the project\'s own page: name, tile size and game rules.',
+      inputSchema: z.object({ view: z.enum(VIEWS), chip: z.enum(LIBRARY_CHIPS).optional(), ...instanceArg }),
     },
-    async ({ view, instance }) => {
+    async ({ view, chip, instance }) => {
       const mapped = VIEW_ACTIONS[view]
       if (!mapped) return fail('Use open_scene { sceneId } to enter the scene editor.')
+      if (chip && view !== 'library') return fail('`chip` only applies to the "library" view.')
       try {
         await activateAction(instance, 'win', mapped[0], mapped[1])
-        return ok(`Switched to ${view}`)
+        if (chip) await changeActionState(instance, 'win', 'library-chip', chip)
+        return ok(chip ? `Switched to ${view} › ${chip}` : `Switched to ${view}`)
       } catch (error) {
         return dbusError(error, instance)
       }
@@ -144,7 +151,7 @@ export function registerEditingTools(server: McpServer): void {
     {
       description:
         'Place a library object (entity definition) on the active map at tile (x, y). `defId` is an ' +
-        'entityLibrary id (create objects in the Objects view / win.new-object). Omit layerId for the active ' +
+        'entityLibrary id (create things under Library › Things / win.new-object). Omit layerId for the active ' +
         'layer. Goes through the engine command path, so it undoes and (in a collab session) syncs to peers. ' +
         'Needs an open scene.',
       inputSchema: z.object({

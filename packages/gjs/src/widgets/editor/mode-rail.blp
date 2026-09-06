@@ -81,7 +81,7 @@ template $PixelRpgModeRail : Adw.Bin {
 
       Adw.ActionRow row_world {
         title: _("World");
-        subtitle: _("Atlas of scenes");
+        subtitle: _("Your maps");
         activatable: true;
         action-name: "win.mode";
         action-target: "'world'";
@@ -99,52 +99,12 @@ template $PixelRpgModeRail : Adw.Bin {
         }
       }
 
-      Adw.ActionRow row_cast {
-        title: _("Cast");
-        subtitle: _("Heroes and NPCs");
+      Adw.ActionRow row_library {
+        title: _("Library");
+        subtitle: _("Characters, things and graphics");
         activatable: true;
         action-name: "win.mode";
-        action-target: "'cast'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "avatar-default-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
-      Adw.ActionRow row_objects {
-        title: _("Objects");
-        subtitle: _("NPCs, items, events");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'objects'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "view-grid-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
-      Adw.ActionRow row_tiles {
-        title: _("Sheets");
-        subtitle: _("Tilesets and appearances");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'tiles'";
+        action-target: "'library'";
 
         [prefix]
         Gtk.Image {

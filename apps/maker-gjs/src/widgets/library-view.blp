@@ -1,0 +1,138 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Library — one rail row for everything a project is made of. Three
+// chips in the header switch between the Characters, Things and
+// Graphics pages, which used to be three rail rows (Cast, Objects,
+// Sheets) of the same master-detail shape over the same data. This
+// host owns the mode rail and the one header; the chip pages carry
+// neither, and each page's DETAIL keeps its own header bar so the
+// phone drill-down still has a back button.
+template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
+  Adw.OverlaySplitView outer_split {
+    sidebar-position: start;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.7;
+    pin-sidebar: true;
+    collapsed: bind template.library-collapsed;
+    show-sidebar: bind template.show-library bidirectional;
+
+    sidebar: $PixelRpgModeRail mode_rail {
+      project-name: _("New Project");
+      project-tagline: _("Library");
+    };
+
+    content: Adw.ToolbarView {
+      top-bar-style: flat;
+
+      [top]
+      Adw.HeaderBar {
+        show-start-title-buttons: false;
+
+        // Reopen the mode rail when it is collapsed to an overlay
+        // (narrow widths) — without this the Library had no way back
+        // to the other rows once the rail was dismissed.
+        [start]
+        Gtk.ToggleButton library_toggle {
+          icon-name: "sidebar-show-symbolic";
+          tooltip-text: _("Toggle sidebar");
+          active: bind template.show-library bidirectional;
+        }
+
+        // The chip filter. `active-name` IS the view's `chip` property
+        // (bidirectional), and both stacks below follow it declaratively,
+        // so a chip change from a click, a deep link or the
+        // `win.library-chip` action takes the same one path.
+        title-widget: Adw.ToggleGroup chips {
+          active-name: bind template.chip bidirectional;
+          homogeneous: true;
+
+          Adw.Toggle {
+            name: "characters";
+            label: _("Characters");
+          }
+
+          Adw.Toggle {
+            name: "things";
+            label: _("Things");
+          }
+
+          Adw.Toggle {
+            name: "graphics";
+            label: _("Graphics");
+          }
+        };
+
+        // The per-chip primary action, swapped with the chip.
+        [end]
+        Gtk.Stack header_end {
+          visible-child-name: bind chips.active-name;
+          hhomogeneous: false;
+
+          Gtk.StackPage {
+            name: "characters";
+
+            child: Gtk.Button {
+              icon-name: "list-add-symbolic";
+              action-name: "win.new-character";
+              tooltip-text: _("Add a character");
+              styles ["flat"]
+            };
+          }
+
+          Gtk.StackPage {
+            name: "things";
+
+            child: Gtk.Button new_thing_button {
+              icon-name: "list-add-symbolic";
+              tooltip-text: _("Add a thing");
+              styles ["flat"]
+            };
+          }
+
+          Gtk.StackPage {
+            name: "graphics";
+
+            child: Gtk.ToggleButton {
+              icon-name: "sidebar-show-right-symbolic";
+              tooltip-text: _("Toggle details");
+              active: bind tiles_view.show-quickview bidirectional;
+            };
+          }
+        }
+      }
+
+      // Non-homogeneous for the same reason as the window's ViewStack:
+      // the stack must track only the visible page's measurement, or the
+      // widest page's minimum keeps the phone breakpoint from firing.
+      content: Gtk.Stack pages {
+        visible-child-name: bind chips.active-name;
+        hhomogeneous: false;
+        vhomogeneous: false;
+        transition-type: crossfade;
+
+        Gtk.StackPage {
+          name: "characters";
+
+          child: $CastView cast_view {
+            inspector-collapsed: bind template.inspector-collapsed;
+          };
+        }
+
+        Gtk.StackPage {
+          name: "things";
+          child: $ObjectsView objects_view {};
+        }
+
+        Gtk.StackPage {
+          name: "graphics";
+
+          child: $TilesView tiles_view {
+            inspector-collapsed: bind template.inspector-collapsed;
+          };
+        }
+      };
+    };
+  }
+}

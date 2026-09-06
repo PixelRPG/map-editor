@@ -8,7 +8,7 @@ Early development (pre-release file format). What works today:
 
 - Tile painting/erasing and object placement on multi-layer maps, with command-based undo/redo
 - Entity-composition content model — reusable entity definitions (`components[]` + registry-generated inspectors) for NPCs, items, teleports, spawn points
-- Editor views: Welcome (templates + recents), Atlas (world overview), Cast (characters), Objects (entity library), Sheets (tilesets + appearances/animations), Scene editor, Data
+- Three rail rows: World (the atlas of maps + the map editor), Library (Characters · Things · Graphics behind three chips), Game (the project's name, rules and settings); plus the Welcome screen (templates + recents)
 - Live editing in an embedded Excalibur canvas + in-editor Play mode (player spawn + grid movement)
 - Collaborative pair-editing over WebRTC (LAN discovery via Avahi, live cursors + presence, snapshot-on-join)
 - An in-process AI collaborator driveable over D-Bus/MCP (`apps/mcp-bridge`), visible as a live participant

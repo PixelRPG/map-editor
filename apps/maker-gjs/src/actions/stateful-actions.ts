@@ -8,6 +8,8 @@ import type Gio from '@girs/gio-2.0'
 export interface StatefulWindowActions {
   /** `win.mode` — the active mode-rail row. */
   mode: Gio.SimpleAction
+  /** `win.library-chip` — the Library's visible chip page. */
+  libraryChip: Gio.SimpleAction
   /** `win.set-tool` — the active editor tool. */
   tool: Gio.SimpleAction
   /** `win.play` — runtime (playtest) mode. */

@@ -9,12 +9,14 @@ GObject.type_ensure(ProjectHeroIcon.$gtype)
 /**
  * Editor mode discriminator emitted by {@link ModeRail}.
  */
-export type EditorMode = 'world' | 'cast' | 'objects' | 'tiles' | 'game'
+export type EditorMode = 'world' | 'library' | 'game'
 
-const MODE_ORDER: EditorMode[] = ['world', 'cast', 'objects', 'tiles', 'game']
+const MODE_ORDER: EditorMode[] = ['world', 'library', 'game']
 
 /**
- * Library mode rail — the editor's primary navigation column.
+ * Mode rail — the editor's primary navigation column: three rows, World
+ * (the maps), Library (characters, things, graphics) and Game (the
+ * project's own page).
  *
  * Hosts a hero block (project name + tagline + {@link ProjectHeroIcon})
  * followed by an `Adw.PreferencesGroup` of mode rows. Selection drives
@@ -28,9 +30,7 @@ export class ModeRail extends Adw.Bin {
   declare _project_name: Gtk.Label
   declare _project_tagline: Gtk.Label
   declare _row_world: Adw.ActionRow
-  declare _row_cast: Adw.ActionRow
-  declare _row_objects: Adw.ActionRow
-  declare _row_tiles: Adw.ActionRow
+  declare _row_library: Adw.ActionRow
   declare _row_game: Adw.ActionRow
   declare _share_button: Gtk.Button
 
@@ -48,9 +48,7 @@ export class ModeRail extends Adw.Bin {
           'project_name',
           'project_tagline',
           'row_world',
-          'row_cast',
-          'row_objects',
-          'row_tiles',
+          'row_library',
           'row_game',
           'share_button',
         ],
@@ -132,12 +130,8 @@ export class ModeRail extends Adw.Bin {
     switch (mode) {
       case 'world':
         return this._row_world
-      case 'cast':
-        return this._row_cast
-      case 'objects':
-        return this._row_objects
-      case 'tiles':
-        return this._row_tiles
+      case 'library':
+        return this._row_library
       case 'game':
         return this._row_game
     }
