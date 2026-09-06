@@ -81,8 +81,6 @@ const EXPECTED_EXEMPTIONS = {
   SpriteRefComponent:
     'known gap: the placement graphic is built from the DEFINITION (`buildPlacementGraphic(def, …)`), so the ' +
     'attached component is inert until a runtime graphic system reads it (TODO.md, Engine / runtime)',
-  NpcRouteComponent:
-    'known gap: waypoints + facing are authored and persisted; `NpcMovementSystem` is unbuilt (TODO.md, Engine / runtime)',
   CustomDataComponent:
     'by design: the project-script escape hatch. The ENGINE must never read `bag` — a reader here would be the bug',
 }

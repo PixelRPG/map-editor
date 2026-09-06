@@ -108,6 +108,7 @@ export class MapScene extends Scene {
         mapResource,
         entityLibrary: this.entityLibrary,
         config: options.gameSystemConfig?.[spec.id] ?? {},
+        componentRegistry: this.componentRegistry,
         playerCharacter: options.playerCharacter,
         playerSpriteSet: options.playerSpriteSet,
       }

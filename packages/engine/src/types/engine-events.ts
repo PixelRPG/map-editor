@@ -22,6 +22,10 @@ export enum EngineEvent {
   WALKED_ONTO_TILE = 'walked-onto-tile',
   TELEPORT_REQUESTED = 'teleport-requested',
   ITEM_PICKED_UP = 'item-picked-up',
+  DAMAGE_DEALT = 'damage-dealt',
+  ENTITY_DEFEATED = 'entity-defeated',
+  EXPERIENCE_GAINED = 'experience-gained',
+  LEVEL_UP = 'level-up',
   SHOW_TEXT_REQUESTED = 'show-text-requested',
   FLAG_SET = 'flag-set',
   PLAY_SFX_REQUESTED = 'play-sfx-requested',
@@ -140,6 +144,43 @@ export interface EngineEventMap {
     qty: number
     pickupSound?: string
   }
+  /**
+   * A hit landed. Emitted by `combat-action`'s damage sources
+   * (`MeleeAttackSystem` for a swing, `HostileAiSystem` for contact) and
+   * folded into live hit points by `stats`' `StatsSystem`.
+   *
+   * `amount` is the RAW damage — attacker's weapon plus its `attack`
+   * stat. Mitigation by the target's `defense` happens in `StatsSystem`,
+   * because `defense` is a `stats` field and `stats` is the system that
+   * gets to say what it means.
+   *
+   * `targetId` / `sourceId` are Excalibur runtime entity ids: this is a
+   * local per-scene bus event, never a wire message or a save key (the
+   * same footing as `TRIGGER_FIRED`). Transport rule 1 still holds — no
+   * persisted key is derived from them.
+   */
+  [EngineEvent.DAMAGE_DEALT]: { targetId: number; amount: number; sourceId?: number }
+  /**
+   * An actor's hit points reached zero. Emitted by `StatsSystem`, which
+   * owns hit points; acted on by `combat-action`'s `DefeatSystem`, which
+   * decides what a defeated body does (drop, reward, respawn).
+   *
+   * The split is deliberate: "hp hit zero" is a stats fact and stays true
+   * whichever combat system is on, while "it drops a heart and comes back
+   * in five seconds" is one combat system's rule.
+   */
+  [EngineEvent.ENTITY_DEFEATED]: { entityId: number }
+  /**
+   * Experience awarded to an actor — emitted by `DefeatSystem` when a
+   * hostile pays out, folded by `StatsSystem` into `exp` / `level`.
+   */
+  [EngineEvent.EXPERIENCE_GAINED]: { entityId: number; amount: number }
+  /**
+   * Emitted by `StatsSystem` when accumulated experience crossed
+   * `expToNext`. The maker host surfaces it as a playtest toast, the same
+   * treatment `FLAG_SET` and `ITEM_PICKED_UP` get.
+   */
+  [EngineEvent.LEVEL_UP]: { entityId: number; level: number }
   /**
    * Emitted by `EventActionSystem` for a `show-text` action. The maker
    * host surfaces the line as a playtest toast today (no store yet — the

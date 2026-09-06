@@ -143,16 +143,28 @@ export default async () => {
       }
     })
 
-    await it('the base layer is core and inventory', async () => {
+    await it('the base layer is core, inventory and stats', async () => {
       // Pinned deliberately: a base system is always on, so it costs every
       // project its components and its runtime whether or not anything
-      // reads them. Adding one is a decision, not a default — `time` and
-      // `stats` are both out of this layer for the same reason, that their
-      // only reader (`economy`, `combat-action`) ships later.
+      // reads them. Adding one is a decision, not a default — `stats`
+      // joined this layer only in the commit that gave it a reader
+      // (`combat-action`), and `time` is still out of it for exactly the
+      // reason `stats` used to be: its reader (`economy`) ships later.
       const base = Object.values(BUILT_IN_GAME_SYSTEMS)
         .filter((s) => s.editor.base)
         .map((s) => s.id)
-      expect(base.sort()).toStrictEqual(['core', 'inventory'])
+      expect(base.sort()).toStrictEqual(['core', 'inventory', 'stats'])
+    })
+
+    await it('a switchable system exists, and it is off by default', async () => {
+      // The frame's own promise: it must carry a system a user turns ON,
+      // not just the floor everybody stands on. Until `combat-action`
+      // landed, every registered system was base and the whole enabled-set
+      // path — the switch, `requires`, the dormant registry — was exercised
+      // only by fixtures.
+      const switchable = Object.values(BUILT_IN_GAME_SYSTEMS).filter((s) => !s.editor.base)
+      expect(switchable.map((s) => s.id)).toStrictEqual(['combat-action'])
+      for (const spec of switchable) expect(isGameSystemEnabled(spec, {})).toBe(false)
     })
 
     await it('every base system has a reader for what it owns', async () => {
@@ -176,8 +188,16 @@ export default async () => {
 
   await describe('effective game systems', async () => {
     await it('base systems are on with no project data at all', async () => {
-      expect(effectiveGameSystems(null).map((s) => s.id)).toStrictEqual(['core', 'inventory'])
-      expect(effectiveGameSystems({}).map((s) => s.id)).toStrictEqual(['core', 'inventory'])
+      expect(effectiveGameSystems(null).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory'])
+      expect(effectiveGameSystems({}).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory'])
+    })
+
+    await it('enabling combat-action adds it in registry order, after what it reads', async () => {
+      // Registry order IS runtime order: `combat-action` must come after
+      // `core` (which spawns the hero and writes its velocity) and after
+      // `stats` (which seeds the hit points its HUD draws).
+      const on = { gameSystems: { 'combat-action': { enabled: true } } }
+      expect(effectiveGameSystems(on).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory', 'combat-action'])
     })
 
     await it('an optional system is off until the project enables it', async () => {
@@ -215,7 +235,29 @@ export default async () => {
       // `item` proves the move out of core landed: it is inventory's now.
       expect(registry.item).toBeDefined()
       expect(registry.visual).toBeDefined()
-      expect(Object.keys(registry).length).toBe(discoverComponentSpecs().length)
+      // `stats` is base, so it is here with no project data at all …
+      expect(registry.stats).toBeDefined()
+      // … while a switchable system's components are NOT: dormant until
+      // the project says otherwise. This is the assertion that would have
+      // caught `combat-action` being registered as base by accident.
+      for (const type of ['weapon', 'hostile', 'hurtbox', 'invulnerable']) {
+        expect(`${type}: ${registry[type] === undefined}`).toBe(`${type}: true`)
+      }
+      const baseTypes = Object.values(BUILT_IN_GAME_SYSTEMS)
+        .filter((system) => system.editor.base)
+        .flatMap((system) => system.components.map((component) => component.type))
+      expect(Object.keys(registry).sort()).toStrictEqual([...new Set(baseTypes)].sort())
+    })
+
+    await it('a switched-on system contributes its components, and only then', async () => {
+      const off = effectiveComponentRegistry({ gameSystems: { 'combat-action': { enabled: false } } })
+      expect(off.weapon).toBeUndefined()
+      const on = effectiveComponentRegistry({ gameSystems: { 'combat-action': { enabled: true } } })
+      expect(on.weapon).toBeDefined()
+      expect(on.hostile).toBeDefined()
+      // Every shipped spec is reachable once everything is on — the proof
+      // that no component is stranded behind a system nobody can enable.
+      expect(Object.keys(on).length).toBe(discoverComponentSpecs().length)
     })
 
     await it('omits a disabled system component — dormant, not deleted', async () => {
@@ -233,7 +275,7 @@ export default async () => {
       const project = { gameSystems: { core: { enabled: true }, 'combat-turn': { enabled: true } } }
       expect(unknownGameSystemIds(project)).toStrictEqual(['combat-turn'])
       // …and the project still resolves to its known systems.
-      expect(effectiveGameSystems(project).map((s) => s.id)).toStrictEqual(['core', 'inventory'])
+      expect(effectiveGameSystems(project).map((s) => s.id)).toStrictEqual(['core', 'stats', 'inventory'])
     })
   })
 }

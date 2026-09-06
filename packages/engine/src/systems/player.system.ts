@@ -22,10 +22,11 @@ import {
   zFor,
   TileTransformComponent,
 } from '../components/index.ts'
+import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { buildPlaceholderAnimations } from '../runtime/placeholder-character.ts'
-import type { CharacterAnimationRole, CharacterDefinition, Facing } from '../types/data/index.ts'
+import type { CharacterAnimationRole, CharacterDefinition, EntityDefinition, Facing } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { buildCharacterAnimations } from '../utils/character.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
@@ -85,6 +86,8 @@ export class PlayerSystem extends System {
     private readonly events: EventEmitter<EngineEventMap>,
     private readonly playerCharacter?: CharacterDefinition,
     private readonly playerSpriteSet?: SpriteSetResource,
+    private readonly entityLibrary: readonly EntityDefinition[] = [],
+    private readonly componentRegistry?: ComponentSpecRegistry,
   ) {
     super()
   }
@@ -173,6 +176,7 @@ export class PlayerSystem extends System {
     const initialGraphic = resolved.animations[initialRole]
     if (initialGraphic) actor.graphics.use(initialGraphic)
     actor.graphics.visible = false
+    this.attachDefinitionComponents(actor, tile.tileX, tile.tileY, tw, th)
     // Between the hero plane (z=100) and the overlay plane (z=200) so
     // canopy sprites draw over the player and decoration sprites draw
     // beside them.
@@ -186,6 +190,46 @@ export class PlayerSystem extends System {
     if (session) {
       session.lastTileX = tile.tileX
       session.lastTileY = tile.tileY
+    }
+  }
+
+  /**
+   * Give the hero the rest of its own definition.
+   *
+   * The player is persisted as an ordinary `EntityDefinition` in
+   * `entityLibrary`, but this system is handed the flat
+   * {@link CharacterDefinition} view model, which carries only a look and
+   * a speed. Everything else the author put on the hero — a stat block, a
+   * weapon, a hurtbox — would otherwise be silently dropped, and a
+   * project could set the hero's Max HP to 10 with nothing reading it.
+   *
+   * Built through the **effective** registry, so a component whose game
+   * system is switched off stays dormant on the hero exactly as it does
+   * on a placement: one rule, not two. `visual` and `movement` are
+   * skipped because the view model already supplied both and the actor
+   * is built from them.
+   */
+  private attachDefinitionComponents(
+    actor: Actor,
+    tileX: number,
+    tileY: number,
+    tileWidth: number,
+    tileHeight: number,
+  ): void {
+    const registry = this.componentRegistry
+    const definition = this.playerCharacter
+      ? this.entityLibrary.find((candidate) => candidate.id === this.playerCharacter?.id)
+      : undefined
+    if (!registry || !definition) return
+
+    const ctx = { placementId: definition.id, tileX, tileY, tileWidth, tileHeight }
+    for (const data of definition.components) {
+      if (data.type === 'visual' || data.type === 'movement') continue
+      const spec = registry[data.type]
+      if (!spec) continue // dormant (system off) or unknown — same skip the spawn pipeline makes
+      const built = spec.build(data, ctx)
+      if (!built) continue
+      for (const component of Array.isArray(built) ? built : [built]) actor.addComponent(component)
     }
   }
 
