@@ -36,7 +36,7 @@ import { swingBox } from '../utils/combat.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { DefeatSystem } from './defeat.system.ts'
 import { HostileAiSystem } from './hostile-ai.system.ts'
-import { HudSystem } from './hud.system.ts'
+import { HEART_POINTS, HudSystem } from './hud.system.ts'
 import { KnockbackSystem } from './knockback.system.ts'
 import { MeleeAttackSystem } from './melee-attack.system.ts'
 import { StatsSystem } from './stats.system.ts'
@@ -453,6 +453,26 @@ export default async () => {
       events.emit(EngineEvent.EXPERIENCE_GAINED, { entityId: hero.id, amount: 100 })
       tick()
       expect(hearts().length > 3).toBe(true)
+    })
+  })
+
+  await describe('combat-action — the HUD raster', async () => {
+    await it('describes the heart on whole pixels', async () => {
+      // Excalibur sizes a Polygon's raster from its points
+      // (`width = maxX - minX`). Fractional points therefore ask for a
+      // bitmap 20.7 pixels wide, which under GJS throws inside
+      // `getImageData` mid-frame and kills the render loop — the game
+      // stops drawing because of the health bar. Caught only by running
+      // it, so it is pinned here rather than left to the next reader.
+      for (const point of HEART_POINTS) {
+        expect(Number.isInteger(point.x)).toBe(true)
+        expect(Number.isInteger(point.y)).toBe(true)
+      }
+      const width = Math.max(0, ...HEART_POINTS.map((p) => p.x)) - Math.min(...HEART_POINTS.map((p) => p.x))
+      const height = Math.max(0, ...HEART_POINTS.map((p) => p.y)) - Math.min(...HEART_POINTS.map((p) => p.y))
+      expect(Number.isInteger(width)).toBe(true)
+      expect(Number.isInteger(height)).toBe(true)
+      expect(width > 0 && height > 0).toBe(true)
     })
   })
 

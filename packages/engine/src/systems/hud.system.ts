@@ -136,8 +136,16 @@ function emptyHeart(): Polygon {
  *
  * Built once at module load: the shape never changes, and re-sampling it
  * per frame would be trigonometry in the render loop for no reason.
+ *
+ * **The points are rounded to whole pixels, and that is load-bearing.**
+ * Excalibur derives a `Polygon`'s raster size from its points
+ * (`width = maxX − minX`), so fractional coordinates produce a bitmap
+ * 20.7 pixels wide — a size no bitmap can have. Under GJS that reaches
+ * `getImageData` and throws mid-frame, killing the render loop and taking
+ * the whole canvas with it: the game stops drawing because of the health
+ * bar. Whole pixels also happen to be what pixel art wants.
  */
-const HEART_POINTS: Vector[] = buildHeartPoints(HEART_SIZE)
+export const HEART_POINTS: Vector[] = buildHeartPoints(HEART_SIZE)
 
 function buildHeartPoints(size: number): Vector[] {
   const steps = 28
@@ -146,7 +154,7 @@ function buildHeartPoints(size: number): Vector[] {
     const t = (step / steps) * Math.PI * 2
     const x = 16 * Math.sin(t) ** 3
     const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)
-    points.push(vec((x / 34) * size, (-y / 30) * size))
+    points.push(vec(Math.round((x / 34) * size), Math.round((-y / 30) * size)))
   }
   return points
 }
