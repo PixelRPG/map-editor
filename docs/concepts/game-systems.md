@@ -164,6 +164,14 @@ from the undo stack and the wire, because playing a game is not editing it. The 
 respawn and never written. The only thing this system persists is its own on/off switch, which
 rides `__project/systems.set` like every other.
 
+Two rules follow for anything spawned mid-play. It is built with `runtime: true`, so it never
+wears the editor's cell frame or marker diamonds — `MapScene.refreshPlacementGraphicsForMode`
+cannot fix that afterwards, because it only walks placements that exist in the map and a drop's
+placement is synthetic. And its appearance comes from the entity library: `hostile.dropItemId` is
+a bare id, so an author who makes an entity of that id with a `visual` gets it on the ground.
+Without a match the drop is invisible — the honest cost of `dropItemId` having no appearance
+anywhere until `item-def` ships, and a placeholder icon would hide it.
+
 **Input.** `InputSourceComponent` gained `attackHeld`, and `InputSystem` maps X / J to it.
 Transport rule 3 is unchanged: combat reads the component, never a keyboard. Attack is a second
 button rather than an overload of the action button because the two mean opposite things to the

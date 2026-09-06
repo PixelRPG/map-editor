@@ -122,17 +122,28 @@ export class DefeatSystem extends System {
    * onto `trigger` composition an authored pickup would — and
    * `ItemPickupSystem` collects it with no special case. The synthetic
    * placement is never added to the map.
+   *
+   * **Where the drop's looks come from.** `hostile.dropItemId` is a bare
+   * id, so this resolves it against the entity library: an author who
+   * makes a `heart` entity with a `visual` gets a heart on the ground,
+   * and its `item` / `trigger` components are only filled in when it
+   * carries none. Without a match the drop is the bare pair, which in
+   * runtime mode renders nothing — an invisible pickup is the honest cost
+   * of `dropItemId` having no appearance anywhere until `item-def` ships
+   * (TODO.md), and inventing a placeholder icon here would hide it.
    */
   private spawnDrop(itemId: string, tile: TileTransformComponent, scene: Scene): void {
     const id = `drop:${itemId}:${tile.tileX},${tile.tileY}:${Math.floor(Math.random() * 1e9)}`
-    const definition: EntityDefinition = {
-      id,
-      name: itemId,
-      components: [
-        { type: 'item', itemId, qty: 1 },
-        { type: 'trigger', on: 'walk-onto', once: true },
-      ],
+    const authored = this.entityLibrary.find((candidate) => candidate.id === itemId)
+    const components = [...(authored?.components ?? [])]
+    if (!components.some((component) => component.type === 'item')) {
+      components.push({ type: 'item', itemId, qty: 1 })
     }
+    if (!components.some((component) => component.type === 'trigger')) {
+      components.push({ type: 'trigger', on: 'walk-onto', once: true })
+    }
+
+    const definition: EntityDefinition = { id, name: authored?.name ?? itemId, components }
     const placement: ObjectPlacement = {
       id,
       layerId: tile.layerId,
@@ -153,10 +164,19 @@ export class DefeatSystem extends System {
     this.logger.info(`[DefeatSystem] respawned ${placementId}`)
   }
 
-  /** One spawn-pipeline call, with the map's layers resolved. */
+  /**
+   * One spawn-pipeline call, with the map's layers resolved.
+   *
+   * **Always `runtime: true`.** Everything this system spawns is spawned
+   * *during play*, so it must never wear the editor's cell frame or its
+   * marker diamonds — that chrome is for authoring and the player must
+   * not see it. `MapScene.refreshPlacementGraphicsForMode` cannot correct
+   * it afterwards either: it only walks placements that exist in the map,
+   * and a drop's placement is synthetic by design.
+   */
   private build(placement: ObjectPlacement, definition: EntityDefinition): Entity {
     const layersById = new Map((this.mapResource.mapData?.layers ?? []).map((layer) => [layer.id, layer]))
-    return buildPlacementEntity(placement, definition, this.mapResource, layersById, this.registry)
+    return buildPlacementEntity(placement, definition, this.mapResource, layersById, this.registry, { runtime: true })
   }
 
   /** Full heal plus a grace period — the placeholder game-over. */

@@ -19,6 +19,8 @@ import { InvulnerableUntilComponent } from '../components/invulnerable-until.com
 import { ItemComponent } from '../components/item.component.ts'
 import { KnockbackComponent } from '../components/knockback.component.ts'
 import { PlacementIdComponent } from '../components/placement-id.component.ts'
+import { SpriteRefComponent } from '../components/sprite-ref.component.ts'
+import { TriggerComponent } from '../components/trigger.component.ts'
 import { PlayerActorComponent, PlayerComponent } from '../components/player-actor.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import { StatsRuntimeComponent } from '../components/stats-runtime.component.ts'
@@ -30,7 +32,7 @@ import { buildWeaponComponent } from '../entity/specs/weapon.ts'
 import { HurtboxComponent } from '../components/hurtbox.component.ts'
 import { MovementComponent } from '../components/movement.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
-import type { Facing, ObjectPlacement } from '../types/data/index.ts'
+import type { EntityDefinition, Facing, ObjectPlacement } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { swingBox } from '../utils/combat.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -95,6 +97,13 @@ function rig(options: RigOptions = {}) {
 
   const entityLibrary = [
     {
+      id: 'heart',
+      name: 'Heart',
+      // An ordinary library entity, not an `item-def`: what a drop's looks
+      // come from until `item-def` ships.
+      components: [{ type: 'visual', spriteSetId: 'ui', spriteId: 3 }],
+    },
+    {
       id: 'slime',
       name: 'Slime',
       components: [
@@ -135,7 +144,7 @@ function rig(options: RigOptions = {}) {
     new MeleeAttackSystem(mapResource, events),
     new HostileAiSystem(mapResource, events),
     new KnockbackSystem(mapResource, events),
-    new DefeatSystem(mapResource, events, entityLibrary as never),
+    new DefeatSystem(mapResource, events, entityLibrary as unknown as EntityDefinition[]),
     ...(DOM_AVAILABLE ? [new HudSystem()] : []),
   ]
   for (const system of systems) system.initialize(scene.world, scene)
@@ -364,6 +373,23 @@ export default async () => {
       expect(drops().length).toBe(1)
       expect(drops()[0]?.get(ItemComponent)?.itemId).toBe('heart')
       expect(drops()[0]?.get(TileTransformComponent)?.tileX).toBe(3)
+    })
+
+    await it('gives the drop the looks the library authored for that id', async () => {
+      if (!DOM_AVAILABLE) return
+      // `dropItemId` is a bare string, so the appearance has to come from
+      // somewhere: the library entity of the same id. Without this a drop
+      // is invisible, and an invisible pickup reads as a broken drop.
+      const { swing, tick, drops } = rig({ hostileHp: 1, dropItemId: 'heart', dropChance: 1 })
+      tick()
+      swing()
+      tick()
+      const drop = drops()[0]
+      expect(drop).toBeDefined()
+      expect(drop?.get(SpriteRefComponent)?.spriteSetId).toBe('ui')
+      // …and it still picks up like any other item.
+      expect(drop?.get(ItemComponent)?.itemId).toBe('heart')
+      expect(drop?.get(TriggerComponent)?.on).toBe('walk-onto')
     })
 
     await it('drops nothing when the roll misses', async () => {
