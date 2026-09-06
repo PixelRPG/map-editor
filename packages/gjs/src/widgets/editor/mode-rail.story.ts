@@ -26,7 +26,7 @@ export class ModeRailStory extends StoryWidget {
     return {
       title: 'Editor/Mode Rail',
       description:
-        'Left library sidebar — hero icon + project name + tagline + World/Cast/Objects/Sheets/Data action rows.',
+        'Left library sidebar — hero icon + project name + tagline + World/Cast/Objects/Sheets/Game action rows.',
       component: ModeRail.$gtype,
       controls: [
         { name: 'projectName', label: 'Project name', type: ControlType.TEXT },
@@ -40,7 +40,7 @@ export class ModeRailStory extends StoryWidget {
             { label: 'Cast', value: 'cast' },
             { label: 'Objects', value: 'objects' },
             { label: 'Sheets', value: 'tiles' },
-            { label: 'Data', value: 'data' },
+            { label: 'Game', value: 'game' },
           ],
         },
       ],

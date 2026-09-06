@@ -6,7 +6,7 @@ import { dbusError } from '../dbus/dbus-error.ts'
 import { fail, ok } from '../tool-result.ts'
 import { instanceArg } from './instance-arg.ts'
 
-const VIEWS = ['welcome', 'atlas', 'cast', 'objects', 'tiles', 'data', 'scene-editor'] as const
+const VIEWS = ['welcome', 'atlas', 'cast', 'objects', 'tiles', 'game', 'scene-editor'] as const
 type ViewName = (typeof VIEWS)[number]
 
 /**
@@ -20,7 +20,7 @@ const VIEW_ACTIONS: Partial<Record<ViewName, readonly [string, string?]>> = {
   cast: ['mode', 'cast'],
   objects: ['mode', 'objects'],
   tiles: ['mode', 'tiles'],
-  data: ['mode', 'data'],
+  game: ['mode', 'game'],
 }
 
 /** Named editing operations: what the agent changes about a scene, rather than which action drives it. */
@@ -67,8 +67,8 @@ export function registerEditingTools(server: McpServer): void {
     'set_view',
     {
       description:
-        'Switch the top-level view. "atlas"/"cast"/"tiles"/"data" need a loaded project; "welcome" closes it; ' +
-        'for "scene-editor" use open_scene. "data" is the Assets & project view.',
+        'Switch the top-level view. "atlas"/"cast"/"objects"/"tiles"/"game" need a loaded project; "welcome" closes it; ' +
+        'for "scene-editor" use open_scene. "game" is the project\'s own page: name, tile size and game rules.',
       inputSchema: z.object({ view: z.enum(VIEWS), ...instanceArg }),
     },
     async ({ view, instance }) => {

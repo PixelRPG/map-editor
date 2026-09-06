@@ -9,7 +9,6 @@ import {
   createMapEditorDataOp,
   type EditorTool,
   type SpriteSetData,
-  type SpriteSetKind,
 } from '@pixelrpg/engine'
 import { type CollaboratorEntry, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
@@ -26,17 +25,12 @@ import { installTileActions } from '../actions/tile-actions.ts'
 import { installViewActions } from '../actions/view-actions.ts'
 import { installZoomActions } from '../actions/zoom-actions.ts'
 import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
-import {
-  presentAssetImport,
-  presentDeleteAsset,
-  presentRenameAsset,
-  presentTilesetSwitcher,
-} from '../services/asset-dialogs.ts'
+import { presentTilesetSwitcher } from '../services/asset-dialogs.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
-import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
+import { GameController } from '../services/game-controller.ts'
 import { wireEngineEvents } from '../services/engine-event-bridge.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
 import { buildVariant } from '../services/gvariant.ts'
@@ -58,19 +52,18 @@ import { ViewRouter } from '../services/view-router.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { CastView } from './cast-view.ts'
-// biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
-import { DataView } from './data-view.ts'
+import { GameView } from './game-view.ts'
 import { ObjectsView } from './objects-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import { TilesView } from './tiles-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
 // Force registration so the `$CastView` / `$TilesView` / `$ObjectsView` /
-// `$PixelRpgDataView` references in the blueprint resolve at parse time.
+// `$PixelRpgGameView` references in the blueprint resolve at parse time.
 GObject.type_ensure(CastView.$gtype)
 GObject.type_ensure(ObjectsView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
-GObject.type_ensure(DataView.$gtype)
+GObject.type_ensure(GameView.$gtype)
 
 /**
  * Read-only snapshot of the editor's live state, surfaced to external
@@ -156,7 +149,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _objects_view: ObjectsView
   declare _tiles_view: TilesView
   declare _scene_editor_view: SceneEditorView
-  declare _data_view: DataView
+  declare _game_view: GameView
   declare _stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
 
@@ -231,7 +224,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._objects_view,
       this._tiles_view,
       this._scene_editor_view,
-      this._data_view,
+      this._game_view,
     ],
     getMode: () => (this._actions ? stringState(this._actions.mode) : null),
     // set_state (not change_state) so the change-state handler doesn't
@@ -306,7 +299,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _castCtl: CastController | null = null
   private _objectsCtl: ObjectsController | null = null
   private _tilesCtl: TilesController | null = null
-  private _dataCtl: DataController | null = null
+  private _gameCtl: GameController | null = null
 
   static {
     GObject.registerClass(
@@ -320,7 +313,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           'objects_view',
           'tiles_view',
           'scene_editor_view',
-          'data_view',
+          'game_view',
           'stack',
           'toast_overlay',
         ],
@@ -455,7 +448,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._cast_view,
       this._tiles_view,
       this._objects_view,
-      this._data_view,
+      this._game_view,
     ]) {
       this.signals.connect(view, 'mode-changed', (_v: unknown, mode: string) => setMode(mode))
     }
@@ -514,18 +507,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // animation edits route through the cast controller's methods.
       this._tilesCtl = new TilesController(this._tiles_view, this._projectStore, this._castCtl)
     }
-    if (!this._dataCtl) {
-      this._dataCtl = new DataController(this._data_view, this._projectStore)
-      // Asset actions that need host dialogs / navigation.
-      this._dataCtl.on('import-requested', ({ kind }) => this._presentAssetImport(kind))
-      this._dataCtl.on('open-requested', ({ id, kind }) => this._openAsset(id, kind))
-      this._dataCtl.on('rename-requested', ({ id, currentName }) => {
-        presentRenameAsset(this, currentName, (name) => this._projectStore.renameSpriteSet(id, name))
-      })
-      this._dataCtl.on('delete-requested', ({ id, name, usedBy }) => {
-        presentDeleteAsset(this, { name, usedBy }, () => this._projectStore.deleteSpriteSet(id))
-      })
-    }
+    if (!this._gameCtl) this._gameCtl = new GameController(this._game_view, this._projectStore)
     if (!this._objectsCtl) this._objectsCtl = new ObjectsController(this._objects_view, this._projectStore)
   }
 
@@ -553,8 +535,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this.bind_property('show-library', view, 'show-library', flags)
       this.bind_property('show-inspector', view, 'show-inspector', flags)
     }
-    // The Data view has a mode rail but no inspector — bind only the library.
-    this.bind_property('show-library', this._data_view, 'show-library', flags)
+    // The Game page has a mode rail but no inspector — bind only the library.
+    this.bind_property('show-library', this._game_view, 'show-library', flags)
   }
 
   /**
@@ -669,24 +651,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _prepareView(view: ViewName): void {
     if (view === 'cast') void this._castCtl?.refresh()
     else if (view === 'objects') this._objectsCtl?.refresh()
-  }
-
-  /** Present the unified import dialog for a Data-view asset of `kind`. */
-  private _presentAssetImport(kind: SpriteSetKind): void {
-    presentAssetImport(this, kind, (result) => void this._projectStore.importSpriteSet(result))
-  }
-
-  /**
-   * Jump from a Data-view asset row to its home view. Both kinds live in
-   * the Sheets view: tilesets → tile inspector, appearances (character
-   * sheets) → the asset glance. (Animation authoring lives in the Cast
-   * matrix, reachable from the glance's "edit in Cast" jump.)
-   */
-  private _openAsset(id: string, kind: SpriteSetKind): void {
-    if (!this._loadedProject) return
-    this._router.setView('tiles')
-    if (kind === 'tileset') this._tiles_view.focusTileset(id)
-    else this._tiles_view.focusAppearance(id)
   }
 
   /**

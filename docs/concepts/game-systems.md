@@ -102,7 +102,7 @@ The per-system `config` bag is plumbed end to end (file → op → `runtime(ctx)
 
 ## The activation UI
 
-Data view → **Game rules**: one `Adw.ExpanderRow` per switchable system with `show-enable-switch`, so the switch is the on/off and the body is the expert surface — a child flips the switch without ever expanding, an expert expands without ever flipping. Below it, an **Always on** group listing the base layer as insensitive rows, because there is nothing to decide about them.
+Game page → **Game rules**: one `Adw.ExpanderRow` per switchable system with `show-enable-switch`, so the switch is the on/off and the body is the expert surface — a child flips the switch without ever expanding, an expert expands without ever flipping. Below it, an **Always on** group listing the base layer as insensitive rows, because there is nothing to decide about them.
 
 The model is built in `apps/maker-gjs/src/services/game-rules-model.ts` (pure, unit-tested with fixture systems — the switchable path has no shipped system to exercise it yet) and rendered in `widgets/data-view.ts`. A system another enabled system `requires` has its switch locked and says by whom. With no switchable system in this build the Game-rules group hides itself: an empty titled group with a description reads as broken.
 

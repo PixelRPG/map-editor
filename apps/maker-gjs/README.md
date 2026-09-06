@@ -30,7 +30,7 @@ src/
 ├── widgets/                # GTK views (.ts + .blp [+ .css] per widget):
 │                           #   application-window, welcome-view, atlas-view,
 │                           #   cast-view, objects-view, tiles-view (Sheets),
-│                           #   scene-editor-view, data-view, share-dialog,
+│                           #   scene-editor-view, game-view, share-dialog,
 │                           #   preferences-dialog
 └── services/               # controller layer: project load/save, collab
                             # session + signalling, cast/objects controllers,
