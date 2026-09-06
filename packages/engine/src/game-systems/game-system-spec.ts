@@ -86,6 +86,12 @@ export interface EntityTemplate {
   category?: string
   /** The component set a fresh entity of this template starts with. */
   components: ComponentData[]
+  /**
+   * Offered in Full view only. The chooser hides it in Simple view — a
+   * template that starts empty ("add components yourself") is the
+   * expert's front door, not a child's.
+   */
+  fullViewOnly?: boolean
 }
 
 /**

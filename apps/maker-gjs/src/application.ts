@@ -10,9 +10,11 @@ import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './c
 import { sanitizeInstanceId } from './instance-id.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
+import { lookupAppSettings } from './services/app-settings.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
 import { coerceThemePreference } from './services/theme-preference.ts'
 import { ThemeService } from './services/theme.service.ts'
+import { UiTierService } from './services/ui-tier.service.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
 export class Application extends Adw.Application {
@@ -43,6 +45,13 @@ export class Application extends Adw.Application {
    * once libadwaita is up.
    */
   readonly themeService = new ThemeService()
+
+  /**
+   * Simple view / Full view (GSettings `ui-tier` key). Same lifecycle as
+   * the theme: constructed eagerly so the stateful `app.full-view` action
+   * can wire against it, backed by the shared settings in {@link onStartup}.
+   */
+  readonly uiTierService = new UiTierService()
 
   static {
     GObject.registerClass(
@@ -84,7 +93,11 @@ export class Application extends Adw.Application {
   protected onStartup(): void {
     this.initResources()
     this.initStyles()
-    this.themeService.init()
+    // One Gio.Settings for both keys; `null` (schema not found) makes
+    // both services fall back to in-memory values with a warning.
+    const settings = lookupAppSettings()
+    this.themeService.init(settings)
+    this.uiTierService.init(settings)
     this.initControlInterface()
     // Opt-in @gjsify/devtools control plane (`org.gjsify.Devtools`) — the
     // standard interface `gjsify debug` (MCP) + a `gdbus` Screenshot speak,
@@ -190,6 +203,7 @@ export class Application extends Adw.Application {
     showPreferencesAction.connect('activate', (_action) => {
       const preferencesDialog = new PreferencesDialog()
       preferencesDialog.setThemeService(this.themeService)
+      preferencesDialog.setUiTierService(this.uiTierService)
       preferencesDialog.present(this.active_window)
     })
     this.add_action(showPreferencesAction)
@@ -208,12 +222,31 @@ export class Application extends Adw.Application {
       themeAction.set_state(GLib.Variant.new_string(this.themeService.theme))
     })
     this.add_action(themeAction)
+
+    // Full view — a stateful boolean, so the primary menu renders it as a
+    // check item and a driver reads it from ListActions. No `activate`
+    // handler on purpose: GSimpleAction's default toggles a parameterless
+    // boolean action through `change-state`, which is the one path every
+    // switch (menu, Preferences, the "Show N more settings" row) takes.
+    // State mirrors the persisted tier both ways, like `app.theme`.
+    const fullViewAction = Gio.SimpleAction.new_stateful(
+      'full-view',
+      null,
+      GLib.Variant.new_boolean(this.uiTierService.fullView),
+    )
+    fullViewAction.connect('change-state', (_action, value) => {
+      this.uiTierService.fullView = value?.get_boolean() ?? false
+    })
+    this.uiTierService.connect('notify::full-view', () => {
+      fullViewAction.set_state(GLib.Variant.new_boolean(this.uiTierService.fullView))
+    })
+    this.add_action(fullViewAction)
   }
 
   vfunc_activate() {
     let { active_window } = this
 
-    if (!active_window) active_window = new ApplicationWindow(this)
+    if (!active_window) active_window = new ApplicationWindow(this, this.uiTierService)
 
     active_window.present()
   }

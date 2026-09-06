@@ -161,11 +161,19 @@ export class CastView extends LibraryPage {
     const expander = new Gtk.Expander({ label: _('All components'), marginTop: 8 })
     expander.set_child(this._advancedEditor)
     this._advanced_slot.append(expander)
+    this._advancedEditor.fullView = this.fullView
     this._advancedEditor.connect('entity-changed', (_e: EntityComponentsEditor, json: string) => {
       if (!this._silentAdvanced) this.emit('character-entity-changed', json)
     })
+    this._advancedEditor.connect('show-more-requested', () => {
+      this.activate_action('win.show-full-view', null)
+    })
     this._statValues = attachStatTiles(this._stat_grid)
     attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
+  }
+
+  protected override _onFullViewChanged(fullView: boolean): void {
+    this._advancedEditor.fullView = fullView
   }
 
   /**

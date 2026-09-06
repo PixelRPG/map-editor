@@ -5,6 +5,10 @@
     <value nick="force-light" value="1"/>
     <value nick="force-dark" value="2"/>
   </enum>
+  <enum id="org.pixelrpg.maker.UiTier">
+    <value nick="simple" value="0"/>
+    <value nick="full" value="1"/>
+  </enum>
   <schema id="org.pixelrpg.maker" path="/org/pixelrpg/maker/">
     <key name="theme" enum="org.pixelrpg.maker.Theme">
       <default>'default'</default>
@@ -12,6 +16,18 @@
       <description>
         Follow the system color scheme ("default") or force the light or
         dark style regardless of the OS setting.
+      </description>
+    </key>
+    <key name="ui-tier" enum="org.pixelrpg.maker.UiTier">
+      <default>'simple'</default>
+      <summary>View tier</summary>
+      <description>
+        "simple" shows what a game is made of — every template, the basic
+        fields of every component — and counts the rest into a "Show N
+        more settings" row; "full" shows every component, field, template
+        and technical detail. A fact about the person at the keyboard: it
+        follows them across projects and is never shared with
+        collaborators.
       </description>
     </key>
   </schema>

@@ -1,7 +1,8 @@
 import Adw from '@girs/adw-1'
-import Gio from '@girs/gio-2.0'
+import type Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
-import { APPLICATION_ID, PKGDATADIR } from '../constants.ts'
+import { APPLICATION_ID } from '../constants.ts'
+import { lookupAppSettings } from './app-settings.ts'
 import { coerceThemePreference, type ThemePreference } from './theme-preference.ts'
 
 /** Map a persisted preference onto libadwaita's color-scheme request. */
@@ -14,29 +15,6 @@ export function colorSchemeForTheme(theme: ThemePreference): Adw.ColorScheme {
     default:
       return Adw.ColorScheme.DEFAULT
   }
-}
-
-/**
- * Locate the app's GSettings schema without aborting when it isn't
- * installed system-wide: `Gio.Settings.new()` hard-aborts the process on
- * a missing schema, so resolve through `Gio.SettingsSchemaSource` first
- * and fall back to the compiled schema shipped next to the app data
- * (`PKGDATADIR/gschemas.compiled`, produced by `gjsify run build:schemas`)
- * for uninstalled development runs.
- */
-export function lookupThemeSettings(): Gio.Settings | null {
-  const defaultSource = Gio.SettingsSchemaSource.get_default()
-  let schema = defaultSource?.lookup(APPLICATION_ID, true) ?? null
-  if (!schema) {
-    try {
-      const devSource = Gio.SettingsSchemaSource.new_from_directory(PKGDATADIR, defaultSource, false)
-      schema = devSource.lookup(APPLICATION_ID, false)
-    } catch (error) {
-      console.warn(`[ThemeService] No compiled schemas in ${PKGDATADIR}: ${error}`)
-    }
-  }
-  if (!schema) return null
-  return Gio.Settings.new_full(schema, null, null)
 }
 
 /**
@@ -79,7 +57,7 @@ export class ThemeService extends GObject.Object {
    * Call once from Application startup (libadwaita must be initialized
    * before the style manager is touched).
    */
-  init(settings: Gio.Settings | null = lookupThemeSettings()): void {
+  init(settings: Gio.Settings | null = lookupAppSettings()): void {
     this.settings = settings
     if (settings) {
       settings.connect('changed::theme', () => {

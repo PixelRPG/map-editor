@@ -184,27 +184,13 @@ menu primary_menu {
       action: "win.close-project";
     }
   }
+  // The tier switch, one click from every view. It took the slot of a
+  // Style submenu that duplicated Preferences › Color Scheme; `app.theme`
+  // stays for drivers, Preferences keeps the row.
   section {
-    submenu {
-      label: _("Style");
-
-      item {
-        label: _("Auto");
-        action: "app.theme";
-        target: "default";
-      }
-
-      item {
-        label: _("Light");
-        action: "app.theme";
-        target: "force-light";
-      }
-
-      item {
-        label: _("Dark");
-        action: "app.theme";
-        target: "force-dark";
-      }
+    item {
+      label: _("Full view");
+      action: "app.full-view";
     }
   }
 

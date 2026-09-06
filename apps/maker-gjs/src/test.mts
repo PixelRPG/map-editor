@@ -30,6 +30,7 @@ import sessionServiceSuite from './services/session-service.spec.js'
 import sessionSnapshotSuite from './services/session-snapshot.spec.js'
 import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 import themePreferenceSuite from './services/theme-preference.spec.js'
+import uiTierSuite from './services/ui-tier.spec.js'
 import thingCategoriesSuite from './services/thing-categories.spec.js'
 import zoomMathSuite from './services/zoom-math.spec.js'
 
@@ -42,6 +43,7 @@ import collabOpStamperSuite from './services/collab-op-stamper.spec.js'
 import collabPeerColourSuite from './services/collab-peer-colour.spec.js'
 import collabPeerConnectSuite from './services/collab-peer-connect.spec.js'
 import collabSinkBufferSuite from './services/collab-sink-buffer.spec.js'
+import entityTemplatesSuite from './services/entity-templates.spec.js'
 import entityVisualsSuite from './services/entity-visuals.spec.js'
 import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
 import layerDraftSuite from './services/layer-draft.spec.js'
@@ -73,6 +75,7 @@ run({
   collabSessionSuite,
   collabSinkBufferSuite,
   engineStateSyncSuite,
+  entityTemplatesSuite,
   entityVisualsSuite,
   gameRulesModelSuite,
   gvariantSuite,
@@ -109,6 +112,7 @@ run({
   themePreferenceSuite,
   thingCategoriesSuite,
   tilesViewModelSuite,
+  uiTierSuite,
   viewModeMapSuite,
   windowActionsSuite,
   zoomMathSuite,

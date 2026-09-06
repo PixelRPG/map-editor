@@ -117,12 +117,15 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
 
           child: $CastView cast_view {
             inspector-collapsed: bind template.inspector-collapsed;
+            full-view: bind template.full-view;
           };
         }
 
         Gtk.StackPage {
           name: "things";
-          child: $ObjectsView objects_view {};
+          child: $ObjectsView objects_view {
+            full-view: bind template.full-view;
+          };
         }
 
         Gtk.StackPage {
