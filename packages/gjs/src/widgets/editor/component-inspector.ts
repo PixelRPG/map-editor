@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { ComponentData, ComponentSpec, FieldDescriptor } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
+import { overlayRenderedFields } from './component-inspector.model.ts'
 
 /** Project-scoped options injected by the host for the `*-ref` field pickers. */
 export interface ComponentRefOptions {
@@ -42,6 +43,12 @@ export class ComponentInspector extends Adw.PreferencesGroup {
   private _refOptions: ComponentRefOptions = {}
   private _rows: FieldRow[] = []
   private _trackedRows: Adw.PreferencesRow[] = []
+  /**
+   * The last payload the host set (or this widget emitted). Every edit
+   * overlays the rendered rows onto it, so a field no row renders is
+   * never dropped — see `overlayRenderedFields`.
+   */
+  private _data: ComponentData | null = null
   /** Suppresses `data-changed` while the host populates rows. */
   private _silent = false
   private _removeButton: Gtk.Button | null = null
@@ -95,6 +102,13 @@ export class ComponentInspector extends Adw.PreferencesGroup {
 
   /** Populate the rows from component data without echoing `data-changed`. */
   setData(data: ComponentData): void {
+    this._data = { ...data }
+    this._applyData()
+  }
+
+  private _applyData(): void {
+    const data = this._data
+    if (!data) return
     this._silent = true
     try {
       for (const row of this._rows) row.set(data[row.field.key])
@@ -110,6 +124,9 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     for (const field of this._spec.fields) {
       this._rows.push(this._buildRow(field))
     }
+    // A rebuild after `setData` (new ref options, a filter change) must
+    // show the data, not the descriptors' defaults.
+    this._applyData()
   }
 
   private _clearRows(): void {
@@ -224,14 +241,16 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     }
   }
 
-  /** Re-assemble the component data from the rows + emit it. */
+  /**
+   * Overlay the rendered rows onto the last payload + emit the result.
+   * Starting from the payload rather than from the rows is what keeps a
+   * field that is not on screen from being silently dropped.
+   */
   private _emitChange(): void {
     if (!this._spec) return
-    const data: ComponentData = { type: this._spec.type }
-    for (const row of this._rows) {
-      const value = row.get()
-      if (value !== undefined) data[row.field.key] = value
-    }
+    const rendered = this._rows.map((row) => ({ key: row.field.key, value: row.get() }))
+    const data = overlayRenderedFields(this._spec.type, this._data, rendered)
+    this._data = data
     this.emit('data-changed', JSON.stringify(data))
   }
 }
