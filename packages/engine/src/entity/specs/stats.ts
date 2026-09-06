@@ -65,8 +65,10 @@ export const statsSpec: ComponentSpec = {
   fields: [
     { key: 'maxHp', label: 'Max HP', input: 'int', required: true, basic: true, default: 3, min: 1, max: 99 },
     { key: 'hp', label: 'HP', input: 'int', basic: true, default: 3, min: 0, max: 99 },
-    { key: 'attack', label: 'Attack', input: 'int', default: 1, min: 0 },
-    { key: 'defense', label: 'Defense', input: 'int', default: 0, min: 0 },
+    // The four numbers a child knows from any RPG are Simple view; the
+    // progression internals below stay Full view.
+    { key: 'attack', label: 'Attack', input: 'int', basic: true, default: 1, min: 0 },
+    { key: 'defense', label: 'Defense', input: 'int', basic: true, default: 0, min: 0 },
     { key: 'level', label: 'Level', input: 'int', default: 1, min: 1 },
     { key: 'exp', label: 'Experience', input: 'int', default: 0, min: 0 },
     { key: 'expToNext', label: 'Experience to next level', input: 'int', default: DEFAULT_EXP_TO_NEXT, min: 1 },

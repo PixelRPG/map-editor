@@ -15,6 +15,7 @@ import GObject from '@girs/gobject-2.0'
  */
 export class LibraryPage extends Adw.Bin {
   private _inspectorCollapsed = false
+  private _fullView = false
 
   static {
     GObject.registerClass(
@@ -25,6 +26,13 @@ export class LibraryPage extends Adw.Bin {
             'inspector-collapsed',
             'Inspector Collapsed',
             "Whether the page's own split should collapse to a drill-down (responsive breakpoint)",
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the view renders everything (Full view) or the Simple-view subset — pushed from the app tier',
             GObject.ParamFlags.READWRITE,
             false,
           ),
@@ -40,6 +48,24 @@ export class LibraryPage extends Adw.Bin {
    * desktop sidebar and the phone bottom sheet.
    */
   protected _onInspectorCollapsedChanged(_collapsed: boolean): void {}
+
+  /**
+   * Hook fired after `full-view` changes — default no-op. A view whose
+   * widgets have no template binding to reach (a components editor built
+   * in code) pushes the tier into them here.
+   */
+  protected _onFullViewChanged(_fullView: boolean): void {}
+
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+    this._onFullViewChanged(value)
+  }
 
   get inspectorCollapsed(): boolean {
     return this._inspectorCollapsed

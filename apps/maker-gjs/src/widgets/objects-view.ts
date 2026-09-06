@@ -5,7 +5,7 @@ import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import { isCharacterEntity } from '@pixelrpg/engine'
 import { type ComponentRefOptions, EntityComponentsEditor, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
-import { ENTITY_TEMPLATES, type EntityTemplate } from '../services/entity-templates.ts'
+import { ENTITY_TEMPLATES, type EntityTemplate, templatesForView } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
 import { groupThingsByCategory } from '../services/thing-categories.ts'
 import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
@@ -44,6 +44,7 @@ export class ObjectsView extends Adw.Bin {
   private _editor: EntityComponentsEditor
   private _refOptions: ComponentRefOptions = {}
   private _templates: readonly EntityTemplate[] = ENTITY_TEMPLATES
+  private _fullView = false
   private _silentName = false
   private _silentCast = false
   private signals = new SignalScope()
@@ -63,6 +64,15 @@ export class ObjectsView extends Adw.Bin {
           'delete_button',
           'detail_slot',
         ],
+        Properties: {
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the detail editor and the template chooser show everything — pushed from the Library host',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
         Signals: {
           // Whole EntityDefinition JSON after an inspector edit.
           'object-changed': { param_types: [GObject.TYPE_STRING] },
@@ -97,6 +107,7 @@ export class ObjectsView extends Adw.Bin {
     })
     nameGroup.add(this._castRow)
     this._editor = new EntityComponentsEditor()
+    this._editor.fullView = this._fullView
     this._detail_slot.append(nameGroup)
     this._detail_slot.append(this._editor)
 
@@ -129,6 +140,23 @@ export class ObjectsView extends Adw.Bin {
     this.signals.connect(this._editor, 'entity-changed', (_e: EntityComponentsEditor, json: string) => {
       this.emit('object-changed', json)
     })
+    // "Show N more settings" flips the app-wide tier (and the window
+    // raises the toast with the way back).
+    this.signals.connect(this._editor, 'show-more-requested', () => {
+      this.activate_action('win.show-full-view', null)
+    })
+  }
+
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+    this._editor.fullView = value
+    this._rebuildTemplateTiles()
   }
 
   vfunc_unmap(): void {
@@ -214,7 +242,9 @@ export class ObjectsView extends Adw.Bin {
    * Public: the "+" button lives in the Library host's header.
    */
   presentTemplateChooser(): void {
-    presentTemplateChooser(this, this._templates, (templateId) => this.emit('object-create-requested', templateId))
+    presentTemplateChooser(this, templatesForView(this._templates, this._fullView), (templateId) =>
+      this.emit('object-create-requested', templateId),
+    )
   }
 
   private _rebuildTemplateTiles(): void {
@@ -224,7 +254,7 @@ export class ObjectsView extends Adw.Bin {
       this._empty_templates.remove(child)
       child = next
     }
-    buildTemplateTiles(this._empty_templates, this._templates, (templateId) =>
+    buildTemplateTiles(this._empty_templates, templatesForView(this._templates, this._fullView), (templateId) =>
       this.emit('object-create-requested', templateId),
     )
   }

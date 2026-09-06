@@ -13,7 +13,7 @@ interface ItemData extends ComponentData {
 export const itemSpec: ComponentSpec = {
   type: 'item',
   system: 'inventory',
-  editor: { label: 'Item pickup', icon: 'package-x-generic-symbolic', markerColor: '#ffcc33' },
+  editor: { label: 'Item pickup', icon: 'package-x-generic-symbolic', markerColor: '#ffcc33', basic: true },
   fields: [
     { key: 'itemId', label: 'Item id', input: 'text', required: true, basic: true },
     { key: 'qty', label: 'Quantity', input: 'int', basic: true, default: 1, min: 1 },

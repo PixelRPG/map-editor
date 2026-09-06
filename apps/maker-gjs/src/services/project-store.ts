@@ -11,6 +11,7 @@ import {
   applySpriteSetUpdate,
   type ComponentSpecRegistry,
   effectiveComponentRegistry,
+  projectHasSimpleViewHiddenContent,
   type EntityDefinition,
   GAME_SYSTEMS_SET_KIND,
   type GameProjectData,
@@ -295,6 +296,19 @@ export class ProjectStore {
    */
   componentRegistry(): ComponentSpecRegistry {
     return effectiveComponentRegistry(this.data)
+  }
+
+  /**
+   * Whether the project holds content Simple view cannot show — a
+   * Full-view-only component or a `states[]` overlay — in the library, in
+   * an inline placement or in a placement override of any loaded map.
+   * The Library's honesty banner is derived from this; it carries no
+   * state of its own.
+   */
+  hasSimpleViewHiddenContent(): boolean {
+    const maps = this.resource?.maps
+    const mapDatas = maps ? [...maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : [])) : []
+    return projectHasSimpleViewHiddenContent(this.data, mapDatas, this.componentRegistry())
   }
 
   /**

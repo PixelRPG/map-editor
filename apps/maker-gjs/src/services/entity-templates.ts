@@ -131,6 +131,7 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     icon: 'view-grid-symbolic',
     description: 'An empty entity — add components yourself.',
     components: [],
+    fullViewOnly: true,
   },
 ]
 
@@ -145,6 +146,16 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
 export function entityTemplatesFor(project?: Pick<GameProjectData, 'gameSystems'> | null): EntityTemplate[] {
   const fromSystems = effectiveGameSystems(project).flatMap((system) => [...(system.templates ?? [])])
   return [...ENTITY_TEMPLATES, ...fromSystems]
+}
+
+/**
+ * The templates one view tier offers: Full view every one, Simple view
+ * all but the `fullViewOnly` ones. `entity-templates.spec.ts` pins that
+ * every Simple-view template seeds only Simple-view components with
+ * nothing hidden, so a child never meets the count row on a fresh object.
+ */
+export function templatesForView(templates: readonly EntityTemplate[], fullView: boolean): EntityTemplate[] {
+  return fullView ? [...templates] : templates.filter((template) => template.fullViewOnly !== true)
 }
 
 /** Look a template up by id, across the built-ins and `project`'s systems. */

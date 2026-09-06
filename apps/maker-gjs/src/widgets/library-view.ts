@@ -34,6 +34,7 @@ GObject.type_ensure(TilesView.$gtype)
  */
 export class LibraryView extends ResponsiveEditorView {
   declare _chips: Adw.ToggleGroup
+  declare _hidden_banner: Adw.Banner
   declare _new_thing_button: Gtk.Button
   declare _cast_view: CastView
   declare _objects_view: ObjectsView
@@ -41,6 +42,7 @@ export class LibraryView extends ResponsiveEditorView {
 
   private _chip: LibraryChip = DEFAULT_LIBRARY_CHIP
   private _projectName = ''
+  private _hiddenContent = false
   private signals = new SignalScope()
 
   static {
@@ -48,7 +50,15 @@ export class LibraryView extends ResponsiveEditorView {
       {
         GTypeName: 'PixelRpgLibraryView',
         Template,
-        InternalChildren: ['mode_rail', 'chips', 'new_thing_button', 'cast_view', 'objects_view', 'tiles_view'],
+        InternalChildren: [
+          'mode_rail',
+          'chips',
+          'hidden_banner',
+          'new_thing_button',
+          'cast_view',
+          'objects_view',
+          'tiles_view',
+        ],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -83,6 +93,30 @@ export class LibraryView extends ResponsiveEditorView {
   vfunc_unmap(): void {
     this.signals.disconnectAll()
     super.vfunc_unmap()
+  }
+
+  /**
+   * Whether the open project holds content Simple view cannot show; the
+   * window pushes it from `ProjectStore.hasSimpleViewHiddenContent()` on
+   * every project + library change. The banner shows iff this AND the
+   * view is Simple — there is nothing to reveal in Full view.
+   */
+  setHiddenContent(present: boolean): void {
+    this._hiddenContent = present
+    this._refreshBanner()
+  }
+
+  protected override _onFullViewChanged(): void {
+    this._refreshBanner()
+  }
+
+  private _refreshBanner(): void {
+    this._hidden_banner.set_revealed(this._hiddenContent && !this.fullView)
+  }
+
+  /** The banner's one button: the same reveal gesture as the count row. */
+  _onBannerClicked(): void {
+    this.activate_action('win.show-full-view', null)
   }
 
   get chip(): LibraryChip {

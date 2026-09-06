@@ -62,6 +62,7 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
           Adw.EntryRow version_row {
             show-apply-button: true;
             title: _("Version");
+            visible: bind template.full-view;
           }
 
           Adw.EntryRow description_row {
@@ -70,8 +71,11 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
           }
         }
 
+        // Full view only: the tile grid and the file path are the
+        // expert's numbers; a child's Game page is a name and an author.
         Adw.PreferencesGroup {
           title: _("Tile settings");
+          visible: bind template.full-view;
 
           Adw.SpinRow tilesize_row {
             title: _("Default tile size");

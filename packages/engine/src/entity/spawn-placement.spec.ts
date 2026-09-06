@@ -2,9 +2,11 @@ import { describe, expect, it } from '@gjsify/unit'
 import { type Actor, GraphicsGroup } from 'excalibur'
 import {
   CollisionComponent,
+  CustomDataComponent,
   EntityStatesComponent,
   EventActionsComponent,
   PlacementIdComponent,
+  ScriptRefComponent,
   SpriteRefComponent,
   TeleportComponent,
   TileTransformComponent,
@@ -164,6 +166,37 @@ export default async () => {
         layersById,
       ) as Actor
       expect(entity.has(EntityStatesComponent)).toBe(false)
+    })
+  })
+
+  await describe('Simple view never hides a rendered effect', async () => {
+    // Hiding is inspector-only: the spawn pipeline takes no view tier, so
+    // a component Simple view does not render still becomes a runtime
+    // component. `script` and `custom-data` are the two Full-view-only
+    // types a project can carry today.
+    const domAvailable = typeof document !== 'undefined'
+
+    await it('spawns the components Simple view hides', async () => {
+      if (!domAvailable) return
+      const def: EntityDefinition = {
+        id: 'guard',
+        name: 'Guard',
+        components: [
+          { type: 'trigger', on: 'action-button', once: true },
+          { type: 'script', scriptId: 'guard-logic' },
+          { type: 'custom-data', data: { mood: 'grumpy' } },
+        ],
+      }
+      const entity = buildPlacementEntity(
+        { id: 'guard-1', layerId: 'l1', tileX: 2, tileY: 2, inline: def },
+        def,
+        fakeMapResource,
+        layersById,
+      ) as Actor
+      expect(entity.has(ScriptRefComponent)).toBe(true)
+      expect(entity.has(CustomDataComponent)).toBe(true)
+      // The hidden `once` field reaches the runtime too.
+      expect(entity.get(TriggerComponent)?.once).toBe(true)
     })
   })
 }

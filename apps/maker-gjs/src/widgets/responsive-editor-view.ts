@@ -25,6 +25,7 @@ export class ResponsiveEditorView extends Adw.Bin {
   private _showInspector = false
   private _libraryCollapsed = false
   private _inspectorCollapsed = false
+  private _fullView = false
 
   static {
     GObject.registerClass(
@@ -59,6 +60,13 @@ export class ResponsiveEditorView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the view renders everything (Full view) or the Simple-view subset — pushed from the app tier',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
         },
         Signals: {
           'mode-changed': { param_types: [GObject.TYPE_STRING] },
@@ -80,6 +88,24 @@ export class ResponsiveEditorView extends Adw.Bin {
    * inspector between the desktop sidebar and the phone bottom sheet).
    */
   protected _onInspectorCollapsedChanged(_collapsed: boolean): void {}
+
+  /**
+   * Hook fired after `full-view` changes — default no-op. A view whose
+   * widgets have no template binding to reach (a components editor built
+   * in code) pushes the tier into them here.
+   */
+  protected _onFullViewChanged(_fullView: boolean): void {}
+
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+    this._onFullViewChanged(value)
+  }
 
   get showLibrary(): boolean {
     return this._showLibrary

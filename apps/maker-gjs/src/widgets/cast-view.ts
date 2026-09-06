@@ -1,7 +1,7 @@
 import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
+import type Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition, ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import {
   ActionDirectionMatrix,
@@ -15,7 +15,6 @@ import {
   type SpriteSetChoice,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 
 import {
   countSheetUsers,
@@ -158,14 +157,29 @@ export class CastView extends LibraryPage {
 
   constructor() {
     super()
-    const expander = new Gtk.Expander({ label: _('All components'), marginTop: 8 })
-    expander.set_child(this._advancedEditor)
-    this._advanced_slot.append(expander)
+    // The generated components editor, inline — the same widget the
+    // Things page uses, filtered by the view tier. It used to sit behind
+    // an unremembered "All components" expander, which was a wall the
+    // child re-found every session; now Simple view shows the basic
+    // groups and counts the rest into "Show N more settings". Appearance
+    // and speed are edited by the friendly inspector above, so their
+    // components are left out here rather than shown twice.
+    this._advancedEditor.setExcludedTypes(['visual', 'movement'])
+    this._advancedEditor.set_margin_top(8)
+    this._advanced_slot.append(this._advancedEditor)
+    this._advancedEditor.fullView = this.fullView
     this._advancedEditor.connect('entity-changed', (_e: EntityComponentsEditor, json: string) => {
       if (!this._silentAdvanced) this.emit('character-entity-changed', json)
     })
+    this._advancedEditor.connect('show-more-requested', () => {
+      this.activate_action('win.show-full-view', null)
+    })
     this._statValues = attachStatTiles(this._stat_grid)
     attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
+  }
+
+  protected override _onFullViewChanged(fullView: boolean): void {
+    this._advancedEditor.fullView = fullView
   }
 
   /**

@@ -27,5 +27,15 @@ template $PreferencesDialog: Adw.PreferencesDialog {
         notify::selected => $_onThemeSelected();
       }
     }
+
+    Adw.PreferencesGroup {
+      title: _("Editor");
+      description: _("Simple view shows what a game is made of; Full view shows everything");
+
+      Adw.SwitchRow full_view_row {
+        title: _("Full view");
+        subtitle: _("Show every component, setting and template");
+      }
+    }
   }
 }

@@ -11,7 +11,7 @@ interface DialogueData extends ComponentData {
 export const dialogueSpec: ComponentSpec = {
   type: 'dialogue',
   system: 'core',
-  editor: { label: 'Dialogue', icon: 'chat-symbolic', markerColor: '#66cc66' },
+  editor: { label: 'Dialogue', icon: 'chat-symbolic', markerColor: '#66cc66', basic: true },
   fields: [{ key: 'dialogueId', label: 'Dialogue id', input: 'text', required: true, basic: true }],
   build: (data) => {
     const d = data as DialogueData

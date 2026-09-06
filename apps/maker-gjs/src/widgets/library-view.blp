@@ -103,34 +103,56 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
         }
       }
 
-      // Non-homogeneous for the same reason as the window's ViewStack:
-      // the stack must track only the visible page's measurement, or the
-      // widest page's minimum keeps the phone breakpoint from firing.
-      content: Gtk.Stack pages {
-        visible-child-name: bind chips.active-name;
-        hhomogeneous: false;
-        vhomogeneous: false;
-        transition-type: crossfade;
+      content: Gtk.Box {
+        orientation: vertical;
 
-        Gtk.StackPage {
-          name: "characters";
-
-          child: $CastView cast_view {
-            inspector-collapsed: bind template.inspector-collapsed;
-          };
+        // The honesty signal, once per project: revealed in Simple view
+        // while the project holds content Simple view cannot show (a
+        // script, custom data, a states[] overlay). A banner, not a
+        // toast — toasts vanish, and this is the one message a child
+        // must be able to reread. Derived from content, so it is absent
+        // in the common case.
+        Adw.Banner hidden_banner {
+          title: _("This project uses scripts or other settings that Simple view hides");
+          button-label: _("Full view");
+          revealed: false;
+          button-clicked => $_onBannerClicked();
         }
 
-        Gtk.StackPage {
-          name: "things";
-          child: $ObjectsView objects_view {};
-        }
+        // Non-homogeneous for the same reason as the window's ViewStack:
+        // the stack must track only the visible page's measurement, or the
+        // widest page's minimum keeps the phone breakpoint from firing.
+        Gtk.Stack pages {
+          visible-child-name: bind chips.active-name;
+          hhomogeneous: false;
+          vhomogeneous: false;
+          transition-type: crossfade;
+          vexpand: true;
 
-        Gtk.StackPage {
-          name: "graphics";
+          Gtk.StackPage {
+            name: "characters";
 
-          child: $TilesView tiles_view {
-            inspector-collapsed: bind template.inspector-collapsed;
-          };
+            child: $CastView cast_view {
+              inspector-collapsed: bind template.inspector-collapsed;
+              full-view: bind template.full-view;
+            };
+          }
+
+          Gtk.StackPage {
+            name: "things";
+
+            child: $ObjectsView objects_view {
+              full-view: bind template.full-view;
+            };
+          }
+
+          Gtk.StackPage {
+            name: "graphics";
+
+            child: $TilesView tiles_view {
+              inspector-collapsed: bind template.inspector-collapsed;
+            };
+          }
         }
       };
     };

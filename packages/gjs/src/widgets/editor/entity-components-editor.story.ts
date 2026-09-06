@@ -34,6 +34,21 @@ const SAMPLE_ENTITIES: Record<string, EntityDefinition> = {
     ],
     editorData: { template: 'item' },
   },
+  // Hidden content for the Simple-view row: a script (1) + custom data
+  // (1) + `trigger.once` (1) → "Show 3 more settings".
+  door: {
+    id: 'locked-door',
+    name: 'Locked Door',
+    components: [
+      { type: 'visual', spriteSetId: 'overworld', spriteId: 9 },
+      { type: 'collision' },
+      { type: 'trigger', on: 'action-button', once: true },
+      { type: 'actions', actions: [{ id: 'a-text', type: 'show-text', text: 'Locked.' }] },
+      { type: 'script', scriptId: 'door-check' },
+      { type: 'custom-data', data: { key: 'brass' } },
+    ],
+    editorData: { template: 'door' },
+  },
 }
 
 /** Showcase for the generated all-components editor. */
@@ -47,7 +62,7 @@ export class EntityComponentsEditorStory extends StoryWidget {
   constructor() {
     super({
       story: 'Default',
-      args: { sample: 'npc' },
+      args: { sample: 'npc', fullView: true },
       meta: EntityComponentsEditorStory.getMetadata(),
     })
   }
@@ -56,7 +71,7 @@ export class EntityComponentsEditorStory extends StoryWidget {
     return {
       title: 'Editor/Entity Components Editor',
       description:
-        'Advanced "all components" editor: one generated ComponentInspector per component (rows derived from the field DSL) + an "Add component" menu. Emits the whole EntityDefinition as JSON on every edit.',
+        'The components editor: one generated ComponentInspector per component (rows derived from the field DSL) + an "Add component" menu. Simple view filters to the basic subset and counts the rest into a "Show N more settings" row. Emits the whole EntityDefinition as JSON on every edit.',
       component: EntityComponentsEditor.$gtype,
       controls: [
         {
@@ -67,7 +82,13 @@ export class EntityComponentsEditorStory extends StoryWidget {
             { value: 'npc', label: 'NPC (visual + movement + dialogue + trigger)' },
             { value: 'teleport', label: 'Teleport (trigger + teleport)' },
             { value: 'item', label: 'Item (visual + item + trigger)' },
+            { value: 'door', label: 'Locked door (script + custom data + once → 3 hidden)' },
           ],
+        },
+        {
+          name: 'fullView',
+          label: 'Full view',
+          type: ControlType.BOOLEAN,
         },
       ],
     }
@@ -96,6 +117,7 @@ export class EntityComponentsEditorStory extends StoryWidget {
   private _applySample(): void {
     if (!this._editor) return
     const key = typeof this.args.sample === 'string' ? this.args.sample : 'npc'
+    this._editor.fullView = this.args.fullView !== false
     this._editor.setEntity(SAMPLE_ENTITIES[key] ?? SAMPLE_ENTITIES.npc)
   }
 }

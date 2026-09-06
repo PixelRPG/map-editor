@@ -78,5 +78,6 @@ One vocabulary, chosen for the child (the interaction concept's §7); code keeps
 | **Graphics** (Library chip) | `TilesView` / `TilesController`: the sprite sets (`SpriteSetData`), tilesets and appearances alike; "sprite sheet" is the import dialog's word |
 | **Game** (rail row) | `GameView` / `GameController`: `GameProjectData`'s name, `properties` and `gameSystems` |
 | **Character** (badge, switch) | `isCharacterEntity(def)` — `editorData.template === 'character'` |
+| **Simple view** / **Full view** (menu check item, Preferences switch, "Show N more settings" row) | the GSettings key `ui-tier` (`simple` \| `full`), `UiTierService.full-view`, the stateful `app.full-view` action, and the `full-view` property every view carries; the filter is `entity/disclosure.ts` — see [`entity-and-appearance-model.md`](entity-and-appearance-model.md) § Simple view and Full view |
 | **Appearance** | a character-kind sprite set: `SpriteSetData.kind === 'character'` plus its `characterAnimations` |
 | **Sidebar** (toggle) | the rail drawer — `show-library` / `library-collapsed` on every view, `win.toggle-library` |

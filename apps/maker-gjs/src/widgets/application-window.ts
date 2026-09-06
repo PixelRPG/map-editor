@@ -42,6 +42,7 @@ import { ObjectsController } from '../services/objects-controller.ts'
 import { ProjectLifecycle } from '../services/project-lifecycle.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
 import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
+import type { UiTierService } from '../services/ui-tier.service.ts'
 import { loadRecentProjects } from '../services/recent-projects.ts'
 import { SceneNavigator } from '../services/scene-navigator.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
@@ -288,6 +289,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _tilesCtl: TilesController | null = null
   private _gameCtl: GameController | null = null
 
+  private _fullView = false
+
   static {
     GObject.registerClass(
       {
@@ -328,16 +331,30 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          // Mirror of the app tier (`UiTierService.full-view`), pushed
+          // into every view's own `full-view` so Blueprint leaves can
+          // write `visible: bind template.full-view;`.
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the editor shows everything (Full view) or the Simple-view subset',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
         },
       },
       ApplicationWindow,
     )
   }
 
-  constructor(application: Adw.Application) {
+  constructor(
+    application: Adw.Application,
+    private readonly _uiTier: UiTierService,
+  ) {
     super({ application })
     this._installActions()
     this._shareSidebarState()
+    this._shareFullView()
     wireEngineEvents(this._engineCtl, {
       showToast: (message) => this._showToast(message),
       setZoom: (zoom) => this._scene_editor_view.setZoom(zoom),
@@ -372,6 +389,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _wireStoreEvents(): void {
     this._projectStore.on('notice', (notice) => this._showToast(this._noticeText(notice)))
+    // The Library's honesty banner is derived from content, so recompute
+    // it whenever the content it reads can change: project swap, and any
+    // entity edit from either lens or a peer.
+    const refreshHiddenContent = () =>
+      this._library_view.setHiddenContent(this._projectStore.hasSimpleViewHiddenContent())
+    this._projectStore.on('project-changed', refreshHiddenContent)
+    this._projectStore.on('entity-library-changed', refreshHiddenContent)
     // Tile-property edits (Solid / Surface), local or inbound from a peer,
     // may change live collision; with a scene open, refresh the engine so
     // the change applies without a reload. The engine ref is per-scene +
@@ -521,6 +545,45 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * The app tier flows one way: service → this window → every view. The
+   * views never write it back; the three switches all go through the
+   * service (`app.full-view`, Preferences, `win.show-full-view`).
+   */
+  private _shareFullView(): void {
+    const flags = GObject.BindingFlags.SYNC_CREATE
+    this._uiTier.bind_property('full-view', this, 'full-view', flags)
+    for (const view of [this._atlas_view, this._scene_editor_view, this._library_view, this._game_view]) {
+      this.bind_property('full-view', view, 'full-view', flags)
+    }
+  }
+
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+  }
+
+  /**
+   * Flip to Full view from where a wall was hit, and put the way back on
+   * screen: a toast whose Undo returns to Simple view. The switch is
+   * global on purpose — a per-panel reveal is thirty remembered states
+   * nobody can explain, and an unremembered one is a wall the child
+   * re-finds every session.
+   */
+  private _revealFullView(): void {
+    this._uiTier.fullView = true
+    const toast = new Adw.Toast({ title: _('Full view on'), buttonLabel: _('Undo') })
+    toast.connect('button-clicked', () => {
+      this._uiTier.fullView = false
+    })
+    this._toast_overlay.add_toast(toast)
+  }
+
+  /**
    * Build the `win` action group. Each group gets a context listing only
    * what it needs; the returned handles are the stateful actions the
    * window keeps driving afterwards.
@@ -539,6 +602,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       },
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
+      showFullView: () => this._revealFullView(),
     })
 
     installProjectActions(group, {

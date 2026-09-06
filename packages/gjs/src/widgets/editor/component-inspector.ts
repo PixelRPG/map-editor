@@ -1,8 +1,9 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { ComponentData, ComponentSpec, FieldDescriptor } from '@pixelrpg/engine'
+import { type ComponentData, type ComponentSpec, type FieldDescriptor, simpleViewFields } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
+import { overlayRenderedFields } from './component-inspector.model.ts'
 
 /** Project-scoped options injected by the host for the `*-ref` field pickers. */
 export interface ComponentRefOptions {
@@ -40,8 +41,15 @@ interface FieldRow {
 export class ComponentInspector extends Adw.PreferencesGroup {
   private _spec: ComponentSpec | null = null
   private _refOptions: ComponentRefOptions = {}
+  private _fullView = true
   private _rows: FieldRow[] = []
   private _trackedRows: Adw.PreferencesRow[] = []
+  /**
+   * The last payload the host set (or this widget emitted). Every edit
+   * overlays the rendered rows onto it, so a field no row renders is
+   * never dropped — see `overlayRenderedFields`.
+   */
+  private _data: ComponentData | null = null
   /** Suppresses `data-changed` while the host populates rows. */
   private _silent = false
   private _removeButton: Gtk.Button | null = null
@@ -50,6 +58,15 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgComponentInspector',
+        Properties: {
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Render every field (true) or only the basic ones (false)',
+            GObject.ParamFlags.READWRITE,
+            true,
+          ),
+        },
         Signals: {
           // The whole component data, JSON-stringified, on any edit.
           'data-changed': { param_types: [GObject.TYPE_STRING] },
@@ -60,6 +77,22 @@ export class ComponentInspector extends Adw.PreferencesGroup {
       },
       ComponentInspector,
     )
+  }
+
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  /**
+   * Which tier renders: Full view shows every field, Simple view only the
+   * `basic` ones and never a raw `json` row. Render-only — `setData`'s
+   * payload is kept whole either way.
+   */
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+    if (this._spec) this._rebuild()
   }
 
   /** Show / hide the header remove (✕) button. */
@@ -95,6 +128,13 @@ export class ComponentInspector extends Adw.PreferencesGroup {
 
   /** Populate the rows from component data without echoing `data-changed`. */
   setData(data: ComponentData): void {
+    this._data = { ...data }
+    this._applyData()
+  }
+
+  private _applyData(): void {
+    const data = this._data
+    if (!data) return
     this._silent = true
     try {
       for (const row of this._rows) row.set(data[row.field.key])
@@ -107,9 +147,18 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     this._clearRows()
     this._rows = []
     if (!this._spec) return
-    for (const field of this._spec.fields) {
+    for (const field of this._renderedFields(this._spec)) {
       this._rows.push(this._buildRow(field))
     }
+    // A rebuild after `setData` (new ref options, a filter change) must
+    // show the data, not the descriptors' defaults.
+    this._applyData()
+  }
+
+  /** The descriptors this tier renders (see the engine's disclosure rules). */
+  private _renderedFields(spec: ComponentSpec): readonly FieldDescriptor[] {
+    if (this._fullView) return spec.fields
+    return simpleViewFields(spec).filter((field) => field.input !== 'json')
   }
 
   private _clearRows(): void {
@@ -224,14 +273,16 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     }
   }
 
-  /** Re-assemble the component data from the rows + emit it. */
+  /**
+   * Overlay the rendered rows onto the last payload + emit the result.
+   * Starting from the payload rather than from the rows is what keeps a
+   * field that is not on screen from being silently dropped.
+   */
   private _emitChange(): void {
     if (!this._spec) return
-    const data: ComponentData = { type: this._spec.type }
-    for (const row of this._rows) {
-      const value = row.get()
-      if (value !== undefined) data[row.field.key] = value
-    }
+    const rendered = this._rows.map((row) => ({ key: row.field.key, value: row.get() }))
+    const data = overlayRenderedFields(this._spec.type, this._data, rendered)
+    this._data = data
     this.emit('data-changed', JSON.stringify(data))
   }
 }

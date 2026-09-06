@@ -13,7 +13,7 @@ interface TriggerData extends ComponentData {
 export const triggerSpec: ComponentSpec = {
   type: 'trigger',
   system: 'core',
-  editor: { label: 'Trigger', icon: 'media-playback-start-symbolic', markerColor: '#66ffcc' },
+  editor: { label: 'Trigger', icon: 'media-playback-start-symbolic', markerColor: '#66ffcc', basic: true },
   fields: [
     {
       key: 'on',

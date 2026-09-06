@@ -59,7 +59,7 @@ export function addAction(group: ActionRegistry, action: Gio.Action): void {
  * groups, so the two can only agree by being right.
  */
 export const WINDOW_ACTION_NAMES_BY_MODULE = {
-  view: ['mode', 'library-chip', 'back-to-atlas', 'open-scene', 'open-scene-by-id'],
+  view: ['mode', 'library-chip', 'back-to-atlas', 'open-scene', 'open-scene-by-id', 'show-full-view'],
   project: ['open-project', 'close-project', 'open-recent-projects', 'new-scene'],
   zoom: ['zoom-in', 'zoom-out', 'zoom-reset', 'atlas-fit'],
   editing: ['set-tool', 'set-object-brush', 'select-placement', 'undo', 'redo', 'new-layer'],

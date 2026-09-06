@@ -15,6 +15,11 @@ export interface ViewActionsContext {
   /** The atlas card the user last selected — what `win.open-scene` opens. */
   selectedSceneId(): string | null
   openScene(sceneId: string): void
+  /**
+   * Switch to Full view from where a wall was hit (the "Show N more
+   * settings" row, the Library banner) and offer the way back in a toast.
+   */
+  showFullView(): void
 }
 
 /**
@@ -73,6 +78,12 @@ export function installViewActions(
     if (id) ctx.openScene(id)
   })
   addAction(group, openSceneById)
+
+  // Stateless on purpose: the tier itself is `app.full-view`; this is the
+  // "reveal" gesture, which is always upward and always toasts.
+  const showFullView = new Gio.SimpleAction({ name: 'show-full-view' })
+  showFullView.connect('activate', () => ctx.showFullView())
+  addAction(group, showFullView)
 
   return { mode, libraryChip }
 }

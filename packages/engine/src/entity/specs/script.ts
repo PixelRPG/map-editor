@@ -18,7 +18,9 @@ export const scriptSpec: ComponentSpec = {
   system: 'core',
   editor: { label: 'Script', icon: 'text-x-script-symbolic' },
   fields: [
-    { key: 'scriptId', label: 'Script id', input: 'text', required: true, basic: true },
+    // Full view only, like the component: a basic field inside a
+    // non-basic component would be a row Simple view could never reach.
+    { key: 'scriptId', label: 'Script id', input: 'text', required: true },
     { key: 'params', label: 'Parameters (JSON)', input: 'json' },
   ],
   build: (data) => {
