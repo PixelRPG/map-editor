@@ -54,6 +54,7 @@ import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
 import { GameView } from './game-view.ts'
 import { LibraryView } from './library-view.ts'
+import { RecentProjectsDialog } from './recent-projects-dialog.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
@@ -543,6 +544,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     installProjectActions(group, {
       showToast,
       openProject: () => this._projects.openFromDialog(),
+      presentRecentProjects: () => this._presentRecentProjects(),
       closeProject: () => void this._projects.close(),
     })
 
@@ -629,6 +631,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.insert_action_group('win', group)
     this._winActions = group
     this._actions = { mode, libraryChip, tool, play, objects, grid, transparency, share, undo, redo }
+  }
+
+  /** `win.open-recent-projects` — the primary menu's "Open Recent". */
+  private _presentRecentProjects(): void {
+    const dialog = new RecentProjectsDialog()
+    dialog.setRecentProjects(loadRecentProjects())
+    dialog.connect('recent-selected', (_d: RecentProjectsDialog, path: string) => {
+      dialog.close()
+      void this._projects.load(path)
+    })
+    dialog.present(this)
   }
 
   /** Re-hydrate the lenses behind `view` before the router shows it. */

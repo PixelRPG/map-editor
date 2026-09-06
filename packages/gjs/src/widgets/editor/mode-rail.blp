@@ -144,6 +144,9 @@ template $PixelRpgModeRail : Adw.Bin {
       vexpand: true;
     }
 
+    // Settings only. A second button used to sit above it, bound to
+    // the same action as the primary menu's "Open Recent" — one entry
+    // point per affordance is enough.
     Gtk.Box footer {
       orientation: vertical;
       margin-start: 12;
@@ -151,20 +154,6 @@ template $PixelRpgModeRail : Adw.Bin {
       margin-top: 12;
       margin-bottom: 16;
       spacing: 4;
-
-      Gtk.Button {
-        label: _("Recent projects…");
-        action-name: "win.open-recent-projects";
-        styles ["flat"]
-        halign: fill;
-
-        child: Gtk.Label {
-          label: _("Recent projects…");
-          halign: start;
-          margin-start: 6;
-          margin-end: 6;
-        };
-      }
 
       Gtk.Button {
         label: _("Settings");
