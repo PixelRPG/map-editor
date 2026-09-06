@@ -15,66 +15,160 @@ jobs:
     name: gjsify check + build
     runs-on: ubuntu-latest
 
+    # CI must not be the thing that decides which libadwaita this app may use —
+    # the runtime it ships on decides that. `apps/maker-gjs/package.json` pins
+    # the Flatpak runtime to GNOME 50, and the GNOME 50 SDK carries libadwaita
+    # 1.9.3 / GTK 4.22.4 / GJS 1.88.1 / GtkSourceView 5.20.0 (measured with
+    # `flatpak run --devel --command=pkg-config org.gnome.Sdk//50 --modversion …`).
+    # `ubuntu-latest` (= ubuntu-24.04) carries libadwaita 1.5.0 / GTK 4.14.5 /
+    # GJS 1.80.2 — four libadwaita minors behind the shipped runtime.
+    #
+    # That skew is a defect, not a constraint. It made CI reject code that runs
+    # correctly in the shipped app: PR #288 failed with "Namespace Adw does not
+    # contain a type called ToggleGroup" on a template that compiles on every
+    # developer machine and inside the Flatpak. The tree's own floor had been
+    # sitting at exactly 1.5 (Adw.AlertDialog / AboutDialog / Dialog), so Ubuntu
+    # was one widget away from blocking the redesign for good — which needs
+    # Adw.BottomSheet + Adw.MultiLayoutView (1.6), Adw.ToggleGroup (1.7) and
+    # Adw.ShortcutsDialog (1.8).
+    #
+    # `fedora:44` is the fix because it is not merely NEWER, it is the SAME
+    # toolkit: measured on the image, libadwaita 1.9.3, GTK 4.22.4, GJS 1.88.1,
+    # GtkSourceView 5.20.0 — identical to the GNOME 50 SDK on all four, and it
+    # packages blueprint-compiler 0.20.4, exactly the version this workflow used
+    # to build from source. So CI now compiles against what users run.
+    #
+    # Keeping it that way is one rule: when `gjsify.flatpak.runtimeVersion`
+    # moves, move this tag with it (GNOME 50 = Fedora 44, 49 = 43, 48 = 42).
+    # `ghcr.io/gjsify/ci-fedora:44` would skip the dnf step below, but it is
+    # another org's image on another org's release cadence, built for a much
+    # larger package set; a bare Fedora tag keeps this repo's CI self-contained.
+    container:
+      image: fedora:44
+
     steps:
+      - name: Install container prerequisites
+        # Before `actions/checkout`, and it has to be: the Fedora base image has
+        # no `git`, and checkout silently degrades to a REST tarball download
+        # when it cannot find one. `tar`/`xz` are what `actions/setup-node`
+        # unpacks its Node distribution with, `findutils` what several actions
+        # shell out to. `libatomic` is insurance for a future Node bump — Node
+        # >= 26's prebuilt binary links `libatomic.so.1`, which a minimal Fedora
+        # container does not carry, and the failure mode is a bare loader error.
+        #
+        # Note for anyone extending this job: there is no `node` on PATH until
+        # the `Setup Node.js` step below, so nothing above it may shell out to
+        # `node` — and `${{ runner.temp }}` inside a container expands to the
+        # HOST path, not a path that exists in here.
+        run: dnf install -y --setopt=install_weak_deps=False git tar xz findutils libatomic
+
       - uses: actions/checkout@v6
 
       - name: Install GNOME dev libs
         # `blueprint-compiler` needs the `.gir` introspection files for the
         # namespaces referenced in `using …;` lines of our `.blp` templates
-        # (Gtk 4.0, Adw 1, GtkSource 5). `libglib2.0-bin` ships
-        # `glib-compile-resources` for `gjsify gresource`. `meson`/`ninja`
-        # are for the blueprint-compiler-from-source build in the next step.
-        # The `gir1.2-gst*` typelibs satisfy `@gjsify/webrtc`'s
-        # `gi://Gst` / `gi://GstSdp` / `gi://GstWebRTC` imports, which the
-        # engine test bundle pulls in (collab/PeerSession) — without them
-        # the gjs test run aborts at module load with "Typelib for Gst not
-        # found". The tests themselves use fakes, so no gst runtime needed.
-        # `pkg-config` is declared explicitly rather than inherited from a
-        # `-dev` package: `gjsify system-check` treats it as a REQUIRED
-        # dependency and reads library versions through it.
+        # (Gtk 4.0, Adw 1, GtkSource 5) — and, unlike Ubuntu's 0.10, Fedora
+        # packages 0.20.4, which understands the `css-classes: [...]` array
+        # literal our templates use. That retires a from-source meson build.
+        # `glib2` ships `glib-compile-resources` for `gjsify gresource` and
+        # `glib-compile-schemas` for `gjsify gsettings`. The `gstreamer1-*-devel`
+        # packages carry the Gst / GstSdp / GstWebRTC typelibs that satisfy
+        # `@gjsify/webrtc`'s `gi://Gst` imports, which the engine test bundle
+        # pulls in (collab/PeerSession) — without them the gjs test run aborts
+        # at module load with "Typelib for Gst not found". The tests themselves
+        # use fakes, so no gst runtime is needed. `pkgconf-pkg-config` provides
+        # `pkg-config`, declared explicitly rather than inherited from a `-devel`
+        # package: `gjsify system-check` treats it as a REQUIRED dependency and
+        # reads library versions through it. `meson` is likewise required by
+        # `system-check` and stays for that reason alone now that nothing builds
+        # from source; `ninja-build` keeps its optional report at parity, so a
+        # real regression there is not buried under new warnings.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          dnf install -y --setopt=install_weak_deps=False \
             gjs \
-            pkg-config \
-            libglib2.0-bin \
-            libgirepository1.0-dev \
-            libgtk-4-dev \
-            libadwaita-1-dev \
-            libgtksourceview-5-dev \
-            gir1.2-gstreamer-1.0 \
-            gir1.2-gst-plugins-base-1.0 \
-            gir1.2-gst-plugins-bad-1.0 \
-            gir1.2-soup-3.0 \
+            pkgconf-pkg-config \
+            glib2 \
+            glib2-devel \
+            gobject-introspection-devel \
+            gtk4-devel \
+            libadwaita-devel \
+            gtksourceview5-devel \
+            gstreamer1-devel \
+            gstreamer1-plugins-base-devel \
+            gstreamer1-plugins-bad-free-devel \
+            libsoup3-devel \
+            blueprint-compiler \
             meson \
             ninja-build \
             python3
 
-      - name: Install blueprint-compiler from source
-        # Ubuntu 24.04 ships blueprint-compiler 0.10, which predates the
-        # `css-classes: [...]` array literal syntax used in our templates.
-        # Pin the latest upstream tag (v0.20.4). Bump this whenever we
-        # adopt newer blueprint syntax. GNOME GitLab has repeated 5xx
-        # outages, so try the official GitHub mirror first and fall back
-        # to gitlab.gnome.org, with retries on both.
+      - name: Verify the toolkit floor matches the shipped runtime
+        # The gate that makes the container choice above enforceable instead of
+        # merely intended. It runs BEFORE the install/build so a base-image
+        # regression fails in seconds naming the widget, rather than two minutes
+        # later inside whichever unrelated `.blp` happens to touch it first —
+        # which is precisely how #288 surfaced, as a mystery compile error in a
+        # feature branch.
+        #
+        # Deliberately NOT a version comparison: mapping GNOME runtime version →
+        # minimum libadwaita needs a table that nothing keeps honest. This asks
+        # `blueprint-compiler` the same question the build asks — it resolves
+        # every type against the installed `Adw-1` typelib — so the probe fails
+        # exactly when and how a real template would.
+        #
+        # Every widget below is one this codebase uses or the concept docs
+        # commit to. When the floor rises, add a row. Never delete a row to make
+        # this pass: the runtime sets the floor, not the runner.
         run: |
-          clone_bpc() {
-            for url in \
-              https://github.com/GNOME/blueprint-compiler.git \
-              https://gitlab.gnome.org/jwestman/blueprint-compiler.git; do
-              for attempt in 1 2 3; do
-                git clone --depth 1 --branch v0.20.4 "$url" /tmp/bpc && return 0
-                echo "clone failed ($url, attempt $attempt), retrying…"
-                rm -rf /tmp/bpc
-                sleep $((attempt * 10))
-              done
-            done
-            return 1
+          echo "Flatpak runtime declared by apps/maker-gjs: GNOME $(grep -o '"runtimeVersion": *"[0-9]*"' apps/maker-gjs/package.json | grep -o '[0-9]*')"
+          echo "libadwaita     $(pkg-config --modversion libadwaita-1)"
+          echo "GTK4           $(pkg-config --modversion gtk4)"
+          echo "GJS            $(gjs --version | awk '{print $NF}')"
+          echo "GtkSourceView  $(pkg-config --modversion gtksourceview-5)"
+          echo "blueprint      $(blueprint-compiler --version)"
+
+          probe="$(mktemp -d)"
+          cat > "$probe/floor.blp" <<'BLP'
+          using Gtk 4.0;
+          using Adw 1;
+
+          template $ToolkitFloorProbe: Adw.Bin {
+            Adw.MultiLayoutView {            // libadwaita 1.6
+              Adw.BottomSheet {              // libadwaita 1.6
+                sheet: Adw.ToggleGroup {     // libadwaita 1.7
+                  Adw.Toggle { label: "a"; } // libadwaita 1.7
+                  Adw.Toggle { label: "b"; }
+                };
+              }
+            }
           }
-          clone_bpc
-          meson setup --prefix=/usr/local /tmp/bpc /tmp/bpc/_build
-          sudo meson install -C /tmp/bpc/_build
-          blueprint-compiler --version
+
+          Adw.ShortcutsDialog probe_shortcuts {   // libadwaita 1.8
+            Adw.ShortcutsSection {
+              title: "General";
+              Adw.ShortcutsItem {
+                title: "Quit";
+                accelerator: "<Control>q";
+              }
+            }
+          }
+          BLP
+
+          if ! blueprint-compiler compile "$probe/floor.blp" > "$probe/floor.ui"; then
+            echo
+            echo "The installed libadwaita is older than the GNOME runtime this app ships on."
+            echo "The widget named above is the first one missing. Raise the container image"
+            echo "to match gjsify.flatpak.runtimeVersion — do not drop the widget."
+            exit 1
+          fi
+
+          for type in AdwMultiLayoutView AdwBottomSheet AdwToggleGroup AdwToggle AdwShortcutsDialog; do
+            grep -q "\"$type\"" "$probe/floor.ui" || {
+              echo "probe compiled but $type never reached the .ui — the probe is lying"
+              exit 1
+            }
+          done
+          echo "toolkit floor OK — every libadwaita 1.6 / 1.7 / 1.8 widget resolves"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
