@@ -50,6 +50,7 @@ export default async () => {
       expect(input()?.moveX).toBe(0)
       expect(input()?.moveY).toBe(0)
       expect(input()?.actionHeld).toBe(false)
+      expect(input()?.attackHeld).toBe(false)
     })
 
     await it('stays neutral outside runtime mode even with keys held', async () => {
@@ -68,6 +69,42 @@ export default async () => {
       expect(input()?.moveX).toBe(1)
       expect(input()?.moveY).toBe(0)
       expect(input()?.actionHeld).toBe(true)
+    })
+
+    await it('publishes the attack button on its own key, not the action one', async () => {
+      // The second button of the transport-rule-3 contract: combat reads
+      // `attackHeld` off this component, never the keyboard. Keeping it
+      // off Space/Enter is what stops the hero swinging at every sign.
+      const { scene, system, held, input } = makeInputScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+
+      held.add(Keys.Space)
+      system.update(16)
+      expect(input()?.actionHeld).toBe(true)
+      expect(input()?.attackHeld).toBe(false)
+
+      held.clear()
+      held.add(Keys.X)
+      system.update(16)
+      expect(input()?.actionHeld).toBe(false)
+      expect(input()?.attackHeld).toBe(true)
+
+      held.clear()
+      held.add(Keys.J)
+      system.update(16)
+      expect(input()?.attackHeld).toBe(true)
+    })
+
+    await it('releases the attack button when runtime mode ends mid-hold', async () => {
+      const { scene, system, held, input } = makeInputScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+      held.add(Keys.X)
+      system.update(16)
+      expect(input()?.attackHeld).toBe(true)
+
+      SessionState.unset(scene, RuntimeModeComponent)
+      system.update(16)
+      expect(input()?.attackHeld).toBe(false)
     })
 
     await it('normalises diagonals (no sqrt(2) speed boost)', async () => {

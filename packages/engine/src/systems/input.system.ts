@@ -1,7 +1,7 @@
 import { type Scene, System, SystemType, type World } from 'excalibur'
 import { InputSourceComponent } from '../components/input-source.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
-import { isActionPressed, type KeyboardLike, readMovementInput } from '../utils/player-input.ts'
+import { isActionPressed, isAttackPressed, type KeyboardLike, readMovementInput } from '../utils/player-input.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
@@ -42,6 +42,7 @@ export class InputSystem extends System {
       input.moveX = 0
       input.moveY = 0
       input.actionHeld = false
+      input.attackHeld = false
       return
     }
 
@@ -49,5 +50,6 @@ export class InputSystem extends System {
     input.moveX = dx
     input.moveY = dy
     input.actionHeld = isActionPressed(kb)
+    input.attackHeld = isAttackPressed(kb)
   }
 }

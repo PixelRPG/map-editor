@@ -266,16 +266,32 @@ export default async () => {
 
       store.setGameSystemEnabled('combat-action', true)
 
-      expect(data.gameSystems).toStrictEqual({ 'combat-action': { enabled: true } })
-      expect(io.writes).toHaveLength(1)
-      // Round-trips through the file: an id this build does not know must
-      // survive a save by an editor that does not have it.
-      expect(GameProjectFormat.deserialize(io.writes[0].contents).gameSystems).toStrictEqual({
+      // Enabling pulls in what the system declares it reads, so the record
+      // that lands on disk and on the wire is already closed over
+      // `requires` — a peer never has to re-derive it.
+      expect(data.gameSystems).toStrictEqual({
         'combat-action': { enabled: true },
+        stats: { enabled: true },
+        inventory: { enabled: true },
+      })
+      expect(io.writes).toHaveLength(1)
+      expect(GameProjectFormat.deserialize(io.writes[0].contents).gameSystems?.['combat-action']).toStrictEqual({
+        enabled: true,
       })
       expect(session.sent).toHaveLength(1)
       expect(session.sent[0].kind).toBe(GAME_SYSTEMS_SET_KIND)
       expect(notified).toBe(1)
+    })
+
+    await it('round-trips an id this build does not know', async () => {
+      // A project saved by a newer editor must open here, keep the system
+      // it names, and save it back — otherwise opening a file downgrades it.
+      const { store, io, data } = makeStore()
+      store.setGameSystemEnabled('combat-turn', true)
+      expect(data.gameSystems).toStrictEqual({ 'combat-turn': { enabled: true } })
+      expect(GameProjectFormat.deserialize(io.writes[0].contents).gameSystems).toStrictEqual({
+        'combat-turn': { enabled: true },
+      })
     })
 
     await it('switching off is dormant, never destructive', async () => {
@@ -285,18 +301,36 @@ export default async () => {
       store.setGameSystemEnabled('combat-action', true)
       store.setGameSystemEnabled('combat-action', false)
 
-      expect(data.gameSystems).toStrictEqual({ 'combat-action': { enabled: false } })
+      expect(data.gameSystems?.['combat-action']).toStrictEqual({ enabled: false })
+      // What it pulled in stays on: turning fighting off must not take the
+      // hit points with it, because other things may already read them.
+      expect(data.gameSystems?.stats).toStrictEqual({ enabled: true })
       expect(data.entityLibrary).toHaveLength(1)
     })
 
     await it('componentRegistry follows the enabled set', async () => {
       const { store } = makeStore()
-      // Only base systems ship in this build, so the effective registry is
-      // the full built-in set — and an unknown id never adds to it.
-      const base = Object.keys(store.componentRegistry()).sort()
-      store.setGameSystemEnabled('combat-action', true)
-      expect(Object.keys(store.componentRegistry()).sort()).toStrictEqual(base)
+      const base = Object.keys(store.componentRegistry())
+      // Base systems ship on: `item` is inventory's, `stats` is stats'.
       expect(base).toContain('item')
+      expect(base).toContain('stats')
+      // …and a switchable system's components are absent until it is on.
+      expect(base).not.toContain('weapon')
+
+      store.setGameSystemEnabled('combat-action', true)
+      const on = Object.keys(store.componentRegistry())
+      expect(on).toContain('weapon')
+      expect(on).toContain('hostile')
+
+      store.setGameSystemEnabled('combat-action', false)
+      expect(Object.keys(store.componentRegistry())).not.toContain('weapon')
+    })
+
+    await it('an unknown id never adds to the registry', async () => {
+      const { store } = makeStore()
+      const base = Object.keys(store.componentRegistry()).sort()
+      store.setGameSystemEnabled('combat-turn', true)
+      expect(Object.keys(store.componentRegistry()).sort()).toStrictEqual(base)
     })
 
     await it('applies a remote systems.set without re-broadcasting', async () => {

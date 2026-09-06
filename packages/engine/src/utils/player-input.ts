@@ -35,6 +35,18 @@ export function isActionPressed(kb: KeyboardLike): boolean {
 }
 
 /**
+ * True when the held attack keys (X / J) form a "press" this frame.
+ *
+ * Kept off Space and Enter deliberately: those are the action button, and
+ * a hero who swings a sword every time they try to read a sign is the
+ * bug this separation exists to prevent. X is the arrow-keys pairing, J
+ * the WASD one.
+ */
+export function isAttackPressed(kb: KeyboardLike): boolean {
+  return kb.isHeld(Keys.X) || kb.isHeld(Keys.J)
+}
+
+/**
  * Pick a facing from an input vector. Prefers the dominant axis;
  * exact ties (perfect diagonal) keep the previous facing so the hero
  * doesn't flicker between two animations when the user holds two

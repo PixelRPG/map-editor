@@ -50,8 +50,13 @@ export default async () => {
         ctx,
       )
       expect(teleport).not.toBeNull()
-      // …while a data-only spec (movement) builds nothing (read off the def).
-      expect(BUILT_IN_COMPONENT_SPECS.movement.build({ type: 'movement', tilesPerSec: 4 }, ctx)).toBeNull()
+      // …and so does `movement`, whose speed HostileAiSystem reads off the
+      // spawned entity (PlayerSystem still takes the hero's from the flat
+      // character view model, so for the player the component is inert).
+      const movement = BUILT_IN_COMPONENT_SPECS.movement.build({ type: 'movement', tilesPerSec: 4 }, ctx)
+      expect(movement).not.toBeNull()
+      // …while a presence-as-data spec carries no fields at all.
+      expect(BUILT_IN_COMPONENT_SPECS.hurtbox.build({ type: 'hurtbox' }, ctx)).not.toBeNull()
     })
 
     await it('npc-route build drops malformed waypoints (json-field escape hatch)', async () => {

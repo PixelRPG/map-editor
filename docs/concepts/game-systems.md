@@ -38,7 +38,7 @@ Every `ComponentSpec` carries `system: string`, the id of the game system that o
 2. **every component spec in the repo is owned by exactly one game system**, and by the one its own `system` field names;
 3. `requires` closes over registered ids and has no cycle;
 4. a `templates[].components[].type` is always reachable from its system (own components ∪ `requires`' ∪ `core`'s) — a template may not seed a component its system cannot render;
-5. the base layer is exactly `core` and `inventory` — pinned, because a base system is always on and therefore costs every project its components and its runtime; and **every base system contributes at least one ECS system**, because an always-on bundle that runs nothing is the "declared but nobody reads it" shape with a UI row in front of it.
+5. the base layer is exactly `core`, `stats` and `inventory` — pinned, because a base system is always on and therefore costs every project its components and its runtime; and **every base system contributes at least one ECS system**, because an always-on bundle that runs nothing is the "declared but nobody reads it" shape with a UI row in front of it. `stats` joined this layer only in the commit that gave it a reader; `time` is still out of it for the same reason `stats` used to be.
 
 Discovery is the same barrel trick `entity/registry.spec.ts` uses: every `game-systems/specs/*.ts` export passing `isGameSystemSpec`, with `check:barrels` guaranteeing the barrel is complete and `gjsify run check:specs` guaranteeing the spec file actually runs.
 
@@ -75,6 +75,8 @@ Two layers, in this order:
 
 `ObjectSpawnSystem` sitting in layer 1 is what keeps the spawn-point entity in the world before `PlayerSystem` (layer 2) queries for it.
 
+`GameSystemRuntimeContext` carries the project's **effective** `componentRegistry` alongside the map resource and the entity library. A system that spawns entities of its own at runtime — a dropped item, a respawned enemy, the hero itself — must build them through that and never through `BUILT_IN_COMPONENT_SPECS`, or a switched-off system's components would come back to life on a respawn while staying dormant everywhere else.
+
 ## Off means dormant, never destructive
 
 The most important line here: **disabled data is preserved and inert; unknown data is rejected.** Merging the two either makes a typo silent or makes a switch destructive.
@@ -104,7 +106,7 @@ The per-system `config` bag is plumbed end to end (file → op → `runtime(ctx)
 
 Data view → **Game rules**: one `Adw.ExpanderRow` per switchable system with `show-enable-switch`, so the switch is the on/off and the body is the expert surface — a child flips the switch without ever expanding, an expert expands without ever flipping. Below it, an **Always on** group listing the base layer as insensitive rows, because there is nothing to decide about them.
 
-The model is built in `apps/maker-gjs/src/services/game-rules-model.ts` (pure, unit-tested with fixture systems — the switchable path has no shipped system to exercise it yet) and rendered in `widgets/data-view.ts`. A system another enabled system `requires` has its switch locked and says by whom. With no switchable system in this build the Game-rules group hides itself: an empty titled group with a description reads as broken.
+The model is built in `apps/maker-gjs/src/services/game-rules-model.ts` (pure, unit-tested) and rendered in `widgets/data-view.ts`. A system another enabled system `requires` has its switch locked and says by whom. The group still hides itself when a build has no switchable system at all — an empty titled group with a description reads as broken — but that is no longer the shipped state: `combat-action` puts one switch on the page.
 
 ## Conditional states and the flag store
 
@@ -118,18 +120,73 @@ The base layer's payload this round is the thing that makes the simple view able
 
 **Actions only, this round.** A state overlaying any other component type validates with a warning and stays inert. The cost is visible in the first hour and is named rather than hidden: a door teleports once you have the key but never *looks* open, and a chest still looks closed after it gave you its item. Applying a `visual` or `collision` overlay means rebuilding a live entity's sprite and collider mid-frame while keeping its runtime companions (`TriggerFiredComponent`) alive — the first piece of engine work in this design that rebuilds a spawned entity, and it deserves its own round.
 
+## The first switchable system: `combat-action`
+
+Realtime fighting, the Zelda / Secret of Mana shape. It exists as much to *prove the frame* as to
+provide fighting: everything it needed was a registration, and the diff touched no framework
+mechanism except to add one field to the runtime context.
+
+**What it owns.** `weapon` (damage, reach, swing time, knockback, animation, sound), `hostile`
+(behaviour, aggro radius, contact damage, attack interval, drop, respawn, experience reward),
+`hurtbox` (presence means "can be hit"), `invulnerable` (the post-hit grace period).
+
+**What it reuses, and why that is the point.** Hit points are `stats`. The enemy's look is
+`visual`, its speed `movement`, its patrol `npc-route`, its solidity `collision`, its drop
+`inventory`'s `item`. A second hp field on `hostile` would have been the failure: the composition
+model only pays off when the second system to want a number reads the first system's.
+
+Two consequences fall out of that reuse. `movement` stopped being data-only — `HostileAiSystem`
+drives ordinary placements and has no `CharacterDefinition` to read a speed off, so `movementSpec`
+now builds a `MovementComponent`. And `PlayerSystem` now composes the hero from its own
+`EntityDefinition` through the effective registry: the player is persisted as a library entity but
+handed to that system as a flat view model carrying only a look and a speed, so a stat block or a
+weapon authored on the hero used to be silently dropped. Because it goes through the *effective*
+registry, a dormant component stays dormant on the hero exactly as it does on a placement.
+
+**Five ECS systems, and the order is load-bearing.** `MeleeAttackSystem` (first — it advances the
+shared combat clock the others read), `HostileAiSystem`, `KnockbackSystem` (after both velocity
+writers, so its pushback survives the frame), `DefeatSystem`, `HudSystem` (last, so it draws the
+hit points this frame's damage produced).
+
+**The clock.** Excalibur hands systems an elapsed delta, not a timestamp. A swing cooldown, an
+i-frame window and a respawn timer that each kept their own would drift apart, so one `nowMs` lives
+on `CombatSessionComponent` and the first system in the list advances it.
+
+**Where the boundary between `stats` and `combat-action` runs.** `StatsSystem` says *hp reached
+zero* and emits `ENTITY_DEFEATED`. `DefeatSystem` decides what that means — drop, experience,
+respawn, or (for the hero) a placeholder full heal. Keeping the second out of the first is what
+lets `combat-turn` later reuse the same hit points without inheriting Zelda's rules.
+
+**Nothing in the fight is a `Command` or a project op.** A drop, a respawn and the HUD are
+*playtest* state: scene-lifetime, rebuilt from the map on the next load, and deliberately absent
+from the undo stack and the wire, because playing a game is not editing it. The precedent is
+`PlayerSystem`, which `scene.add`s the hero the same way. The map's `objectPlacements` is read for
+respawn and never written. The only thing this system persists is its own on/off switch, which
+rides `__project/systems.set` like every other.
+
+**Input.** `InputSourceComponent` gained `attackHeld`, and `InputSystem` maps X / J to it.
+Transport rule 3 is unchanged: combat reads the component, never a keyboard. Attack is a second
+button rather than an overload of the action button because the two mean opposite things to the
+same tile — action *talks to* what is in front of you, attack *hits* it.
+
+**The HUD is Excalibur screen-space, not GTK**, so a Full Run window and a browser export render it
+too. A GTK overlay would exist only inside the maker, and the first person to export their game
+would lose their health bar with no explanation.
+
 ## Reach — what the frame must not preclude
 
 | Item | Status |
 |---|---|
 | `GameSystemSpec` + registry + ownership guard | **landed** |
 | Derived `BUILT_IN_COMPONENT_SPECS`, `effectiveComponentRegistry` threaded to every consumer | **landed** |
-| Base layer `core` / `inventory` | **landed** |
+| Base layer `core` / `stats` / `inventory` | **landed** |
 | Flag store, `EntityState.when` runtime, actions-only overlays | **landed** |
 | `__project/systems.set` + the Game-rules page | **landed** |
+| `stats` — the spec (`maxHp`, `hp` basic; `attack`, `defense`, `level`, `exp`, `expToNext`), live values as a runtime component, `DAMAGE_DEALT` / `ENTITY_DEFEATED` / `EXPERIENCE_GAINED` / `LEVEL_UP` and `StatsSystem` | **landed**, in the same commit as its reader |
+| `combat-action` — `weapon` / `hostile` / `hurtbox` / `invulnerable`, melee, aggro, knockback, defeat + drops + respawn, heart HUD, `GameSystemSpec.templates` | **landed** — the first switchable system |
 | `inventory` bag — `InventoryComponent`, `item-def` library entities, `INVENTORY_CHANGED` | planned, with the first system that reads a bag |
-| `stats` — a `stats` spec (`hp`, `maxHp` basic; `attack`, `defense`, `speed`, `level`, `exp`, `expToNext`), live hp as a runtime component, `DAMAGE_DEALT` / `ENTITY_DEFEATED` / `LEVEL_UP` and `StatsSystem` | planned, **in the same commit as `combat-action`** — see below |
-| `combat-action` — requires `stats` + `inventory`; `weapon` / `hostile` / `hurtbox` / `invulnerable`, melee, aggro, knockback, defeat, HUD | planned |
+| `stats.speed` | planned, with `combat-turn`'s speed-sorted `TurnOrderSystem` — its only reader |
+| A real game over — `combat-action` currently full-heals a defeated hero | planned, with playthrough save-state |
 | `combat-turn` — a second Excalibur scene, encounter tables, party, skills (`GameSystemSpec.scenes`) | planned |
 | `economy` + `time` — shop, crop, tool, stamina, the clock, `schedule`, `GameClockComponent` | planned |
 | Regions as a map primitive (`regionKinds`) | planned, with the two systems that want them |
@@ -139,7 +196,9 @@ The base layer's payload this round is the thing that makes the simple view able
 
 Each planned row is a registration rather than a refactor — that is what the frame buys. None of them is declared in the type today, because a field nothing renders or runs is the shape the deletion milestone removed.
 
-**Why `stats` is not in the base layer yet, even though the design puts it there.** Its only reader is `combat-action`. Registering it now would put eight editable fields — Max HP, HP, Attack, Defense, Speed, Level, Experience, Experience to next — in front of a child, under an always-on row, where setting HP to 10 changes nothing about the game. That is the same shape `time` was dropped for (its only reader, `economy`, is deferred), so it gets the same answer: `stats` ships in the commit that gives it a reader. Note that the `movement` precedent — a data-only spec with `build: () => null` — does *not* cover it: `movement.tilesPerSec` has a reader, `PlayerSystem`, which reads it off the definition instead of a runtime component. Data-only **with** a consumer is a design choice; data-only **without** one is the defect class.
+**Why `stats` waited, and what let it in.** Its only reader is a combat system. Registering it earlier would have put eight editable fields — Max HP, HP, Attack, Defense, Speed, Level, Experience, Experience to next — in front of a child, under an always-on row, where setting HP to 10 changed nothing about the game. It therefore shipped in the same commit as `combat-action`, and the rule generalises one level down: **a field earns its place the same way a component does.** Seven of those eight fields have a reader here — `maxHp` draws the heart row, `hp` seeds the live block, `attack` is added to a swing, `defense` is subtracted from a hit, and `level`/`exp`/`expToNext` are the fold a defeated enemy pays into. `speed` does not, so it is **not shipped**: its only reader is `combat-turn`'s speed-sorted `TurnOrderSystem`, and in realtime combat a character's movement rate is already `movement.tilesPerSec`. It arrives with its reader, like everything else in the reach table.
+
+`time` is still out of the base layer for exactly the reason `stats` used to be: its only reader, `economy`, is deferred.
 
 ## Cross-references
 

@@ -1,8 +1,10 @@
 import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
 import type { GameProjectData } from '../types/data/GameProjectData.ts'
 import type { GameSystemSpec } from './game-system-spec.ts'
+import { combatActionGameSystem } from './specs/combat-action.ts'
 import { coreGameSystem } from './specs/core.ts'
 import { inventoryGameSystem } from './specs/inventory.ts'
+import { statsGameSystem } from './specs/stats.ts'
 
 /**
  * Built-in game systems, keyed by stable `id` — the same discipline as
@@ -12,10 +14,18 @@ import { inventoryGameSystem } from './specs/inventory.ts'
  *
  * Completeness (every shipped `specs/*.ts` registered, no stale entries)
  * and component ownership are auto-enforced by `registry.spec.ts`.
+ *
+ * **Insertion order is the runtime order** `MapScene` adds each system's
+ * ECS systems in, so it is load-bearing rather than cosmetic: `core`
+ * spawns the hero and writes its velocity, `stats` seeds the live hit
+ * points, and `combat-action` reads both — and its own pushback has to
+ * land after every earlier writer has set its velocity for the tick.
  */
 export const BUILT_IN_GAME_SYSTEMS: Record<string, GameSystemSpec> = {
   [coreGameSystem.id]: coreGameSystem,
+  [statsGameSystem.id]: statsGameSystem,
   [inventoryGameSystem.id]: inventoryGameSystem,
+  [combatActionGameSystem.id]: combatActionGameSystem,
 }
 
 /** A project's per-system record: whether it's on, plus its settings. */

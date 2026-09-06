@@ -12,15 +12,22 @@ import { Component } from 'excalibur'
  * input sources become a plug-in surface instead of a refactor.
  *
  * `moveX`/`moveY` form a normalised direction vector (diagonals are
- * pre-scaled by the writer, see `readMovementInput`). `actionHeld` is
- * the raw held state — consumers do their own edge detection (e.g.
- * `PlayerSystem` via `PlayerSessionComponent.actionWasHeld`).
+ * pre-scaled by the writer, see `readMovementInput`). `actionHeld` and
+ * `attackHeld` are raw held states — consumers do their own edge
+ * detection (e.g. `PlayerSystem` via `PlayerSessionComponent.actionWasHeld`,
+ * `MeleeAttackSystem` via `CombatSessionComponent.attackWasHeld`).
+ *
+ * The two buttons are separate because they mean opposite things to the
+ * same tile: action *talks to* the thing in front of you, attack *hits*
+ * it. Overloading one button would make "open the chest" and "smash the
+ * chest" indistinguishable at the point where the intent arrives.
  */
 export class InputSourceComponent extends Component {
   constructor(
     public moveX = 0,
     public moveY = 0,
     public actionHeld = false,
+    public attackHeld = false,
   ) {
     super()
   }

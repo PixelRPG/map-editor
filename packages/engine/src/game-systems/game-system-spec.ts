@@ -1,5 +1,5 @@
 import type { EventEmitter, System } from 'excalibur'
-import type { ComponentSpec } from '../entity/component-spec.ts'
+import type { ComponentSpec, ComponentSpecRegistry } from '../entity/component-spec.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import type { CharacterDefinition, ComponentData, EntityDefinition } from '../types/data/index.ts'
@@ -41,6 +41,15 @@ export interface GameSystemRuntimeContext {
   readonly events: EventEmitter<EngineEventMap>
   readonly mapResource: MapResource
   readonly entityLibrary: readonly EntityDefinition[]
+  /**
+   * The project's effective component registry — the same one the spawn
+   * pipeline is handed. A system that spawns entities of its own at
+   * runtime (a dropped item, a respawned enemy) must build them through
+   * this and not through `BUILT_IN_COMPONENT_SPECS`, or a switched-off
+   * system's components would come back to life on a respawn while
+   * staying dormant everywhere else.
+   */
+  readonly componentRegistry: ComponentSpecRegistry
   /** The project's per-system settings (`GameProjectData.gameSystems[id].config`). */
   readonly config: Readonly<Record<string, unknown>>
   /** The resolved player definition, when the project names one. */
