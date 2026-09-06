@@ -383,7 +383,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // applied it in memory) — persist that map file here (this window
     // owns map IO) and reposition its atlas card.
     this._projectStore.on('map-editor-data-changed', ({ mapId }) => {
-      this._mapPersistCtl.persistMap(mapId, _('Could not save atlas position'))
+      this._mapPersistCtl.persistMap(mapId, _('Could not save map position'))
       this._scenes.refreshAtlasPosition(mapId)
     })
   }
@@ -673,7 +673,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (!project || !sceneId) return
     const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
     if (refs.length <= 1) {
-      this._showToast(_('This scene uses a single tileset.'))
+      this._showToast(_('This map uses a single tileset.'))
       return
     }
     const activeId = this._scene_editor_view.activeTilesetId

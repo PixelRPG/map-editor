@@ -55,7 +55,7 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
     if (!id) return
     const sceneId = ctx.currentSceneId()
     if (!sceneId) {
-      ctx.showToast(_('Open a scene first to place a character'))
+      ctx.showToast(_('Open a map first to place a character'))
       return
     }
     ctx.openScene(sceneId)

@@ -37,6 +37,6 @@ export function installProjectActions(group: Gio.SimpleActionGroup, ctx: Project
   addAction(group, openRecent)
 
   const newScene = new Gio.SimpleAction({ name: 'new-scene' })
-  newScene.connect('activate', () => ctx.showToast(_('New Scene — not yet implemented')))
+  newScene.connect('activate', () => ctx.showToast(_('New map — not yet implemented')))
   addAction(group, newScene)
 }

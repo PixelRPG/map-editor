@@ -65,7 +65,7 @@ export class SceneNavigator {
   open(sceneId: string): void {
     const scene = this._scenesById.get(sceneId)
     if (!scene) {
-      this.ctx.showToast(_('Scene not found'))
+      this.ctx.showToast(_('Map not found'))
       return
     }
     this._currentSceneId = sceneId

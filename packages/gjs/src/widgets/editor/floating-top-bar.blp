@@ -120,7 +120,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
 
             Gtk.Button back_button_split {
               action-name: "win.back-to-atlas";
-              tooltip-text: _("Back to atlas");
+              tooltip-text: _("Back to World");
               styles ["flat"]
 
               child: Gtk.Box {
@@ -131,7 +131,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
                 }
 
                 Gtk.Label {
-                  label: _("Atlas");
+                  label: _("World");
                 }
               };
             }
@@ -279,7 +279,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
           Gtk.Button back_button_merged {
             visible: false;
             action-name: "win.back-to-atlas";
-            tooltip-text: _("Back to atlas");
+            tooltip-text: _("Back to World");
             styles ["flat"]
 
             child: Gtk.Box {
@@ -290,7 +290,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
               }
 
               Gtk.Label {
-                label: _("Atlas");
+                label: _("World");
               }
             };
           }

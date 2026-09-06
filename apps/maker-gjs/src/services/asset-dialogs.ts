@@ -20,7 +20,7 @@ export function presentTilesetSwitcher(
 ): void {
   const dialog = new Adw.AlertDialog({
     heading: _('Switch tileset'),
-    body: _('Choose which of this scene’s tilesets to paint from.'),
+    body: _('Choose which of this map’s tilesets to paint from.'),
   })
   const list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE, cssClasses: ['boxed-list'] })
   for (const choice of choices) {

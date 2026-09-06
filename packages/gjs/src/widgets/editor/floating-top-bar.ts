@@ -282,7 +282,7 @@ export class FloatingTopBar extends Adw.Bin {
 
     if (!this._back_button_merged.get_visible()) {
       const nav = new Gio.Menu()
-      nav.append(_('Back to Atlas'), 'win.back-to-atlas')
+      nav.append(_('Back to World'), 'win.back-to-atlas')
       root.append_section(null, nav)
     }
 
