@@ -77,11 +77,12 @@ template $ObjectsView : Adw.Bin {
                 Gtk.StackPage {
                   name: "list";
 
-                  child: Gtk.ListBox objects_list {
-                    selection-mode: none;
+                  // One Adw.PreferencesGroup per category, built in
+                  // objects-view.ts from `groupThingsByCategory`.
+                  child: Gtk.Box objects_groups {
+                    orientation: vertical;
+                    spacing: 18;
                     valign: start;
-
-                    styles ["boxed-list"]
                   };
                 }
               };

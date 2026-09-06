@@ -30,6 +30,7 @@ import sessionServiceSuite from './services/session-service.spec.js'
 import sessionSnapshotSuite from './services/session-snapshot.spec.js'
 import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 import themePreferenceSuite from './services/theme-preference.spec.js'
+import thingCategoriesSuite from './services/thing-categories.spec.js'
 import zoomMathSuite from './services/zoom-math.spec.js'
 
 import castControllerAnimationsSuite from './services/cast-controller-animations.spec.js'
@@ -106,6 +107,7 @@ run({
   sessionSnapshotSuite,
   sessionStateSuite,
   themePreferenceSuite,
+  thingCategoriesSuite,
   tilesViewModelSuite,
   viewModeMapSuite,
   windowActionsSuite,

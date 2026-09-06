@@ -7,6 +7,7 @@ import { type ComponentRefOptions, EntityComponentsEditor, SignalScope } from '@
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES, type EntityTemplate } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
+import { groupThingsByCategory } from '../services/thing-categories.ts'
 import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
 import { buildObjectRow, buildRelationshipDiagram, buildTemplateTiles } from './objects/object-gallery.ts'
 import Template from './objects-view.blp'
@@ -17,8 +18,10 @@ GObject.type_ensure(EntityComponentsEditor.$gtype)
  * The Library's **Things** page — the GENERAL master-detail lens over
  * EVERY entity definition in the project's `entityLibrary` (world objects
  * AND the `character`-template cast members, the latter flagged with a
- * "Character" badge). The gallery lists them; the detail page edits one
- * raw through a name field + the generated {@link EntityComponentsEditor}.
+ * "Character" badge). The gallery lists them grouped by
+ * `editorData.category` — Objects, Heroes, NPCs, then whatever a game
+ * system stamps; the detail page edits one raw through a name field +
+ * the generated {@link EntityComponentsEditor}.
  * The Characters page is the specialised friendly lens over the character
  * subset. Pure view: all persistence / collab rides `ObjectsController`
  * via the emitted signals; the mode rail and the header (chips + "+")
@@ -27,7 +30,7 @@ GObject.type_ensure(EntityComponentsEditor.$gtype)
 export class ObjectsView extends Adw.Bin {
   declare _nav: Adw.NavigationView
   declare _list_stack: Gtk.Stack
-  declare _objects_list: Gtk.ListBox
+  declare _objects_groups: Gtk.Box
   declare _empty_diagram_slot: Gtk.Box
   declare _empty_templates: Gtk.FlowBox
   declare _detail_page: Adw.NavigationPage
@@ -53,7 +56,7 @@ export class ObjectsView extends Adw.Bin {
         InternalChildren: [
           'nav',
           'list_stack',
-          'objects_list',
+          'objects_groups',
           'empty_diagram_slot',
           'empty_templates',
           'detail_page',
@@ -157,17 +160,20 @@ export class ObjectsView extends Adw.Bin {
     this._rebuildTemplateTiles()
   }
 
-  /** Replace the object list + rebuild the gallery rows. */
+  /** Replace the object list + rebuild the gallery, one group per category. */
   setObjects(objects: EntityDefinition[]): void {
     this._objects = objects
-    let child = this._objects_list.get_first_child()
+    let child = this._objects_groups.get_first_child()
     while (child) {
       const next = child.get_next_sibling()
-      this._objects_list.remove(child)
+      this._objects_groups.remove(child)
       child = next
     }
-    for (const obj of objects) {
-      this._objects_list.append(buildObjectRow(obj, () => this.focusObject(obj.id)))
+    for (const group of groupThingsByCategory(objects)) {
+      // msgid stays literal in `thing-categories.ts`; translated here.
+      const widget = new Adw.PreferencesGroup({ title: _(group.label) })
+      for (const obj of group.things) widget.add(buildObjectRow(obj, () => this.focusObject(obj.id)))
+      this._objects_groups.append(widget)
     }
     this._list_stack.set_visible_child_name(objects.length > 0 ? 'list' : 'empty')
     // If the open object vanished (deleted), drop back to the gallery.

@@ -89,7 +89,11 @@ export class ObjectsController {
       id,
       name: template.label,
       components: template.components.map((c) => ({ ...c })),
-      editorData: { template: template.id, icon: template.icon },
+      editorData: {
+        template: template.id,
+        icon: template.icon,
+        ...(template.category ? { category: template.category } : {}),
+      },
     }
   }
 

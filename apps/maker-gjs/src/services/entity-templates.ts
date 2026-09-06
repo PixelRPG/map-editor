@@ -25,6 +25,9 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     label: 'NPC',
     icon: 'avatar-default-symbolic',
     description: 'A character that walks a route + talks when interacted with.',
+    // The same group a demoted cast NPC keeps, so world NPCs and former
+    // cast NPCs sit together under Things.
+    category: 'npc',
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'movement', tilesPerSec: 3 },
