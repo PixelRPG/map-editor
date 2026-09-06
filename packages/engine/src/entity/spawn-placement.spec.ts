@@ -10,7 +10,7 @@ import {
   TileTransformComponent,
   TriggerComponent,
 } from '../components/index.ts'
-import { TIER_Z } from '../components/tilemap-tier.component.ts'
+import { zFor } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { EntityDefinition, LayerData, ObjectPlacement } from '../types/data/index.ts'
 import { buildPlacementEntity, placementSpawnWarnings } from './spawn-placement.ts'
@@ -57,10 +57,10 @@ export default async () => {
       expect(entity.has(TriggerComponent)).toBe(true)
       expect(entity.has(CollisionComponent)).toBe(true)
       expect(entity.has(TeleportComponent)).toBe(true)
-      // Tile-centre position + tier z
+      // Tile-centre position + plane z
       expect(entity.pos.x).toBe(3 * 16 + 8)
       expect(entity.pos.y).toBe(4 * 16 + 8)
-      expect(entity.z).toBe(TIER_Z.ground)
+      expect(entity.z).toBe(zFor('ground'))
     })
 
     await it('builds no SpriteRef for a sprite-less definition', async () => {

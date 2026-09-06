@@ -35,6 +35,19 @@ export default async () => {
       expect(layer.locked).toBe(true)
     })
 
+    await it('carries the plane through and leaves it absent when the file has none', async () => {
+      const [roofs, legacy] = toLayerDescriptors(
+        mapData({
+          layers: [
+            { id: 'roofs', name: 'Roofs', visible: true, plane: 'overlay' },
+            { id: 'legacy', name: 'Legacy', visible: true },
+          ],
+        }),
+      )
+      expect(roofs.plane).toBe('overlay')
+      expect('plane' in legacy).toBe(false)
+    })
+
     await it('is empty for a map without layers', async () => {
       expect(toLayerDescriptors(mapData({}))).toStrictEqual([])
     })

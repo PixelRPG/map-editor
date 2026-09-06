@@ -6,6 +6,7 @@ import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
 type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
+type LayerListChangedPayload = EngineEventMap[EngineEvent.LAYER_LIST_CHANGED]
 type ShowTextPayload = EngineEventMap[EngineEvent.SHOW_TEXT_REQUESTED]
 type ItemPickedUpPayload = EngineEventMap[EngineEvent.ITEM_PICKED_UP]
 type FlagSetPayload = EngineEventMap[EngineEvent.FLAG_SET]
@@ -59,6 +60,12 @@ export interface EngineControllerEvents {
    */
   'layer-flag-changed': LayerFlagChangedPayload
   /**
+   * The engine's `LAYER_LIST_CHANGED` event — a layer was added, moved
+   * or changed plane on any application path (local, undo/redo, inbound
+   * peer op). The host re-reads the map's layer list into the Layers tab.
+   */
+  'layer-list-changed': LayerListChangedPayload
+  /**
    * Fired once per pointer tile-transition over the active map — drives
    * the floating-zoom OSD's coord readout (the `12, 7` label).
    */
@@ -106,6 +113,7 @@ export class EngineController {
   private _tilePickedHookAttached = false
   private _placementSelectedHookAttached = false
   private _layerFlagHookAttached = false
+  private _layerListHookAttached = false
   private _pointerTileHookAttached = false
   private _runtimeEffectHooksAttached = false
   private readonly _events = new TypedEmitter<EngineControllerEvents>()
@@ -175,6 +183,7 @@ export class EngineController {
     this._attachTilePickedHook()
     this._attachPlacementSelectedHook()
     this._attachLayerFlagHook()
+    this._attachLayerListHook()
     this._attachPointerTileHook()
     this._attachRuntimeEffectHooks()
   }
@@ -290,6 +299,16 @@ export class EngineController {
       }),
     )
     this._layerFlagHookAttached = true
+  }
+
+  private _attachLayerListHook(): void {
+    if (this._layerListHookAttached || !this._engine) return
+    this._hookSubs.push(
+      this._engine.events.on(EngineEvent.LAYER_LIST_CHANGED, (payload) => {
+        this._events.emit('layer-list-changed', payload)
+      }),
+    )
+    this._layerListHookAttached = true
   }
 
   private _attachPointerTileHook(): void {

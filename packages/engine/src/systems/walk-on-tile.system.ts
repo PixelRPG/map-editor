@@ -1,6 +1,7 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
+import { orderLayersForWalkOn } from '../services/layer-order.ts'
 import { isLayerDataVisible } from '../services/layer-visibility.ts'
 import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { findTileMapForLayer } from '../services/tile-paint.service.ts'
@@ -17,11 +18,12 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
  * from. This is the layer where "water-tiles play splash sounds
  * project-wide" actually works.
  *
- * Resolution path: walk the map's visible layers (top → bottom),
- * find the topmost sprite at `(tileX, tileY)`, look up its
- * `tileProperties` on the matching sprite-set entry. First hit
- * wins. Empty / no-match returns the default `{ walkable: true }`
- * payload.
+ * Resolution path: walk the map's visible layers from the top down —
+ * the order `orderLayersForWalkOn` defines (highest plane first, then
+ * the layer that draws on top inside a plane) — find the topmost
+ * sprite at `(tileX, tileY)`, look up its `tileProperties` on the
+ * matching sprite-set entry. First hit wins. Empty / no-match returns
+ * the default `{ walkable: true }` payload.
  */
 export class WalkOnTileSystem extends System {
   public readonly systemType = SystemType.Update
@@ -52,11 +54,14 @@ export class WalkOnTileSystem extends System {
   /**
    * Top-down lookup of the tile properties at `(tileX, tileY)`.
    *
-   * Iterates layers in reverse (top first) so a foreground tree
-   * tile's properties override the ground tile underneath. The
+   * Iterates layers top first — plane order, then array order inside
+   * a plane, the same rule the renderer draws by — so a foreground
+   * tree tile's properties override the ground tile underneath. The
    * first sprite found with `tileProperties` on its sprite-set
    * entry wins; if no layer has a sprite at that coord we return
-   * the engine default (walkable, no surface).
+   * the engine default (walkable, no surface). Raw array order used
+   * to decide this on its own, so an `overlay` layer placed first
+   * in the file rendered above the player and still lost the lookup.
    *
    * Source of truth: the LIVE tilemap shadow (`MapEditorComponent`
    * via {@link getSpritesAt}) — the same state tile paints mutate
@@ -66,16 +71,15 @@ export class WalkOnTileSystem extends System {
    * without a live tilemap (headless contexts) fall back to the
    * mapData snapshot.
    *
-   * Hot path: called on every `PLAYER_TILE_CHANGED`; plain reverse
-   * `for` loop, no per-step allocations beyond the shadow lookup.
+   * Hot path: called on every `PLAYER_TILE_CHANGED`; one small sort
+   * of the layer list per step, no other allocations beyond the
+   * shadow lookup.
    */
   private resolveTileProperties(scene: Scene, tileX: number, tileY: number): TileProperties {
     const mapData = this.mapResource.mapData
     if (!mapData) return { walkable: true }
 
-    const layers = mapData.layers
-    for (let i = layers.length - 1; i >= 0; i--) {
-      const layer = layers[i]
+    for (const layer of orderLayersForWalkOn(mapData.layers)) {
       if (!isLayerDataVisible(layer)) continue
 
       const found = scene instanceof MapScene ? findTileMapForLayer(scene, layer.id) : null

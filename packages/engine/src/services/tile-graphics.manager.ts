@@ -1,7 +1,7 @@
 import type { Animation, Graphic, Sprite, Tile, TileMap } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
-import { TIER_Z, TileMapTierComponent } from '../components/tilemap-tier.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import { layerOrderIndex, sortRefsByLayerOrder } from './layer-order.ts'
 import { collectHiddenLayerIds } from './layer-visibility.ts'
 import { getSpritesAt } from './map-editor-shadow.service.ts'
 
@@ -56,6 +56,13 @@ function resolveTileGraphic(mapResource: MapResource, ref: TileSpriteRef): Graph
  */
 type TileGraphicOpacityProvider = (ref: TileSpriteRef) => number
 
+/**
+ * Rebuild one tile's graphics from the shadow: the visible refs on the
+ * cell, in draw order. Draw order is the layers' order in
+ * `MapData.layers` — the same rule the initial paint and the walk-on
+ * lookup use — never the shadow's insertion order, which a live paint
+ * appends to.
+ */
 export function rebuildAllTileGraphics(
   tileMap: TileMap,
   mapResource: MapResource,
@@ -71,7 +78,7 @@ export function rebuildAllTileGraphics(
   // shadow state (so toggling visibility back on is a pure graphics
   // rebuild without re-loading from JSON) but we skip them at render.
   const visibleSprites = allSprites.filter((s) => !hiddenLayerIds.has(s.layerId))
-  const sortedSprites = [...visibleSprites].sort((a, b) => (a?.zIndex || 0) - (b?.zIndex || 0))
+  const sortedSprites = sortRefsByLayerOrder(visibleSprites, layerOrderIndex(mapResource.mapData?.layers ?? []))
 
   tile.clearGraphics()
 
@@ -91,47 +98,13 @@ export function rebuildAllTileGraphics(
 }
 
 /**
- * Pin a tilemap's z to its declared tier. The tilemap's z is set
- * once on creation by {@link MapResource.createTileMaps} and
- * doesn't change at runtime, so this function is now a noop for
- * tilemaps that already carry a {@link TileMapTierComponent} —
- * kept exported because it's part of {@link refreshAllTileGraphics}'s
- * pair contract.
- *
- * Pre-refactor this set `tileMap.z = max(layer.z, sprite.z) + 100`,
- * which forced the monolithic tilemap *above* every actor in the
- * scene. That offset is the bug the tier system replaces — actors
- * (placements, the future player) now interleave with tilemaps at
- * their tier's z, not flat-stacked behind one tilemap z=109.
- *
- * `mapResource` is retained in the signature so call sites don't
- * change, and so we can fall back to its first layer's z if a
- * tilemap somehow lacks the tier marker (defensive only — every
- * `MapResource`-built tilemap has one).
- */
-export function updateTileMapZIndex(tileMap: TileMap, mapResource: MapResource): void {
-  const tierComponent = tileMap.get(TileMapTierComponent)
-  if (tierComponent) {
-    tileMap.z = TIER_Z[tierComponent.tier]
-    return
-  }
-  // Defensive fallback for tilemaps not built by MapResource — pin
-  // them to the ground tier so they at least don't overpaint
-  // actors. mapResource access here is just to keep the signature
-  // stable for any external caller; not used.
-  void mapResource
-  tileMap.z = TIER_Z.ground
-}
-
-/**
  * Rebuild graphics on every tile in the supplied `TileMap`. Used after
  * a global state change that affects rendering for many tiles at once
- * — currently: toggling `layer.visible` on a layer. Pairs the per-tile
- * rebuild with a single z-index pass at the end so the maximum
- * z-index of the tilemap reflects all (visible) sprites.
+ * — toggling `layer.visible`, reordering a layer, moving a layer to
+ * another plane.
  *
  * Hot for huge maps — O(columns × rows × sprites-per-tile) — but
- * called only on explicit user toggles, not per frame.
+ * called only on explicit user actions, not per frame.
  */
 export function refreshAllTileGraphics(
   tileMap: TileMap,
@@ -145,5 +118,4 @@ export function refreshAllTileGraphics(
       rebuildAllTileGraphics(tileMap, mapResource, tile, opacityFor)
     }
   }
-  updateTileMapZIndex(tileMap, mapResource)
 }

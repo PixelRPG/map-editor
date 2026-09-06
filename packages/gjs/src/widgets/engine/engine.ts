@@ -12,6 +12,7 @@ import {
   Engine as ExcaliburEngine,
   formatError,
   type LayerData,
+  type LayerPlane,
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription } from 'excalibur'
@@ -280,6 +281,20 @@ export class Engine extends Adw.Bin {
    */
   public addLayer(layer: LayerData): boolean {
     return this._excalibur?.addLayer(layer) ?? false
+  }
+
+  /**
+   * Forward to `Engine.reorderLayer` — dispatches an undoable
+   * `ReorderLayerCommand` (collab sync rides the command). The widget
+   * relays the resulting `LAYER_LIST_CHANGED` on {@link events}.
+   */
+  public reorderLayer(layerId: string, index: number): boolean {
+    return this._excalibur?.reorderLayer(layerId, index) ?? false
+  }
+
+  /** Forward to `Engine.setLayerPlane` — an undoable `SetLayerPlaneCommand`, optionally with a list position. */
+  public setLayerPlane(layerId: string, plane: LayerPlane, index?: number): boolean {
+    return this._excalibur?.setLayerPlane(layerId, plane, index) ?? false
   }
 
   /** Read whether a specific layer is locked on the active map. */

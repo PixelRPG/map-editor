@@ -50,6 +50,10 @@ export function forwardEngineEvents(engine: ExcaliburEngine, sink: EngineEventSi
     // of the layer-flag commands (local, undo/redo, remote peer), so
     // the host's Layers tab follows changes it didn't originate.
     fwd(EngineEvent.LAYER_FLAG_CHANGED),
+    // Layer LIST mirroring (add / reorder / change of plane) — same
+    // every-path contract, so the Layers tab re-reads the map after a
+    // remote peer's move or an undo it didn't originate.
+    fwd(EngineEvent.LAYER_LIST_CHANGED),
     // Runtime event-script effects (playtest). The `EventActionSystem`
     // emits these on `TRIGGER_FIRED`; the host surfaces them (toasts
     // today — a real dialogue box / inventory / audio layer later).

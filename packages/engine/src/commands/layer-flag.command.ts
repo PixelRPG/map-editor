@@ -1,9 +1,9 @@
 import { Actor, type Scene, TileMap } from 'excalibur'
-import { TileMapTierComponent, TileTransformComponent } from '../components/index.ts'
+import { TileMapPlaneComponent, TileTransformComponent } from '../components/index.ts'
 import { MapScene } from '../scenes/map.scene.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
 import { refreshAllTileGraphics } from '../services/tile-graphics.manager.ts'
-import { DEFAULT_LAYER_TIER } from '../types/data/LayerData.ts'
+import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'
 import type { Command } from './types.ts'
 
 /**
@@ -56,10 +56,10 @@ function resolveLayer(scene: Scene, layerId: string) {
  * renders from the layer (the in-engine half that used to live in
  * `Engine.setLayerVisible` before the flag became a Command):
  *
- * - **Tile graphics** on the layer's tier tilemap — sprites rebuild
+ * - **Tile graphics** on the layer's plane tilemap — sprites rebuild
  *   via `refreshAllTileGraphics`, which already filters hidden
- *   layers. Only the hosting tier needs the filter re-applied; the
- *   other tier tilemaps don't carry this layer's sprites.
+ *   layers. Only the hosting plane needs the filter re-applied; the
+ *   other plane tilemaps don't carry this layer's sprites.
  * - **Object placements** — actors spawned for
  *   `MapData.objectPlacements` get their `graphics.visible` flipped.
  *   A single layer can carry both, so both surfaces flip together.
@@ -81,16 +81,16 @@ function applyLayerVisibility(scene: Scene, layerId: string, visible: boolean): 
   // what `services/layer-visibility.ts` reads back — a predicate call
   // here would be circular.
   layer.visible = visible
-  const targetTier = layer.tier ?? DEFAULT_LAYER_TIER
+  const targetPlane = layer.plane ?? DEFAULT_LAYER_PLANE
   for (const entity of scene.world.entityManager.entities) {
     if (entity instanceof TileMap) {
-      if (entity.get(TileMapTierComponent)?.tier === targetTier) {
+      if (entity.get(TileMapPlaneComponent)?.plane === targetPlane) {
         refreshAllTileGraphics(entity, scene.mapResource)
       }
       continue
     }
     // Placement actors carry the canonical `layerId` on
-    // `TileTransformComponent` — the visibility flip is tier-independent.
+    // `TileTransformComponent` — the visibility flip is plane-independent.
     const transform = entity.get(TileTransformComponent)
     if (transform?.layerId === layerId && entity instanceof Actor) {
       entity.graphics.visible = visible && areObjectsVisible(scene)

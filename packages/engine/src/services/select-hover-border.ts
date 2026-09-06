@@ -1,5 +1,5 @@
 import { Actor, Color, Rectangle, type Scene, type TileMap, Vector, vec } from 'excalibur'
-import { ActiveToolComponent, TIER_Z } from '../components/index.ts'
+import { ActiveToolComponent, zFor } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -54,7 +54,7 @@ export function createSelectHoverBorderActor(): Actor {
     name: 'select-hover-border',
     anchor: vec(0, 0),
   })
-  actor.z = TIER_Z.overlay + 50
+  actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
   actor.graphics.visible = false
   return actor

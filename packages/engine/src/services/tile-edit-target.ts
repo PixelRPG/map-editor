@@ -125,7 +125,7 @@ export function resolveEditLayer(query: EditLayerQuery): EditLayerResolution {
 
 /**
  * Full chain for a tile-level edit: {@link resolveEditLayer} plus the
- * per-tier tilemap lookup and the bounds check against
+ * per-plane tilemap lookup and the bounds check against
  * {@link TileEditTargetQuery.mapBounds}.
  */
 export function resolveTileEditTarget<TTileMap extends TileGrid, TEditor>(
@@ -147,8 +147,8 @@ export function resolveTileEditTarget<TTileMap extends TileGrid, TEditor>(
  *
  * `bounds` must be the map's PERSISTED extent (`MapData.columns/rows`).
  * A scene's `TileMap`s are DERIVED from exactly those two fields
- * (`resource/tilemap-builder.ts` → `buildTierTileMaps` copies them
- * verbatim into every tier), so tilemap dimensions are a mirror, never
+ * (`resource/tilemap-builder.ts` → `buildPlaneTileMaps` copies them
+ * verbatim into every plane), so tilemap dimensions are a mirror, never
  * a second source of truth. Checking against the mirror is how the two
  * editor paths came to disagree: `TileEditorSystem.applyObjectStamp`
  * bounded against the tilemap while `EditOperations.placeObject`

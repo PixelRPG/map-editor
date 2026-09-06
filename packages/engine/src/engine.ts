@@ -19,7 +19,7 @@ import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
-import type { LayerData } from './types/data/index.ts'
+import type { LayerData, LayerPlane } from './types/data/index.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
 
 // The AI-assistant presence subsystem (cursor/awareness/follow/flash) lives
@@ -399,6 +399,16 @@ export class Engine {
   /** Append a fully built layer to the active map through the op-log. */
   addLayer(layer: LayerData, origin?: string): boolean {
     return this.layers.add(layer, origin)
+  }
+
+  /** Move a layer inside `MapData.layers` — see {@link LayerOperations.reorder}. */
+  reorderLayer(layerId: string, index: number, origin?: string): boolean {
+    return this.layers.reorder(layerId, index, origin)
+  }
+
+  /** Move a layer to another plane (and optionally a list position) — see {@link LayerOperations.setPlane}. */
+  setLayerPlane(layerId: string, plane: LayerPlane, index?: number, origin?: string): boolean {
+    return this.layers.setPlane(layerId, plane, index, origin)
   }
 
   /** Read the `locked` flag on a layer. `false` for an unknown id / no scene. */

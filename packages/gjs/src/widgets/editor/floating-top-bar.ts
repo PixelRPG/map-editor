@@ -3,11 +3,16 @@ import type Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import type { LayerPlane } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import { SignalScope } from '../../utils/signal-scope'
 
+import { DepthGlyph } from './depth-glyph'
+
 import Template from './floating-top-bar.blp'
+
+GObject.type_ensure(DepthGlyph.$gtype)
 
 /**
  * Self-aware top-of-canvas OSD chrome for the scene editor.
@@ -60,10 +65,13 @@ export class FloatingTopBar extends Adw.Bin {
   declare _inspector_toggle_merged: Gtk.ToggleButton
   declare _merged_tile_label: Gtk.Label
   declare _merged_layer_label: Gtk.Label
+  declare _layer_glyph_split: DepthGlyph
+  declare _layer_glyph_merged: DepthGlyph
 
   private _placeholderIcon: Gtk.IconPaintable | null = null
   private _tileName = ''
   private _layerName = ''
+  private _layerPlane: LayerPlane = 'ground'
   private _tilePopover: Gtk.Popover | null = null
   private _layerPopover: Gtk.Popover | null = null
   private _signals = new SignalScope()
@@ -99,6 +107,8 @@ export class FloatingTopBar extends Adw.Bin {
           'inspector_toggle_merged',
           'merged_tile_label',
           'merged_layer_label',
+          'layer_glyph_split',
+          'layer_glyph_merged',
         ],
         Properties: {
           'tile-name': GObject.ParamSpec.string(
@@ -114,6 +124,13 @@ export class FloatingTopBar extends Adw.Bin {
             'Name of the active layer',
             GObject.ParamFlags.READWRITE,
             '',
+          ),
+          'layer-plane': GObject.ParamSpec.string(
+            'layer-plane',
+            'Layer Plane',
+            'Plane of the active layer (ground, hero or overlay), shown by the chip glyph',
+            GObject.ParamFlags.READWRITE,
+            'ground',
           ),
         },
       },
@@ -191,6 +208,22 @@ export class FloatingTopBar extends Adw.Bin {
     if (this._layerName === value) return
     this._layerName = value
     this.notify('layer-name')
+  }
+
+  get layerPlane(): LayerPlane {
+    return this._layerPlane ?? 'ground'
+  }
+
+  set layerPlane(value: LayerPlane) {
+    if (this._layerPlane === value) return
+    this._layerPlane = value
+    this.notify('layer-plane')
+  }
+
+  /** The project's player sprite for the chip glyph (`null` = silhouette). */
+  setHeroPaintable(paintable: Gdk.Paintable | null): void {
+    this._layer_glyph_split.heroPaintable = paintable
+    this._layer_glyph_merged.heroPaintable = paintable
   }
 
   setTilePopover(popover: Gtk.Popover): void {

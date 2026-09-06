@@ -1,5 +1,5 @@
 import { Actor, type Scene, type Sprite, type TileMap, Vector, vec } from 'excalibur'
-import { ActiveLayerComponent, ActiveTileComponent, ActiveToolComponent, TIER_Z } from '../components/index.ts'
+import { ActiveLayerComponent, ActiveTileComponent, ActiveToolComponent, zFor } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -28,7 +28,7 @@ export interface PencilPreviewHover {
 /**
  * Construct the preview actor. Top-left anchored so `pos` maps
  * directly to a tile's world-space origin. Z-pinned above the
- * highest tilemap tier so the ghost sits on top of every painted
+ * highest tilemap plane so the ghost sits on top of every painted
  * tile.
  */
 export function createPencilPreviewActor(): Actor {
@@ -36,7 +36,7 @@ export function createPencilPreviewActor(): Actor {
     name: 'tile-paint-preview',
     anchor: vec(0, 0),
   })
-  actor.z = TIER_Z.overlay + 50
+  actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
   actor.graphics.visible = false
   return actor

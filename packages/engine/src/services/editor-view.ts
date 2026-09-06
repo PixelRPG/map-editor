@@ -22,7 +22,7 @@ export const GRID_MODE_DIM_OPACITY = 0.25
  *
  * Two passes:
  *
- * 1. **Tilemap rebuild.** Each tier's tilemap rebuilds its tile
+ * 1. **Tilemap rebuild.** Each plane's tilemap rebuilds its tile
  *    graphics through the standard `refreshAllTileGraphics`,
  *    passing an opacity function that dims sprites whose
  *    `layerId` doesn't match the active layer. The clone made
@@ -49,7 +49,7 @@ export function applyEditorViewMode(scene: MapScene): void {
     return refLayerId === activeLayerId ? 1 : GRID_MODE_DIM_OPACITY
   }
 
-  // Pass 1: tilemaps. Rebuild every tile on every tier — the
+  // Pass 1: tilemaps. Rebuild every tile on every plane — the
   // opacity provider runs per sprite during the clone step.
   for (const entity of scene.world.entityManager.entities) {
     if (entity instanceof TileMap) {

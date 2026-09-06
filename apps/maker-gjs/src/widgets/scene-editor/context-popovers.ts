@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import Gtk from '@girs/gtk-4.0'
-import { type LayerDescriptor, type TileDescriptor, TilePalette } from '@pixelrpg/gjs'
+import { DepthGlyph, type LayerDescriptor, planeOf, type TileDescriptor, TilePalette } from '@pixelrpg/gjs'
 import type { ObjectBrushOption } from './object-descriptors.ts'
 
 /** The popover shell every context popover shares: padded box + dim heading. */
@@ -94,6 +95,8 @@ export interface LayerPopoverOptions {
   layers: readonly LayerDescriptor[]
   /** The active layer's id, or `null` when there is none. */
   activeId: string | null
+  /** The project's player sprite for the row glyphs (`null` = silhouette). */
+  heroPaintable?: Gdk.Paintable | null
 }
 
 /** The active-layer list behind the top bar's layer chip. */
@@ -112,6 +115,9 @@ export function buildLayerPopover(options: LayerPopoverOptions, onSelect: (layer
   list.set_size_request(240, -1)
   for (const layer of options.layers) {
     const row = new Adw.ActionRow({ title: layer.name, subtitle: `${layer.tileCount} tiles`, activatable: true })
+    // The same depth picture as the Layers tab's rows, so the quick
+    // switch says where a layer is, not just what it is called.
+    row.add_prefix(new DepthGlyph({ plane: planeOf(layer), size: 24, heroPaintable: options.heroPaintable ?? null }))
     ;(row as Adw.ActionRow & { layerId?: string }).layerId = layer.id
     list.append(row)
   }

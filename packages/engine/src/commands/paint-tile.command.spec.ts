@@ -1,17 +1,17 @@
 /**
  * Apply/revert behaviour of `PaintTileCommand` / `EraseTileCommand`
- * against a three-tier scene (ground / hero / overlay tilemaps).
+ * against a three-plane scene (ground / hero / overlay tilemaps).
  *
  * Regression focus: the commands' internal `resolveContext` used to
- * grab the FIRST `TileMap` in the scene — always the ground tier,
- * because `MapResource.createTileMaps` adds tiers in ground → hero →
+ * grab the FIRST `TileMap` in the scene — always the ground plane,
+ * because `buildPlaneTileMaps` adds planes in ground → hero →
  * overlay order. Every hero/overlay-layer paint therefore mutated the
  * ground tilemap's shadow state (wrong render z), while the
- * `previousSprites` snapshot was read from the tier-correct shadow
+ * `previousSprites` snapshot was read from the plane-correct shadow
  * that never saw the paint — so undoing a second paint ERASED the
  * first one instead of restoring it (silent data loss, replayed
  * identically on every collab peer). The commands must resolve the
- * tilemap by the layer's tier, exactly like the interactive paths
+ * tilemap by the layer's plane, exactly like the interactive paths
  * (`TileEditorSystem`, `Engine.paintTileAt`).
  */
 
@@ -19,13 +19,13 @@ import { describe, expect, it } from '@gjsify/unit'
 import { TileMap } from 'excalibur'
 
 import { MapEditorComponent } from '../components/map-editor.component.ts'
-import { TileMapTierComponent } from '../components/tilemap-tier.component.ts'
+import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
 import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { findTileMapForLayer, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
-import type { LayerTier } from '../types/data/index.ts'
+import type { LayerPlane } from '../types/data/index.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
 
 /**
@@ -37,7 +37,7 @@ function makeFakeSprite(): { clone: () => unknown } {
   return { clone: () => ({}) }
 }
 
-interface TierFixture {
+interface PlaneFixture {
   scene: MapScene
   ground: TileMap
   hero: TileMap
@@ -47,22 +47,22 @@ interface TierFixture {
 /**
  * Build a duck-typed `MapScene` (via `Object.create` so `instanceof
  * MapScene` holds without running the constructor's engine wiring)
- * holding one real `TileMap` per tier, in the same order
+ * holding one real `TileMap` per plane, in the same order
  * `MapResource.createTileMaps` adds them — ground first, which is
  * exactly what made the old first-TileMap scan always pick ground.
  *
  * One sprite set `terrain` with `firstGid: 1` and local sprites 0+1,
  * so global tile ids 1 and 2 are paintable.
  */
-function makeTierScene(): TierFixture {
+function makePlaneScene(): PlaneFixture {
   const spriteSet = { sprites: { 0: makeFakeSprite(), 1: makeFakeSprite() }, animations: {} }
   const mapResource = {
     mapData: {
       layers: [
-        { id: 'ground-layer', name: 'Ground', visible: true, tier: 'ground' },
-        { id: 'hero-layer', name: 'Decor', visible: true, tier: 'hero' },
-        { id: 'overlay-layer', name: 'Treetops', visible: true, tier: 'overlay' },
-        { id: 'legacy-layer', name: 'Legacy (no tier)', visible: true },
+        { id: 'ground-layer', name: 'Ground', visible: true, plane: 'ground' },
+        { id: 'hero-layer', name: 'Decor', visible: true, plane: 'hero' },
+        { id: 'overlay-layer', name: 'Treetops', visible: true, plane: 'overlay' },
+        { id: 'legacy-layer', name: 'Legacy (no plane)', visible: true },
       ],
       spriteSets: [{ id: 'terrain', firstGid: 1 }],
     },
@@ -72,16 +72,16 @@ function makeTierScene(): TierFixture {
     // biome-ignore lint/suspicious/noExplicitAny: test stub mirrors only the surface the commands exercise
   } as any as MapResource
 
-  const makeTierTileMap = (tier: LayerTier): TileMap => {
+  const makePlaneTileMap = (plane: LayerPlane): TileMap => {
     const tileMap = new TileMap({ tileWidth: 16, tileHeight: 16, columns: 4, rows: 4 })
-    tileMap.addComponent(new TileMapTierComponent(tier))
+    tileMap.addComponent(new TileMapPlaneComponent(plane))
     tileMap.addComponent(new MapEditorComponent())
     return tileMap
   }
 
-  const ground = makeTierTileMap('ground')
-  const hero = makeTierTileMap('hero')
-  const overlay = makeTierTileMap('overlay')
+  const ground = makePlaneTileMap('ground')
+  const hero = makePlaneTileMap('hero')
+  const overlay = makePlaneTileMap('overlay')
 
   const scene = Object.create(MapScene.prototype) as MapScene
   Object.assign(scene, {
@@ -104,10 +104,10 @@ function refsAt(tileMap: TileMap, x: number, y: number, layerId: string): string
 
 /**
  * Paint the way every real caller does: snapshot the previous sprites
- * from the layer's tier-correct editor, then apply. Returns the
+ * from the layer's plane-correct editor, then apply. Returns the
  * command so tests can `revert` it later.
  */
-function paint(fixture: TierFixture, layerId: string, x: number, y: number, spriteId: number): PaintTileCommand {
+function paint(fixture: PlaneFixture, layerId: string, x: number, y: number, spriteId: number): PaintTileCommand {
   const found = findTileMapForLayer(fixture.scene, layerId)
   if (!found) throw new Error(`fixture cannot resolve layer ${layerId}`)
   const command = new PaintTileCommand({
@@ -122,7 +122,7 @@ function paint(fixture: TierFixture, layerId: string, x: number, y: number, spri
 }
 
 /** Erase counterpart of {@link paint} — same snapshot-then-apply flow. */
-function erase(fixture: TierFixture, layerId: string, x: number, y: number): EraseTileCommand {
+function erase(fixture: PlaneFixture, layerId: string, x: number, y: number): EraseTileCommand {
   const found = findTileMapForLayer(fixture.scene, layerId)
   if (!found) throw new Error(`fixture cannot resolve layer ${layerId}`)
   const command = new EraseTileCommand({
@@ -150,9 +150,9 @@ async function muteWarn<T>(fn: () => Promise<T> | T): Promise<T> {
 }
 
 export default async () => {
-  await describe('PaintTileCommand.apply — tier routing', async () => {
+  await describe('PaintTileCommand.apply — plane routing', async () => {
     await it('writes a hero-layer paint to the hero tilemap, not the first (ground) one', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       paint(fixture, 'hero-layer', 1, 1, 1)
 
       expect(refsAt(fixture.hero, 1, 1, 'hero-layer')).toStrictEqual(['terrain#0'])
@@ -161,7 +161,7 @@ export default async () => {
     })
 
     await it('writes an overlay-layer paint to the overlay tilemap', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       paint(fixture, 'overlay-layer', 2, 3, 2)
 
       expect(refsAt(fixture.overlay, 2, 3, 'overlay-layer')).toStrictEqual(['terrain#1'])
@@ -169,8 +169,8 @@ export default async () => {
       expect(getSpritesAt(editorOf(fixture.hero), 2, 3).length).toBe(0)
     })
 
-    await it('routes a tier-less layer to the ground tilemap (legacy default)', async () => {
-      const fixture = makeTierScene()
+    await it('routes a plane-less layer to the ground tilemap (legacy default)', async () => {
+      const fixture = makePlaneScene()
       paint(fixture, 'legacy-layer', 0, 0, 1)
 
       expect(refsAt(fixture.ground, 0, 0, 'legacy-layer')).toStrictEqual(['terrain#0'])
@@ -178,7 +178,7 @@ export default async () => {
     })
 
     await it('warns + no-ops for an unknown layer id instead of falling back to a tilemap', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       const command = new PaintTileCommand({
         layerId: 'deleted-layer',
         tileX: 1,
@@ -196,7 +196,7 @@ export default async () => {
 
   await describe('PaintTileCommand revert — paint → paint → undo round-trip', async () => {
     await it('undo of a second hero-layer paint restores the first (regression: it erased it)', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       paint(fixture, 'hero-layer', 1, 1, 1)
       const second = paint(fixture, 'hero-layer', 1, 1, 2)
       expect(refsAt(fixture.hero, 1, 1, 'hero-layer')).toStrictEqual(['terrain#1'])
@@ -211,7 +211,7 @@ export default async () => {
     })
 
     await it('undo of the first paint returns the tile to empty', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       const first = paint(fixture, 'hero-layer', 1, 1, 1)
       const second = paint(fixture, 'hero-layer', 1, 1, 2)
 
@@ -222,9 +222,9 @@ export default async () => {
     })
   })
 
-  await describe('EraseTileCommand — tier routing + revert', async () => {
-    await it('erases only the targeted layer tier, leaving congruent tiles on other tiers', async () => {
-      const fixture = makeTierScene()
+  await describe('EraseTileCommand — plane routing + revert', async () => {
+    await it('erases only the targeted layer plane, leaving congruent tiles on other planes', async () => {
+      const fixture = makePlaneScene()
       paint(fixture, 'ground-layer', 1, 1, 1)
       paint(fixture, 'hero-layer', 1, 1, 2)
 
@@ -235,8 +235,8 @@ export default async () => {
       expect(refsAt(fixture.ground, 1, 1, 'ground-layer')).toStrictEqual(['terrain#0'])
     })
 
-    await it('undo of an erase restores the erased sprites on the correct tier', async () => {
-      const fixture = makeTierScene()
+    await it('undo of an erase restores the erased sprites on the correct plane', async () => {
+      const fixture = makePlaneScene()
       paint(fixture, 'hero-layer', 1, 1, 1)
       const eraseCommand = erase(fixture, 'hero-layer', 1, 1)
       expect(getSpritesAt(editorOf(fixture.hero), 1, 1).length).toBe(0)
@@ -250,7 +250,7 @@ export default async () => {
 
   await describe('buildTileFillCommand + FillTileCommand — flood fill', async () => {
     await it('fills the whole empty layer as one command; revert clears it', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       const cmd = buildTileFillCommand(
         editorOf(fixture.ground),
         fixture.scene.mapResource,
@@ -266,7 +266,7 @@ export default async () => {
       cmd.apply(fixture.scene)
       expect(refsAt(fixture.ground, 0, 0, 'ground-layer')).toStrictEqual(['terrain#0'])
       expect(refsAt(fixture.ground, 3, 3, 'ground-layer')).toStrictEqual(['terrain#0'])
-      // Fill targets one tier only — other tiers stay empty.
+      // Fill targets one plane only — other planes stay empty.
       expect(getSpritesAt(editorOf(fixture.hero), 0, 0).length).toBe(0)
 
       cmd.revert(fixture.scene)
@@ -275,7 +275,7 @@ export default async () => {
     })
 
     await it('stops at a wall of a different tile (bounded region)', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       // Wall down column x=2 with tile 2 (terrain#1), partitioning the map.
       for (let y = 0; y < 4; y++) paint(fixture, 'ground-layer', 2, y, 2)
 
@@ -301,7 +301,7 @@ export default async () => {
     })
 
     await it('no-ops (returns null) when the origin already shows the fill tile', async () => {
-      const fixture = makeTierScene()
+      const fixture = makePlaneScene()
       paint(fixture, 'ground-layer', 0, 0, 1)
       const cmd = buildTileFillCommand(
         editorOf(fixture.ground),

@@ -377,6 +377,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         if (placementId) this.set_property('show-inspector', true)
       },
       setLayerFlag: (layerId, flag, value) => this._scene_editor_view.setLayerFlag(layerId, flag, value),
+      refreshLayers: () => {
+        const sceneId = this._scenes.currentSceneId
+        const mapData = sceneId ? this._loadedProject?.resource.maps.get(sceneId)?.mapData : undefined
+        if (mapData) this._scene_editor_view.refreshLayers(mapData)
+      },
     })
     this._wireStoreEvents()
   }
@@ -707,10 +712,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * `win.new-layer` — append a fresh empty layer to the active scene's
-   * map through the engine's undoable + collab-synced `AddLayerCommand`,
-   * then re-populate the Layers tab + persist (the same refresh flow as
-   * `object-removed`). The engine mutates the shared project
+   * `win.new-layer` — append a fresh empty layer, in the plane of the
+   * active layer, to the active scene's map through the engine's
+   * undoable + collab-synced `AddLayerCommand`. The command's
+   * `LAYER_LIST_CHANGED` re-reads the Layers tab; this only selects the
+   * new layer and persists. The engine mutates the shared project
    * `MapResource`, so both see the new layer.
    */
   private _createLayer(): void {
@@ -718,11 +724,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (!sceneId) return
     const layers = this._loadedProject?.resource.maps.get(sceneId)?.mapData?.layers
     if (!layers) return
-    const layer = nextLayerDraft(layers)
+    const activeId = this._scene_editor_view.activeLayerId
+    const active = activeId ? layers.find((l) => l.id === activeId) : undefined
+    const layer = nextLayerDraft(layers, active?.plane)
     if (!this._engineCtl.engine?.addLayer(layer)) return
-    if (this._loadedProject) {
-      void this._scene_editor_view.populateFromProject(this._loadedProject, sceneId)
-    }
+    this._scene_editor_view.selectLayer(layer.id)
     this._mapPersistCtl.persistCurrentMap()
     this._showToast(_(`Added “${layer.name}”`))
   }

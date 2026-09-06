@@ -25,7 +25,7 @@
       "id": "layer_ground",
       "name": "Ground",
       "visible": true,
-      "tier": "ground",
+      "plane": "ground",
       "sprites": [
         {
           "x": 61,
@@ -99653,16 +99653,13 @@
       "id": "layer_decorations",
       "name": "Decorations",
       "visible": true,
-      "properties": {
-        "z": 7
-      },
-      "tier": "hero"
+      "plane": "hero"
     },
     {
       "id": "layer_overlay",
       "name": "Overlay",
       "visible": true,
-      "tier": "overlay",
+      "plane": "overlay",
       "sprites": [
         {
           "x": 13,

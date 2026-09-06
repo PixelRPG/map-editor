@@ -2,6 +2,7 @@ import type { Loadable } from 'excalibur'
 import { Logger, type Scene, type Tile, type TileMap } from 'excalibur'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
 import { MapFormat } from '../format/MapFormat'
+import { layerOrderIndex, sortRefsByLayerOrder } from '../services/layer-order.ts'
 import { collectHiddenLayerIds, isLayerDataVisible } from '../services/layer-visibility.ts'
 import {
   getSpritesAt,
@@ -9,14 +10,14 @@ import {
   parseShadowCoordKey,
   setInitialSprites,
 } from '../services/map-editor-shadow.service.ts'
-import type { LayerTier, MapData, MapResourceOptions } from '../types'
-import { DEFAULT_LAYER_TIER, LAYER_TIERS } from '../types/data/LayerData.ts'
+import type { LayerPlane, MapData, MapResourceOptions } from '../types'
+import { DEFAULT_LAYER_PLANE, LAYER_PLANES } from '../types/data/LayerData.ts'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { foldShadowToLayerSprites } from './shadow-fold.ts'
 import { isSpriteRefSolid } from './sprite-solidity.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
-import { buildTierTileMaps, collectInitialSprites } from './tilemap-builder.ts'
+import { buildPlaneTileMaps, collectInitialSprites } from './tilemap-builder.ts'
 
 /**
  * Resource class for loading custom Map format into Excalibur.
@@ -38,16 +39,16 @@ export class MapResource implements Loadable<TileMap> {
   private _mapData!: MapData
 
   /**
-   * One `TileMap` per {@link LayerTier} — built up-front in
-   * {@link buildTierTileMaps} so callers can always grab the
-   * tier-matching tilemap by component lookup, even before any
-   * sprites for that tier are loaded. The `data` field (Loadable
-   * contract) points at the ground-tier tilemap for backwards
-   * compatibility with callers that don't know about tiers.
+   * One `TileMap` per {@link LayerPlane} — built up-front in
+   * {@link buildPlaneTileMaps} so callers can always grab the
+   * plane-matching tilemap by component lookup, even before any
+   * sprites for that plane are loaded. The `data` field (Loadable
+   * contract) points at the ground-plane tilemap for backwards
+   * compatibility with callers that don't know about planes.
    */
-  private tileMapsByTier: Map<LayerTier, TileMap> = new Map()
-  /** Initial per-tier sprite refs, keyed by `"tileX,tileY"` per the shadow-state schema. */
-  private initialSpritesByTier: Map<LayerTier, Map<string, TileSpriteRef[]>> = new Map()
+  private tileMapsByPlane: Map<LayerPlane, TileMap> = new Map()
+  /** Initial per-plane sprite refs, keyed by `"tileX,tileY"` per the shadow-state schema. */
+  private initialSpritesByPlane: Map<LayerPlane, Map<string, TileSpriteRef[]>> = new Map()
 
   private logger = Logger.getInstance()
 
@@ -107,7 +108,7 @@ export class MapResource implements Loadable<TileMap> {
 
   /**
    * Parse the map JSON + resolve its sprite sets. The Excalibur
-   * `TileMap`s (one `Tile` object per cell per tier — six figures for
+   * `TileMap`s (one `Tile` object per cell per plane — six figures for
    * the big ported worlds) are NOT built here: projects preload every
    * map for the atlas/previews/snapshots, which only read `mapData`.
    * {@link ensureTileMaps} builds them on first scene use.
@@ -132,23 +133,23 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Build the per-tier `TileMap`s + the editor shadow state from the
+   * Build the per-plane `TileMap`s + the editor shadow state from the
    * loaded map data. Idempotent — the first scene to use this map
    * pays the (large) tile-allocation cost, later calls are no-ops.
    */
   ensureTileMaps(): void {
-    if (this.tileMapsByTier.size > 0) return
+    if (this.tileMapsByPlane.size > 0) return
     if (!this._mapData) throw new Error('Map resource not loaded')
 
-    this.tileMapsByTier = buildTierTileMaps(this._mapData)
+    this.tileMapsByPlane = buildPlaneTileMaps(this._mapData)
     // Loadable<TileMap> contract — point `data` at the ground
-    // tilemap. Callers that need a specific tier should walk the
-    // scene by `TileMapTierComponent` instead.
-    const groundTileMap = this.tileMapsByTier.get(DEFAULT_LAYER_TIER)
+    // tilemap. Callers that need a specific plane should walk the
+    // scene by `TileMapPlaneComponent` instead.
+    const groundTileMap = this.tileMapsByPlane.get(DEFAULT_LAYER_PLANE)
     if (!groundTileMap) throw new Error('Failed to build ground tilemap')
     this.data = groundTileMap
 
-    this.initialSpritesByTier = collectInitialSprites(this._mapData, this.tileMapsByTier, (setId, spriteId, solid) =>
+    this.initialSpritesByPlane = collectInitialSprites(this._mapData, this.tileMapsByPlane, (setId, spriteId, solid) =>
       this.isSolidRef(setId, spriteId, solid),
     )
   }
@@ -156,9 +157,9 @@ export class MapResource implements Loadable<TileMap> {
   addToScene(scene: Scene): void {
     this.ensureTileMaps()
 
-    for (const tier of LAYER_TIERS) {
-      const tileMap = this.tileMapsByTier.get(tier)
-      const initial = this.initialSpritesByTier.get(tier)
+    for (const plane of LAYER_PLANES) {
+      const tileMap = this.tileMapsByPlane.get(plane)
+      const initial = this.initialSpritesByPlane.get(plane)
       if (!tileMap || !initial) continue
       const editorComponent = new MapEditorComponent()
       setInitialSprites(editorComponent, initial)
@@ -174,16 +175,15 @@ export class MapResource implements Loadable<TileMap> {
     // loop. Shared with `rebuildAllTileGraphics` so the two paths
     // can't disagree on what "hidden" means.
     const hiddenLayerIds = collectHiddenLayerIds(this)
+    // The same draw-order rule `rebuildAllTileGraphics` applies on every
+    // later paint, so the first frame and the thousandth agree.
+    const layerOrder = layerOrderIndex(this._mapData.layers)
 
-    for (const [tier, initial] of this.initialSpritesByTier) {
-      const tileMap = this.tileMapsByTier.get(tier)
+    for (const [plane, initial] of this.initialSpritesByPlane) {
+      const tileMap = this.tileMapsByPlane.get(plane)
       if (!tileMap) continue
       initial.forEach((refs, key) => {
-        const sortedRefs = [...refs].sort((a, b) => {
-          const aZ = a.zIndex ?? 0
-          const bZ = b.zIndex ?? 0
-          return aZ - bZ
-        })
+        const sortedRefs = sortRefsByLayerOrder(refs, layerOrder)
         const { tileX, tileY } = parseShadowCoordKey(key)
         const tile = tileMap.getTile(tileX, tileY)
         if (!tile) return
@@ -204,33 +204,33 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Get the `TileMap` entity for a specific tier. Returns
+   * Get the `TileMap` entity for a specific plane. Returns
    * `undefined` only when the map hasn't been loaded yet — every
-   * loaded map has all three tiers built up-front.
+   * loaded map has all three planes built up-front.
    *
-   * Use this when you have a layer (or a `LayerTier`) in hand and
+   * Use this when you have a layer (or a `LayerPlane`) in hand and
    * need to read / write its tilemap directly. For lookup from
    * within a `Scene` without the `MapResource` in scope, look up
-   * by `TileMapTierComponent` instead.
+   * by `TileMapPlaneComponent` instead.
    */
-  getTileMapForTier(tier: LayerTier): TileMap | undefined {
-    return this.tileMapsByTier.get(tier)
+  getTileMapForPlane(plane: LayerPlane): TileMap | undefined {
+    return this.tileMapsByPlane.get(plane)
   }
 
   /**
    * Resolve the tilemap that owns a given layer id by routing
-   * through the layer's `tier`. Returns `undefined` if the layer
+   * through the layer's `plane`. Returns `undefined` if the layer
    * id is unknown.
    */
   getTileMapForLayer(layerId: string): TileMap | undefined {
     const layer = this._mapData?.layers.find((l) => l.id === layerId)
     if (!layer) return undefined
-    return this.getTileMapForTier(layer.tier ?? DEFAULT_LAYER_TIER)
+    return this.getTileMapForPlane(layer.plane ?? DEFAULT_LAYER_PLANE)
   }
 
-  /** Iterate every tilemap built for this map (one per tier). */
+  /** Iterate every tilemap built for this map (one per plane). */
   *tileMaps(): IterableIterator<TileMap> {
-    for (const t of this.tileMapsByTier.values()) yield t
+    for (const t of this.tileMapsByPlane.values()) yield t
   }
 
   /**
@@ -247,7 +247,7 @@ export class MapResource implements Loadable<TileMap> {
 
   /**
    * Fold the live editor shadow (`MapEditorComponent.sprites`) on
-   * every tier's tilemap back into `mapData.layers[].sprites[]`.
+   * every plane's tilemap back into `mapData.layers[].sprites[]`.
    *
    * Paints mutate the shadow only — `mapData.layers` stays at the
    * load-time snapshot until something explicitly syncs it. Callers
@@ -255,14 +255,14 @@ export class MapResource implements Loadable<TileMap> {
    * snapshot for a late-joining peer) MUST call this first.
    *
    * Per-layer sprite arrays are rebuilt deterministically from the
-   * shadow (sorted by `(y, x, zIndex)`) so wire bytes are stable
+   * shadow (sorted by `(y, x)`) so wire bytes are stable
    * across runs of the host and friendly to diff tools when the
    * file lands on disk.
    *
    * Per-placement `properties` + `solid` overrides on
    * `SpriteDataMap` entries are lost during this fold — the shadow
    * tracks only the gameplay-loaded fields (spriteSetId, spriteId,
-   * animationId, zIndex, layerId). This matches the pre-existing
+   * animationId, layerId). This matches the pre-existing
    * limitation called out by `isSolidRef`: live edits already
    * dropped the per-placement `solid` override. Same caveat applies
    * now to the persisted shape.
@@ -272,13 +272,13 @@ export class MapResource implements Loadable<TileMap> {
    */
   syncShadowToMapData(): boolean {
     if (!this._mapData) return false
-    // No tier tilemaps = this map was loaded (e.g. for a snapshot) but
+    // No plane tilemaps = this map was loaded (e.g. for a snapshot) but
     // never opened in a scene, so there's no editor shadow to fold in.
     // Bail out — otherwise the write-back loop below would overwrite the
     // loaded on-disk sprites with an empty shadow (data loss).
-    if (this.tileMapsByTier.size === 0) return false
+    if (this.tileMapsByPlane.size === 0) return false
 
-    const shadows = [...this.tileMapsByTier.values()]
+    const shadows = [...this.tileMapsByPlane.values()]
       .map((tileMap) => tileMap.get(MapEditorComponent)?.sprites)
       .filter((sprites) => sprites !== undefined)
     const spritesPerLayer = foldShadowToLayerSprites(shadows)
@@ -318,7 +318,7 @@ export class MapResource implements Loadable<TileMap> {
 
   /** Recompute `tile.solid` for every tile holding a sprite ref matching `matches`. */
   private refreshTileSolidsWhere(matches: (ref: TileSpriteRef) => boolean): void {
-    for (const tilemap of this.tileMapsByTier.values()) {
+    for (const tilemap of this.tileMapsByPlane.values()) {
       const editor = tilemap.get(MapEditorComponent)
       if (!editor) continue
       for (const { tileX, tileY } of iterateOccupiedCoords(editor)) {

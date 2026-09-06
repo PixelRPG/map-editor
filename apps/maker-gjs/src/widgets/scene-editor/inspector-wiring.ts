@@ -1,3 +1,4 @@
+import type { LayerPlane } from '@pixelrpg/engine'
 import type { LayersTab, ObjectsTab, PropsTab, TilesTab } from '@pixelrpg/gjs'
 
 /**
@@ -34,6 +35,11 @@ export interface LayersTabWiring {
   setActiveLayer(layerId: string): void
   setLayerVisible(layerId: string, visible: boolean): void
   setLayerLocked(layerId: string, locked: boolean): void
+  /**
+   * A row was dropped in section `plane` at array position `index`.
+   * The engine decides whether that is a reorder or a change of plane.
+   */
+  moveLayer(layerId: string, plane: LayerPlane, index: number): void
   persistMapData(): void
   toggleObjectsVisibility(): void
 }
@@ -52,6 +58,10 @@ export function wireLayersTab(tab: LayersTab, ctx: LayersTabWiring): void {
   })
   tab.connect('layer-lock-toggled', (_l: LayersTab, layerId: string, locked: boolean) => {
     ctx.setLayerLocked(layerId, locked)
+    ctx.persistMapData()
+  })
+  tab.connect('layer-move-requested', (_l: LayersTab, layerId: string, plane: string, index: number) => {
+    ctx.moveLayer(layerId, plane as LayerPlane, index)
     ctx.persistMapData()
   })
   // The pinned "Objects" pseudo-row is pure view state like grid/dim —

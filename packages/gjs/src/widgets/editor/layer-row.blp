@@ -20,6 +20,14 @@ template $PixelRpgLayerRow : Adw.Bin {
       valign: center;
     }
 
+    // Which plane the layer draws on, as the same picture the section
+    // header shows — so a row read on its own still says where it is.
+    $PixelRpgDepthGlyph glyph {
+      size: 24;
+      plane: bind template.plane;
+      valign: center;
+    }
+
     Gtk.Label name_label {
       label: bind template.layer-name;
       halign: start;

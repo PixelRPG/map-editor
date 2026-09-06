@@ -19,7 +19,7 @@ import {
   RuntimeModeComponent,
   SpawnOverrideComponent,
   SpawnPointComponent,
-  TIER_Z,
+  zFor,
   TileTransformComponent,
 } from '../components/index.ts'
 import type { MapResource } from '../resource/MapResource.ts'
@@ -173,10 +173,10 @@ export class PlayerSystem extends System {
     const initialGraphic = resolved.animations[initialRole]
     if (initialGraphic) actor.graphics.use(initialGraphic)
     actor.graphics.visible = false
-    // Between hero tier (z=100) and overlay tier (z=200) so canopy
-    // sprites draw over the player and decoration sprites draw
+    // Between the hero plane (z=100) and the overlay plane (z=200) so
+    // canopy sprites draw over the player and decoration sprites draw
     // beside them.
-    actor.z = TIER_Z.hero + 50
+    actor.z = zFor('hero') + 50
 
     scene.add(actor)
 

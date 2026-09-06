@@ -4,22 +4,37 @@ using Adw 1;
 template $PixelRpgLayersTab : Adw.Bin {
   Gtk.Box {
     orientation: vertical;
-    spacing: 6;
+    spacing: 18;
     margin-top: 12;
     margin-bottom: 12;
     margin-start: 12;
     margin-end: 12;
 
-    Gtk.ListBox list {
-      selection-mode: single;
-      styles ["boxed-list"]
+    // Three fixed sections, top to bottom as the world is: what draws
+    // on top of the hero is at the top of the list. Every section keeps
+    // its header when empty — the header is the explanation.
+    $PixelRpgLayerSection section_overlay {
+      plane: "overlay";
+      title: _("Above the hero");
+      subtitle: _("Roofs, treetops, bridges you walk under");
+    }
+
+    $PixelRpgLayerSection section_hero {
+      plane: "hero";
+      title: _("At hero height");
+      subtitle: _("Rocks, signs, things you walk around");
+    }
+
+    $PixelRpgLayerSection section_ground {
+      plane: "ground";
+      title: _("Below the hero");
+      subtitle: _("Floors, grass, water, paths");
     }
 
     Gtk.Button new_layer_button {
       label: _("New layer");
       action-name: "win.new-layer";
       styles ["flat"]
-      margin-top: 6;
 
       child: Gtk.Box {
         spacing: 6;
@@ -32,6 +47,14 @@ template $PixelRpgLayersTab : Adw.Bin {
           label: _("New layer");
         }
       };
+    }
+
+    // Object placements: a global eye, not a layer — it lives under the
+    // three planes rather than inside one, because it has no depth of
+    // its own (placements render at their layer's plane).
+    Gtk.ListBox objects_list {
+      selection-mode: none;
+      styles ["boxed-list"]
     }
   }
 }

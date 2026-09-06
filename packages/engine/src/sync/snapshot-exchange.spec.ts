@@ -47,7 +47,7 @@ const FAKE_SNAPSHOT: ProjectSnapshot = {
         rows: 16,
         tileWidth: 16,
         tileHeight: 16,
-        layers: [{ id: 'ground', name: 'Ground', type: 'tile', tier: 'background', data: [] }],
+        layers: [{ id: 'ground', name: 'Ground', type: 'tile', plane: 'ground', data: [] }],
         spriteSets: [],
       } as unknown as ProjectSnapshot['maps'][number]['data'],
     },

@@ -21,10 +21,10 @@ import { Actor, TileMap } from 'excalibur'
 
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import { TileTransformComponent } from '../components/tile-transform.component.ts'
-import { TileMapTierComponent } from '../components/tilemap-tier.component.ts'
+import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
-import type { LayerData, LayerTier } from '../types/data/index.ts'
+import type { LayerData, LayerPlane } from '../types/data/index.ts'
 import { SetLayerLockedCommand, SetLayerVisibilityCommand } from './layer-flag.command.ts'
 import { BUILT_IN_COMMANDS } from './registry.ts'
 
@@ -39,14 +39,14 @@ interface LayerFixture {
 /**
  * Duck-typed `MapScene` (via `Object.create` so `instanceof MapScene`
  * holds without the constructor's engine wiring — same recipe as the
- * paint-tile spec) with two tier tilemaps, two layers, and one
+ * paint-tile spec) with two plane tilemaps, two layers, and one
  * placement actor bucketed on the hero layer so the visibility
  * command's placement-flip branch is exercised.
  */
 function makeLayerScene(): LayerFixture {
   const layers: LayerData[] = [
-    { id: 'ground-layer', name: 'Ground', visible: true, tier: 'ground' } as LayerData,
-    { id: 'hero-layer', name: 'Decor', visible: true, locked: false, tier: 'hero' } as LayerData,
+    { id: 'ground-layer', name: 'Ground', visible: true, plane: 'ground' } as LayerData,
+    { id: 'hero-layer', name: 'Decor', visible: true, locked: false, plane: 'hero' } as LayerData,
   ]
   const spriteSet = { sprites: {}, animations: {} }
   const mapResource = {
@@ -60,14 +60,14 @@ function makeLayerScene(): LayerFixture {
     // biome-ignore lint/suspicious/noExplicitAny: test stub mirrors only the surface the commands exercise
   } as any as MapResource
 
-  const makeTierTileMap = (tier: LayerTier): TileMap => {
+  const makePlaneTileMap = (plane: LayerPlane): TileMap => {
     const tileMap = new TileMap({ tileWidth: 16, tileHeight: 16, columns: 2, rows: 2 })
-    tileMap.addComponent(new TileMapTierComponent(tier))
+    tileMap.addComponent(new TileMapPlaneComponent(plane))
     tileMap.addComponent(new MapEditorComponent())
     return tileMap
   }
-  const ground = makeTierTileMap('ground')
-  const hero = makeTierTileMap('hero')
+  const ground = makePlaneTileMap('ground')
+  const hero = makePlaneTileMap('hero')
 
   const placement = new Actor()
   placement.addComponent(new TileTransformComponent(1, 1, 'hero-layer'))

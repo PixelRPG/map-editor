@@ -1,5 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
+import type { LayerPlane } from '@pixelrpg/engine'
+import { GLYPH_PLANES } from './depth-glyph.geometry'
 import { LayerRow } from './layer-row'
 
 /** Showcase for a single layer row. */
@@ -19,6 +21,7 @@ export class LayerRowStory extends StoryWidget {
         visible: true,
         locked: false,
         active: true,
+        plane: 'hero',
       },
       meta: LayerRowStory.getMetadata(),
     })
@@ -27,7 +30,8 @@ export class LayerRowStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Editor/Layer Row',
-      description: 'Single row in the Layers inspector tab: visibility toggle, name, tile-count badge, lock toggle.',
+      description:
+        'Single row in the Layers inspector tab: visibility toggle, depth glyph (plane), name, tile-count badge, lock toggle.',
       component: LayerRow.$gtype,
       controls: [
         { name: 'layerName', label: 'Layer name', type: ControlType.TEXT },
@@ -35,6 +39,12 @@ export class LayerRowStory extends StoryWidget {
         { name: 'visible', label: 'Visible', type: ControlType.BOOLEAN },
         { name: 'locked', label: 'Locked', type: ControlType.BOOLEAN },
         { name: 'active', label: 'Active', type: ControlType.BOOLEAN },
+        {
+          name: 'plane',
+          label: 'Plane',
+          type: ControlType.SELECT,
+          options: GLYPH_PLANES.map((plane) => ({ label: plane, value: plane })),
+        },
       ],
     }
   }
@@ -46,6 +56,7 @@ export class LayerRowStory extends StoryWidget {
       visible: this.args.visible as boolean,
       locked: this.args.locked as boolean,
       active: this.args.active as boolean,
+      plane: this.args.plane as LayerPlane,
     })
     // Mirror toggles back into story args so the Controls panel stays in
     // sync when the user clicks the visibility / lock buttons.
@@ -65,6 +76,7 @@ export class LayerRowStory extends StoryWidget {
     if (typeof this.args.visible === 'boolean') this._row.visible = this.args.visible
     if (typeof this.args.locked === 'boolean') this._row.locked = this.args.locked
     if (typeof this.args.active === 'boolean') this._row.active = this.args.active
+    if (typeof this.args.plane === 'string') this._row.plane = this.args.plane as LayerPlane
   }
 }
 

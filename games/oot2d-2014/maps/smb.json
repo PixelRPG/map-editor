@@ -20,7 +20,7 @@
       "id": "layer_ground",
       "name": "Ground",
       "visible": true,
-      "tier": "ground",
+      "plane": "ground",
       "sprites": [
         {
           "x": 40,
@@ -19054,7 +19054,7 @@
       "id": "layer_overlay",
       "name": "Overlay",
       "visible": true,
-      "tier": "overlay",
+      "plane": "overlay",
       "sprites": []
     },
     {

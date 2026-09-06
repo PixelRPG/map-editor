@@ -17,9 +17,11 @@ import { run } from '@gjsify/unit'
 import editOperationsSuite from './engine/edit-operations.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
+import layerOrderCommandSuite from './commands/layer-order.command.spec.js'
 import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
 import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import registrySuite from './commands/registry.spec.js'
+import tilemapPlaneSuite from './components/tilemap-plane.spec.js'
 import actionsSpecSuite from './entity/specs/actions.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
 import entityDataAccessSuite from './entity/data-access.spec.js'
@@ -38,6 +40,7 @@ import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
 import floodFillSuite from './services/flood-fill.spec.js'
 import layerFlagEventSuite from './services/layer-flag-event.spec.js'
+import layerOrderSuite from './services/layer-order.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import placementGeometrySuite from './services/placement-geometry.spec.js'
 import placementPickingSuite from './services/placement-picking.spec.js'
@@ -78,6 +81,8 @@ run({
   paintTileCommandSuite,
   layerFlagCommandSuite,
   layerLifecycleCommandSuite,
+  layerOrderCommandSuite,
+  tilemapPlaneSuite,
   objectPlacementCommandSuite,
   entityRegistrySuite,
   gameSystemsRegistrySuite,
@@ -106,6 +111,7 @@ run({
   assistantPresenceSuite,
   floodFillSuite,
   layerFlagEventSuite,
+  layerOrderSuite,
   awarenessSuite,
   chunkingSuite,
   collabIntegrationSuite,

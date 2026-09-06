@@ -19,7 +19,7 @@
       "id": "layer_ground",
       "name": "Ground",
       "visible": true,
-      "tier": "ground",
+      "plane": "ground",
       "sprites": [
         {
           "x": 5,
@@ -267,7 +267,7 @@
       "id": "layer_decor",
       "name": "Decor",
       "visible": true,
-      "tier": "hero",
+      "plane": "hero",
       "sprites": [
         {
           "x": 6,

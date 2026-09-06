@@ -224,10 +224,13 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
                 margin-start: 6;
                 margin-end: 6;
 
-                Gtk.Image {
-                  icon-name: "view-list-symbolic";
-                  pixel-size: 14;
-                  styles ["accent"]
+                // The active layer's plane, as the same picture the
+                // Layers tab uses. Below 460sp the chip is icon-only,
+                // so at the tightest width this glyph IS the chip.
+                $PixelRpgDepthGlyph layer_glyph_split {
+                  size: 14;
+                  plane: bind template.layer-plane;
+                  valign: center;
                 }
 
                 Gtk.Label {
@@ -385,10 +388,10 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
               margin-start: 4;
               margin-end: 2;
 
-              Gtk.Image {
-                icon-name: "view-list-symbolic";
-                pixel-size: 14;
-                styles ["accent"]
+              $PixelRpgDepthGlyph layer_glyph_merged {
+                size: 14;
+                plane: bind template.layer-plane;
+                valign: center;
               }
 
               Gtk.Label merged_layer_label {
