@@ -41,15 +41,26 @@ export default async () => {
       expect(model.alwaysOn[0].enabled).toBe(true)
     })
 
-    await it('renders empty-but-correct when only base systems ship', async () => {
-      // The shipped state of THIS build: no switchable system exists, so
-      // the page must be an "Always on" group and nothing else — not a
-      // titled empty group that reads as broken.
+    await it('renders the shipped build: three always-on rows and one switch', async () => {
+      // The shipped state of THIS build. Until `combat-action` landed the
+      // Game-rules group had nothing to show and hid itself; now it has a
+      // switch, which is the first time the page renders at all.
       const model = buildGameRulesModel()
-      expect(model.switchable).toStrictEqual([])
-      expect(model.alwaysOn.map((r) => r.id)).toStrictEqual(['core', 'inventory'])
+      expect(model.alwaysOn.map((r) => r.id)).toStrictEqual(['core', 'stats', 'inventory'])
+      expect(model.switchable.map((r) => r.id)).toStrictEqual(['combat-action'])
       expect(model.alwaysOn.every((r) => r.enabled)).toBe(true)
+      // Off until the project says otherwise — a build must not gain
+      // fighting just by being opened in a newer editor.
+      expect(model.switchable[0].enabled).toBe(false)
       expect(model.alwaysOn.every((r) => r.kidLabel.length > 0)).toBe(true)
+      expect(model.switchable.every((r) => r.kidLabel.length > 0)).toBe(true)
+    })
+
+    await it('names what the shipped switch also turns on', async () => {
+      const model = buildGameRulesModel({ project: { gameSystems: { 'combat-action': { enabled: true } } } })
+      const combat = model.switchable.find((r) => r.id === 'combat-action')
+      expect(combat?.enabled).toBe(true)
+      expect(combat?.alsoEnables).toStrictEqual(['Stats', 'Inventory'])
     })
 
     await it('names what a switch also turns on, and what locks it', async () => {

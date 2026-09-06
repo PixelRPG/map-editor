@@ -1,16 +1,23 @@
+import { MovementComponent } from '../../components/index.ts'
 import type { ComponentData } from '../../types/data/index.ts'
 import type { ComponentSpec } from '../component-spec.ts'
 
 /**
- * Movement — grid-movement speed in tiles/second. Data-only: `build`
- * returns `null` because `PlayerSystem` reads the speed straight off the
- * definition (via `getComponentData`) rather than from an ECS component.
- * The field still drives validation + the inspector.
+ * Movement — grid-movement speed in tiles/second.
+ *
+ * `PlayerSystem` still reads the hero's speed off the flat
+ * {@link CharacterDefinition} view model it is handed, so for the player
+ * this component is inert. It exists for everything that is *not* the
+ * player: `HostileAiSystem` drives ordinary placements and has no view
+ * model to read, so the speed has to be on the entity it is moving.
  */
 interface MovementData extends ComponentData {
   type: 'movement'
   tilesPerSec: number
 }
+
+/** Matches the field descriptor's `default` — one number, one place. */
+const DEFAULT_TILES_PER_SEC = 4
 
 export const movementSpec: ComponentSpec = {
   type: 'movement',
@@ -22,14 +29,16 @@ export const movementSpec: ComponentSpec = {
       label: 'Speed (tiles/second)',
       input: 'float',
       basic: true,
-      default: 4,
+      default: DEFAULT_TILES_PER_SEC,
       min: 0.5,
       max: 16,
       step: 0.5,
     },
   ],
-  // Read off the definition by PlayerSystem — no runtime component to build.
-  build: () => null,
+  build: (data) => {
+    const d = data as MovementData
+    return new MovementComponent(Math.max(0, d.tilesPerSec ?? DEFAULT_TILES_PER_SEC))
+  },
 }
 
 export type { MovementData }

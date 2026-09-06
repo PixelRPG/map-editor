@@ -59,7 +59,14 @@ export const coreGameSystem: GameSystemSpec = {
     // InputSystem BEFORE PlayerSystem (insertion order = tick order at
     // equal priority): the player consumes the intent the same frame.
     new InputSystem(),
-    new PlayerSystem(ctx.mapResource, ctx.events, ctx.playerCharacter, ctx.playerSpriteSet),
+    new PlayerSystem(
+      ctx.mapResource,
+      ctx.events,
+      ctx.playerCharacter,
+      ctx.playerSpriteSet,
+      ctx.entityLibrary,
+      ctx.componentRegistry,
+    ),
     new TriggerSystem(ctx.events),
     new TeleportSystem(ctx.events),
     new EventActionSystem(ctx.events),
