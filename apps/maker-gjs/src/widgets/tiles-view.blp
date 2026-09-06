@@ -1,30 +1,18 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $TilesView : $PixelRpgResponsiveEditorView {
-  // Same master-detail shape as cast-view: ModeRail (left) holds the
-  // whole view; the central `Adw.NavigationView` drills from a tileset
-  // card GALLERY (with a desktop quick-view sidebar) into a per-tileset
-  // DETAIL page (palette + inspector). The two are never shown at once.
-  Adw.OverlaySplitView outer_split {
-    sidebar-position: start;
-    min-sidebar-width: 220;
-    max-sidebar-width: 260;
-    sidebar-width-fraction: 0.7;
-    pin-sidebar: true;
-    collapsed: bind template.library-collapsed;
-    show-sidebar: bind template.show-library bidirectional;
-
-    sidebar: $PixelRpgModeRail mode_rail {
-      project-name: _("New Project");
-      project-tagline: _("Sheets view");
-    };
-
-    content: Adw.NavigationView nav {
+template $TilesView : $PixelRpgLibraryPage {
+  // The Graphics page of the Library. The `Adw.NavigationView` drills
+  // from a sprite-sheet card GALLERY (with a desktop quick-view sidebar)
+  // into a per-tileset DETAIL page (palette + inspector). The two are
+  // never shown at once. The Library host owns the header (the chips +
+  // the quick-view toggle); only the detail carries a header bar, for
+  // the back button.
+  Adw.NavigationView nav {
       // ── Gallery (master) ──────────────────────────────────────────
       Adw.NavigationPage {
         tag: "gallery";
-        title: _("Sheets");
+        title: _("Graphics");
 
         child: Adw.OverlaySplitView gallery_split {
           sidebar-position: end;
@@ -36,34 +24,11 @@ template $TilesView : $PixelRpgResponsiveEditorView {
 
           sidebar: $TilesQuickView quick_view {};
 
-          content: Adw.ToolbarView {
-            top-bar-style: flat;
-
-            [top]
-            Adw.HeaderBar {
-              show-title: false;
-              show-start-title-buttons: false;
-              show-end-title-buttons: false;
-
-              [start]
-              Gtk.ToggleButton library_toggle {
-                icon-name: "sidebar-show-symbolic";
-                tooltip-text: _("Toggle library");
-                active: bind template.show-library bidirectional;
-              }
-
-              [end]
-              Gtk.ToggleButton quickview_toggle {
-                icon-name: "sidebar-show-right-symbolic";
-                tooltip-text: _("Toggle details");
-                active: bind template.show-quickview bidirectional;
-              }
-            }
-
-            content: Gtk.ScrolledWindow {
+          content: Gtk.ScrolledWindow {
               hexpand: true;
               vexpand: true;
               hscrollbar-policy: never;
+              min-content-width: 1;
 
               child: Adw.Clamp {
                 maximum-size: 1000;
@@ -78,13 +43,13 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   margin-end: 24;
 
                   Gtk.Label header_label {
-                    label: _("Sheets");
+                    label: _("Graphics");
                     halign: start;
                     styles ["title-1"]
                   }
 
                   Gtk.Label {
-                    label: _("Every sprite sheet in the project. Tilesets paint maps; appearances dress characters. Configure tiles here; edit an appearance's animations in Cast.");
+                    label: _("Every picture sheet in the project. Tilesets paint maps; appearances dress characters. Configure tiles here; edit an appearance's animations under Characters.");
                     halign: start;
                     wrap: true;
                     xalign: 0;
@@ -98,7 +63,7 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                     spacing: 8;
 
                     Gtk.SearchEntry search_entry {
-                      placeholder-text: _("Search sheets…");
+                      placeholder-text: _("Search graphics…");
                       hexpand: true;
                     }
 
@@ -154,8 +119,8 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   // ── Appearances (character sprite sheets) ──────────
                   // The other kind of sprite sheet: a character's look +
                   // its animations. Managed here as raw assets (import /
-                  // delete / glance); a tap jumps to the Cast matrix to
-                  // author the animations (`win.edit-appearance`).
+                  // delete / glance); a tap jumps to the Characters matrix
+                  // to author the animations (`win.edit-appearance`).
                   Gtk.Box appearance_header {
                     orientation: horizontal;
                     spacing: 8;
@@ -178,7 +143,7 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   }
 
                   Gtk.Label {
-                    label: _("Animation sheets characters wear. Open one to edit its animations in Cast; several characters can share an appearance.");
+                    label: _("Animation sheets characters wear. Open one to edit its animations under Characters; several characters can share an appearance.");
                     halign: start;
                     wrap: true;
                     xalign: 0;
@@ -192,7 +157,6 @@ template $TilesView : $PixelRpgResponsiveEditorView {
                   }
                 };
               };
-            };
           };
         };
       }
@@ -326,7 +290,5 @@ template $TilesView : $PixelRpgResponsiveEditorView {
           };
         };
       }
-
-    };
   }
 }

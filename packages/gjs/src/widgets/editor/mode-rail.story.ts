@@ -25,8 +25,7 @@ export class ModeRailStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Editor/Mode Rail',
-      description:
-        'Left library sidebar — hero icon + project name + tagline + World/Cast/Objects/Sheets/Data action rows.',
+      description: 'Left mode rail — hero icon + project name + tagline + the World / Library / Game action rows.',
       component: ModeRail.$gtype,
       controls: [
         { name: 'projectName', label: 'Project name', type: ControlType.TEXT },
@@ -37,10 +36,8 @@ export class ModeRailStory extends StoryWidget {
           type: ControlType.SELECT,
           options: [
             { label: 'World', value: 'world' },
-            { label: 'Cast', value: 'cast' },
-            { label: 'Objects', value: 'objects' },
-            { label: 'Sheets', value: 'tiles' },
-            { label: 'Data', value: 'data' },
+            { label: 'Library', value: 'library' },
+            { label: 'Game', value: 'game' },
           ],
         },
       ],

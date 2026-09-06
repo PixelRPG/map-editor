@@ -86,7 +86,6 @@ export class AtlasView extends ResponsiveEditorView {
   constructor() {
     super()
     this._mode_rail.projectName = this._projectName
-    this._mode_rail.projectTagline = 'Atlas view'
     this._atlas.setWorld(this._scenes, this._teleports)
     this._inspector.setScene(null, this._scenes, this._teleports)
     this._preview_zoom.setZoom(this._atlas.previewZoom)

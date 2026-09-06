@@ -79,6 +79,11 @@ export interface EntityTemplate {
   icon: string
   /** One-line description for the chooser row subtitle. */
   description: string
+  /**
+   * The Library › Things group a fresh entity lands in, stamped into
+   * `editorData.category`. Absent = the uncategorised "Objects" group.
+   */
+  category?: string
   /** The component set a fresh entity of this template starts with. */
   components: ComponentData[]
 }

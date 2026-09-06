@@ -114,13 +114,13 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
             Gtk.ToggleButton library_toggle_split {
               icon-name: "sidebar-show-symbolic";
               action-name: "win.toggle-library";
-              tooltip-text: _("Toggle library");
+              tooltip-text: _("Toggle sidebar");
               styles ["flat"]
             }
 
             Gtk.Button back_button_split {
               action-name: "win.back-to-atlas";
-              tooltip-text: _("Back to atlas");
+              tooltip-text: _("Back to World");
               styles ["flat"]
 
               child: Gtk.Box {
@@ -131,7 +131,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
                 }
 
                 Gtk.Label {
-                  label: _("Atlas");
+                  label: _("World");
                 }
               };
             }
@@ -272,14 +272,14 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
           Gtk.ToggleButton library_toggle_merged {
             icon-name: "sidebar-show-symbolic";
             action-name: "win.toggle-library";
-            tooltip-text: _("Toggle library");
+            tooltip-text: _("Toggle sidebar");
             styles ["flat"]
           }
 
           Gtk.Button back_button_merged {
             visible: false;
             action-name: "win.back-to-atlas";
-            tooltip-text: _("Back to atlas");
+            tooltip-text: _("Back to World");
             styles ["flat"]
 
             child: Gtk.Box {
@@ -290,7 +290,7 @@ template $PixelRpgFloatingTopBar : Adw.Bin {
               }
 
               Gtk.Label {
-                label: _("Atlas");
+                label: _("World");
               }
             };
           }

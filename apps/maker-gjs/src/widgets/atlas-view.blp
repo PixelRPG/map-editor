@@ -26,7 +26,7 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
 
     sidebar: $PixelRpgModeRail mode_rail {
       project-name: _("New Project");
-      project-tagline: _("Atlas view");
+      project-tagline: _("World");
     };
 
     content: Adw.OverlaySplitView inner_split {
@@ -55,7 +55,7 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
           [start]
           Gtk.ToggleButton library_toggle {
             icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Toggle library");
+            tooltip-text: _("Toggle sidebar");
             active: bind template.show-library bidirectional;
           }
 
@@ -90,10 +90,10 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             valign: end;
             margin-end: 12;
             margin-bottom: 12;
-            label: _("New Scene");
+            label: _("New map");
             icon-name: "list-add-symbolic";
             action-name: "win.new-scene";
-            tooltip-text: _("Create a new scene");
+            tooltip-text: _("Create a new map");
           }
 
           // Legend chip — bottom-center OSD explaining the teleport edges.

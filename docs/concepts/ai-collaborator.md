@@ -157,7 +157,7 @@ assistant awareness relay (re-wired from the live session).
 `win.play` is the deliberate exception: it is reset to `false` on
 scene-editor exit instead (a fresh scene starts in editor mode). This
 kills the old drift class where a paused assistant silently resumed
-after a Cast-view detour.
+after a Library detour.
 
 ## Auto-presence — external drivers always surface as the AI
 

@@ -1,7 +1,7 @@
 import type { EditorMode } from '@pixelrpg/gjs'
 
 /** The window `Adw.ViewStack`'s page names (see `application-window.blp`). */
-export type ViewName = 'welcome' | 'atlas' | 'cast' | 'objects' | 'tiles' | 'scene-editor' | 'data'
+export type ViewName = 'welcome' | 'atlas' | 'library' | 'scene-editor' | 'game'
 
 /**
  * Which mode-rail row a view belongs to. `welcome` has no mode: leaving
@@ -11,11 +11,9 @@ export type ViewName = 'welcome' | 'atlas' | 'cast' | 'objects' | 'tiles' | 'sce
 const MODE_FOR_VIEW: Readonly<Record<ViewName, EditorMode | null>> = {
   welcome: null,
   atlas: 'world',
-  cast: 'cast',
-  objects: 'objects',
-  tiles: 'tiles',
+  library: 'library',
   'scene-editor': 'world',
-  data: 'data',
+  game: 'game',
 }
 
 /** The mode-rail row `view` belongs to, or `null` when it has none. */
@@ -32,10 +30,8 @@ export function modeForView(view: ViewName): EditorMode | null {
  */
 const VIEW_FOR_MODE: Readonly<Record<EditorMode, ViewName>> = {
   world: 'atlas',
-  cast: 'cast',
-  objects: 'objects',
-  tiles: 'tiles',
-  data: 'data',
+  library: 'library',
+  game: 'game',
 }
 
 /** Whether an arbitrary `win.mode` target string names a real mode. */

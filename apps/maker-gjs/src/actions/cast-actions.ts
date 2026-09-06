@@ -3,11 +3,12 @@ import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
 
-/** What the Cast actions need from the window. */
+/** What the Characters actions need from the window. */
 export interface CastActionsContext {
   hasProject(): boolean
   showToast(message: string): void
-  showCastView(): void
+  /** Show the Library on its Characters chip. */
+  showCharacters(): void
   presentNewCharacter(): void
   focusCharacter(id: string): void
   /** Select the first character wearing `sheetId`; `false` when none does. */
@@ -22,9 +23,9 @@ export interface CastActionsContext {
 }
 
 /**
- * Cast actions. The in-UI paths are the card clicks; these are their
- * driveable equivalents so the MCP bridge and scripts reach the same
- * flows.
+ * Characters actions. The in-UI paths are the row clicks; these are
+ * their driveable equivalents so the MCP bridge and scripts reach the
+ * same flows. Each one lands on the Library's Characters chip first.
  */
 export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastActionsContext): void {
   const newCharacter = new Gio.SimpleAction({ name: 'new-character' })
@@ -40,7 +41,9 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
   const openCharacter = Gio.SimpleAction.new('open-character', GLib.VariantType.new('s'))
   openCharacter.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
-    if (id) ctx.focusCharacter(id)
+    if (!id) return
+    ctx.showCharacters()
+    ctx.focusCharacter(id)
   })
   addAction(group, openCharacter)
 
@@ -52,7 +55,7 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
     if (!id) return
     const sceneId = ctx.currentSceneId()
     if (!sceneId) {
-      ctx.showToast(_('Open a scene first to place a character'))
+      ctx.showToast(_('Open a map first to place a character'))
       return
     }
     ctx.openScene(sceneId)
@@ -60,17 +63,15 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
   })
   addAction(group, placeCharacter)
 
-  // The Cast matrix is where animations are authored; Sheets only manages
-  // appearances as raw assets and links here.
+  // The Characters matrix is where animations are authored; Graphics only
+  // manages appearances as raw assets and links here.
   const editAppearance = Gio.SimpleAction.new('edit-appearance', GLib.VariantType.new('s'))
   editAppearance.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (!id) return
-    ctx.showCastView()
+    ctx.showCharacters()
     if (!ctx.focusCharacterBySheet(id)) {
-      ctx.showToast(
-        _('No character wears this appearance yet — assign it to a character in Cast to edit its animations'),
-      )
+      ctx.showToast(_('No character wears this appearance yet — give it to a character to edit its animations'))
     }
   })
   addAction(group, editAppearance)
@@ -83,7 +84,7 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
       ctx.showToast(_('Open a project first'))
       return
     }
-    ctx.showCastView()
+    ctx.showCharacters()
     if (!ctx.presentNewAnimation(parameter?.get_string()[0] || undefined)) {
       ctx.showToast(_('Select or create a character first to add an animation'))
     }

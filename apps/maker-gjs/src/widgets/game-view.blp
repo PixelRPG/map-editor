@@ -1,16 +1,16 @@
 using Gtk 4.0;
 using Adw 1;
 
-// Data view — the project's lower-level "Assets and project" surface.
-// ModeRail (left) holds the whole view; the content is an
-// `Adw.PreferencesPage` (clamped + scrollable → responsive for free):
-//   • Project   — editable project metadata (name, author, …).
+// Game page — the project's own settings, one rail row. ModeRail (left)
+// holds the whole view; the content is an `Adw.PreferencesPage` (clamped
+// + scrollable → responsive for free):
+//   • Project    — editable project metadata (name, author, …).
+//   • Tile settings — the default tile size + where the project lives.
 //   • Game rules — the switchable game systems + the always-on base
-//     layer (see docs/concepts/game-systems.md).
-//   • Sprite sheets / Tilesets — every imported asset as a management
-//     row (thumbnail · metadata · "used by") with a ⋯ menu; rows are
-//     built in data-view.ts. Import buttons reuse the unified dialog.
-template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
+//     layer (see docs/concepts/game-systems.md), built in game-view.ts.
+// Assets are NOT listed here: characters and graphics are one rail row
+// away in the Library, and a group of jump-links to them was noise.
+template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
   Adw.OverlaySplitView outer_split {
     sidebar-position: start;
     min-sidebar-width: 220;
@@ -22,7 +22,7 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
 
     sidebar: $PixelRpgModeRail mode_rail {
       project-name: _("New Project");
-      project-tagline: _("Data view");
+      project-tagline: _("Game");
     };
 
     content: Adw.ToolbarView {
@@ -37,13 +37,13 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
         [start]
         Gtk.ToggleButton library_toggle {
           icon-name: "sidebar-show-symbolic";
-          tooltip-text: _("Toggle library");
+          tooltip-text: _("Toggle sidebar");
           active: bind template.show-library bidirectional;
         }
       }
 
       content: Adw.PreferencesPage {
-        title: _("Data");
+        title: _("Game");
 
         Adw.PreferencesGroup {
           title: _("Project");
@@ -94,7 +94,7 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
         // Game rules — one Adw.ExpanderRow per switchable game system
         // (show-enable-switch: the switch is the on/off, the body is the
         // expert surface), plus the always-on base layer. Rows are built
-        // in data-view.ts from the game-system registry, so a new system
+        // in game-view.ts from the game-system registry, so a new system
         // is a registration rather than a template edit. `game_rules`
         // hides itself while no switchable system ships.
         Adw.PreferencesGroup game_rules {
@@ -106,38 +106,6 @@ template $PixelRpgDataView : $PixelRpgResponsiveEditorView {
         Adw.PreferencesGroup always_on {
           title: _("Always on");
           description: _("Part of every game.");
-        }
-
-        // Assets are OWNED + edited in Cast / Sheets — Data only links to
-        // them (no duplicated import/rename/delete here). Suffix links jump
-        // to the managing view (soll-data).
-        Adw.PreferencesGroup {
-          title: _("Linked assets");
-          description: _("Managed in the Cast and Sheets views — Data just references them.");
-
-          Adw.ActionRow appearances_ref_row {
-            title: _("Appearances");
-            activatable-widget: appearances_open_button;
-
-            [suffix]
-            Gtk.Button appearances_open_button {
-              valign: center;
-              label: _("Open in Cast");
-              styles ["flat"]
-            }
-          }
-
-          Adw.ActionRow tilesets_ref_row {
-            title: _("Tilesets");
-            activatable-widget: tilesets_open_button;
-
-            [suffix]
-            Gtk.Button tilesets_open_button {
-              valign: center;
-              label: _("Open in Sheets");
-              styles ["flat"]
-            }
-          }
         }
       };
     };

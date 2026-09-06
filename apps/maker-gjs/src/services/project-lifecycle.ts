@@ -110,7 +110,7 @@ export class ProjectLifecycle {
   async loadSandbox(projectPath: string): Promise<void> {
     try {
       await this.load(projectPath)
-      this.ctx.showToast(_('Joined shared session — open a scene to start editing.'))
+      this.ctx.showToast(_('Joined shared session — open a map to start editing.'))
     } catch (err) {
       this.ctx.showToast(_(`Could not open shared session: ${(err as Error).message}`))
     }

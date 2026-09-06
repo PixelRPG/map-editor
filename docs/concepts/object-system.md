@@ -202,12 +202,12 @@ Canonical events (names match the `EngineEvent` enum in `packages/engine/src/typ
 
 The shipped surface (entity-composition C2–C6 + the tile-like-object UX, PRs #179–#184):
 
-- **Objects view** — a top-level master-detail view over the whole `entityLibrary` (world objects AND cast characters, the latter with a "Cast" badge), edited through the generated component inspector (`ObjectsController`, `win.new-object` / `win.open-object`).
+- **Library › Things** — the general master-detail list over the whole `entityLibrary` (world objects AND cast characters, the latter with a "Character" badge), grouped by `editorData.category` (`services/thing-categories.ts`: the uncategorised group is **Objects**, then Heroes, NPCs, then whatever a template or game system stamps — `EntityTemplate.category` is the writer, `groupThingsByCategory` the reader), edited through the generated component inspector (`ObjectsController`, `win.new-object` / `win.open-object`). One chip page of the Library rail row, beside Characters (the friendly lens over the character subset) and Graphics (the sprite sheets).
 - **Object brushes in the scene editor's Tiles tab** — a visual sprite-thumbnail palette (shared `TilePalette` / `createSwatchWidget`) below the tile palette; single-click a card to arm the brush (`win.set-object-brush`), which switches to the `'object'` tool.
 - **Object tool** — part of the `EditorTool` union; stamps the armed brush onto the clicked tile as an undoable, collab-synced `PlaceObjectCommand`. Placements render framed with a shared hover ghost (`entity/placement-graphic.ts`): the definition's `visual` sprite/animation contain-fitted into the cell — for a Cast character that's the sheet-owned `characterAnimations` default (e.g. `idle-down`) — or a type-coloured marker only when no appearance resolves. The FloatingTopBar context chip quick-selects tiles or objects depending on the active tool.
 - **Props tab "Selected object" group** — selecting a placement (`'select'` tool or `win.select-placement`) shows its name/position + an undoable Remove (`RemoveObjectCommand`).
 - **Objects visibility row** in the Layers tab (`win.toggle-objects`).
-- **Tile properties** — edited in the Sheets view's tile-property inspector (Solid switch, surface); persists to the sprite-set JSON.
+- **Tile properties** — edited in Library › Graphics' tile-property inspector (Solid switch, surface); persists to the sprite-set JSON.
 - **Atlas teleport curves** — built by aggregating placements carrying a `teleport` component across all maps via `resolvePlacementDefinition` — inline AND `defId` placements both surface (`project-loader.ts`; replaced the legacy projectwide `teleports[]`).
 
 Remaining follow-ups (per-placement override editing, palette layout) are tracked in `TODO.md` § "Object-system editor UI follow-ups".
@@ -274,7 +274,7 @@ Decisions captured here so future PRs don't re-litigate them:
 
 ## Related concepts
 
-- [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (Objects view, object tool, inspector tabs) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.entityLibrary` (project data), not on the session-singleton.
+- [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (Library › Things, object tool, inspector tabs) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.entityLibrary` (project data), not on the session-singleton.
 - [`runtime-modes.md`](runtime-modes.md) — trigger *effects* only fire while runtime is active because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`, the system that gates on `RuntimeModeComponent`. In pure editor mode the placements render but walk-onto/action triggers can't fire. (`auto` triggers fire on scene init regardless — no shipped template uses them yet.)
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`, `LayerData.id`) are what op-log payloads are keyed on. The transport-compatibility constraint applies to all future schema changes: stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere.
 

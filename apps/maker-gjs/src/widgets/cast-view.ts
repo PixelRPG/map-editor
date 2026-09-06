@@ -10,7 +10,6 @@ import {
   type ComponentRefOptions,
   EntityComponentsEditor,
   type GdkSpriteSetResource,
-  type ModeRail,
   type NewCharacterDraft,
   SignalScope,
   type SpriteSetChoice,
@@ -43,36 +42,31 @@ import {
 import { CastRosterRow } from './cast/roster-row.ts'
 import { attachTemplateSlots } from './cast/template-slots.ts'
 import Template from './cast-view.blp'
-import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import { LibraryPage } from './library-page.ts'
 
 GObject.type_ensure(CharacterPreview.$gtype)
 GObject.type_ensure(CastInspector.$gtype)
 GObject.type_ensure(ActionDirectionMatrix.$gtype)
 
-export namespace CastView {
-  export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
-  export interface SignalProps {
-    'mode-changed': [string]
-  }
-}
-
 /**
- * Project-level Cast view — a Characters-only lens (the friendly hero /
- * NPC roster) as an `Adw.NavigationSplitView` **master-detail**: a
- * filterable character LIST on the left, a rich detail pane (animated
- * preview + stat summary + editable inspector) on the right. The split
- * collapses to a drill-down on narrow widths.
+ * The Library's **Characters** page — a characters-only lens (the
+ * friendly hero / NPC roster) as an `Adw.NavigationSplitView`
+ * **master-detail**: a filterable character LIST on the left, a rich
+ * detail pane (animated preview + stat summary + editable inspector) on
+ * the right. The split collapses to a drill-down on narrow widths. The
+ * mode rail and the header (chips + "+") belong to the `LibraryView`
+ * host.
  *
  * Animation authoring lives here: the {@link ActionDirectionMatrix} in
  * the detail edits the character's appearance animations directly. The
- * raw sprite-sheet *asset* (import / delete / glance) lives in the
- * unified **Sheets** view; the detail's "Edit appearance →" deep-links
- * there for asset management.
+ * raw sprite-sheet *asset* (import / delete / glance) lives on the
+ * **Graphics** page; the detail's "Edit appearance →" deep-links there
+ * for asset management.
  *
  * Mutations land via host-supplied callbacks (`bindCallbacks`) so the
  * application window stays the single owner of project data.
  */
-export class CastView extends ResponsiveEditorView {
+export class CastView extends LibraryPage {
   declare _cast_split: Adw.NavigationSplitView
   // ── Master (roster) ─────────────────────────────────────────────
   declare _roster_list: Gtk.ListBox
@@ -95,7 +89,6 @@ export class CastView extends ResponsiveEditorView {
   declare _matrix: ActionDirectionMatrix
   declare _advanced_slot: Gtk.Box
 
-  private _projectName = ''
   private _filter: RoleFilter = 'all'
   private _characters: CharacterDefinition[] = []
   private _sheets: SpriteSetChoice[] = []
@@ -132,7 +125,6 @@ export class CastView extends ResponsiveEditorView {
         GTypeName: 'CastView',
         Template,
         InternalChildren: [
-          'mode_rail',
           'cast_split',
           'roster_list',
           'roster_empty',
@@ -153,17 +145,7 @@ export class CastView extends ResponsiveEditorView {
           'matrix',
           'advanced_slot',
         ],
-        Properties: {
-          'project-name': GObject.ParamSpec.string(
-            'project-name',
-            'Project Name',
-            'Display name fed into the ModeRail hero block',
-            GObject.ParamFlags.READWRITE,
-            '',
-          ),
-        },
         Signals: {
-          // mode-changed inherited from ResponsiveEditorView.
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
         },
       },
@@ -206,9 +188,6 @@ export class CastView extends ResponsiveEditorView {
     super.vfunc_map()
     this._inspector.setMode('character')
 
-    this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
-      this.emit('mode-changed', mode)
-    })
     wireRoleFilter(
       this.signals,
       { all: this._filter_all, heroes: this._filter_heroes, npcs: this._filter_npcs },
@@ -287,17 +266,6 @@ export class CastView extends ResponsiveEditorView {
     if (!this._currentCharacter()) return false
     this._presentAnimationDialog(null)
     return true
-  }
-
-  get projectName(): string {
-    return this._projectName ?? ''
-  }
-
-  set projectName(value: string) {
-    if (this._projectName === value) return
-    this._projectName = value
-    this._mode_rail.projectName = value
-    this.notify('project-name')
   }
 
   bindCallbacks(callbacks: {
@@ -451,7 +419,7 @@ export class CastView extends ResponsiveEditorView {
     this._matrix.setCharacter(character, spriteSet)
   }
 
-  /** Deep-link into the active character's raw appearance ASSET (Sheets view). */
+  /** Deep-link into the active character's raw appearance ASSET (Graphics). */
   private _editAppearance(): void {
     const character = this._currentCharacter()
     if (character) this.activate_action('win.open-appearance', GLib.Variant.new_string(character.spriteSetId))

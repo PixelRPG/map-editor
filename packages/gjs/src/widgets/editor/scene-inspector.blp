@@ -102,7 +102,7 @@ template $PixelRpgSceneInspector : Adw.Bin {
       }
 
       Gtk.Button open_button {
-        label: _("Open Scene");
+        label: _("Open map");
         action-name: "win.open-scene";
         halign: fill;
         styles ["suggested-action", "pill"]
@@ -112,8 +112,8 @@ template $PixelRpgSceneInspector : Adw.Bin {
       Adw.StatusPage empty_state {
         visible: bind template.empty;
         icon-name: "view-paged-symbolic";
-        title: _("No scene selected");
-        description: _("Pick a scene from the atlas to inspect it.");
+        title: _("No map selected");
+        description: _("Pick a map from the world to inspect it.");
       }
       };
       };

@@ -1,63 +1,22 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $ObjectsView : $PixelRpgResponsiveEditorView {
-  // OverlaySplitView holds the ModeRail (left) for the view's lifetime;
-  // the content is an Adw.NavigationView master-detail: a GALLERY page
-  // listing every world-object definition, drilling into a DETAIL page
-  // with the generated all-components editor.
-  Adw.OverlaySplitView outer_split {
-    sidebar-position: start;
-    min-sidebar-width: 220;
-    max-sidebar-width: 260;
-    sidebar-width-fraction: 0.7;
-    pin-sidebar: true;
-    collapsed: bind template.library-collapsed;
-    show-sidebar: bind template.show-library bidirectional;
-
-    sidebar: $PixelRpgModeRail mode_rail {
-      project-name: _("New Project");
-      project-tagline: _("Objects");
-    };
-
-    content: Adw.NavigationView nav {
+template $ObjectsView : Adw.Bin {
+  // The Things page of the Library: an Adw.NavigationView master-detail
+  // — a GALLERY page listing every entity definition, drilling into a
+  // DETAIL page with the generated all-components editor. The Library
+  // host owns the header (the chips + the "+" button that opens the
+  // template chooser); only the detail carries a header bar, for the
+  // back button and the delete action.
+  Adw.NavigationView nav {
       // ── Gallery (master) ──────────────────────────────────────────
       Adw.NavigationPage {
         tag: "gallery";
-        title: _("Objects");
+        title: _("Things");
 
-        child: Adw.ToolbarView {
-          [top]
-          Adw.HeaderBar {
-            show-title: false;
-            show-start-title-buttons: false;
-            show-end-title-buttons: false;
-
-            // Reopen the mode rail when it's collapsed to an overlay
-            // (narrow widths) — without this the Objects view had no way
-            // back to the other modes once the rail was dismissed.
-            [start]
-            Gtk.ToggleButton library_toggle {
-              icon-name: "sidebar-show-symbolic";
-              tooltip-text: _("Toggle library");
-              active: bind template.show-library bidirectional;
-            }
-
-            [end]
-            Gtk.Button new_object_button {
-              tooltip-text: _("New object");
-
-              child: Adw.ButtonContent {
-                icon-name: "list-add-symbolic";
-                label: _("New object");
-              };
-
-              styles ["suggested-action"]
-            }
-          }
-
-          content: Gtk.ScrolledWindow {
+        child: Gtk.ScrolledWindow {
             hscrollbar-policy: never;
+            min-content-width: 1;
 
             child: Adw.Clamp {
               maximum-size: 640;
@@ -70,10 +29,10 @@ template $ObjectsView : $PixelRpgResponsiveEditorView {
                 Gtk.StackPage {
                   name: "empty";
 
-                  // Deliberate empty-state (soll-objects): what objects are
-                  // (the Sheets → Cast → Objects relationship diagram) + a
-                  // row of template tiles to create one. The diagram + tiles
-                  // are built in objects-view.ts and dropped into the slots.
+                  // Deliberate empty-state: what things are (the Graphics →
+                  // Characters → Things relationship diagram) + a row of
+                  // template tiles to create one. The diagram + tiles are
+                  // built in objects-view.ts and dropped into the slots.
                   child: Gtk.Box {
                     orientation: vertical;
                     spacing: 24;
@@ -81,8 +40,8 @@ template $ObjectsView : $PixelRpgResponsiveEditorView {
 
                     Adw.StatusPage {
                       icon-name: "view-grid-symbolic";
-                      title: _("No objects yet");
-                      description: _("Objects are the placeable things in your scenes — chests, signs, doors, triggers. Build one from a template, then drop it onto any map.");
+                      title: _("No things yet");
+                      description: _("Things are what you place on a map — chests, signs, doors, triggers. Build one from a template, then drop it onto any map.");
                       vexpand: false;
                     }
 
@@ -118,30 +77,32 @@ template $ObjectsView : $PixelRpgResponsiveEditorView {
                 Gtk.StackPage {
                   name: "list";
 
-                  child: Gtk.ListBox objects_list {
-                    selection-mode: none;
+                  // One Adw.PreferencesGroup per category, built in
+                  // objects-view.ts from `groupThingsByCategory`.
+                  child: Gtk.Box objects_groups {
+                    orientation: vertical;
+                    spacing: 18;
                     valign: start;
-
-                    styles ["boxed-list"]
                   };
                 }
               };
             };
-          };
         };
       }
 
       // ── Detail ────────────────────────────────────────────────────
       Adw.NavigationPage detail_page {
         tag: "detail";
-        title: _("Object");
+        title: _("Thing");
 
         child: Adw.ToolbarView {
           [top]
           Adw.HeaderBar {
+            show-end-title-buttons: false;
+
             [end]
             Gtk.Button delete_button {
-              tooltip-text: _("Delete object");
+              tooltip-text: _("Delete thing");
               icon-name: "user-trash-symbolic";
 
               styles ["flat"]
@@ -166,6 +127,5 @@ template $ObjectsView : $PixelRpgResponsiveEditorView {
           };
         };
       }
-    };
   }
 }

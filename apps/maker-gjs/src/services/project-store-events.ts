@@ -4,7 +4,7 @@ import type { LoadedProject } from './project-loader.ts'
  * The outward contract of `ProjectStore`: what it tells its lenses and
  * its host window happened. Kept beside the store rather than inside it
  * because every consumer (`CastController`, `ObjectsController`,
- * `TilesController`, `DataController`, `ApplicationWindow`) imports
+ * `TilesController`, `GameController`, `ApplicationWindow`) imports
  * these names without needing the store's implementation.
  */
 

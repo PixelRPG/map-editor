@@ -2,11 +2,13 @@
 
 > Status: tracked in [implementation status](#implementation-status) — the single source of truth.
 
-The editor has seven top-level views (welcome, atlas, cast, objects,
-tiles/Sheets, scene-editor, data — the `Adw.ViewStack` pages in
-`application-window.blp`) and one window-level chrome system that has
-to render acceptably from a 360 px-wide smartphone form-factor up to
-a 4K desktop monitor. This doc is the high-level map of how that's stitched
+The editor has five top-level views (welcome, atlas, library,
+scene-editor, game — the `Adw.ViewStack` pages in
+`application-window.blp`) behind three mode-rail rows (World = atlas +
+scene editor, Library, Game; `check-mode-routes.mjs` holds the four
+declarations of that mapping together) and one window-level chrome
+system that has to render acceptably from a 360 px-wide smartphone
+form-factor up to a 4K desktop monitor. This doc is the high-level map of how that's stitched
 together so the next contributor doesn't have to reverse-engineer
 fifteen PRs to add a new view.
 
@@ -23,8 +25,8 @@ Single source of truth: two `Adw.Breakpoint`s on the
 
 | Tier        | Condition                              | Setters apply                                                                                         |
 |-------------|----------------------------------------|-------------------------------------------------------------------------------------------------------|
-| Mobile      | `max-width: 768sp`                     | `library-collapsed: true` + `inspector-collapsed: true` on every view (atlas, scene-editor, welcome*) |
-| Tablet      | `min-width: 768sp and max-width: 1023sp` | `library-collapsed: true` on atlas + scene-editor only                                                |
+| Mobile      | `max-width: 768sp`                     | `library-collapsed: true` + `inspector-collapsed: true` on every view (atlas, library, scene-editor, welcome*; game has no inspector) |
+| Tablet      | `min-width: 768sp and max-width: 1023sp` | `library-collapsed: true` on every view with a rail (atlas, library, scene-editor, game)             |
 | Desktop     | (no breakpoint, template defaults)     | All `*-collapsed: false` — both sidebars persistent                                                   |
 
 \* Welcome view has no `library-collapsed` (no left sidebar there);
@@ -51,7 +53,7 @@ persistent — impossible to express with a single shared
 state is **shared across view switches** (toggle the inspector
 open in the atlas, switch to the scene editor, it stays open).
 Desktop users open the sidebars they want from the toggle pills
-(headerbar buttons on atlas / cast / tiles / welcome; merged top
+(headerbar buttons on atlas / library / game / welcome; merged top
 OSD on the scene editor).
 
 ---
@@ -66,13 +68,17 @@ the inspector **auto-opens** if it was closed.
 | View          | Triggering selection                                          | Inspector content                          |
 |---------------|---------------------------------------------------------------|--------------------------------------------|
 | Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
-| Cast          | Click a character card in the gallery                         | Name, appearance picker, player toggle, speed (`CastInspector` in `character` mode) |
-| Sheets (stack page `tiles`) | Click a tile in a tileset's palette             | Solid switch, surface combo (tile-property inspector); appearance sheets open the animation editor (`CastInspector` in `sheet` mode) |
+| Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
 | Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Objects-tab row highlights, props          |
 
-The Objects and Data views follow the same content-view master-detail
-pattern (gallery/list → detail page) rather than a separate inspector
-drawer.
+The Library's Characters and Things pages and the Game page follow
+the content-view master-detail pattern (list → detail page, an
+`Adw.NavigationSplitView` / `Adw.NavigationView` that collapses to a
+drill-down at the same `inspector-collapsed` breakpoint) rather than a
+separate inspector drawer. The Library host pushes `inspector-collapsed`
+into the pages that have a split to collapse (`library-view.blp`); the
+window's `show-inspector` is not bound to it, because nothing behind the
+Library's header is a drawer.
 
 The rule is one line per call site: `this.showInspector = true`
 in the selection handler. The setter is a no-op when the panel is
@@ -151,7 +157,7 @@ binds `visible` to `collapsed` so:
 
 - **Desktop** (`collapsed: false`) — button hidden. The panel
   is pinned, the toggle in the floating top OSD (scene editor)
-  or the central headerbar (atlas / cast / tiles) is the
+  or the central headerbar (atlas / library) is the
   expected close affordance.
 - **Tablet / mobile** (`collapsed: true`) — button visible. Click
   closes the drawer via the existing `win.toggle-inspector`
@@ -452,6 +458,17 @@ dragging wouldn't be discoverable anyway.
 
 ## Adding a new view — checklist
 
+0. Decide whether it is a new RAIL ROW at all. Three rows is the
+   design (World / Library / Game, `mode-rail.blp`), and a place
+   that is another lens over data a row already owns is a chip
+   page of that row, not a fourth row: Cast, Objects and Sheets
+   were three rows of the same master-detail shape over the same
+   entity library + sprite sets, and merged into `LibraryView`
+   (`library-view.blp`: one host with the rail + the header, a
+   `Gtk.Stack` of pages that carry neither). A chip page extends
+   `LibraryPage` when it has a split to collapse, `Adw.Bin`
+   otherwise, and keeps a header bar only on its DETAIL page (for
+   the phone back button).
 1. Decide: canvas-bearing or content-only?
 2. If canvas-bearing, follow the atlas-view template (outer
    OverlaySplitView wraps inner OverlaySplitView wraps content
@@ -471,7 +488,12 @@ dragging wouldn't be discoverable anyway.
    `application-window.blp` — mirror the existing per-view
    blocks.
 6. Add the view to the `AdwViewStack` in the application window
-   template.
+   template, and — if it is a rail row — to `EditorMode`,
+   `MODE_ORDER`, the rail's `.blp` and `VIEW_FOR_MODE` /
+   `MODE_FOR_VIEW`; `gjsify run check:mode-routes` fails until all
+   six edges agree. The MCP bridge's `set_view` enum
+   (`apps/mcp-bridge/src/tools/editing.tools.ts`) is a literal copy
+   of `ViewName` that no guard covers: change it in the same commit.
 7. Drag the window to 360 px and check the log for
    `exceeds ApplicationWindow width` warnings. If any:
    identify the bubbling child + apply the

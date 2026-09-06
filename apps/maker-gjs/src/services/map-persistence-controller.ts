@@ -62,7 +62,7 @@ export class MapPersistenceController {
     const mapResource = this.host.getMapResource(mapId)
     if (!mapResource?.mapData) return
     mapResource.mapData.editorData = withAtlasPosition(mapResource.mapData.editorData, atlasX, atlasY)
-    this.persistMap(mapId, _('Could not save atlas position'))
+    this.persistMap(mapId, _('Could not save map position'))
     this.host.sendMapEditorDataChange(mapId, { atlasX, atlasY })
   }
 

@@ -7,7 +7,8 @@ import { addAction } from './action-registry.ts'
 export interface ObjectActionsContext {
   hasProject(): boolean
   showToast(message: string): void
-  showObjectsView(): void
+  /** Show the Library on its Things chip. */
+  showThings(): void
   createFromTemplate(templateId: string): void
   focusObject(id: string): void
   /** Promote a world object into the Cast roster, or demote it back. */
@@ -15,9 +16,9 @@ export interface ObjectActionsContext {
 }
 
 /**
- * Entity-library navigation. The in-view paths are the "New object"
- * template chooser and the Objects detail's "Cast member" switch; these
- * are their driveable forms.
+ * Entity-library navigation. The in-view paths are the "+" template
+ * chooser and the Things detail's "Character" switch; these are their
+ * driveable forms. Each one lands on the Library's Things chip first.
  */
 export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectActionsContext): void {
   const newObject = Gio.SimpleAction.new('new-object', GLib.VariantType.new('s'))
@@ -26,7 +27,7 @@ export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectAc
       ctx.showToast(_('Open a project first'))
       return
     }
-    ctx.showObjectsView()
+    ctx.showThings()
     ctx.createFromTemplate(parameter?.get_string()[0] || 'npc')
   })
   addAction(group, newObject)
@@ -35,7 +36,7 @@ export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectAc
   openObject.connect('activate', (_a, parameter) => {
     const id = parameter?.get_string()[0]
     if (!id) return
-    ctx.showObjectsView()
+    ctx.showThings()
     ctx.focusObject(id)
   })
   addAction(group, openObject)

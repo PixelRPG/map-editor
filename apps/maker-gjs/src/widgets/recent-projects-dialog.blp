@@ -1,0 +1,42 @@
+using Gtk 4.0;
+using Adw 1;
+
+// "Open Recent" from the primary menu. The welcome view already shows
+// the same list in its recents column, but that column is the welcome
+// view's: with a project open the menu item is the only way to reach
+// the list without closing the project first.
+template $PixelRpgRecentProjectsDialog : Adw.Dialog {
+  title: _("Recent projects");
+  content-width: 440;
+  content-height: 520;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Gtk.ScrolledWindow {
+      hscrollbar-policy: never;
+      propagate-natural-height: true;
+
+      child: Gtk.Box {
+        orientation: vertical;
+        margin-top: 12;
+        margin-bottom: 12;
+        margin-start: 12;
+        margin-end: 12;
+
+        Gtk.ListBox recents_list {
+          selection-mode: none;
+          valign: start;
+          styles ["boxed-list"]
+
+          Adw.ActionRow empty_recents_row {
+            title: _("No recent projects");
+            subtitle: _("Projects you open show up here.");
+            sensitive: false;
+          }
+        }
+      };
+    };
+  };
+}

@@ -1,31 +1,19 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $CastView : $PixelRpgResponsiveEditorView {
-  // Outer OverlaySplitView holds the ModeRail (left navigation). The
-  // central content is an `Adw.NavigationSplitView` master-detail: a
-  // filterable character LIST on the left (sidebar) and a rich detail
-  // pane on the right (content). On narrow widths the split collapses
-  // to a drill-down (tap a row → detail with a back button).
+template $CastView : $PixelRpgLibraryPage {
+  // The Characters page of the Library: an `Adw.NavigationSplitView`
+  // master-detail — a filterable character LIST on the left (sidebar)
+  // and a rich detail pane on the right (content). On narrow widths
+  // the split collapses to a drill-down (tap a row → detail with a
+  // back button). The Library host owns the header (the chips + the
+  // "+" button); the detail keeps a header bar of its own only while
+  // collapsed, for that back button.
   //
-  // Cast is a Characters-only lens — a friendly hero/NPC roster. Sprite
-  // sheets (appearances) live in the Sheets view; the detail just picks
-  // an appearance and deep-links into the Sheets editor to tweak it.
-  Adw.OverlaySplitView outer_split {
-    sidebar-position: start;
-    min-sidebar-width: 220;
-    max-sidebar-width: 260;
-    sidebar-width-fraction: 0.7;
-    pin-sidebar: true;
-    collapsed: bind template.library-collapsed;
-    show-sidebar: bind template.show-library bidirectional;
-
-    sidebar: $PixelRpgModeRail mode_rail {
-      project-name: _("New Project");
-      project-tagline: _("Cast view");
-    };
-
-    content: Adw.NavigationSplitView cast_split {
+  // Characters is a friendly hero/NPC roster. Sprite sheets
+  // (appearances) live under Graphics; the detail just picks an
+  // appearance and deep-links there to manage the asset.
+  Adw.NavigationSplitView cast_split {
       min-sidebar-width: 300;
       max-sidebar-width: 340;
       collapsed: bind template.inspector-collapsed;
@@ -33,35 +21,9 @@ template $CastView : $PixelRpgResponsiveEditorView {
       // ── Master: filterable character roster ───────────────────────
       sidebar: Adw.NavigationPage {
         tag: "roster";
-        title: _("Cast");
+        title: _("Characters");
 
-        child: Adw.ToolbarView {
-          [top]
-          Adw.HeaderBar {
-            show-end-title-buttons: false;
-
-            [start]
-            Gtk.ToggleButton library_toggle {
-              icon-name: "sidebar-show-symbolic";
-              tooltip-text: _("Toggle library");
-              active: bind template.show-library bidirectional;
-            }
-
-            title-widget: Gtk.Label {
-              label: _("Characters");
-              styles ["heading"]
-            };
-
-            [end]
-            Gtk.Button new_character_button {
-              icon-name: "list-add-symbolic";
-              action-name: "win.new-character";
-              tooltip-text: _("Add a new character");
-              styles ["flat"]
-            }
-          }
-
-          content: Gtk.Box {
+        child: Gtk.Box {
             orientation: vertical;
             spacing: 0;
 
@@ -97,6 +59,7 @@ template $CastView : $PixelRpgResponsiveEditorView {
             Gtk.ScrolledWindow {
               hscrollbar-policy: never;
               vexpand: true;
+              min-content-width: 1;
 
               child: Gtk.Box {
                 orientation: vertical;
@@ -135,7 +98,6 @@ template $CastView : $PixelRpgResponsiveEditorView {
                 }
               };
             }
-          };
         };
       };
 
@@ -145,9 +107,14 @@ template $CastView : $PixelRpgResponsiveEditorView {
         title: _("Character");
 
         child: Adw.ToolbarView {
+          // Only the collapsed (phone) layout needs this bar: it carries
+          // the drill-down's back button. On desktop the detail's own
+          // title-1 heading is the title and the Library header above
+          // holds the window controls.
           [top]
           Adw.HeaderBar {
             show-end-title-buttons: false;
+            visible: bind template.inspector-collapsed;
           }
 
           content: Gtk.Stack detail_stack {
@@ -271,6 +238,5 @@ template $CastView : $PixelRpgResponsiveEditorView {
           };
         };
       };
-    };
   }
 }

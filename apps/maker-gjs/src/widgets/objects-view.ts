@@ -3,32 +3,34 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import { isCharacterEntity } from '@pixelrpg/engine'
-import { type ComponentRefOptions, EntityComponentsEditor, type ModeRail, SignalScope } from '@pixelrpg/gjs'
+import { type ComponentRefOptions, EntityComponentsEditor, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES, type EntityTemplate } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
+import { groupThingsByCategory } from '../services/thing-categories.ts'
 import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
 import { buildObjectRow, buildRelationshipDiagram, buildTemplateTiles } from './objects/object-gallery.ts'
 import Template from './objects-view.blp'
-import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
 GObject.type_ensure(EntityComponentsEditor.$gtype)
 
 /**
- * Objects library view — the GENERAL master-detail lens over EVERY entity
- * definition in the project's `entityLibrary` (world objects AND the
- * `character`-template cast members, the latter flagged with a "Cast"
- * badge). The gallery lists them; the detail page edits one raw through a
- * name field + the generated {@link EntityComponentsEditor}. The Cast view
- * is the specialised friendly lens over the character subset. Pure view:
- * all persistence / collab rides `ObjectsController` via the emitted signals.
+ * The Library's **Things** page — the GENERAL master-detail lens over
+ * EVERY entity definition in the project's `entityLibrary` (world objects
+ * AND the `character`-template cast members, the latter flagged with a
+ * "Character" badge). The gallery lists them grouped by
+ * `editorData.category` — Objects, Heroes, NPCs, then whatever a game
+ * system stamps; the detail page edits one raw through a name field +
+ * the generated {@link EntityComponentsEditor}.
+ * The Characters page is the specialised friendly lens over the character
+ * subset. Pure view: all persistence / collab rides `ObjectsController`
+ * via the emitted signals; the mode rail and the header (chips + "+")
+ * belong to the `LibraryView` host.
  */
-export class ObjectsView extends ResponsiveEditorView {
-  declare _outer_split: Adw.OverlaySplitView
+export class ObjectsView extends Adw.Bin {
   declare _nav: Adw.NavigationView
-  declare _new_object_button: Gtk.Button
   declare _list_stack: Gtk.Stack
-  declare _objects_list: Gtk.ListBox
+  declare _objects_groups: Gtk.Box
   declare _empty_diagram_slot: Gtk.Box
   declare _empty_templates: Gtk.FlowBox
   declare _detail_page: Adw.NavigationPage
@@ -52,12 +54,9 @@ export class ObjectsView extends ResponsiveEditorView {
         GTypeName: 'ObjectsView',
         Template,
         InternalChildren: [
-          'outer_split',
-          'mode_rail',
           'nav',
-          'new_object_button',
           'list_stack',
-          'objects_list',
+          'objects_groups',
           'empty_diagram_slot',
           'empty_templates',
           'detail_page',
@@ -65,7 +64,6 @@ export class ObjectsView extends ResponsiveEditorView {
           'detail_slot',
         ],
         Signals: {
-          // mode-changed is inherited from ResponsiveEditorView.
           // Whole EntityDefinition JSON after an inspector edit.
           'object-changed': { param_types: [GObject.TYPE_STRING] },
           // A template id chosen in the "New object" dialog.
@@ -84,17 +82,18 @@ export class ObjectsView extends ResponsiveEditorView {
 
   constructor() {
     super()
-    // Build the detail body once: a name group (name + the "Cast member"
+    // Build the detail body once: a name group (name + the "Character"
     // toggle) + the components editor.
     const nameGroup = new Adw.PreferencesGroup()
     this._nameRow = new Adw.EntryRow({ title: _('Name') })
     nameGroup.add(this._nameRow)
-    // Promote/demote an actor-like entity into the friendly Cast roster.
-    // Only shown for entities with a `visual` component (a character needs
-    // an appearance); flips `editorData.template` ↔ 'character'.
+    // Promote/demote an actor-like entity into the friendly Characters
+    // roster. Only shown for entities with a `visual` component (a
+    // character needs an appearance); flips `editorData.template` ↔
+    // 'character'.
     this._castRow = new Adw.SwitchRow({
-      title: _('Cast member'),
-      subtitle: _('Show in the Cast roster — edit its appearance, speed, and player flag there.'),
+      title: _('Character'),
+      subtitle: _('Show under Characters — edit its look, speed and player flag there.'),
     })
     nameGroup.add(this._castRow)
     this._editor = new EntityComponentsEditor()
@@ -105,9 +104,9 @@ export class ObjectsView extends ResponsiveEditorView {
   }
 
   /**
-   * Populate the empty state: the relationship diagram (Sheets → Cast →
-   * Objects) plus the template tiles, which reuse the same
-   * `object-create-requested` path as the "New object" chooser.
+   * Populate the empty state: the relationship diagram (Graphics →
+   * Characters → Things) plus the template tiles, which reuse the same
+   * `object-create-requested` path as the "+" template chooser.
    */
   private _buildEmptyState(): void {
     buildRelationshipDiagram(this._empty_diagram_slot)
@@ -116,10 +115,6 @@ export class ObjectsView extends ResponsiveEditorView {
 
   vfunc_map(): void {
     super.vfunc_map()
-    this.signals.connect(this._mode_rail as ModeRail, 'mode-changed', (_v: ModeRail, mode: string) => {
-      this.emit('mode-changed', mode)
-    })
-    this.signals.connect(this._new_object_button, 'clicked', () => this._presentTemplateChooser())
     this.signals.connect(this._delete_button, 'clicked', () => {
       if (this._activeId) this._confirmDelete(this._activeId)
     })
@@ -157,25 +152,28 @@ export class ObjectsView extends ResponsiveEditorView {
   }
 
   /**
-   * The templates the "New object" chooser offers — built-ins plus the
-   * templates of every switched-on game system.
+   * The templates the "+" chooser offers — built-ins plus the templates
+   * of every switched-on game system.
    */
   setTemplates(templates: readonly EntityTemplate[]): void {
     this._templates = templates
     this._rebuildTemplateTiles()
   }
 
-  /** Replace the object list + rebuild the gallery rows. */
+  /** Replace the object list + rebuild the gallery, one group per category. */
   setObjects(objects: EntityDefinition[]): void {
     this._objects = objects
-    let child = this._objects_list.get_first_child()
+    let child = this._objects_groups.get_first_child()
     while (child) {
       const next = child.get_next_sibling()
-      this._objects_list.remove(child)
+      this._objects_groups.remove(child)
       child = next
     }
-    for (const obj of objects) {
-      this._objects_list.append(buildObjectRow(obj, () => this.focusObject(obj.id)))
+    for (const group of groupThingsByCategory(objects)) {
+      // msgid stays literal in `thing-categories.ts`; translated here.
+      const widget = new Adw.PreferencesGroup({ title: _(group.label) })
+      for (const obj of group.things) widget.add(buildObjectRow(obj, () => this.focusObject(obj.id)))
+      this._objects_groups.append(widget)
     }
     this._list_stack.set_visible_child_name(objects.length > 0 ? 'list' : 'empty')
     // If the open object vanished (deleted), drop back to the gallery.
@@ -211,8 +209,11 @@ export class ObjectsView extends ResponsiveEditorView {
     this._editor.setEntity(obj)
   }
 
-  /** Present the template chooser; the chosen template id drives creation. */
-  private _presentTemplateChooser(): void {
+  /**
+   * Present the template chooser; the chosen template id drives creation.
+   * Public: the "+" button lives in the Library host's header.
+   */
+  presentTemplateChooser(): void {
     presentTemplateChooser(this, this._templates, (templateId) => this.emit('object-create-requested', templateId))
   }
 

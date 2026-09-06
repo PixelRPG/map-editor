@@ -30,6 +30,7 @@ import sessionServiceSuite from './services/session-service.spec.js'
 import sessionSnapshotSuite from './services/session-snapshot.spec.js'
 import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 import themePreferenceSuite from './services/theme-preference.spec.js'
+import thingCategoriesSuite from './services/thing-categories.spec.js'
 import zoomMathSuite from './services/zoom-math.spec.js'
 
 import castControllerAnimationsSuite from './services/cast-controller-animations.spec.js'
@@ -44,6 +45,7 @@ import collabSinkBufferSuite from './services/collab-sink-buffer.spec.js'
 import entityVisualsSuite from './services/entity-visuals.spec.js'
 import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
 import layerDraftSuite from './services/layer-draft.spec.js'
+import libraryChipSuite from './services/library-chip.spec.js'
 import projectStoreBroadcastSuite from './services/project-store-broadcast.spec.js'
 import projectStoreEntitiesSuite from './services/project-store-entities.spec.js'
 import projectStorePersistenceSuite from './services/project-store-persistence.spec.js'
@@ -83,6 +85,7 @@ run({
   lanSignallingTimeoutSuite,
   layerDescriptorsSuite,
   layerDraftSuite,
+  libraryChipSuite,
   mapEditorDataSuite,
   orphanPublisherCleanupSuite,
   participantRosterSuite,
@@ -104,6 +107,7 @@ run({
   sessionSnapshotSuite,
   sessionStateSuite,
   themePreferenceSuite,
+  thingCategoriesSuite,
   tilesViewModelSuite,
   viewModeMapSuite,
   windowActionsSuite,

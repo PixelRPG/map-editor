@@ -5,9 +5,9 @@ import { gettext as _ } from 'gettext'
 import type { EntityTemplate } from '../../services/entity-templates.ts'
 
 /**
- * One gallery row. Objects is the GENERAL lens, so it lists characters
- * too — flagged with a person icon + a "Cast" badge to make clear they
- * are also the friendly Cast members (edited nicely over there).
+ * One gallery row. Things is the GENERAL lens, so it lists characters
+ * too — flagged with a person icon + a "Character" badge to make clear
+ * they are also on the Characters page (edited nicely over there).
  */
 export function buildObjectRow(object: EntityDefinition, onActivate: () => void): Adw.ActionRow {
   const isCharacter = isCharacterEntity(object)
@@ -15,7 +15,9 @@ export function buildObjectRow(object: EntityDefinition, onActivate: () => void)
   const icon = isCharacter ? 'avatar-default-symbolic' : (object.editorData?.icon ?? 'view-grid-symbolic')
   row.add_prefix(new Gtk.Image({ iconName: icon }))
   if (isCharacter) {
-    row.add_suffix(new Gtk.Label({ label: _('Cast'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }))
+    row.add_suffix(
+      new Gtk.Label({ label: _('Character'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }),
+    )
   }
   row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic', cssClasses: ['dim-label'] }))
   row.connect('activated', onActivate)
@@ -25,13 +27,13 @@ export function buildObjectRow(object: EntityDefinition, onActivate: () => void)
 /** The template archetypes the empty state offers as one-click tiles. */
 const EMPTY_STATE_TEMPLATE_IDS = ['chest', 'sign', 'door', 'trigger']
 
-/** Fill the empty state's relationship diagram: Sheets → Cast → Objects. */
+/** Fill the empty state's relationship diagram: Graphics → Characters → Things. */
 export function buildRelationshipDiagram(slot: Gtk.Box): void {
   // msgids stay literal here so extraction sees them.
   const chips: Array<[string, string, boolean]> = [
-    [_('Sheets'), _('art'), false],
-    [_('Cast'), _('characters'), false],
-    [_('Objects'), _('placed in scenes'), true],
+    [_('Graphics'), _('art'), false],
+    [_('Characters'), _('who'), false],
+    [_('Things'), _('placed on maps'), true],
   ]
   chips.forEach(([title, sub, accent], i) => {
     if (i > 0) {
@@ -57,7 +59,7 @@ export function buildRelationshipDiagram(slot: Gtk.Box): void {
 
 /**
  * Fill the empty state's template tiles. They reuse the same creation
- * path as the "New object" chooser.
+ * path as the "+" template chooser.
  */
 export function buildTemplateTiles(
   slot: Gtk.FlowBox,

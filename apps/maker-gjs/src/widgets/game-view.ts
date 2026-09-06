@@ -1,48 +1,39 @@
 import Adw from '@girs/adw-1'
-import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
-import Template from './data-view.blp'
+import Template from './game-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
-/**
- * The whole Data-view model the controller pushes in one shot. Assets are
- * summarised as COUNTS only — they're owned + edited in Cast / Sheets, so
- * Data references them rather than duplicating the management surface.
- */
-export interface DataViewModel {
+/** The whole Game-page model the controller pushes in one shot. */
+export interface GameViewModel {
   name: string
   author: string
   version: string
   description: string
   tileSize: number
   path: string
-  appearanceCount: number
-  tilesetCount: number
   /** The switchable game systems + the always-on base layer. */
   gameRules: GameRulesModel
 }
 
-export interface DataViewCallbacks {
+export interface GameViewCallbacks {
   setProjectField: (field: 'name' | 'author' | 'version' | 'description' | 'tileSize', value: string) => void
   /** Switch one game system on or off (`__project/systems.set` via the ProjectStore). */
   setGameSystemEnabled: (id: string, enabled: boolean) => void
 }
 
 /**
- * Data view — the project's settings surface. Editable project metadata
- * (name / author / version / description) + tile settings, plus a
- * "Linked assets" group that just *references* the appearances (Cast) and
- * tilesets (Sheets) with a count + a jump-to-managing-view link. The
- * assets themselves are owned + edited in those views — Data no longer
- * duplicates the import/rename/delete surface. See `data-controller.ts`.
+ * Game page — the project's own settings, the third rail row. Editable
+ * project metadata (name / author / version / description), tile
+ * settings and the "Game rules" group of switchable game systems. The
+ * assets a project holds are NOT listed here: characters and graphics
+ * live one rail row away in the Library. See `game-controller.ts`.
  */
-// biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
-export class DataView extends ResponsiveEditorView {
+export class GameView extends ResponsiveEditorView {
   declare _outer_split: Adw.OverlaySplitView
   declare _library_toggle: Gtk.ToggleButton
   declare _name_row: Adw.EntryRow
@@ -51,15 +42,11 @@ export class DataView extends ResponsiveEditorView {
   declare _description_row: Adw.EntryRow
   declare _tilesize_row: Adw.SpinRow
   declare _path_row: Adw.ActionRow
-  declare _appearances_ref_row: Adw.ActionRow
-  declare _tilesets_ref_row: Adw.ActionRow
-  declare _appearances_open_button: Gtk.Button
-  declare _tilesets_open_button: Gtk.Button
   declare _game_rules: Adw.PreferencesGroup
   declare _always_on: Adw.PreferencesGroup
 
   private signals = new SignalScope()
-  private _callbacks: DataViewCallbacks | null = null
+  private _callbacks: GameViewCallbacks | null = null
   // True while `setData` writes the row texts, so the `notify`/`apply`
   // handlers don't fire the edit callbacks back during a refresh.
   private _loading = false
@@ -67,7 +54,7 @@ export class DataView extends ResponsiveEditorView {
   static {
     GObject.registerClass(
       {
-        GTypeName: 'PixelRpgDataView',
+        GTypeName: 'PixelRpgGameView',
         Template,
         InternalChildren: [
           'outer_split',
@@ -79,17 +66,13 @@ export class DataView extends ResponsiveEditorView {
           'description_row',
           'tilesize_row',
           'path_row',
-          'appearances_ref_row',
-          'tilesets_ref_row',
-          'appearances_open_button',
-          'tilesets_open_button',
           'game_rules',
           'always_on',
         ],
         // show-library / library-collapsed (+ inspector) props + the
         // mode-changed signal are inherited from ResponsiveEditorView.
       },
-      DataView,
+      GameView,
     )
   }
 
@@ -101,14 +84,6 @@ export class DataView extends ResponsiveEditorView {
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) =>
       this.emit('mode-changed', mode),
     )
-    // Reference links jump to the view that OWNS the asset type.
-    this.signals.connect(this._appearances_open_button, 'clicked', () =>
-      this.activate_action('win.mode', GLib.Variant.new_string('cast')),
-    )
-    this.signals.connect(this._tilesets_open_button, 'clicked', () =>
-      this.activate_action('win.mode', GLib.Variant.new_string('tiles')),
-    )
-
     this.signals.connect(this._name_row, 'apply', () => this._emitField('name', this._name_row.get_text()))
     this.signals.connect(this._author_row, 'apply', () => this._emitField('author', this._author_row.get_text()))
     this.signals.connect(this._version_row, 'apply', () => this._emitField('version', this._version_row.get_text()))
@@ -131,7 +106,7 @@ export class DataView extends ResponsiveEditorView {
     this._callbacks?.setProjectField(field, value.trim())
   }
 
-  bindCallbacks(callbacks: DataViewCallbacks): void {
+  bindCallbacks(callbacks: GameViewCallbacks): void {
     this._callbacks = callbacks
   }
 
@@ -212,7 +187,7 @@ export class DataView extends ResponsiveEditorView {
   }
 
   /** Replace the whole view from a freshly built model. */
-  setData(model: DataViewModel | null): void {
+  setData(model: GameViewModel | null): void {
     this._loading = true
     this._name_row.set_text(model?.name ?? '')
     this._author_row.set_text(model?.author ?? '')
@@ -234,18 +209,6 @@ export class DataView extends ResponsiveEditorView {
       row.set_sensitive(sensitive)
     }
 
-    // Reference-row subtitles: how many + where they're managed.
-    const appearances = model?.appearanceCount ?? 0
-    const tilesets = model?.tilesetCount ?? 0
-    this._appearances_ref_row.set_subtitle(
-      appearances === 1 ? _('1 appearance · used by the Cast') : _(`${appearances} appearances · used by the Cast`),
-    )
-    this._tilesets_ref_row.set_subtitle(
-      tilesets === 1 ? _('1 tileset · used by maps') : _(`${tilesets} tilesets · used by maps`),
-    )
-    this._appearances_open_button.set_sensitive(sensitive)
-    this._tilesets_open_button.set_sensitive(sensitive)
-
     // Rebuild inside the loading fence so the freshly-created switches
     // don't echo their initial value back as a user edit.
     this._loading = true
@@ -265,4 +228,4 @@ function describeUsage(rule: GameRuleRow): string {
   return `${objects} · ${placed} ${on}`
 }
 
-GObject.type_ensure(DataView.$gtype)
+GObject.type_ensure(GameView.$gtype)

@@ -81,94 +81,54 @@ template $PixelRpgModeRail : Adw.Bin {
 
       Adw.ActionRow row_world {
         title: _("World");
-        subtitle: _("Atlas of scenes");
+        subtitle: _("Your maps");
         activatable: true;
         action-name: "win.mode";
         action-target: "'world'";
 
         [prefix]
         Gtk.Image {
+          icon-name: "mark-location-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow row_library {
+        title: _("Library");
+        subtitle: _("Characters, things and graphics");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'library'";
+
+        [prefix]
+        Gtk.Image {
+          icon-name: "view-grid-symbolic";
+          pixel-size: 22;
+        }
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
+      }
+
+      Adw.ActionRow row_game {
+        title: _("Game");
+        subtitle: _("Name, rules and settings");
+        activatable: true;
+        action-name: "win.mode";
+        action-target: "'game'";
+
+        [prefix]
+        Gtk.Image {
           icon-name: "applications-games-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
-      Adw.ActionRow row_cast {
-        title: _("Cast");
-        subtitle: _("Heroes and NPCs");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'cast'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "avatar-default-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
-      Adw.ActionRow row_objects {
-        title: _("Objects");
-        subtitle: _("NPCs, items, events");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'objects'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "view-grid-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
-      Adw.ActionRow row_tiles {
-        title: _("Sheets");
-        subtitle: _("Tilesets and appearances");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'tiles'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "view-grid-symbolic";
-          pixel-size: 22;
-        }
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
-      }
-
-      Adw.ActionRow row_data {
-        title: _("Data");
-        subtitle: _("Assets and project");
-        activatable: true;
-        action-name: "win.mode";
-        action-target: "'data'";
-
-        [prefix]
-        Gtk.Image {
-          icon-name: "drive-harddisk-symbolic";
           pixel-size: 22;
         }
 
@@ -184,6 +144,9 @@ template $PixelRpgModeRail : Adw.Bin {
       vexpand: true;
     }
 
+    // Settings only. A second button used to sit above it, bound to
+    // the same action as the primary menu's "Open Recent" — one entry
+    // point per affordance is enough.
     Gtk.Box footer {
       orientation: vertical;
       margin-start: 12;
@@ -191,20 +154,6 @@ template $PixelRpgModeRail : Adw.Bin {
       margin-top: 12;
       margin-bottom: 16;
       spacing: 4;
-
-      Gtk.Button {
-        label: _("Recent projects…");
-        action-name: "win.open-recent-projects";
-        styles ["flat"]
-        halign: fill;
-
-        child: Gtk.Label {
-          label: _("Recent projects…");
-          halign: start;
-          margin-start: 6;
-          margin-end: 6;
-        };
-      }
 
       Gtk.Button {
         label: _("Settings");

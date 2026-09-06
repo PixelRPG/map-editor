@@ -138,7 +138,6 @@ export class SceneEditorView extends ResponsiveEditorView {
   constructor() {
     super()
     this._mode_rail.projectName = this._projectName
-    this._mode_rail.projectTagline = 'Scene editor'
     this._wireInspectorSignals()
   }
 

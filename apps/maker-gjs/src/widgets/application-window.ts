@@ -9,7 +9,6 @@ import {
   createMapEditorDataOp,
   type EditorTool,
   type SpriteSetData,
-  type SpriteSetKind,
 } from '@pixelrpg/engine'
 import { type CollaboratorEntry, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
@@ -26,17 +25,13 @@ import { installTileActions } from '../actions/tile-actions.ts'
 import { installViewActions } from '../actions/view-actions.ts'
 import { installZoomActions } from '../actions/zoom-actions.ts'
 import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
-import {
-  presentAssetImport,
-  presentDeleteAsset,
-  presentRenameAsset,
-  presentTilesetSwitcher,
-} from '../services/asset-dialogs.ts'
+import { presentTilesetSwitcher } from '../services/asset-dialogs.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
-import { DataController } from '../services/data-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
+import { GameController } from '../services/game-controller.ts'
+import type { LibraryChip } from '../services/library-chip.ts'
 import { wireEngineEvents } from '../services/engine-event-bridge.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
 import { buildVariant } from '../services/gvariant.ts'
@@ -57,20 +52,16 @@ import type { ViewName } from '../services/view-mode-map.ts'
 import { ViewRouter } from '../services/view-router.ts'
 import Template from './application-window.blp'
 import type { AtlasView } from './atlas-view.ts'
-import { CastView } from './cast-view.ts'
-// biome-ignore lint/suspicious/noShadowRestrictedNames: GTK view-class naming convention (CastView/TilesView/DataView); the JS DataView global is unused in this app
-import { DataView } from './data-view.ts'
-import { ObjectsView } from './objects-view.ts'
+import { GameView } from './game-view.ts'
+import { LibraryView } from './library-view.ts'
+import { RecentProjectsDialog } from './recent-projects-dialog.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
-import { TilesView } from './tiles-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
-// Force registration so the `$CastView` / `$TilesView` / `$ObjectsView` /
-// `$PixelRpgDataView` references in the blueprint resolve at parse time.
-GObject.type_ensure(CastView.$gtype)
-GObject.type_ensure(ObjectsView.$gtype)
-GObject.type_ensure(TilesView.$gtype)
-GObject.type_ensure(DataView.$gtype)
+// Force registration so the `$PixelRpgLibraryView` / `$PixelRpgGameView`
+// references in the blueprint resolve at parse time.
+GObject.type_ensure(LibraryView.$gtype)
+GObject.type_ensure(GameView.$gtype)
 
 /**
  * Read-only snapshot of the editor's live state, surfaced to external
@@ -135,7 +126,7 @@ export type { SessionSnapshot }
  * Top-level window.
  *
  * Hosts an `Adw.ViewStack` that switches between the welcome screen, the
- * atlas (world overview), the per-mode views and the scene editor, and
+ * three rail rows (World = atlas + scene editor, Library, Game) and
  * composes the collaborators that do the actual work:
  *
  * - {@link ViewRouter} — page switching + mode-rail sync
@@ -152,11 +143,9 @@ export type { SessionSnapshot }
 export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _welcome_view: WelcomeView
   declare _atlas_view: AtlasView
-  declare _cast_view: CastView
-  declare _objects_view: ObjectsView
-  declare _tiles_view: TilesView
+  declare _library_view: LibraryView
   declare _scene_editor_view: SceneEditorView
-  declare _data_view: DataView
+  declare _game_view: GameView
   declare _stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
 
@@ -225,19 +214,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   })
   private readonly _router = new ViewRouter({
     getStack: () => this._stack,
-    getRails: () => [
-      this._atlas_view,
-      this._cast_view,
-      this._objects_view,
-      this._tiles_view,
-      this._scene_editor_view,
-      this._data_view,
-    ],
+    getRails: () => [this._atlas_view, this._library_view, this._scene_editor_view, this._game_view],
     getMode: () => (this._actions ? stringState(this._actions.mode) : null),
     // set_state (not change_state) so the change-state handler doesn't
     // re-enter: the view is already being set explicitly.
     setModeState: (mode) => this._actions?.mode.set_state(GLib.Variant.new_string(mode)),
-    isRailOverlay: () => this._cast_view.libraryCollapsed,
+    isRailOverlay: () => this._library_view.libraryCollapsed,
     hideLibrary: () => this.set_property('show-library', false),
     onLeaveSceneEditor: () => {
       this._engineCtl.dispose()
@@ -279,16 +261,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     setProject: (project) => this._projectStore.setProject(project),
     adoptProject: (project) => {
       this._atlas_view.projectName = project.projectName
+      this._library_view.projectName = project.projectName
       this._scene_editor_view.projectName = project.projectName
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenes.setScenes(project.scenes)
     },
     // A fresh project starts on the card overview, not a stale detail page
     // left over from the previous one.
-    resetViews: () => {
-      this._cast_view.resetToOverview()
-      this._tiles_view.resetToOverview()
-    },
+    resetViews: () => this._library_view.resetToOverview(),
     refreshRecentProjects: (recent) => this._welcome_view.setRecentProjects(recent),
     setShareEnabled: (enabled) => this._actions?.share.set_enabled(enabled),
     showAtlas: () => this._router.setView('atlas'),
@@ -306,7 +286,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _castCtl: CastController | null = null
   private _objectsCtl: ObjectsController | null = null
   private _tilesCtl: TilesController | null = null
-  private _dataCtl: DataController | null = null
+  private _gameCtl: GameController | null = null
 
   static {
     GObject.registerClass(
@@ -316,11 +296,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         InternalChildren: [
           'welcome_view',
           'atlas_view',
-          'cast_view',
-          'objects_view',
-          'tiles_view',
+          'library_view',
           'scene_editor_view',
-          'data_view',
+          'game_view',
           'stack',
           'toast_overlay',
         ],
@@ -405,7 +383,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // applied it in memory) — persist that map file here (this window
     // owns map IO) and reposition its atlas card.
     this._projectStore.on('map-editor-data-changed', ({ mapId }) => {
-      this._mapPersistCtl.persistMap(mapId, _('Could not save atlas position'))
+      this._mapPersistCtl.persistMap(mapId, _('Could not save map position'))
       this._scenes.refreshAtlasPosition(mapId)
     })
   }
@@ -449,16 +427,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // the right ViewStack page. Mutation handling + persistence belongs to
     // the per-mode controllers; view-side stays presentational.
     const setMode = (mode: string) => this._actions?.mode.change_state(GLib.Variant.new_string(mode))
-    for (const view of [
-      this._atlas_view,
-      this._scene_editor_view,
-      this._cast_view,
-      this._tiles_view,
-      this._objects_view,
-      this._data_view,
-    ]) {
+    for (const view of [this._atlas_view, this._scene_editor_view, this._library_view, this._game_view]) {
       this.signals.connect(view, 'mode-changed', (_v: unknown, mode: string) => setMode(mode))
     }
+    // The Library's own chip clicks flow back into `win.library-chip`, so
+    // an external driver reading the action state sees what is on screen.
+    this.signals.connect(this._library_view, 'notify::chip', () => {
+      this._actions?.libraryChip.set_state(GLib.Variant.new_string(this._library_view.chip))
+    })
 
     // Scene editor → host bridge. The inspector mutates `MapResource
     // .mapData` in place via `engine.setLayerVisible` / `setLayerLocked`,
@@ -507,26 +483,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * wires the pieces that need window-owned resources (dialogs, navigation).
    */
   private _ensureControllers(): void {
-    if (!this._castCtl) this._castCtl = new CastController(this._cast_view, this._projectStore)
+    const library = this._library_view
+    if (!this._castCtl) this._castCtl = new CastController(library.castView, this._projectStore)
     if (!this._tilesCtl && this._castCtl) {
       // Sprite-set CRUD + tile properties delegate to the store (the
       // single descriptor write + collab-broadcast path); appearance /
       // animation edits route through the cast controller's methods.
-      this._tilesCtl = new TilesController(this._tiles_view, this._projectStore, this._castCtl)
+      this._tilesCtl = new TilesController(library.tilesView, this._projectStore, this._castCtl)
     }
-    if (!this._dataCtl) {
-      this._dataCtl = new DataController(this._data_view, this._projectStore)
-      // Asset actions that need host dialogs / navigation.
-      this._dataCtl.on('import-requested', ({ kind }) => this._presentAssetImport(kind))
-      this._dataCtl.on('open-requested', ({ id, kind }) => this._openAsset(id, kind))
-      this._dataCtl.on('rename-requested', ({ id, currentName }) => {
-        presentRenameAsset(this, currentName, (name) => this._projectStore.renameSpriteSet(id, name))
-      })
-      this._dataCtl.on('delete-requested', ({ id, name, usedBy }) => {
-        presentDeleteAsset(this, { name, usedBy }, () => this._projectStore.deleteSpriteSet(id))
-      })
-    }
-    if (!this._objectsCtl) this._objectsCtl = new ObjectsController(this._objects_view, this._projectStore)
+    if (!this._gameCtl) this._gameCtl = new GameController(this._game_view, this._projectStore)
+    if (!this._objectsCtl) this._objectsCtl = new ObjectsController(library.objectsView, this._projectStore)
   }
 
   /**
@@ -543,18 +509,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _shareSidebarState(): void {
     const flags = GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL
-    for (const view of [
-      this._atlas_view,
-      this._cast_view,
-      this._objects_view,
-      this._tiles_view,
-      this._scene_editor_view,
-    ]) {
+    for (const view of [this._atlas_view, this._scene_editor_view]) {
       this.bind_property('show-library', view, 'show-library', flags)
       this.bind_property('show-inspector', view, 'show-inspector', flags)
     }
-    // The Data view has a mode rail but no inspector — bind only the library.
-    this.bind_property('show-library', this._data_view, 'show-library', flags)
+    // The Library and the Game page have a mode rail but no inspector
+    // drawer (their detail panes are master-detail splits) — bind only
+    // the library.
+    this.bind_property('show-library', this._library_view, 'show-library', flags)
+    this.bind_property('show-library', this._game_view, 'show-library', flags)
   }
 
   /**
@@ -567,10 +530,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     const hasProject = () => this._loadedProject != null
     const showToast = (message: string) => this._showToast(message)
 
-    const { mode } = installViewActions(group, {
+    const { mode, libraryChip } = installViewActions(group, {
       hasProject,
       setView: (view) => this._router.setView(view),
       prepareView: (view) => this._prepareView(view),
+      setLibraryChip: (chip) => {
+        this._library_view.chip = chip
+      },
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
     })
@@ -578,6 +544,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     installProjectActions(group, {
       showToast,
       openProject: () => this._projects.openFromDialog(),
+      presentRecentProjects: () => this._presentRecentProjects(),
       closeProject: () => void this._projects.close(),
     })
 
@@ -625,14 +592,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setViewAssistantPaused: (paused) => this._scene_editor_view.setAssistantPaused(paused),
     })
 
+    const library = this._library_view
     installCastActions(group, {
       hasProject,
       showToast,
-      showCastView: () => this._router.setView('cast'),
-      presentNewCharacter: () => this._cast_view.presentNewCharacterDialog(),
-      focusCharacter: (id) => this._cast_view.focusCharacter(id),
-      focusCharacterBySheet: (sheetId) => this._cast_view.focusCharacterBySheet(sheetId),
-      presentNewAnimation: (sheetId) => this._cast_view.presentNewAnimationForSheet(sheetId),
+      showCharacters: () => this._showLibrary('characters'),
+      presentNewCharacter: () => library.castView.presentNewCharacterDialog(),
+      focusCharacter: (id) => library.castView.focusCharacter(id),
+      focusCharacterBySheet: (sheetId) => library.castView.focusCharacterBySheet(sheetId),
+      presentNewAnimation: (sheetId) => library.castView.presentNewAnimationForSheet(sheetId),
       currentSceneId: () => this._scenes.currentSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
@@ -641,20 +609,20 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     installTileActions(group, {
       hasProject,
       showToast,
-      showTilesView: () => this._router.setView('tiles'),
-      presentAppearanceImport: () => this._tiles_view.presentAppearanceImportDialog(),
-      presentTilesetImport: () => this._tiles_view.presentTilesetImportDialog(),
-      focusTileset: (id) => this._tiles_view.focusTileset(id),
-      focusAppearance: (id) => this._tiles_view.focusAppearance(id),
+      showGraphics: () => this._showLibrary('graphics'),
+      presentAppearanceImport: () => library.tilesView.presentAppearanceImportDialog(),
+      presentTilesetImport: () => library.tilesView.presentTilesetImportDialog(),
+      focusTileset: (id) => library.tilesView.focusTileset(id),
+      focusAppearance: (id) => library.tilesView.focusAppearance(id),
       switchTileset: () => this._switchTileset(),
     })
 
     installObjectActions(group, {
       hasProject,
       showToast,
-      showObjectsView: () => this._router.setView('objects'),
+      showThings: () => this._showLibrary('things'),
       createFromTemplate: (templateId) => this._objectsCtl?.createFromTemplate(templateId),
-      focusObject: (id) => this._objects_view.focusObject(id),
+      focusObject: (id) => library.objectsView.focusObject(id),
       toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
     })
 
@@ -662,31 +630,36 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     this.insert_action_group('win', group)
     this._winActions = group
-    this._actions = { mode, tool, play, objects, grid, transparency, share, undo, redo }
+    this._actions = { mode, libraryChip, tool, play, objects, grid, transparency, share, undo, redo }
   }
 
-  /** Re-hydrate the lens behind `view` before the router shows it. */
+  /** `win.open-recent-projects` — the primary menu's "Open Recent". */
+  private _presentRecentProjects(): void {
+    const dialog = new RecentProjectsDialog()
+    dialog.setRecentProjects(loadRecentProjects())
+    dialog.connect('recent-selected', (_d: RecentProjectsDialog, path: string) => {
+      dialog.close()
+      void this._projects.load(path)
+    })
+    dialog.present(this)
+  }
+
+  /** Re-hydrate the lenses behind `view` before the router shows it. */
   private _prepareView(view: ViewName): void {
-    if (view === 'cast') void this._castCtl?.refresh()
-    else if (view === 'objects') this._objectsCtl?.refresh()
-  }
-
-  /** Present the unified import dialog for a Data-view asset of `kind`. */
-  private _presentAssetImport(kind: SpriteSetKind): void {
-    presentAssetImport(this, kind, (result) => void this._projectStore.importSpriteSet(result))
+    if (view !== 'library') return
+    void this._castCtl?.refresh()
+    this._objectsCtl?.refresh()
   }
 
   /**
-   * Jump from a Data-view asset row to its home view. Both kinds live in
-   * the Sheets view: tilesets → tile inspector, appearances (character
-   * sheets) → the asset glance. (Animation authoring lives in the Cast
-   * matrix, reachable from the glance's "edit in Cast" jump.)
+   * The deep links' landing: `win.mode('library')` plus the chip. Goes
+   * through the router (rail highlight, engine teardown) exactly like a
+   * rail click, then picks the page.
    */
-  private _openAsset(id: string, kind: SpriteSetKind): void {
-    if (!this._loadedProject) return
-    this._router.setView('tiles')
-    if (kind === 'tileset') this._tiles_view.focusTileset(id)
-    else this._tiles_view.focusAppearance(id)
+  private _showLibrary(chip: LibraryChip): void {
+    this._prepareView('library')
+    this._router.setView('library')
+    this._library_view.chip = chip
   }
 
   /**
@@ -700,7 +673,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (!project || !sceneId) return
     const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
     if (refs.length <= 1) {
-      this._showToast(_('This scene uses a single tileset.'))
+      this._showToast(_('This map uses a single tileset.'))
       return
     }
     const activeId = this._scene_editor_view.activeTilesetId

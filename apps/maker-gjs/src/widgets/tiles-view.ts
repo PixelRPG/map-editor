@@ -6,14 +6,12 @@ import type { CharacterDefinition, GameProjectResource, SpriteDataSet } from '@p
 import {
   CardGallery,
   type GdkSpriteSetResource,
-  type ModeRail,
   reparentWidget,
   SignalScope,
   type SpriteSetChoice,
   TileInspector,
   TilePalette,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 
 import { countMapUsers } from '../services/sprite-set-usage.ts'
 import {
@@ -26,7 +24,7 @@ import {
   sheetAsCharacter,
   type TilesetSort,
 } from '../services/tiles-view-model.ts'
-import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import { LibraryPage } from './library-page.ts'
 import {
   confirmAppearanceDelete,
   confirmTilesetDelete,
@@ -65,17 +63,17 @@ GObject.type_ensure(CardGallery.$gtype)
 GObject.type_ensure(TilesQuickView.$gtype)
 
 /**
- * Tileset editor view. Lives at the same level as cast-view + atlas-view:
- * an Adw.OverlaySplitView with the ModeRail on the left, a tile inspector
- * on the right, and the central area showing a sprite-set card gallery +
- * the full tile palette of the active sprite-set.
+ * The Library's **Graphics** page — tilesets and appearances as raw
+ * assets: a sprite-set card gallery (with a desktop quick-view sidebar)
+ * drilling into the full tile palette + tile inspector of one tileset.
+ * The mode rail and the header (chips + the quick-view toggle) belong to
+ * the `LibraryView` host.
  *
- * The gallery mirrors the Cast view's character cards (shared
- * `CardGallery`): each tileset is a card with a sheet thumbnail; the
- * "+ New tileset" header button imports one (same `SpriteSetImportDialog`
- * the cast uses), and each project tileset's card carries a delete
- * affordance. Selecting a card populates the palette below + the right
- * inspector for that set's tiles.
+ * The gallery uses the shared `CardGallery`: each tileset is a card with
+ * a sheet thumbnail; the "+" beside the section heading imports one
+ * (same `SpriteSetImportDialog` the character dialog uses), and each
+ * project tileset's card carries a delete affordance. Selecting a card
+ * populates the palette below + the right inspector for that set's tiles.
  *
  * Inspector edits mutate the `SpriteSetData` in memory, push the change
  * to the engine's live tilemap via `refreshTileSolidsForSprite`, and
@@ -83,7 +81,7 @@ GObject.type_ensure(TilesQuickView.$gtype)
  * Tileset create/delete also route to the host (shared with the Cast
  * controller's sprite-set CRUD + collab broadcast).
  */
-export class TilesView extends ResponsiveEditorView {
+export class TilesView extends LibraryPage {
   declare _inspector: TileInspector
   declare _palette: TilePalette
   declare _tilesets_gallery: CardGallery
@@ -104,11 +102,10 @@ export class TilesView extends ResponsiveEditorView {
   declare _quick_view: TilesQuickView
   // ── Appearances (character sprite sheets) gallery ──
   // Asset management only: import / delete / glance. Editing an
-  // appearance's animations happens in the Cast matrix — a card's "edit"
-  // affordance jumps there (`win.edit-appearance`).
+  // appearance's animations happens in the Characters matrix — a card's
+  // "edit" affordance jumps there (`win.edit-appearance`).
   declare _appearances_gallery: CardGallery
 
-  private _projectName = ''
   // Quick-view shown on desktop; flipped off when the breakpoint collapses
   // (see `_onInspectorCollapsedChanged`).
   private _showQuickview = true
@@ -156,7 +153,6 @@ export class TilesView extends ResponsiveEditorView {
         GTypeName: 'TilesView',
         Template,
         InternalChildren: [
-          'mode_rail',
           'inspector',
           'palette',
           'tilesets_gallery',
@@ -173,15 +169,8 @@ export class TilesView extends ResponsiveEditorView {
           'appearances_gallery',
         ],
         Properties: {
-          'project-name': GObject.ParamSpec.string(
-            'project-name',
-            'Project Name',
-            'Display name fed into the ModeRail hero block',
-            GObject.ParamFlags.READWRITE,
-            '',
-          ),
-          // show-library/-inspector + *-collapsed are inherited from
-          // ResponsiveEditorView; only the gallery quick-view is local.
+          // inspector-collapsed is inherited from LibraryPage; only the
+          // gallery quick-view is local.
           'show-quickview': GObject.ParamSpec.boolean(
             'show-quickview',
             'Show Quick-view',
@@ -191,8 +180,6 @@ export class TilesView extends ResponsiveEditorView {
           ),
         },
         Signals: {
-          // mode-changed is inherited from ResponsiveEditorView.
-
           // A tileset was imported via this view's dialog — payload is
           // the `SpriteSetImportResult`. The host routes it to the
           // shared sprite-set import path (copy + register + broadcast).
@@ -233,9 +220,6 @@ export class TilesView extends ResponsiveEditorView {
    */
   vfunc_map(): void {
     super.vfunc_map()
-    this.signals.connect(this._mode_rail, 'mode-changed', (_v: ModeRail, mode: string) => {
-      this.emit('mode-changed', mode)
-    })
     wireGalleryQuery(
       this.signals,
       { searchEntry: this._search_entry, sortDropdown: this._sort_dropdown },
@@ -278,17 +262,6 @@ export class TilesView extends ResponsiveEditorView {
   vfunc_unmap(): void {
     this.signals.disconnectAll()
     super.vfunc_unmap()
-  }
-
-  get projectName(): string {
-    return this._projectName ?? ''
-  }
-
-  set projectName(value: string) {
-    if (this._projectName === value) return
-    this._projectName = value
-    this._mode_rail.projectName = value
-    this.notify('project-name')
   }
 
   get showQuickview(): boolean {
@@ -364,9 +337,6 @@ export class TilesView extends ResponsiveEditorView {
    * inspector reflect the persisted state.
    */
   async setProject(project: GameProjectResource | null): Promise<void> {
-    this._projectName = project?.data?.name ?? _('New Project')
-    if (this._mode_rail) this._mode_rail.projectName = this._projectName
-
     if (!project) {
       this._clearProject()
       return
@@ -404,8 +374,9 @@ export class TilesView extends ResponsiveEditorView {
   /**
    * Select an appearance (sprite-sheet) by id + show its glance. Used by
    * the `win.open-appearance` action + the character detail's "Edit
-   * appearance" deep-link (asset management). Animations are authored in
-   * Cast — a narrow layout (no glance) jumps there via {@link _selectAppearance}.
+   * appearance" deep-link (asset management). Animations are authored
+   * under Characters — a narrow layout (no glance) jumps there via
+   * {@link _selectAppearance}.
    */
   focusAppearance(id: string): void {
     this._selectAppearance(id)
