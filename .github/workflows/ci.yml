@@ -46,6 +46,20 @@ jobs:
     container:
       image: fedora:44
 
+    # On `runs-on: ubuntu-latest` every `run:` step got `/usr/bin/bash -e {0}`.
+    # Inside a container the runner picks `sh -e {0}` instead — measured in run
+    # 34018444347, the first green run of the container job — even though the
+    # Fedora image does carry bash. That is a silent shell swap the move to a
+    # container smuggled in, and it stays invisible until someone adds a bashism
+    # and gets a confusing failure in the one place these steps are expensive to
+    # debug. Naming the shell restores exactly what every step ran under before.
+    # Deliberately `bash -e {0}` and not the `shell: bash` alias, which would
+    # additionally turn on `pipefail` — a real behaviour change that deserves its
+    # own commit rather than riding along inside a parity fix.
+    defaults:
+      run:
+        shell: bash -e {0}
+
     steps:
       - name: Install container prerequisites
         # Before `actions/checkout`, and it has to be: the Fedora base image has
