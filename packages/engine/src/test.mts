@@ -25,6 +25,7 @@ import tilemapPlaneSuite from './components/tilemap-plane.spec.js'
 import actionsSpecSuite from './entity/specs/actions.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
 import entityDataAccessSuite from './entity/data-access.spec.js'
+import entityDisclosureSuite from './entity/disclosure.spec.js'
 import entityPlacementGraphicSuite from './entity/placement-graphic.spec.js'
 import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
@@ -92,6 +93,7 @@ run({
   entityValidateSuite,
   entityConvertSuite,
   entityDataAccessSuite,
+  entityDisclosureSuite,
   entityPlacementGraphicSuite,
   entitySpawnPlacementSuite,
   objectSystemValidationSuite,

@@ -14,15 +14,18 @@ interface ActionsData extends ComponentData {
  * The list is heterogeneous (a discriminated union), which the flat
  * field-DSL can't express, so it rides a single `json` field for
  * round-trip + a custom {@link ComponentSpec.validate} that deep-checks
- * every entry. The friendly per-action editor is the Objects view's
- * `EventActionListEditor`; the generated inspector falls back to the raw
- * JSON row.
+ * every entry. The friendly per-action editor is `EventActionListEditor`
+ * (the child's tool, hence `basic`); Full view's generated inspector
+ * falls back to the raw JSON row.
  */
 export const actionsSpec: ComponentSpec = {
   type: 'actions',
   system: 'core',
-  editor: { label: 'Actions', icon: 'view-list-ordered-symbolic', markerColor: '#66ffcc' },
-  fields: [{ key: 'actions', label: 'Actions', input: 'json', default: [] }],
+  editor: { label: 'Actions', icon: 'view-list-ordered-symbolic', markerColor: '#66ffcc', basic: true },
+  // `basic` on a `json` field means "render through the bespoke list
+  // editor" — Simple view never shows raw JSON; the widget package
+  // asserts every basic json field has such an editor.
+  fields: [{ key: 'actions', label: 'Actions', input: 'json', basic: true, default: [] }],
   // Messages are prefixed with the component type by `validateComponentData`.
   validate: (data) => {
     const list = (data as ActionsData).actions

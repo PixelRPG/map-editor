@@ -18,7 +18,7 @@ export function buildInvulnerableComponent(data: InvulnerableData): Invulnerable
 export const invulnerableSpec: ComponentSpec = {
   type: 'invulnerable',
   system: 'combat-action',
-  editor: { label: 'Grace period', icon: 'security-medium-symbolic' },
+  editor: { label: 'Grace period', icon: 'security-medium-symbolic', basic: true },
   fields: [
     {
       key: 'afterHitMs',

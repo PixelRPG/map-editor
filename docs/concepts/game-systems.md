@@ -190,7 +190,7 @@ would lose their health bar with no explanation.
 | Base layer `core` / `stats` / `inventory` | **landed** |
 | Flag store, `EntityState.when` runtime, actions-only overlays | **landed** |
 | `__project/systems.set` + the Game-rules page | **landed** |
-| `stats` — the spec (`maxHp`, `hp` basic; `attack`, `defense`, `level`, `exp`, `expToNext`), live values as a runtime component, `DAMAGE_DEALT` / `ENTITY_DEFEATED` / `EXPERIENCE_GAINED` / `LEVEL_UP` and `StatsSystem` | **landed**, in the same commit as its reader |
+| `stats` — the spec (`maxHp`, `hp`, `attack`, `defense` basic; `level`, `exp`, `expToNext` Full view), live values as a runtime component, `DAMAGE_DEALT` / `ENTITY_DEFEATED` / `EXPERIENCE_GAINED` / `LEVEL_UP` and `StatsSystem` | **landed**, in the same commit as its reader |
 | `combat-action` — `weapon` / `hostile` / `hurtbox` / `invulnerable`, melee, aggro, knockback, defeat + drops + respawn, heart HUD, `GameSystemSpec.templates` | **landed** — the first switchable system |
 | `inventory` bag — `InventoryComponent`, `item-def` library entities, `INVENTORY_CHANGED` | planned, with the first system that reads a bag |
 | `stats.speed` | planned, with `combat-turn`'s speed-sorted `TurnOrderSystem` — its only reader |
