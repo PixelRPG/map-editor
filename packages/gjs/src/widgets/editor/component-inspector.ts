@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { ComponentData, ComponentSpec, FieldDescriptor } from '@pixelrpg/engine'
+import { type ComponentData, type ComponentSpec, type FieldDescriptor, simpleViewFields } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 import { overlayRenderedFields } from './component-inspector.model.ts'
 
@@ -41,6 +41,7 @@ interface FieldRow {
 export class ComponentInspector extends Adw.PreferencesGroup {
   private _spec: ComponentSpec | null = null
   private _refOptions: ComponentRefOptions = {}
+  private _fullView = true
   private _rows: FieldRow[] = []
   private _trackedRows: Adw.PreferencesRow[] = []
   /**
@@ -57,6 +58,15 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgComponentInspector',
+        Properties: {
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Render every field (true) or only the basic ones (false)',
+            GObject.ParamFlags.READWRITE,
+            true,
+          ),
+        },
         Signals: {
           // The whole component data, JSON-stringified, on any edit.
           'data-changed': { param_types: [GObject.TYPE_STRING] },
@@ -67,6 +77,22 @@ export class ComponentInspector extends Adw.PreferencesGroup {
       },
       ComponentInspector,
     )
+  }
+
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  /**
+   * Which tier renders: Full view shows every field, Simple view only the
+   * `basic` ones and never a raw `json` row. Render-only — `setData`'s
+   * payload is kept whole either way.
+   */
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+    if (this._spec) this._rebuild()
   }
 
   /** Show / hide the header remove (✕) button. */
@@ -121,12 +147,18 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     this._clearRows()
     this._rows = []
     if (!this._spec) return
-    for (const field of this._spec.fields) {
+    for (const field of this._renderedFields(this._spec)) {
       this._rows.push(this._buildRow(field))
     }
     // A rebuild after `setData` (new ref options, a filter change) must
     // show the data, not the descriptors' defaults.
     this._applyData()
+  }
+
+  /** The descriptors this tier renders (see the engine's disclosure rules). */
+  private _renderedFields(spec: ComponentSpec): readonly FieldDescriptor[] {
+    if (this._fullView) return spec.fields
+    return simpleViewFields(spec).filter((field) => field.input !== 'json')
   }
 
   private _clearRows(): void {
