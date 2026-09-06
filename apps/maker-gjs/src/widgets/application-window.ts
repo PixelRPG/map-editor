@@ -389,6 +389,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _wireStoreEvents(): void {
     this._projectStore.on('notice', (notice) => this._showToast(this._noticeText(notice)))
+    // The Library's honesty banner is derived from content, so recompute
+    // it whenever the content it reads can change: project swap, and any
+    // entity edit from either lens or a peer.
+    const refreshHiddenContent = () =>
+      this._library_view.setHiddenContent(this._projectStore.hasSimpleViewHiddenContent())
+    this._projectStore.on('project-changed', refreshHiddenContent)
+    this._projectStore.on('entity-library-changed', refreshHiddenContent)
     // Tile-property edits (Solid / Surface), local or inbound from a peer,
     // may change live collision; with a scene open, refresh the engine so
     // the change applies without a reload. The engine ref is per-scene +
