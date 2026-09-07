@@ -267,9 +267,11 @@ export class SceneEditor extends Adw.Bin {
   set brushLabel(value: string) {
     if (this._brushLabel === value) return
     this._brushLabel = value
-    // The label is hidden below a 784 px canvas, so the same sentence is
-    // the badge button's tooltip and the badge's accessible name — the
-    // three facts stay reachable without reading pixels.
+    // The ladder hides this label at the narrower rungs, so the same
+    // sentence is also the badge button's tooltip and the badge's
+    // accessible name — the three facts stay reachable at every width and
+    // to a screen reader. (`chrome-stages.ts` owns which rungs; naming a
+    // width here would be a fifth place for it to drift.)
     this._badge_button.set_tooltip_text(value)
     this._badge.setAccessibleLabel(value)
     this.notify('brush-label')

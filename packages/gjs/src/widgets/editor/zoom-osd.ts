@@ -13,8 +13,12 @@ export const ZOOM_OSD_LINGER_MS = 1200
  * consulted between tasks and a number that only matters at the moment
  * it changes. This shows the number at the bottom centre for
  * {@link ZOOM_OSD_LINGER_MS} after a change and then fades out, so the
- * standing cost is zero. The `+`/`-`/`0` accelerators, the wheel, pinch
- * and three "⋯" items drive the zoom itself.
+ * standing cost is zero. The `+`/`-`/`0` accelerators, the wheel and
+ * three "⋯" items drive the zoom itself. There is no pinch: nothing
+ * binds a `Gtk.GestureZoom` and `CameraControlSystem` reads only
+ * `pointer.on('wheel')`, so on a phone the menu is the only zoom —
+ * thinner than it was, now that the scene editor has no zoom buttons.
+ * Tracked in TODO.md.
  *
  * `Gtk.Inscription`, not `Gtk.Label`: a Label re-measures when the text
  * changes ("98 %" → "220 %"), the `queue_resize` bubbles up through

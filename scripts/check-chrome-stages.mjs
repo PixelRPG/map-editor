@@ -11,9 +11,9 @@
  * overlap at some window size nobody happened to try.
  *
  * That is the bug this guard covers. It surfaced while measuring the
- * redesign — the design's own §2.4 thresholds were 5-14 % below what the
- * pills actually measure at three of four rungs, so the pills collided
- * at a 620 px and a 784 px canvas.
+ * redesign: the design's §2.4 thresholds (604 / 664 / 784 / 1124) were
+ * all below what the pills actually measure (656 / 704 / 856 / 1136), so
+ * the pills collided at a 620 px and a 784 px canvas.
  */
 
 import { readFileSync } from 'node:fs'

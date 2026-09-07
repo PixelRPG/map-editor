@@ -13,9 +13,11 @@ export const WINDOW_ACCELS: ReadonlyArray<readonly [string, readonly string[]]> 
   ['win.play', ['F5']],
   ['win.atlas-fit', ['0']],
   ['win.share-session', ['<Primary><Shift>s']],
-  // Tool keys. The tool group is icon-only below a 1124 px canvas, so
-  // an expert's fastest route to a verb is the key, and the tooltip on
-  // each toggle names it.
+  // Tool keys. The tool group carries verbs only at the widest rung and
+  // is not shown at all at the narrowest (`STAGE_MIN_CANVAS_PX` in
+  // `@pixelrpg/gjs`'s `chrome-stages.ts` owns those widths — do not
+  // restate them here, they move), so a key is an expert's fastest route
+  // to a verb at most sizes. Each toggle's tooltip names its key.
   ['win.set-tool::select', ['v']],
   ['win.set-tool::pencil', ['b']],
   ['win.set-tool::fill', ['g']],
