@@ -10,9 +10,9 @@ import { createSwatchWidget } from './tile-swatch.ts'
 import Template from './tile-palette.blp'
 
 /**
- * Max swatches per line in `wrap` mode — high enough that the available
- * width (not this cap) decides how many fixed-size tiles fit per row, so
- * tiles never stretch to fill a wide window.
+ * Default `wrap-cap`: max swatches per line in `wrap` mode — high enough
+ * that the available width (not this cap) decides how many fixed-size
+ * tiles fit per row, so tiles never stretch to fill a wide window.
  */
 const WRAP_MAX_CHILDREN = 64
 
@@ -45,6 +45,7 @@ export class TilePalette extends Adw.Bin {
   private _selectedId: number | null = null
   private _aspectMode: TilePaletteAspectMode = 'fill'
   private _wrap = false
+  private _wrapCap = WRAP_MAX_CHILDREN
   private _dragSource = false
   /**
    * Aspect ratio (width / height) of the active sprite-sheet's
@@ -107,6 +108,20 @@ export class TilePalette extends Adw.Bin {
             'Whether the FlowBox is allowed to wrap to the available width (vs. pinned to a fixed column count)',
             GObject.ParamFlags.READWRITE,
             false,
+          ),
+          // The most swatches a wrapped line may hold. It is also the
+          // NATURAL width, so a popover sizes to exactly this many columns
+          // while a narrower host still gets one column as the minimum —
+          // which a pinned `columns` cannot give: six pinned columns
+          // measure 378 px, wider than the 360 px phone.
+          'wrap-cap': GObject.ParamSpec.int(
+            'wrap-cap',
+            'Wrap Cap',
+            'Most swatches per line while wrapping; the natural width is this many columns',
+            GObject.ParamFlags.READWRITE,
+            1,
+            128,
+            WRAP_MAX_CHILDREN,
           ),
           // When on, each swatch becomes a `Gtk.DragSource` carrying its
           // tile id, so cells can be DRAGGED out (e.g. into the animation
@@ -171,7 +186,7 @@ export class TilePalette extends Adw.Bin {
   }
 
   set columns(value: number) {
-    const [min, max] = linePolicy(value, this._wrap, WRAP_MAX_CHILDREN)
+    const [min, max] = linePolicy(value, this._wrap, this._wrapCap)
     this._flow.set_min_children_per_line(min)
     this._flow.set_max_children_per_line(max)
     this.notify('columns')
@@ -192,6 +207,18 @@ export class TilePalette extends Adw.Bin {
     this._flow.set_homogeneous(!value)
     // Reapply the current column setting under the new policy so
     // `set columns` picks the right min/max-children-per-line.
+    this.columns = this.columns
+  }
+
+  get wrapCap(): number {
+    return this._wrapCap ?? WRAP_MAX_CHILDREN
+  }
+
+  set wrapCap(value: number) {
+    if (this._wrapCap === value) return
+    this._wrapCap = value
+    this.notify('wrap-cap')
+    // Reapply the column policy so the new cap reaches the FlowBox.
     this.columns = this.columns
   }
 

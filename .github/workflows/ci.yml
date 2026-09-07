@@ -90,7 +90,11 @@ jobs:
         # `@gjsify/webrtc`'s `gi://Gst` imports, which the engine test bundle
         # pulls in (collab/PeerSession) — without them the gjs test run aborts
         # at module load with "Typelib for Gst not found". The tests themselves
-        # use fakes, so no gst runtime is needed. `pkgconf-pkg-config` provides
+        # use fakes, so no gst runtime is needed. `adwaita-sans-fonts` is GNOME's
+        # UI font, which the display-backed probes pin (`phone-chrome.probe.ts`)
+        # so a pill measures here what it measures on a workstation — with no
+        # font installed the labelled rungs came out 52 px narrower than the
+        # table, and the first Broadway run went red on that. `pkgconf-pkg-config` provides
         # `pkg-config`, declared explicitly rather than inherited from a `-devel`
         # package: `gjsify system-check` treats it as a REQUIRED dependency and
         # reads library versions through it. `meson` is likewise required by
@@ -111,6 +115,7 @@ jobs:
             gstreamer1-plugins-base-devel \
             gstreamer1-plugins-bad-free-devel \
             libsoup3-devel \
+            adwaita-sans-fonts \
             blueprint-compiler \
             meson \
             ninja-build \
@@ -336,12 +341,35 @@ jobs:
         # stay collab-compatible" enforced, not just documented.
         run: gjsify foreach test -v -p --include @pixelrpg/engine
 
-      - name: Run gjs widget tests (GTK-free helper logic)
-        # The @pixelrpg/gjs suite. The widgets themselves subclass
-        # Gtk.Widget and can't run headlessly, so this covers the pure,
-        # GTK-free helpers extracted alongside them (e.g. MapPreview's
-        # fingerprint + viewport-clamp geometry). Runs under both gjs + node.
-        run: gjsify foreach test -v -p --include @pixelrpg/gjs
+      - name: Run gjs widget tests (helper logic + display-backed probes)
+        # The @pixelrpg/gjs suites: `test.mts` (GTK-free helpers, gjs +
+        # node) and then `test.display.mts` (gjs only). The three
+        # display-backed probe suites in the latter — brush badge, depth
+        # glyph, phone chrome — need a GdkDisplay, and without one they
+        # SKIP, which is how the phone bar overflowed a 360 px window while
+        # every run was green. `gtk4-broadwayd` ships in the `gtk4` package
+        # already installed above and is a real display with no X server,
+        # so the probes run here. They share one process on purpose: the
+        # display question is asked once and cached (`pixel-probe.ts`), so
+        # the #293 hazard of a second `Gtk.init_check()` answering
+        # differently does not apply, and all three ran green in this
+        # image. The package is run directly rather than through
+        # `foreach -p`: the first red run showed `gjs exited with code 1`
+        # and not one line from gjs, because the parallel runner captures
+        # the child's output and a process that dies takes its buffer
+        # with it. `fc-match` is in the log so a missing font is a visible
+        # cause, not a mystery number. The grep afterwards is the point:
+        # it fails the step if the phone-chrome probe did not print its
+        # measurements, so a display that silently went missing cannot
+        # turn skips back into a green run.
+        run: |
+          gtk4-broadwayd :5 &
+          sleep 1
+          export GDK_BACKEND=broadway BROADWAY_DISPLAY=:5
+          fc-match "Adwaita Sans"
+          gjsify workspace @pixelrpg/gjs test 2>&1 | tee gjs-test.log
+          test "${PIPESTATUS[0]}" -eq 0
+          grep -q '\[phone-chrome\] floor' gjs-test.log
 
       - name: Run maker tests (collab transport + session services)
         # The @pixelrpg/maker-gjs suite (18 suites): SessionService

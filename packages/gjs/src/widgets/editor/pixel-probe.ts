@@ -135,13 +135,18 @@ export function readerFor(texture: Gdk.Texture): PixelReader {
  * so a probe spec needs no fixture PNG on disk.
  */
 export function solidPaintable(size: number, rgb: Rgb): Gdk.Paintable {
+  return solidPaintableRect(size, size, rgb)
+}
+
+/** {@link solidPaintable} with a shape: a 32×16 stands in for a wide object sprite. */
+export function solidPaintableRect(width: number, height: number, rgb: Rgb): Gdk.Paintable {
   const snapshot = Gtk.Snapshot.new()
   const rect = new Graphene.Rect()
-  rect.init(0, 0, size, size)
+  rect.init(0, 0, width, height)
   snapshot.append_color(new Gdk.RGBA({ red: rgb.r / 255, green: rgb.g / 255, blue: rgb.b / 255, alpha: 1 }), rect)
   const node = snapshot.to_node()
   if (!node) throw new Error('solid paintable snapshot is empty')
-  const window = new Gtk.Window({ default_width: size, default_height: size, decorated: false })
+  const window = new Gtk.Window({ default_width: width, default_height: height, decorated: false })
   window.present()
   pumpUntil(() => window.get_mapped(), 'paintable window')
   const renderer = window.get_renderer()

@@ -27,6 +27,15 @@ template $PixelRpgSceneEditor : Adw.Bin {
   Adw.BreakpointBin ladder {
     // The bin measures the CANVAS, which is what the pills have to fit
     // into — not the window, which is wider whenever a sidebar is open.
+    //
+    // `width-request` is the phone floor, and the bin ENFORCES nothing
+    // below it: a breakpoint bin ignores its child's minimum, and a child
+    // that asks for more is allocated past the window's edge from x=0
+    // with one `Adwaita-WARNING` in the log. Everything under it — bar,
+    // sheet page, canvas overlay — has to fit 360 px on its own, and the
+    // sheet's minimum is the wider of its page and its bar even while
+    // closed (a homogeneous `Gtk.Stack` inside `Adw.BottomSheet`).
+    // `phone-chrome.probe.spec.ts` measures that with GTK.
     width-request: 360;
     height-request: 400;
 
@@ -42,14 +51,15 @@ template $PixelRpgSceneEditor : Adw.Bin {
     // rules are unit-tested rather than diffed by eye.
     //
     // The thresholds are the canvas widths at which both pills fit with
-    // a roster in the context pill, MEASURED in the running app rather
-    // than derived from per-button arithmetic — the design's §2.4 numbers
-    // land low at every rung. `STAGE_MIN_CANVAS_PX` carries the same four
-    // numbers, `scripts/check-chrome-stages.mjs` fails if either side
-    // drifts, and `effectiveStage` demotes further for a roster wider
-    // than one avatar.
+    // a roster in the context pill, MEASURED (`phone-chrome.probe.spec.ts`
+    // asks GTK) rather than derived from per-button arithmetic — the
+    // design's §2.4 numbers land low at every rung, and the first
+    // measured set was 8 px low again. `STAGE_MIN_CANVAS_PX` carries the
+    // same four numbers, `scripts/check-chrome-stages.mjs` fails if either
+    // side drifts, and `effectiveStage` demotes further for a roster
+    // wider than one avatar.
     Adw.Breakpoint {
-      condition ("min-width: 656sp")
+      condition ("min-width: 672sp")
 
       setters {
         template.stage: "compact";
@@ -57,7 +67,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 704sp")
+      condition ("min-width: 720sp")
 
       setters {
         template.stage: "normal-1";
@@ -73,7 +83,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 1136sp")
+      condition ("min-width: 1144sp")
 
       setters {
         template.stage: "roomy";
@@ -320,7 +330,10 @@ template $PixelRpgSceneEditor : Adw.Bin {
       };
 
       // ============================================================
-      // PHONE BAR - docked, full width, two rows.
+      // PHONE BAR - docked, full width, two 44 px rows (108 px with the
+      // 6 px margins and gap). Everything in it fits 360 px: the four
+      // tools and the badge in row A, and in row B as many WHOLE recent
+      // tiles as the width allows beside the "⌃" - six at the floor.
       // ============================================================
       bottom-bar: Gtk.Box phone_bar {
         orientation: vertical;

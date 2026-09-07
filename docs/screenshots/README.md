@@ -58,6 +58,33 @@ pixel art can never be miscounted as chrome.
 | 05 | [`chrome/05-phone-playing.png`](chrome/05-phone-playing.png) | A Live Run: the bar and the Play FAB give way, the canvas grows to the full window, and the right pill becomes Stop + Restart |
 | 06 | [`chrome/06-desktop-full-view.png`](chrome/06-desktop-full-view.png) | Full view: the same chrome plus the Play split-button arrow and the cursor-tile caption bottom-left — 0.28 percentage points more chrome than Simple view |
 
+## The phone bar fits its floor (2026-09-07)
+
+The docked bar shipped in the redesign above did not fit the 360 px phone
+the design targets, and the sheet behind it did not either. Measured with
+GTK's own allocations (`phone-chrome.probe.spec.ts`), not pixels: the
+Brush page pinned six 54 px palette columns — 378 px — and
+`Adw.BottomSheet` keeps page and bar in one homogeneous `Gtk.Stack`, so
+that 378 px was the closed sheet's minimum, and the ladder's
+`Adw.BreakpointBin` (which ignores its child's minimum) allocated the
+whole editor 18 px past a 360 px window: `AdwBottomSheet … exceeds
+AdwBreakpointBin width: requested 378 px, 360 px available`. On top of
+that the recent strip sliced a tile at its edge, and the bar's buttons
+were 64×54 px — GTK's `min-width` is the content box — making a 127 px
+bar with five tiles where six fit.
+
+After: the sheet's minimum is 227 px, the allocation at 360 is 360, the
+bar is two 44 px rows, and the strip shows six whole tiles. Each pair is
+the same map (`games/zelda-like`, Kokiri Forest) at 360, 400 and 460 px,
+left to right, captured the same way.
+
+| # | Capture | What it shows |
+|---|---|---|
+| 07 | [`chrome/07-phone-bar-before.png`](chrome/07-phone-bar-before.png) | The bar before: at 360 the badge is 5 px from the edge and the Play FAB's neighbour is cut (the whole editor is 378 wide); at every width a tile is sliced beside the "⌃" |
+| 08 | [`chrome/08-phone-bar-after.png`](chrome/08-phone-bar-after.png) | After: the bar inside the window with its margin at 360, six whole tiles, 44 px rows |
+| 09 | [`chrome/09-phone-sheet-before.png`](chrome/09-phone-sheet-before.png) | The open sheet before: at 360 the third plane chip, "Layers…", the search field and the sixth column are cut off |
+| 10 | [`chrome/10-phone-sheet-after.png`](chrome/10-phone-sheet-after.png) | After: the palettes wrap to five columns at 360 and six from 400, nothing cut |
+
 ## Three rows (2026-09-06)
 
 The information-architecture milestone turned the six-row rail into
