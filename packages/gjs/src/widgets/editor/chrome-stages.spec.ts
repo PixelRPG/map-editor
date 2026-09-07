@@ -199,7 +199,7 @@ export default async () => {
       expect(stageForCanvasWidth(671)).toBe('tight')
       expect(stageForCanvasWidth(719)).toBe('compact')
       expect(stageForCanvasWidth(855)).toBe('normal-1')
-      expect(stageForCanvasWidth(1159)).toBe('normal-2')
+      expect(stageForCanvasWidth(1143)).toBe('normal-2')
     })
 
     await it('places the measured canvas widths where the app showed them', async () => {

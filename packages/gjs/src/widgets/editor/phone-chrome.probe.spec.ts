@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
-import { type ChromeStage, CHROME_STAGES, CONTEXT_PILL_PX, STAGE_EDITING_PILL_PX } from './chrome-stages.ts'
+import { CHROME_STAGES, CONTEXT_PILL_PX, STAGE_EDITING_PILL_PX } from './chrome-stages.ts'
 import type { PhoneChromeReport } from './phone-chrome.probe.ts'
 import { RECENT_BUTTON_PX, RECENT_PITCH_PX, RECENT_TILES_MAX, wholeCount } from './recent-tiles.geometry.ts'
 
@@ -21,18 +21,14 @@ import { RECENT_BUTTON_PX, RECENT_PITCH_PX, RECENT_TILES_MAX, wholeCount } from 
 const isGjs = typeof (globalThis as { imports?: unknown }).imports !== 'undefined'
 
 /**
- * The icon-only rungs and the solo context pill hold no text, so they
- * measure the same on every machine. The rungs with "World", the brush
- * sentence and the six verbs move with the font — CI's stack renders
- * them up to 14 px wider than a workstation's — so for those only the
- * UNSAFE direction is held tightly: a table lower than the widget lets a
- * rung in whose pills then overlap; a table a little higher merely
- * delays the rung by pixels nobody sees.
+ * The probe pins the UI font, so every rung — the icon-only ones and the
+ * ones with "World", the brush sentence and the six verbs — reads the
+ * same on a workstation, under Broadway and in CI; a rounding pixel or
+ * two is all that is allowed. A table LOWER than the widget is the
+ * dangerous direction (it lets a rung in whose pills then overlap), but
+ * with a pinned font there is no reason to allow slack in the other one.
  */
 const EXACT_PX = 2
-const TEXT_LOW_PX = 2
-const TEXT_HIGH_PX = 24
-const TEXT_FREE_STAGES: readonly ChromeStage[] = ['tight', 'compact']
 
 export default async () => {
   await describe('scene editor chrome — measured by GTK', async () => {
@@ -92,13 +88,7 @@ export default async () => {
         `[phone-chrome] editing pill natural width per rung: ${CHROME_STAGES.map((s) => `${s} ${pills.editing[s]} (table ${STAGE_EDITING_PILL_PX[s]})`).join(' · ')} · context pill solo ${pills.contextSolo} (table ${CONTEXT_PILL_PX.solo})`,
       )
       for (const stage of CHROME_STAGES) {
-        const delta = pills.editing[stage] - STAGE_EDITING_PILL_PX[stage]
-        if (TEXT_FREE_STAGES.includes(stage)) {
-          expect(Math.abs(delta)).toBeLessThanOrEqual(EXACT_PX)
-        } else {
-          expect(delta).toBeLessThanOrEqual(TEXT_LOW_PX)
-          expect(-delta).toBeLessThanOrEqual(TEXT_HIGH_PX)
-        }
+        expect(Math.abs(pills.editing[stage] - STAGE_EDITING_PILL_PX[stage])).toBeLessThanOrEqual(EXACT_PX)
       }
       expect(Math.abs(pills.contextSolo - CONTEXT_PILL_PX.solo)).toBeLessThanOrEqual(EXACT_PX)
     })

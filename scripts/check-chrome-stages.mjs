@@ -15,7 +15,7 @@
  * all below what the pills actually measure, so the pills collided at a
  * 620 px and a 784 px canvas. The first measured set (656 / 704 / 856 /
  * 1136) was itself 8 px low below `normal-2`; the ladder is now
- * 672 / 720 / 856 / 1160, read off GTK by `phone-chrome.probe.spec.ts`.
+ * 672 / 720 / 856 / 1144, read off GTK by `phone-chrome.probe.spec.ts`.
  *
  * This guard sees ONLY the wide layout's ladder. It cannot see the phone
  * bar or the sheet: their floor is the ladder's `width-request`, and a

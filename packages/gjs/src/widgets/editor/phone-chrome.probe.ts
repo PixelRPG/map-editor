@@ -66,6 +66,20 @@ const OBJECT_COUNT = 6
 let styled = false
 
 /**
+ * The UI font every measurement is taken in: GNOME's default since 47
+ * (`adwaita-sans-fonts`), which is what the app runs under on the
+ * platform the design targets. Pinned because GTK otherwise takes it
+ * from the session — a workstation says "Adwaita Sans 11" through the
+ * portal, a bare container says "Sans 10" with whatever fontconfig
+ * substitutes, and a container with no fonts at all measured the
+ * labelled rungs 52 px narrower than the table. With the pin the same
+ * widget measures the same everywhere the font is installed (CI
+ * installs it), and a missing font shows up as a wrong number rather
+ * than as a run that quietly measured something else.
+ */
+const PROBE_FONT = 'Adwaita Sans 11'
+
+/**
  * Install the package stylesheet once, as the app does: without it every
  * button measures at Adwaita's defaults, and the numbers this probe
  * exists for — the 44 px targets, the pill table — are the CSS's doing.
@@ -75,6 +89,8 @@ function ensureStyles(): void {
   if (styled) return
   const display = Gdk.Display.get_default()
   if (!display) throw new Error('no display for the package stylesheet')
+  const settings = Gtk.Settings.get_for_display(display)
+  settings.gtk_font_name = PROBE_FONT
   const provider = new Gtk.CssProvider()
   provider.load_from_string(packageStyle)
   Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)

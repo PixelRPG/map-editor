@@ -35,7 +35,7 @@ export type ChromeLayout = 'wide' | 'phone'
  *
  * These are NOT the design's numbers. Its §2.4 table derives them from
  * per-button arithmetic and lands low at every rung (604 vs 672, 664 vs
- * 720, 784 vs 856, 1124 vs 1160), because a labelled `Adw.Toggle` is
+ * 720, 784 vs 856, 1124 vs 1144), because a labelled `Adw.Toggle` is
  * wider than an icon plus a word. The first measured set (656 / 704 /
  * 856 / 1136) was still 8 px low below `normal-2`: both pill tables were
  * read 8 px short, so `phone-chrome.probe.spec.ts` now measures the pills
@@ -49,7 +49,7 @@ export const STAGE_MIN_CANVAS_PX: Record<ChromeStage, number> = {
   compact: 672,
   'normal-1': 720,
   'normal-2': 856,
-  roomy: 1160,
+  roomy: 1144,
 }
 
 /** The stage a canvas of `width` px lands in. */
@@ -86,22 +86,21 @@ export const CONTEXT_PILL_PX = { solo: 108, withRoster: 150 } as const
  * came out 5-20 % low at every rung above `tight`, because a labelled
  * `Adw.Toggle` is wider than the sum of an icon and a word.
  *
- * The two labelled rungs vary with the font as well as the text (a
- * "Select" is 9 px wider than a "Paint"; CI's font stack renders the
- * sentence 8 px and the six verbs 14 px wider than this workstation's),
- * so they are held ABOVE the widest reading: a table that is low lets a
- * rung in whose pills then overlap, a table that is high delays it by
- * pixels nobody sees. The probe holds the unsafe direction to 2 px.
- * Refresh these together whenever the pill gains or loses a control; the
- * fit rule below is what turns them into behaviour, and
- * `chrome-stages.spec.ts` checks the table stays monotonic.
+ * The two labelled rungs vary with the text (a "Select" is 9 px wider
+ * than a "Paint"; a long layer name adds more) and with the font, so
+ * the probe pins the font to GNOME's default, "Adwaita Sans 11", and
+ * reads the same number on a workstation, under Broadway and in CI —
+ * these are that reading, rounded up. Refresh them together whenever
+ * the pill gains or loses a control; the fit rule below is what turns
+ * them into behaviour, and `chrome-stages.spec.ts` checks the table
+ * stays monotonic.
  */
 export const STAGE_EDITING_PILL_PX: Record<ChromeStage, number> = {
   tight: 264,
   compact: 489,
   'normal-1': 537,
-  'normal-2': 656,
-  roomy: 976,
+  'normal-2': 648,
+  roomy: 960,
 }
 
 /** What the two pills and the bar show, for one state of the chrome. */

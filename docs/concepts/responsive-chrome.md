@@ -393,7 +393,7 @@ So the ladder sets exactly **one** property — `stage`, a string — and
 | `compact` | 672 px | the `Adw.ToggleGroup` tool chooser |
 | `normal-1` | 720 px | "World" beside the back arrow |
 | `normal-2` | 856 px | the brush sentence beside the badge ("Paint · Ground") |
-| `roomy` | 1160 px | verbs beside the six tool icons |
+| `roomy` | 1144 px | verbs beside the six tool icons |
 
 Three things about those numbers:
 
@@ -401,12 +401,12 @@ Three things about those numbers:
   package stylesheet loaded, which `phone-chrome.probe.spec.ts` reads
   back on every display-backed run — not derived per button. The
   design's §2.4 arithmetic lands low at every rung — 604 vs 672, 664 vs
-  720, 784 vs 856, 1124 vs 1160 — because a labelled `Adw.Toggle` is
+  720, 784 vs 856, 1124 vs 1144 — because a labelled `Adw.Toggle` is
   wider than the sum of an icon and a word; and the first measured set
   (656 / 704 / 856 / 1136) was 8 px low again below `normal-2`, because
-  both pill tables had been read 8 px short. The two rungs with text in
-  them are held above the widest reading, because CI's font stack
-  renders the sentence and the verbs wider than a workstation's.
+  both pill tables had been read 8 px short. The probe pins the UI font
+  to GNOME's default, "Adwaita Sans 11", so the two rungs with text in
+  them read the same on a workstation, under Broadway and in CI.
 - They assume a **roster in the context pill** (150 px, versus 108 px
   solo). The AI assistant joins whenever an agent drives the editor,
   so with-roster is the common case; keying on the solo width means
