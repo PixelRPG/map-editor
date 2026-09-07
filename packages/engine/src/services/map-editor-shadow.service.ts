@@ -43,6 +43,7 @@ export function setInitialSprites(
     next[key] = [...refs]
   }
   component.sprites = next
+  component.revision++
 }
 
 /**
@@ -85,6 +86,7 @@ export function setSpritesAt(
   } else {
     component.sprites[key] = next
   }
+  component.revision++
 }
 
 /**

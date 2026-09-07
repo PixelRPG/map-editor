@@ -12,6 +12,7 @@ import {
   type PointerWorldEvent,
 } from './engine/pointer-observers.ts'
 import { type MapLoadOptions, ProjectLoader } from './engine/project-loader.ts'
+import { synthesizePointerMoveAtTile } from './engine/pointer-synthesis.ts'
 import { ViewModeController } from './engine/view-mode.controller.ts'
 import type { GameProjectResource } from './resource/GameProjectResource.ts'
 import { MapScene } from './scenes/map.scene.ts'
@@ -544,6 +545,16 @@ export class Engine {
   /** Subscribe to the pointer's tile position, deduped per tile — see {@link observePointerTile}. */
   onPointerTileChanged(cb: (event: PointerTileEvent) => void): () => void {
     return observePointerTile(this.pointerHost(), cb)
+  }
+
+  /**
+   * Move the pointer to tile `(tileX, tileY)` as if the mouse had — the
+   * hover overlays then show what a click there would do. See
+   * {@link synthesizePointerMoveAtTile}. Returns `false` without an
+   * active map.
+   */
+  hoverTileAt(tileX: number, tileY: number): boolean {
+    return synthesizePointerMoveAtTile(this.pointerHost(), tileX, tileY)
   }
 
   /**

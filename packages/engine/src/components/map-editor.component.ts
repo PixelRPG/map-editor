@@ -27,7 +27,15 @@ export interface TileSpriteRef {
  * `iterateOccupiedCoords`). Callers pass `(tileX, tileY)` numeric
  * coords rather than runtime `ex.Tile` objects, decoupling the
  * shadow state from Excalibur's entity graph.
+ *
+ * `revision` counts writes to `sprites` (bumped by the write verbs, so
+ * every paint / erase / fill / undo / remote op / plane move ticks it).
+ * Readers that cache something derived from the shadow — the fill
+ * preview's flood-fill region — compare it instead of subscribing to
+ * every mutation path: a derived value is valid iff the revision it was
+ * computed at is the current one.
  */
 export class MapEditorComponent extends Component {
   public sprites: Record<string, TileSpriteRef[]> = {}
+  public revision = 0
 }

@@ -1,7 +1,7 @@
 import { FillTileCommand } from '../commands/index.ts'
 import type { MapEditorComponent } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
-import { computeFloodFillRegion } from './flood-fill.ts'
+import { computeFloodFillRegion, type GridCell } from './flood-fill.ts'
 import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
 import { snapshotPreviousSprites } from './tile-paint.service.ts'
 
@@ -24,12 +24,18 @@ function layerSignature(refs: ReadonlyArray<{ spriteSetId: string; spriteId: num
 }
 
 /**
- * Build a bucket-fill command for the contiguous region matching the
- * origin tile on `layerId`, replacing each cell with `spriteId`.
- * Returns `null` when nothing should change: the sprite id is unknown,
- * the origin already shows the fill tile, or the region is empty.
+ * The cells a bucket-fill from `(originX, originY)` on `layerId` would
+ * repaint with `spriteId`, or `null` when the click would change
+ * nothing: the sprite id is unknown, the origin already shows the fill
+ * tile, or the region is empty.
+ *
+ * This is THE fill region — {@link buildTileFillCommand} (the click)
+ * and `services/fill-preview.ts` (the hover) both call it, so what the
+ * preview outlines and what the click repaints cannot drift apart: a
+ * second, similar-looking traversal for the preview would be a bug
+ * generator.
  */
-export function buildTileFillCommand(
+export function resolveTileFillRegion(
   editor: MapEditorComponent,
   mapResource: MapResource,
   bounds: { columns: number; rows: number },
@@ -37,7 +43,7 @@ export function buildTileFillCommand(
   originX: number,
   originY: number,
   spriteId: number,
-): FillTileCommand | null {
+): GridCell[] | null {
   const targetInfo = findSpriteInfoForTileId(mapResource, spriteId)
   if (!targetInfo) return null
   const targetSignature = `${targetInfo.spriteSetId}#${targetInfo.spriteId}`
@@ -50,7 +56,25 @@ export function buildTileFillCommand(
   if (signatureAt(originX, originY) === targetSignature) return null
 
   const region = computeFloodFillRegion({ x: originX, y: originY }, bounds, signatureAt)
-  if (region.length === 0) return null
+  return region.length === 0 ? null : region
+}
+
+/**
+ * Build a bucket-fill command for the region {@link resolveTileFillRegion}
+ * resolves, replacing each cell with `spriteId`. Returns `null` when
+ * that region is `null` (nothing would change).
+ */
+export function buildTileFillCommand(
+  editor: MapEditorComponent,
+  mapResource: MapResource,
+  bounds: { columns: number; rows: number },
+  layerId: string,
+  originX: number,
+  originY: number,
+  spriteId: number,
+): FillTileCommand | null {
+  const region = resolveTileFillRegion(editor, mapResource, bounds, layerId, originX, originY, spriteId)
+  if (!region) return null
 
   const cells = region.map((cell) => ({
     tileX: cell.x,

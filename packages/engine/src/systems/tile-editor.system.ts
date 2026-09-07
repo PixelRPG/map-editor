@@ -97,7 +97,7 @@ export class TileEditorSystem extends System {
     this.engine = scene.engine
     this.scene = scene
 
-    this.overlays.attach(scene)
+    this.overlays.attach(scene, this.events)
 
     // Paint fires on the high-level `POINTER_TAP` from
     // `PointerGestureSystem`, NOT on raw `pointer.on('down')` — the

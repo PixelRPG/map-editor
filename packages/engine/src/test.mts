@@ -16,6 +16,7 @@ import { run } from '@gjsify/unit'
 // follow-up — a test that asserts every spec file is registered.)
 import commandHistorySuite from './engine/command-history.spec.js'
 import editOperationsSuite from './engine/edit-operations.spec.js'
+import pointerSynthesisSuite from './engine/pointer-synthesis.spec.js'
 import sceneSwapSuite from './engine/scene-swap.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
@@ -49,6 +50,8 @@ import placementGeometrySuite from './services/placement-geometry.spec.js'
 import placementPickingSuite from './services/placement-picking.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
 import playerCharacterSuite from './services/player-character.spec.js'
+import regionGeometrySuite from './services/region-geometry.spec.js'
+import regionGraphicSuite from './services/region-graphic.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
@@ -71,6 +74,8 @@ import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
 import snapshotPathsSuite from './sync/snapshot-paths.spec.js'
 import combatActionSuite from './systems/combat-action.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
+import hoverOverlaysSuite from './systems/hover-overlays.spec.js'
+import hoverOverlaysMapSuite from './systems/hover-overlays.map.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
 import stateSystemSuite from './systems/state.system.spec.js'
 import statsSystemSuite from './systems/stats.system.spec.js'
@@ -84,6 +89,7 @@ run({
   registrySuite,
   commandHistorySuite,
   editOperationsSuite,
+  pointerSynthesisSuite,
   sceneSwapSuite,
   paintTileCommandSuite,
   layerFlagCommandSuite,
@@ -110,6 +116,8 @@ run({
   placementIdSuite,
   placementPickingSuite,
   playerCharacterSuite,
+  regionGeometrySuite,
+  regionGraphicSuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   tileEditTargetSuite,
@@ -138,6 +146,8 @@ run({
   snapshotPathsSuite,
   inputSystemSuite,
   eventActionSystemSuite,
+  hoverOverlaysSuite,
+  hoverOverlaysMapSuite,
   stateSystemSuite,
   statsSystemSuite,
   combatActionSuite,
