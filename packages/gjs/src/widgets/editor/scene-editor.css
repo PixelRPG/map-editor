@@ -69,13 +69,17 @@
 }
 
 /*
- * The brush badge's own button keeps the pill's button metrics but
- * drops the horizontal padding on the badge side, so the 32px square
- * sits flush against the tool group rather than floating in a gap.
+ * The badge is 32px — deliberately larger than the 22px swatch it
+ * replaces, because it is now the ONLY picture of the active tile. At
+ * Adwaita's default 5px vertical button padding that makes a 42px
+ * button and a 66px pill, which breaks the 58px every other piece of
+ * floating chrome is; the pill's own 12px padding then eats eight more
+ * rows of map across the whole pill. 1px keeps the button at 34px and
+ * the pill at 58px, measured.
  */
-.badge-button {
-  padding-left: 4px;
-  padding-right: 6px;
+.badge-button > button {
+  min-height: 0;
+  padding: 0 6px 0 4px;
 }
 
 /*
