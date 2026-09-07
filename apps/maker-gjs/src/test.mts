@@ -9,6 +9,7 @@ import collabLogSuite from './services/collab-log.spec.js'
 import collabSessionSuite from './services/collab-session.spec.js'
 import collabSessionE2eSuite from './services/collab-session-e2e.spec.js'
 import engineControllerSuite from './services/engine-controller.spec.js'
+import serialQueueSuite from './services/serial-queue.spec.js'
 import engineStateSyncSuite from './services/engine-state-sync.spec.js'
 import gameRulesModelSuite from './services/game-rules-model.spec.js'
 import gvariantSuite from './services/gvariant.spec.js'
@@ -78,6 +79,7 @@ run({
   collabSessionSuite,
   collabSinkBufferSuite,
   engineControllerSuite,
+  serialQueueSuite,
   engineStateSyncSuite,
   entityTemplatesSuite,
   entityVisualsSuite,
