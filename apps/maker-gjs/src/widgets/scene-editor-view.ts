@@ -1,5 +1,6 @@
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
+import { gettext as _ } from 'gettext'
 import type Gtk from '@girs/gtk-4.0'
 import type Gdk from '@girs/gdk-4.0'
 import { type EditorTool, type LayerPlane, type MapData, resolvePlacementDefinition } from '@pixelrpg/engine'
@@ -11,6 +12,8 @@ import {
   type GdkSpriteSheet,
   type LayerDescriptor,
   planeOf,
+  populatedPlanes,
+  pushRecent,
   ModeRail,
   RightInspector,
   type SampleScene,
@@ -22,7 +25,6 @@ import { toLayerDescriptors } from '../services/layer-descriptors.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
 import Template from './scene-editor-view.blp'
-import { buildLayerPopover, buildObjectPopover, buildTilePopover } from './scene-editor/context-popovers.ts'
 import { paintableFor } from './scene-editor/object-descriptors.ts'
 import { wireLayersTab, wireObjectsTab, wirePropsTab, wireTilesTab } from './scene-editor/inspector-wiring.ts'
 import {
@@ -32,6 +34,21 @@ import {
   type ObjectBrushOption,
   spriteSetIdsFor,
 } from './scene-editor/object-descriptors.ts'
+
+/**
+ * The tool's verb, for the sentence beside the badge ("Paint · Ground").
+ * The tool chooser owns the same words for its tooltips and its roomy
+ * labels; this table is the maker's copy for the one place the label is
+ * assembled with the layer name.
+ */
+const TOOL_LABELS: Record<EditorTool, string> = {
+  select: _('Select'),
+  pencil: _('Paint'),
+  fill: _('Fill'),
+  eraser: _('Erase'),
+  eyedropper: _('Pick'),
+  object: _('Object'),
+}
 
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(SceneEditor.$gtype)
@@ -73,8 +90,17 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _objectBrushes: ObjectBrushOption[] = []
   /** The armed object brush (defId), mirrored from `win.set-object-brush`. */
   private _armedObjectId: string | null = null
-  /** The active editor tool — decides what the context chip quick-selects (tiles vs objects). */
+  /** The active editor tool — decides what the badge shows (tile vs object). */
   private _activeTool: EditorTool = 'select'
+  /** The active layer's name, for the sentence beside the badge. */
+  private _activeLayerName = ''
+  /**
+   * The layer a plane chip returns to. A person who moves Above → Below
+   * → Above expects their roof layer back, not the plane's first one.
+   */
+  private _lastLayerByPlane = new Map<LayerPlane, string>()
+  /** Session-local LRU of sheet-local tile ids behind the phone bar's strip. */
+  private _recentTileIds: number[] = []
   /** Per-placement info for the Props tab's "Selected object" group. */
   private _placementInfo = new Map<
     string,
@@ -139,11 +165,39 @@ export class SceneEditorView extends ResponsiveEditorView {
     super()
     this._mode_rail.projectName = this._projectName
     this._wireInspectorSignals()
+    this._wireEditorSignals()
   }
 
-  /** Forward the current zoom level to the floating zoom OSD. */
+  /**
+   * The chrome's own picks. `wireTilesTab`'s rule applies verbatim here:
+   * choosing a tile while the Object tool is armed means "paint this",
+   * so it arms the pencil first.
+   */
+  private _wireEditorSignals(): void {
+    const page = this._editor.brushPage
+    page.connect('tile-selected', (_p: unknown, tileId: number) => {
+      if (this._activeTool === 'object') this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
+      this._setActiveTile(tileId)
+    })
+    page.connect('object-brush-selected', (_p: unknown, defId: string) =>
+      this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
+    )
+    page.connect('plane-selected', (_p: unknown, plane: string) => this._selectPlane(plane as LayerPlane))
+    page.connect('layers-requested', () => {
+      this.activate_action('win.set-inspector-tab', GLib.Variant.new_string('layers'))
+      this.showInspector = true
+    })
+    this._editor.recentTiles.connect('tile-selected', (_r: unknown, tileId: number) => {
+      if (this._activeTool === 'object' || this._activeTool === 'select') {
+        this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
+      }
+      this._setActiveTile(tileId)
+    })
+  }
+
+  /** Show the current zoom in the transient bottom-centre readout. */
   setZoom(zoom: number): void {
-    this._editor.zoomOsd.setZoom(zoom)
+    this._editor.setZoom(zoom)
   }
 
   /**
@@ -169,9 +223,14 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._engine = engine ?? null
   }
 
-  /** Reflect the `win.play` action's runtime state on the FloatingPlay button. */
+  /**
+   * Reflect the `win.play` action's runtime state on the whole chrome,
+   * not just the FAB: on phone the bar and the FAB give way to the run
+   * and the context pill becomes Stop · Restart, because during a Live
+   * Run the finger is the joystick rather than a brush.
+   */
   setPlaying(playing: boolean): void {
-    this._editor.floatingPlay.playing = playing
+    this._editor.setPlaying(playing)
   }
 
   /** Mirror the global objects visibility into the Layers tab's Objects row (no re-emit). */
@@ -194,44 +253,51 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._inspector.layersTab.setLayerState(layerId, flag, value)
   }
 
-  /** Push the live participant roster (AI + peers) to the collaborators bar. */
+  /** Push the live participant roster (AI + peers) to the context pill's chip. */
   setCollaborators(participants: CollaboratorEntry[], followedId: string | null): void {
-    this._editor.floatingCollaborators.setParticipants(participants, followedId)
+    this._editor.rosterChip.setParticipants(participants, followedId)
   }
 
-  /** Reflect the user pause state on the collaborators bar's AI control. */
+  /** Reflect the user pause state on the roster chip's AI control. */
   setAssistantPaused(paused: boolean): void {
-    this._editor.floatingCollaborators.paused = paused
+    this._editor.rosterChip.paused = paused
   }
 
-  /** Subscribe to chip clicks — the host toggles follow for that participant. */
+  /** Subscribe to roster clicks — the host toggles follow for that participant. */
   onParticipantActivated(callback: (peerId: string) => void): void {
-    this._editor.floatingCollaborators.connect('participant-activated', (_widget, peerId: string) => callback(peerId))
+    this._editor.rosterChip.connect('participant-activated', (_widget, peerId: string) => callback(peerId))
   }
 
   /**
-   * On phone widths (`inspector-collapsed` is set only <768sp — tablet
-   * collapses just the library), reflow the tool rail into a bottom bar.
+   * `inspector-collapsed` is set only <768sp — the tablet breakpoint
+   * collapses just the library — so it is the phone signal. The editor's
+   * whole chrome switch hangs off it.
    */
   protected _onInspectorCollapsedChanged(collapsed: boolean): void {
-    this._editor.setCompact(collapsed)
+    this._editor.setLayout(collapsed ? 'phone' : 'wide')
+  }
+
+  /** Push the tier down so the caption, the Play menu and "⋯" follow it. */
+  protected _onFullViewChanged(fullView: boolean): void {
+    this._editor.fullView = fullView
   }
 
   /**
-   * Forward the active editor tool to the left tool rail so its active
-   * button highlights. The host calls this from the `win.set-tool`
-   * action's change-state handler.
+   * Forward the active editor tool to the tool chooser so its toggle
+   * checks, and to the badge. The host calls this from the `win.set-tool`
+   * action's change-state handler, which stays the only writer of engine
+   * state — the chooser never checks itself on a click.
    *
-   * The context chip is tool-dependent: under the Object tool its
-   * quick-select popover offers the placeable OBJECTS (and the swatch
-   * previews the armed brush); under every other tool it offers tiles —
-   * so the chip always quick-selects what the current tool consumes.
+   * The badge is tool-dependent in two ways: its corner disc carries the
+   * tool's own icon, and its picture shows what that tool consumes — the
+   * armed object under the Object tool, the active tile otherwise, a
+   * checkerboard under Erase (which lays nothing) and a ghosted tile
+   * under Select (which lays nothing either).
    */
   setActiveTool(tool: EditorTool): void {
-    this._editor.toolRail.setActiveTool(tool)
+    this._editor.toolGroup.setActiveTool(tool)
     if (this._activeTool === tool) return
     this._activeTool = tool
-    this._refreshContextPopovers()
     this._syncContextChip()
   }
 
@@ -244,6 +310,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (this._armedObjectId === defId) return
     this._armedObjectId = defId
     this._inspector.tilesTab.selectObjectBrush(defId)
+    this._editor.brushPage.selectObjectBrush(defId)
     if (this._activeTool === 'object') this._syncContextChip()
   }
 
@@ -281,14 +348,11 @@ export class SceneEditorView extends ResponsiveEditorView {
   /** Header title + the floating chips. */
   setScene(scene: SampleScene): void {
     this.sceneName = scene.name
-    this._editor.topBar.tileName = 'Tile 0'
-    this._editor.topBar.layerName = 'Background'
-    this._editor.zoomOsd.setZoom(1)
-    // Cursor is hidden until the first pointer-move arrives over the
-    // canvas — see `setCursorTile`. Calling `setCursor(0, 0)` here
-    // would stick a misleading `0, 0` readout on the OSD before the
-    // user has even moved the mouse.
-    this._editor.zoomOsd.setCursor(null, null)
+    this._editor.setZoom(1)
+    // The caption stays empty until the first pointer-move arrives over
+    // the canvas — see `setCursorTile`. Writing `0, 0` here would stick
+    // a misleading readout on it before the user has moved the mouse.
+    this._editor.setCursorTile(null, null)
   }
 
   /**
@@ -298,7 +362,7 @@ export class SceneEditorView extends ResponsiveEditorView {
    * identical values — this is just the forwarder.
    */
   setCursorTile(tileX: number | null, tileY: number | null): void {
-    this._editor.zoomOsd.setCursor(tileX, tileY)
+    this._editor.setCursorTile(tileX, tileY)
   }
 
   /**
@@ -371,7 +435,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     // is above THIS hero; a project without a player gets the silhouette.
     this._heroPaintable = paintableFor(playerDef, sheets)
     this._inspector.layersTab.heroPaintable = this._heroPaintable
-    this._editor.topBar.setHeroPaintable(this._heroPaintable)
+    this._editor.brushPage.heroPaintable = this._heroPaintable
 
     this._inspector.objectsTab.setObjects(buildPlacementRows(resolved, sheets))
     this._placementInfo = new Map(
@@ -390,8 +454,10 @@ export class SceneEditorView extends ResponsiveEditorView {
     const brushOptions = buildBrushOptions(brushDefs, sheets)
     this._objectBrushes = brushOptions
     this._inspector.tilesTab.setObjectBrushes(brushOptions)
+    this._editor.brushPage.setObjectBrushes(brushOptions)
     if (this._armedObjectId && !brushOptions.some((b) => b.id === this._armedObjectId)) this._armedObjectId = null
     this._inspector.tilesTab.selectObjectBrush(this._armedObjectId)
+    this._editor.brushPage.selectObjectBrush(this._armedObjectId)
   }
 
   /** The sprite-set id currently feeding the Tiles-tab palette. */
@@ -418,11 +484,12 @@ export class SceneEditorView extends ResponsiveEditorView {
       const tiles = this._sheetToTiles(gdkSet.spriteSheet)
       this._tiles = tiles
       this._inspector.tilesTab.setTiles(tiles)
+      this._editor.brushPage.setTiles(tiles)
+      // A fresh sheet starts the recency list over: ids are sheet-local,
+      // so carrying the old ones across would ring the wrong swatches.
+      this._recentTileIds = tiles.slice(0, 8).map((tile) => tile.id)
+      this._refreshRecentTiles()
       if (tiles.length) this._setActiveTile(tiles[0].id)
-      // After the active tile, not before: the popovers read it back off
-      // the engine, and `_tilesetFirstGid` has already moved to the new
-      // sheet, so building first would resolve the previous sheet's index.
-      this._refreshContextPopovers()
     } catch (error) {
       console.warn('[SceneEditorView] Failed to load sprite set for tiles tab:', error)
     }
@@ -456,12 +523,26 @@ export class SceneEditorView extends ResponsiveEditorView {
     // empty and the replay has to reach it, or the engine has no active
     // tile until the user picks a swatch by hand.
     this._engine?.setActiveTile(tileId + this._tilesetFirstGid)
-    // The chip mirrors what the current tool consumes — under the Object
+    // The badge mirrors what the current tool consumes — under the Object
     // tool it keeps showing the armed object; tile state still updates.
     this._syncContextChip()
-    // Mirror selection back to the inspector palette in case the change
-    // came from the top-bar tile popover.
+    // Mirror selection back into every surface that shows it, wherever
+    // the change came from: the inspector palette, the brush page, and
+    // the phone bar's recent strip.
     this._inspector.tilesTab.selectTile(tileId)
+    this._editor.brushPage.selectTile(tileId)
+    this._recentTileIds = pushRecent(this._recentTileIds, tileId)
+    this._refreshRecentTiles()
+  }
+
+  /** Re-render the phone bar's recency strip from the current id list. */
+  private _refreshRecentTiles(): void {
+    const byId = new Map(this._tiles.map((tile) => [tile.id, tile]))
+    const tiles = this._recentTileIds
+      .map((id) => byId.get(id))
+      .filter((tile): tile is TileDescriptor => tile !== undefined)
+    this._editor.recentTiles.setTiles(tiles)
+    this._editor.recentTiles.setActive(this._activeTileIndex)
   }
 
   /**
@@ -505,9 +586,8 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (activeId) {
       this._inspector.layersTab.selectLayer(activeId)
       const layer = this._layers.find((l) => l.id === activeId)
-      if (layer) this._editor.topBar.layerPlane = planeOf(layer)
+      if (layer) this._applyActiveLayer(layer.id, layer)
     }
-    this._refreshContextPopovers()
   }
 
   /**
@@ -541,10 +621,46 @@ export class SceneEditorView extends ResponsiveEditorView {
     // so the populate-from-project replay must always reach the engine.
     this._engine?.setActiveLayer(layerId)
     const layer = this._layers.find((l) => l.id === layerId)
-    this._editor.topBar.layerName = layer?.name ?? layerId
-    this._editor.topBar.layerPlane = layer ? planeOf(layer) : 'ground'
+    this._applyActiveLayer(layerId, layer)
     // Mirror selection back to the inspector layers tab.
     this._inspector.layersTab.selectLayer(layerId)
+  }
+
+  /**
+   * Push the active layer into every surface that shows it: the badge's
+   * ring colour, the sentence beside it, the brush page's caption and
+   * its plane chips. One writer, so the ring and the caption can never
+   * disagree about which plane the next stroke lands on.
+   */
+  private _applyActiveLayer(layerId: string, layer: LayerDescriptor | undefined): void {
+    const plane = layer ? planeOf(layer) : 'ground'
+    this._activeLayerName = layer?.name ?? layerId
+    this._editor.brushBadge.plane = plane
+    this._editor.brushPage.layerName = this._activeLayerName
+    this._editor.brushPage.setActivePlane(plane, populatedPlanes(this._layers))
+    this._lastLayerByPlane.set(plane, layerId)
+    this._syncBrushLabel()
+  }
+
+  /** "Paint · Ground" — what, and where it lands. */
+  private _syncBrushLabel(): void {
+    this._editor.brushLabel = `${TOOL_LABELS[this._activeTool] ?? this._activeTool} · ${this._activeLayerName}`
+  }
+
+  /**
+   * A plane chip was tapped: activate that plane's last-used layer, or
+   * its topmost one when this session has not been there yet. The chip
+   * is insensitive for a plane with no layers, so there is always one to
+   * land on.
+   */
+  private _selectPlane(plane: LayerPlane): void {
+    const remembered = this._lastLayerByPlane.get(plane)
+    if (remembered && this._layers.some((l) => l.id === remembered)) {
+      this._setActiveLayer(remembered)
+      return
+    }
+    const fallback = [...this._layers].reverse().find((l) => planeOf(l) === plane)
+    if (fallback) this._setActiveLayer(fallback.id)
   }
 
   /**
@@ -574,46 +690,26 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
-   * Rebuild the active-tile and active-layer popovers under the
-   * top-right context chip with the currently loaded tiles + layers.
-   * The brush popover is tool-dependent: the Object tool quick-selects
-   * objects, every other tool quick-selects tiles.
-   */
-  private _refreshContextPopovers(): void {
-    this._editor.topBar.setTilePopover(
-      this._activeTool === 'object'
-        ? buildObjectPopover({ brushes: this._objectBrushes, armedId: this._armedObjectId }, (defId) =>
-            this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
-          )
-        : buildTilePopover(
-            { tilesetName: this._tilesetName, tiles: this._tiles, activeIndex: this._activeTileIndex },
-            (tileId) => this._setActiveTile(tileId),
-          ),
-    )
-    this._editor.topBar.setLayerPopover(
-      buildLayerPopover(
-        { layers: this._layers, activeId: this._activeLayerId, heroPaintable: this._heroPaintable },
-        (layerId) => this._setActiveLayer(layerId),
-      ),
-    )
-  }
-
-  /**
-   * Sync the context chip's label + swatch with what the current tool
-   * consumes: the armed object brush under the Object tool, the active
-   * tile otherwise.
+   * Sync the brush badge with what the current tool consumes: the armed
+   * object brush under the Object tool, the active tile otherwise.
+   *
+   * The badge draws the tool itself (corner disc) and the plane (ring),
+   * so this only supplies the picture; `_applyActiveLayer` supplies the
+   * ring and `setActiveTool` the disc. The three chips this replaced —
+   * a rail row, a tile chip and a layer chip — are now one square.
    */
   private _syncContextChip(): void {
+    this._editor.brushBadge.tool = this._activeTool
+    this._syncBrushLabel()
     if (this._activeTool === 'object') {
       const armed = this._objectBrushes.find((b) => b.id === this._armedObjectId) ?? null
-      this._editor.topBar.tileName = armed?.name ?? 'Object'
-      this._editor.topBar.setTilePaintable(armed?.paintable ?? null)
+      this._editor.brushBadge.tilePaintable = armed?.paintable ?? null
       return
     }
     const index = this._activeTileIndex
     const tile = index != null ? this._tiles.find((t) => t.id === index) : null
-    this._editor.topBar.tileName = tile?.name ?? (index != null ? `Tile ${index}` : 'Tile')
-    this._editor.topBar.setTilePaintable(tile?.paintable ?? null)
+    this._editor.brushBadge.tilePaintable = tile?.paintable ?? null
+    this._editor.recentTiles.setActive(index)
   }
 
   private _wireInspectorSignals(): void {

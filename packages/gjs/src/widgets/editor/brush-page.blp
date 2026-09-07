@@ -1,0 +1,97 @@
+using Gtk 4.0;
+using Adw 1;
+
+// One "what the next stroke lays" surface, in two homes: the brush
+// badge's popover on wide layouts and the bottom sheet's Brush page on
+// phone. The same instance is moved between them by
+// `SceneEditor.setLayout`, so there is exactly one implementation of
+// "which plane, which layer, which tile, which object".
+template $PixelRpgBrushPage : Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    // The three planes as pictures, not a list: "below the hero", "at
+    // hero height", "above the hero". Tapping one activates that
+    // plane's last-used layer.
+    Adw.ToggleGroup plane_chips {
+      homogeneous: true;
+      can-shrink: false;
+      tooltip-text: _("Which plane the next stroke lands on");
+    }
+
+    Gtk.Box layer_row {
+      orientation: horizontal;
+      spacing: 6;
+
+      Gtk.Label layer_label {
+        label: bind template.layer-name;
+        halign: start;
+        hexpand: true;
+        ellipsize: end;
+        styles ["heading", "dim-label"]
+      }
+
+      Gtk.Button layers_button {
+        label: _("Layers…");
+        tooltip-text: _("All layers on this map");
+        styles ["flat"]
+      }
+    }
+
+    Gtk.SearchEntry search {
+      placeholder-text: _("Search tiles…");
+    }
+
+    Gtk.ScrolledWindow palette_scroller {
+      hscrollbar-policy: never;
+      vscrollbar-policy: automatic;
+      propagate-natural-height: true;
+      max-content-height: 460;
+      min-content-height: 200;
+      vexpand: true;
+
+      child: Gtk.Box {
+        orientation: vertical;
+        spacing: 12;
+
+        $PixelRpgTilePalette palette {
+          tile-size: 48;
+          columns: 6;
+        }
+
+        Gtk.Box objects_section {
+          orientation: vertical;
+          spacing: 6;
+          visible: false;
+
+          Gtk.Label {
+            label: _("Things");
+            halign: start;
+            styles ["heading", "dim-label"]
+          }
+
+          $PixelRpgTilePalette object_palette {
+            tile-size: 48;
+            columns: 6;
+            aspect-mode: "contain";
+            styles ["object-brush-palette"]
+          }
+        }
+
+        // Shown only when the project has no placeable objects at all,
+        // so the Things section is never an empty box.
+        Gtk.Label objects_empty {
+          label: _("No objects in the library yet");
+          visible: false;
+          halign: start;
+          styles ["dim-label"]
+        }
+      };
+    }
+  }
+}

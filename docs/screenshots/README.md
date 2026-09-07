@@ -34,6 +34,30 @@ be able to) *do* there.
 - **Atlas opens at 200 % zoom**, so scene cards overflow the viewport in the
   screenshot. The atlas is a pannable/zoomable canvas; the framing is not fixed.
 
+## Floating chrome, redesigned (2026-09-07)
+
+The scene editor's overlay was rebuilt: one full-width `Gtk.WindowHandle`
+with a spacer between two pills became two separately-aligned pills, the
+six-row tool rail, the zoom pill, the collaborators pill and the tile and
+layer chips went, and the four things a stroke needs — which tool, which
+tile, which layer, and undo — became a compound brush badge beside the
+tool chooser plus one always-visible undo button.
+
+The pairs below are the same map (`games/oot2d-2014`, Kokiri Forest) at
+the same size before and after, captured the same way. Chrome coverage is
+measured as the pixels where `Screenshot("window")` differs from
+`Screenshot("canvas")` — the raw framebuffer with no chrome — so dark
+pixel art can never be miscounted as chrome.
+
+| # | Capture | What it shows |
+|---|---|---|
+| 01 | [`chrome/01-desktop-before.png`](chrome/01-desktop-before.png) | 1280x800, sidebars collapsed: the L-shaped slab of top pill + tool rail, the AI and zoom pills bottom-left. 105 816 px2 of chrome, 10.33 % |
+| 02 | [`chrome/02-desktop-after.png`](chrome/02-desktop-after.png) | The same view: two pills with 147 px of map between them, nothing at all between y=70 and the Play button. 66 606 px2, 6.50 % |
+| 03 | [`chrome/03-phone-before.png`](chrome/03-phone-before.png) | 360x780: five clusters, undo two taps deep inside "...", the tool bar sitting in the shell's bottom-edge gesture band. 23.48 % |
+| 04 | [`chrome/04-phone-after.png`](chrome/04-phone-after.png) | "<" top-left, roster + undo + "..." top-right, and a DOCKED bottom bar — the canvas ends where the bar starts, so nothing covers a paintable tile |
+| 05 | [`chrome/05-phone-playing.png`](chrome/05-phone-playing.png) | A Live Run: the bar and the Play FAB give way, the canvas grows to the full window, and the right pill becomes Stop + Restart |
+| 06 | [`chrome/06-desktop-full-view.png`](chrome/06-desktop-full-view.png) | Full view: the same chrome plus the Play split-button arrow and the cursor-tile caption bottom-left — 0.28 percentage points more chrome than Simple view |
+
 ## Three rows (2026-09-06)
 
 The information-architecture milestone turned the six-row rail into

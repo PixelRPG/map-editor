@@ -234,6 +234,11 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.getEditorViewFlags() ?? { showGrid: false, dimInactiveLayers: false, objectsVisible: true }
   }
 
+  /** Forward to `Engine.clearSaveState` — what ↺ Restart resets. */
+  public clearSaveState(): void {
+    this._excalibur?.clearSaveState()
+  }
+
   /** Forward to `Engine.setRuntimeMode` — toggles editor ↔ playtest. */
   public setRuntimeMode(active: boolean): void {
     this._excalibur?.setRuntimeMode(active)

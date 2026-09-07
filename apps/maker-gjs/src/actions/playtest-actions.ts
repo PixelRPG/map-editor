@@ -10,6 +10,14 @@ export interface PlaytestActionsContext {
   setRuntimeMode(playing: boolean): void
   /** Swap the FloatingPlay pill's icon + label. */
   setViewPlaying(playing: boolean): void
+  /**
+   * Drop the run's accumulated state so the next one starts identically
+   * (decision 14 of the merged concept: Restart clears the save). A
+   * playtest that starts the same way every time is what makes it a
+   * test — the cost, stated rather than hidden, is that a door the child
+   * just unlocked is locked again.
+   */
+  clearSaveState(): void
 }
 
 /**
@@ -34,6 +42,28 @@ export function installPlaytestActions(
     ctx.setViewPlaying(isPlaying)
   })
   addAction(group, play)
+
+  /**
+   * ↺ Restart — re-enter runtime from the beginning. Stopping and
+   * starting again is what "from the beginning" means to the engine, so
+   * this is that sequence plus the save wipe, not a second runtime path.
+   */
+  const restart = new Gio.SimpleAction({ name: 'restart' })
+  restart.connect('activate', () => {
+    ctx.clearSaveState()
+    if (play.get_state()?.get_boolean()) ctx.setRuntimeMode(false)
+    ctx.setRuntimeMode(true)
+    play.change_state(GLib.Variant.new_boolean(true))
+  })
+  addAction(group, restart)
+
+  /** ▶ from the spawn point with a clean save — the Full-view split menu's entry. */
+  const playFromStart = new Gio.SimpleAction({ name: 'play-from-start' })
+  playFromStart.connect('activate', () => {
+    ctx.clearSaveState()
+    play.change_state(GLib.Variant.new_boolean(true))
+  })
+  addAction(group, playFromStart)
 
   return { play }
 }

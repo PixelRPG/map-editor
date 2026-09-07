@@ -25,7 +25,7 @@ export interface InspectorActionsContext {
  *
  * `toggle-library` and `toggle-inspector` are BOTH `Gio.PropertyAction`s
  * over the window's shared sidebar properties, because the OSD buttons
- * live in the cross-package `FloatingTopBar`, which a template binding
+ * live in the cross-package `SceneEditor` pills, which a template binding
  * cannot reach; the atlas and welcome views bind `show-library` /
  * `show-inspector` directly instead (see
  * `docs/concepts/responsive-chrome.md`).

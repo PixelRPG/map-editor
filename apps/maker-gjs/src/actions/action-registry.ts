@@ -59,7 +59,15 @@ export function addAction(group: ActionRegistry, action: Gio.Action): void {
  * groups, so the two can only agree by being right.
  */
 export const WINDOW_ACTION_NAMES_BY_MODULE = {
-  view: ['mode', 'library-chip', 'back-to-atlas', 'open-scene', 'open-scene-by-id', 'show-full-view'],
+  view: [
+    'mode',
+    'library-chip',
+    'back-to-atlas',
+    'open-scene',
+    'open-scene-by-id',
+    'show-full-view',
+    'show-help-overlay',
+  ],
   project: ['open-project', 'close-project', 'open-recent-projects', 'new-scene'],
   zoom: ['zoom-in', 'zoom-out', 'zoom-reset', 'atlas-fit'],
   editing: ['set-tool', 'set-object-brush', 'select-placement', 'undo', 'redo', 'new-layer'],
@@ -71,7 +79,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'toggle-grid',
     'toggle-transparency',
   ],
-  playtest: ['play'],
+  playtest: ['play', 'restart', 'play-from-start'],
   session: ['share-session', 'toggle-assistant-paused'],
   cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation'],
   tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'switch-tileset'],

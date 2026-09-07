@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 
@@ -28,17 +29,20 @@ import Template from './floating-fab.blp'
 export class FloatingFab extends Adw.Bin {
   declare _button: Gtk.Button
   declare _button_content: Adw.ButtonContent
+  declare _menu_button: Gtk.MenuButton
 
   private _label = ''
   private _iconName = ''
   private _actionName = ''
+  private _showMenu = false
+  private _menuModel: Gio.MenuModel | null = null
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgFloatingFab',
         Template,
-        InternalChildren: ['button', 'button_content'],
+        InternalChildren: ['button', 'button_content', 'menu_button'],
         Properties: {
           label: GObject.ParamSpec.string(
             'label',
@@ -60,6 +64,20 @@ export class FloatingFab extends Adw.Bin {
             'GAction name (e.g. `win.new-scene`) triggered when the FAB is clicked',
             GObject.ParamFlags.READWRITE,
             '',
+          ),
+          'show-menu': GObject.ParamSpec.boolean(
+            'show-menu',
+            'Show menu',
+            'Whether the split half (a menu arrow beside the action) is shown',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          'menu-model': GObject.ParamSpec.object(
+            'menu-model',
+            'Menu model',
+            'Menu behind the split half',
+            GObject.ParamFlags.READWRITE,
+            GObject.Object.$gtype,
           ),
           // `tooltip-text` is inherited from `Gtk.Widget` — re-declaring
           // it as a custom ParamSpec would collide at class-registration
@@ -112,6 +130,26 @@ export class FloatingFab extends Adw.Bin {
     if (this._actionName === value) return
     this._actionName = value
     this.notify('action-name')
+  }
+
+  get showMenu(): boolean {
+    return this._showMenu ?? false
+  }
+
+  set showMenu(value: boolean) {
+    if (this._showMenu === value) return
+    this._showMenu = value
+    this.notify('show-menu')
+  }
+
+  get menuModel(): Gio.MenuModel | null {
+    return this._menuModel ?? null
+  }
+
+  set menuModel(value: Gio.MenuModel | null) {
+    if (this._menuModel === value) return
+    this._menuModel = value
+    this.notify('menu-model')
   }
 }
 

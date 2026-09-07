@@ -79,18 +79,26 @@ virtual peers.
    so remote peers can durably attribute them to the AI; the receive-side
    `REMOTE_COMMAND_APPLIED` event exposes it. A remote-peer attribution
    UI (badge/flash on `origin`) is a follow-up in `TODO.md`.
-3. **Presence UI + control (done).** A bottom-left `FloatingCollaborators`
-   OSD pill (avatar + "AI Assistant" + a pause/resume button) appears when
-   the assistant is present. The button drives the
+3. **Presence UI + control (done).** A `PixelRpgRosterChip`
+   (`packages/gjs/src/widgets/editor/roster-chip.ts`) in the scene
+   editor's top-right context pill: an avatar stack that opens a popover
+   with one row per participant, the AI's row carrying a pause/resume
+   button. The chip hides itself while the roster is empty, so a solo
+   session pays no canvas for it. The button drives the
    `win.toggle-assistant-paused` stateful action and `get_status` reports
    `assistantPaused` / `assistantPresent` so the agent can stop *before*
    hitting errors. Pause is **enforced**, not advisory — every mutating
    Control method is rejected with a typed error while paused, and the
    control plane can never flip the pause action itself. Full semantics
    in [Pause contract](#pause-contract).
-4. **Follow-cam + activation UX (done).** An opt-in "follow the assistant"
-   toggle on the pill (`win.toggle-follow-assistant` → `Engine.setFollowAssistant`)
-   pans the camera to the assistant's cursor on each move; off by default
+4. **Follow-cam + activation UX (done).** An opt-in Follow toggle on the
+   assistant's roster row. There is no follow *action*: the chip emits
+   `participant-activated` with the peer id, `SceneEditorView` forwards it
+   to `CollabPresenceController.onParticipantActivated`, which toggles
+   follow for that peer — `Engine.setFollowAssistant` for the AI (it owns
+   its own cursor), `panCameraTo` as a human peer's cursor arrives. Follow
+   is per-participant, so it never was a window-level boolean. It pans the
+   camera to the followed cursor on each move; off by default
    so the view isn't yanked around. The first time the assistant becomes
    present, a toast ("AI assistant is now editing with you") announces it —
    a clear, consent-style cue rather than a silent takeover.
@@ -124,7 +132,7 @@ names — and `assistant-pause-policy.spec.ts` pins the table).
 | `SetAssistantInfo`, `HideAssistant` | **allowed** | the assistant's own presence channel (labelling / explicit opt-out) |
 | `SetAssistantCursor` | rejected — returns `false` | engine-gated; the bridge hint names the pause |
 | `PaintTile`, `PlaceObject`, `OpenProject`, `SetZoom`, `ResizeWindow`, `StartSession`, `JoinSession`, `FollowParticipant`, `ActivateAction`, `ChangeActionState` | rejected — `assistant-paused` D-Bus error | the whole action plane counts as mutating: every `win.*` / `app.*` action mutates project data or the user's UI, so there is no per-action allowlist today |
-| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (the OSD pill / UI); the AI can never un-pause itself |
+| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (the roster chip's popover); the AI can never un-pause itself |
 | the user's **own UI** | **unaffected** | pause gates the AI, never the human — e.g. the Props "Remove" button works while paused (`Engine.removeObject` is deliberately ungated; the assistant has no Control-side remove) |
 
 `get_status.assistantPaused` reports the pause from the window-side
@@ -176,26 +184,43 @@ surface presence only. Read-only methods (`GetStatus`, `Screenshot`, …)
 stay silent; `HideAssistant` remains the explicit opt-out when a driver
 finishes.
 
-## Participants toolbar (roster switcher)
+## Roster chip (participant switcher)
 
-The bottom-left OSD bar (`FloatingCollaborators`) is not AI-specific — it
-renders the **live roster** and lets the user follow any participant:
+The `RosterChip` in the scene editor's context pill is not AI-specific —
+it renders the **live roster** and lets the user follow any participant:
 
+- **Chip** — overlapping discs in each participant's cursor colour, the
+  AI's marked with a star, capped at three with a "+N" caption. It is a
+  custom `vfunc_snapshot` widget rather than a row of `Adw.Avatar`s
+  because the overlap needs negative spacing, which GTK forbids. Geometry
+  and the cap live in `roster-chip.geometry.ts`.
 - **Roster** — the window aggregates the local AI assistant + every peer
-  from the session awareness (`ApplicationWindow.getParticipants`), each as
-  a colour-matched chip. A relayed AI on a joiner appears as a session peer
-  with `ASSISTANT_PEER_ID`, flagged `isAI`. Exposed in `get_status`
+  from the session awareness (`ApplicationWindow.getParticipants`), each a
+  row in the chip's popover. The row renders a "Simple view" / "Full view"
+  subtitle when the entry carries a tier, which nothing fills yet — the
+  awareness `presence` frame has no tier field (`TODO.md`, Simple view).
+  A relayed AI on a joiner appears as a session peer with
+  `ASSISTANT_PEER_ID`, flagged `isAI`. Exposed in `get_status`
   (`participants`, `followedPeerId`).
-- **Follow** — clicking a chip follows that participant with the camera
-  (`ApplicationWindow.followParticipant` → `Engine.panCameraTo` on the
-  followed peer's awareness cursor; the engine self-pans for the AI). Also
-  driveable via `Control.FollowParticipant` / the `follow_participant` MCP
-  tool. Clicking the followed chip again stops following.
-- **AI pause** lives on the same bar (shown when an AI participant is
-  present).
+- **Follow** — the Follow toggle on a row follows that participant with
+  the camera (`participant-activated` → `CollabPresenceController` →
+  `Engine.panCameraTo` on the followed peer's awareness cursor; the engine
+  self-pans for the AI). Also driveable via `Control.FollowParticipant` /
+  the `follow_participant` MCP tool. Toggling the followed row again stops
+  following.
+- **AI pause** is the second suffix on the AI's row, bound to
+  `win.toggle-assistant-paused`; while paused the chip draws a pause badge
+  over the AI's disc, so the state is readable without opening the popover.
 
 So "watch what a collaborator is doing" works uniformly for the AI and for
 human peers — the AI was just the first participant.
+
+**Why a chip and not a bar.** The bottom-left `FloatingCollaborators` bar
+this replaces cost ~13 700 px² of canvas whenever anyone was in the
+session — which includes every agent-driven session, since the assistant
+joins as soon as an agent acts. The roster is the content and the pill was
+only the frame, so only the frame changed: the rows, the Follow toggle and
+the pause control are the same. Empty roster, no chip, no cost.
 
 ## UX / product considerations
 

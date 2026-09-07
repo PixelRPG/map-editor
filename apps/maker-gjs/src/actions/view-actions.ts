@@ -20,6 +20,8 @@ export interface ViewActionsContext {
    * settings" row, the Library banner) and offer the way back in a toast.
    */
   showFullView(): void
+  /** Present the keyboard-shortcut reference (`Adw.ShortcutsDialog`). */
+  showShortcuts(): void
 }
 
 /**
@@ -84,6 +86,13 @@ export function installViewActions(
   const showFullView = new Gio.SimpleAction({ name: 'show-full-view' })
   showFullView.connect('activate', () => ctx.showFullView())
   addAction(group, showFullView)
+
+  // Registered at last: the primary menu bound this name for a long time
+  // with nothing behind it, so the item was greyed out in every build
+  // ever made — the bug `check-blp-actions.mjs` exists for.
+  const showHelpOverlay = new Gio.SimpleAction({ name: 'show-help-overlay' })
+  showHelpOverlay.connect('activate', () => ctx.showShortcuts())
+  addAction(group, showHelpOverlay)
 
   return { mode, libraryChip }
 }

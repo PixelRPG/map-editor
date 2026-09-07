@@ -275,7 +275,8 @@ export class AddAnimationDialog extends Adw.Dialog {
 
   /**
    * Bottom-right OSD zoom pill — mirrors the scene editor's
-   * `FloatingZoom` pattern: `[-] [N%] [+]`, flat buttons inside a
+   * `FloatingZoom` pattern (the atlas's zoom pill): `[-] [N%] [+]`,
+   * flat buttons inside a
    * `toolbar.osd` Box. Clamps at the endpoints; reset jumps back to
    * the default level.
    */

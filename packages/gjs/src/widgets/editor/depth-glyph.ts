@@ -11,19 +11,8 @@ import {
   type GlyphPlane,
   type GlyphRect,
   highlightRect,
+  PLANE_COLOR,
 } from './depth-glyph.geometry.ts'
-
-/**
- * The three plane colours are FIXED, not the accent: under a colourful
- * accent in a dark theme all three would look the same. Adwaita's named
- * palette, looked up through the style context with hex fallbacks the
- * way `TeleportOverlay` resolves the accent.
- */
-const PLANE_COLOR: Record<GlyphPlane, { name: string; fallback: string }> = {
-  ground: { name: 'green_3', fallback: '#33d17a' },
-  hero: { name: 'orange_3', fallback: '#ff7800' },
-  overlay: { name: 'blue_3', fallback: '#3584e4' },
-}
 const FG_FALLBACK = '#000000'
 const ACCENT_FALLBACK = '#3584e4'
 /**

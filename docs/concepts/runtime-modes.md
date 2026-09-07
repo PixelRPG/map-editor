@@ -30,7 +30,7 @@ Combinations are first-class. Each user-facing button picks a marker set:
 |---|---|---|
 | Default (open editor) | `EditorMode` | Pure editor — tools work, nothing moves, triggers are visualised but don't execute |
 | **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `SpawnOverride{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. |
-| **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the floating top-bar's tool affordances are hidden and the inspector goes read-only — clean run-through. Esc / Stop → drops the runtime marker, back to editor. |
+| **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the editing pill's tool affordances are hidden and the inspector goes read-only — clean run-through. The phone layout already does this much (`chromeFlags` hides the bottom bar and the Play FAB while playing and turns the context pill into Stop · Restart); the wide layout does not yet. Esc / Stop → drops the runtime marker, back to editor. |
 | **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + spawn-point placement. No editor chrome. This is what shipping looks like. |
 
 **Why marker components instead of an enum:** "Live Run" isn't a separate mode from "Editor" — it's `Editor && Runtime`. Modelling each as a separate boolean marker lets the systems independently observe their own concern without anyone owning a giant `Mode` enum that needs a switch statement everywhere.
@@ -148,7 +148,8 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 
 **Phase 2 — Maker controls (landed)**:
 - Play / Stop wired through `win.play` in `apps/maker-gjs/src/widgets/application-window.ts` → toggles the session markers in the active `MapScene`
-- Editor chrome reacts to `EditorMode` presence
+- Reset wired through `win.restart` and `win.play-from-start` (`apps/maker-gjs/src/actions/playtest-actions.ts`) → `Engine.clearSaveState()` then re-enter runtime
+- Editor chrome reacts to `EditorMode` presence — see [`responsive-chrome.md`](responsive-chrome.md) § Wide ↔ phone for what a phone run hides
 
 **Phase 3 — `PlayerSystem` spawn-override handling (landed)**:
 - The spawn resolution prefers `SpawnOverrideComponent` when present (see `resolveSpawnTile` in `packages/engine/src/systems/player.system.ts`)
@@ -169,6 +170,6 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 ## Open questions
 
 - **Save-state during Live Run** — if the user paints a tile while the runtime is active and then hits Stop, does the painted tile persist? Default proposal: yes. Editor edits always commit to the in-memory project; the runtime is just a *renderer* of that project. Ghost spawn is the only state that doesn't commit.
-- **Reset semantics** — should "Stop" auto-reset the entity state (re-spawn picked-up items, re-position the player), or hold it for "Re-Play" to refresh? Default proposal: Stop holds, dedicated "Reset" button re-spawns. Mario Maker leans the same way.
+- ~~**Reset semantics**~~ — **decided as proposed.** Stop holds; `win.restart` (↺ in the phone run's context pill) and `win.play-from-start` (the Full-view Play menu) both call `Engine.clearSaveState()` first, so a run starts identically every time — the cost being that a door the child just unlocked is locked again. `clearSaveState` resets the flag store today and is the hook a richer playthrough state (hit points, bag) extends. Restart itself re-enters runtime by toggling `setRuntimeMode` off and on, since that is what "from the beginning" already means to the engine.
 - **Pause** — if the user clicks back into the inspector during Live Run, does time pause? Default proposal: yes; clicking outside the engine widget pauses, clicking back resumes. Avoid the "I'm typing in the inspector while my player runs into spikes" failure mode.
 - **WebView host integration** — what's the cheapest way to serve a project to a `WebKit.WebView` for Full Run? `data:` URL is bounded by URL-length limits; an in-process Soup server is the cleanest but adds a network hop. Decide when Phase 4 lands.

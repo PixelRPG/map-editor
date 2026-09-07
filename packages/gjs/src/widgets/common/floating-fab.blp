@@ -7,7 +7,7 @@ template $PixelRpgFloatingFab : Adw.Bin {
   // outer Adw.Bin wrapping the FAB (see `FloatingPlay`) would
   // inherit the default `halign: fill` and cover the entire parent
   // `Gtk.Overlay`, blocking pointer events to every layer underneath
-  // (canvas, FloatingTopBar, FloatingZoom). Bottom-right placement +
+  // (canvas, the editing and context pills). Bottom-right placement +
   // margins live on the call-site instead.
 
   // `toolbar.osd` Box stays as the layout host (same outer geometry,
@@ -35,6 +35,18 @@ template $PixelRpgFloatingFab : Adw.Bin {
           icon-name: bind template.icon-name;
           label: bind template.label;
         };
+      }
+
+      // The split half: a menu arrow beside the primary action, shown
+      // only where a consumer supplies a menu (the scene editor's Play
+      // in Full view). Simple view never sees an arrow.
+      Gtk.MenuButton menu_button {
+        visible: bind template.show-menu;
+        icon-name: "pan-up-symbolic";
+        menu-model: bind template.menu-model;
+        tooltip-text: _("More ways to play");
+        focus-on-click: false;
+        styles ["suggested-action"]
       }
     };
   }

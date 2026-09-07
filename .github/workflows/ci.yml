@@ -317,6 +317,17 @@ jobs:
         # gaps need a marker in the file AND an entry in the script.
         run: node scripts/check-orphan-components.mjs
 
+      - name: Verify the scene editor's disclosure ladder agrees with itself
+        # The ladder is declared twice — as `Adw.Breakpoint` conditions in
+        # `scene-editor.blp` and as `STAGE_MIN_CANVAS_PX` in
+        # `chrome-stages.ts` — and nothing in TypeScript can see a
+        # Blueprint condition. A threshold changed on one side only keeps
+        # the app running and the tests green while the two floating
+        # pills overlap at some window size nobody tried; that is exactly
+        # what happened at a 620 px and a 784 px canvas while this chrome
+        # was being measured.
+        run: node scripts/check-chrome-stages.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the

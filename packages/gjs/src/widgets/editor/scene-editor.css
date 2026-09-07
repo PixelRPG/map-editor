@@ -59,29 +59,88 @@
 }
 
 /*
- * Left tool rail: give every entry a consistent width so the icon +
- * label rows line up into a tidy column (labels are left-aligned +
- * hexpand inside each button). The active tool carries
- * `.suggested-action` (accent) applied in floating-tool-rail.ts.
+ * The two floating pills. Class markers, so the acceptance probes can
+ * name what they measure — the geometry itself is Adwaita's
+ * `.toolbar.osd` (12px padding, 15px radius, 70% black fill).
  */
-.tool-rail-button {
-  min-width: 104px;
+.editing-pill,
+.context-pill {
+  /* marker only */
 }
 
 /*
- * Compact (phone) bottom bar: the desktop 104px column min-width would
- * make six tools overflow a ~400px bar. Reset it so the icon-only
- * buttons shrink to their natural size and the whole rail fits.
+ * The badge is 32px — deliberately larger than the 22px swatch it
+ * replaces, because it is now the ONLY picture of the active tile. At
+ * Adwaita's default 5px vertical button padding that makes a 42px
+ * button and a 66px pill, which breaks the 58px every other piece of
+ * floating chrome is; the pill's own 12px padding then eats eight more
+ * rows of map across the whole pill. 1px keeps the button at 34px and
+ * the pill at 58px, measured.
  */
-.tool-rail-compact .tool-rail-button {
-  min-width: 0;
-  padding: 8px 10px;
+.badge-button > button {
+  min-height: 0;
+  padding: 0 6px 0 4px;
 }
 
-.tool-rail-button.active-tool,
-.tool-rail-button.active-tool:hover {
-  background-color: @accent_bg_color;
-  color: @accent_fg_color;
+/*
+ * Phone: the "‹" is the ONLY supported exit (decision 20), so it is a
+ * 44px touch target rather than the 34px an OSD button defaults to.
+ */
+.back-circle {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px;
 }
 
+/*
+ * The docked bottom bar. It is the sheet's `bottom-bar`, so it sits on
+ * the window background rather than over the canvas: the canvas ends
+ * where the bar starts (the overlay's margin-bottom is bound to
+ * `bottom-bar-height`), which is what keeps the shell's bottom-edge
+ * gesture band off paintable tiles.
+ */
+.phone-bar {
+  background-color: @headerbar_bg_color;
+  border-top: 1px solid @headerbar_shade_color;
+}
 
+.phone-bar toggle-group > toggle {
+  min-height: 44px;
+}
+
+.phone-bar button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* The active tile in the recent strip, ringed in the accent. */
+.recent-tile {
+  padding: 2px;
+}
+
+.recent-tile:checked {
+  background-color: alpha(@accent_bg_color, 0.25);
+  box-shadow: inset 0 0 0 2px @accent_bg_color;
+}
+
+/* Transient zoom readout + full-view cursor caption: smaller than a
+ * button-bearing pill, because neither holds a control. */
+.toolbar.osd.zoom-osd,
+.toolbar.osd.cursor-caption {
+  padding: 4px 8px;
+}
+
+/*
+ * `Adw.ToastOverlay` is the window's content, so every toast lands at
+ * the window's bottom centre — which on phone is exactly where the
+ * docked bar is. A toast raised over the tool chooser is how the
+ * measurement round found this. 120px clears the 108px bar.
+ *
+ * The class goes on the WINDOW, not on the scene editor: the toast
+ * overlay is the editor's ancestor, so a selector rooted at the editor
+ * could never reach it. `SceneEditor` sets it on `get_root()` while the
+ * phone bar is revealed and drops it on unmap.
+ */
+window.sheet-peeking toastoverlay > toast {
+  margin-bottom: 120px;
+}

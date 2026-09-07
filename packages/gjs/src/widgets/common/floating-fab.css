@@ -13,9 +13,17 @@
  * active shading mirrors libadwaita's own CTA shade values so the pill
  * responds the same way a standalone suggested-action button does.
  */
+/*
+ * `padding: 0` on the frame, because the frame is invisible: with the
+ * toolbar's default 12 px the FAB occupied a 98x58 box of which only the
+ * 74x34 button was visible or clickable, and the rest was a transparent
+ * window-drag surface sitting on the canvas. The button IS the target
+ * now.
+ */
 .toolbar.osd.floating-fab-frame {
   background-color: transparent;
   box-shadow: none;
+  padding: 0;
 }
 
 .toolbar.osd.floating-fab-frame button.suggested-action {

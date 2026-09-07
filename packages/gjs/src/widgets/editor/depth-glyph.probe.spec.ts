@@ -26,12 +26,13 @@ const GREY_CHROMA = 24
 
 export default async () => {
   await describe('PixelRpgDepthGlyph — rendered pixels', async () => {
+    const rig = isGjs ? await import('./pixel-probe.ts') : null
     const probe = isGjs ? await import('./depth-glyph.probe.ts') : null
-    if (!probe?.hasDisplay()) {
+    if (!rig?.hasDisplay() || !probe) {
       await it.skip('needs GJS + a display: colours the highlighted band only, at 40 / 24 / 14 px')
       return
     }
-    const outDir = probe.pngDir()
+    const outDir = rig.pngDir('DEPTH_GLYPH_PNG_DIR')
 
     for (const size of Object.values(GLYPH_SIZES)) {
       await it(`at ${size} px, exactly the highlighted plane's band carries colour`, async () => {
@@ -41,9 +42,9 @@ export default async () => {
             size,
             outDir ? `${outDir}/glyph-${plane}-${size}.png` : undefined,
           )
-          expect(probe.chroma(result.pixels[plane])).toBeGreaterThan(COLOURED_CHROMA)
+          expect(rig.chroma(result.pixels[plane])).toBeGreaterThan(COLOURED_CHROMA)
           for (const other of GLYPH_PLANES.filter((p) => p !== plane)) {
-            expect(probe.chroma(result.pixels[other])).toBeLessThan(GREY_CHROMA)
+            expect(rig.chroma(result.pixels[other])).toBeLessThan(GREY_CHROMA)
           }
         }
       })

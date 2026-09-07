@@ -5,10 +5,13 @@ import { Component } from 'excalibur'
  * session-singleton entity (see `docs/concepts/editor-architecture.md`).
  *
  * Canonical set is shared with the UI tool selector
- * (`@pixelrpg/gjs/widgets/editor/floating-tool-rail`) — both sides
+ * (`@pixelrpg/gjs/widgets/editor/tool-group`) — both sides
  * import this type so adding / renaming a tool is a single-file change.
  * Adding a new tool: extend this union, add its entry to `TOOLS` in
- * `FloatingToolRail`, implement the system-side behaviour in
+ * `@pixelrpg/gjs`'s `ToolGroup` and its icon to `TOOL_ICONS` in
+ * `brush-badge.geometry.ts` — the badge's corner disc draws from that
+ * same table, so the chooser and the badge can never name different
+ * tools — then implement the system-side behaviour in
  * `TileEditorSystem.applyClick`.
  *
  * `'select'` is the default — read-only inspect/select. Clicks
