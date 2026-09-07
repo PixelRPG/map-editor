@@ -104,13 +104,40 @@
   border-top: 1px solid @headerbar_shade_color;
 }
 
+/*
+ * 44 px touch targets, OUTER. GTK's `min-width` / `min-height` are the
+ * content box and Adwaita pads a button `5px 10px`, so the `44px` floors
+ * this replaces made 64×54 px buttons: a 127 px bar where the design and
+ * the 120 px toast clearance below say 108, and 20 px of the recent
+ * strip gone to the "⌃"'s padding — five tiles where six fit. The
+ * phone-chrome probe measures these buttons back at exactly 44.
+ */
 .phone-bar toggle-group > toggle {
-  min-height: 44px;
+  /* + the group's own 3 px padding a side = 44 */
+  min-height: 38px;
 }
 
 .phone-bar button {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px;
+}
+
+/* The badge is its own 44 px picture; the button around it adds nothing. */
+.phone-bar button.badge-phone {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+/*
+ * The recent strip's swatches: a 40 px picture inside the 44 px target,
+ * on a 48 px pitch (`RECENT_*_PX` in recent-tiles.geometry.ts).
+ */
+.phone-bar button.recent-tile {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 2px;
 }
 
 /* The active tile in the recent strip, ringed in the accent. */

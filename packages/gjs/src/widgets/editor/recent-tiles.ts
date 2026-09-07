@@ -3,24 +3,19 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
+import {
+  RECENT_BUTTON_PX,
+  RECENT_PITCH_PX,
+  RECENT_SWATCH_PX,
+  RECENT_TILES_MAX,
+  wholeCount,
+} from './recent-tiles.geometry.ts'
+import { RecentTilesLayout } from './recent-tiles-layout.ts'
 import type { TileDescriptor } from './tile-palette.ts'
 import { createSwatchWidget } from './tile-swatch.ts'
 
-/** Side of one swatch, and the pitch it sits on. */
-export const RECENT_SWATCH_PX = 40
-export const RECENT_PITCH_PX = 48
-
-/** Most recently used tiles the strip remembers. */
-export const RECENT_TILES_MAX = 8
-
-/**
- * Keep an LRU of tile ids with `id` at the front, capped at
- * {@link RECENT_TILES_MAX}. Pure, so the "painting a meadow alternates
- * two or three tiles and none of them falls off" claim is a unit test.
- */
-export function pushRecent(recent: readonly number[], id: number): number[] {
-  return [id, ...recent.filter((other) => other !== id)].slice(0, RECENT_TILES_MAX)
-}
+/** Gap between the strip and its "⌃". */
+const EXPAND_GAP_PX = 4
 
 /**
  * The phone bar's second row: the tiles this session has used, biggest
@@ -30,9 +25,19 @@ export function pushRecent(recent: readonly number[], id: number): number[] {
  * or three tiles a meadow is made of — costs one tap instead of opening
  * the sheet, picking, and dismissing it. The trailing "⌃" opens the
  * sheet for everything else.
+ *
+ * The strip shows a WHOLE number of swatches: at 360 px six fit and the
+ * seventh is not drawn at all, rather than sliced by the edge of the bar
+ * — a cut tile is not an affordance, it reads as a defect. The strip it
+ * replaces clipped through a `Gtk.ScrolledWindow`, and the eighth tile
+ * ended up half under the "⌃". {@link RecentTilesLayout} decides the
+ * count at every allocation from the real button widths, and reports one
+ * swatch as the minimum so the strip can never be what holds the window
+ * above the phone width.
  */
 export class RecentTiles extends Adw.Bin {
   private _row: Gtk.Box
+  private _expand: Gtk.Button
   private _buttons = new Map<number, Gtk.ToggleButton>()
   private _activeId: number | null = null
   /** Set while a programmatic check is in flight, so it never re-emits. */
@@ -55,26 +60,31 @@ export class RecentTiles extends Adw.Bin {
 
   constructor() {
     super()
-    this._row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: RECENT_PITCH_PX - RECENT_SWATCH_PX })
-    this._row.add_css_class('recent-tiles')
-    const outer = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 })
-    // The strip is clipped, not wrapped: at 360 px six swatches fit and
-    // the seventh is simply not drawn, rather than pushing the "⌃" off
-    // the bar or growing the row to two lines.
-    const clip = new Gtk.ScrolledWindow({
-      hscrollbar_policy: Gtk.PolicyType.EXTERNAL,
-      vscrollbar_policy: Gtk.PolicyType.NEVER,
+    this._row = new Gtk.Box({
+      orientation: Gtk.Orientation.HORIZONTAL,
+      spacing: RECENT_PITCH_PX - RECENT_BUTTON_PX,
       hexpand: true,
-      propagate_natural_height: true,
     })
-    clip.set_child(this._row)
-    outer.append(clip)
+    this._row.add_css_class('recent-tiles')
+    const outer = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: EXPAND_GAP_PX })
+    outer.append(this._row)
 
-    const expand = new Gtk.Button({ icon_name: 'go-up-symbolic', tooltip_text: _('More tiles') })
-    expand.add_css_class('flat')
-    expand.connect('clicked', () => this.emit('expand-requested'))
-    outer.append(expand)
+    this._expand = new Gtk.Button({ icon_name: 'go-up-symbolic', tooltip_text: _('More tiles') })
+    this._expand.add_css_class('flat')
+    this._expand.connect('clicked', () => this.emit('expand-requested'))
+    outer.append(this._expand)
     this.set_child(outer)
+    this.set_layout_manager(new RecentTilesLayout())
+  }
+
+  /** The swatch buttons in strip order — the probe reads their widths. */
+  get tileButtons(): readonly Gtk.ToggleButton[] {
+    return [...this._buttons.values()]
+  }
+
+  /** How many swatches the last allocation showed whole. */
+  get shownCount(): number {
+    return this.tileButtons.filter((button) => button.get_child_visible()).length
   }
 
   /** Replace the strip; `tiles` is already in recency order. */
@@ -116,6 +126,24 @@ export class RecentTiles extends Adw.Bin {
     } finally {
       this._echo = false
     }
+  }
+
+  // ---- RecentTilesHost, called by the layout manager ----
+
+  firstTileMinPx(): number {
+    const first = this.tileButtons[0]
+    return first ? first.measure(Gtk.Orientation.HORIZONTAL, -1)[0] : 0
+  }
+
+  reservedPx(): number {
+    return EXPAND_GAP_PX + this._expand.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+  }
+
+  fitTiles(rowPx: number): void {
+    const buttons = this.tileButtons
+    const widths = buttons.map((button) => button.measure(Gtk.Orientation.HORIZONTAL, -1)[1])
+    const count = wholeCount(widths, this._row.get_spacing(), rowPx)
+    for (const [index, button] of buttons.entries()) button.set_child_visible(index < count)
   }
 }
 

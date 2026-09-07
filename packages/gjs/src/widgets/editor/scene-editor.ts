@@ -179,6 +179,7 @@ export class SceneEditor extends Adw.Bin {
     this._badge_button.set_popover(this._brushPopover)
 
     this._phoneBadgeButton.add_css_class('flat')
+    this._phoneBadgeButton.add_css_class('badge-phone')
     this._phoneBadgeButton.set_tooltip_text(_('Brush'))
     this._phoneBadgeButton.connect('clicked', () => this._bottom_sheet.set_open(true))
     this._recent_tiles.connect('expand-requested', () => this._bottom_sheet.set_open(true))

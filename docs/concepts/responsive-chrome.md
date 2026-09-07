@@ -458,6 +458,32 @@ recent-tiles strip. While a phone run is on, the bar, the FAB and the
 Live Run the finger is the joystick, not a brush. On wide the same run
 changes only the FAB's own icon.
 
+**Everything under the ladder fits 360 px, and that is nobody's job
+but its own.** The ladder's `Adw.BreakpointBin` sets the floor with
+`width-request: 360` and enforces nothing: a breakpoint bin ignores its
+child's minimum, so a child that wants more is allocated past the
+window's edge from x=0 — one `Adwaita-WARNING` in the log, and every
+end-aligned piece (context pill, Play FAB, the badge) pushed off the
+right. Two rules follow, both measured by `phone-chrome.probe.spec.ts`
+with GTK's `measure()` rather than by eye:
+
+- The **sheet's minimum is the wider of its page and its bar, at all
+  times.** `Adw.BottomSheet` keeps both in one homogeneous `Gtk.Stack`,
+  so the Brush page's width reaches the docked bar and the canvas with
+  the sheet closed. Its palettes therefore `wrap` with six columns as
+  the cap (one column minimum, six natural — the badge popover still
+  sizes to six) and its plane-chip captions ellipsize: six pinned
+  columns measured 378 px and put the whole editor 18 px past a 360 px
+  window.
+- The **recent strip shows a whole number of tiles** — six at 360 px —
+  and hides the rest; a swatch sliced by the edge of the bar reads as
+  a defect, not as "more". `RecentTilesLayout` decides the count at
+  every allocation from the real button widths and reports one swatch
+  as the strip's minimum. The bar's buttons are 44 px OUTER targets:
+  GTK's `min-width` is the content box, and `44px` plus Adwaita's
+  padding had made 64×54 px buttons, a 127 px bar, and five tiles
+  where six fit.
+
 ---
 
 ## Size-propagation hazards (and the fixes)
@@ -473,6 +499,13 @@ Symptom: `AdwToastOverlay … exceeds ApplicationWindow width:
 requested 1202 px, …` log warnings at narrow viewports, with
 the lower breakpoints visibly never engaging.
 
+The scene editor has a second, quieter form of the same hazard: its
+ladder is an `Adw.BreakpointBin`, which **stops** the propagation at
+`width-request: 360` — so the window still shrinks to 360, and a child
+that wants more is not refused but allocated past the edge, with an
+`AdwBottomSheet … exceeds AdwBreakpointBin width: requested 378 px,
+360 px available` warning as the only trace.
+
 The fixes that turned out to matter:
 
 | Location                          | Fix                                                                                                                                                                                  | PR  |
@@ -482,6 +515,7 @@ The fixes that turned out to matter:
 | `engine.blp`                      | Wrap `canvasContainer` in a `Gtk.ScrolledWindow` with `min-content-{width,height}: 1` + `hscrollbar-policy: external` (size-detach only, no scrollbars). Same trick, different layer | #57 |
 | `welcome-view.blp` recents column | Inner `Gtk.ScrolledWindow` gets `min-content-width: 1`. Dropped the `width-request: 320` floor on the recents column                                                                 | #60 |
 | `application-window.blp` ViewStack | `hhomogeneous: false` + `vhomogeneous: false`. Default `true` measures **every page** and uses the max as the stack's size — the scene editor's WebGL canvas leaked into the atlas view's layout | #55 |
+| `brush-page.blp` palettes | `wrap: true` + `wrap-cap: 6` instead of `columns: 6`. `Adw.BottomSheet`'s page and bottom bar share one homogeneous `Gtk.Stack` (not ours to configure), so the closed sheet's minimum is the page's: six pinned 54 px columns were 378 px, and the ladder's `Adw.BreakpointBin` — which ignores its child's minimum — allocated the whole editor 18 px past a 360 px window. Caught by `phone-chrome.probe.spec.ts`, not by any log anyone read | this PR |
 
 If you add a new view: keep its minimum-size profile in mind.
 A `min-content-width: 1` on the outermost ScrolledWindow is
@@ -679,6 +713,7 @@ dragging wouldn't be discoverable anyway.
 | Chrome architecture as described (breakpoints, sidebars, OSD pills, engine-resize handling) — ships in `apps/maker-gjs` | **landed** (PRs #48–#64) |
 | Scene-editor chrome: two pills + Play FAB + transient zoom, the `stage` ladder, and the phone bottom sheet | **landed** |
 | Scene-editor thresholds re-measured against real pill widths, with `check-chrome-stages.mjs` holding the two declarations together | **landed** |
+| Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles, measured by GTK (`phone-chrome.probe.spec.ts`) | **landed** |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
