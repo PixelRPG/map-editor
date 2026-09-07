@@ -61,9 +61,13 @@ export class FloatingPlay extends Adw.Bin {
   set playing(value: boolean) {
     if (this._playing === value) return
     this._playing = value
-    this._fab.iconName = value ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic'
-    this._fab.label = value ? _('Pause') : _('Play')
-    this._fab.tooltipText = value ? _('Pause playtest') : _('Play')
+    // Stop, not Pause: the runtime has one exit and it returns to
+    // editing (concept §2.5 — the child sees Play / Stop, and Restart
+    // beside Stop while a run is going). "Pause" promised a resume the
+    // action never had.
+    this._fab.iconName = value ? 'media-playback-stop-symbolic' : 'media-playback-start-symbolic'
+    this._fab.label = value ? _('Stop') : _('Play')
+    this._fab.tooltipText = value ? _('Stop the playtest') : _('Play')
     // The menu is about starting a run; while one is going the arrow
     // would offer nothing the Stop button does not already cover.
     this._fab.showMenu = this._showMenu && !value

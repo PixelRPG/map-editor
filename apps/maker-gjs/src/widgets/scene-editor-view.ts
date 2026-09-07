@@ -223,9 +223,14 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._engine = engine ?? null
   }
 
-  /** Reflect the `win.play` action's runtime state on the FloatingPlay button. */
+  /**
+   * Reflect the `win.play` action's runtime state on the whole chrome,
+   * not just the FAB: on phone the bar and the FAB give way to the run
+   * and the context pill becomes Stop · Restart, because during a Live
+   * Run the finger is the joystick rather than a brush.
+   */
   setPlaying(playing: boolean): void {
-    this._editor.floatingPlay.playing = playing
+    this._editor.setPlaying(playing)
   }
 
   /** Mirror the global objects visibility into the Layers tab's Objects row (no re-emit). */
