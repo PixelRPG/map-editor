@@ -14,6 +14,20 @@ export const GLYPH_PLANES: readonly GlyphPlane[] = ['ground', 'hero', 'overlay']
 /** Sizes the glyph is used at: section header, row badge / popover row, top-bar chip. */
 export const GLYPH_SIZES = { header: 40, row: 24, chip: 14 } as const
 
+/**
+ * The three plane colours, FIXED rather than derived from the accent:
+ * under a colourful accent in a dark theme all three would look the
+ * same. Adwaita's named palette with hex fallbacks, looked up through
+ * the style context. Shared, not duplicated — the depth glyph, the
+ * brush badge's plane ring and the plane chips must agree, or "green
+ * means below the hero" stops being one fact.
+ */
+export const PLANE_COLOR: Record<GlyphPlane, { name: string; fallback: string }> = {
+  ground: { name: 'green_3', fallback: '#33d17a' },
+  hero: { name: 'orange_3', fallback: '#ff7800' },
+  overlay: { name: 'blue_3', fallback: '#3584e4' },
+}
+
 /** Axis-aligned rectangle in glyph pixels. */
 export interface GlyphRect {
   x: number
