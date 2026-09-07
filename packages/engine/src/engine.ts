@@ -155,6 +155,16 @@ export class Engine {
     return this.loader.loadMap(mapId, options)
   }
 
+  /**
+   * Id of the map that is live, or `null` before the first
+   * {@link loadMap}. `loadProject` already activates the project's
+   * startup map, so a host must ask rather than assume it has to load
+   * one itself. See {@link ProjectLoader.currentMapId}.
+   */
+  get currentMapId(): string | null {
+    return this.loader.currentMapId
+  }
+
   async start(): Promise<void> {
     this.excalibur.start()
     this.setStatus(EngineStatus.RUNNING)

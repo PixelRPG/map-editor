@@ -14,7 +14,9 @@ import { run } from '@gjsify/unit'
 // stays green while testing nothing). When you add a `*.spec.ts`, add
 // its import + `run()` entry here. (Tracked in TODO.md as a guard
 // follow-up — a test that asserts every spec file is registered.)
+import commandHistorySuite from './engine/command-history.spec.js'
 import editOperationsSuite from './engine/edit-operations.spec.js'
+import sceneSwapSuite from './engine/scene-swap.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
 import layerOrderCommandSuite from './commands/layer-order.command.spec.js'
@@ -80,7 +82,9 @@ import subscriptionRegistrySuite from './utils/subscription-registry.spec.js'
 
 run({
   registrySuite,
+  commandHistorySuite,
   editOperationsSuite,
+  sceneSwapSuite,
   paintTileCommandSuite,
   layerFlagCommandSuite,
   layerLifecycleCommandSuite,
