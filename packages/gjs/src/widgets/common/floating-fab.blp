@@ -7,7 +7,7 @@ template $PixelRpgFloatingFab : Adw.Bin {
   // outer Adw.Bin wrapping the FAB (see `FloatingPlay`) would
   // inherit the default `halign: fill` and cover the entire parent
   // `Gtk.Overlay`, blocking pointer events to every layer underneath
-  // (canvas, FloatingTopBar, FloatingZoom). Bottom-right placement +
+  // (canvas, the editing and context pills). Bottom-right placement +
   // margins live on the call-site instead.
 
   // `toolbar.osd` Box stays as the layout host (same outer geometry,
