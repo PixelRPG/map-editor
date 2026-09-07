@@ -1,4 +1,5 @@
 import { run } from '@gjsify/unit'
+import accelsSuite from './actions/accels.spec.js'
 import actionRegistrySuite from './actions/action-registry.spec.js'
 import windowActionsSuite from './actions/window-actions.gjs.spec.js'
 import instanceIdSuite from './instance-id.spec.js'
@@ -59,6 +60,7 @@ import tilesViewModelSuite from './services/tiles-view-model.spec.js'
 import viewModeMapSuite from './services/view-mode-map.spec.js'
 
 run({
+  accelsSuite,
   actionRegistrySuite,
   assistantPausePolicySuite,
   assistantStateServiceSuite,

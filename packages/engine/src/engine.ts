@@ -1,6 +1,6 @@
 import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Logger, Vector } from 'excalibur'
 import type { Command } from './commands/index.ts'
-import type { EditorTool, EditorViewFlags } from './components/index.ts'
+import { type EditorTool, type EditorViewFlags, GameSaveStateComponent } from './components/index.ts'
 import { CommandHistory } from './engine/command-history.ts'
 import { EditOperations } from './engine/edit-operations.ts'
 import { EditorSession } from './engine/editor-session.ts'
@@ -18,6 +18,7 @@ import { MapScene } from './scenes/map.scene.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
+import { SessionState } from './utils/session-state.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { LayerData, LayerPlane } from './types/data/index.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
@@ -459,6 +460,24 @@ export class Engine {
     // Swap placement chrome (cell frames + logic markers) out of / back
     // into the render so a playtest shows only the real sprites.
     scene.refreshPlacementGraphicsForMode(active)
+  }
+
+  /**
+   * Drop the playthrough's accumulated state — today the flag store,
+   * tomorrow live hit points and the bag — so the next run starts from
+   * the same place as the first one.
+   *
+   * Decision 14 of the design: a playtest that starts identically every
+   * time is what makes it a test, and the key-and-door loop stays
+   * re-runnable. The cost is stated rather than hidden: a door the child
+   * just unlocked is locked again.
+   *
+   * No-op without an active scene.
+   */
+  clearSaveState(): void {
+    const scene = this.activeMapScene()
+    if (!scene) return
+    SessionState.set(scene, new GameSaveStateComponent())
   }
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */

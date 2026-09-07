@@ -23,6 +23,7 @@ import { installSessionActions } from '../actions/session-actions.ts'
 import { booleanState, type StatefulWindowActions, stringState } from '../actions/stateful-actions.ts'
 import { installTileActions } from '../actions/tile-actions.ts'
 import { installViewActions } from '../actions/view-actions.ts'
+import { presentShortcutsDialog } from './shortcuts-dialog.ts'
 import { installZoomActions } from '../actions/zoom-actions.ts'
 import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
 import { presentTilesetSwitcher } from '../services/asset-dialogs.ts'
@@ -601,6 +602,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
       showFullView: () => this._revealFullView(),
+      showShortcuts: () => presentShortcutsDialog(this),
     })
 
     installProjectActions(group, {
@@ -645,6 +647,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       persistCurrentMap: () => this._mapPersistCtl.persistCurrentMap(),
       setRuntimeMode: (playing) => this._engineCtl.engine?.setRuntimeMode(playing),
       setViewPlaying: (playing) => this._scene_editor_view.setPlaying(playing),
+      clearSaveState: () => this._engineCtl.engine?.clearSaveState(),
     })
 
     const { share } = installSessionActions(group, {
