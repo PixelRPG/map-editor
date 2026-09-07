@@ -52,4 +52,22 @@ export const EDITOR_CONSTANTS = {
   HOVER_TILE_BORDER_COLOR: '#3584e4',
   HOVER_OBJECT_BORDER_COLOR: '#f5c211',
   HOVER_BORDER_LINE_WIDTH: 2,
+
+  // `fill-preview` palette — the region a bucket-fill click would
+  // repaint, outlined and tinted while the `'fill'` tool hovers. Adwaita
+  // green (success): a fill ADDS, and green is taken by no other overlay
+  // (select = blue, object = yellow, selection = orange). The tint is
+  // faint so the tiles underneath stay legible; the outline carries the
+  // "where does it stop" answer.
+  FILL_PREVIEW_COLOR: '#2ec27e',
+  FILL_PREVIEW_TINT_ALPHA: 0.22,
+
+  // `eraser-preview` palette — the cell an eraser click would clear on
+  // the active layer. Adwaita red (destructive) when the cell holds
+  // sprites the click removes; a neutral grey outline when it holds
+  // nothing on that layer, so the tool still shows where it is without
+  // promising a change the click cannot make.
+  ERASE_PREVIEW_COLOR: '#e01b24',
+  ERASE_PREVIEW_TINT_ALPHA: 0.35,
+  ERASE_PREVIEW_EMPTY_COLOR: '#77767b',
 } as const

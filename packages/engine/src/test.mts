@@ -47,6 +47,7 @@ import placementGeometrySuite from './services/placement-geometry.spec.js'
 import placementPickingSuite from './services/placement-picking.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
 import playerCharacterSuite from './services/player-character.spec.js'
+import regionGeometrySuite from './services/region-geometry.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
@@ -69,6 +70,7 @@ import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
 import snapshotPathsSuite from './sync/snapshot-paths.spec.js'
 import combatActionSuite from './systems/combat-action.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
+import hoverOverlaysSuite from './systems/hover-overlays.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
 import stateSystemSuite from './systems/state.system.spec.js'
 import statsSystemSuite from './systems/stats.system.spec.js'
@@ -106,6 +108,7 @@ run({
   placementIdSuite,
   placementPickingSuite,
   playerCharacterSuite,
+  regionGeometrySuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   tileEditTargetSuite,
@@ -134,6 +137,7 @@ run({
   snapshotPathsSuite,
   inputSystemSuite,
   eventActionSystemSuite,
+  hoverOverlaysSuite,
   stateSystemSuite,
   statsSystemSuite,
   combatActionSuite,
