@@ -89,8 +89,10 @@ export class SceneEditor extends Adw.Bin {
    * (compact) instead of the vertical left rail, with the bottom-left
    * OSD stack + Play button lifted above it so nothing overlaps. Driven
    * by `SceneEditorView` on the `inspector-collapsed` (<768sp)
-   * breakpoint; a widget-internal `Adw.BreakpointBin` can't observe the
-   * narrow width because the engine canvas keeps this overlay wide.
+   * breakpoint because the reflow keys on the WINDOW form factor: with
+   * both sidebars open on a small desktop the canvas is narrow while the
+   * device is still a desktop. A widget-internal `Adw.BreakpointBin`
+   * would observe the narrow width fine — see `scene-editor.blp`.
    */
   setCompact(compact: boolean): void {
     const rail = this._tool_rail

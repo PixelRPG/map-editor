@@ -3,12 +3,22 @@ using Adw 1;
 
 template $PixelRpgSceneEditor : Adw.Bin {
   // Responsive density is handled by FloatingTopBar's own internal
-  // `Adw.BreakpointBin` (split ≥880sp ↔ merged). The tool rail's
-  // desktop-vs-phone reflow is driven from `SceneEditor.setCompact`
-  // (called by SceneEditorView on the `inspector-collapsed` breakpoint,
-  // which fires only <768sp) rather than a widget-internal breakpoint —
-  // the engine canvas keeps this overlay's allocation wide, so a local
-  // `Adw.BreakpointBin` never observes the narrow window width.
+  // `Adw.BreakpointBin` (split ≥880sp ↔ merged), which observes the
+  // CANVAS width and tracks it correctly all the way down: at a 360 px
+  // window the bar reaches its <460sp stage (undo, redo, back, grid and
+  // dim all inside the "⋯" menu), which is only reachable if the bin
+  // measured ~336 px. A widget-internal `Adw.BreakpointBin` here would
+  // therefore work too — the engine canvas does NOT keep this overlay's
+  // allocation wide, because `application-window.blp:62-70` sets the
+  // ViewStack's `hhomogeneous`/`vhomogeneous` to false precisely so the
+  // WebGL canvas's large natural width stops propagating upward.
+  //
+  // The tool rail's desktop-vs-phone reflow is nevertheless driven from
+  // `SceneEditor.setCompact` (called by SceneEditorView on the
+  // `inspector-collapsed` breakpoint, which fires only <768sp) because
+  // it keys on the WINDOW form factor, not on the canvas width: with
+  // both sidebars open on a small desktop the canvas is narrow while
+  // the device is still a desktop.
   Gtk.Overlay overlay {
     [overlay]
     $PixelRpgFloatingTopBar top_bar {}
