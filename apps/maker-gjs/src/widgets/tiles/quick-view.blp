@@ -1,10 +1,13 @@
 using Gtk 4.0;
 using Adw 1;
 
-// Shared read-only glance for the selected card of EITHER Sheets section.
+// Shared read-only glance for the selected card of EITHER Graphics section.
 // The preview swaps by kind (a static sheet thumbnail for a tileset, an
 // animated `CharacterPreview` for an appearance); the name, subtitle and
-// Edit button are shared, which is what makes one sidebar enough.
+// edit button are shared, which is what makes one sidebar enough. The
+// kind line and the button's wording say which of the two this is — a
+// name alone ("Scientist") reads as a character, and the button leads
+// somewhere different for each kind.
 template $TilesQuickView : Adw.Bin {
   child: Gtk.ScrolledWindow {
     hscrollbar-policy: never;
@@ -53,6 +56,11 @@ template $TilesQuickView : Adw.Bin {
             }
           }
 
+          Gtk.Label kind_label {
+            halign: center;
+            styles ["caption-heading", "dim-label"]
+          }
+
           Gtk.Label name_label {
             halign: center;
             wrap: true;
@@ -65,8 +73,10 @@ template $TilesQuickView : Adw.Bin {
             styles ["caption", "dim-label"]
           }
 
+          // Label set per kind in quick-view.ts: a tileset's detail is
+          // its tile configuration here, an appearance's is the
+          // animation matrix under Characters.
           Gtk.Button edit_button {
-            label: _("Edit");
             halign: center;
             margin-top: 6;
             styles ["suggested-action", "pill"]

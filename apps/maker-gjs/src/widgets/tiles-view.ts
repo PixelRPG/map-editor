@@ -75,6 +75,14 @@ GObject.type_ensure(TilesQuickView.$gtype)
  * project tileset's card carries a delete affordance. Selecting a card
  * populates the palette below + the right inspector for that set's tiles.
  *
+ * Nothing is selected until the user (or a deep link) picks a card: the
+ * quick-view opens on its "select a tileset or appearance" state rather
+ * than on an arbitrary first card, and a selection the page made by
+ * itself is what put a glance on screen with no lit card in sight. A
+ * deep link that selects a card also scrolls it into view, so the
+ * glance and the card it describes are on screen together. The
+ * selection is this page's own and survives a chip switch.
+ *
  * Inspector edits mutate the `SpriteSetData` in memory, push the change
  * to the engine's live tilemap via `refreshTileSolidsForSprite`, and
  * persist the JSON via host-supplied callbacks (the host owns file IO).
@@ -318,11 +326,10 @@ export class TilesView extends LibraryPage {
   setAppearances(sheets: SpriteSetChoice[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
     this._appearances = sheets
     this._appearanceSetsById = spriteSetsById
+    // A deleted active appearance leaves no selection — not the next
+    // sheet in line, which nobody chose.
     if (this._activeAppearanceId && !sheets.find((s) => s.id === this._activeAppearanceId)) {
       this._activeAppearanceId = null
-    }
-    if (!this._activeAppearanceId && sheets.length > 0) {
-      this._activeAppearanceId = sheets[0].id
     }
     this._rebuildAppearancesGallery()
     // If the user is currently glancing at an appearance, refresh it (e.g.
@@ -345,10 +352,10 @@ export class TilesView extends LibraryPage {
     this._spriteSets = await loadTilesetEntries(project)
     this._mapUsage = countMapUsers(project)
 
-    // Keep the active selection if still present; otherwise fall back
-    // to the first set.
+    // Keep the active selection if still present; otherwise there is
+    // none (see the class note — no first-card default).
     const keep = this._active && this._spriteSets.some((entry) => entry.id === this._active?.id)
-    await this._syncPalette(keep ? (this._active?.id ?? null) : (this._spriteSets[0]?.id ?? null))
+    await this._syncPalette(keep ? (this._active?.id ?? null) : null)
     this._rebuildGallery()
     // Only steal the quick-view glance if the user is currently on a
     // tileset; a tileset re-hydrate (e.g. reorder) shouldn't yank a
@@ -372,14 +379,17 @@ export class TilesView extends LibraryPage {
   }
 
   /**
-   * Select an appearance (sprite-sheet) by id + show its glance. Used by
-   * the `win.open-appearance` action + the character detail's "Edit
-   * appearance" deep-link (asset management). Animations are authored
-   * under Characters — a narrow layout (no glance) jumps there via
-   * {@link _selectAppearance}.
+   * Select an appearance (sprite-sheet) by id, show its glance and
+   * scroll its card into view — the Appearances section sits below the
+   * tilesets, so a deep link would otherwise light a card the user
+   * cannot see. Used by the `win.open-appearance` action + the character
+   * detail's "Edit appearance" deep-link (asset management). Animations
+   * are authored under Characters — a narrow layout (no glance) jumps
+   * there via {@link _selectAppearance}.
    */
   focusAppearance(id: string): void {
     this._selectAppearance(id)
+    this._appearances_gallery.revealActive()
   }
 
   /**
@@ -438,6 +448,7 @@ export class TilesView extends LibraryPage {
     this._active = null
     this._selectedSpriteId = null
     this._activeKind = 'tileset'
+    this._activeAppearanceId = null
     this._tilesets_gallery.setItems([])
     this._palette.setTiles([])
     this._inspector.setSprite(null, null)

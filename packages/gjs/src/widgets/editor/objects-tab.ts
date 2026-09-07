@@ -1,10 +1,10 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
-import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Template from './objects-tab.blp'
 import { createSwatchWidget } from './tile-swatch.ts'
+import { scrollIntoView } from '../../utils/scroll-into-view.ts'
 import { SignalScope } from '../../utils/signal-scope.ts'
 
 /** Editor-side description of a single object placement. */
@@ -168,7 +168,9 @@ export class ObjectsTab extends Adw.Bin {
         if (objId === id) {
           this._list.select_row(row as Gtk.ListBoxRow)
           this._activeId = id
-          this._scrollRowIntoView(row as Gtk.ListBoxRow)
+          // An off-screen row (the list lives in the RightInspector's
+          // ScrolledWindow) comes into view; a click already is.
+          scrollIntoView(() => row)
           return
         }
         row = row.get_next_sibling()
@@ -178,29 +180,6 @@ export class ObjectsTab extends Adw.Bin {
     } finally {
       this._silentSelect = false
     }
-  }
-
-  /**
-   * Scroll an off-screen row into the inspector's viewport (centred).
-   * The list lives inside the RightInspector's ScrolledWindow (implicit
-   * `Gtk.Viewport`); we position the vadjustment manually from the
-   * row's bounds — `Gtk.Viewport.scroll_to` proved unreliable across
-   * the ViewStack nesting — and defer to an idle so the row's
-   * allocation is valid even when the tab was just switched in.
-   */
-  private _scrollRowIntoView(row: Gtk.ListBoxRow): void {
-    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-      const viewport = row.get_ancestor(Gtk.Viewport.$gtype) as Gtk.Viewport | null
-      const content = viewport?.get_child()
-      if (!viewport || !content) return GLib.SOURCE_REMOVE
-      const [ok, bounds] = row.compute_bounds(content)
-      if (!ok) return GLib.SOURCE_REMOVE
-      const adj = viewport.vadjustment
-      if (!adj) return GLib.SOURCE_REMOVE
-      const target = bounds.get_y() - (adj.get_page_size() - bounds.get_height()) / 2
-      adj.set_value(Math.max(adj.get_lower(), Math.min(target, adj.get_upper() - adj.get_page_size())))
-      return GLib.SOURCE_REMOVE
-    })
   }
 }
 
