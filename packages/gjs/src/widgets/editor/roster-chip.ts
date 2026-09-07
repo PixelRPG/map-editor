@@ -143,6 +143,18 @@ export class RosterChip extends Gtk.MenuButton {
       {
         GTypeName: 'PixelRpgRosterChip',
         Properties: {
+          // Notified on every roster change, because the chip's WIDTH is
+          // what decides whether the tool group still fits beside it —
+          // the scene editor re-runs its ladder on this.
+          'roster-size': GObject.ParamSpec.int(
+            'roster-size',
+            'Roster size',
+            'How many participants the chip is currently showing',
+            GObject.ParamFlags.READABLE,
+            0,
+            999,
+            0,
+          ),
           paused: GObject.ParamSpec.boolean(
             'paused',
             'Paused',
@@ -195,6 +207,10 @@ export class RosterChip extends Gtk.MenuButton {
     this.set_popover(popover)
   }
 
+  get rosterSize(): number {
+    return this._participants?.length ?? 0
+  }
+
   get paused(): boolean {
     return this._paused ?? false
   }
@@ -226,6 +242,7 @@ export class RosterChip extends Gtk.MenuButton {
         : _('%d people in this session').replace('%d', String(participants.length)),
     )
     this._rebuildRows()
+    this.notify('roster-size')
   }
 
   private _rebuildRows(): void {

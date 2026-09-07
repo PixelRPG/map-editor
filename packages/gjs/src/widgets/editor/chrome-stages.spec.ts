@@ -13,6 +13,10 @@ import {
   type ChromeStage,
   CHROME_STAGES,
   chromeFlags,
+  CONTEXT_PILL_PX,
+  effectiveStage,
+  pillsFit,
+  STAGE_EDITING_PILL_PX,
   STAGE_MIN_CANVAS_PX,
   stageForCanvasWidth,
 } from './chrome-stages.ts'
@@ -117,6 +121,72 @@ export default async () => {
     })
   })
 
+  await describe('effectiveStage — the fit check', async () => {
+    await it('refuses the two rungs that overlapped in the running app', async () => {
+      // Measured: a 620 px canvas with a roster (142 px context pill)
+      // cannot afford `compact`'s 479 px editing pill, and a 784 px one
+      // cannot afford `normal-2`'s 764 px pill.
+      expect(effectiveStage('compact', 620, CONTEXT_PILL_PX.withRoster)).toBe('tight')
+      expect(effectiveStage('normal-2', 784, CONTEXT_PILL_PX.withRoster)).toBe('normal-1')
+      // And a roster of three, which the thresholds do not carry.
+      expect(effectiveStage('roomy', 1140, 257)).toBe('normal-2')
+    })
+
+    await it('keeps the proposed rung when the pills do fit', async () => {
+      expect(effectiveStage('compact', 620, CONTEXT_PILL_PX.solo)).toBe('compact')
+      expect(effectiveStage('roomy', 1280, CONTEXT_PILL_PX.withRoster)).toBe('roomy')
+      expect(effectiveStage('normal-1', 720, CONTEXT_PILL_PX.withRoster)).toBe('normal-1')
+    })
+
+    await it('never proposes a rung whose pills do not fit', async () => {
+      for (const stage of CHROME_STAGES) {
+        for (const contextPx of [CONTEXT_PILL_PX.solo, CONTEXT_PILL_PX.withRoster, 220]) {
+          for (let canvas = 360; canvas <= 1600; canvas += 17) {
+            const chosen = effectiveStage(stage, canvas, contextPx)
+            if (chosen === 'tight') continue
+            expect(pillsFit(STAGE_EDITING_PILL_PX[chosen], contextPx, canvas)).toBe(true)
+          }
+        }
+      }
+    })
+
+    await it('falls back to tight rather than to nothing', async () => {
+      // A canvas too small even for the tight pill still has to render
+      // something; `tight` is the floor, and the pill clips rather than
+      // the chrome vanishing.
+      expect(effectiveStage('roomy', 200, 300)).toBe('tight')
+    })
+
+    await it('never climbs above what the bin proposed', async () => {
+      for (const stage of CHROME_STAGES) {
+        const chosen = effectiveStage(stage, 4000, CONTEXT_PILL_PX.solo)
+        expect(CHROME_STAGES.indexOf(chosen)).toBeLessThan(CHROME_STAGES.indexOf(stage) + 1)
+      }
+    })
+  })
+
+  await describe('STAGE_EDITING_PILL_PX', async () => {
+    await it('grows with every rung, because each one only adds', async () => {
+      let previous = -1
+      for (const stage of CHROME_STAGES) {
+        expect(STAGE_EDITING_PILL_PX[stage]).toBeGreaterThan(previous)
+        previous = STAGE_EDITING_PILL_PX[stage]
+      }
+    })
+
+    await it('is affordable at its own breakpoint even with a roster', async () => {
+      // The thresholds carry the with-roster case on purpose: the AI
+      // assistant is in the session whenever an agent drives the editor,
+      // so a solo-width threshold would overlap in the common case.
+      for (const stage of CHROME_STAGES) {
+        if (stage === 'tight') continue
+        expect(pillsFit(STAGE_EDITING_PILL_PX[stage], CONTEXT_PILL_PX.withRoster, STAGE_MIN_CANVAS_PX[stage])).toBe(
+          true,
+        )
+      }
+    })
+  })
+
   await describe('stageForCanvasWidth', async () => {
     await it('maps each threshold to its own stage', async () => {
       for (const stage of CHROME_STAGES) {
@@ -125,19 +195,20 @@ export default async () => {
     })
 
     await it('stays one stage below its own threshold', async () => {
-      expect(stageForCanvasWidth(603)).toBe('tight')
-      expect(stageForCanvasWidth(663)).toBe('compact')
-      expect(stageForCanvasWidth(783)).toBe('normal-1')
-      expect(stageForCanvasWidth(1123)).toBe('normal-2')
+      expect(stageForCanvasWidth(655)).toBe('tight')
+      expect(stageForCanvasWidth(703)).toBe('compact')
+      expect(stageForCanvasWidth(855)).toBe('normal-1')
+      expect(stageForCanvasWidth(1135)).toBe('normal-2')
     })
 
-    await it('places the real window sizes where the design says', async () => {
-      // 1280 collapsed → roomy; 1280 with both sidebars → normal-1;
-      // 1024 collapsed → normal-2; a tablet with the inspector → tight.
-      expect(stageForCanvasWidth(1280)).toBe('roomy')
-      expect(stageForCanvasWidth(732)).toBe('normal-1')
-      expect(stageForCanvasWidth(1024)).toBe('normal-2')
-      expect(stageForCanvasWidth(468)).toBe('tight')
+    await it('places the measured canvas widths where the app showed them', async () => {
+      // Each of these was captured from the running editor and the pill
+      // widths read back off the pixels; see the PR body.
+      expect(stageForCanvasWidth(1300)).toBe('roomy')
+      expect(stageForCanvasWidth(1000)).toBe('normal-2')
+      expect(stageForCanvasWidth(780)).toBe('normal-1')
+      expect(stageForCanvasWidth(660)).toBe('compact')
+      expect(stageForCanvasWidth(464)).toBe('tight')
       expect(stageForCanvasWidth(360)).toBe('tight')
     })
   })

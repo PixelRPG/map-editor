@@ -5,7 +5,7 @@ import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
 import { BADGE_SIZES } from './brush-badge.geometry.ts'
-import { type ChromeStage, CHROME_STAGES, chromeFlags } from './chrome-stages.ts'
+import { type ChromeStage, CHROME_STAGES, chromeFlags, CONTEXT_PILL_PX, effectiveStage } from './chrome-stages.ts'
 import { BrushBadge } from './brush-badge.ts'
 import { BrushPage } from './brush-page.ts'
 import { FloatingPlay } from './floating-play.ts'
@@ -62,6 +62,7 @@ export class SceneEditor extends Adw.Bin {
   declare _back_circle: Gtk.Button
 
   declare _context_handle: Gtk.WindowHandle
+  declare _context_pill: Gtk.Box
   declare _roster_slot: Adw.Bin
   declare _phone_undo: Gtk.Button
   declare _stop_button: Gtk.Button
@@ -117,6 +118,7 @@ export class SceneEditor extends Adw.Bin {
           'badge_label',
           'back_circle',
           'context_handle',
+          'context_pill',
           'roster_slot',
           'phone_undo',
           'stop_button',
@@ -180,6 +182,11 @@ export class SceneEditor extends Adw.Bin {
     this._phoneBadgeButton.set_tooltip_text(_('Brush'))
     this._phoneBadgeButton.connect('clicked', () => this._bottom_sheet.set_open(true))
     this._recent_tiles.connect('expand-requested', () => this._bottom_sheet.set_open(true))
+    // The roster chip's WIDTH is what decides whether the tool group
+    // still fits beside it, and that width changes both when the chip
+    // appears and when another participant joins an already-visible one.
+    this._rosterChip.connect('notify::visible', () => this._applyVisibility())
+    this._rosterChip.connect('notify::roster-size', () => this._applyVisibility())
 
     this._updateOverflowMenu()
     this._applyVisibility()
@@ -341,7 +348,19 @@ export class SceneEditor extends Adw.Bin {
   }
 
   private _applyVisibility(): void {
-    const f = chromeFlags(this._stage, this._layout, this._playing)
+    const canvas = this._ladder.get_width()
+    // The chip's real natural width, not the table's estimate: a roster
+    // of three is wider than a roster of one, and the ladder has to know.
+    // `CONTEXT_PILL_PX` is only the fallback before the first allocation.
+    const measured = this._context_pill.get_preferred_size()[1]?.width ?? 0
+    const contextPill =
+      measured > 0 ? measured : this._rosterChip.get_visible() ? CONTEXT_PILL_PX.withRoster : CONTEXT_PILL_PX.solo
+    // The bin proposes a rung from the canvas width; the thresholds
+    // already carry a one-avatar roster, and this demotes further for a
+    // wider one. Before the first allocation `canvas` is 0, which lands
+    // on `tight` — the right floor to start from.
+    const stage = this._layout === 'phone' ? this._stage : effectiveStage(this._stage, canvas, contextPill)
+    const f = chromeFlags(stage, this._layout, this._playing)
 
     this._editing_handle.set_visible(f.editingPill)
     this._back_circle.set_visible(f.backCircle)
@@ -360,7 +379,8 @@ export class SceneEditor extends Adw.Bin {
     this._inspector_toggle.set_visible(f.inspectorToggle)
     // The chip hides itself when the roster is empty, so this only ever
     // takes it away — never puts a chip on screen for a solo session.
-    if (!f.overflowButton) this._rosterChip.set_visible(false)
+    // Guarded, or the `notify::visible` handler above would recurse.
+    if (!f.overflowButton && this._rosterChip.get_visible()) this._rosterChip.set_visible(false)
 
     this._bottom_sheet.set_reveal_bottom_bar(f.bottomBar)
     this._floating_play.set_visible(f.playFab)
