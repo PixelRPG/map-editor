@@ -336,12 +336,25 @@ jobs:
         # stay collab-compatible" enforced, not just documented.
         run: gjsify foreach test -v -p --include @pixelrpg/engine
 
-      - name: Run gjs widget tests (GTK-free helper logic)
-        # The @pixelrpg/gjs suite. The widgets themselves subclass
-        # Gtk.Widget and can't run headlessly, so this covers the pure,
-        # GTK-free helpers extracted alongside them (e.g. MapPreview's
-        # fingerprint + viewport-clamp geometry). Runs under both gjs + node.
-        run: gjsify foreach test -v -p --include @pixelrpg/gjs
+      - name: Run gjs widget tests (helper logic + display-backed probes)
+        # The @pixelrpg/gjs suites: `test.mts` (GTK-free helpers, gjs +
+        # node) and then `test.display.mts` (gjs only). The three
+        # display-backed probe suites in the latter — brush badge, depth
+        # glyph, phone chrome — need a GdkDisplay, and without one they
+        # SKIP, which is how the phone bar overflowed a 360 px window while
+        # every run was green. `gtk4-broadwayd` ships in the `gtk4` package
+        # already installed above and is a real display with no X server,
+        # so the probes run here. The grep afterwards is the point: it
+        # fails the step if the phone-chrome probe did not print its
+        # measurements, so a display that silently went missing cannot
+        # turn skips back into a green run.
+        run: |
+          gtk4-broadwayd :5 &
+          sleep 1
+          export GDK_BACKEND=broadway BROADWAY_DISPLAY=:5
+          gjsify foreach test -v -p --include @pixelrpg/gjs 2>&1 | tee gjs-test.log
+          test "${PIPESTATUS[0]}" -eq 0
+          grep -q '\[phone-chrome\] floor' gjs-test.log
 
       - name: Run maker tests (collab transport + session services)
         # The @pixelrpg/maker-gjs suite (18 suites): SessionService

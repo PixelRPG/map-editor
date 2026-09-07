@@ -20,7 +20,7 @@
  * This guard sees ONLY the wide layout's ladder. It cannot see the phone
  * bar or the sheet: their floor is the ladder's `width-request`, and a
  * child wider than that overflows the window silently. That class is
- * covered by the display-backed probe `phone-chrome.probe.spec.ts`.
+ * covered by the display-backed probe, which CI runs under Broadway.
  */
 
 import { readFileSync } from 'node:fs'

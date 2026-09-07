@@ -718,7 +718,7 @@ dragging wouldn't be discoverable anyway.
 | Chrome architecture as described (breakpoints, sidebars, OSD pills, engine-resize handling) — ships in `apps/maker-gjs` | **landed** (PRs #48–#64) |
 | Scene-editor chrome: two pills + Play FAB + transient zoom, the `stage` ladder, and the phone bottom sheet | **landed** |
 | Scene-editor thresholds re-measured against real pill widths, with `check-chrome-stages.mjs` holding the two declarations together | **landed** |
-| Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles; pill tables and ladder corrected by GTK measurement (`phone-chrome.probe.spec.ts`) | **landed** |
+| Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles; pill tables and ladder corrected by GTK measurement (`phone-chrome.probe.spec.ts`, run in CI under Broadway) | **landed** |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
