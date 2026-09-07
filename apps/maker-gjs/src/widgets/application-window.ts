@@ -31,7 +31,7 @@ import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { GameController } from '../services/game-controller.ts'
-import type { LibraryChip } from '../services/library-chip.ts'
+import { isChipInTier, type LibraryChip } from '../services/library-chip.ts'
 import { wireEngineEvents } from '../services/engine-event-bridge.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
 import { buildVariant } from '../services/gvariant.ts'
@@ -597,9 +597,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       hasProject,
       setView: (view) => this._router.setView(view),
       prepareView: (view) => this._prepareView(view),
-      setLibraryChip: (chip) => {
-        this._library_view.chip = chip
-      },
+      setLibraryChip: (chip) => this._landOnChip(chip),
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
       showFullView: () => this._revealFullView(),
@@ -723,6 +721,22 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private _showLibrary(chip: LibraryChip): void {
     this._prepareView('library')
     this._router.setView('library')
+    this._landOnChip(chip)
+  }
+
+  /**
+   * The one way onto a Library chip from outside the header: the
+   * `win.library-chip` action and every deep link. A chip the current
+   * tier does not show (Graphics in Simple view) counts as a wall hit —
+   * the link flips to Full view first, with the same toast-and-Undo as
+   * the other reveals, and then lands. Dropping the link instead would
+   * be a deep link that silently does nothing, which is the worse of
+   * the two: `win.open-appearance` from tooling, `win.new-spriteset`
+   * from the MCP bridge and `set_view library graphics` all arrive
+   * here without a person who could read a refusal.
+   */
+  private _landOnChip(chip: LibraryChip): void {
+    if (!isChipInTier(chip, this._fullView)) this._revealFullView()
     this._library_view.chip = chip
   }
 

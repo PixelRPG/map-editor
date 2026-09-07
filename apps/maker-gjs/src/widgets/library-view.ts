@@ -3,7 +3,13 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { type ModeRail, SignalScope } from '@pixelrpg/gjs'
 
-import { DEFAULT_LIBRARY_CHIP, isLibraryChip, type LibraryChip } from '../services/library-chip.ts'
+import {
+  chipForTier,
+  DEFAULT_LIBRARY_CHIP,
+  isChipInTier,
+  isLibraryChip,
+  type LibraryChip,
+} from '../services/library-chip.ts'
 import { CastView } from './cast-view.ts'
 import Template from './library-view.blp'
 import { ObjectsView } from './objects-view.ts'
@@ -31,9 +37,18 @@ GObject.type_ensure(TilesView.$gtype)
  * `Adw.ToggleGroup` binds to it bidirectionally and both stacks follow
  * the group, so a click, a deep link and the `win.library-chip` action
  * all take the same path.
+ *
+ * The chips follow the view tier: Graphics exists in Full view only
+ * (`FULL_VIEW_ONLY_CHIPS`), so its toggle leaves the header in Simple
+ * view and the page falls back to Characters if it was showing. The
+ * view never flips the tier itself — a deep link that needs Graphics
+ * from Simple view goes through the window, which reveals Full view
+ * first (`win.show-full-view`'s toast with its Undo) and lands here
+ * after.
  */
 export class LibraryView extends ResponsiveEditorView {
   declare _chips: Adw.ToggleGroup
+  declare _graphics_toggle: Adw.Toggle
   declare _hidden_banner: Adw.Banner
   declare _new_thing_button: Gtk.Button
   declare _cast_view: CastView
@@ -53,6 +68,7 @@ export class LibraryView extends ResponsiveEditorView {
         InternalChildren: [
           'mode_rail',
           'chips',
+          'graphics_toggle',
           'hidden_banner',
           'new_thing_button',
           'cast_view',
@@ -82,6 +98,16 @@ export class LibraryView extends ResponsiveEditorView {
     )
   }
 
+  constructor() {
+    super()
+    // The template builds all three toggles; the tier decides which
+    // stay. Runs here because the window's `full-view` binding only
+    // NOTIFIES on a change, and Simple view is the default on both
+    // sides — without this the Graphics chip would sit in the header
+    // until the tier flipped twice.
+    this._syncChipsToTier()
+  }
+
   vfunc_map(): void {
     super.vfunc_map()
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) =>
@@ -108,6 +134,26 @@ export class LibraryView extends ResponsiveEditorView {
 
   protected override _onFullViewChanged(): void {
     this._refreshBanner()
+    this._syncChipsToTier()
+  }
+
+  /**
+   * Add or remove the Full-view-only Graphics toggle to match the tier.
+   * Order matters on the way down: the page moves to its fallback chip
+   * BEFORE the toggle goes, because removing the ACTIVE toggle would
+   * leave the group with no active name and both stacks bound to it
+   * with no page to show. `Adw.Toggle` has no `visible` property, which
+   * is why this is code and not a `.blp` binding.
+   */
+  private _syncChipsToTier(): void {
+    const present = this._chips.get_toggle_by_name('graphics') !== null
+    if (this.fullView === present) return
+    if (this.fullView) {
+      this._chips.add(this._graphics_toggle)
+      return
+    }
+    this.chip = chipForTier(this.chip, false)
+    this._chips.remove(this._graphics_toggle)
   }
 
   private _refreshBanner(): void {
@@ -126,10 +172,16 @@ export class LibraryView extends ResponsiveEditorView {
   /**
    * Typed as `string` because the toggle group's `active-name` binding
    * writes through here; anything that is not a chip is ignored rather
-   * than shown as an empty stack.
+   * than shown as an empty stack. A chip outside the current tier is
+   * refused loudly: the window reveals Full view before landing on
+   * Graphics, so reaching this branch means a caller skipped that step.
    */
   set chip(value: string) {
     if (!isLibraryChip(value) || this._chip === value) return
+    if (!isChipInTier(value, this.fullView)) {
+      console.warn(`[LibraryView] "${value}" is a Full-view chip; reveal Full view before landing on it`)
+      return
+    }
     this._chip = value
     this.notify('chip')
   }

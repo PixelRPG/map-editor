@@ -37,22 +37,28 @@ export function animationCountLabel(count: number): string {
   return count === 1 ? _('1 animation') : _(`${count} animations`)
 }
 
+/** The card's usage line — the sort key of the "Usage" order, so it stays on the card. */
+export function mapUsageLabel(mapUsers: number): string {
+  if (mapUsers === 0) return _('Not used by any map')
+  return mapUsers === 1 ? _('Used by 1 map') : _(`Used by ${mapUsers} maps`)
+}
+
 /**
- * Card model for one tileset: the sprite count, tile dimensions and map
- * usage as one subtitle line, a tile-size chip as badge, and edit
- * affordances only for project sets — built-ins have no files and can be
- * neither renamed nor removed.
+ * Card model for one tileset: sprite count and tile size on the
+ * subtitle line, map usage on a line of its own (the three together
+ * outgrow a card's width and got cut off), and edit affordances only
+ * for project sets — built-ins have no files and can be neither renamed
+ * nor removed. No badge: the tile size is already on the subtitle.
  */
 export function buildTilesetCard(facts: TilesetCardFacts): GalleryCardItem {
   const parts = [tileCountLabel(facts.spriteCount)]
   if (facts.spriteWidth && facts.spriteHeight) parts.push(`${facts.spriteWidth}×${facts.spriteHeight}`)
-  parts.push(facts.mapUsers === 1 ? _('used by 1 map') : _(`used by ${facts.mapUsers} maps`))
   const editable = !isBuiltInSpriteSet(facts.id)
   return {
     id: facts.id,
     title: facts.name,
     subtitle: parts.join(' · '),
-    badge: facts.spriteWidth ? _(`${facts.spriteWidth}px tiles`) : null,
+    detail: mapUsageLabel(facts.mapUsers),
     fallbackIcon: 'view-grid-symbolic',
     deletable: editable,
     renamable: editable,

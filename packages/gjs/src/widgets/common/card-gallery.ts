@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
+import { scrollIntoView } from '../../utils/scroll-into-view.ts'
 import { GalleryCard, type GalleryCardItem, type GalleryCardLabels } from './gallery-card.ts'
 
 import Template from './card-gallery.blp'
@@ -221,6 +222,18 @@ export class CardGallery extends Adw.Bin {
     if (this._activeId === id) return
     this._activeId = id
     this._applyHighlight()
+  }
+
+  /**
+   * Scroll the active card into the enclosing viewport. For a selection
+   * made by code — a deep link landing on a card in a section below the
+   * fold — so the card and whatever describes it are on screen together;
+   * a clicked card is in view already. The card is looked up when the
+   * scroll runs, so a `setItems` in between (a re-hydrate on the way in)
+   * still lands on the active id. No-op without an active card.
+   */
+  revealActive(): void {
+    scrollIntoView(() => (this._activeId ? (this._cardsById.get(this._activeId) ?? null) : null))
   }
 
   private _clear(): void {

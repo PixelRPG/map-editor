@@ -72,7 +72,9 @@ export function registerEditingTools(server: McpServer): void {
       description:
         'Switch the top-level view. "atlas", "library" and "game" need a loaded project; "welcome" closes it; ' +
         'for "scene-editor" use open_scene. "library" holds the characters, the things (entity library) and the ' +
-        'graphics (tilesets + appearances) behind three chips — pass `chip` to pick one, or keep the current one. ' +
+        'graphics (tilesets + appearances) behind three chips — pass `chip` to pick one, or keep the current one ' +
+        '(the graphics chip exists in Full view only; asking for it from Simple view switches the maker to Full view, ' +
+        'with an Undo toast for the person at the keyboard). ' +
         '"game" is the project\'s own page: name, tile size and game rules.',
       inputSchema: z.object({ view: z.enum(VIEWS), chip: z.enum(LIBRARY_CHIPS).optional(), ...instanceArg }),
     },

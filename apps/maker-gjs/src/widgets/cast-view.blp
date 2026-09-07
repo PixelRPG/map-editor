@@ -205,8 +205,12 @@ template $CastView : $PixelRpgLibraryPage {
                       halign: start;
                       spacing: 10;
 
+                      // A door into Graphics, which Simple view does not
+                      // have: Full view only. In Simple view the picker
+                      // above is how a character changes its look.
                       Gtk.Button edit_appearance_button {
                         label: _("Edit appearance");
+                        visible: bind template.full-view;
                         styles ["suggested-action", "pill"]
                       }
 

@@ -8,7 +8,12 @@ import { gettext as _ } from 'gettext'
 /** Edge length (px) of a card's square preview area. */
 const PREVIEW_SIZE = 96
 
-/** Cap on the title/subtitle width so a long name can't widen a card. */
+/**
+ * Cap on a label's NATURAL width so a long name can't widen a card. It
+ * is not the rendered width: the labels fill whatever width the card
+ * was given (the flow box stretches cards to the row), and ellipsize
+ * only when the text is wider than that.
+ */
 const LABEL_MAX_CHARS = 16
 
 /** Milliseconds within which a second click counts as a double-click. */
@@ -26,6 +31,12 @@ export interface GalleryCardItem {
   title: string
   /** Caption under the title (kind, sprite count, …). */
   subtitle: string
+  /**
+   * Second caption line under the subtitle — a fact that does not fit
+   * the subtitle's one line at card width (usage, provenance). Omit it
+   * rather than lengthening the subtitle: a card is ~200 px wide.
+   */
+  detail?: string | null
   /** Optional accent pill on the card (e.g. `Player`). */
   badge?: string | null
   /** Preview image. When null, {@link fallbackIcon} is shown instead. */
@@ -231,6 +242,7 @@ export class GalleryCard extends Gtk.Overlay {
     box.append(preview)
     box.append(buildLabel(item.title, ['heading']))
     if (item.subtitle) box.append(buildLabel(item.subtitle, ['caption', 'dim-label']))
+    if (item.detail) box.append(buildLabel(item.detail, ['caption', 'dim-label']))
     if (item.badge) box.append(buildLabel(item.badge, ['caption', 'accent']))
     return box
   }
@@ -281,10 +293,17 @@ export class GalleryCard extends Gtk.Overlay {
   }
 }
 
+/**
+ * A centred, ellipsizing card label. `halign: FILL` + `xalign` rather
+ * than `halign: CENTER`: a centred label is allocated only its natural
+ * width, which {@link LABEL_MAX_CHARS} caps, so text past the cap was
+ * cut off while the card around it had room to spare.
+ */
 function buildLabel(text: string, cssClasses: string[]): Gtk.Label {
   return new Gtk.Label({
     label: text,
-    halign: Gtk.Align.CENTER,
+    halign: Gtk.Align.FILL,
+    xalign: 0.5,
     ellipsize: Pango.EllipsizeMode.END,
     maxWidthChars: LABEL_MAX_CHARS,
     cssClasses,
