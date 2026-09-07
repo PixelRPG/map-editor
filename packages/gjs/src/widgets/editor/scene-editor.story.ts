@@ -3,15 +3,28 @@ import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
+import type { EditorTool, LayerPlane } from '@pixelrpg/engine'
 import { SAMPLE_SCENES } from '../../__demo__/world-sample'
 import { MiniMap } from './mini-map'
-import { SceneEditor } from './scene-editor'
+import { SceneEditor, type SceneEditorLayout } from './scene-editor'
+
+const TOOL_LABELS: Record<string, string> = {
+  select: 'Select',
+  pencil: 'Paint',
+  fill: 'Fill',
+  eraser: 'Erase',
+  eyedropper: 'Pick',
+  object: 'Object',
+}
 
 /**
- * Showcase: full scene-editor view with floating chrome.
+ * Showcase: the whole scene-editor surface with its floating chrome.
  *
- * Uses a {@link MiniMap} from the sample world as a stand-in for the
- * real Excalibur engine widget so the story is self-contained.
+ * The `layout` control is the story's point — switching it runs the same
+ * `setLayout` the window's <768sp breakpoint runs, so the wide pills and
+ * the docked phone bar can be compared without resizing anything. A
+ * {@link MiniMap} stands in for the Excalibur widget so the story is
+ * self-contained.
  */
 export class SceneEditorStory extends StoryWidget {
   private _editor: SceneEditor | null = null
@@ -23,7 +36,15 @@ export class SceneEditorStory extends StoryWidget {
   constructor() {
     super({
       story: 'Default',
-      args: { sceneId: SAMPLE_SCENES[1].id, tool: 'pencil', zoom: 100, mapPx: 16 },
+      args: {
+        sceneId: SAMPLE_SCENES[1].id,
+        tool: 'pencil',
+        plane: 'ground',
+        layout: 'wide',
+        fullView: true,
+        zoom: 100,
+        mapPx: 16,
+      },
       meta: SceneEditorStory.getMetadata(),
     })
   }
@@ -32,7 +53,7 @@ export class SceneEditorStory extends StoryWidget {
     return {
       title: 'Editor/Scene Editor',
       description:
-        'Full scene-editor composition: header + scratchpad backdrop + floating tool rail / zoom OSD / context chip. Engine is mocked with a MiniMap preview.',
+        'The editing pill, the context pill, the brush badge and the Play FAB over a mocked canvas — plus the docked phone bar behind the layout switch.',
       component: SceneEditor.$gtype,
       controls: [
         {
@@ -42,15 +63,31 @@ export class SceneEditorStory extends StoryWidget {
           options: SAMPLE_SCENES.map((s) => ({ label: s.name, value: s.id })),
         },
         {
+          name: 'layout',
+          label: 'Layout',
+          type: ControlType.SELECT,
+          options: [
+            { label: 'Wide (desktop / tablet)', value: 'wide' },
+            { label: 'Phone', value: 'phone' },
+          ],
+        },
+        {
           name: 'tool',
           label: 'Active tool',
           type: ControlType.SELECT,
+          options: Object.entries(TOOL_LABELS).map(([value, label]) => ({ label, value })),
+        },
+        {
+          name: 'plane',
+          label: 'Active plane',
+          type: ControlType.SELECT,
           options: [
-            { label: 'Pencil', value: 'pencil' },
-            { label: 'Eraser', value: 'eraser' },
-            { label: 'Eyedropper', value: 'eyedropper' },
+            { label: 'Below the hero', value: 'ground' },
+            { label: 'At hero height', value: 'hero' },
+            { label: 'Above the hero', value: 'overlay' },
           ],
         },
+        { name: 'fullView', label: 'Full view', type: ControlType.BOOLEAN },
         { name: 'zoom', label: 'Zoom %', type: ControlType.RANGE, min: 25, max: 400, step: 25 },
         { name: 'mapPx', label: 'Tile size (preview)', type: ControlType.RANGE, min: 8, max: 48, step: 2 },
       ],
@@ -82,32 +119,60 @@ export class SceneEditorStory extends StoryWidget {
       this.args = { ...this.args, tool: value!.get_string()[0] }
     })
     group.add_action(toolAction)
-    for (const name of ['zoom-in', 'zoom-out', 'zoom-reset', 'undo', 'redo', 'play', 'back-to-atlas']) {
+    for (const name of [
+      'zoom-in',
+      'zoom-out',
+      'zoom-reset',
+      'undo',
+      'redo',
+      'play',
+      'play-from-start',
+      'restart',
+      'back-to-atlas',
+      'share-session',
+      'show-help-overlay',
+      'toggle-assistant-paused',
+    ]) {
       group.add_action(new Gio.SimpleAction({ name }))
+    }
+    for (const name of ['toggle-grid', 'toggle-transparency', 'toggle-objects']) {
+      group.add_action(Gio.SimpleAction.new_stateful(name, null, GLib.Variant.new_boolean(false)))
+    }
+    for (const name of ['toggle-library', 'toggle-inspector']) {
+      group.add_action(Gio.SimpleAction.new_stateful(name, null, GLib.Variant.new_boolean(false)))
     }
     this.insert_action_group('win', group)
   }
 
   private _applyState(): void {
-    if (!this._editor) return
+    const editor = this._editor
+    if (!editor) return
     const sceneId = typeof this.args.sceneId === 'string' ? this.args.sceneId : SAMPLE_SCENES[0].id
     const scene = SAMPLE_SCENES.find((s) => s.id === sceneId) ?? SAMPLE_SCENES[0]
     const tilePx = typeof this.args.mapPx === 'number' ? this.args.mapPx : 16
+    const tool = ((this.args.tool as EditorTool) ?? 'pencil') as EditorTool
+    const plane = ((this.args.plane as LayerPlane) ?? 'ground') as LayerPlane
 
-    this._editor.topBar.tileName = `Grass A — ${scene.name}`
-    this._editor.topBar.layerName = 'Background'
-    this._editor.toolRail.setActiveTool((this.args.tool as 'pencil') ?? 'pencil')
+    editor.fullView = this.args.fullView !== false
+    editor.setLayout(((this.args.layout as SceneEditorLayout) ?? 'wide') as SceneEditorLayout)
+
+    editor.toolGroup.setActiveTool(tool)
+    editor.brushBadge.tool = tool
+    editor.brushBadge.plane = plane
+    editor.brushLabel = `${TOOL_LABELS[tool] ?? tool} · Background`
+    editor.brushPage.layerName = 'Background'
+    editor.brushPage.setActivePlane(plane, ['ground', 'hero', 'overlay'])
 
     const zoomPercent = typeof this.args.zoom === 'number' ? this.args.zoom : 100
-    this._editor.zoomOsd.setZoom(zoomPercent / 100)
-    this._editor.zoomOsd.setCursor(scene.rows[0]?.length ?? 0, scene.rows.length)
+    editor.setZoom(zoomPercent / 100)
+    editor.setCursorTile(scene.rows[0]?.length ?? 0, scene.rows.length)
 
     // Refresh the mock engine preview.
     const preview = new MiniMap({ rows: scene.rows, tilePx })
     const frame = new Gtk.Frame()
     frame.add_css_class('card')
     frame.set_child(preview)
-    this._editor.setEngine(frame)
+    editor.setEngine(frame)
   }
 }
 

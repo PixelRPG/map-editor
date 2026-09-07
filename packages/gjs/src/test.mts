@@ -19,6 +19,7 @@ import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
 import bespokeEditorsModelSuite from './widgets/editor/bespoke-editors.model.spec.js'
 import brushBadgeGeometrySuite from './widgets/editor/brush-badge.geometry.spec.js'
 import brushBadgeProbeSuite from './widgets/editor/brush-badge.probe.spec.js'
+import chromeStagesSuite from './widgets/editor/chrome-stages.spec.js'
 import componentInspectorModelSuite from './widgets/editor/component-inspector.model.spec.js'
 import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.js'
 import depthGlyphProbeSuite from './widgets/editor/depth-glyph.probe.spec.js'
@@ -41,6 +42,7 @@ run({
   bespokeEditorsModelSuite,
   brushBadgeGeometrySuite,
   brushBadgeProbeSuite,
+  chromeStagesSuite,
   characterAnimationSuite,
   componentInspectorModelSuite,
   depthGlyphGeometrySuite,

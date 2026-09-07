@@ -36,6 +36,18 @@ template $PixelRpgFloatingFab : Adw.Bin {
           label: bind template.label;
         };
       }
+
+      // The split half: a menu arrow beside the primary action, shown
+      // only where a consumer supplies a menu (the scene editor's Play
+      // in Full view). Simple view never sees an arrow.
+      Gtk.MenuButton menu_button {
+        visible: bind template.show-menu;
+        icon-name: "pan-up-symbolic";
+        menu-model: bind template.menu-model;
+        tooltip-text: _("More ways to play");
+        focus-on-click: false;
+        styles ["suggested-action"]
+      }
     };
   }
 }

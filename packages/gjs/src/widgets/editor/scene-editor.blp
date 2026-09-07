@@ -2,75 +2,348 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgSceneEditor : Adw.Bin {
-  // Responsive density is handled by FloatingTopBar's own internal
-  // `Adw.BreakpointBin` (split ≥880sp ↔ merged), which observes the
-  // CANVAS width and tracks it correctly all the way down: at a 360 px
-  // window the bar reaches its <460sp stage (undo, redo, back, grid and
-  // dim all inside the "⋯" menu), which is only reachable if the bin
-  // measured ~336 px. A widget-internal `Adw.BreakpointBin` here would
-  // therefore work too — the engine canvas does NOT keep this overlay's
-  // allocation wide, because `application-window.blp:62-70` sets the
-  // ViewStack's `hhomogeneous`/`vhomogeneous` to false precisely so the
-  // WebGL canvas's large natural width stops propagating upward.
+  // The scene editor's floating chrome.
   //
-  // The tool rail's desktop-vs-phone reflow is nevertheless driven from
-  // `SceneEditor.setCompact` (called by SceneEditorView on the
-  // `inspector-collapsed` breakpoint, which fires only <768sp) because
-  // it keys on the WINDOW form factor, not on the canvas width: with
-  // both sidebars open on a small desktop the canvas is narrow while
-  // the device is still a desktop.
-  Gtk.Overlay overlay {
-    [overlay]
-    $PixelRpgFloatingTopBar top_bar {}
+  // TWO RULES DECIDE THIS SHAPE, both read out of source rather than
+  // assumed, and both rule out a single declarative layout switch:
+  //
+  // 1. THE CANVAS MUST NEVER BE REPARENTED. The engine tears down in
+  //    `vfunc_unroot` (`widgets/engine/engine.ts`), so any re-slotting
+  //    kills the Excalibur loop for good (PR #66,
+  //    `docs/concepts/responsive-chrome.md`). An `Adw.MultiLayoutView`
+  //    re-slots every `Adw.LayoutSlot` child on a layout change, so the
+  //    canvas cannot live in a slot. It has ONE parent for the life of
+  //    the view: `engine_holder` in `overlay` in `bottom_sheet.content`.
+  //
+  // 2. NO SINGLE CHROME LAYER CAN FLOAT OVER THE CANVAS.
+  //    `gtk_widget_pick` returns before descending into the children of
+  //    a `can-target: false` widget (`gtkwidget.c`), so a full-size
+  //    chrome layer would either eat every stroke (`can-target: true`)
+  //    or make its own buttons unclickable. Every floating piece is its
+  //    own `Gtk.Overlay` child.
+  //
+  // The wide<->phone switch is therefore `SceneEditor.setLayout`, which
+  // moves three small GL-free widgets between slots.
+  Adw.BreakpointBin ladder {
+    // The bin measures the CANVAS, which is what the pills have to fit
+    // into — not the window, which is wider whenever a sidebar is open.
+    width-request: 360;
+    height-request: 400;
 
-    // Labelled tool rail on the left edge, tucked just under the top
-    // bar. Owns tool selection (the top bar no longer carries a tool
-    // button) so every tool is discoverable at a glance. On phone
-    // widths `SceneEditor.setCompact` reflows it into a bottom bar.
-    [overlay]
-    $PixelRpgFloatingToolRail tool_rail {
-      halign: start;
-      valign: start;
-      margin-start: 12;
-      margin-top: 64;
+    // The ladder sets ONE property — the stage name — and
+    // `chrome-stages.ts` turns (stage, layout, playing) into every flag.
+    //
+    // `Adw.BreakpointBin` activates exactly ONE breakpoint at a time
+    // (adw-breakpoint-bin.c: reverse iteration, break on first match),
+    // so setters do NOT stack. Writing each stage's full visible set out
+    // here is how the bar this replaces ended up with two complete
+    // button hierarchies and an overflow menu rebuilt from button
+    // visibility. One property is the whole contract instead, and the
+    // rules are unit-tested rather than diffed by eye.
+    //
+    // The thresholds are canvas widths = the design's bar width + 24 px
+    // of margins; `STAGE_MIN_CANVAS_PX` carries the same numbers, and
+    // `chrome-stages.spec.ts` pins them.
+    Adw.Breakpoint {
+      condition ("min-width: 604sp")
+
+      setters {
+        template.stage: "compact";
+      }
     }
 
-    // Bottom-left OSD stack — collaborators pill above the zoom pill.
-    // One Box instead of two absolutely-margined overlays, so the pills
-    // can never collide regardless of their heights.
-    [overlay]
-    Gtk.Box bottom_left_osds {
-      orientation: vertical;
-      spacing: 8;
-      halign: start;
-      valign: end;
-      margin-start: 12;
-      margin-bottom: 12;
+    Adw.Breakpoint {
+      condition ("min-width: 664sp")
 
-      $PixelRpgFloatingCollaborators floating_collaborators {}
-
-      $PixelRpgFloatingZoom zoom_osd {}
+      setters {
+        template.stage: "normal-1";
+      }
     }
 
-    [overlay]
-    $PixelRpgFloatingPlay floating_play {}
+    Adw.Breakpoint {
+      condition ("min-width: 784sp")
 
-    child: Adw.Bin backdrop {
-      // Diagonal-stripe scratchpad — visible wherever the engine canvas
-      // doesn't cover the area. The map fills as much as possible; the
-      // stripes only show through transparent regions of the canvas
-      // (outside map bounds) and beyond it.
-      styles ["editor-backdrop"]
-      hexpand: true;
-      vexpand: true;
+      setters {
+        template.stage: "normal-2";
+      }
+    }
 
-      child: Gtk.Box engine_holder {
-        orientation: vertical;
-        halign: fill;
-        valign: fill;
-        hexpand: true;
-        vexpand: true;
+    Adw.Breakpoint {
+      condition ("min-width: 1124sp")
+
+      setters {
+        template.stage: "roomy";
+      }
+    }
+
+    // Present at every size, inert on wide: `reveal-bottom-bar: false`
+    // drives `bottom-bar-height` to 0 through the progress lerp, the
+    // sheet is translated off-screen, and `can-open: false` disables the
+    // swipe tracker (adw-bottom-sheet.c). The wide layout pays nothing
+    // for the wrapper, and the canvas never changes parent when the
+    // phone layout turns it on.
+    child: Adw.BottomSheet bottom_sheet {
+      modal: false;
+      full-width: true;
+      show-drag-handle: true;
+      can-open: false;
+      reveal-bottom-bar: false;
+
+      // libadwaita allocates the sheet's content at FULL height and lays
+      // the bar over it (adw-bottom-sheet.c), so the bar would cover the
+      // bottom of the map. Binding the overlay's bottom margin to the
+      // bar's height docks it instead: the canvas ends where the bar
+      // starts, and the shell's bottom-edge gesture band lands on the
+      // bar rather than on paintable tiles.
+      content: Gtk.Overlay overlay {
+        margin-bottom: bind bottom_sheet.bottom-bar-height;
+
+        child: Adw.Bin backdrop {
+          // Diagonal-stripe scratchpad — visible wherever the engine
+          // canvas doesn't cover the area.
+          styles ["editor-backdrop"]
+          hexpand: true;
+          vexpand: true;
+
+          child: Gtk.Box engine_holder {
+            orientation: vertical;
+            halign: fill;
+            valign: fill;
+            hexpand: true;
+            vexpand: true;
+          };
+        };
+
+        // ============================================================
+        // EDITING PILL - start-aligned, wide layouts only.
+        //
+        // `halign: start`, NOT `fill`. The bar it replaces was one
+        // full-width `Gtk.WindowHandle` with a spacer between its two
+        // pills, so 571 px of visible map at 1280x800 started a window
+        // drag instead of a stroke. Each pill now wraps only itself, and
+        // the gap between them is canvas again.
+        // ============================================================
+        [overlay]
+        Gtk.WindowHandle editing_handle {
+          halign: start;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
+
+          child: Gtk.Box editing_pill {
+            orientation: horizontal;
+            spacing: 2;
+            styles ["toolbar", "osd", "editing-pill"]
+
+            Gtk.ToggleButton library_toggle {
+              icon-name: "sidebar-show-symbolic";
+              action-name: "win.toggle-library";
+              tooltip-text: _("Toggle sidebar");
+              styles ["flat"]
+            }
+
+            Gtk.Button back_button {
+              action-name: "win.back-to-atlas";
+              tooltip-text: _("Back to World");
+              styles ["flat"]
+
+              child: Gtk.Box {
+                spacing: 4;
+
+                Gtk.Image {
+                  icon-name: "go-previous-symbolic";
+                }
+
+                Gtk.Label back_label {
+                  visible: false;
+                  label: _("World");
+                }
+              };
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            Gtk.Button undo_button {
+              icon-name: "edit-undo-symbolic";
+              action-name: "win.undo";
+              tooltip-text: _("Undo (Ctrl+Z)");
+              styles ["flat"]
+            }
+
+            Gtk.Button redo_button {
+              icon-name: "edit-redo-symbolic";
+              action-name: "win.redo";
+              tooltip-text: _("Redo (Ctrl+Shift+Z)");
+              styles ["flat"]
+            }
+
+            Gtk.Separator {
+              orientation: vertical;
+            }
+
+            // The tool group lives here on wide and in the phone bar's
+            // first row on phone - the SAME instance, moved by
+            // `setLayout`, so there is one armed-tool state.
+            Adw.Bin tools_slot_top {}
+
+            Gtk.MenuButton badge_button {
+              tooltip-text: _("Brush");
+              styles ["flat", "badge-button"]
+
+              child: Gtk.Box {
+                spacing: 8;
+                margin-start: 2;
+
+                Adw.Bin badge_slot_top {}
+
+                Gtk.Label badge_label {
+                  visible: false;
+                  label: bind template.brush-label;
+                }
+              };
+            }
+          };
+        }
+
+        // Phone's only exit (decision 20): a 44 px circular target at
+        // the top-left corner. The system back gesture may also work,
+        // but measurement showed the shell SHARES that gesture rather
+        // than the app owning it, so it is a bonus, not a contract.
+        [overlay]
+        Gtk.Button back_circle {
+          visible: false;
+          halign: start;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
+          icon-name: "go-previous-symbolic";
+          action-name: "win.back-to-atlas";
+          tooltip-text: _("Back to World");
+          styles ["osd", "circular", "back-circle"]
+        }
+
+        // ============================================================
+        // CONTEXT PILL - end-aligned, every layout.
+        // ============================================================
+        [overlay]
+        Gtk.WindowHandle context_handle {
+          halign: end;
+          valign: start;
+          margin-top: 12;
+          margin-end: 12;
+
+          child: Gtk.Box context_pill {
+            orientation: horizontal;
+            spacing: 2;
+            styles ["toolbar", "osd", "context-pill"]
+
+            Adw.Bin roster_slot {}
+
+            // Phone only: undo is a visible button and never inside
+            // "..." (decision 18 - the button is the ONLY undo on
+            // touch, so it may not be two taps away).
+            Gtk.Button phone_undo {
+              visible: false;
+              icon-name: "edit-undo-symbolic";
+              action-name: "win.undo";
+              tooltip-text: _("Undo");
+              styles ["flat"]
+            }
+
+            // Playing, on phone: Stop and Restart take the pill.
+            Gtk.Button stop_button {
+              visible: false;
+              icon-name: "media-playback-stop-symbolic";
+              action-name: "win.play";
+              tooltip-text: _("Stop");
+              styles ["flat"]
+            }
+
+            Gtk.Button restart_button {
+              visible: false;
+              icon-name: "view-refresh-symbolic";
+              action-name: "win.restart";
+              tooltip-text: _("Restart from the beginning");
+              styles ["flat"]
+            }
+
+            Gtk.MenuButton overflow_button {
+              icon-name: "view-more-symbolic";
+              tooltip-text: _("More actions");
+              styles ["flat"]
+            }
+
+            Gtk.ToggleButton inspector_toggle {
+              icon-name: "sidebar-show-right-symbolic";
+              action-name: "win.toggle-inspector";
+              tooltip-text: _("Toggle inspector");
+              styles ["flat"]
+            }
+          };
+        }
+
+        // Zoom as feedback, not furniture: bottom-centre, shown for
+        // 1.2 s after a change, then faded out. The pill it replaces
+        // held 10 324 px2 of the bottom-left corner permanently.
+        [overlay]
+        $PixelRpgZoomOsd zoom_osd {
+          margin-bottom: 12;
+        }
+
+        // Full view only: the tile under the pointer.
+        [overlay]
+        Gtk.Box cursor_caption {
+          visible: bind template.full-view;
+          halign: start;
+          valign: end;
+          margin-start: 12;
+          margin-bottom: 12;
+          styles ["toolbar", "osd", "cursor-caption"]
+
+          Gtk.Inscription cursor_label {
+            text: bind template.cursor-text;
+            min-chars: 8;
+            nat-chars: 8;
+            xalign: 0.0;
+            styles ["caption", "numeric"]
+          }
+        }
+
+        [overlay]
+        $PixelRpgFloatingPlay floating_play {}
       };
+
+      // ============================================================
+      // PHONE BAR - docked, full width, two rows.
+      // ============================================================
+      bottom-bar: Gtk.Box phone_bar {
+        orientation: vertical;
+        spacing: 6;
+        margin-top: 6;
+        margin-bottom: 6;
+        margin-start: 12;
+        margin-end: 12;
+        styles ["phone-bar"]
+
+        Gtk.Box bar_row_a {
+          orientation: horizontal;
+          spacing: 8;
+
+          Adw.Bin tools_slot_bar {
+            hexpand: true;
+          }
+
+          Adw.Bin badge_slot_bar {}
+        }
+
+        $PixelRpgRecentTiles recent_tiles {}
+      };
+
+      // The brush surface: the same instance the badge's popover holds
+      // on wide layouts.
+      sheet: Adw.Bin brush_slot_sheet {};
     };
   }
 }
