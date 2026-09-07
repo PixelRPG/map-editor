@@ -9,6 +9,7 @@ import { applyRuntimeMode } from '../services/runtime-mode.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from '../types/index.ts'
 import { formatError } from '../utils/format-error.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { swapInScene } from './scene-swap.ts'
 
 /**
  * Excalibur's `Loader` exposes events through an untyped `on`; this is
@@ -51,12 +52,23 @@ export interface ProjectLoaderHost {
 export class ProjectLoader {
   private readonly logger = Logger.getInstance()
   private resource: GameProjectResource | null = null
+  private activeMapId: string | null = null
 
   constructor(private readonly host: ProjectLoaderHost) {}
 
   /** Currently loaded project resource, `null` until `loadProject` completes. */
   get gameProjectResource(): GameProjectResource | null {
     return this.resource
+  }
+
+  /**
+   * Id of the map that is live, or `null` before the first
+   * {@link loadMap}. `loadProject` activates the project's
+   * `startup.initialMapId` on its own, so a host that wants to know
+   * which map it ended up with has to ask rather than assume none.
+   */
+  get currentMapId(): string | null {
+    return this.activeMapId
   }
 
   async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
@@ -131,11 +143,12 @@ export class ProjectLoader {
       ? Color.fromHex(mapResource.mapData.backgroundColor)
       : Color.Transparent
 
-    // Re-entry: drop the stale scene instance so addScene doesn't
-    // collide and the room rebuilds fresh from data.
-    if (this.host.excalibur.scenes[mapId]) this.host.excalibur.removeScene(mapId)
-    this.host.excalibur.addScene(mapId, scene)
-    this.host.excalibur.goToScene(mapId)
+    // Re-entry drops the stale scene instance so the room rebuilds fresh
+    // from data, and the switch is AWAITED so the engine is actually
+    // showing `scene` before `MAP_LOADED` claims it is — see
+    // {@link swapInScene} for both contracts and what breaks without them.
+    await swapInScene(this.host.excalibur, mapId, scene)
+    this.activeMapId = mapId
 
     this.logger.info(`Map ${mapResource.mapData.name} loaded`)
     this.host.events.emit(EngineEvent.MAP_LOADED, { mapId })

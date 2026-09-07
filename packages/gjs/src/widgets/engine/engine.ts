@@ -124,6 +124,11 @@ export class Engine extends Adw.Bin {
     await this._excalibur!.loadMap(mapId)
   }
 
+  /** Forward to `Engine.currentMapId` — which map the engine has live, if any. */
+  public get currentMapId(): string | null {
+    return this._excalibur?.currentMapId ?? null
+  }
+
   public async start(): Promise<void> {
     await this._waitForReady()
     await this._excalibur!.start()

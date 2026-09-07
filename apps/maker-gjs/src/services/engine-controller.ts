@@ -1,5 +1,5 @@
 import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
-import { Engine } from '@pixelrpg/gjs'
+import type { Engine } from '@pixelrpg/gjs'
 import { TypedEmitter } from './typed-emitter.ts'
 import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 
@@ -84,6 +84,27 @@ export interface EngineControllerEvents {
 }
 
 /**
+ * Every engine → UI bridge {@link EngineController} opens, named. One
+ * name per hook, attached once per engine instance and forgotten
+ * wholesale on {@link EngineController.dispose} — see
+ * {@link EngineController._attachedHooks} for why they are a set and
+ * not a field each.
+ */
+export const ENGINE_HOOKS = [
+  'zoom',
+  'undo',
+  'tile-picked',
+  'placement-selected',
+  'layer-flag',
+  'layer-list',
+  'pointer-tile',
+  'runtime-effects',
+] as const
+
+/** One of {@link ENGINE_HOOKS}. */
+export type EngineHook = (typeof ENGINE_HOOKS)[number]
+
+/**
  * Encapsulates the engine widget's lifecycle for the maker:
  *
  * - Creates a fresh `Engine` on demand, initialises it, hands it to the
@@ -107,15 +128,19 @@ export class EngineController {
   private _engine: Engine | null = null
   private _projectPath: string | null = null
   private _mapId: string | null = null
-  private _zoomHookAttached = false
   private _lastReportedZoom = 1
-  private _undoHookAttached = false
-  private _tilePickedHookAttached = false
-  private _placementSelectedHookAttached = false
-  private _layerFlagHookAttached = false
-  private _layerListHookAttached = false
-  private _pointerTileHookAttached = false
-  private _runtimeEffectHooksAttached = false
+  /**
+   * Which of {@link ENGINE_HOOKS} are live on the CURRENT engine — the
+   * only record of that, so {@link dispose} forgets all of them by
+   * clearing one set.
+   *
+   * It used to be one `_xHookAttached` boolean per hook, reset by a
+   * hand-written list in `dispose`; that list had already lost
+   * `layer-list`, so after one view switch the Layers tab stopped
+   * following add / reorder / plane changes with nothing reporting it.
+   * A set cannot fall out of sync with itself.
+   */
+  private readonly _attachedHooks = new Set<EngineHook>()
   private readonly _events = new TypedEmitter<EngineControllerEvents>()
   /**
    * Excalibur `events.on(...)` subscriptions opened on the current engine
@@ -123,12 +148,24 @@ export class EngineController {
    * {@link dispose} so teardown is deterministic rather than relying on the
    * engine emitter being GC'd — the closures capture `this`, so a pinned
    * emitter would otherwise keep firing into a controller whose `_engine`
-   * is a newer instance. (The zoom/undo/pointer hooks return a boolean; the
-   * gjs `Engine` widget owns those subscriptions and drops them on dispose.)
+   * is a newer instance. (The zoom/undo/pointer hooks are not in here: the
+   * gjs `Engine` widget keeps those disposers itself and releases them in
+   * its own teardown, which is why those three `on…` methods answer with a
+   * plain "did I subscribe?" boolean.)
    */
   private readonly _hookSubs: Array<{ close(): void }> = []
 
-  constructor(private readonly slot: EngineSlot) {}
+  /**
+   * @param slot        where the engine widget gets mounted.
+   * @param createEngine builds the engine widget. Injected rather than
+   *   `new Engine()`-ed inline so this controller stays free of a value
+   *   import from `@pixelrpg/gjs` — that keeps it (and its hook wiring)
+   *   unit-testable off the GTK stack.
+   */
+  constructor(
+    private readonly slot: EngineSlot,
+    private readonly createEngine: () => Engine,
+  ) {}
 
   /** The currently-active engine, or `null` if disposed. */
   get engine(): Engine | null {
@@ -154,7 +191,7 @@ export class EngineController {
     }
 
     if (!this._engine) {
-      this._engine = new Engine()
+      this._engine = this.createEngine()
       this.slot(this._engine)
       await this._engine.initialize()
     } else {
@@ -162,14 +199,31 @@ export class EngineController {
       this.slot(this._engine)
     }
 
-    if (this._projectPath !== projectPath) {
-      await this._engine.loadProject(projectPath)
-      this._projectPath = projectPath
-      this._mapId = null
-    }
-    if (this._mapId !== mapId) {
-      await this._engine.loadMap(mapId)
-      this._mapId = mapId
+    try {
+      if (this._projectPath !== projectPath) {
+        await this._engine.loadProject(projectPath)
+        this._projectPath = projectPath
+        // `loadProject` activates the project's `startup.initialMapId`
+        // by itself. Record which map that was instead of assuming
+        // none: assuming `null` here re-loaded the startup map a second
+        // time on every project open — a full scene rebuild thrown
+        // away, and until `swapInScene` learned to step off the active
+        // scene, an outright throw (TODO.md, resolved with this).
+        this._mapId = this._engine.currentMapId
+      }
+      if (this._mapId !== mapId) {
+        await this._engine.loadMap(mapId)
+        this._mapId = mapId
+      }
+    } finally {
+      // Hook attachment does NOT ride on the load succeeding. A failed
+      // load leaves a live, painting engine behind (the project's own
+      // startup map is already up by then), and `SceneNavigator._hydrate`
+      // deliberately falls through so the user keeps a usable editor —
+      // so bailing out here used to strip every engine → UI bridge off a
+      // window that looked completely normal. Undo/redo greyed out for
+      // the whole session was the visible half of that.
+      this._attachHooks()
     }
 
     // Active tool / tile / layer are pushed by the host
@@ -177,7 +231,14 @@ export class EngineController {
     // stays the source of truth across map switches. The controller
     // intentionally doesn't reset them here; doing so would force the
     // tool back to a hardcoded default and desync from the toolbar.
+  }
 
+  /**
+   * Open every engine → UI bridge that is not open yet. Idempotent per
+   * engine instance, so callers may run it after any step that could
+   * have created the engine.
+   */
+  private _attachHooks(): void {
     this._attachZoomHook()
     this._attachUndoHook()
     this._attachTilePickedHook()
@@ -186,6 +247,17 @@ export class EngineController {
     this._attachLayerListHook()
     this._attachPointerTileHook()
     this._attachRuntimeEffectHooks()
+  }
+
+  /**
+   * Run `attach` once per engine instance and remember it by name.
+   * `attach` reports whether it managed to subscribe — the gjs `Engine`
+   * widget refuses while its Excalibur instance is not up yet — and only
+   * a `true` is recorded, so a later call retries.
+   */
+  private _attachOnce(hook: EngineHook, attach: (engine: Engine) => boolean): void {
+    if (this._attachedHooks.has(hook) || !this._engine) return
+    if (attach(this._engine)) this._attachedHooks.add(hook)
   }
 
   /**
@@ -219,13 +291,7 @@ export class EngineController {
     this._engine = null
     this._projectPath = null
     this._mapId = null
-    this._zoomHookAttached = false
-    this._undoHookAttached = false
-    this._tilePickedHookAttached = false
-    this._placementSelectedHookAttached = false
-    this._layerFlagHookAttached = false
-    this._pointerTileHookAttached = false
-    this._runtimeEffectHooksAttached = false
+    this._attachedHooks.clear()
     // Drop the cached undo state on the host side too — without an
     // engine, both actions should be disabled regardless of what the
     // last loaded scene reported.
@@ -256,66 +322,73 @@ export class EngineController {
   }
 
   private _attachZoomHook(): void {
-    if (this._zoomHookAttached || !this._engine) return
-    this._zoomHookAttached = this._engine.onCameraZoomChanged((zoom) => {
-      if (!shouldReportZoomChange(zoom, this._lastReportedZoom)) return
-      this._lastReportedZoom = zoom
-      this._events.emit('zoom-changed', zoom)
-    })
+    this._attachOnce('zoom', (engine) =>
+      engine.onCameraZoomChanged((zoom) => {
+        if (!shouldReportZoomChange(zoom, this._lastReportedZoom)) return
+        this._lastReportedZoom = zoom
+        this._events.emit('zoom-changed', zoom)
+      }),
+    )
   }
 
   private _attachUndoHook(): void {
-    if (this._undoHookAttached || !this._engine) return
-    this._undoHookAttached = this._engine.onUndoStackChanged((state) => {
-      this._events.emit('undo-changed', state)
-    })
+    this._attachOnce('undo', (engine) =>
+      engine.onUndoStackChanged((state) => {
+        this._events.emit('undo-changed', state)
+      }),
+    )
   }
 
   private _attachTilePickedHook(): void {
-    if (this._tilePickedHookAttached || !this._engine) return
-    this._hookSubs.push(
-      this._engine.events.on(EngineEvent.TILE_PICKED, (payload) => {
-        this._events.emit('tile-picked', payload)
-      }),
-    )
-    this._tilePickedHookAttached = true
+    this._attachOnce('tile-picked', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.TILE_PICKED, (payload) => {
+          this._events.emit('tile-picked', payload)
+        }),
+      )
+      return true
+    })
   }
 
   private _attachPlacementSelectedHook(): void {
-    if (this._placementSelectedHookAttached || !this._engine) return
-    this._hookSubs.push(
-      this._engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
-        this._events.emit('placement-selected', payload)
-      }),
-    )
-    this._placementSelectedHookAttached = true
+    this._attachOnce('placement-selected', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
+          this._events.emit('placement-selected', payload)
+        }),
+      )
+      return true
+    })
   }
 
   private _attachLayerFlagHook(): void {
-    if (this._layerFlagHookAttached || !this._engine) return
-    this._hookSubs.push(
-      this._engine.events.on(EngineEvent.LAYER_FLAG_CHANGED, (payload) => {
-        this._events.emit('layer-flag-changed', payload)
-      }),
-    )
-    this._layerFlagHookAttached = true
+    this._attachOnce('layer-flag', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.LAYER_FLAG_CHANGED, (payload) => {
+          this._events.emit('layer-flag-changed', payload)
+        }),
+      )
+      return true
+    })
   }
 
   private _attachLayerListHook(): void {
-    if (this._layerListHookAttached || !this._engine) return
-    this._hookSubs.push(
-      this._engine.events.on(EngineEvent.LAYER_LIST_CHANGED, (payload) => {
-        this._events.emit('layer-list-changed', payload)
-      }),
-    )
-    this._layerListHookAttached = true
+    this._attachOnce('layer-list', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.LAYER_LIST_CHANGED, (payload) => {
+          this._events.emit('layer-list-changed', payload)
+        }),
+      )
+      return true
+    })
   }
 
   private _attachPointerTileHook(): void {
-    if (this._pointerTileHookAttached || !this._engine) return
-    this._pointerTileHookAttached = this._engine.onPointerTileChanged((payload) => {
-      this._events.emit('pointer-tile-changed', payload)
-    })
+    this._attachOnce('pointer-tile', (engine) =>
+      engine.onPointerTileChanged((payload) => {
+        this._events.emit('pointer-tile-changed', payload)
+      }),
+    )
   }
 
   /**
@@ -326,14 +399,14 @@ export class EngineController {
    * same lifecycle + teardown); the host decides how to present them.
    */
   private _attachRuntimeEffectHooks(): void {
-    if (this._runtimeEffectHooksAttached || !this._engine) return
-    const engine = this._engine
-    this._hookSubs.push(
-      engine.events.on(EngineEvent.SHOW_TEXT_REQUESTED, (payload) => this._events.emit('show-text', payload)),
-      engine.events.on(EngineEvent.ITEM_PICKED_UP, (payload) => this._events.emit('item-picked-up', payload)),
-      engine.events.on(EngineEvent.FLAG_SET, (payload) => this._events.emit('flag-set', payload)),
-      engine.events.on(EngineEvent.PLAY_SFX_REQUESTED, (payload) => this._events.emit('play-sfx', payload)),
-    )
-    this._runtimeEffectHooksAttached = true
+    this._attachOnce('runtime-effects', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.SHOW_TEXT_REQUESTED, (payload) => this._events.emit('show-text', payload)),
+        engine.events.on(EngineEvent.ITEM_PICKED_UP, (payload) => this._events.emit('item-picked-up', payload)),
+        engine.events.on(EngineEvent.FLAG_SET, (payload) => this._events.emit('flag-set', payload)),
+        engine.events.on(EngineEvent.PLAY_SFX_REQUESTED, (payload) => this._events.emit('play-sfx', payload)),
+      )
+      return true
+    })
   }
 }
