@@ -82,7 +82,18 @@ export class ToolGroup extends Adw.Bin {
   constructor() {
     super()
     this._group = new Adw.ToggleGroup({ homogeneous: true, can_shrink: false })
-    this._group.add_css_class('flat')
+    // NOT `.flat`, although the design's widget spec says so: inside an
+    // `.osd` toolbar libadwaita gives a checked toggle
+    // `--active-toggle-bg-color: white`
+    // (`refs/libadwaita/src/stylesheet/widgets/_toggle-group.scss`
+    // `&.osd, .osd &`), and that white slab on black is the whole reason
+    // the design could delete the labelled tool rail — it is a stronger
+    // "armed" cue than the rail's accent fill. The `.flat` variant of the
+    // same file overrides it back to `$selected_color`, a low-alpha tint:
+    // measured over the 70 %-black pill it renders rgb(55,61,36) against
+    // the pill's rgb(35,42,14), luminance 58 vs 38, where the design's own
+    // acceptance probe D6 asks for > 200 vs < 70. The two clauses cannot
+    // both hold, so the reason wins over the letter.
     this.set_child(this._group)
     this._rebuild()
     this._group.connect('notify::active-name', () => this._onActiveNameChanged())
