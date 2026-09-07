@@ -66,8 +66,6 @@ Conventions:
 
 ## Cleanup / debt
 
-- **A dead Yarn PnP editor SDK still advertises TypeScript 5.5 to editors** — `.yarn/sdks/typescript/` is tracked and declares `"version": "5.5.3-sdk"` with its own `lib/typescript.js`, left over from before the gjsify migration. The repo has used no Yarn since (`gjsify-lock.json`, no `yarn.lock`), so nothing in the build or CI reads it — but an editor that picks the workspace SDK gets a 5.5 language service while `gjsify foreach check` runs TypeScript 7. Diagnostics then disagree with CI in both directions, and the gap widened from one minor to two majors when TS 7 landed. Delete `.yarn/` (also `.yarn/releases/yarn-4.13.0.cjs`) unless something still needs it.
-  *owner: tooling, why: leftover from the Yarn-era toolchain, harmless to the build*
 
 - **`gjsify install --refresh-lockfile` is blocked repo-wide by a partial `@girs` 4.7.0 release** —
   four packages were published alone at `4.7.0` (`adw-1`, `cairo-1.0`, `avahi-0.6`,
