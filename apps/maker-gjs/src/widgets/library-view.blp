@@ -44,6 +44,12 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
         // (bidirectional), and both stacks below follow it declaratively,
         // so a chip change from a click, a deep link or the
         // `win.library-chip` action takes the same one path.
+        //
+        // Graphics is Full view only (concept decision 2). An
+        // `Adw.Toggle` has no `visible` to bind, so `library-view.ts`
+        // removes the toggle from the group in Simple view and adds it
+        // back in Full view (`_syncChipsToTier`) — the one place the
+        // `.blp` cannot say `visible: bind template.full-view` itself.
         title-widget: Adw.ToggleGroup chips {
           active-name: bind template.chip bidirectional;
           homogeneous: true;
@@ -58,7 +64,7 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
             label: _("Things");
           }
 
-          Adw.Toggle {
+          Adw.Toggle graphics_toggle {
             name: "graphics";
             label: _("Graphics");
           }
