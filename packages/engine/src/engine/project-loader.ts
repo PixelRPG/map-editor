@@ -7,6 +7,7 @@ import { MapScene } from '../scenes/map.scene.ts'
 import { resolvePlayerCharacter } from '../services/player-character.ts'
 import { applyRuntimeMode } from '../services/runtime-mode.ts'
 import { EngineEvent, type EngineEventMap, EngineStatus, type Facing, type ProjectLoadOptions } from '../types/index.ts'
+import { ProjectLoadInProgressError } from './project-load-in-progress.error.ts'
 import { formatError } from '../utils/format-error.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { swapInScene } from './scene-swap.ts'
@@ -53,6 +54,19 @@ export class ProjectLoader {
   private readonly logger = Logger.getInstance()
   private resource: GameProjectResource | null = null
   private activeMapId: string | null = null
+  /**
+   * The startup-map load kicked off from the loader's `afterload` event.
+   *
+   * Excalibur emits `afterload` synchronously and discards whatever the
+   * handler returns, so an `async` handler keeps running after
+   * `excalibur.start()` has already resolved. Parking the promise here
+   * lets {@link loadProject} await it, which is what makes "the project
+   * is loaded" mean "and its startup map is on screen" rather than "and
+   * a map load is still in flight behind your back".
+   */
+  private startupMapLoad: Promise<void> | null = null
+  /** Set for the duration of a {@link loadProject} — see the guard there. */
+  private loadInFlight = false
 
   constructor(private readonly host: ProjectLoaderHost) {}
 
@@ -71,10 +85,39 @@ export class ProjectLoader {
     return this.activeMapId
   }
 
+  /**
+   * Load a project and leave its startup map on screen.
+   *
+   * Resolves only once that map load has finished, so
+   * {@link currentMapId} is answerable the moment this returns — a
+   * caller that reads it earlier gets `null` and asks for a map load the
+   * engine is already performing.
+   *
+   * Refuses to start while another load is in flight. Two overlapping
+   * `excalibur.start()` calls on one Excalibur engine DEADLOCK: the
+   * second overwrites `Engine._loader` mid-flight and neither
+   * `Loader.load()` ever reaches its `afterload`, so no map is loaded
+   * and both callers wait forever with nothing thrown. Reporting that as
+   * an error is the difference between a bug you can see and an editor
+   * that silently sits on an empty scene.
+   */
   async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
+    if (this.loadInFlight) {
+      throw new ProjectLoadInProgressError(projectPath)
+    }
+    this.loadInFlight = true
+    try {
+      await this.runProjectLoad(projectPath, options)
+    } finally {
+      this.loadInFlight = false
+    }
+  }
+
+  private async runProjectLoad(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
     this.host.setStatus(EngineStatus.LOADING)
     this.logger.info(`[Engine] Loading project: ${projectPath}`)
 
+    this.startupMapLoad = null
     this.resource = new GameProjectResource(projectPath, {
       preloadAllSpriteSets: options?.preloadAllSpriteSets ?? true,
       preloadAllMaps: options?.preloadAllMaps ?? false,
@@ -84,6 +127,11 @@ export class ProjectLoader {
     this.wireLoaderEvents(loader, projectPath, options)
 
     await this.host.excalibur.start(loader)
+    // `start()` resolves when the loader is done; the startup map is
+    // loaded from the loader's `afterload` handler, whose promise
+    // Excalibur does not await. Await it here so the project is fully on
+    // screen — and `currentMapId` truthful — before this returns.
+    await this.startupMapLoad
     // Re-apply resolution + viewport after the canvas size is settled
     // (the gjsify widget emits the final size asynchronously).
     try {
@@ -201,19 +249,28 @@ export class ProjectLoader {
       this.logger.info('Loading complete')
     })
 
-    loaderEvents.on('afterload', async () => {
-      this.logger.info('GameProjectResource loaded successfully')
-      this.resource?.debugInfo()
-
-      this.host.events.emit(EngineEvent.PROJECT_LOADED, { projectPath, options })
-
-      const initialMapId = this.resource?.data.startup.initialMapId
-      if (initialMapId) {
-        await this.loadMap(initialMapId)
-      }
-
-      this.host.setStatus(EngineStatus.READY)
+    // Excalibur emits `afterload` synchronously and ignores what the
+    // handler returns, so this body outlives `excalibur.start()`. Park
+    // its promise where `loadProject` can await it rather than letting a
+    // map load run unobserved behind the caller.
+    loaderEvents.on('afterload', () => {
+      this.startupMapLoad = this.openStartupMap(projectPath, options)
     })
+  }
+
+  /** The tail of a project load: announce it, then open its startup map. */
+  private async openStartupMap(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
+    this.logger.info('GameProjectResource loaded successfully')
+    this.resource?.debugInfo()
+
+    this.host.events.emit(EngineEvent.PROJECT_LOADED, { projectPath, options })
+
+    const initialMapId = this.resource?.data.startup.initialMapId
+    if (initialMapId) {
+      await this.loadMap(initialMapId)
+    }
+
+    this.host.setStatus(EngineStatus.READY)
   }
 
   /**
