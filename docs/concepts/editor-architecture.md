@@ -60,7 +60,7 @@ Editor-state components, all on the session-singleton entity:
 
 The set is intentionally small — anything that doesn't qualify (see below) stays in its natural home.
 
-> **Note on the tool union:** the shipped set is `select | pencil | eraser | eyedropper | object`. `select` is the default — read-only click-to-select that picks the topmost `ObjectPlacement` at the clicked tile (mutating `SelectedPlacementsComponent`) and emits `PLACEMENT_SELECTED` for inspector sync; tile-level / marquee selection is still deferred. `object` stamps the armed object brush (`ActiveObjectComponent`) onto the clicked tile. Bucket-fill, rect, stamp, and event tools remain deferred. Any future tool drops in via the tool MenuButton inside `FloatingTopBar` (see `_buildToolPopover`) by extending the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts`.
+> **Note on the tool union:** the shipped set is `select | pencil | fill | eraser | eyedropper | object`. `select` is the default — read-only click-to-select that picks the topmost `ObjectPlacement` at the clicked tile (mutating `SelectedPlacementsComponent`) and emits `PLACEMENT_SELECTED` for inspector sync; tile-level / marquee selection is still deferred. `object` stamps the armed object brush (`ActiveObjectComponent`) onto the clicked tile. Rect, stamp, and event tools remain deferred. A future tool extends the `EditorTool` union in `packages/engine/src/components/active-tool.component.ts` and adds one entry to `TOOLS` in `PixelRpgToolGroup` (`packages/gjs/src/widgets/editor/tool-group.ts`) — an icon in `TOOL_ICONS`, a verb and an accelerator key. The group's `Adw.ToggleGroup` never writes engine state itself: a click activates `win.set-tool`, and the action's change-state handler calls back into `setActiveTool`, so the action stays the single writer.
 
 ### In ECS systems (controller)
 
@@ -236,11 +236,11 @@ This was the **minimum** for the architecture to be real — it established the 
 
 ### Phase 2 — `ActiveToolComponent`
 
-Replaced the `engine.setEditorState({ tool })` callback with component mutation. `TileEditorSystem` queries the session singleton instead. The tool MenuButton inside `FloatingTopBar` (popover-driven) mutates the component on selection. Smallest possible migration; it validated the subscription bridge.
+Replaced the `engine.setEditorState({ tool })` callback with component mutation. `TileEditorSystem` queries the session singleton instead. The chooser widget has changed shape twice since (popover → labelled rail → today's `PixelRpgToolGroup`), but never the seam: the widget activates `win.set-tool` and the action mutates the component. Smallest possible migration; it validated the subscription bridge.
 
 ### Phase 3 — `ActiveTileComponent` + `ActiveLayerComponent`
 
-The active tile + layer became per-scene components; the `FloatingTopBar` chips, the inspector and `TileEditorSystem` consume them. `SceneEditorView` holds no copy: it writes through the engine and reads back via derived getters over `ActiveTileComponent` / `ActiveLayerComponent`, under the same condition that drops the write, so read and write cannot disagree.
+The active tile + layer became per-scene components; the `PixelRpgBrushBadge` (which draws all three of tool, tile and layer as one glyph), the inspector and `TileEditorSystem` consume them. `SceneEditorView` holds no copy: it writes through the engine and reads back via derived getters over `ActiveTileComponent` / `ActiveLayerComponent`, under the same condition that drops the write, so read and write cannot disagree.
 
 The cross-scene-persistence worry that once justified the mirrors was unfounded — entering a scene always runs `populateFromProject`, which unconditionally resets both, so the fields never survived a switch. `_tilesetFirstGid` stays view-owned; it bridges the sheet-local index to the global id and is not a second copy of the state.
 

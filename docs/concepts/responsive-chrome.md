@@ -53,8 +53,10 @@ persistent — impossible to express with a single shared
 state is **shared across view switches** (toggle the inspector
 open in the atlas, switch to the scene editor, it stays open).
 Desktop users open the sidebars they want from the toggle pills
-(headerbar buttons on atlas / library / game / welcome; merged top
-OSD on the scene editor).
+(headerbar buttons on atlas / library / game / welcome; the two
+floating pills on the scene editor — `library_toggle` in the
+start-aligned editing pill, `inspector_toggle` in the end-aligned
+context pill).
 
 ---
 
@@ -121,8 +123,9 @@ created a hidden-UI dead end.
   the reference shape; future drag-capable surfaces follow the
   same split.
 
-**Mobile / tablet behaviour falls out for free.** The window-level
-`inspector-collapsed` breakpoint setter (≤ 1024sp) flips the
+**Mobile behaviour falls out for free.** The window-level
+`inspector-collapsed` breakpoint setter (≤ 768sp — the tablet tier
+collapses only the library) flips the
 right `Adw.OverlaySplitView` into drawer mode. The same
 `showInspector = true` write surfaces as an overlay drawer on
 narrow widths and as a persistent panel on desktop — no
@@ -142,12 +145,16 @@ here.
 ## Right inspector — in-overlay close affordance
 
 In overlay-drawer mode (`inspector-collapsed: true`, set by the
-window breakpoint at ≤ 1024sp) the right inspector can grow
+window breakpoint at ≤ 768sp) the right inspector can grow
 nearly as wide as the window itself — its `max-sidebar-width`
 shrinks once content lands on it. On a 360 px-wide phone
 that leaves zero space for an "outside-tap-to-dismiss" target,
 so the only reliable way to close the drawer has to be **inside**
-the drawer.
+the drawer. The scene editor makes that the *only* way: the same
+breakpoint switches its chrome to the phone layout, which drops
+`inspector_toggle` from the context pill, so a drawer opened by
+"Layers…" or by a placement selection is closed from its own
+header.
 
 Each of the four right-inspector widgets (`RightInspector`,
 `SceneInspector`, `CastInspector`, `TileInspector`) carries a
@@ -155,11 +162,11 @@ Each of the four right-inspector widgets (`RightInspector`,
 button in the `[start]` slot of its flat headerbar. The button
 binds `visible` to `collapsed` so:
 
-- **Desktop** (`collapsed: false`) — button hidden. The panel
-  is pinned, the toggle in the floating top OSD (scene editor)
-  or the central headerbar (atlas / library) is the
-  expected close affordance.
-- **Tablet / mobile** (`collapsed: true`) — button visible. Click
+- **Desktop / tablet** (`collapsed: false`) — button hidden. The
+  panel is pinned, and `inspector_toggle` — in the scene editor's
+  end-aligned context pill, or the central headerbar on
+  atlas / library — is the expected close affordance.
+- **Phone** (`collapsed: true`) — button visible. Click
   closes the drawer via the existing `win.toggle-inspector`
   `Gio.PropertyAction` (boolean property toggle, flips
   `show-inspector` to false).
@@ -189,7 +196,7 @@ The headerbar would either cover canvas content (`extend-content-to-top-edge`
 canvas — both worse than just letting the canvas occupy the
 whole content area with chrome floating on top.
 
-Layout shape:
+Layout shape — the atlas, whose overlay children are all direct:
 
 ```
 Adw.OverlaySplitView outer_split   (pin-sidebar: true)
@@ -198,15 +205,66 @@ Adw.OverlaySplitView outer_split   (pin-sidebar: true)
    ├─ sidebar (end): RightInspector / SceneInspector
    │     (its own thin flat HeaderBar carries the window-close X)
    └─ content: Gtk.Overlay
-      ├─ [overlay] FloatingTopBar (top, spans full width)
-      │     — absorbed the former FloatingHistory + ContextChip +
-      │       FloatingToolRail roles: undo/redo/grid, active-tool
-      │       MenuButton, active-tile + active-layer context chip,
-      │       sidebar toggles
-      ├─ [overlay] FloatingZoom (bottom-LEFT)
-      ├─ [overlay] FloatingPlay (bottom-right)
-      └─ child: canvas / scene-card area
+      ├─ [overlay] toggle pill      (top-right: library + inspector)
+      ├─ [overlay] FloatingZoom     (bottom-left — atlas only, see below)
+      ├─ [overlay] overview minimap (bottom-centre)
+      ├─ [overlay] FloatingFab      ("New Scene", bottom-right)
+      └─ child: scene-card area
 ```
+
+The scene editor puts a `SceneEditor` (`scene-editor.blp`) in the
+same `content:` slot, and that widget owns its own overlay:
+
+```
+$PixelRpgSceneEditor
+└─ Adw.BreakpointBin ladder      (measures the CANVAS, writes `stage`)
+   └─ Adw.BottomSheet bottom_sheet   (inert on wide, docked bar on phone)
+      ├─ content: Gtk.Overlay        (margin-bottom bound to the bar's height)
+      │  ├─ child: backdrop (diagonal stripes) → engine_holder
+      │  │     the canvas has ONE parent for the view's life
+      │  │     (see "Engine widget lifecycle")
+      │  ├─ [overlay] Gtk.WindowHandle → editing pill  (halign: start)
+      │  │     library toggle · back · undo · redo · ToolGroup ·
+      │  │     BrushBadge + its label
+      │  ├─ [overlay] back_circle "‹"   (phone only, top-left)
+      │  ├─ [overlay] Gtk.WindowHandle → context pill  (halign: end)
+      │  │     RosterChip · "⋯" · inspector toggle
+      │  ├─ [overlay] ZoomOsd        (bottom-centre, transient)
+      │  ├─ [overlay] cursor_caption (bottom-left, Full view only)
+      │  └─ [overlay] FloatingPlay   (bottom-right)
+      ├─ bottom-bar: phone bar — ToolGroup + BrushBadge + RecentTiles
+      └─ sheet: BrushPage
+```
+
+Two rules force that shape, and both are written out in
+`scene-editor.blp`'s header comment:
+
+1. **The canvas is never reparented.** The engine tears down in
+   `vfunc_unroot`, so an `Adw.MultiLayoutView` — which re-slots every
+   `Adw.LayoutSlot` child on a layout change — cannot hold it.
+   `SceneEditor.setLayout` moves three small GL-free widgets
+   (`ToolGroup`, `BrushBadge`, `BrushPage`) between slots instead.
+2. **No single chrome layer may float over the canvas.**
+   `gtk_widget_pick` returns before descending into a
+   `can-target: false` widget, so one full-size chrome layer would
+   either eat every stroke or make its own buttons unclickable. Every
+   floating piece is its own `Gtk.Overlay` child.
+
+The `Adw.BottomSheet` is present at every size and costs nothing on
+wide: `reveal-bottom-bar: false` drives `bottom-bar-height` to 0 and
+`can-open: false` disables the swipe tracker. It is a permanent
+wrapper precisely so turning the phone layout on never changes the
+canvas's parent.
+
+libadwaita allocates a bottom sheet's content at FULL height and lays
+the bar over it, so the bar would sit on top of the bottom of the map.
+Binding the overlay's `margin-bottom` to `bottom-bar-height` docks it
+instead: the canvas ends where the bar starts, and the shell's
+bottom-edge gesture band lands on the bar rather than on paintable
+tiles. The window's toasts need the same clearance, which is why
+`SceneEditor` puts a `sheet-peeking` class on the *window* — the
+`Adw.ToastOverlay` is this widget's ancestor, so a selector rooted
+here could never reach a toast.
 
 `pin-sidebar: true` is **load-bearing** on both OverlaySplitViews:
 without it, libadwaita auto-resets `show-sidebar` to `false` as
@@ -245,81 +303,160 @@ Adw.OverlaySplitView outer_split
 
 ## The OSD pill pattern (canvas views)
 
-Repeated across `FloatingTopBar`, `FloatingZoom`, `FloatingPlay`,
-and the atlas's two inline toggle pills. `FloatingTopBar` is a
-single pill that contains the history controls + active-tool
-MenuButton + context chip + sidebar toggles internally — not five
-separate pills sitting next to each other.
+Repeated across the scene editor's editing + context pills,
+`FloatingZoom` (atlas), `FloatingPlay`, `ZoomOsd`, the cursor
+caption and the atlas's inline toggle pills. A pill is a
+`toolbar`+`osd`-styled `Gtk.Box` of buttons, aligned into a corner
+of the overlay.
 
 ```blp
-Adw.Bin {
+// WindowHandle gives empty space inside the pill (between buttons,
+// outer padding) a window-drag affordance. Buttons inside bypass
+// automatically — Gtk widget event semantics.
+Gtk.WindowHandle {
   halign: start | end | center;
   valign: start | end | center;
   margin-…: 12;
 
-  // WindowHandle gives empty space inside the pill (between buttons,
-  // outer padding) a window-drag affordance. Buttons inside bypass
-  // automatically — Gtk widget event semantics.
-  Gtk.WindowHandle {
-    child: Gtk.Box {
-      orientation: horizontal | vertical;
-      spacing: 2;
-      styles ["toolbar", "osd"]
+  child: Gtk.Box {
+    orientation: horizontal | vertical;
+    spacing: 2;
+    styles ["toolbar", "osd"]
 
-      // …buttons, separators, action-bound widgets…
-    };
-  }
+    // …buttons, separators, action-bound widgets…
+  };
 }
 ```
 
 Conventions:
 
+- **One handle per pill, never one across the row.** The bar this
+  replaced was a single full-width `Gtk.WindowHandle` with a spacer
+  between its two clusters, so at 1280×800 roughly 570 px of visible
+  map started a window drag instead of a stroke. Each pill wraps
+  only itself; the gap between them is canvas.
 - **Sidebar toggle position**: the right-sidebar toggle (`inspector_toggle`)
   always sits at the **rightmost** slot of whatever pill hosts it
   (PR #52). Position on screen visually maps to the side it
   controls. The same rule applies to the `library_toggle`, which
-  now sits at the **leftmost** slot of `FloatingTopBar`.
-- **No `FloatingPlay` WindowHandle wrap**: it's a single big
-  button, no empty pixels to drag from. Other pills wrap.
+  sits at the **leftmost** slot of the editing pill.
+- **Only pills with empty pixels wrap.** `FloatingPlay` is a single
+  big button, so there is nothing to drag from; `ZoomOsd` and the
+  cursor caption carry no controls at all. `ZoomOsd` additionally
+  sets `can-target: false`, because a `Gtk.Revealer` on a crossfade
+  transition keeps its allocation while hidden and would otherwise
+  swallow strokes aimed at the canvas behind an invisible widget.
 - **Margins**: 12 px from the nearest edge. Top pills + bottom
   pills clear each other; left + right clear the sidebars when
   the sidebars are persistent.
+- **Feedback is transient, furniture is permanent.** `ZoomOsd`
+  reveals the percentage at the bottom centre for 1.2 s after a
+  change and fades; the standing cost is zero pixels. The pill it
+  replaced held ~10 300 px² of the bottom-left corner at every window
+  size for three buttons consulted between tasks. `FloatingZoom`
+  survives for the atlas, where the buttons ARE the whole zoom
+  affordance; the scene editor drives zoom from `+` / `-` /
+  `<Primary>0`, the wheel (`CameraControlSystem`) and three "⋯" items
+  instead. There is no pinch gesture on the canvas yet, so a phone has
+  the "⋯" items and nothing else.
 
 ---
 
-## FloatingTopBar's internal breakpoint cascade
+## The scene editor's disclosure ladder
 
 Unlike the rest of the chrome — which reacts to
-`ApplicationWindow`-level breakpoints — `FloatingTopBar` carries
-its **own** `Adw.BreakpointBin` watching its **own allocated
-width**, not the window width. This is necessary because the
-amount of horizontal space the top bar actually gets is
-`window width − persistent sidebars` (variable across
-breakpoints and across the user's show-library / show-inspector
-state). Watching the window would mis-estimate the room available
-by hundreds of pixels.
+`ApplicationWindow`-level breakpoints — the scene editor carries its
+**own** `Adw.BreakpointBin` (`ladder` in `scene-editor.blp`) watching
+the **canvas** width, not the window's. The room the pills actually
+get is `window width − persistent sidebars`, which varies with the
+tier AND with the user's show-library / show-inspector state;
+watching the window mis-estimates it by hundreds of pixels.
 
-The cascade:
+The **critical gotcha** is why the ladder is shaped the way it is:
+`Adw.BreakpointBin` activates **one** breakpoint at a time. It
+iterates its breakpoints in **reverse**, breaks on the first match,
+and applies only that breakpoint's setters (see
+`adw-breakpoint-bin.c:421-428` in the libadwaita source — the loop
+reads `for (i = priv->breakpoints->len; i-- > 0;)` and `break`s once
+one matches). Setters do **not** stack, so every rung has to declare
+its complete visible set. Writing that out as `visible:` setters five
+times is how the bar this replaced ended up with two full button
+hierarchies and an overflow menu rebuilt from button visibility.
 
-| Threshold        | Behaviour                                                            |
-|------------------|----------------------------------------------------------------------|
-| ≥ 880sp          | **split**: history + tools + chip + toggles laid out as one row      |
-| < 880sp          | **merged**: collapsed into a more compact layout                     |
-| < 740sp          | progressive disclosure step 1 (drops the lowest-priority cluster)    |
-| < 620sp          | progressive disclosure step 2                                        |
-| < 540sp          | progressive disclosure step 3                                        |
-| < 460sp          | progressive disclosure step 4 (most compact form)                    |
+So the ladder sets exactly **one** property — `stage`, a string — and
+`packages/gjs/src/widgets/editor/chrome-stages.ts` turns
+`(stage, layout, playing)` into every flag:
 
-The **critical gotcha**: `Adw.BreakpointBin` activates **one**
-breakpoint at a time. It iterates its breakpoints in **reverse**,
-breaks on the first match, and applies only that breakpoint's
-setters (see `adw-breakpoint-bin.c:421-428` in the libadwaita
-source — the loop reads `for (i = priv->breakpoints->len; i-- > 0;)`
-and `break`s once one matches). That means any setter you want
-applied at, say, 540sp must **also** be present on the 460sp
-breakpoint — they don't stack. The setters for each range have to
-be written **cumulatively**, listing every property that should
-be in effect at that width and below.
+| Rung | Canvas ≥ | What it adds |
+|---|---|---|
+| `tight` | 0 px | badge only — no tool group (two sidebars open on a small desktop) |
+| `compact` | 656 px | the `Adw.ToggleGroup` tool chooser |
+| `normal-1` | 704 px | "World" beside the back arrow |
+| `normal-2` | 856 px | the brush sentence beside the badge ("Paint · Ground") |
+| `roomy` | 1136 px | verbs beside the six tool icons |
+
+Three things about those numbers:
+
+- They are **measured in the running app** (1280×800, the oot2d
+  project, real text metrics), not derived per button. The design's
+  §2.4 arithmetic lands low at every rung — 604 vs 656, 664 vs 704,
+  784 vs 856, 1124 vs 1136 — because a labelled `Adw.Toggle` is wider
+  than the sum of an icon and a word.
+- They assume a **roster in the context pill** (142 px, versus 100 px
+  solo). The AI assistant joins whenever an agent drives the editor,
+  so with-roster is the common case; keying on the solo width means
+  the pills overlap the moment anyone joins. A solo session reaches
+  each rung ~42 px later than it strictly must, which nobody can see.
+- `effectiveStage(proposed, canvasPx, contextPillPx)` demotes further
+  when the pills still would not fit — a roster of three is wider than
+  a roster of one, and no width table can know that. `SceneEditor`
+  re-runs it on the chip's `notify::roster-size`.
+
+Two invariants the spec pins, because the layout this replaced broke
+both: **undo is reachable at every stage and in both layouts** (the
+old ladder pushed it into an overflow menu below 460sp, which on a
+phone put the only undo on touch two taps deep), and **the armed tool
+is nameable at every stage** — where the tool group is hidden the badge
+still carries the tool's icon and its popover opens with the group.
+Below `roomy` the verbs are gone, so the keyboard is an expert's
+fastest route to one: V B G E I O arm the six tools, `+` / `-` /
+`<Primary>0` drive the zoom, and `win.show-help-overlay` lists them
+in an `Adw.ShortcutsDialog` built from `SHORTCUT_SECTIONS`
+(`apps/maker-gjs/src/actions/accels.ts`) — one table, so the dialog
+cannot advertise a key the window does not bind.
+
+`chrome-stages.ts` is GTK-free, so both invariants
+are unit tests (`chrome-stages.spec.ts`) rather than five blocks of
+Blueprint a reader has to diff by eye. The two declarations of the
+thresholds — the `.blp` conditions and `STAGE_MIN_CANVAS_PX` — are
+held together by `scripts/check-chrome-stages.mjs`, which also refuses
+conditions out of ascending order (reverse iteration means the widest
+rung must come last).
+
+### Wide ↔ phone
+
+The layout switch is a different axis from the ladder and hangs off
+`inspector-collapsed` (≤ 768sp). `SceneEditor.setLayout` moves three
+widgets and flips three flags:
+
+- the `ToolGroup` from the editing pill into the phone bar's first row
+  (and from six tools to four: Paint · Fill · Erase · Select — Pick is
+  the long press, the object brush is armed by choosing a Thing);
+- the `BrushBadge` from beside its label into the bar's button, at
+  44 px instead of 32;
+- the `BrushPage` from the badge's popover into the bottom sheet, so
+  "which plane, which layer, which tile" has ONE implementation rather
+  than a popover copy and a sheet copy that drift.
+
+The editing pill itself is gone on phone: only a circular "‹" remains
+top-left (the system back gesture is shared with the shell, so it is a
+bonus, not the contract), undo moves into the context pill as a
+visible button — never into "⋯", because it is the only undo on touch
+— and the sheet's docked bar carries the tools, the badge and a
+recent-tiles strip. While a phone run is on, the bar, the FAB and the
+"‹" all give way and the context pill becomes Stop · Restart: during a
+Live Run the finger is the joystick, not a brush. On wide the same run
+changes only the FAB's own icon.
 
 ---
 
@@ -472,7 +609,12 @@ dragging wouldn't be discoverable anyway.
 1. Decide: canvas-bearing or content-only?
 2. If canvas-bearing, follow the atlas-view template (outer
    OverlaySplitView wraps inner OverlaySplitView wraps content
-   Gtk.Overlay with floating OSD pills).
+   Gtk.Overlay with floating OSD pills). Wrap each pill in its own
+   `Gtk.WindowHandle`, never one across the row. If the pills have
+   to disclose with width, put a `Adw.BreakpointBin` around the
+   view's own content and let it write ONE property — the scene
+   editor's `stage` / `chrome-stages.ts` split is the reference
+   shape, and the reason is the reverse-iteration gotcha above.
 3. If content-only, follow the welcome-view template (one
    OverlaySplitView + an Adw.ToolbarView with a regular
    HeaderBar on the content side).
@@ -535,7 +677,10 @@ dragging wouldn't be discoverable anyway.
 | Scope | Status |
 |---|---|
 | Chrome architecture as described (breakpoints, sidebars, OSD pills, engine-resize handling) — ships in `apps/maker-gjs` | **landed** (PRs #48–#64) |
-| `FloatingTopBar` breakpoint thresholds re-measure once sidebar widths settle | follow-up, tracked in `TODO.md` |
+| Scene-editor chrome: two pills + Play FAB + transient zoom, the `stage` ladder, and the phone bottom sheet | **landed** |
+| Scene-editor thresholds re-measured against real pill widths, with `check-chrome-stages.mjs` holding the two declarations together | **landed** |
+| Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
+| Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller
