@@ -9,7 +9,8 @@
     "check:barrels": "gjsify barrels --check src/widgets/common src/widgets/editor src/widgets/sprite",
     "build": "gjsify run build:barrels",
     "check": "gjsify run build:barrels && tsc && node scripts/check-widget-invariants.mjs",
-    "test": "gjsify test",
+    "test": "gjsify test && gjsify run test:display",
+    "test:display": "gjsify test --runtime gjs --entry src/test.display.mts --outdir dist/display",
     "storybook": "gjsify storybook"
   },
   "gjsify": {

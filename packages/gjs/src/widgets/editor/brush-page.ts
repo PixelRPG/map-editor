@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import Pango from '@girs/pango-1.0'
 import { LAYER_PLANES, type LayerPlane } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
@@ -195,7 +196,13 @@ export class BrushPage extends Adw.Bin {
     for (const plane of CHIP_PLANES) {
       const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
       box.append(new DepthGlyph({ plane, size: GLYPH_SIZES.row }))
-      const caption = new Gtk.Label({ label: PLANE_CAPTIONS[plane].short() })
+      // Ellipsizing is what lets the chips ADAPT: `can-shrink` on the
+      // group is a no-op for custom children (gtkbutton.c), so without it
+      // three rigid captions are the sheet's widest row — and the widest
+      // row is the whole editor's minimum width (see brush-page.blp). At
+      // the default text scale nothing is ever cut; at a larger one the
+      // caption shortens before the window refuses to shrink.
+      const caption = new Gtk.Label({ label: PLANE_CAPTIONS[plane].short(), ellipsize: Pango.EllipsizeMode.END })
       caption.add_css_class('caption')
       box.append(caption)
       this._plane_chips.add(new Adw.Toggle({ name: plane, child: box, tooltip: PLANE_CAPTIONS[plane].long() }))

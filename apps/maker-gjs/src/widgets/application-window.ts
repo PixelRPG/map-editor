@@ -10,7 +10,7 @@ import {
   type EditorTool,
   type SpriteSetData,
 } from '@pixelrpg/engine'
-import { type CollaboratorEntry, SignalScope } from '@pixelrpg/gjs'
+import { type CollaboratorEntry, Engine, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { installWindowAccels } from '../actions/accels.ts'
 import { installCastActions } from '../actions/cast-actions.ts'
@@ -185,10 +185,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * networked human peers come from the live CollabSession awareness.
    */
   private readonly _assistantState = new AssistantStateService()
-  private _engineCtl = new EngineController((engine) => {
-    if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
-    else this._scene_editor_view.setEngineWidget(null)
-  })
+  private _engineCtl = new EngineController(
+    (engine) => {
+      if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
+      else this._scene_editor_view.setEngineWidget(null)
+    },
+    () => new Engine(),
+  )
   // Map-file persistence (serialise MapData → source JSON, atlas/preview
   // editor-data writes). Injected accessors read this window's live state;
   // the op plumbing for editor-data changes stays here (collab is the

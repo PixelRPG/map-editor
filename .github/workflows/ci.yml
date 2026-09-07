@@ -90,7 +90,11 @@ jobs:
         # `@gjsify/webrtc`'s `gi://Gst` imports, which the engine test bundle
         # pulls in (collab/PeerSession) — without them the gjs test run aborts
         # at module load with "Typelib for Gst not found". The tests themselves
-        # use fakes, so no gst runtime is needed. `pkgconf-pkg-config` provides
+        # use fakes, so no gst runtime is needed. `adwaita-sans-fonts` is GNOME's
+        # UI font, which the display-backed probes pin (`phone-chrome.probe.ts`)
+        # so a pill measures here what it measures on a workstation — with no
+        # font installed the labelled rungs came out 52 px narrower than the
+        # table, and the first Broadway run went red on that. `pkgconf-pkg-config` provides
         # `pkg-config`, declared explicitly rather than inherited from a `-devel`
         # package: `gjsify system-check` treats it as a REQUIRED dependency and
         # reads library versions through it. `meson` is likewise required by
@@ -111,6 +115,7 @@ jobs:
             gstreamer1-plugins-base-devel \
             gstreamer1-plugins-bad-free-devel \
             libsoup3-devel \
+            adwaita-sans-fonts \
             blueprint-compiler \
             meson \
             ninja-build \
@@ -336,12 +341,35 @@ jobs:
         # stay collab-compatible" enforced, not just documented.
         run: gjsify foreach test -v -p --include @pixelrpg/engine
 
-      - name: Run gjs widget tests (GTK-free helper logic)
-        # The @pixelrpg/gjs suite. The widgets themselves subclass
-        # Gtk.Widget and can't run headlessly, so this covers the pure,
-        # GTK-free helpers extracted alongside them (e.g. MapPreview's
-        # fingerprint + viewport-clamp geometry). Runs under both gjs + node.
-        run: gjsify foreach test -v -p --include @pixelrpg/gjs
+      - name: Run gjs widget tests (helper logic + display-backed probes)
+        # The @pixelrpg/gjs suites: `test.mts` (GTK-free helpers, gjs +
+        # node) and then `test.display.mts` (gjs only). The three
+        # display-backed probe suites in the latter — brush badge, depth
+        # glyph, phone chrome — need a GdkDisplay, and without one they
+        # SKIP, which is how the phone bar overflowed a 360 px window while
+        # every run was green. `gtk4-broadwayd` ships in the `gtk4` package
+        # already installed above and is a real display with no X server,
+        # so the probes run here. They share one process on purpose: the
+        # display question is asked once and cached (`pixel-probe.ts`), so
+        # the #293 hazard of a second `Gtk.init_check()` answering
+        # differently does not apply, and all three ran green in this
+        # image. The package is run directly rather than through
+        # `foreach -p`: the first red run showed `gjs exited with code 1`
+        # and not one line from gjs, because the parallel runner captures
+        # the child's output and a process that dies takes its buffer
+        # with it. `fc-match` is in the log so a missing font is a visible
+        # cause, not a mystery number. The grep afterwards is the point:
+        # it fails the step if the phone-chrome probe did not print its
+        # measurements, so a display that silently went missing cannot
+        # turn skips back into a green run.
+        run: |
+          gtk4-broadwayd :5 &
+          sleep 1
+          export GDK_BACKEND=broadway BROADWAY_DISPLAY=:5
+          fc-match "Adwaita Sans"
+          gjsify workspace @pixelrpg/gjs test 2>&1 | tee gjs-test.log
+          test "${PIPESTATUS[0]}" -eq 0
+          grep -q '\[phone-chrome\] floor' gjs-test.log
 
       - name: Run maker tests (collab transport + session services)
         # The @pixelrpg/maker-gjs suite (18 suites): SessionService
@@ -369,3 +397,112 @@ jobs:
         # maker's `sanitizeInstanceId` (else the bridge dials a name nobody
         # owns). Runs under both gjs + node.
         run: gjsify foreach test -v -p --include @pixelrpg/mcp-bridge
+
+  smoke:
+    name: open a map (headless app smoke check)
+    runs-on: ubuntu-latest
+    # Its OWN job, deliberately, and it BLOCKS.
+    #
+    # This is the only check in the repo that STARTS the app. Nine
+    # structural guards and five unit suites were green while opening a
+    # map intermittently left the editor on an empty scene for the whole
+    # session, because every one of them inspects shape and none of them
+    # asks whether the thing runs. That gap is what this closes, and a
+    # `continue-on-error` gate would reproduce exactly the pattern it
+    # exists to remove.
+    #
+    # It is separate from `build` so an environment failure — a
+    # compositor that will not start, a GL stack that will not init —
+    # names itself instead of arriving as a mystery inside a ten-minute
+    # build. If weston ever stops coming up here, the fallback is Xvfb
+    # plus `--socket=fallback-x11`; do NOT reach for `continue-on-error`.
+    #
+    # Verified to discriminate, which is the part that makes it a gate:
+    # against the pre-fix build it exits 1 with "no active layer — the
+    # editor has no paint target".
+    timeout-minutes: 25
+    container:
+      image: fedora:44
+    defaults:
+      run:
+        shell: bash -e {0}
+
+    steps:
+      - name: Install container prerequisites
+        run: dnf install -y --setopt=install_weak_deps=False git tar xz findutils libatomic
+
+      - uses: actions/checkout@v6
+
+      - name: Install GNOME dev libs + a headless display
+        # Same toolkit set the `build` job installs, plus what running the
+        # app needs and building it does not:
+        #   weston            a compositor with a real headless backend.
+        #                     `mutter --headless` wants logind and a seat,
+        #                     which a container does not have — measured:
+        #                     it never creates its Wayland socket there.
+        #   mesa-dri-drivers  llvmpipe, so the Gtk.GLArea gets a GL context
+        #                     with no GPU. Paired with
+        #                     LIBGL_ALWAYS_SOFTWARE=1 below.
+        #   dbus-daemon       the Control interface the check drives is on
+        #                     the SESSION bus, which a container has none of
+        #                     until `dbus-run-session` makes one.
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            gjs \
+            pkgconf-pkg-config \
+            glib2 \
+            glib2-devel \
+            gobject-introspection-devel \
+            gtk4-devel \
+            libadwaita-devel \
+            gtksourceview5-devel \
+            gstreamer1-devel \
+            gstreamer1-plugins-base-devel \
+            gstreamer1-plugins-bad-free-devel \
+            libsoup3-devel \
+            blueprint-compiler \
+            meson \
+            ninja-build \
+            python3 \
+            weston \
+            mesa-dri-drivers \
+            mesa-libEGL \
+            mesa-libGL \
+            dbus-daemon
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install @gjsify/cli globally (pinned to the lockfile)
+        run: |
+          version=$(node -p "require('./gjsify-lock.json').packages['node_modules/@gjsify/cli'].version")
+          npm install -g "@gjsify/cli@${version}"
+
+      - name: Install dependencies (gjsify install --immutable)
+        run: gjsify install --immutable
+
+      - name: Build workspace
+        run: gjsify foreach build -v -t
+
+      - name: Open a shipped project and map, and check the editor can edit it
+        env:
+          XDG_RUNTIME_DIR: /tmp/xdg-runtime
+          WAYLAND_DISPLAY: smoke-wayland
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          # The app resolves its own typelibs from the gjsify prebuilds; the
+          # script inherits whatever we export here.
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" --width=1280 --height=800 &
+          for _ in $(seq 1 50); do
+            [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] && break
+            sleep 0.2
+          done
+          test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          GI_TYPELIB_PATH=$(find "$PWD/node_modules" -type d -path '*/prebuilds/linux-x64' | tr '\n' ':')
+          export GI_TYPELIB_PATH
+          export LD_LIBRARY_PATH="$GI_TYPELIB_PATH"
+          dbus-run-session -- node scripts/smoke-open-map.mjs --runs 3

@@ -12,8 +12,15 @@
  *
  * That is the bug this guard covers. It surfaced while measuring the
  * redesign: the design's §2.4 thresholds (604 / 664 / 784 / 1124) were
- * all below what the pills actually measure (656 / 704 / 856 / 1136), so
- * the pills collided at a 620 px and a 784 px canvas.
+ * all below what the pills actually measure, so the pills collided at a
+ * 620 px and a 784 px canvas. The first measured set (656 / 704 / 856 /
+ * 1136) was itself 8 px low below `normal-2`; the ladder is now
+ * 672 / 720 / 856 / 1144, read off GTK by `phone-chrome.probe.spec.ts`.
+ *
+ * This guard sees ONLY the wide layout's ladder. It cannot see the phone
+ * bar or the sheet: their floor is the ladder's `width-request`, and a
+ * child wider than that overflows the window silently. That class is
+ * covered by the display-backed probe, which CI runs under Broadway.
  */
 
 import { readFileSync } from 'node:fs'

@@ -59,9 +59,19 @@ template $PixelRpgBrushPage : Adw.Bin {
         orientation: vertical;
         spacing: 12;
 
+        // Both palettes WRAP, with six columns as the natural width: the
+        // badge popover (wide) sizes to six, the phone sheet packs what
+        // fits. Pinned columns are a minimum, and six of them measure
+        // 378 px — wider than the 360 px phone the design targets. And
+        // the sheet's minimum is never private: `Adw.BottomSheet` keeps
+        // its page and its bottom bar in one homogeneous `Gtk.Stack`, so
+        // that 378 px reached the docked bar and the canvas with the
+        // sheet CLOSED, and the ladder's `Adw.BreakpointBin` allocated
+        // the whole editor 18 px past a 360 px window.
         $PixelRpgTilePalette palette {
           tile-size: 48;
-          columns: 6;
+          wrap: true;
+          wrap-cap: 6;
         }
 
         Gtk.Box objects_section {
@@ -77,7 +87,8 @@ template $PixelRpgBrushPage : Adw.Bin {
 
           $PixelRpgTilePalette object_palette {
             tile-size: 48;
-            columns: 6;
+            wrap: true;
+            wrap-cap: 6;
             aspect-mode: "contain";
             styles ["object-brush-palette"]
           }

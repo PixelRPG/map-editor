@@ -19,6 +19,7 @@ import { Color, EventEmitter, type Subscription } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
 import { forwardEngineEvents } from './engine-events.ts'
+import { EngineUnavailableError } from './engine-unavailable.error.ts'
 import Template from './engine.blp'
 
 /**
@@ -30,6 +31,14 @@ import Template from './engine.blp'
  */
 const SCRATCHPAD_BG_LIGHT = Color.fromHex('#ededed')
 const SCRATCHPAD_BG_DARK = Color.fromHex('#232328')
+
+/**
+ * How long `loadProject` / `loadMap` wait for the canvas to come up
+ * before reporting failure. Generous — GL init on a cold, software-
+ * rendered stack is slow — but finite, because the alternative is a call
+ * that never returns and a scene editor that never recovers.
+ */
+const READY_TIMEOUT_MS = 20_000
 
 export namespace Engine {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
@@ -74,7 +83,15 @@ export class Engine extends Adw.Bin {
    * (see {@link SignalScope.connectUntil}).
    */
   private _readyWaiters = new SignalScope()
+  /**
+   * `reject` side of every pending {@link _waitForReady}. Teardown and a
+   * failed start settle these: a promise left pending forever strands
+   * its caller with nothing to report and no reason to rebuild.
+   */
+  private _readyRejectors: Array<(reason: Error) => void> = []
   private _teardownComplete = false
+  /** Why the engine can never become ready, once that is known. */
+  private _startFailure: string | null = null
 
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
@@ -109,7 +126,14 @@ export class Engine extends Adw.Bin {
     super(params)
   }
 
+  /**
+   * Create the canvas bridge and start the engine on it. Idempotent.
+   * Throws on a widget that has already been torn down — reviving one is
+   * not possible (its GL context is gone), and returning quietly would
+   * park the caller's next `loadProject` on a `ready` that can never fire.
+   */
   public async initialize(): Promise<void> {
+    if (this._teardownComplete) throw new EngineUnavailableError('engine widget was disposed')
     if (this._widget) return
     this._startWithWidget(false)
   }
@@ -122,6 +146,11 @@ export class Engine extends Adw.Bin {
   public async loadMap(mapId: string): Promise<void> {
     await this._waitForReady()
     await this._excalibur!.loadMap(mapId)
+  }
+
+  /** Forward to `Engine.currentMapId` — which map the engine has live, if any. */
+  public get currentMapId(): string | null {
+    return this._excalibur?.currentMapId ?? null
   }
 
   public async start(): Promise<void> {
@@ -497,12 +526,18 @@ export class Engine extends Adw.Bin {
         // editor scratchpad instead of showing through as opaque white.
         this._applyScratchpadBackground()
         this._ready = true
+        // The `ready` signal settles every waiter; drop their rejectors
+        // so a later teardown does not walk a list of dead callbacks.
+        this._readyRejectors = []
         this.emit('ready')
       } catch (err) {
         const renderer = useFallback ? 'Canvas 2D' : 'WebGL'
         const detail = formatError(err)
         console.error(`[Engine] ${renderer} start failed: ${detail}`)
         this.status = EngineStatus.ERROR
+        // `ready` will never be emitted now. Settle the waiters, or every
+        // caller sits on a promise with nothing to report.
+        this._failStart(`${renderer} start failed: ${detail}`)
         this.emit(EngineEvent.ERROR, detail)
         // Fallback disabled: swapping widgets after a failed GL init causes
         // libepoxy assertions (the dead GLArea context is still queried).
@@ -594,7 +629,7 @@ export class Engine extends Adw.Bin {
     this._teardownComplete = true
 
     this._releaseCloseRequest()
-    this._readyWaiters.disconnectAll()
+    this._failStart('engine widget was disposed')
 
     for (const subscription of this._excaliburSubscriptions) {
       try {
@@ -624,18 +659,63 @@ export class Engine extends Adw.Bin {
   }
 
   /**
-   * Resolve once the engine has emitted `ready`. A widget torn down
-   * before that keeps the promise pending on purpose: every caller
-   * dereferences `this._excalibur!` right after awaiting, so resolving
-   * on teardown would swap a stalled call for a `TypeError`. The
-   * HANDLER is still released, which is what teardown owes.
+   * Record that the engine can never become ready, release the `ready`
+   * handlers, and reject everyone waiting on them.
+   *
+   * Waiters used to be left pending on purpose — every caller
+   * dereferences `this._excalibur!` straight after awaiting, so
+   * resolving would swap a stall for a `TypeError`. Rejecting gives
+   * callers the third option they actually need: `EngineController` can
+   * rebuild the widget and `SceneNavigator` can tell the user the map
+   * did not open, instead of both sitting on a promise that never
+   * settles.
+   */
+  private _failStart(reason: string): void {
+    this._startFailure ??= reason
+    this._readyWaiters.disconnectAll()
+    const rejectors = this._readyRejectors
+    this._readyRejectors = []
+    for (const reject of rejectors) reject(new EngineUnavailableError(reason))
+  }
+
+  /** `true` once this widget is disposed or its engine failed to start. */
+  public get unusable(): boolean {
+    return this._teardownComplete || this._startFailure !== null
+  }
+
+  /**
+   * Resolve once the engine has emitted `ready`; reject if it never can
+   * (teardown or a failed start), and reject after
+   * {@link READY_TIMEOUT_MS} if the canvas simply never realises — a
+   * `Gtk.GLArea` parented into a page that is never mapped emits no
+   * `onReady` and no error, which used to leave every caller pending for
+   * the rest of the session. A timeout does NOT mark the widget dead:
+   * the engine may still be coming up, so the next call waits again.
    */
   private async _waitForReady(): Promise<void> {
     if (this._ready) return
-    await new Promise<void>((resolve) => {
+    if (this._startFailure) throw new EngineUnavailableError(this._startFailure)
+    await new Promise<void>((resolve, reject) => {
+      let timeoutId = 0
+      const settle = (finish: () => void) => {
+        if (timeoutId) {
+          GLib.source_remove(timeoutId)
+          timeoutId = 0
+        }
+        const index = this._readyRejectors.indexOf(rejector)
+        if (index >= 0) this._readyRejectors.splice(index, 1)
+        finish()
+      }
+      const rejector = (reason: Error) => settle(() => reject(reason))
+      this._readyRejectors.push(rejector)
       this._readyWaiters.connectUntil(this, 'ready', () => {
-        resolve()
+        settle(resolve)
         return true
+      })
+      timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, READY_TIMEOUT_MS, () => {
+        timeoutId = 0
+        settle(() => reject(new EngineUnavailableError(`canvas not ready after ${READY_TIMEOUT_MS} ms`)))
+        return GLib.SOURCE_REMOVE
       })
     })
   }
