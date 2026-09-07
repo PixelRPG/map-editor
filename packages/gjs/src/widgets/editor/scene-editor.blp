@@ -51,14 +51,15 @@ template $PixelRpgSceneEditor : Adw.Bin {
     // rules are unit-tested rather than diffed by eye.
     //
     // The thresholds are the canvas widths at which both pills fit with
-    // a roster in the context pill, MEASURED in the running app rather
-    // than derived from per-button arithmetic — the design's §2.4 numbers
-    // land low at every rung. `STAGE_MIN_CANVAS_PX` carries the same four
-    // numbers, `scripts/check-chrome-stages.mjs` fails if either side
-    // drifts, and `effectiveStage` demotes further for a roster wider
-    // than one avatar.
+    // a roster in the context pill, MEASURED (`phone-chrome.probe.spec.ts`
+    // asks GTK) rather than derived from per-button arithmetic — the
+    // design's §2.4 numbers land low at every rung, and the first
+    // measured set was 8 px low again. `STAGE_MIN_CANVAS_PX` carries the
+    // same four numbers, `scripts/check-chrome-stages.mjs` fails if either
+    // side drifts, and `effectiveStage` demotes further for a roster
+    // wider than one avatar.
     Adw.Breakpoint {
-      condition ("min-width: 656sp")
+      condition ("min-width: 672sp")
 
       setters {
         template.stage: "compact";
@@ -66,7 +67,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 704sp")
+      condition ("min-width: 720sp")
 
       setters {
         template.stage: "normal-1";
@@ -82,7 +83,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 1136sp")
+      condition ("min-width: 1160sp")
 
       setters {
         template.stage: "roomy";

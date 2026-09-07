@@ -123,9 +123,9 @@ export default async () => {
 
   await describe('effectiveStage — the fit check', async () => {
     await it('refuses the two rungs that overlapped in the running app', async () => {
-      // Measured: a 620 px canvas with a roster (142 px context pill)
-      // cannot afford `compact`'s 479 px editing pill, and a 784 px one
-      // cannot afford `normal-2`'s 764 px pill.
+      // Measured: a 620 px canvas with a roster (150 px context pill)
+      // cannot afford `compact`'s 489 px editing pill, and a 784 px one
+      // cannot afford `normal-2`'s 648 px pill.
       expect(effectiveStage('compact', 620, CONTEXT_PILL_PX.withRoster)).toBe('tight')
       expect(effectiveStage('normal-2', 784, CONTEXT_PILL_PX.withRoster)).toBe('normal-1')
       // And a roster of three, which the thresholds do not carry.
@@ -133,7 +133,8 @@ export default async () => {
     })
 
     await it('keeps the proposed rung when the pills do fit', async () => {
-      expect(effectiveStage('compact', 620, CONTEXT_PILL_PX.solo)).toBe('compact')
+      // Solo, `compact` needs 489 + 108 + 32 = 629 px.
+      expect(effectiveStage('compact', 640, CONTEXT_PILL_PX.solo)).toBe('compact')
       expect(effectiveStage('roomy', 1280, CONTEXT_PILL_PX.withRoster)).toBe('roomy')
       expect(effectiveStage('normal-1', 720, CONTEXT_PILL_PX.withRoster)).toBe('normal-1')
     })
@@ -195,19 +196,21 @@ export default async () => {
     })
 
     await it('stays one stage below its own threshold', async () => {
-      expect(stageForCanvasWidth(655)).toBe('tight')
-      expect(stageForCanvasWidth(703)).toBe('compact')
+      expect(stageForCanvasWidth(671)).toBe('tight')
+      expect(stageForCanvasWidth(719)).toBe('compact')
       expect(stageForCanvasWidth(855)).toBe('normal-1')
-      expect(stageForCanvasWidth(1135)).toBe('normal-2')
+      expect(stageForCanvasWidth(1159)).toBe('normal-2')
     })
 
     await it('places the measured canvas widths where the app showed them', async () => {
-      // Each of these was captured from the running editor and the pill
-      // widths read back off the pixels; see the PR body.
+      // Each of these was captured from the running editor. 660 was
+      // `compact` on the first ladder; GTK's own measure of the pills
+      // (`phone-chrome.probe.spec.ts`) moved that rung to 672.
       expect(stageForCanvasWidth(1300)).toBe('roomy')
       expect(stageForCanvasWidth(1000)).toBe('normal-2')
       expect(stageForCanvasWidth(780)).toBe('normal-1')
-      expect(stageForCanvasWidth(660)).toBe('compact')
+      expect(stageForCanvasWidth(680)).toBe('compact')
+      expect(stageForCanvasWidth(660)).toBe('tight')
       expect(stageForCanvasWidth(464)).toBe('tight')
       expect(stageForCanvasWidth(360)).toBe('tight')
     })

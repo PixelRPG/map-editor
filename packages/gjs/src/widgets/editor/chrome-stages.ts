@@ -22,8 +22,8 @@ export type ChromeLayout = 'wide' | 'phone'
 
 /**
  * Canvas width, in px, at which each rung starts: `STAGE_EDITING_PILL_PX`
- * plus a context pill WITH a roster in it (142 px) plus 32 px of margin
- * and gap, rounded up.
+ * plus a context pill WITH a roster in it (150 px) plus 32 px of margin
+ * and gap, rounded up to a multiple of 8.
  *
  * The with-roster case is the threshold rather than the solo one on
  * purpose. A solo session then reaches each rung ~42 px later than it
@@ -34,19 +34,22 @@ export type ChromeLayout = 'wide' | 'phone'
  * this for a roster wider than one avatar.
  *
  * These are NOT the design's numbers. Its §2.4 table derives them from
- * per-button arithmetic and lands low at every rung (604 vs 656, 664 vs
- * 704, 784 vs 856, 1124 vs 1136), because a labelled `Adw.Toggle` is
- * wider than an icon plus a word. `chrome-stages.spec.ts` refuses a rung
- * whose own pill cannot fit at its own threshold, which is how the drift
- * became visible; `scripts/check-chrome-stages.mjs` holds the `.blp`
- * conditions to these four numbers.
+ * per-button arithmetic and lands low at every rung (604 vs 672, 664 vs
+ * 720, 784 vs 856, 1124 vs 1160), because a labelled `Adw.Toggle` is
+ * wider than an icon plus a word. The first measured set (656 / 704 /
+ * 856 / 1136) was still 8 px low below `normal-2`: both pill tables were
+ * read 8 px short, so `phone-chrome.probe.spec.ts` now measures the pills
+ * with GTK and refuses a table that drifts. `chrome-stages.spec.ts`
+ * refuses a rung whose own pill cannot fit at its own threshold, and
+ * `scripts/check-chrome-stages.mjs` holds the `.blp` conditions to these
+ * four numbers.
  */
 export const STAGE_MIN_CANVAS_PX: Record<ChromeStage, number> = {
   tight: 0,
-  compact: 656,
-  'normal-1': 704,
+  compact: 672,
+  'normal-1': 720,
   'normal-2': 856,
-  roomy: 1136,
+  roomy: 1160,
 }
 
 /** The stage a canvas of `width` px lands in. */
@@ -59,8 +62,9 @@ export function stageForCanvasWidth(width: number): ChromeStage {
 }
 
 /**
- * How much of the canvas the context pill needs, measured: 100 px with
- * no roster, 142 px once one avatar is in it.
+ * How much of the canvas the context pill needs — its natural width as
+ * GTK measures it (`measure()`, the pill box without the handle's
+ * margin): 108 px with no roster, 150 px once one avatar is in it.
  *
  * The design's stage table sums a 100 px right pill at every rung and
  * never adds the roster. That is what made two rungs overlap in the real
@@ -68,27 +72,36 @@ export function stageForCanvasWidth(width: number): ChromeStage {
  * context pill 142, and 479 + 142 + 24 px of margins + an 8 px gap is
  * 653 — 33 px more than there is; at 784 px the same sum came to 938.
  * The roster is present whenever anyone else is in the session, the AI
- * assistant included, so it is not a rare case.
+ * assistant included, so it is not a rare case. Those first readings
+ * were themselves 8 px short of what GTK reports for the same pills;
+ * `phone-chrome.probe.spec.ts` keeps this table at the measured value.
  */
-export const CONTEXT_PILL_PX = { solo: 100, withRoster: 142 } as const
+export const CONTEXT_PILL_PX = { solo: 108, withRoster: 150 } as const
 
 /**
- * Width of the editing pill at each rung, MEASURED in the running app
- * (1280x800, the oot2d project, real text metrics) rather than derived
- * from the design's per-button arithmetic — which came out 5-20 % low at
- * every rung above `tight`, because a labelled `Adw.Toggle` is wider
- * than the sum of an icon and a word.
+ * Natural width of the editing pill at each rung — `measure()` on the
+ * pill box with the package stylesheet loaded and "Paint · Ground" as the
+ * brush sentence, the numbers `phone-chrome.probe.spec.ts` reads back —
+ * rather than derived from the design's per-button arithmetic, which
+ * came out 5-20 % low at every rung above `tight`, because a labelled
+ * `Adw.Toggle` is wider than the sum of an icon and a word.
  *
+ * The two labelled rungs vary with the font as well as the text (a
+ * "Select" is 9 px wider than a "Paint"; CI's font stack renders the
+ * sentence 8 px and the six verbs 14 px wider than this workstation's),
+ * so they are held ABOVE the widest reading: a table that is low lets a
+ * rung in whose pills then overlap, a table that is high delays it by
+ * pixels nobody sees. The probe holds the unsafe direction to 2 px.
  * Refresh these together whenever the pill gains or loses a control; the
  * fit rule below is what turns them into behaviour, and
  * `chrome-stages.spec.ts` checks the table stays monotonic.
  */
 export const STAGE_EDITING_PILL_PX: Record<ChromeStage, number> = {
-  tight: 256,
-  compact: 479,
-  'normal-1': 529,
-  'normal-2': 648,
-  roomy: 960,
+  tight: 264,
+  compact: 489,
+  'normal-1': 537,
+  'normal-2': 656,
+  roomy: 976,
 }
 
 /** What the two pills and the bar show, for one state of the chrome. */

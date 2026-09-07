@@ -5,7 +5,14 @@ import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
 
 import { BADGE_SIZES } from './brush-badge.geometry.ts'
-import { type ChromeStage, CHROME_STAGES, chromeFlags, CONTEXT_PILL_PX, effectiveStage } from './chrome-stages.ts'
+import {
+  type ChromeFlags,
+  type ChromeStage,
+  CHROME_STAGES,
+  chromeFlags,
+  CONTEXT_PILL_PX,
+  effectiveStage,
+} from './chrome-stages.ts'
 import { BrushBadge } from './brush-badge.ts'
 import { BrushPage } from './brush-page.ts'
 import { FloatingPlay } from './floating-play.ts'
@@ -363,8 +370,31 @@ export class SceneEditor extends Adw.Bin {
     // wider one. Before the first allocation `canvas` is 0, which lands
     // on `tight` — the right floor to start from.
     const stage = this._layout === 'phone' ? this._stage : effectiveStage(this._stage, canvas, contextPill)
-    const f = chromeFlags(stage, this._layout, this._playing)
+    this._applyFlags(chromeFlags(stage, this._layout, this._playing))
+  }
 
+  /**
+   * The editing pill's natural width at each rung, read off the real
+   * widget: each rung's wide-layout flags are applied, the pill measured,
+   * and the current state put back. It needs no canvas of any width —
+   * only a rooted widget, so its CSS resolves — which is what lets
+   * `phone-chrome.probe.spec.ts` check `STAGE_EDITING_PILL_PX` on any
+   * display. The ladder itself still reasons with that table; measuring
+   * here at startup and dropping the table is tracked in TODO.md.
+   */
+  measureEditingPillWidths(): Record<ChromeStage, number> {
+    const pill = this._editing_handle.get_child()
+    const widths = {} as Record<ChromeStage, number>
+    for (const stage of CHROME_STAGES) {
+      this._applyFlags(chromeFlags(stage, 'wide', false))
+      widths[stage] = pill?.measure(Gtk.Orientation.HORIZONTAL, -1)[1] ?? 0
+    }
+    this._applyVisibility()
+    return widths
+  }
+
+  /** Make one visible set real — every flag `chromeFlags` names, on its widget. */
+  private _applyFlags(f: ChromeFlags): void {
     this._editing_handle.set_visible(f.editingPill)
     this._back_circle.set_visible(f.backCircle)
     this._library_toggle.set_visible(f.libraryToggle)

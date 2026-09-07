@@ -5,17 +5,17 @@ import Gtk from '@girs/gtk-4.0'
 
 import packageStyle from '../../index.css'
 
+import type { ChromeStage } from './chrome-stages.ts'
 import { pumpUntil, solidPaintable, solidPaintableRect } from './pixel-probe.ts'
 import { RECENT_TILES_MAX } from './recent-tiles.geometry.ts'
 import { SceneEditor } from './scene-editor.ts'
 import type { TileDescriptor } from './tile-palette.ts'
 
 /**
- * Display-backed measurement of the scene editor's phone chrome, asked
- * of GTK itself — `measure()` and allocations — rather than read off
- * pixels.
+ * Display-backed measurement of the scene editor's chrome, asked of GTK
+ * itself — `measure()` and allocations — rather than read off pixels.
  *
- * It builds a real `PixelRpgSceneEditor` in phone layout at
+ * The phone half builds a real `PixelRpgSceneEditor` in phone layout at
  * the ladder's own floor width, gives the brush page and the recency
  * strip realistic content, and reports what every part asks for. The
  * defect this exists for: the sheet's Brush page pinned six 54 px
@@ -25,7 +25,9 @@ import type { TileDescriptor } from './tile-palette.ts'
  * 360 px window with the sheet closed. Nothing in the GTK-free tests
  * could see it, and the breakpoint guard only knows the wide pills.
  *
- * GTK-only; the spec loads this lazily.
+ * The wide half measures the editing pill's natural width at each rung,
+ * so `STAGE_EDITING_PILL_PX` is checked against the widget rather than
+ * remembered from a screenshot. GTK-only; the spec loads this lazily.
  */
 
 /** One widget's horizontal demand and what it actually got. */
@@ -52,6 +54,9 @@ export interface PhoneChromeReport {
     allWhole: boolean
   }
 }
+
+/** The sentence beside the badge that `STAGE_EDITING_PILL_PX` was measured with. */
+const BRUSH_SENTENCE = 'Paint · Ground'
 
 const TILE = { r: 60, g: 140, b: 80 }
 const OBJECT = { r: 200, g: 120, b: 40 }
@@ -158,4 +163,35 @@ export function probePhoneChrome(): PhoneChromeReport {
   }
   window.destroy()
   return result
+}
+
+/** Natural widths of the two wide-layout pills: the editing pill per rung, the context pill solo. */
+export interface PillWidths {
+  /** `_editing_pill` itself — the box the table names; its handle's 12 px margin is `PILL_MARGINS_PX`. */
+  editing: Record<ChromeStage, number>
+  /** `_context_pill` with no roster — `CONTEXT_PILL_PX.solo`. */
+  contextSolo: number
+}
+
+/**
+ * Measure both pills in the wide layout. The window's size does not
+ * matter — `measureEditingPillWidths` applies each rung's flags itself,
+ * so a display too small for the `roomy` canvas (Broadway's is) still
+ * yields every rung; the widget only has to be rooted for its CSS.
+ */
+export function probePillWidths(): PillWidths {
+  ensureStyles()
+  const editor = new SceneEditor()
+  editor.brushLabel = BRUSH_SENTENCE
+  const window = new Gtk.Window({ default_width: 1000, default_height: 700, decorated: false })
+  window.set_child(editor)
+  editor.setLayout('wide')
+  populate(editor)
+  window.present()
+  pumpUntil(() => editor.get_mapped(), 'wide chrome window')
+
+  const editing = editor.measureEditingPillWidths()
+  const contextSolo = editor._context_pill.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+  window.destroy()
+  return { editing, contextSolo }
 }
