@@ -49,6 +49,7 @@ import placementPickingSuite from './services/placement-picking.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
 import playerCharacterSuite from './services/player-character.spec.js'
 import regionGeometrySuite from './services/region-geometry.spec.js'
+import regionGraphicSuite from './services/region-graphic.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
@@ -111,6 +112,7 @@ run({
   placementPickingSuite,
   playerCharacterSuite,
   regionGeometrySuite,
+  regionGraphicSuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   tileEditTargetSuite,

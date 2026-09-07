@@ -18,10 +18,23 @@ import { computeRegionBounds, computeRegionOutline, computeRegionRuns, type Regi
  * hook on an actor with no graphic has zero-size bounds and gets
  * culled as soon as the actor's origin leaves the screen.
  *
- * Per frame only the runs and segments inside `visibleWorldBounds` are
+ * Per frame only the runs and segments inside the view's bounds are
  * drawn: kokiri-forest's heaviest region is 896 runs + 810 segments,
  * and at editor zoom the viewport covers a small fraction of them.
+ * The outline is `lineWidth` SCREEN pixels wide at any zoom — a fixed
+ * world width turns sub-pixel below zoom 1 (0.8 px at 0.4) and, without
+ * antialiasing, rasterises only where it happens to cover a pixel
+ * centre, so the border of a zoomed-out map came out dotted.
  */
+
+/** What the graphic reads about the camera on every draw. */
+export interface RegionView {
+  /** World-space rectangle on screen, or `null` to draw every primitive. */
+  readonly bounds: BoundingBox | null
+  /** Camera zoom (screen px per world px). */
+  readonly zoom: number
+}
+
 export interface RegionGraphicOptions {
   readonly cells: readonly GridCell[]
   readonly tileWidth: number
@@ -29,14 +42,15 @@ export interface RegionGraphicOptions {
   /** Translucent fill of every cell, or `null` for an outline-only shape. */
   readonly tintColor: Color | null
   readonly strokeColor: Color
+  /** Outline width in SCREEN pixels. */
   readonly lineWidth: number
   /**
-   * World-space rectangle currently on screen (the scene camera's
-   * viewport), read on every draw; `null` draws everything. The owner
-   * keeps {@link RegionGraphic.worldOrigin} in sync with the actor so
-   * the graphic can translate it into its own cell space.
+   * The camera's view, read on every draw; `null` draws everything at
+   * zoom 1. The owner keeps {@link RegionGraphic.worldOrigin} in sync
+   * with the actor so the graphic can translate the bounds into its own
+   * cell space.
    */
-  readonly visibleWorldBounds: () => BoundingBox | null
+  readonly view: () => RegionView | null
 }
 
 interface Rect {
@@ -104,8 +118,10 @@ export class RegionGraphic extends Graphic {
   }
 
   protected _drawImage(ctx: ExcaliburGraphicsContext, _x: number, _y: number): void {
-    const view = this.visibleCellRange()
-    const { tintColor, strokeColor, lineWidth } = this.options
+    const camera = this.options.view()
+    const view = this.visibleCellRange(camera?.bounds ?? null)
+    const { tintColor, strokeColor } = this.options
+    const lineWidth = this.options.lineWidth / (camera?.zoom || 1)
     if (tintColor) {
       for (const rect of this.rects) {
         if (view && (rect.row < view.top || rect.row >= view.bottom || rect.x1 <= view.left || rect.x0 >= view.right)) {
@@ -133,8 +149,9 @@ export class RegionGraphic extends Graphic {
    * right/bottom), or `null` to draw everything. Padded by one cell so
    * a stroke straddling the edge is never clipped away.
    */
-  private visibleCellRange(): { left: number; top: number; right: number; bottom: number } | null {
-    const world = this.options.visibleWorldBounds()
+  private visibleCellRange(
+    world: BoundingBox | null,
+  ): { left: number; top: number; right: number; bottom: number } | null {
     if (!world) return null
     const { tileWidth, tileHeight } = this.options
     return {

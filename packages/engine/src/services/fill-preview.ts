@@ -1,4 +1,4 @@
-import { Actor, type BoundingBox, Color, type Scene, type TileMap, Vector, vec } from 'excalibur'
+import { Actor, Color, type Scene, type TileMap, Vector, vec } from 'excalibur'
 import {
   ActiveLayerComponent,
   ActiveTileComponent,
@@ -11,7 +11,7 @@ import type { MapScene } from '../scenes/map.scene.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
 import type { GridCell } from './flood-fill.ts'
-import { RegionGraphic } from './region-graphic.ts'
+import { RegionGraphic, type RegionView } from './region-graphic.ts'
 import { resolveMapBounds } from './tile-edit-target.ts'
 import { resolveTileFillRegion } from './tile-fill.service.ts'
 import { findTileMapForLayer } from './tile-paint.service.ts'
@@ -166,7 +166,7 @@ function buildCache(target: FillTarget, region: GridCell[], scene: Scene): FillP
       tintColor: tint,
       strokeColor: Color.fromHex(EDITOR_CONSTANTS.FILL_PREVIEW_COLOR),
       lineWidth: EDITOR_CONSTANTS.HOVER_BORDER_LINE_WIDTH,
-      visibleWorldBounds: () => visibleWorldBounds(scene),
+      view: () => cameraView(scene),
     }),
   }
 }
@@ -210,7 +210,9 @@ function resolveFillTarget(scene: Scene): FillTarget | null {
   }
 }
 
-/** The camera's world-space viewport, or `null` off-engine (headless tests draw nothing anyway). */
-function visibleWorldBounds(scene: Scene): BoundingBox | null {
-  return scene.engine?.screen?.getWorldBounds() ?? null
+/** The camera's world-space viewport + zoom, or `null` off-engine (headless tests draw nothing anyway). */
+export function cameraView(scene: Scene): RegionView | null {
+  const screen = scene.engine?.screen
+  if (!screen) return null
+  return { bounds: screen.getWorldBounds(), zoom: scene.camera?.zoom || 1 }
 }

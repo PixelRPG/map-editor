@@ -3,6 +3,7 @@ import { ActiveLayerComponent, ActiveToolComponent, type MapEditorComponent, zFo
 import type { MapScene } from '../scenes/map.scene.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { cameraView } from './fill-preview.ts'
 import { getSpritesAt } from './map-editor-shadow.service.ts'
 import { RegionGraphic } from './region-graphic.ts'
 import { findTileMapForLayer } from './tile-paint.service.ts'
@@ -74,7 +75,7 @@ export function refreshEraserPreview(actor: Actor, scene: Scene, hover: EraserPr
   }
 
   const { x, y } = hover.coords
-  const graphics = ensureGraphics(actor, target.tileMap)
+  const graphics = ensureGraphics(actor, target.tileMap, scene)
   const erasing = getSpritesAt(target.editor, x, y, target.layerId).length > 0
   actor.graphics.use(erasing ? graphics.erasing : graphics.nothingToErase)
   actor.pos = new Vector(
@@ -110,15 +111,19 @@ function resolveEraserTarget(scene: Scene): EraserTarget | null {
   return { tileMap: found.tileMap, editor: found.editor, layerId }
 }
 
-function ensureGraphics(actor: Actor, tileMap: TileMap): EraserGraphics {
+function ensureGraphics(actor: Actor, tileMap: TileMap, scene: Scene): EraserGraphics {
   const cached = graphicsByActor.get(actor)
   if (cached && cached.tileWidth === tileMap.tileWidth && cached.tileHeight === tileMap.tileHeight) return cached
 
   const tint = Color.fromHex(EDITOR_CONSTANTS.ERASE_PREVIEW_COLOR)
   tint.a = EDITOR_CONSTANTS.ERASE_PREVIEW_TINT_ALPHA
   const cell = { cells: [{ x: 0, y: 0 }], tileWidth: tileMap.tileWidth, tileHeight: tileMap.tileHeight }
-  // A single cell needs no viewport culling.
-  const visibleWorldBounds = () => null
+  // A single cell needs no viewport culling, but the stroke still
+  // follows the zoom.
+  const view = () => {
+    const camera = cameraView(scene)
+    return camera ? { bounds: null, zoom: camera.zoom } : null
+  }
   const built: EraserGraphics = {
     tileWidth: tileMap.tileWidth,
     tileHeight: tileMap.tileHeight,
@@ -127,14 +132,14 @@ function ensureGraphics(actor: Actor, tileMap: TileMap): EraserGraphics {
       tintColor: tint,
       strokeColor: Color.fromHex(EDITOR_CONSTANTS.ERASE_PREVIEW_COLOR),
       lineWidth: EDITOR_CONSTANTS.HOVER_BORDER_LINE_WIDTH,
-      visibleWorldBounds,
+      view,
     }),
     nothingToErase: new RegionGraphic({
       ...cell,
       tintColor: null,
       strokeColor: Color.fromHex(EDITOR_CONSTANTS.ERASE_PREVIEW_EMPTY_COLOR),
       lineWidth: EDITOR_CONSTANTS.HOVER_BORDER_LINE_WIDTH,
-      visibleWorldBounds,
+      view,
     }),
   }
   graphicsByActor.set(actor, built)
