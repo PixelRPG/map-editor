@@ -24,9 +24,25 @@ export interface Rgb {
   b: number
 }
 
+/**
+ * Cached, because `Gtk.init_check()` does not give the same answer twice.
+ *
+ * On a headless runner the FIRST call returns `false` and every call
+ * after it returns `true` — measured with
+ * `GDK_BACKEND=nonexistent gjs -m` on this machine, and it is what broke
+ * CI the moment a second display-backed probe suite existed: the brush
+ * badge's spec asked first and skipped, the depth glyph's asked second,
+ * was told a display was there, tried to render into nothing and took
+ * the whole process down with no stack trace.
+ *
+ * One question, one answer, for the life of the process.
+ */
+let displayAvailable: boolean | null = null
+
 /** Whether a display is reachable — `false` headless (CI), `true` on a workstation. */
 export function hasDisplay(): boolean {
-  return Gtk.init_check()
+  if (displayAvailable === null) displayAvailable = Gtk.init_check()
+  return displayAvailable
 }
 
 /** The directory named by `envVar` to drop rendered PNGs into, or `null`. */
