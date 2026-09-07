@@ -35,17 +35,23 @@ const EMITTER_HOOK_COUNT = 8
  * `Engine` widget, and nothing else. Records which hooks were opened so
  * a test can assert on the set rather than on eight separate flags.
  */
-function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string } = {}) {
+function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string; holdProjectLoad?: Promise<void> } = {}) {
   const opened: string[] = []
   const loadedMaps: string[] = []
+  const loadedProjects: string[] = []
   let currentMapId: string | null = null
   let undoListener: UndoListener | null = null
   const engine = {
     excalibur: {},
+    unusable: false,
     initialize: async () => {},
     // Mirrors the real engine: the project's `startup.initialMapId` is
-    // activated as part of loading the project.
-    loadProject: async () => {
+    // activated as part of loading the project, and the load takes time
+    // — `holdProjectLoad` is the window a second bring-up used to slip
+    // into.
+    loadProject: async (path: string) => {
+      loadedProjects.push(path)
+      if (options.holdProjectLoad) await options.holdProjectLoad
       currentMapId = options.startupMapId ?? null
     },
     get currentMapId() {
@@ -94,10 +100,16 @@ function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string } 
     },
     /** Every map id handed to `loadMap`, in order. */
     loadedMaps,
+    /** Every project path handed to `loadProject`, in order. */
+    loadedProjects,
     /** Simulate the engine reporting an undo-stack change. */
     reportUndoState: (state: { canUndo: boolean; canRedo: boolean }) => undoListener?.(state),
     get undoHookAttached() {
       return undoListener !== null
+    },
+    /** Simulate the widget having been disposed or failed to start. */
+    markUnusable: () => {
+      engine.unusable = true
     },
   }
 }
@@ -173,6 +185,82 @@ export default async function () {
       await controller.ensureForMap('/project.json', 'tree-house')
 
       expect(fake.loadedMaps.join(',')).toBe('tree-house')
+    })
+
+    await it('runs one project load when two opens overlap', async () => {
+      // The defect: `SceneNavigator.open` starts hydration with `void
+      // this._hydrate(…)`, so a second map open lands inside the first
+      // one's awaits. Both then read `_projectPath === null` and both
+      // call `loadProject` — and two `excalibur.start()` calls on one
+      // Excalibur engine deadlock, so NEITHER finishes, no map is ever
+      // loaded, and both hydration chains hang with nothing thrown.
+      let release!: () => void
+      const held = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const fake = makeFakeEngine({ startupMapId: 'kokiri-forest', holdProjectLoad: held })
+      const controller = makeController(fake)
+
+      const first = controller.ensureForMap('/project.json', 'kokiri-forest')
+      const second = controller.ensureForMap('/project.json', 'tree-house')
+      release()
+      await Promise.all([first, second])
+
+      expect(fake.loadedProjects.length).toBe(1)
+    })
+
+    await it('creates one engine when two opens overlap', async () => {
+      // The other half: while the first bring-up waits for its canvas,
+      // the widget has no Excalibur instance yet. A liveness probe of
+      // `!engine.excalibur` reads that as "dead", so the second call
+      // used to dispose a perfectly healthy engine mid-start — and the
+      // first call's `loadProject` then waited on a `ready` signal that
+      // widget would never emit.
+      let release!: () => void
+      const held = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const first = makeFakeEngine({ startupMapId: 'kokiri-forest', holdProjectLoad: held })
+      const second = makeFakeEngine({ startupMapId: 'kokiri-forest' })
+      const controller = makeController(first, second)
+
+      const a = controller.ensureForMap('/project.json', 'kokiri-forest')
+      const b = controller.ensureForMap('/project.json', 'kokiri-forest')
+      release()
+      await Promise.all([a, b])
+
+      expect(second.totalHooks).toBe(0)
+      expect(controller.engine).toBe(first.widget)
+    })
+
+    await it('loads the second map exactly once when two opens overlap', async () => {
+      let release!: () => void
+      const held = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const fake = makeFakeEngine({ startupMapId: 'kokiri-forest', holdProjectLoad: held })
+      const controller = makeController(fake)
+
+      const a = controller.ensureForMap('/project.json', 'kokiri-forest')
+      const b = controller.ensureForMap('/project.json', 'tree-house')
+      release()
+      await Promise.all([a, b])
+
+      // The queued call sees a cache that tells the truth: the project
+      // load already put kokiri-forest up, so only the switch remains.
+      expect(fake.loadedMaps.join(',')).toBe('tree-house')
+    })
+
+    await it('replaces an engine that reports itself unusable', async () => {
+      const dead = makeFakeEngine()
+      const fresh = makeFakeEngine()
+      const controller = makeController(dead, fresh)
+      await controller.ensureForMap('/project.json', 'kokiri-forest')
+
+      dead.markUnusable()
+      await controller.ensureForMap('/project.json', 'kokiri-forest')
+
+      expect(controller.engine).toBe(fresh.widget)
     })
 
     await it('does not re-attach a hook on a second ensureForMap', async () => {

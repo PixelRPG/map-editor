@@ -1,5 +1,6 @@
 import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
 import type { Engine } from '@pixelrpg/gjs'
+import { SerialQueue } from './serial-queue.ts'
 import { TypedEmitter } from './typed-emitter.ts'
 import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 
@@ -154,6 +155,8 @@ export class EngineController {
    * plain "did I subscribe?" boolean.)
    */
   private readonly _hookSubs: Array<{ close(): void }> = []
+  /** Bring-up runs one at a time — see {@link ensureForMap}. */
+  private readonly _queue = new SerialQueue()
 
   /**
    * @param slot        where the engine widget gets mounted.
@@ -184,9 +187,32 @@ export class EngineController {
    * Ensure the engine is alive, attached to the host slot, and has the
    * requested project + map loaded. Recreates the engine if the
    * cached wrapper has lost its Excalibur instance.
+   *
+   * Calls are SERIALISED — a second one queues behind the first instead
+   * of interleaving with it. Every caller arrives through
+   * `SceneNavigator.open`, which starts hydration with `void
+   * this._hydrate(…)`, so two map opens in quick succession (an atlas
+   * double-click, two `win.open-scene-by-id` in a row) used to run
+   * concurrently over `_engine`, `_projectPath` and `_mapId`. Both then
+   * read `_projectPath === null`, both called `loadProject`, and two
+   * `excalibur.start()` calls on one Excalibur engine deadlock: neither
+   * loader ever reaches `afterload`, so no map is ever loaded and BOTH
+   * hydration chains hang forever with no error to report. The editor
+   * sits on an empty scene for the rest of the session. Serialising is
+   * what makes the cache checks below mean anything.
    */
-  async ensureForMap(projectPath: string, mapId: string): Promise<void> {
-    if (this._engine && !this._engine.excalibur) {
+  ensureForMap(projectPath: string, mapId: string): Promise<void> {
+    return this._queue.run(() => this._bringUp(projectPath, mapId))
+  }
+
+  private async _bringUp(projectPath: string, mapId: string): Promise<void> {
+    // `unusable`, not `!excalibur`: the widget assigns its Excalibur
+    // instance only once the GLArea has realised, so `!excalibur` is
+    // also true for an engine that is merely still starting. Tearing
+    // THAT down is how a second bring-up used to kill a healthy
+    // in-flight one. `unusable` means disposed or failed — the two
+    // states a rebuild is the right answer to.
+    if (this._engine?.unusable) {
       this.dispose()
     }
 
