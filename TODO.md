@@ -114,17 +114,13 @@ Conventions:
   no unit test; its user-visible half is covered by `engine-controller.spec.ts` and by
   `scripts/smoke-open-map.mjs`. Fixing this needs the node target to either stub `document` or
   stop pulling Excalibur's browser singletons in through the loader. *owner: engine + tooling*
-- **Promote the open-a-map smoke check to a required CI gate** — `scripts/smoke-open-map.mjs`
-  starts the built maker, opens a shipped project and a map, and asserts the editor comes up able
-  to edit it (`view`, `enginePresent`, `engineReady`, `currentSceneId` AND `activeLayer` — the
-  last is load-bearing: `engineReady` was true in every run of the scenario that was broken). It
-  is the only check in the tree that starts the app; the nine guards above and the five unit
-  suites were all green while opening a map intermittently left the editor on an empty scene. The
-  CI job exists but runs `continue-on-error: true` because its environment (a compositor +
-  software GL inside `fedora:44`) has not been proven on a real runner yet. Flip it to blocking
-  once it has a green streak; if `weston --backend=headless-backend.so` turns out not to come up
-  either, the fallback is `Xvfb` + `--socket=fallback-x11`. Harness + traps:
-  `scripts/smoke/README.md`. *owner: tooling*
+- **Extend the open-a-map smoke check beyond opening a map** — `scripts/smoke-open-map.mjs` is
+  CI-gated and is the only check in the tree that starts the app (the nine guards above and the
+  five unit suites were all green while opening a map intermittently left the editor on an empty
+  scene). It covers one flow: open a project, open a map, assert the editor can edit it. Worth
+  adding next, each cheap on top of the running app: painting a tile and asserting the map data
+  changed; undo/redo round-tripping; leaving and re-entering the scene editor (the engine
+  teardown/rebuild path). Harness + rig traps: `scripts/smoke/README.md`. *owner: tooling*
 - **Simple view — what the tier does not reach yet** — the tier itself shipped (`ui-tier` GSettings key, `app.full-view`, the filtered inspectors, the count row, the Library banner; [`docs/concepts/entity-and-appearance-model.md`](docs/concepts/entity-and-appearance-model.md) § Simple view and Full view). Still open: (a) a collaborator's tier on the awareness `presence` frame so the roster chip can read "Mia · Simple view" — one optional `AwarenessPeerInfo` field, never on the op-log; (b) the Play FAB's Test / Launch-game arrow bound to `full-view` once those run modes have a surface (`runtime-modes.md`); (c) a guard that walks every `.blp` and asserts each `visible: bind template.full-view` sits on a row, a button or a group of rows, never on a container holding a whole alternative page (the "no widget class instantiated in only one tier" rule — today the Game page's Tile-settings group is the only group-level binding). *owner: maker + gjs*
 - **The signalling-server test suite leaks a process per run** — every
   `gjsify foreach test --include @pixelrpg/signalling-server` invocation leaves a `signalling-server`

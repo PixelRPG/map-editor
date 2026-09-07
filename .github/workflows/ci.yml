@@ -373,24 +373,25 @@ jobs:
   smoke:
     name: open a map (headless app smoke check)
     runs-on: ubuntu-latest
-    # Its OWN job, deliberately, and `continue-on-error` until it has a
-    # green streak.
+    # Its OWN job, deliberately, and it BLOCKS.
     #
     # This is the only check in the repo that STARTS the app. Nine
     # structural guards and five unit suites were green while opening a
     # map intermittently left the editor on an empty scene for the whole
     # session, because every one of them inspects shape and none of them
-    # asks whether the thing runs. That gap is what this closes.
+    # asks whether the thing runs. That gap is what this closes, and a
+    # `continue-on-error` gate would reproduce exactly the pattern it
+    # exists to remove.
     #
-    # It is separate from `build` so that an environment flake — a
+    # It is separate from `build` so an environment failure — a
     # compositor that will not start, a GL stack that will not init —
-    # cannot block a PR that has nothing to do with it, and
-    # `continue-on-error: true` because the environment below has been
-    # proven on a workstation but not yet on a real runner. Flip it to
-    # blocking once the log shows it passing consistently; TODO.md tracks
-    # that. If weston turns out not to come up here either, the fallback
-    # is Xvfb plus `--socket=fallback-x11`.
-    continue-on-error: true
+    # names itself instead of arriving as a mystery inside a ten-minute
+    # build. If weston ever stops coming up here, the fallback is Xvfb
+    # plus `--socket=fallback-x11`; do NOT reach for `continue-on-error`.
+    #
+    # Verified to discriminate, which is the part that makes it a gate:
+    # against the pre-fix build it exits 1 with "no active layer — the
+    # editor has no paint target".
     timeout-minutes: 25
     container:
       image: fedora:44

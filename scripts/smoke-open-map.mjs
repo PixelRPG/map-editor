@@ -199,7 +199,11 @@ async function once(index, logDir) {
     } catch {
       // already gone
     }
-    logFile.end()
+    // AWAIT the flush. Ending the stream without waiting left the caller
+    // reading a file the pipe had not written yet, so a failing run
+    // printed an empty app log — the one artifact that says what went
+    // wrong.
+    await new Promise((resolve) => logFile.end(resolve))
   }
 }
 
