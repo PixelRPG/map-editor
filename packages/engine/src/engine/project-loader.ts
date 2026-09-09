@@ -34,6 +34,13 @@ export interface MapLoadOptions {
 export interface ProjectLoaderHost {
   readonly excalibur: ExcaliburEngine
   readonly events: EventEmitter<EngineEventMap>
+  /**
+   * Clear colour for maps that declare no `backgroundColor` of their own.
+   * The GJS host paints its scratchpad backdrop here because GLArea alpha
+   * compositing is unreliable on that stack; the browser host leaves it
+   * `Color.Transparent` so the page behind the canvas shows through.
+   */
+  readonly backdropColor: Color
   setStatus(status: EngineStatus): void
   /** Play state of the CURRENT scene, read before a switch is performed. */
   isRuntimeMode(): boolean
@@ -54,6 +61,17 @@ export class ProjectLoader {
   private readonly logger = Logger.getInstance()
   private resource: GameProjectResource | null = null
   private activeMapId: string | null = null
+  private _activeMapBackgroundColor: string | null = null
+
+  /**
+   * The `backgroundColor` the ACTIVE map declares, or null when it
+   * declares none. The engine reads it so a later backdrop change (a
+   * light/dark theme flip on the host) repaints only the maps that are
+   * showing the backdrop rather than overriding a map's own colour.
+   */
+  public get activeMapBackgroundColor(): string | null {
+    return this._activeMapBackgroundColor
+  }
   /**
    * The startup-map load kicked off from the loader's `afterload` event.
    *
@@ -185,11 +203,15 @@ export class ProjectLoader {
     // go through Excalibur's `Rectangle` Raster (2D-canvas rasterise),
     // which the GJS canvas path doesn't survive — the clear colour is
     // pure GL and also matches the original-game semantic (fill the
-    // screen, tiles on top). Reset to transparent for maps without one
-    // so the editor backdrop shows through.
-    this.host.excalibur.backgroundColor = mapResource.mapData.backgroundColor
-      ? Color.fromHex(mapResource.mapData.backgroundColor)
-      : Color.Transparent
+    // screen, tiles on top). A map without one falls back to the HOST's
+    // backdrop colour, NOT to `Color.Transparent`: Excalibur's
+    // `Color.Transparent` is white at alpha 0, so on any host where the
+    // canvas cannot composite its alpha (GTK's GLArea) the area around
+    // the map clears to opaque WHITE instead of the editor backdrop.
+    this._activeMapBackgroundColor = mapResource.mapData.backgroundColor ?? null
+    this.host.excalibur.backgroundColor = this._activeMapBackgroundColor
+      ? Color.fromHex(this._activeMapBackgroundColor)
+      : this.host.backdropColor
 
     // Re-entry drops the stale scene instance so the room rebuilds fresh
     // from data, and the switch is AWAITED so the engine is actually

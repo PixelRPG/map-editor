@@ -105,7 +105,12 @@ export class CharacterPreview extends Adw.Bin {
             'Frame size',
             'Width + height of the square preview frame in pixels',
             GObject.ParamFlags.READWRITE,
-            64,
+            // 32, not 64: the cast roster's list rows use a 40 px avatar
+            // (`roster-row.blp`). GObject rejects an out-of-range property
+            // value, so a 64 px floor did not clamp the row to 64 — it
+            // dropped the assignment with a `GLib-GObject-CRITICAL` and
+            // left the row at the 160 px DEFAULT, four times too large.
+            32,
             512,
             160,
           ),

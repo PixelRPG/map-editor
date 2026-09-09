@@ -154,11 +154,24 @@ export class SessionService {
   startBrowsing(): void {
     if (this.state.kind !== 'idle' && this.state.kind !== 'browsing') return
     if (this.state.kind === 'browsing') return
-    this.backend.startBrowsing((event) => {
-      const outcome = applyDiscoveryEvent(this.discoveredByRoom, event)
-      if (outcome.kind === 'discovered') this.emit('service-discovered', outcome.service)
-      else this.emit('service-gone', outcome.serviceName)
-    })
+    try {
+      this.backend.startBrowsing((event) => {
+        const outcome = applyDiscoveryEvent(this.discoveredByRoom, event)
+        if (outcome.kind === 'discovered') this.emit('service-discovered', outcome.service)
+        else this.emit('service-gone', outcome.serviceName)
+      })
+    } catch (err) {
+      // Discovery needs `avahi-browse` on PATH; plenty of systems (a
+      // stock postmarketOS phone image, a minimal container) do not ship
+      // it. Browsing is an optional convenience — the Welcome view shows
+      // an empty "Sessions on this network" pane and hosting / joining by
+      // room id still work — so a missing daemon must not reach the GJS
+      // toplevel as an unhandled exception, which is what it did before.
+      // State stays `idle`, so a later retry is not blocked by a
+      // `browsing` state that nothing is backing.
+      log.warn('LAN discovery unavailable — continuing without it', err)
+      return
+    }
     this.wasBrowsing = true
     this.setState({ kind: 'browsing' })
   }

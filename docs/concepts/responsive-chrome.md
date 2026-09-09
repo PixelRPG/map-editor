@@ -521,11 +521,44 @@ The fixes that turned out to matter:
 | `welcome-view.blp` recents column | Inner `Gtk.ScrolledWindow` gets `min-content-width: 1`. Dropped the `width-request: 320` floor on the recents column                                                                 | #60 |
 | `application-window.blp` ViewStack | `hhomogeneous: false` + `vhomogeneous: false`. Default `true` measures **every page** and uses the max as the stack's size — the scene editor's WebGL canvas leaked into the atlas view's layout | #55 |
 | `brush-page.blp` palettes | `wrap: true` + `wrap-cap: 6` instead of `columns: 6`. `Adw.BottomSheet`'s page and bottom bar share one homogeneous `Gtk.Stack` (not ours to configure), so the closed sheet's minimum is the page's: six pinned 54 px columns were 378 px, and the ladder's `Adw.BreakpointBin` — which ignores its child's minimum — allocated the whole editor 18 px past a 360 px window. Caught by `phone-chrome.probe.spec.ts`, not by any log anyone read | this PR |
+| `action-direction-matrix.ts` cells | `ellipsize: END` + `max-width-chars: 18` on the per-cell "N frames · Σms" caption. The grid is `column-homogeneous` over five columns, so one ~112 px unbreakable caption set a 5 × 112 + 4 × 8 = 592 px floor — 640 px with the detail pane's margins. Ellipsized, the cell's floor is its 48 px thumbnail | this PR |
+| `cast-view.blp` detail pane | `Adw.BreakpointBin` (`max-width: 420sp`) stacks `detail_header` (180 px preview + a `title-1` name that cannot wrap mid-word = 357 px) and `detail_actions` (two labelled pills = 352 px), and drops the preview to 128 px. The pane's `hscrollbar-policy: never` propagates its minimum straight to the window, so before this the WHOLE cast detail was clipped at 360 px, not scrolled | this PR |
+| `atlas-view.blp` bottom OSDs | `Adw.BreakpointBin` scoped to the canvas hides the centred `legend_chip` below 624 px and drops `new_scene_fab` to its icon below 400 px. The zoom pill (233 px), legend (110 px) and FAB (103 px) are three independently aligned overlay children of one `Gtk.Overlay` — nothing made them aware of each other, so at 360 px the legend rendered underneath the other two | this PR |
 
 If you add a new view: keep its minimum-size profile in mind.
 A `min-content-width: 1` on the outermost ScrolledWindow is
 usually all that's needed. Validate by dragging the window to
 360 px and watching the log.
+
+---
+
+## Touch input on the canvas
+
+Touch is handled by `@gjsify/event-bridge`, not by this repo.
+
+`Gtk.EventControllerMotion` — which the bridge derives
+`pointermove`/`mousemove` from — is driven only by the logical pointer;
+a finger produces `GDK_TOUCH_UPDATE`, never `GDK_MOTION_NOTIFY`.
+Measured on a OnePlus 6 (postmarketOS, GTK 4.22): a touch-drag session
+produced 935 touch updates and **0** motion signals, against 42
+`GestureClick::pressed`. Without a touch path the canvas therefore got
+a press and a release with nothing in between, so
+`PointerGestureSystem` never crossed `DRAG_THRESHOLD_PX`,
+`CameraControlSystem` never received `POINTER_DRAG_MOVE`, and the map
+could not be panned by finger. Tapping to paint still worked, which is
+why it reads as "panning is broken" rather than "touch is broken".
+
+gjsify solved this upstream in `feat(event-bridge): a finger is a
+pointer too` (#1591): an `Gtk.EventControllerLegacy` feeds a
+`TouchPointerTranslator` that emits one Pointer Events Level 3 stream
+per contact, with touch contacts numbered from `pointerId` 2 so they
+never collide with the mouse's 1.
+
+**That commit is not in a published tag yet.** `@gjsify/event-bridge`
+0.48.0 — what npm serves — contains no touch code at all. Until a
+release carries it, a checkout that needs finger-panning has to link
+the package from a local gjsify tree; see the repo README's
+troubleshooting note.
 
 ---
 

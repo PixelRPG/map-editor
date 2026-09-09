@@ -56,6 +56,7 @@ export class Engine {
   public readonly events = new EventEmitter<EngineEventMap>()
 
   public readonly excalibur: ExcaliburEngine
+  private _backdropColor: Color = Color.Transparent
   private readonly logger = Logger.getInstance()
 
   private readonly assistant: AssistantPresenceController
@@ -69,6 +70,28 @@ export class Engine {
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
     return this.loader.gameProjectResource
+  }
+
+  /**
+   * Clear colour painted wherever the loaded map declares no
+   * `backgroundColor` of its own — i.e. the area around the map.
+   *
+   * Hosts that can composite the canvas's alpha (the browser runtime)
+   * leave this at the `Color.Transparent` default and let their own
+   * backdrop show through. The GTK host sets its scratchpad colour here
+   * instead, because a `Gtk.GLArea` does not reliably keep the alpha
+   * channel — and Excalibur's `Color.Transparent` is WHITE at alpha 0,
+   * so dropping the alpha turns the surround opaque white.
+   */
+  public get backdropColor(): Color {
+    return this._backdropColor
+  }
+
+  public set backdropColor(colour: Color) {
+    this._backdropColor = colour
+    // A map that declares its own colour keeps it; only the maps showing
+    // the backdrop repaint, so a live theme flip cannot overwrite map data.
+    if (!this.loader.activeMapBackgroundColor) this.excalibur.backgroundColor = colour
   }
 
   constructor(canvas: HTMLCanvasElement) {
@@ -98,6 +121,9 @@ export class Engine {
     })
 
     const activeScene = () => this.activeMapScene()
+    // The loader host is an object literal, so its getter cannot use
+    // `this` to reach the engine.
+    const self = this
 
     // The assistant-presence subsystem reads the active scene + camera from
     // the engine and builds its cursor renderer bound to this engine.
@@ -112,6 +138,9 @@ export class Engine {
     this.loader = new ProjectLoader({
       excalibur: this.excalibur,
       events: this.events,
+      get backdropColor(): Color {
+        return self._backdropColor
+      },
       setStatus: (status) => this.setStatus(status),
       isRuntimeMode: () => this.isRuntimeMode(),
     })

@@ -30,6 +30,16 @@ template $Engine : Adw.Bin {
     hscrollbar-policy: external;
     vscrollbar-policy: external;
 
+    // This wrapper exists ONLY to detach the canvas's minimum size; it must
+    // never scroll. Kinetic scrolling defaults to on and installs a
+    // single-touch pan gesture that claims one-finger drags before they
+    // reach the canvas — measured on a touchscreen as "one finger paints,
+    // two fingers pan", because a `GtkGestureSingle` bails out on the
+    // second contact and lets that sequence through. The editor's own
+    // model is the opposite: `PointerGestureSystem` makes a one-finger
+    // drag a camera pan and keeps painting on tap.
+    kinetic-scrolling: false;
+
     child: Gtk.Box canvasContainer {
       vexpand: true;
       hexpand: true;

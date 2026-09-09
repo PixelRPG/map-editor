@@ -20,6 +20,11 @@ export const EDITOR_CONSTANTS = {
   // imperceptibly-small viewport).
   ZOOM_STEP: 0.2,
   MIN_ZOOM: 0.1,
+  // Pinch-zoom's ceiling. The wheel has none because a notch moves zoom
+  // by a fixed 0.2 and a user stops when the view looks right; a pinch
+  // multiplies, so two fingers crossing the screen can ask for 20x in one
+  // gesture and strand the user in a viewport showing four tiles.
+  MAX_ZOOM: 8,
 
   // `TileEditorSystem.resolveLayerId`: fallback id when the active
   // layer is unset and the map has no `layers[0]` to fall back on.

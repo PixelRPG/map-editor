@@ -129,112 +129,143 @@ template $CastView : $PixelRpgLibraryPage {
 
             Gtk.StackPage {
               name: "info";
-              child: Gtk.ScrolledWindow {
-                hexpand: true;
-                vexpand: true;
-                hscrollbar-policy: never;
+              // Measures the DETAIL PANE, not the window — at desktop the
+              // pane is only part of the split, so keying the reflow to
+              // the window would keep the wide layout in a narrow pane.
+              //
+              // `hscrollbar-policy: never` below propagates the child's
+              // minimum straight up to the window, so anything that cannot
+              // shrink here clips the whole page rather than scrolling.
+              child: Adw.BreakpointBin detail_breakpoint {
+                width-request: 240;
+                height-request: 240;
 
-                child: Adw.Clamp {
-                  maximum-size: 640;
-                  tightening-threshold: 460;
+                Adw.Breakpoint {
+                  condition ("max-width: 420sp")
 
-                  child: Gtk.Box {
-                    orientation: vertical;
-                    spacing: 18;
-                    margin-top: 24;
-                    margin-bottom: 24;
-                    margin-start: 24;
-                    margin-end: 24;
+                  setters {
+                    detail_header.orientation: vertical;
+                    detail_actions.orientation: vertical;
+                    detail_actions.halign: fill;
+                    preview.frame-size: 128;
+                  }
+                }
 
-                    // Header row: preview card + identity (name/subtitle).
-                    // Stats + actions live in full-width rows below so the
-                    // detail reflows cleanly on phone (no horizontal run-off).
-                    Gtk.Box {
-                      orientation: horizontal;
-                      spacing: 24;
+                child: Gtk.ScrolledWindow {
+                  hexpand: true;
+                  vexpand: true;
+                  hscrollbar-policy: never;
 
-                      $PixelRpgCharacterPreview preview {
-                        frame-size: 180;
-                        valign: start;
-                      }
+                  child: Adw.Clamp {
+                    maximum-size: 640;
+                    tightening-threshold: 460;
 
-                      Gtk.Box {
-                        orientation: vertical;
-                        spacing: 6;
-                        hexpand: true;
-                        valign: center;
+                    child: Gtk.Box {
+                      orientation: vertical;
+                      spacing: 18;
+                      margin-top: 24;
+                      margin-bottom: 24;
+                      margin-start: 24;
+                      margin-end: 24;
+
+                      // Header row: preview card + identity (name/subtitle).
+                      // Stats + actions live in full-width rows below so the
+                      // detail reflows cleanly on phone (no horizontal run-off).
+                      //
+                      // Side by side this row measured 357 px minimum (a
+                      // 180 px preview + 24 px gap + a `title-1` name, which
+                      // cannot wrap mid-word), so `detail_breakpoint` stacks
+                      // it and shrinks the preview below 420 px.
+                      Gtk.Box detail_header {
+                        orientation: horizontal;
+                        spacing: 24;
+
+                        $PixelRpgCharacterPreview preview {
+                          frame-size: 180;
+                          valign: start;
+                        }
 
                         Gtk.Box {
-                          orientation: horizontal;
-                          spacing: 10;
+                          orientation: vertical;
+                          spacing: 6;
+                          hexpand: true;
+                          valign: center;
 
-                          Gtk.Label detail_name {
+                          Gtk.Box {
+                            orientation: horizontal;
+                            spacing: 10;
+
+                            Gtk.Label detail_name {
+                              halign: start;
+                              xalign: 0;
+                              wrap: true;
+                              hexpand: true;
+                              styles ["title-1"]
+                            }
+
+                            Gtk.Label detail_player_badge {
+                              label: _("Player character");
+                              valign: center;
+                              visible: false;
+                              styles ["caption-heading", "accent"]
+                            }
+                          }
+
+                          Gtk.Label detail_subtitle {
                             halign: start;
                             xalign: 0;
                             wrap: true;
-                            hexpand: true;
-                            styles ["title-1"]
-                          }
-
-                          Gtk.Label detail_player_badge {
-                            label: _("Player character");
-                            valign: center;
-                            visible: false;
-                            styles ["caption-heading", "accent"]
+                            styles ["dim-label"]
                           }
                         }
+                      }
 
-                        Gtk.Label detail_subtitle {
-                          halign: start;
-                          xalign: 0;
-                          wrap: true;
-                          styles ["dim-label"]
+                      // 2×2 read-only stat summary (full width).
+                      Gtk.Grid stat_grid {
+                        column-spacing: 10;
+                        row-spacing: 10;
+                        column-homogeneous: true;
+                      }
+
+                      // Two labelled pills side by side measured 352 px —
+                      // they do not fit a 360 px window either, so the same
+                      // breakpoint stacks them.
+                      Gtk.Box detail_actions {
+                        orientation: horizontal;
+                        halign: start;
+                        spacing: 10;
+
+                        // A door into Graphics, which Simple view does not
+                        // have: Full view only. In Simple view the picker
+                        // above is how a character changes its look.
+                        Gtk.Button edit_appearance_button {
+                          label: _("Edit appearance");
+                          visible: bind template.full-view;
+                          styles ["suggested-action", "pill"]
+                        }
+
+                        Gtk.Button place_button {
+                          label: _("Place on map");
+                          styles ["pill"]
                         }
                       }
-                    }
 
-                    // 2×2 read-only stat summary (full width).
-                    Gtk.Grid stat_grid {
-                      column-spacing: 10;
-                      row-spacing: 10;
-                      column-homogeneous: true;
-                    }
+                      // Editable fields (name / appearance / player / speed).
+                      $PixelRpgCastInspector inspector {}
 
-                    Gtk.Box {
-                      orientation: horizontal;
-                      halign: start;
-                      spacing: 10;
-
-                      // A door into Graphics, which Simple view does not
-                      // have: Full view only. In Simple view the picker
-                      // above is how a character changes its look.
-                      Gtk.Button edit_appearance_button {
-                        label: _("Edit appearance");
-                        visible: bind template.full-view;
-                        styles ["suggested-action", "pill"]
+                      // Animation authoring — the Action×Direction matrix
+                      // (moved here from the Sheets view). Reads the
+                      // character's sheet animations; a cell drives the
+                      // preview, double-click edits its frames.
+                      $PixelRpgActionDirectionMatrix matrix {
+                        margin-top: 8;
                       }
 
-                      Gtk.Button place_button {
-                        label: _("Place on map");
-                        styles ["pill"]
+                      // Progressive disclosure: raw "all components" editor.
+                      Gtk.Box advanced_slot {
+                        orientation: vertical;
                       }
-                    }
-
-                    // Editable fields (name / appearance / player / speed).
-                    $PixelRpgCastInspector inspector {}
-
-                    // Animation authoring — the Action×Direction matrix
-                    // (moved here from the Sheets view). Reads the
-                    // character's sheet animations; a cell drives the
-                    // preview, double-click edits its frames.
-                    $PixelRpgActionDirectionMatrix matrix {
-                      margin-top: 8;
-                    }
-
-                    // Progressive disclosure: raw "all components" editor.
-                    Gtk.Box advanced_slot {
-                      orientation: vertical;
-                    }
+                    };
                   };
                 };
               };

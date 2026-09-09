@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import Pango from '@girs/pango-1.0'
 import { type CharacterAnimation, type CharacterDefinition, REQUIRED_ROLES } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
@@ -233,7 +234,24 @@ export class ActionDirectionMatrix extends Adw.Bin {
       const frames = n === 1 ? _('1 frame') : _('%n frames').replace('%n', String(n))
       caption = `${frames} · ${ms} ms`
     }
-    box.append(new Gtk.Label({ label: caption, cssClasses: ['caption', 'dim-label'] }))
+    box.append(
+      new Gtk.Label({
+        label: caption,
+        cssClasses: ['caption', 'dim-label'],
+        // Ellipsize, or this caption sets the cell's minimum width. The
+        // grid is `columnHomogeneous` over five columns, so a
+        // "8 frames · 800 ms" caption (~112 px unbreakable) made the
+        // matrix demand 5 × 112 + 4 × 8 = 592 px — 640 with the detail
+        // pane's margins. In a 360 px window `Gtk.ScrolledWindow`'s
+        // `hscrollbar-policy: never` propagates that minimum all the way
+        // to the window, so libadwaita clipped the WHOLE cast detail
+        // (title, stat tiles and inspector ran off the right edge) and
+        // logged `AdwToastOverlay exceeds ApplicationWindow width`.
+        // Ellipsized, the cell's floor is the 48 px thumbnail instead.
+        ellipsize: Pango.EllipsizeMode.END,
+        maxWidthChars: 18,
+      }),
+    )
     return box
   }
 

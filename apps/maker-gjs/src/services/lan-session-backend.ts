@@ -45,8 +45,10 @@ export class LanSessionBackend implements SessionBackend {
       browser.start(onEvent)
       this.browser = browser
     } catch (err) {
-      // `avahi-browse` missing → silently skip (Welcome view falls
-      // back to an empty "Sessions on this network" pane).
+      // `avahi-browse` missing → surface to the caller, which decides.
+      // `SessionService.startBrowsing` catches this and stays idle so the
+      // Welcome view falls back to an empty "Sessions on this network"
+      // pane instead of the process taking an unhandled exception.
       this.browser = null
       throw err
     }

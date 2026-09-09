@@ -67,66 +67,106 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
           }
         }
 
-        content: Gtk.Overlay {
-          // Overview minimap — whole-world-at-a-glance, top-right OSD.
-          // The `.osd` Bin supplies the floating-chrome background; the
-          // AtlasOverview inside draws scene rects + the viewport frame.
-          [overlay]
-          Adw.Bin overview_frame {
-            halign: end;
-            valign: start;
-            margin-top: 12;
-            margin-end: 12;
-            width-request: 150;
-            height-request: 100;
-            styles ["osd", "atlas-overview-frame"]
+        // The bin measures the CANVAS, not the window, because the three
+        // bottom OSDs have to fit the space left between the sidebars —
+        // the same reason `scene-editor.blp` scopes its ladder here.
+        //
+        // Without it all three were laid out unconditionally and, at the
+        // 360 px the phone tier actually gets, the start-aligned zoom
+        // pill (233 px), the centred legend chip (110 px) and the
+        // end-aligned "New map" FAB (103 px) summed past the window: the
+        // legend ended up printed underneath the other two.
+        content: Adw.BreakpointBin {
+          width-request: 360;
+          height-request: 400;
 
-            child: $PixelRpgAtlasOverview atlas_overview {};
-          }
+          // Only ONE breakpoint applies (adw-breakpoint-bin.c iterates in
+          // reverse and breaks on the first match), so each declares its
+          // full set and the narrower one is declared last to win.
+          //
+          // The legend is centred, so it clears the start pill only from
+          // 12 + 233 + 8 + 110/2 doubled ≈ 616 px of canvas.
+          Adw.Breakpoint {
+            condition ("max-width: 623sp")
 
-          [overlay]
-          $PixelRpgFloatingFab new_scene_fab {
-            halign: end;
-            valign: end;
-            margin-end: 12;
-            margin-bottom: 12;
-            label: _("New map");
-            icon-name: "list-add-symbolic";
-            action-name: "win.new-scene";
-            tooltip-text: _("Create a new map");
-          }
-
-          // Legend chip — bottom-center OSD explaining the teleport edges.
-          [overlay]
-          Gtk.Box legend_chip {
-            halign: center;
-            valign: end;
-            margin-bottom: 12;
-            spacing: 6;
-            styles ["osd", "toolbar", "atlas-legend"]
-
-            Gtk.Image {
-              icon-name: "mail-send-symbolic";
-            }
-
-            Gtk.Label {
-              label: _("Teleport");
-              styles ["caption"]
+            setters {
+              legend_chip.visible: false;
             }
           }
 
-          // Same zoom pill as the scene editor (fires win.zoom-*);
-          // in the atlas the window routes those actions to the
-          // global card-preview zoom instead of the engine camera.
-          [overlay]
-          $PixelRpgFloatingZoom preview_zoom {
-            halign: start;
-            valign: end;
-            margin-start: 12;
-            margin-bottom: 12;
+          // Below 400 px even the two pills collide (12 + 233 + 8 + 103 +
+          // 12 = 368), so the FAB drops to its icon. Its tooltip and the
+          // `+` glyph carry the meaning.
+          Adw.Breakpoint {
+            condition ("max-width: 399sp")
+
+            setters {
+              legend_chip.visible: false;
+              new_scene_fab.label: "";
+            }
           }
 
-          child: $PixelRpgAtlasCanvas atlas {};
+          child: Gtk.Overlay {
+            // Overview minimap — whole-world-at-a-glance, top-right OSD.
+            // The `.osd` Bin supplies the floating-chrome background; the
+            // AtlasOverview inside draws scene rects + the viewport frame.
+            [overlay]
+            Adw.Bin overview_frame {
+              halign: end;
+              valign: start;
+              margin-top: 12;
+              margin-end: 12;
+              width-request: 150;
+              height-request: 100;
+              styles ["osd", "atlas-overview-frame"]
+
+              child: $PixelRpgAtlasOverview atlas_overview {};
+            }
+
+            [overlay]
+            $PixelRpgFloatingFab new_scene_fab {
+              halign: end;
+              valign: end;
+              margin-end: 12;
+              margin-bottom: 12;
+              label: _("New map");
+              icon-name: "list-add-symbolic";
+              action-name: "win.new-scene";
+              tooltip-text: _("Create a new map");
+            }
+
+            // Legend chip — bottom-center OSD explaining the teleport edges.
+            [overlay]
+            Gtk.Box legend_chip {
+              halign: center;
+              valign: end;
+              margin-bottom: 12;
+              spacing: 6;
+              styles ["osd", "toolbar", "atlas-legend"]
+
+              Gtk.Image {
+                icon-name: "mail-send-symbolic";
+              }
+
+              Gtk.Label {
+                label: _("Teleport");
+                styles ["caption"]
+              }
+            }
+
+            // Same zoom pill as the scene editor (fires win.zoom-*);
+            // in the atlas the window routes those actions to the
+            // global card-preview zoom instead of the engine camera.
+            [overlay]
+            $PixelRpgFloatingZoom preview_zoom {
+              halign: start;
+              valign: end;
+              margin-start: 12;
+              margin-bottom: 12;
+            }
+
+            child: $PixelRpgAtlasCanvas atlas {};
+          };
         };
       };
     };

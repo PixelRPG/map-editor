@@ -1,6 +1,6 @@
 {
   "id": "kokiri-forest",
-  "name": "kokiri-forest",
+  "name": "Kokiri Forest",
   "version": "1.0.0",
   "tileWidth": 16,
   "tileHeight": 16,
@@ -124873,7 +124873,7 @@
     }
   ],
   "editorData": {
-    "atlasX": 75,
-    "atlasY": 130
+    "atlasX": 112,
+    "atlasY": 128
   }
 }

@@ -15,10 +15,11 @@ import {
   type LayerPlane,
   type ProjectLoadOptions,
 } from '@pixelrpg/engine'
-import { Color, EventEmitter, type Subscription } from 'excalibur'
+import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
 import { forwardEngineEvents } from './engine-events.ts'
+import { attachPinchZoom } from './pinch-zoom.ts'
 import { EngineUnavailableError } from './engine-unavailable.error.ts'
 import Template from './engine.blp'
 
@@ -396,6 +397,33 @@ export class Engine extends Adw.Bin {
   }
 
   /**
+   * Set the camera zoom while holding the world point under
+   * (`screenX`, `screenY`) — widget-local pixels — in place.
+   *
+   * A camera whose `pos` is the viewport centre maps screen to world as
+   * `pos + (screen − half) / zoom`. Keeping one world point fixed across
+   * a zoom change therefore shifts `pos` by that offset times the
+   * difference of the two reciprocals — no dependency on Excalibur's
+   * per-frame camera transform, which has not been recomputed yet at the
+   * moment this runs.
+   */
+  public zoomAboutPoint(zoom: number, screenX: number, screenY: number): void {
+    const camera = this._excalibur?.excalibur?.currentScene?.camera
+    const widget = this._widget
+    if (!camera || !widget) return
+    const previous = camera.zoom
+    if (!(previous > 0) || !(zoom > 0) || previous === zoom) {
+      if (camera) camera.zoom = zoom
+      return
+    }
+    camera.zoom = zoom
+    const offsetX = screenX - widget.get_allocated_width() / 2
+    const offsetY = screenY - widget.get_allocated_height() / 2
+    const reciprocalDelta = 1 / previous - 1 / zoom
+    camera.pos = new Vector(camera.pos.x + offsetX * reciprocalDelta, camera.pos.y + offsetY * reciprocalDelta)
+  }
+
+  /**
    * Subscribe to camera-zoom changes. The callback fires after every
    * engine update tick. Returns `true` if the subscription was
    * registered, `false` if the engine wasn't running yet.
@@ -442,8 +470,12 @@ export class Engine extends Adw.Bin {
     const update = () => {
       const dark = styleManager.dark
       const colour = dark ? SCRATCHPAD_BG_DARK : SCRATCHPAD_BG_LIGHT
-      const excalibur = this._excalibur?.excalibur
-      if (excalibur) excalibur.backgroundColor = colour
+      // Set the ENGINE's backdrop, not Excalibur's clear colour directly:
+      // every map load rewrites the clear colour, so a direct write only
+      // held until the first map opened and the surround then cleared to
+      // Excalibur's `Color.Transparent` — which is white at alpha 0.
+      const engine = this._excalibur
+      if (engine) engine.backdropColor = colour
     }
     update()
     // Track future theme switches; released in `_teardown`. Drop any
@@ -471,6 +503,11 @@ export class Engine extends Adw.Bin {
     widget.installGlobals()
     this._canvasContainer.append(widget)
     this._widget = widget
+
+    // Two fingers scale the map. One-finger drags stay with the camera
+    // pan in `CameraControlSystem`; see `pinch-zoom.ts` for why the two
+    // do not fight.
+    attachPinchZoom(widget, this)
 
     widget.onReady(async (canvas: HTMLCanvasElement) => {
       // Defer the focus grab out of the engine-init render burst.
