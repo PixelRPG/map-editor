@@ -263,6 +263,17 @@ jobs:
         # spec file is missing from its package's test.mts.
         run: node scripts/check-spec-registration.mjs
 
+      - name: Verify the node-test window shim is the first import
+        # `@pixelrpg/engine`'s node-test-globals defines `window` for
+        # excalibur's module-init polyfill, and only works as the FIRST import
+        # of a test entry — ESM runs every imported body before the importing
+        # one, so anywhere else it lands after the excalibur body and the node
+        # leg dies at load. The inline-shim version of this sat at the top of
+        # the engine's test.mts and could never fire; nothing caught it until
+        # gjsify 0.53 stopped defining `window` for `--app node`. Fails if an
+        # entry drops the import or moves it off first position.
+        run: node scripts/check-test-globals.mjs
+
       - name: Verify every declared gjsify asset path exists
         # package.json#gjsify blocks (flatpak/ship/storybook) name source
         # assets by path. Nothing checked that they resolve, so the maker
