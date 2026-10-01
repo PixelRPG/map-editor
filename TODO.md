@@ -67,7 +67,7 @@ Conventions:
 
 ## Cleanup / debt
 
-- **Repo guards — nine scripts in `scripts/`, all CI-gated.** Each exists because the bug class it
+- **Repo guards — ten scripts in `scripts/`, all CI-gated.** Each exists because the bug class it
   covers had already shipped; add the mechanism with the fix, not just the fix.
   - `check-spec-registration.mjs` — a spec not passed to `run()` in its package's `test.mts` never
     runs while CI stays green.
@@ -90,6 +90,11 @@ Conventions:
     `STAGE_MIN_CANVAS_PX` must carry the same four numbers, in ascending order; nothing in
     TypeScript can see a Blueprint condition, so a threshold changed on one side only left the
     two OSD pills overlapping at a window size nobody happened to try.
+  - `check-test-globals.mjs` — `@pixelrpg/engine`'s `node-test-globals` must be the FIRST import
+    of a test entry; ESM runs every imported body before the importing one, so anywhere else it
+    lands after the Excalibur body that needs `window` and the node leg dies at load. The inline
+    version of this shim sat at the top of the engine's `test.mts` and could never fire, which
+    only stayed hidden because gjsify 0.53 stopped defining `window` for `--app node` (#300).
 - **The engine's node test leg breaks if `project-loader.ts` enters its graph** — a spec that
   imports `ProjectLoader` pulls Excalibur's full bundle into the node target, and
   `DisconnectGrace › fires once the window elapses` then fails with `document is not defined`
@@ -100,7 +105,7 @@ Conventions:
   `scripts/smoke-open-map.mjs`. Fixing this needs the node target to either stub `document` or
   stop pulling Excalibur's browser singletons in through the loader. *owner: engine + tooling*
 - **Extend the open-a-map smoke check beyond opening a map** — `scripts/smoke-open-map.mjs` is
-  CI-gated and is the only check in the tree that starts the app (the nine guards above and the
+  CI-gated and is the only check in the tree that starts the app (the ten guards above and the
   five unit suites were all green while opening a map intermittently left the editor on an empty
   scene). It covers one flow: open a project, open a map, assert the editor can edit it. Worth
   adding next, each cheap on top of the running app: painting a tile and asserting the map data
