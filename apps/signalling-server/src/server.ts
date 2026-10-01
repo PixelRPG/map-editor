@@ -61,6 +61,7 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
   // GJS's setInterval has no unref(); Node's polyfill returns a
   // Timeout with one. Cast keeps both runtimes happy without
   // pulling node:timers.
+  // fixed upstream in gjsify: #1950 Timeout.unref
   const maybeUnref = sweep as unknown as { unref?: () => void }
   maybeUnref.unref?.()
 
