@@ -18,6 +18,22 @@ const DIRECTIONS: { id: string; glyph: string; label: () => string }[] = [
 const CELL_THUMB = 48
 
 /**
+ * Typed view of the signals {@link ActionDirectionMatrix} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ActionDirectionMatrixSignals extends Adw.Bin.SignalSignatures {
+  'animation-selected': (animationId: string) => void
+  'edit-animation-requested': (animationId: string) => void
+  'add-animation-requested': () => void
+  'delete-animation-requested': (animationId: string) => void
+}
+
+/**
  * Action×Direction animation matrix — the design's replacement for the
  * flat 8-row {@link AnimationList} (soll-character). A `Gtk.Grid` with a
  * direction header row and one row per action (Idle / Walk); every cell
@@ -55,6 +71,10 @@ export class ActionDirectionMatrix extends Adw.Bin {
       ActionDirectionMatrix,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ActionDirectionMatrixSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ActionDirectionMatrixSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ActionDirectionMatrixSignals>['emit']
 
   constructor() {
     super()

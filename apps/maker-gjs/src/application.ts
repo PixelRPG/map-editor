@@ -17,6 +17,19 @@ import { ThemeService } from './services/theme.service.ts'
 import { UiTierService } from './services/ui-tier.service.ts'
 import { ApplicationWindow, PreferencesDialog } from './widgets/index.ts'
 
+/**
+ * Typed view of the signals {@link Application} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ApplicationSignals extends Adw.Application.SignalSignatures {
+  'pixelrpg-intent': (action: string, target: string) => void
+}
+
 export class Application extends Adw.Application {
   /**
    * Intent extracted from a `pixelrpg://...` URL invocation on launch
@@ -64,6 +77,10 @@ export class Application extends Adw.Application {
       Application,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ApplicationSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ApplicationSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ApplicationSignals>['emit']
 
   constructor() {
     // PIXELRPG_INSTANCE (set only by the devtools orchestrator) gives this
@@ -241,6 +258,22 @@ export class Application extends Adw.Application {
       fullViewAction.set_state(GLib.Variant.new_boolean(this.uiTierService.fullView))
     })
     this.add_action(fullViewAction)
+  }
+
+  /**
+   * The maker's own window, typed.
+   *
+   * `Gio.Application.active_window` is `Gtk.Window`, because that is all
+   * `Adw.Application` promises — but this app only ever installs an
+   * {@link ApplicationWindow} (see `vfunc_activate`). `control-dbus.service`
+   * needs that narrower type to reach the Control methods, and since
+   * `@girs` 5 typed the signals on it, the plain `as` downcast no longer
+   * compiles. Narrowing HERE says where the fact comes from; a cast in
+   * the reader would only say that it read.
+   */
+  get makerWindow(): ApplicationWindow | null {
+    const window = this.active_window
+    return window instanceof ApplicationWindow ? window : null
   }
 
   vfunc_activate() {

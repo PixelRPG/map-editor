@@ -12,9 +12,11 @@ import { run } from '@gjsify/unit'
 import brushBadgeProbeSuite from './widgets/editor/brush-badge.probe.spec.js'
 import depthGlyphProbeSuite from './widgets/editor/depth-glyph.probe.spec.js'
 import phoneChromeProbeSuite from './widgets/editor/phone-chrome.probe.spec.js'
+import signalScopeSuite from './utils/signal-scope.spec.js'
 
 run({
   brushBadgeProbeSuite,
   depthGlyphProbeSuite,
   phoneChromeProbeSuite,
+  signalScopeSuite,
 })

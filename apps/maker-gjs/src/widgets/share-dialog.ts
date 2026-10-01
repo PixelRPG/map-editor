@@ -15,6 +15,21 @@ export type SharePresentationState =
   | { kind: 'connected'; shareUrl: string; peerLabel: string }
 
 /**
+ * Typed view of the signals {@link ShareDialog} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ShareDialogSignals extends Adw.Dialog.SignalSignatures {
+  'share-requested': () => void
+  'stop-requested': () => void
+  'copy-link-requested': () => void
+}
+
+/**
  * Modal dialog that walks the user through Pair-Editing hosting.
  *
  * Two visible states — `idle` (call-to-action to start sharing) and
@@ -80,6 +95,10 @@ export class ShareDialog extends Adw.Dialog {
       ShareDialog,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ShareDialogSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ShareDialogSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ShareDialogSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()

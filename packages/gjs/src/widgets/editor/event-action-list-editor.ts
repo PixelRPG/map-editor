@@ -30,6 +30,20 @@ const FACING_OPTIONS = (): RowOption[] => [
 ]
 
 /**
+ * Typed view of the signals {@link EventActionListEditor} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface EventActionListEditorSignals extends Adw.PreferencesGroup.SignalSignatures {
+  'data-changed': (dataJson: string) => void
+  'remove-requested': () => void
+}
+
+/**
  * Friendly editor for an entity's ordered `actions` list (the event
  * "page" body) — a drop-in replacement for the generic
  * {@link ComponentInspector} JSON field when the component type is
@@ -63,6 +77,10 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
       EventActionListEditor,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, EventActionListEditorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, EventActionListEditorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, EventActionListEditorSignals>['emit']
 
   constructor() {
     super({ title: _('Actions') })

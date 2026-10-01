@@ -119,6 +119,19 @@ export class AvatarStack extends Gtk.Widget {
 }
 
 /**
+ * Typed view of the signals {@link RosterChip} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface RosterChipSignals extends Gtk.MenuButton.SignalSignatures {
+  'participant-activated': (peerId: string) => void
+}
+
+/**
  * The participants pill: an avatar stack that opens the roster.
  *
  * It replaces the bottom-left `FloatingCollaborators` bar, which cost
@@ -172,6 +185,10 @@ export class RosterChip extends Gtk.MenuButton {
       RosterChip,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, RosterChipSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, RosterChipSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, RosterChipSignals>['emit']
 
   constructor() {
     super()

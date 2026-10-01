@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { type ModeRail, SignalScope } from '@pixelrpg/gjs'
+import { type EditorMode, type ModeRail, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
@@ -82,7 +82,7 @@ export class GameView extends ResponsiveEditorView {
   vfunc_map(): void {
     super.vfunc_map()
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) =>
-      this.emit('mode-changed', mode),
+      this.emit('mode-changed', mode as EditorMode),
     )
     this.signals.connect(this._name_row, 'apply', () => this._emitField('name', this._name_row.get_text()))
     this.signals.connect(this._author_row, 'apply', () => this._emitField('author', this._author_row.get_text()))

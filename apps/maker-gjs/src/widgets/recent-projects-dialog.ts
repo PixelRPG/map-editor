@@ -7,6 +7,19 @@ import { buildRecentProjectRow } from './recent-project-row.ts'
 import Template from './recent-projects-dialog.blp'
 
 /**
+ * Typed view of the signals {@link RecentProjectsDialog} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface RecentProjectsDialogSignals extends Adw.Dialog.SignalSignatures {
+  'recent-selected': (projectPath: string) => void
+}
+
+/**
  * The primary menu's "Open Recent": the persisted recent-projects list as
  * a dialog, so it is reachable while a project is open. The welcome
  * view's recents column renders the same rows ({@link buildRecentProjectRow}).
@@ -34,6 +47,10 @@ export class RecentProjectsDialog extends Adw.Dialog {
       RecentProjectsDialog,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, RecentProjectsDialogSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, RecentProjectsDialogSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, RecentProjectsDialogSignals>['emit']
 
   /** Replace the list; an empty array keeps the built-in placeholder row. */
   setRecentProjects(recents: RecentProjectEntry[]): void {

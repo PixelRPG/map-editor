@@ -13,6 +13,25 @@ export interface CastSheetChoice {
 }
 
 /**
+ * Typed view of the signals {@link CastInspector} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface CastInspectorSignals extends Adw.Bin.SignalSignatures {
+  'name-changed': (name: string) => void
+  'player-changed': (isPlayer: boolean) => void
+  'speed-changed': (tilesPerSec: number) => void
+  'duration-changed': (durationMs: number) => void
+  'sheet-changed': (spriteSetId: string) => void
+  'sheet-renamed': (name: string) => void
+  'edit-appearance-requested': () => void
+}
+
+/**
  * Right-pane inspector for the Cast view. Shows the selected
  * character's metadata + the selected animation's duration. Edits
  * are emitted as signals — the host applies the mutation against
@@ -76,6 +95,10 @@ export class CastInspector extends Adw.Bin {
       CastInspector,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, CastInspectorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, CastInspectorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, CastInspectorSignals>['emit']
 
   constructor() {
     super()

@@ -48,6 +48,19 @@ GObject.type_ensure(CastInspector.$gtype)
 GObject.type_ensure(ActionDirectionMatrix.$gtype)
 
 /**
+ * Typed view of the signals {@link CastView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface CastViewSignals extends Adw.Bin.SignalSignatures {
+  'character-entity-changed': (entityJson: string) => void
+}
+
+/**
  * The Library's **Characters** page — a characters-only lens (the
  * friendly hero / NPC roster) as an `Adw.NavigationSplitView`
  * **master-detail**: a filterable character LIST on the left, a rich
@@ -151,6 +164,10 @@ export class CastView extends LibraryPage {
       CastView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, CastViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, CastViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, CastViewSignals>['emit']
 
   private _advancedEditor = new EntityComponentsEditor()
   private _silentAdvanced = false

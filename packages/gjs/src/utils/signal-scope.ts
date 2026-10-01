@@ -1,4 +1,4 @@
-import type GObject from '@girs/gobject-2.0'
+import GObject from '@girs/gobject-2.0'
 
 /**
  * Tracks GObject signal connections for symmetric connect/disconnect across
@@ -14,7 +14,12 @@ export class SignalScope {
 
   // biome-ignore lint/suspicious/noExplicitAny: GObject signal handlers have heterogeneous signatures; the scope deliberately accepts any tuple here, callers cast or use specific types at the call site.
   connect<T extends GObject.Object>(source: T, signal: string, handler: (...args: any[]) => void): void {
-    const id = source.connect(signal, handler)
+    // The scope's whole point is that ONE helper connects signals whose
+    // names differ per call site, so the name arrives as data and the
+    // typed `connect` cannot accept it. `@girs` 5 deleted the permissive
+    // string overload that used to, so this goes through the dynamic
+    // entry point instead of casting — same runtime call, one fewer lie.
+    const id = GObject.signal_connect(source, signal, handler)
     this.bindings.push({ source, id })
   }
 
@@ -33,7 +38,7 @@ export class SignalScope {
    */
   connectUntil<T extends GObject.Object>(source: T, signal: string, handler: () => boolean): void {
     const binding = { source, id: 0 }
-    binding.id = source.connect(signal, () => {
+    binding.id = GObject.signal_connect(source, signal, () => {
       if (!handler()) return
       // Drop the tracked binding first: disconnecting a handler from
       // inside its own emission is fine, but a later `disconnectAll()`

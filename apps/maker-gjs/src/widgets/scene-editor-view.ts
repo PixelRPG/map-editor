@@ -23,7 +23,7 @@ import {
 } from '@pixelrpg/gjs'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
-import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 import Template from './scene-editor-view.blp'
 import { paintableFor } from './scene-editor/object-descriptors.ts'
 import { wireLayersTab, wireObjectsTab, wirePropsTab, wireTilesTab } from './scene-editor/inspector-wiring.ts'
@@ -53,6 +53,20 @@ const TOOL_LABELS: Record<EditorTool, string> = {
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(SceneEditor.$gtype)
 GObject.type_ensure(RightInspector.$gtype)
+
+/**
+ * Typed view of the signals {@link SceneEditorView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface SceneEditorViewSignals extends ResponsiveEditorViewSignals {
+  'persist-requested': () => void
+  'object-removed': () => void
+}
 
 /**
  * Maker-app **Scene Editor** view.
@@ -160,6 +174,10 @@ export class SceneEditorView extends ResponsiveEditorView {
       SceneEditorView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, SceneEditorViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SceneEditorViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SceneEditorViewSignals>['emit']
 
   constructor() {
     super()

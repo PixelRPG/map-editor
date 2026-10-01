@@ -27,6 +27,19 @@ const KNOB_HEIGHT = 6
 const ACCENT_FALLBACK = '#3584e4'
 
 /**
+ * Typed view of the signals {@link AnimationTimeline} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface AnimationTimelineSignals extends Gtk.Widget.SignalSignatures {
+  scrubbed: (position: number) => void
+}
+
+/**
  * A ruler + scrubbing playhead for the animation editor's frame sequence —
  * the `soll-anim-editor` timeline lane. Draws the sequence as time-
  * proportional segments (a 400 ms frame is twice as wide as a 200 ms one),
@@ -63,6 +76,10 @@ export class AnimationTimeline extends Gtk.Widget {
       AnimationTimeline,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, AnimationTimelineSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, AnimationTimelineSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, AnimationTimelineSignals>['emit']
 
   constructor() {
     super()

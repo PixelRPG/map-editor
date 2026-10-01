@@ -10,7 +10,6 @@
 // the GJS runtime runs.
 import { run } from '@gjsify/unit'
 
-import signalScopeSuite from './utils/signal-scope.spec.js'
 import addAnimationDialogModelSuite from './widgets/cast/add-animation-dialog.model.spec.js'
 import animationSequenceSuite from './widgets/cast/animation-sequence.spec.js'
 import animationTimelineGeometrySuite from './widgets/cast/animation-timeline.geometry.spec.js'
@@ -54,7 +53,6 @@ run({
   recentTilesGeometrySuite,
   sceneCardDragSuite,
   sceneInspectorModelSuite,
-  signalScopeSuite,
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
   tilePaletteGeometrySuite,

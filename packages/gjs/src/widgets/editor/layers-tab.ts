@@ -34,6 +34,23 @@ export interface LayerDescriptor {
 type LayerBoxRow = Gtk.ListBoxRow & { layerId?: string }
 
 /**
+ * Typed view of the signals {@link LayersTab} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface LayersTabSignals extends Adw.Bin.SignalSignatures {
+  'layer-selected': (layerId: string) => void
+  'layer-visibility-toggled': (layerId: string, visible: boolean) => void
+  'layer-lock-toggled': (layerId: string, locked: boolean) => void
+  'layer-move-requested': (layerId: string, targetId: string, targetIndex: number) => void
+  'objects-visibility-toggled': (visible: boolean) => void
+}
+
+/**
  * Inspector's "Layers" tab: three fixed {@link LayerSection}s — Above
  * the hero / At hero height / Below the hero — each a `boxed-list` of
  * {@link LayerRow}s in draw order (top row draws on top), a footer "New
@@ -99,6 +116,10 @@ export class LayersTab extends Adw.Bin {
       LayersTab,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, LayersTabSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, LayersTabSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, LayersTabSignals>['emit']
 
   constructor() {
     super()

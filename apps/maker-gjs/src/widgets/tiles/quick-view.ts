@@ -27,6 +27,19 @@ export interface AppearanceGlance {
 }
 
 /**
+ * Typed view of the signals {@link TilesQuickView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface TilesQuickViewSignals extends Adw.Bin.SignalSignatures {
+  'edit-requested': () => void
+}
+
+/**
  * The Graphics page's desktop quick-view sidebar — one read-only glance
  * shared by both galleries. Purely presentational: the view says WHICH
  * glance to show, and the edit button surfaces as `edit-requested` so
@@ -68,6 +81,10 @@ export class TilesQuickView extends Adw.Bin {
       TilesQuickView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, TilesQuickViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, TilesQuickViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, TilesQuickViewSignals>['emit']
 
   constructor() {
     super()

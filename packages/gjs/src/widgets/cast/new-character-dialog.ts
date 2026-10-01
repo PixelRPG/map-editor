@@ -22,6 +22,21 @@ export interface NewCharacterDraft {
 }
 
 /**
+ * Typed view of the signals {@link NewCharacterDialog} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface NewCharacterDialogSignals extends Adw.Dialog.SignalSignatures {
+  'character-created': (draft: NewCharacterDraft) => void
+  'import-spriteset-requested': () => void
+  'spriteset-activated': (spriteSetId: string) => void
+}
+
+/**
  * Dialog for creating a new {@link CharacterDefinition}. Collects the
  * name, type (hero / NPC), whether it's the player, the sprite set, and
  * the movement speed. The sprite set can be one already in the project
@@ -78,6 +93,10 @@ export class NewCharacterDialog extends Adw.Dialog {
       NewCharacterDialog,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, NewCharacterDialogSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, NewCharacterDialogSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, NewCharacterDialogSignals>['emit']
 
   constructor() {
     super()

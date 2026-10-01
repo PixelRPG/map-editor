@@ -16,7 +16,7 @@ import {
 } from '@pixelrpg/gjs'
 
 import Template from './atlas-view.blp'
-import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 
 GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
@@ -24,6 +24,22 @@ GObject.type_ensure(SceneInspector.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
 GObject.type_ensure(AtlasOverview.$gtype)
+
+/**
+ * Typed view of the signals {@link AtlasView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
+  'scene-opened': (sceneId: string) => void
+  'scene-selected': (sceneId: string) => void
+  'scene-moved': (sceneId: string, x: number, y: number) => void
+  'preview-moved': (sceneId: string, centerX: number, centerY: number) => void
+}
 
 /**
  * Maker-app **Atlas** view — composes the mode rail, atlas canvas, and
@@ -82,6 +98,10 @@ export class AtlasView extends ResponsiveEditorView {
       AtlasView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, AtlasViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, AtlasViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, AtlasViewSignals>['emit']
 
   constructor() {
     super()

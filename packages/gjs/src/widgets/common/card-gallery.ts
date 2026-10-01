@@ -11,6 +11,23 @@ import Template from './card-gallery.blp'
 GObject.type_ensure(GalleryCard.$gtype)
 
 /**
+ * Typed view of the signals {@link CardGallery} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface CardGallerySignals extends Adw.Bin.SignalSignatures {
+  'item-activated': (id: string) => void
+  'item-opened': (id: string) => void
+  'rename-requested': (id: string) => void
+  'delete-requested': (id: string) => void
+  'reorder-requested': (draggedId: string, targetId: string) => void
+}
+
+/**
  * Reusable, responsive grid of Adwaita cards — the single visual
  * vocabulary the Cast view (characters) and the Tiles view (tilesets)
  * share for listing their project entities. Each card ({@link GalleryCard})
@@ -112,6 +129,10 @@ export class CardGallery extends Adw.Bin {
       CardGallery,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, CardGallerySignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, CardGallerySignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, CardGallerySignals>['emit']
 
   constructor() {
     super()

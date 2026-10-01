@@ -27,6 +27,20 @@ interface FieldRow {
 }
 
 /**
+ * Typed view of the signals {@link ComponentInspector} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ComponentInspectorSignals extends Adw.PreferencesGroup.SignalSignatures {
+  'data-changed': (dataJson: string) => void
+  'remove-requested': () => void
+}
+
+/**
  * Inspector for ONE component — an `Adw.PreferencesGroup` whose rows are
  * **generated from the component spec's {@link FieldDescriptor}s** (no
  * hand-built template). Each `input` maps to an Adwaita row; edits emit
@@ -78,6 +92,10 @@ export class ComponentInspector extends Adw.PreferencesGroup {
       ComponentInspector,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ComponentInspectorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ComponentInspectorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ComponentInspectorSignals>['emit']
 
   get fullView(): boolean {
     return this._fullView

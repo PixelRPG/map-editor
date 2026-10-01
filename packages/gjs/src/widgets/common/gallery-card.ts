@@ -71,6 +71,26 @@ export interface GalleryCardLabels {
 }
 
 /**
+ * Typed view of the signals {@link GalleryCard} registers, layered on
+ * `Gtk.Overlay`'s own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own
+ * signals now has to spell them out — `SignalMethods` refines the
+ * inherited method rather than replacing it at run time.
+ */
+export interface GalleryCardSignals extends Gtk.Overlay.SignalSignatures {
+  activated: () => void
+  opened: () => void
+  'rename-requested': () => void
+  'delete-requested': () => void
+  /** Pointer entered (`true`) or left (`false`) the card. */
+  'hover-changed': (hovered: boolean) => void
+  /** A card was dropped onto this one; payload is the dragged id. */
+  'reorder-requested': (draggedId: string) => void
+}
+
+/**
  * One card in a {@link CardGallery}: a `card`-styled `Gtk.Button` (the
  * whole card is the click target) inside a `Gtk.Overlay` so the
  * three-dots action menu can float in the top-right corner. The overlay
@@ -115,6 +135,10 @@ export class GalleryCard extends Gtk.Overlay {
       GalleryCard,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, GalleryCardSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, GalleryCardSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, GalleryCardSignals>['emit']
 
   constructor(item: GalleryCardItem, labels: GalleryCardLabels, preview: Gtk.Widget | null) {
     super()
@@ -255,14 +279,14 @@ export class GalleryCard extends Gtk.Overlay {
    */
   private _buildMenuButton(): Gtk.MenuButton {
     const group = new Gio.SimpleActionGroup()
-    const addAction = (name: string, signal: string) => {
+    const addAction = (name: string, emit: () => void) => {
       const action = new Gio.SimpleAction({ name })
-      action.connect('activate', () => this.emit(signal))
+      action.connect('activate', emit)
       group.add_action(action)
     }
-    addAction('open', 'opened')
-    if (this._item.renamable) addAction('rename', 'rename-requested')
-    if (this._item.deletable) addAction('delete', 'delete-requested')
+    addAction('open', () => this.emit('opened'))
+    if (this._item.renamable) addAction('rename', () => this.emit('rename-requested'))
+    if (this._item.deletable) addAction('delete', () => this.emit('delete-requested'))
     this._populateMenu()
 
     const menu = this._menu
