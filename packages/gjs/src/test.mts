@@ -8,6 +8,8 @@
 // GTK-free module (e.g. `map-preview.geometry.ts`) and test it here; a
 // suite that needs a real widget goes in `test.display.mts`, which only
 // the GJS runtime runs.
+// MUST stay the first import — read the module's comment.
+import '@pixelrpg/engine/node-test-globals'
 import { run } from '@gjsify/unit'
 
 import addAnimationDialogModelSuite from './widgets/cast/add-animation-dialog.model.spec.js'

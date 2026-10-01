@@ -1,3 +1,5 @@
+// MUST stay the first import — read the module's comment.
+import '@pixelrpg/engine/node-test-globals'
 import { run } from '@gjsify/unit'
 import accelsSuite from './actions/accels.spec.js'
 import actionRegistrySuite from './actions/action-registry.spec.js'

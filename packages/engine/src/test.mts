@@ -1,11 +1,8 @@
-// Polyfill `globalThis.window` BEFORE excalibur is imported anywhere
-// in the suite tree — its `polyfill()` runs at module init and
-// throws under Node otherwise.
-const winTarget = globalThis as { window?: unknown }
-if (typeof winTarget.window === 'undefined') {
-  winTarget.window = globalThis
-}
-
+// MUST stay the first import — read the module's comment. The shim that used to
+// live here as inline statements could never fire: ESM runs every imported
+// module's body first, so it landed after excalibur's, which is the body that
+// needs `window`.
+import '@pixelrpg/engine/node-test-globals'
 import { run } from '@gjsify/unit'
 
 // NOTE: this entry is HAND-MAINTAINED — `gjsify test` runs only the
