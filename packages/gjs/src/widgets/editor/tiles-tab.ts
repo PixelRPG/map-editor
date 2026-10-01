@@ -21,6 +21,20 @@ export interface ObjectBrushDescriptor {
 }
 
 /**
+ * Typed view of the signals {@link TilesTab} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface TilesTabSignals extends Adw.Bin.SignalSignatures {
+  'tile-selected': (tileId: number) => void
+  'object-brush-selected': (defId: string) => void
+}
+
+/**
  * Inspector's "Tiles" tab.
  *
  * Hosts a search entry, the active tileset name + "Switch…" button, the
@@ -71,6 +85,10 @@ export class TilesTab extends Adw.Bin {
       TilesTab,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, TilesTabSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, TilesTabSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, TilesTabSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()

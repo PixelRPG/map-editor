@@ -3,6 +3,19 @@ import GObject from '@girs/gobject-2.0'
 import type { EditorMode, ModeRail } from '@pixelrpg/gjs'
 
 /**
+ * Typed view of the signals {@link ResponsiveEditorView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ResponsiveEditorViewSignals extends Adw.Bin.SignalSignatures {
+  'mode-changed': (mode: EditorMode) => void
+}
+
+/**
  * Shared base for the mode-rail editor views (Atlas / Cast / Tiles /
  * Scene-editor / Data). They all expose the same responsive-shell
  * contract to the application window — the `show-library` /
@@ -75,6 +88,10 @@ export class ResponsiveEditorView extends Adw.Bin {
       ResponsiveEditorView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ResponsiveEditorViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ResponsiveEditorViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ResponsiveEditorViewSignals>['emit']
 
   /** Highlight the ModeRail's active row (called when the host changes view). */
   syncActiveMode(mode: EditorMode): void {

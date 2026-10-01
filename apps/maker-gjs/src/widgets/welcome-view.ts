@@ -14,6 +14,25 @@ GObject.type_ensure(ProjectHeroIcon.$gtype)
 GObject.type_ensure(MapPreview.$gtype)
 
 /**
+ * Typed view of the signals {@link WelcomeView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface WelcomeViewSignals extends Adw.Bin.SignalSignatures {
+  'create-project': () => void
+  'open-project': () => void
+  'browse-projects': () => void
+  'template-selected': (templateId: string) => void
+  'recent-selected': (projectPath: string) => void
+  'session-selected': (service: DiscoveredService) => void
+  'join-by-code': (roomId: string) => void
+}
+
+/**
  * Welcome / home view.
  *
  * Two columns at desktop width — hero + CTA + template strip on the
@@ -118,6 +137,10 @@ export class WelcomeView extends Adw.Bin {
       WelcomeView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, WelcomeViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, WelcomeViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, WelcomeViewSignals>['emit']
 
   get inspectorCollapsed(): boolean {
     return this._inspectorCollapsed ?? false

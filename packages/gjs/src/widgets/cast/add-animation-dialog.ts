@@ -32,6 +32,20 @@ GObject.type_ensure(AnimationTimeline.$gtype)
 GObject.type_ensure(SequenceStrip.$gtype)
 
 /**
+ * Typed view of the signals {@link AddAnimationDialog} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface AddAnimationDialogSignals extends Adw.Dialog.SignalSignatures {
+  'animation-created': (animation: CharacterAnimation) => void
+  'animation-edited': (animationId: string, animation: CharacterAnimation) => void
+}
+
+/**
  * Modal dialog for creating a custom `CharacterAnimation`. Three
  * editable surfaces inside the dialog drive one piece of state:
  *
@@ -160,6 +174,10 @@ export class AddAnimationDialog extends Adw.Dialog {
       AddAnimationDialog,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, AddAnimationDialogSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, AddAnimationDialogSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, AddAnimationDialogSignals>['emit']
 
   constructor() {
     super()

@@ -54,6 +54,24 @@ export namespace Engine {
 }
 
 /**
+ * The {@link Engine.SignalProps} tuple map as a signal-signature map, so
+ * `SignalMethods` can type `connect`/`emit` from the one declaration the
+ * `registerClass` block already has to keep in sync with.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface EngineSignals extends Adw.Bin.SignalSignatures {
+  ready: () => void
+  [EngineEvent.STATUS_CHANGED]: (status: EngineStatus) => void
+  [EngineEvent.PROJECT_LOADED]: (payload: string) => void
+  [EngineEvent.MAP_LOADED]: (payload: string) => void
+  [EngineEvent.ERROR]: (detail: string) => void
+}
+
+/**
  * GJS engine widget.
  *
  * Hosts a gjsify WebGLBridge (WebGL 2, via Gtk.GLArea) and instantiates
@@ -122,6 +140,10 @@ export class Engine extends Adw.Bin {
       Engine,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, EngineSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, EngineSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, EngineSignals>['emit']
 
   constructor(params: Engine.ConstructorProps = {}) {
     super(params)

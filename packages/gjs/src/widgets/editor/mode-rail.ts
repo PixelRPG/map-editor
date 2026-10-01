@@ -14,6 +14,19 @@ export type EditorMode = 'world' | 'library' | 'game'
 const MODE_ORDER: EditorMode[] = ['world', 'library', 'game']
 
 /**
+ * Typed view of the signals {@link ModeRail} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ModeRailSignals extends Adw.Bin.SignalSignatures {
+  'mode-changed': (mode: string) => void
+}
+
+/**
  * Mode rail — the editor's primary navigation column: three rows, World
  * (the maps), Library (characters, things, graphics) and Game (the
  * project's own page).
@@ -82,6 +95,10 @@ export class ModeRail extends Adw.Bin {
       ModeRail,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ModeRailSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ModeRailSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ModeRailSignals>['emit']
 
   constructor(params: Partial<{ projectName: string; projectTagline: string; activeMode: EditorMode }> = {}) {
     super()

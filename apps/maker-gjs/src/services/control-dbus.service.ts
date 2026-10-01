@@ -40,7 +40,7 @@ export class ControlDbusService {
   }
 
   private get window(): ApplicationWindow | null {
-    return (this.app.active_window as ApplicationWindow | null) ?? null
+    return this.app.makerWindow
   }
 
   // --- D-Bus methods (names + signatures match CONTROL_IFACE_XML) ---

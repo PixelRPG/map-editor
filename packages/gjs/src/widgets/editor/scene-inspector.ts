@@ -24,6 +24,19 @@ const PREVIEW_WIDTH = 240
 const PREVIEW_HEIGHT = 180
 
 /**
+ * Typed view of the signals {@link SceneInspector} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface SceneInspectorSignals extends Adw.Bin.SignalSignatures {
+  'preview-lock-changed': (unlocked: boolean) => void
+}
+
+/**
  * Right-pane inspector for the **Atlas (World)** view.
  *
  * Shows the selected scene's preview, name + tile size + music subtitle,
@@ -123,6 +136,10 @@ export class SceneInspector extends Adw.Bin {
       SceneInspector,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, SceneInspectorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SceneInspectorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SceneInspectorSignals>['emit']
 
   /**
    * Set the inspected scene and the full teleport list for the world.

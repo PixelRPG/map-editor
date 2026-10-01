@@ -13,6 +13,20 @@ const SURFACE_KEYS = [null, 'grass', 'dirt', 'stone', 'wood', 'water', 'sand', '
 type SurfaceKey = (typeof SURFACE_KEYS)[number]
 
 /**
+ * Typed view of the signals {@link TileInspector} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface TileInspectorSignals extends Adw.Bin.SignalSignatures {
+  'solid-changed': (solid: boolean) => void
+  'surface-changed': (surface: string) => void
+}
+
+/**
  * Right-pane inspector for the Tiles view. Shows the selected tile's
  * properties from the active sprite-set definition: a preview image,
  * the sprite's id/name, a Solid switch (writes `def.solid`), and a
@@ -48,6 +62,10 @@ export class TileInspector extends Adw.Bin {
       TileInspector,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, TileInspectorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, TileInspectorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, TileInspectorSignals>['emit']
 
   constructor() {
     super()

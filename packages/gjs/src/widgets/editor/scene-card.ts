@@ -14,6 +14,25 @@ import Template from './scene-card.blp'
 GObject.type_ensure(MiniMap.$gtype)
 
 /**
+ * Typed view of the signals {@link SceneCard} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface SceneCardSignals extends Gtk.Button.SignalSignatures {
+  'scene-activated': () => void
+  'scene-drag-begin': () => void
+  'scene-drag-update': (dx: number, dy: number) => void
+  'scene-drag-end': (dx: number, dy: number) => void
+  'preview-pan-update': (dx: number, dy: number) => void
+  'preview-pan-end': () => void
+  'lock-changed': (unlocked: boolean) => void
+}
+
+/**
  * Single atlas-space card representing one scene.
  *
  * The card is a `Gtk.Button` styled `flat` so it picks up Adwaita's
@@ -137,6 +156,10 @@ export class SceneCard extends Gtk.Button {
       SceneCard,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, SceneCardSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SceneCardSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SceneCardSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()

@@ -9,6 +9,7 @@ import {
   reparentWidget,
   SignalScope,
   type SpriteSetChoice,
+  type SpriteSetImportResult,
   TileInspector,
   TilePalette,
 } from '@pixelrpg/gjs'
@@ -61,6 +62,22 @@ GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
 GObject.type_ensure(TilesQuickView.$gtype)
+
+/**
+ * Typed view of the signals {@link TilesView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface TilesViewSignals extends Adw.Bin.SignalSignatures {
+  'spriteset-imported': (result: SpriteSetImportResult) => void
+  'spriteset-rename-requested': (spriteSetId: string, name: string) => void
+  'spriteset-reorder-requested': (orderedIds: string[]) => void
+  'spriteset-delete-requested': (spriteSetId: string) => void
+}
 
 /**
  * The Library's **Graphics** page — tilesets and appearances as raw
@@ -207,6 +224,10 @@ export class TilesView extends LibraryPage {
       TilesView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, TilesViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, TilesViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, TilesViewSignals>['emit']
 
   constructor() {
     super()

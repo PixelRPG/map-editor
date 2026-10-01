@@ -30,6 +30,21 @@ export interface TileDescriptor {
 }
 
 /**
+ * Typed view of the signals {@link TilePalette} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface TilePaletteSignals extends Adw.Bin.SignalSignatures {
+  'tile-selected': (tileId: number) => void
+  'tile-drag-started': (tileId: number) => void
+  'tile-drag-ended': () => void
+}
+
+/**
  * 5-column FlowBox of tile swatches. Emits `tile-selected::<id>` when a
  * swatch is activated. Used by `tiles-tab` and the active-tile popover
  * surfaced inside `floating-top-bar`.
@@ -148,6 +163,10 @@ export class TilePalette extends Adw.Bin {
       TilePalette,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, TilePaletteSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, TilePaletteSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, TilePaletteSignals>['emit']
 
   constructor(params: Partial<{ tiles: TileDescriptor[]; tileSize: number; columns: number }> = {}) {
     super()

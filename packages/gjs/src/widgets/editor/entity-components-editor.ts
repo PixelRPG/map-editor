@@ -30,6 +30,20 @@ const BESPOKE_EDITORS: Record<BespokeEditorKey, () => EventActionListEditor> = {
 }
 
 /**
+ * Typed view of the signals {@link EntityComponentsEditor} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface EntityComponentsEditorSignals extends Adw.Bin.SignalSignatures {
+  'entity-changed': (entityJson: string) => void
+  'show-more-requested': () => void
+}
+
+/**
  * The components editor for one {@link EntityDefinition}: a vertical
  * stack of {@link ComponentInspector}s (one per component, generated from
  * the registry) + an "Add component" menu of the not-yet-present types.
@@ -101,6 +115,10 @@ export class EntityComponentsEditor extends Adw.Bin {
       EntityComponentsEditor,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, EntityComponentsEditorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, EntityComponentsEditorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, EntityComponentsEditorSignals>['emit']
 
   constructor() {
     super()

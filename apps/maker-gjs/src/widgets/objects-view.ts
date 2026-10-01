@@ -15,6 +15,23 @@ import Template from './objects-view.blp'
 GObject.type_ensure(EntityComponentsEditor.$gtype)
 
 /**
+ * Typed view of the signals {@link ObjectsView} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ObjectsViewSignals extends Adw.Bin.SignalSignatures {
+  'object-changed': (objectJson: string) => void
+  'object-create-requested': (defJson: string) => void
+  'object-delete-requested': (defId: string) => void
+  'object-rename-requested': (defId: string, name: string) => void
+  'object-cast-toggle-requested': (defId: string, isCast: boolean) => void
+}
+
+/**
  * The Library's **Things** page — the GENERAL master-detail lens over
  * EVERY entity definition in the project's `entityLibrary` (world objects
  * AND the `character`-template cast members, the latter flagged with a
@@ -89,6 +106,10 @@ export class ObjectsView extends Adw.Bin {
       ObjectsView,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ObjectsViewSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ObjectsViewSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ObjectsViewSignals>['emit']
 
   constructor() {
     super()

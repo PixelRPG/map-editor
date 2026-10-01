@@ -18,6 +18,20 @@ import { createSwatchWidget } from './tile-swatch.ts'
 const EXPAND_GAP_PX = 4
 
 /**
+ * Typed view of the signals {@link RecentTiles} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface RecentTilesSignals extends Adw.Bin.SignalSignatures {
+  'tile-selected': (index: number) => void
+  'expand-requested': () => void
+}
+
+/**
  * The phone bar's second row: the tiles this session has used, biggest
  * first, with the active one ringed.
  *
@@ -57,6 +71,10 @@ export class RecentTiles extends Adw.Bin {
       RecentTiles,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, RecentTilesSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, RecentTilesSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, RecentTilesSignals>['emit']
 
   constructor() {
     super()

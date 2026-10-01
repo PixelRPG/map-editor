@@ -1,7 +1,7 @@
 import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { type ModeRail, SignalScope } from '@pixelrpg/gjs'
+import { type EditorMode, type ModeRail, SignalScope } from '@pixelrpg/gjs'
 
 import {
   chipForTier,
@@ -111,7 +111,7 @@ export class LibraryView extends ResponsiveEditorView {
   vfunc_map(): void {
     super.vfunc_map()
     this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) =>
-      this.emit('mode-changed', mode),
+      this.emit('mode-changed', mode as EditorMode),
     )
     this.signals.connect(this._new_thing_button, 'clicked', () => this._objects_view.presentTemplateChooser())
   }

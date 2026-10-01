@@ -14,6 +14,22 @@ const ROW_THUMBNAIL_CAP = 6
 const ROW_THUMBNAIL_SIZE = 24
 
 /**
+ * Typed view of the signals {@link AnimationList} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface AnimationListSignals extends Adw.Bin.SignalSignatures {
+  'animation-selected': (animationId: string) => void
+  'add-animation-requested': () => void
+  'edit-animation-requested': (animationId: string) => void
+  'delete-animation-requested': (animationId: string) => void
+}
+
+/**
  * Rendered list of a character's {@link CharacterAnimation}s. Each row
  * shows the animation id (e.g. `walk-down`), a frame-count + duration
  * suffix, and a status icon — checkmark for required-and-filled, alert
@@ -54,6 +70,10 @@ export class AnimationList extends Adw.Bin {
       AnimationList,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, AnimationListSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, AnimationListSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, AnimationListSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()

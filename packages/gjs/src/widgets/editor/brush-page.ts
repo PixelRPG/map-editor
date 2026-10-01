@@ -28,6 +28,22 @@ const PLANE_CAPTIONS: Record<LayerPlane, { short: () => string; long: () => stri
 }
 
 /**
+ * Typed view of the signals {@link BrushPage} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
+  'tile-selected': (tileId: number) => void
+  'object-brush-selected': (defId: string) => void
+  'plane-selected': (plane: string) => void
+  'layers-requested': () => void
+}
+
+/**
  * Everything that decides what the next stroke lays: which plane, which
  * layer, which tile, which object.
  *
@@ -96,6 +112,10 @@ export class BrushPage extends Adw.Bin {
       BrushPage,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, BrushPageSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, BrushPageSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, BrushPageSignals>['emit']
 
   constructor() {
     super()

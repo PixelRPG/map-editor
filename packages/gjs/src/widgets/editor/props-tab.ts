@@ -37,6 +37,21 @@ export interface SelectedObjectDescriptor {
 }
 
 /**
+ * Typed view of the signals {@link PropsTab} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface PropsTabSignals extends Adw.Bin.SignalSignatures {
+  'prop-changed': (key: string, value: string) => void
+  'object-open-requested': (defId: string) => void
+  'object-remove-requested': (placementId: string) => void
+}
+
+/**
  * Inspector's "Props" tab — a vertical list of `Adw.EntryRow` /
  * `Adw.ActionRow`s for the active scene's metadata, topped by a
  * "Selected object" group (visible while a placement is selected via
@@ -125,6 +140,10 @@ export class PropsTab extends Adw.Bin {
       PropsTab,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, PropsTabSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, PropsTabSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, PropsTabSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()

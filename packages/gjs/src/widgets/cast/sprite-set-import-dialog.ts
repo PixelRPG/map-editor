@@ -37,6 +37,19 @@ export interface SpriteSetImportResult {
 }
 
 /**
+ * Typed view of the signals {@link SpriteSetImportDialog} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface SpriteSetImportDialogSignals extends Adw.Dialog.SignalSignatures {
+  'spriteset-imported': (result: SpriteSetImportResult) => void
+}
+
+/**
  * Dialog for importing a sprite sheet into the project. The user picks
  * a PNG, declares the uniform sprite size (every sprite in the image
  * is the same size), and marks the collision box that applies to every
@@ -144,6 +157,10 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       SpriteSetImportDialog,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, SpriteSetImportDialogSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SpriteSetImportDialogSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SpriteSetImportDialogSignals>['emit']
 
   constructor() {
     super()

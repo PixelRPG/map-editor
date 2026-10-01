@@ -23,6 +23,20 @@ import { insertAt, moveTo, removeAt } from './animation-sequence.ts'
 type DragPayload = { kind: 'move'; from: number } | { kind: 'insert'; spriteId: number }
 
 /**
+ * Typed view of the signals {@link SequenceStrip} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface SequenceStripSignals extends Gtk.Box.SignalSignatures {
+  'frames-changed': () => void
+  'duration-changed': () => void
+}
+
+/**
  * Horizontal strip of the animation's frame sequence — the sole owner of
  * the frame list while the dialog is open.
  *
@@ -71,6 +85,10 @@ export class SequenceStrip extends Gtk.Box {
       SequenceStrip,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, SequenceStripSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SequenceStripSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SequenceStripSignals>['emit']
 
   constructor() {
     // Orientation / spacing / alignment are declared in

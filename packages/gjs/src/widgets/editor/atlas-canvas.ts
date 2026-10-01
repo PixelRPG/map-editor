@@ -32,6 +32,25 @@ const SURFACE_PADDING = 180
 const ATLAS_GRID = 8
 
 /**
+ * Typed view of the signals {@link AtlasCanvas} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
+  'scene-selected': (sceneId: string) => void
+  'scene-drag-began': (sceneId: string) => void
+  'scene-opened': (sceneId: string) => void
+  'scene-moved': (sceneId: string, x: number, y: number) => void
+  'preview-moved': (sceneId: string, centerX: number, centerY: number) => void
+  'preview-lock-changed': (sceneId: string, unlocked: boolean) => void
+  'world-changed': () => void
+}
+
+/**
  * Scrollable atlas surface — the "World" home view.
  *
  * Composition:
@@ -133,6 +152,10 @@ export class AtlasCanvas extends Adw.Bin {
       AtlasCanvas,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, AtlasCanvasSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, AtlasCanvasSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, AtlasCanvasSignals>['emit']
 
   /**
    * Populate the canvas from sample-world descriptors. Pass the loaded

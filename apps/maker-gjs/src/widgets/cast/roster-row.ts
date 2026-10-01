@@ -11,6 +11,19 @@ import Template from './roster-row.blp'
 GObject.type_ensure(CharacterPreview.$gtype)
 
 /**
+ * Typed view of the signals {@link CastRosterRow} registers, layered on the parent's
+ * own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface CastRosterRowSignals extends Gtk.ListBoxRow.SignalSignatures {
+  'delete-requested': () => void
+}
+
+/**
  * One row of the Cast roster. Carries the character id the list selection
  * resolves back to, and reports its trash button as `delete-requested` —
  * the view owns the confirmation and the mutation.
@@ -68,6 +81,10 @@ export class CastRosterRow extends Gtk.ListBoxRow {
       CastRosterRow,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, CastRosterRowSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, CastRosterRowSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, CastRosterRowSignals>['emit']
 
   constructor(character: CharacterDefinition, spriteSet: GdkSpriteSetResource | null) {
     super()

@@ -43,6 +43,19 @@ export interface ObjectDescriptor {
 const FALLBACK_ICON = 'view-grid-symbolic'
 
 /**
+ * Typed view of the signals {@link ObjectsTab} registers, layered on the
+ * parent's own so inherited signals keep their argument lists.
+ *
+ * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
+ * every generated class carried, so a class that registers its own signals
+ * now has to spell them out — `SignalMethods` refines the inherited method
+ * rather than replacing it at run time.
+ */
+export interface ObjectsTabSignals extends Adw.Bin.SignalSignatures {
+  'object-selected': (defId: string) => void
+}
+
+/**
  * Inspector's "Objects" tab — a pure list of the objects PLACED on the
  * active scene: one `Adw.ActionRow` per placement (tile-like sprite
  * swatch, name, tile coordinates); selection emits
@@ -77,6 +90,10 @@ export class ObjectsTab extends Adw.Bin {
       ObjectsTab,
     )
   }
+
+  declare connect: GObject.SignalMethods<this, ObjectsTabSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, ObjectsTabSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, ObjectsTabSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()
