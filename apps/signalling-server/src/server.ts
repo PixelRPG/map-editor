@@ -57,13 +57,11 @@ export async function startServer(opts: ServerOptions): Promise<ServerHandle> {
 
   wss.on('connection', (ws: WebSocket, req: ConnectionRequest) => acceptConnection(rooms, ws, req, logLevel))
 
+  // The sweep must not keep the loop alive on Node, and on GJS it is recorded
+  // only — GLib owns the loop and g_source_unref would destroy the source.
+  // Both are true of the handle gjsify hands back (#1950), so no cast.
   const sweep = setInterval(() => rooms.sweep(), SWEEP_INTERVAL_MS)
-  // GJS's setInterval has no unref(); Node's polyfill returns a
-  // Timeout with one. Cast keeps both runtimes happy without
-  // pulling node:timers.
-  // fixed upstream in gjsify: #1950 Timeout.unref
-  const maybeUnref = sweep as unknown as { unref?: () => void }
-  maybeUnref.unref?.()
+  sweep.unref()
 
   return {
     address: { host: opts.host, port: opts.port },
