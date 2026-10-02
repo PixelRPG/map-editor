@@ -555,7 +555,7 @@ per contact, with touch contacts numbered from `pointerId` 2 so they
 never collide with the mouse's 1.
 
 **It shipped in `@gjsify/event-bridge` 0.49.0**, so the local-link
-workaround this section used to describe is gone with it: 0.53.0's
+workaround this section used to describe is gone with it: 0.54.0's
 `lib/esm/touch-pointers.js` is what npm serves, and `gjsify install`
 puts it in place. The `scripts/link-local-gjsify.sh` shim that copied a
 checkout's `event-bridge` over the registry copy was deleted in the same
