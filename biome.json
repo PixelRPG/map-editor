@@ -41,6 +41,7 @@
       "!**/.*",
       "!apps/maker-gjs/data",
       "!**/*.blp",
+      "!**/*.d.blp.ts",
       "!**/*.xml",
       "!**/*.css"
     ]
