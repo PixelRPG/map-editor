@@ -63,7 +63,7 @@
       "kind": "app",
       "name": "PixelRPG Maker",
       "runtime": "gnome",
-      "runtimeVersion": "50",
+      "runtimeVersion": "51",
       "command": "org.pixelrpg.maker",
       "finishArgs": [
         "--device=dri",

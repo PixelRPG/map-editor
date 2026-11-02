@@ -17,9 +17,9 @@ jobs:
 
     # CI must not be the thing that decides which libadwaita this app may use —
     # the runtime it ships on decides that. `apps/maker-gjs/package.json` pins
-    # the Flatpak runtime to GNOME 50, and the GNOME 50 SDK carries libadwaita
-    # 1.9.3 / GTK 4.22.4 / GJS 1.88.1 / GtkSourceView 5.20.0 (measured with
-    # `flatpak run --devel --command=pkg-config org.gnome.Sdk//50 --modversion …`).
+    # the Flatpak runtime to GNOME 51, and the GNOME 51 SDK carries libadwaita
+    # 1.10.0 / GTK 4.24.1 / GJS 1.90.1 / GtkSourceView 5.22.0 (measured with
+    # `flatpak run --devel --command=pkg-config org.gnome.Sdk//51 --modversion …`).
     # `ubuntu-latest` (= ubuntu-24.04) carries libadwaita 1.5.0 / GTK 4.14.5 /
     # GJS 1.80.2 — four libadwaita minors behind the shipped runtime.
     #
@@ -32,19 +32,19 @@ jobs:
     # Adw.BottomSheet + Adw.MultiLayoutView (1.6), Adw.ToggleGroup (1.7) and
     # Adw.ShortcutsDialog (1.8).
     #
-    # `fedora:44` is the fix because it is not merely NEWER, it is the SAME
-    # toolkit: measured on the image, libadwaita 1.9.3, GTK 4.22.4, GJS 1.88.1,
-    # GtkSourceView 5.20.0 — identical to the GNOME 50 SDK on all four, and it
-    # packages blueprint-compiler 0.20.4, exactly the version this workflow used
+    # `fedora:45` is the fix because it is not merely NEWER, it is the SAME
+    # toolkit: measured on the image, libadwaita 1.10.0, GTK 4.24.1, GJS 1.90.1,
+    # GtkSourceView 5.22.0 — identical to the GNOME 51 SDK on all four, and it
+    # packages blueprint-compiler 0.22.2, exactly the version this workflow used
     # to build from source. So CI now compiles against what users run.
     #
     # Keeping it that way is one rule: when `gjsify.flatpak.runtimeVersion`
-    # moves, move this tag with it (GNOME 50 = Fedora 44, 49 = 43, 48 = 42).
-    # `ghcr.io/gjsify/ci-fedora:44` would skip the dnf step below, but it is
+    # moves, move this tag with it (GNOME 51 = Fedora 45, 50 = 44, 49 = 43, 48 = 42).
+    # `ghcr.io/gjsify/ci-fedora:45` would skip the dnf step below, but it is
     # another org's image on another org's release cadence, built for a much
     # larger package set; a bare Fedora tag keeps this repo's CI self-contained.
     container:
-      image: fedora:44
+      image: fedora:45
 
     # On `runs-on: ubuntu-latest` every `run:` step got `/usr/bin/bash -e {0}`.
     # Inside a container the runner picks `sh -e {0}` instead — measured in run
@@ -82,7 +82,7 @@ jobs:
         # `blueprint-compiler` needs the `.gir` introspection files for the
         # namespaces referenced in `using …;` lines of our `.blp` templates
         # (Gtk 4.0, Adw 1, GtkSource 5) — and, unlike Ubuntu's 0.10, Fedora
-        # packages 0.20.4, which understands the `css-classes: [...]` array
+        # packages 0.22.2, which understands the `css-classes: [...]` array
         # literal our templates use. That retires a from-source meson build.
         # `glib2` ships `glib-compile-resources` for `gjsify gresource` and
         # `glib-compile-schemas` for `gjsify gsettings`. The `gstreamer1-*-devel`
@@ -433,7 +433,7 @@ jobs:
     # editor has no paint target".
     timeout-minutes: 25
     container:
-      image: fedora:44
+      image: fedora:45
     defaults:
       run:
         shell: bash -e {0}

@@ -64,7 +64,7 @@ that reads only `engineReady` reports green on an editor you cannot paint in.
 ## Promoting this to a CI job
 
 The pieces are all here; what is missing is a headless environment in the
-`fedora:44` container:
+`fedora:45` container:
 
 - `dbus-run-session` — the Control interface needs a session bus.
 - a compositor. Prefer `weston --backend=headless-backend.so` over
