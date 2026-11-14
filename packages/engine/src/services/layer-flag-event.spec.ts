@@ -15,6 +15,9 @@ import { describe, expect, it } from '@gjsify/unit'
 import {
   AddLayerCommand,
   type Command,
+  DuplicateLayerCommand,
+  RemoveLayerCommand,
+  RenameLayerCommand,
   ReorderLayerCommand,
   SetLayerLockedCommand,
   SetLayerPlaneCommand,
@@ -91,6 +94,23 @@ export default async () => {
         previousIndex: 2,
       })
       expect(layerListChange(setPlane)).toStrictEqual({ layerId: 'roofs' })
+    })
+
+    await it('reports a duplicate and a remove by the payload layer id', async () => {
+      const content = {
+        layer: { id: 'decor-copy', name: 'Decor copy', visible: true },
+        index: 2,
+        placements: [],
+      }
+      expect(layerListChange(new DuplicateLayerCommand(content))).toStrictEqual({ layerId: 'decor-copy' })
+      expect(layerListChange(new RemoveLayerCommand(content))).toStrictEqual({ layerId: 'decor-copy' })
+    })
+
+    await it('reports a rename — the row shows the name', async () => {
+      // Not a position change, but an undone or remote rename would
+      // otherwise leave the row reading the old name.
+      const cmd = new RenameLayerCommand({ layerId: 'decor', name: 'Treetops', previousName: 'Decor' })
+      expect(layerListChange(cmd)).toStrictEqual({ layerId: 'decor' })
     })
 
     await it('is null for the flag commands and for non-layer commands', async () => {

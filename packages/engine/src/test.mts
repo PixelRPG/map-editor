@@ -15,6 +15,7 @@ import commandHistorySuite from './engine/command-history.spec.js'
 import editOperationsSuite from './engine/edit-operations.spec.js'
 import pointerSynthesisSuite from './engine/pointer-synthesis.spec.js'
 import sceneSwapSuite from './engine/scene-swap.spec.js'
+import layerContentCommandSuite from './commands/layer-content.command.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
 import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.js'
 import layerOrderCommandSuite from './commands/layer-order.command.spec.js'
@@ -93,6 +94,7 @@ run({
   paintTileCommandSuite,
   layerFlagCommandSuite,
   layerLifecycleCommandSuite,
+  layerContentCommandSuite,
   layerOrderCommandSuite,
   tilemapPlaneSuite,
   objectPlacementCommandSuite,

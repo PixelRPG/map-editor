@@ -1,12 +1,17 @@
 import {
   AddLayerCommand,
   type Command,
+  DuplicateLayerCommand,
+  RemoveLayerCommand,
+  RenameLayerCommand,
   ReorderLayerCommand,
   SetLayerLockedCommand,
   SetLayerPlaneCommand,
   SetLayerVisibilityCommand,
 } from '../commands/index.ts'
+import { reidLayerContent, snapshotLayerContent } from '../services/layer-content.service.ts'
 import { isLayerDataVisible } from '../services/layer-visibility.ts'
+import { makePlacementId } from '../services/placement-id.ts'
 import type { LayerData, LayerPlane } from '../types/data/index.ts'
 import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'
 import type { ActiveSceneAccessor } from './scene-binding.ts'
@@ -86,6 +91,58 @@ export class LayerOperations {
     if (!layers) return false
     if (layers.some((existing) => existing.id === layer.id)) return false
     this.execute(new AddLayerCommand({ layer }), origin)
+    return true
+  }
+
+  /**
+   * Rename a layer. `false` without an active map or for an unknown id;
+   * `true` for a rename to the same name, which dispatches nothing.
+   */
+  rename(layerId: string, name: string, origin?: string): boolean {
+    const layer = this.find(layerId)
+    if (!layer) return false
+    if (layer.name === name) return true
+    this.execute(new RenameLayerCommand({ layerId, name, previousName: layer.name }), origin)
+    return true
+  }
+
+  /**
+   * Duplicate a layer with everything on it — tiles and placements —
+   * as one undo step. The caller supplies the copy's id + name (the id
+   * vocabulary lives in the maker's `ProjectStore`); the placements get
+   * freshly minted ids here, since a placement id is a transport key and
+   * the copy must not share one with the original. The copy lands
+   * directly above its source, which is where every paint program puts
+   * it. `false` without an active map, for an unknown id, or when the
+   * new id is already taken.
+   */
+  duplicate(layerId: string, copy: Pick<LayerData, 'id' | 'name'>, origin?: string): boolean {
+    const layers = this.layers()
+    if (!layers || layers.some((layer) => layer.id === copy.id)) return false
+    const scene = this.activeScene()
+    const content = scene ? snapshotLayerContent(scene, layerId) : null
+    if (!content) return false
+    this.execute(
+      new DuplicateLayerCommand(reidLayerContent(content, copy, (p) => makePlacementId(p.tileX, p.tileY))),
+      origin,
+    )
+    return true
+  }
+
+  /**
+   * Delete a layer with its tiles and placements as one undo step —
+   * which is what lets the UI skip a confirmation dialog and offer
+   * "Undo" in a toast instead. `false` without an active map, for an
+   * unknown id, or for the LAST remaining layer (a map with no layer
+   * has nowhere to paint).
+   */
+  remove(layerId: string, origin?: string): boolean {
+    const layers = this.layers()
+    if (!layers || layers.length <= 1) return false
+    const scene = this.activeScene()
+    const content = scene ? snapshotLayerContent(scene, layerId) : null
+    if (!content) return false
+    this.execute(new RemoveLayerCommand(content), origin)
     return true
   }
 

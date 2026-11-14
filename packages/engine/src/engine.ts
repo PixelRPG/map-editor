@@ -508,6 +508,21 @@ export class Engine {
     return this.layers.add(layer, origin)
   }
 
+  /** Rename a layer through the op-log — see {@link LayerOperations.rename}. */
+  renameLayer(layerId: string, name: string, origin?: string): boolean {
+    return this.layers.rename(layerId, name, origin)
+  }
+
+  /** Duplicate a layer with its tiles + placements — see {@link LayerOperations.duplicate}. */
+  duplicateLayer(layerId: string, copy: Pick<LayerData, 'id' | 'name'>, origin?: string): boolean {
+    return this.layers.duplicate(layerId, copy, origin)
+  }
+
+  /** Delete a layer with everything on it — see {@link LayerOperations.remove}. */
+  removeLayer(layerId: string, origin?: string): boolean {
+    return this.layers.remove(layerId, origin)
+  }
+
   /** Move a layer inside `MapData.layers` — see {@link LayerOperations.reorder}. */
   reorderLayer(layerId: string, index: number, origin?: string): boolean {
     return this.layers.reorder(layerId, index, origin)
