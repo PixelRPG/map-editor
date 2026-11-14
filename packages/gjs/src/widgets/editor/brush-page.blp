@@ -43,104 +43,129 @@ template $PixelRpgBrushPage : Adw.Bin {
       }
     }
 
-    Gtk.Box tileset_row {
-      orientation: horizontal;
-      spacing: 6;
+    // Tiles ↔ Things as peers. They used to be one scroll: the Things
+    // grid sat BELOW a palette tall enough to need its own scrollbar,
+    // so on a phone sheet nobody ever reached it.
+    Adw.ToggleGroup mode_toggle {
+      homogeneous: true;
+      active-name: "tiles";
 
-      Gtk.Label tileset_label {
-        label: bind template.tileset-name;
-        halign: start;
-        hexpand: true;
-        ellipsize: end;
-        styles ["heading", "dim-label"]
+      Adw.Toggle {
+        name: "tiles";
+        label: _("Tiles");
+        tooltip: _("Paint the ground, walls and water");
       }
 
-      Gtk.Button switch_button {
-        label: _("Switch…");
-        tooltip-text: _("Paint from another tileset");
-        action-name: "win.switch-tileset";
-        styles ["flat"]
+      Adw.Toggle {
+        name: "things";
+        label: _("Things");
+        tooltip: _("Place a person, a chest, a door");
       }
     }
 
-    Gtk.SearchEntry search {
-      placeholder-text: _("Search tiles…");
-    }
-
-    Gtk.ScrolledWindow palette_scroller {
-      hscrollbar-policy: never;
-      vscrollbar-policy: automatic;
-      propagate-natural-height: true;
-      max-content-height: 460;
-      min-content-height: 200;
+    // Not homogeneous vertically: a two-row Things grid must not reserve
+    // the height of a 32-row tileset, which on a phone sheet would be
+    // the whole page.
+    Gtk.Stack mode_stack {
+      visible-child-name: bind mode_toggle.active-name;
+      vhomogeneous: false;
+      transition-type: crossfade;
+      transition-duration: 120;
       vexpand: true;
 
-      child: Gtk.Box {
-        orientation: vertical;
-        spacing: 12;
+      Gtk.StackPage {
+        name: "tiles";
 
-        // Both palettes WRAP, with six columns as the natural width: the
-        // badge popover (wide) sizes to six, the phone sheet packs what
-        // fits. Pinned columns are a minimum, and six of them measure
-        // 378 px — wider than the 360 px phone the design targets. And
-        // the sheet's minimum is never private: `Adw.BottomSheet` keeps
-        // its page and its bottom bar in one homogeneous `Gtk.Stack`, so
-        // that 378 px reached the docked bar and the canvas with the
-        // sheet CLOSED, and the ladder's `Adw.BreakpointBin` allocated
-        // the whole editor 18 px past a 360 px window.
-        $PixelRpgTilePalette palette {
-          tile-size: 48;
-          wrap: true;
-          wrap-cap: 6;
-        }
-
-        // A project with no tiles yet: say what to do instead of
-        // showing an empty grid under a nameless heading. It sits
-        // INSIDE the scroller next to the palette, so a tileless
-        // project still reaches the Things grid below it.
-        Adw.StatusPage empty_state {
-          visible: false;
-          icon-name: "image-x-generic-symbolic";
-          title: _("No tiles yet");
-          description: _("Import a picture and cut it into tiles to paint with.");
-
-          child: Gtk.Button {
-            label: _("Import a picture…");
-            action-name: "win.new-tileset";
-            halign: center;
-            styles ["suggested-action", "pill"]
-          };
-        }
-
-        Gtk.Box objects_section {
+        child: Gtk.Box tiles_pane {
           orientation: vertical;
-          spacing: 6;
-          visible: false;
+          spacing: 12;
 
-          Gtk.Label {
-            label: _("Things");
-            halign: start;
-            styles ["heading", "dim-label"]
+          // One chip per tileset the map references — thumbnail plus
+          // name, scrolling sideways. This is the ONLY way to change
+          // the painting tileset; there is no second "Switch…" path to
+          // keep in sync with it.
+          Gtk.ScrolledWindow tileset_scroller {
+            hscrollbar-policy: automatic;
+            vscrollbar-policy: never;
+            propagate-natural-height: true;
+
+            child: Adw.ToggleGroup tileset_chips {
+              can-shrink: false;
+              halign: start;
+            };
           }
 
-          $PixelRpgTilePalette object_palette {
-            tile-size: 48;
-            wrap: true;
-            wrap-cap: 6;
-            aspect-mode: "contain";
-            styles ["object-brush-palette"]
-          }
-        }
+          // Both axes: the sheet is drawn whole at an integer scale, so
+          // a wide tileset is panned rather than squeezed. 16 px tiles
+          // reach 48 px, which is what makes a tap on a phone land.
+          Gtk.ScrolledWindow sheet_scroller {
+            hscrollbar-policy: automatic;
+            vscrollbar-policy: automatic;
+            propagate-natural-height: true;
+            max-content-height: 460;
+            min-content-height: 200;
+            vexpand: true;
 
-        // Shown only when the project has no placeable objects at all,
-        // so the Things section is never an empty box.
-        Gtk.Label objects_empty {
-          label: _("No objects in the library yet");
-          visible: false;
-          halign: start;
-          styles ["dim-label"]
-        }
-      };
+            child: $PixelRpgTileSheet sheet {};
+          }
+
+          // A project with no tiles yet: say what to do instead of
+          // showing an empty sheet under a nameless heading.
+          Adw.StatusPage empty_state {
+            visible: false;
+            icon-name: "image-x-generic-symbolic";
+            title: _("No tiles yet");
+            description: _("Import a picture and cut it into tiles to paint with.");
+
+            child: Gtk.Button {
+              label: _("Import a picture…");
+              action-name: "win.new-tileset";
+              halign: center;
+              styles ["suggested-action", "pill"]
+            };
+          }
+        };
+      }
+
+      Gtk.StackPage {
+        name: "things";
+
+        child: Gtk.ScrolledWindow things_scroller {
+          hscrollbar-policy: never;
+          vscrollbar-policy: automatic;
+          propagate-natural-height: true;
+          max-content-height: 460;
+          vexpand: true;
+
+          child: Gtk.Box {
+            orientation: vertical;
+            spacing: 6;
+
+            // Six columns as the natural width with ellipsizing
+            // captions: `wrap` keeps the per-line minimum at one
+            // swatch, so the page still fits a 360 px phone — and the
+            // sheet's minimum is never private, because
+            // `Adw.BottomSheet` keeps its page and its bottom bar in
+            // one homogeneous `Gtk.Stack`.
+            $PixelRpgTilePalette object_palette {
+              tile-size: 48;
+              wrap: true;
+              wrap-cap: 6;
+              aspect-mode: "contain";
+              styles ["object-brush-palette"]
+            }
+
+            // Shown only when the project has no placeable objects at
+            // all, so the Things page is never an empty box.
+            Gtk.Label objects_empty {
+              label: _("No objects in the library yet");
+              visible: false;
+              halign: start;
+              styles ["dim-label"]
+            }
+          };
+        };
+      }
     }
   }
 }

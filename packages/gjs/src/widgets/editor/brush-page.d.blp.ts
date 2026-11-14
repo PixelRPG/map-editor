@@ -27,14 +27,15 @@ export declare const InternalChildren: [
   "layer_row",
   "layer_label",
   "layers_button",
-  "tileset_row",
-  "tileset_label",
-  "switch_button",
-  "search",
-  "palette_scroller",
-  "palette",
+  "mode_toggle",
+  "mode_stack",
+  "tiles_pane",
+  "tileset_scroller",
+  "tileset_chips",
+  "sheet_scroller",
+  "sheet",
   "empty_state",
-  "objects_section",
+  "things_scroller",
   "object_palette",
   "objects_empty",
 ];
@@ -45,14 +46,15 @@ export interface Children {
   _layer_row: Gtk.Box;
   _layer_label: Gtk.Label;
   _layers_button: Gtk.Button;
-  _tileset_row: Gtk.Box;
-  _tileset_label: Gtk.Label;
-  _switch_button: Gtk.Button;
-  _search: Gtk.SearchEntry;
-  _palette_scroller: Gtk.ScrolledWindow;
-  _palette: GObject.Object;
+  _mode_toggle: Adw.ToggleGroup;
+  _mode_stack: Gtk.Stack;
+  _tiles_pane: Gtk.Box;
+  _tileset_scroller: Gtk.ScrolledWindow;
+  _tileset_chips: Adw.ToggleGroup;
+  _sheet_scroller: Gtk.ScrolledWindow;
+  _sheet: GObject.Object;
   _empty_state: Adw.StatusPage;
-  _objects_section: Gtk.Box;
+  _things_scroller: Gtk.ScrolledWindow;
   _object_palette: GObject.Object;
   _objects_empty: Gtk.Label;
 }

@@ -16,9 +16,17 @@ export interface BrushPageWiring {
   armPencilTool(): void
   setActiveTile(tileId: number): void
   armObjectBrush(defId: string): void
+  /** Re-point the sheet at another of the map's tilesets. */
+  selectTileset(spriteSetId: string): void
   selectPlane(plane: LayerPlane): void
   /** The "choose a layer" row leads to the Layers page, wherever it is hosted. */
   openLayersPage(): void
+  /**
+   * Get the sheet out of the way once a Thing is armed: on a phone the
+   * page fills the sheet, and the next gesture belongs to the canvas.
+   * A no-op in the wide inspector, which never covers the map.
+   */
+  collapseSheet(): void
 }
 
 export function wireBrushPage(page: BrushPage, ctx: BrushPageWiring): void {
@@ -31,7 +39,11 @@ export function wireBrushPage(page: BrushPage, ctx: BrushPageWiring): void {
   })
   // Picking what to place arms the brush AND the Object tool in one step,
   // just like picking a tile arms the pencil's active tile.
-  page.connect('object-brush-selected', (_p: BrushPage, defId: string) => ctx.armObjectBrush(defId))
+  page.connect('object-brush-selected', (_p: BrushPage, defId: string) => {
+    ctx.armObjectBrush(defId)
+    ctx.collapseSheet()
+  })
+  page.connect('tileset-selected', (_p: BrushPage, spriteSetId: string) => ctx.selectTileset(spriteSetId))
   page.connect('plane-selected', (_p: BrushPage, plane: string) => ctx.selectPlane(plane as LayerPlane))
   page.connect('layers-requested', () => ctx.openLayersPage())
 }

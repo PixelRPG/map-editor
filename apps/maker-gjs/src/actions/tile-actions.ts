@@ -13,8 +13,8 @@ export interface TileActionsContext {
   presentTilesetImport(): void
   focusTileset(id: string): void
   focusAppearance(id: string): void
-  /** Re-point the Brush-page palette at another of the scene's tilesets. */
-  switchTileset(): void
+  /** Re-point the Brush page's sheet at another of the scene's tilesets. */
+  selectTileset(spriteSetId: string): void
 }
 
 /**
@@ -62,7 +62,12 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
   })
   addAction(group, openAppearance)
 
-  const switchTileset = new Gio.SimpleAction({ name: 'switch-tileset' })
-  switchTileset.connect('activate', () => ctx.switchTileset())
-  addAction(group, switchTileset)
+  // The Brush page's tileset chips activate this; the window owns the
+  // project and resolves the set's `firstGid` from the map's references.
+  const selectTileset = Gio.SimpleAction.new('select-tileset', GLib.VariantType.new('s'))
+  selectTileset.connect('activate', (_a, parameter) => {
+    const id = parameter?.get_string()[0]
+    if (id) ctx.selectTileset(id)
+  })
+  addAction(group, selectTileset)
 }

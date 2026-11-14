@@ -88,7 +88,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   playtest: ['play', 'restart', 'play-from-start'],
   session: ['share-session', 'toggle-assistant-paused'],
   cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation'],
-  tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'switch-tileset'],
+  tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset'],
   object: ['new-object', 'open-object', 'toggle-object-cast'],
 } as const satisfies Record<string, readonly string[]>
 

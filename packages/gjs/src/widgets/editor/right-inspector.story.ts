@@ -1,8 +1,10 @@
 import GObject from '@girs/gobject-2.0'
 import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
-import { buildDemoTiles } from '../../__demo__/world-sample'
+import { GdkSpriteSetResource } from '../../sprite'
+import type { BrushPage } from './brush-page'
 import { EditorPages } from './editor-pages'
 import { RightInspector } from './right-inspector'
+import { sheetGridOf } from './tile-sheet.geometry'
 
 /** Showcase for the inspector pane hosting the Brush/Layers/Selected pages. */
 export class RightInspectorStory extends StoryWidget {
@@ -48,8 +50,7 @@ export class RightInspectorStory extends StoryWidget {
     // `host()` parents each widget into a slot, and the slot holds the ref.
     const pages = new EditorPages()
     pages.host(inspector.pageSlots)
-    pages.brush.tilesetName = 'Lokiri Forest'
-    pages.brush.setTiles(buildDemoTiles(20))
+    void this._loadSheet(pages.brush)
     pages.layers.setLayers([
       { id: 'bg', name: 'Background', tileCount: 248, plane: 'ground' },
       { id: 'mid', name: 'Midground', tileCount: 96, plane: 'hero' },
@@ -80,6 +81,25 @@ export class RightInspectorStory extends StoryWidget {
   updateArgs(_args: StoryArgs): void {
     if (!this._inspector) return
     if (typeof this.args.activePage === 'string') this._inspector.visiblePage = this.args.activePage
+  }
+
+  /**
+   * A real tileset rather than coloured squares: the Brush page's whole
+   * point is that a two-tile tree reads as one tree, which synthetic
+   * swatches cannot show.
+   */
+  private async _loadSheet(brush: BrushPage): Promise<void> {
+    try {
+      const resource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/lokiri-forest.json')
+      const texture = resource.imageTexture?.texture ?? null
+      const data = resource.data
+      if (!texture || !data) return
+      brush.setTilesets([{ id: data.id, name: data.name, thumbnail: resource.createSheetThumbnail() }], data.id)
+      brush.setSheet(texture, sheetGridOf(data, texture.get_width(), texture.get_height()))
+      brush.selectTile(0)
+    } catch (error) {
+      console.error('RightInspectorStory: failed to load the sample tileset', error)
+    }
   }
 }
 

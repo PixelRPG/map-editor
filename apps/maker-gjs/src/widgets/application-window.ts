@@ -28,7 +28,6 @@ import { installViewActions } from '../actions/view-actions.ts'
 import { presentShortcutsDialog } from './shortcuts-dialog.ts'
 import { installZoomActions } from '../actions/zoom-actions.ts'
 import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
-import { presentTilesetSwitcher } from '../services/asset-dialogs.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
 import type { BackStep } from '../services/back-order.ts'
 import { CastController } from '../services/cast-controller.ts'
@@ -821,7 +820,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       presentTilesetImport: () => library.tilesView.presentTilesetImportDialog(),
       focusTileset: (id) => library.tilesView.focusTileset(id),
       focusAppearance: (id) => library.tilesView.focusAppearance(id),
-      switchTileset: () => this._switchTileset(),
+      selectTileset: (spriteSetId) => this._selectTileset(spriteSetId),
     })
 
     installObjectActions(group, {
@@ -972,25 +971,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * `win.switch-tileset` — pick which of the active scene's tilesets feeds
-   * the Brush-page palette. Maps referencing a single sprite set have
-   * nothing to switch to.
+   * `win.select-tileset(s)` — paint from another of the active scene's
+   * tilesets, as picked by a Brush-page chip. The window resolves the
+   * set's `firstGid` here because the sprite-set references hang off the
+   * project, which the scene view deliberately does not hold.
    */
-  private _switchTileset(): void {
+  private _selectTileset(spriteSetId: string): void {
     const project = this._loadedProject
     const sceneId = this._scenes.currentSceneId
     if (!project || !sceneId) return
     const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
-    if (refs.length <= 1) {
-      this._showToast(_('This map uses a single tileset.'))
-      return
-    }
-    const activeId = this._scene_editor_view.activeTilesetId
-    const choices = refs.map((ref) => ({ id: ref.id, active: ref.id === activeId }))
-    presentTilesetSwitcher(this, choices, (spriteSetId) => {
-      const ref = refs.find((r) => r.id === spriteSetId)
-      void this._scene_editor_view.loadTileset(project, spriteSetId, ref?.firstGid ?? 1)
-    })
+    const ref = refs.find((r) => r.id === spriteSetId)
+    void this._scene_editor_view.loadTileset(project, spriteSetId, ref?.firstGid ?? 1)
   }
 
   /**

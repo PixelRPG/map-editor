@@ -9,11 +9,14 @@ import { gettext as _ } from 'gettext'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { DepthGlyph } from './depth-glyph.ts'
 import { GLYPH_SIZES } from './depth-glyph.geometry.ts'
-import { type TileDescriptor, TilePalette } from './tile-palette.ts'
+import { TilePalette } from './tile-palette.ts'
+import { TileSheet } from './tile-sheet.ts'
+import type { SheetGrid } from './tile-sheet.geometry.ts'
 
 import Template from './brush-page.blp'
 
 GObject.type_ensure(TilePalette.$gtype)
+GObject.type_ensure(TileSheet.$gtype)
 GObject.type_ensure(DepthGlyph.$gtype)
 
 /** One placeable library object shown in the page's Things grid. */
@@ -27,6 +30,15 @@ export interface ObjectBrushDescriptor {
   color?: string
 }
 
+/** One tileset the map references, shown as a chip above the sheet. */
+export interface TilesetChipDescriptor {
+  /** Sprite-set id — what {@link BrushPage} emits when the chip is tapped. */
+  id: string
+  name: string
+  /** Downscaled picture of the whole sheet; an icon stands in without one. */
+  thumbnail?: Gdk.Paintable | null
+}
+
 /** The three planes, top of the world first — the order the Layers page shows. */
 const CHIP_PLANES: readonly LayerPlane[] = ['overlay', 'hero', 'ground'] as const
 
@@ -36,6 +48,9 @@ const PLANE_CAPTIONS: Record<LayerPlane, { short: () => string; long: () => stri
   hero: { short: () => _('Hero height'), long: () => _('At hero height') },
   overlay: { short: () => _('Above'), long: () => _('Above the hero') },
 }
+
+/** Thumbnail box of a tileset chip — landscape, because sheets are wide. */
+const CHIP_THUMB = { width: 56, height: 40 } as const
 
 /**
  * Typed view of the signals {@link BrushPage} registers, layered on the
@@ -50,12 +65,17 @@ export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
   'tile-selected': (tileId: number) => void
   'object-brush-selected': (defId: string) => void
   'plane-selected': (plane: string) => void
+  'tileset-selected': (spriteSetId: string) => void
   'layers-requested': () => void
 }
 
 /**
  * Everything that decides what the next stroke lays: which plane, which
  * layer, which tileset, which tile, which object.
+ *
+ * Tiles and Things are PEERS here, one `Adw.ToggleGroup` apart. They used
+ * to share a scroll with the Things grid below a palette tall enough to
+ * need its own scrollbar, so on a phone sheet nobody ever reached it.
  *
  * One instance with two homes — the wide inspector's Brush page and the
  * phone sheet's Brush page — because "what the next stroke lays" should
@@ -68,26 +88,23 @@ export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
  */
 export class BrushPage extends Adw.Bin {
   declare _plane_chips: Adw.ToggleGroup
-  declare _layer_label: Gtk.Label
   declare _layers_button: Gtk.Button
-  declare _tileset_row: Gtk.Box
-  declare _tileset_label: Gtk.Label
-  declare _switch_button: Gtk.Button
-  declare _search: Gtk.SearchEntry
-  declare _palette: TilePalette
+  declare _mode_toggle: Adw.ToggleGroup
+  declare _tileset_scroller: Gtk.ScrolledWindow
+  declare _tileset_chips: Adw.ToggleGroup
+  declare _sheet_scroller: Gtk.ScrolledWindow
+  declare _sheet: TileSheet
   declare _empty_state: Adw.StatusPage
-  declare _objects_section: Gtk.Box
   declare _object_palette: TilePalette
   declare _objects_empty: Gtk.Label
 
   private _layerName = ''
-  private _tilesetName = ''
-  private _tiles: TileDescriptor[] = []
   private _objectBrushIds: string[] = []
-  private _activeTileId: number | null = null
   private _planes = new Set<LayerPlane>()
   /** Set while a programmatic plane write is in flight, so it never re-emits. */
   private _echo = false
+  /** The same guard for the tileset chips, which the host also writes. */
+  private _tilesetEcho = false
   private _signals = new SignalScope()
 
   static {
@@ -97,15 +114,13 @@ export class BrushPage extends Adw.Bin {
         Template,
         InternalChildren: [
           'plane_chips',
-          'layer_label',
           'layers_button',
-          'tileset_row',
-          'tileset_label',
-          'switch_button',
-          'search',
-          'palette',
+          'mode_toggle',
+          'tileset_scroller',
+          'tileset_chips',
+          'sheet_scroller',
+          'sheet',
           'empty_state',
-          'objects_section',
           'object_palette',
           'objects_empty',
         ],
@@ -117,13 +132,6 @@ export class BrushPage extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          'tileset-name': GObject.ParamSpec.string(
-            'tileset-name',
-            'Tileset Name',
-            'Name of the active tileset, shown above the palette',
-            GObject.ParamFlags.READWRITE,
-            '',
-          ),
         },
         Signals: {
           'tile-selected': { param_types: [GObject.TYPE_INT] },
@@ -131,6 +139,8 @@ export class BrushPage extends Adw.Bin {
           // A plane chip was tapped — the host activates that plane's
           // last-used layer.
           'plane-selected': { param_types: [GObject.TYPE_STRING] },
+          // A tileset chip was tapped — the host re-points the sheet.
+          'tileset-selected': { param_types: [GObject.TYPE_STRING] },
           // "Layers…" — the host opens the full list.
           'layers-requested': { param_types: [] },
         },
@@ -150,7 +160,7 @@ export class BrushPage extends Adw.Bin {
 
   vfunc_map(): void {
     super.vfunc_map()
-    this._signals.connect(this._palette, 'tile-selected', (_p: TilePalette, tileId: number) =>
+    this._signals.connect(this._sheet, 'tile-selected', (_s: TileSheet, tileId: number) =>
       this.emit('tile-selected', tileId),
     )
     this._signals.connect(this._object_palette, 'tile-selected', (_p: TilePalette, idx: number) => {
@@ -162,8 +172,12 @@ export class BrushPage extends Adw.Bin {
       const name = this._plane_chips.get_active_name()
       if (name) this.emit('plane-selected', name)
     })
+    this._signals.connect(this._tileset_chips, 'notify::active-name', () => {
+      if (this._tilesetEcho) return
+      const name = this._tileset_chips.get_active_name()
+      if (name) this.emit('tileset-selected', name)
+    })
     this._signals.connect(this._layers_button, 'clicked', () => this.emit('layers-requested'))
-    this._signals.connect(this._search, 'search-changed', () => this._applyFilter())
   }
 
   vfunc_unmap(): void {
@@ -181,16 +195,6 @@ export class BrushPage extends Adw.Bin {
     this.notify('layer-name')
   }
 
-  get tilesetName(): string {
-    return this._tilesetName ?? ''
-  }
-
-  set tilesetName(value: string) {
-    if (this._tilesetName === value) return
-    this._tilesetName = value
-    this.notify('tileset-name')
-  }
-
   /** The project's player sprite, drawn in every plane chip's glyph. */
   set heroPaintable(paintable: Gdk.Paintable | null) {
     for (const plane of CHIP_PLANES) {
@@ -199,21 +203,58 @@ export class BrushPage extends Adw.Bin {
     }
   }
 
-  /** An empty list swaps the palette for the "Import a picture…" state. */
-  setTiles(tiles: TileDescriptor[]): void {
-    this._tiles = tiles
-    const has = tiles.length > 0
-    this._search.set_visible(has)
-    this._tileset_row.set_visible(has)
-    this._palette.set_visible(has)
+  /**
+   * Show a tileset as the contiguous picture it is. Passing `null` for
+   * either argument swaps the sheet for the "Import a picture…" state.
+   */
+  setSheet(texture: Gdk.Texture | null, grid: SheetGrid | null): void {
+    const has = texture !== null && grid !== null
+    this._sheet.setSheet(texture, grid)
+    this._tileset_scroller.set_visible(has)
+    this._sheet_scroller.set_visible(has)
     this._empty_state.set_visible(!has)
-    this._applyFilter()
   }
 
-  /** Ring the swatch for the active tile without re-emitting. */
+  /** Ring the active tile on the sheet without re-emitting. */
   selectTile(id: number): void {
-    this._activeTileId = id
-    this._palette.selectTile(id)
+    this._sheet.selectTile(id)
+  }
+
+  /**
+   * Check the chip of the tileset the host actually loaded, without
+   * re-emitting — the load can be refused or redirected, so the chips
+   * follow the host's answer rather than the tap.
+   */
+  selectTileset(spriteSetId: string): void {
+    if (!this._tileset_chips.get_toggle_by_name(spriteSetId)) return
+    this._tilesetEcho = true
+    try {
+      this._tileset_chips.set_active_name(spriteSetId)
+    } finally {
+      this._tilesetEcho = false
+    }
+  }
+
+  /**
+   * List the map's tilesets as chips and check the active one. This is
+   * the ONLY way to change the painting tileset — there is no second
+   * "Switch…" path that could hold a different answer.
+   */
+  setTilesets(tilesets: ReadonlyArray<TilesetChipDescriptor>, activeId: string | null): void {
+    this._tilesetEcho = true
+    try {
+      this._tileset_chips.remove_all()
+      for (const tileset of tilesets) {
+        this._tileset_chips.add(
+          new Adw.Toggle({ name: tileset.id, child: tilesetChipChild(tileset), tooltip: tileset.name }),
+        )
+      }
+      if (activeId && tilesets.some((tileset) => tileset.id === activeId)) {
+        this._tileset_chips.set_active_name(activeId)
+      }
+    } finally {
+      this._tilesetEcho = false
+    }
   }
 
   setObjectBrushes(brushes: ReadonlyArray<ObjectBrushDescriptor>): void {
@@ -221,15 +262,22 @@ export class BrushPage extends Adw.Bin {
     this._object_palette.setTiles(
       brushes.map((b, idx) => ({ id: idx, name: b.name, color: b.color, paintable: b.paintable ?? undefined })),
     )
-    this._objects_section.set_visible(brushes.length > 0)
     this._objects_empty.set_visible(brushes.length === 0)
   }
 
-  /** Mirror an externally-armed object brush (`null` clears) without re-emitting. */
+  /**
+   * Mirror an externally-armed object brush (`null` clears) without
+   * re-emitting. An armed object also brings the Things page forward —
+   * the brush the user just armed has to be the one they can see.
+   */
   selectObjectBrush(defId: string | null): void {
     const idx = defId ? this._objectBrushIds.indexOf(defId) : -1
-    if (idx < 0) this._object_palette.clearSelection()
-    else this._object_palette.selectTile(idx)
+    if (idx < 0) {
+      this._object_palette.clearSelection()
+      return
+    }
+    this._object_palette.selectTile(idx)
+    this._mode_toggle.set_active_name('things')
   }
 
   /**
@@ -270,22 +318,24 @@ export class BrushPage extends Adw.Bin {
       this._plane_chips.add(new Adw.Toggle({ name: plane, child: box, tooltip: PLANE_CAPTIONS[plane].long() }))
     }
   }
+}
 
-  /**
-   * Narrow the palette to the tiles whose name matches the search. The
-   * active tile survives the filter when it still matches, so typing
-   * does not silently disarm the brush.
-   */
-  private _applyFilter(): void {
-    const needle = this._search.get_text().trim().toLowerCase()
-    const shown = needle
-      ? this._tiles.filter((tile) => (tile.name ?? `Tile ${tile.id}`).toLowerCase().includes(needle))
-      : this._tiles
-    this._palette.setTiles(shown)
-    if (this._activeTileId != null && shown.some((tile) => tile.id === this._activeTileId)) {
-      this._palette.selectTile(this._activeTileId)
-    }
-  }
+/** Thumbnail over an ellipsizing name — the body of one tileset chip. */
+function tilesetChipChild(tileset: TilesetChipDescriptor): Gtk.Widget {
+  const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
+  const thumb = tileset.thumbnail
+    ? new Gtk.Picture({ paintable: tileset.thumbnail, contentFit: Gtk.ContentFit.CONTAIN })
+    : new Gtk.Image({ iconName: 'image-x-generic-symbolic' })
+  thumb.set_size_request(CHIP_THUMB.width, CHIP_THUMB.height)
+  box.append(thumb)
+  const caption = new Gtk.Label({
+    label: tileset.name,
+    ellipsize: Pango.EllipsizeMode.END,
+    maxWidthChars: 10,
+  })
+  caption.add_css_class('caption')
+  box.append(caption)
+  return box
 }
 
 /** Every plane a map has at least one layer on, for {@link BrushPage.setActivePlane}. */

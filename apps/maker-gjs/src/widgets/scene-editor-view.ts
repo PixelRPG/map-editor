@@ -27,7 +27,9 @@ import {
   type SampleScene,
   SceneEditor,
   type SelectedPlacementDescriptor,
+  sheetGridOf,
   type TileDescriptor,
+  type TilesetChipDescriptor,
 } from '@pixelrpg/gjs'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
@@ -58,6 +60,13 @@ const TOOL_LABELS: Record<EditorTool, string> = {
   eyedropper: _('Pick'),
   object: _('Thing'),
 }
+
+/**
+ * Longer edge of a tileset chip's sheet thumbnail, in px. The chip box is
+ * 56×40, so a 96-px texture survives HiDPI scaling without carrying a
+ * whole 1024-px sheet per chip.
+ */
+const TILESET_CHIP_THUMB_PX = 96
 
 GObject.type_ensure(SceneEditor.$gtype)
 GObject.type_ensure(RightInspector.$gtype)
@@ -141,7 +150,6 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _entityLibrary: readonly EntityDefinition[] = []
   /** Sprite sheets behind the placement sprites, keyed by sprite-set id. */
   private _objectSheets: ObjectSheets = new Map()
-  private _tilesetName = ''
   /**
    * `firstGid` of the active sprite set. The engine indexes tiles as
    * global IDs (`spriteIndex + firstGid`); the inspector deals in
@@ -676,11 +684,35 @@ export class SceneEditorView extends ResponsiveEditorView {
     // project-level list if the map doesn't pin a set.
     const mapSpriteSetRef = mapData.spriteSets?.[0]
     const firstSet = mapSpriteSetRef ?? project.resource.data?.spriteSets?.[0]
+    await this._populateTilesets(project, mapData)
     if (firstSet) {
       await this.loadTileset(project, firstSet.id, mapSpriteSetRef?.firstGid ?? 1)
     } else {
-      this._pages.brush.setTiles([])
+      this._pages.brush.setSheet(null, null)
     }
+  }
+
+  /**
+   * List the map's tilesets as chips above the sheet. Tapping one is the
+   * only way to change the painting tileset, so every set the map
+   * references has to appear here even when its sheet fails to load —
+   * except that a chip without a sheet has nothing to show, so an
+   * unloadable set is dropped rather than offered as a dead end.
+   */
+  private async _populateTilesets(project: LoadedProject, mapData: MapData): Promise<void> {
+    const refs = mapData.spriteSets ?? project.resource.data?.spriteSets ?? []
+    const chips: TilesetChipDescriptor[] = []
+    for (const ref of refs) {
+      const engineSet = await project.resource.getSpriteSet(ref.id).catch(() => null)
+      if (!engineSet) continue
+      const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
+      chips.push({
+        id: ref.id,
+        name: engineSet.data?.name ?? ref.id,
+        thumbnail: gdkSet.createSheetThumbnail(TILESET_CHIP_THUMB_PX),
+      })
+    }
+    this._pages.brush.setTilesets(chips, null)
   }
 
   /**
@@ -732,30 +764,26 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._syncSelectedObjectProps(this._selectedPlacementId())
   }
 
-  /** The sprite-set id currently feeding the Brush page's palette. */
-  get activeTilesetId(): string {
-    return this._tilesetName
-  }
-
   /**
-   * Load `spriteSetId` into the Brush page's palette as the active painting
-   * tileset, offsetting tile ids by `firstGid`. Extracted from
-   * {@link populateFromProject} so the "Switch…" tileset action can
-   * re-point the palette to another of the map's tilesets (the win
-   * action resolves the set + firstGid from the map's `spriteSets`).
+   * Load `spriteSetId` into the Brush page as the sheet being painted
+   * from, offsetting tile ids by `firstGid`. Extracted from
+   * {@link populateFromProject} so a tileset chip can re-point the sheet
+   * at another of the map's tilesets (`win.select-tileset` resolves the
+   * set + firstGid from the map's `spriteSets`).
    */
   async loadTileset(project: LoadedProject, spriteSetId: string, firstGid: number): Promise<void> {
     try {
       const engineSet = await project.resource.getSpriteSet(spriteSetId)
       if (!engineSet) return
       const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
-      if (!gdkSet.spriteSheet) return
-      this._pages.brush.tilesetName = engineSet.data?.name ?? spriteSetId
-      this._tilesetName = spriteSetId
+      const texture = gdkSet.imageTexture?.texture ?? null
+      const layout = gdkSet.data
+      if (!gdkSet.spriteSheet || !texture || !layout) return
       this._tilesetFirstGid = firstGid
       const tiles = this._sheetToTiles(gdkSet.spriteSheet)
       this._tiles = tiles
-      this._pages.brush.setTiles(tiles)
+      this._pages.brush.setSheet(texture, sheetGridOf(layout, texture.get_width(), texture.get_height()))
+      this._pages.brush.selectTileset(spriteSetId)
       // A fresh sheet starts the recency list over: ids are sheet-local,
       // so carrying the old ones across would ring the wrong swatches.
       this._recentTileIds = tiles.slice(0, 8).map((tile) => tile.id)
@@ -988,8 +1016,10 @@ export class SceneEditorView extends ResponsiveEditorView {
       armPencilTool: () => this.activate_action('win.set-tool', GLib.Variant.new_string('pencil')),
       setActiveTile: (tileId) => this._setActiveTile(tileId),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
+      selectTileset: (id) => this.activate_action('win.select-tileset', GLib.Variant.new_string(id)),
       selectPlane: (plane) => this._selectPlane(plane),
       openLayersPage: () => this.showSheetPage('layers'),
+      collapseSheet: () => this._editor.collapseSheet(),
     })
     wireLayersPage(this._pages.layers, {
       setActiveLayer: (layerId) => this._setActiveLayer(layerId),

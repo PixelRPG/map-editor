@@ -612,11 +612,16 @@ with GTK's `measure()` rather than by eye:
   times.** `Adw.BottomSheet` keeps both in one homogeneous `Gtk.Stack`,
   so the Brush page's width reaches the docked bar and the canvas with
   the sheet closed, and every one of the three pages has to clear that
-  floor, not just the Brush page. Its palettes therefore `wrap` with six
-  columns as the cap (one column minimum, six natural) and its
+  floor, not just the Brush page. Its Things palette therefore `wrap`s
+  with six columns as the cap (one column minimum, six natural) and its
   plane-chip captions ellipsize: six pinned
   columns measured 378 px and put the whole editor 18 px past a 360 px
-  window.
+  window. The tile sheet is the one child that reports its natural size
+  as its minimum — a scaled texture squeezed to 360 px would be a
+  misdrawn tileset, not a narrow one — so it sits in a
+  `Gtk.ScrolledWindow` that absorbs that minimum and pans instead,
+  which is the same reason the tileset chips are `can-shrink: false`
+  inside a scroller of their own.
 - The **recent strip shows a whole number of tiles** — six at 360 px —
   and hides the rest; a swatch sliced by the edge of the bar reads as
   a defect, not as "more". `RecentTilesLayout` decides the count at
@@ -1019,6 +1024,8 @@ on the scene the load then replaces and vanishes silently.
 | On phone every inspector reveal lands on the sheet, never the editor's drawer (`_onShowInspectorChanged`) | **landed** |
 | The *Selected* page edits a placement (name + component overrides, Duplicate, Delete) and the phone bar's second row becomes the contextual action bar — a canvas selection fills both and does NOT open the sheet (REDESIGN § 5.4 / § 9 step 3.3) | **landed** |
 | Dragging the selected placement to move it; `Move` is a one-shot tap instead (REDESIGN § 5.4) | deferred, tracked in `TODO.md` |
+| The *Brush* page is a `Tiles \| Things` toggle over the tileset drawn as one contiguous sheet, with the map's tilesets as chips above it and `win.select-tileset(s)` as the only way to change sheets (REDESIGN § 5.3 / § 9 step 3.4) | **landed** |
+| A drag on the sheet picking a multi-tile stamp, and the "Search tiles…" row (REDESIGN § 5.3) | deferred / dropped, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:
