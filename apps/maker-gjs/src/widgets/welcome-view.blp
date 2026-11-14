@@ -197,7 +197,7 @@ template $WelcomeView : Adw.Bin {
             }
 
             Gtk.Label welcome_title {
-              label: _("Welcome to Pixel RPG Editor");
+              label: _("PixelRPG Maker");
               halign: start;
               xalign: 0;
               // Wrap so the large title doesn't force a wide minimum window
@@ -210,7 +210,7 @@ template $WelcomeView : Adw.Bin {
             }
 
             Gtk.Label welcome_subtitle {
-              label: _("Draw maps from tilesets, place a hero and NPCs, hook maps together with teleports, and script events.");
+              label: _("Draw maps, add heroes and doors, press Play.");
               halign: start;
               xalign: 0;
               wrap: true;
@@ -259,15 +259,10 @@ template $WelcomeView : Adw.Bin {
               margin-bottom: 10;
 
               Gtk.Label templates_heading {
-                label: _("Templates");
+                label: _("Start something new");
                 halign: start;
                 hexpand: true;
                 styles ["caption-heading", "dim-label"]
-              }
-
-              Gtk.SearchEntry template_filter {
-                placeholder-text: _("Filter templates…");
-                max-width-chars: 18;
               }
             }
 

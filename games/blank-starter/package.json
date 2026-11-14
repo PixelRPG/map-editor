@@ -4,6 +4,10 @@
   "description": "Empty starter template — single 20×14 scene with no tiles. The 'New Project' default.",
   "type": "module",
   "private": true,
+  "pixelrpg": {
+    "kind": "starter",
+    "caption": "Start from nothing"
+  },
   "exports": {
     "./*": "./*",
     "./maps/*": "./maps/*"

@@ -252,12 +252,23 @@ export class AtlasCanvas extends Adw.Bin {
    * overview minimap gives the whole-world-at-a-glance view. Deferred
    * until the scroller has a real page size (first allocation) so the
    * math isn't run against a zero viewport.
+   *
+   * With `focusSceneId`, a world that does not fit the viewport centres on
+   * that scene instead — a phone opens on the start map, not on the
+   * middle of the world.
    */
-  fitToContent(): void {
+  fitToContent(focusSceneId?: string): void {
     const h = this._scroller.hadjustment
     const v = this._scroller.vadjustment
     const extent = worldExtent(this._scenes)
+    const focusIndex = focusSceneId ? this._scenes.findIndex((scene) => scene.id === focusSceneId) : -1
     const apply = (): void => {
+      if (focusIndex >= 0 && (extent.width > h.page_size || extent.height > v.page_size)) {
+        const rect = sceneRects(this._scenes)[focusIndex]
+        h.value = centeredScrollValue(2 * rect.x + rect.w, h.upper, h.page_size)
+        v.value = centeredScrollValue(2 * rect.y + rect.h, v.upper, v.page_size)
+        return
+      }
       h.value = centeredScrollValue(extent.width, h.upper, h.page_size)
       v.value = centeredScrollValue(extent.height, v.upper, v.page_size)
     }

@@ -1,3 +1,4 @@
+import GLib from '@girs/glib-2.0'
 import { PREFIX } from '../constants.ts'
 
 /**
@@ -31,25 +32,50 @@ export interface ProjectTemplate {
   accentColor: string
   /** Whether this is the "blank" template used by *New Project*. */
   isBlank?: boolean
+  /** `example` is a finished game to look at, `starter` is a place to begin. */
+  kind: 'example' | 'starter'
 }
 
 const TEMPLATES_ROOT = `${PREFIX}/../../games`
 
+/**
+ * `kind` and the child-facing `caption` live in the template's own
+ * `package.json` (`pixelrpg` field), next to the content they describe.
+ */
+function readTemplateMeta(
+  dir: string,
+  fallbackKind: ProjectTemplate['kind'],
+): { kind: ProjectTemplate['kind']; caption: string } {
+  try {
+    const [ok, bytes] = GLib.file_get_contents(`${TEMPLATES_ROOT}/${dir}/package.json`)
+    if (ok) {
+      const meta = JSON.parse(new TextDecoder().decode(bytes))?.pixelrpg
+      if (meta?.kind === 'example' || meta?.kind === 'starter') {
+        return { kind: meta.kind, caption: typeof meta.caption === 'string' ? meta.caption : '' }
+      }
+    }
+  } catch {
+    // Unreadable metadata only costs the caption; the card still opens.
+  }
+  return { kind: fallbackKind, caption: '' }
+}
+
+/** The example comes first: Blank has no tiles to paint with yet. */
 export const STARTER_TEMPLATES: ProjectTemplate[] = [
-  {
-    id: 'blank-starter',
-    name: 'Blank Project',
-    caption: 'Empty 20×14 scene',
-    projectPath: `${TEMPLATES_ROOT}/blank-starter/game-project.json`,
-    accentColor: '#535c68',
-    isBlank: true,
-  },
   {
     id: 'kokiri-forest',
     name: 'Kokiri Forest',
-    caption: 'Zelda-like demo (full art)',
+    ...readTemplateMeta('zelda-like', 'example'),
     projectPath: `${TEMPLATES_ROOT}/zelda-like/game-project.json`,
     accentColor: '#3d6b3a',
+  },
+  {
+    id: 'blank-starter',
+    name: 'Empty game',
+    ...readTemplateMeta('blank-starter', 'starter'),
+    projectPath: `${TEMPLATES_ROOT}/blank-starter/game-project.json`,
+    accentColor: '#535c68',
+    isBlank: true,
   },
 ]
 

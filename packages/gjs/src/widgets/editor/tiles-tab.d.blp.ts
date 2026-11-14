@@ -1,15 +1,16 @@
 // GENERATED from tiles-tab.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgTilesTab` defines. */
-export declare const GTypeName: 'PixelRpgTilesTab';
+export declare const GTypeName: "PixelRpgTilesTab";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -22,22 +23,24 @@ export declare const GTypeName: 'PixelRpgTilesTab';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'search',
-    'header',
-    'tileset_label',
-    'switch_button',
-    'palette',
-    'objects_section',
-    'object_palette',
+  "search",
+  "header",
+  "tileset_label",
+  "switch_button",
+  "palette",
+  "empty_state",
+  "objects_section",
+  "object_palette",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _search: Gtk.SearchEntry;
-    _header: Gtk.Box;
-    _tileset_label: Gtk.Label;
-    _switch_button: Gtk.Button;
-    _palette: GObject.Object;
-    _objects_section: Gtk.Box;
-    _object_palette: GObject.Object;
+  _search: Gtk.SearchEntry;
+  _header: Gtk.Box;
+  _tileset_label: Gtk.Label;
+  _switch_button: Gtk.Button;
+  _palette: GObject.Object;
+  _empty_state: Adw.StatusPage;
+  _objects_section: Gtk.Box;
+  _object_palette: GObject.Object;
 }

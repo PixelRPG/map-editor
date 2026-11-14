@@ -32,6 +32,9 @@ export interface SceneCardSignals extends Gtk.Button.SignalSignatures {
   'lock-changed': (unlocked: boolean) => void
 }
 
+/** Card width up to which the dimensions label yields to the name. */
+const NARROW_CARD_PX = 200
+
 /**
  * Single atlas-space card representing one scene.
  *
@@ -59,6 +62,7 @@ export class SceneCard extends Gtk.Button {
   declare _map: MiniMap
   declare _preview_slot: Adw.Bin
   declare _lock_button: Gtk.ToggleButton
+  declare _size_label: Gtk.Label
 
   private _sceneName = ''
   private _cols = 0
@@ -100,7 +104,7 @@ export class SceneCard extends Gtk.Button {
       {
         GTypeName: 'PixelRpgSceneCard',
         Template,
-        InternalChildren: ['map', 'preview_slot', 'lock_button'],
+        InternalChildren: ['map', 'preview_slot', 'lock_button', 'size_label'],
         Properties: {
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
@@ -160,6 +164,16 @@ export class SceneCard extends Gtk.Button {
   declare connect: GObject.SignalMethods<this, SceneCardSignals>['connect']
   declare connect_after: GObject.SignalMethods<this, SceneCardSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, SceneCardSignals>['emit']
+
+  /**
+   * A card at or under {@link NARROW_CARD_PX} gives its whole title row to
+   * the name: "Link'…" next to "11×11" told the child neither.
+   */
+  vfunc_size_allocate(width: number, height: number, baseline: number): void {
+    super.vfunc_size_allocate(width, height, baseline)
+    const show = width > NARROW_CARD_PX
+    if (this._size_label.get_visible() !== show) this._size_label.set_visible(show)
+  }
 
   vfunc_map(): void {
     super.vfunc_map()

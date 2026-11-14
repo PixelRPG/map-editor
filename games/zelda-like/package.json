@@ -4,6 +4,10 @@
   "description": "Zelda like game",
   "type": "module",
   "private": true,
+  "pixelrpg": {
+    "kind": "example",
+    "caption": "An example game — look around and change it"
+  },
   "scripts": {
     "preview": "serve -l 5001 --cors"
   },
