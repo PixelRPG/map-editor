@@ -30,5 +30,16 @@
         collaborators.
       </description>
     </key>
+    <key name="show-grid-default" type="b">
+      <default>false</default>
+      <summary>Show the tile grid in new sessions</summary>
+      <description>
+        The state `win.toggle-grid` starts in. The grid itself stays a
+        per-session toggle — flipping it in a map does not change this
+        preference — so the two never fight: this is only what the editor
+        opens with. Like the view tier, a fact about the person at the
+        keyboard rather than about the project.
+      </description>
+    </key>
   </schema>
 </schemalist>

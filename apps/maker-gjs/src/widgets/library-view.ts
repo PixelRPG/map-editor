@@ -1,7 +1,7 @@
 import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { ProjectMenuButton, SignalScope } from '@pixelrpg/gjs'
+import { ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
 
 import {
   chipForTier,
@@ -17,12 +17,13 @@ import { ResponsiveEditorView } from './responsive-editor-view.ts'
 import { TilesView } from './tiles-view.ts'
 
 // Force registration so the `$CastView` / `$ObjectsView` / `$TilesView`
-// / `$PixelRpgProjectMenuButton` references in the blueprint resolve at
-// parse time.
+// / `$PixelRpgProjectMenuButton` / `$PixelRpgRosterChip` references in
+// the blueprint resolve at parse time.
 GObject.type_ensure(CastView.$gtype)
 GObject.type_ensure(ObjectsView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
 GObject.type_ensure(ProjectMenuButton.$gtype)
+GObject.type_ensure(RosterChip.$gtype)
 
 /**
  * The Library — one shell destination hosting three chip pages: **Characters**
@@ -68,6 +69,7 @@ export class LibraryView extends ResponsiveEditorView {
         Template,
         InternalChildren: [
           'view_switcher',
+          'roster_chip',
           'pages',
           'graphics_page',
           'hidden_banner',
@@ -197,6 +199,35 @@ export class LibraryView extends ResponsiveEditorView {
   resetToOverview(): void {
     this._cast_view.resetToOverview()
     this._tiles_view.resetToOverview()
+  }
+
+  /**
+   * Pop the visible chip page's pushed detail, and say whether there was
+   * one — back step 4 (REDESIGN.md § 3.4).
+   */
+  popPage(): boolean {
+    return this._visiblePage().popPage()
+  }
+
+  /** Whether the visible chip page has a detail pushed over its gallery. */
+  hasPushedPage(): boolean {
+    return this._visiblePage().hasPushedPage()
+  }
+
+  /**
+   * The chip page the user is looking at. Only that one answers a back:
+   * `Adw.ViewStack` keeps the other two alive with their own pushed
+   * pages (§ 3.4, "tabs keep their place").
+   */
+  private _visiblePage(): CastView | ObjectsView | TilesView {
+    switch (this.chip) {
+      case 'things':
+        return this._objects_view
+      case 'graphics':
+        return this._tiles_view
+      default:
+        return this._cast_view
+    }
   }
 }
 

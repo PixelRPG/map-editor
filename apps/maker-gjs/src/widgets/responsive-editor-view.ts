@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
+import type { CollaboratorEntry, RosterChip } from '@pixelrpg/gjs'
 
 /**
  * Signal surface {@link ResponsiveEditorView} hands its subclasses.
@@ -36,6 +37,17 @@ export class ResponsiveEditorView extends Adw.Bin {
    * declares none and {@link attachShellSwitcher} is a no-op there.
    */
   declare _view_switcher?: Adw.ViewSwitcher
+
+  /**
+   * The header's roster chip, declared by the three shell views' `.blp`
+   * beside the primary menu (REDESIGN.md § 3.3: "Primary menu, people"
+   * sit together at the header end on every tier).
+   *
+   * The map editor has no shell header — its chip lives inside the
+   * context pill — so `SceneEditorView` leaves this unset and overrides
+   * the three roster methods to reach `SceneEditor.rosterChip` instead.
+   */
+  declare _roster_chip?: RosterChip
 
   private _showInspector = false
   private _inspectorCollapsed = false
@@ -91,6 +103,39 @@ export class ResponsiveEditorView extends Adw.Bin {
    */
   attachShellSwitcher(stack: Adw.ViewStack): void {
     if (this._view_switcher) this._view_switcher.stack = stack
+  }
+
+  /**
+   * Push the live participant roster (AI + peers) into the header chip.
+   * The chip hides itself on an empty roster, so a solo session shows
+   * nothing and no caller has to branch on "am I collaborating".
+   */
+  setCollaborators(participants: CollaboratorEntry[], followedId: string | null): void {
+    this._roster_chip?.setParticipants(participants, followedId)
+  }
+
+  /** Reflect the user pause state on the chip's AI control. */
+  setAssistantPaused(paused: boolean): void {
+    if (this._roster_chip) this._roster_chip.paused = paused
+  }
+
+  /** Subscribe to roster clicks — the host toggles follow for that participant. */
+  onParticipantActivated(callback: (peerId: string) => void): void {
+    this._roster_chip?.connect('participant-activated', (_widget, peerId: string) => callback(peerId))
+  }
+
+  /**
+   * Whether this view actually resolved a roster chip.
+   *
+   * The chip hides itself on an empty roster, so neither a screenshot
+   * nor `get_visible()` can tell "no collaborators" apart from "the
+   * template forgot the chip" — which is exactly how it went missing on
+   * three of four views. The smoke driver reads this through
+   * `DebugStatus.rosterChipViews` to prove the wiring exists in a solo
+   * session, before anyone else is there to reveal it.
+   */
+  hasRosterChip(): boolean {
+    return this._roster_chip != null
   }
 
   /**

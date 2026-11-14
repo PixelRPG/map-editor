@@ -73,8 +73,11 @@ export class ControlDbusService {
 
   /**
    * `ActivateAction(scope, name, value_json)` — activate an action.
-   * `value_json` is `''` for no parameter, otherwise a JSON-encoded
-   * scalar. Throws (→ D-Bus error) on an unknown action, on a
+   * `value_json` is `''` for no parameter, a JSON-encoded scalar for a
+   * one-parameter action, and a JSON array for an action whose parameter
+   * is a tuple (`win.focus-placement` is `(ss)`:
+   * `["kokiri-forest", "chest-1"]`). Throws (→ D-Bus error) on an
+   * unknown action, on a
    * human-only action (`win.toggle-assistant-paused`), while the user
    * has the assistant paused, and on engine-backed actions that would
    * silently no-op (no engine / empty undo stack).

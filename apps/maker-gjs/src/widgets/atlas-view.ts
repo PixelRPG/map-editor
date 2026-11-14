@@ -7,6 +7,7 @@ import {
   FloatingFab,
   FloatingZoom,
   ProjectMenuButton,
+  RosterChip,
   SAMPLE_SCENES,
   SAMPLE_TELEPORTS,
   type SampleScene,
@@ -19,6 +20,7 @@ import Template from './atlas-view.blp'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 
 GObject.type_ensure(ProjectMenuButton.$gtype)
+GObject.type_ensure(RosterChip.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(SceneInspector.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
@@ -71,7 +73,15 @@ export class AtlasView extends ResponsiveEditorView {
       {
         GTypeName: 'AtlasView',
         Template,
-        InternalChildren: ['view_switcher', 'atlas', 'inspector', 'preview_zoom', 'atlas_overview', 'overview_frame'],
+        InternalChildren: [
+          'view_switcher',
+          'roster_chip',
+          'atlas',
+          'inspector',
+          'preview_zoom',
+          'atlas_overview',
+          'overview_frame',
+        ],
         // show-inspector / inspector-collapsed / compact / full-view are
         // inherited from ResponsiveEditorView.
         Signals: {
@@ -119,6 +129,21 @@ export class AtlasView extends ResponsiveEditorView {
    */
   fitAtlas(): void {
     this._atlas.fitToContent()
+    this._refreshOverview()
+  }
+
+  /**
+   * Select one map's card and bring it into view — where back from the
+   * map editor lands (REDESIGN.md § 3.4, step 5). Centring only: the
+   * atlas is a `Gtk.Fixed` surface with no fractional scale, so "zoomed
+   * on the map just left" is the card-preview zoom the user set, not a
+   * camera. Unknown ids leave the atlas where it is.
+   */
+  focusScene(id: string): void {
+    if (!this._scenes.some((scene) => scene.id === id)) return
+    this._atlas.selectedId = id
+    this._refreshSelectedScene(id)
+    this._atlas.fitToContent(id)
     this._refreshOverview()
   }
 

@@ -17,11 +17,27 @@ scenarios
   enterleave  open a map, go back to the World page, repeat 8x — each
               round trip destroys and rebuilds the engine widget + its GL
               context, and is checked to leave SceneEditorView rooted
+  back      deep-link onto a placement, then press `win.back` twice and
+            check it undoes ONE thing per press, in the order § 3.4 fixes
 
 A run PASSES when, after the last step, GetStatus reports
 engineReady=true AND currentSceneId is the map we asked for AND
 activeLayer is non-null (a live engine on the right scene, with the
 editor state actually planted on it).
+
+Every scenario also asserts `rosterChipViews == 4` once the engine check
+passed: all four destinations must have built a header/pill roster chip
+(REDESIGN.md § 3.3). A solo roster hides the chip, so nothing else in
+this run — or in a screenshot — can tell a missing chip from an empty
+one.
+
+`back` is the one scenario that asserts an ORDER rather than an end
+state. Back is one decision behind five gestures (REDESIGN.md § 3.4), so
+the failure it looks for is a press that undoes two things at once: with
+a placement selected, the first back must clear the selection and LEAVE
+the editor open, and only the second may fall back to World. A resolver
+that checked the steps in the wrong order still ends up on World, which
+every other check here would score as a pass.
 
 `enterleave` additionally asserts `sceneEditorRooted` on BOTH sides of
 every switch. The editor's two stacks only change which page is visible,
@@ -99,6 +115,47 @@ def status(label: str):
 
 def activate(label: str, name: str):
     call(label, "ActivateAction", "win", name, "")
+
+
+def activate_value(label: str, name: str, value):
+    # Two unwrapping layers, same as open_scene_argv: gdbus parses the
+    # argument as a GVariant string (so the JSON has to arrive quoted and
+    # inner-escaped), and the app JSON.parses what is left. A tuple
+    # parameter like `win.focus-placement`'s `(ss)` takes a JSON ARRAY.
+    #
+    # Unlike `activate`, this one RAISES on a rejected call. A parameter
+    # is exactly what the marshaller can get wrong (wrong arity, a kind
+    # it cannot build), and GTK answers a type mismatch with a warning on
+    # a stderr nobody reads — the deep link would just not happen, and
+    # the scenario would blame whatever it asserted next.
+    payload = json.dumps(value).replace('"', '\\"')
+    r = call(label, "ActivateAction", "win", name, f'"{payload}"')
+    if r is None:
+        raise RuntimeError(f"activate-timeout:win.{name}")
+    if r.returncode != 0:
+        raise RuntimeError(f"activate-failed:win.{name}: {r.stderr.strip() or r.stdout.strip()}")
+
+
+def map_data(label: str, map_id: str) -> dict:
+    r = call(label, "GetMapData", map_id, timeout=20)
+    if r is None or r.returncode != 0:
+        raise RuntimeError(f"no-map-data:{map_id}")
+    return json.loads(ast.literal_eval(r.stdout.strip())[0])
+
+
+def first_placement_id(label: str, map_id: str) -> str:
+    """A placement id to deep-link onto, read from the app, not the file.
+
+    `win.focus-placement` is reached over the same Control plane as every
+    other deep link, so the id it is given has to be one the app itself
+    reports — a map whose placements failed to load would otherwise be
+    deep-linked with an id out of a JSON file and look fine.
+    """
+    placements = map_data(label, map_id).get("placements") or []
+    ids = [p.get("id") for p in placements if p.get("id")]
+    if not ids:
+        raise RuntimeError(f"no-placements:{map_id}")
+    return ids[0]
 
 
 def open_scene_argv(label: str, scene: str) -> list[str]:
@@ -193,6 +250,31 @@ def require_rooted(st: dict | None, where: str) -> None:
         )
 
 
+ROSTER_CHIP_VIEWS = 4
+
+
+def require_roster_chips(st: dict | None, where: str) -> None:
+    """Fail the run unless all four destinations built a roster chip.
+
+    The chip hides itself on an empty roster, so a solo session — which
+    is every screenshot and every smoke run — renders identically whether
+    a view has a chip or not. That is how World, Library and Game lost
+    theirs. `rosterChipViews` is the window counting the chips its widget
+    tree actually resolved, so the regression fails here instead of at
+    the moment a second participant joins.
+    """
+    if st is None:
+        raise RuntimeError(f"no status to check rosterChipViews ({where})")
+    if "rosterChipViews" not in st:
+        raise RuntimeError(f"GetStatus has no rosterChipViews field ({where})")
+    if st["rosterChipViews"] != ROSTER_CHIP_VIEWS:
+        raise RuntimeError(
+            f"only {st['rosterChipViews']} of {ROSTER_CHIP_VIEWS} views have a roster "
+            f"chip ({where}) — a shell view's template or InternalChildren lost it, "
+            "and a solo session cannot show it"
+        )
+
+
 # Per-batch label prefix. It has to be unique across batches, not just
 # within one: PIXELRPG_INSTANCE becomes the GApplication id, so if any
 # instance from an earlier batch is still alive under the same label the
@@ -273,6 +355,54 @@ def run_once(i: int) -> tuple[bool, dict | None, str]:
                                    f"the World page (round {_n})", 15)
                 require_rooted(st, f"round {_n}, back on World")
             open_scene(label, MAP_A)
+        elif SCENARIO == "back":
+            open_scene(label, MAP_A)
+            # The settled triple, not just `engineReady`: that flag only
+            # says Excalibur exists, and a selection written while the
+            # map is still loading lands on the scene that load is about
+            # to replace — the selection then vanishes with no warning
+            # anywhere. `activeLayer` is what says the layers are live.
+            st = must_wait_for(
+                label,
+                lambda s: s.get("engineReady") is True
+                and s.get("currentSceneId") == MAP_A
+                and s.get("activeLayer"),
+                "a settled map before the back order",
+                30,
+            )
+            require_rooted(st, "on the map, before the first back")
+
+            placement = first_placement_id(label, MAP_A)
+            activate_value(label, "focus-placement", [MAP_A, placement])
+            must_wait_for(label, lambda s: s.get("selectedPlacements") == [placement],
+                          f"the deep link to select {placement}", 20)
+
+            # Step 3 beats step 5: one press, one thing undone. If the
+            # resolver reached `leave-map` first the view would be World
+            # here, and the next wait would be the one that passed.
+            activate(label, "back")
+            st = must_wait_for(
+                label,
+                lambda s: s.get("selectedPlacements") == [] and s.get("view") == "map",
+                "the first back to clear the selection and stay on the map",
+                15,
+            )
+            require_rooted(st, "on the map, after the selection back")
+
+            activate(label, "back")
+            st = must_wait_for(label, lambda s: s.get("view") == "world",
+                               "the second back to reach World", 15)
+            require_rooted(st, "back on World")
+
+            # Nothing left to undo: back must now be inert rather than
+            # walking further out of the app.
+            activate(label, "back")
+            time.sleep(0.5)
+            st = status(label)
+            if st is None or st.get("view") != "world":
+                raise RuntimeError(f"a back with nothing to undo left World (view={st and st.get('view')})")
+
+            open_scene(label, MAP_A)
         elif SCENARIO == "churn":
             open_scene(label, MAP_A)
             wait_for(label, lambda s: s.get("engineReady") is True, 30)
@@ -297,6 +427,10 @@ def run_once(i: int) -> tuple[bool, dict | None, str]:
             and st.get("currentSceneId") == want
             and st.get("activeLayer")
         )
+        # Only once the engine check passed, so a broken engine still
+        # reports as a broken engine rather than as a roster regression.
+        if good:
+            require_roster_chips(st, "after the last step")
         return good, st, want
     except RuntimeError as exc:
         return False, None, str(exc)

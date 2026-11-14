@@ -20,10 +20,11 @@ export declare const GTypeName: 'PreferencesDialog';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['theme_row', 'full_view_row'];
+export declare const InternalChildren: ['theme_row', 'full_view_row', 'show_grid_row'];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
     _theme_row: Adw.ComboRow;
     _full_view_row: Adw.SwitchRow;
+    _show_grid_row: Adw.SwitchRow;
 }

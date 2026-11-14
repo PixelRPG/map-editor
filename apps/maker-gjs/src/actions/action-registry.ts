@@ -64,10 +64,12 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'library-chip',
     'back-to-atlas',
     'open-scene',
+    'focus-placement',
     'open-scene-by-id',
     'show-full-view',
     'show-help-overlay',
   ],
+  back: ['back'],
   project: ['open-project', 'close-project', 'open-recent-projects', 'new-scene'],
   zoom: ['zoom-in', 'zoom-out', 'zoom-reset', 'atlas-fit'],
   editing: [

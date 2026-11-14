@@ -16,6 +16,17 @@ export interface ViewActionsContext {
   selectedSceneId(): string | null
   openScene(sceneId: string): void
   /**
+   * Leave the map editor for World, with the atlas on the map just left
+   * (§ 3.4 step 5). Not plain `setView('world')`: the atlas has to move,
+   * and `win.back` must land in the same place as this button.
+   */
+  leaveMap(): void
+  /**
+   * Open `mapId` (if it is not already open), then select `placementId`
+   * and move the camera onto it — `win.focus-placement`.
+   */
+  focusPlacement(mapId: string, placementId: string): void
+  /**
    * Switch to Full view from where a wall was hit (the "Show N more
    * settings" row, the Library banner) and offer the way back in a toast.
    */
@@ -69,9 +80,12 @@ export function installViewActions(
 
   // Name kept: the scene editor's back buttons, the MCP bridge's
   // `back_to_atlas` tool and `scripts/smoke/drive.py` all bind it. The
-  // destination is the shell's World page (REDESIGN.md § 3.4).
+  // destination is the shell's World page (REDESIGN.md § 3.4) — this is
+  // the UNCONDITIONAL leave, where `win.back` is the conditional one
+  // that may collapse a sheet or clear a selection first. Both end up in
+  // the same `leaveMap`.
   const backToAtlas = new Gio.SimpleAction({ name: 'back-to-atlas' })
-  backToAtlas.connect('activate', () => ctx.setView('world'))
+  backToAtlas.connect('activate', () => ctx.leaveMap())
   addAction(group, backToAtlas)
 
   const openScene = new Gio.SimpleAction({ name: 'open-scene' })
@@ -80,6 +94,17 @@ export function installViewActions(
     if (id) ctx.openScene(id)
   })
   addAction(group, openScene)
+
+  // `(mapId, placementId)` — open the map, select that placement and put
+  // the camera on it (REDESIGN.md § 3.4). A tuple rather than two
+  // actions because the pair is meaningless apart: a placement id is
+  // only resolvable inside its own map.
+  const focusPlacement = Gio.SimpleAction.new('focus-placement', GLib.VariantType.new('(ss)'))
+  focusPlacement.connect('activate', (_a, parameter) => {
+    const [mapId, placementId] = (parameter?.deepUnpack() as [string, string] | undefined) ?? []
+    if (mapId && placementId) ctx.focusPlacement(mapId, placementId)
+  })
+  addAction(group, focusPlacement)
 
   const openSceneById = Gio.SimpleAction.new('open-scene-by-id', GLib.VariantType.new('s'))
   openSceneById.connect('activate', (_a, parameter) => {

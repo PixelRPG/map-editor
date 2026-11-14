@@ -235,6 +235,21 @@ export class ObjectsView extends Adw.Bin {
     }
   }
 
+  /**
+   * Pop the detail page back to the gallery, and say whether there was a
+   * page to pop — back step 4 (REDESIGN.md § 3.4).
+   */
+  popPage(): boolean {
+    if (!this.hasPushedPage()) return false
+    this._nav.pop()
+    return true
+  }
+
+  /** Whether a detail page is pushed over the gallery. */
+  hasPushedPage(): boolean {
+    return this._nav.get_visible_page()?.tag === 'detail'
+  }
+
   /** Open the detail page for an object id. No-op if unknown. */
   focusObject(id: string): void {
     if (!this._objects.some((o) => o.id === id)) return

@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
-import { acceleratorFor, SHORTCUT_SECTIONS, WINDOW_ACCELS } from './accels.ts'
+import { acceleratorFor, SHORTCUT_SECTIONS, WINDOW_ACCELS, WINDOW_SHORTCUTS } from './accels.ts'
 import { WINDOW_ACTION_NAMES } from './action-registry.ts'
 
 /** `win.set-tool::pencil` names the action `set-tool`. */
@@ -39,6 +39,42 @@ export default async () => {
       for (const tool of ['select', 'pencil', 'fill', 'eraser', 'eyedropper', 'object']) {
         expect(acceleratorFor(`win.set-tool::${tool}`)).not.toBe(null)
       }
+    })
+  })
+
+  await describe('WINDOW_SHORTCUTS', async () => {
+    await it('binds only actions the window registers', async () => {
+      for (const [detailed] of WINDOW_SHORTCUTS) {
+        expect(WINDOW_ACTION_NAMES.includes(actionNameOf(detailed))).toBe(true)
+      }
+    })
+
+    await it('never binds one accelerator to two actions', async () => {
+      const seen = new Map<string, string>()
+      for (const [detailed, keys] of WINDOW_SHORTCUTS) {
+        for (const key of keys) {
+          expect(seen.has(key)).toBe(false)
+          seen.set(key, detailed)
+        }
+      }
+    })
+
+    await it('never re-binds a key the application already owns globally', async () => {
+      // The two tables install into different phases, so a key in both
+      // would fire twice for one press — and the global one would win
+      // the first round, in the capture phase.
+      const global = new Set(WINDOW_ACCELS.flatMap(([, keys]) => [...keys]))
+      for (const [, keys] of WINDOW_SHORTCUTS) {
+        for (const key of keys) expect(global.has(key)).toBe(false)
+      }
+    })
+
+    await it('keeps Escape off the application accel table', async () => {
+      // A global `Escape` fires before the focused widget is asked, so
+      // it would take the key away from every popover, dialog and
+      // entry in the app. It belongs on the window controller only.
+      for (const [, keys] of WINDOW_ACCELS) expect(keys.includes('Escape')).toBe(false)
+      expect(acceleratorFor('win.back')).toBe('Escape')
     })
   })
 

@@ -70,6 +70,12 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
         [end]
         $PixelRpgProjectMenuButton project_menu {}
 
+        // Packed next, so people sit immediately left of the menu —
+        // "roster chip · ⋯" is the same pair on every shell view and in
+        // the map editor's context pill.
+        [end]
+        $PixelRpgRosterChip roster_chip {}
+
         [end]
         Gtk.ToggleButton inspector_toggle {
           icon-name: "sidebar-show-right-symbolic";

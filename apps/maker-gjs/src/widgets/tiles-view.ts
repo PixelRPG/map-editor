@@ -396,6 +396,23 @@ export class TilesView extends LibraryPage {
     if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
   }
 
+  /**
+   * Pop the detail page back to the gallery, and say whether there was a
+   * page to pop — back step 4 (REDESIGN.md § 3.4). Unlike
+   * {@link resetToOverview} this undoes one push, which is all a single
+   * back may do.
+   */
+  popPage(): boolean {
+    if (!this.hasPushedPage()) return false
+    this._nav.pop()
+    return true
+  }
+
+  /** Whether a detail page is pushed over the gallery. */
+  hasPushedPage(): boolean {
+    return this._nav.get_visible_page()?.tag === 'detail'
+  }
+
   /** Select a tileset by id + open its detail page (host / MCP entry). */
   focusTileset(id: string): void {
     this._selectTileset(id)

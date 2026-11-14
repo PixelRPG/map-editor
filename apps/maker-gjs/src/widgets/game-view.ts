@@ -1,16 +1,17 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { ProjectMenuButton, SignalScope } from '@pixelrpg/gjs'
+import { ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
 import Template from './game-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
 
-// Force registration so the `$PixelRpgProjectMenuButton` reference in
-// the blueprint resolves at parse time.
+// Force registration so the `$PixelRpgProjectMenuButton` and
+// `$PixelRpgRosterChip` references in the blueprint resolve at parse time.
 GObject.type_ensure(ProjectMenuButton.$gtype)
+GObject.type_ensure(RosterChip.$gtype)
 
 /** The whole Game-page model the controller pushes in one shot. */
 export interface GameViewModel {
@@ -62,6 +63,7 @@ export class GameView extends ResponsiveEditorView {
         Template,
         InternalChildren: [
           'view_switcher',
+          'roster_chip',
           'name_row',
           'author_row',
           'version_row',
