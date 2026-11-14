@@ -46,7 +46,6 @@ The previous architecture (PR #5 and earlier) used a WebKit WebView with RPC bet
 | [`apps/signalling-server`](apps/signalling-server) | Stateless WebSocket relay for cross-network WebRTC signalling |
 | [`games/zelda-like`](games/zelda-like) | Sample game project used by the editor and storybook |
 | [`games/blank-starter`](games/blank-starter) | Empty starter template ("New Project" opens it) |
-| [`games/minimalist-starter`](games/minimalist-starter) | Minimal starter template |
 
 The maker stays GJS-only. Exported games target multiple platforms — Browser is the first export target (`apps/game-browser` is the runtime seed).
 

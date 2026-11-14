@@ -45,25 +45,11 @@ export const STARTER_TEMPLATES: ProjectTemplate[] = [
     isBlank: true,
   },
   {
-    id: 'minimalist-starter',
-    name: 'Minimalist Starter',
-    caption: 'Overworld · dungeon · town · teleports',
-    projectPath: `${TEMPLATES_ROOT}/minimalist-starter/game-project.json`,
-    accentColor: '#5fb04c',
-  },
-  {
     id: 'kokiri-forest',
     name: 'Kokiri Forest',
     caption: 'Zelda-like demo (full art)',
     projectPath: `${TEMPLATES_ROOT}/zelda-like/game-project.json`,
     accentColor: '#3d6b3a',
-  },
-  {
-    id: 'oot2d-2014',
-    name: 'OoT2D 2014 World',
-    caption: '19 converted reference maps · 8px tiles',
-    projectPath: `${TEMPLATES_ROOT}/oot2d-2014/game-project.json`,
-    accentColor: '#c4a24c',
   },
 ]
 

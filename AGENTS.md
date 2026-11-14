@@ -8,7 +8,7 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for Pi
 
 ## Structure
 
-[Workspaces] |root: ./ |packages/{engine,gjs} |apps/{maker-gjs,game-browser,mcp-bridge,signalling-server} |games/{zelda-like,blank-starter,minimalist-starter} |docs/
+[Workspaces] |root: ./ |packages/{engine,gjs} |apps/{maker-gjs,game-browser,mcp-bridge,signalling-server} |games/{zelda-like,blank-starter} |docs/
 
 [Packages] |`engine`: Excalibur-based engine + editor logic (Resources, Components, Systems, MapFormat); platform-indep core, runs in GJS or browser |`gjs`: GTK4/libadwaita widgets that host the engine + Gdk-side preview pipeline (Sprite/SpriteSheet/ImageTexture for Gsk-snapshot rendering)
 
