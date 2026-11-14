@@ -6,7 +6,7 @@ import type Gio from '@girs/gio-2.0'
  * `engine-state-sync.ts` re-pushes it into each freshly created engine.
  */
 export interface StatefulWindowActions {
-  /** `win.mode` — the active mode-rail row. */
+  /** `win.mode` — the active shell destination (World · Library · Game). */
   mode: Gio.SimpleAction
   /** `win.library-chip` — the Library's visible chip page. */
   libraryChip: Gio.SimpleAction

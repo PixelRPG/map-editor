@@ -2,11 +2,17 @@
 
 > Status: tracked in [implementation status](#implementation-status) — the single source of truth.
 
-The editor has five top-level views (welcome, atlas, library,
-scene-editor, game — the `Adw.ViewStack` pages in
-`application-window.blp`) behind three mode-rail rows (World = atlas +
-scene editor, Library, Game; `check-mode-routes.mjs` holds the four
-declarations of that mapping together) and one window-level chrome
+The editor has five top-level views — `welcome`, `world` (the atlas),
+`library`, `game`, `map` (the scene editor) — spread over **two**
+nested stacks in `application-window.blp`: a `Gtk.Stack root_stack`
+with `welcome` / `shell` / `map`, and inside the `shell` page an
+`Adw.ViewStack shell_stack` with `world` / `library` / `game`. The
+three shell pages are the switcher destinations (an
+`Adw.ViewSwitcherBar` at the bottom on phone, an `Adw.ViewSwitcher` in
+each view's header on wide); `welcome` and `map` are full-window pages
+that take over instead. `check-mode-routes.mjs` holds the
+`EditorMode` ↔ `ViewName` ↔ two-stack declarations together. On top of
+that sits one window-level chrome
 system that has to render acceptably from a 360 px-wide smartphone
 form-factor up to a 4K desktop monitor. This doc is the high-level map of how that's stitched
 together so the next contributor doesn't have to reverse-engineer
@@ -18,45 +24,52 @@ This doc is purely about the **view** layer's chrome.
 
 ---
 
-## Breakpoints — mobile / tablet / desktop
+## Breakpoints — phone / desktop
 
-Single source of truth: two `Adw.Breakpoint`s on the
+Single source of truth: **one** `Adw.Breakpoint` on the
 `ApplicationWindow` template (`apps/maker-gjs/src/widgets/application-window.blp`).
 
-| Tier        | Condition                              | Setters apply                                                                                         |
-|-------------|----------------------------------------|-------------------------------------------------------------------------------------------------------|
-| Mobile      | `max-width: 768sp`                     | `library-collapsed: true` + `inspector-collapsed: true` on every view (atlas, library, scene-editor, welcome*; game has no inspector) |
-| Tablet      | `min-width: 768sp and max-width: 1023sp` | `library-collapsed: true` on every view with a rail (atlas, library, scene-editor, game)             |
-| Desktop     | (no breakpoint, template defaults)     | All `*-collapsed: false` — both sidebars persistent                                                   |
+| Tier    | Condition                          | Setters apply                                                                                                     |
+|---------|------------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| Phone   | `max-width: 767sp`                 | `view_switcher_bar.reveal: true` + `compact: true` on the three shell views (world, library, game) + `inspector-collapsed: true` on every view that has an inspector (atlas, library, scene-editor, welcome; game has none) |
+| Desktop | (no breakpoint, template defaults) | `reveal: false` — the header switchers carry navigation; `compact: false`, `inspector-collapsed: false` — splits and the inspector persistent |
 
-\* Welcome view has no `library-collapsed` (no left sidebar there);
-only the recents `inspector-collapsed` toggles.
+The **tablet** tier is gone (redesign step 2.1). It existed to
+collapse the left mode rail while keeping the right inspector
+persistent; with the rail deleted it had no setter left to apply.
 
 `collapsed: true` on an `Adw.OverlaySplitView` flips the sidebar
 from a persistent side-panel to an overlay drawer — opens with
 the toggle button, dismisses on outside-tap, doesn't reserve
 layout space.
 
-### Why split into per-side properties
+### `compact` vs `inspector-collapsed`
 
-Each view exposes two independent boolean properties:
-`library-collapsed` (left) and `inspector-collapsed` (right). The
-tablet preset wants the **left** collapsed but the **right**
-persistent — impossible to express with a single shared
-`collapsed` flag, hence the split (PR #53).
+Two independent booleans, on purpose. `inspector-collapsed` (right)
+is a sidebar mode; **`compact`** is "this view is on a phone" — it
+replaces the former `library-collapsed` (left) now that there is no
+left sidebar to collapse. Each shell view reads it to hide its header
+`Adw.ViewSwitcher` (the bottom `Adw.ViewSwitcherBar` has taken over)
+and to pick its narrow layout. The scene editor does **not** take
+`compact`: it runs its own canvas-width `Adw.BreakpointBin` (the
+`stage` ladder below), which is a finer measure than the window's
+width.
 
 ### Defaults
 
-`show-library` + `show-inspector` now live on the
-**ApplicationWindow** (both default `false`) and are bound
-**bidirectionally** to each view's same-named property — so the
-state is **shared across view switches** (toggle the inspector
-open in the atlas, switch to the scene editor, it stays open).
-Desktop users open the sidebars they want from the toggle pills
-(headerbar buttons on atlas / library / game / welcome; the two
-floating pills on the scene editor — `library_toggle` in the
-start-aligned editing pill, `inspector_toggle` in the end-aligned
-context pill).
+`show-inspector` lives on the **ApplicationWindow** (default `false`)
+and is bound **bidirectionally** to the same-named property on the
+atlas and the scene editor — so the state is **shared across view
+switches** (toggle the inspector open in the atlas, switch to the
+scene editor, it stays open). Library and Game are master-detail
+splits with no inspector drawer, so they are unbound. Desktop users
+open the inspector from its toggle pill (a headerbar button on atlas /
+welcome; the end-aligned context pill's `inspector_toggle` on the
+scene editor).
+
+There is no `show-library` any more, and no `win.toggle-library`: step
+2.1 deleted the left drawer on every view, so the window-level half of
+the pair and the scene editor's `library_toggle` button went with it.
 
 ---
 
@@ -124,8 +137,7 @@ created a hidden-UI dead end.
   same split.
 
 **Mobile behaviour falls out for free.** The window-level
-`inspector-collapsed` breakpoint setter (≤ 768sp — the tablet tier
-collapses only the library) flips the
+`inspector-collapsed` breakpoint setter (`max-width: 767sp`) flips the
 right `Adw.OverlaySplitView` into drawer mode. The same
 `showInspector = true` write surfaces as an overlay drawer on
 narrow widths and as a persistent panel on desktop — no
@@ -145,7 +157,7 @@ here.
 ## Right inspector — in-overlay close affordance
 
 In overlay-drawer mode (`inspector-collapsed: true`, set by the
-window breakpoint at ≤ 768sp) the right inspector can grow
+window breakpoint at `max-width: 767sp`) the right inspector can grow
 nearly as wide as the window itself — its `max-sidebar-width`
 shrinks once content lands on it. On a 360 px-wide phone
 that leaves zero space for an "outside-tap-to-dismiss" target,
@@ -162,10 +174,12 @@ Each of the four right-inspector widgets (`RightInspector`,
 button in the `[start]` slot of its flat headerbar. The button
 binds `visible` to `collapsed` so:
 
-- **Desktop / tablet** (`collapsed: false`) — button hidden. The
+- **Desktop** (`collapsed: false`) — button hidden. The
   panel is pinned, and `inspector_toggle` — in the scene editor's
-  end-aligned context pill, or the central headerbar on
-  atlas / library — is the expected close affordance.
+  end-aligned context pill, or the atlas header — is the expected
+  close affordance. `CastInspector` / `TileInspector` sit in the
+  Library's own master-detail splits rather than a window drawer, so
+  there is no toggle for them.
 - **Phone** (`collapsed: true`) — button visible. Click
   closes the drawer via the existing `win.toggle-inspector`
   `Gio.PropertyAction` (boolean property toggle, flips
@@ -199,18 +213,20 @@ whole content area with chrome floating on top.
 Layout shape — the atlas, whose overlay children are all direct:
 
 ```
-Adw.OverlaySplitView outer_split   (pin-sidebar: true)
-├─ sidebar (start): ModeRail  (or no sidebar in atlas's case)
-└─ content: Adw.OverlaySplitView inner_split   (pin-sidebar: true)
-   ├─ sidebar (end): RightInspector / SceneInspector
-   │     (its own thin flat HeaderBar carries the window-close X)
-   └─ content: Gtk.Overlay
-      ├─ [overlay] toggle pill      (top-right: library + inspector)
-      ├─ [overlay] FloatingZoom     (bottom-left — atlas only, see below)
-      ├─ [overlay] overview minimap (bottom-centre)
-      ├─ [overlay] FloatingFab      ("New Scene", bottom-right)
-      └─ child: scene-card area
+Adw.OverlaySplitView split   (pin-sidebar: true)
+├─ sidebar (end): RightInspector / SceneInspector
+│     (its own thin flat HeaderBar carries the window-close X)
+└─ content: Gtk.Overlay
+   ├─ [overlay] toggle pill      (top-right: inspector)
+   ├─ [overlay] FloatingZoom     (bottom-left — atlas only, see below)
+   ├─ [overlay] overview minimap (bottom-centre)
+   ├─ [overlay] FloatingFab      ("New Scene", bottom-right)
+   └─ child: scene-card area
 ```
+
+Before step 2.1 this was a pair of nested `Adw.OverlaySplitView`s, the
+outer one holding a `ModeRail` sidebar. The rail is gone, so there is
+one split per view and it is the inspector's.
 
 The scene editor puts a `SceneEditor` (`scene-editor.blp`) in the
 same `content:` slot, and that widget owns its own overlay:
@@ -224,7 +240,7 @@ $PixelRpgSceneEditor
       │  │     the canvas has ONE parent for the view's life
       │  │     (see "Engine widget lifecycle")
       │  ├─ [overlay] Gtk.WindowHandle → editing pill  (halign: start)
-      │  │     library toggle · back · undo · redo · ToolGroup ·
+      │  │     back · undo · redo · ToolGroup ·
       │  │     BrushBadge + its label
       │  ├─ [overlay] back_circle "‹"   (phone only, top-left)
       │  ├─ [overlay] Gtk.WindowHandle → context pill  (halign: end)
@@ -272,11 +288,11 @@ tiles. The window's toasts need the same clearance, which is why
 `Adw.ToastOverlay` is this widget's ancestor, so a selector rooted
 here could never reach a toast.
 
-`pin-sidebar: true` is **load-bearing** on both OverlaySplitViews:
-without it, libadwaita auto-resets `show-sidebar` to `false` as
-part of the collapsed↔persistent transition — which defeats the
-ApplicationWindow's persistent `show-library` / `show-inspector`
-state every time you cross the tablet/mobile breakpoint.
+`pin-sidebar: true` is **load-bearing**: without it, libadwaita
+auto-resets `show-sidebar` to `false` as part of the
+collapsed↔persistent transition — which defeats the
+ApplicationWindow's persistent `show-inspector` state every time you
+cross the phone breakpoint.
 
 The window-close X **always** lives on the right sidebar's flat
 header (never on the canvas's overlay). It's the only piece of
@@ -344,8 +360,9 @@ Conventions:
 - **Sidebar toggle position**: the right-sidebar toggle (`inspector_toggle`)
   always sits at the **rightmost** slot of whatever pill hosts it
   (PR #52). Position on screen visually maps to the side it
-  controls. The same rule applies to the `library_toggle`, which
-  sits at the **leftmost** slot of the editing pill.
+  controls. It is the only sidebar toggle left — the editing pill's
+  leftmost slot used to hold a mirroring `library_toggle`, which step
+  2.1 removed with the left drawer.
 - **Only pills with empty pixels wrap.** `FloatingPlay` is a single
   big button, so there is nothing to drag from; `ZoomOsd` and the
   cursor caption carry no controls at all. `ZoomOsd` additionally
@@ -374,9 +391,10 @@ Unlike the rest of the chrome — which reacts to
 `ApplicationWindow`-level breakpoints — the scene editor carries its
 **own** `Adw.BreakpointBin` (`ladder` in `scene-editor.blp`) watching
 the **canvas** width, not the window's. The room the pills actually
-get is `window width − persistent sidebars`, which varies with the
-tier AND with the user's show-library / show-inspector state;
-watching the window mis-estimates it by hundreds of pixels.
+get is `window width − the persistent inspector`, which varies with
+the tier AND with the user's show-inspector state; watching the window
+mis-estimates it by hundreds of pixels. It is also why the scene
+editor takes no `compact` setter from the window breakpoint.
 
 The **critical gotcha** is why the ladder is shaped the way it is:
 `Adw.BreakpointBin` activates **one** breakpoint at a time. It
@@ -395,24 +413,28 @@ So the ladder sets exactly **one** property — `stage`, a string — and
 
 | Rung | Canvas ≥ | What it adds |
 |---|---|---|
-| `tight` | 0 px | badge only — no tool group (two sidebars open on a small desktop) |
-| `compact` | 720 px | the `Adw.ToggleGroup` tool chooser |
-| `normal-1` | 808 px | the map name beside the back arrow |
-| `normal-2` | 920 px | the brush sentence beside the badge ("Paint · Ground") |
-| `roomy` | 1224 px | verbs beside the six tool icons |
+| `tight` | 0 px | badge only — no tool group (the inspector open on a small desktop) |
+| `compact` | 672 px | the `Adw.ToggleGroup` tool chooser |
+| `normal-1` | 768 px | the map name beside the back arrow |
+| `normal-2` | 880 px | the brush sentence beside the badge ("Paint · Ground") |
+| `roomy` | 1176 px | verbs beside the six tool icons |
 
 Three things about those numbers:
 
 - They are **measured** — `measure()` on the real pills with the
   package stylesheet loaded, which `phone-chrome.probe.spec.ts` reads
   back on every display-backed run — not derived per button. The
-  design's §2.4 arithmetic lands low at every rung — 604 vs 672, 664 vs
-  720, 784 vs 856, 1124 vs 1144 — because a labelled `Adw.Toggle` is
+  design's §2.4 arithmetic lands low at every rung — 604 / 664 / 784 /
+  1124 against measured pills — because a labelled `Adw.Toggle` is
   wider than the sum of an icon and a word; and the first measured set
   (656 / 704 / 856 / 1136) was 8 px low again below `normal-2`, because
   both pill tables had been read 8 px short. The probe pins the UI font
   to GNOME's default, "Adwaita Sans 11", so the two rungs with text in
-  them read the same on a workstation, under Broadway and in CI.
+  them read the same on a workstation, under Broadway and in CI. The
+  numbers move whenever the pill gains or loses a control, and the probe
+  is what notices: dropping the library toggle (step 2.1 — the library
+  became a shell destination) took 42 px off the editing pill at every
+  rung and the whole ladder down from 720 / 808 / 920 / 1224.
 - They assume a **roster in the context pill** (192 px, versus 150 px
   solo — the window controls are part of both). The AI assistant joins whenever an agent drives the editor,
   so with-roster is the common case; keying on the solo width means
@@ -449,7 +471,7 @@ rung must come last).
 ### Wide ↔ phone
 
 The layout switch is a different axis from the ladder and hangs off
-`inspector-collapsed` (≤ 768sp). `SceneEditor.setLayout` moves three
+`inspector-collapsed` (`max-width: 767sp`). `SceneEditor.setLayout` moves three
 widgets and flips three flags:
 
 - the `ToolGroup` from the editing pill into the phone bar's first row
@@ -530,7 +552,7 @@ The fixes that turned out to matter:
 | `scene-inspector.blp`             | Drop the hard `width-request: 300`                                                                                                                                                   | #54 |
 | `engine.blp`                      | Wrap `canvasContainer` in a `Gtk.ScrolledWindow` with `min-content-{width,height}: 1` + `hscrollbar-policy: external` (size-detach only, no scrollbars). Same trick, different layer | #57 |
 | `welcome-view.blp` recents column | Inner `Gtk.ScrolledWindow` gets `min-content-width: 1`. Dropped the `width-request: 320` floor on the recents column                                                                 | #60 |
-| `application-window.blp` ViewStack | `hhomogeneous: false` + `vhomogeneous: false`. Default `true` measures **every page** and uses the max as the stack's size — the scene editor's WebGL canvas leaked into the atlas view's layout | #55 |
+| `application-window.blp` `root_stack` + `shell_stack` | `hhomogeneous: false` + `vhomogeneous: false` on **both**. Default `true` measures **every page** and uses the max as the stack's size — the scene editor's WebGL canvas leaked into the atlas view's layout | #55 |
 | `brush-page.blp` palettes | `wrap: true` + `wrap-cap: 6` instead of `columns: 6`. `Adw.BottomSheet`'s page and bottom bar share one homogeneous `Gtk.Stack` (not ours to configure), so the closed sheet's minimum is the page's: six pinned 54 px columns were 378 px, and the ladder's `Adw.BreakpointBin` — which ignores its child's minimum — allocated the whole editor 18 px past a 360 px window. Caught by `phone-chrome.probe.spec.ts`, not by any log anyone read | this PR |
 | `action-direction-matrix.ts` cells | `ellipsize: END` + `max-width-chars: 18` on the per-cell "N frames · Σms" caption. The grid is `column-homogeneous` over five columns, so one ~112 px unbreakable caption set a 5 × 112 + 4 × 8 = 592 px floor — 640 px with the detail pane's margins. Ellipsized, the cell's floor is its 48 px thumbnail | this PR |
 | `cast-view.blp` detail pane | `Adw.BreakpointBin` (`max-width: 420sp`) stacks `detail_header` (180 px preview + a `title-1` name that cannot wrap mid-word = 357 px) and `detail_actions` (two labelled pills = 352 px), and drops the preview to 128 px. The pane's `hscrollbar-policy: never` propagates its minimum straight to the window, so before this the WHOLE cast detail was clipped at 360 px, not scrolled | this PR |
@@ -641,7 +663,7 @@ its own DisplayMode logic runs.
 `packages/gjs/src/widgets/engine/engine.ts` — `vfunc_unroot`.
 
 GTK4 fires `unmap` on **transient** invisibility too, not only on
-destroy. The OverlaySplitView's tablet-breakpoint reflow unmaps the
+destroy. The OverlaySplitView's breakpoint reflow unmaps the
 scene-editor host's children mid-animation; the same happens during
 view switches (atlas ↔ scene editor) while the outgoing view fades
 out. Anything you tear down in `vfunc_unmap` runs once per transient
@@ -651,7 +673,7 @@ The Excalibur game loop in particular **never recovers** from a
 teardown — `excalibur.stop()` calls `cancelAnimationFrame(id)` which
 nulls the bridge's pending frame callback. Once the loop is dead it
 stays dead until the next `excalibur.start()`. The visible symptom
-is "map disappears at the tablet breakpoint and stays gone forever,
+is "map disappears at the breakpoint and stays gone forever,
 even when the window grows back" (PR #66).
 
 Rules:
@@ -694,7 +716,7 @@ between rows / below the active tab pick up window-drag gestures
 items, search entries) consume their own clicks and bypass the
 handle automatically.
 
-The left ModeRail wraps the whole sidebar body. The right
+The right
 inspectors (RightInspector, SceneInspector) wrap their
 `Gtk.ScrolledWindow` content (the sidebar's own flat HeaderBar
 is already a drag region by virtue of being an `Adw.HeaderBar`).
@@ -709,20 +731,22 @@ dragging wouldn't be discoverable anyway.
 
 ## Adding a new view — checklist
 
-0. Decide whether it is a new RAIL ROW at all. Three rows is the
-   design (World / Library / Game, `mode-rail.blp`), and a place
-   that is another lens over data a row already owns is a chip
-   page of that row, not a fourth row: Cast, Objects and Sheets
-   were three rows of the same master-detail shape over the same
-   entity library + sprite sets, and merged into `LibraryView`
-   (`library-view.blp`: one host with the rail + the header, a
-   `Gtk.Stack` of pages that carry neither). A chip page extends
-   `LibraryPage` when it has a split to collapse, `Adw.Bin`
-   otherwise, and keeps a header bar only on its DETAIL page (for
-   the phone back button).
+0. Decide whether it is a new SWITCHER DESTINATION at all. Three
+   destinations is the design (World / Library / Game, the
+   `shell_stack` pages), and a place that is another lens over data a
+   destination already owns is a chip page of that destination, not a
+   fourth: Cast, Objects and Sheets were three of the same
+   master-detail shape over the same entity library + sprite sets, and
+   merged into `LibraryView` (`library-view.blp`: one host with the
+   header + the chip switcher, an `Adw.ViewStack` of pages that carry
+   neither). A chip page extends `LibraryPage` when it has a split to
+   collapse, `Adw.Bin` otherwise, and keeps a header bar only on its
+   DETAIL page (for the phone back button). A page that takes over the
+   whole window instead of sitting beside the others (welcome, the map
+   editor) is a `root_stack` page and gets no switcher entry.
 1. Decide: canvas-bearing or content-only?
-2. If canvas-bearing, follow the atlas-view template (outer
-   OverlaySplitView wraps inner OverlaySplitView wraps content
+2. If canvas-bearing, follow the atlas-view template (one
+   OverlaySplitView — the inspector's — wrapping a content
    Gtk.Overlay with floating OSD pills). Wrap each pill in its own
    `Gtk.WindowHandle`, never one across the row. If the pills have
    to disclose with width, put a `Adw.BreakpointBin` around the
@@ -732,22 +756,24 @@ dragging wouldn't be discoverable anyway.
 3. If content-only, follow the welcome-view template (one
    OverlaySplitView + an Adw.ToolbarView with a regular
    HeaderBar on the content side).
-4. Expose `library-collapsed` + `inspector-collapsed` +
-   `show-library` + `show-inspector` GObject properties with
-   `false` defaults, and set `pin-sidebar: true` on every
+4. Extend `ResponsiveEditorView`, which already carries `compact` +
+   `inspector-collapsed` + `show-inspector` with `false` defaults and
+   the `attachShellSwitcher()` hook; set `pin-sidebar: true` on every
    `Adw.OverlaySplitView` in the view. `ApplicationWindow`'s
-   constructor binds its own `show-library` / `show-inspector`
-   bidirectionally to each view's same-named properties — so as
-   long as the names match, the persistent shared state wires up
-   automatically.
+   constructor binds its own `show-inspector` bidirectionally to the
+   views that have an inspector drawer — so as long as the names
+   match, the persistent shared state wires up automatically.
 5. Add breakpoint setters for the new view in
    `application-window.blp` — mirror the existing per-view
-   blocks.
-6. Add the view to the `AdwViewStack` in the application window
-   template, and — if it is a rail row — to `EditorMode`,
-   `MODE_ORDER`, the rail's `.blp` and `VIEW_FOR_MODE` /
+   blocks (`compact: true` for a shell view, `inspector-collapsed:
+   true` if it has one).
+6. Add the view to `root_stack` or `shell_stack` in the application
+   window template, and — if it is a shell destination — to
+   `EditorMode`, `MODE_ORDER`, `ROUTE_FOR_VIEW` and `VIEW_FOR_MODE` /
    `MODE_FOR_VIEW`; `gjsify run check:mode-routes` fails until all
-   six edges agree. The MCP bridge's `set_view` enum
+   declarations agree (it also requires an `icon-name` + a `title` on
+   every shell page, since those are what the switchers render). The
+   MCP bridge's `set_view` enum
    (`apps/mcp-bridge/src/tools/editing.tools.ts`) is a literal copy
    of `ViewName` that no guard covers: change it in the same commit.
 7. Drag the window to 360 px and check the log for
@@ -768,7 +794,7 @@ dragging wouldn't be discoverable anyway.
   invisible-but-present.
 - **Setting `set_size_request(1, 1)` on the WebGL bridge widget
   to free up size propagation caused the canvas to render blank
-  at tablet width** — the bridge's allocation collapsed to its
+  at mid widths** — the bridge's allocation collapsed to its
   minimum during certain layout passes. Use the
   ScrolledWindow-size-detach pattern (PR #57) instead.
 - **Renaming gjsify's `esbuild:` config key to `bundler:` looks
@@ -797,6 +823,7 @@ dragging wouldn't be discoverable anyway.
 | Two-finger pinch + pan on the canvas, whole-pixel zoom snap on release, stroke cancel via the sequence claim (REDESIGN § 9 steps 1.1 / 1.2) | **landed** |
 | Phone history pill: undo + redo as 44 px OSD buttons in the bottom-left corner, out of the context pill and out of "⋯"; two-finger tap undoes, three-finger tap redoes (REDESIGN § 9 step 1.3) | **landed** |
 | Long press on the canvas: a paint tool picks the tile under the finger and the brush badge pops; `select` / `object` open a placement menu (Edit · Copy · Delete) at the finger (REDESIGN § 9 step 1.4) | **landed** |
+| Navigation shell: `root_stack` / `shell_stack`, `Adw.ViewSwitcherBar` on phone and `Adw.ViewSwitcher` in the headers on wide, `ModeRail` + both left drawers + the tablet breakpoint deleted, `library-collapsed` → `compact` (REDESIGN § 9 step 2.1) | **landed** |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |

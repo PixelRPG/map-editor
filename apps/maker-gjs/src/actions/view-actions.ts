@@ -25,9 +25,13 @@ export interface ViewActionsContext {
 }
 
 /**
- * `win.mode`, `win.library-chip` and the scene-navigation actions. Every
- * view's mode rail forwards its `mode-changed` through `win.mode`, so
- * navigation is consistent no matter which rail was clicked.
+ * `win.mode`, `win.library-chip` and the scene-navigation actions.
+ *
+ * `win.mode` stays the one navigation entry point even though the shell's
+ * view switchers drive the `Adw.ViewStack` directly: the window mirrors
+ * the stack's `notify::visible-child-name` back into this action, so deep
+ * links (the MCP bridge's `set_view`, the smoke driver) and switcher
+ * clicks end up in the same state.
  */
 export function installViewActions(
   group: Gio.SimpleActionGroup,
@@ -63,8 +67,11 @@ export function installViewActions(
   })
   addAction(group, libraryChip)
 
+  // Name kept: the scene editor's back buttons, the MCP bridge's
+  // `back_to_atlas` tool and `scripts/smoke/drive.py` all bind it. The
+  // destination is the shell's World page (REDESIGN.md § 3.4).
   const backToAtlas = new Gio.SimpleAction({ name: 'back-to-atlas' })
-  backToAtlas.connect('activate', () => ctx.setView('atlas'))
+  backToAtlas.connect('activate', () => ctx.setView('world'))
   addAction(group, backToAtlas)
 
   const openScene = new Gio.SimpleAction({ name: 'open-scene' })

@@ -2,45 +2,49 @@
 /**
  * Mode-route guard.
  *
- * The mode rail is the editor's primary navigation. Every row it shows
- * is a promise: click here and you land somewhere. One row could not
- * keep it — `audio` had a rail row (`mode-rail.blp`), a member in the
- * `EditorMode` union and NO `Adw.ViewStackPage` behind it. The gap was
- * papered over rather than reported: `resolveModeNavigation` special-
- * cased the id into a `{ kind: 'unimplemented' }` outcome,
- * `view-actions.ts` turned that into a *"Coming soon"* toast and snapped
- * the rail back, and a spec PINNED the dead end as correct behaviour.
- * Three layers of code existed so that one advertised place could not be
- * reached — and nothing anywhere said "this mode has no view".
+ * The view switcher is the editor's primary navigation. Every
+ * destination it shows is a promise: click here and you land somewhere.
+ * One could not keep it — `audio` had a mode-rail row, a member in the
+ * `EditorMode` union and NO stack page behind it. The gap was papered
+ * over rather than reported: `resolveModeNavigation` special-cased the id
+ * into a `{ kind: 'unimplemented' }` outcome, `view-actions.ts` turned
+ * that into a *"Coming soon"* toast and snapped the rail back, and a spec
+ * PINNED the dead end as correct behaviour. Three layers of code existed
+ * so that one advertised place could not be reached — and nothing
+ * anywhere said "this mode has no view".
  *
- * This guard fails (exit 1) when the four declarations of a mode drift
- * apart. They live in four files, two packages and two languages, so
- * nothing but a cross-file check can hold them together:
+ * The rail is gone (REDESIGN.md § 3.1) but the drift it enabled is not:
+ * navigation is now declared across TWO nested stacks, so the same
+ * promise is split over more places than before. This guard fails
+ * (exit 1) when they disagree. They live in three files, two packages and
+ * two languages, so nothing but a cross-file check can hold them
+ * together:
  *
- *  1. `EditorMode` + `MODE_ORDER`  — `packages/gjs/src/widgets/editor/mode-rail.ts`
- *  2. the rail rows               — `packages/gjs/src/widgets/editor/mode-rail.blp`
- *  3. `VIEW_FOR_MODE` / `MODE_FOR_VIEW` / `ViewName`
+ *  1. `EditorMode` + `MODE_ORDER` — `packages/gjs/src/widgets/editor/editor-mode.ts`
+ *  2. `ViewName` / `ViewRoute` / `ROUTE_FOR_VIEW` / `MODE_FOR_VIEW` / `VIEW_FOR_MODE`
  *                                 — `apps/maker-gjs/src/services/view-mode-map.ts`
- *  4. the `Adw.ViewStackPage`s    — `apps/maker-gjs/src/widgets/application-window.blp`
+ *  3. the two stacks' pages       — `apps/maker-gjs/src/widgets/application-window.blp`
  *
- * `tsc` already covers ONE of the six edges: `VIEW_FOR_MODE` is typed
- * `Record<EditorMode, ViewName>` (exhaustive, deliberately not
- * `Partial`), so a mode with no view fails the type-check. It cannot see
- * the other five — a `ViewName` string is not proof an
- * `Adw.ViewStackPage` of that name exists, and `.blp` is invisible to it
- * entirely.
+ * `tsc` already covers a few of the edges: `VIEW_FOR_MODE` is typed
+ * `Record<EditorMode, ViewName>` and `ROUTE_FOR_VIEW` / `MODE_FOR_VIEW`
+ * are `Record<ViewName, …>` (exhaustive, deliberately not `Partial`), so
+ * a mode with no view or a view with no route fails the type-check. It
+ * cannot see the rest — a page-name string is not proof a `Gtk.StackPage`
+ * or `Adw.ViewStackPage` of that name exists, and `.blp` is invisible to
+ * it entirely.
  *
- * Deliberate scope decisions:
- *  - `welcome` and `scene-editor` are views with NO rail row, on
- *    purpose: the welcome screen is pre-project and the scene editor is
- *    reached by opening a scene, not by picking a mode. So the
- *    view→mode direction is checked as "every view is classified by
- *    `MODE_FOR_VIEW`" (where `null` is a legal answer), not as "every
- *    view has a row".
- *  - Only `mode-rail.blp` is scanned for rows, and only rows bound to
- *    `win.mode`. Other `.blp` files carry `action-target` values for
- *    other actions (a template id for `win.new-object`, say); those are
- *    a different vocabulary and are `check-blp-actions.mjs`'s concern.
+ * What the two levels mean, and why the checks are asymmetric:
+ *  - `root_stack` (`Gtk.Stack`) carries `welcome` / `shell` / `map`.
+ *    These are NOT switcher destinations — the welcome screen is
+ *    pre-project and the map editor is reached by opening a map, not by
+ *    picking a destination. So `welcome` and `map` legitimately have no
+ *    mode, and the view→mode direction is checked as "every view is
+ *    classified by `MODE_FOR_VIEW`" (where `null` is a legal answer).
+ *  - `shell_stack` (`Adw.ViewStack`) carries the three switcher
+ *    destinations. Here the symmetric check DOES hold: a page the
+ *    switcher renders that the router cannot name is unreachable from
+ *    code, and a mode that does not route into the shell cannot be
+ *    selected by a switcher at all.
  *
  * Runs in CI (Node is already provisioned for the gjsify CLI bootstrap)
  * and locally via `gjsify run check:mode-routes` at the workspace root.
@@ -51,8 +55,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const MODE_RAIL_TS = 'packages/gjs/src/widgets/editor/mode-rail.ts'
-const MODE_RAIL_BLP = 'packages/gjs/src/widgets/editor/mode-rail.blp'
+const EDITOR_MODE_TS = 'packages/gjs/src/widgets/editor/editor-mode.ts'
 const VIEW_MODE_MAP_TS = 'apps/maker-gjs/src/services/view-mode-map.ts'
 const WINDOW_BLP = 'apps/maker-gjs/src/widgets/application-window.blp'
 
@@ -63,9 +66,30 @@ const WINDOW_BLP = 'apps/maker-gjs/src/widgets/application-window.blp'
  * directory exists to avoid.
  */
 const MIN_MODES = 3
-const MIN_VIEWS = 4
+const MIN_VIEWS = 5
+const MIN_ROOT_PAGES = 3
+const MIN_SHELL_PAGES = 3
 
 const read = (rel) => readFileSync(join(ROOT, rel), 'utf8')
+
+/** Body of the first `{ … }` at or after `index`, brace-matched. */
+function braceBody(source, index) {
+  const open = source.indexOf('{', index)
+  if (open === -1) return null
+  let depth = 0
+  for (let end = open; end < source.length; end++) {
+    if (source[end] === '{') depth++
+    else if (source[end] === '}' && --depth === 0) return source.slice(open + 1, end)
+  }
+  return null
+}
+
+/** Drop `//` line comments so a commented-out entry is not parsed as real. */
+const stripComments = (text) =>
+  text
+    .split('\n')
+    .map((line) => line.replace(/\/\/.*$/, ''))
+    .join('\n')
 
 /**
  * Quoted members of `export type <name> = 'a' | 'b' | …`.
@@ -97,6 +121,26 @@ function arrayLiteral(source, name) {
   return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1])
 }
 
+/**
+ * Quoted members of one field of `export interface <iface>`, e.g. the
+ * `'welcome' | 'shell' | 'map'` of `ViewRoute['root']`. The field's own
+ * union is what `routeForView` is allowed to return, so a stack page
+ * missing from it is a page no route can ever name.
+ */
+function interfaceFieldUnion(source, iface, field) {
+  const start = source.search(new RegExp(`export interface ${iface}\\b`))
+  if (start === -1) return { members: [], nullable: false, found: false }
+  const body = braceBody(source, start)
+  if (body === null) return { members: [], nullable: false, found: false }
+  const m = stripComments(body).match(new RegExp(`\\b${field}:\\s*([^\\n;]+)`))
+  if (!m) return { members: [], nullable: false, found: false }
+  return {
+    members: [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]),
+    nullable: /\bnull\b/.test(m[1]),
+    found: true,
+  }
+}
+
 /** Split `text` on every `separator` that is not inside `{}`, `[]` or `()`. */
 function splitTopLevel(text, separator) {
   const parts = []
@@ -115,6 +159,14 @@ function splitTopLevel(text, separator) {
   return parts
 }
 
+/** Body of `const <name>… = { … }`, brace-matched and comment-stripped. */
+function literalBody(source, name) {
+  const start = source.search(new RegExp(`const ${name}\\b`))
+  if (start === -1) return null
+  const body = braceBody(source, start)
+  return body === null ? null : stripComments(body)
+}
+
 /**
  * `key: 'value'` / `'key': 'value'` / `key: null` pairs of a
  * `const <name>… = { … }` object literal, brace-matched so a nested
@@ -128,22 +180,8 @@ function splitTopLevel(text, separator) {
  * a nested value is skipped rather than half-parsed.
  */
 function objectLiteral(source, name) {
-  const start = source.search(new RegExp(`const ${name}\\b`))
-  if (start === -1) return []
-  const open = source.indexOf('{', start)
-  if (open === -1) return []
-  let depth = 0
-  let end = open
-  for (; end < source.length; end++) {
-    if (source[end] === '{') depth++
-    else if (source[end] === '}' && --depth === 0) break
-  }
-  const body = source
-    .slice(open + 1, end)
-    .split('\n')
-    .map((line) => line.replace(/\/\/.*$/, ''))
-    .join('\n')
-
+  const body = literalBody(source, name)
+  if (body === null) return []
   return splitTopLevel(body, ',')
     .map((chunk) => chunk.match(/^\s*'?([\w-]+)'?\s*:\s*(?:'([^']*)'|(null))\s*$/))
     .filter((m) => m !== null)
@@ -151,156 +189,284 @@ function objectLiteral(source, name) {
 }
 
 /**
- * `Adw.ViewStackPage { … name: "…" }` page names. Anchored on the page
- * TYPE, not on a bare `name:` line — an unanchored scan also matches the
- * template's own `Gtk.Widget.name` (`application-window.blp:5`) and
- * reports the window itself as a stack page.
+ * Entries of a record whose values are themselves object literals, e.g.
+ * `ROUTE_FOR_VIEW`'s `welcome: { root: 'welcome', shell: null }`. Each
+ * inner object is parsed with the same scalar matcher, so the two levels
+ * share one notion of "a quoted value or null".
  */
-function viewStackPageNames(source) {
-  return [...source.matchAll(/Adw\.ViewStackPage\s*\{[\s\S]*?\bname:\s*"([^"]+)"/g)].map((m) => m[1])
+function nestedObjectLiteral(source, name) {
+  const body = literalBody(source, name)
+  if (body === null) return []
+  return splitTopLevel(body, ',')
+    .map((chunk) => chunk.match(/^\s*'?([\w-]+)'?\s*:\s*\{([^{}]*)\}\s*$/))
+    .filter((m) => m !== null)
+    .map((m) => {
+      const fields = {}
+      for (const field of splitTopLevel(m[2], ',')) {
+        const pair = field.match(/^\s*'?([\w-]+)'?\s*:\s*(?:'([^']*)'|(null))\s*$/)
+        if (pair) fields[pair[1]] = pair[2] ?? null
+      }
+      return { key: m[1], fields }
+    })
 }
 
 /**
- * Rail rows: the `action-target` of every row bound to `win.mode`.
- * Blueprint writes the GVariant string target as `"'world'"` — quotes
- * inside quotes — so the inner pair is stripped.
+ * Pages of one stack-page TYPE, brace-matched. Anchored on the page type
+ * rather than on a bare `name:` line — an unanchored scan also matches
+ * the template's own `Gtk.Widget.name` (`application-window.blp:5`) and
+ * reports the window itself as a stack page.
  *
- * The two properties are collected PER `{ … }` BLOCK, not in line order.
- * Blueprint imposes no property order, so a row writing `action-target`
- * above `action-name` is the same row; a line-order matcher attributed
- * that target to whichever action-name it had last seen — in a rail where
- * a non-mode row (`win.share-session`) precedes it, that loses a working
- * row and reports the mode as unreachable, which is a false failure on
- * correct markup.
+ * `title` / `icon` are reported per page because they are the switcher's
+ * only labels: an `Adw.ViewStackPage` without them renders as a blank
+ * button, which is a navigation dead end of a subtler kind — the
+ * destination exists but nothing says what it is.
  */
-function modeRailRowTargets(source) {
-  const targets = []
-  /** One frame per open block; a row's properties land on its own frame. */
-  const stack = []
-  for (const raw of source.split('\n')) {
-    const line = raw.replace(/\/\/.*$/, '')
-    const frame = stack.at(-1)
-    if (frame) {
-      const action = line.match(/\baction-name:\s*"([^"]+)"/)
-      if (action) frame.action = action[1]
-      const target = line.match(/\baction-target:\s*"'([^']+)'"/)
-      if (target) frame.target = target[1]
-    }
-    // Braces inside a string are text, not structure.
-    for (const ch of line.replace(/"[^"]*"/g, '""')) {
-      if (ch === '{') stack.push({})
-      else if (ch === '}') {
-        const closed = stack.pop()
-        if (closed?.action === 'win.mode' && closed.target !== undefined) targets.push(closed.target)
-      }
-    }
+function stackPages(source, type) {
+  const pages = []
+  const re = new RegExp(`\\b${type.replace(/\./g, '\\.')}\\s*\\{`, 'g')
+  for (const m of source.matchAll(re)) {
+    const body = braceBody(source, m.index)
+    if (body === null) continue
+    const clean = stripComments(body)
+    pages.push({
+      name: clean.match(/\bname:\s*"([^"]+)"/)?.[1] ?? null,
+      hasTitle: /\btitle:\s*(?:_\()?"/.test(clean),
+      hasIcon: /\bicon-name:\s*"/.test(clean),
+      childId: clean.match(/\bchild:\s*\$\w+\s+(\w+)\s*\{/)?.[1] ?? null,
+      childType: clean.match(/\bchild:\s*(\$\w+)/)?.[1] ?? null,
+    })
   }
-  return targets
+  return pages
 }
 
-const railTs = read(MODE_RAIL_TS)
-const railBlp = read(MODE_RAIL_BLP)
+/** Setter targets of every `Adw.Breakpoint { … setters { … } }` block. */
+function breakpointSetters(source) {
+  const setters = []
+  for (const m of stripComments(source).matchAll(/\bsetters\s*\{/g)) {
+    const body = braceBody(source, m.index)
+    if (body === null) continue
+    for (const pair of body.matchAll(/([\w-]+)\.([\w-]+):\s*([^;]+);/g)) {
+      setters.push({ target: pair[1], property: pair[2], value: pair[3].trim() })
+    }
+  }
+  return setters
+}
+
+const modeTs = read(EDITOR_MODE_TS)
 const mapTs = read(VIEW_MODE_MAP_TS)
 const windowBlp = read(WINDOW_BLP)
 
-const modes = unionMembers(railTs, 'EditorMode')
-const modeOrder = arrayLiteral(railTs, 'MODE_ORDER')
-const railRows = modeRailRowTargets(railBlp)
+const modes = unionMembers(modeTs, 'EditorMode')
+const modeOrder = arrayLiteral(modeTs, 'MODE_ORDER')
 const viewNames = unionMembers(mapTs, 'ViewName')
-const viewForMode = objectLiteral(mapTs, 'VIEW_FOR_MODE')
+const routeForView = nestedObjectLiteral(mapTs, 'ROUTE_FOR_VIEW')
 const modeForView = objectLiteral(mapTs, 'MODE_FOR_VIEW')
-const stackPages = viewStackPageNames(windowBlp)
+const viewForMode = objectLiteral(mapTs, 'VIEW_FOR_MODE')
+const rootUnion = interfaceFieldUnion(mapTs, 'ViewRoute', 'root')
+const shellUnion = interfaceFieldUnion(mapTs, 'ViewRoute', 'shell')
+const rootPages = stackPages(windowBlp, 'Gtk.StackPage')
+const shellPages = stackPages(windowBlp, 'Adw.ViewStackPage')
+const setters = breakpointSetters(windowBlp)
 
 const failures = []
 const fail = (message) => failures.push(message)
 
 if (modes.length < MIN_MODES)
-  fail(`parsed only ${modes.length} EditorMode member(s) from ${MODE_RAIL_TS} — the matcher is broken, not the tree`)
+  fail(`parsed only ${modes.length} EditorMode member(s) from ${EDITOR_MODE_TS} — the matcher is broken, not the tree`)
 if (viewNames.length < MIN_VIEWS)
   fail(
     `parsed only ${viewNames.length} ViewName member(s) from ${VIEW_MODE_MAP_TS} — the matcher is broken, not the tree`,
   )
-if (stackPages.length < MIN_VIEWS)
-  fail(
-    `parsed only ${stackPages.length} Adw.ViewStackPage name(s) from ${WINDOW_BLP} — the matcher is broken, not the tree`,
-  )
+if (rootPages.length < MIN_ROOT_PAGES)
+  fail(`parsed only ${rootPages.length} Gtk.StackPage(s) from ${WINDOW_BLP} — the matcher is broken, not the tree`)
+if (shellPages.length < MIN_SHELL_PAGES)
+  fail(`parsed only ${shellPages.length} Adw.ViewStackPage(s) from ${WINDOW_BLP} — the matcher is broken, not the tree`)
+if (routeForView.length < MIN_VIEWS)
+  fail(`parsed only ${routeForView.length} ROUTE_FOR_VIEW entr(ies) — the matcher is broken, not the tree`)
+if (!rootUnion.found || !shellUnion.found)
+  fail(`could not parse ViewRoute's root/shell field unions from ${VIEW_MODE_MAP_TS} — the matcher is broken`)
 
 const modeSet = new Set(modes)
 const viewNameSet = new Set(viewNames)
-const stackPageSet = new Set(stackPages)
-const railRowSet = new Set(railRows)
-const viewForModeKeys = new Set(viewForMode.map((e) => e.key))
+const rootPageSet = new Set(rootPages.map((p) => p.name))
+const shellPageSet = new Set(shellPages.map((p) => p.name))
+const routeMap = new Map(routeForView.map((e) => [e.key, e.fields]))
+const modeForViewMap = new Map(modeForView.map((e) => [e.key, e.value]))
 
 // 1. Every mode resolves to a view.
 for (const mode of modes) {
-  if (!viewForModeKeys.has(mode)) {
+  if (!viewForMode.some((e) => e.key === mode)) {
     fail(
       `EditorMode "${mode}" has no VIEW_FOR_MODE entry in ${VIEW_MODE_MAP_TS} — ` +
-        'the rail would advertise a place the user cannot reach. Add the view, or drop the mode.',
+        'the switcher would advertise a place the user cannot reach. Add the view, or drop the mode.',
     )
   }
 }
 
-// 2. …and that view is a real stack page.
+// 2. No route from a mode that does not exist, and the view it names is real.
 for (const { key, value } of viewForMode) {
-  if (value && !stackPageSet.has(value)) {
-    fail(`VIEW_FOR_MODE["${key}"] → "${value}" is not an Adw.ViewStackPage name in ${WINDOW_BLP}`)
-  }
+  if (!modeSet.has(key))
+    fail(`VIEW_FOR_MODE has a "${key}" entry but "${key}" is not an EditorMode (${EDITOR_MODE_TS})`)
+  if (value && !viewNameSet.has(value)) fail(`VIEW_FOR_MODE["${key}"] → "${value}" is not a ViewName`)
 }
 
-// 3. No route from a mode that does not exist.
-for (const { key } of viewForMode) {
-  if (!modeSet.has(key)) fail(`VIEW_FOR_MODE has a "${key}" entry but "${key}" is not an EditorMode (${MODE_RAIL_TS})`)
-}
-
-// 4. Rail rows and modes agree, both directions.
-for (const mode of modes) {
-  if (!railRowSet.has(mode))
-    fail(`EditorMode "${mode}" has no win.mode row in ${MODE_RAIL_BLP} — it is unreachable from the rail`)
-}
-for (const target of railRowSet) {
-  if (!modeSet.has(target))
-    fail(`${MODE_RAIL_BLP} has a win.mode row targeting "${target}", which is not an EditorMode`)
-}
-
-// 5. MODE_ORDER (what the widget iterates) is exactly the union.
+// 3. MODE_ORDER (what every mode-indexed iteration walks) is exactly the union.
 for (const mode of modes) {
   if (!modeOrder.includes(mode))
-    fail(
-      `EditorMode "${mode}" is missing from MODE_ORDER in ${MODE_RAIL_TS} — the row is never connected or highlighted`,
-    )
+    fail(`EditorMode "${mode}" is missing from MODE_ORDER in ${EDITOR_MODE_TS} — mode-indexed iteration skips it`)
 }
 for (const mode of modeOrder) {
-  if (!modeSet.has(mode)) fail(`MODE_ORDER lists "${mode}", which is not an EditorMode (${MODE_RAIL_TS})`)
+  if (!modeSet.has(mode)) fail(`MODE_ORDER lists "${mode}", which is not an EditorMode (${EDITOR_MODE_TS})`)
 }
 
-// 6. ViewName and the stack pages agree, both directions, and every
-//    view is classified onto a rail row (or explicitly onto none).
+// 4. Every view has a route, and nothing routes a view that does not exist.
 for (const view of viewNames) {
-  if (!stackPageSet.has(view)) fail(`ViewName "${view}" has no Adw.ViewStackPage in ${WINDOW_BLP}`)
+  if (!routeMap.has(view)) fail(`ViewName "${view}" has no ROUTE_FOR_VIEW entry — the router cannot show it`)
 }
-for (const page of stackPages) {
-  if (!viewNameSet.has(page))
-    fail(`${WINDOW_BLP} has an Adw.ViewStackPage "${page}" missing from the ViewName union (${VIEW_MODE_MAP_TS})`)
+for (const { key } of routeForView) {
+  if (!viewNameSet.has(key)) fail(`ROUTE_FOR_VIEW has a "${key}" entry but "${key}" is not a ViewName`)
 }
-const modeForViewKeys = new Set(modeForView.map((e) => e.key))
+
+// 5. Both levels of every route land on a real page, and the two levels
+//    agree: a shell page is reachable only through the `shell` root page,
+//    and the root pages outside the shell must not name one.
+for (const { key, fields } of routeForView) {
+  const { root, shell } = fields
+  if (root === undefined) {
+    fail(`ROUTE_FOR_VIEW["${key}"] has no \`root\` — every view must name a ${WINDOW_BLP} root_stack page`)
+  } else if (!rootPageSet.has(root)) {
+    fail(`ROUTE_FOR_VIEW["${key}"].root → "${root}" is not a Gtk.StackPage name in ${WINDOW_BLP}`)
+  }
+  if (shell === undefined) {
+    fail(`ROUTE_FOR_VIEW["${key}"] has no \`shell\` — write \`shell: null\` for a view outside the project shell`)
+  } else if (shell !== null && !shellPageSet.has(shell)) {
+    fail(`ROUTE_FOR_VIEW["${key}"].shell → "${shell}" is not an Adw.ViewStackPage name in ${WINDOW_BLP}`)
+  } else if (shell !== null && root !== 'shell') {
+    fail(`ROUTE_FOR_VIEW["${key}"] selects shell page "${shell}" but root page "${root}" — the shell is not shown`)
+  } else if (shell === null && root === 'shell') {
+    fail(`ROUTE_FOR_VIEW["${key}"] shows the shell but selects no page in it — the switcher would keep the last one`)
+  }
+}
+
+// 6. The ViewRoute field unions cover every page in their stack, both
+//    directions. A page missing from the union is a page no route can
+//    name; a union member with no page is a route that cannot resolve.
+for (const page of rootPageSet) {
+  if (!rootUnion.members.includes(page))
+    fail(`Gtk.StackPage "${page}" is missing from ViewRoute['root'] in ${VIEW_MODE_MAP_TS} — no route can name it`)
+}
+for (const member of rootUnion.members) {
+  if (!rootPageSet.has(member))
+    fail(`ViewRoute['root'] lists "${member}", which is not a Gtk.StackPage in ${WINDOW_BLP}`)
+}
+for (const page of shellPageSet) {
+  if (!shellUnion.members.includes(page))
+    fail(
+      `Adw.ViewStackPage "${page}" is missing from ViewRoute['shell'] in ${VIEW_MODE_MAP_TS} — no route can select it`,
+    )
+}
+for (const member of shellUnion.members) {
+  if (!shellPageSet.has(member))
+    fail(`ViewRoute['shell'] lists "${member}", which is not an Adw.ViewStackPage in ${WINDOW_BLP}`)
+}
+if (shellUnion.found && !shellUnion.nullable)
+  fail(`ViewRoute['shell'] must admit \`null\` — \`welcome\` and \`map\` live outside the project shell`)
+
+// 7. The shell's pages ARE the switcher's destinations, so here the
+//    symmetric check holds: every shell page is a mode, every mode's
+//    view is that shell page.
+for (const page of shellPageSet) {
+  if (!modeSet.has(page))
+    fail(
+      `Adw.ViewStackPage "${page}" is not an EditorMode (${EDITOR_MODE_TS}) — ` +
+        'the view switcher would show a destination `win.mode` cannot select.',
+    )
+}
+for (const { key, value } of viewForMode) {
+  const route = routeMap.get(value)
+  if (route && route.shell !== key)
+    fail(
+      `EditorMode "${key}" routes to view "${value}", which selects shell page "${route.shell}" — ` +
+        'picking the destination would move the switcher somewhere else.',
+    )
+}
+
+// 8. Every view is classified onto a shell destination (or explicitly
+//    onto none), and that classification is exactly the shell page the
+//    route selects — the switcher highlight and the shown page are the
+//    same fact written twice.
 for (const view of viewNames) {
-  if (!modeForViewKeys.has(view))
-    fail(`ViewName "${view}" has no MODE_FOR_VIEW entry — the rail highlight is undefined on that page`)
+  if (!modeForViewMap.has(view))
+    fail(`ViewName "${view}" has no MODE_FOR_VIEW entry — the switcher highlight is undefined on that page`)
 }
 for (const { key, value } of modeForView) {
   if (!viewNameSet.has(key)) fail(`MODE_FOR_VIEW has a "${key}" entry but "${key}" is not a ViewName`)
   if (value !== null && !modeSet.has(value)) fail(`MODE_FOR_VIEW["${key}"] → "${value}" is not an EditorMode`)
+  const route = routeMap.get(key)
+  if (route && route.shell !== undefined && route.shell !== value)
+    fail(
+      `MODE_FOR_VIEW["${key}"] → ${value === null ? 'null' : `"${value}"`} but ` +
+        `ROUTE_FOR_VIEW["${key}"].shell → ${route.shell === null ? 'null' : `"${route.shell}"`} — ` +
+        'the highlighted destination and the shown page disagree.',
+    )
+}
+
+// 9. A switcher destination needs a label and an icon: `Adw.ViewSwitcher`
+//    and `Adw.ViewSwitcherBar` render nothing else, so a page without
+//    them is a blank button.
+for (const page of shellPages) {
+  if (page.name === null) fail(`an Adw.ViewStackPage in ${WINDOW_BLP} has no \`name\` — the router cannot select it`)
+  if (!page.hasTitle)
+    fail(`Adw.ViewStackPage "${page.name}" has no \`title\` — the switcher renders an unlabelled button`)
+  if (!page.hasIcon)
+    fail(`Adw.ViewStackPage "${page.name}" has no \`icon-name\` — the phone switcher bar shows no icon`)
+}
+
+// 10. The phone navigation: the bottom bar must point at the shell stack
+//     and be revealed by the breakpoint, and every shell page must hand
+//     its wide-screen switcher over to it by going compact. Miss either
+//     half and a phone loses all top-level navigation — the failure the
+//     screenshot pass at 360 px exists to catch, caught here instead.
+if (!/Adw\.ViewSwitcherBar\s+view_switcher_bar\s*\{[^}]*\bstack:\s*shell_stack\s*;/.test(stripComments(windowBlp)))
+  fail(`${WINDOW_BLP}: \`Adw.ViewSwitcherBar view_switcher_bar\` does not bind \`stack: shell_stack\``)
+if (!setters.some((s) => s.target === 'view_switcher_bar' && s.property === 'reveal' && s.value === 'true'))
+  fail(`${WINDOW_BLP}: no breakpoint sets \`view_switcher_bar.reveal: true\` — the phone has no navigation`)
+for (const page of shellPages) {
+  if (page.childId === null) {
+    fail(`Adw.ViewStackPage "${page.name}" declares no \`child: $Type id {}\` — cannot check its compact setter`)
+    continue
+  }
+  if (!setters.some((s) => s.target === page.childId && s.property === 'compact' && s.value === 'true'))
+    fail(
+      `${WINDOW_BLP}: no breakpoint sets \`${page.childId}.compact: true\` — ` +
+        `the "${page.name}" page would keep its wide switcher next to the phone switcher bar.`,
+    )
+}
+
+// 11. The map editor is a permanent `root_stack` child. The engine tears
+//     its Excalibur instance down in `vfunc_unroot`, so moving the view
+//     between stacks — or nesting it where a parent can be replaced —
+//     kills the loop for good (REDESIGN.md § 10, risk 4).
+const mapPage = rootPages.find((p) => p.name === 'map')
+if (!mapPage) {
+  fail(`${WINDOW_BLP}: no Gtk.StackPage named "map" — the scene editor must be a direct root_stack page`)
+} else if (mapPage.childType !== '$SceneEditorView') {
+  fail(
+    `${WINDOW_BLP}: root_stack page "map" has child ${mapPage.childType ?? '(none)'} rather than $SceneEditorView — ` +
+      "the scene editor must be rooted there for the app's lifetime, never reparented.",
+  )
 }
 
 if (failures.length > 0) {
   for (const message of failures) console.error(`✗ ${message}`)
   console.error(
-    `\n${failures.length} mode-route violation(s). Every EditorMode must have a rail row, a VIEW_FOR_MODE ` +
-      'entry and a real Adw.ViewStackPage behind it — a mode with no view is a navigation dead end.',
+    `\n${failures.length} mode-route violation(s). Every EditorMode must be an Adw.ViewStackPage of the shell ` +
+      'with a VIEW_FOR_MODE entry and a ROUTE_FOR_VIEW route behind it — a destination with no page is a ' +
+      'navigation dead end.',
   )
   process.exit(1)
 }
 console.log(
-  `✓ All ${modes.length} editor modes route to a real view (${stackPages.length} stack pages, ${railRows.length} rail rows)`,
+  `✓ All ${modes.length} shell destinations route to a real view ` +
+    `(${rootPages.length} root pages, ${shellPages.length} shell pages, ${viewNames.length} views)`,
 )

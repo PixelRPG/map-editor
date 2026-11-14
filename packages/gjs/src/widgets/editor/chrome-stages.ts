@@ -22,7 +22,7 @@ export type ChromeLayout = 'wide' | 'phone'
 
 /**
  * Canvas width, in px, at which each rung starts: `STAGE_EDITING_PILL_PX`
- * plus a context pill WITH a roster in it (150 px) plus 32 px of margin
+ * plus a context pill WITH a roster in it (192 px) plus 32 px of margin
  * and gap, rounded up to a multiple of 8.
  *
  * The with-roster case is the threshold rather than the solo one on
@@ -34,22 +34,24 @@ export type ChromeLayout = 'wide' | 'phone'
  * this for a roster wider than one avatar.
  *
  * These are NOT the design's numbers. Its §2.4 table derives them from
- * per-button arithmetic and lands low at every rung (604 vs 672, 664 vs
- * 720, 784 vs 856, 1124 vs 1144), because a labelled `Adw.Toggle` is
- * wider than an icon plus a word. The first measured set (656 / 704 /
- * 856 / 1136) was still 8 px low below `normal-2`: both pill tables were
- * read 8 px short, so `phone-chrome.probe.spec.ts` now measures the pills
- * with GTK and refuses a table that drifts. `chrome-stages.spec.ts`
+ * per-button arithmetic and lands low at every rung, because a labelled
+ * `Adw.Toggle` is wider than an icon plus a word. The first measured set
+ * was itself 8 px low below `normal-2` — both pill tables were read
+ * 8 px short — so `phone-chrome.probe.spec.ts` now measures the pills
+ * with GTK and refuses a table that drifts; that is also what caught
+ * this set the hour the library toggle left the pill: 42 px narrower at
+ * every rung, so every threshold moved down one or two multiples of 8.
+ * `chrome-stages.spec.ts`
  * refuses a rung whose own pill cannot fit at its own threshold, and
  * `scripts/check-chrome-stages.mjs` holds the `.blp` conditions to these
  * four numbers.
  */
 export const STAGE_MIN_CANVAS_PX: Record<ChromeStage, number> = {
   tight: 0,
-  compact: 720,
-  'normal-1': 808,
-  'normal-2': 920,
-  roomy: 1224,
+  compact: 672,
+  'normal-1': 768,
+  'normal-2': 880,
+  roomy: 1176,
 }
 
 /** The stage a canvas of `width` px lands in. */
@@ -96,11 +98,11 @@ export const CONTEXT_PILL_PX = { solo: 150, withRoster: 192 } as const
  * stays monotonic.
  */
 export const STAGE_EDITING_PILL_PX: Record<ChromeStage, number> = {
-  tight: 264,
-  compact: 489,
-  'normal-1': 584,
-  'normal-2': 694,
-  roomy: 994,
+  tight: 222,
+  compact: 447,
+  'normal-1': 542,
+  'normal-2': 652,
+  roomy: 952,
 }
 
 /** What the two pills and the bar show, for one state of the chrome. */
@@ -109,8 +111,6 @@ export interface ChromeFlags {
   editingPill: boolean
   /** The circular "‹", phone's only supported exit (decision 20). */
   backCircle: boolean
-  /** The library sidebar toggle — there is no rail to open on phone. */
-  libraryToggle: boolean
   /** "World" beside the back arrow. */
   backLabel: boolean
   /** Undo in the editing pill (wide) … */
@@ -195,7 +195,6 @@ export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: b
   return {
     editingPill: !phone,
     backCircle: phone && !running,
-    libraryToggle: !phone,
     backLabel: !phone && rank >= CHROME_STAGES.indexOf('normal-1'),
     undoButton: !phone,
     phoneUndo: phone && !running,

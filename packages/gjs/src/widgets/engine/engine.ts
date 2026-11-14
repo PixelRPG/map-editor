@@ -110,6 +110,20 @@ export class Engine extends Adw.Bin {
    * its caller with nothing to report and no reason to rebuild.
    */
   private _readyRejectors: Array<(reason: Error) => void> = []
+  /**
+   * `reject` side of every engine operation already PAST `ready` —
+   * `loadProject`, `loadMap`, `start`, `stop`.
+   *
+   * {@link _waitForReady} only covers callers still waiting for the
+   * canvas. Teardown stops Excalibur mid-flight, and a loader that was
+   * stopped never calls back, so an operation that had already started
+   * stayed pending for the rest of the process. Through
+   * `EngineController`'s serial queue that wedged every later map open
+   * behind it: leaving the map editor while its project was still
+   * loading meant the editor never opened a map again, with nothing
+   * logged. Same doctrine as {@link _failStart} — never strand a caller.
+   */
+  private _inflightRejectors: Array<(reason: Error) => void> = []
   private _teardownComplete = false
   /** Why the engine can never become ready, once that is known. */
   private _startFailure: string | null = null
@@ -165,12 +179,12 @@ export class Engine extends Adw.Bin {
 
   public async loadProject(projectPath: string, options?: ProjectLoadOptions): Promise<void> {
     await this._waitForReady()
-    await this._excalibur!.loadProject(projectPath, options)
+    await this._untilTeardown(this._excalibur!.loadProject(projectPath, options))
   }
 
   public async loadMap(mapId: string): Promise<void> {
     await this._waitForReady()
-    await this._excalibur!.loadMap(mapId)
+    await this._untilTeardown(this._excalibur!.loadMap(mapId))
   }
 
   /** Forward to `Engine.currentMapId` — which map the engine has live, if any. */
@@ -180,12 +194,12 @@ export class Engine extends Adw.Bin {
 
   public async start(): Promise<void> {
     await this._waitForReady()
-    await this._excalibur!.start()
+    await this._untilTeardown(this._excalibur!.start())
   }
 
   public async stop(): Promise<void> {
     await this._waitForReady()
-    await this._excalibur!.stop()
+    await this._untilTeardown(this._excalibur!.stop())
   }
 
   /** Forward to `Engine.setActiveTool` — writes to the session-singleton. */
@@ -766,9 +780,35 @@ export class Engine extends Adw.Bin {
   private _failStart(reason: string): void {
     this._startFailure ??= reason
     this._readyWaiters.disconnectAll()
-    const rejectors = this._readyRejectors
+    const rejectors = [...this._readyRejectors, ...this._inflightRejectors]
     this._readyRejectors = []
+    this._inflightRejectors = []
     for (const reject of rejectors) reject(new EngineUnavailableError(reason))
+  }
+
+  /**
+   * Resolve with `operation`, or reject as soon as the engine can no
+   * longer finish it (teardown, failed start) — whichever happens first.
+   *
+   * See {@link _inflightRejectors} for the stall this closes.
+   */
+  private _untilTeardown<T>(operation: Promise<T>): Promise<T> {
+    if (this._startFailure) {
+      return Promise.reject(new EngineUnavailableError(this._startFailure))
+    }
+    let rejector!: (reason: Error) => void
+    const abandoned = new Promise<never>((_resolve, reject) => {
+      rejector = reject
+    })
+    this._inflightRejectors.push(rejector)
+    const release = () => {
+      const index = this._inflightRejectors.indexOf(rejector)
+      if (index >= 0) this._inflightRejectors.splice(index, 1)
+    }
+    // `Promise.race` subscribes to both sides, so a rejection that
+    // arrives after the race settled is already handled — no stray
+    // unhandled-rejection warning when `release` loses the entry.
+    return Promise.race([operation, abandoned]).finally(release)
   }
 
   /** `true` once this widget is disposed or its engine failed to start. */

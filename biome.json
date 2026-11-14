@@ -43,7 +43,8 @@
       "!**/*.blp",
       "!**/*.d.blp.ts",
       "!**/*.xml",
-      "!**/*.css"
+      "!**/*.css",
+      "!scripts/smoke/out-*"
     ]
   },
   "overrides": [

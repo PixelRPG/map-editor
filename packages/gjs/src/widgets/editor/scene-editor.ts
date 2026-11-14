@@ -58,7 +58,6 @@ export class SceneEditor extends Adw.Bin {
   declare _engine_holder: Gtk.Box
 
   declare _editing_handle: Gtk.WindowHandle
-  declare _library_toggle: Gtk.ToggleButton
   declare _back_button: Gtk.Button
   declare _back_label: Gtk.Label
   declare _undo_button: Gtk.Button
@@ -130,7 +129,6 @@ export class SceneEditor extends Adw.Bin {
           'overlay',
           'engine_holder',
           'editing_handle',
-          'library_toggle',
           'back_button',
           'back_label',
           'undo_button',
@@ -469,7 +467,6 @@ export class SceneEditor extends Adw.Bin {
   private _applyFlags(f: ChromeFlags): void {
     this._editing_handle.set_visible(f.editingPill)
     this._back_circle.set_visible(f.backCircle)
-    this._library_toggle.set_visible(f.libraryToggle)
     this._back_label.set_visible(f.backLabel)
     this._undo_button.set_visible(f.undoButton)
     this._redo_button.set_visible(f.redoButton)
@@ -554,6 +551,11 @@ export class SceneEditor extends Adw.Bin {
    * replaces rebuilt its menu from button visibility so the two could
    * never disagree, which is machinery this design does not need
    * because the menu's items are never buttons.
+   *
+   * It also carries the app's primary menu. The map editor shows no
+   * shell navigation (REDESIGN.md § 3.3), so the context pill is its
+   * only header end, and this is the only door — at every width, not
+   * just on phone as it was while the mode rail still existed.
    */
   private _updateOverflowMenu(): void {
     const phone = this._layout === 'phone'
@@ -576,12 +578,25 @@ export class SceneEditor extends Adw.Bin {
     play.append(_('Share…'), 'win.share-session')
     root.append_section(null, play)
 
+    // The primary menu's own sections, in its order.
+    const project = new Gio.Menu()
+    project.append(_('Open Recent'), 'win.open-recent-projects')
+    project.append(_('Close Project'), 'win.close-project')
+    root.append_section(null, project)
+
+    const tier = new Gio.Menu()
+    tier.append(_('Full view'), 'app.full-view')
+    root.append_section(null, tier)
+
     const help = new Gio.Menu()
     if (this._fullView && !phone) help.append(_('Keyboard shortcuts'), 'win.show-help-overlay')
-    // The rail's primary menu is unreachable from the phone editor, so
-    // the tier switch needs a door here.
-    if (phone) help.append(_('Full view'), 'app.full-view')
-    if (help.get_n_items() > 0) root.append_section(null, help)
+    help.append(_('Preferences'), 'app.preferences')
+    help.append(_('About PixelRPG Maker'), 'app.about')
+    root.append_section(null, help)
+
+    const quit = new Gio.Menu()
+    quit.append(_('Quit'), 'app.quit')
+    root.append_section(null, quit)
 
     this._overflow_button.set_menu_model(root)
   }

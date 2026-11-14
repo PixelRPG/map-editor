@@ -8,12 +8,14 @@
  * the rest of the session. Every one of them checks shape; none of them
  * starts the app and asks whether it works. This one does.
  *
- * WHAT IT ASSERTS, and why all four:
- *   view           === 'scene-editor'   the editor is where it claims
- *   enginePresent  === true             a canvas widget exists
- *   engineReady    === true             Excalibur is live on it
- *   currentSceneId === the map asked for
- *   activeLayer    !== null             a paint target is actually planted
+ * WHAT IT ASSERTS, and why all five:
+ *   view              === 'map'      the editor is where it claims
+ *   sceneEditorRooted === true       the canvas hangs in this window, so
+ *                                    navigation did not reparent it away
+ *   enginePresent     === true       a canvas widget exists
+ *   engineReady       === true       Excalibur is live on it
+ *   currentSceneId    === the map asked for
+ *   activeLayer       !== null       a paint target is actually planted
  *
  * `activeLayer` is the load-bearing one. `engineReady` was true in every
  * single run of the scenario that was broken — an engine with no map on it
@@ -142,7 +144,8 @@ async function waitFor(label, predicate, timeoutMs) {
 
 function verdict(st, wantMap) {
   if (!st) return 'no status from the Control interface'
-  if (st.view !== 'scene-editor') return `view is "${st.view}", not the scene editor`
+  if (st.view !== 'map') return `view is "${st.view}", not the map editor`
+  if (!st.sceneEditorRooted) return 'the scene editor is not rooted in the window'
   if (!st.enginePresent) return 'no engine widget'
   if (!st.engineReady) return 'engine widget has no live Excalibur instance'
   if (st.currentSceneId !== wantMap) return `showing "${st.currentSceneId}", asked for "${wantMap}"`

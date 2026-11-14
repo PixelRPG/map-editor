@@ -21,13 +21,11 @@ export declare const GTypeName: 'SceneEditorView';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['outer_split', 'mode_rail', 'inner_split', 'editor', 'inspector'];
+export declare const InternalChildren: ['inner_split', 'editor', 'inspector'];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _outer_split: Adw.OverlaySplitView;
-    _mode_rail: GObject.Object;
-    _inner_split: Adw.OverlaySplitView;
-    _editor: GObject.Object;
-    _inspector: GObject.Object;
+        _inner_split: Adw.OverlaySplitView;
+        _editor: GObject.Object;
+        _inspector: GObject.Object;
 }

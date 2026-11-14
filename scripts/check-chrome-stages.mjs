@@ -14,8 +14,12 @@
  * redesign: the design's §2.4 thresholds (604 / 664 / 784 / 1124) were
  * all below what the pills actually measure, so the pills collided at a
  * 620 px and a 784 px canvas. The first measured set (656 / 704 / 856 /
- * 1136) was itself 8 px low below `normal-2`; the ladder is now
- * 720 / 808 / 920 / 1224 (the map name and window controls widened the pills), read off GTK by `phone-chrome.probe.spec.ts`.
+ * 1136) was itself 8 px low below `normal-2`; the map name and window
+ * controls then widened the pills to 720 / 808 / 920 / 1224, and
+ * dropping the library toggle out of the editing pill (the library is a
+ * shell destination now, not a drawer) narrowed it again to the current
+ * 672 / 768 / 880 / 1176 — every one of those readings off GTK by
+ * `phone-chrome.probe.spec.ts`.
  *
  * This guard sees ONLY the wide layout's ladder. It cannot see the phone
  * bar or the sheet: their floor is the ladder's `width-request`, and a

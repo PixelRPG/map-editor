@@ -225,18 +225,24 @@ export class EngineController {
       this.dispose()
     }
 
-    if (!this._engine) {
-      this._engine = this.createEngine()
-      this.slot(this._engine)
-      await this._engine.initialize()
-    } else {
-      // Re-attach in case the host cleared the slot during a view switch.
-      this.slot(this._engine)
-    }
-
     try {
+      // Held locally as well as on the instance: `dispose()` may land on
+      // any `await` below and nulls the field, and the operations have to
+      // keep talking to the widget that is rejecting them rather than
+      // read a field TypeScript can no longer narrow.
+      let engine = this._engine
+      if (!engine) {
+        engine = this.createEngine()
+        this._engine = engine
+        this.slot(engine)
+        await engine.initialize()
+      } else {
+        // Re-attach in case the host cleared the slot during a view switch.
+        this.slot(engine)
+      }
+
       if (this._projectPath !== projectPath) {
-        await this._engine.loadProject(projectPath)
+        await engine.loadProject(projectPath)
         this._projectPath = projectPath
         // `loadProject` activates the project's `startup.initialMapId`
         // by itself. Record which map that was instead of assuming
@@ -244,12 +250,20 @@ export class EngineController {
         // time on every project open — a full scene rebuild thrown
         // away, and until `swapInScene` learned to step off the active
         // scene, an outright throw (TODO.md, resolved with this).
-        this._mapId = this._engine.currentMapId
+        this._mapId = engine.currentMapId
       }
       if (this._mapId !== mapId) {
-        await this._engine.loadMap(mapId)
+        await engine.loadMap(mapId)
         this._mapId = mapId
       }
+    } catch (error) {
+      // `dispose()` landed mid-bring-up — the user left the map editor
+      // before its project finished loading, so the widget rejected the
+      // in-flight load to let this queue slot drain (see
+      // `Engine._inflightRejectors`). That is navigation, not a failure:
+      // reporting it would toast "Failed to load map" over the page the
+      // user just went back to.
+      if (this._engine) throw error
     } finally {
       // Hook attachment does NOT ride on the load succeeding. A failed
       // load leaves a live, painting engine behind (the project's own

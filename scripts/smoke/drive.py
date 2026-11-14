@@ -14,13 +14,22 @@ scenarios
             itself live — lands the second open INSIDE the project load,
             which is the window the two collide in
   churn     open project + map, then switch maps 4x fast
-  enterleave  open a map, go back to the atlas, repeat 8x — each round
-              trip destroys and rebuilds the engine widget + its GL context
+  enterleave  open a map, go back to the World page, repeat 8x — each
+              round trip destroys and rebuilds the engine widget + its GL
+              context, and is checked to leave SceneEditorView rooted
 
 A run PASSES when, after the last step, GetStatus reports
 engineReady=true AND currentSceneId is the map we asked for AND
 activeLayer is non-null (a live engine on the right scene, with the
 editor state actually planted on it).
+
+`enterleave` additionally asserts `sceneEditorRooted` on BOTH sides of
+every switch. The editor's two stacks only change which page is visible,
+so SceneEditorView must stay parented by `root_stack` for the process's
+lifetime: the gjs Engine tears Excalibur down in `vfunc_unroot` and
+nothing rebuilds it, so one stray unroot kills the map editor for good
+(REDESIGN.md § 10, risk 4). `engineReady` alone would not catch it — it
+reports the CURRENT entry, and the teardown is only visible on the next.
 """
 from __future__ import annotations
 
@@ -55,11 +64,15 @@ gip = subprocess.run(
 ).stdout.split()
 ENV = {
     **os.environ,
-    "XDG_RUNTIME_DIR": "/run/user/1000",
-    "WAYLAND_DISPLAY": "pixrace",
     "GI_TYPELIB_PATH": ":".join(gip),
     "LD_LIBRARY_PATH": ":".join(gip),
 }
+# The rig's own long-lived compositor, unless we were started inside one
+# already (`headless-run` exports its private socket) — overriding that
+# would point the app at a display that is not there.
+if not os.environ.get("WAYLAND_DISPLAY"):
+    ENV["XDG_RUNTIME_DIR"] = "/run/user/1000"
+    ENV["WAYLAND_DISPLAY"] = "pixrace"
 ENV.pop("DISPLAY", None)
 
 
@@ -127,6 +140,10 @@ def open_scenes_together(label: str, *scenes: str) -> float:
 
 
 def wait_for(label: str, pred, timeout=30.0):
+    """Poll GetStatus until `pred` holds. On timeout returns the LAST
+    status read, not None — callers that only want a best-effort nudge
+    rely on that. Use `must_wait_for` when the condition is the assertion.
+    """
     deadline = time.time() + timeout
     st = None
     while time.time() < deadline:
@@ -135,6 +152,45 @@ def wait_for(label: str, pred, timeout=30.0):
             return st
         time.sleep(0.1)
     return st
+
+
+def must_wait_for(label: str, pred, what: str, timeout=30.0):
+    """Like `wait_for`, but a timeout is a failure.
+
+    `wait_for` answering with the last status is a trap for a loop that
+    checks something else afterwards: the engine-rebuild regression this
+    scenario exists for passed eight rounds of `sceneEditorRooted`
+    while `engineReady` was never once true, because every round read a
+    stale status instead of stopping. A condition worth waiting for is a
+    condition worth failing on.
+    """
+    deadline = time.time() + timeout
+    st = None
+    while time.time() < deadline:
+        st = status(label)
+        if st is not None and pred(st):
+            return st
+        time.sleep(0.1)
+    raise RuntimeError(f"timed out after {timeout:g}s waiting for {what} (last status: {st})")
+
+
+def require_rooted(st: dict | None, where: str) -> None:
+    """Fail the run unless SceneEditorView is still where it was built.
+
+    Read from GetStatus rather than inferred: `sceneEditorRooted` is the
+    window comparing the live widget's parent against `root_stack` and its
+    root against itself. A missing key is a failure too — the field going
+    away would otherwise turn this assertion into a silent pass.
+    """
+    if st is None:
+        raise RuntimeError(f"no status to check sceneEditorRooted ({where})")
+    if "sceneEditorRooted" not in st:
+        raise RuntimeError(f"GetStatus has no sceneEditorRooted field ({where})")
+    if st["sceneEditorRooted"] is not True:
+        raise RuntimeError(
+            f"SceneEditorView was reparented or unrooted ({where}) — "
+            "the Excalibur loop is torn down in vfunc_unroot and never rebuilt"
+        )
 
 
 # Per-batch label prefix. It has to be unique across batches, not just
@@ -209,9 +265,13 @@ def run_once(i: int) -> tuple[bool, dict | None, str]:
         elif SCENARIO == "enterleave":
             for _n in range(8):
                 open_scene(label, MAP_A)
-                wait_for(label, lambda s: s.get("engineReady") is True, 30)
+                st = must_wait_for(label, lambda s: s.get("engineReady") is True,
+                                   f"a live engine (round {_n})", 30)
+                require_rooted(st, f"round {_n}, on the map")
                 activate(label, "back-to-atlas")
-                wait_for(label, lambda s: s.get("view") == "atlas", 15)
+                st = must_wait_for(label, lambda s: s.get("view") == "world",
+                                   f"the World page (round {_n})", 15)
+                require_rooted(st, f"round {_n}, back on World")
             open_scene(label, MAP_A)
         elif SCENARIO == "churn":
             open_scene(label, MAP_A)

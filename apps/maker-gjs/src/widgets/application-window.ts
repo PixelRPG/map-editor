@@ -2,6 +2,7 @@ import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
 import {
   type AgentMapData,
   ASSISTANT_PEER_ID,
@@ -82,6 +83,19 @@ export interface DebugStatus {
   engineReady: boolean
   /** Whether the window is currently mapped (visible). */
   mapped: boolean
+  /**
+   * Whether `SceneEditorView` still sits where it was built: parented by
+   * `root_stack` and rooted in this window.
+   *
+   * It is the one widget in the tree that must NEVER be reparented. The
+   * gjs `Engine` tears its Excalibur instance down in `vfunc_unroot`, and
+   * nothing rebuilds it — so a single unroot kills the map editor's loop
+   * for the rest of the process (REDESIGN.md § 10, risk 4). Switching
+   * `root_stack` between the project shell and the map leaves the view
+   * mapped/unmapped, never unrooted; this flag is how the smoke driver
+   * proves that across a round trip instead of trusting the claim.
+   */
+  sceneEditorRooted: boolean
   activeTool: EditorTool | null
   activeTile: number | null
   activeLayer: string | null
@@ -127,11 +141,13 @@ export type { SessionSnapshot }
 /**
  * Top-level window.
  *
- * Hosts an `Adw.ViewStack` that switches between the welcome screen, the
- * three rail rows (World = atlas + scene editor, Library, Game) and
- * composes the collaborators that do the actual work:
+ * Hosts two nested stacks (REDESIGN.md § 3.2): a `Gtk.Stack` carrying
+ * welcome / project shell / map editor, and inside the shell an
+ * `Adw.ViewStack` carrying the three switcher destinations World, Library
+ * and Game. Around them it composes the collaborators that do the actual
+ * work:
  *
- * - {@link ViewRouter} — page switching + mode-rail sync
+ * - {@link ViewRouter} — page switching across both stacks
  * - {@link SceneNavigator} — which scene is open, engine + inspector hydration
  * - {@link ProjectLifecycle} — open / create / close a project
  * - {@link SessionCoordinator} — pair-editing, the Share dialog, awareness relay
@@ -148,7 +164,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _library_view: LibraryView
   declare _scene_editor_view: SceneEditorView
   declare _game_view: GameView
-  declare _stack: Adw.ViewStack
+  declare _root_stack: Gtk.Stack
+  declare _shell_stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
 
   private signals = new SignalScope()
@@ -218,14 +235,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     showToast: (message) => this._showToast(message),
   })
   private readonly _router = new ViewRouter({
-    getStack: () => this._stack,
-    getRails: () => [this._atlas_view, this._library_view, this._scene_editor_view, this._game_view],
+    getRootStack: () => this._root_stack,
+    getShellStack: () => this._shell_stack,
     getMode: () => (this._actions ? stringState(this._actions.mode) : null),
     // set_state (not change_state) so the change-state handler doesn't
     // re-enter: the view is already being set explicitly.
     setModeState: (mode) => this._actions?.mode.set_state(GLib.Variant.new_string(mode)),
-    isRailOverlay: () => this._library_view.libraryCollapsed,
-    hideLibrary: () => this.set_property('show-library', false),
     onLeaveSceneEditor: () => {
       this._engineCtl.dispose()
       // The engine is gone; a re-entry starts a fresh MapScene in editor
@@ -236,7 +251,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   private readonly _scenes = new SceneNavigator({
     getProject: () => this._loadedProject,
     showToast: (message) => this._showToast(message),
-    showSceneEditorPage: () => this._router.setView('scene-editor'),
+    showSceneEditorPage: () => this._router.setView('map'),
     setScene: (scene) => this._scene_editor_view.setScene(scene),
     ensureEngineForMap: (projectPath, sceneId) => this._engineCtl.ensureForMap(projectPath, sceneId),
     onEngineReady: () => {
@@ -265,9 +280,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     showToast: (message) => this._showToast(message),
     setProject: (project) => this._projectStore.setProject(project),
     adoptProject: (project) => {
-      this._atlas_view.projectName = project.projectName
-      this._library_view.projectName = project.projectName
-      this._scene_editor_view.projectName = project.projectName
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenes.setScenes(project.scenes)
     },
@@ -276,7 +288,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     resetViews: () => this._library_view.resetToOverview(),
     refreshRecentProjects: (recent) => this._welcome_view.setRecentProjects(recent),
     setShareEnabled: (enabled) => this._actions?.share.set_enabled(enabled),
-    showAtlas: () => this._router.setView('atlas'),
+    showAtlas: () => this._router.setView('world'),
     showWelcome: () => this._router.setView('welcome'),
     invalidateEngine: () => this._engineCtl.invalidateCache(),
     disposeEngine: () => this._engineCtl.dispose(),
@@ -306,28 +318,22 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           'library_view',
           'scene_editor_view',
           'game_view',
-          'stack',
+          'root_stack',
+          'shell_stack',
           'toast_overlay',
         ],
         Properties: {
-          // Single source of truth for sidebar visibility. Each view's
-          // own `show-library` / `show-inspector` is bound bidirectionally
-          // to these in the constructor, so toggling the library in
-          // atlas keeps it visible after navigating to scene-editor (or
-          // vice-versa). Before, each view held an independent state +
-          // had different defaults, so a fresh sidebar would auto-open
-          // on view switch every time.
+          // Single source of truth for inspector visibility. Each view's
+          // own `show-inspector` is bound bidirectionally to this in the
+          // constructor, so toggling the inspector in World keeps it
+          // visible after navigating to the map editor (or vice-versa).
+          // Before, each view held an independent state + had different
+          // defaults, so a fresh sidebar would auto-open on view switch
+          // every time.
           //
           // Defaults closed: the user opens what they want from the
           // floating toggles. Removing the auto-open avoids the "wait
           // why did the inspector appear" surprise the user flagged.
-          'show-library': GObject.ParamSpec.boolean(
-            'show-library',
-            'Show library',
-            'Whether the left library sidebar is visible (shared across all views)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
           'show-inspector': GObject.ParamSpec.boolean(
             'show-inspector',
             'Show inspector',
@@ -357,6 +363,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   ) {
     super({ application })
     this._installActions()
+    this._attachShellSwitchers()
     this._shareSidebarState()
     this._shareFullView()
     wireEngineEvents(this._engineCtl, {
@@ -453,15 +460,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         this._mapPersistCtl.persistPreviewViewport(id, tileX, tileY)
       },
     )
-    // Every view's mode-rail forwards `mode-changed` at the view level.
-    // Re-route all of them through the central `win.mode` action so
-    // navigation is consistent — the action's change-state handler picks
-    // the right ViewStack page. Mutation handling + persistence belongs to
-    // the per-mode controllers; view-side stays presentational.
-    const setMode = (mode: string) => this._actions?.mode.change_state(GLib.Variant.new_string(mode))
-    for (const view of [this._atlas_view, this._scene_editor_view, this._library_view, this._game_view]) {
-      this.signals.connect(view, 'mode-changed', (_v: unknown, mode: string) => setMode(mode))
-    }
+    // The header switchers and the bottom switcher bar all drive
+    // `shell_stack` directly, so the stack — not a per-view signal — is
+    // where a destination change becomes observable. Mirror it into
+    // `win.mode` with `set_state`, not `change_state`: the page is
+    // already showing, and re-entering the change-state handler would
+    // route back into the router for no reason.
+    this.signals.connect(this._shell_stack, 'notify::visible-child-name', () => {
+      const page = this._shell_stack.get_visible_child_name()
+      if (page && this._actions && stringState(this._actions.mode) !== page) {
+        this._actions.mode.set_state(GLib.Variant.new_string(page))
+      }
+    })
     // The Library's own chip clicks flow back into `win.library-chip`, so
     // an external driver reading the action state sees what is on screen.
     this.signals.connect(this._library_view, 'notify::chip', () => {
@@ -500,7 +510,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._session.start()
 
     this._refreshSessionBrowsing()
-    this.signals.connect(this._stack, 'notify::visible-child-name', () => this._refreshSessionBrowsing())
+    this.signals.connect(this._root_stack, 'notify::visible-child-name', () => this._refreshSessionBrowsing())
   }
 
   vfunc_unmap(): void {
@@ -528,28 +538,41 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * Bidirectionally bind this window's `show-library` / `show-inspector`
-   * to every view's own pair. Effect: the sidebars retain their state
-   * across view switches — opening the library in atlas keeps it open
-   * after navigating to scene-editor, and closing it stays closed when
-   * the user goes back.
+   * Bidirectionally bind this window's `show-inspector` to every view
+   * that owns an inspector drawer. Effect: the inspector retains its
+   * state across view switches — opening it in World keeps it open after
+   * navigating to the map editor, and closing it stays closed when the
+   * user goes back.
    *
-   * Welcome is deliberately NOT bound: its recents column is part of the
-   * home layout (visible by default, inlined below the hero on phone),
-   * not a project inspector — sharing state would hide it whenever the
-   * user last closed an editor inspector.
+   * Library and Game are deliberately NOT bound: their detail panes are
+   * master-detail splits, not inspector drawers.
+   *
+   * Welcome is deliberately NOT bound either: its recents column is part
+   * of the home layout (visible by default, inlined below the hero on
+   * phone), not a project inspector — sharing state would hide it
+   * whenever the user last closed an editor inspector.
    */
   private _shareSidebarState(): void {
     const flags = GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL
     for (const view of [this._atlas_view, this._scene_editor_view]) {
-      this.bind_property('show-library', view, 'show-library', flags)
       this.bind_property('show-inspector', view, 'show-inspector', flags)
     }
-    // The Library and the Game page have a mode rail but no inspector
-    // drawer (their detail panes are master-detail splits) — bind only
-    // the library.
-    this.bind_property('show-library', this._library_view, 'show-library', flags)
-    this.bind_property('show-library', this._game_view, 'show-library', flags)
+  }
+
+  /**
+   * Point every shell page's `Adw.ViewSwitcher` at the shell stack.
+   *
+   * The switchers live inside the pages they switch between, so the
+   * stack cannot be referenced from their own Blueprint — `shell_stack`
+   * is a sibling in the window template, not an ancestor of the view.
+   * Wiring it here keeps the pages reusable in Storybook (no switcher
+   * target = the switcher just renders inert) and avoids a ParamSpec
+   * whose only purpose is to relay one object reference.
+   */
+  private _attachShellSwitchers(): void {
+    for (const view of [this._atlas_view, this._library_view, this._game_view]) {
+      view.attachShellSwitcher(this._shell_stack)
+    }
   }
 
   /**
@@ -620,7 +643,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
 
     installZoomActions(group, {
-      targetsAtlas: () => this._router.currentView === 'atlas',
+      targetsAtlas: () => this._router.currentView === 'world',
       stepAtlasZoom: (delta) => this._atlas_view.stepPreviewZoom(delta),
       resetAtlasZoom: () => this._atlas_view.resetPreviewZoom(),
       fitAtlas: () => this._atlas_view.fitAtlas(),
@@ -888,6 +911,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // before hosting/painting.
       engineReady: ex != null,
       mapped: this.get_mapped(),
+      sceneEditorRooted:
+        this._scene_editor_view.get_parent() === this._root_stack &&
+        (this._scene_editor_view.get_root() as unknown as ApplicationWindow) === this,
       activeTool: ex?.getActiveTool() ?? null,
       activeTile: ex?.getActiveTile() ?? null,
       activeLayer: ex?.getActiveLayer() ?? null,

@@ -1,22 +1,37 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { modeForView, resolveModeNavigation } from './view-mode-map.ts'
+import { modeForView, resolveModeNavigation, routeForView } from './view-mode-map.ts'
 
 export default async () => {
+  await describe('routeForView', async () => {
+    await it('splits the flat view name into the two stack levels', async () => {
+      expect(routeForView('welcome')).toStrictEqual({ root: 'welcome', shell: null })
+      expect(routeForView('world')).toStrictEqual({ root: 'shell', shell: 'world' })
+      expect(routeForView('library')).toStrictEqual({ root: 'shell', shell: 'library' })
+      expect(routeForView('game')).toStrictEqual({ root: 'shell', shell: 'game' })
+      expect(routeForView('map')).toStrictEqual({ root: 'map', shell: null })
+    })
+  })
+
   await describe('modeForView', async () => {
-    await it('maps the scene editor onto the world rail row', async () => {
-      expect(modeForView('atlas')).toBe('world')
-      expect(modeForView('scene-editor')).toBe('world')
+    await it('maps each shell destination onto its own mode', async () => {
+      expect(modeForView('world')).toBe('world')
+      expect(modeForView('library')).toBe('library')
+      expect(modeForView('game')).toBe('game')
     })
 
-    await it('leaves the welcome view without a mode', async () => {
+    await it('leaves the views outside the shell without a mode', async () => {
+      // `map` keeping the switcher where it was is what lets the map
+      // editor's back button return to the page the map was opened from
+      // (REDESIGN.md § 3.4).
       expect(modeForView('welcome')).toBe(null)
+      expect(modeForView('map')).toBe(null)
     })
   })
 
   await describe('resolveModeNavigation', async () => {
     await it('navigates to the mode’s view when a project is open', async () => {
-      expect(resolveModeNavigation('world', true)).toStrictEqual({ kind: 'navigate', view: 'atlas' })
+      expect(resolveModeNavigation('world', true)).toStrictEqual({ kind: 'navigate', view: 'world' })
       expect(resolveModeNavigation('library', true)).toStrictEqual({ kind: 'navigate', view: 'library' })
       expect(resolveModeNavigation('game', true)).toStrictEqual({ kind: 'navigate', view: 'game' })
     })

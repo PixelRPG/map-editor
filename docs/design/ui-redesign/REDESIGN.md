@@ -1000,7 +1000,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 
 | # | Step | Resolves |
 |---|---|---|
-| 2.1 | `root_stack` / `shell_stack`; `Adw.ViewSwitcherBar` on phone, `Adw.ViewSwitcher` on wide; delete `ModeRail` and the left split views | drawer navigation (`*/09`) |
+| 2.1 | `root_stack` / `shell_stack`; `Adw.ViewSwitcherBar` on phone, `Adw.ViewSwitcher` on wide; delete `ModeRail` and the left split views | drawer navigation (`*/09`) | — done (`ViewName` is now `welcome \| world \| library \| game \| map`; `ModeRail`, the tablet breakpoint, `win.toggle-library`, `show-library` and `library-collapsed` are gone — `compact` replaces the latter; `$PixelRpgProjectMenuButton` re-homes `primary_menu` out of the rail, which pre-lands part of 2.2; the library chips are an `Adw.InlineViewSwitcher`; the no-reparent invariant is proven by `DebugStatus.sceneEditorRooted` + `drive.py`'s `enterleave` scenario, backed by `check-mode-routes.mjs`)
 | 2.2 | Primary menu and roster on every project screen; Preferences dialog regrouped | orphaned "Settings" |
 | 2.3 | Back order (§3.4) and deep-link back stacks | — |
 
@@ -1086,7 +1086,14 @@ overlays.
    event bridge's pointer stream paints. Verify on a real touchscreen (the OnePlus 6 rig), not
    under Broadway.
 4. **Nested stacks and the engine.** `root_stack` must keep `SceneEditorView` rooted while
-   hidden; assert no `unroot` fires across a shell ↔ map switch.
+   hidden; assert no `unroot` fires across a shell ↔ map switch. **Verified in Phase 2.1** on
+   three fronts: `DebugStatus.sceneEditorRooted` reports the live parent/root pair,
+   `scripts/smoke/drive.py`'s `enterleave` scenario calls `require_rooted()` on both sides of
+   every map ↔ World switch (and `scripts/smoke-open-map.mjs` asserts it after each open), and
+   `check:mode-routes` check 11 statically forbids the view from being anything but a direct
+   `root_stack` page. The switch itself does tear the Excalibur instance down by design —
+   `EngineController` disposes on leave and builds a fresh engine on the next open — the widget
+   is what must never be reparented.
 5. **`Adw.ViewSwitcher` inside an OSD pill** on the atlas: check contrast and that the pill's
    empty pixels do not need a `WindowHandle` (they must not get one that spans map).
 6. **Contiguous palette, two-axis pan.** The sample's forest sheet is 32 × 32 tiles of 16 px:

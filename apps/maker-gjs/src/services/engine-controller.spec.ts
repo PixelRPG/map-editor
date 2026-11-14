@@ -44,6 +44,17 @@ function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string; h
   const loadedProjects: string[] = []
   let currentMapId: string | null = null
   let undoListener: UndoListener | null = null
+  /** Mirrors the widget's `_inflightRejectors` — see `dispose` below. */
+  const inflight: Array<(reason: Error) => void> = []
+  let signalProjectLoadStarted!: () => void
+  const projectLoadStarted = new Promise<void>((resolve) => {
+    signalProjectLoadStarted = resolve
+  })
+  /** The widget's `_untilTeardown`: lose the race to teardown, reject. */
+  const untilTeardown = async <T>(operation: Promise<T>): Promise<T> => {
+    const abandoned = new Promise<never>((_resolve, reject) => inflight.push(reject))
+    return Promise.race([operation, abandoned])
+  }
   const engine = {
     excalibur: {},
     unusable: false,
@@ -54,7 +65,8 @@ function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string; h
     // into.
     loadProject: async (path: string) => {
       loadedProjects.push(path)
-      if (options.holdProjectLoad) await options.holdProjectLoad
+      signalProjectLoadStarted()
+      if (options.holdProjectLoad) await untilTeardown(options.holdProjectLoad)
       currentMapId = options.startupMapId ?? null
     },
     get currentMapId() {
@@ -65,7 +77,13 @@ function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string; h
       if (options.failOnMap) throw new Error('Cannot remove a currently active scene: kokiri-forest')
       currentMapId = mapId
     },
-    dispose: () => {},
+    // The widget's teardown: nothing it was asked to do can finish any
+    // more, so everything still in flight is rejected rather than left
+    // pending, and the widget reports itself unusable from here on.
+    dispose: () => {
+      engine.unusable = true
+      for (const reject of inflight.splice(0)) reject(new Error('engine widget was disposed'))
+    },
     onCameraZoomChanged: () => {
       opened.push('zoom')
       return true
@@ -105,6 +123,8 @@ function makeFakeEngine(options: { failOnMap?: boolean; startupMapId?: string; h
     loadedMaps,
     /** Every project path handed to `loadProject`, in order. */
     loadedProjects,
+    /** Resolves once `loadProject` has actually been entered. */
+    projectLoadStarted,
     /** Simulate the engine reporting an undo-stack change. */
     reportUndoState: (state: { canUndo: boolean; canRedo: boolean }) => undoListener?.(state),
     get undoHookAttached() {
@@ -294,6 +314,66 @@ export default async function () {
       // following add / reorder / plane changes, silently.
       expect(second.widgetHooks).toBe(WIDGET_OWNED_HOOKS)
       expect(second.emitterHookCount).toBe(EMITTER_HOOK_COUNT)
+    })
+
+    await it('lets the queue drain when it lands mid project load', async () => {
+      // Leaving the map editor while the project is still loading:
+      // `back-to-atlas` → `onLeaveSceneEditor` → `dispose`. The widget
+      // stops Excalibur, so the loader it was waiting on never calls
+      // back. Without the widget rejecting what it can no longer
+      // finish, `_bringUp` never returned, the serial queue stayed
+      // wedged on that one slot, and every later map open hung behind
+      // it — for the rest of the session, with nothing logged.
+      const forever = new Promise<void>(() => {})
+      const abandoned = makeFakeEngine({ holdProjectLoad: forever })
+      const controller = makeController(abandoned)
+
+      const bringUp = controller.ensureForMap('/project.json', 'kokiri-forest')
+      await abandoned.projectLoadStarted
+      controller.dispose()
+
+      await bringUp
+    })
+
+    await it('does not report the abandoned load as a failure', async () => {
+      // `SceneNavigator._hydrate` toasts whatever `ensureForMap`
+      // rejects with. Surfacing this one would put "Failed to load
+      // map" over the page the user just navigated back to — the load
+      // did not fail, it was called off.
+      const forever = new Promise<void>(() => {})
+      const abandoned = makeFakeEngine({ holdProjectLoad: forever })
+      const controller = makeController(abandoned)
+
+      const bringUp = controller.ensureForMap('/project.json', 'kokiri-forest')
+      await abandoned.projectLoadStarted
+      controller.dispose()
+
+      let rejected: unknown = null
+      await bringUp.catch((error) => {
+        rejected = error
+      })
+      expect(rejected).toBe(null)
+    })
+
+    await it('builds a fresh engine for the next map open', async () => {
+      const forever = new Promise<void>(() => {})
+      const abandoned = makeFakeEngine({ holdProjectLoad: forever })
+      const fresh = makeFakeEngine()
+      const controller = makeController(abandoned, fresh)
+
+      const bringUp = controller.ensureForMap('/project.json', 'kokiri-forest')
+      await abandoned.projectLoadStarted
+      controller.dispose()
+      await bringUp
+
+      // Re-entering the map editor. The cached project path has to be
+      // gone with the engine, or the new widget would be handed a map
+      // from a project it never loaded.
+      await controller.ensureForMap('/project.json', 'kokiri-forest')
+
+      expect(controller.engine).toBe(fresh.widget)
+      expect(fresh.loadedProjects.join(',')).toBe('/project.json')
+      expect(fresh.widgetHooks).toBe(WIDGET_OWNED_HOOKS)
     })
 
     await it('reports both actions disabled once the engine is gone', async () => {

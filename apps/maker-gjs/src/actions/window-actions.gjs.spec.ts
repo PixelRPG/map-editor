@@ -65,9 +65,9 @@ function readBool(object: GObject.Object, property: string): boolean {
 }
 
 /**
- * Stand-in for the window as the owner of the two shared sidebar
- * properties the `toggle-library` / `toggle-inspector` PropertyActions
- * wrap. Registered lazily so the node target never reaches it.
+ * Stand-in for the window as the owner of the shared `show-inspector`
+ * property the `toggle-inspector` PropertyAction wraps. Registered lazily
+ * so the node target never reaches it.
  */
 let sidebarOwnerClass: (new () => GObject.Object) | null = null
 function makeSidebarOwner(): GObject.Object {
@@ -75,13 +75,6 @@ function makeSidebarOwner(): GObject.Object {
     {
       GTypeName: 'PixelRpgSpecSidebarOwner',
       Properties: {
-        'show-library': GObject.ParamSpec.boolean(
-          'show-library',
-          'Show library',
-          'Spec stand-in for the window property',
-          GObject.ParamFlags.READWRITE,
-          false,
-        ),
         'show-inspector': GObject.ParamSpec.boolean(
           'show-inspector',
           'Show inspector',
@@ -195,11 +188,16 @@ export default async () => {
       expect(readBool(owner, 'show-inspector')).toBe(false)
     })
 
-    await it('gives win.toggle-library the same shape (the two sidebars stay symmetric)', async () => {
+    await it('installs no win.toggle-library — the library is a destination, not a drawer', async () => {
+      // REDESIGN § 3.2: the Library moved into the shell's view
+      // switcher, so there is nothing left to toggle over the map. A
+      // button wired to a non-existent action is silently insensitive,
+      // which is exactly the class of bug `check-blp-actions.mjs`
+      // exists for — assert the absence instead of trusting the grep.
       const group = realActionGroup()
       if (!group) return
       installCovered(group, makeSidebarOwner())
-      expect(group.get_action_state_type('toggle-library')?.dup_string()).toBe('b')
+      expect(group.has_action('toggle-library')).toBe(false)
     })
 
     await it('opens with the Move tool armed, never a mutating one', async () => {

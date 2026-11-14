@@ -1,12 +1,16 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { type EditorMode, type ModeRail, SignalScope } from '@pixelrpg/gjs'
+import { ProjectMenuButton, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
 import Template from './game-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+
+// Force registration so the `$PixelRpgProjectMenuButton` reference in
+// the blueprint resolves at parse time.
+GObject.type_ensure(ProjectMenuButton.$gtype)
 
 /** The whole Game-page model the controller pushes in one shot. */
 export interface GameViewModel {
@@ -27,15 +31,14 @@ export interface GameViewCallbacks {
 }
 
 /**
- * Game page — the project's own settings, the third rail row. Editable
- * project metadata (name / author / version / description), tile
- * settings and the "Game rules" group of switchable game systems. The
- * assets a project holds are NOT listed here: characters and graphics
- * live one rail row away in the Library. See `game-controller.ts`.
+ * Game page — the project's own settings, the third shell destination.
+ * Editable project metadata (name / author / version / description),
+ * tile settings and the "Game rules" group of switchable game systems.
+ * The assets a project holds are NOT listed here: characters and
+ * graphics live one switcher click away in the Library. See
+ * `game-controller.ts`.
  */
 export class GameView extends ResponsiveEditorView {
-  declare _outer_split: Adw.OverlaySplitView
-  declare _library_toggle: Gtk.ToggleButton
   declare _name_row: Adw.EntryRow
   declare _author_row: Adw.EntryRow
   declare _version_row: Adw.EntryRow
@@ -58,9 +61,7 @@ export class GameView extends ResponsiveEditorView {
         GTypeName: 'PixelRpgGameView',
         Template,
         InternalChildren: [
-          'outer_split',
-          'mode_rail',
-          'library_toggle',
+          'view_switcher',
           'name_row',
           'author_row',
           'version_row',
@@ -70,8 +71,8 @@ export class GameView extends ResponsiveEditorView {
           'game_rules',
           'always_on',
         ],
-        // show-library / library-collapsed (+ inspector) props + the
-        // mode-changed signal are inherited from ResponsiveEditorView.
+        // show-inspector / inspector-collapsed / compact / full-view are
+        // inherited from ResponsiveEditorView.
       },
       GameView,
     )
@@ -82,9 +83,6 @@ export class GameView extends ResponsiveEditorView {
   // doesn't accumulate duplicate handlers and an unmapped one stops firing.
   vfunc_map(): void {
     super.vfunc_map()
-    this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) =>
-      this.emit('mode-changed', mode as EditorMode),
-    )
     this.signals.connect(this._name_row, 'apply', () => this._emitField('name', this._name_row.get_text()))
     this.signals.connect(this._author_row, 'apply', () => this._emitField('author', this._author_row.get_text()))
     this.signals.connect(this._version_row, 'apply', () => this._emitField('version', this._version_row.get_text()))
@@ -207,7 +205,6 @@ export class GameView extends ResponsiveEditorView {
     this._description_row.set_text(model?.description ?? '')
     this._tilesize_row.set_value(model?.tileSize ?? 16)
     this._path_row.set_subtitle(model?.path ?? '—')
-    this._mode_rail.projectName = model?.name || _('New Project')
     this._loading = false
 
     const sensitive = model !== null
