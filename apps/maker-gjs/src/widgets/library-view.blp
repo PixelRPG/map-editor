@@ -53,6 +53,7 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
         title-widget: Adw.ToggleGroup chips {
           active-name: bind template.chip bidirectional;
           homogeneous: true;
+          can-shrink: true;
 
           Adw.Toggle {
             name: "characters";
