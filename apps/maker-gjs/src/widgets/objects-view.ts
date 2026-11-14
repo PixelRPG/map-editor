@@ -33,10 +33,9 @@ export interface ObjectsViewSignals extends Adw.Bin.SignalSignatures {
 
 /**
  * The Library's **Things** page — the GENERAL master-detail lens over
- * EVERY entity definition in the project's `entityLibrary` (world objects
- * AND the `character`-template cast members, the latter flagged with a
- * "Character" badge). The gallery lists them grouped by
- * `editorData.category` — Objects, Heroes, NPCs, then whatever a game
+ * EVERY entity definition in the project's `entityLibrary`; the gallery
+ * lists the non-character ones (characters live on their own page),
+ * grouped by `editorData.category` — Objects, then whatever a game
  * system stamps; the detail page edits one raw through a name field +
  * the generated {@link EntityComponentsEditor}.
  * The Characters page is the specialised friendly lens over the character
@@ -218,13 +217,14 @@ export class ObjectsView extends Adw.Bin {
       this._objects_groups.remove(child)
       child = next
     }
-    for (const group of groupThingsByCategory(objects)) {
+    // Characters live on their own page; Things lists what a map holds.
+    for (const group of groupThingsByCategory(objects.filter((o) => !isCharacterEntity(o)))) {
       // msgid stays literal in `thing-categories.ts`; translated here.
       const widget = new Adw.PreferencesGroup({ title: _(group.label) })
       for (const obj of group.things) widget.add(buildObjectRow(obj, () => this.focusObject(obj.id)))
       this._objects_groups.append(widget)
     }
-    this._list_stack.set_visible_child_name(objects.length > 0 ? 'list' : 'empty')
+    this._list_stack.set_visible_child_name(objects.some((o) => !isCharacterEntity(o)) ? 'list' : 'empty')
     // If the open object vanished (deleted), drop back to the gallery.
     if (this._activeId && !objects.some((o) => o.id === this._activeId)) {
       this._activeId = null
