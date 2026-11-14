@@ -1,3 +1,4 @@
+import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import {
@@ -58,6 +59,7 @@ export class AtlasView extends ResponsiveEditorView {
   declare _inspector: SceneInspector
   declare _preview_zoom: FloatingZoom
   declare _atlas_overview: AtlasOverview
+  declare _overview_frame: Adw.Bin
 
   private signals = new SignalScope()
   private _scenes: SampleScene[] = SAMPLE_SCENES
@@ -71,7 +73,7 @@ export class AtlasView extends ResponsiveEditorView {
       {
         GTypeName: 'AtlasView',
         Template,
-        InternalChildren: ['mode_rail', 'atlas', 'inspector', 'preview_zoom', 'atlas_overview'],
+        InternalChildren: ['mode_rail', 'atlas', 'inspector', 'preview_zoom', 'atlas_overview', 'overview_frame'],
         Properties: {
           'project-name': GObject.ParamSpec.string(
             'project-name',
@@ -120,6 +122,8 @@ export class AtlasView extends ResponsiveEditorView {
     this._atlas_overview.setContent(this._atlas.sceneRects(), width, height)
     const vp = this._atlas.viewportRect()
     this._atlas_overview.setViewport(vp.x, vp.y, vp.w, vp.h)
+    // A world that already fits the canvas needs no map of itself.
+    this._overview_frame.set_visible(vp.w < width || vp.h < height)
   }
 
   /**

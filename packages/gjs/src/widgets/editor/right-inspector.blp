@@ -24,7 +24,7 @@ template $PixelRpgRightInspector : Adw.Bin {
     Adw.HeaderBar {
       show-title: false;
       show-start-title-buttons: false;
-      show-end-title-buttons: false;
+      show-end-title-buttons: true;
       styles ["flat"]
 
       [start]
@@ -35,6 +35,19 @@ template $PixelRpgRightInspector : Adw.Bin {
         tooltip-text: _("Close inspector");
         styles ["flat", "circular"]
       }
+    }
+
+    // The page switcher sits on top, under the header — the same three-page
+    // order the phone sheet will use, so the pages read as one set.
+    [top]
+    Adw.InlineViewSwitcher {
+      stack: stack;
+      display-mode: labels;
+      homogeneous: false;
+      can-shrink: false;
+      margin-start: 12;
+      margin-end: 12;
+      margin-bottom: 6;
     }
 
     // Whole inspector body acts as a drag region for the window —
@@ -53,7 +66,7 @@ template $PixelRpgRightInspector : Adw.Bin {
 
         Adw.ViewStackPage {
           name: "tiles";
-          title: _("Tiles");
+          title: _("Brush");
           icon-name: "view-grid-symbolic";
 
           child: $PixelRpgTilesTab tiles_tab {};
@@ -69,7 +82,7 @@ template $PixelRpgRightInspector : Adw.Bin {
 
         Adw.ViewStackPage {
           name: "objects";
-          title: _("Objects");
+          title: _("Things");
           icon-name: "preferences-system-symbolic";
 
           child: $PixelRpgObjectsTab objects_tab {};
@@ -77,7 +90,7 @@ template $PixelRpgRightInspector : Adw.Bin {
 
         Adw.ViewStackPage {
           name: "props";
-          title: _("Props");
+          title: _("Selected");
           icon-name: "document-properties-symbolic";
 
           child: $PixelRpgPropsTab props_tab {};
@@ -86,10 +99,5 @@ template $PixelRpgRightInspector : Adw.Bin {
       };
     };
 
-    [bottom]
-    Adw.ViewSwitcherBar {
-      stack: stack;
-      reveal: true;
-    }
   }
 }

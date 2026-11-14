@@ -17,7 +17,22 @@ template $WelcomeView : Adw.Bin {
     // column is REPARENTED inline below the hero (see
     // inline_recents_slot) instead of hiding in a drawer, so the slot
     // here is just its desktop home.
-    sidebar: Gtk.ScrolledWindow {
+    //
+    // The sidebar owns a header of its own: pinned beside the hero it is
+    // the window's end edge, and a header bar only shows the close button
+    // where it touches the edge — the hero's bar, one pane in, never did.
+    sidebar: Adw.ToolbarView {
+      top-bar-style: flat;
+
+      [top]
+      Adw.HeaderBar {
+        show-title: false;
+        show-start-title-buttons: false;
+        show-end-title-buttons: true;
+        styles ["flat"]
+      }
+
+      content: Gtk.ScrolledWindow {
       hscrollbar-policy: never;
       vscrollbar-policy: automatic;
       min-content-width: 1;
@@ -125,12 +140,13 @@ template $WelcomeView : Adw.Bin {
           }
         };
       };
+      };
     };
 
     // Content: regular Adw.ToolbarView with a real headerbar.
     // No canvas here = no Gtk.Overlay + no floating OSD pills.
-    // The headerbar hosts the window-close X (show-end-title-buttons)
-    // + the recents toggle (desktop only — on phone the recents are
+    // The headerbar hosts the window-close X while the sidebar is
+    // collapsed (it is then the end edge) + the recents toggle (desktop only — on phone the recents are
     // inlined, so there is no drawer to toggle).
     content: Adw.ToolbarView {
       [top]

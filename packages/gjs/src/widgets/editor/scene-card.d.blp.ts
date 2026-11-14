@@ -1,16 +1,16 @@
 // GENERATED from scene-card.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgSceneCard` defines. */
-export declare const GTypeName: 'PixelRpgSceneCard';
+export declare const GTypeName: "PixelRpgSceneCard";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -23,28 +23,26 @@ export declare const GTypeName: 'PixelRpgSceneCard';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'root',
-    'title_row',
-    'name_label',
-    'size_label',
-    'overlay',
-    'body',
-    'preview_slot',
-    'map',
-    'lock_button',
-    'event_badge',
+  "root",
+  "title_row",
+  "name_label",
+  "size_label",
+  "overlay",
+  "body",
+  "preview_slot",
+  "map",
+  "lock_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _root: Gtk.Box;
-    _title_row: Gtk.Box;
-    _name_label: Gtk.Label;
-    _size_label: Gtk.Label;
-    _overlay: Gtk.Overlay;
-    _body: Gtk.Box;
-    _preview_slot: Adw.Bin;
-    _map: GObject.Object;
-    _lock_button: Gtk.ToggleButton;
-    _event_badge: Gtk.Box;
+  _root: Gtk.Box;
+  _title_row: Gtk.Box;
+  _name_label: Gtk.Label;
+  _size_label: Gtk.Label;
+  _overlay: Gtk.Overlay;
+  _body: Gtk.Box;
+  _preview_slot: Adw.Bin;
+  _map: GObject.Object;
+  _lock_button: Gtk.ToggleButton;
 }

@@ -44,6 +44,7 @@ export class GameView extends ResponsiveEditorView {
   declare _path_row: Adw.ActionRow
   declare _game_rules: Adw.PreferencesGroup
   declare _always_on: Adw.PreferencesGroup
+  private _hasAlwaysOn = false
 
   private signals = new SignalScope()
   private _callbacks: GameViewCallbacks | null = null
@@ -130,7 +131,8 @@ export class GameView extends ResponsiveEditorView {
     this._ruleRows = []
     if (!model) {
       this._game_rules.set_visible(false)
-      this._always_on.set_visible(false)
+      this._hasAlwaysOn = false
+      this._syncAlwaysOn()
       return
     }
 
@@ -146,7 +148,17 @@ export class GameView extends ResponsiveEditorView {
       this._ruleRows.push({ group: this._always_on, row })
     }
     this._game_rules.set_visible(model.switchable.length > 0)
-    this._always_on.set_visible(model.alwaysOn.length > 0)
+    this._hasAlwaysOn = model.alwaysOn.length > 0
+    this._syncAlwaysOn()
+  }
+
+  protected override _onFullViewChanged(_fullView: boolean): void {
+    this._syncAlwaysOn()
+  }
+
+  /** The base layer is a Full view detail: Simple view shows only what the child can switch. */
+  private _syncAlwaysOn(): void {
+    this._always_on.set_visible(this._hasAlwaysOn && this.fullView)
   }
 
   /** One switchable system: switch in the header, expert detail in the body. */

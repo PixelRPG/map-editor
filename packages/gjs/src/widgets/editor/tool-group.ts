@@ -26,7 +26,7 @@ const TOOLS: readonly ToolEntry[] = [
   { id: 'fill', label: () => _('Fill'), key: 'G' },
   { id: 'eraser', label: () => _('Erase'), key: 'E' },
   { id: 'eyedropper', label: () => _('Pick'), key: 'I' },
-  { id: 'object', label: () => _('Object'), key: 'O' },
+  { id: 'object', label: () => _('Thing'), key: 'O' },
 ] as const
 
 /** Phone order — Paint first, because the app opens with Paint armed. */

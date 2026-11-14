@@ -49,7 +49,7 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
         Adw.HeaderBar {
           show-title: false;
           show-start-title-buttons: false;
-          show-end-title-buttons: false;
+          show-end-title-buttons: true;
           styles ["flat", "atlas-headerbar"]
 
           [start]
@@ -73,9 +73,8 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
         //
         // Without it all three were laid out unconditionally and, at the
         // 360 px the phone tier actually gets, the start-aligned zoom
-        // pill (233 px), the centred legend chip (110 px) and the
-        // end-aligned "New map" FAB (103 px) summed past the window: the
-        // legend ended up printed underneath the other two.
+        // pill (233 px) and the end-aligned "New map" FAB (103 px) have
+        // to share the width, so the FAB drops to its icon when it runs out.
         content: Adw.BreakpointBin {
           width-request: 360;
           height-request: 400;
@@ -84,16 +83,6 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
           // reverse and breaks on the first match), so each declares its
           // full set and the narrower one is declared last to win.
           //
-          // The legend is centred, so it clears the start pill only from
-          // 12 + 233 + 8 + 110/2 doubled ≈ 616 px of canvas.
-          Adw.Breakpoint {
-            condition ("max-width: 623sp")
-
-            setters {
-              legend_chip.visible: false;
-            }
-          }
-
           // Below 400 px even the two pills collide (12 + 233 + 8 + 103 +
           // 12 = 368), so the FAB drops to its icon. Its tooltip and the
           // `+` glyph carry the meaning.
@@ -101,7 +90,6 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             condition ("max-width: 399sp")
 
             setters {
-              legend_chip.visible: false;
               new_scene_fab.label: "";
             }
           }
@@ -114,7 +102,7 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             Adw.Bin overview_frame {
               halign: end;
               valign: start;
-              margin-top: 12;
+              margin-top: 56;
               margin-end: 12;
               width-request: 150;
               height-request: 100;
@@ -133,25 +121,6 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
               icon-name: "list-add-symbolic";
               action-name: "win.new-scene";
               tooltip-text: _("Create a new map");
-            }
-
-            // Legend chip — bottom-center OSD explaining the teleport edges.
-            [overlay]
-            Gtk.Box legend_chip {
-              halign: center;
-              valign: end;
-              margin-bottom: 12;
-              spacing: 6;
-              styles ["osd", "toolbar", "atlas-legend"]
-
-              Gtk.Image {
-                icon-name: "mail-send-symbolic";
-              }
-
-              Gtk.Label {
-                label: _("Teleport");
-                styles ["caption"]
-              }
             }
 
             // Same zoom pill as the scene editor (fires win.zoom-*);
