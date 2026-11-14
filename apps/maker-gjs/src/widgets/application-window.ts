@@ -31,6 +31,7 @@ import { presentTilesetSwitcher } from '../services/asset-dialogs.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
+import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { GameController } from '../services/game-controller.ts'
 import { isChipInTier, type LibraryChip } from '../services/library-chip.ts'
@@ -373,6 +374,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   constructor(
     application: Adw.Application,
     private readonly _uiTier: UiTierService,
+    private readonly _editorDefaults: EditorDefaultsService,
   ) {
     super({ application })
     this._installActions()
@@ -710,6 +712,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     const { objects, grid, transparency } = installInspectorActions(group, {
       sidebarOwner: this,
+      // Read once, here: the grid is a per-session toggle the user flips
+      // constantly, so the preference seeds it and never tracks it. No
+      // engine exists yet — `syncEngineState` pushes the action's state
+      // into every engine it builds (`RESYNCED_WIN_ACTIONS`).
+      showGridDefault: this._editorDefaults.showGrid,
       setInspectorTab: (name) => this._scene_editor_view.setInspectorTab(name),
       setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
       setViewObjectsVisible: (visible) => this._scene_editor_view.setObjectsVisible(visible),

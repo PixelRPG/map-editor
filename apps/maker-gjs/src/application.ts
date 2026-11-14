@@ -11,6 +11,7 @@ import { sanitizeInstanceId } from './instance-id.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { lookupAppSettings } from './services/app-settings.ts'
+import { EditorDefaultsService } from './services/editor-defaults.service.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
 import { coerceThemePreference } from './services/theme-preference.ts'
 import { ThemeService } from './services/theme.service.ts'
@@ -66,6 +67,13 @@ export class Application extends Adw.Application {
    */
   readonly uiTierService = new UiTierService()
 
+  /**
+   * Editing defaults a session opens with (GSettings `show-grid-default`).
+   * Same lifecycle as the theme and the tier; read by the window when it
+   * installs `win.toggle-grid`.
+   */
+  readonly editorDefaultsService = new EditorDefaultsService()
+
   static {
     GObject.registerClass(
       {
@@ -110,11 +118,12 @@ export class Application extends Adw.Application {
   protected onStartup(): void {
     this.initResources()
     this.initStyles()
-    // One Gio.Settings for both keys; `null` (schema not found) makes
-    // both services fall back to in-memory values with a warning.
+    // One Gio.Settings for every key; `null` (schema not found) makes
+    // all three services fall back to in-memory values with a warning.
     const settings = lookupAppSettings()
     this.themeService.init(settings)
     this.uiTierService.init(settings)
+    this.editorDefaultsService.init(settings)
     this.initControlInterface()
     // Opt-in @gjsify/devtools control plane (`org.gjsify.Devtools`) — the
     // standard interface `gjsify debug` (MCP) + a `gdbus` Screenshot speak,
@@ -221,6 +230,7 @@ export class Application extends Adw.Application {
       const preferencesDialog = new PreferencesDialog()
       preferencesDialog.setThemeService(this.themeService)
       preferencesDialog.setUiTierService(this.uiTierService)
+      preferencesDialog.setEditorDefaults(this.editorDefaultsService)
       preferencesDialog.present(this.active_window)
     })
     this.add_action(showPreferencesAction)
@@ -279,7 +289,7 @@ export class Application extends Adw.Application {
   vfunc_activate() {
     let { active_window } = this
 
-    if (!active_window) active_window = new ApplicationWindow(this, this.uiTierService)
+    if (!active_window) active_window = new ApplicationWindow(this, this.uiTierService, this.editorDefaultsService)
 
     active_window.present()
   }

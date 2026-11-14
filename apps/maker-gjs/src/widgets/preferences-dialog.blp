@@ -6,12 +6,11 @@ template $PreferencesDialog: Adw.PreferencesDialog {
   title: _("Preferences");
 
   Adw.PreferencesPage {
-    title: _("Appearance");
-    icon-name: "brush-monitor-symbolic";
+    title: _("Preferences");
+    icon-name: "preferences-system-symbolic";
 
     Adw.PreferencesGroup {
-      title: _("Style");
-      description: _("Follow the system style or force light or dark");
+      title: _("View");
 
       Adw.ComboRow theme_row {
         title: _("Color Scheme");
@@ -26,15 +25,19 @@ template $PreferencesDialog: Adw.PreferencesDialog {
 
         notify::selected => $_onThemeSelected();
       }
-    }
-
-    Adw.PreferencesGroup {
-      title: _("Editor");
-      description: _("Simple view shows what a game is made of; Full view shows everything");
 
       Adw.SwitchRow full_view_row {
         title: _("Full view");
-        subtitle: _("Show every component, setting and template");
+        subtitle: _("Show every component, setting and template instead of just what a game is made of");
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Editing");
+
+      Adw.SwitchRow show_grid_row {
+        title: _("Show grid by default");
+        subtitle: _("What the tile grid is set to when you open a map");
       }
     }
   }

@@ -17,6 +17,13 @@ export interface InspectorActionsContext {
   setViewObjectsVisible(visible: boolean): void
   setEngineShowGrid(showGrid: boolean): void
   setEngineDimInactiveLayers(dim: boolean): void
+  /**
+   * State `toggle-grid` starts in — the `show-grid-default` preference
+   * (REDESIGN.md § 4.8). Only the initial state: the action never writes
+   * back, so a session toggle does not change what the next one opens
+   * with.
+   */
+  showGridDefault: boolean
 }
 
 /**
@@ -69,7 +76,7 @@ export function installInspectorActions(
   })
   addAction(group, objects)
 
-  const grid = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(false))
+  const grid = Gio.SimpleAction.new_stateful('toggle-grid', null, GLib.Variant.new_boolean(ctx.showGridDefault))
   grid.connect('change-state', (action, value) => {
     action.set_state(value!)
     ctx.setEngineShowGrid(value!.get_boolean())

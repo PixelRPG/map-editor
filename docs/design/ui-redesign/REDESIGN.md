@@ -1001,7 +1001,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 | # | Step | Resolves |
 |---|---|---|
 | 2.1 | `root_stack` / `shell_stack`; `Adw.ViewSwitcherBar` on phone, `Adw.ViewSwitcher` on wide; delete `ModeRail` and the left split views | drawer navigation (`*/09`) | — done (`ViewName` is now `welcome \| world \| library \| game \| map`; `ModeRail`, the tablet breakpoint, `win.toggle-library`, `show-library` and `library-collapsed` are gone — `compact` replaces the latter; `$PixelRpgProjectMenuButton` re-homes `primary_menu` out of the rail, which pre-lands part of 2.2; the library chips are an `Adw.InlineViewSwitcher`; the no-reparent invariant is proven by `DebugStatus.sceneEditorRooted` + `drive.py`'s `enterleave` scenario, backed by `check-mode-routes.mjs`)
-| 2.2 | Primary menu and roster on every project screen; Preferences dialog regrouped | orphaned "Settings" |
+| 2.2 | Primary menu and roster on every project screen; Preferences dialog regrouped | orphaned "Settings" | — done (the menu re-homed in 2.1; `$PixelRpgRosterChip` now sits in the World / Library / Game headers beside it and in the scene editor's context pill, fanned out by `ApplicationWindow._wireRosterFollow` and held by `check-mode-routes.mjs` check 12 + `drive.py`'s `require_roster_chips`. Preferences is one page of **View** + **Editing**, the latter backed by `EditorDefaultsService` / GSettings `show-grid-default`, which SEEDS `win.toggle-grid` rather than mirroring it. The Together and Help groups and two Editing rows are deferred to the features they configure — see TODO.md)
 | 2.3 | Back order (§3.4) and deep-link back stacks | — |
 
 **Phase 3 — The sheet**
