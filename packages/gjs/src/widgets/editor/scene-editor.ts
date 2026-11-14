@@ -105,7 +105,9 @@ export class SceneEditor extends Adw.Bin {
   declare _phone_bar: Gtk.Box
   declare _tools_slot_bar: Adw.Bin
   declare _badge_slot_bar: Adw.Bin
+  declare _bar_row_b: Gtk.Stack
   declare _recent_tiles: RecentTiles
+  declare _selection_label: Gtk.Inscription
   declare _sheet_view: Gtk.Box
   declare _sheet_grabber: Gtk.Box
   declare _sheet_switcher: Adw.InlineViewSwitcher
@@ -193,7 +195,9 @@ export class SceneEditor extends Adw.Bin {
           'phone_bar',
           'tools_slot_bar',
           'badge_slot_bar',
+          'bar_row_b',
           'recent_tiles',
+          'selection_label',
           'sheet_view',
           'sheet_grabber',
           'sheet_switcher',
@@ -369,6 +373,20 @@ export class SceneEditor extends Adw.Bin {
 
   get recentTiles(): RecentTiles {
     return this._recent_tiles
+  }
+
+  /**
+   * Which of the phone bar's two second rows is showing: the selection's
+   * verbs while `name` is a placement's name, the recent-tile strip on
+   * `null` (REDESIGN § 5.4). No sheet opens either way — the point of
+   * the bar is that the map stays visible.
+   *
+   * The row exists at every width; on wide layouts the whole docked bar
+   * is hidden, so this is a no-op there rather than a special case.
+   */
+  setPlacementSelected(name: string | null): void {
+    this._selection_label.set_text(name)
+    this._bar_row_b.set_visible_child_name(name === null ? 'recent' : 'selection')
   }
 
   get floatingPlay(): FloatingPlay {
@@ -653,15 +671,17 @@ export class SceneEditor extends Adw.Bin {
 
   /**
    * The placement context menu's model — static, so it is built once.
-   * All three actions are stateless and read the current selection, the
+   * Every action is stateless and reads the current selection, the
    * same contract as `win.undo`: the long press sets the selection
    * before the menu opens, so nothing has to be carried in an action
-   * target.
+   * target. The same four verbs make up the phone selection bar
+   * ({@link setPlacementSelected}) — one set of actions, two surfaces.
    */
   private _buildPlacementMenu(): void {
     const model = new Gio.Menu()
     model.append(_('Edit'), 'win.edit-placement')
     model.append(_('Copy'), 'win.copy-placement')
+    model.append(_('Move'), 'win.move-placement')
     // "Goes to… ›" from REDESIGN §5.5 is missing on purpose: it needs
     // the map + spawn-point picker of §6.2, which does not exist yet.
     model.append(_('Delete'), 'win.delete-placement')

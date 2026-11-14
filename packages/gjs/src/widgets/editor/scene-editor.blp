@@ -412,7 +412,73 @@ template $PixelRpgSceneEditor : Adw.Bin {
           Adw.Bin badge_slot_bar {}
         }
 
-        $PixelRpgRecentTiles recent_tiles {}
+        // Row B is contextual (REDESIGN § 5.4): the recent-tile strip
+        // normally, the selection's verbs while a placement is picked.
+        // A stack rather than two `visible` flags so the row keeps one
+        // height and the bar above the canvas never jumps.
+        Gtk.Stack bar_row_b {
+          transition-type: crossfade;
+          transition-duration: 120;
+
+          Gtk.StackPage {
+            name: "recent";
+
+            child: $PixelRpgRecentTiles recent_tiles {};
+          }
+
+          Gtk.StackPage {
+            name: "selection";
+
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 6;
+
+              // Which thing the four verbs apply to. Ellipsised rather
+              // than wrapped: at 360 px the buttons have the right of
+              // way, and a two-line name would grow the docked bar.
+              Gtk.Inscription selection_label {
+                min-chars: 4;
+                nat-chars: 8;
+                xalign: 0.0;
+                hexpand: true;
+                valign: center;
+                styles ["heading"]
+              }
+
+              Gtk.Button {
+                label: _("Edit");
+                action-name: "win.edit-placement";
+                valign: center;
+                styles ["pill"]
+              }
+
+              Gtk.Button {
+                label: _("Copy");
+                action-name: "win.copy-placement";
+                valign: center;
+                styles ["pill"]
+              }
+
+              // A word, not a glyph: Adwaita ships no "move" symbolic,
+              // and the verb has to be unambiguous — it arms the next
+              // tap rather than moving anything right away.
+              Gtk.Button {
+                label: _("Move");
+                action-name: "win.move-placement";
+                valign: center;
+                styles ["pill"]
+              }
+
+              Gtk.Button {
+                icon-name: "user-trash-symbolic";
+                tooltip-text: _("Delete");
+                action-name: "win.delete-placement";
+                valign: center;
+                styles ["circular", "destructive-action"]
+              }
+            };
+          }
+        }
       };
 
       // The phone home of the editor pages — the SAME three widgets the
