@@ -13,9 +13,10 @@ be able to) *do* there.
   PNG bytes were pulled from the `Screenshot(scope)` method
   (`scope = "window"` — full app chrome + canvas; `scope = "canvas"` — the raw
   WebGL framebuffer with no chrome).
-- **Sample project:** `games/oot2d-2014` ("OoT2D 2014 World") — the richest bundled
-  project (19 maps, 20 tilesets), so tilesets/atlas/scene-editor appear fully
-  populated. The scene-editor shots show the **Kokiri Forest** scene.
+- **Sample project:** `games/oot2d-2014` ("OoT2D 2014 World", 19 maps, 20
+  tilesets) — since removed from the repo; the PNGs below are kept as
+  captured. Current shots should use `games/zelda-like` (Kokiri Forest). The
+  scene-editor shots show the **Kokiri Forest** scene.
 - **Tiers** (via `resize_window` presets):
   | Folder | Preset | Size (px) | Chrome behaviour |
   |---|---|---|---|
@@ -43,7 +44,7 @@ layer chips went, and the four things a stroke needs — which tool, which
 tile, which layer, and undo — became a compound brush badge beside the
 tool chooser plus one always-visible undo button.
 
-The pairs below are the same map (`games/oot2d-2014`, Kokiri Forest) at
+The pairs below are the same map (formerly `games/oot2d-2014`, Kokiri Forest) at
 the same size before and after, captured the same way. Chrome coverage is
 measured as the pixels where `Screenshot("window")` differs from
 `Screenshot("canvas")` — the raw framebuffer with no chrome — so dark
