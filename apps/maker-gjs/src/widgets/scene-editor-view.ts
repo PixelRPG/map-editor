@@ -291,6 +291,26 @@ export class SceneEditorView extends ResponsiveEditorView {
     // widgets, so the layer list, the palette and the selection survive
     // the crossing with their state intact.
     this._pages.host(collapsed ? this._editor.pageSlots : this._inspector.pageSlots)
+    // Shrinking a window with the drawer open leaves the property true
+    // on a width that has no drawer, and the next reveal would then be a
+    // no-op set. Shut it on the way in, not at the reveal.
+    if (collapsed) this.showInspector = false
+  }
+
+  /**
+   * On phone the editor has no inspector drawer — the three pages live
+   * in the bottom sheet (`_onInspectorCollapsedChanged` hosts them
+   * there), so the drawer would slide out empty. Every "reveal the
+   * inspector" caller — `win.toggle-inspector`, `win.select-placement`,
+   * `win.focus-placement` — therefore lands on the sheet instead, and
+   * the property snaps back to `false` so the window's bidirectional
+   * binding and the pill's toggle stay honest about a drawer that is
+   * not open.
+   */
+  protected _onShowInspectorChanged(showInspector: boolean): void {
+    if (!showInspector || !this.inspectorCollapsed) return
+    this.showInspector = false
+    this._editor.openSheet()
   }
 
   /** Push the tier down so the caption, the Play menu and "⋯" follow it. */
@@ -459,12 +479,14 @@ export class SceneEditorView extends ResponsiveEditorView {
    * Both stacks get the page, not just the visible one: the pages move
    * between the two containers on every breakpoint crossing, and a
    * stack left on its old page would show the wrong one after the move.
+   *
+   * Revealing is one statement at both widths: on phone
+   * `_onShowInspectorChanged` turns it into the sheet.
    */
   showSheetPage(name: string): void {
     this._inspector.visiblePage = name
     this._editor.sheetPage = name
-    if (this.inspectorCollapsed) this._editor.openSheet()
-    else this.showInspector = true
+    this.showInspector = true
   }
 
   /** Header title + the floating chips. */

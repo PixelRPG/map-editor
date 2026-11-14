@@ -162,11 +162,17 @@ nearly as wide as the window itself — its `max-sidebar-width`
 shrinks once content lands on it. On a 360 px-wide phone
 that leaves zero space for an "outside-tap-to-dismiss" target,
 so the only reliable way to close the drawer has to be **inside**
-the drawer. The scene editor makes that the *only* way: the same
-breakpoint switches its chrome to the phone layout, which drops
-`inspector_toggle` from the context pill, so a drawer opened by
-"Layers…" or by a placement selection is closed from its own
-header.
+the drawer. The scene editor sidesteps the question entirely: at
+that breakpoint it has no drawer. `EditorPages` hosts the three
+pages in the bottom sheet instead (see "The sheet's three
+detents"), so `SceneEditorView._onShowInspectorChanged` turns
+every reveal — `win.toggle-inspector`, `revealInspector` from a
+canvas selection, `win.focus-placement` — into `openSheet()` and
+puts `show-inspector` back to `false`. Without that redirect the
+drawer slides out over the map holding nothing, because its slots
+are empty whenever the pages live in the sheet. The other three
+inspectors still take the drawer on phone and close from their
+own header.
 
 Each of the four right-inspector widgets (`RightInspector`,
 `SceneInspector`, `CastInspector`, `TileInspector`) carries a
@@ -995,7 +1001,8 @@ on the scene the load then replaces and vanishes silently.
 | Keyboard access to the detents, and a stepwise Full → Half → Peek on back (REDESIGN § 5.2) | deferred, tracked in `TODO.md` |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
-| A canvas selection opens the phone's inspector drawer rather than the sheet (REDESIGN § 9 step 3.3) | deferred, tracked in `TODO.md` |
+| On phone every inspector reveal lands on the sheet, never the editor's drawer (`_onShowInspectorChanged`) | **landed** |
+| A canvas selection opening the sheet on the *Selected* page, with the contextual action bar (REDESIGN § 9 step 3.3) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:
