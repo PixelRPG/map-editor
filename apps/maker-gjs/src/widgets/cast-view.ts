@@ -266,6 +266,23 @@ export class CastView extends LibraryPage {
     this._cast_split.set_show_content(false)
   }
 
+  /**
+   * Slide back from the character detail to the roster, and say whether
+   * there was anywhere to go — back step 4 (REDESIGN.md § 3.4). Only the
+   * collapsed split view has a "page" to pop; while both panes show, the
+   * detail is not covering anything and back belongs to the caller.
+   */
+  popPage(): boolean {
+    if (!this.hasPushedPage()) return false
+    this._cast_split.set_show_content(false)
+    return true
+  }
+
+  /** Whether the character detail is covering the roster (collapsed only). */
+  hasPushedPage(): boolean {
+    return this._cast_split.get_collapsed() && this._cast_split.get_show_content()
+  }
+
   /** Select a character AND reveal its detail (creation landing + tooling drill-in). */
   focusCharacter(id: string): void {
     this._selectCharacter(id)

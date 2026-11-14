@@ -729,6 +729,57 @@ dragging wouldn't be discoverable anyway.
 
 ---
 
+## The back order
+
+Back is five gestures — the header's back button, `Esc`, `Alt+←`, the
+mouse's button 8, and the shell's own back — onto **one** decision.
+That decision is a pure function, `resolveBackStep()` in
+`apps/maker-gjs/src/services/back-order.ts`, reading a flat
+`BackState`; `win.back` (`actions/back-actions.ts`) performs whatever
+it returns. The precedence is REDESIGN § 3.4's:
+
+| Step | When | Performed by |
+|---|---|---|
+| `stop-run` | a Live Run is playing | `ctx.stopRun()` |
+| `collapse-sheet` | in `map`, the bottom sheet is expanded | `ctx.collapseSheet()` |
+| `clear-selection` | in `map`, something is selected | `ctx.clearSelection()` |
+| `pop-page` | the visible destination has a pushed detail page | `ctx.popPage()` |
+| `leave-map` | in `map`, nothing of the above | `ctx.leaveMap()` |
+| `none` | nothing left to undo | nobody — the event travels on |
+
+The naming is the wiring: a step's performer is its camelCase
+(`'stop-run'` → `stopRun`), so no lookup table has to be kept in step
+with `BACK_STEPS`. `check:mode-routes` check 13 holds the two sides
+together statically and fails on a step with no performer.
+
+Two shapes of this are easy to get wrong:
+
+- **`sheetOpen` and `hasSelection` are gated on `inMap`, `running` is
+  not.** `shell_stack` and `root_stack` keep the scene editor's page
+  alive across a switch, so an expanded sheet on a *hidden* editor
+  would otherwise swallow World's back. A run, by contrast, owns the
+  whole window while it lasts — back stops it from anywhere.
+- **`Esc` and `Alt+←` are NOT in `WINDOW_ACCELS`.** An application
+  accel for `Escape` wins over every popover, `Adw.Dialog` and
+  `Gtk.Entry` in the window. They live in a separate
+  `WINDOW_SHORTCUTS` table and are installed as a
+  `Gtk.ShortcutController` in `Gtk.PropagationPhase.BUBBLE` by
+  `ApplicationWindow`, so focused widgets get first refusal.
+  `acceleratorFor()` searches both tables, which is what keeps the
+  shortcuts window honest.
+
+Deep links are the other half of § 3.4: `win.open-object` /
+`win.open-character` / `win.library-chip` push a Library page, and
+`win.focus-placement(mapId, placementId)` opens a map *with* a
+selection. Entering by link and pressing back must land where
+navigating by hand would, which is why those actions push real pages
+instead of swapping content, and why `focus-placement` parks the id in
+`_pendingPlacementFocus` and lets `SceneNavigator`'s `onEngineReady`
+drain it — a selection written while the scene is still loading lands
+on the scene the load then replaces and vanishes silently.
+
+---
+
 ## Adding a new view — checklist
 
 0. Decide whether it is a new SWITCHER DESTINATION at all. Three
@@ -791,7 +842,12 @@ dragging wouldn't be discoverable anyway.
    MCP bridge's `set_view` enum
    (`apps/mcp-bridge/src/tools/editing.tools.ts`) is a literal copy
    of `ViewName` that no guard covers: change it in the same commit.
-8. Drag the window to 360 px and check the log for
+8. Teach the back order about it (see [the back order](#the-back-order)).
+   A view with a detail page needs `hasPushedPage()` + `popPage()`,
+   and the `backState()` the window hands `installBackActions` must
+   report them — otherwise
+   back skips straight past the detail page to the destination.
+9. Drag the window to 360 px and check the log for
    `exceeds ApplicationWindow width` warnings. If any:
    identify the bubbling child + apply the
    `min-content-width: 1` trick at the right ScrolledWindow,
@@ -840,6 +896,7 @@ dragging wouldn't be discoverable anyway.
 | Long press on the canvas: a paint tool picks the tile under the finger and the brush badge pops; `select` / `object` open a placement menu (Edit · Copy · Delete) at the finger (REDESIGN § 9 step 1.4) | **landed** |
 | Navigation shell: `root_stack` / `shell_stack`, `Adw.ViewSwitcherBar` on phone and `Adw.ViewSwitcher` in the headers on wide, `ModeRail` + both left drawers + the tablet breakpoint deleted, `library-collapsed` → `compact` (REDESIGN § 9 step 2.1) | **landed** |
 | Roster chip on all four destinations, not just the map editor's context pill; the chip's Follow click reaches the presence controller from every view (REDESIGN § 3.3 / § 9 step 2.2) | **landed** |
+| One back order for all five gestures (`resolveBackStep`), `Esc` / `Alt+←` / mouse button 8 outside `WINDOW_ACCELS`, and `win.focus-placement` as a selection-bearing deep link (REDESIGN § 3.4 / § 9 step 2.3) | **landed** |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |

@@ -7,6 +7,7 @@ import windowActionsSuite from './actions/window-actions.gjs.spec.js'
 import instanceIdSuite from './instance-id.spec.js'
 import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
+import backOrderSuite from './services/back-order.spec.js'
 import collabLogSuite from './services/collab-log.spec.js'
 import collabSessionSuite from './services/collab-session.spec.js'
 import collabSessionE2eSuite from './services/collab-session-e2e.spec.js'
@@ -68,6 +69,7 @@ run({
   actionRegistrySuite,
   assistantPausePolicySuite,
   assistantStateServiceSuite,
+  backOrderSuite,
   castControllerAnimationsSuite,
   castControllerPreviewCacheSuite,
   castControllerViewModelSuite,

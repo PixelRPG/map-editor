@@ -200,6 +200,35 @@ export class LibraryView extends ResponsiveEditorView {
     this._cast_view.resetToOverview()
     this._tiles_view.resetToOverview()
   }
+
+  /**
+   * Pop the visible chip page's pushed detail, and say whether there was
+   * one — back step 4 (REDESIGN.md § 3.4).
+   */
+  popPage(): boolean {
+    return this._visiblePage().popPage()
+  }
+
+  /** Whether the visible chip page has a detail pushed over its gallery. */
+  hasPushedPage(): boolean {
+    return this._visiblePage().hasPushedPage()
+  }
+
+  /**
+   * The chip page the user is looking at. Only that one answers a back:
+   * `Adw.ViewStack` keeps the other two alive with their own pushed
+   * pages (§ 3.4, "tabs keep their place").
+   */
+  private _visiblePage(): CastView | ObjectsView | TilesView {
+    switch (this.chip) {
+      case 'things':
+        return this._objects_view
+      case 'graphics':
+        return this._tiles_view
+      default:
+        return this._cast_view
+    }
+  }
 }
 
 GObject.type_ensure(LibraryView.$gtype)

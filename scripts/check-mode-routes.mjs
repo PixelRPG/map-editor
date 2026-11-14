@@ -46,6 +46,14 @@
  *    code, and a mode that does not route into the shell cannot be
  *    selected by a switcher at all.
  *
+ * Navigation is not only the way in. Check 13 holds the way OUT — the
+ * one back of REDESIGN.md § 3.4, declared across four more files (the
+ * step order, the performer per step, the keys, the gesture
+ * controllers). It is the same bug class seen from the other side: a
+ * back step with no performer is a promise the shell cannot keep, and
+ * it is quieter than a missing page, because a back that does nothing
+ * looks exactly like a back with nothing left to undo.
+ *
  * Runs in CI (Node is already provisioned for the gjsify CLI bootstrap)
  * and locally via `gjsify run check:mode-routes` at the workspace root.
  */
@@ -58,6 +66,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const EDITOR_MODE_TS = 'packages/gjs/src/widgets/editor/editor-mode.ts'
 const VIEW_MODE_MAP_TS = 'apps/maker-gjs/src/services/view-mode-map.ts'
 const WINDOW_BLP = 'apps/maker-gjs/src/widgets/application-window.blp'
+const BACK_ORDER_TS = 'apps/maker-gjs/src/services/back-order.ts'
+const BACK_ACTIONS_TS = 'apps/maker-gjs/src/actions/back-actions.ts'
+const ACCELS_TS = 'apps/maker-gjs/src/actions/accels.ts'
+const WINDOW_TS = 'apps/maker-gjs/src/widgets/application-window.ts'
 
 /**
  * Lower bounds on what a healthy parse finds. A regex that stopped
@@ -69,6 +81,7 @@ const MIN_MODES = 3
 const MIN_VIEWS = 5
 const MIN_ROOT_PAGES = 3
 const MIN_SHELL_PAGES = 3
+const MIN_BACK_STEPS = 6
 
 const read = (rel) => readFileSync(join(ROOT, rel), 'utf8')
 
@@ -239,6 +252,29 @@ function stackPages(source, type) {
   return pages
 }
 
+/**
+ * Rows of an accelerator table — `export const <name> … = [['win.x',
+ * ['<Primary>x']], …]`. Parsed as whole rows rather than by harvesting
+ * every quoted string: the two levels hold different things, and a
+ * matcher that flattened them would check action names against keys.
+ * The table ends at the first `]` in column 1, which is how Biome
+ * formats it.
+ */
+function accelTable(source, name) {
+  const m = source.match(new RegExp(`export const ${name}\\b[^=]*=\\s*\\[`))
+  if (!m) return []
+  const rest = source.slice(m.index + m[0].length)
+  const end = rest.search(/\n\]/)
+  const body = end === -1 ? rest : rest.slice(0, end)
+  return [...body.matchAll(/\[\s*'([^']+)'\s*,\s*\[([^\]]*)\]/g)].map((row) => ({
+    action: row[1],
+    keys: [...row[2].matchAll(/'([^']+)'/g)].map((x) => x[1]),
+  }))
+}
+
+/** `stop-run` → `stopRun`: a back step's name and its performer's. */
+const camel = (kebab) => kebab.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+
 /** Setter targets of every `Adw.Breakpoint { … setters { … } }` block. */
 function breakpointSetters(source) {
   const setters = []
@@ -255,6 +291,10 @@ function breakpointSetters(source) {
 const modeTs = read(EDITOR_MODE_TS)
 const mapTs = read(VIEW_MODE_MAP_TS)
 const windowBlp = read(WINDOW_BLP)
+const backOrderTs = stripComments(read(BACK_ORDER_TS))
+const backActionsTs = stripComments(read(BACK_ACTIONS_TS))
+const accelsTs = stripComments(read(ACCELS_TS))
+const windowTs = stripComments(read(WINDOW_TS))
 
 const modes = unionMembers(modeTs, 'EditorMode')
 const modeOrder = arrayLiteral(modeTs, 'MODE_ORDER')
@@ -267,6 +307,8 @@ const shellUnion = interfaceFieldUnion(mapTs, 'ViewRoute', 'shell')
 const rootPages = stackPages(windowBlp, 'Gtk.StackPage')
 const shellPages = stackPages(windowBlp, 'Adw.ViewStackPage')
 const setters = breakpointSetters(windowBlp)
+const backSteps = arrayLiteral(backOrderTs, 'BACK_STEPS')
+const windowShortcuts = accelTable(accelsTs, 'WINDOW_SHORTCUTS')
 
 const failures = []
 const fail = (message) => failures.push(message)
@@ -285,6 +327,10 @@ if (routeForView.length < MIN_VIEWS)
   fail(`parsed only ${routeForView.length} ROUTE_FOR_VIEW entr(ies) — the matcher is broken, not the tree`)
 if (!rootUnion.found || !shellUnion.found)
   fail(`could not parse ViewRoute's root/shell field unions from ${VIEW_MODE_MAP_TS} — the matcher is broken`)
+if (backSteps.length < MIN_BACK_STEPS)
+  fail(`parsed only ${backSteps.length} BACK_STEPS member(s) from ${BACK_ORDER_TS} — the matcher is broken`)
+if (windowShortcuts.length < 1)
+  fail(`parsed no WINDOW_SHORTCUTS row from ${ACCELS_TS} — the matcher is broken, not the tree`)
 
 const modeSet = new Set(modes)
 const viewNameSet = new Set(viewNames)
@@ -497,12 +543,86 @@ for (const page of shellPages) {
   }
 }
 
+// 13. Back is navigation too, and it is declared across four files
+//     (REDESIGN.md § 3.4): the step order in `back-order.ts`, the
+//     performer per step in `back-actions.ts`, the keys in `accels.ts`
+//     and the gesture controllers in `application-window.ts`. None of
+//     the three seams `tsc` cannot see is loud when it breaks — a back
+//     that does nothing looks exactly like a back with nothing to undo:
+//      - the `switch` in `installBackActions` has no `never` arm, so a
+//        new `BackStep` falls through it and the step is silently a
+//        no-op;
+//      - `_installBackGestures` looks its handler up in a
+//        `Record<string, …>`, so a key declared with no handler is dead
+//        and only warns at runtime, where nobody is reading;
+//      - the controllers must stay in the BUBBLE phase. In the capture
+//        phase `Escape` is taken from every popover, dialog and entry
+//        before the focused widget is asked.
+//     That `WINDOW_SHORTCUTS` and `WINDOW_ACCELS` share no key is
+//     checked in `accels.spec.ts` instead — both tables are plain data
+//     a spec can import.
+const backStepNames = new Set(backSteps)
+for (const step of backSteps) {
+  const body = backActionsTs.match(new RegExp(`case '${step}':([\\s\\S]*?)\\bbreak\\b`))?.[1]
+  if (body === undefined) {
+    fail(
+      `${BACK_ACTIONS_TS}: BackStep "${step}" has no \`case '${step}':\` in installBackActions — ` +
+        'the step resolves and then nothing happens. Add the arm, or drop the step.',
+    )
+    continue
+  }
+  if (step === 'none') continue
+  const performer = camel(step)
+  if (!body.includes(`ctx.${performer}(`))
+    fail(
+      `${BACK_ACTIONS_TS}: \`case '${step}':\` does not call \`ctx.${performer}()\` — ` +
+        'a back step and its performer are named the same thing on purpose.',
+    )
+  if (!new RegExp(`\\b${performer}\\(\\):`).test(backActionsTs))
+    fail(`${BACK_ACTIONS_TS}: BackActionsContext declares no \`${performer}()\` for BackStep "${step}"`)
+}
+if (!backStepNames.has('none'))
+  fail(`${BACK_ORDER_TS}: BACK_STEPS has no "none" member — the gestures cannot tell "handled" from "nothing to undo"`)
+
+// Anchored on the DEFINITION, not the call: the call comes first in the
+// file, and a body read from there would be the next unrelated literal.
+const backGesturesAt = windowTs.search(/private\s+_installBackGestures\s*\(/)
+const backGestures = backGesturesAt === -1 ? null : braceBody(windowTs, backGesturesAt)
+if (!/\bthis\._installBackGestures\(performBack\)/.test(windowTs) || backGestures === null) {
+  fail(
+    `${WINDOW_TS}: no \`this._installBackGestures(performBack)\` with a body — ` +
+      '`Esc`, `Alt+←` and the mouse back button would not be bound at all.',
+  )
+} else {
+  for (const { action } of windowShortcuts) {
+    if (!backGestures.includes(`'${action}':`))
+      fail(
+        `${WINDOW_TS}: _installBackGestures has no handler for the window shortcut "${action}" — ` +
+          `its ${ACCELS_TS} keys are dead, and only a runtime console.warn says so.`,
+      )
+  }
+  const bubbles = [...backGestures.matchAll(/set_propagation_phase\(Gtk\.PropagationPhase\.(\w+)\)/g)]
+  if (bubbles.length < 2)
+    fail(
+      `${WINDOW_TS}: _installBackGestures sets a propagation phase on ${bubbles.length} of its 2 controllers — ` +
+        'an unset phase is BUBBLE by default, but the keyboard and mouse backs must say so together.',
+    )
+  for (const [, phase] of bubbles) {
+    if (phase !== 'BUBBLE')
+      fail(
+        `${WINDOW_TS}: _installBackGestures puts a controller in the ${phase} phase — ` +
+          'only BUBBLE lets the focused widget answer first, which is why these keys are not application accels.',
+      )
+  }
+}
+
 if (failures.length > 0) {
   for (const message of failures) console.error(`✗ ${message}`)
   console.error(
     `\n${failures.length} mode-route violation(s). Every EditorMode must be an Adw.ViewStackPage of the shell ` +
       'with a VIEW_FOR_MODE entry and a ROUTE_FOR_VIEW route behind it — a destination with no page is a ' +
-      'navigation dead end.',
+      'navigation dead end. Back is held to the same bar: every BackStep needs a performer and every back ' +
+      'key a handler, or the way out is the dead end instead.',
   )
   process.exit(1)
 }

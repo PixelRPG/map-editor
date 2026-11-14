@@ -2,7 +2,7 @@ import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import {
   type AgentMapData,
   ASSISTANT_PEER_ID,
@@ -13,7 +13,8 @@ import {
 } from '@pixelrpg/engine'
 import { type CollaboratorEntry, Engine, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
-import { installWindowAccels } from '../actions/accels.ts'
+import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
+import { installBackActions } from '../actions/back-actions.ts'
 import { installCastActions } from '../actions/cast-actions.ts'
 import { installEditingActions } from '../actions/editing-actions.ts'
 import { installInspectorActions } from '../actions/inspector-actions.ts'
@@ -29,6 +30,7 @@ import { installZoomActions } from '../actions/zoom-actions.ts'
 import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
 import { presentTilesetSwitcher } from '../services/asset-dialogs.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
+import type { BackStep } from '../services/back-order.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
@@ -198,6 +200,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _actions: StatefulWindowActions | null = null
   /**
+   * A placement `win.focus-placement` must select once the engine for a
+   * freshly opened map exists. Opening a map hydrates asynchronously, so
+   * a selection written at activation time would land on no engine and
+   * vanish; `SceneNavigator`'s `onEngineReady` drains this.
+   */
+  private _pendingPlacementFocus: string | null = null
+  /**
    * The single owner of the active project + every project-level write
    * (entity library, sprite-sets, metadata) including persistence +
    * collab broadcast + inbound peer-op application. Controllers are
@@ -271,6 +280,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     onEngineReady: () => {
       this._syncEngineUiState()
       this._session.attachEngineIfAwaiting()
+      // A `win.focus-placement` that had to open the map first parked
+      // its placement here, because the engine it needs comes up only
+      // now (`SceneNavigator._hydrate`).
+      const placementId = this._pendingPlacementFocus
+      this._pendingPlacementFocus = null
+      if (placementId) this._scene_editor_view.focusPlacement(placementId)
     },
     populateInspector: (project, sceneId) => this._scene_editor_view.populateFromProject(project, sceneId),
     refreshAtlasWorld: (project) => this._atlas_view.setWorld(project.scenes, project.teleports, project.resource),
@@ -671,6 +686,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setLibraryChip: (chip) => this._landOnChip(chip),
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
+      leaveMap: () => this._leaveMap(),
+      focusPlacement: (mapId, placementId) => this._focusPlacement(mapId, placementId),
       showFullView: () => this._revealFullView(),
       showShortcuts: () => presentShortcutsDialog(this),
     })
@@ -724,6 +741,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setEngineDimInactiveLayers: (dim) => this._engineCtl.engine?.setDimInactiveLayers(dim),
     })
 
+    const { performBack } = installBackActions(group, {
+      backState: () => ({
+        running: this._actions?.play.get_state()?.get_boolean() ?? false,
+        inMap: this._router.currentView === 'map',
+        sheetOpen: this._scene_editor_view.sheetOpen,
+        hasSelection: this._scene_editor_view.hasSelection(),
+        pushedPage: this._router.currentView === 'library' && this._library_view.hasPushedPage(),
+      }),
+      stopRun: () => this._actions?.play.change_state(GLib.Variant.new_boolean(false)),
+      collapseSheet: () => void this._scene_editor_view.collapseSheet(),
+      clearSelection: () => void this._scene_editor_view.clearSelection(),
+      popPage: () => void this._library_view.popPage(),
+      leaveMap: () => this._leaveMap(),
+    })
+
     const { play } = installPlaytestActions(group, {
       persistCurrentMap: () => this._mapPersistCtl.persistCurrentMap(),
       setRuntimeMode: (playing) => this._engineCtl.engine?.setRuntimeMode(playing),
@@ -775,10 +807,96 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
 
     installWindowAccels(this.get_application())
+    this._installBackGestures(performBack)
 
     this.insert_action_group('win', group)
     this._winActions = group
     this._actions = { mode, libraryChip, tool, play, objects, grid, transparency, share, undo, redo }
+  }
+
+  /**
+   * Back to World from the map editor, with the atlas on the map just
+   * left (REDESIGN.md § 3.4 step 5). Both gestures route here —
+   * `win.back-to-atlas` (the editor's own back buttons, the MCP bridge,
+   * `scripts/smoke/drive.py`) and `win.back` — so the header button and
+   * `Esc` cannot land in different places.
+   *
+   * Centring only, no zoom: the atlas is a `Gtk.Fixed` surface whose
+   * zoom is the card-preview scale the user chose, not a camera.
+   */
+  private _leaveMap(): void {
+    const sceneId = this._scenes.currentSceneId
+    this._router.setView('world')
+    if (sceneId) this._atlas_view.focusScene(sceneId)
+  }
+
+  /**
+   * `win.focus-placement(mapId, placementId)` — land on one object in
+   * one map (REDESIGN.md § 3.4).
+   *
+   * Always parked and drained through `onEngineReady`, never applied
+   * straight away, even when `mapId` is the map already on screen. A
+   * selection is session state on the ACTIVE SCENE, so one written while
+   * that scene is still loading lands on the scene the load is about to
+   * replace and disappears with it — no error, no warning, a deep link
+   * that selects nothing. Being the current map says nothing about being
+   * settled, and this action's callers are exactly the ones that arrive
+   * early: a `pixelrpg://` link during startup, an agent calling
+   * `focus_placement` straight after opening the project.
+   *
+   * `SceneNavigator.open` re-hydrates and re-fires `onEngineReady` even
+   * for the map already open, so the parked id costs one inspector
+   * repopulate and is drained in both cases.
+   */
+  private _focusPlacement(mapId: string, placementId: string): void {
+    this._pendingPlacementFocus = placementId
+    this._scenes.open(mapId)
+  }
+
+  /**
+   * The back gestures that are not buttons: `Esc`, `Alt+←` and the mouse
+   * back button (button 8).
+   *
+   * Both controllers sit in the BUBBLE phase, so the focused widget is
+   * asked first. That is the whole reason these keys are not in
+   * `WINDOW_ACCELS`: a `Gtk.Application` accel fires in the capture
+   * phase, and a global `Esc` would stop every popover from closing and
+   * every entry from being abandoned. The shortcut handler returns
+   * whether a back actually happened, so an `Esc` with nothing to undo
+   * travels on to the shell instead of being swallowed here.
+   */
+  private _installBackGestures(performBack: () => BackStep): void {
+    const handlers: Record<string, () => boolean> = {
+      'win.back': () => performBack() !== 'none',
+    }
+
+    const shortcuts = new Gtk.ShortcutController()
+    shortcuts.set_propagation_phase(Gtk.PropagationPhase.BUBBLE)
+    for (const [action, keys] of WINDOW_SHORTCUTS) {
+      const handler = handlers[action]
+      if (!handler) {
+        console.warn(`[ApplicationWindow] no handler for the window shortcut "${action}"; its keys are dead`)
+        continue
+      }
+      for (const key of keys) {
+        const trigger = Gtk.ShortcutTrigger.parse_string(key)
+        if (!trigger) {
+          console.warn(`[ApplicationWindow] "${key}" is not a parseable accelerator`)
+          continue
+        }
+        shortcuts.add_shortcut(new Gtk.Shortcut({ trigger, action: Gtk.CallbackAction.new(() => handler()) }))
+      }
+    }
+    this.add_controller(shortcuts)
+
+    // The mouse back button is a button press, not an accelerator, so it
+    // needs its own gesture. `button: 8` is X11/Wayland's "back"; GTK has
+    // no named constant for it.
+    const mouseBack = new Gtk.GestureClick()
+    mouseBack.set_button(8)
+    mouseBack.set_propagation_phase(Gtk.PropagationPhase.BUBBLE)
+    mouseBack.connect('pressed', () => void performBack())
+    this.add_controller(mouseBack)
   }
 
   /** `win.open-recent-projects` — the primary menu's "Open Recent". */

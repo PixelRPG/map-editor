@@ -133,6 +133,21 @@ export class AtlasView extends ResponsiveEditorView {
   }
 
   /**
+   * Select one map's card and bring it into view — where back from the
+   * map editor lands (REDESIGN.md § 3.4, step 5). Centring only: the
+   * atlas is a `Gtk.Fixed` surface with no fractional scale, so "zoomed
+   * on the map just left" is the card-preview zoom the user set, not a
+   * camera. Unknown ids leave the atlas where it is.
+   */
+  focusScene(id: string): void {
+    if (!this._scenes.some((scene) => scene.id === id)) return
+    this._atlas.selectedId = id
+    this._refreshSelectedScene(id)
+    this._atlas.fitToContent(id)
+    this._refreshOverview()
+  }
+
+  /**
    * Step the global card-preview zoom (the window routes `win.zoom-in/
    * out` here while the atlas is the visible view).
    */

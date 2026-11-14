@@ -282,6 +282,25 @@ export class SceneEditor extends Adw.Bin {
     return this._floating_play
   }
 
+  /**
+   * Whether the phone sheet is expanded over the canvas. Only phone
+   * layout can open it (`set_can_open`), so this is `false` at every
+   * wider rung — where the brush lives in a popover instead.
+   */
+  get sheetOpen(): boolean {
+    return this._bottom_sheet.get_open()
+  }
+
+  /**
+   * Collapse the sheet back to its peek bar, and say whether there was
+   * anything to collapse. Step 2 of the back order (REDESIGN.md § 3.4).
+   */
+  collapseSheet(): boolean {
+    if (!this._bottom_sheet.get_open()) return false
+    this._bottom_sheet.set_open(false)
+    return true
+  }
+
   get layout(): SceneEditorLayout {
     return this._layout
   }

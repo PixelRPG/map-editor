@@ -403,6 +403,53 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._inspector.propsTab.setSelectedObject(info && placementId ? { placementId, ...info } : null)
   }
 
+  /** Whether the phone sheet is expanded over the canvas — back step 2. */
+  get sheetOpen(): boolean {
+    return this._editor.sheetOpen
+  }
+
+  /** Collapse the phone sheet to its peek bar; `false` if it was already there. */
+  collapseSheet(): boolean {
+    return this._editor.collapseSheet()
+  }
+
+  /**
+   * Whether anything is selected on the map — back step 3. Unlike
+   * {@link _selectedPlacementId} this counts a multi-selection too: back
+   * clears whatever is highlighted, however much of it there is.
+   */
+  hasSelection(): boolean {
+    return (this._engine?.excalibur?.getSelectedPlacements() ?? []).length > 0
+  }
+
+  /**
+   * Drop the selection and take the highlight out of every surface that
+   * shows it. Selection is awareness state (`SelectedPlacementsComponent`
+   * over `SessionState`), not map data, so there is nothing to undo and
+   * no `Command` to register.
+   */
+  clearSelection(): boolean {
+    if (!this.hasSelection()) return false
+    this._engine?.setSelectedPlacements([])
+    this._syncSelectedObjectProps(null)
+    this._inspector.objectsTab.selectObject(null)
+    return true
+  }
+
+  /**
+   * Select one placement and move the camera onto it — what
+   * `win.focus-placement` lands on after opening the map (§ 3.4). Same
+   * three steps as picking the row in the Objects tab.
+   */
+  focusPlacement(placementId: string): void {
+    this._engine?.setSelectedPlacements([placementId])
+    this._syncSelectedObjectProps(placementId)
+    this._inspector.objectsTab.selectObject(placementId)
+    // Fire-and-forget like the Objects tab's own pick: the engine
+    // resolves when the pan ends, or rejects when a later pick wins.
+    void this._engine?.focusOnPlacement(placementId)
+  }
+
   /**
    * Switch the right inspector to a tab by name (`tiles` / `layers` /
    * `objects` / `props`). Drives the `win.set-inspector-tab` action so

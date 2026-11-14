@@ -31,6 +31,34 @@ export const WINDOW_ACCELS: ReadonlyArray<readonly [string, readonly string[]]> 
 ]
 
 /**
+ * Keys bound on the WINDOW, not on the application.
+ *
+ * `Gtk.Application.set_accels_for_action` installs a global accelerator:
+ * it fires in the capture phase, before the focused widget is asked, so
+ * `Escape` there would be taken away from every popover, dialog and
+ * entry in the app — a person typing a map name could not abandon the
+ * entry, and the brush popover could not be dismissed. These live on a
+ * bubble-phase `Gtk.ShortcutController` instead, which the focused
+ * widget gets to refuse first, and whose handler reports back whether it
+ * did anything, so an unused `Escape` still travels on.
+ *
+ * The controller is built in `ApplicationWindow` rather than here: this
+ * module is in the node test graph, which has no gi stack to construct a
+ * `Gtk.ShortcutController` with — `@girs/gtk-4.0` must stay a type-only
+ * import.
+ *
+ * They are declared here all the same, so the shortcut dialog can list
+ * them and `accels.spec.ts` can hold them to the same two invariants as
+ * {@link WINDOW_ACCELS}.
+ */
+export const WINDOW_SHORTCUTS: ReadonlyArray<readonly [string, readonly string[]]> = [
+  // One back, five gestures (REDESIGN.md § 3.4). The mouse back button
+  // is not an accelerator at all — it is a `Gtk.GestureClick` on button
+  // 8, wired next to this controller.
+  ['win.back', ['Escape', '<Alt>Left']],
+]
+
+/**
  * The shortcut reference, grouped the way a person looks one up — by
  * task, not by the module the action happens to live in.
  *
@@ -47,6 +75,10 @@ export interface ShortcutSection {
 }
 
 export const SHORTCUT_SECTIONS: ReadonlyArray<ShortcutSection> = [
+  {
+    title: 'Navigation',
+    items: [{ action: 'win.back', title: 'Back' }],
+  },
   {
     title: 'Tools',
     items: [
@@ -90,9 +122,14 @@ export const SHORTCUT_SECTIONS: ReadonlyArray<ShortcutSection> = [
   },
 ]
 
-/** The first accelerator bound to `action`, or `null` when it has none. */
+/**
+ * The first accelerator bound to `action`, or `null` when it has none.
+ * Searches both tables: where a key is installed is an implementation
+ * detail of the key, and the shortcut dialog has to list either kind.
+ */
 export function acceleratorFor(action: string): string | null {
-  return WINDOW_ACCELS.find(([name]) => name === action)?.[1][0] ?? null
+  const row = WINDOW_ACCELS.find(([name]) => name === action) ?? WINDOW_SHORTCUTS.find(([name]) => name === action)
+  return row?.[1][0] ?? null
 }
 
 /** Bind {@link WINDOW_ACCELS}; a no-op before the window has an application. */

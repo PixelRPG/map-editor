@@ -10,7 +10,7 @@
  * dead and every `Gtk.ToggleButton` wired to the action had no state to
  * reflect — with nothing anywhere reporting it.
  *
- * SCOPE — five of the ten `install*Actions` modules are exercised here.
+ * SCOPE — six of the eleven `install*Actions` modules are exercised here.
  * The other five (`view`, `project`, `cast`, `tile`, `object`) import
  * `gettext` for their toast msgids, which the node test target resolves
  * through `@gjsify/node-gi` — a package this workspace does not install,
@@ -35,6 +35,7 @@ import {
   duplicateActionNames,
   WINDOW_ACTION_NAMES_BY_MODULE,
 } from './action-registry.ts'
+import { installBackActions } from './back-actions.ts'
 import { installEditingActions } from './editing-actions.ts'
 import { installInspectorActions } from './inspector-actions.ts'
 import { installPlaytestActions } from './playtest-actions.ts'
@@ -42,7 +43,7 @@ import { installSessionActions } from './session-actions.ts'
 import { installZoomActions } from './zoom-actions.ts'
 
 /** The modules this spec can install; the rest are gettext-bound (see the file header). */
-const COVERED_MODULES = ['zoom', 'editing', 'inspector', 'playtest', 'session'] as const
+const COVERED_MODULES = ['zoom', 'editing', 'inspector', 'playtest', 'session', 'back'] as const
 
 const coveredNames = (): string[] => COVERED_MODULES.flatMap((key) => [...WINDOW_ACTION_NAMES_BY_MODULE[key]])
 
@@ -125,6 +126,14 @@ function installCovered(group: Gio.SimpleActionGroup, sidebarOwner: GObject.Obje
     setEngineDimInactiveLayers: noop,
   })
   installPlaytestActions(group, { persistCurrentMap: noop, setRuntimeMode: noop, setViewPlaying: noop })
+  installBackActions(group, {
+    backState: () => ({ running: false, inMap: false, sheetOpen: false, hasSelection: false, pushedPage: false }),
+    stopRun: noop,
+    collapseSheet: noop,
+    clearSelection: noop,
+    popPage: noop,
+    leaveMap: noop,
+  })
   installSessionActions(group, {
     presentShareDialog: noop,
     setAssistantPaused: noop,
