@@ -423,6 +423,8 @@ export class SceneEditorView extends ResponsiveEditorView {
     const firstSet = mapSpriteSetRef ?? project.resource.data?.spriteSets?.[0]
     if (firstSet) {
       await this.loadTileset(project, firstSet.id, mapSpriteSetRef?.firstGid ?? 1)
+    } else {
+      this._inspector.tilesTab.setTiles([])
     }
   }
 

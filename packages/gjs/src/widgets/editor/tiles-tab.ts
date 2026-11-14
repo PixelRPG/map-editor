@@ -50,6 +50,8 @@ export interface TilesTabSignals extends Adw.Bin.SignalSignatures {
  */
 export class TilesTab extends Adw.Bin {
   declare _search: Gtk.SearchEntry
+  declare _header: Gtk.Box
+  declare _empty_state: Adw.StatusPage
   declare _tileset_label: Gtk.Label
   declare _switch_button: Gtk.Button
   declare _palette: TilePalette
@@ -66,7 +68,16 @@ export class TilesTab extends Adw.Bin {
       {
         GTypeName: 'PixelRpgTilesTab',
         Template,
-        InternalChildren: ['search', 'tileset_label', 'switch_button', 'palette', 'objects_section', 'object_palette'],
+        InternalChildren: [
+          'search',
+          'header',
+          'tileset_label',
+          'switch_button',
+          'palette',
+          'empty_state',
+          'objects_section',
+          'object_palette',
+        ],
         Properties: {
           'tileset-name': GObject.ParamSpec.string(
             'tileset-name',
@@ -116,8 +127,14 @@ export class TilesTab extends Adw.Bin {
     this.notify('tileset-name')
   }
 
+  /** An empty list swaps the palette for the "Import a picture…" state. */
   setTiles(tiles: TileDescriptor[]): void {
     this._palette.setTiles(tiles)
+    const has = tiles.length > 0
+    this._search.set_visible(has)
+    this._header.set_visible(has)
+    this._palette.set_visible(has)
+    this._empty_state.set_visible(!has)
   }
 
   /** Visually highlight a tile in the inner palette, used to mirror an

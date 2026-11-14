@@ -37,6 +37,22 @@ template $PixelRpgTilesTab : Adw.Bin {
       columns: 5;
     }
 
+    // A project with no tiles yet: say what to do instead of showing an
+    // empty grid under a nameless heading.
+    Adw.StatusPage empty_state {
+      visible: false;
+      icon-name: "image-x-generic-symbolic";
+      title: _("No tiles yet");
+      description: _("Import a picture and cut it into tiles to paint with.");
+
+      child: Gtk.Button {
+        label: _("Import a picture…");
+        action-name: "win.new-tileset";
+        halign: center;
+        styles ["suggested-action", "pill"]
+      };
+    }
+
     Gtk.Box objects_section {
       orientation: vertical;
       spacing: 6;
