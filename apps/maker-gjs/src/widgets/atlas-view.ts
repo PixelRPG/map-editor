@@ -182,7 +182,7 @@ export class AtlasView extends ResponsiveEditorView {
     this._inspector.setScene(null, scenes, teleports, projectResource)
     // Open a real project fitted so every scene is reachable at once,
     // instead of the old 200% top-left dump that ran off-viewport.
-    this._atlas.fitToContent()
+    this._atlas.fitToContent(projectResource?.data?.startup?.initialMapId)
     this._refreshOverview()
   }
 
