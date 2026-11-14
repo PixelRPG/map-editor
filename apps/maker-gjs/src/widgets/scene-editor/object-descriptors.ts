@@ -1,33 +1,19 @@
 import type Gdk from '@girs/gdk-4.0'
-import type { EntityDefinition, ObjectPlacement } from '@pixelrpg/engine'
+import type { EntityDefinition } from '@pixelrpg/engine'
 import { markerColorFor } from '@pixelrpg/engine'
 import { GdkSpriteSetResource, type GdkSpriteSheet } from '@pixelrpg/gjs'
-import { iconOf, visualOf } from '../../services/entity-visuals.ts'
+import { visualOf } from '../../services/entity-visuals.ts'
 import type { LoadedProject } from '../../services/project-loader.ts'
 
 /** Sprite sheets keyed by sprite-set id; `null` marks a failed load. */
 export type ObjectSheets = ReadonlyMap<string, GdkSpriteSheet | null>
 
-/** A map placement paired with the definition it resolved to. */
-export interface ResolvedPlacement {
-  placement: ObjectPlacement
-  def: EntityDefinition | null
-}
-
-/** A placeable library object as the Tiles-tab grid + popover render it. */
+/** A placeable library object as the Brush page's Things grid renders it. */
 export interface ObjectBrushOption {
   id: string
   name: string
   paintable: Gdk.Paintable | null
   color?: string
-}
-
-/** One row of the inspector's Objects tab. */
-export interface PlacementRow extends ObjectBrushOption {
-  icon?: string
-  tileX: number
-  tileY: number
-  layerId: string
 }
 
 /** Every sprite set referenced by the given definitions. */
@@ -61,7 +47,7 @@ export async function loadObjectSheets(
         const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
         sheets.set(setId, gdkSet.spriteSheet ?? null)
       } catch (error) {
-        console.warn(`[object-descriptors] Failed to load sprite set "${setId}" for objects tab:`, error)
+        console.warn(`[object-descriptors] Failed to load sprite set "${setId}" for the Things grid:`, error)
         sheets.set(setId, null)
       }
     }),
@@ -87,25 +73,8 @@ function swatchColorFor(def: EntityDefinition | null, paintable: Gdk.Paintable |
   return markerColorFor(def.components)
 }
 
-/** Rows for the Objects tab — a real sprite thumbnail where one resolves. */
-export function buildPlacementRows(resolved: readonly ResolvedPlacement[], sheets: ObjectSheets): PlacementRow[] {
-  return resolved.map(({ placement, def }) => {
-    const paintable = paintableFor(def, sheets)
-    return {
-      id: placement.id,
-      name: def?.name ?? placement.id,
-      icon: iconOf(def),
-      tileX: placement.tileX,
-      tileY: placement.tileY,
-      layerId: placement.layerId,
-      paintable,
-      color: swatchColorFor(def, paintable),
-    }
-  })
-}
-
 /**
- * Brush swatches for the Tiles tab's Objects grid, so picking an object
+ * Brush swatches for the Brush page's Things grid, so picking an object
  * looks and feels exactly like picking a tile.
  */
 export function buildBrushOptions(defs: readonly EntityDefinition[], sheets: ObjectSheets): ObjectBrushOption[] {

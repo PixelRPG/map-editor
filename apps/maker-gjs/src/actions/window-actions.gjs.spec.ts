@@ -119,7 +119,7 @@ function installCovered(group: Gio.SimpleActionGroup, sidebarOwner: GObject.Obje
   })
   installInspectorActions(group, {
     sidebarOwner,
-    setInspectorTab: noop,
+    showSheetPage: noop,
     setEngineObjectsVisible: noop,
     setViewObjectsVisible: noop,
     setEngineShowGrid: noop,

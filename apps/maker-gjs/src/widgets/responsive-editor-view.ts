@@ -156,6 +156,13 @@ export class ResponsiveEditorView extends Adw.Bin {
   /** Hook fired after `compact` changes — default no-op. */
   protected _onCompactChanged(_compact: boolean): void {}
 
+  /**
+   * Hook fired after `show-inspector` changes — default no-op. A view
+   * whose inspector is not a drawer at every width redirects the
+   * request here instead of growing a second property nobody binds.
+   */
+  protected _onShowInspectorChanged(_showInspector: boolean): void {}
+
   get fullView(): boolean {
     return this._fullView
   }
@@ -186,6 +193,7 @@ export class ResponsiveEditorView extends Adw.Bin {
     if (this._showInspector === value) return
     this._showInspector = value
     this.notify('show-inspector')
+    this._onShowInspectorChanged(value)
   }
 
   get inspectorCollapsed(): boolean {

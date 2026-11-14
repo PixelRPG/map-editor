@@ -15,7 +15,7 @@ export interface EngineEventBridgeContext {
    */
   adoptPickedTile(globalTileId: number): void
   /**
-   * Mirror a canvas selection into the inspector's Objects tab. A hit
+   * Mirror a canvas selection into the inspector's Selected page. A hit
    * also reveals the inspector (project-wide policy in
    * `docs/concepts/responsive-chrome.md`); an empty-tile click leaves it
    * alone, since there is nothing to show.
@@ -28,7 +28,7 @@ export interface EngineEventBridgeContext {
    */
   requestPlacementContext(screenX: number, screenY: number): void
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void
-  /** Re-read the active map's layer list into the Layers tab (add / reorder / change of plane, any path). */
+  /** Re-read the active map's layer list into the Layers page (add / reorder / change of plane, any path). */
   refreshLayers(): void
 }
 

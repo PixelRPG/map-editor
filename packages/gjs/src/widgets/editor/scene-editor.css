@@ -36,10 +36,10 @@
  * Tile-like object swatches — the SAME visual language as placements on
  * the map (engine `placement-graphic.ts`): a thin frame in the object
  * accent colour (#f5c211, the object hover-border hue) around the
- * sprite/marker preview. Applied to the Tiles tab's Objects grid cells
- * (`.object-brush-palette`) and the Objects tab's placement-row
- * swatches (`.object-swatch`), so an object reads identically in the
- * palette, in the placement list, and on the canvas.
+ * sprite/marker preview. Applied to the Brush page's Things grid cells
+ * (`.object-brush-palette`) and the Selected page's placement swatch
+ * (`.object-swatch`), so an object reads identically in the palette,
+ * in the inspector, and on the canvas.
  */
 .object-brush-palette flowboxchild {
   border: 1px solid alpha(#f5c211, 0.7);
@@ -89,8 +89,16 @@
  * floating chrome is; the pill's own 12px padding then eats eight more
  * rows of map across the whole pill. 1px keeps the button at 34px and
  * the pill at 58px, measured.
+ *
+ * The class sits on the button itself. It used to be a `Gtk.MenuButton`
+ * — whose own node is a wrapper around an inner `button` — so the
+ * selector read `.badge-button > button`; when the badge became a plain
+ * `Gtk.Button` on `win.sheet-page` that child stopped existing, the rule
+ * silently stopped matching, and every rung of the editing pill measured
+ * 10px wider than `STAGE_EDITING_PILL_PX` (caught by
+ * `phone-chrome.probe.spec.ts`, not by any visible breakage).
  */
-.badge-button > button {
+.badge-button {
   min-height: 0;
   padding: 0 6px 0 4px;
 }
@@ -168,6 +176,28 @@
 .toolbar.osd.zoom-osd,
 .toolbar.osd.cursor-caption {
   padding: 4px 8px;
+}
+
+/*
+ * The sheet's drag handle, ours rather than libadwaita's.
+ *
+ * `show-drag-handle` is off because libadwaita's handle is an internal
+ * `AdwGizmo` with `can-target: false`, parented outside our template —
+ * no gesture can be attached to it. The metrics are copied from
+ * libadwaita's own (`_bottom-sheet.scss`: 54×6 pill, 15px margin, so a
+ * 36px strip) so the sheet still looks native, and the strip spans the
+ * full width because it is the drag target: a 54px-wide handle is a
+ * precise aim on a phone.
+ */
+.sheet-grabber {
+  padding: 15px;
+}
+
+.sheet-grabber-pill {
+  min-width: 54px;
+  min-height: 6px;
+  border-radius: 99px;
+  background-color: color-mix(in srgb, currentColor 25%, transparent);
 }
 
 /*

@@ -1,4 +1,4 @@
-// Pure rules behind the Layers tab's three sections: which rows a
+// Pure rules behind the Layers page's three sections: which rows a
 // section shows, in what order, and what array position a drop means.
 // GTK-free so the list ↔ array mapping is unit-tested; the tab only
 // translates pointer positions into these calls.

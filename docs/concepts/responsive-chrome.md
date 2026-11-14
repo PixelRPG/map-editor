@@ -84,7 +84,7 @@ the inspector **auto-opens** if it was closed.
 |---------------|---------------------------------------------------------------|--------------------------------------------|
 | Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
 | Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
-| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Objects-tab row highlights, props          |
+| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement     |
 
 The Library's Characters and Things pages and the Game page follow
 the content-view master-detail pattern (list → detail page, an
@@ -116,9 +116,9 @@ created a hidden-UI dead end.
   inspector content, no auto-open. Otherwise the sidebar would
   pop on every stray click on the canvas.
 - **Selection that originated *inside* the inspector.** Picking a
-  row in the objects-tab list doesn't auto-open the parent
-  inspector (it can't be both the source and the target). Same
-  for animation-list / layers-tab clicks.
+  row in a list the inspector itself shows doesn't auto-open the
+  parent inspector (it can't be both the source and the target) —
+  animation-list and layers-page clicks.
 - **Mutating-tool clicks.** Pencil / eraser don't select anything
   — they paint. No inspector content emerges, so no auto-open.
 - **Eyedropper.** Auto-switches to pencil after a pick; no
@@ -162,11 +162,17 @@ nearly as wide as the window itself — its `max-sidebar-width`
 shrinks once content lands on it. On a 360 px-wide phone
 that leaves zero space for an "outside-tap-to-dismiss" target,
 so the only reliable way to close the drawer has to be **inside**
-the drawer. The scene editor makes that the *only* way: the same
-breakpoint switches its chrome to the phone layout, which drops
-`inspector_toggle` from the context pill, so a drawer opened by
-"Layers…" or by a placement selection is closed from its own
-header.
+the drawer. The scene editor sidesteps the question entirely: at
+that breakpoint it has no drawer. `EditorPages` hosts the three
+pages in the bottom sheet instead (see "The sheet's three
+detents"), so `SceneEditorView._onShowInspectorChanged` turns
+every reveal — `win.toggle-inspector`, `revealInspector` from a
+canvas selection, `win.focus-placement` — into `openSheet()` and
+puts `show-inspector` back to `false`. Without that redirect the
+drawer slides out over the map holding nothing, because its slots
+are empty whenever the pages live in the sheet. The other three
+inspectors still take the drawer on phone and close from their
+own header.
 
 Each of the four right-inspector widgets (`RightInspector`,
 `SceneInspector`, `CastInspector`, `TileInspector`) carries a
@@ -255,7 +261,15 @@ $PixelRpgSceneEditor
       │      long press — pointed at the finger, so overlay
       │      coordinates and canvas coordinates must agree)
       ├─ bottom-bar: phone bar — ToolGroup + BrushBadge + RecentTiles
-      └─ sheet: BrushPage
+      └─ sheet: Gtk.Box sheet_view
+            its `height-request` IS the sheet's height — see
+            "The sheet's three detents"
+         ├─ Gtk.Box sheet_grabber → Adw.Bin .sheet-grabber-pill
+         │     our own drag handle: drag to resize, tap to cycle
+         ├─ Adw.InlineViewSwitcher sheet_switcher
+         └─ Gtk.ScrolledWindow sheet_scroller → Adw.ViewStack sheet_stack
+               brush · layers · selected — three Adw.Bin slots the
+               host fills from `EditorPages` (see below)
 ```
 
 Two rules force that shape, and both are written out in
@@ -264,8 +278,8 @@ Two rules force that shape, and both are written out in
 1. **The canvas is never reparented.** The engine tears down in
    `vfunc_unroot`, so an `Adw.MultiLayoutView` — which re-slots every
    `Adw.LayoutSlot` child on a layout change — cannot hold it.
-   `SceneEditor.setLayout` moves three small GL-free widgets
-   (`ToolGroup`, `BrushBadge`, `BrushPage`) between slots instead.
+   `SceneEditor.setLayout` moves two small GL-free widgets
+   (`ToolGroup`, `BrushBadge`) between slots instead.
 2. **No single chrome layer may float over the canvas.**
    `gtk_widget_pick` returns before descending into a
    `can-target: false` widget, so one full-size chrome layer would
@@ -287,6 +301,72 @@ tiles. The window's toasts need the same clearance, which is why
 `SceneEditor` puts a `sheet-peeking` class on the *window* — the
 `Adw.ToastOverlay` is this widget's ancestor, so a selector rooted
 here could never reach a toast.
+
+### The sheet's three detents
+
+`Adw.BottomSheet` has two states — bar and open — and no detent API.
+The design (REDESIGN § 5.2) asks for three: **Peek** (the docked bar,
+which is the closed sheet), **Half** (the map still visible and
+paintable above it) and **Full**. They are built on top, in two halves:
+
+- **`sheet-detents.ts`** owns every number and every decision, and is
+  GTK-free so all of it is a unit test: `detentHeight` (Peek = the bar,
+  Half = `max(0.46 · height, 320)`, Full = `height − 56`, each clamped
+  into `[bar, full]` so a short window cannot order them wrongly),
+  `snapDetent` (nearest, ties to the shorter), `releaseDetent` (a fling
+  of ≥ 400 px/s takes the next rung in its direction and never skips
+  one, otherwise snap), `cycleDetent` for the tap, and
+  `bottomInsetFor`.
+- **`SheetDetentController`** (plain, not a `GObject`, the way
+  `SceneEditorView` holds `EditorPages`) measures, applies and
+  listens. `SceneEditor` keeps it as a field and re-exports only
+  `detent`, `bottomInset` and a `detent-changed` signal.
+
+Three findings shaped the GTK side, and none of them is guessable from
+the widget's documentation:
+
+1. **`sheet-height` is read-only.** `adw_bottom_sheet_size_allocate`
+   measures the sheet child's *natural* height and allocates that. So
+   a `height-request` on the child IS the detent control — no fight
+   with the swipe tracker, no custom layout manager.
+2. **The sheet child must not be an `Adw.ToolbarView`.** Its `[top]`
+   slot sits inside a `GtkWindowHandle`, and the sheet's swipe tracker
+   force-claims any drag that starts on a window handle
+   (`should_force_drag`, `adw-swipe-tracker.c`) — a detent gesture
+   there would never see one. Hence the plain `Gtk.Box`.
+3. **libadwaita's drag handle is unreachable.** It is an internal
+   `AdwGizmo` with `can-target: false`, parented outside our template,
+   so no controller can be attached to it. `show-drag-handle` is off
+   and `sheet_grabber` carries the gestures instead: a
+   `Gtk.GestureDrag` that claims only once the finger has moved 4 px
+   (well inside GTK's own 16 px threshold, so the ancestor tracker
+   never gets the sequence) plus a `Gtk.GestureClick` that cycles. The
+   strip spans the full width because it is the target; the pill's
+   metrics are copied from `_bottom-sheet.scss` so it still reads as
+   native.
+
+A move between two *open* detents is spring-animated
+(`Adw.SpringAnimation`, damping 1, stiffness 500, `clamp: true`);
+crossing Peek is applied instantly, because that crossing is
+closed↔open and libadwaita already animates it. Half and Full are
+shares of the editor's height, so `vfunc_size_allocate` re-applies
+them after a resize — with an equality guard in the apply, or a
+`set_size_request` that changes nothing would queue a relayout for
+ever.
+
+Only **Full** is `modal`. At Half a stroke has to still reach the
+canvas beside the sheet, which is the whole point of the rung.
+
+**The camera ducks at Half, and only at Half.** A sheet covering the
+bottom of the map means anything the camera centres has to be centred
+in what is left, so `detent-changed` makes `SceneEditorView` call
+`Engine.setViewportInset({ bottom })`. The arithmetic is the pure
+`packages/engine/src/services/viewport-inset.ts`
+(`insetCameraTarget` lifts a focus point by `bottom / (2 · zoom)`),
+applied in `focusOnPlacement`. At Peek nothing is covered and at Full
+nothing is visible to aim at, so both return 0. The inset is **host
+state and never an operation**: a peer's sheet sits at its own detent,
+so pushing this onto the op-log would drag their camera around.
 
 `pin-sidebar: true` is **load-bearing**: without it, libadwaita
 auto-resets `show-sidebar` to `false` as part of the
@@ -471,17 +551,25 @@ rung must come last).
 ### Wide ↔ phone
 
 The layout switch is a different axis from the ladder and hangs off
-`inspector-collapsed` (`max-width: 767sp`). `SceneEditor.setLayout` moves three
+`inspector-collapsed` (`max-width: 767sp`). `SceneEditor.setLayout` moves two
 widgets and flips three flags:
 
 - the `ToolGroup` from the editing pill into the phone bar's first row
   (and from six tools to four: Paint · Fill · Erase · Select — Pick is
   the long press, the object brush is armed by choosing a Thing);
 - the `BrushBadge` from beside its label into the bar's button, at
-  44 px instead of 32;
-- the `BrushPage` from the badge's popover into the bottom sheet, so
-  "which plane, which layer, which tile" has ONE implementation rather
-  than a popover copy and a sheet copy that drift.
+  44 px instead of 32.
+
+The three inspector pages switch host on the same axis, but they are
+not `setLayout`'s business. `EditorPages`
+(`packages/gjs/src/widgets/editor/editor-pages.ts`) owns ONE
+`BrushPage`, `LayersPage` and `SelectedPage`, and `host(slots)` parents
+them into a `PageSlots` triple. `SceneEditorView` holds the instance and
+calls `host()` with `RightInspector.pageSlots` on wide and
+`SceneEditor.pageSlots` on phone, so "which plane, which layer, which
+tile" has one implementation rather than an inspector copy and a sheet
+copy that drift. The same reason retired the badge's popover: the wide
+badge is now a plain button on `win.sheet-page('brush')`.
 
 The editing pill itself is gone on phone: only a circular "‹" remains
 top-left (the system back gesture is shared with the shell, so it is a
@@ -508,9 +596,10 @@ with GTK's `measure()` rather than by eye:
 - The **sheet's minimum is the wider of its page and its bar, at all
   times.** `Adw.BottomSheet` keeps both in one homogeneous `Gtk.Stack`,
   so the Brush page's width reaches the docked bar and the canvas with
-  the sheet closed. Its palettes therefore `wrap` with six columns as
-  the cap (one column minimum, six natural — the badge popover still
-  sizes to six) and its plane-chip captions ellipsize: six pinned
+  the sheet closed, and every one of the three pages has to clear that
+  floor, not just the Brush page. Its palettes therefore `wrap` with six
+  columns as the cap (one column minimum, six natural) and its
+  plane-chip captions ellipsize: six pinned
   columns measured 378 px and put the whole editor 18 px past a 360 px
   window.
 - The **recent strip shows a whole number of tiles** — six at 360 px —
@@ -711,7 +800,7 @@ teardown firing too early — which the `unroot` rule above handles.)
 ## Sidebar drag regions
 
 `Gtk.WindowHandle` wraps every sidebar's content so empty pixels
-between rows / below the active tab pick up window-drag gestures
+between rows / below the active page pick up window-drag gestures
 (PR #53 + #54). Interactive widgets (ActionRows, buttons, list
 items, search entries) consume their own clicks and bypass the
 handle automatically.
@@ -767,6 +856,16 @@ Two shapes of this are easy to get wrong:
   `ApplicationWindow`, so focused widgets get first refusal.
   `acceleratorFor()` searches both tables, which is what keeps the
   shortcuts window honest.
+
+**The editor's visible back button is the one gesture that does NOT go
+through this.** `back_circle` and the editing pill's arrow bind
+`win.back-to-atlas`, which leaves the map unconditionally. REDESIGN
+§ 3.4 argues the split: a labelled control has to do what it says, so
+the steps in front of "leave" belong to the paths with nothing to
+contradict — `Esc`, `Alt+←`, button 8, the shell gesture. The MCP
+bridge's `back_to_atlas` and `scripts/smoke/drive.py` bind the
+unconditional action too, which is also why the smoke `back` scenario
+drives `win.back` explicitly rather than clicking the button.
 
 Deep links are the other half of § 3.4: `win.open-object` /
 `win.open-character` / `win.library-chip` push a Library page, and
@@ -897,9 +996,13 @@ on the scene the load then replaces and vanishes silently.
 | Navigation shell: `root_stack` / `shell_stack`, `Adw.ViewSwitcherBar` on phone and `Adw.ViewSwitcher` in the headers on wide, `ModeRail` + both left drawers + the tablet breakpoint deleted, `library-collapsed` → `compact` (REDESIGN § 9 step 2.1) | **landed** |
 | Roster chip on all four destinations, not just the map editor's context pill; the chip's Follow click reaches the presence controller from every view (REDESIGN § 3.3 / § 9 step 2.2) | **landed** |
 | One back order for all five gestures (`resolveBackStep`), `Esc` / `Alt+←` / mouse button 8 outside `WINDOW_ACCELS`, and `win.focus-placement` as a selection-bearing deep link (REDESIGN § 3.4 / § 9 step 2.3) | **landed** |
+| Three movable inspector pages (Brush · Layers · Selected) owned by `EditorPages`, hosted either in the right inspector or in the bottom sheet, both driven by `win.sheet-page` (REDESIGN § 5.3 / § 9 step 3.1) | **landed** |
+| Peek / Half / Full detents on the phone sheet: own drag handle, fling and tap, spring between open rungs, and the camera ducking at Half via `Engine.setViewportInset` (REDESIGN § 5.2 / § 9 step 3.2) | **landed** |
+| Keyboard access to the detents, and a stepwise Full → Half → Peek on back (REDESIGN § 5.2) | deferred, tracked in `TODO.md` |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
-| Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
+| On phone every inspector reveal lands on the sheet, never the editor's drawer (`_onShowInspectorChanged`) | **landed** |
+| A canvas selection opening the sheet on the *Selected* page, with the contextual action bar (REDESIGN § 9 step 3.3) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:

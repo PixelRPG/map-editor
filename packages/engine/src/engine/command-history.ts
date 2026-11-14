@@ -141,7 +141,7 @@ export class CommandHistory {
   }
 
   /**
-   * Mirror a layer command to the host's Layers tab: a flag command's
+   * Mirror a layer command to the host's Layers page: a flag command's
    * effective value, or the fact that the layer list changed. The
    * command→payload mappings are the pure {@link layerFlagChange} /
    * {@link layerListChange}; this only owns the emits. No-op for

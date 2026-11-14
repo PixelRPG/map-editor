@@ -6,7 +6,7 @@
  * path (local, undo, redo, AND inbound peer ops — which deliberately don't
  * emit `COMMAND_EXECUTED`) so the inspector's eye/padlock follows changes
  * it didn't originate. The `apply`-reports-target vs `revert`-reports-
- * previous distinction is the bit that keeps the Layers tab in sync after
+ * previous distinction is the bit that keeps the Layers page in sync after
  * an undo, so it is pinned here independently of a live engine.
  */
 
@@ -95,7 +95,7 @@ export default async () => {
 
     await it('is null for the flag commands and for non-layer commands', async () => {
       // The flags have their own mirror; a flag toggle must not make the
-      // Layers tab rebuild its rows.
+      // Layers page rebuild its rows.
       expect(
         layerListChange(new SetLayerVisibilityCommand({ layerId: 'g', visible: false, previousVisible: true })),
       ).toBe(null)

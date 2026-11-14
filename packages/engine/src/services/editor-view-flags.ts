@@ -13,7 +13,7 @@ import type { EditorViewFlags } from '../components/editor-view-mode.component.t
 
 /**
  * Flags reported when nothing has been set yet. `objectsVisible`
- * defaults ON — placements are part of the map, the Layers tab's
+ * defaults ON — placements are part of the map, the Layers page's
  * "Objects" toggle is opt-OUT.
  */
 export const DEFAULT_EDITOR_VIEW_FLAGS = {

@@ -83,7 +83,7 @@ interface ObjectPlacement {
 
 `overrides` is **not** deep-merged. `name` replaces the display name; each entry in `overrides.components` **replaces the base component of the same `type` in its entirety** (a type absent from the base is appended). See `mergePlacementComponents` in `packages/engine/src/entity/data-access.ts`.
 
-Placement → definition resolution (inline, or `defId` library lookup, with `overrides` merged) has **one** implementation: `resolvePlacementDefinition` in `packages/engine/src/entity/data-access.ts`. Every consumer — the spawn pipeline, the maker's Objects tab, the atlas teleport overlay — goes through it; hand-rolled partial resolution (e.g. reading `placement.inline` only) is a bug, since the object brush creates `defId` placements.
+Placement → definition resolution (inline, or `defId` library lookup, with `overrides` merged) has **one** implementation: `resolvePlacementDefinition` in `packages/engine/src/entity/data-access.ts`. Every consumer — the spawn pipeline, the maker's Selected page, the atlas teleport overlay — goes through it; hand-rolled partial resolution (e.g. reading `placement.inline` only) is a bug, since the object brush creates `defId` placements.
 
 If a user wants "same as library but with a different teleport label", they put the **entire** `teleport` component config in `overrides.components` with the new label included. Deterministic behaviour beats convenience for the editor's mutation surface.
 
@@ -166,7 +166,7 @@ player.z = zFor('hero') + 50                                     // systems/play
 
 The plane offsets are not exported; `zFor` is the only way any code obtains a tilemap or actor z, so nothing treats 0 / 100 / 200 as an exhaustive enum once storeys exist. A placement lands on exactly the render plane of the layer it references, and the gaps leave room for actors to interleave (`hero` is where the player sits, alongside decorations). Inside one plane the array order of `MapData.layers` decides which of two layers' sprites shows on top of a shared cell (`services/layer-order.ts`).
 
-The editor shows this as three fixed sections in the Layers tab (`packages/gjs/src/widgets/editor/layers-tab.ts`, `layer-section.ts`), ordered top-down as the world is, each headed by the depth glyph (`depth-glyph.ts`: a side view of the hero with the plane's element in its colour — green ground slab, orange block beside the legs, blue roof slab); every layer row and every plane chip in the `BrushPage` carry the same glyph at 24 px, and the brush badge's plane ring uses the same `PLANE_COLOR` table — "green means below the hero" is one fact with one source. (Nothing renders at the 14 px `chip` size any more — the top-bar layer chip it was named for is gone; it survives as the `size` property's floor and in the geometry probes.) The nine rendered states, as `depth-glyph.probe.spec.ts` reads them back on a workstation:
+The editor shows this as three fixed sections in the Layers page (`packages/gjs/src/widgets/editor/layers-page.ts`, `layer-section.ts`), ordered top-down as the world is, each headed by the depth glyph (`depth-glyph.ts`: a side view of the hero with the plane's element in its colour — green ground slab, orange block beside the legs, blue roof slab); every layer row and every plane chip in the `BrushPage` carry the same glyph at 24 px, and the brush badge's plane ring uses the same `PLANE_COLOR` table — "green means below the hero" is one fact with one source. (Nothing renders at the 14 px `chip` size any more — the top-bar layer chip it was named for is gone; it survives as the `size` property's floor and in the geometry probes.) The nine rendered states, as `depth-glyph.probe.spec.ts` reads them back on a workstation:
 
 ![Depth glyph states at 40, 24 and 14 px](../screenshots/depth-glyph-states.png) Dragging a row inside a section is a `ReorderLayerCommand`, into another section a `SetLayerPlaneCommand` (`commands/layer-order.command.ts`); both are registered commands, and every application path emits `LAYER_LIST_CHANGED` so the tab follows undo and peers. The words "tier", "z-index" and "elevation" appear in no UI string.
 
@@ -203,10 +203,10 @@ Canonical events (names match the `EngineEvent` enum in `packages/engine/src/typ
 The shipped surface (entity-composition C2–C6 + the tile-like-object UX, PRs #179–#184):
 
 - **Library › Things** — the general master-detail list over the whole `entityLibrary` (world objects AND cast characters, the latter with a "Character" badge), grouped by `editorData.category` (`services/thing-categories.ts`: the uncategorised group is **Objects**, then Heroes, NPCs, then whatever a template or game system stamps — `EntityTemplate.category` is the writer, `groupThingsByCategory` the reader), edited through the generated component inspector (`ObjectsController`, `win.new-object` / `win.open-object`). One chip page of the Library rail row, beside Characters (the friendly lens over the character subset) and Graphics (the sprite sheets).
-- **Object brushes in the scene editor's Tiles tab** — a visual sprite-thumbnail palette (shared `TilePalette` / `createSwatchWidget`) below the tile palette; single-click a card to arm the brush (`win.set-object-brush`), which switches to the `'object'` tool.
-- **Object tool** — part of the `EditorTool` union; stamps the armed brush onto the clicked tile as an undoable, collab-synced `PlaceObjectCommand`. Placements render framed with a shared hover ghost (`entity/placement-graphic.ts`): the definition's `visual` sprite/animation contain-fitted into the cell — for a Cast character that's the sheet-owned `characterAnimations` default (e.g. `idle-down`) — or a type-coloured marker only when no appearance resolves. The brush badge next to the tool chooser previews what the next stroke lays — the armed object under the Object tool, the active tile otherwise (`subjectFor` in `brush-badge.geometry.ts`) — and its popover is the `BrushPage`, which lists tiles and, under a "Things" heading, every placeable object.
-- **Props tab "Selected object" group** — selecting a placement (`'select'` tool or `win.select-placement`) shows its name/position + an undoable Remove (`RemoveObjectCommand`).
-- **Objects visibility row** in the Layers tab (`win.toggle-objects`).
+- **Object brushes in the scene editor's Brush page** — a visual sprite-thumbnail palette (shared `TilePalette` / `createSwatchWidget`) below the tile palette; single-click a card to arm the brush (`win.set-object-brush`), which switches to the `'object'` tool.
+- **Object tool** — part of the `EditorTool` union; stamps the armed brush onto the clicked tile as an undoable, collab-synced `PlaceObjectCommand`. Placements render framed with a shared hover ghost (`entity/placement-graphic.ts`): the definition's `visual` sprite/animation contain-fitted into the cell — for a Cast character that's the sheet-owned `characterAnimations` default (e.g. `idle-down`) — or a type-coloured marker only when no appearance resolves. The brush badge next to the tool chooser previews what the next stroke lays — the armed object under the Object tool, the active tile otherwise (`subjectFor` in `brush-badge.geometry.ts`) — and tapping it runs `win.sheet-page('brush')`, which shows the `BrushPage`: tiles, and under a "Things" heading every placeable object.
+- **Selected page "Selected object" group** — selecting a placement (`'select'` tool or `win.select-placement`) shows its name/position + an undoable Remove (`RemoveObjectCommand`).
+- **Objects visibility row** in the Layers page (`win.toggle-objects`).
 - **Tile properties** — edited in Library › Graphics' tile-property inspector (Solid switch, surface); persists to the sprite-set JSON.
 - **Atlas teleport curves** — built by aggregating placements carrying a `teleport` component across all maps via `resolvePlacementDefinition` — inline AND `defId` placements both surface (`project-loader.ts`; replaced the legacy projectwide `teleports[]`).
 
@@ -229,7 +229,7 @@ Tracked here so anyone picking up the work knows the dependency order. PR number
 | 5 | `TriggerSystem` + event-bus contract | **landed** |
 | 6 | `TeleportSystem`, `ItemPickupSystem`, `WalkOnTileSystem` | **landed** |
 | 7 | Editor UI — Objects authoring view, object tool + brush palette, Props selected-object group, Objects visibility row, atlas-from-placements | **landed** (#170–#174 + #179–#184; remaining polish in `TODO.md`) |
-| 8 | Depth — one ordering rule (plane + array order), the three-section Layers tab with the depth glyph, reorder / change-of-plane commands, `elevation` + `elevation-step` pinned as types | **landed** |
+| 8 | Depth — one ordering rule (plane + array order), the three-section Layers page with the depth glyph, reorder / change-of-plane commands, `elevation` + `elevation-step` pinned as types | **landed** |
 | 9 | Elevation runtime — per-storey tilemap triples via `zFor(plane, elevation)`, `ElevationComponent` + `ElevationStepComponent` + their system arriving together, the walk-on storey filter, stamps and the floor switcher | **planned** (see § Elevation; `TODO.md` § Engine / runtime) |
 
 ## Where this is implemented
@@ -261,8 +261,8 @@ These citations update as the work lands. Anything referenced here must exist in
 - `packages/engine/src/services/layer-order.ts` — `layerOrderIndex`, `sortRefsByLayerOrder`, `orderLayersForWalkOn`
 - `packages/engine/src/commands/layer-order.command.ts` + `services/layer-plane.service.ts` — `layer.reorder`, `layer.set-plane`
 - `packages/engine/src/format/MapFormat.ts` — plane / elevation validation, `properties.z` warning
-- `packages/gjs/src/widgets/editor/depth-glyph.ts` (+ `.geometry.ts`, `.probe.ts`), `layer-section.ts`, `layer-sections.ts`, `layers-tab.ts` — the glyph and the three-section tab
-- Editor UI: `apps/maker-gjs/src/widgets/objects-view.ts` + the scene-editor inspector tabs in `scene-editor-view.ts`
+- `packages/gjs/src/widgets/editor/depth-glyph.ts` (+ `.geometry.ts`, `.probe.ts`), `layer-section.ts`, `layer-sections.ts`, `layers-page.ts` — the glyph and the three-section page
+- Editor UI: `apps/maker-gjs/src/widgets/objects-view.ts` + the scene-editor inspector pages in `scene-editor-view.ts`
 
 ## What's NOT on the table
 
@@ -274,7 +274,7 @@ Decisions captured here so future PRs don't re-litigate them:
 
 ## Related concepts
 
-- [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (Library › Things, object tool, inspector tabs) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.entityLibrary` (project data), not on the session-singleton.
+- [`editor-architecture.md`](editor-architecture.md) — the editor UI for the object system (Library › Things, object tool, inspector pages) lives in the broader GTK-View / ECS-Model+Controller split. Library entries themselves stay on `GameProjectData.entityLibrary` (project data), not on the session-singleton.
 - [`runtime-modes.md`](runtime-modes.md) — trigger *effects* only fire while runtime is active because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`, the system that gates on `RuntimeModeComponent`. In pure editor mode the placements render but walk-onto/action triggers can't fire. (`auto` triggers fire on scene init regardless — no shipped template uses them yet.)
 - [`collaboration-and-multiplayer.md`](collaboration-and-multiplayer.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`, `LayerData.id`) are what op-log payloads are keyed on. The transport-compatibility constraint applies to all future schema changes: stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere.
 

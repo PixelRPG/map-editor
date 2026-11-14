@@ -9,7 +9,6 @@ import { gettext as _ } from 'gettext'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { DepthGlyph } from './depth-glyph.ts'
 import { GLYPH_SIZES } from './depth-glyph.geometry.ts'
-import type { ObjectBrushDescriptor } from './tiles-tab.ts'
 import { type TileDescriptor, TilePalette } from './tile-palette.ts'
 
 import Template from './brush-page.blp'
@@ -17,7 +16,18 @@ import Template from './brush-page.blp'
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(DepthGlyph.$gtype)
 
-/** The three planes, top of the world first — the order the Layers tab shows. */
+/** One placeable library object shown in the page's Things grid. */
+export interface ObjectBrushDescriptor {
+  /** Library entity id (string — unlike numeric tile ids). */
+  id: string
+  name?: string
+  /** Sprite thumbnail; falls back to {@link ObjectBrushDescriptor.color}. */
+  paintable?: Gdk.Paintable | null
+  /** Solid fallback swatch colour (e.g. the def's marker colour). */
+  color?: string
+}
+
+/** The three planes, top of the world first — the order the Layers page shows. */
 const CHIP_PLANES: readonly LayerPlane[] = ['overlay', 'hero', 'ground'] as const
 
 /** The child-legible name of each plane. The long form is the tooltip. */
@@ -45,12 +55,12 @@ export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
 
 /**
  * Everything that decides what the next stroke lays: which plane, which
- * layer, which tile, which object.
+ * layer, which tileset, which tile, which object.
  *
- * One instance with two homes — the brush badge's popover on wide
- * layouts, the bottom sheet's Brush page on phone — because "what a
- * layer looks like" should have one implementation, not a popover copy
- * and a sheet copy that drift. `SceneEditor.setLayout` moves it; nothing
+ * One instance with two homes — the wide inspector's Brush page and the
+ * phone sheet's Brush page — because "what the next stroke lays" should
+ * have one implementation, not an inspector copy and a sheet copy that
+ * drift. `EditorPages.host` moves it between the two slot sets; nothing
  * about the widget knows which home it is in.
  *
  * Pure view: it renders what the host pushes in and emits what the user
@@ -60,13 +70,18 @@ export class BrushPage extends Adw.Bin {
   declare _plane_chips: Adw.ToggleGroup
   declare _layer_label: Gtk.Label
   declare _layers_button: Gtk.Button
+  declare _tileset_row: Gtk.Box
+  declare _tileset_label: Gtk.Label
+  declare _switch_button: Gtk.Button
   declare _search: Gtk.SearchEntry
   declare _palette: TilePalette
+  declare _empty_state: Adw.StatusPage
   declare _objects_section: Gtk.Box
   declare _object_palette: TilePalette
   declare _objects_empty: Gtk.Label
 
   private _layerName = ''
+  private _tilesetName = ''
   private _tiles: TileDescriptor[] = []
   private _objectBrushIds: string[] = []
   private _activeTileId: number | null = null
@@ -84,8 +99,12 @@ export class BrushPage extends Adw.Bin {
           'plane_chips',
           'layer_label',
           'layers_button',
+          'tileset_row',
+          'tileset_label',
+          'switch_button',
           'search',
           'palette',
+          'empty_state',
           'objects_section',
           'object_palette',
           'objects_empty',
@@ -95,6 +114,13 @@ export class BrushPage extends Adw.Bin {
             'layer-name',
             'Layer Name',
             'Name of the active layer, shown above the palette',
+            GObject.ParamFlags.READWRITE,
+            '',
+          ),
+          'tileset-name': GObject.ParamSpec.string(
+            'tileset-name',
+            'Tileset Name',
+            'Name of the active tileset, shown above the palette',
             GObject.ParamFlags.READWRITE,
             '',
           ),
@@ -155,6 +181,16 @@ export class BrushPage extends Adw.Bin {
     this.notify('layer-name')
   }
 
+  get tilesetName(): string {
+    return this._tilesetName ?? ''
+  }
+
+  set tilesetName(value: string) {
+    if (this._tilesetName === value) return
+    this._tilesetName = value
+    this.notify('tileset-name')
+  }
+
   /** The project's player sprite, drawn in every plane chip's glyph. */
   set heroPaintable(paintable: Gdk.Paintable | null) {
     for (const plane of CHIP_PLANES) {
@@ -163,8 +199,14 @@ export class BrushPage extends Adw.Bin {
     }
   }
 
+  /** An empty list swaps the palette for the "Import a picture…" state. */
   setTiles(tiles: TileDescriptor[]): void {
     this._tiles = tiles
+    const has = tiles.length > 0
+    this._search.set_visible(has)
+    this._tileset_row.set_visible(has)
+    this._palette.set_visible(has)
+    this._empty_state.set_visible(!has)
     this._applyFilter()
   }
 

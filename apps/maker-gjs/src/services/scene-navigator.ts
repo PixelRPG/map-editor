@@ -15,7 +15,7 @@ export interface SceneNavigatorContext {
   ensureEngineForMap(projectPath: string, sceneId: string): Promise<void>
   /** A fresh engine is live — re-push window state, attach a waiting session. */
   onEngineReady(): void
-  /** Fill the inspector tabs from the project's map data. */
+  /** Fill the inspector pages from the project's map data. */
   populateInspector(project: LoadedProject, sceneId: string): Promise<void>
   /** Re-render the atlas from the (possibly mutated) project scenes. */
   refreshAtlasWorld(project: LoadedProject): void

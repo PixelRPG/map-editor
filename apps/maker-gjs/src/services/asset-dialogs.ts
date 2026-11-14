@@ -9,7 +9,7 @@ export interface TilesetChoice {
 }
 
 /**
- * Let the user re-point the Tiles-tab palette at another of the scene's
+ * Let the user re-point the Brush-page palette at another of the scene's
  * tilesets. Callers filter out the single-tileset case first — there is
  * nothing to choose from.
  */

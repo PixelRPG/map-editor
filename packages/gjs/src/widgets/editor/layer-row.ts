@@ -10,7 +10,7 @@ import Template from './layer-row.blp'
 GObject.type_ensure(DepthGlyph.$gtype)
 
 /**
- * Single row in the Layers tab.
+ * Single row in the Layers page.
  *
  * Composition: visibility toggle, depth glyph (the layer's plane), layer
  * name, tile-count caption, lock toggle. The `active` style class is
@@ -18,7 +18,7 @@ GObject.type_ensure(DepthGlyph.$gtype)
  *
  * Emits no signals of its own — state is exposed via `visible` /
  * `locked` properties (bidirectional bindings drive the toggle buttons)
- * and consumed by the parent {@link LayersTab}.
+ * and consumed by the parent {@link LayersPage}.
  */
 export class LayerRow extends Adw.Bin {
   declare _visibility_button: Gtk.ToggleButton

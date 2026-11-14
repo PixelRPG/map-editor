@@ -6,6 +6,7 @@ import type Gdk from '@girs/gdk-4.0'
 import { type EditorTool, type LayerPlane, type MapData, resolvePlacementDefinition } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
+  EditorPages,
   type Engine,
   GdkSpriteSetResource,
   type GdkSpriteSheet,
@@ -23,10 +24,9 @@ import type { LoadedProject } from '../services/project-loader.ts'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 import Template from './scene-editor-view.blp'
 import { paintableFor } from './scene-editor/object-descriptors.ts'
-import { wireLayersTab, wireObjectsTab, wirePropsTab, wireTilesTab } from './scene-editor/inspector-wiring.ts'
+import { wireBrushPage, wireLayersPage, wireSelectedPage } from './scene-editor/inspector-wiring.ts'
 import {
   buildBrushOptions,
-  buildPlacementRows,
   loadObjectSheets,
   type ObjectBrushOption,
   spriteSetIdsFor,
@@ -68,17 +68,22 @@ export interface SceneEditorViewSignals extends ResponsiveEditorViewSignals {
  * Maker-app **Scene Editor** view.
  *
  * One `Adw.OverlaySplitView` with the {@link SceneEditor} content on the
- * left and the {@link RightInspector} (Brush · Layers · Things ·
- * Selected) on the right. No shell navigation: the map editor is its own
- * `root_stack` page, reached from a map card and left through the back
- * affordance (REDESIGN.md § 3.4).
+ * left and the {@link RightInspector} on the right. No shell navigation:
+ * the map editor is its own `root_stack` page, reached from a map card
+ * and left through the back affordance (REDESIGN.md § 3.4).
+ *
+ * This view OWNS the three pages (Brush · Layers · Selected) as a single
+ * {@link EditorPages} set and hosts them in whichever container the
+ * layout calls for — the inspector when wide, the bottom sheet on phone
+ * (REDESIGN.md § 5.2). Every populate call therefore has exactly one
+ * target, whatever the window width.
  *
  * The active tile and layer live ONLY on the engine's session singleton
  * (`ActiveTileComponent` / `ActiveLayerComponent`); this view holds no
  * copy. It writes them through {@link _setActiveTile} /
  * {@link _setActiveLayer} and reads them back through
  * {@link _activeTileIndex} / {@link _activeLayerId} to re-render the two
- * surfaces that show them — the inspector tabs and the OSD chips.
+ * surfaces that show them — the pages and the OSD chips.
  *
  * The engine indexes tiles as global ids (`spriteIndex + firstGid`); the
  * inspector deals in 0-based indices, and `_tilesetFirstGid` bridges the
@@ -88,13 +93,15 @@ export class SceneEditorView extends ResponsiveEditorView {
   declare _editor: SceneEditor
   declare _inspector: RightInspector
 
+  /** The three pages, hosted by the inspector or the sheet — never both. */
+  private _pages = new EditorPages()
   private _sceneName = ''
   private _engine: Engine | null = null
   private _layers: LayerDescriptor[] = []
   /** The project's player sprite, drawn in every depth glyph (`null` = silhouette). */
   private _heroPaintable: Gdk.Paintable | null = null
   private _tiles: TileDescriptor[] = []
-  /** Placeable library objects — feeds the Tiles-tab grid + the context-chip popover. */
+  /** Placeable library objects — feeds the Brush-page grid + the context-chip popover. */
   private _objectBrushes: ObjectBrushOption[] = []
   /** The armed object brush (defId), mirrored from `win.set-object-brush`. */
   private _armedObjectId: string | null = null
@@ -109,7 +116,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _lastLayerByPlane = new Map<LayerPlane, string>()
   /** Session-local LRU of sheet-local tile ids behind the phone bar's strip. */
   private _recentTileIds: number[] = []
-  /** Per-placement info for the Props tab's "Selected object" group. */
+  /** Per-placement info for the Selected page's "Selected object" group. */
   private _placementInfo = new Map<
     string,
     { name: string; defId: string | null; tileX: number; tileY: number; layerId: string }
@@ -155,7 +162,7 @@ export class SceneEditorView extends ResponsiveEditorView {
           // listens because it tracks the project + scene paths
           // needed by `MapFormat.serialize` + `writeTextFile`.
           'persist-requested': { param_types: [] },
-          // A placement was removed via the Props tab — the host
+          // A placement was removed via the Selected page — the host
           // refreshes the inspector's placement list.
           'object-removed': { param_types: [] },
         },
@@ -170,34 +177,28 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   constructor() {
     super()
+    // `inspector-collapsed` only notifies on a CHANGE, so the initial
+    // layout has to be hosted by hand — otherwise the pages stay
+    // unparented until the first breakpoint crossing.
+    this._pages.host(this.inspectorCollapsed ? this._editor.pageSlots : this._inspector.pageSlots)
     this._wireInspectorSignals()
     this._wireEditorSignals()
   }
 
-  /**
-   * The chrome's own picks. `wireTilesTab`'s rule applies verbatim here:
-   * choosing a tile while the Object tool is armed means "paint this",
-   * so it arms the pencil first.
-   */
+  /** The chrome's own picks, which exist in both layouts. */
   private _wireEditorSignals(): void {
-    const page = this._editor.brushPage
-    page.connect('tile-selected', (_p: unknown, tileId: number) => {
-      if (this._activeTool === 'object') this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
-      this._setActiveTile(tileId)
-    })
-    page.connect('object-brush-selected', (_p: unknown, defId: string) =>
-      this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
-    )
-    page.connect('plane-selected', (_p: unknown, plane: string) => this._selectPlane(plane as LayerPlane))
-    page.connect('layers-requested', () => {
-      this.activate_action('win.set-inspector-tab', GLib.Variant.new_string('layers'))
-      this.showInspector = true
-    })
     this._editor.recentTiles.connect('tile-selected', (_r: unknown, tileId: number) => {
       if (this._activeTool === 'object' || this._activeTool === 'select') {
         this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
       }
       this._setActiveTile(tileId)
+    })
+    // The sheet at Half covers the bottom of the map, so anything the
+    // camera is asked to centre has to be centred in what is LEFT of it.
+    // The inset is host state, not an op — it must never reach a peer's
+    // camera, whose sheet is at its own detent.
+    this._editor.connect('detent-changed', () => {
+      this._engine?.setViewportInset({ bottom: this._editor.bottomInset })
     })
   }
 
@@ -239,15 +240,15 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._editor.setPlaying(playing)
   }
 
-  /** Mirror the global objects visibility into the Layers tab's Objects row (no re-emit). */
+  /** Mirror the global objects visibility into the Layers page's Objects row (no re-emit). */
   setObjectsVisible(visible: boolean): void {
-    this._inspector.layersTab.setObjectsState(this._placementInfo.size, visible)
+    this._pages.layers.setObjectsState(this._placementInfo.size, visible)
   }
 
   /**
    * Mirror an engine-side layer-flag change (the `LAYER_FLAG_CHANGED`
    * event — fired for local toggles, undo/redo AND inbound peer ops)
-   * into this view's `_layers` cache + the Layers tab's eye/padlock
+   * into this view's `_layers` cache + the Layers page's eye/padlock
    * row state. The tab write is re-emit-free, so a mirrored change
    * never dispatches a second command. This is the single owner of
    * the cache update — the toggle handlers themselves don't write it
@@ -256,7 +257,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void {
     const idx = this._layers.findIndex((l) => l.id === layerId)
     if (idx >= 0) this._layers[idx] = { ...this._layers[idx], [flag]: value }
-    this._inspector.layersTab.setLayerState(layerId, flag, value)
+    this._pages.layers.setLayerState(layerId, flag, value)
   }
 
   /** Push the live participant roster (AI + peers) to the context pill's chip. */
@@ -286,6 +287,30 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   protected _onInspectorCollapsedChanged(collapsed: boolean): void {
     this._editor.setLayout(collapsed ? 'phone' : 'wide')
+    // Re-parent, don't rebuild: `EditorPages` is the single set of page
+    // widgets, so the layer list, the palette and the selection survive
+    // the crossing with their state intact.
+    this._pages.host(collapsed ? this._editor.pageSlots : this._inspector.pageSlots)
+    // Shrinking a window with the drawer open leaves the property true
+    // on a width that has no drawer, and the next reveal would then be a
+    // no-op set. Shut it on the way in, not at the reveal.
+    if (collapsed) this.showInspector = false
+  }
+
+  /**
+   * On phone the editor has no inspector drawer — the three pages live
+   * in the bottom sheet (`_onInspectorCollapsedChanged` hosts them
+   * there), so the drawer would slide out empty. Every "reveal the
+   * inspector" caller — `win.toggle-inspector`, `win.select-placement`,
+   * `win.focus-placement` — therefore lands on the sheet instead, and
+   * the property snaps back to `false` so the window's bidirectional
+   * binding and the pill's toggle stay honest about a drawer that is
+   * not open.
+   */
+  protected _onShowInspectorChanged(showInspector: boolean): void {
+    if (!showInspector || !this.inspectorCollapsed) return
+    this.showInspector = false
+    this._editor.openSheet()
   }
 
   /** Push the tier down so the caption, the Play menu and "⋯" follow it. */
@@ -314,29 +339,27 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   /**
    * Mirror the armed object brush (from `win.set-object-brush`) into
-   * the Tiles-tab grid highlight + the context chip (when the Object
+   * the Brush page's Things grid + the context chip (when the Object
    * tool is active). `null` clears.
    */
   setArmedObjectBrush(defId: string | null): void {
     if (this._armedObjectId === defId) return
     this._armedObjectId = defId
-    this._inspector.tilesTab.selectObjectBrush(defId)
-    this._editor.brushPage.selectObjectBrush(defId)
+    this._pages.brush.selectObjectBrush(defId)
     if (this._activeTool === 'object') this._syncContextChip()
   }
 
   /**
-   * Sync the right-inspector's objects-tab row highlight with a
-   * canvas-driven selection (`PLACEMENT_SELECTED` event from the
-   * engine's select tool). Passing `null` clears the row highlight —
-   * matches what happens when the user clicks empty tile space with
-   * the select tool active. The canvas-side selection ring lives on
-   * the session-singleton's `SelectedPlacementsComponent`, mutated
-   * inside `TileEditorSystem.applySelect`, so it doesn't need to be
-   * re-applied here.
+   * Sync the Selected page with a canvas-driven selection
+   * (`PLACEMENT_SELECTED` event from the engine's select tool). Passing
+   * `null` empties the page — matches what happens when the user clicks
+   * empty tile space with the select tool active. The canvas-side
+   * selection ring lives on the session-singleton's
+   * `SelectedPlacementsComponent`, mutated inside
+   * `TileEditorSystem.applySelect`, so it doesn't need to be re-applied
+   * here.
    */
   highlightPlacement(placementId: string | null): void {
-    this._inspector.objectsTab.selectObject(placementId)
     this._syncSelectedObjectProps(placementId)
   }
 
@@ -369,7 +392,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     const copyId = this._engine?.excalibur?.duplicatePlacement(placementId)
     if (!copyId) return
     this._engine?.setSelectedPlacements([copyId])
-    this._inspector.objectsTab.selectObject(copyId)
     this._syncSelectedObjectProps(copyId)
   }
 
@@ -389,18 +411,17 @@ export class SceneEditorView extends ResponsiveEditorView {
     return selected.length === 1 ? selected[0] : null
   }
 
-  /** Drop a placement from the map and clear it out of the inspector. */
+  /** Drop a placement from the map and clear it out of the Selected page. */
   private _removePlacement(placementId: string): void {
     if (!this._engine?.excalibur?.removeObject(placementId)) return
     this._syncSelectedObjectProps(null)
-    this._inspector.objectsTab.selectObject(null)
     this.emit('object-removed')
   }
 
-  /** Push the selected placement into the Props tab's "Selected object" group (`null` hides it). */
+  /** Push the selected placement into the Selected page's object group (`null` hides it). */
   private _syncSelectedObjectProps(placementId: string | null): void {
     const info = placementId ? this._placementInfo.get(placementId) : null
-    this._inspector.propsTab.setSelectedObject(info && placementId ? { placementId, ...info } : null)
+    this._pages.selected.setSelectedObject(info && placementId ? { placementId, ...info } : null)
   }
 
   /** Whether the phone sheet is expanded over the canvas — back step 2. */
@@ -432,32 +453,40 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (!this.hasSelection()) return false
     this._engine?.setSelectedPlacements([])
     this._syncSelectedObjectProps(null)
-    this._inspector.objectsTab.selectObject(null)
     return true
   }
 
   /**
    * Select one placement and move the camera onto it — what
    * `win.focus-placement` lands on after opening the map (§ 3.4). Same
-   * three steps as picking the row in the Objects tab.
+   * steps as a canvas tap with the select tool.
    */
   focusPlacement(placementId: string): void {
     this._engine?.setSelectedPlacements([placementId])
     this._syncSelectedObjectProps(placementId)
-    this._inspector.objectsTab.selectObject(placementId)
-    // Fire-and-forget like the Objects tab's own pick: the engine
-    // resolves when the pan ends, or rejects when a later pick wins.
+    // Fire-and-forget: the engine resolves when the pan ends, or rejects
+    // when a later pick wins.
     void this._engine?.focusOnPlacement(placementId)
   }
 
   /**
-   * Switch the right inspector to a tab by name (`tiles` / `layers` /
-   * `objects` / `props`). Drives the `win.set-inspector-tab` action so
-   * tooling (the MCP bridge) can reach the Objects brush palette, the
-   * Layers list, etc. — the tab bar is otherwise click-only.
+   * Show one of the three pages (`brush` / `layers` / `selected`) and
+   * bring its container up: the bottom sheet on phone, the inspector
+   * drawer when wide. Backs `win.sheet-page`, so tooling (the MCP
+   * bridge) can reach the Things palette or the layer list, which are
+   * otherwise click-only.
+   *
+   * Both stacks get the page, not just the visible one: the pages move
+   * between the two containers on every breakpoint crossing, and a
+   * stack left on its old page would show the wrong one after the move.
+   *
+   * Revealing is one statement at both widths: on phone
+   * `_onShowInspectorChanged` turns it into the sheet.
    */
-  setInspectorTab(name: string): void {
+  showSheetPage(name: string): void {
     this._inspector.visiblePage = name
+    this._editor.sheetPage = name
+    this.showInspector = true
   }
 
   /** Header title + the floating chips. */
@@ -482,17 +511,17 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
-   * Populate the right-side inspector tabs from a real loaded project.
-   * Reads the active map's layers + first sprite-set from
-   * `LoadedProject.resource` and feeds them into the tiles / layers /
-   * props tabs.
+   * Populate the three editor pages from a real loaded project. Reads
+   * the active map's layers + first sprite-set from
+   * `LoadedProject.resource` and feeds them into the brush / layers /
+   * selected pages.
    */
   async populateFromProject(project: LoadedProject, sceneId: string): Promise<void> {
     const map = await project.resource.getMap(sceneId).catch(() => null)
     const mapData = map ?? project.resource.maps.get(sceneId)?.mapData
     if (!mapData) return
 
-    this._inspector.propsTab.setScene({
+    this._pages.selected.setScene({
       name: mapData.name ?? mapData.id,
       cols: mapData.columns,
       rows: mapData.rows,
@@ -501,13 +530,13 @@ export class SceneEditorView extends ResponsiveEditorView {
 
     const layers = toLayerDescriptors(mapData)
     this._layers = layers
-    this._inspector.layersTab.setLayers(layers)
-    this._inspector.layersTab.setObjectsState(
+    this._pages.layers.setLayers(layers)
+    this._pages.layers.setObjectsState(
       mapData.objectPlacements?.length ?? 0,
       this._engine?.excalibur?.getEditorViewFlags().objectsVisible ?? true,
     )
     if (layers.length) {
-      this._inspector.layersTab.selectLayer(layers[0].id)
+      this._pages.layers.selectLayer(layers[0].id)
       this._setActiveLayer(layers[0].id)
     }
 
@@ -521,17 +550,17 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (firstSet) {
       await this.loadTileset(project, firstSet.id, mapSpriteSetRef?.firstGid ?? 1)
     } else {
-      this._inspector.tilesTab.setTiles([])
+      this._pages.brush.setTiles([])
     }
   }
 
   /**
-   * Fill the Objects tab (the map's placements) and the Tiles tab's
-   * object-brush grid.
+   * Fill the Brush page's Things grid and the per-placement lookup the
+   * Selected page reads.
    *
    * Each placement resolves through the canonical resolver (inline, or
    * entity-library lookup by `defId`, with per-instance overrides merged);
-   * falling back to the placement id keeps a row labelled even when the
+   * falling back to the placement id keeps a placement named even when the
    * library lookup misses.
    */
   private async _populateObjects(project: LoadedProject, mapData: MapData): Promise<void> {
@@ -552,10 +581,9 @@ export class SceneEditorView extends ResponsiveEditorView {
     // The depth glyphs draw the project's own hero, so "above the hero"
     // is above THIS hero; a project without a player gets the silhouette.
     this._heroPaintable = paintableFor(playerDef, sheets)
-    this._inspector.layersTab.heroPaintable = this._heroPaintable
-    this._editor.brushPage.heroPaintable = this._heroPaintable
+    this._pages.layers.heroPaintable = this._heroPaintable
+    this._pages.brush.heroPaintable = this._heroPaintable
 
-    this._inspector.objectsTab.setObjects(buildPlacementRows(resolved, sheets))
     this._placementInfo = new Map(
       resolved.map(({ placement, def }) => [
         placement.id,
@@ -571,20 +599,18 @@ export class SceneEditorView extends ResponsiveEditorView {
 
     const brushOptions = buildBrushOptions(brushDefs, sheets)
     this._objectBrushes = brushOptions
-    this._inspector.tilesTab.setObjectBrushes(brushOptions)
-    this._editor.brushPage.setObjectBrushes(brushOptions)
+    this._pages.brush.setObjectBrushes(brushOptions)
     if (this._armedObjectId && !brushOptions.some((b) => b.id === this._armedObjectId)) this._armedObjectId = null
-    this._inspector.tilesTab.selectObjectBrush(this._armedObjectId)
-    this._editor.brushPage.selectObjectBrush(this._armedObjectId)
+    this._pages.brush.selectObjectBrush(this._armedObjectId)
   }
 
-  /** The sprite-set id currently feeding the Tiles-tab palette. */
+  /** The sprite-set id currently feeding the Brush page's palette. */
   get activeTilesetId(): string {
     return this._tilesetName
   }
 
   /**
-   * Load `spriteSetId` into the Tiles-tab palette as the active painting
+   * Load `spriteSetId` into the Brush page's palette as the active painting
    * tileset, offsetting tile ids by `firstGid`. Extracted from
    * {@link populateFromProject} so the "Switch…" tileset action can
    * re-point the palette to another of the map's tilesets (the win
@@ -596,20 +622,19 @@ export class SceneEditorView extends ResponsiveEditorView {
       if (!engineSet) return
       const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
       if (!gdkSet.spriteSheet) return
-      this._inspector.tilesTab.tilesetName = engineSet.data?.name ?? spriteSetId
+      this._pages.brush.tilesetName = engineSet.data?.name ?? spriteSetId
       this._tilesetName = spriteSetId
       this._tilesetFirstGid = firstGid
       const tiles = this._sheetToTiles(gdkSet.spriteSheet)
       this._tiles = tiles
-      this._inspector.tilesTab.setTiles(tiles)
-      this._editor.brushPage.setTiles(tiles)
+      this._pages.brush.setTiles(tiles)
       // A fresh sheet starts the recency list over: ids are sheet-local,
       // so carrying the old ones across would ring the wrong swatches.
       this._recentTileIds = tiles.slice(0, 8).map((tile) => tile.id)
       this._refreshRecentTiles()
       if (tiles.length) this._setActiveTile(tiles[0].id)
     } catch (error) {
-      console.warn('[SceneEditorView] Failed to load sprite set for tiles tab:', error)
+      console.warn('[SceneEditorView] Failed to load sprite set for Brush page:', error)
     }
   }
 
@@ -647,8 +672,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     // Mirror selection back into every surface that shows it, wherever
     // the change came from: the inspector palette, the brush page, and
     // the phone bar's recent strip.
-    this._inspector.tilesTab.selectTile(tileId)
-    this._editor.brushPage.selectTile(tileId)
+    this._pages.brush.selectTile(tileId)
     this._recentTileIds = pushRecent(this._recentTileIds, tileId)
     this._refreshRecentTiles()
   }
@@ -685,13 +709,13 @@ export class SceneEditorView extends ResponsiveEditorView {
     return this._activeLayerId
   }
 
-  /** Make `layerId` the active layer — engine, top-bar chip and Layers tab together. */
+  /** Make `layerId` the active layer — engine, top-bar chip and Layers page together. */
   selectLayer(layerId: string): void {
     this._setActiveLayer(layerId)
   }
 
   /**
-   * Re-read the map's layer list into the Layers tab + popover after a
+   * Re-read the map's layer list into the Layers page + popover after a
    * `LAYER_LIST_CHANGED` (add / reorder / change of plane on ANY path —
    * local drop, undo, redo, a peer's op). Keeps the active layer; the
    * caller passes the live `mapData`, which is the single owner of the
@@ -699,10 +723,10 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   refreshLayers(mapData: MapData): void {
     this._layers = toLayerDescriptors(mapData)
-    this._inspector.layersTab.setLayers(this._layers)
+    this._pages.layers.setLayers(this._layers)
     const activeId = this._activeLayerId
     if (activeId) {
-      this._inspector.layersTab.selectLayer(activeId)
+      this._pages.layers.selectLayer(activeId)
       const layer = this._layers.find((l) => l.id === activeId)
       if (layer) this._applyActiveLayer(layer.id, layer)
     }
@@ -741,7 +765,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const layer = this._layers.find((l) => l.id === layerId)
     this._applyActiveLayer(layerId, layer)
     // Mirror selection back to the inspector layers tab.
-    this._inspector.layersTab.selectLayer(layerId)
+    this._pages.layers.selectLayer(layerId)
   }
 
   /**
@@ -754,8 +778,8 @@ export class SceneEditorView extends ResponsiveEditorView {
     const plane = layer ? planeOf(layer) : 'ground'
     this._activeLayerName = layer?.name ?? layerId
     this._editor.brushBadge.plane = plane
-    this._editor.brushPage.layerName = this._activeLayerName
-    this._editor.brushPage.setActivePlane(plane, populatedPlanes(this._layers))
+    this._pages.brush.layerName = this._activeLayerName
+    this._pages.brush.setActivePlane(plane, populatedPlanes(this._layers))
     this._lastLayerByPlane.set(plane, layerId)
     this._syncBrushLabel()
   }
@@ -782,7 +806,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
-   * A row dropped in the Layers tab: same plane → a reorder, another
+   * A row dropped in the Layers page: same plane → a reorder, another
    * plane → a change of plane (which carries the position too). Both
    * are registered commands, so undo and peers follow; the resulting
    * `LAYER_LIST_CHANGED` re-reads the list into the tab.
@@ -831,13 +855,15 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   private _wireInspectorSignals(): void {
-    wireTilesTab(this._inspector.tilesTab, {
+    wireBrushPage(this._pages.brush, {
       isObjectToolActive: () => this._activeTool === 'object',
       armPencilTool: () => this.activate_action('win.set-tool', GLib.Variant.new_string('pencil')),
       setActiveTile: (tileId) => this._setActiveTile(tileId),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
+      selectPlane: (plane) => this._selectPlane(plane),
+      openLayersPage: () => this.showSheetPage('layers'),
     })
-    wireLayersTab(this._inspector.layersTab, {
+    wireLayersPage(this._pages.layers, {
       setActiveLayer: (layerId) => this._setActiveLayer(layerId),
       setLayerVisible: (layerId, visible) => this._engine?.setLayerVisible(layerId, visible),
       setLayerLocked: (layerId, locked) => this._engine?.setLayerLocked(layerId, locked),
@@ -845,16 +871,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       persistMapData: () => this._persistMapData(),
       toggleObjectsVisibility: () => this.activate_action('win.toggle-objects', null),
     })
-    wireObjectsTab(this._inspector.objectsTab, {
-      selectPlacement: (placementId) => {
-        this._engine?.setSelectedPlacements([placementId])
-        this._syncSelectedObjectProps(placementId)
-        // Fire-and-forget: the engine resolves the pan when the camera
-        // move ends, or rejects when a second pick supersedes it.
-        void this._engine?.focusOnPlacement(placementId)
-      },
-    })
-    wirePropsTab(this._inspector.propsTab, {
+    wireSelectedPage(this._pages.selected, {
       openObjectDefinition: (defId) => this.activate_action('win.open-object', GLib.Variant.new_string(defId)),
       removePlacement: (placementId) => this._removePlacement(placementId),
     })

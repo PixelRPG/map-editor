@@ -109,7 +109,7 @@ export class LayerOperations {
 
   /**
    * Move a layer to another plane, optionally to a position inside the
-   * list at the same time (a drag between the Layers tab's sections
+   * list at the same time (a drag between the Layers page's sections
    * lands at a row, not just in a bucket). One command, one undo step.
    * `false` without an active map or for an unknown id; `true` when
    * nothing changes, which dispatches nothing.

@@ -9,7 +9,7 @@ import type { SpriteDataSet } from '../types/data/index.ts'
  *      load-time path carries this; live edits via `MapEditorComponent`
  *      lose the field (pre-existing limitation — there is no UI for
  *      placement-level overrides yet).
- *   2. `definition.solid` — the sprite-set wall flag (Tiles tab Solid
+ *   2. `definition.solid` — the sprite-set wall flag (Brush page Solid
  *      switch + the Tiled `<objectgroup>` porter). An explicit `false`
  *      wins over the walkable fallback below.
  *   3. `definition.tileProperties.walkable === false` — the semantic

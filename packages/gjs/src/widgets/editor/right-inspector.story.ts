@@ -1,9 +1,10 @@
 import GObject from '@girs/gobject-2.0'
 import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
 import { buildDemoTiles } from '../../__demo__/world-sample'
+import { EditorPages } from './editor-pages'
 import { RightInspector } from './right-inspector'
 
-/** Showcase for the inspector pane with Tiles/Layers/Props tabs. */
+/** Showcase for the inspector pane hosting the Brush/Layers/Selected pages. */
 export class RightInspectorStory extends StoryWidget {
   private _inspector: RightInspector | null = null
 
@@ -14,7 +15,7 @@ export class RightInspectorStory extends StoryWidget {
   constructor() {
     super({
       story: 'Default',
-      args: { activeTab: 'tiles' },
+      args: { activePage: 'brush' },
       meta: RightInspectorStory.getMetadata(),
     })
   }
@@ -22,17 +23,17 @@ export class RightInspectorStory extends StoryWidget {
   static getMetadata(): StoryMeta {
     return {
       title: 'Editor/Right Inspector',
-      description: 'Right-pane inspector with Tiles · Layers · Props tabs; switcher bar at the bottom.',
+      description: 'Right-pane host for the Brush · Layers · Selected pages; switcher bar at the bottom.',
       component: RightInspector.$gtype,
       controls: [
         {
-          name: 'activeTab',
-          label: 'Active tab',
+          name: 'activePage',
+          label: 'Active page',
           type: ControlType.SELECT,
           options: [
-            { label: 'Tiles', value: 'tiles' },
+            { label: 'Brush', value: 'brush' },
             { label: 'Layers', value: 'layers' },
-            { label: 'Props', value: 'props' },
+            { label: 'Selected', value: 'selected' },
           ],
         },
       ],
@@ -42,16 +43,21 @@ export class RightInspectorStory extends StoryWidget {
   initialize(): void {
     const inspector = new RightInspector()
     inspector.set_size_request(300, 520)
-    inspector.tilesTab.tilesetName = 'Lokiri Forest'
-    inspector.tilesTab.setTiles(buildDemoTiles(20))
-    inspector.layersTab.setLayers([
+    // The app owns the page instances and hands them to whichever layout
+    // is showing; the story plays that host. No field keeps `pages` alive:
+    // `host()` parents each widget into a slot, and the slot holds the ref.
+    const pages = new EditorPages()
+    pages.host(inspector.pageSlots)
+    pages.brush.tilesetName = 'Lokiri Forest'
+    pages.brush.setTiles(buildDemoTiles(20))
+    pages.layers.setLayers([
       { id: 'bg', name: 'Background', tileCount: 248, plane: 'ground' },
       { id: 'mid', name: 'Midground', tileCount: 96, plane: 'hero' },
       { id: 'fg', name: 'Foreground', tileCount: 18, plane: 'overlay' },
       { id: 'events', name: 'Events', tileCount: 6, locked: true },
     ])
-    inspector.layersTab.selectLayer('bg')
-    inspector.propsTab.setScene({
+    pages.layers.selectLayer('bg')
+    pages.selected.setScene({
       name: 'Whispering Forest',
       cols: 32,
       rows: 24,
@@ -61,14 +67,14 @@ export class RightInspectorStory extends StoryWidget {
       encounters: 'Common slimes',
       onEnter: 'Spawn deer NPC',
     })
-    inspector.visiblePage = this.args.activeTab as string
+    inspector.visiblePage = (this.args.activePage as string) ?? 'brush'
     this._inspector = inspector
     this.addContent(inspector)
   }
 
   updateArgs(_args: StoryArgs): void {
     if (!this._inspector) return
-    if (typeof this.args.activeTab === 'string') this._inspector.visiblePage = this.args.activeTab
+    if (typeof this.args.activePage === 'string') this._inspector.visiblePage = this.args.activePage
   }
 }
 

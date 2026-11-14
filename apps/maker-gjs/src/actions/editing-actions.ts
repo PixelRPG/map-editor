@@ -11,14 +11,14 @@ export interface EditingActionsContext {
   setViewTool(tool: EditorTool): void
   /** Arm (or clear, on `null`) the entity the object tool stamps. */
   setEngineObjectBrush(defId: string | null): void
-  /** Mirror the armed brush into the Tiles-tab grid + the context chip. */
+  /** Mirror the armed brush into the Brush-page grid + the context chip. */
   setViewObjectBrush(defId: string | null): void
   setSelectedPlacements(placementIds: readonly string[]): void
-  /** Highlight the placement's row in the inspector's Objects tab. */
+  /** Fill the Selected page from the placement (or clear it on `null`). */
   highlightPlacement(placementId: string | null): void
   /** Open the right inspector (a hit selection has content to show). */
   revealInspector(): void
-  /** Reveal the inspector on the Properties tab for the current selection. */
+  /** Show the Selected page for the current selection. */
   editPlacement(): void
   /** Duplicate the current selection one tile over, then select the copy. */
   copyPlacement(): void

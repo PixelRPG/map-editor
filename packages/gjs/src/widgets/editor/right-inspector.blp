@@ -61,15 +61,19 @@ template $PixelRpgRightInspector : Adw.Bin {
         vexpand: true;
         hscrollbar-policy: never;
 
+        // The pages themselves are NOT built here: one set of page
+        // widgets lives in `EditorPages` and is hosted either in these
+        // slots or in the phone sheet's, never both. See
+        // `docs/concepts/responsive-chrome.md`.
         child: Adw.ViewStack stack {
         vexpand: true;
 
         Adw.ViewStackPage {
-          name: "tiles";
+          name: "brush";
           title: _("Brush");
           icon-name: "view-grid-symbolic";
 
-          child: $PixelRpgTilesTab tiles_tab {};
+          child: Adw.Bin brush_slot {};
         }
 
         Adw.ViewStackPage {
@@ -77,23 +81,15 @@ template $PixelRpgRightInspector : Adw.Bin {
           title: _("Layers");
           icon-name: "view-list-symbolic";
 
-          child: $PixelRpgLayersTab layers_tab {};
+          child: Adw.Bin layers_slot {};
         }
 
         Adw.ViewStackPage {
-          name: "objects";
-          title: _("Things");
-          icon-name: "preferences-system-symbolic";
-
-          child: $PixelRpgObjectsTab objects_tab {};
-        }
-
-        Adw.ViewStackPage {
-          name: "props";
+          name: "selected";
           title: _("Selected");
           icon-name: "document-properties-symbolic";
 
-          child: $PixelRpgPropsTab props_tab {};
+          child: Adw.Bin selected_slot {};
         }
         };
       };

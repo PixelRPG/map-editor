@@ -63,7 +63,7 @@ function resolveLayer(scene: Scene, layerId: string) {
  * - **Object placements** — actors spawned for
  *   `MapData.objectPlacements` get their `graphics.visible` flipped.
  *   A single layer can carry both, so both surfaces flip together.
- *   Combined with the global objects toggle (Layers tab "Objects"
+ *   Combined with the global objects toggle (Layers page "Objects"
  *   row): a placement renders only when BOTH are on.
  *
  * Living in the command (not the Engine) means the remote-apply path

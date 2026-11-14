@@ -16,7 +16,7 @@ export type LayerListChange = EngineEventMap[EngineEvent.LAYER_LIST_CHANGED]
 
 /**
  * Map a layer-flag command + the direction it is being applied in to the
- * `LAYER_FLAG_CHANGED` payload the host's Layers tab mirrors — or `null`
+ * `LAYER_FLAG_CHANGED` payload the host's Layers page mirrors — or `null`
  * for any command that isn't a layer-flag toggle.
  *
  * Pure counterpart of `Engine._emitLayerFlagChanged`: the engine emits
@@ -43,7 +43,7 @@ export function layerFlagChange(command: Command, direction: 'apply' | 'revert')
 
 /**
  * Map a command that changes the layer LIST (add, reorder, change of
- * plane) to the `LAYER_LIST_CHANGED` payload the host's Layers tab
+ * plane) to the `LAYER_LIST_CHANGED` payload the host's Layers page
  * re-reads the map on — or `null` for any other command. Direction is
  * irrelevant: apply and revert both leave the list different from
  * what the tab shows, and the tab reads the list back from the map.

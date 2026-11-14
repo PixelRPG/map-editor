@@ -23,7 +23,10 @@ template $PixelRpgSceneEditor : Adw.Bin {
   //    own `Gtk.Overlay` child.
   //
   // The wide<->phone switch is therefore `SceneEditor.setLayout`, which
-  // moves three small GL-free widgets between slots.
+  // moves two small GL-free widgets between slots. The three inspector
+  // pages are not among them: `EditorPages` keeps one set of page
+  // widgets and the host re-parents them into whichever slot pair the
+  // layout uses (`pageSlots` here and on `RightInspector`).
   Adw.BreakpointBin ladder {
     // The bin measures the CANVAS, which is what the pills have to fit
     // into — not the window, which is wider whenever a sidebar is open.
@@ -99,7 +102,9 @@ template $PixelRpgSceneEditor : Adw.Bin {
     child: Adw.BottomSheet bottom_sheet {
       modal: false;
       full-width: true;
-      show-drag-handle: true;
+      // Off: `sheet_grabber` in the sheet box is the handle. Two handles
+      // would stack, and libadwaita's own is unreachable from here.
+      show-drag-handle: false;
       can-open: false;
       reveal-bottom-bar: false;
 
@@ -197,7 +202,13 @@ template $PixelRpgSceneEditor : Adw.Bin {
             // `setLayout`, so there is one armed-tool state.
             Adw.Bin tools_slot_top {}
 
-            Gtk.MenuButton badge_button {
+            // Not a `Gtk.MenuButton` with its own popover copy of the
+            // brush surface: it opens the ONE Brush page where the
+            // current layout keeps it — the inspector here, the sheet on
+            // phone. `action-target` is set in TS: Blueprint has no
+            // syntax for a GVariant literal.
+            Gtk.Button badge_button {
+              action-name: "win.sheet-page";
               tooltip-text: _("Brush");
               styles ["flat", "badge-button"]
 
@@ -404,9 +415,87 @@ template $PixelRpgSceneEditor : Adw.Bin {
         $PixelRpgRecentTiles recent_tiles {}
       };
 
-      // The brush surface: the same instance the badge's popover holds
-      // on wide layouts.
-      sheet: Adw.Bin brush_slot_sheet {};
+      // The phone home of the editor pages — the SAME three widgets the
+      // wide inspector hosts, moved here by `EditorPages.host`.
+      //
+      // A plain box, deliberately NOT an `Adw.ToolbarView`: that widget's
+      // `[top]` slot sits inside a `GtkWindowHandle`, and the sheet's own
+      // swipe tracker force-claims every drag that starts on a window
+      // handle (`should_force_drag` in adw-swipe-tracker.c), so our
+      // detent gesture would never see one.
+      //
+      // Its natural height IS the sheet's height: libadwaita measures
+      // this child and allocates that (adw-bottom-sheet.c), and
+      // `sheet-height` itself is read-only. `Gtk.ScrolledWindow` does not
+      // propagate its child's natural height, so the box measures to
+      // whatever `height-request` `SceneEditor._setSheetHeight` puts on
+      // it — which is how the detents move at all.
+      sheet: Gtk.Box sheet_view {
+        orientation: vertical;
+
+        // Our own drag handle. libadwaita's is an internal `AdwGizmo`
+        // with `can-target: false`, parented outside this template, so
+        // `show-drag-handle` is off and this strip carries the drag and
+        // the tap instead.
+        Gtk.Box sheet_grabber {
+          styles ["sheet-grabber"]
+
+          tooltip-text: _("Drag to resize, tap to cycle");
+
+          Adw.Bin {
+            styles ["sheet-grabber-pill"]
+
+            hexpand: true;
+            halign: center;
+            valign: center;
+          }
+        }
+
+        Adw.InlineViewSwitcher sheet_switcher {
+          stack: sheet_stack;
+          display-mode: labels;
+          homogeneous: false;
+          can-shrink: true;
+          halign: center;
+          margin-bottom: 6;
+          margin-start: 12;
+          margin-end: 12;
+        }
+
+        Gtk.ScrolledWindow sheet_scroller {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: never;
+
+          child: Adw.ViewStack sheet_stack {
+            vexpand: true;
+
+            Adw.ViewStackPage {
+              name: "brush";
+              title: _("Brush");
+              icon-name: "view-grid-symbolic";
+
+              child: Adw.Bin brush_slot_sheet {};
+            }
+
+            Adw.ViewStackPage {
+              name: "layers";
+              title: _("Layers");
+              icon-name: "view-list-symbolic";
+
+              child: Adw.Bin layers_slot_sheet {};
+            }
+
+            Adw.ViewStackPage {
+              name: "selected";
+              title: _("Selected");
+              icon-name: "document-properties-symbolic";
+
+              child: Adw.Bin selected_slot_sheet {};
+            }
+          };
+        }
+      };
     };
   }
 }

@@ -24,7 +24,7 @@ export interface ReorderLayerPayload {
  * field (possibly absent — a legacy layer that relied on the ground
  * default) so `revert` puts the file back exactly, key-less if it was.
  * A change of plane also carries a list position, because a drag from
- * one section of the Layers tab into another lands at a row, and that
+ * one section of the Layers page into another lands at a row, and that
  * row is an array index: one command, one undo step.
  */
 export interface SetLayerPlanePayload {

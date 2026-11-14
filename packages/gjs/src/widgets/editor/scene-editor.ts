@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
@@ -15,10 +16,12 @@ import {
   effectiveStage,
 } from './chrome-stages.ts'
 import { BrushBadge } from './brush-badge.ts'
-import { BrushPage } from './brush-page.ts'
+import type { PageSlots } from './editor-pages.ts'
 import { FloatingPlay } from './floating-play.ts'
 import { RecentTiles } from './recent-tiles.ts'
 import { RosterChip } from './roster-chip.ts'
+import { SheetDetentController } from './sheet-detent-controller.ts'
+import type { SheetDetent } from './sheet-detents.ts'
 import { ToolGroup } from './tool-group.ts'
 import { ZoomOsd } from './zoom-osd.ts'
 
@@ -30,6 +33,17 @@ GObject.type_ensure(RecentTiles.$gtype)
 
 /** The two chrome layouts. `phone` is what `inspector-collapsed` (<768sp) selects. */
 export type SceneEditorLayout = 'wide' | 'phone'
+
+/** `win.sheet-page`'s target for every affordance that means "the brush". */
+const BRUSH_PAGE_TARGET = GLib.Variant.new_string('brush')
+
+/**
+ * Typed view of the signals {@link SceneEditor} registers, layered on
+ * the parent's own so inherited signals keep their argument lists.
+ */
+export interface SceneEditorSignals extends Adw.Bin.SignalSignatures {
+  'detent-changed': (detent: SheetDetent) => void
+}
 
 /**
  * Scene-editor content surface: the striped backdrop, the engine slot,
@@ -47,11 +61,15 @@ export type SceneEditorLayout = 'wide' | 'phone'
  * and layer are now one compound {@link BrushBadge} beside the tool
  * chooser, and undo is a button at every width.
  *
- * `setLayout` is the whole wide↔phone switch, and it moves exactly three
+ * `setLayout` is the whole wide↔phone switch, and it moves exactly two
  * widgets. The engine canvas is not one of them: it tears down in
  * `vfunc_unroot`, so it keeps one parent for the life of the view.
  */
 export class SceneEditor extends Adw.Bin {
+  declare connect: GObject.SignalMethods<this, SceneEditorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SceneEditorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SceneEditorSignals>['emit']
+
   declare _ladder: Adw.BreakpointBin
   declare _bottom_sheet: Adw.BottomSheet
   declare _overlay: Gtk.Overlay
@@ -63,7 +81,7 @@ export class SceneEditor extends Adw.Bin {
   declare _undo_button: Gtk.Button
   declare _redo_button: Gtk.Button
   declare _tools_slot_top: Adw.Bin
-  declare _badge_button: Gtk.MenuButton
+  declare _badge_button: Gtk.Button
   declare _badge_slot_top: Adw.Bin
   declare _badge_label: Gtk.Label
   declare _back_circle: Gtk.Button
@@ -88,7 +106,14 @@ export class SceneEditor extends Adw.Bin {
   declare _tools_slot_bar: Adw.Bin
   declare _badge_slot_bar: Adw.Bin
   declare _recent_tiles: RecentTiles
+  declare _sheet_view: Gtk.Box
+  declare _sheet_grabber: Gtk.Box
+  declare _sheet_switcher: Adw.InlineViewSwitcher
+  declare _sheet_scroller: Gtk.ScrolledWindow
+  declare _sheet_stack: Adw.ViewStack
   declare _brush_slot_sheet: Adw.Bin
+  declare _layers_slot_sheet: Adw.Bin
+  declare _selected_slot_sheet: Adw.Bin
 
   private _engineWidget: Gtk.Widget | null = null
   private _layout: SceneEditorLayout = 'wide'
@@ -99,12 +124,10 @@ export class SceneEditor extends Adw.Bin {
   private _mapName = ''
   private _cursorText = ''
 
-  /** The three widgets `setLayout` moves, plus the surfaces they move between. */
+  /** The widgets `setLayout` moves, plus the surfaces they move between. */
   private _badge = new BrushBadge({ size: BADGE_SIZES.wide })
   private _toolGroup = new ToolGroup()
-  private _brushPage = new BrushPage()
   private _rosterChip = new RosterChip()
-  private _brushPopover = new Gtk.Popover()
   private _phoneBadgeButton = new Gtk.Button()
 
   /**
@@ -118,11 +141,27 @@ export class SceneEditor extends Adw.Bin {
    */
   private _placementMenu = new Gtk.PopoverMenu({ hasArrow: false })
 
+  /**
+   * The sheet's three detents. Built in the constructor because it needs
+   * the template's children; everything it decides is in
+   * `sheet-detents.ts`, so this widget only forwards the result on.
+   */
+  private _detents: SheetDetentController
+
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgSceneEditor',
         Template,
+        Signals: {
+          /**
+           * The phone sheet settled on a new detent (`peek` | `half` |
+           * `full`). The host answers it by reading {@link bottomInset}
+           * and ducking the camera, which is why the detent is a signal
+           * and not just a getter.
+           */
+          'detent-changed': { param_types: [GObject.TYPE_STRING] },
+        },
         InternalChildren: [
           'ladder',
           'bottom_sheet',
@@ -155,7 +194,14 @@ export class SceneEditor extends Adw.Bin {
           'tools_slot_bar',
           'badge_slot_bar',
           'recent_tiles',
+          'sheet_view',
+          'sheet_grabber',
+          'sheet_switcher',
+          'sheet_scroller',
+          'sheet_stack',
           'brush_slot_sheet',
+          'layers_slot_sheet',
+          'selected_slot_sheet',
         ],
         Properties: {
           stage: GObject.ParamSpec.string(
@@ -201,18 +247,34 @@ export class SceneEditor extends Adw.Bin {
 
   constructor() {
     super()
+    this._detents = new SheetDetentController(
+      {
+        sheet: this._bottom_sheet,
+        view: this._sheet_view,
+        grabber: this._sheet_grabber,
+        scroller: this._sheet_scroller,
+        canvas: this,
+      },
+      (detent) => {
+        this._applyToastClearance()
+        this.emit('detent-changed', detent)
+      },
+    )
     this._badge_slot_top.set_child(this._badge)
     this._tools_slot_top.set_child(this._toolGroup)
     this._roster_slot.set_child(this._rosterChip)
 
-    this._brushPopover.set_child(this._brushPage)
-    this._badge_button.set_popover(this._brushPopover)
+    // Blueprint has no GVariant literal, so every `win.sheet-page`
+    // target is set here. `check-blp-actions.mjs` only validates the
+    // action NAME, which the template still carries.
+    this._badge_button.set_action_target_value(BRUSH_PAGE_TARGET)
 
     this._phoneBadgeButton.add_css_class('flat')
     this._phoneBadgeButton.add_css_class('badge-phone')
     this._phoneBadgeButton.set_tooltip_text(_('Brush'))
-    this._phoneBadgeButton.connect('clicked', () => this._bottom_sheet.set_open(true))
-    this._recent_tiles.connect('expand-requested', () => this._bottom_sheet.set_open(true))
+    this._phoneBadgeButton.set_action_name('win.sheet-page')
+    this._phoneBadgeButton.set_action_target_value(BRUSH_PAGE_TARGET)
+    this._recent_tiles.connect('expand-requested', () => this.activate_action('win.sheet-page', BRUSH_PAGE_TARGET))
     // The roster chip's WIDTH is what decides whether the tool group
     // still fits beside it, and that width changes both when the chip
     // appears and when another participant joins an already-visible one.
@@ -266,8 +328,39 @@ export class SceneEditor extends Adw.Bin {
     return this._toolGroup
   }
 
-  get brushPage(): BrushPage {
-    return this._brushPage
+  /** The three bins the shell hands to `EditorPages.host` on phone. */
+  get pageSlots(): PageSlots {
+    return { brush: this._brush_slot_sheet, layers: this._layers_slot_sheet, selected: this._selected_slot_sheet }
+  }
+
+  get sheetPage(): string {
+    return this._sheet_stack.get_visible_child_name() ?? 'brush'
+  }
+
+  set sheetPage(name: string) {
+    this._sheet_stack.set_visible_child_name(name)
+  }
+
+  /**
+   * Reveal the sheet over the canvas at Half. No-op on wide, where it
+   * can't open — and no-op at Full, so opening the sheet on a page that
+   * is already fully showing never shrinks it.
+   */
+  openSheet(): void {
+    if (this._detents.detent === 'peek') this._detents.setDetent('half')
+  }
+
+  /** Which detent the sheet rests at. `peek` is the docked bar. */
+  get detent(): SheetDetent {
+    return this._detents.detent
+  }
+
+  /**
+   * How far, in px, the camera has to lift its focus point so a focused
+   * tile is not behind the sheet. Read by the host on `detent-changed`.
+   */
+  get bottomInset(): number {
+    return this._detents.bottomInset
   }
 
   get rosterChip(): RosterChip {
@@ -288,16 +381,20 @@ export class SceneEditor extends Adw.Bin {
    * wider rung — where the brush lives in a popover instead.
    */
   get sheetOpen(): boolean {
-    return this._bottom_sheet.get_open()
+    return this._detents.detent !== 'peek'
   }
 
   /**
    * Collapse the sheet back to its peek bar, and say whether there was
    * anything to collapse. Step 2 of the back order (REDESIGN.md § 3.4).
+   *
+   * ONE step, straight to Peek, even from Full: back has a pinned order
+   * (`resolveBackStep`), and a stepwise Full → Half → Peek would put two
+   * back presses where the smoke scenario and the docs count one.
    */
   collapseSheet(): boolean {
-    if (!this._bottom_sheet.get_open()) return false
-    this._bottom_sheet.set_open(false)
+    if (this._detents.detent === 'peek') return false
+    this._detents.setDetent('peek')
     return true
   }
 
@@ -406,9 +503,13 @@ export class SceneEditor extends Adw.Bin {
   }
 
   /**
-   * The whole wide↔phone switch. Six steps, three of which move a small,
+   * The whole wide↔phone switch. Five steps, two of which move a small,
    * GL-free widget between two slots; the sheet and the canvas never
    * move, so the Excalibur loop never sees an unroot.
+   *
+   * The three editor pages are NOT moved here — the shell owns that set
+   * and hosts it from `inspector-collapsed` (`EditorPages.host`), which
+   * is the same signal this method follows.
    */
   setLayout(layout: SceneEditorLayout): void {
     if (this._layout === layout) return
@@ -428,19 +529,11 @@ export class SceneEditor extends Adw.Bin {
       this._badge_slot_top.set_child(this._badge)
     }
     this._badge.size = phone ? BADGE_SIZES.phone : BADGE_SIZES.wide
-    // 3. The brush surface: badge popover ↔ sheet.
-    if (phone) {
-      this._brushPopover.set_child(null)
-      this._brush_slot_sheet.set_child(this._brushPage)
-    } else {
-      this._brush_slot_sheet.set_child(null)
-      this._brushPopover.set_child(this._brushPage)
-    }
-    // 4. Four tools instead of six.
+    // 3. Four tools instead of six.
     this._toolGroup.phone = phone
-    // 5. The sheet stops being inert.
+    // 4. The sheet stops being inert.
     this._bottom_sheet.set_can_open(phone)
-    // 6. Which buttons the pills carry, from `chrome-stages.ts`.
+    // 5. Which buttons the pills carry, from `chrome-stages.ts`.
     this._applyVisibility()
     this._updateCursorCaption()
     this._updateOverflowMenu()
@@ -523,6 +616,17 @@ export class SceneEditor extends Adw.Bin {
     const wanted = this._layout === 'phone' && !this._playing
     if (wanted) root.add_css_class('sheet-peeking')
     else root.remove_css_class('sheet-peeking')
+  }
+
+  /**
+   * Half and Full are shares of the editor's height, so a rotation or a
+   * window resize moves them. Re-applied here rather than from a
+   * `notify::` because the height is only known once it is allocated;
+   * `reapply` is guarded against re-entering the relayout it sits in.
+   */
+  vfunc_size_allocate(width: number, height: number, baseline: number): void {
+    super.vfunc_size_allocate(width, height, baseline)
+    this._detents.reapply()
   }
 
   vfunc_map(): void {

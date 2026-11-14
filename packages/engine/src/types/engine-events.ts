@@ -79,8 +79,8 @@ export interface EngineEventMap {
    * `null` as "clear the inspector selection". The component-side
    * selection state (`SelectedPlacementsComponent`) is mutated
    * directly by the system; this event is purely for UI sync (the
-   * objects-tab needs to highlight the matching row, the engine
-   * itself doesn't surface inspector state).
+   * host fills its Selected page from it, the engine itself doesn't
+   * surface inspector state).
    */
   [EngineEvent.PLACEMENT_SELECTED]: {
     placementId: string | null
@@ -312,7 +312,7 @@ export interface EngineEventMap {
   }
   /**
    * A layer's `visible` / `locked` flag changed on the active map —
-   * UI-sync event for the host's Layers tab. Fired by the Engine on
+   * UI-sync event for the host's Layers page. Fired by the Engine on
    * EVERY application path of a `SetLayerVisibilityCommand` /
    * `SetLayerLockedCommand`: local execute, undo, redo, AND remote
    * apply/revert (unlike `COMMAND_EXECUTED`, which deliberately

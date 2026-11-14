@@ -297,7 +297,7 @@ export class MapResource implements Loadable<TileMap> {
    * Walks the live editor shadow (`MapEditorComponent`) on every
    * tilemap rather than `mapData.layers[].sprites[]` — paint/erase
    * during playtest only mutates the shadow; mapData stays stale
-   * until save. Anchoring on the shadow keeps Tiles-tab toggles and
+   * until save. Anchoring on the shadow keeps Brush-page toggles and
    * runtime paints consistent.
    */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {

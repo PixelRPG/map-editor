@@ -62,7 +62,7 @@ export class ObjectSpawnSystem extends System {
       }
       if (!def) continue
       const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.registry)
-      // Respect the global objects toggle (Layers tab "Objects" row).
+      // Respect the global objects toggle (Layers page "Objects" row).
       if (entity instanceof Actor && !objectsVisible) entity.graphics.visible = false
       scene.add(entity)
     }
