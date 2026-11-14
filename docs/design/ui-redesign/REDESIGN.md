@@ -978,11 +978,11 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 | 0.2 | Map name in the editing pill / phone back button, with the map popover | unnamed map |
 | 0.3 | Rename inspector tabs to Brush · Layers · Selected, switcher on top; "Object" tool → "Thing"; tileset display name in the palette header | vocabulary drift; "lokiri-forest" |
 | 0.4 | ~~Opening and run camera clamp to the map (§4.3, §4.6)~~ **Skipped: the camera is correct, the strip is map data (risk 10).** | 80 px backdrop strip (`*/07`); block behind Stop (`desktop/11`) |
-| 0.5 | Things stops listing characters; Things and Characters empty states; "+" on phone | brief: Things empty state |
-| 0.6 | Welcome: hide missing recents behind "Tidy up"; new title and tagline; drop the template filter; example first; template `kind` + `caption`; rename the example project to "Kokiri Forest" | `desktop/01` |
+| 0.5 | Things stops listing characters; Things and Characters empty states; "+" on phone | brief: Things empty state | — done except the phone "+" (open, see TODO.md)
+| 0.6 | Welcome: hide missing recents behind "Tidy up"; new title and tagline; drop the template filter; example first; template `kind` + `caption`; rename the example project to "Kokiri Forest" | `desktop/01` | — done
 | 0.7 | Remove dead furniture: empty cursor capsule, "Teleport" legend chip, "★" badge, "No selection" pane, minimap when the world fits, "Always on" group in Simple view | principle 6 |
-| 0.8 | Brush page empty state for a project without tiles ("Import a picture…"). No baseline shot exists of `blank-starter`: capture one first and confirm what a new project shows today | Blank is a dead end |
-| 0.9 | Atlas card titles above the card at up to 200 px; atlas opens scrolled to the start map | "Link'…"; `phone/02` |
+| 0.8 | Brush page empty state for a project without tiles ("Import a picture…"). No baseline shot exists of `blank-starter`: capture one first and confirm what a new project shows today | Blank is a dead end | — done (desktop Brush tab; phone Brush page still open)
+| 0.9 | Atlas card titles above the card at up to 200 px; atlas opens scrolled to the start map | "Link'…"; `phone/02` | — done (size label hidden at <=200 px instead of moving the title)
 
 **Phase 1 — Touch canvas**
 
