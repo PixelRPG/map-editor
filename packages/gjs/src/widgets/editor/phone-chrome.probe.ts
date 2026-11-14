@@ -11,6 +11,7 @@ import { pumpUntil, solidPaintable, solidPaintableRect } from './pixel-probe.ts'
 import { RECENT_TILES_MAX } from './recent-tiles.geometry.ts'
 import { SceneEditor } from './scene-editor.ts'
 import type { TileDescriptor } from './tile-palette.ts'
+import { sheetGridOf } from './tile-sheet.geometry.ts'
 
 /**
  * Display-backed measurement of the scene editor's chrome, asked of GTK
@@ -63,7 +64,9 @@ const MAP_NAME = 'Kokiri Forest'
 
 const TILE = { r: 60, g: 140, b: 80 }
 const OBJECT = { r: 200, g: 120, b: 40 }
-const TILE_COUNT = 60
+/** A sheet wider than a phone: the point is that it pans, not that it fits. */
+const SHEET = { columns: 10, rows: 6, spriteWidth: 16, spriteHeight: 16 }
+const TILE_COUNT = SHEET.columns * SHEET.rows
 const OBJECT_COUNT = 6
 
 let styled = false
@@ -127,7 +130,10 @@ function populate(editor: SceneEditor): EditorPages {
     name: `Tile ${id}`,
     paintable: tile,
   }))
-  pages.brush.setTiles(tiles)
+  const sheetWidth = SHEET.columns * SHEET.spriteWidth
+  const sheetHeight = SHEET.rows * SHEET.spriteHeight
+  pages.brush.setTilesets([{ id: 'probe', name: 'Probe tiles' }], 'probe')
+  pages.brush.setSheet(solidPaintableRect(sheetWidth, sheetHeight, TILE), sheetGridOf(SHEET, sheetWidth, sheetHeight))
   const wide = solidPaintableRect(32, 16, OBJECT)
   pages.brush.setObjectBrushes(
     Array.from({ length: OBJECT_COUNT }, (_, i) => ({ id: `thing-${i}`, name: `Thing ${i}`, paintable: wide })),
@@ -163,8 +169,9 @@ export function probePhoneChrome(): PhoneChromeReport {
     report('brush page', page),
     report('  plane chips', page._plane_chips),
     report('  layer row', page._layers_button.get_parent() ?? page._layers_button),
-    report('  search', page._search),
-    report('  tile palette', page._palette),
+    report('  mode toggle', page._mode_toggle),
+    report('  tileset chips', page._tileset_scroller),
+    report('  tile sheet', page._sheet_scroller),
     report('  object palette', page._object_palette),
   ]
 

@@ -134,12 +134,16 @@ export function readerFor(texture: Gdk.Texture): PixelReader {
  * A flat, fully-opaque paintable in one colour — a stand-in tile sprite,
  * so a probe spec needs no fixture PNG on disk.
  */
-export function solidPaintable(size: number, rgb: Rgb): Gdk.Paintable {
+export function solidPaintable(size: number, rgb: Rgb): Gdk.Texture {
   return solidPaintableRect(size, size, rgb)
 }
 
-/** {@link solidPaintable} with a shape: a 32×16 stands in for a wide object sprite. */
-export function solidPaintableRect(width: number, height: number, rgb: Rgb): Gdk.Paintable {
+/**
+ * {@link solidPaintable} with a shape: a 32×16 stands in for a wide object
+ * sprite, and a 160×96 for a whole tile sheet. Typed as the `Gdk.Texture`
+ * it is, because a `TileSheet` needs the texture, not just a paintable.
+ */
+export function solidPaintableRect(width: number, height: number, rgb: Rgb): Gdk.Texture {
   const snapshot = Gtk.Snapshot.new()
   const rect = new Graphene.Rect()
   rect.init(0, 0, width, height)
