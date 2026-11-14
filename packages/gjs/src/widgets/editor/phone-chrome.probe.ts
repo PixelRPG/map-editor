@@ -199,6 +199,9 @@ export interface PillWidths {
  */
 export function probePillWidths(): PillWidths {
   ensureStyles()
+  // Window controls take their width from the session's decoration layout;
+  // pin one close button (the GNOME default) so the measurement is the same everywhere.
+  Gtk.Settings.get_default()?.set_property('gtk-decoration-layout', ':close')
   const editor = new SceneEditor()
   editor.brushLabel = BRUSH_SENTENCE
   editor.mapName = MAP_NAME
