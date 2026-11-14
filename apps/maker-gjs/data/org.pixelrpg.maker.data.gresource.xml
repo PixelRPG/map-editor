@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/org/pixelrpg/maker">
+    <file preprocess="xml-stripblanks">icons/scalable/actions/map-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/library-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/tileset-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pencil-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/color-fill-symbolic.svg</file>

@@ -498,6 +498,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     // already showing, and re-entering the change-state handler would
     // route back into the router for no reason.
     this.signals.connect(this._shell_stack, 'notify::visible-child-name', () => {
+      this._dropFocus()
       const page = this._shell_stack.get_visible_child_name()
       if (page && this._actions && stringState(this._actions.mode) !== page) {
         this._actions.mode.set_state(GLib.Variant.new_string(page))
@@ -541,13 +542,31 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this._session.start()
 
     this._refreshSessionBrowsing()
-    this.signals.connect(this._root_stack, 'notify::visible-child-name', () => this._refreshSessionBrowsing())
+    this.signals.connect(this._root_stack, 'notify::visible-child-name', () => {
+      this._dropFocus()
+      this._refreshSessionBrowsing()
+    })
   }
 
   vfunc_unmap(): void {
     this.signals.disconnectAll()
     this._session.stop()
     super.vfunc_unmap()
+  }
+
+  /**
+   * Drop the keyboard focus whenever the shown view changes.
+   *
+   * `gtk_stack_set_visible_child_internal` calls `gtk_widget_child_focus(
+   * page, GTK_DIR_TAB_FORWARD)` when the focus was inside the stack it is
+   * switching, so the incoming page's first focusable widget grabs it. On
+   * the Game view that is the Name `Adw.EntryRow`, which then shows its
+   * text selected and lights its apply button as if the user had started
+   * typing — one stray keystroke renames the project. Switching views is
+   * navigation, not an edit, so nothing should own the focus afterwards.
+   */
+  private _dropFocus(): void {
+    this.set_focus(null)
   }
 
   /**

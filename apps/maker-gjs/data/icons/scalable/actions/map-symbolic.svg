@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A folded paper map: three panels, the creases cut out as holes so the
+     silhouette does not read as one blob. Holes are wound against the outer
+     contour, so they stay holes under either fill rule — GTK's symbolic
+     recolouring only rewrites `fill`, it never touches winding or stroke. -->
+<svg xmlns="http://www.w3.org/2000/svg" height="16px" width="16px" viewBox="0 0 16 16">
+  <path fill="#222222" d="M 1 4 L 5.5 2 L 10.5 4 L 15 2 L 15 12 L 10.5 14 L 5.5 12 L 1 14 Z M 5.1 2.6 L 5.1 11.5 L 5.9 11.5 L 5.9 2.6 Z M 10.1 4.5 L 10.1 13.4 L 10.9 13.4 L 10.9 4.5 Z"/>
+</svg>

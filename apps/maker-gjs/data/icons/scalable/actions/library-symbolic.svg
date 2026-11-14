@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A shelf of books. The book lying flat on top of the upright one, and the
+     one leaning into the gap, are what stop three vertical bars from reading
+     as a bar chart; at 16px the silhouette is the only cue that survives, so
+     there is no inner detail. Fill-only paths, because GTK's symbolic
+     recolouring rewrites `fill` and leaves `stroke` at whatever the file
+     says. -->
+<svg xmlns="http://www.w3.org/2000/svg" height="16px" width="16px" viewBox="0 0 16 16">
+  <path fill="#222222" d="M 1.8 3.6 L 6 3.6 L 6 5 L 1.8 5 Z"/>
+  <path fill="#222222" d="M 2.2 5.4 L 5.4 5.4 L 5.4 13 L 2.2 13 Z"/>
+  <path fill="#222222" d="M 6.5 6.4 L 8 6.4 L 8 13 L 6.5 13 Z"/>
+  <path fill="#222222" d="M 9.11 12.23 L 11.8 13 L 14.06 5.12 L 11.37 4.35 Z"/>
+  <path fill="#222222" d="M 1 13 L 15 13 L 15 14.8 L 1 14.8 Z"/>
+</svg>
