@@ -1,15 +1,15 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import { LayersTab } from './layers-tab'
+import { LayersPage } from './layers-page'
 import { ObjectsTab } from './objects-tab'
-import { PropsTab } from './props-tab'
+import { SelectedPage } from './selected-page'
 import Template from './right-inspector.blp'
 import { TilesTab } from './tiles-tab'
 
 GObject.type_ensure(TilesTab.$gtype)
-GObject.type_ensure(LayersTab.$gtype)
+GObject.type_ensure(LayersPage.$gtype)
 GObject.type_ensure(ObjectsTab.$gtype)
-GObject.type_ensure(PropsTab.$gtype)
+GObject.type_ensure(SelectedPage.$gtype)
 
 /**
  * Right-side inspector for the scene editor.
@@ -22,9 +22,9 @@ GObject.type_ensure(PropsTab.$gtype)
 export class RightInspector extends Adw.Bin {
   declare _stack: Adw.ViewStack
   declare _tiles_tab: TilesTab
-  declare _layers_tab: LayersTab
+  declare _layers_page: LayersPage
   declare _objects_tab: ObjectsTab
-  declare _props_tab: PropsTab
+  declare _selected_page: SelectedPage
 
   private _collapsed = false
 
@@ -33,7 +33,7 @@ export class RightInspector extends Adw.Bin {
       {
         GTypeName: 'PixelRpgRightInspector',
         Template,
-        InternalChildren: ['stack', 'tiles_tab', 'layers_tab', 'objects_tab', 'props_tab'],
+        InternalChildren: ['stack', 'tiles_tab', 'layers_page', 'objects_tab', 'selected_page'],
         Properties: {
           'visible-page': GObject.ParamSpec.string(
             'visible-page',
@@ -63,16 +63,16 @@ export class RightInspector extends Adw.Bin {
     return this._tiles_tab
   }
 
-  get layersTab(): LayersTab {
-    return this._layers_tab
+  get layersPage(): LayersPage {
+    return this._layers_page
   }
 
   get objectsTab(): ObjectsTab {
     return this._objects_tab
   }
 
-  get propsTab(): PropsTab {
-    return this._props_tab
+  get selectedPage(): SelectedPage {
+    return this._selected_page
   }
 
   get visiblePage(): string {

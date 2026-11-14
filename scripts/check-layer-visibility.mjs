@@ -38,7 +38,7 @@
  *
  * The pinning counts a file only when a marker actually SUPPRESSED a
  * would-be violation — not merely because the file mentions the marker
- * string. `packages/gjs`'s layers-tab documents its many GTK
+ * string. `packages/gjs`'s layers-page documents its many GTK
  * `widget.visible` lines with the marker for human readers even though
  * their receivers were never matched; pinning on mere presence would
  * turn that good comment into a build failure and couple this list to

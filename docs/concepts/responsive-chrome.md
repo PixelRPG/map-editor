@@ -118,7 +118,7 @@ created a hidden-UI dead end.
 - **Selection that originated *inside* the inspector.** Picking a
   row in the objects-tab list doesn't auto-open the parent
   inspector (it can't be both the source and the target). Same
-  for animation-list / layers-tab clicks.
+  for animation-list / layers-page clicks.
 - **Mutating-tool clicks.** Pencil / eraser don't select anything
   — they paint. No inspector content emerges, so no auto-open.
 - **Eyedropper.** Auto-switches to pencil after a pick; no

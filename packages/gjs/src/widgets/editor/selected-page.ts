@@ -3,11 +3,11 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { SignalScope } from '../../utils/signal-scope.ts'
 
-import Template from './props-tab.blp'
+import Template from './selected-page.blp'
 
 /**
  * Plain-data description of a scene's properties, fed into
- * {@link PropsTab.setScene}.
+ * {@link SelectedPage.setScene}.
  */
 export interface ScenePropsDescriptor {
   name?: string
@@ -22,7 +22,7 @@ export interface ScenePropsDescriptor {
 
 /**
  * The placement shown in the "Selected object" group, fed into
- * {@link PropsTab.setSelectedObject}.
+ * {@link SelectedPage.setSelectedObject}.
  */
 export interface SelectedObjectDescriptor {
   /** Placement id (unique within the map). */
@@ -37,7 +37,7 @@ export interface SelectedObjectDescriptor {
 }
 
 /**
- * Typed view of the signals {@link PropsTab} registers, layered on the
+ * Typed view of the signals {@link SelectedPage} registers, layered on the
  * parent's own so inherited signals keep their argument lists.
  *
  * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
@@ -45,7 +45,7 @@ export interface SelectedObjectDescriptor {
  * now has to spell them out — `SignalMethods` refines the inherited method
  * rather than replacing it at run time.
  */
-export interface PropsTabSignals extends Adw.Bin.SignalSignatures {
+export interface SelectedPageSignals extends Adw.Bin.SignalSignatures {
   'prop-changed': (key: string, value: string) => void
   'object-open-requested': (defId: string) => void
   'object-remove-requested': (placementId: string) => void
@@ -62,7 +62,7 @@ export interface PropsTabSignals extends Adw.Bin.SignalSignatures {
  * inspector to relay into the project model; object actions as
  * `object-open-requested::<defId>` / `object-remove-requested::<id>`.
  */
-export class PropsTab extends Adw.Bin {
+export class SelectedPage extends Adw.Bin {
   declare _name_row: Adw.EntryRow
   declare _size_row: Adw.ActionRow
   declare _tile_size_row: Adw.ActionRow
@@ -83,7 +83,7 @@ export class PropsTab extends Adw.Bin {
   static {
     GObject.registerClass(
       {
-        GTypeName: 'PixelRpgPropsTab',
+        GTypeName: 'PixelRpgSelectedPage',
         Template,
         InternalChildren: [
           'name_row',
@@ -137,13 +137,13 @@ export class PropsTab extends Adw.Bin {
           'object-remove-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
-      PropsTab,
+      SelectedPage,
     )
   }
 
-  declare connect: GObject.SignalMethods<this, PropsTabSignals>['connect']
-  declare connect_after: GObject.SignalMethods<this, PropsTabSignals>['connect_after']
-  declare emit: GObject.SignalMethods<this, PropsTabSignals>['emit']
+  declare connect: GObject.SignalMethods<this, SelectedPageSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SelectedPageSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SelectedPageSignals>['emit']
 
   vfunc_map(): void {
     super.vfunc_map()
@@ -214,4 +214,4 @@ export class PropsTab extends Adw.Bin {
   }
 }
 
-GObject.type_ensure(PropsTab.$gtype)
+GObject.type_ensure(SelectedPage.$gtype)

@@ -1,5 +1,5 @@
 import type { LayerPlane } from '@pixelrpg/engine'
-import type { LayersTab, ObjectsTab, PropsTab, TilesTab } from '@pixelrpg/gjs'
+import type { LayersPage, ObjectsTab, SelectedPage, TilesTab } from '@pixelrpg/gjs'
 
 /**
  * Inspector → top-bar + engine wiring, one function per tab.
@@ -31,7 +31,7 @@ export function wireTilesTab(tab: TilesTab, ctx: TilesTabWiring): void {
 }
 
 /** What the Layers tab's toggles drive. */
-export interface LayersTabWiring {
+export interface LayersPageWiring {
   setActiveLayer(layerId: string): void
   setLayerVisible(layerId: string, visible: boolean): void
   setLayerLocked(layerId: string, locked: boolean): void
@@ -50,24 +50,24 @@ export interface LayersTabWiring {
  * which is the single owner of the view's layer cache. Writing the cache
  * here too would be the parallel state AGENTS.md forbids.
  */
-export function wireLayersTab(tab: LayersTab, ctx: LayersTabWiring): void {
-  tab.connect('layer-selected', (_l: LayersTab, id: string) => ctx.setActiveLayer(id))
-  tab.connect('layer-visibility-toggled', (_l: LayersTab, layerId: string, visible: boolean) => {
+export function wireLayersPage(tab: LayersPage, ctx: LayersPageWiring): void {
+  tab.connect('layer-selected', (_l: LayersPage, id: string) => ctx.setActiveLayer(id))
+  tab.connect('layer-visibility-toggled', (_l: LayersPage, layerId: string, visible: boolean) => {
     ctx.setLayerVisible(layerId, visible)
     ctx.persistMapData()
   })
-  tab.connect('layer-lock-toggled', (_l: LayersTab, layerId: string, locked: boolean) => {
+  tab.connect('layer-lock-toggled', (_l: LayersPage, layerId: string, locked: boolean) => {
     ctx.setLayerLocked(layerId, locked)
     ctx.persistMapData()
   })
-  tab.connect('layer-move-requested', (_l: LayersTab, layerId: string, plane: string, index: number) => {
+  tab.connect('layer-move-requested', (_l: LayersPage, layerId: string, plane: string, index: number) => {
     ctx.moveLayer(layerId, plane as LayerPlane, index)
     ctx.persistMapData()
   })
   // The pinned "Objects" pseudo-row is pure view state like grid/dim —
   // not persisted. Activating the stateful action with no parameter
   // toggles it, matching the row's already-flipped state.
-  tab.connect('objects-visibility-toggled', (_l: LayersTab, _visible: boolean) => ctx.toggleObjectsVisibility())
+  tab.connect('objects-visibility-toggled', (_l: LayersPage, _visible: boolean) => ctx.toggleObjectsVisibility())
 }
 
 /** What an Objects-tab row selection drives. */
@@ -85,13 +85,13 @@ export function wireObjectsTab(tab: ObjectsTab, ctx: ObjectsTabWiring): void {
 }
 
 /** What the Props tab's selected-object actions drive. */
-export interface PropsTabWiring {
+export interface SelectedPageWiring {
   openObjectDefinition(defId: string): void
   /** Dispatch the undoable RemoveObjectCommand and refresh the placement list. */
   removePlacement(placementId: string): void
 }
 
-export function wirePropsTab(tab: PropsTab, ctx: PropsTabWiring): void {
-  tab.connect('object-open-requested', (_p: PropsTab, defId: string) => ctx.openObjectDefinition(defId))
-  tab.connect('object-remove-requested', (_p: PropsTab, placementId: string) => ctx.removePlacement(placementId))
+export function wireSelectedPage(tab: SelectedPage, ctx: SelectedPageWiring): void {
+  tab.connect('object-open-requested', (_p: SelectedPage, defId: string) => ctx.openObjectDefinition(defId))
+  tab.connect('object-remove-requested', (_p: SelectedPage, placementId: string) => ctx.removePlacement(placementId))
 }

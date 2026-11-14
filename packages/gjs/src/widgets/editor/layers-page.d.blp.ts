@@ -1,4 +1,4 @@
-// GENERATED from layers-tab.blp — do not edit. ADR 0088 says what these exports mean.
+// GENERATED from layers-page.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
 import type GObject from 'gi://GObject?version=2.0';
@@ -8,8 +8,8 @@ import type Gtk from 'gi://Gtk?version=4.0';
 declare const xml: string;
 export default xml;
 
-/** The class `template $PixelRpgLayersTab` defines. */
-export declare const GTypeName: 'PixelRpgLayersTab';
+/** The class `template $PixelRpgLayersPage` defines. */
+export declare const GTypeName: 'PixelRpgLayersPage';
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.

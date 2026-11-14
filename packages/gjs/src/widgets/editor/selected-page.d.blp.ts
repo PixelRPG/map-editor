@@ -1,4 +1,4 @@
-// GENERATED from props-tab.blp — do not edit. ADR 0088 says what these exports mean.
+// GENERATED from selected-page.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
 import type Adw from 'gi://Adw?version=1';
@@ -8,8 +8,8 @@ import type Gtk from 'gi://Gtk?version=4.0';
 declare const xml: string;
 export default xml;
 
-/** The class `template $PixelRpgPropsTab` defines. */
-export declare const GTypeName: 'PixelRpgPropsTab';
+/** The class `template $PixelRpgSelectedPage` defines. */
+export declare const GTypeName: 'PixelRpgSelectedPage';
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.

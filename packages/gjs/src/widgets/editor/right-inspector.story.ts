@@ -44,14 +44,14 @@ export class RightInspectorStory extends StoryWidget {
     inspector.set_size_request(300, 520)
     inspector.tilesTab.tilesetName = 'Lokiri Forest'
     inspector.tilesTab.setTiles(buildDemoTiles(20))
-    inspector.layersTab.setLayers([
+    inspector.layersPage.setLayers([
       { id: 'bg', name: 'Background', tileCount: 248, plane: 'ground' },
       { id: 'mid', name: 'Midground', tileCount: 96, plane: 'hero' },
       { id: 'fg', name: 'Foreground', tileCount: 18, plane: 'overlay' },
       { id: 'events', name: 'Events', tileCount: 6, locked: true },
     ])
-    inspector.layersTab.selectLayer('bg')
-    inspector.propsTab.setScene({
+    inspector.layersPage.selectLayer('bg')
+    inspector.selectedPage.setScene({
       name: 'Whispering Forest',
       cols: 32,
       rows: 24,

@@ -24,16 +24,16 @@ export declare const GTypeName: "PixelRpgRightInspector";
 export declare const InternalChildren: [
   "stack",
   "tiles_tab",
-  "layers_tab",
+  "layers_page",
   "objects_tab",
-  "props_tab",
+  "selected_page",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
   _stack: Adw.ViewStack;
   _tiles_tab: GObject.Object;
-  _layers_tab: GObject.Object;
+  _layers_page: GObject.Object;
   _objects_tab: GObject.Object;
-  _props_tab: GObject.Object;
+  _selected_page: GObject.Object;
 }

@@ -77,7 +77,7 @@ template $PixelRpgRightInspector : Adw.Bin {
           title: _("Layers");
           icon-name: "view-list-symbolic";
 
-          child: $PixelRpgLayersTab layers_tab {};
+          child: $PixelRpgLayersPage layers_page {};
         }
 
         Adw.ViewStackPage {
@@ -93,7 +93,7 @@ template $PixelRpgRightInspector : Adw.Bin {
           title: _("Selected");
           icon-name: "document-properties-symbolic";
 
-          child: $PixelRpgPropsTab props_tab {};
+          child: $PixelRpgSelectedPage selected_page {};
         }
         };
       };

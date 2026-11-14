@@ -15,7 +15,7 @@ GObject.type_ensure(DepthGlyph.$gtype)
  * is the explanation of the plane, so it stays when the list is empty
  * and a dimmed "Nothing here yet" takes the rows' place.
  *
- * Owns no rows and no signals of its own: {@link LayersTab} fills the
+ * Owns no rows and no signals of its own: {@link LayersPage} fills the
  * list, wires selection across the three sections and installs the
  * drop target. `plane` / `title` / `subtitle` are template-bound.
  */

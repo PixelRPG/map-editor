@@ -23,7 +23,7 @@ import type { LoadedProject } from '../services/project-loader.ts'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 import Template from './scene-editor-view.blp'
 import { paintableFor } from './scene-editor/object-descriptors.ts'
-import { wireLayersTab, wireObjectsTab, wirePropsTab, wireTilesTab } from './scene-editor/inspector-wiring.ts'
+import { wireLayersPage, wireObjectsTab, wireSelectedPage, wireTilesTab } from './scene-editor/inspector-wiring.ts'
 import {
   buildBrushOptions,
   buildPlacementRows,
@@ -241,7 +241,7 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   /** Mirror the global objects visibility into the Layers tab's Objects row (no re-emit). */
   setObjectsVisible(visible: boolean): void {
-    this._inspector.layersTab.setObjectsState(this._placementInfo.size, visible)
+    this._inspector.layersPage.setObjectsState(this._placementInfo.size, visible)
   }
 
   /**
@@ -256,7 +256,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void {
     const idx = this._layers.findIndex((l) => l.id === layerId)
     if (idx >= 0) this._layers[idx] = { ...this._layers[idx], [flag]: value }
-    this._inspector.layersTab.setLayerState(layerId, flag, value)
+    this._inspector.layersPage.setLayerState(layerId, flag, value)
   }
 
   /** Push the live participant roster (AI + peers) to the context pill's chip. */
@@ -400,7 +400,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   /** Push the selected placement into the Props tab's "Selected object" group (`null` hides it). */
   private _syncSelectedObjectProps(placementId: string | null): void {
     const info = placementId ? this._placementInfo.get(placementId) : null
-    this._inspector.propsTab.setSelectedObject(info && placementId ? { placementId, ...info } : null)
+    this._inspector.selectedPage.setSelectedObject(info && placementId ? { placementId, ...info } : null)
   }
 
   /** Whether the phone sheet is expanded over the canvas — back step 2. */
@@ -492,7 +492,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const mapData = map ?? project.resource.maps.get(sceneId)?.mapData
     if (!mapData) return
 
-    this._inspector.propsTab.setScene({
+    this._inspector.selectedPage.setScene({
       name: mapData.name ?? mapData.id,
       cols: mapData.columns,
       rows: mapData.rows,
@@ -501,13 +501,13 @@ export class SceneEditorView extends ResponsiveEditorView {
 
     const layers = toLayerDescriptors(mapData)
     this._layers = layers
-    this._inspector.layersTab.setLayers(layers)
-    this._inspector.layersTab.setObjectsState(
+    this._inspector.layersPage.setLayers(layers)
+    this._inspector.layersPage.setObjectsState(
       mapData.objectPlacements?.length ?? 0,
       this._engine?.excalibur?.getEditorViewFlags().objectsVisible ?? true,
     )
     if (layers.length) {
-      this._inspector.layersTab.selectLayer(layers[0].id)
+      this._inspector.layersPage.selectLayer(layers[0].id)
       this._setActiveLayer(layers[0].id)
     }
 
@@ -552,7 +552,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     // The depth glyphs draw the project's own hero, so "above the hero"
     // is above THIS hero; a project without a player gets the silhouette.
     this._heroPaintable = paintableFor(playerDef, sheets)
-    this._inspector.layersTab.heroPaintable = this._heroPaintable
+    this._inspector.layersPage.heroPaintable = this._heroPaintable
     this._editor.brushPage.heroPaintable = this._heroPaintable
 
     this._inspector.objectsTab.setObjects(buildPlacementRows(resolved, sheets))
@@ -699,10 +699,10 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   refreshLayers(mapData: MapData): void {
     this._layers = toLayerDescriptors(mapData)
-    this._inspector.layersTab.setLayers(this._layers)
+    this._inspector.layersPage.setLayers(this._layers)
     const activeId = this._activeLayerId
     if (activeId) {
-      this._inspector.layersTab.selectLayer(activeId)
+      this._inspector.layersPage.selectLayer(activeId)
       const layer = this._layers.find((l) => l.id === activeId)
       if (layer) this._applyActiveLayer(layer.id, layer)
     }
@@ -741,7 +741,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const layer = this._layers.find((l) => l.id === layerId)
     this._applyActiveLayer(layerId, layer)
     // Mirror selection back to the inspector layers tab.
-    this._inspector.layersTab.selectLayer(layerId)
+    this._inspector.layersPage.selectLayer(layerId)
   }
 
   /**
@@ -837,7 +837,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       setActiveTile: (tileId) => this._setActiveTile(tileId),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
     })
-    wireLayersTab(this._inspector.layersTab, {
+    wireLayersPage(this._inspector.layersPage, {
       setActiveLayer: (layerId) => this._setActiveLayer(layerId),
       setLayerVisible: (layerId, visible) => this._engine?.setLayerVisible(layerId, visible),
       setLayerLocked: (layerId, locked) => this._engine?.setLayerLocked(layerId, locked),
@@ -854,7 +854,7 @@ export class SceneEditorView extends ResponsiveEditorView {
         void this._engine?.focusOnPlacement(placementId)
       },
     })
-    wirePropsTab(this._inspector.propsTab, {
+    wireSelectedPage(this._inspector.selectedPage, {
       openObjectDefinition: (defId) => this.activate_action('win.open-object', GLib.Variant.new_string(defId)),
       removePlacement: (placementId) => this._removePlacement(placementId),
     })

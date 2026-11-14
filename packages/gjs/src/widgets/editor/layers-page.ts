@@ -9,13 +9,13 @@ import { LayerSection } from './layer-section'
 import { type DropAnchor, layersInSection, resolveLayerDrop, SECTION_PLANES } from './layer-sections.ts'
 import { SignalScope } from '../../utils/signal-scope.ts'
 
-import Template from './layers-tab.blp'
+import Template from './layers-page.blp'
 
 GObject.type_ensure(LayerRow.$gtype)
 GObject.type_ensure(LayerSection.$gtype)
 
 /**
- * Shape consumed by {@link LayersTab.setLayers}. The list order is the
+ * Shape consumed by {@link LayersPage.setLayers}. The list order is the
  * map's array order — the tab derives the section rows from it and
  * translates drops back into array positions.
  */
@@ -34,7 +34,7 @@ export interface LayerDescriptor {
 type LayerBoxRow = Gtk.ListBoxRow & { layerId?: string }
 
 /**
- * Typed view of the signals {@link LayersTab} registers, layered on the
+ * Typed view of the signals {@link LayersPage} registers, layered on the
  * parent's own so inherited signals keep their argument lists.
  *
  * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
@@ -42,7 +42,7 @@ type LayerBoxRow = Gtk.ListBoxRow & { layerId?: string }
  * now has to spell them out — `SignalMethods` refines the inherited method
  * rather than replacing it at run time.
  */
-export interface LayersTabSignals extends Adw.Bin.SignalSignatures {
+export interface LayersPageSignals extends Adw.Bin.SignalSignatures {
   'layer-selected': (layerId: string) => void
   'layer-visibility-toggled': (layerId: string, visible: boolean) => void
   'layer-lock-toggled': (layerId: string, locked: boolean) => void
@@ -72,7 +72,7 @@ export interface LayersTabSignals extends Adw.Bin.SignalSignatures {
 // GObject property — the eye toggle's UI state, whose absent-means-hidden
 // GTK default is correct and unrelated. Each of those carries a
 // `layer-visibility-ok:` marker so the repo guard can tell them apart.
-export class LayersTab extends Adw.Bin {
+export class LayersPage extends Adw.Bin {
   declare _section_overlay: LayerSection
   declare _section_hero: LayerSection
   declare _section_ground: LayerSection
@@ -95,7 +95,7 @@ export class LayersTab extends Adw.Bin {
   static {
     GObject.registerClass(
       {
-        GTypeName: 'PixelRpgLayersTab',
+        GTypeName: 'PixelRpgLayersPage',
         Template,
         InternalChildren: ['section_overlay', 'section_hero', 'section_ground', 'objects_list'],
         Signals: {
@@ -113,13 +113,13 @@ export class LayersTab extends Adw.Bin {
           'objects-visibility-toggled': { param_types: [GObject.TYPE_BOOLEAN] },
         },
       },
-      LayersTab,
+      LayersPage,
     )
   }
 
-  declare connect: GObject.SignalMethods<this, LayersTabSignals>['connect']
-  declare connect_after: GObject.SignalMethods<this, LayersTabSignals>['connect_after']
-  declare emit: GObject.SignalMethods<this, LayersTabSignals>['emit']
+  declare connect: GObject.SignalMethods<this, LayersPageSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, LayersPageSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, LayersPageSignals>['emit']
 
   constructor() {
     super()
@@ -364,4 +364,4 @@ function clearListBox(list: Gtk.ListBox): void {
   }
 }
 
-GObject.type_ensure(LayersTab.$gtype)
+GObject.type_ensure(LayersPage.$gtype)
