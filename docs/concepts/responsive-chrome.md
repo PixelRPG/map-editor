@@ -255,9 +255,13 @@ $PixelRpgSceneEditor
       │      long press — pointed at the finger, so overlay
       │      coordinates and canvas coordinates must agree)
       ├─ bottom-bar: phone bar — ToolGroup + BrushBadge + RecentTiles
-      └─ sheet: Adw.ToolbarView sheet_view
-         ├─ [top] Adw.InlineViewSwitcher sheet_switcher
-         └─ Gtk.ScrolledWindow → Adw.ViewStack sheet_stack
+      └─ sheet: Gtk.Box sheet_view
+            its `height-request` IS the sheet's height — see
+            "The sheet's three detents"
+         ├─ Gtk.Box sheet_grabber → Adw.Bin .sheet-grabber-pill
+         │     our own drag handle: drag to resize, tap to cycle
+         ├─ Adw.InlineViewSwitcher sheet_switcher
+         └─ Gtk.ScrolledWindow sheet_scroller → Adw.ViewStack sheet_stack
                brush · layers · selected — three Adw.Bin slots the
                host fills from `EditorPages` (see below)
 ```
@@ -291,6 +295,72 @@ tiles. The window's toasts need the same clearance, which is why
 `SceneEditor` puts a `sheet-peeking` class on the *window* — the
 `Adw.ToastOverlay` is this widget's ancestor, so a selector rooted
 here could never reach a toast.
+
+### The sheet's three detents
+
+`Adw.BottomSheet` has two states — bar and open — and no detent API.
+The design (REDESIGN § 5.2) asks for three: **Peek** (the docked bar,
+which is the closed sheet), **Half** (the map still visible and
+paintable above it) and **Full**. They are built on top, in two halves:
+
+- **`sheet-detents.ts`** owns every number and every decision, and is
+  GTK-free so all of it is a unit test: `detentHeight` (Peek = the bar,
+  Half = `max(0.46 · height, 320)`, Full = `height − 56`, each clamped
+  into `[bar, full]` so a short window cannot order them wrongly),
+  `snapDetent` (nearest, ties to the shorter), `releaseDetent` (a fling
+  of ≥ 400 px/s takes the next rung in its direction and never skips
+  one, otherwise snap), `cycleDetent` for the tap, and
+  `bottomInsetFor`.
+- **`SheetDetentController`** (plain, not a `GObject`, the way
+  `SceneEditorView` holds `EditorPages`) measures, applies and
+  listens. `SceneEditor` keeps it as a field and re-exports only
+  `detent`, `bottomInset` and a `detent-changed` signal.
+
+Three findings shaped the GTK side, and none of them is guessable from
+the widget's documentation:
+
+1. **`sheet-height` is read-only.** `adw_bottom_sheet_size_allocate`
+   measures the sheet child's *natural* height and allocates that. So
+   a `height-request` on the child IS the detent control — no fight
+   with the swipe tracker, no custom layout manager.
+2. **The sheet child must not be an `Adw.ToolbarView`.** Its `[top]`
+   slot sits inside a `GtkWindowHandle`, and the sheet's swipe tracker
+   force-claims any drag that starts on a window handle
+   (`should_force_drag`, `adw-swipe-tracker.c`) — a detent gesture
+   there would never see one. Hence the plain `Gtk.Box`.
+3. **libadwaita's drag handle is unreachable.** It is an internal
+   `AdwGizmo` with `can-target: false`, parented outside our template,
+   so no controller can be attached to it. `show-drag-handle` is off
+   and `sheet_grabber` carries the gestures instead: a
+   `Gtk.GestureDrag` that claims only once the finger has moved 4 px
+   (well inside GTK's own 16 px threshold, so the ancestor tracker
+   never gets the sequence) plus a `Gtk.GestureClick` that cycles. The
+   strip spans the full width because it is the target; the pill's
+   metrics are copied from `_bottom-sheet.scss` so it still reads as
+   native.
+
+A move between two *open* detents is spring-animated
+(`Adw.SpringAnimation`, damping 1, stiffness 500, `clamp: true`);
+crossing Peek is applied instantly, because that crossing is
+closed↔open and libadwaita already animates it. Half and Full are
+shares of the editor's height, so `vfunc_size_allocate` re-applies
+them after a resize — with an equality guard in the apply, or a
+`set_size_request` that changes nothing would queue a relayout for
+ever.
+
+Only **Full** is `modal`. At Half a stroke has to still reach the
+canvas beside the sheet, which is the whole point of the rung.
+
+**The camera ducks at Half, and only at Half.** A sheet covering the
+bottom of the map means anything the camera centres has to be centred
+in what is left, so `detent-changed` makes `SceneEditorView` call
+`Engine.setViewportInset({ bottom })`. The arithmetic is the pure
+`packages/engine/src/services/viewport-inset.ts`
+(`insetCameraTarget` lifts a focus point by `bottom / (2 · zoom)`),
+applied in `focusOnPlacement`. At Peek nothing is covered and at Full
+nothing is visible to aim at, so both return 0. The inset is **host
+state and never an operation**: a peer's sheet sits at its own detent,
+so pushing this onto the op-log would drag their camera around.
 
 `pin-sidebar: true` is **load-bearing**: without it, libadwaita
 auto-resets `show-sidebar` to `false` as part of the
@@ -781,6 +851,16 @@ Two shapes of this are easy to get wrong:
   `acceleratorFor()` searches both tables, which is what keeps the
   shortcuts window honest.
 
+**The editor's visible back button is the one gesture that does NOT go
+through this.** `back_circle` and the editing pill's arrow bind
+`win.back-to-atlas`, which leaves the map unconditionally. REDESIGN
+§ 3.4 argues the split: a labelled control has to do what it says, so
+the steps in front of "leave" belong to the paths with nothing to
+contradict — `Esc`, `Alt+←`, button 8, the shell gesture. The MCP
+bridge's `back_to_atlas` and `scripts/smoke/drive.py` bind the
+unconditional action too, which is also why the smoke `back` scenario
+drives `win.back` explicitly rather than clicking the button.
+
 Deep links are the other half of § 3.4: `win.open-object` /
 `win.open-character` / `win.library-chip` push a Library page, and
 `win.focus-placement(mapId, placementId)` opens a map *with* a
@@ -911,6 +991,8 @@ on the scene the load then replaces and vanishes silently.
 | Roster chip on all four destinations, not just the map editor's context pill; the chip's Follow click reaches the presence controller from every view (REDESIGN § 3.3 / § 9 step 2.2) | **landed** |
 | One back order for all five gestures (`resolveBackStep`), `Esc` / `Alt+←` / mouse button 8 outside `WINDOW_ACCELS`, and `win.focus-placement` as a selection-bearing deep link (REDESIGN § 3.4 / § 9 step 2.3) | **landed** |
 | Three movable inspector pages (Brush · Layers · Selected) owned by `EditorPages`, hosted either in the right inspector or in the bottom sheet, both driven by `win.sheet-page` (REDESIGN § 5.3 / § 9 step 3.1) | **landed** |
+| Peek / Half / Full detents on the phone sheet: own drag handle, fling and tap, spring between open rungs, and the camera ducking at Half via `Engine.setViewportInset` (REDESIGN § 5.2 / § 9 step 3.2) | **landed** |
+| Keyboard access to the detents, and a stepwise Full → Half → Peek on back (REDESIGN § 5.2) | deferred, tracked in `TODO.md` |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | A canvas selection opens the phone's inspector drawer rather than the sheet (REDESIGN § 9 step 3.3) | deferred, tracked in `TODO.md` |

@@ -193,6 +193,13 @@ export class SceneEditorView extends ResponsiveEditorView {
       }
       this._setActiveTile(tileId)
     })
+    // The sheet at Half covers the bottom of the map, so anything the
+    // camera is asked to centre has to be centred in what is LEFT of it.
+    // The inset is host state, not an op — it must never reach a peer's
+    // camera, whose sheet is at its own detent.
+    this._editor.connect('detent-changed', () => {
+      this._engine?.setViewportInset({ bottom: this._editor.bottomInset })
+    })
   }
 
   /** Show the current zoom in the transient bottom-centre readout. */

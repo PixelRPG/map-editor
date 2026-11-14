@@ -32,6 +32,7 @@ import mapPreviewOpsSuite from './widgets/editor/map-preview.ops.spec.js'
 import recentTilesGeometrySuite from './widgets/editor/recent-tiles.geometry.spec.js'
 import sceneCardDragSuite from './widgets/editor/scene-card.drag.spec.js'
 import sceneInspectorModelSuite from './widgets/editor/scene-inspector.model.spec.js'
+import sheetDetentsSuite from './widgets/editor/sheet-detents.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
 import touchGestureSuite from './widgets/engine/touch-gesture.spec.js'
@@ -56,6 +57,7 @@ run({
   recentTilesGeometrySuite,
   sceneCardDragSuite,
   sceneInspectorModelSuite,
+  sheetDetentsSuite,
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
   tilePaletteGeometrySuite,

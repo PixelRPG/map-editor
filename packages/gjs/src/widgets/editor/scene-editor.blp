@@ -102,7 +102,9 @@ template $PixelRpgSceneEditor : Adw.Bin {
     child: Adw.BottomSheet bottom_sheet {
       modal: false;
       full-width: true;
-      show-drag-handle: true;
+      // Off: `sheet_grabber` in the sheet box is the handle. Two handles
+      // would stack, and libadwaita's own is unreachable from here.
+      show-drag-handle: false;
       can-open: false;
       reveal-bottom-bar: false;
 
@@ -414,27 +416,53 @@ template $PixelRpgSceneEditor : Adw.Bin {
       };
 
       // The phone home of the editor pages — the SAME three widgets the
-      // wide inspector hosts, moved here by `EditorPages.host`. Its own
-      // toolbar header carries the switcher, and (from 3.2) is the drag
-      // target that cycles the detents, because `Adw.BottomSheet`'s own
-      // drag handle is internal and cannot be reached from here.
-      sheet: Adw.ToolbarView sheet_view {
-        top-bar-style: flat;
+      // wide inspector hosts, moved here by `EditorPages.host`.
+      //
+      // A plain box, deliberately NOT an `Adw.ToolbarView`: that widget's
+      // `[top]` slot sits inside a `GtkWindowHandle`, and the sheet's own
+      // swipe tracker force-claims every drag that starts on a window
+      // handle (`should_force_drag` in adw-swipe-tracker.c), so our
+      // detent gesture would never see one.
+      //
+      // Its natural height IS the sheet's height: libadwaita measures
+      // this child and allocates that (adw-bottom-sheet.c), and
+      // `sheet-height` itself is read-only. `Gtk.ScrolledWindow` does not
+      // propagate its child's natural height, so the box measures to
+      // whatever `height-request` `SceneEditor._setSheetHeight` puts on
+      // it — which is how the detents move at all.
+      sheet: Gtk.Box sheet_view {
+        orientation: vertical;
 
-        [top]
+        // Our own drag handle. libadwaita's is an internal `AdwGizmo`
+        // with `can-target: false`, parented outside this template, so
+        // `show-drag-handle` is off and this strip carries the drag and
+        // the tap instead.
+        Gtk.Box sheet_grabber {
+          styles ["sheet-grabber"]
+
+          tooltip-text: _("Drag to resize, tap to cycle");
+
+          Adw.Bin {
+            styles ["sheet-grabber-pill"]
+
+            hexpand: true;
+            halign: center;
+            valign: center;
+          }
+        }
+
         Adw.InlineViewSwitcher sheet_switcher {
           stack: sheet_stack;
           display-mode: labels;
           homogeneous: false;
           can-shrink: true;
           halign: center;
-          margin-top: 6;
           margin-bottom: 6;
           margin-start: 12;
           margin-end: 12;
         }
 
-        content: Gtk.ScrolledWindow {
+        Gtk.ScrolledWindow sheet_scroller {
           hexpand: true;
           vexpand: true;
           hscrollbar-policy: never;
@@ -466,7 +494,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
               child: Adw.Bin selected_slot_sheet {};
             }
           };
-        };
+        }
       };
     };
   }

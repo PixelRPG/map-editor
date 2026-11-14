@@ -179,6 +179,28 @@
 }
 
 /*
+ * The sheet's drag handle, ours rather than libadwaita's.
+ *
+ * `show-drag-handle` is off because libadwaita's handle is an internal
+ * `AdwGizmo` with `can-target: false`, parented outside our template —
+ * no gesture can be attached to it. The metrics are copied from
+ * libadwaita's own (`_bottom-sheet.scss`: 54×6 pill, 15px margin, so a
+ * 36px strip) so the sheet still looks native, and the strip spans the
+ * full width because it is the drag target: a 54px-wide handle is a
+ * precise aim on a phone.
+ */
+.sheet-grabber {
+  padding: 15px;
+}
+
+.sheet-grabber-pill {
+  min-width: 54px;
+  min-height: 6px;
+  border-radius: 99px;
+  background-color: color-mix(in srgb, currentColor 25%, transparent);
+}
+
+/*
  * `Adw.ToastOverlay` is the window's content, so every toast lands at
  * the window's bottom centre — which on phone is exactly where the
  * docked bar is. A toast raised over the tool chooser is how the

@@ -249,6 +249,21 @@ destinations never move.
   3. Selection → clear.
   4. Pushed page → pop.
   5. Map editor → World, with the atlas centred and zoomed on the map just left.
+- **Two actions, on purpose.** The gestures above all bind `win.back`, which runs that order
+  through the pure `resolveBackStep()`. The editor's *visible* back button — the "‹" circle on
+  phone and the arrow in the editing pill — binds `win.back-to-atlas` instead: the
+  unconditional "leave this map", with no steps in front of it. That is deliberate, not a
+  leftover. A button a finger can see has to do the thing it is labelled with, the way iOS and
+  Android treat a navigation-bar back: if the first tap instead collapsed a sheet the person
+  can see is open, the control would read as broken. The invisible paths — `Esc`, `Alt+←`,
+  mouse button 8, the shell's back gesture — are where a *contextual* back belongs, because
+  there is no label to contradict. The MCP bridge's `back_to_atlas` tool and
+  `scripts/smoke/drive.py` bind the unconditional action for the same reason: they want to
+  leave, not to unwind.
+  Re-check once 3.3 lands and a selection has a visible bar of its own: a tap on "‹" with the
+  sheet at Full now skips three rungs of state at once, and if that reads as losing work on a
+  real phone, the fix is for the button to adopt `win.back` and for Peek to become the only
+  resting detent — not to make `resolveBackStep` conditional per caller.
 - **Swipe-back** is on for every `Adw.NavigationView` (Library and Game details, sheet
   sub-pages). It is *not* an edge swipe on a canvas: an edge drag on the map is a stroke.
 - **Tabs keep their place.** Switching World → Library → World returns to the same scroll,
@@ -621,11 +636,16 @@ height; it has **no detent API**. Detents are built on top:
 | **Half** | 46 % of the window, min 320 px | `modal: false` — the map above stays paintable | pick a tile and keep drawing; glance at layers; read the selection |
 | **Full** | window height − 56 px | `modal: true` (dim) | search, long forms, layer management, starter packs |
 
-Implementation: a small `SheetDetents` controller owns one number, the sheet child's
-`height-request`, and animates it with an `Adw.SpringAnimation`. Peek ↔ Half is
-`Adw.BottomSheet.open`; Half ↔ Full is the controller, driven by a `Gtk.GestureDrag` on the
-sheet's header and by scrolling past the top of the page's `Gtk.ScrolledWindow`. A fling picks
-the next detent in its direction; a tap on the handle cycles Peek → Half → Full → Peek.
+Implementation (landed, step 3.2): `sheet-detents.ts` owns the arithmetic as pure functions —
+which height a detent is, which detent a release lands on, how far the camera has to duck — and
+`SheetDetentController` owns one number, the sheet child's `height-request`, animated with an
+`Adw.SpringAnimation`. Peek IS the closed sheet, so the controller drives
+`Adw.BottomSheet.open` alongside the height and reconciles a `notify::open` it did not cause;
+crossing Peek is applied instantly, because libadwaita already animates open ↔ closed. Moves
+come from a `Gtk.GestureDrag` on our own full-width grabber strip (libadwaita's handle cannot be
+reached from a template) and from scrolling past the top of the page's `Gtk.ScrolledWindow`,
+which collapses one rung. A fling picks the next detent in its direction and never skips one; a
+tap on the grabber cycles Peek → Half → Full → Peek.
 
 Rules that keep the hard-won fixes intact:
 
@@ -1009,7 +1029,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 | # | Step | Resolves |
 |---|---|---|
 | 3.1 | Split the inspector panes from their `Adw.OverlaySplitView` host into three movable pages | TODO "The phone bottom sheet has one page" (the stated blocker) | — done (`EditorPages` owns one `BrushPage` / `LayersPage` / `SelectedPage` and `host(slots)` parents them into a `PageSlots` triple; `SceneEditorView` holds the instance and hosts into `RightInspector.pageSlots` on wide, `SceneEditor.pageSlots` — a switcher + `Adw.ViewStack` in the sheet — on phone. `win.sheet-page(brush\|layers\|selected)` replaces `win.set-inspector-tab` and routes to whichever host the layout uses, so the wide badge's popover is gone and the badge is a plain button on that action. The placement-list page had no home in the three-page design and was deleted with `buildPlacementRows` — see TODO.md. `SelectedPage` keeps its pre-redesign content until 3.3)
-| 3.2 | Sheet with switcher and `SheetDetents` (Peek / Half / Full), camera bottom inset | same |
+| 3.2 | Sheet with switcher and `SheetDetents` (Peek / Half / Full), camera bottom inset | same | — done (`sheet-detents.ts` is the whole decision as pure arithmetic — heights clamped into `[bar, full]`, nearest-snap with ties to the shorter, a ≥ 400 px/s fling taking the next rung and never skipping one — and `SheetDetentController` is the GTK half, kept plain rather than a `GObject` the way `EditorPages` is. Three things the widget's docs do not say decided the shape: `sheet-height` is READ-ONLY, so a `height-request` on the sheet child is the control (libadwaita allocates that child's natural height); the child cannot be an `Adw.ToolbarView`, whose `[top]` is a `GtkWindowHandle` the sheet's swipe tracker force-claims every drag from; and libadwaita's own drag handle is an internal `can-target: false` `AdwGizmo`, so `show-drag-handle` is off and a full-width `sheet_grabber` carries the drag (claiming at 4 px, inside GTK's 16) and the tap. Only Full is modal — at Half a stroke must still reach the canvas, which is the point of the rung — and the camera ducks at Half ONLY, via `Engine.setViewportInset` + the pure `services/viewport-inset.ts`: host state, deliberately not on the op-log, since a peer's sheet is at its own detent. No keyboard path to the detents and a one-step `collapseSheet` are deferred — see TODO.md)
 | 3.3 | Selected page with placement overrides; contextual action bar; phone stops using the inspector drawer | same; TODO "Object-system editor UI follow-ups" (a), (c); `phone/08` |
 | 3.4 | Brush page: Tiles \| Things switch, tileset chips, contiguous sheet palette | TODO "Object-system editor UI follow-ups" (b) |
 | 3.5 | Layers page: rename / duplicate / delete commands and UI; Things eye to the view menu; plane-tinted ghost | TODO "Layers page follow-ups" (a), (b), (d) |
@@ -1074,11 +1094,16 @@ overlays.
 
 ## 10. Open risks to verify first
 
-1. **Detents on `Adw.BottomSheet`.** The widget offers `open`, `modal`, `sheet-height`,
-   `can-open`, `can-close` and no detents. Prototype `SheetDetents` (§5.2) before Phase 3. If
-   animating the child's `height-request` fights the sheet's own swipe tracker, fall back to
-   two states — Peek and Half — with an "expand" header button that switches the page to a
-   full-height `Adw.Dialog`.
+1. **Detents on `Adw.BottomSheet`.** ~~The widget offers `open`, `modal`, `sheet-height`,
+   `can-open`, `can-close` and no detents.~~ **Resolved in 3.2, and the fallback is not
+   needed.** `sheet-height` turned out to be read-only; `adw_bottom_sheet_size_allocate`
+   measures the sheet child's *natural* height, so a `height-request` on that child is the
+   detent control and there is no fight with the swipe tracker at all. Two things did have to
+   change shape: the sheet child is a plain `Gtk.Box` rather than an `Adw.ToolbarView` (whose
+   `[top]` sits in a `GtkWindowHandle`, and `should_force_drag` in `adw-swipe-tracker.c`
+   claims every drag that starts on one), and the drag handle is ours rather than
+   libadwaita's (theirs is an internal `can-target: false` `AdwGizmo`, unreachable from a
+   template). Arithmetic in `sheet-detents.ts`, wiring in `SheetDetentController`.
 2. **`modal: false` at Half.** Confirm that strokes reach the canvas above an open non-modal
    sheet and that the sheet does not dim. If not, Half becomes modal and the tile-pick flow
    collapses to Peek after each pick.

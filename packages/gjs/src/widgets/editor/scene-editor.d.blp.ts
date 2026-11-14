@@ -61,11 +61,13 @@ export declare const InternalChildren: [
   "badge_slot_bar",
   "recent_tiles",
   "sheet_view",
+  "sheet_grabber",
+  "sheet_switcher",
+  "sheet_scroller",
   "sheet_stack",
   "brush_slot_sheet",
   "layers_slot_sheet",
   "selected_slot_sheet",
-  "sheet_switcher",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -107,10 +109,12 @@ export interface Children {
   _tools_slot_bar: Adw.Bin;
   _badge_slot_bar: Adw.Bin;
   _recent_tiles: GObject.Object;
-  _sheet_view: Adw.ToolbarView;
+  _sheet_view: Gtk.Box;
+  _sheet_grabber: Gtk.Box;
+  _sheet_switcher: Adw.InlineViewSwitcher;
+  _sheet_scroller: Gtk.ScrolledWindow;
   _sheet_stack: Adw.ViewStack;
   _brush_slot_sheet: Adw.Bin;
   _layers_slot_sheet: Adw.Bin;
   _selected_slot_sheet: Adw.Bin;
-  _sheet_switcher: Adw.InlineViewSwitcher;
 }

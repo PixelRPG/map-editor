@@ -19,6 +19,12 @@ import { MapScene } from './scenes/map.scene.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
+import {
+  EMPTY_VIEWPORT_INSET,
+  insetCameraTarget,
+  normalizeViewportInset,
+  type ViewportInset,
+} from './services/viewport-inset.ts'
 import { SessionState } from './utils/session-state.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { LayerData, LayerPlane } from './types/data/index.ts'
@@ -66,6 +72,9 @@ export class Engine {
   private readonly history: CommandHistory
   private readonly layers: LayerOperations
   private readonly edits: EditOperations
+
+  /** Canvas edges the host's chrome covers — see {@link setViewportInset}. */
+  private _viewportInset: ViewportInset = EMPTY_VIEWPORT_INSET
 
   /** Currently loaded project resource (null until loadProject completes). */
   public get gameProjectResource(): GameProjectResource | null {
@@ -269,12 +278,29 @@ export class Engine {
     if (!scene) return false
     const centre = placementTileCentre(scene.mapResource?.mapData, placementId)
     if (!centre) return false
+    const target = insetCameraTarget(centre, this._viewportInset, scene.camera.zoom)
     try {
-      await scene.camera.move(new Vector(centre.x, centre.y), durationMs)
+      await scene.camera.move(new Vector(target.x, target.y), durationMs)
       return true
     } catch {
       return false
     }
+  }
+
+  /**
+   * Declare which canvas edges host chrome currently covers, so the
+   * camera aims at the centre of what is still visible — the phone
+   * sheet at its Half detent sits over the lower third of the map.
+   *
+   * Host state, not map state: it is per-participant and must never
+   * ride the op-log.
+   */
+  setViewportInset(inset: Partial<ViewportInset> | null | undefined): void {
+    this._viewportInset = normalizeViewportInset(inset)
+  }
+
+  getViewportInset(): ViewportInset {
+    return this._viewportInset
   }
 
   // ──────────────────────────────────────────────────────────────

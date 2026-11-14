@@ -6,6 +6,7 @@ import { WebGLBridge } from '@gjsify/webgl'
 import {
   type EditorTool,
   type EditorViewFlags,
+  EMPTY_VIEWPORT_INSET,
   EngineEvent,
   type EngineEventMap,
   EngineStatus,
@@ -13,7 +14,9 @@ import {
   formatError,
   type LayerData,
   type LayerPlane,
+  normalizeViewportInset,
   type ProjectLoadOptions,
+  type ViewportInset,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
@@ -87,6 +90,7 @@ export class Engine extends Adw.Bin {
   private _excalibur: ExcaliburEngine | null = null
   private _ready = false
   private _excaliburSubscriptions: Subscription[] = []
+  private _viewportInset: ViewportInset = EMPTY_VIEWPORT_INSET
   private _closeRequestHandlerId = 0
   /**
    * The window the `close-request` handler is attached to. Tracked
@@ -235,6 +239,19 @@ export class Engine extends Adw.Bin {
   /** Forward to `Engine.focusOnPlacement` — smoothly pans the camera. */
   public focusOnPlacement(placementId: string, durationMs?: number): Promise<boolean> {
     return this._excalibur?.focusOnPlacement(placementId, durationMs) ?? Promise.resolve(false)
+  }
+
+  /**
+   * Forward to `Engine.setViewportInset` — which canvas edges the host's
+   * chrome covers (the phone sheet at Half).
+   *
+   * Remembered on the widget as well, because the detent can settle
+   * while the Excalibur engine is still initialising and an inset
+   * dropped then would only resurface at the next drag.
+   */
+  public setViewportInset(inset: Partial<ViewportInset> | null | undefined): void {
+    this._viewportInset = normalizeViewportInset(inset)
+    this._excalibur?.setViewportInset(this._viewportInset)
   }
 
   /** Undo the most recent editor command. Returns `false` if nothing to undo. */
@@ -625,6 +642,7 @@ export class Engine extends Adw.Bin {
         const engine = new ExcaliburEngine(canvas)
         this._excaliburSubscriptions.push(...forwardEngineEvents(engine, this))
         this._excalibur = engine
+        engine.setViewportInset(this._viewportInset)
         await engine.initialize()
         // Apply the scratchpad backdrop colour as the engine clear
         // colour. With GLArea alpha compositing being unreliable on

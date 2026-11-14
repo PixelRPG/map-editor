@@ -20,6 +20,8 @@ import type { PageSlots } from './editor-pages.ts'
 import { FloatingPlay } from './floating-play.ts'
 import { RecentTiles } from './recent-tiles.ts'
 import { RosterChip } from './roster-chip.ts'
+import { SheetDetentController } from './sheet-detent-controller.ts'
+import type { SheetDetent } from './sheet-detents.ts'
 import { ToolGroup } from './tool-group.ts'
 import { ZoomOsd } from './zoom-osd.ts'
 
@@ -34,6 +36,14 @@ export type SceneEditorLayout = 'wide' | 'phone'
 
 /** `win.sheet-page`'s target for every affordance that means "the brush". */
 const BRUSH_PAGE_TARGET = GLib.Variant.new_string('brush')
+
+/**
+ * Typed view of the signals {@link SceneEditor} registers, layered on
+ * the parent's own so inherited signals keep their argument lists.
+ */
+export interface SceneEditorSignals extends Adw.Bin.SignalSignatures {
+  'detent-changed': (detent: SheetDetent) => void
+}
 
 /**
  * Scene-editor content surface: the striped backdrop, the engine slot,
@@ -56,6 +66,10 @@ const BRUSH_PAGE_TARGET = GLib.Variant.new_string('brush')
  * `vfunc_unroot`, so it keeps one parent for the life of the view.
  */
 export class SceneEditor extends Adw.Bin {
+  declare connect: GObject.SignalMethods<this, SceneEditorSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, SceneEditorSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, SceneEditorSignals>['emit']
+
   declare _ladder: Adw.BreakpointBin
   declare _bottom_sheet: Adw.BottomSheet
   declare _overlay: Gtk.Overlay
@@ -92,8 +106,10 @@ export class SceneEditor extends Adw.Bin {
   declare _tools_slot_bar: Adw.Bin
   declare _badge_slot_bar: Adw.Bin
   declare _recent_tiles: RecentTiles
-  declare _sheet_view: Adw.ToolbarView
+  declare _sheet_view: Gtk.Box
+  declare _sheet_grabber: Gtk.Box
   declare _sheet_switcher: Adw.InlineViewSwitcher
+  declare _sheet_scroller: Gtk.ScrolledWindow
   declare _sheet_stack: Adw.ViewStack
   declare _brush_slot_sheet: Adw.Bin
   declare _layers_slot_sheet: Adw.Bin
@@ -125,11 +141,27 @@ export class SceneEditor extends Adw.Bin {
    */
   private _placementMenu = new Gtk.PopoverMenu({ hasArrow: false })
 
+  /**
+   * The sheet's three detents. Built in the constructor because it needs
+   * the template's children; everything it decides is in
+   * `sheet-detents.ts`, so this widget only forwards the result on.
+   */
+  private _detents: SheetDetentController
+
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgSceneEditor',
         Template,
+        Signals: {
+          /**
+           * The phone sheet settled on a new detent (`peek` | `half` |
+           * `full`). The host answers it by reading {@link bottomInset}
+           * and ducking the camera, which is why the detent is a signal
+           * and not just a getter.
+           */
+          'detent-changed': { param_types: [GObject.TYPE_STRING] },
+        },
         InternalChildren: [
           'ladder',
           'bottom_sheet',
@@ -163,7 +195,9 @@ export class SceneEditor extends Adw.Bin {
           'badge_slot_bar',
           'recent_tiles',
           'sheet_view',
+          'sheet_grabber',
           'sheet_switcher',
+          'sheet_scroller',
           'sheet_stack',
           'brush_slot_sheet',
           'layers_slot_sheet',
@@ -213,6 +247,19 @@ export class SceneEditor extends Adw.Bin {
 
   constructor() {
     super()
+    this._detents = new SheetDetentController(
+      {
+        sheet: this._bottom_sheet,
+        view: this._sheet_view,
+        grabber: this._sheet_grabber,
+        scroller: this._sheet_scroller,
+        canvas: this,
+      },
+      (detent) => {
+        this._applyToastClearance()
+        this.emit('detent-changed', detent)
+      },
+    )
     this._badge_slot_top.set_child(this._badge)
     this._tools_slot_top.set_child(this._toolGroup)
     this._roster_slot.set_child(this._rosterChip)
@@ -294,9 +341,26 @@ export class SceneEditor extends Adw.Bin {
     this._sheet_stack.set_visible_child_name(name)
   }
 
-  /** Reveal the sheet over the canvas. No-op on wide, where it can't open. */
+  /**
+   * Reveal the sheet over the canvas at Half. No-op on wide, where it
+   * can't open — and no-op at Full, so opening the sheet on a page that
+   * is already fully showing never shrinks it.
+   */
   openSheet(): void {
-    this._bottom_sheet.set_open(true)
+    if (this._detents.detent === 'peek') this._detents.setDetent('half')
+  }
+
+  /** Which detent the sheet rests at. `peek` is the docked bar. */
+  get detent(): SheetDetent {
+    return this._detents.detent
+  }
+
+  /**
+   * How far, in px, the camera has to lift its focus point so a focused
+   * tile is not behind the sheet. Read by the host on `detent-changed`.
+   */
+  get bottomInset(): number {
+    return this._detents.bottomInset
   }
 
   get rosterChip(): RosterChip {
@@ -317,16 +381,20 @@ export class SceneEditor extends Adw.Bin {
    * wider rung — where the brush lives in a popover instead.
    */
   get sheetOpen(): boolean {
-    return this._bottom_sheet.get_open()
+    return this._detents.detent !== 'peek'
   }
 
   /**
    * Collapse the sheet back to its peek bar, and say whether there was
    * anything to collapse. Step 2 of the back order (REDESIGN.md § 3.4).
+   *
+   * ONE step, straight to Peek, even from Full: back has a pinned order
+   * (`resolveBackStep`), and a stepwise Full → Half → Peek would put two
+   * back presses where the smoke scenario and the docs count one.
    */
   collapseSheet(): boolean {
-    if (!this._bottom_sheet.get_open()) return false
-    this._bottom_sheet.set_open(false)
+    if (this._detents.detent === 'peek') return false
+    this._detents.setDetent('peek')
     return true
   }
 
@@ -548,6 +616,17 @@ export class SceneEditor extends Adw.Bin {
     const wanted = this._layout === 'phone' && !this._playing
     if (wanted) root.add_css_class('sheet-peeking')
     else root.remove_css_class('sheet-peeking')
+  }
+
+  /**
+   * Half and Full are shares of the editor's height, so a rotation or a
+   * window resize moves them. Re-applied here rather than from a
+   * `notify::` because the height is only known once it is allocated;
+   * `reapply` is guarded against re-entering the relayout it sits in.
+   */
+  vfunc_size_allocate(width: number, height: number, baseline: number): void {
+    super.vfunc_size_allocate(width, height, baseline)
+    this._detents.reapply()
   }
 
   vfunc_map(): void {
