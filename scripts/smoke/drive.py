@@ -64,11 +64,15 @@ gip = subprocess.run(
 ).stdout.split()
 ENV = {
     **os.environ,
-    "XDG_RUNTIME_DIR": "/run/user/1000",
-    "WAYLAND_DISPLAY": "pixrace",
     "GI_TYPELIB_PATH": ":".join(gip),
     "LD_LIBRARY_PATH": ":".join(gip),
 }
+# The rig's own long-lived compositor, unless we were started inside one
+# already (`headless-run` exports its private socket) — overriding that
+# would point the app at a display that is not there.
+if not os.environ.get("WAYLAND_DISPLAY"):
+    ENV["XDG_RUNTIME_DIR"] = "/run/user/1000"
+    ENV["WAYLAND_DISPLAY"] = "pixrace"
 ENV.pop("DISPLAY", None)
 
 
@@ -136,6 +140,10 @@ def open_scenes_together(label: str, *scenes: str) -> float:
 
 
 def wait_for(label: str, pred, timeout=30.0):
+    """Poll GetStatus until `pred` holds. On timeout returns the LAST
+    status read, not None — callers that only want a best-effort nudge
+    rely on that. Use `must_wait_for` when the condition is the assertion.
+    """
     deadline = time.time() + timeout
     st = None
     while time.time() < deadline:
@@ -144,6 +152,26 @@ def wait_for(label: str, pred, timeout=30.0):
             return st
         time.sleep(0.1)
     return st
+
+
+def must_wait_for(label: str, pred, what: str, timeout=30.0):
+    """Like `wait_for`, but a timeout is a failure.
+
+    `wait_for` answering with the last status is a trap for a loop that
+    checks something else afterwards: the engine-rebuild regression this
+    scenario exists for passed eight rounds of `sceneEditorRooted`
+    while `engineReady` was never once true, because every round read a
+    stale status instead of stopping. A condition worth waiting for is a
+    condition worth failing on.
+    """
+    deadline = time.time() + timeout
+    st = None
+    while time.time() < deadline:
+        st = status(label)
+        if st is not None and pred(st):
+            return st
+        time.sleep(0.1)
+    raise RuntimeError(f"timed out after {timeout:g}s waiting for {what} (last status: {st})")
 
 
 def require_rooted(st: dict | None, where: str) -> None:
@@ -237,10 +265,12 @@ def run_once(i: int) -> tuple[bool, dict | None, str]:
         elif SCENARIO == "enterleave":
             for _n in range(8):
                 open_scene(label, MAP_A)
-                st = wait_for(label, lambda s: s.get("engineReady") is True, 30)
+                st = must_wait_for(label, lambda s: s.get("engineReady") is True,
+                                   f"a live engine (round {_n})", 30)
                 require_rooted(st, f"round {_n}, on the map")
                 activate(label, "back-to-atlas")
-                st = wait_for(label, lambda s: s.get("view") == "world", 15)
+                st = must_wait_for(label, lambda s: s.get("view") == "world",
+                                   f"the World page (round {_n})", 15)
                 require_rooted(st, f"round {_n}, back on World")
             open_scene(label, MAP_A)
         elif SCENARIO == "churn":

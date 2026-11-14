@@ -141,3 +141,6 @@ vite.config.js.timestamp*
 .claude
 gschemas.compiled
 
+# Smoke-driver run output (scripts/smoke/drive.py writes out-<tag>/)
+scripts/smoke/out-*/
+
