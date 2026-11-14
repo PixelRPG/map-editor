@@ -6,6 +6,7 @@ import {
   ActiveToolComponent,
   type EditorTool,
   EditorViewModeComponent,
+  PendingPlacementMoveComponent,
   SelectedPlacementsComponent,
 } from '../components/index.ts'
 import { applyEditorViewMode } from '../services/editor-view.ts'
@@ -15,9 +16,10 @@ import { type ActiveSceneAccessor, rebindOnMapLoaded } from './scene-binding.ts'
 
 /**
  * The editor's per-scene "what am I about to do" state: active tool,
- * armed tile, armed object brush, target layer and current selection.
+ * armed tile, armed object brush, target layer, current selection and
+ * a placement armed for a one-shot move.
  *
- * All five live on the active scene's session-singleton so systems read
+ * All of them live on the active scene's session-singleton so systems read
  * them through `SessionState` rather than reaching back into the engine
  * — this class is only the typed accessor pair around that, plus the
  * one side effect the raw component write cannot express (re-applying
@@ -110,6 +112,28 @@ export class EditorSession {
       return
     }
     SessionState.set(scene, new SelectedPlacementsComponent([...placementIds]))
+  }
+
+  /**
+   * The placement armed for a one-shot move, or `null`. See
+   * {@link PendingPlacementMoveComponent} for why the arming lives here
+   * rather than in the host.
+   */
+  get pendingPlacementMove(): string | null {
+    const scene = this.activeScene()
+    if (!scene) return null
+    return SessionState.get(scene, PendingPlacementMoveComponent)?.placementId ?? null
+  }
+
+  /** `null` disarms, so there is no "armed for nobody" state to get wrong. */
+  set pendingPlacementMove(placementId: string | null) {
+    const scene = this.activeScene()
+    if (!scene) return
+    if (placementId === null) {
+      SessionState.unset(scene, PendingPlacementMoveComponent)
+      return
+    }
+    SessionState.set(scene, new PendingPlacementMoveComponent(placementId))
   }
 
   /**

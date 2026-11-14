@@ -42,6 +42,28 @@ export function mergePlacementComponents(
 }
 
 /**
+ * The definition a placement is an instance OF, with its per-instance
+ * `overrides` **not** applied: the inline definition, or the library
+ * entry `defId` names. `null` when neither resolves.
+ *
+ * This is the base an editor diffs against. `placementOverridesFrom`
+ * needs it to decide what an edit actually overrides, and the Selected
+ * page needs it to decide which component types the placement added
+ * itself (the only removable ones — the override model has no
+ * tombstone, see `placement-overrides.ts`). Reaching for
+ * {@link resolvePlacementDefinition} there would diff the overrides
+ * against themselves and find nothing.
+ */
+export function basePlacementDefinition(
+  placement: ObjectPlacement,
+  library: readonly EntityDefinition[],
+): EntityDefinition | null {
+  if (placement.inline) return placement.inline
+  if (placement.defId) return library.find((d) => d.id === placement.defId) ?? null
+  return null
+}
+
+/**
  * Resolve a placement to its effective {@link EntityDefinition}: an inline
  * definition, or a library lookup by `defId` with per-instance
  * `overrides` merged (name replace + wholesale-replace components per
@@ -56,9 +78,7 @@ export function resolvePlacementDefinition(
   placement: ObjectPlacement,
   library: readonly EntityDefinition[],
 ): EntityDefinition | null {
-  let base: EntityDefinition | null = null
-  if (placement.inline) base = placement.inline
-  else if (placement.defId) base = library.find((d) => d.id === placement.defId) ?? null
+  const base = basePlacementDefinition(placement, library)
   if (!base) return null
   if (!placement.overrides) return base
   return {

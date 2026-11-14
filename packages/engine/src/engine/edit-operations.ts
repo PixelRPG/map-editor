@@ -11,6 +11,7 @@ import {
   type TileEditTarget,
   resolveTileEditTarget,
 } from '../services/tile-edit-target.ts'
+import type { PlacementOverrides } from '../entity/placement-overrides.ts'
 import type { ObjectPlacement } from '../types/data/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { EditorSession } from './editor-session.ts'
@@ -267,6 +268,77 @@ export class EditOperations {
     if (placement.inline) placement.inline = { ...placement.inline, id: placement.id }
     this.execute(new PlaceObjectCommand({ placement }), origin)
     return placement.id
+  }
+
+  /**
+   * Move a placement to another tile, keeping its id.
+   *
+   * The id stays: it is the stable key the selection, the save state and
+   * every peer address this object by, and `makePlacementId` only
+   * encodes coords *for readability* (see that function's note). Minting
+   * a new id for a move would break the selection and read as
+   * delete-plus-create on the undo stack.
+   *
+   * Rides a same-id {@link PlaceObjectCommand}, whose apply captures the
+   * placement it overwrites in `replaced` — so revert puts the object
+   * back on its old tile instead of deleting it, and a peer's revert
+   * converges to the same state.
+   *
+   * Gates like {@link removeObject}: the layer is dictated by the
+   * placement (a move stays on its own layer), and the assistant-pause
+   * gate is skipped because this is the only move path and the human's
+   * "Move" button routes through it — enforcing it would disable the
+   * user's own button while they have the AI paused.
+   */
+  movePlacement(placementId: string, tileX: number, tileY: number, origin?: string): boolean {
+    const scene = this.activeScene()
+    const mapData = scene?.mapResource?.mapData
+    const source = mapData?.objectPlacements?.find((candidate) => candidate.id === placementId)
+    if (!source) return false
+    const layer = resolveEditLayer({
+      assistantPause: { mode: 'skip' },
+      hasActiveMap: true,
+      requestedLayerId: source.layerId,
+      activeLayerId: null,
+      isLayerLocked: (layerId) => this.layers.isLocked(layerId),
+    })
+    if (layer.type === 'rejected') return false
+    if (isTileOutsideMap(mapData, tileX, tileY)) return false
+    if (source.tileX === tileX && source.tileY === tileY) return false
+    this.execute(new PlaceObjectCommand({ placement: { ...source, tileX, tileY } }), origin)
+    return true
+  }
+
+  /**
+   * Replace a placement's per-instance overrides — the Selected page's
+   * edits to the name and components of this one object, leaving the
+   * library definition it came from untouched.
+   *
+   * `undefined` clears the block, which is what
+   * {@link placementOverridesFrom} returns once the user has set every
+   * field back to the library's value. Gates exactly like
+   * {@link movePlacement}.
+   */
+  setPlacementOverrides(placementId: string, overrides: PlacementOverrides | undefined, origin?: string): boolean {
+    const scene = this.activeScene()
+    const source = scene?.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId)
+    if (!source) return false
+    const layer = resolveEditLayer({
+      assistantPause: { mode: 'skip' },
+      hasActiveMap: true,
+      requestedLayerId: source.layerId,
+      activeLayerId: null,
+      isLayerLocked: (layerId) => this.layers.isLocked(layerId),
+    })
+    if (layer.type === 'rejected') return false
+    const placement: ObjectPlacement = { ...source }
+    // Deleted rather than set to `undefined`: the payload is a wire
+    // message, and `JSON.stringify` drops an undefined value anyway —
+    // keeping the key would make the local and remote shapes differ.
+    if (overrides) placement.overrides = overrides
+    else delete placement.overrides
+    this.execute(new PlaceObjectCommand({ placement }), origin)
+    return true
   }
 
   /** The scene + resolved tile target, or `null` when a guard refused. */

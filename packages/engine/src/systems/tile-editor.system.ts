@@ -18,6 +18,7 @@ import {
   ActiveToolComponent,
   type EditorTool,
   MapEditorComponent,
+  PendingPlacementMoveComponent,
   SelectedPlacementsComponent,
   TileMapPlaneComponent,
 } from '../components/index.ts'
@@ -431,12 +432,35 @@ export class TileEditorSystem extends System {
    * subscription) and emits {@link EngineEvent.PLACEMENT_SELECTED} for
    * the host UI to mirror in the inspector. An empty-tile click clears
    * the selection.
+   *
+   * Unless a one-shot move is armed — then this tap is the move's target
+   * and {@link consumePendingMove} takes it instead.
    */
   private applySelect(hit: TileHit): void {
     if (!this.scene) return
+    if (this.consumePendingMove(hit.coords)) return
     const placements = (this.scene as MapScene).mapResource?.mapData?.objectPlacements ?? []
     const picked = pickTopmostPlacementAt(placements, hit.coords.x, hit.coords.y)
     this.selectPlacement(hit.coords, picked?.id ?? null)
+  }
+
+  /**
+   * If a placement is armed for a one-shot move, disarm it and ask the
+   * host to move it to `coords` — returning `true` so the caller skips
+   * the usual selection write.
+   *
+   * Disarming BEFORE the request is what makes it one-shot even if the
+   * host refuses the move (padlocked layer, off-map tile): a second tap
+   * must then be an ordinary select, not another move attempt the user
+   * has forgotten about.
+   */
+  private consumePendingMove(coords: { x: number; y: number }): boolean {
+    if (!this.scene) return false
+    const pending = SessionState.get(this.scene, PendingPlacementMoveComponent)
+    if (!pending) return false
+    SessionState.unset(this.scene, PendingPlacementMoveComponent)
+    this.events.emit(EngineEvent.PLACEMENT_MOVE_REQUESTED, { placementId: pending.placementId, coords })
+    return true
   }
 
   /**

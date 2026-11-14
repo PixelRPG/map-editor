@@ -1,6 +1,11 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { EntityDefinition } from '../types/data/index.ts'
-import { getComponentData, mergePlacementComponents, resolvePlacementDefinition } from './data-access.ts'
+import {
+  basePlacementDefinition,
+  getComponentData,
+  mergePlacementComponents,
+  resolvePlacementDefinition,
+} from './data-access.ts'
 
 export default async () => {
   await describe('getComponentData', async () => {
@@ -33,6 +38,35 @@ export default async () => {
         { type: 'collision' },
         { type: 'trigger', on: 'walk-onto' },
       ])
+    })
+  })
+
+  await describe('basePlacementDefinition', async () => {
+    const library: EntityDefinition[] = [
+      { id: 'apple', name: 'Apple', components: [{ type: 'item', itemId: 'apple' }] },
+    ]
+
+    await it('returns the library entry WITHOUT the overrides applied', async () => {
+      const placement = {
+        id: 'p',
+        layerId: 'l1',
+        tileX: 0,
+        tileY: 0,
+        defId: 'apple',
+        overrides: { name: 'Golden Apple', components: [{ type: 'item', itemId: 'gold-apple' }] },
+      }
+      // The whole point: an editor diffing against this sees the edit.
+      expect(basePlacementDefinition(placement, library)).toBe(library[0])
+    })
+
+    await it('returns the inline definition', async () => {
+      const inline: EntityDefinition = { id: 'd', name: 'D', components: [] }
+      expect(basePlacementDefinition({ id: 'p', layerId: 'l1', tileX: 0, tileY: 0, inline }, library)).toBe(inline)
+    })
+
+    await it('returns null for an unknown defId and for neither', async () => {
+      expect(basePlacementDefinition({ id: 'p', layerId: 'l1', tileX: 0, tileY: 0, defId: 'gone' }, library)).toBe(null)
+      expect(basePlacementDefinition({ id: 'p', layerId: 'l1', tileX: 0, tileY: 0 }, library)).toBe(null)
     })
   })
 
