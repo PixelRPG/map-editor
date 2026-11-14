@@ -6,7 +6,6 @@ import type Gdk from '@girs/gdk-4.0'
 import { type EditorTool, type LayerPlane, type MapData, resolvePlacementDefinition } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
-  type EditorMode,
   type Engine,
   GdkSpriteSetResource,
   type GdkSpriteSheet,
@@ -14,11 +13,9 @@ import {
   planeOf,
   populatedPlanes,
   pushRecent,
-  ModeRail,
   RightInspector,
   type SampleScene,
   SceneEditor,
-  SignalScope,
   type TileDescriptor,
 } from '@pixelrpg/gjs'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
@@ -50,7 +47,6 @@ const TOOL_LABELS: Record<EditorTool, string> = {
   object: _('Thing'),
 }
 
-GObject.type_ensure(ModeRail.$gtype)
 GObject.type_ensure(SceneEditor.$gtype)
 GObject.type_ensure(RightInspector.$gtype)
 
@@ -71,11 +67,11 @@ export interface SceneEditorViewSignals extends ResponsiveEditorViewSignals {
 /**
  * Maker-app **Scene Editor** view.
  *
- * Outer `Adw.OverlaySplitView` (mode rail, full window height) →
- * `Adw.ToolbarView` with the scene header → inner `Adw.OverlaySplitView`
- * with the {@link SceneEditor} content on the left and the
- * {@link RightInspector} (Tiles · Layers · Props) docked under the
- * header on the right.
+ * One `Adw.OverlaySplitView` with the {@link SceneEditor} content on the
+ * left and the {@link RightInspector} (Brush · Layers · Things ·
+ * Selected) on the right. No shell navigation: the map editor is its own
+ * `root_stack` page, reached from a map card and left through the back
+ * affordance (REDESIGN.md § 3.4).
  *
  * The active tile and layer live ONLY on the engine's session singleton
  * (`ActiveTileComponent` / `ActiveLayerComponent`); this view holds no
@@ -92,8 +88,6 @@ export class SceneEditorView extends ResponsiveEditorView {
   declare _editor: SceneEditor
   declare _inspector: RightInspector
 
-  private signals = new SignalScope()
-  private _projectName = "Aria's Quest"
   private _sceneName = ''
   private _engine: Engine | null = null
   private _layers: LayerDescriptor[] = []
@@ -133,15 +127,8 @@ export class SceneEditorView extends ResponsiveEditorView {
       {
         GTypeName: 'SceneEditorView',
         Template,
-        InternalChildren: ['mode_rail', 'editor', 'inspector'],
+        InternalChildren: ['editor', 'inspector'],
         Properties: {
-          'project-name': GObject.ParamSpec.string(
-            'project-name',
-            'Project Name',
-            'Name shown in the mode rail hero',
-            GObject.ParamFlags.READWRITE,
-            'New Project',
-          ),
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
             'Scene Name',
@@ -149,9 +136,12 @@ export class SceneEditorView extends ResponsiveEditorView {
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          // show-library/-inspector + *-collapsed are inherited from
-          // ResponsiveEditorView (all default false — both sidebars start
-          // closed, opened on demand via the floating toggle pills).
+          // show-inspector + inspector-collapsed are inherited from
+          // ResponsiveEditorView (both default false — the inspector
+          // starts closed, opened on demand via the floating toggle
+          // pill). `compact` is deliberately NOT set for this view: the
+          // map editor carries no shell navigation, so there would be
+          // nothing to move to a bottom bar.
           // Top-bar density (compact / show-back / show-history /
           // show-grid / show-chip-labels) is driven by an
           // `Adw.BreakpointBin` inside `scene-editor.blp` so it
@@ -159,7 +149,6 @@ export class SceneEditorView extends ResponsiveEditorView {
           // no passthrough properties needed here.
         },
         Signals: {
-          // mode-changed is inherited from ResponsiveEditorView.
           // Fired when the active map's `MapData` was mutated in
           // place (e.g. user toggled a layer's visibility or lock
           // flag) and should be serialised back to disk. The host
@@ -181,7 +170,6 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   constructor() {
     super()
-    this._mode_rail.projectName = this._projectName
     this._wireInspectorSignals()
     this._wireEditorSignals()
   }
@@ -774,7 +762,7 @@ export class SceneEditorView extends ResponsiveEditorView {
    * The badge draws the tool itself (corner disc) and the plane (ring),
    * so this only supplies the picture; `_applyActiveLayer` supplies the
    * ring and `setActiveTool` the disc. The three chips this replaced —
-   * a rail row, a tile chip and a layer chip — are now one square.
+   * a tool chip, a tile chip and a layer chip — are now one square.
    */
   private _syncContextChip(): void {
     this._editor.brushBadge.tool = this._activeTool
@@ -820,17 +808,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     })
   }
 
-  get projectName(): string {
-    return this._projectName ?? ''
-  }
-
-  set projectName(value: string) {
-    if (this._projectName === value) return
-    this._projectName = value
-    this._mode_rail.projectName = value
-    this.notify('project-name')
-  }
-
   get sceneName(): string {
     return this._sceneName ?? ''
   }
@@ -839,18 +816,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (this._sceneName === value) return
     this._sceneName = value
     this.notify('scene-name')
-  }
-
-  vfunc_map(): void {
-    super.vfunc_map()
-    this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
-      this.emit('mode-changed', mode as EditorMode)
-    })
-  }
-
-  vfunc_unmap(): void {
-    this.signals.disconnectAll()
-    super.vfunc_unmap()
   }
 }
 

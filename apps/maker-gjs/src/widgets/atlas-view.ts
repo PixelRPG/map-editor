@@ -4,10 +4,9 @@ import type { GameProjectResource } from '@pixelrpg/engine'
 import {
   AtlasCanvas,
   AtlasOverview,
-  type EditorMode,
   FloatingFab,
   FloatingZoom,
-  ModeRail,
+  ProjectMenuButton,
   SAMPLE_SCENES,
   SAMPLE_TELEPORTS,
   type SampleScene,
@@ -19,7 +18,7 @@ import {
 import Template from './atlas-view.blp'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 
-GObject.type_ensure(ModeRail.$gtype)
+GObject.type_ensure(ProjectMenuButton.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(SceneInspector.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
@@ -43,16 +42,16 @@ export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
 }
 
 /**
- * Maker-app **Atlas** view — composes the mode rail, atlas canvas, and
- * scene inspector into the desktop Adwaita split-view layout described
- * in the design handoff.
- *
- * Outer `Adw.NavigationSplitView` holds the mode rail; the inner
- * `Adw.OverlaySplitView` keeps the scene inspector pinned to the
+ * Maker-app **World** view — the atlas canvas plus the scene inspector
+ * in one `Adw.OverlaySplitView`, which keeps the inspector pinned to the
  * trailing edge but lets it collapse on narrow widths.
  *
+ * Navigation between the shell's three destinations is the header's
+ * `Adw.ViewSwitcher` (wide) or the window's `Adw.ViewSwitcherBar`
+ * (phone) — this view no longer carries a sidebar of its own.
+ *
  * Emits `scene-opened::<id>` so the application window can swap to the
- * scene editor view.
+ * map editor.
  */
 export class AtlasView extends ResponsiveEditorView {
   declare _atlas: AtlasCanvas
@@ -64,7 +63,6 @@ export class AtlasView extends ResponsiveEditorView {
   private signals = new SignalScope()
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
-  private _projectName = SAMPLE_SCENES.length ? "Aria's Quest" : 'New Project'
   private _projectResource: GameProjectResource | null = null
   private _selectedSceneId: string | null = null
 
@@ -73,18 +71,9 @@ export class AtlasView extends ResponsiveEditorView {
       {
         GTypeName: 'AtlasView',
         Template,
-        InternalChildren: ['mode_rail', 'atlas', 'inspector', 'preview_zoom', 'atlas_overview', 'overview_frame'],
-        Properties: {
-          'project-name': GObject.ParamSpec.string(
-            'project-name',
-            'Project Name',
-            'Name shown in the header window title',
-            GObject.ParamFlags.READWRITE,
-            'New Project',
-          ),
-          // show-library/-inspector + *-collapsed are inherited from
-          // ResponsiveEditorView.
-        },
+        InternalChildren: ['view_switcher', 'atlas', 'inspector', 'preview_zoom', 'atlas_overview', 'overview_frame'],
+        // show-inspector / inspector-collapsed / compact / full-view are
+        // inherited from ResponsiveEditorView.
         Signals: {
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
@@ -94,7 +83,6 @@ export class AtlasView extends ResponsiveEditorView {
           'preview-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
           },
-          // mode-changed is inherited from ResponsiveEditorView.
         },
       },
       AtlasView,
@@ -107,7 +95,6 @@ export class AtlasView extends ResponsiveEditorView {
 
   constructor() {
     super()
-    this._mode_rail.projectName = this._projectName
     this._atlas.setWorld(this._scenes, this._teleports)
     this._inspector.setScene(null, this._scenes, this._teleports)
     this._preview_zoom.setZoom(this._atlas.previewZoom)
@@ -152,17 +139,6 @@ export class AtlasView extends ResponsiveEditorView {
   /** Back to the 200% default (`win.zoom-reset` in the atlas). */
   resetPreviewZoom(): void {
     this.setPreviewZoom(AtlasCanvas.DEFAULT_PREVIEW_ZOOM)
-  }
-
-  get projectName(): string {
-    return this._projectName ?? ''
-  }
-
-  set projectName(value: string) {
-    if (this._projectName === value) return
-    this._projectName = value
-    this._mode_rail.projectName = value
-    this.notify('project-name')
   }
 
   /**
@@ -244,9 +220,6 @@ export class AtlasView extends ResponsiveEditorView {
     })
     this.signals.connect(this._inspector, 'preview-lock-changed', (_i: SceneInspector, unlocked: boolean) => {
       if (this._selectedSceneId) this._atlas.setPreviewLock(this._selectedSceneId, unlocked)
-    })
-    this.signals.connect(this._mode_rail, 'mode-changed', (_r: ModeRail, mode: string) => {
-      this.emit('mode-changed', mode as EditorMode)
     })
     // Overview minimap: redraw scene rects when the world changes, and
     // track the viewport frame as the user pans/scrolls.

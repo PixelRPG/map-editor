@@ -6,9 +6,8 @@ import { addAction } from './action-registry.ts'
 /** What the sidebar + view-flag actions need from the window. */
 export interface InspectorActionsContext {
   /**
-   * Owner of the shared `show-library` / `show-inspector` properties the
-   * two sidebar toggles wrap — the window, which binds both
-   * bidirectionally into every view.
+   * Owner of the shared `show-inspector` property the sidebar toggle
+   * wraps — the window, which binds it bidirectionally into every view.
    */
   sidebarOwner: GObject.Object
   /** Switch the scene inspector to a tab by name (tiles/layers/objects/props). */
@@ -23,12 +22,15 @@ export interface InspectorActionsContext {
 /**
  * Sidebar toggles and the editor view flags.
  *
- * `toggle-library` and `toggle-inspector` are BOTH `Gio.PropertyAction`s
- * over the window's shared sidebar properties, because the OSD buttons
- * live in the cross-package `SceneEditor` pills, which a template binding
- * cannot reach; the atlas and welcome views bind `show-library` /
- * `show-inspector` directly instead (see
- * `docs/concepts/responsive-chrome.md`).
+ * `toggle-inspector` is a `Gio.PropertyAction` over the window's shared
+ * `show-inspector` property, because the OSD button lives in the
+ * cross-package `SceneEditor` pills, which a template binding cannot
+ * reach; the atlas and welcome views bind `show-inspector` directly
+ * instead (see `docs/concepts/responsive-chrome.md`).
+ *
+ * There is no `toggle-library` counterpart any more: the library is a
+ * destination of the shell's view switcher, not a drawer over the map
+ * (REDESIGN.md § 3.2).
  *
  * A PropertyAction carries boolean STATE, so a `Gtk.ToggleButton` wired
  * with `action-name` reflects the sidebar without any extra plumbing —
@@ -53,10 +55,6 @@ export function installInspectorActions(
   })
   addAction(group, setInspectorTab)
 
-  addAction(
-    group,
-    new Gio.PropertyAction({ name: 'toggle-library', object: ctx.sidebarOwner, property_name: 'show-library' }),
-  )
   addAction(
     group,
     new Gio.PropertyAction({ name: 'toggle-inspector', object: ctx.sidebarOwner, property_name: 'show-inspector' }),

@@ -1,117 +1,116 @@
 using Gtk 4.0;
 using Adw 1;
 
-// Game page — the project's own settings, one rail row. ModeRail (left)
-// holds the whole view; the content is an `Adw.PreferencesPage` (clamped
-// + scrollable → responsive for free):
+// Game page — the project's own settings, one shell destination. The
+// content is an `Adw.PreferencesPage` (clamped + scrollable →
+// responsive for free):
 //   • Project    — editable project metadata (name, author, …).
 //   • Tile settings — the default tile size + where the project lives.
 //   • Game rules — the switchable game systems + the always-on base
 //     layer (see docs/concepts/game-systems.md), built in game-view.ts.
-// Assets are NOT listed here: characters and graphics are one rail row
-// away in the Library, and a group of jump-links to them was noise.
+// Assets are NOT listed here: characters and graphics are one switcher
+// click away in the Library, and a group of jump-links was noise.
 template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
-  Adw.OverlaySplitView outer_split {
-    sidebar-position: start;
-    min-sidebar-width: 220;
-    max-sidebar-width: 260;
-    sidebar-width-fraction: 0.7;
-    pin-sidebar: true;
-    collapsed: bind template.library-collapsed;
-    show-sidebar: bind template.show-library bidirectional;
+  Adw.ToolbarView {
+    top-bar-style: flat;
 
-    sidebar: $PixelRpgModeRail mode_rail {
-      project-name: _("New Project");
-      project-tagline: _("Game");
-    };
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: true;
 
-    content: Adw.ToolbarView {
-      top-bar-style: flat;
+      // Wide: the shell switcher is the header title. Phone: the
+      // window's `Adw.ViewSwitcherBar` owns the destinations and the
+      // header shows the page title instead (REDESIGN.md § 3.3).
+      // `view_switcher.stack` is wired in code — see
+      // `ResponsiveEditorView.attachShellSwitcher`.
+      title-widget: Gtk.Box {
+        halign: center;
 
-      [top]
-      Adw.HeaderBar {
-        show-title: false;
-        show-start-title-buttons: false;
-        show-end-title-buttons: true;
+        Adw.ViewSwitcher view_switcher {
+          visible: bind template.compact inverted;
+          policy: wide;
+        }
 
-        [start]
-        Gtk.ToggleButton library_toggle {
-          icon-name: "sidebar-show-symbolic";
-          tooltip-text: _("Toggle sidebar");
-          active: bind template.show-library bidirectional;
+        Adw.WindowTitle {
+          title: _("Game");
+          visible: bind template.compact;
+        }
+      };
+
+      [end]
+      $PixelRpgProjectMenuButton project_menu {}
+    }
+
+    content: Adw.PreferencesPage {
+      title: _("Game");
+
+      Adw.PreferencesGroup {
+        title: _("Project");
+        description: _("Settings saved into game-project.json.");
+
+        Adw.EntryRow name_row {
+          show-apply-button: true;
+          title: _("Name");
+        }
+
+        Adw.EntryRow author_row {
+          show-apply-button: true;
+          title: _("Author");
+        }
+
+        Adw.EntryRow version_row {
+          show-apply-button: true;
+          title: _("Version");
+          visible: bind template.full-view;
+        }
+
+        Adw.EntryRow description_row {
+          show-apply-button: true;
+          title: _("Description");
         }
       }
 
-      content: Adw.PreferencesPage {
-        title: _("Game");
+      // Full view only: the tile grid and the file path are the
+      // expert's numbers; a child's Game page is a name and an author.
+      Adw.PreferencesGroup {
+        title: _("Tile settings");
+        visible: bind template.full-view;
 
-        Adw.PreferencesGroup {
-          title: _("Project");
-          description: _("Settings saved into game-project.json.");
-
-          Adw.EntryRow name_row {
-            show-apply-button: true;
-            title: _("Name");
-          }
-
-          Adw.EntryRow author_row {
-            show-apply-button: true;
-            title: _("Author");
-          }
-
-          Adw.EntryRow version_row {
-            show-apply-button: true;
-            title: _("Version");
-            visible: bind template.full-view;
-          }
-
-          Adw.EntryRow description_row {
-            show-apply-button: true;
-            title: _("Description");
-          }
+        Adw.SpinRow tilesize_row {
+          title: _("Default tile size");
+          subtitle: _("Pixel grid step for new maps.");
+          adjustment: Gtk.Adjustment {
+            lower: 4;
+            upper: 256;
+            step-increment: 1;
+            page-increment: 8;
+          };
         }
 
-        // Full view only: the tile grid and the file path are the
-        // expert's numbers; a child's Game page is a name and an author.
-        Adw.PreferencesGroup {
-          title: _("Tile settings");
-          visible: bind template.full-view;
-
-          Adw.SpinRow tilesize_row {
-            title: _("Default tile size");
-            subtitle: _("Pixel grid step for new maps.");
-            adjustment: Gtk.Adjustment {
-              lower: 4;
-              upper: 256;
-              step-increment: 1;
-              page-increment: 8;
-            };
-          }
-
-          Adw.ActionRow path_row {
-            title: _("Project file");
-            subtitle-selectable: true;
-            styles ["property"]
-          }
+        Adw.ActionRow path_row {
+          title: _("Project file");
+          subtitle-selectable: true;
+          styles ["property"]
         }
+      }
 
-        // Game rules — one Adw.ExpanderRow per switchable game system
-        // (show-enable-switch: the switch is the on/off, the body is the
-        // expert surface), plus the always-on base layer. Rows are built
-        // in game-view.ts from the game-system registry, so a new system
-        // is a registration rather than a template edit. `game_rules`
-        // hides itself while no switchable system ships.
-        Adw.PreferencesGroup game_rules {
-          title: _("Game rules");
-          description: _("Turn on what your game has.");
-          visible: false;
-        }
+      // Game rules — one Adw.ExpanderRow per switchable game system
+      // (show-enable-switch: the switch is the on/off, the body is the
+      // expert surface), plus the always-on base layer. Rows are built
+      // in game-view.ts from the game-system registry, so a new system
+      // is a registration rather than a template edit. `game_rules`
+      // hides itself while no switchable system ships.
+      Adw.PreferencesGroup game_rules {
+        title: _("Game rules");
+        description: _("Turn on what your game has.");
+        visible: false;
+      }
 
-        Adw.PreferencesGroup always_on {
-          title: _("Always on");
-          description: _("Part of every game.");
-        }
-      };
+      Adw.PreferencesGroup always_on {
+        title: _("Always on");
+        description: _("Part of every game.");
+      }
     };
   }
 }

@@ -53,7 +53,7 @@ Terms used across multiple docs.
 - **Mode marker** — a component on the session-singleton whose mere presence flips a mode on (`EditorModeComponent`, `RuntimeModeComponent`, `SpawnOverrideComponent`). Adding/removing the component is the mode transition.
 - **Placement** — one instance of an entity on a map at `(tileX, tileY)` on a referenced `layerId`. Carries either a `defId` (library reference) or an `inline` definition. Lives in `MapData.objectPlacements`.
 - **Definition** — `EntityDefinition`, the reusable shape a placement refers to: `id`, `name`, an explicit `components[]` list (each entry a typed, serialisable component config keyed into the component registry), optional `states[]`, optional `editorData` (`template` / `category` / `icon`). See [`entity-and-appearance-model.md`](entity-and-appearance-model.md).
-- **Library** — `GameProjectData.entityLibrary[]`, the project-level pool of reusable `EntityDefinition`s (world objects AND cast characters). Editing one entry updates every placement that references it via `defId`. (The rail row called Library in the UI is wider: it also holds the sprite sets — see the UI words below.)
+- **Library** — `GameProjectData.entityLibrary[]`, the project-level pool of reusable `EntityDefinition`s (world objects AND cast characters). Editing one entry updates every placement that references it via `defId`. (The switcher destination called Library in the UI is wider: it also holds the sprite sets — see the UI words below.)
 - **Game system** — a `GameSystemSpec` (`packages/engine/src/game-systems/`): the switchable bundle a *user* turns on — components, editor templates and the ECS systems that run them. Not an ECS `System`. Base systems (`core`, `inventory`) are always on; everything else is per-project in `GameProjectData.gameSystems`. See [`game-systems.md`](game-systems.md).
 - **Dormant** — data belonging to a game system the project has switched OFF: preserved, editable, inert, and reported separately from an *unknown* component type, which is rejected loudly. The distinction is what keeps a switch from being destructive and a typo from being silent.
 - **Effective registry** — `effectiveComponentRegistry(project)`: the components a given project may use (base systems plus the ones it enabled). What every validator, spawn path and inspector is handed, rather than the full `BUILT_IN_COMPONENT_SPECS`.
@@ -70,14 +70,14 @@ One vocabulary, chosen for the child (the interaction concept's §7); code keeps
 
 | UI word | Code term |
 |---|---|
-| **World** (rail row) | the atlas (`AtlasView`, every `MapData` as a card) plus the scene editor (`SceneEditorView`) — one row, two pages, both `modeForView(...) === 'world'` |
+| **World** (switcher destination) | the atlas (`AtlasView`, the `world` page of `shell_stack`, every `MapData` as a card) plus the scene editor (`SceneEditorView`, the `map` page of `root_stack`) — one destination, two pages, both `modeForView(...) === 'world'` |
 | **Map** | `MapData`, `maps/*.json`, and everything the code still calls a *scene* (`win.open-scene`, `SceneNavigator`, `currentSceneId`) |
-| **Library** (rail row) | `LibraryView`: three chip pages over the entity library + the sprite sets — reached by `win.mode('library')` + `win.library-chip` |
+| **Library** (switcher destination) | `LibraryView`: three chip pages over the entity library + the sprite sets — reached by `win.mode('library')` + `win.library-chip` |
 | **Characters** (Library chip) | `CastView` / `CastController`: the `character`-template subset of `entityLibrary`, as `CharacterDefinition` view models |
 | **Things** (Library chip) | `ObjectsView` / `ObjectsController`: every `EntityDefinition` in `entityLibrary`; "Objects" survives only as the name of the uncategorised group inside it |
 | **Graphics** (Library chip) | `TilesView` / `TilesController`: the sprite sets (`SpriteSetData`), tilesets and appearances alike; "sprite sheet" is the import dialog's word |
-| **Game** (rail row) | `GameView` / `GameController`: `GameProjectData`'s name, `properties` and `gameSystems` |
+| **Game** (switcher destination) | `GameView` / `GameController`: `GameProjectData`'s name, `properties` and `gameSystems` |
 | **Character** (badge, switch) | `isCharacterEntity(def)` — `editorData.template === 'character'` |
 | **Simple view** / **Full view** (menu check item, Preferences switch, "Show N more settings" row) | the GSettings key `ui-tier` (`simple` \| `full`), `UiTierService.full-view`, the stateful `app.full-view` action, and the `full-view` property every view carries; the filter is `entity/disclosure.ts` — see [`entity-and-appearance-model.md`](entity-and-appearance-model.md) § Simple view and Full view |
 | **Appearance** | a character-kind sprite set: `SpriteSetData.kind === 'character'` plus its `characterAnimations` |
-| **Sidebar** (toggle) | the rail drawer — `show-library` / `library-collapsed` on every view, `win.toggle-library` |
+| **Sidebar** (toggle) | the right inspector drawer — `show-inspector` / `inspector-collapsed`, `win.toggle-inspector`. The left rail drawer (`show-library` / `library-collapsed` / `win.toggle-library`) is gone; `compact` is what a view now reads to know it is on a phone |

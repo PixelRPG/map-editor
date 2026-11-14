@@ -7,7 +7,7 @@ import { fail, ok } from '../tool-result.ts'
 import { instanceArg } from './instance-arg.ts'
 
 /** A literal copy of the maker's `ViewName` (`apps/maker-gjs/src/services/view-mode-map.ts`). */
-const VIEWS = ['welcome', 'atlas', 'library', 'game', 'scene-editor'] as const
+const VIEWS = ['welcome', 'world', 'library', 'game', 'map'] as const
 type ViewName = (typeof VIEWS)[number]
 
 /** A literal copy of the maker's `LibraryChip` (`apps/maker-gjs/src/services/library-chip.ts`). */
@@ -15,13 +15,13 @@ const LIBRARY_CHIPS = ['characters', 'things', 'graphics'] as const
 
 /**
  * The `win.` action each top-level view is reached through, with its
- * parameter where one is needed. `scene-editor` is deliberately absent:
- * entering it needs a scene id, so open_scene owns that route. The
+ * parameter where one is needed. `map` is deliberately absent: entering
+ * the map editor needs a scene id, so open_scene owns that route. The
  * Library's chip is a second step (`win.library-chip`), applied after.
  */
 const VIEW_ACTIONS: Partial<Record<ViewName, readonly [string, string?]>> = {
   welcome: ['close-project'],
-  atlas: ['mode', 'world'],
+  world: ['mode', 'world'],
   library: ['mode', 'library'],
   game: ['mode', 'game'],
 }
@@ -70,8 +70,9 @@ export function registerEditingTools(server: McpServer): void {
     'set_view',
     {
       description:
-        'Switch the top-level view. "atlas", "library" and "game" need a loaded project; "welcome" closes it; ' +
-        'for "scene-editor" use open_scene. "library" holds the characters, the things (entity library) and the ' +
+        'Switch the top-level view. "world", "library" and "game" are the project shell\'s three destinations and ' +
+        'need a loaded project; "welcome" closes it; for "map" (the map editor) use open_scene. ' +
+        '"library" holds the characters, the things (entity library) and the ' +
         'graphics (tilesets + appearances) behind three chips — pass `chip` to pick one, or keep the current one ' +
         '(the graphics chip exists in Full view only; asking for it from Simple view switches the maker to Full view, ' +
         'with an Undo toast for the person at the keyboard). ' +

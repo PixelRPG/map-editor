@@ -3,6 +3,7 @@
 
 import type Adw from 'gi://Adw?version=1';
 import type GObject from 'gi://GObject?version=2.0';
+import type Gtk from 'gi://Gtk?version=4.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
@@ -22,22 +23,28 @@ export declare const GTypeName: 'ApplicationWindow';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'toast_overlay',
-    'stack',
-    'welcome_view',
-    'atlas_view',
-    'library_view',
-    'scene_editor_view',
-    'game_view',
+        'toast_overlay',
+        'root_stack',
+        'welcome_view',
+        'shell',
+        'shell_stack',
+        'atlas_view',
+        'library_view',
+        'game_view',
+        'view_switcher_bar',
+        'scene_editor_view',
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _toast_overlay: Adw.ToastOverlay;
-    _stack: Adw.ViewStack;
-    _welcome_view: GObject.Object;
-    _atlas_view: GObject.Object;
-    _library_view: GObject.Object;
-    _scene_editor_view: GObject.Object;
-    _game_view: GObject.Object;
+        _toast_overlay: Adw.ToastOverlay;
+        _root_stack: Gtk.Stack;
+        _welcome_view: GObject.Object;
+        _shell: Adw.ToolbarView;
+        _shell_stack: Adw.ViewStack;
+        _atlas_view: GObject.Object;
+        _library_view: GObject.Object;
+        _game_view: GObject.Object;
+        _view_switcher_bar: Adw.ViewSwitcherBar;
+        _scene_editor_view: GObject.Object;
 }

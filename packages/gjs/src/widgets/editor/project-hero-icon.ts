@@ -11,7 +11,7 @@ const ON_ACCENT_FALLBACK = '#ffffff'
  * Project hero icon — a rounded-square chip painted in the accent color
  * with a compact compass-rose glyph centred inside.
  *
- * Used by the {@link ModeRail} library sidebar's hero block. The `size`
+ * Used by the welcome view's project cards. The `size`
  * property scales the entire composition. The accent color tracks the
  * libadwaita `@accent_bg_color` style binding when available, otherwise
  * falls back to the default Adwaita blue.

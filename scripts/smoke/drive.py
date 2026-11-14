@@ -14,13 +14,22 @@ scenarios
             itself live — lands the second open INSIDE the project load,
             which is the window the two collide in
   churn     open project + map, then switch maps 4x fast
-  enterleave  open a map, go back to the atlas, repeat 8x — each round
-              trip destroys and rebuilds the engine widget + its GL context
+  enterleave  open a map, go back to the World page, repeat 8x — each
+              round trip destroys and rebuilds the engine widget + its GL
+              context, and is checked to leave SceneEditorView rooted
 
 A run PASSES when, after the last step, GetStatus reports
 engineReady=true AND currentSceneId is the map we asked for AND
 activeLayer is non-null (a live engine on the right scene, with the
 editor state actually planted on it).
+
+`enterleave` additionally asserts `sceneEditorRooted` on BOTH sides of
+every switch. The editor's two stacks only change which page is visible,
+so SceneEditorView must stay parented by `root_stack` for the process's
+lifetime: the gjs Engine tears Excalibur down in `vfunc_unroot` and
+nothing rebuilds it, so one stray unroot kills the map editor for good
+(REDESIGN.md § 10, risk 4). `engineReady` alone would not catch it — it
+reports the CURRENT entry, and the teardown is only visible on the next.
 """
 from __future__ import annotations
 
@@ -137,6 +146,25 @@ def wait_for(label: str, pred, timeout=30.0):
     return st
 
 
+def require_rooted(st: dict | None, where: str) -> None:
+    """Fail the run unless SceneEditorView is still where it was built.
+
+    Read from GetStatus rather than inferred: `sceneEditorRooted` is the
+    window comparing the live widget's parent against `root_stack` and its
+    root against itself. A missing key is a failure too — the field going
+    away would otherwise turn this assertion into a silent pass.
+    """
+    if st is None:
+        raise RuntimeError(f"no status to check sceneEditorRooted ({where})")
+    if "sceneEditorRooted" not in st:
+        raise RuntimeError(f"GetStatus has no sceneEditorRooted field ({where})")
+    if st["sceneEditorRooted"] is not True:
+        raise RuntimeError(
+            f"SceneEditorView was reparented or unrooted ({where}) — "
+            "the Excalibur loop is torn down in vfunc_unroot and never rebuilt"
+        )
+
+
 # Per-batch label prefix. It has to be unique across batches, not just
 # within one: PIXELRPG_INSTANCE becomes the GApplication id, so if any
 # instance from an earlier batch is still alive under the same label the
@@ -209,9 +237,11 @@ def run_once(i: int) -> tuple[bool, dict | None, str]:
         elif SCENARIO == "enterleave":
             for _n in range(8):
                 open_scene(label, MAP_A)
-                wait_for(label, lambda s: s.get("engineReady") is True, 30)
+                st = wait_for(label, lambda s: s.get("engineReady") is True, 30)
+                require_rooted(st, f"round {_n}, on the map")
                 activate(label, "back-to-atlas")
-                wait_for(label, lambda s: s.get("view") == "atlas", 15)
+                st = wait_for(label, lambda s: s.get("view") == "world", 15)
+                require_rooted(st, f"round {_n}, back on World")
             open_scene(label, MAP_A)
         elif SCENARIO == "churn":
             open_scene(label, MAP_A)

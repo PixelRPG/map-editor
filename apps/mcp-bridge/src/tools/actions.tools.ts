@@ -84,7 +84,7 @@ export function registerActionTools(server: McpServer): void {
   registerWinAction(server, 'zoom_in', 'zoom-in', 'Zoom the map camera in one step.')
   registerWinAction(server, 'zoom_out', 'zoom-out', 'Zoom the map camera out one step.')
   registerWinAction(server, 'zoom_reset', 'zoom-reset', 'Reset the map camera zoom to 100%.')
-  registerWinAction(server, 'back_to_atlas', 'back-to-atlas', 'Leave the scene editor and return to the atlas.')
+  registerWinAction(server, 'back_to_atlas', 'back-to-atlas', 'Leave the map editor and return to the World view.')
   registerWinAction(server, 'close_project', 'close-project', 'Close the project and return to the welcome view.')
   registerWinAction(server, 'toggle_inspector', 'toggle-inspector', 'Toggle the right inspector sidebar.')
 }

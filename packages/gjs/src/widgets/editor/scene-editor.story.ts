@@ -138,7 +138,7 @@ export class SceneEditorStory extends StoryWidget {
     for (const name of ['toggle-grid', 'toggle-transparency', 'toggle-objects']) {
       group.add_action(Gio.SimpleAction.new_stateful(name, null, GLib.Variant.new_boolean(false)))
     }
-    for (const name of ['toggle-library', 'toggle-inspector']) {
+    for (const name of ['toggle-inspector']) {
       group.add_action(Gio.SimpleAction.new_stateful(name, null, GLib.Variant.new_boolean(false)))
     }
     this.insert_action_group('win', group)

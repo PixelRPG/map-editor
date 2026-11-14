@@ -59,7 +59,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     // side drifts, and `effectiveStage` demotes further for a roster
     // wider than one avatar.
     Adw.Breakpoint {
-      condition ("min-width: 720sp")
+      condition ("min-width: 672sp")
 
       setters {
         template.stage: "compact";
@@ -67,7 +67,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 808sp")
+      condition ("min-width: 768sp")
 
       setters {
         template.stage: "normal-1";
@@ -75,7 +75,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 920sp")
+      condition ("min-width: 880sp")
 
       setters {
         template.stage: "normal-2";
@@ -83,7 +83,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 1224sp")
+      condition ("min-width: 1176sp")
 
       setters {
         template.stage: "roomy";
@@ -148,13 +148,6 @@ template $PixelRpgSceneEditor : Adw.Bin {
             orientation: horizontal;
             spacing: 2;
             styles ["toolbar", "osd", "editing-pill"]
-
-            Gtk.ToggleButton library_toggle {
-              icon-name: "sidebar-show-symbolic";
-              action-name: "win.toggle-library";
-              tooltip-text: _("Toggle sidebar");
-              styles ["flat"]
-            }
 
             Gtk.Button back_button {
               action-name: "win.back-to-atlas";
@@ -287,6 +280,12 @@ template $PixelRpgSceneEditor : Adw.Bin {
               styles ["flat"]
             }
 
+            // The map editor shows no shell navigation, so this pill is
+            // its only header end and "..." is the only door to the
+            // app's primary menu (REDESIGN.md § 3.3). Those items are
+            // sections of this menu rather than a second
+            // $PixelRpgProjectMenuButton beside it: two adjacent menu
+            // buttons, and a "Share..." in both of them.
             Gtk.MenuButton overflow_button {
               icon-name: "view-more-symbolic";
               tooltip-text: _("More actions");

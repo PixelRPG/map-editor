@@ -8,44 +8,27 @@ template $ApplicationWindow : Adw.ApplicationWindow {
   width-request: 360;
   height-request: 480;
 
-  // Mobile (<768sp): every sidebar collapses into an overlay
-  // drawer. User opens them via the headerbar toggles in atlas /
-  // library / game, the merged top OSD bar in the scene editor, and
-  // the welcome view's headerbar toggle.
+  // Phone (<768sp): the shell's three destinations move into the
+  // bottom `Adw.ViewSwitcherBar`, the views drop their wide-screen
+  // switcher and the inspectors collapse into overlay drawers. The
+  // threshold is `max-width: 767sp` so it does not double-match the
+  // tablet range at exactly 768sp (REDESIGN.md § 3.3).
+  //
+  // There is no tablet breakpoint any more: the left mode rail was
+  // its only setter, and tablet now uses the template defaults — the
+  // wide switcher plus persistent inspectors.
   Adw.Breakpoint {
-    condition ("max-width: 768sp")
+    condition ("max-width: 767sp")
 
     setters {
-      atlas_view.library-collapsed: true;
+      view_switcher_bar.reveal: true;
+      atlas_view.compact: true;
       atlas_view.inspector-collapsed: true;
-      library_view.library-collapsed: true;
+      library_view.compact: true;
       library_view.inspector-collapsed: true;
-      scene_editor_view.library-collapsed: true;
       scene_editor_view.inspector-collapsed: true;
-      game_view.library-collapsed: true;
+      game_view.compact: true;
       welcome_view.inspector-collapsed: true;
-    }
-  }
-
-  // Tablet (768sp ≤ width < 1024sp): only the left library
-  // collapses (it's the larger sidebar). The right inspector
-  // stays persistent because that's where the user reads scene
-  // metadata + edits properties — making it a drawer would hide
-  // their current context every time they tap outside.
-  //
-  // Welcome view's recents panel also stays persistent at tablet
-  // — it's the user's primary continue-work surface.
-  //
-  // Desktop (≥1024sp) uses the template defaults — every sidebar
-  // persistent — so no third breakpoint needed.
-  Adw.Breakpoint {
-    condition ("min-width: 768sp and max-width: 1023sp")
-
-    setters {
-      atlas_view.library-collapsed: true;
-      library_view.library-collapsed: true;
-      scene_editor_view.library-collapsed: true;
-      game_view.library-collapsed: true;
     }
   }
 
@@ -56,9 +39,14 @@ template $ApplicationWindow : Adw.ApplicationWindow {
   // allocation, not the window width.
 
   content: Adw.ToastOverlay toast_overlay {
-    child: Adw.ViewStack stack {
+    // Two levels, not one flat stack: the project shell owns the view
+    // switcher, the map editor deliberately has no shell navigation
+    // (REDESIGN.md § 3.2). `Gtk.Stack` rather than `Adw.ViewStack`
+    // because these pages are not switcher destinations.
+    child: Gtk.Stack root_stack {
       vexpand: true;
       hexpand: true;
+      transition-type: crossfade;
       // Default is `true`, which measures every page and uses the
       // max as the stack's size. With the scene editor's WebGL
       // canvas reporting a large natural width (~1200 px), that
@@ -69,34 +57,60 @@ template $ApplicationWindow : Adw.ApplicationWindow {
       hhomogeneous: false;
       vhomogeneous: false;
 
-      Adw.ViewStackPage {
+      Gtk.StackPage {
         name: "welcome";
         title: _("Welcome");
         child: $WelcomeView welcome_view {};
       }
 
-      Adw.ViewStackPage {
-        name: "atlas";
-        title: _("World");
-        child: $AtlasView atlas_view {};
+      Gtk.StackPage {
+        name: "shell";
+        title: _("Project");
+
+        child: Adw.ToolbarView shell {
+          [bottom]
+          Adw.ViewSwitcherBar view_switcher_bar {
+            stack: shell_stack;
+          }
+
+          content: Adw.ViewStack shell_stack {
+            vexpand: true;
+            hexpand: true;
+            hhomogeneous: false;
+            vhomogeneous: false;
+
+            Adw.ViewStackPage {
+              name: "world";
+              title: _("World");
+              icon-name: "map-symbolic";
+              child: $AtlasView atlas_view {};
+            }
+
+            Adw.ViewStackPage {
+              name: "library";
+              title: _("Library");
+              icon-name: "library-symbolic";
+              child: $PixelRpgLibraryView library_view {};
+            }
+
+            Adw.ViewStackPage {
+              name: "game";
+              title: _("Game");
+              icon-name: "applications-games-symbolic";
+              child: $PixelRpgGameView game_view {};
+            }
+          };
+        };
       }
 
-      Adw.ViewStackPage {
-        name: "library";
-        title: _("Library");
-        child: $PixelRpgLibraryView library_view {};
-      }
-
-      Adw.ViewStackPage {
-        name: "scene-editor";
+      // A permanent child of `root_stack` for the app's lifetime —
+      // never reparented. The engine tears its Excalibur instance
+      // down in `vfunc_unroot`, and a stray unroot kills the loop for
+      // good (REDESIGN.md § 10, risk 4).
+      Gtk.StackPage {
+        name: "map";
         title: _("Map editor");
         child: $SceneEditorView scene_editor_view {};
-      }
-
-      Adw.ViewStackPage {
-        name: "game";
-        title: _("Game");
-        child: $PixelRpgGameView game_view {};
       }
     };
   };
