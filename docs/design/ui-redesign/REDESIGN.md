@@ -988,7 +988,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 
 | # | Step | Resolves |
 |---|---|---|
-| 1.1 | Pinch zoom + two-finger pan (`Gtk.GestureZoom`), whole-pixel snap, stroke cancel on second finger | TODO "No pinch-to-zoom on the scene canvas" |
+| 1.1 | Pinch zoom + two-finger pan (`Gtk.GestureZoom`), whole-pixel snap, stroke cancel on second finger | TODO "No pinch-to-zoom on the scene canvas" | — done (`pinch-zoom.ts` over the pure `touch-gesture.ts`; there is no drag-stroke to cancel yet, see TODO.md)
 | 1.2 | Move tool on touch (one-finger pan, tap select), armed on open | accidental strokes | — done (`select` was already the default `win.set-tool` state; now pinned by `window-actions.gjs.spec.ts` and the phone tool order leads with it)
 | 1.3 | Undo/redo pill bottom-left on phone; two- and three-finger tap | thumb reach; undo invariant kept |
 | 1.4 | Long-press menu on placements; badge pop on pick | brief: long-press |

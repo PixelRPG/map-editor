@@ -419,6 +419,23 @@ export class Engine extends Adw.Bin {
   }
 
   /**
+   * Move the camera by a screen-pixel offset: the map follows the
+   * fingers, so the camera travels the other way, and a screen pixel is
+   * `1 / zoom` world units.
+   *
+   * Mirrors what `CameraControlSystem` does for a one-finger drag, but
+   * the two-finger gesture cannot go through that path — it claims the
+   * sequence away from the pointer stream precisely so the drag stops
+   * feeding deltas (see `pinch-zoom.ts`).
+   */
+  public panCameraBy(screenDeltaX: number, screenDeltaY: number): void {
+    const camera = this._excalibur?.excalibur?.currentScene?.camera
+    if (!camera) return
+    const zoom = camera.zoom || 1
+    camera.pos = new Vector(camera.pos.x - screenDeltaX / zoom, camera.pos.y - screenDeltaY / zoom)
+  }
+
+  /**
    * Set the camera zoom while holding the world point under
    * (`screenX`, `screenY`) — widget-local pixels — in place.
    *

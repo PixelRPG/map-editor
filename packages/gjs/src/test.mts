@@ -34,6 +34,7 @@ import sceneCardDragSuite from './widgets/editor/scene-card.drag.spec.js'
 import sceneInspectorModelSuite from './widgets/editor/scene-inspector.model.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
+import touchGestureSuite from './widgets/engine/touch-gesture.spec.js'
 
 run({
   addAnimationDialogModelSuite,
@@ -58,4 +59,5 @@ run({
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
   tilePaletteGeometrySuite,
+  touchGestureSuite,
 })
