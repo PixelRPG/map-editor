@@ -2,97 +2,90 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgSelectedPage : Adw.Bin {
-  Gtk.Box {
-    orientation: vertical;
+  // Two states, never both: nothing is selected, or one placement is.
+  // A stack rather than `visible` flags so the empty state can fill the
+  // page (the sheet at Full is tall and an empty list reads as a bug).
+  Gtk.Stack stack {
+    Gtk.StackPage {
+      name: "empty";
 
-    // Settings for the placement currently selected on the canvas
-    // (select tool). Hidden without a selection.
-    Adw.PreferencesGroup object_group {
-      title: _("Selected object");
-      visible: false;
-      margin-top: 12;
-      margin-start: 12;
-      margin-end: 12;
-
-      Adw.ActionRow object_def_row {
-        title: _("Object");
-
-        [suffix]
-        Gtk.Button object_open_button {
-          icon-name: "document-edit-symbolic";
-          tooltip-text: _("Edit in library");
-          valign: center;
-          styles ["flat"]
-        }
-      }
-
-      Adw.ActionRow object_position_row {
-        title: _("Position");
-      }
-
-      Adw.ActionRow object_remove_row {
-        title: _("Remove from map");
-        activatable: true;
-        styles ["error"]
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "user-trash-symbolic";
-        }
-      }
+      child: Adw.StatusPage {
+        icon-name: "edit-select-all-symbolic";
+        title: _("Nothing selected");
+        description: _("Tap a thing on the map to edit it here.");
+      };
     }
 
-    Adw.PreferencesGroup props_group {
-      margin-top: 12;
-      margin-bottom: 12;
-      margin-start: 12;
-      margin-end: 12;
+    Gtk.StackPage {
+      name: "placement";
 
-      Adw.EntryRow name_row {
-        title: _("Name");
-      }
+      child: Gtk.Box {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 12;
+        margin-bottom: 12;
+        margin-start: 12;
+        margin-end: 12;
 
-      Adw.ActionRow size_row {
-        title: _("Size");
-        subtitle: bind template.size-text;
-      }
+        // The header: who this is. The name is the one editable field
+        // here and commits on apply (✓ / Enter) rather than per
+        // keystroke — a character each would be one undo entry and one
+        // collab op each.
+        Adw.PreferencesGroup {
+          Adw.EntryRow name_row {
+            title: _("Name");
+            show-apply-button: true;
 
-      Adw.ActionRow tile_size_row {
-        title: _("Tile size");
-        subtitle: bind template.tile-size-text;
-      }
+            [prefix]
+            Gtk.Image sprite_image {
+              pixel-size: 32;
+              valign: center;
+            }
+          }
 
-      Adw.EntryRow music_row {
-        title: _("Music");
-      }
+          Adw.ActionRow kind_row {
+            title: _("Kind");
+          }
 
-      Adw.EntryRow battle_bg_row {
-        title: _("Battle BG");
-      }
+          // Deliberately kept though the design's header list omits it:
+          // this is the only place the user sees WHICH LAYER the
+          // placement sits on, and the layer decides whether an edit is
+          // allowed at all (a locked layer refuses).
+          Adw.ActionRow position_row {
+            title: _("Position");
+          }
 
-      Adw.ActionRow encounters_row {
-        title: _("Encounters");
-        subtitle: bind template.encounters-text;
-        activatable: true;
+          Adw.ActionRow library_row {
+            title: _("Edit in Library");
+            activatable: true;
+            visible: false;
 
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
+            [suffix]
+            Gtk.Image {
+              icon-name: "go-next-symbolic";
+              styles ["dim-label"]
+            }
+          }
         }
-      }
 
-      Adw.ActionRow on_enter_row {
-        title: _("On Enter");
-        subtitle: bind template.on-enter-text;
-        activatable: true;
+        // The generated component groups for THIS placement's
+        // overrides. Filled by the host with an `EntityComponentsEditor`
+        // so this page stays free of the component registry.
+        Adw.Bin components_slot {}
 
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
+        Adw.PreferencesGroup {
+          Adw.ButtonRow duplicate_row {
+            title: _("Duplicate");
+            start-icon-name: "edit-copy-symbolic";
+          }
+
+          Adw.ButtonRow delete_row {
+            title: _("Delete");
+            start-icon-name: "user-trash-symbolic";
+            styles ["destructive-action"]
+          }
         }
-      }
+      };
     }
   }
 }
