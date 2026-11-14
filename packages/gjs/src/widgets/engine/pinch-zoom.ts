@@ -1,16 +1,29 @@
 import Gtk from '@girs/gtk-4.0'
 import { EDITOR_CONSTANTS } from '@pixelrpg/engine'
 
+import {
+  beginTwoFinger,
+  snapZoomToWholePixel,
+  stepTwoFinger,
+  type TwoFingerState,
+  type ZoomRange,
+} from './touch-gesture.ts'
+
 /** What the gesture needs from the engine widget that owns it. */
 export interface PinchZoomHost {
   /** Current camera zoom, or null before the engine is running. */
   getCameraZoom(): number | null
   /** Set the zoom while holding the world point under a screen position still. */
   zoomAboutPoint(zoom: number, screenX: number, screenY: number): void
+  /** Move the camera by a screen-pixel offset, the way a drag pans it. */
+  panCameraBy(screenDeltaX: number, screenDeltaY: number): void
 }
 
+const ZOOM_RANGE: ZoomRange = { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM }
+
 /**
- * Pinch-to-zoom for the engine canvas.
+ * The two-finger canvas gesture: pinch to zoom, drag to pan, and a
+ * spring to the nearest whole-pixel zoom when the fingers leave.
  *
  * Zoom otherwise rides the scroll wheel, the `+` / `-` / `<Primary>0`
  * accelerators and the "⋯" menu — none of which a phone has, so the menu
@@ -20,20 +33,37 @@ export interface PinchZoomHost {
  * the one-finger drag the camera pans on: a `GtkGestureSingle` bails out
  * the moment a second contact arrives, and this gesture only begins once
  * one has. That split is the usual touch contract — one finger moves the
- * map, two fingers scale it.
+ * map, two fingers scale AND move it.
  *
- * Scale is applied against the zoom the gesture STARTED from rather than
- * the live value. `scale-changed` reports cumulative scale since `begin`
- * (1.0 = fingers where they started), so multiplying the current zoom by
- * it each time would compound: a steady 1.5 would ratchet 1.5, 2.25,
- * 3.375 … per callback instead of settling at 1.5.
+ * Both halves are driven from `Gtk.Gesture::update` rather than
+ * `scale-changed`: two fingers that travel without spreading never
+ * change the scale, so a pan hung off `scale-changed` would simply not
+ * fire. `update` runs on every processed event, and
+ * `get_scale_delta()` carries the same number `scale-changed` would
+ * have passed.
+ *
+ * The decisions themselves — how a cumulative scale becomes a zoom, how
+ * far the midpoint moved, where the spring lands — are in
+ * `touch-gesture.ts` and unit-tested there. Touch cannot be injected
+ * into the headless harness, so that is where the proof has to live.
  */
 export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.GestureZoom {
   const gesture = new Gtk.GestureZoom()
-  let zoomAtBegin = 1
+  let state: TwoFingerState | null = null
+
+  const centreOf = (): [number, number] => {
+    // Anchor on the point between the fingers, not the viewport centre:
+    // on a phone the thing being zoomed is whatever is under the pinch,
+    // and centre-anchored scaling slides it out from under them. Falls
+    // back to the centre when GTK cannot report a bounding box.
+    const [hasCentre, centreX, centreY] = gesture.get_bounding_box_center()
+    if (hasCentre) return [centreX, centreY]
+    return [widget.get_allocated_width() / 2, widget.get_allocated_height() / 2]
+  }
 
   gesture.connect('begin', () => {
-    zoomAtBegin = host.getCameraZoom() ?? 1
+    const [centreX, centreY] = centreOf()
+    state = beginTwoFinger(host.getCameraZoom() ?? 1, centreX, centreY)
     // Claim the contacts, or the camera gets driven twice per frame. The
     // touch stream also reaches `PointerGestureSystem`, whose drag feeds
     // `CameraControlSystem`'s pan — so a pinch panned AND scaled at once,
@@ -44,31 +74,39 @@ export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.Ge
     // into `pointercancel`, and `PointerGestureSystem` ends the drag
     // (`pointer.on('cancel')` → `POINTER_DRAG_END`) instead of feeding
     // more deltas. No flag has to be threaded from this widget into the
-    // engine package to say "a pinch is in progress".
+    // engine package to say "a pinch is in progress". It is also what
+    // makes the second finger CANCEL a one-finger gesture rather than
+    // let it commit (REDESIGN § 5.5).
     gesture.set_state(Gtk.EventSequenceState.CLAIMED)
   })
 
-  gesture.connect('scale-changed', (_gesture: Gtk.GestureZoom, scale: number) => {
-    if (!Number.isFinite(scale) || scale <= 0) return
-
-    const target = clamp(zoomAtBegin * scale, EDITOR_CONSTANTS.MIN_ZOOM, EDITOR_CONSTANTS.MAX_ZOOM)
-
-    // Anchor on the point between the fingers, not the viewport centre:
-    // on a phone the thing being zoomed is whatever is under the pinch,
-    // and centre-anchored scaling slides it out from under them. Falls
-    // back to the centre when GTK cannot report a bounding box.
-    const [hasCentre, centreX, centreY] = gesture.get_bounding_box_center()
-    if (!hasCentre) {
-      host.zoomAboutPoint(target, widget.get_allocated_width() / 2, widget.get_allocated_height() / 2)
-      return
-    }
-    host.zoomAboutPoint(target, centreX, centreY)
+  gesture.connect('update', () => {
+    if (!state) return
+    const [centreX, centreY] = centreOf()
+    const step = stepTwoFinger(state, gesture.get_scale_delta(), centreX, centreY, ZOOM_RANGE)
+    state = step.state
+    host.zoomAboutPoint(step.zoom, step.anchorX, step.anchorY)
+    if (step.panX !== 0 || step.panY !== 0) host.panCameraBy(step.panX, step.panY)
   })
+
+  // Spring to a whole-pixel scale once the fingers are gone. A pinch
+  // lands on an arbitrary fraction, and 16 px tiles resampled onto a
+  // fractional grid shimmer and grow and lose their one-pixel seams.
+  // Snapping on release keeps the gesture continuous while it is live
+  // and the artwork honest the rest of the time.
+  const settle = () => {
+    state = null
+    const zoom = host.getCameraZoom()
+    if (zoom === null) return
+    const snapped = snapZoomToWholePixel(zoom, ZOOM_RANGE)
+    if (snapped === zoom) return
+    const [centreX, centreY] = centreOf()
+    host.zoomAboutPoint(snapped, centreX, centreY)
+  }
+
+  gesture.connect('end', settle)
+  gesture.connect('cancel', settle)
 
   widget.add_controller(gesture)
   return gesture
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
 }

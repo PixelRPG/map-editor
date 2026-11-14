@@ -561,6 +561,36 @@ puts it in place. The `scripts/link-local-gjsify.sh` shim that copied a
 checkout's `event-bridge` over the registry copy was deleted in the same
 commit that dropped the pin below 0.49.0.
 
+### The two-finger gesture
+
+One finger belongs to the pointer stream above; two fingers belong to
+`attachPinchZoom` (`packages/gjs/src/widgets/engine/pinch-zoom.ts`), a
+`Gtk.GestureZoom` on the canvas widget. It zooms about the midpoint
+between the fingers AND pans by however far that midpoint travels, both
+folded out of one `Gtk.Gesture::update` — two fingers that translate
+rigidly never change the scale, so a pan hung off `scale-changed` would
+not fire at all.
+
+On `begin` the gesture takes `Gtk.EventSequenceState.CLAIMED`. GTK then
+cancels the sequence for every other controller, the bridge turns that
+into `pointercancel`, and `PointerGestureSystem` ends the one-finger
+drag instead of feeding more deltas — which is both why a pinch does
+not pan twice per frame and why a second finger cancels whatever one
+finger had started.
+
+On release the zoom springs to the nearest whole-pixel level (the
+integers, and `1/n` below 1), measured in log space because zoom is
+multiplicative. A pinch otherwise lands on an arbitrary fraction, and
+16 px tiles resampled onto a fractional grid shimmer and lose their
+one-pixel seams.
+
+The arithmetic for all three lives in `touch-gesture.ts`, GTK-free and
+unit-tested. **Touch cannot be injected into the headless harness** —
+the capture script drives a pointer, so no screenshot can prove any of
+this. The unit tests are the only proof these decisions get, which is
+why they are a separate pure module rather than inlined in the
+controller.
+
 ---
 
 ## Engine widget resize handling
@@ -753,6 +783,8 @@ dragging wouldn't be discoverable anyway.
 | Scene-editor chrome: two pills + Play FAB + transient zoom, the `stage` ladder, and the phone bottom sheet | **landed** |
 | Scene-editor thresholds re-measured against real pill widths, with `check-chrome-stages.mjs` holding the two declarations together | **landed** |
 | Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles; pill tables and ladder corrected by GTK measurement (`phone-chrome.probe.spec.ts`, run in CI under Broadway) | **landed** |
+| Two-finger pinch + pan on the canvas, whole-pixel zoom snap on release, stroke cancel via the sequence claim (REDESIGN § 9 steps 1.1 / 1.2) | **landed** |
+| One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 

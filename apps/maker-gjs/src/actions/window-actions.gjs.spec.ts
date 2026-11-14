@@ -201,5 +201,17 @@ export default async () => {
       installCovered(group, makeSidebarOwner())
       expect(group.get_action_state_type('toggle-library')?.dup_string()).toBe('b')
     })
+
+    await it('opens with the Move tool armed, never a mutating one', async () => {
+      // REDESIGN § 9 step 1.2. On touch there is no hover and no
+      // modifier, so whichever tool is armed when the map appears is
+      // the one the first accidental tap applies. `select` pans on a
+      // one-finger drag and selects on a tap — neither writes to the
+      // map. A mutating default paints before the user has aimed.
+      const group = realActionGroup()
+      if (!group) return
+      installCovered(group, makeSidebarOwner())
+      expect(group.get_action_state('set-tool')?.get_string()[0]).toBe('select')
+    })
   })
 }

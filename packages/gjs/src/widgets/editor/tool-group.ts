@@ -29,8 +29,13 @@ const TOOLS: readonly ToolEntry[] = [
   { id: 'object', label: () => _('Thing'), key: 'O' },
 ] as const
 
-/** Phone order — Paint first, because the app opens with Paint armed. */
-const PHONE_TOOLS: readonly EditorTool[] = ['pencil', 'fill', 'eraser', 'select'] as const
+/**
+ * Phone order. Select comes FIRST because it is what the editor opens
+ * with (REDESIGN § 9 step 1.2, pinned by `window-actions.gjs.spec.ts`):
+ * on touch the armed tool is whatever the first stray tap applies, and
+ * Select only pans and selects. Paint follows as the next reach.
+ */
+const PHONE_TOOLS: readonly EditorTool[] = ['select', 'pencil', 'fill', 'eraser'] as const
 
 /**
  * The tool chooser: one `Adw.ToggleGroup` that lives in the wide
