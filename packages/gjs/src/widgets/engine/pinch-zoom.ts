@@ -5,6 +5,7 @@ import {
   beginTwoFinger,
   snapZoomToWholePixel,
   stepTwoFinger,
+  twoFingerDidMove,
   type TwoFingerState,
   type ZoomRange,
 } from './touch-gesture.ts'
@@ -50,6 +51,7 @@ const ZOOM_RANGE: ZoomRange = { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONS
 export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.GestureZoom {
   const gesture = new Gtk.GestureZoom()
   let state: TwoFingerState | null = null
+  let travel = 0
 
   const centreOf = (): [number, number] => {
     // Anchor on the point between the fingers, not the viewport centre:
@@ -64,6 +66,7 @@ export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.Ge
   gesture.connect('begin', () => {
     const [centreX, centreY] = centreOf()
     state = beginTwoFinger(host.getCameraZoom() ?? 1, centreX, centreY)
+    travel = 0
     // Claim the contacts, or the camera gets driven twice per frame. The
     // touch stream also reaches `PointerGestureSystem`, whose drag feeds
     // `CameraControlSystem`'s pan — so a pinch panned AND scaled at once,
@@ -86,7 +89,10 @@ export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.Ge
     const step = stepTwoFinger(state, gesture.get_scale_delta(), centreX, centreY, ZOOM_RANGE)
     state = step.state
     host.zoomAboutPoint(step.zoom, step.anchorX, step.anchorY)
-    if (step.panX !== 0 || step.panY !== 0) host.panCameraBy(step.panX, step.panY)
+    if (step.panX !== 0 || step.panY !== 0) {
+      travel += Math.hypot(step.panX, step.panY)
+      host.panCameraBy(step.panX, step.panY)
+    }
   })
 
   // Spring to a whole-pixel scale once the fingers are gone. A pinch
@@ -94,10 +100,18 @@ export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.Ge
   // fractional grid shimmer and grow and lose their one-pixel seams.
   // Snapping on release keeps the gesture continuous while it is live
   // and the artwork honest the rest of the time.
+  // Two fingers that rested still and left again were a two-finger TAP
+  // — undo, handled by `multi-finger-tap.ts`. This gesture begins for
+  // that too, and springing on its end would yank a deliberate 1.2x
+  // zoom to 1x every time the user undid something.
   const settle = () => {
+    const began = state
+    const travelled = travel
     state = null
+    travel = 0
     const zoom = host.getCameraZoom()
-    if (zoom === null) return
+    if (zoom === null || began === null) return
+    if (!twoFingerDidMove(travelled, began.zoomAtBegin, zoom)) return
     const snapped = snapZoomToWholePixel(zoom, ZOOM_RANGE)
     if (snapped === zoom) return
     const [centreX, centreY] = centreOf()

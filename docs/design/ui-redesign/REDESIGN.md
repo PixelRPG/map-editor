@@ -708,9 +708,12 @@ selection actions — no sheet opens, the map stays visible:
 | Swipe up on the bar | Peek → Half | |
 | Back | per §3.4 | |
 
-Pinch, two-finger pan and the multi-finger taps are one recogniser group on the engine widget,
-in the capture phase, so they win over the single-contact pointer stream from
-`@gjsify/event-bridge`. The gesture taps are accelerators; the buttons remain the contract.
+Pinch and two-finger pan are one `Gtk.GestureZoom` on the engine widget (`pinch-zoom.ts`); it
+CLAIMS its sequences, and that claim is what cancels the single-contact pointer stream from
+`@gjsify/event-bridge`. The multi-finger taps read the raw touch stream in the CAPTURE phase and
+never stop an event (`multi-finger-tap.ts`), so they can only add a gesture, never swallow one —
+and because the zoom gesture also begins for a two-finger tap, its whole-pixel spring asks
+`twoFingerDidMove` first. The gesture taps are accelerators; the buttons remain the contract.
 
 **Feedback through motion** (the stand-in for haptics): pressed buttons scale to 0.96; a pick
 pops the badge; an undo or redo flashes the affected tiles for 150 ms; a blocked action (locked
@@ -990,7 +993,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 |---|---|---|
 | 1.1 | Pinch zoom + two-finger pan (`Gtk.GestureZoom`), whole-pixel snap, stroke cancel on second finger | TODO "No pinch-to-zoom on the scene canvas" | — done (`pinch-zoom.ts` over the pure `touch-gesture.ts`; there is no drag-stroke to cancel yet, see TODO.md)
 | 1.2 | Move tool on touch (one-finger pan, tap select), armed on open | accidental strokes | — done (`select` was already the default `win.set-tool` state; now pinned by `window-actions.gjs.spec.ts` and the phone tool order leads with it)
-| 1.3 | Undo/redo pill bottom-left on phone; two- and three-finger tap | thumb reach; undo invariant kept | — pill done (`history_pill`, phone-only; `cursor_caption` is wide-only now that the corner is taken); taps pending
+| 1.3 | Undo/redo pill bottom-left on phone; two- and three-finger tap | thumb reach; undo invariant kept | — done (`history_pill`, phone-only; `cursor_caption` is wide-only now that the corner is taken; taps via `multi-finger-tap.ts` over the pure reducer — the "Undid: Paint" OSD is not built, see TODO.md)
 | 1.4 | Long-press menu on placements; badge pop on pick | brief: long-press |
 
 **Phase 2 — Navigation shell**

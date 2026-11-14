@@ -792,7 +792,7 @@ dragging wouldn't be discoverable anyway.
 | Scene-editor thresholds re-measured against real pill widths, with `check-chrome-stages.mjs` holding the two declarations together | **landed** |
 | Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles; pill tables and ladder corrected by GTK measurement (`phone-chrome.probe.spec.ts`, run in CI under Broadway) | **landed** |
 | Two-finger pinch + pan on the canvas, whole-pixel zoom snap on release, stroke cancel via the sequence claim (REDESIGN § 9 steps 1.1 / 1.2) | **landed** |
-| Phone history pill: undo + redo as 44 px OSD buttons in the bottom-left corner, out of the context pill and out of "⋯" (REDESIGN § 9 step 1.3) | **landed** |
+| Phone history pill: undo + redo as 44 px OSD buttons in the bottom-left corner, out of the context pill and out of "⋯"; two-finger tap undoes, three-finger tap redoes (REDESIGN § 9 step 1.3) | **landed** |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |

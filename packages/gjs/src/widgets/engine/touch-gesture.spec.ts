@@ -9,8 +9,14 @@ import { describe, expect, it } from '@gjsify/unit'
 
 import {
   beginTwoFinger,
+  EMPTY_TAP_STATE,
+  moveTapContact,
+  pressTapContact,
+  releaseTapContact,
   snapZoomToWholePixel,
   stepTwoFinger,
+  type TapState,
+  twoFingerDidMove,
   type ZoomRange,
   wholePixelZoomLevels,
 } from './touch-gesture.ts'
@@ -117,6 +123,94 @@ export default async () => {
       for (const zoom of [0, -2, Number.NaN]) {
         expect(snapZoomToWholePixel(zoom, RANGE)).toBe(1)
       }
+    })
+  })
+
+  await describe('twoFingerDidMove', async () => {
+    await it('calls a still two-finger rest a tap, not a pinch', async () => {
+      // `Gtk.GestureZoom` begins for a two-finger TAP too, and its end
+      // must not spring a deliberate 1.2x zoom to a whole pixel.
+      expect(twoFingerDidMove(0, 1.2, 1.2)).toBe(false)
+      expect(twoFingerDidMove(3, 1.2, 1.21)).toBe(false)
+    })
+
+    await it('accepts a pan that never scaled and a pinch that never travelled', async () => {
+      expect(twoFingerDidMove(40, 1.2, 1.2)).toBe(true)
+      expect(twoFingerDidMove(0, 1, 1.4)).toBe(true)
+      expect(twoFingerDidMove(0, 1.4, 1)).toBe(true)
+    })
+  })
+
+  await describe('multi-finger taps', async () => {
+    /** Press `count` fingers 40 px apart, hold `heldMs`, lift them all. */
+    const tap = (count: number, heldMs = 60, slide = 0): number => {
+      let state: TapState = EMPTY_TAP_STATE
+      for (let finger = 0; finger < count; finger++) {
+        state = pressTapContact(state, 100 + finger * 40, 200, finger * 5)
+      }
+      if (slide !== 0) state = moveTapContact(state, 100, 200 + slide)
+      let fingers = 0
+      for (let finger = 0; finger < count; finger++) {
+        const x = finger === 0 && slide !== 0 ? 100 : 100 + finger * 40
+        const y = finger === 0 && slide !== 0 ? 200 + slide : 200
+        const lift = releaseTapContact(state, x, y, heldMs + finger * 5)
+        state = lift.state
+        fingers = fingers || lift.fingers
+      }
+      return fingers
+    }
+
+    await it('reports the arity only once every finger has left', async () => {
+      let state = pressTapContact(EMPTY_TAP_STATE, 100, 200, 0)
+      state = pressTapContact(state, 140, 200, 8)
+      const first = releaseTapContact(state, 100, 200, 60)
+      expect(first.fingers).toBe(0)
+      expect(releaseTapContact(first.state, 140, 200, 70).fingers).toBe(2)
+    })
+
+    await it('counts two fingers and three fingers apart', async () => {
+      expect(tap(2)).toBe(2)
+      expect(tap(3)).toBe(3)
+      expect(tap(1)).toBe(1)
+    })
+
+    await it('counts the PEAK, so a ragged lift is still a three-finger tap', async () => {
+      // Three fingers rarely leave together; the last one up must not
+      // report a one-finger tap.
+      let state = pressTapContact(EMPTY_TAP_STATE, 100, 200, 0)
+      state = pressTapContact(state, 140, 200, 6)
+      state = pressTapContact(state, 180, 200, 12)
+      state = releaseTapContact(state, 100, 200, 50).state
+      state = releaseTapContact(state, 140, 200, 58).state
+      expect(releaseTapContact(state, 180, 200, 70).fingers).toBe(3)
+    })
+
+    await it('rejects a touch that travelled — that was a pinch or a pan', async () => {
+      expect(tap(2, 60, 80)).toBe(0)
+    })
+
+    await it('rejects a touch held too long — that was a long press', async () => {
+      expect(tap(2, 900)).toBe(0)
+    })
+
+    await it('rejects a finger that joins a touch already under way', async () => {
+      // Resting a thumb, waiting, then tapping is two gestures stacked,
+      // not one two-finger tap.
+      let state = pressTapContact(EMPTY_TAP_STATE, 100, 200, 0)
+      state = pressTapContact(state, 300, 200, 800)
+      state = releaseTapContact(state, 100, 200, 820).state
+      expect(releaseTapContact(state, 300, 200, 830).fingers).toBe(0)
+    })
+
+    await it('starts a clean touch after the glass empties', async () => {
+      expect(tap(2, 900)).toBe(0)
+      expect(tap(2)).toBe(2)
+    })
+
+    await it('ignores a lift it has no contact for', async () => {
+      const lift = releaseTapContact(EMPTY_TAP_STATE, 10, 10, 5)
+      expect(lift.fingers).toBe(0)
+      expect(lift.state.contacts.length).toBe(0)
     })
   })
 }
