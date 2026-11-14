@@ -35,6 +35,7 @@ import sceneInspectorModelSuite from './widgets/editor/scene-inspector.model.spe
 import sheetDetentsSuite from './widgets/editor/sheet-detents.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
+import tileSheetGeometrySuite from './widgets/editor/tile-sheet.geometry.spec.js'
 import touchGestureSuite from './widgets/engine/touch-gesture.spec.js'
 
 run({
@@ -61,5 +62,6 @@ run({
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
   tilePaletteGeometrySuite,
+  tileSheetGeometrySuite,
   touchGestureSuite,
 })
