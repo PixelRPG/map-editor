@@ -69,6 +69,19 @@
 }
 
 /*
+ * The bottom-left undo/redo pill, phone only. 44 px touch targets
+ * OUTER, by the same arithmetic as `.phone-bar button` below: GTK's
+ * `min-*` are the content box and Adwaita pads a button 5px, so 34 + 2×5
+ * is the 44 the design asks for. The pill itself is Adwaita's
+ * `.toolbar.osd`, like the other two.
+ */
+.history-pill button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px;
+}
+
+/*
  * The badge is 32px — deliberately larger than the 22px swatch it
  * replaces, because it is now the ONLY picture of the active tile. At
  * Adwaita's default 5px vertical button padding that makes a 42px

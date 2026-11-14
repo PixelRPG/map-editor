@@ -54,6 +54,25 @@ export default async () => {
       }
     })
 
+    await it('offers redo in exactly one place whenever editing is possible', async () => {
+      // Redo used to be a "⋯" item on phone. It is a button now, so the
+      // same one-place rule that holds undo honest holds it too.
+      for (const { stage, layout, playing } of everyState()) {
+        const f = chromeFlags(stage, layout, playing)
+        const editable = !(layout === 'phone' && playing)
+        expect([f.redoButton, f.phoneRedo].filter(Boolean).length).toBe(editable ? 1 : 0)
+      }
+    })
+
+    await it('shows the history pill exactly when it has buttons', async () => {
+      // An empty 44 px OSD pill in the corner a thumb owns is worse than
+      // no pill: it covers the map and does nothing.
+      for (const { stage, layout, playing } of everyState()) {
+        const f = chromeFlags(stage, layout, playing)
+        expect(f.historyPill).toBe(f.phoneUndo || f.phoneRedo)
+      }
+    })
+
     await it('keeps the badge on screen wherever the tool group is dropped', async () => {
       // The badge is never hidden by the ladder, so the armed tool is
       // always nameable — its corner disc carries the tool's icon.
@@ -75,6 +94,7 @@ export default async () => {
       expect(f.bottomBar).toBe(false)
       expect(f.playFab).toBe(false)
       expect(f.backCircle).toBe(false)
+      expect(f.historyPill).toBe(false)
       expect(f.overflowButton).toBe(false)
       expect(f.runtimeControls).toBe(true)
     })

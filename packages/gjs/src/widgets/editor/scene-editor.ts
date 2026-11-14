@@ -71,11 +71,14 @@ export class SceneEditor extends Adw.Bin {
   declare _context_handle: Gtk.WindowHandle
   declare _context_pill: Gtk.Box
   declare _roster_slot: Adw.Bin
-  declare _phone_undo: Gtk.Button
   declare _stop_button: Gtk.Button
   declare _restart_button: Gtk.Button
   declare _overflow_button: Gtk.MenuButton
   declare _inspector_toggle: Gtk.ToggleButton
+
+  declare _history_pill: Gtk.Box
+  declare _phone_undo: Gtk.Button
+  declare _phone_redo: Gtk.Button
 
   declare _zoom_osd: ZoomOsd
   declare _cursor_caption: Gtk.Box
@@ -128,11 +131,13 @@ export class SceneEditor extends Adw.Bin {
           'context_handle',
           'context_pill',
           'roster_slot',
-          'phone_undo',
           'stop_button',
           'restart_button',
           'overflow_button',
           'inspector_toggle',
+          'history_pill',
+          'phone_undo',
+          'phone_redo',
           'zoom_osd',
           'cursor_caption',
           'floating_play',
@@ -271,7 +276,7 @@ export class SceneEditor extends Adw.Bin {
   set fullView(value: boolean) {
     if (this._fullView === value) return
     this._fullView = value
-    this._cursor_caption.set_visible(value && this._cursorText !== '')
+    this._updateCursorCaption()
     this._floating_play.showMenu = value
     this._updateOverflowMenu()
     this.notify('full-view')
@@ -311,8 +316,19 @@ export class SceneEditor extends Adw.Bin {
   set cursorText(value: string) {
     if (this._cursorText === value) return
     this._cursorText = value
-    this._cursor_caption.set_visible(this._fullView && value !== '')
+    this._updateCursorCaption()
     this.notify('cursor-text')
+  }
+
+  /**
+   * The caption and the history pill want the same bottom-left corner.
+   * The pill wins there: on phone the corner is the one a thumb owns,
+   * and a tile readout needs a hovering pointer, which touch has not
+   * got. A stray motion event from a tap would otherwise raise the
+   * caption straight on top of Undo.
+   */
+  private _updateCursorCaption(): void {
+    this._cursor_caption.set_visible(this._fullView && this._cursorText !== '' && this._layout !== 'phone')
   }
 
   /** Show `zoom` in the transient bottom-centre readout. */
@@ -372,8 +388,9 @@ export class SceneEditor extends Adw.Bin {
     this._toolGroup.phone = phone
     // 5. The sheet stops being inert.
     this._bottom_sheet.set_can_open(phone)
-    // 6. Which buttons the two pills carry, from `chrome-stages.ts`.
+    // 6. Which buttons the pills carry, from `chrome-stages.ts`.
     this._applyVisibility()
+    this._updateCursorCaption()
     this._updateOverflowMenu()
   }
 
@@ -425,7 +442,9 @@ export class SceneEditor extends Adw.Bin {
     this._toolGroup.set_visible(f.toolGroup)
     this._toolGroup.showLabels = f.toolLabels
 
+    this._history_pill.set_visible(f.historyPill)
     this._phone_undo.set_visible(f.phoneUndo)
+    this._phone_redo.set_visible(f.phoneRedo)
     this._stop_button.set_visible(f.runtimeControls)
     this._restart_button.set_visible(f.runtimeControls)
     this._overflow_button.set_visible(f.overflowButton)
@@ -471,7 +490,7 @@ export class SceneEditor extends Adw.Bin {
 
   /**
    * The "⋯" menu — a fixed list, rebuilt only when the tier or the
-   * layout changes. It never contains undo, back or a tool: the bar it
+   * layout changes. It never contains undo, redo, back or a tool: the bar it
    * replaces rebuilt its menu from button visibility so the two could
    * never disagree, which is machinery this design does not need
    * because the menu's items are never buttons.
@@ -487,7 +506,6 @@ export class SceneEditor extends Adw.Bin {
     root.append_section(null, view)
 
     const zoom = new Gio.Menu()
-    if (phone) zoom.append(_('Redo'), 'win.redo')
     zoom.append(_('Zoom in'), 'win.zoom-in')
     zoom.append(_('Zoom out'), 'win.zoom-out')
     zoom.append(_('Reset zoom'), 'win.zoom-reset')

@@ -270,17 +270,6 @@ template $PixelRpgSceneEditor : Adw.Bin {
 
             Adw.Bin roster_slot {}
 
-            // Phone only: undo is a visible button and never inside
-            // "..." (decision 18 - the button is the ONLY undo on
-            // touch, so it may not be two taps away).
-            Gtk.Button phone_undo {
-              visible: false;
-              icon-name: "edit-undo-symbolic";
-              action-name: "win.undo";
-              tooltip-text: _("Undo");
-              styles ["flat"]
-            }
-
             // Playing, on phone: Stop and Restart take the pill.
             Gtk.Button stop_button {
               visible: false;
@@ -319,6 +308,41 @@ template $PixelRpgSceneEditor : Adw.Bin {
               visible: bind inspector_toggle.active inverted;
             }
           };
+        }
+
+        // ============================================================
+        // HISTORY PILL - phone only, bottom-left, floating 12 px above
+        // the docked bar (the overlay's margin-bottom is bound to the
+        // sheet's bottom-bar-height). Undo is a visible button at every
+        // width and never inside "..." (decision 18 - it is the ONLY
+        // undo on touch, so it may not be two taps away); here it is
+        // also in thumb reach, which the top-right corner is not.
+        // Redo joins it: with the pill in the corner a thumb owns, the
+        // "..." item it used to be is strictly worse.
+        // ============================================================
+        [overlay]
+        Gtk.Box history_pill {
+          visible: false;
+          halign: start;
+          valign: end;
+          margin-start: 12;
+          margin-bottom: 12;
+          spacing: 2;
+          styles ["toolbar", "osd", "history-pill"]
+
+          Gtk.Button phone_undo {
+            icon-name: "edit-undo-symbolic";
+            action-name: "win.undo";
+            tooltip-text: _("Undo");
+            styles ["flat"]
+          }
+
+          Gtk.Button phone_redo {
+            icon-name: "edit-redo-symbolic";
+            action-name: "win.redo";
+            tooltip-text: _("Redo");
+            styles ["flat"]
+          }
         }
 
         // Zoom as feedback, not furniture: bottom-centre, shown for

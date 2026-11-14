@@ -44,12 +44,14 @@ export declare const InternalChildren: [
   "context_handle",
   "context_pill",
   "roster_slot",
-  "phone_undo",
   "stop_button",
   "restart_button",
   "overflow_button",
   "inspector_toggle",
   "window_controls",
+  "history_pill",
+  "phone_undo",
+  "phone_redo",
   "zoom_osd",
   "cursor_caption",
   "cursor_label",
@@ -85,12 +87,14 @@ export interface Children {
   _context_handle: Gtk.WindowHandle;
   _context_pill: Gtk.Box;
   _roster_slot: Adw.Bin;
-  _phone_undo: Gtk.Button;
   _stop_button: Gtk.Button;
   _restart_button: Gtk.Button;
   _overflow_button: Gtk.MenuButton;
   _inspector_toggle: Gtk.ToggleButton;
   _window_controls: Gtk.WindowControls;
+  _history_pill: Gtk.Box;
+  _phone_undo: Gtk.Button;
+  _phone_redo: Gtk.Button;
   _zoom_osd: GObject.Object;
   _cursor_caption: Gtk.Box;
   _cursor_label: Gtk.Inscription;
