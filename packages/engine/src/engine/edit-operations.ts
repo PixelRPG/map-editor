@@ -11,6 +11,7 @@ import {
   type TileEditTarget,
   resolveTileEditTarget,
 } from '../services/tile-edit-target.ts'
+import type { ObjectPlacement } from '../types/data/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { EditorSession } from './editor-session.ts'
 import type { LayerOperations } from './layer-operations.ts'
@@ -212,6 +213,60 @@ export class EditOperations {
     if (layer.type === 'rejected') return false
     this.execute(new RemoveObjectCommand({ placement }), origin)
     return true
+  }
+
+  /**
+   * Duplicate a placement onto a neighbouring tile, returning the copy's
+   * id (`null` when a guard refused or no neighbour is on the map).
+   *
+   * The **whole** placement is copied — `defId` *or* `inline`, plus
+   * `overrides` — so duplicating an object the user has renamed or
+   * re-configured keeps that work. Re-stamping from `defId` alone would
+   * hand back a stock library instance and quietly drop the overrides.
+   *
+   * The copy lands on a neighbour, not the source tile: `makePlacementId`
+   * encodes the tile, and two placements stacked on one cell are
+   * indistinguishable on the canvas. First in-bounds direction of
+   * right / left / down / up wins.
+   *
+   * Like {@link removeObject}, the layer is dictated by the placement and
+   * its padlock still refuses — but the assistant-pause gate is
+   * *enforced* here, because this adds an object just as
+   * {@link placeObject} does.
+   */
+  duplicatePlacement(placementId: string, origin?: string): string | null {
+    const scene = this.activeScene()
+    const mapData = scene?.mapResource?.mapData
+    const source = mapData?.objectPlacements?.find((candidate) => candidate.id === placementId)
+    if (!source) return null
+    const layer = resolveEditLayer({
+      assistantPause: { mode: 'enforce', paused: this.assistant.isPaused() },
+      hasActiveMap: true,
+      requestedLayerId: source.layerId,
+      activeLayerId: null,
+      isLayerLocked: (layerId) => this.layers.isLocked(layerId),
+    })
+    if (layer.type === 'rejected') return null
+    const spot = [
+      { x: source.tileX + 1, y: source.tileY },
+      { x: source.tileX - 1, y: source.tileY },
+      { x: source.tileX, y: source.tileY + 1 },
+      { x: source.tileX, y: source.tileY - 1 },
+    ].find((candidate) => !isTileOutsideMap(mapData, candidate.x, candidate.y))
+    if (!spot) return null
+    // Deep copy via JSON: `overrides` / `inline` are nested objects, and
+    // sharing them between two placements would make an edit to one
+    // silently rewrite the other. The schema is JSON-serialisable by
+    // contract (see AGENTS.md, transport-friendly schema).
+    const placement: ObjectPlacement = JSON.parse(JSON.stringify(source))
+    placement.id = makePlacementId(spot.x, spot.y)
+    placement.tileX = spot.x
+    placement.tileY = spot.y
+    // An inline definition's id is conventionally the placement's, so
+    // the copy needs its own rather than a twin of the source's.
+    if (placement.inline) placement.inline = { ...placement.inline, id: placement.id }
+    this.execute(new PlaceObjectCommand({ placement }), origin)
+    return placement.id
   }
 
   /** The scene + resolved tile target, or `null` when a guard refused. */

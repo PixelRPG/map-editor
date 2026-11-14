@@ -370,11 +370,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       adoptPickedTile: (globalTileId) => {
         this._scene_editor_view.selectTileByGlobalId(globalTileId)
         this._actions?.tool.change_state(GLib.Variant.new_string('pencil'))
+        // The pick happens under the finger, nowhere near the badge; the
+        // pop is the only thing that says where the tile went.
+        this._scene_editor_view.popBrushBadge()
       },
       selectPlacement: (placementId) => {
         this._scene_editor_view.highlightPlacement(placementId)
         if (placementId) this.set_property('show-inspector', true)
       },
+      requestPlacementContext: (screenX, screenY) => this._scene_editor_view.showPlacementMenu(screenX, screenY),
       setLayerFlag: (layerId, flag, value) => this._scene_editor_view.setLayerFlag(layerId, flag, value),
       refreshLayers: () => {
         const sceneId = this._scenes.currentSceneId
@@ -632,6 +636,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setSelectedPlacements: (ids) => this._engineCtl.engine?.setSelectedPlacements([...ids]),
       highlightPlacement: (id) => this._scene_editor_view.highlightPlacement(id),
       revealInspector: () => this.set_property('show-inspector', true),
+      editPlacement: () => {
+        this.set_property('show-inspector', true)
+        this._scene_editor_view.setInspectorTab('props')
+      },
+      copyPlacement: () => this._scene_editor_view.copySelectedPlacement(),
+      deletePlacement: () => this._scene_editor_view.deleteSelectedPlacement(),
       undo: () => this._engineCtl.engine?.undo(),
       redo: () => this._engineCtl.engine?.redo(),
       createLayer: () => this._createLayer(),

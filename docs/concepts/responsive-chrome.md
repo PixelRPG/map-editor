@@ -235,6 +235,9 @@ $PixelRpgSceneEditor
       │  ├─ [overlay] cursor_caption (bottom-left, Full view + wide only —
       │  │     the history pill owns that corner on phone)
       │  └─ [overlay] FloatingPlay   (bottom-right)
+      │     (+ a Gtk.PopoverMenu parented to the overlay on first
+      │      long press — pointed at the finger, so overlay
+      │      coordinates and canvas coordinates must agree)
       ├─ bottom-bar: phone bar — ToolGroup + BrushBadge + RecentTiles
       └─ sheet: BrushPage
 ```
@@ -793,6 +796,8 @@ dragging wouldn't be discoverable anyway.
 | Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles; pill tables and ladder corrected by GTK measurement (`phone-chrome.probe.spec.ts`, run in CI under Broadway) | **landed** |
 | Two-finger pinch + pan on the canvas, whole-pixel zoom snap on release, stroke cancel via the sequence claim (REDESIGN § 9 steps 1.1 / 1.2) | **landed** |
 | Phone history pill: undo + redo as 44 px OSD buttons in the bottom-left corner, out of the context pill and out of "⋯"; two-finger tap undoes, three-finger tap redoes (REDESIGN § 9 step 1.3) | **landed** |
+| Long press on the canvas: a paint tool picks the tile under the finger and the brush badge pops; `select` / `object` open a placement menu (Edit · Copy · Delete) at the finger (REDESIGN § 9 step 1.4) | **landed** |
+| The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |

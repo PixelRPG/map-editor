@@ -9,7 +9,9 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import {
+  BADGE_POP,
   BADGE_SIZES,
+  badgePopScale,
   brushBadgeGeometry,
   brushBadgeProbes,
   discCoverage,
@@ -98,6 +100,32 @@ export default async () => {
 
     await it('draws the armed object under the Object tool', async () => {
       expect(subjectFor('object')).toBe('object')
+    })
+  })
+
+  await describe('badgePopScale', async () => {
+    await it('starts and ends at exactly 1', async () => {
+      // A pop that ends anywhere else leaves the badge permanently
+      // mis-sized, and a dropped last frame is the normal case.
+      expect(badgePopScale(0)).toBe(1)
+      expect(badgePopScale(1)).toBe(1)
+    })
+
+    await it('peaks at the configured scale, halfway through', async () => {
+      expect(badgePopScale(0.5)).toBe(BADGE_POP.peakScale)
+    })
+
+    await it('never exceeds the peak, and never shrinks the badge', async () => {
+      for (let step = 0; step <= 20; step++) {
+        const scale = badgePopScale(step / 20)
+        expect(scale).toBeGreaterThanOrEqual(1)
+        expect(scale).toBeLessThanOrEqual(BADGE_POP.peakScale)
+      }
+    })
+
+    await it('clamps a progress outside 0…1 instead of inverting the pop', async () => {
+      expect(badgePopScale(-0.5)).toBe(1)
+      expect(badgePopScale(1.5)).toBe(1)
     })
   })
 

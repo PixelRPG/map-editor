@@ -1,3 +1,4 @@
+import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
@@ -6,8 +7,10 @@ import Gtk from '@girs/gtk-4.0'
 import type { EditorTool, LayerPlane } from '@pixelrpg/engine'
 
 import {
+  BADGE_POP,
   BADGE_SIZES,
   type BadgeRect,
+  badgePopScale,
   type BrushBadgeGeometry,
   brushBadgeGeometry,
   GHOST_OPACITY,
@@ -55,6 +58,8 @@ export class BrushBadge extends Gtk.Widget {
   private _plane: LayerPlane = 'ground'
   private _tilePaintable: Gdk.Paintable | null = null
   private _iconCache = new Map<string, Gtk.IconPaintable>()
+  private _popScale = 1
+  private _popAnimation: Adw.TimedAnimation | null = null
 
   static {
     GObject.registerClass(
@@ -170,8 +175,42 @@ export class BrushBadge extends Gtk.Widget {
     this.update_property([Gtk.AccessibleProperty.LABEL], [label])
   }
 
+  /**
+   * Swell and settle once — "the tile you just picked landed *here*".
+   *
+   * On touch there is no pointer to follow the pick, and the eyedropper
+   * long-press happens under the finger, far from the badge: without a
+   * cue at the destination the brush changes silently. Restarting the
+   * animation on a second pick keeps rapid picks from stacking scale.
+   */
+  pop(): void {
+    if (!this._popAnimation) {
+      const target = Adw.CallbackAnimationTarget.new((progress) => {
+        this._popScale = badgePopScale(progress)
+        this.queue_draw()
+      })
+      this._popAnimation = Adw.TimedAnimation.new(this, 0, 1, BADGE_POP.durationMs, target) as Adw.TimedAnimation
+      this._popAnimation.easing = Adw.Easing.LINEAR
+    }
+    this._popAnimation.reset()
+    this._popAnimation.play()
+  }
+
   vfunc_measure(_orientation: Gtk.Orientation, _forSize: number): [number, number, number, number] {
     return [this._size, this._size, -1, -1]
+  }
+
+  vfunc_unmap(): void {
+    // An animation left running on an unmapped badge keeps ticking a
+    // frame clock for a widget nobody sees, and its target holds this
+    // instance alive. Dropping it here breaks both; `pop()` rebuilds it
+    // lazily. Deliberately NOT in `vfunc_unroot()`: GJS runs unroot from
+    // the GC sweep, and touching JS state there raises
+    // "Attempting to run a JS callback during garbage collection".
+    this._popAnimation?.pause()
+    this._popAnimation = null
+    this._popScale = 1
+    super.vfunc_unmap()
   }
 
   vfunc_snapshot(snapshot: Gtk.Snapshot): void {
@@ -186,6 +225,14 @@ export class BrushBadge extends Gtk.Widget {
         y: Math.floor((this.get_height() - size) / 2),
       }),
     )
+    // The pick pop, about the square's centre so the badge grows evenly
+    // rather than drifting towards one corner.
+    if (this._popScale !== 1) {
+      const half = size / 2
+      snapshot.translate(new Graphene.Point({ x: half, y: half }))
+      snapshot.scale(this._popScale, this._popScale)
+      snapshot.translate(new Graphene.Point({ x: -half, y: -half }))
+    }
 
     // 1. The well — visible only where the tile is transparent.
     fillRounded(snapshot, g.frame, g.radius, withAlpha(fg, WELL_ALPHA))

@@ -6,6 +6,7 @@ import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
+type PlacementContextPayload = EngineEventMap[EngineEvent.PLACEMENT_CONTEXT_REQUESTED]
 type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
 type LayerListChangedPayload = EngineEventMap[EngineEvent.LAYER_LIST_CHANGED]
 type ShowTextPayload = EngineEventMap[EngineEvent.SHOW_TEXT_REQUESTED]
@@ -53,6 +54,13 @@ export interface EngineControllerEvents {
    */
   'placement-selected': PlacementSelectedPayload
   /**
+   * The engine's `PLACEMENT_CONTEXT_REQUESTED` event — a long press
+   * landed on a placement. It arrives right after the matching
+   * `placement-selected`, so the host only has to open the context
+   * menu at `screenPos`; the selection is already current.
+   */
+  'placement-context': PlacementContextPayload
+  /**
    * The engine's `LAYER_FLAG_CHANGED` event — fired on every
    * application path of the layer-flag commands (local toggle,
    * undo/redo, AND inbound peer ops, which don't emit
@@ -96,6 +104,7 @@ export const ENGINE_HOOKS = [
   'undo',
   'tile-picked',
   'placement-selected',
+  'placement-context',
   'layer-flag',
   'layer-list',
   'pointer-tile',
@@ -269,6 +278,7 @@ export class EngineController {
     this._attachUndoHook()
     this._attachTilePickedHook()
     this._attachPlacementSelectedHook()
+    this._attachPlacementContextHook()
     this._attachLayerFlagHook()
     this._attachLayerListHook()
     this._attachPointerTileHook()
@@ -381,6 +391,17 @@ export class EngineController {
       this._hookSubs.push(
         engine.events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => {
           this._events.emit('placement-selected', payload)
+        }),
+      )
+      return true
+    })
+  }
+
+  private _attachPlacementContextHook(): void {
+    this._attachOnce('placement-context', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.PLACEMENT_CONTEXT_REQUESTED, (payload) => {
+          this._events.emit('placement-context', payload)
         }),
       )
       return true

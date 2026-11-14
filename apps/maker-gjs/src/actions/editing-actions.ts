@@ -18,6 +18,12 @@ export interface EditingActionsContext {
   highlightPlacement(placementId: string | null): void
   /** Open the right inspector (a hit selection has content to show). */
   revealInspector(): void
+  /** Reveal the inspector on the Properties tab for the current selection. */
+  editPlacement(): void
+  /** Duplicate the current selection one tile over, then select the copy. */
+  copyPlacement(): void
+  /** Remove the current selection from its layer. */
+  deletePlacement(): void
   undo(): void
   redo(): void
   /** Append a fresh empty layer to the active scene's map. */
@@ -74,6 +80,23 @@ export function installEditingActions(
     if (id) ctx.revealInspector()
   })
   addAction(group, selectPlacement)
+
+  // The three entries of the touch long-press placement menu (REDESIGN
+  // § 9 step 1.4). Stateless like undo/redo: they read the current
+  // selection rather than take an id, because the long press selects the
+  // placement under the finger before the menu pops up — a parameter
+  // would be a second, drift-prone statement of the same target.
+  const editPlacement = new Gio.SimpleAction({ name: 'edit-placement' })
+  editPlacement.connect('activate', () => ctx.editPlacement())
+  addAction(group, editPlacement)
+
+  const copyPlacement = new Gio.SimpleAction({ name: 'copy-placement' })
+  copyPlacement.connect('activate', () => ctx.copyPlacement())
+  addAction(group, copyPlacement)
+
+  const deletePlacement = new Gio.SimpleAction({ name: 'delete-placement' })
+  deletePlacement.connect('activate', () => ctx.deletePlacement())
+  addAction(group, deletePlacement)
 
   const undo = new Gio.SimpleAction({ name: 'undo' })
   undo.connect('activate', () => ctx.undo())

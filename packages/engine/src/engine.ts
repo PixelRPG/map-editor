@@ -357,6 +357,14 @@ export class Engine {
     return this.edits.removeObject(placementId, origin)
   }
 
+  /**
+   * Duplicate a placement onto a neighbouring tile, returning the copy's
+   * id — see {@link EditOperations.duplicatePlacement}.
+   */
+  duplicatePlacement(placementId: string, origin?: string): string | null {
+    return this.edits.duplicatePlacement(placementId, origin)
+  }
+
   // ──────────────────────────────────────────────────────────────
   // AI assistant — in-process virtual collaborator presence/cursor
   // (see docs/concepts/ai-collaborator.md)
@@ -584,6 +592,15 @@ export class Engine {
    */
   hoverTileAt(tileX: number, tileY: number): boolean {
     return synthesizePointerMoveAtTile(this.pointerHost(), tileX, tileY)
+  }
+
+  /**
+   * Report a "press and hold" at canvas position `(screenX, screenY)` —
+   * see {@link EngineEvent.POINTER_LONG_PRESS} for why the recogniser
+   * lives in the host and not in `PointerGestureSystem`.
+   */
+  longPressAt(screenX: number, screenY: number): void {
+    this.events.emit(EngineEvent.POINTER_LONG_PRESS, { screenPos: { x: screenX, y: screenY } })
   }
 
   /**

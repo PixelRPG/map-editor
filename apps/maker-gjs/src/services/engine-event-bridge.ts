@@ -21,6 +21,12 @@ export interface EngineEventBridgeContext {
    * alone, since there is nothing to show.
    */
   selectPlacement(placementId: string | null): void
+  /**
+   * Open the placement context menu at a canvas position (widget-local
+   * pixels), after a long press. The selection the menu acts on is
+   * already set by the preceding `selectPlacement`.
+   */
+  requestPlacementContext(screenX: number, screenY: number): void
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void
   /** Re-read the active map's layer list into the Layers tab (add / reorder / change of plane, any path). */
   refreshLayers(): void
@@ -40,6 +46,7 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('undo-changed', ({ canUndo, canRedo }) => ctx.setHistoryEnabled(canUndo, canRedo))
   engine.on('tile-picked', ({ globalTileId }) => ctx.adoptPickedTile(globalTileId))
   engine.on('placement-selected', ({ placementId }) => ctx.selectPlacement(placementId))
+  engine.on('placement-context', ({ screenPos }) => ctx.requestPlacementContext(screenPos.x, screenPos.y))
   engine.on('layer-flag-changed', ({ layerId, flag, value }) => ctx.setLayerFlag(layerId, flag, value))
   engine.on('layer-list-changed', () => ctx.refreshLayers())
   engine.on('show-text', ({ text, speaker }) => ctx.showToast(speaker ? `${speaker}: ${text}` : text))

@@ -46,6 +46,11 @@ export function forwardEngineEvents(engine: ExcaliburEngine, sink: EngineEventSi
     // Select-tool canvas picks — without this relay the host never
     // hears about them and the Objects-list / Props sync stays dead.
     fwd(EngineEvent.PLACEMENT_SELECTED),
+    // Long press on a placement — the host turns this into the context
+    // menu at the finger. Typed relay only: the payload's meaning is
+    // the placement AND where it was touched, which no single GObject
+    // argument carries.
+    fwd(EngineEvent.PLACEMENT_CONTEXT_REQUESTED),
     // Layer eye/padlock mirroring — fires on every application path
     // of the layer-flag commands (local, undo/redo, remote peer), so
     // the host's Layers tab follows changes it didn't originate.

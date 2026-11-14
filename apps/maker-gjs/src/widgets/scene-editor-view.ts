@@ -347,6 +347,63 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._syncSelectedObjectProps(placementId)
   }
 
+  /**
+   * Open the placement context menu at a canvas position (widget-local
+   * pixels) — the long-press half of the selection above, which has
+   * already run by the time this is called.
+   */
+  showPlacementMenu(screenX: number, screenY: number): void {
+    this._editor.showPlacementMenu(screenX, screenY)
+  }
+
+  /** Confirm a pick at the brush badge — see `BrushBadge.pop`. */
+  popBrushBadge(): void {
+    this._editor.brushBadge.pop()
+  }
+
+  /**
+   * Duplicate the selected placement onto a neighbouring tile and move
+   * the selection to the copy — the "Copy" entry of the long-press
+   * placement menu (REDESIGN § 9 step 1.4).
+   *
+   * Selecting the copy rather than leaving the original selected is what
+   * makes a repeated Copy lay down a row: the next one duplicates the
+   * one just made.
+   */
+  copySelectedPlacement(): void {
+    const placementId = this._selectedPlacementId()
+    if (!placementId) return
+    const copyId = this._engine?.excalibur?.duplicatePlacement(placementId)
+    if (!copyId) return
+    this._engine?.setSelectedPlacements([copyId])
+    this._inspector.objectsTab.selectObject(copyId)
+    this._syncSelectedObjectProps(copyId)
+  }
+
+  /** Remove the selected placement — the menu's "Delete" entry. */
+  deleteSelectedPlacement(): void {
+    const placementId = this._selectedPlacementId()
+    if (placementId) this._removePlacement(placementId)
+  }
+
+  /**
+   * The single selected placement, or `null` when nothing (or more than
+   * one thing) is selected — the menu entries act on one object, and
+   * acting on "the first of several" would be a guess.
+   */
+  private _selectedPlacementId(): string | null {
+    const selected = this._engine?.excalibur?.getSelectedPlacements() ?? []
+    return selected.length === 1 ? selected[0] : null
+  }
+
+  /** Drop a placement from the map and clear it out of the inspector. */
+  private _removePlacement(placementId: string): void {
+    if (!this._engine?.excalibur?.removeObject(placementId)) return
+    this._syncSelectedObjectProps(null)
+    this._inspector.objectsTab.selectObject(null)
+    this.emit('object-removed')
+  }
+
   /** Push the selected placement into the Props tab's "Selected object" group (`null` hides it). */
   private _syncSelectedObjectProps(placementId: string | null): void {
     const info = placementId ? this._placementInfo.get(placementId) : null
@@ -759,12 +816,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     })
     wirePropsTab(this._inspector.propsTab, {
       openObjectDefinition: (defId) => this.activate_action('win.open-object', GLib.Variant.new_string(defId)),
-      removePlacement: (placementId) => {
-        if (!this._engine?.excalibur?.removeObject(placementId)) return
-        this._syncSelectedObjectProps(null)
-        this._inspector.objectsTab.selectObject(null)
-        this.emit('object-removed')
-      },
+      removePlacement: (placementId) => this._removePlacement(placementId),
     })
   }
 

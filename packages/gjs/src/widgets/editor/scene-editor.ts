@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
@@ -107,6 +108,17 @@ export class SceneEditor extends Adw.Bin {
   private _brushPopover = new Gtk.Popover()
   private _phoneBadgeButton = new Gtk.Button()
 
+  /**
+   * The context menu a long press on a placement opens, at the finger.
+   * Built here rather than in `scene-editor.blp` for the same reason the
+   * overflow menu is (`_updateOverflowMenu`): its model is a `Gio.Menu`,
+   * and a popover that has to be positioned per press has no sensible
+   * declarative parent — a `Gtk.PopoverMenu` is a `GtkNative`, so it
+   * takes no part in the overlay's layout and only needs a parent to
+   * position against (`set_parent` in {@link showPlacementMenu}).
+   */
+  private _placementMenu = new Gtk.PopoverMenu({ hasArrow: false })
+
   static {
     GObject.registerClass(
       {
@@ -209,8 +221,31 @@ export class SceneEditor extends Adw.Bin {
     this._rosterChip.connect('notify::visible', () => this._applyVisibility())
     this._rosterChip.connect('notify::roster-size', () => this._applyVisibility())
 
+    this._buildPlacementMenu()
     this._updateOverflowMenu()
     this._applyVisibility()
+  }
+
+  /**
+   * Open the placement context menu at a canvas position, in the
+   * overlay's coordinates — which are the canvas's own: the backdrop,
+   * the engine holder and the engine widget all fill the overlay, so
+   * the engine's screen origin is the overlay's.
+   *
+   * Driven by a long press on a placement (`PLACEMENT_CONTEXT_REQUESTED`);
+   * the menu's items act on the current selection, which the engine has
+   * already pointed at that placement.
+   */
+  showPlacementMenu(x: number, y: number): void {
+    // Parented on first use rather than in the constructor: a popover
+    // needs its parent only to position against, and attaching it late
+    // keeps the widget out of the overlay for every editor that never
+    // sees a long press.
+    if (this._placementMenu.get_parent() !== this._overlay) {
+      this._placementMenu.set_parent(this._overlay)
+    }
+    this._placementMenu.set_pointing_to(new Gdk.Rectangle({ x: Math.round(x), y: Math.round(y), width: 1, height: 1 }))
+    this._placementMenu.popup()
   }
 
   /** Inject the host engine widget into the centred scratchpad slot. */
@@ -485,7 +520,32 @@ export class SceneEditor extends Adw.Bin {
     // Leaving the scene editor must not leave every other view's toasts
     // floating 120 px up.
     this.get_root()?.remove_css_class('sheet-peeking')
+    // A `set_parent`ed popover is a real child of the overlay and has to
+    // be taken off again by hand, or the overlay is finalized with
+    // children still attached. Symmetric with the lazy attach in
+    // `showPlacementMenu`, which re-parents it on the next long press.
+    if (this._placementMenu.get_parent()) {
+      this._placementMenu.popdown()
+      this._placementMenu.unparent()
+    }
     super.vfunc_unmap()
+  }
+
+  /**
+   * The placement context menu's model — static, so it is built once.
+   * All three actions are stateless and read the current selection, the
+   * same contract as `win.undo`: the long press sets the selection
+   * before the menu opens, so nothing has to be carried in an action
+   * target.
+   */
+  private _buildPlacementMenu(): void {
+    const model = new Gio.Menu()
+    model.append(_('Edit'), 'win.edit-placement')
+    model.append(_('Copy'), 'win.copy-placement')
+    // "Goes to… ›" from REDESIGN §5.5 is missing on purpose: it needs
+    // the map + spawn-point picker of §6.2, which does not exist yet.
+    model.append(_('Delete'), 'win.delete-placement')
+    this._placementMenu.set_menu_model(model)
   }
 
   /**
