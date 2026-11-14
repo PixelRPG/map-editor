@@ -32,6 +32,7 @@ export declare const InternalChildren: [
         'tiles_view',
         'view_switcher',
         'project_menu',
+        'roster_chip',
         'header_end',
         'new_thing_button',
 ];
@@ -47,6 +48,7 @@ export interface Children {
         _tiles_view: GObject.Object;
         _view_switcher: Adw.ViewSwitcher;
         _project_menu: GObject.Object;
+        _roster_chip: GObject.Object;
         _header_end: Gtk.Stack;
         _new_thing_button: Gtk.Button;
 }

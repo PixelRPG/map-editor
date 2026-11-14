@@ -46,6 +46,11 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
       [end]
       $PixelRpgProjectMenuButton project_menu {}
 
+      // Packed next, so people sit immediately left of the menu —
+      // "roster chip · ⋯" is the same pair on every shell view.
+      [end]
+      $PixelRpgRosterChip roster_chip {}
+
       // The per-chip primary action, swapped with the chip.
       [end]
       Gtk.Stack header_end {

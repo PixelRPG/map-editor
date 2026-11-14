@@ -274,6 +274,11 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._editor.rosterChip.connect('participant-activated', (_widget, peerId: string) => callback(peerId))
   }
 
+  /** The chip is the context pill's, not a header child — always present. */
+  hasRosterChip(): boolean {
+    return true
+  }
+
   /**
    * `inspector-collapsed` is set only <768sp — the tablet breakpoint
    * collapses just the library — so it is the phone signal. The editor's

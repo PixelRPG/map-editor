@@ -32,6 +32,7 @@ export declare const InternalChildren: [
         'always_on',
         'view_switcher',
         'project_menu',
+        'roster_chip',
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -46,4 +47,5 @@ export interface Children {
         _always_on: Adw.PreferencesGroup;
         _view_switcher: Adw.ViewSwitcher;
         _project_menu: GObject.Object;
+        _roster_chip: GObject.Object;
 }

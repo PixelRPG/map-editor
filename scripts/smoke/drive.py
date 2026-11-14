@@ -23,6 +23,12 @@ engineReady=true AND currentSceneId is the map we asked for AND
 activeLayer is non-null (a live engine on the right scene, with the
 editor state actually planted on it).
 
+Every scenario also asserts `rosterChipViews == 4` once the engine check
+passed: all four destinations must have built a header/pill roster chip
+(REDESIGN.md § 3.3). A solo roster hides the chip, so nothing else in
+this run — or in a screenshot — can tell a missing chip from an empty
+one.
+
 `enterleave` additionally asserts `sceneEditorRooted` on BOTH sides of
 every switch. The editor's two stacks only change which page is visible,
 so SceneEditorView must stay parented by `root_stack` for the process's
@@ -193,6 +199,31 @@ def require_rooted(st: dict | None, where: str) -> None:
         )
 
 
+ROSTER_CHIP_VIEWS = 4
+
+
+def require_roster_chips(st: dict | None, where: str) -> None:
+    """Fail the run unless all four destinations built a roster chip.
+
+    The chip hides itself on an empty roster, so a solo session — which
+    is every screenshot and every smoke run — renders identically whether
+    a view has a chip or not. That is how World, Library and Game lost
+    theirs. `rosterChipViews` is the window counting the chips its widget
+    tree actually resolved, so the regression fails here instead of at
+    the moment a second participant joins.
+    """
+    if st is None:
+        raise RuntimeError(f"no status to check rosterChipViews ({where})")
+    if "rosterChipViews" not in st:
+        raise RuntimeError(f"GetStatus has no rosterChipViews field ({where})")
+    if st["rosterChipViews"] != ROSTER_CHIP_VIEWS:
+        raise RuntimeError(
+            f"only {st['rosterChipViews']} of {ROSTER_CHIP_VIEWS} views have a roster "
+            f"chip ({where}) — a shell view's template or InternalChildren lost it, "
+            "and a solo session cannot show it"
+        )
+
+
 # Per-batch label prefix. It has to be unique across batches, not just
 # within one: PIXELRPG_INSTANCE becomes the GApplication id, so if any
 # instance from an earlier batch is still alive under the same label the
@@ -297,6 +328,10 @@ def run_once(i: int) -> tuple[bool, dict | None, str]:
             and st.get("currentSceneId") == want
             and st.get("activeLayer")
         )
+        # Only once the engine check passed, so a broken engine still
+        # reports as a broken engine rather than as a roster regression.
+        if good:
+            require_roster_chips(st, "after the last step")
         return good, st, want
     except RuntimeError as exc:
         return False, None, str(exc)

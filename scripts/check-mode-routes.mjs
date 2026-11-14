@@ -457,6 +457,46 @@ if (!mapPage) {
   )
 }
 
+// 12. Every shell destination carries the roster chip at its header end.
+//     "Who else is here" is a property of the session, not of the map, so
+//     all four destinations show it (REDESIGN.md § 3.3) — but the chip
+//     hides itself on an empty roster, which made the omission invisible:
+//     it was present only in the map editor's context pill, and no solo
+//     screenshot or smoke run could show the other three were missing it.
+//     Two halves are needed and each is useless alone: the `.blp`
+//     declaration builds the widget, the `InternalChildren` entry is what
+//     binds it to `_roster_chip` so `ResponsiveEditorView` can push the
+//     roster into it. The map editor's chip lives in the pill, not a
+//     header, so it is covered by `DebugStatus.rosterChipViews` instead.
+const ROSTER_CHIP_TYPE = '$PixelRpgRosterChip'
+for (const page of shellPages) {
+  if (page.childId === null) continue // already reported by check 10
+  const widget = page.childId.replace(/_/g, '-')
+  for (const ext of ['blp', 'ts']) {
+    const path = `apps/maker-gjs/src/widgets/${widget}.${ext}`
+    let source
+    try {
+      source = stripComments(readFileSync(join(ROOT, path), 'utf8'))
+    } catch {
+      fail(`${WINDOW_BLP}: shell page "${page.name}" has child \`${page.childId}\` but ${path} does not exist`)
+      continue
+    }
+    if (ext === 'blp') {
+      const declared = new RegExp(`\\[end\\]\\s*\\${ROSTER_CHIP_TYPE}\\s+roster_chip\\s*\\{`).test(source)
+      if (!declared)
+        fail(
+          `${path}: no \`[end] ${ROSTER_CHIP_TYPE} roster_chip {}\` in the header — ` +
+            `the "${page.name}" destination would not show who else is in the session.`,
+        )
+    } else if (!/InternalChildren:[\s\S]*?\]/.exec(source)?.[0]?.includes("'roster_chip'")) {
+      fail(
+        `${path}: \`roster_chip\` is missing from \`InternalChildren\` — ` +
+          'the chip is built but never bound, so setCollaborators() silently does nothing.',
+      )
+    }
+  }
+}
+
 if (failures.length > 0) {
   for (const message of failures) console.error(`✗ ${message}`)
   console.error(

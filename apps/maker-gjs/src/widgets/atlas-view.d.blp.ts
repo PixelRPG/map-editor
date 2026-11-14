@@ -33,6 +33,7 @@ export declare const InternalChildren: [
         'switcher_pill',
         'view_switcher',
         'project_menu',
+        'roster_chip',
         'inspector_toggle',
 ];
 
@@ -48,5 +49,6 @@ export interface Children {
         _switcher_pill: Adw.Bin;
         _view_switcher: Adw.ViewSwitcher;
         _project_menu: GObject.Object;
+        _roster_chip: GObject.Object;
         _inspector_toggle: Gtk.ToggleButton;
 }

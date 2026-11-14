@@ -763,11 +763,26 @@ dragging wouldn't be discoverable anyway.
    constructor binds its own `show-inspector` bidirectionally to the
    views that have an inspector drawer — so as long as the names
    match, the persistent shared state wires up automatically.
-5. Add breakpoint setters for the new view in
+5. Give a shell destination the session pair at its header `[end]`:
+   `$PixelRpgProjectMenuButton project_menu {}` first, then
+   `[end] $PixelRpgRosterChip roster_chip {}` — declared in that
+   order they render left-to-right as "roster chip · ⋯", the same
+   pair the map editor's context pill shows. List `'roster_chip'` in
+   `InternalChildren` so `ResponsiveEditorView._roster_chip` binds;
+   the base class then handles `setCollaborators` /
+   `setAssistantPaused` / `onParticipantActivated`, and
+   `ApplicationWindow._rosterViews()` must grow the new view so the
+   window's fan-out reaches it. Both halves are checked
+   (`check:mode-routes` check 12 statically,
+   `DebugStatus.rosterChipViews` at runtime) because **the chip hides
+   itself on an empty roster**: a solo session — every screenshot and
+   every smoke run — renders identically whether the chip is there or
+   not, which is how three of four destinations lost it.
+6. Add breakpoint setters for the new view in
    `application-window.blp` — mirror the existing per-view
    blocks (`compact: true` for a shell view, `inspector-collapsed:
    true` if it has one).
-6. Add the view to `root_stack` or `shell_stack` in the application
+7. Add the view to `root_stack` or `shell_stack` in the application
    window template, and — if it is a shell destination — to
    `EditorMode`, `MODE_ORDER`, `ROUTE_FOR_VIEW` and `VIEW_FOR_MODE` /
    `MODE_FOR_VIEW`; `gjsify run check:mode-routes` fails until all
@@ -776,7 +791,7 @@ dragging wouldn't be discoverable anyway.
    MCP bridge's `set_view` enum
    (`apps/mcp-bridge/src/tools/editing.tools.ts`) is a literal copy
    of `ViewName` that no guard covers: change it in the same commit.
-7. Drag the window to 360 px and check the log for
+8. Drag the window to 360 px and check the log for
    `exceeds ApplicationWindow width` warnings. If any:
    identify the bubbling child + apply the
    `min-content-width: 1` trick at the right ScrolledWindow,
@@ -824,6 +839,7 @@ dragging wouldn't be discoverable anyway.
 | Phone history pill: undo + redo as 44 px OSD buttons in the bottom-left corner, out of the context pill and out of "⋯"; two-finger tap undoes, three-finger tap redoes (REDESIGN § 9 step 1.3) | **landed** |
 | Long press on the canvas: a paint tool picks the tile under the finger and the brush badge pops; `select` / `object` open a placement menu (Edit · Copy · Delete) at the finger (REDESIGN § 9 step 1.4) | **landed** |
 | Navigation shell: `root_stack` / `shell_stack`, `Adw.ViewSwitcherBar` on phone and `Adw.ViewSwitcher` in the headers on wide, `ModeRail` + both left drawers + the tablet breakpoint deleted, `library-collapsed` → `compact` (REDESIGN § 9 step 2.1) | **landed** |
+| Roster chip on all four destinations, not just the map editor's context pill; the chip's Follow click reaches the presence controller from every view (REDESIGN § 3.3 / § 9 step 2.2) | **landed** |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |

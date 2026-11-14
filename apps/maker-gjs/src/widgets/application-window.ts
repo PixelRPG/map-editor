@@ -58,6 +58,7 @@ import type { AtlasView } from './atlas-view.ts'
 import { GameView } from './game-view.ts'
 import { LibraryView } from './library-view.ts'
 import { RecentProjectsDialog } from './recent-projects-dialog.ts'
+import type { ResponsiveEditorView } from './responsive-editor-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 
@@ -116,6 +117,17 @@ export interface DebugStatus {
    * docs/concepts/ai-collaborator.md § "Pause contract".
    */
   assistantPaused: boolean
+  /**
+   * How many of the four shell destinations resolved a roster chip.
+   *
+   * Must always equal 4 (World, Library, Game, Map — REDESIGN.md § 3.3).
+   * An empty roster hides the chip, so a solo session cannot show the
+   * difference between "nobody else is here" and "this view's template
+   * has no chip" — which is how three of four views lost it. The static
+   * guard (`check:mode-routes` check 12) proves the declarations exist;
+   * this counts what the widget tree actually built.
+   */
+  rosterChipViews: number
   /** Live session participants (AI assistant + networked peers). */
   participants: CollaboratorEntry[]
   /** peerId of the participant the camera is following, or null. */
@@ -230,8 +242,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     getEngine: () => this._engineCtl.engine?.excalibur ?? null,
     getActiveCollab: () => this._session.activeCollab(),
     assistantState: this._assistantState,
-    setCollaboratorsOnView: (participants, followedPeerId) =>
-      this._scene_editor_view.setCollaborators(participants, followedPeerId),
+    setCollaboratorsOnView: (participants, followedPeerId) => {
+      for (const view of this._rosterViews()) view.setCollaborators(participants, followedPeerId)
+    },
     showToast: (message) => this._showToast(message),
   })
   private readonly _router = new ViewRouter({
@@ -364,6 +377,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     super({ application })
     this._installActions()
     this._attachShellSwitchers()
+    this._wireRosterFollow()
     this._shareSidebarState()
     this._shareFullView()
     wireEngineEvents(this._engineCtl, {
@@ -576,6 +590,30 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * Every view that shows a roster chip. People are present on all four
+   * destinations (REDESIGN.md § 3.3) because a session does not pause
+   * when the user steps out of the map editor to rename a character —
+   * the chip went missing on three of four views, so "who else is here"
+   * was only answerable from the canvas.
+   */
+  private _rosterViews(): ResponsiveEditorView[] {
+    return [this._atlas_view, this._library_view, this._game_view, this._scene_editor_view]
+  }
+
+  /**
+   * Route every chip's Follow click into the presence controller.
+   *
+   * Wired from the constructor, NOT from `_wireViewSignals`: that runs
+   * on every `vfunc_map` under a `SignalScope`, so a remap would stack a
+   * second handler per chip. These four chips live as long as the window.
+   */
+  private _wireRosterFollow(): void {
+    for (const view of this._rosterViews()) {
+      view.onParticipantActivated((peerId) => this._collabPresenceCtl.onParticipantActivated(peerId))
+    }
+  }
+
+  /**
    * The app tier flows one way: service → this window → every view. The
    * views never write it back; the three switches all go through the
    * service (`app.full-view`, Preferences, `win.show-full-view`).
@@ -690,7 +728,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       presentShareDialog: () => this._session.presentShareDialog(),
       setAssistantPaused: (paused) => this._assistantState.setPaused(paused),
       setEngineAssistantPaused: (paused) => this._engineCtl.engine?.excalibur?.setAssistantPaused(paused),
-      setViewAssistantPaused: (paused) => this._scene_editor_view.setAssistantPaused(paused),
+      setViewAssistantPaused: (paused) => {
+        for (const view of this._rosterViews()) view.setAssistantPaused(paused)
+      },
     })
 
     const library = this._library_view
@@ -929,6 +969,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // The AssistantStateService is the single source — the engine's
       // copy is a push-down cache that resets on recreation.
       assistantPaused: this._assistantState.paused,
+      rosterChipViews: this._rosterViews().filter((view) => view.hasRosterChip()).length,
       participants: this.getParticipants(),
       followedPeerId: this.followedPeerId,
     }

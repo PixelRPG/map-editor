@@ -38,8 +38,16 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
         }
       };
 
+      // Packed first, so it sits furthest from the centre: the primary
+      // menu is the rightmost item before the window controls on every
+      // shell view.
       [end]
       $PixelRpgProjectMenuButton project_menu {}
+
+      // Packed next, so people sit immediately left of the menu —
+      // "roster chip · ⋯" is the same pair on every shell view.
+      [end]
+      $PixelRpgRosterChip roster_chip {}
     }
 
     content: Adw.PreferencesPage {

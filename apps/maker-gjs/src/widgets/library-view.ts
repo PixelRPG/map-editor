@@ -1,7 +1,7 @@
 import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { ProjectMenuButton, SignalScope } from '@pixelrpg/gjs'
+import { ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
 
 import {
   chipForTier,
@@ -17,12 +17,13 @@ import { ResponsiveEditorView } from './responsive-editor-view.ts'
 import { TilesView } from './tiles-view.ts'
 
 // Force registration so the `$CastView` / `$ObjectsView` / `$TilesView`
-// / `$PixelRpgProjectMenuButton` references in the blueprint resolve at
-// parse time.
+// / `$PixelRpgProjectMenuButton` / `$PixelRpgRosterChip` references in
+// the blueprint resolve at parse time.
 GObject.type_ensure(CastView.$gtype)
 GObject.type_ensure(ObjectsView.$gtype)
 GObject.type_ensure(TilesView.$gtype)
 GObject.type_ensure(ProjectMenuButton.$gtype)
+GObject.type_ensure(RosterChip.$gtype)
 
 /**
  * The Library — one shell destination hosting three chip pages: **Characters**
@@ -68,6 +69,7 @@ export class LibraryView extends ResponsiveEditorView {
         Template,
         InternalChildren: [
           'view_switcher',
+          'roster_chip',
           'pages',
           'graphics_page',
           'hidden_banner',
