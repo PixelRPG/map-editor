@@ -56,27 +56,6 @@ template $PixelRpgSceneCard : Gtk.Button {
         tooltip-text: _("Unlock to pan the preview section");
         styles ["scene-card-lock", "osd", "flat"]
       }
-
-      [overlay]
-      Gtk.Box event_badge {
-        halign: end;
-        valign: end;
-        margin-bottom: 4;
-        margin-end: 4;
-        spacing: 4;
-        visible: bind template.has-events;
-        styles ["scene-card-badge", "osd"]
-
-        Gtk.Image {
-          icon-name: "starred-symbolic";
-          pixel-size: 10;
-        }
-
-        Gtk.Label {
-          label: bind template.events-text;
-          styles ["caption-heading", "numeric"]
-        }
-      }
     }
   };
 }

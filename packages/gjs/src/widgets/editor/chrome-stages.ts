@@ -46,10 +46,10 @@ export type ChromeLayout = 'wide' | 'phone'
  */
 export const STAGE_MIN_CANVAS_PX: Record<ChromeStage, number> = {
   tight: 0,
-  compact: 672,
-  'normal-1': 720,
-  'normal-2': 856,
-  roomy: 1144,
+  compact: 720,
+  'normal-1': 808,
+  'normal-2': 920,
+  roomy: 1224,
 }
 
 /** The stage a canvas of `width` px lands in. */
@@ -64,7 +64,7 @@ export function stageForCanvasWidth(width: number): ChromeStage {
 /**
  * How much of the canvas the context pill needs — its natural width as
  * GTK measures it (`measure()`, the pill box without the handle's
- * margin): 108 px with no roster, 150 px once one avatar is in it.
+ * margin): 150 px with no roster (map name and window controls included), 192 px once one avatar is in it.
  *
  * The design's stage table sums a 100 px right pill at every rung and
  * never adds the roster. That is what made two rungs overlap in the real
@@ -76,7 +76,7 @@ export function stageForCanvasWidth(width: number): ChromeStage {
  * were themselves 8 px short of what GTK reports for the same pills;
  * `phone-chrome.probe.spec.ts` keeps this table at the measured value.
  */
-export const CONTEXT_PILL_PX = { solo: 108, withRoster: 150 } as const
+export const CONTEXT_PILL_PX = { solo: 150, withRoster: 192 } as const
 
 /**
  * Natural width of the editing pill at each rung — `measure()` on the
@@ -98,9 +98,9 @@ export const CONTEXT_PILL_PX = { solo: 108, withRoster: 150 } as const
 export const STAGE_EDITING_PILL_PX: Record<ChromeStage, number> = {
   tight: 264,
   compact: 489,
-  'normal-1': 537,
-  'normal-2': 648,
-  roomy: 960,
+  'normal-1': 584,
+  'normal-2': 694,
+  roomy: 994,
 }
 
 /** What the two pills and the bar show, for one state of the chrome. */

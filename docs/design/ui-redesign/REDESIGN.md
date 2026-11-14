@@ -977,7 +977,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 | 0.1 | `Gtk.WindowControls` on every screen that lacks them: Welcome, atlas, Game, the editor's context pill, Things on phone | no close button (`desktop/01`, `/02`, `/06`, `/07`, `phone/04`) |
 | 0.2 | Map name in the editing pill / phone back button, with the map popover | unnamed map |
 | 0.3 | Rename inspector tabs to Brush · Layers · Selected, switcher on top; "Object" tool → "Thing"; tileset display name in the palette header | vocabulary drift; "lokiri-forest" |
-| 0.4 | Opening and run camera clamp to the map (§4.3, §4.6) | 80 px backdrop strip (`*/07`); block behind Stop (`desktop/11`) |
+| 0.4 | ~~Opening and run camera clamp to the map (§4.3, §4.6)~~ **Skipped: the camera is correct, the strip is map data (risk 10).** | 80 px backdrop strip (`*/07`); block behind Stop (`desktop/11`) |
 | 0.5 | Things stops listing characters; Things and Characters empty states; "+" on phone | brief: Things empty state |
 | 0.6 | Welcome: hide missing recents behind "Tidy up"; new title and tagline; drop the template filter; example first; template `kind` + `caption`; rename the example project to "Kokiri Forest" | `desktop/01` |
 | 0.7 | Remove dead furniture: empty cursor capsule, "Teleport" legend chip, "★" badge, "No selection" pane, minimap when the world fits, "Always on" group in Simple view | principle 6 |
@@ -1101,8 +1101,11 @@ overlays.
    per-card lock). Get the owner's decision before step 5.3. If the section view stays, keep
    steps 5.2 and 5.6 anyway and anchor arc ends to the card edge nearest the door.
 10. **The 80 px strip's cause is inferred from screenshots** (constant offset, backdrop
-    colour, moves with the camera). Confirm in the engine's initial camera code before step
-    0.4; if the offset is deliberate (room for chrome), keep the inset logic and drop the
-    resting offset.
+    colour, moves with the camera). **Checked in Phase 0: the diagnosis was wrong.** The
+    editor camera sits at the map origin and the run camera is clamped by `lockCamera`. The
+    strip is five empty tile columns (80 / 16) of `kokiri-forest.json`'s ground layer, which
+    is not rectangular (9806 of 26048 cells empty), and the 72×88 block behind Stop is
+    tile-aligned empty cells too. A camera clamp removes neither. The fix is map data or a
+    map `backgroundColor`, a product decision; step 0.4 is not done.
 11. **A new project today.** No screenshot shows `blank-starter`. Step 0.8 starts by capturing
     one; the empty-state design assumes the palette is simply empty.

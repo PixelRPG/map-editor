@@ -93,6 +93,7 @@ export class SceneEditor extends Adw.Bin {
   private _fullView = false
   private _playing = false
   private _brushLabel = ''
+  private _mapName = ''
   private _cursorText = ''
 
   /** The three widgets `setLayout` moves, plus the surfaces they move between. */
@@ -160,6 +161,13 @@ export class SceneEditor extends Adw.Bin {
             'brush-label',
             'Brush Label',
             'The sentence beside the badge — "<tool> · <layer>"',
+            GObject.ParamFlags.READWRITE,
+            '',
+          ),
+          'map-name': GObject.ParamSpec.string(
+            'map-name',
+            'Map Name',
+            'The open map, shown beside the back arrow so the pill says where you are',
             GObject.ParamFlags.READWRITE,
             '',
           ),
@@ -263,9 +271,20 @@ export class SceneEditor extends Adw.Bin {
   set fullView(value: boolean) {
     if (this._fullView === value) return
     this._fullView = value
+    this._cursor_caption.set_visible(value && this._cursorText !== '')
     this._floating_play.showMenu = value
     this._updateOverflowMenu()
     this.notify('full-view')
+  }
+
+  get mapName(): string {
+    return this._mapName ?? ''
+  }
+
+  set mapName(value: string) {
+    if (this._mapName === value) return
+    this._mapName = value
+    this.notify('map-name')
   }
 
   get brushLabel(): string {
@@ -292,6 +311,7 @@ export class SceneEditor extends Adw.Bin {
   set cursorText(value: string) {
     if (this._cursorText === value) return
     this._cursorText = value
+    this._cursor_caption.set_visible(this._fullView && value !== '')
     this.notify('cursor-text')
   }
 

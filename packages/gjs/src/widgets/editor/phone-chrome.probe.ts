@@ -57,6 +57,8 @@ export interface PhoneChromeReport {
 
 /** The sentence beside the badge that `STAGE_EDITING_PILL_PX` was measured with. */
 const BRUSH_SENTENCE = 'Paint · Ground'
+/** A typical map name: the back button carries it, so the pill table is measured with one. */
+const MAP_NAME = 'Kokiri Forest'
 
 const TILE = { r: 60, g: 140, b: 80 }
 const OBJECT = { r: 200, g: 120, b: 40 }
@@ -199,6 +201,7 @@ export function probePillWidths(): PillWidths {
   ensureStyles()
   const editor = new SceneEditor()
   editor.brushLabel = BRUSH_SENTENCE
+  editor.mapName = MAP_NAME
   const window = new Gtk.Window({ default_width: 1000, default_height: 700, decorated: false })
   window.set_child(editor)
   editor.setLayout('wide')

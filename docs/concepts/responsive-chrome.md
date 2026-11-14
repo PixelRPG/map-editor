@@ -390,10 +390,10 @@ So the ladder sets exactly **one** property — `stage`, a string — and
 | Rung | Canvas ≥ | What it adds |
 |---|---|---|
 | `tight` | 0 px | badge only — no tool group (two sidebars open on a small desktop) |
-| `compact` | 672 px | the `Adw.ToggleGroup` tool chooser |
-| `normal-1` | 720 px | "World" beside the back arrow |
-| `normal-2` | 856 px | the brush sentence beside the badge ("Paint · Ground") |
-| `roomy` | 1144 px | verbs beside the six tool icons |
+| `compact` | 720 px | the `Adw.ToggleGroup` tool chooser |
+| `normal-1` | 808 px | the map name beside the back arrow |
+| `normal-2` | 920 px | the brush sentence beside the badge ("Paint · Ground") |
+| `roomy` | 1224 px | verbs beside the six tool icons |
 
 Three things about those numbers:
 
@@ -407,8 +407,8 @@ Three things about those numbers:
   both pill tables had been read 8 px short. The probe pins the UI font
   to GNOME's default, "Adwaita Sans 11", so the two rungs with text in
   them read the same on a workstation, under Broadway and in CI.
-- They assume a **roster in the context pill** (150 px, versus 108 px
-  solo). The AI assistant joins whenever an agent drives the editor,
+- They assume a **roster in the context pill** (192 px, versus 150 px
+  solo — the window controls are part of both). The AI assistant joins whenever an agent drives the editor,
   so with-roster is the common case; keying on the solo width means
   the pills overlap the moment anyone joins. A solo session reaches
   each rung ~42 px later than it strictly must, which nobody can see.

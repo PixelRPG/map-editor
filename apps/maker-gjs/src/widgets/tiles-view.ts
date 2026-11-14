@@ -134,6 +134,8 @@ export class TilesView extends LibraryPage {
   // Quick-view shown on desktop; flipped off when the breakpoint collapses
   // (see `_onInspectorCollapsedChanged`).
   private _showQuickview = true
+  private _quickviewWide = true
+  private _quickviewHasContent = false
 
   private signals = new SignalScope()
   private _spriteSets: TilesetEntry[] = []
@@ -306,7 +308,8 @@ export class TilesView extends LibraryPage {
   protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
     // Collapsed = narrow/phone → hide the gallery quick-view (a tap
     // drills straight into the detail page). Expanded = desktop → show.
-    this.showQuickview = !collapsed
+    this._quickviewWide = !collapsed
+    this._syncQuickview()
     // Re-home the tile inspector: right sidebar (desktop) ↔ bottom sheet
     // (phone).
     this._placeInspector()
@@ -551,12 +554,21 @@ export class TilesView extends LibraryPage {
     else this._showTilesetGlance()
   }
 
+  /** The glance column exists only on wide layouts and only while it has something to show — never a "No selection" pane. */
+  private _syncQuickview(): void {
+    this.showQuickview = this._quickviewWide && this._quickviewHasContent
+  }
+
   private _showAppearanceGlance(): void {
     const character = this._sheetAsCharacter(this._activeAppearanceId)
     if (!character) {
       this._quick_view.showEmpty()
+      this._quickviewHasContent = false
+      this._syncQuickview()
       return
     }
+    this._quickviewHasContent = true
+    this._syncQuickview()
     const sheet = this._activeAppearanceId ? (this._appearanceSetsById.get(this._activeAppearanceId) ?? null) : null
     this._quick_view.showAppearance({
       character,
@@ -569,8 +581,12 @@ export class TilesView extends LibraryPage {
     const active = this._activeSpriteSet()
     if (!active) {
       this._quick_view.clearTileset()
+      this._quickviewHasContent = false
+      this._syncQuickview()
       return
     }
+    this._quickviewHasContent = true
+    this._syncQuickview()
     this._quick_view.showTileset({
       thumbnail: active.gdk?.createSheetThumbnail(240) ?? null,
       title: tilesetName(active),

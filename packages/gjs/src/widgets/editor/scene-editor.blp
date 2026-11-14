@@ -59,7 +59,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     // side drifts, and `effectiveStage` demotes further for a roster
     // wider than one avatar.
     Adw.Breakpoint {
-      condition ("min-width: 672sp")
+      condition ("min-width: 720sp")
 
       setters {
         template.stage: "compact";
@@ -67,7 +67,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 720sp")
+      condition ("min-width: 808sp")
 
       setters {
         template.stage: "normal-1";
@@ -75,7 +75,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 856sp")
+      condition ("min-width: 920sp")
 
       setters {
         template.stage: "normal-2";
@@ -83,7 +83,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
     }
 
     Adw.Breakpoint {
-      condition ("min-width: 1144sp")
+      condition ("min-width: 1224sp")
 
       setters {
         template.stage: "roomy";
@@ -170,7 +170,9 @@ template $PixelRpgSceneEditor : Adw.Bin {
 
                 Gtk.Label back_label {
                   visible: false;
-                  label: _("World");
+                  label: bind template.map-name;
+                  ellipsize: end;
+                  max-width-chars: 14;
                 }
               };
             }
@@ -232,10 +234,23 @@ template $PixelRpgSceneEditor : Adw.Bin {
           valign: start;
           margin-top: 12;
           margin-start: 12;
-          icon-name: "go-previous-symbolic";
           action-name: "win.back-to-atlas";
           tooltip-text: _("Back to World");
-          styles ["osd", "circular", "back-circle"]
+          styles ["osd", "back-circle"]
+
+          child: Gtk.Box {
+            spacing: 6;
+
+            Gtk.Image {
+              icon-name: "go-previous-symbolic";
+            }
+
+            Gtk.Label back_circle_label {
+              label: bind template.map-name;
+              ellipsize: end;
+              max-width-chars: 16;
+            }
+          };
         }
 
         // ============================================================
@@ -295,6 +310,14 @@ template $PixelRpgSceneEditor : Adw.Bin {
               tooltip-text: _("Toggle inspector");
               styles ["flat"]
             }
+
+            // With the inspector shut the pill is the window's end edge, so
+            // the close button lives here; with it open the inspector's own
+            // header sits at the edge and carries them.
+            Gtk.WindowControls window_controls {
+              side: end;
+              visible: bind inspector_toggle.active inverted;
+            }
           };
         }
 
@@ -309,7 +332,7 @@ template $PixelRpgSceneEditor : Adw.Bin {
         // Full view only: the tile under the pointer.
         [overlay]
         Gtk.Box cursor_caption {
-          visible: bind template.full-view;
+          visible: false;
           halign: start;
           valign: end;
           margin-start: 12;

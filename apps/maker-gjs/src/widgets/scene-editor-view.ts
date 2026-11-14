@@ -47,7 +47,7 @@ const TOOL_LABELS: Record<EditorTool, string> = {
   fill: _('Fill'),
   eraser: _('Erase'),
   eyedropper: _('Pick'),
-  object: _('Object'),
+  object: _('Thing'),
 }
 
 GObject.type_ensure(ModeRail.$gtype)
@@ -366,6 +366,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   /** Header title + the floating chips. */
   setScene(scene: SampleScene): void {
     this.sceneName = scene.name
+    this._editor.mapName = scene.name
     this._editor.setZoom(1)
     // The caption stays empty until the first pointer-move arrives over
     // the canvas — see `setCursorTile`. Writing `0, 0` here would stick
@@ -496,7 +497,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       if (!engineSet) return
       const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
       if (!gdkSet.spriteSheet) return
-      this._inspector.tilesTab.tilesetName = spriteSetId
+      this._inspector.tilesTab.tilesetName = engineSet.data?.name ?? spriteSetId
       this._tilesetName = spriteSetId
       this._tilesetFirstGid = firstGid
       const tiles = this._sheetToTiles(gdkSet.spriteSheet)
