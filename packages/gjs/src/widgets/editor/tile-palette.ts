@@ -50,7 +50,7 @@ export interface TilePaletteSignals extends Adw.Bin.SignalSignatures {
  * surfaced inside `floating-top-bar`.
  *
  * The swatch size is configurable; default 42px matches the design
- * handoff §"Tiles tab" spec.
+ * handoff §"Brush page" spec.
  */
 export class TilePalette extends Adw.Bin {
   declare _flow: Gtk.FlowBox

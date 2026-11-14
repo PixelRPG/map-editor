@@ -48,9 +48,9 @@ export interface EngineControllerEvents {
   'tile-picked': TilePickedPayload
   /**
    * The engine's `PLACEMENT_SELECTED` event (`'select'`-tool click).
-   * The host mirrors the pick into the right-inspector's objects-tab
-   * row highlight; the engine-side selection state is already mutated
-   * inside the system, so the canvas ring updates without the host.
+   * The host mirrors the pick into the Selected page; the engine-side
+   * selection state is already mutated inside the system, so the canvas
+   * ring updates without the host.
    */
   'placement-selected': PlacementSelectedPayload
   /**
@@ -64,14 +64,14 @@ export interface EngineControllerEvents {
    * The engine's `LAYER_FLAG_CHANGED` event — fired on every
    * application path of the layer-flag commands (local toggle,
    * undo/redo, AND inbound peer ops, which don't emit
-   * `COMMAND_EXECUTED`) so the Layers tab follows changes the
+   * `COMMAND_EXECUTED`) so the Layers page follows changes the
    * inspector didn't originate, just like the canvas does.
    */
   'layer-flag-changed': LayerFlagChangedPayload
   /**
    * The engine's `LAYER_LIST_CHANGED` event — a layer was added, moved
    * or changed plane on any application path (local, undo/redo, inbound
-   * peer op). The host re-reads the map's layer list into the Layers tab.
+   * peer op). The host re-reads the map's layer list into the Layers page.
    */
   'layer-list-changed': LayerListChangedPayload
   /**
@@ -146,7 +146,7 @@ export class EngineController {
    *
    * It used to be one `_xHookAttached` boolean per hook, reset by a
    * hand-written list in `dispose`; that list had already lost
-   * `layer-list`, so after one view switch the Layers tab stopped
+   * `layer-list`, so after one view switch the Layers page stopped
    * following add / reorder / plane changes with nothing reporting it.
    * A set cannot fall out of sync with itself.
    */

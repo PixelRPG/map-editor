@@ -52,10 +52,10 @@ export interface SelectedPageSignals extends Adw.Bin.SignalSignatures {
 }
 
 /**
- * Inspector's "Props" tab — a vertical list of `Adw.EntryRow` /
+ * The inspector's "Selected" page — a vertical list of `Adw.EntryRow` /
  * `Adw.ActionRow`s for the active scene's metadata, topped by a
  * "Selected object" group (visible while a placement is selected via
- * the select tool or the Objects tab) offering per-placement actions:
+ * the select tool) offering per-placement actions:
  * edit-in-library + remove-from-map.
  *
  * Writes are emitted as `prop-changed::<key, value>` for the parent
@@ -170,8 +170,7 @@ export class SelectedPage extends Adw.Bin {
 
   /**
    * Show (descriptor) or hide (`null`) the "Selected object" group.
-   * Driven by the host from the engine's `PLACEMENT_SELECTED` event +
-   * the Objects-tab row selection.
+   * Driven by the host from the engine's `PLACEMENT_SELECTED` event.
    */
   setSelectedObject(desc: SelectedObjectDescriptor | null): void {
     this._selectedObject = desc

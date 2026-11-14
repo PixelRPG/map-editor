@@ -1,30 +1,22 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import { LayersPage } from './layers-page'
-import { ObjectsTab } from './objects-tab'
-import { SelectedPage } from './selected-page'
+import type { PageSlots } from './editor-pages.ts'
 import Template from './right-inspector.blp'
-import { TilesTab } from './tiles-tab'
-
-GObject.type_ensure(TilesTab.$gtype)
-GObject.type_ensure(LayersPage.$gtype)
-GObject.type_ensure(ObjectsTab.$gtype)
-GObject.type_ensure(SelectedPage.$gtype)
 
 /**
  * Right-side inspector for the scene editor.
  *
- * Hosts an `Adw.ViewStack` + `Adw.ViewSwitcherBar` with four pages:
- * **Tiles**, **Layers**, **Objects**, **Props**. Each tab is exposed as
- * a property so the application shell can populate it (tiles, stamps,
- * layer list, object placements, scene metadata).
+ * Hosts an `Adw.ViewStack` + `Adw.InlineViewSwitcher` with three pages:
+ * **Brush**, **Layers**, **Selected**. It does not own their content —
+ * each page is an `Adw.Bin` slot the shell fills from its single
+ * {@link EditorPages} set, which the phone sheet borrows instead when
+ * the layout collapses.
  */
 export class RightInspector extends Adw.Bin {
   declare _stack: Adw.ViewStack
-  declare _tiles_tab: TilesTab
-  declare _layers_page: LayersPage
-  declare _objects_tab: ObjectsTab
-  declare _selected_page: SelectedPage
+  declare _brush_slot: Adw.Bin
+  declare _layers_slot: Adw.Bin
+  declare _selected_slot: Adw.Bin
 
   private _collapsed = false
 
@@ -33,14 +25,14 @@ export class RightInspector extends Adw.Bin {
       {
         GTypeName: 'PixelRpgRightInspector',
         Template,
-        InternalChildren: ['stack', 'tiles_tab', 'layers_page', 'objects_tab', 'selected_page'],
+        InternalChildren: ['stack', 'brush_slot', 'layers_slot', 'selected_slot'],
         Properties: {
           'visible-page': GObject.ParamSpec.string(
             'visible-page',
             'Visible Page',
-            'Name of the active tab (tiles, layers, objects, props)',
+            'Name of the active page (brush, layers, selected)',
             GObject.ParamFlags.READWRITE,
-            'tiles',
+            'brush',
           ),
           // Mirrors the parent view's `inspector-collapsed` — drives
           // the visibility of the in-overlay close button. See
@@ -59,24 +51,13 @@ export class RightInspector extends Adw.Bin {
     )
   }
 
-  get tilesTab(): TilesTab {
-    return this._tiles_tab
-  }
-
-  get layersPage(): LayersPage {
-    return this._layers_page
-  }
-
-  get objectsTab(): ObjectsTab {
-    return this._objects_tab
-  }
-
-  get selectedPage(): SelectedPage {
-    return this._selected_page
+  /** The three bins the shell hands to `EditorPages.host` on wide layouts. */
+  get pageSlots(): PageSlots {
+    return { brush: this._brush_slot, layers: this._layers_slot, selected: this._selected_slot }
   }
 
   get visiblePage(): string {
-    return this._stack.get_visible_child_name() ?? 'tiles'
+    return this._stack.get_visible_child_name() ?? 'brush'
   }
 
   set visiblePage(value: string) {

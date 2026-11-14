@@ -517,7 +517,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._mapPersistCtl.persistCurrentMap()
     })
 
-    // A placement was removed via the Props tab — refresh the inspector's
+    // A placement was removed via the Selected page — refresh the inspector's
     // placement list (the command already mutated the live MapData) and
     // persist, mirroring the layer-flag flow.
     this.signals.connect(this._scene_editor_view, 'object-removed', () => {
@@ -735,10 +735,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setSelectedPlacements: (ids) => this._engineCtl.engine?.setSelectedPlacements([...ids]),
       highlightPlacement: (id) => this._scene_editor_view.highlightPlacement(id),
       revealInspector: () => this.set_property('show-inspector', true),
-      editPlacement: () => {
-        this.set_property('show-inspector', true)
-        this._scene_editor_view.setInspectorTab('props')
-      },
+      // The view decides where "Selected" lives — phone sheet or wide
+      // inspector — so naming the page is enough; revealing the drawer
+      // by hand here would fight the sheet on phone.
+      editPlacement: () => this._scene_editor_view.showSheetPage('selected'),
       copyPlacement: () => this._scene_editor_view.copySelectedPlacement(),
       deletePlacement: () => this._scene_editor_view.deleteSelectedPlacement(),
       undo: () => this._engineCtl.engine?.undo(),
@@ -753,7 +753,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       // engine exists yet — `syncEngineState` pushes the action's state
       // into every engine it builds (`RESYNCED_WIN_ACTIONS`).
       showGridDefault: this._editorDefaults.showGrid,
-      setInspectorTab: (name) => this._scene_editor_view.setInspectorTab(name),
+      showSheetPage: (name) => this._scene_editor_view.showSheetPage(name),
       setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
       setViewObjectsVisible: (visible) => this._scene_editor_view.setObjectsVisible(visible),
       setEngineShowGrid: (showGrid) => this._engineCtl.engine?.setShowGrid(showGrid),
@@ -965,7 +965,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   /**
    * `win.switch-tileset` — pick which of the active scene's tilesets feeds
-   * the Tiles-tab palette. Maps referencing a single sprite set have
+   * the Brush-page palette. Maps referencing a single sprite set have
    * nothing to switch to.
    */
   private _switchTileset(): void {
@@ -989,7 +989,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * `win.new-layer` — append a fresh empty layer, in the plane of the
    * active layer, to the active scene's map through the engine's
    * undoable + collab-synced `AddLayerCommand`. The command's
-   * `LAYER_LIST_CHANGED` re-reads the Layers tab; this only selects the
+   * `LAYER_LIST_CHANGED` re-reads the Layers page; this only selects the
    * new layer and persists. The engine mutates the shared project
    * `MapResource`, so both see the new layer.
    */

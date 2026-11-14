@@ -48,8 +48,8 @@ export function mergePlacementComponents(
  * `type`). Returns `null` if neither resolves.
  *
  * This is the **single** placement→definition resolver — the spawn
- * pipeline, the maker's Objects tab and the atlas teleport overlay all
- * go through it, so `defId` placements (created by the object brush
+ * pipeline, the maker's Selected page and the atlas teleport overlay
+ * all go through it, so `defId` placements (created by the object brush
  * since C3b) and per-placement overrides behave identically everywhere.
  */
 export function resolvePlacementDefinition(

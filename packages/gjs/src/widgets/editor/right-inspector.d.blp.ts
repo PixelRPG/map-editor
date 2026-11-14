@@ -2,7 +2,6 @@
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
 import type Adw from "gi://Adw?version=1";
-import type GObject from "gi://GObject?version=2.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
@@ -21,19 +20,12 @@ export declare const GTypeName: "PixelRpgRightInspector";
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: [
-  "stack",
-  "tiles_tab",
-  "layers_page",
-  "objects_tab",
-  "selected_page",
-];
+export declare const InternalChildren: ["stack", "brush_slot", "layers_slot", "selected_slot"];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
   _stack: Adw.ViewStack;
-  _tiles_tab: GObject.Object;
-  _layers_page: GObject.Object;
-  _objects_tab: GObject.Object;
-  _selected_page: GObject.Object;
+  _brush_slot: Adw.Bin;
+  _layers_slot: Adw.Bin;
+  _selected_slot: Adw.Bin;
 }

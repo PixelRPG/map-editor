@@ -6,6 +6,7 @@ import Gtk from '@girs/gtk-4.0'
 import packageStyle from '../../index.css'
 
 import type { ChromeStage } from './chrome-stages.ts'
+import { EditorPages } from './editor-pages.ts'
 import { pumpUntil, solidPaintable, solidPaintableRect } from './pixel-probe.ts'
 import { RECENT_TILES_MAX } from './recent-tiles.geometry.ts'
 import { SceneEditor } from './scene-editor.ts'
@@ -110,22 +111,31 @@ function boundsIn(child: Gtk.Widget, ancestor: Gtk.Widget): Graphene.Rect | null
   return ok ? rect : null
 }
 
-/** Realistic content: a full tileset and a few object brushes with a wide sprite. */
-function populate(editor: SceneEditor): void {
+/**
+ * The pages the editor hosts, with realistic content: a full tileset and
+ * a few object brushes with a wide sprite.
+ *
+ * The app owns the page instances and hands them to a layout; the probe
+ * does the same so the sheet measures what the app puts in it.
+ */
+function populate(editor: SceneEditor): EditorPages {
+  const pages = new EditorPages()
+  pages.host(editor.pageSlots)
   const tile = solidPaintable(16, TILE)
   const tiles: TileDescriptor[] = Array.from({ length: TILE_COUNT }, (_, id) => ({
     id,
     name: `Tile ${id}`,
     paintable: tile,
   }))
-  editor.brushPage.setTiles(tiles)
+  pages.brush.setTiles(tiles)
   const wide = solidPaintableRect(32, 16, OBJECT)
-  editor.brushPage.setObjectBrushes(
+  pages.brush.setObjectBrushes(
     Array.from({ length: OBJECT_COUNT }, (_, i) => ({ id: `thing-${i}`, name: `Thing ${i}`, paintable: wide })),
   )
-  editor.brushPage.setActivePlane('ground', ['ground', 'hero', 'overlay'])
+  pages.brush.setActivePlane('ground', ['ground', 'hero', 'overlay'])
   editor.recentTiles.setTiles(tiles.slice(0, RECENT_TILES_MAX))
   editor.recentTiles.setActive(0)
+  return pages
 }
 
 /** Build the editor in phone layout at its floor width and measure everything below the ladder. */
@@ -138,11 +148,11 @@ export function probePhoneChrome(): PhoneChromeReport {
   const window = new Gtk.Window({ default_width: floorPx, default_height: 780, decorated: false })
   window.set_child(editor)
   editor.setLayout('phone')
-  populate(editor)
+  const pages = populate(editor)
   window.present()
   pumpUntil(() => editor.get_mapped() && editor._phone_bar.get_width() > 0, 'phone chrome window')
 
-  const page = editor.brushPage
+  const page = pages.brush
   const badgeButton = editor._badge_slot_bar.get_child()
   const parts: WidthReport[] = [
     report('bottom sheet', editor._bottom_sheet),

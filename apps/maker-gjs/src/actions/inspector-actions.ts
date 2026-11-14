@@ -10,10 +10,13 @@ export interface InspectorActionsContext {
    * wraps — the window, which binds it bidirectionally into every view.
    */
   sidebarOwner: GObject.Object
-  /** Switch the scene inspector to a tab by name (tiles/layers/objects/props). */
-  setInspectorTab(name: string): void
+  /**
+   * Show one of the three editor pages (brush/layers/selected) — in the
+   * phone sheet or the wide inspector, whichever the layout is in.
+   */
+  showSheetPage(name: string): void
   setEngineObjectsVisible(visible: boolean): void
-  /** Mirror into the Layers tab's pinned "Objects" row (no re-emit). */
+  /** Mirror into the Layers page's pinned "Objects" row (no re-emit). */
   setViewObjectsVisible(visible: boolean): void
   setEngineShowGrid(showGrid: boolean): void
   setEngineDimInactiveLayers(dim: boolean): void
@@ -39,6 +42,11 @@ export interface InspectorActionsContext {
  * destination of the shell's view switcher, not a drawer over the map
  * (REDESIGN.md § 3.2).
  *
+ * `sheet-page('brush'|'layers'|'selected')` is the ONE way to reach a
+ * page: the same three pages are hosted by the phone sheet or the wide
+ * inspector depending on the layout, so callers name the page and let
+ * the view decide which container to open (REDESIGN.md § 3.4).
+ *
  * A PropertyAction carries boolean STATE, so a `Gtk.ToggleButton` wired
  * with `action-name` reflects the sidebar without any extra plumbing —
  * the reason `toggle-inspector` must not be a stateless `SimpleAction`.
@@ -55,12 +63,12 @@ export function installInspectorActions(
   group: Gio.SimpleActionGroup,
   ctx: InspectorActionsContext,
 ): { objects: Gio.SimpleAction; grid: Gio.SimpleAction; transparency: Gio.SimpleAction } {
-  const setInspectorTab = Gio.SimpleAction.new('set-inspector-tab', GLib.VariantType.new('s'))
-  setInspectorTab.connect('activate', (_a, parameter) => {
+  const sheetPage = Gio.SimpleAction.new('sheet-page', GLib.VariantType.new('s'))
+  sheetPage.connect('activate', (_a, parameter) => {
     const name = parameter?.get_string()[0]
-    if (name) ctx.setInspectorTab(name)
+    if (name) ctx.showSheetPage(name)
   })
-  addAction(group, setInspectorTab)
+  addAction(group, sheetPage)
 
   addAction(
     group,

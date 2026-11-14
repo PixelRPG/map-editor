@@ -1,11 +1,11 @@
 using Gtk 4.0;
 using Adw 1;
 
-// One "what the next stroke lays" surface, in two homes: the brush
-// badge's popover on wide layouts and the bottom sheet's Brush page on
-// phone. The same instance is moved between them by
-// `SceneEditor.setLayout`, so there is exactly one implementation of
-// "which plane, which layer, which tile, which object".
+// One "what the next stroke lays" surface, in two homes: the wide
+// inspector's Brush page and the phone sheet's Brush page. The same
+// instance is hosted in whichever slot the current layout exposes
+// (`EditorPages.host`), so there is exactly one implementation of
+// "which plane, which layer, which tileset, which tile, which object".
 template $PixelRpgBrushPage : Adw.Bin {
   Gtk.Box {
     orientation: vertical;
@@ -43,6 +43,26 @@ template $PixelRpgBrushPage : Adw.Bin {
       }
     }
 
+    Gtk.Box tileset_row {
+      orientation: horizontal;
+      spacing: 6;
+
+      Gtk.Label tileset_label {
+        label: bind template.tileset-name;
+        halign: start;
+        hexpand: true;
+        ellipsize: end;
+        styles ["heading", "dim-label"]
+      }
+
+      Gtk.Button switch_button {
+        label: _("Switch…");
+        tooltip-text: _("Paint from another tileset");
+        action-name: "win.switch-tileset";
+        styles ["flat"]
+      }
+    }
+
     Gtk.SearchEntry search {
       placeholder-text: _("Search tiles…");
     }
@@ -72,6 +92,24 @@ template $PixelRpgBrushPage : Adw.Bin {
           tile-size: 48;
           wrap: true;
           wrap-cap: 6;
+        }
+
+        // A project with no tiles yet: say what to do instead of
+        // showing an empty grid under a nameless heading. It sits
+        // INSIDE the scroller next to the palette, so a tileless
+        // project still reaches the Things grid below it.
+        Adw.StatusPage empty_state {
+          visible: false;
+          icon-name: "image-x-generic-symbolic";
+          title: _("No tiles yet");
+          description: _("Import a picture and cut it into tiles to paint with.");
+
+          child: Gtk.Button {
+            label: _("Import a picture…");
+            action-name: "win.new-tileset";
+            halign: center;
+            styles ["suggested-action", "pill"]
+          };
         }
 
         Gtk.Box objects_section {

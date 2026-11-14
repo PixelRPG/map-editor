@@ -84,7 +84,7 @@ the inspector **auto-opens** if it was closed.
 |---------------|---------------------------------------------------------------|--------------------------------------------|
 | Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
 | Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
-| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Objects-tab row highlights, props          |
+| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement     |
 
 The Library's Characters and Things pages and the Game page follow
 the content-view master-detail pattern (list → detail page, an
@@ -116,9 +116,9 @@ created a hidden-UI dead end.
   inspector content, no auto-open. Otherwise the sidebar would
   pop on every stray click on the canvas.
 - **Selection that originated *inside* the inspector.** Picking a
-  row in the objects-tab list doesn't auto-open the parent
-  inspector (it can't be both the source and the target). Same
-  for animation-list / layers-page clicks.
+  row in a list the inspector itself shows doesn't auto-open the
+  parent inspector (it can't be both the source and the target) —
+  animation-list and layers-page clicks.
 - **Mutating-tool clicks.** Pencil / eraser don't select anything
   — they paint. No inspector content emerges, so no auto-open.
 - **Eyedropper.** Auto-switches to pencil after a pick; no
@@ -255,7 +255,11 @@ $PixelRpgSceneEditor
       │      long press — pointed at the finger, so overlay
       │      coordinates and canvas coordinates must agree)
       ├─ bottom-bar: phone bar — ToolGroup + BrushBadge + RecentTiles
-      └─ sheet: BrushPage
+      └─ sheet: Adw.ToolbarView sheet_view
+         ├─ [top] Adw.InlineViewSwitcher sheet_switcher
+         └─ Gtk.ScrolledWindow → Adw.ViewStack sheet_stack
+               brush · layers · selected — three Adw.Bin slots the
+               host fills from `EditorPages` (see below)
 ```
 
 Two rules force that shape, and both are written out in
@@ -264,8 +268,8 @@ Two rules force that shape, and both are written out in
 1. **The canvas is never reparented.** The engine tears down in
    `vfunc_unroot`, so an `Adw.MultiLayoutView` — which re-slots every
    `Adw.LayoutSlot` child on a layout change — cannot hold it.
-   `SceneEditor.setLayout` moves three small GL-free widgets
-   (`ToolGroup`, `BrushBadge`, `BrushPage`) between slots instead.
+   `SceneEditor.setLayout` moves two small GL-free widgets
+   (`ToolGroup`, `BrushBadge`) between slots instead.
 2. **No single chrome layer may float over the canvas.**
    `gtk_widget_pick` returns before descending into a
    `can-target: false` widget, so one full-size chrome layer would
@@ -471,17 +475,25 @@ rung must come last).
 ### Wide ↔ phone
 
 The layout switch is a different axis from the ladder and hangs off
-`inspector-collapsed` (`max-width: 767sp`). `SceneEditor.setLayout` moves three
+`inspector-collapsed` (`max-width: 767sp`). `SceneEditor.setLayout` moves two
 widgets and flips three flags:
 
 - the `ToolGroup` from the editing pill into the phone bar's first row
   (and from six tools to four: Paint · Fill · Erase · Select — Pick is
   the long press, the object brush is armed by choosing a Thing);
 - the `BrushBadge` from beside its label into the bar's button, at
-  44 px instead of 32;
-- the `BrushPage` from the badge's popover into the bottom sheet, so
-  "which plane, which layer, which tile" has ONE implementation rather
-  than a popover copy and a sheet copy that drift.
+  44 px instead of 32.
+
+The three inspector pages switch host on the same axis, but they are
+not `setLayout`'s business. `EditorPages`
+(`packages/gjs/src/widgets/editor/editor-pages.ts`) owns ONE
+`BrushPage`, `LayersPage` and `SelectedPage`, and `host(slots)` parents
+them into a `PageSlots` triple. `SceneEditorView` holds the instance and
+calls `host()` with `RightInspector.pageSlots` on wide and
+`SceneEditor.pageSlots` on phone, so "which plane, which layer, which
+tile" has one implementation rather than an inspector copy and a sheet
+copy that drift. The same reason retired the badge's popover: the wide
+badge is now a plain button on `win.sheet-page('brush')`.
 
 The editing pill itself is gone on phone: only a circular "‹" remains
 top-left (the system back gesture is shared with the shell, so it is a
@@ -508,9 +520,10 @@ with GTK's `measure()` rather than by eye:
 - The **sheet's minimum is the wider of its page and its bar, at all
   times.** `Adw.BottomSheet` keeps both in one homogeneous `Gtk.Stack`,
   so the Brush page's width reaches the docked bar and the canvas with
-  the sheet closed. Its palettes therefore `wrap` with six columns as
-  the cap (one column minimum, six natural — the badge popover still
-  sizes to six) and its plane-chip captions ellipsize: six pinned
+  the sheet closed, and every one of the three pages has to clear that
+  floor, not just the Brush page. Its palettes therefore `wrap` with six
+  columns as the cap (one column minimum, six natural) and its
+  plane-chip captions ellipsize: six pinned
   columns measured 378 px and put the whole editor 18 px past a 360 px
   window.
 - The **recent strip shows a whole number of tiles** — six at 360 px —
@@ -711,7 +724,7 @@ teardown firing too early — which the `unroot` rule above handles.)
 ## Sidebar drag regions
 
 `Gtk.WindowHandle` wraps every sidebar's content so empty pixels
-between rows / below the active tab pick up window-drag gestures
+between rows / below the active page pick up window-drag gestures
 (PR #53 + #54). Interactive widgets (ActionRows, buttons, list
 items, search entries) consume their own clicks and bypass the
 handle automatically.
@@ -897,9 +910,10 @@ on the scene the load then replaces and vanishes silently.
 | Navigation shell: `root_stack` / `shell_stack`, `Adw.ViewSwitcherBar` on phone and `Adw.ViewSwitcher` in the headers on wide, `ModeRail` + both left drawers + the tablet breakpoint deleted, `library-collapsed` → `compact` (REDESIGN § 9 step 2.1) | **landed** |
 | Roster chip on all four destinations, not just the map editor's context pill; the chip's Follow click reaches the presence controller from every view (REDESIGN § 3.3 / § 9 step 2.2) | **landed** |
 | One back order for all five gestures (`resolveBackStep`), `Esc` / `Alt+←` / mouse button 8 outside `WINDOW_ACCELS`, and `win.focus-placement` as a selection-bearing deep link (REDESIGN § 3.4 / § 9 step 2.3) | **landed** |
+| Three movable inspector pages (Brush · Layers · Selected) owned by `EditorPages`, hosted either in the right inspector or in the bottom sheet, both driven by `win.sheet-page` (REDESIGN § 5.3 / § 9 step 3.1) | **landed** |
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
-| Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
+| A canvas selection opens the phone's inspector drawer rather than the sheet (REDESIGN § 9 step 3.3) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:

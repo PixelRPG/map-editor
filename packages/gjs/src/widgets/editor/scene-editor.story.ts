@@ -5,6 +5,7 @@ import Gtk from '@girs/gtk-4.0'
 import { ControlType, type StoryArgs, type StoryMeta, type StoryModule, StoryWidget } from '@gjsify/storybook'
 import type { EditorTool, LayerPlane } from '@pixelrpg/engine'
 import { SAMPLE_SCENES } from '../../__demo__/world-sample'
+import { EditorPages } from './editor-pages'
 import { MiniMap } from './mini-map'
 import { SceneEditor, type SceneEditorLayout } from './scene-editor'
 
@@ -28,6 +29,8 @@ const TOOL_LABELS: Record<string, string> = {
  */
 export class SceneEditorStory extends StoryWidget {
   private _editor: SceneEditor | null = null
+  /** The pages the editor's sheet borrows — owned here, as the app owns them. */
+  private readonly _pages = new EditorPages()
 
   static {
     GObject.registerClass({ GTypeName: 'SceneEditorStory' }, SceneEditorStory)
@@ -98,6 +101,9 @@ export class SceneEditorStory extends StoryWidget {
     this._installActions()
     this._editor = new SceneEditor()
     this._editor.set_size_request(720, 480)
+    // The app owns the page instances and hands them to a layout; the
+    // story plays that host so the sheet has something to show.
+    this._pages.host(this._editor.pageSlots)
     this._applyState()
     this.addContent(this._editor)
   }
@@ -141,6 +147,16 @@ export class SceneEditorStory extends StoryWidget {
     for (const name of ['toggle-inspector']) {
       group.add_action(Gio.SimpleAction.new_stateful(name, null, GLib.Variant.new_boolean(false)))
     }
+    const sheetPage = Gio.SimpleAction.new_stateful(
+      'sheet-page',
+      GLib.VariantType.new('s'),
+      GLib.Variant.new_string('brush'),
+    )
+    sheetPage.connect('activate', (action, value) => {
+      action.set_state(value!)
+      if (this._editor) this._editor.sheetPage = value!.get_string()[0]
+    })
+    group.add_action(sheetPage)
     this.insert_action_group('win', group)
   }
 
@@ -160,8 +176,8 @@ export class SceneEditorStory extends StoryWidget {
     editor.brushBadge.tool = tool
     editor.brushBadge.plane = plane
     editor.brushLabel = `${TOOL_LABELS[tool] ?? tool} · Background`
-    editor.brushPage.layerName = 'Background'
-    editor.brushPage.setActivePlane(plane, ['ground', 'hero', 'overlay'])
+    this._pages.brush.layerName = 'Background'
+    this._pages.brush.setActivePlane(plane, ['ground', 'hero', 'overlay'])
 
     const zoomPercent = typeof this.args.zoom === 'number' ? this.args.zoom : 100
     editor.setZoom(zoomPercent / 100)

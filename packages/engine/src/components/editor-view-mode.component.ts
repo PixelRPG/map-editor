@@ -9,7 +9,7 @@ import { Component } from 'excalibur'
  *   fade to {@link GRID_MODE_DIM_OPACITY} so the active layer's
  *   content is the dominant signal.
  * - `objectsVisible` — global show/hide for object placements,
- *   the Layers tab's "Objects" row toggle (combined with each
+ *   the Layers page's "Objects" row toggle (combined with each
  *   placement's per-layer visibility).
  *
  * Earlier shape (`mode: 'normal' | 'grid'`) coupled the two — the

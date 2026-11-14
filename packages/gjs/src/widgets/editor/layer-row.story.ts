@@ -31,7 +31,7 @@ export class LayerRowStory extends StoryWidget {
     return {
       title: 'Editor/Layer Row',
       description:
-        'Single row in the Layers inspector tab: visibility toggle, depth glyph (plane), name, tile-count badge, lock toggle.',
+        'Single row in the Layers page: visibility toggle, depth glyph (plane), name, tile-count badge, lock toggle.',
       component: LayerRow.$gtype,
       controls: [
         { name: 'layerName', label: 'Layer name', type: ControlType.TEXT },

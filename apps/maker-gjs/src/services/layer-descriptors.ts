@@ -2,7 +2,7 @@ import { isLayerDataVisible, type MapData } from '@pixelrpg/engine'
 import type { LayerDescriptor } from '@pixelrpg/gjs'
 
 /**
- * Project a map's layers onto the inspector's Layers tab.
+ * Project a map's layers onto the inspector's Layers page.
  *
  * `tileCount` counts both a layer's own sprites and the object placements
  * that reference it via `layerId` — objects no longer live inside

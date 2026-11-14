@@ -23,7 +23,10 @@ template $PixelRpgSceneEditor : Adw.Bin {
   //    own `Gtk.Overlay` child.
   //
   // The wide<->phone switch is therefore `SceneEditor.setLayout`, which
-  // moves three small GL-free widgets between slots.
+  // moves two small GL-free widgets between slots. The three inspector
+  // pages are not among them: `EditorPages` keeps one set of page
+  // widgets and the host re-parents them into whichever slot pair the
+  // layout uses (`pageSlots` here and on `RightInspector`).
   Adw.BreakpointBin ladder {
     // The bin measures the CANVAS, which is what the pills have to fit
     // into — not the window, which is wider whenever a sidebar is open.
@@ -197,7 +200,13 @@ template $PixelRpgSceneEditor : Adw.Bin {
             // `setLayout`, so there is one armed-tool state.
             Adw.Bin tools_slot_top {}
 
-            Gtk.MenuButton badge_button {
+            // Not a `Gtk.MenuButton` with its own popover copy of the
+            // brush surface: it opens the ONE Brush page where the
+            // current layout keeps it — the inspector here, the sheet on
+            // phone. `action-target` is set in TS: Blueprint has no
+            // syntax for a GVariant literal.
+            Gtk.Button badge_button {
+              action-name: "win.sheet-page";
               tooltip-text: _("Brush");
               styles ["flat", "badge-button"]
 
@@ -404,9 +413,61 @@ template $PixelRpgSceneEditor : Adw.Bin {
         $PixelRpgRecentTiles recent_tiles {}
       };
 
-      // The brush surface: the same instance the badge's popover holds
-      // on wide layouts.
-      sheet: Adw.Bin brush_slot_sheet {};
+      // The phone home of the editor pages — the SAME three widgets the
+      // wide inspector hosts, moved here by `EditorPages.host`. Its own
+      // toolbar header carries the switcher, and (from 3.2) is the drag
+      // target that cycles the detents, because `Adw.BottomSheet`'s own
+      // drag handle is internal and cannot be reached from here.
+      sheet: Adw.ToolbarView sheet_view {
+        top-bar-style: flat;
+
+        [top]
+        Adw.InlineViewSwitcher sheet_switcher {
+          stack: sheet_stack;
+          display-mode: labels;
+          homogeneous: false;
+          can-shrink: true;
+          halign: center;
+          margin-top: 6;
+          margin-bottom: 6;
+          margin-start: 12;
+          margin-end: 12;
+        }
+
+        content: Gtk.ScrolledWindow {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: never;
+
+          child: Adw.ViewStack sheet_stack {
+            vexpand: true;
+
+            Adw.ViewStackPage {
+              name: "brush";
+              title: _("Brush");
+              icon-name: "view-grid-symbolic";
+
+              child: Adw.Bin brush_slot_sheet {};
+            }
+
+            Adw.ViewStackPage {
+              name: "layers";
+              title: _("Layers");
+              icon-name: "view-list-symbolic";
+
+              child: Adw.Bin layers_slot_sheet {};
+            }
+
+            Adw.ViewStackPage {
+              name: "selected";
+              title: _("Selected");
+              icon-name: "document-properties-symbolic";
+
+              child: Adw.Bin selected_slot_sheet {};
+            }
+          };
+        };
+      };
     };
   }
 }

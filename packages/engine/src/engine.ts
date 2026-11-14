@@ -483,7 +483,7 @@ export class Engine {
   }
 
   /**
-   * Globally show / hide object placements — the Layers tab's "Objects"
+   * Globally show / hide object placements — the Layers page's "Objects"
    * toggle. A placement renders only when its layer is visible AND
    * objects are globally visible. Pure view state, never persisted.
    */

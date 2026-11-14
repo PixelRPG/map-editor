@@ -32,7 +32,7 @@ const OUTLINE_PX = 1
  * the hero ("Below the hero"), the block beside the hero's legs ("At
  * hero height"), or the roof slab that cuts the top of the head ("Above
  * the hero"). The one picture that explains what a layer's plane means,
- * shown at 40 px on each Layers-tab section header, 24 px on every row
+ * shown at 40 px on each Layers-page section header, 24 px on every row
  * and popover row, and 14 px in the top-bar layer chip.
  *
  * Raw `Gtk.Widget` with a single `vfunc_snapshot` — the pattern of

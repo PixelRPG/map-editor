@@ -13,7 +13,7 @@ export interface TileActionsContext {
   presentTilesetImport(): void
   focusTileset(id: string): void
   focusAppearance(id: string): void
-  /** Re-point the Tiles-tab palette at another of the scene's tilesets. */
+  /** Re-point the Brush-page palette at another of the scene's tilesets. */
   switchTileset(): void
 }
 

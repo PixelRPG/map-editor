@@ -1,5 +1,5 @@
 /**
- * The Layers tab shows the map's layer ARRAY as three sections whose
+ * The Layers page shows the map's layer ARRAY as three sections whose
  * row order is the inverse of the array (top row = draws on top), and
  * turns a drop back into an array position. Both directions are pinned
  * here without GTK: a mistake in either would put a layer somewhere

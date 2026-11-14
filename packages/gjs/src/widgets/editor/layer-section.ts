@@ -9,7 +9,7 @@ import Template from './layer-section.blp'
 GObject.type_ensure(DepthGlyph.$gtype)
 
 /**
- * One of the Layers tab's three fixed sections — "Above the hero" /
+ * One of the Layers page's three fixed sections — "Above the hero" /
  * "At hero height" / "Below the hero": a header (40 px depth glyph,
  * title, subtitle) over a `boxed-list` of {@link LayerRow}s. The header
  * is the explanation of the plane, so it stays when the list is empty

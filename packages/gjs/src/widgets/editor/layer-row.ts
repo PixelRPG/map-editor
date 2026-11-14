@@ -10,7 +10,7 @@ import Template from './layer-row.blp'
 GObject.type_ensure(DepthGlyph.$gtype)
 
 /**
- * Single row in the Layers tab.
+ * Single row in the Layers page.
  *
  * Composition: visibility toggle, depth glyph (the layer's plane), layer
  * name, tile-count caption, lock toggle. The `active` style class is

@@ -405,7 +405,7 @@ editing pill (top-left)                                   context pill (top-righ
   second chevron beside Play.
 
 **View menu ("⋯")** — Zoom in / out / fit, Show grid, Dim other layers, Show Things (the
-Objects eye moves here from the Layers tab), Show walls **NEW**, Map settings…, Keyboard
+Objects eye moves here from the Layers page), Show walls **NEW**, Map settings…, Keyboard
 shortcuts, then the app section (Simple/Full view, Preferences, About).
 
 ### 4.4 Library
@@ -1008,11 +1008,11 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 
 | # | Step | Resolves |
 |---|---|---|
-| 3.1 | Split the inspector panes from their `Adw.OverlaySplitView` host into three movable pages | TODO "The phone bottom sheet has one page" (the stated blocker) |
+| 3.1 | Split the inspector panes from their `Adw.OverlaySplitView` host into three movable pages | TODO "The phone bottom sheet has one page" (the stated blocker) | — done (`EditorPages` owns one `BrushPage` / `LayersPage` / `SelectedPage` and `host(slots)` parents them into a `PageSlots` triple; `SceneEditorView` holds the instance and hosts into `RightInspector.pageSlots` on wide, `SceneEditor.pageSlots` — a switcher + `Adw.ViewStack` in the sheet — on phone. `win.sheet-page(brush\|layers\|selected)` replaces `win.set-inspector-tab` and routes to whichever host the layout uses, so the wide badge's popover is gone and the badge is a plain button on that action. The placement-list page had no home in the three-page design and was deleted with `buildPlacementRows` — see TODO.md. `SelectedPage` keeps its pre-redesign content until 3.3)
 | 3.2 | Sheet with switcher and `SheetDetents` (Peek / Half / Full), camera bottom inset | same |
 | 3.3 | Selected page with placement overrides; contextual action bar; phone stops using the inspector drawer | same; TODO "Object-system editor UI follow-ups" (a), (c); `phone/08` |
 | 3.4 | Brush page: Tiles \| Things switch, tileset chips, contiguous sheet palette | TODO "Object-system editor UI follow-ups" (b) |
-| 3.5 | Layers page: rename / duplicate / delete commands and UI; Things eye to the view menu; plane-tinted ghost | TODO "Layers tab follow-ups" (a), (b), (d) |
+| 3.5 | Layers page: rename / duplicate / delete commands and UI; Things eye to the view menu; plane-tinted ghost | TODO "Layers page follow-ups" (a), (b), (d) |
 | 3.6 | Starter packs shelf at the foot of the Brush page and in its empty state; `blank-starter` includes the first pack — gated on H1 | TODO "No bundled tileset collection" |
 
 **Phase 4 — Play on touch**

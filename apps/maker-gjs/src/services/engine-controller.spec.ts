@@ -310,7 +310,7 @@ export default async function () {
 
       // The pre-set version reset one boolean per hook from a
       // hand-written list in `dispose`, and that list had lost
-      // `layer-list` — so after one view switch the Layers tab stopped
+      // `layer-list` — so after one view switch the Layers page stopped
       // following add / reorder / plane changes, silently.
       expect(second.widgetHooks).toBe(WIDGET_OWNED_HOOKS)
       expect(second.emitterHookCount).toBe(EMITTER_HOOK_COUNT)
