@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "id": "pixel-rpg",
-  "name": "Pixel RPG Adventure",
+  "name": "Kokiri Forest",
   "startup": {
     "initialMapId": "kokiri-forest",
     "initialX": 160,

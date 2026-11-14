@@ -150,7 +150,7 @@ with teleports, and script events."*
 **What you do here**
 - **New Project…** / **Open Project…** (create a project or open an existing
   `game-project.json`).
-- **Start from a template** — a gallery of starter projects (Blank Project,
+- **Start from a template** — a gallery of starter projects (Empty game,
   Minimalist Starter, Kokiri Forest, OoT2D 2014 World), each with a baked map
   thumbnail.
 

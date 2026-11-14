@@ -126,3 +126,11 @@ export function recordRecentProject(entry: Omit<RecentProject, 'openedAt'>): voi
   const updated: RecentProject[] = [{ ...entry, openedAt: Date.now() }, ...current].slice(0, MAX_RECENTS)
   writeJsonFile(storePath(), updated)
 }
+
+/** Drop every stored entry whose project file is gone — the "Tidy up" action. */
+export function forgetMissingRecents(): void {
+  writeJsonFile(
+    storePath(),
+    readStoredRecents().filter((r) => pathExists(r.path)),
+  )
+}

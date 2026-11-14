@@ -1,14 +1,18 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { gettext as _ } from 'gettext'
 import { MapPreview, ProjectHeroIcon, SignalScope } from '@pixelrpg/gjs'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { parsePixelrpgUrl } from '../services/pixelrpg-url.ts'
 import type { RecentProjectEntry } from '../services/recent-projects.ts'
+import { forgetMissingRecents, loadRecentProjects } from '../services/recent-projects.ts'
 import { STARTER_TEMPLATES } from '../services/templates.ts'
 
 import { buildRecentProjectRow } from './recent-project-row.ts'
 import Template from './welcome-view.blp'
+
+const MAX_RECENT_ROWS = 4
 
 GObject.type_ensure(ProjectHeroIcon.$gtype)
 GObject.type_ensure(MapPreview.$gtype)
@@ -53,7 +57,6 @@ export class WelcomeView extends Adw.Bin {
   declare _open_button: Gtk.Button
   declare _browse_button: Gtk.Button
   declare _templates_grid: Gtk.FlowBox
-  declare _template_filter: Gtk.SearchEntry
   declare _recents_list: Gtk.ListBox
   declare _empty_recents_row: Adw.ActionRow
   declare _sessions_list: Gtk.ListBox
@@ -67,8 +70,6 @@ export class WelcomeView extends Adw.Bin {
   private _recentRows: Gtk.Widget[] = []
   /** `name` → row, so `service-gone` events can remove the right entry. */
   private _sessionRows = new Map<string, Adw.ActionRow>()
-  /** Template card FlowBox child → lowercase searchable text, for the filter. */
-  private _templateSearchText = new Map<Gtk.Widget, string>()
   private _inspectorCollapsed = false
   // Recents are part of the home layout, so the column defaults to
   // visible (unlike the editor views' project inspectors).
@@ -87,7 +88,6 @@ export class WelcomeView extends Adw.Bin {
           'open_button',
           'browse_button',
           'templates_grid',
-          'template_filter',
           'recents_list',
           'empty_recents_row',
           'sessions_list',
@@ -175,7 +175,6 @@ export class WelcomeView extends Adw.Bin {
   constructor() {
     super()
     this._buildTemplateGrid()
-    this._templates_grid.set_filter_func((child) => this._templateFilterFunc(child))
   }
 
   vfunc_map(): void {
@@ -186,7 +185,6 @@ export class WelcomeView extends Adw.Bin {
     this.signals.connect(this._join_link_button, 'clicked', () => this._submitJoinLink())
     // Pressing Enter in the entry submits — same path as the button.
     this.signals.connect(this._join_link_row, 'entry-activated', () => this._submitJoinLink())
-    this.signals.connect(this._template_filter, 'search-changed', () => this._templates_grid.invalidate_filter())
   }
 
   vfunc_unmap(): void {
@@ -205,16 +203,28 @@ export class WelcomeView extends Adw.Bin {
     for (const row of this._recentRows) this._recents_list.remove(row)
     this._recentRows = []
 
-    if (!recents.length) {
-      this._empty_recents_row.set_visible(true)
-      return
-    }
-    this._empty_recents_row.set_visible(false)
+    // Missing projects are not listed; one row offers to forget them.
+    const present = recents.filter((r) => !r.missing).slice(0, MAX_RECENT_ROWS)
+    const missing = recents.length - recents.filter((r) => !r.missing).length
+    this._empty_recents_row.set_visible(present.length === 0)
 
-    for (const recent of recents) {
+    for (const recent of present) {
       const row = buildRecentProjectRow(recent, (path) => this.emit('recent-selected', path))
       this._recents_list.append(row)
       this._recentRows.push(row)
+    }
+    if (missing > 0) {
+      const label =
+        missing === 1
+          ? _('1 game could not be found — Tidy up')
+          : _('%d games could not be found — Tidy up').replace('%d', String(missing))
+      const tidy = new Adw.ButtonRow({ title: label })
+      tidy.connect('activated', () => {
+        forgetMissingRecents()
+        this.setRecentProjects(loadRecentProjects())
+      })
+      this._recents_list.append(tidy)
+      this._recentRows.push(tidy)
     }
   }
 
@@ -232,13 +242,6 @@ export class WelcomeView extends Adw.Bin {
       target.set_child(this._recents_column)
     }
     this._inline_recents_slot.set_visible(this._inspectorCollapsed)
-  }
-
-  private _templateFilterFunc(child: Gtk.FlowBoxChild): boolean {
-    const query = this._template_filter.get_text().trim().toLowerCase()
-    if (!query) return true
-    const text = this._templateSearchText.get(child.get_child() as Gtk.Widget) ?? ''
-    return text.includes(query)
   }
 
   /**
@@ -332,7 +335,6 @@ export class WelcomeView extends Adw.Bin {
     accentColor: string
   }): Gtk.Button {
     const button = new Gtk.Button({ css_classes: ['card'] })
-    this._templateSearchText.set(button, `${template.name} ${template.caption}`.toLowerCase())
     const box = new Gtk.Box({
       orientation: Gtk.Orientation.VERTICAL,
       spacing: 8,
@@ -350,9 +352,9 @@ export class WelcomeView extends Adw.Bin {
     // the four previews don't all block the main loop in a row.
     void Promise.resolve().then(() => preview.loadProject(template.projectPath))
 
-    const name = new Gtk.Label({ label: template.name, halign: Gtk.Align.START })
+    const name = new Gtk.Label({ label: _(template.name), halign: Gtk.Align.START })
     name.add_css_class('heading')
-    const caption = new Gtk.Label({ label: template.caption, halign: Gtk.Align.START })
+    const caption = new Gtk.Label({ label: template.caption ? _(template.caption) : '', halign: Gtk.Align.START })
     caption.add_css_class('caption')
     caption.add_css_class('dim-label')
 

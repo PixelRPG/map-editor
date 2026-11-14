@@ -46,7 +46,6 @@ export declare const InternalChildren: [
   "inline_recents_slot",
   "templates_header",
   "templates_heading",
-  "template_filter",
   "templates_grid",
   "sidebar_toggle",
 ];
@@ -76,7 +75,6 @@ export interface Children {
   _inline_recents_slot: Adw.Bin;
   _templates_header: Gtk.Box;
   _templates_heading: Gtk.Label;
-  _template_filter: Gtk.SearchEntry;
   _templates_grid: Gtk.FlowBox;
   _sidebar_toggle: Gtk.ToggleButton;
 }
