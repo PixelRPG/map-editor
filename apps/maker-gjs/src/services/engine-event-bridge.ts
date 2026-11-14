@@ -27,6 +27,13 @@ export interface EngineEventBridgeContext {
    * already set by the preceding `selectPlacement`.
    */
   requestPlacementContext(screenX: number, screenY: number): void
+  /**
+   * A one-shot move resolved. `moved: false` means the guard chain
+   * refused it (padlocked layer, off-map tile, same tile) — the arming
+   * is spent either way, so the user has to be told rather than left
+   * tapping.
+   */
+  placementMoved(placementId: string, moved: boolean): void
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void
   /** Re-read the active map's layer list into the Layers page (add / reorder / change of plane, any path). */
   refreshLayers(): void
@@ -47,6 +54,7 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('tile-picked', ({ globalTileId }) => ctx.adoptPickedTile(globalTileId))
   engine.on('placement-selected', ({ placementId }) => ctx.selectPlacement(placementId))
   engine.on('placement-context', ({ screenPos }) => ctx.requestPlacementContext(screenPos.x, screenPos.y))
+  engine.on('placement-moved', ({ placementId, moved }) => ctx.placementMoved(placementId, moved))
   engine.on('layer-flag-changed', ({ layerId, flag, value }) => ctx.setLayerFlag(layerId, flag, value))
   engine.on('layer-list-changed', () => ctx.refreshLayers())
   engine.on('show-text', ({ text, speaker }) => ctx.showToast(speaker ? `${speaker}: ${text}` : text))

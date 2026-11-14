@@ -57,15 +57,20 @@ export class RightInspectorStory extends StoryWidget {
       { id: 'events', name: 'Events', tileCount: 6, locked: true },
     ])
     pages.layers.selectLayer('bg')
-    pages.selected.setScene({
-      name: 'Whispering Forest',
-      cols: 32,
-      rows: 24,
-      tilePx: 16,
-      music: 'forest-loop.ogg',
-      battleBg: 'forest-bg.png',
-      encounters: 'Common slimes',
-      onEnter: 'Spawn deer NPC',
+    pages.selected.setPlacement({
+      placementId: 'placement-1',
+      defId: 'deer',
+      kind: 'Deer',
+      tileX: 11,
+      tileY: 4,
+      layerName: 'Midground',
+      paintable: null,
+      definition: {
+        id: 'deer',
+        name: 'Startled deer',
+        components: [{ type: 'collision' }],
+      },
+      baseComponentTypes: ['collision'],
     })
     inspector.visiblePage = (this.args.activePage as string) ?? 'brush'
     this._inspector = inspector

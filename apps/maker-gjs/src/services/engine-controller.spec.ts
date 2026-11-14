@@ -29,9 +29,10 @@ type UndoListener = (state: { canUndo: boolean; canRedo: boolean }) => void
 const WIDGET_OWNED_HOOKS = 'pointer-tile,undo,zoom'
 /**
  * TILE_PICKED, PLACEMENT_SELECTED, PLACEMENT_CONTEXT_REQUESTED,
- * LAYER_FLAG, LAYER_LIST + the four runtime effects.
+ * PLACEMENT_MOVE_REQUESTED, LAYER_FLAG, LAYER_LIST + the four runtime
+ * effects.
  */
-const EMITTER_HOOK_COUNT = 9
+const EMITTER_HOOK_COUNT = 10
 
 /**
  * Everything `ensureForMap` and the hook attachments touch on the gjs

@@ -20,6 +20,8 @@ import { type Entity, EventEmitter, type Scene, TileMap, Vector } from 'excalibu
 import type { Command, ObjectPlacementPayload } from '../commands/index.ts'
 import { ActiveObjectComponent } from '../components/active-object.component.ts'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
+import { PendingPlacementMoveComponent } from '../components/pending-placement-move.component.ts'
+import { SelectedPlacementsComponent } from '../components/selection.component.ts'
 import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import { EditOperations } from '../engine/edit-operations.ts'
 import type { EditorSession } from '../engine/editor-session.ts'
@@ -274,6 +276,112 @@ export default async () => {
       expect(coords).toBe(null)
       // Programmatic path: refused by the shared bounds predicate.
       expect(stampProgrammatically(makeScene(), 4, 0)).toBe(null)
+    })
+  })
+
+  await describe('select tap — one-shot placement move', async () => {
+    /**
+     * The Selected page's "Move" arms a move by writing
+     * `PendingPlacementMoveComponent`; the next select-tap is its
+     * target. Two things must hold, and neither is observable from the
+     * host side:
+     *
+     *  1. that tap must NOT also re-select whatever it landed on —
+     *     otherwise moving an object onto an occupied tile silently
+     *     swaps which object the inspector is editing;
+     *  2. it must be ONE shot even when the host refuses the move, so
+     *     disarming happens before the request, not after a successful
+     *     move.
+     */
+    const LAYER = 'ground-layer'
+    const MOVED = 'placement-moved'
+    const OTHER = 'placement-other'
+
+    function makeSelectScene(): MapScene {
+      const entities: Entity[] = []
+      const scene = Object.create(MapScene.prototype) as MapScene
+      Object.assign(scene, {
+        mapResource: {
+          mapData: {
+            id: 'm1',
+            columns: 4,
+            rows: 4,
+            layers: [{ id: LAYER, name: 'Ground', visible: true, plane: 'ground' }],
+            objectPlacements: [
+              { id: MOVED, layerId: LAYER, tileX: 1, tileY: 1, defId: 'npc' },
+              { id: OTHER, layerId: LAYER, tileX: 2, tileY: 2, defId: 'npc' },
+            ],
+          },
+          // biome-ignore lint/suspicious/noExplicitAny: stub mirrors only what the select path reads
+        } as any as MapResource,
+        add(entity: Entity) {
+          entities.push(entity)
+        },
+        world: { entityManager: { entities } },
+      })
+      return scene
+    }
+
+    function tapSelect(scene: MapScene, events: EventEmitter<EngineEventMap>, tileX: number, tileY: number): void {
+      const system = new TileEditorSystem(events)
+      ;(system as unknown as { scene: Scene }).scene = scene as unknown as Scene
+      ;(system as unknown as { applySelect(hit: unknown): void }).applySelect({
+        coords: { x: tileX, y: tileY },
+      })
+    }
+
+    await it('an armed tap requests the move and leaves the selection alone', async () => {
+      const scene = makeSelectScene()
+      SessionState.set(scene, new SelectedPlacementsComponent([MOVED]))
+      SessionState.set(scene, new PendingPlacementMoveComponent(MOVED))
+      const events = new EventEmitter<EngineEventMap>()
+      const requested: { placementId: string; coords: { x: number; y: number } }[] = []
+      const selected: unknown[] = []
+      events.on(EngineEvent.PLACEMENT_MOVE_REQUESTED, (payload) => requested.push(payload))
+      events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => selected.push(payload))
+
+      // Target tile is occupied by a DIFFERENT placement — the worst
+      // case for a tap that falls through to the selection write.
+      tapSelect(scene, events, 2, 2)
+
+      expect(requested).toHaveLength(1)
+      expect(requested[0]?.placementId).toBe(MOVED)
+      expect(requested[0]?.coords).toStrictEqual({ x: 2, y: 2 })
+      expect(selected).toHaveLength(0)
+      expect(SessionState.get(scene, SelectedPlacementsComponent)?.placementIds).toStrictEqual([MOVED])
+    })
+
+    await it('arming is consumed by that one tap, even if the move is refused', async () => {
+      const scene = makeSelectScene()
+      SessionState.set(scene, new PendingPlacementMoveComponent(MOVED))
+      const events = new EventEmitter<EngineEventMap>()
+      const requested: unknown[] = []
+      const selected: unknown[] = []
+      events.on(EngineEvent.PLACEMENT_MOVE_REQUESTED, (payload) => requested.push(payload))
+      events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => selected.push(payload))
+
+      // Nobody answers PLACEMENT_MOVE_REQUESTED here, which stands in
+      // for a host whose guard chain refused the move.
+      tapSelect(scene, events, 3, 3)
+      expect(SessionState.get(scene, PendingPlacementMoveComponent)).toBe(null)
+
+      // The second tap must be an ordinary select again.
+      tapSelect(scene, events, 2, 2)
+      expect(requested).toHaveLength(1)
+      expect(selected).toHaveLength(1)
+      expect(SessionState.get(scene, SelectedPlacementsComponent)?.placementIds).toStrictEqual([OTHER])
+    })
+
+    await it('an unarmed tap selects as before', async () => {
+      const scene = makeSelectScene()
+      const events = new EventEmitter<EngineEventMap>()
+      const requested: unknown[] = []
+      events.on(EngineEvent.PLACEMENT_MOVE_REQUESTED, (payload) => requested.push(payload))
+
+      tapSelect(scene, events, 1, 1)
+
+      expect(requested).toHaveLength(0)
+      expect(SessionState.get(scene, SelectedPlacementsComponent)?.placementIds).toStrictEqual([MOVED])
     })
   })
 }

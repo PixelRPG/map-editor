@@ -133,6 +133,29 @@ function placementsOf(scene: MapScene): ObjectPlacement[] {
   return scene.mapResource.mapData?.objectPlacements ?? []
 }
 
+/**
+ * An inert `MapScene` for replaying a produced command's apply/revert.
+ *
+ * {@link makeScene}'s fixture carries a real entity library, so
+ * `spawnPlacement` would try to build an actor out of a definition that
+ * has no components. Here the EMPTY library makes spawn resolve to
+ * nothing and despawn iterate an empty world, leaving exactly the
+ * `mapData.objectPlacements` round-trip these tests assert on.
+ */
+function makeReplayScene(initial: ObjectPlacement[]): MapScene {
+  const mapData = {
+    layers: [{ id: TARGET_LAYER, name: 'Ground', visible: true }],
+    objectPlacements: initial.map((placement) => ({ ...placement })),
+  }
+  const scene = Object.create(MapScene.prototype) as MapScene
+  Object.assign(scene, {
+    mapResource: { mapData } as unknown as MapResource,
+    entityLibrary: [],
+    world: { entityManager: { entities: [] } },
+  })
+  return scene
+}
+
 /** How one mutating entry point treats each gate, plus how to drive it. */
 interface GateContract {
   /**
@@ -177,6 +200,20 @@ const CONTRACT: Record<string, GateContract> = {
     // Dictated by the placement, like `removeObject`.
     targetLayer: TARGET_LAYER,
     invoke: (ops) => ops.duplicatePlacement(PLACEMENT_ID) !== null,
+  },
+  movePlacement: {
+    // The only move path, driven by the human's "Move" button — see
+    // `removeObject` for the same reasoning.
+    assistantPause: 'skip',
+    // Dictated by the placement: a move stays on its own layer.
+    targetLayer: TARGET_LAYER,
+    invoke: (ops) => ops.movePlacement(PLACEMENT_ID, 2, 2),
+  },
+  setPlacementOverrides: {
+    // Driven by the Selected page's fields; same reasoning again.
+    assistantPause: 'skip',
+    targetLayer: TARGET_LAYER,
+    invoke: (ops) => ops.setPlacementOverrides(PLACEMENT_ID, { name: 'Shopkeeper' }),
   },
 }
 
@@ -304,6 +341,72 @@ export default async () => {
     await it('duplicatePlacement refuses an unknown placement id', async () => {
       const harness = makeHarness()
       expect(harness.ops.duplicatePlacement('does-not-exist')).toBe(null)
+      expect(harness.executed).toHaveLength(0)
+    })
+
+    await it('movePlacement keeps the id and carries the new tile', async () => {
+      // The id is the stable key the selection, the save state and every
+      // peer use; a move that re-minted it would read as
+      // delete-plus-create and drop the selection.
+      const harness = makeHarness()
+      expect(harness.ops.movePlacement(PLACEMENT_ID, 3, 2)).toBe(true)
+      const moved = (harness.executed[0] as PlaceObjectCommand).payload.placement
+      expect(moved.id).toBe(PLACEMENT_ID)
+      expect(`${moved.tileX},${moved.tileY}`).toBe('3,2')
+      expect(moved.layerId).toBe(TARGET_LAYER)
+    })
+
+    await it('movePlacement round-trips through apply + revert', async () => {
+      const harness = makeHarness()
+      expect(harness.ops.movePlacement(PLACEMENT_ID, 3, 2)).toBe(true)
+      const command = harness.executed[0] as PlaceObjectCommand
+      const scene = makeReplayScene(placementsOf(harness.scene))
+      command.apply(scene)
+      expect(placementsOf(scene)).toHaveLength(1)
+      expect(`${placementsOf(scene)[0].tileX},${placementsOf(scene)[0].tileY}`).toBe('3,2')
+      // Revert must put the object back on its old tile, NOT delete it —
+      // that is what the same-id `replaced` capture is for.
+      command.revert(scene)
+      expect(placementsOf(scene)).toHaveLength(1)
+      expect(`${placementsOf(scene)[0].tileX},${placementsOf(scene)[0].tileY}`).toBe('1,1')
+    })
+
+    await it('movePlacement refuses an off-map tile, a no-op and an unknown id', async () => {
+      const harness = makeHarness()
+      expect(harness.ops.movePlacement(PLACEMENT_ID, 4, 1)).toBe(false)
+      // Already there: an op-log entry and an undo step for nothing.
+      expect(harness.ops.movePlacement(PLACEMENT_ID, 1, 1)).toBe(false)
+      expect(harness.ops.movePlacement('does-not-exist', 2, 2)).toBe(false)
+      expect(harness.executed).toHaveLength(0)
+    })
+
+    await it('setPlacementOverrides round-trips through apply + revert', async () => {
+      const harness = makeHarness()
+      placementsOf(harness.scene)[0].overrides = { name: 'Shopkeeper' }
+      expect(harness.ops.setPlacementOverrides(PLACEMENT_ID, { name: 'Blacksmith' })).toBe(true)
+      const command = harness.executed[0] as PlaceObjectCommand
+      const scene = makeReplayScene(placementsOf(harness.scene))
+      command.apply(scene)
+      expect(placementsOf(scene)[0].overrides?.name).toBe('Blacksmith')
+      command.revert(scene)
+      expect(placementsOf(scene)[0].overrides?.name).toBe('Shopkeeper')
+    })
+
+    await it('setPlacementOverrides drops the block when there is nothing to override', async () => {
+      // `placementOverridesFrom` returns undefined once every field is
+      // back at the library's value; the key must go, not become
+      // `undefined` — the payload is a wire message and JSON would drop
+      // it on the way out, leaving local and remote shapes different.
+      const harness = makeHarness()
+      placementsOf(harness.scene)[0].overrides = { name: 'Shopkeeper' }
+      expect(harness.ops.setPlacementOverrides(PLACEMENT_ID, undefined)).toBe(true)
+      const placement = (harness.executed[0] as PlaceObjectCommand).payload.placement
+      expect('overrides' in placement).toBe(false)
+    })
+
+    await it('setPlacementOverrides refuses an unknown placement id', async () => {
+      const harness = makeHarness()
+      expect(harness.ops.setPlacementOverrides('does-not-exist', { name: 'Nobody' })).toBe(false)
       expect(harness.executed).toHaveLength(0)
     })
   })

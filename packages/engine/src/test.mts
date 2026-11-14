@@ -27,6 +27,7 @@ import entityConvertSuite from './entity/convert.spec.js'
 import entityDataAccessSuite from './entity/data-access.spec.js'
 import entityDisclosureSuite from './entity/disclosure.spec.js'
 import entityPlacementGraphicSuite from './entity/placement-graphic.spec.js'
+import entityPlacementOverridesSuite from './entity/placement-overrides.spec.js'
 import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
@@ -103,6 +104,7 @@ run({
   entityDataAccessSuite,
   entityDisclosureSuite,
   entityPlacementGraphicSuite,
+  entityPlacementOverridesSuite,
   entitySpawnPlacementSuite,
   objectSystemValidationSuite,
   mapResourceSuite,

@@ -16,12 +16,21 @@ export interface EditingActionsContext {
   setSelectedPlacements(placementIds: readonly string[]): void
   /** Fill the Selected page from the placement (or clear it on `null`). */
   highlightPlacement(placementId: string | null): void
-  /** Open the right inspector (a hit selection has content to show). */
+  /**
+   * Open the right inspector because a selection landed — a no-op on
+   * phone, where REDESIGN § 5.4 answers a selection in the bottom bar
+   * instead of over the map.
+   */
   revealInspector(): void
   /** Show the Selected page for the current selection. */
   editPlacement(): void
   /** Duplicate the current selection one tile over, then select the copy. */
   copyPlacement(): void
+  /**
+   * Arm a one-shot move of the current selection: the next tap with the
+   * select tool relocates it instead of changing the selection.
+   */
+  movePlacement(): void
   /** Remove the current selection from its layer. */
   deletePlacement(): void
   undo(): void
@@ -81,8 +90,9 @@ export function installEditingActions(
   })
   addAction(group, selectPlacement)
 
-  // The three entries of the touch long-press placement menu (REDESIGN
-  // § 9 step 1.4). Stateless like undo/redo: they read the current
+  // The entries of the touch long-press placement menu (REDESIGN § 9
+  // step 1.4) and of the phone selection bar (§ 5.4), which offers the
+  // same four verbs. Stateless like undo/redo: they read the current
   // selection rather than take an id, because the long press selects the
   // placement under the finger before the menu pops up — a parameter
   // would be a second, drift-prone statement of the same target.
@@ -93,6 +103,10 @@ export function installEditingActions(
   const copyPlacement = new Gio.SimpleAction({ name: 'copy-placement' })
   copyPlacement.connect('activate', () => ctx.copyPlacement())
   addAction(group, copyPlacement)
+
+  const movePlacement = new Gio.SimpleAction({ name: 'move-placement' })
+  movePlacement.connect('activate', () => ctx.movePlacement())
+  addAction(group, movePlacement)
 
   const deletePlacement = new Gio.SimpleAction({ name: 'delete-placement' })
   deletePlacement.connect('activate', () => ctx.deletePlacement())

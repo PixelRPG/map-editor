@@ -59,7 +59,9 @@ export declare const InternalChildren: [
   "bar_row_a",
   "tools_slot_bar",
   "badge_slot_bar",
+  "bar_row_b",
   "recent_tiles",
+  "selection_label",
   "sheet_view",
   "sheet_grabber",
   "sheet_switcher",
@@ -108,7 +110,9 @@ export interface Children {
   _bar_row_a: Gtk.Box;
   _tools_slot_bar: Adw.Bin;
   _badge_slot_bar: Adw.Bin;
+  _bar_row_b: Gtk.Stack;
   _recent_tiles: GObject.Object;
+  _selection_label: Gtk.Inscription;
   _sheet_view: Gtk.Box;
   _sheet_grabber: Gtk.Box;
   _sheet_switcher: Adw.InlineViewSwitcher;

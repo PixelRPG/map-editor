@@ -17,6 +17,7 @@ export enum EngineEvent {
   TILE_PICKED = 'tile-picked',
   PLACEMENT_SELECTED = 'placement-selected',
   PLACEMENT_CONTEXT_REQUESTED = 'placement-context-requested',
+  PLACEMENT_MOVE_REQUESTED = 'placement-move-requested',
   PLAYER_TILE_CHANGED = 'player-tile-changed',
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
@@ -103,6 +104,24 @@ export interface EngineEventMap {
     placementId: string
     coords: { x: number; y: number }
     screenPos: { x: number; y: number }
+  }
+  /**
+   * Emitted by `TileEditorSystem` when a select-tool tap landed while a
+   * placement was armed for a one-shot move
+   * (`PendingPlacementMoveComponent`). The system has already disarmed
+   * it and deliberately left the selection alone — the target tap must
+   * not double as a re-select.
+   *
+   * The system does NOT perform the move itself: `EditOperations.movePlacement`
+   * owns the guard chain (placement's layer padlock, map bounds) and a
+   * second copy of it here would be the `removeObject` bug again. So the
+   * host answers this event with `Engine.movePlacement`, exactly as it
+   * answers {@link EngineEvent.PLACEMENT_CONTEXT_REQUESTED} by opening a
+   * menu; a host that ignores it simply cannot move objects.
+   */
+  [EngineEvent.PLACEMENT_MOVE_REQUESTED]: {
+    placementId: string
+    coords: { x: number; y: number }
   }
   /**
    * Emitted by {@link PlayerSystem} whenever the player crosses a

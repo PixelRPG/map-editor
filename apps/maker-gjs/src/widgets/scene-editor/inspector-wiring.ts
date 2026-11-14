@@ -81,9 +81,23 @@ export interface SelectedPageWiring {
   openObjectDefinition(defId: string): void
   /** Dispatch the undoable RemoveObjectCommand and refresh the placement list. */
   removePlacement(placementId: string): void
+  /** Lay a copy of the placement on a free neighbouring tile and select it. */
+  duplicatePlacement(placementId: string): void
+  /**
+   * A committed edit of the placement's definition. `entityJson` is the
+   * WHOLE definition as the user now sees it; the host diffs it against
+   * the base to produce the per-instance overrides.
+   */
+  applyPlacementEdit(placementId: string, entityJson: string): void
 }
 
 export function wireSelectedPage(page: SelectedPage, ctx: SelectedPageWiring): void {
   page.connect('object-open-requested', (_p: SelectedPage, defId: string) => ctx.openObjectDefinition(defId))
   page.connect('object-remove-requested', (_p: SelectedPage, placementId: string) => ctx.removePlacement(placementId))
+  page.connect('object-duplicate-requested', (_p: SelectedPage, placementId: string) =>
+    ctx.duplicatePlacement(placementId),
+  )
+  page.connect('overrides-changed', (_p: SelectedPage, placementId: string, entityJson: string) =>
+    ctx.applyPlacementEdit(placementId, entityJson),
+  )
 }

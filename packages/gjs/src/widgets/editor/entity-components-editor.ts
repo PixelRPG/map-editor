@@ -82,6 +82,18 @@ export class EntityComponentsEditor extends Adw.Bin {
    */
   private _excludedTypes: readonly string[] = []
   /**
+   * Component types that render but cannot be removed here. The
+   * placement inspector sets this to the types the BASE definition
+   * carries: the per-placement override model replaces wholesale per
+   * `type` and has no tombstone, so "removing" a base component would
+   * silently let the library's value show through again. Only the types
+   * the placement itself added are removable.
+   *
+   * Unlike `_excludedTypes` these still count as present — they are
+   * editable, just not deletable.
+   */
+  private _nonRemovableTypes: readonly string[] = []
+  /**
    * Which component types this project may edit. The host injects the
    * project's EFFECTIVE registry (`effectiveComponentRegistry`), so a
    * component whose game system is switched off never appears in the Add
@@ -170,6 +182,12 @@ export class EntityComponentsEditor extends Adw.Bin {
     this._rebuild()
   }
 
+  /** Component types whose group hides its remove button; see `_nonRemovableTypes`. */
+  setNonRemovableTypes(types: readonly string[]): void {
+    this._nonRemovableTypes = [...types]
+    this._rebuild()
+  }
+
   /** Project-scoped picker options for the `*-ref` fields. */
   setRefOptions(options: ComponentRefOptions): void {
     this._refOptions = options
@@ -238,7 +256,7 @@ export class EntityComponentsEditor extends Adw.Bin {
     const bespokeKey = bespokeEditorKeyFor(spec)
     const editor = bespokeKey ? BESPOKE_EDITORS[bespokeKey]() : this._buildInspector(spec)
     editor.setRefOptions(this._refOptions)
-    editor.setRemovable(true)
+    editor.setRemovable(!this._nonRemovableTypes.includes(comp.type))
     editor.setData(comp)
     editor.connect('data-changed', (_w: ComponentEditor, json: string) => onDataChanged(json))
     editor.connect('remove-requested', () => this._removeComponent(index))

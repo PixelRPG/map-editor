@@ -4,6 +4,7 @@ import { type EditorTool, type EditorViewFlags, GameSaveStateComponent } from '.
 import { CommandHistory } from './engine/command-history.ts'
 import { EditOperations } from './engine/edit-operations.ts'
 import { EditorSession } from './engine/editor-session.ts'
+import type { PlacementOverrides } from './entity/placement-overrides.ts'
 import { LayerOperations } from './engine/layer-operations.ts'
 import {
   observePointerTile,
@@ -266,6 +267,24 @@ export class Engine {
   }
 
   /**
+   * Arm `placementId` for a one-shot move: the next select-tool tap
+   * relocates it to the tapped tile instead of changing the selection.
+   * `null` disarms.
+   *
+   * The tap itself does not perform the move — the system emits
+   * `PLACEMENT_MOVE_REQUESTED` and the host answers with
+   * {@link movePlacement}, so the layer guard lives in one place.
+   */
+  armPlacementMove(placementId: string | null): void {
+    this.session.pendingPlacementMove = placementId
+  }
+
+  /** Which placement is armed for a one-shot move, or `null`. */
+  getPendingPlacementMove(): string | null {
+    return this.session.pendingPlacementMove
+  }
+
+  /**
    * Smoothly pan the camera so a placement becomes the viewport centre.
    * The 400ms default reads as a clear "the editor moved me" cue without
    * dragging when stepping through a list of objects.
@@ -389,6 +408,19 @@ export class Engine {
    */
   duplicatePlacement(placementId: string, origin?: string): string | null {
     return this.edits.duplicatePlacement(placementId, origin)
+  }
+
+  /** Move a placement to another tile — see {@link EditOperations.movePlacement}. */
+  movePlacement(placementId: string, tileX: number, tileY: number, origin?: string): boolean {
+    return this.edits.movePlacement(placementId, tileX, tileY, origin)
+  }
+
+  /**
+   * Replace one placement's per-instance overrides — see
+   * {@link EditOperations.setPlacementOverrides}.
+   */
+  setPlacementOverrides(placementId: string, overrides: PlacementOverrides | undefined, origin?: string): boolean {
+    return this.edits.setPlacementOverrides(placementId, overrides, origin)
   }
 
   // ──────────────────────────────────────────────────────────────

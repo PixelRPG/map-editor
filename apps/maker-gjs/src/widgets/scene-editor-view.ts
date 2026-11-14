@@ -3,7 +3,16 @@ import GObject from '@girs/gobject-2.0'
 import { gettext as _ } from 'gettext'
 import type Gtk from '@girs/gtk-4.0'
 import type Gdk from '@girs/gdk-4.0'
-import { type EditorTool, type LayerPlane, type MapData, resolvePlacementDefinition } from '@pixelrpg/engine'
+import {
+  basePlacementDefinition,
+  type EditorTool,
+  effectiveComponentRegistry,
+  type EntityDefinition,
+  type LayerPlane,
+  type MapData,
+  placementOverridesFrom,
+  resolvePlacementDefinition,
+} from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
   EditorPages,
@@ -17,6 +26,7 @@ import {
   RightInspector,
   type SampleScene,
   SceneEditor,
+  type SelectedPlacementDescriptor,
   type TileDescriptor,
 } from '@pixelrpg/gjs'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
@@ -29,8 +39,10 @@ import {
   buildBrushOptions,
   loadObjectSheets,
   type ObjectBrushOption,
+  type ObjectSheets,
   spriteSetIdsFor,
 } from './scene-editor/object-descriptors.ts'
+import { buildRefOptions } from '../services/project-store-entities.ts'
 
 /**
  * The tool's verb, for the sentence beside the badge ("Paint · Ground").
@@ -116,11 +128,19 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _lastLayerByPlane = new Map<LayerPlane, string>()
   /** Session-local LRU of sheet-local tile ids behind the phone bar's strip. */
   private _recentTileIds: number[] = []
-  /** Per-placement info for the Selected page's "Selected object" group. */
-  private _placementInfo = new Map<
-    string,
-    { name: string; defId: string | null; tileX: number; tileY: number; layerId: string }
-  >()
+  /**
+   * The LIVE `MapData` of the open map — the very object the engine
+   * mutates in place (see {@link _persistMapData}), not a snapshot. The
+   * Selected page is built from it on demand, so a placement the user
+   * just duplicated, moved or edited is described correctly without a
+   * re-populate. A snapshot is what used to clear the page after a Copy:
+   * the copy's id wasn't in it yet.
+   */
+  private _mapData: MapData | null = null
+  /** The project's entity library, for resolving a placement to its definition. */
+  private _entityLibrary: readonly EntityDefinition[] = []
+  /** Sprite sheets behind the placement sprites, keyed by sprite-set id. */
+  private _objectSheets: ObjectSheets = new Map()
   private _tilesetName = ''
   /**
    * `firstGid` of the active sprite set. The engine indexes tiles as
@@ -242,7 +262,7 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   /** Mirror the global objects visibility into the Layers page's Objects row (no re-emit). */
   setObjectsVisible(visible: boolean): void {
-    this._pages.layers.setObjectsState(this._placementInfo.size, visible)
+    this._pages.layers.setObjectsState(this._mapData?.objectPlacements?.length ?? 0, visible)
   }
 
   /**
@@ -313,9 +333,30 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._editor.openSheet()
   }
 
+  /**
+   * Reveal the inspector BECAUSE something was selected on the canvas —
+   * which on phone means not revealing it at all. REDESIGN § 5.4 is
+   * explicit that a tap on a placement keeps the map visible and answers
+   * in the bottom bar's second row (the name plus Edit · Copy · Move ·
+   * Delete); a sheet sliding up over the thing just tapped would hide
+   * the one piece of context the move verbs need. "Edit" is the opt-in,
+   * and it goes through {@link showSheetPage} like every other page
+   * request.
+   *
+   * On wide layouts the drawer still auto-opens, per the project-wide
+   * policy in `docs/concepts/responsive-chrome.md`.
+   */
+  revealForSelection(): void {
+    if (this.inspectorCollapsed) return
+    this.showInspector = true
+  }
+
   /** Push the tier down so the caption, the Play menu and "⋯" follow it. */
   protected _onFullViewChanged(fullView: boolean): void {
     this._editor.fullView = fullView
+    // The Selected page's component editor hides its advanced specs in
+    // Simple view, so the tier has to reach it too.
+    this._pages.selected.fullView = fullView
   }
 
   /**
@@ -388,11 +429,7 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   copySelectedPlacement(): void {
     const placementId = this._selectedPlacementId()
-    if (!placementId) return
-    const copyId = this._engine?.excalibur?.duplicatePlacement(placementId)
-    if (!copyId) return
-    this._engine?.setSelectedPlacements([copyId])
-    this._syncSelectedObjectProps(copyId)
+    if (placementId) this._duplicatePlacement(placementId)
   }
 
   /** Remove the selected placement — the menu's "Delete" entry. */
@@ -418,10 +455,109 @@ export class SceneEditorView extends ResponsiveEditorView {
     this.emit('object-removed')
   }
 
-  /** Push the selected placement into the Selected page's object group (`null` hides it). */
+  /** Push the selected placement into the Selected page (`null` shows its empty state). */
   private _syncSelectedObjectProps(placementId: string | null): void {
-    const info = placementId ? this._placementInfo.get(placementId) : null
-    this._pages.selected.setSelectedObject(info && placementId ? { placementId, ...info } : null)
+    const desc = placementId ? this._placementDescriptor(placementId) : null
+    this._pages.selected.setPlacement(desc)
+    // The phone bar's second row names the selection and offers its
+    // verbs; with nothing selected it goes back to the recent tiles.
+    this._editor.setPlacementSelected(desc?.definition.name ?? null)
+  }
+
+  /**
+   * Describe one placement for the Selected page, reading the LIVE map
+   * data — so a placement created, moved or edited a moment ago reads
+   * correctly without a re-populate. `null` when the id is unknown or
+   * its definition doesn't resolve (a `defId` pointing at a deleted
+   * library entry): there is nothing honest to show.
+   */
+  private _placementDescriptor(placementId: string): SelectedPlacementDescriptor | null {
+    const placement = this._mapData?.objectPlacements?.find((p) => p.id === placementId)
+    if (!placement) return null
+    const definition = resolvePlacementDefinition(placement, this._entityLibrary)
+    const base = basePlacementDefinition(placement, this._entityLibrary)
+    if (!definition || !base) return null
+    return {
+      placementId,
+      defId: placement.defId ?? null,
+      // What kind of thing this is: the library entry it instantiates,
+      // or — for a placement carrying its own definition — a word for
+      // "this one is not in the library".
+      kind: placement.defId ? base.name : _('Inline object'),
+      tileX: placement.tileX,
+      tileY: placement.tileY,
+      layerName: this._layers.find((l) => l.id === placement.layerId)?.name ?? placement.layerId,
+      paintable: paintableFor(definition, this._objectSheets),
+      definition,
+      baseComponentTypes: base.components.map((c) => c.type),
+    }
+  }
+
+  /**
+   * An edit from the Selected page: diff the definition the user now
+   * sees against the base it instantiates, and keep only the
+   * differences as this placement's overrides. An edit set back to the
+   * library's value therefore stops overriding at all, instead of
+   * leaving a copy of the library in the map file.
+   *
+   * `placementId` comes from the page so a late emit from a placement
+   * that is no longer selected cannot write onto the current one.
+   */
+  private _applyPlacementEdit(placementId: string, entityJson: string): void {
+    const placement = this._mapData?.objectPlacements?.find((p) => p.id === placementId)
+    if (!placement) return
+    const base = basePlacementDefinition(placement, this._entityLibrary)
+    if (!base) return
+    let edited: EntityDefinition
+    try {
+      edited = JSON.parse(entityJson) as EntityDefinition
+    } catch {
+      return
+    }
+    const overrides = placementOverridesFrom(base, edited)
+    if (!this._engine?.excalibur?.setPlacementOverrides(placementId, overrides)) return
+    // The page shows the name and the kind; a committed rename has to
+    // reach them, and the engine has already mutated the live map data.
+    this._syncSelectedObjectProps(placementId)
+    this._persistMapData()
+  }
+
+  /**
+   * Duplicate the selected placement from the Selected page's
+   * Duplicate row — same path as the long-press menu's "Copy", so both
+   * leave the copy selected and the page showing it.
+   */
+  private _duplicatePlacement(placementId: string): void {
+    const copyId = this._engine?.excalibur?.duplicatePlacement(placementId)
+    if (!copyId) return
+    this._engine?.setSelectedPlacements([copyId])
+    this._syncSelectedObjectProps(copyId)
+    this._pages.layers.setObjectsState(
+      this._mapData?.objectPlacements?.length ?? 0,
+      this._engine?.excalibur?.getEditorViewFlags().objectsVisible ?? true,
+    )
+    this._persistMapData()
+  }
+
+  /**
+   * Arm the one-shot tap-to-move: the next tap with the select tool
+   * moves this placement to the tapped tile instead of selecting what
+   * is there. The engine holds the armed state (a session component) and
+   * the system only ASKS for the move — `engine-controller` answers with
+   * `Engine.movePlacement`, so the layer guard runs in one place.
+   */
+  armPlacementMove(): void {
+    const placementId = this._selectedPlacementId()
+    if (placementId) this._engine?.excalibur?.armPlacementMove(placementId)
+  }
+
+  /**
+   * A placement the engine moved (the tap that consumed the arming, or
+   * an undo/redo of one). Refresh the page's position row and persist.
+   */
+  placementMoved(placementId: string): void {
+    this._syncSelectedObjectProps(placementId)
+    this._persistMapData()
   }
 
   /** Whether the phone sheet is expanded over the canvas — back step 2. */
@@ -521,13 +657,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     const mapData = map ?? project.resource.maps.get(sceneId)?.mapData
     if (!mapData) return
 
-    this._pages.selected.setScene({
-      name: mapData.name ?? mapData.id,
-      cols: mapData.columns,
-      rows: mapData.rows,
-      tilePx: mapData.tileWidth,
-    })
-
     const layers = toLayerDescriptors(mapData)
     this._layers = layers
     this._pages.layers.setLayers(layers)
@@ -584,24 +713,23 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._pages.layers.heroPaintable = this._heroPaintable
     this._pages.brush.heroPaintable = this._heroPaintable
 
-    this._placementInfo = new Map(
-      resolved.map(({ placement, def }) => [
-        placement.id,
-        {
-          name: def?.name ?? placement.id,
-          defId: placement.defId ?? null,
-          tileX: placement.tileX,
-          tileY: placement.tileY,
-          layerId: placement.layerId,
-        },
-      ]),
-    )
+    // What the Selected page needs to describe any placement on demand:
+    // the live map data, the library to resolve against and the sheets
+    // the sprites come from. No per-placement snapshot — see `_mapData`.
+    this._mapData = mapData
+    this._entityLibrary = library
+    this._objectSheets = sheets
+    this._pages.selected.setComponentRegistry(effectiveComponentRegistry(project.resource.data))
+    this._pages.selected.setRefOptions(buildRefOptions(project.resource.data?.maps, project.resource.spriteSets))
 
     const brushOptions = buildBrushOptions(brushDefs, sheets)
     this._objectBrushes = brushOptions
     this._pages.brush.setObjectBrushes(brushOptions)
     if (this._armedObjectId && !brushOptions.some((b) => b.id === this._armedObjectId)) this._armedObjectId = null
     this._pages.brush.selectObjectBrush(this._armedObjectId)
+    // A re-populate (a removed object, a reloaded map) must not leave
+    // the Selected page describing the placement list it replaced.
+    this._syncSelectedObjectProps(this._selectedPlacementId())
   }
 
   /** The sprite-set id currently feeding the Brush page's palette. */
@@ -874,6 +1002,8 @@ export class SceneEditorView extends ResponsiveEditorView {
     wireSelectedPage(this._pages.selected, {
       openObjectDefinition: (defId) => this.activate_action('win.open-object', GLib.Variant.new_string(defId)),
       removePlacement: (placementId) => this._removePlacement(placementId),
+      duplicatePlacement: (placementId) => this._duplicatePlacement(placementId),
+      applyPlacementEdit: (placementId, entityJson) => this._applyPlacementEdit(placementId, entityJson),
     })
   }
 
