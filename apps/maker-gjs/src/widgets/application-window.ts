@@ -414,9 +414,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       },
       selectPlacement: (placementId) => {
         this._scene_editor_view.highlightPlacement(placementId)
-        if (placementId) this.set_property('show-inspector', true)
+        if (placementId) this._scene_editor_view.revealForSelection()
       },
       requestPlacementContext: (screenX, screenY) => this._scene_editor_view.showPlacementMenu(screenX, screenY),
+      placementMoved: (placementId, moved) => {
+        if (moved) this._scene_editor_view.placementMoved(placementId)
+        // The only refusals are a padlocked layer, a tile off the map
+        // and the tile it already sits on — all three are the user's
+        // tap, not an error, so a toast is the whole response.
+        else this._showToast(_('That one cannot move there.'))
+      },
       setLayerFlag: (layerId, flag, value) => this._scene_editor_view.setLayerFlag(layerId, flag, value),
       refreshLayers: () => {
         const sceneId = this._scenes.currentSceneId
@@ -734,12 +741,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setViewObjectBrush: (defId) => this._scene_editor_view.setArmedObjectBrush(defId),
       setSelectedPlacements: (ids) => this._engineCtl.engine?.setSelectedPlacements([...ids]),
       highlightPlacement: (id) => this._scene_editor_view.highlightPlacement(id),
-      revealInspector: () => this.set_property('show-inspector', true),
+      revealInspector: () => this._scene_editor_view.revealForSelection(),
       // The view decides where "Selected" lives — phone sheet or wide
       // inspector — so naming the page is enough; revealing the drawer
       // by hand here would fight the sheet on phone.
       editPlacement: () => this._scene_editor_view.showSheetPage('selected'),
       copyPlacement: () => this._scene_editor_view.copySelectedPlacement(),
+      movePlacement: () => this._scene_editor_view.armPlacementMove(),
       deletePlacement: () => this._scene_editor_view.deleteSelectedPlacement(),
       undo: () => this._engineCtl.engine?.undo(),
       redo: () => this._engineCtl.engine?.redo(),

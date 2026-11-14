@@ -78,6 +78,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'select-placement',
     'edit-placement',
     'copy-placement',
+    'move-placement',
     'delete-placement',
     'undo',
     'redo',

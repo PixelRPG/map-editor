@@ -694,6 +694,19 @@ for *this placement's overrides* (the command layer for update-by-replace is rea
 `Adw.ButtonRow`s Duplicate and Delete. With nothing selected the switcher item is insensitive
 and the page shows its empty state.
 
+Implementation (landed, step 3.3): the page is a `Gtk.Stack` over an `Adw.StatusPage` empty
+state and the placement form — an `Adw.EntryRow` with the sprite as its prefix and an apply
+button, then read-only kind / position / "Edit in Library ›" rows, then the page's own
+`EntityComponentsEditor` for the overrides, then Duplicate and Delete. The position row is kept
+although the design does not list it: it is the only place the user can see which layer the
+placement sits on, and the layer decides what the guard chain allows. Writes go through
+`EditOperations.setPlacementOverrides`, so the page needs **no new command**. One deviation:
+the switcher item **cannot** be made insensitive — `Adw.InlineViewSwitcher` rebuilds its toggles
+from the `Adw.ViewStack` and honours only `AdwViewStackPage:visible` — so the page stays
+reachable and the empty state carries the message. Tracked in `TODO.md`. The scene-metadata rows
+the old Props pane carried (name, music, size, tile size, encounters, on-enter) were deleted
+here rather than moved: step 5.4's Map settings dialog has to create them.
+
 ### 5.4 Selection: a contextual action bar
 
 Tapping a placement with Move selects it and **swaps the bar's second row** (recent tiles) for
@@ -710,6 +723,21 @@ selection actions — no sheet opens, the map stays visible:
 - This replaces the phone's auto-opening inspector drawer; on phone the right
   `Adw.OverlaySplitView` is never used (**REMOVED** on phone, resolves `phone/08`).
 
+Implementation (landed, step 3.3): row B of `phone_bar` is a `Gtk.Stack bar_row_b` crossfading
+between a `recent` page (the recent-tile strip) and a `selection` page, driven by the single
+entry point `SceneEditor.setPlacementSelected(name | null)` — a name shows the row, `null`
+restores the strip, so "tapping empty map" needs no second code path. The four verbs are
+`win.edit-placement` / `win.copy-placement` / `win.move-placement` / `win.delete-placement`;
+Copy and Move are words rather than icons because Adwaita ships no symbolic for either. *Move*
+is the one-shot **tap**, not the drag: arming writes `PendingPlacementMoveComponent` on the
+editor session, the next select-tool tap is consumed as the target and answered by
+`Engine.movePlacement` (which keeps the placement id, so the undoable
+`PlaceObjectCommand` is a same-id replace), and a refused move says so in a toast. The drag half
+waits on the drag router that stroke painting needs — see `TODO.md`. The auto-open suppression
+lives in `SceneEditorView.revealForSelection()`, which declines while `inspector-collapsed`;
+`docs/concepts/responsive-chrome.md` § "Right inspector — auto-open policy" is the project-wide
+statement of that exception.
+
 ### 5.5 Gestures
 
 | Gesture | Result | Notes |
@@ -720,7 +748,7 @@ selection actions — no sheet opens, the map stays visible:
 | Pinch | zoom about the pinch centre | `Gtk.GestureZoom` on the engine widget → `Engine.setCameraZoom`; on release the zoom springs to the nearest whole-pixel scale |
 | Second finger lands during a stroke | the stroke is **cancelled**, not committed | nothing reaches the undo stack or peers |
 | Long press (500 ms) on a tile, paint tools | pick that tile (eyedropper), then stay on Paint | the brush badge pops (scale 1 → 1.15 → 1) |
-| Long press on a placement | select + context menu (`Gtk.PopoverMenu` at the finger) | Edit, Copy, Delete; "Goes to… ›" for doors waits on the §6.2 picker |
+| Long press on a placement | select + context menu (`Gtk.PopoverMenu` at the finger) | Edit, Copy, Move, Delete; "Goes to… ›" for doors waits on the §6.2 picker |
 | Long press on empty map, Move | start a marquee | Phase 4b selection |
 | Two-finger tap | undo | a transient OSD names it: "Undid: Paint" |
 | Three-finger tap | redo | |
@@ -1030,7 +1058,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 |---|---|---|
 | 3.1 | Split the inspector panes from their `Adw.OverlaySplitView` host into three movable pages | TODO "The phone bottom sheet has one page" (the stated blocker) | — done (`EditorPages` owns one `BrushPage` / `LayersPage` / `SelectedPage` and `host(slots)` parents them into a `PageSlots` triple; `SceneEditorView` holds the instance and hosts into `RightInspector.pageSlots` on wide, `SceneEditor.pageSlots` — a switcher + `Adw.ViewStack` in the sheet — on phone. `win.sheet-page(brush\|layers\|selected)` replaces `win.set-inspector-tab` and routes to whichever host the layout uses, so the wide badge's popover is gone and the badge is a plain button on that action. The placement-list page had no home in the three-page design and was deleted with `buildPlacementRows` — see TODO.md. `SelectedPage` keeps its pre-redesign content until 3.3)
 | 3.2 | Sheet with switcher and `SheetDetents` (Peek / Half / Full), camera bottom inset | same | — done (`sheet-detents.ts` is the whole decision as pure arithmetic — heights clamped into `[bar, full]`, nearest-snap with ties to the shorter, a ≥ 400 px/s fling taking the next rung and never skipping one — and `SheetDetentController` is the GTK half, kept plain rather than a `GObject` the way `EditorPages` is. Three things the widget's docs do not say decided the shape: `sheet-height` is READ-ONLY, so a `height-request` on the sheet child is the control (libadwaita allocates that child's natural height); the child cannot be an `Adw.ToolbarView`, whose `[top]` is a `GtkWindowHandle` the sheet's swipe tracker force-claims every drag from; and libadwaita's own drag handle is an internal `can-target: false` `AdwGizmo`, so `show-drag-handle` is off and a full-width `sheet_grabber` carries the drag (claiming at 4 px, inside GTK's 16) and the tap. Only Full is modal — at Half a stroke must still reach the canvas, which is the point of the rung — and the camera ducks at Half ONLY, via `Engine.setViewportInset` + the pure `services/viewport-inset.ts`: host state, deliberately not on the op-log, since a peer's sheet is at its own detent. No keyboard path to the detents and a one-step `collapseSheet` are deferred — see TODO.md)
-| 3.3 | Selected page with placement overrides; contextual action bar; phone stops using the inspector drawer | same; TODO "Object-system editor UI follow-ups" (a), (c); `phone/08` |
+| 3.3 | Selected page with placement overrides; contextual action bar; phone stops using the inspector drawer | same; TODO "Object-system editor UI follow-ups" (a), (c); `phone/08` | — done (the page edits a placement's name and its component overrides in place through `EditOperations.setPlacementOverrides`, which writes a **same-id** `PlaceObjectCommand` — update-by-replace, already undo-safe and collab-syncable, so 3.3 adds no command at all; Duplicate is a new-id `PlaceObjectCommand` and Delete the existing `RemoveObjectCommand`. The host dropped its stale `_placementInfo` snapshot for live `MapData` + entity library + object sheets, which is what fixes Copy clearing the page it had just filled. On phone the second row of `phone_bar` crossfades into the contextual bar and the sheet does NOT open — `revealForSelection()` declines while collapsed, and *Edit* is the opt-in. *Move* shipped as a one-shot tap; the drag, and the insensitive switcher item libadwaita cannot express, are in TODO.md. The scene-metadata rows were deleted, not moved: step 5.4 creates them)
 | 3.4 | Brush page: Tiles \| Things switch, tileset chips, contiguous sheet palette | TODO "Object-system editor UI follow-ups" (b) |
 | 3.5 | Layers page: rename / duplicate / delete commands and UI; Things eye to the view menu; plane-tinted ghost | TODO "Layers page follow-ups" (a), (b), (d) |
 | 3.6 | Starter packs shelf at the foot of the Brush page and in its empty state; `blank-starter` includes the first pack — gated on H1 | TODO "No bundled tileset collection" |

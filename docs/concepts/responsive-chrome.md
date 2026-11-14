@@ -84,7 +84,19 @@ the inspector **auto-opens** if it was closed.
 |---------------|---------------------------------------------------------------|--------------------------------------------|
 | Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
 | Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
-| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement     |
+| Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement — **wide only**, see below |
+
+The scene editor is the one exception, and it is deliberate. On phone
+the pages live in the bottom sheet, so "auto-open" would mean sliding a
+sheet up over the placement the user just tapped — hiding the context
+the move and copy verbs need. REDESIGN § 5.4 answers a selection in the
+bottom bar's second row instead (the placement's name plus Edit · Copy ·
+Move · 🗑), and the sheet opens only when the user asks for it with
+Edit. `SceneEditorView.revealForSelection()` is where that split lives:
+a no-op while `inspector-collapsed`, a plain `show-inspector = true`
+otherwise. The unconditional reveals (`win.focus-placement` as a deep
+link, `win.toggle-inspector`) keep going through `show-inspector` and so
+still land on the sheet via `_onShowInspectorChanged`.
 
 The Library's Characters and Things pages and the Game page follow
 the content-view master-detail pattern (list → detail page, an
@@ -166,11 +178,14 @@ the drawer. The scene editor sidesteps the question entirely: at
 that breakpoint it has no drawer. `EditorPages` hosts the three
 pages in the bottom sheet instead (see "The sheet's three
 detents"), so `SceneEditorView._onShowInspectorChanged` turns
-every reveal — `win.toggle-inspector`, `revealInspector` from a
-canvas selection, `win.focus-placement` — into `openSheet()` and
-puts `show-inspector` back to `false`. Without that redirect the
+every reveal — `win.toggle-inspector`, `win.focus-placement`,
+`win.edit-placement` — into `openSheet()` and puts
+`show-inspector` back to `false`. Without that redirect the
 drawer slides out over the map holding nothing, because its slots
-are empty whenever the pages live in the sheet. The other three
+are empty whenever the pages live in the sheet. A plain canvas
+selection is the one reveal that does not arrive here at all: it
+goes through `revealForSelection()`, which declines on phone (see
+"Right inspector — auto-open policy"). The other three
 inspectors still take the drawer on phone and close from their
 own header.
 
@@ -1002,7 +1017,8 @@ on the scene the load then replaces and vanishes silently.
 | The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | On phone every inspector reveal lands on the sheet, never the editor's drawer (`_onShowInspectorChanged`) | **landed** |
-| A canvas selection opening the sheet on the *Selected* page, with the contextual action bar (REDESIGN § 9 step 3.3) | deferred, tracked in `TODO.md` |
+| The *Selected* page edits a placement (name + component overrides, Duplicate, Delete) and the phone bar's second row becomes the contextual action bar — a canvas selection fills both and does NOT open the sheet (REDESIGN § 5.4 / § 9 step 3.3) | **landed** |
+| Dragging the selected placement to move it; `Move` is a one-shot tap instead (REDESIGN § 5.4) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:

@@ -61,6 +61,14 @@ export interface EngineControllerEvents {
    */
   'placement-context': PlacementContextPayload
   /**
+   * The engine's `PLACEMENT_MOVE_REQUESTED` event — a tap landed while
+   * a placement was armed for a one-shot move. The system deliberately
+   * does NOT move it (the guard chain lives in `EditOperations`), so
+   * this controller answers with `Engine.movePlacement` and reports
+   * whether it went through; the host then refreshes and persists.
+   */
+  'placement-moved': { placementId: string; moved: boolean }
+  /**
    * The engine's `LAYER_FLAG_CHANGED` event — fired on every
    * application path of the layer-flag commands (local toggle,
    * undo/redo, AND inbound peer ops, which don't emit
@@ -105,6 +113,7 @@ export const ENGINE_HOOKS = [
   'tile-picked',
   'placement-selected',
   'placement-context',
+  'placement-move',
   'layer-flag',
   'layer-list',
   'pointer-tile',
@@ -293,6 +302,7 @@ export class EngineController {
     this._attachTilePickedHook()
     this._attachPlacementSelectedHook()
     this._attachPlacementContextHook()
+    this._attachPlacementMoveHook()
     this._attachLayerFlagHook()
     this._attachLayerListHook()
     this._attachPointerTileHook()
@@ -416,6 +426,24 @@ export class EngineController {
       this._hookSubs.push(
         engine.events.on(EngineEvent.PLACEMENT_CONTEXT_REQUESTED, (payload) => {
           this._events.emit('placement-context', payload)
+        }),
+      )
+      return true
+    })
+  }
+
+  /**
+   * Answer the engine's move request. Performing the move here rather
+   * than in the host keeps the whole one-shot in one place: arm (an
+   * action), consume (the system), perform (here). The host only hears
+   * the outcome.
+   */
+  private _attachPlacementMoveHook(): void {
+    this._attachOnce('placement-move', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.PLACEMENT_MOVE_REQUESTED, ({ placementId, coords }) => {
+          const moved = engine.excalibur?.movePlacement(placementId, coords.x, coords.y) ?? false
+          this._events.emit('placement-moved', { placementId, moved })
         }),
       )
       return true
