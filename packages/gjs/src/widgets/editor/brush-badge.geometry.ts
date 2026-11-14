@@ -164,6 +164,24 @@ export function subjectFor(tool: EditorTool): BadgeSubject {
   }
 }
 
+/** Peak scale of the pick confirmation pop, and how long it runs. */
+export const BADGE_POP = { peakScale: 1.15, durationMs: 180 } as const
+
+/**
+ * Scale factor of the "a pick landed in the badge" pop at `progress`
+ * (0 → 1 over {@link BADGE_POP}.durationMs).
+ *
+ * A half sine, so the badge swells to {@link BADGE_POP}.peakScale at the
+ * midpoint and returns to exactly 1 — the reason this is a curve rather
+ * than two chained animations is that it must *end* at 1 for every
+ * progress value a dropped frame can leave it on. Clamped, so a
+ * progress past the ends can't shrink or balloon the badge.
+ */
+export function badgePopScale(progress: number): number {
+  const t = Math.min(1, Math.max(0, progress))
+  return 1 + (BADGE_POP.peakScale - 1) * Math.sin(t * Math.PI)
+}
+
 /**
  * Symbolic icon per tool — the same table the tool chooser uses, so the
  * disc and the checked toggle always show the same glyph.

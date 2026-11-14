@@ -115,10 +115,14 @@ export interface ChromeFlags {
   backLabel: boolean
   /** Undo in the editing pill (wide) … */
   undoButton: boolean
-  /** … and undo in the context pill (phone). Exactly one of the two. */
+  /** … and undo in the bottom-left history pill (phone). Exactly one of the two. */
   phoneUndo: boolean
-  /** Redo — a button on wide, a "⋯" item on phone. */
+  /** Redo in the editing pill (wide) … */
   redoButton: boolean
+  /** … and redo beside the phone undo. Travels with it, never alone. */
+  phoneRedo: boolean
+  /** The history pill itself — shown exactly when it has buttons to carry. */
+  historyPill: boolean
   /** The tool chooser. */
   toolGroup: boolean
   /** Verbs beside the six tool icons. */
@@ -196,6 +200,8 @@ export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: b
     undoButton: !phone,
     phoneUndo: phone && !running,
     redoButton: !phone,
+    phoneRedo: phone && !running,
+    historyPill: phone && !running,
     // On phone the bar always carries the four tools; on wide the group
     // is the first thing the ladder drops, because the badge covers it.
     toolGroup: phone ? !running : rank >= CHROME_STAGES.indexOf('compact'),

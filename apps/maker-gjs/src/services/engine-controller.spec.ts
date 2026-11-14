@@ -27,8 +27,11 @@ type UndoListener = (state: { canUndo: boolean; canRedo: boolean }) => void
 
 /** Hooks the gjs `Engine` widget owns; the rest ride its event emitter. */
 const WIDGET_OWNED_HOOKS = 'pointer-tile,undo,zoom'
-/** TILE_PICKED, PLACEMENT_SELECTED, LAYER_FLAG, LAYER_LIST + the four runtime effects. */
-const EMITTER_HOOK_COUNT = 8
+/**
+ * TILE_PICKED, PLACEMENT_SELECTED, PLACEMENT_CONTEXT_REQUESTED,
+ * LAYER_FLAG, LAYER_LIST + the four runtime effects.
+ */
+const EMITTER_HOOK_COUNT = 9
 
 /**
  * Everything `ensureForMap` and the hook attachments touch on the gjs

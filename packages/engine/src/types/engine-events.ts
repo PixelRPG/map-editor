@@ -16,6 +16,7 @@ export enum EngineEvent {
   TILE_PLACED = 'tile-placed',
   TILE_PICKED = 'tile-picked',
   PLACEMENT_SELECTED = 'placement-selected',
+  PLACEMENT_CONTEXT_REQUESTED = 'placement-context-requested',
   PLAYER_TILE_CHANGED = 'player-tile-changed',
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
@@ -30,6 +31,7 @@ export enum EngineEvent {
   FLAG_SET = 'flag-set',
   PLAY_SFX_REQUESTED = 'play-sfx-requested',
   POINTER_TAP = 'pointer-tap',
+  POINTER_LONG_PRESS = 'pointer-long-press',
   POINTER_DRAG_START = 'pointer-drag-start',
   POINTER_DRAG_MOVE = 'pointer-drag-move',
   POINTER_DRAG_END = 'pointer-drag-end',
@@ -83,6 +85,24 @@ export interface EngineEventMap {
   [EngineEvent.PLACEMENT_SELECTED]: {
     placementId: string | null
     coords: { x: number; y: number }
+  }
+  /**
+   * Emitted by `TileEditorSystem` when a long press
+   * ({@link EngineEvent.POINTER_LONG_PRESS}) landed on an object
+   * placement — the touch equivalent of a right-click. The system has
+   * already made that placement the selection (and emitted
+   * {@link EngineEvent.PLACEMENT_SELECTED}); this event is the separate
+   * "and now open a context menu for it" request, so a host without a
+   * context menu simply selects and nothing else happens.
+   *
+   * `screenPos` is the press position in canvas coordinates — the host
+   * needs it to point the popover at the finger, which it cannot derive
+   * from `coords` without knowing the camera transform.
+   */
+  [EngineEvent.PLACEMENT_CONTEXT_REQUESTED]: {
+    placementId: string
+    coords: { x: number; y: number }
+    screenPos: { x: number; y: number }
   }
   /**
    * Emitted by {@link PlayerSystem} whenever the player crosses a
@@ -207,6 +227,19 @@ export interface EngineEventMap {
    * sub-threshold finger wobble shifted the release slightly.
    */
   [EngineEvent.POINTER_TAP]: { screenPos: { x: number; y: number } }
+  /**
+   * "Press and hold" — the touch equivalent of a right-click, fed IN by
+   * the host rather than derived here: `PointerGestureSystem` sees no
+   * clock, and the hold timing plus its drag/tap arbitration belong to
+   * the platform's own recogniser (`Gtk.GestureLongPress` in the GJS
+   * host, whose delay follows the desktop's HIG). The host calls
+   * `Engine.longPressAt` and `TileEditorSystem` resolves the tile the
+   * same way it resolves a tap.
+   *
+   * `screenPos` is the press position, which for a long press is the
+   * only position that exists — the recogniser cancels on movement.
+   */
+  [EngineEvent.POINTER_LONG_PRESS]: { screenPos: { x: number; y: number } }
   /**
    * Drag intent confirmed — the pointer crossed the drag threshold
    * after a press. `screenPos` is the ORIGINAL press position (the

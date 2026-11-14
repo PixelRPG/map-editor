@@ -229,9 +229,15 @@ $PixelRpgSceneEditor
       │  ├─ [overlay] back_circle "‹"   (phone only, top-left)
       │  ├─ [overlay] Gtk.WindowHandle → context pill  (halign: end)
       │  │     RosterChip · "⋯" · inspector toggle
+      │  ├─ [overlay] history_pill  (phone only, bottom-left)
+      │  │     undo · redo, in thumb reach above the docked bar
       │  ├─ [overlay] ZoomOsd        (bottom-centre, transient)
-      │  ├─ [overlay] cursor_caption (bottom-left, Full view only)
+      │  ├─ [overlay] cursor_caption (bottom-left, Full view + wide only —
+      │  │     the history pill owns that corner on phone)
       │  └─ [overlay] FloatingPlay   (bottom-right)
+      │     (+ a Gtk.PopoverMenu parented to the overlay on first
+      │      long press — pointed at the finger, so overlay
+      │      coordinates and canvas coordinates must agree)
       ├─ bottom-bar: phone bar — ToolGroup + BrushBadge + RecentTiles
       └─ sheet: BrushPage
 ```
@@ -420,7 +426,9 @@ Three things about those numbers:
 Two invariants the spec pins, because the layout this replaced broke
 both: **undo is reachable at every stage and in both layouts** (the
 old ladder pushed it into an overflow menu below 460sp, which on a
-phone put the only undo on touch two taps deep), and **the armed tool
+phone put the only undo on touch two taps deep), **redo is offered in
+exactly one place** (the pill on phone, the editing pill or "⋯" on
+wide — two visible redos is a bug the spec catches), and **the armed tool
 is nameable at every stage** — where the tool group is hidden the badge
 still carries the tool's icon and its popover opens with the group.
 Below `roomy` the verbs are gone, so the keyboard is an expert's
@@ -455,10 +463,13 @@ widgets and flips three flags:
 
 The editing pill itself is gone on phone: only a circular "‹" remains
 top-left (the system back gesture is shared with the shell, so it is a
-bonus, not the contract), undo moves into the context pill as a
-visible button — never into "⋯", because it is the only undo on touch
-— and the sheet's docked bar carries the tools, the badge and a
-recent-tiles strip. While a phone run is on, the bar, the FAB and the
+bonus, not the contract), undo and redo move into their own OSD
+history pill in the bottom-left corner, a thumb's reach above the
+docked bar — never into "⋯", because they are the only undo and redo
+on touch — and the sheet's docked bar carries the tools, the badge and
+a recent-tiles strip. The pill costs that corner: `cursor_caption`
+reads a pointer the phone does not have, so it is wide-only and the
+two never stack. While a phone run is on, the bar, the FAB and the
 "‹" all give way and the context pill becomes Stop · Restart: during a
 Live Run the finger is the joystick, not a brush. On wide the same run
 changes only the FAB's own icon.
@@ -784,6 +795,9 @@ dragging wouldn't be discoverable anyway.
 | Scene-editor thresholds re-measured against real pill widths, with `check-chrome-stages.mjs` holding the two declarations together | **landed** |
 | Phone bar + Brush sheet fit the 360 px floor; recent strip shows whole tiles; pill tables and ladder corrected by GTK measurement (`phone-chrome.probe.spec.ts`, run in CI under Broadway) | **landed** |
 | Two-finger pinch + pan on the canvas, whole-pixel zoom snap on release, stroke cancel via the sequence claim (REDESIGN § 9 steps 1.1 / 1.2) | **landed** |
+| Phone history pill: undo + redo as 44 px OSD buttons in the bottom-left corner, out of the context pill and out of "⋯"; two-finger tap undoes, three-finger tap redoes (REDESIGN § 9 step 1.3) | **landed** |
+| Long press on the canvas: a paint tool picks the tile under the finger and the brush badge pops; `select` / `object` open a placement menu (Edit · Copy · Delete) at the finger (REDESIGN § 9 step 1.4) | **landed** |
+| The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | Bottom sheet's second page ("Selected" — object properties on phone) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |

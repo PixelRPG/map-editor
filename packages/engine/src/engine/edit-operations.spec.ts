@@ -26,12 +26,12 @@
 import { describe, expect, it } from '@gjsify/unit'
 import { TileMap } from 'excalibur'
 
-import type { Command } from '../commands/index.ts'
+import { type Command, PlaceObjectCommand } from '../commands/index.ts'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { MapScene } from '../scenes/map.scene.ts'
-import type { LayerPlane } from '../types/data/index.ts'
+import type { LayerPlane, ObjectPlacement } from '../types/data/index.ts'
 import { EditOperations } from './edit-operations.ts'
 import type { EditorSession } from './editor-session.ts'
 import type { LayerOperations } from './layer-operations.ts'
@@ -44,6 +44,7 @@ const PLACEMENT_ID = 'placement-1'
 
 interface Harness {
   ops: EditOperations
+  scene: MapScene
   executed: Command[]
   lockChecks: string[]
 }
@@ -124,7 +125,12 @@ function makeHarness(options: HarnessOptions = {}): Harness {
       executed.push(command)
     },
   })
-  return { ops, executed, lockChecks }
+  return { ops, scene, executed, lockChecks }
+}
+
+/** The placements the fixture scene currently holds. */
+function placementsOf(scene: MapScene): ObjectPlacement[] {
+  return scene.mapResource.mapData?.objectPlacements ?? []
 }
 
 /** How one mutating entry point treats each gate, plus how to drive it. */
@@ -163,6 +169,14 @@ const CONTRACT: Record<string, GateContract> = {
     // Dictated by the placement, not by the active layer.
     targetLayer: TARGET_LAYER,
     invoke: (ops) => ops.removeObject(PLACEMENT_ID),
+  },
+  duplicatePlacement: {
+    // It ADDS an object, so the pause gate applies as it does to
+    // `placeObject` — unlike the remove path above.
+    assistantPause: 'enforce',
+    // Dictated by the placement, like `removeObject`.
+    targetLayer: TARGET_LAYER,
+    invoke: (ops) => ops.duplicatePlacement(PLACEMENT_ID) !== null,
   },
 }
 
@@ -230,6 +244,66 @@ export default async () => {
       // it — the same bounds predicate the tile paths use.
       const harness = makeHarness()
       expect(harness.ops.placeObject({ defId: 'npc', layerId: null, tileX: 4, tileY: 0 })).toBe(false)
+      expect(harness.executed).toHaveLength(0)
+    })
+
+    await it('duplicatePlacement puts the copy on the tile to the right, under a fresh id', async () => {
+      const harness = makeHarness()
+      const newId = harness.ops.duplicatePlacement(PLACEMENT_ID)
+      expect(newId).not.toBe(PLACEMENT_ID)
+      expect(newId).not.toBe(null)
+      const command = harness.executed[0] as PlaceObjectCommand
+      expect(command.kind).toBe(PlaceObjectCommand.KIND)
+      const copy = command.payload.placement
+      expect(copy.id).toBe(newId)
+      // Source sits at (1, 1) on a 4×4 map.
+      expect(`${copy.tileX},${copy.tileY}`).toBe('2,1')
+      expect(copy.layerId).toBe(TARGET_LAYER)
+      expect(copy.defId).toBe('npc')
+    })
+
+    await it('duplicatePlacement steps left when the right neighbour is off-map', async () => {
+      const harness = makeHarness()
+      // Last column of a 4×4 map: (4, 1) does not exist, (2, 1) does.
+      placementsOf(harness.scene)[0].tileX = 3
+      expect(harness.ops.duplicatePlacement(PLACEMENT_ID)).not.toBe(null)
+      const copy = (harness.executed[0] as PlaceObjectCommand).payload.placement
+      expect(`${copy.tileX},${copy.tileY}`).toBe('2,1')
+    })
+
+    await it('duplicatePlacement deep-copies the overrides instead of sharing them', async () => {
+      // A Copy that re-stamped the bare `defId` would hand back a stock
+      // library instance and drop every per-instance edit; a shallow
+      // copy would alias them, so renaming one object renames both.
+      const harness = makeHarness()
+      const source = placementsOf(harness.scene)[0]
+      source.overrides = { name: 'Shopkeeper', components: [{ type: 'dialogue' }] }
+      expect(harness.ops.duplicatePlacement(PLACEMENT_ID)).not.toBe(null)
+      const copy = (harness.executed[0] as PlaceObjectCommand).payload.placement
+      expect(copy.overrides?.name).toBe('Shopkeeper')
+      expect(copy.overrides?.components?.[0]?.type).toBe('dialogue')
+      copy.overrides!.name = 'Blacksmith'
+      expect(source.overrides?.name).toBe('Shopkeeper')
+    })
+
+    await it('duplicatePlacement gives an inline definition its own id', async () => {
+      // `ObjectPlacement.inline.id` is runtime entity identity and is
+      // conventionally the placement's — two placements sharing one
+      // would be two objects claiming the same entity.
+      const harness = makeHarness()
+      const source = placementsOf(harness.scene)[0]
+      source.defId = undefined
+      source.inline = { id: PLACEMENT_ID, name: 'One-off', components: [] }
+      const newId = harness.ops.duplicatePlacement(PLACEMENT_ID)
+      const copy = (harness.executed[0] as PlaceObjectCommand).payload.placement
+      expect(copy.inline?.id).toBe(newId)
+      expect(copy.inline?.name).toBe('One-off')
+      expect(source.inline?.id).toBe(PLACEMENT_ID)
+    })
+
+    await it('duplicatePlacement refuses an unknown placement id', async () => {
+      const harness = makeHarness()
+      expect(harness.ops.duplicatePlacement('does-not-exist')).toBe(null)
       expect(harness.executed).toHaveLength(0)
     })
   })

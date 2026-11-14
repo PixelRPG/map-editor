@@ -19,6 +19,8 @@ import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
 import { forwardEngineEvents } from './engine-events.ts'
+import { attachLongPress } from './long-press.ts'
+import { attachMultiFingerTap } from './multi-finger-tap.ts'
 import { attachPinchZoom } from './pinch-zoom.ts'
 import { EngineUnavailableError } from './engine-unavailable.error.ts'
 import Template from './engine.blp'
@@ -547,6 +549,21 @@ export class Engine extends Adw.Bin {
     // pan in `CameraControlSystem`; see `pinch-zoom.ts` for why the two
     // do not fight.
     attachPinchZoom(widget, this)
+
+    // Two fingers undo, three redo — the touch shorthand for the
+    // history pill in the corner. Routed as window actions so they go
+    // through the same `win.undo` / `win.redo` the buttons and the
+    // keyboard use, rather than reaching into the engine from here.
+    attachMultiFingerTap(widget, (fingers) => {
+      this.activate_action(fingers >= 3 ? 'win.redo' : 'win.undo', null)
+    })
+
+    // Press and hold: the engine decides what the hold means from the
+    // armed tool and what is under the finger (a tile pick or a
+    // placement's context menu) — see `TileEditorSystem.applyLongPress`.
+    attachLongPress(widget, (x, y) => {
+      this._excalibur?.longPressAt(x, y)
+    })
 
     widget.onReady(async (canvas: HTMLCanvasElement) => {
       // Defer the focus grab out of the engine-init render burst.

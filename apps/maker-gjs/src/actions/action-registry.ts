@@ -70,7 +70,17 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   ],
   project: ['open-project', 'close-project', 'open-recent-projects', 'new-scene'],
   zoom: ['zoom-in', 'zoom-out', 'zoom-reset', 'atlas-fit'],
-  editing: ['set-tool', 'set-object-brush', 'select-placement', 'undo', 'redo', 'new-layer'],
+  editing: [
+    'set-tool',
+    'set-object-brush',
+    'select-placement',
+    'edit-placement',
+    'copy-placement',
+    'delete-placement',
+    'undo',
+    'redo',
+    'new-layer',
+  ],
   inspector: [
     'set-inspector-tab',
     'toggle-library',

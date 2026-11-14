@@ -55,6 +55,18 @@ interface TileHit {
 }
 
 /**
+ * Tools whose long press is an eyedropper pick (REDESIGN §5.5: "pick
+ * that tile, then stay on Paint"). Long-press dispatch is tool-first,
+ * like {@link TileEditorSystem.applyClick}: with a paint tool armed the
+ * pick has to work on every tile, including one an object happens to
+ * stand on — a placement menu stealing the press would make the
+ * eyedropper unpredictable exactly where the map is busiest. The
+ * placement context menu is therefore the long press of the tools that
+ * deal in objects (`'select'`, `'object'`).
+ */
+const LONG_PRESS_PICK_TOOLS: readonly EditorTool[] = ['pencil', 'fill', 'eraser', 'eyedropper']
+
+/**
  * Tile-level editor interactions: brush/eraser application on click and hover
  * tracking on move. Owns no global state — per-tilemap selection/hover lives
  * in {@link MapEditorComponent} on the TileMap entity.
@@ -109,6 +121,14 @@ export class TileEditorSystem extends System {
     this.events.on(EngineEvent.POINTER_TAP, ({ screenPos }) => {
       const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
       if (hit) this.applyClick(hit)
+    })
+
+    // The hold itself is recognised by the host (see
+    // `EngineEvent.POINTER_LONG_PRESS`); from here on it resolves to a
+    // tile exactly like a tap.
+    this.events.on(EngineEvent.POINTER_LONG_PRESS, ({ screenPos }) => {
+      const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
+      if (hit) this.applyLongPress(hit, screenPos)
     })
 
     // Hover preview still rides on raw `move` — it is independent of
@@ -252,6 +272,50 @@ export class TileEditorSystem extends System {
     this.emitTileClicked(hit)
   }
 
+  /**
+   * Route a long press to the active tool — see
+   * {@link LONG_PRESS_PICK_TOOLS} for why the tool decides first.
+   *
+   * A paint tool picks the tile under the finger without switching tool;
+   * an object tool selects the placement under the finger and asks the
+   * host for a context menu. A long press on empty tile space with an
+   * object tool does nothing yet (REDESIGN reserves it for the Phase 4b
+   * marquee).
+   */
+  private applyLongPress(hit: TileHit, screenPos: { x: number; y: number }): void {
+    const scene = this.scene as MapScene | undefined
+    if (!scene) return
+    const tool: EditorTool = SessionState.get(scene, ActiveToolComponent)?.tool ?? 'select'
+
+    if (LONG_PRESS_PICK_TOOLS.includes(tool)) {
+      const layerId = this.resolveLayerId(SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null)
+      if (!layerId) return
+      // No lock guard — a pick only reads, same as the eyedropper's own
+      // tap path.
+      this.applyEyedropper({
+        scene,
+        hit,
+        layerId,
+        previousSprites: snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y),
+        tileId: null,
+      })
+      return
+    }
+
+    const placements = scene.mapResource?.mapData?.objectPlacements ?? []
+    const picked = pickTopmostPlacementAt(placements, hit.coords.x, hit.coords.y)
+    // Deliberately NOT clearing the selection on an empty-space hold:
+    // the tap already does that, and a hold that finds nothing should
+    // leave the map as the user left it.
+    if (!picked) return
+    this.selectPlacement(hit.coords, picked.id)
+    this.events.emit(EngineEvent.PLACEMENT_CONTEXT_REQUESTED, {
+      placementId: picked.id,
+      coords: hit.coords,
+      screenPos,
+    })
+  }
+
   private applyMutatingTool(tool: EditorTool, ctx: ToolContext): void {
     switch (tool) {
       // Pencil + fill need an armed tile; the eraser is the one mutating
@@ -372,11 +436,18 @@ export class TileEditorSystem extends System {
     if (!this.scene) return
     const placements = (this.scene as MapScene).mapResource?.mapData?.objectPlacements ?? []
     const picked = pickTopmostPlacementAt(placements, hit.coords.x, hit.coords.y)
-    SessionState.set(this.scene, new SelectedPlacementsComponent(picked ? [picked.id] : []))
-    this.events.emit(EngineEvent.PLACEMENT_SELECTED, {
-      placementId: picked?.id ?? null,
-      coords: hit.coords,
-    })
+    this.selectPlacement(hit.coords, picked?.id ?? null)
+  }
+
+  /**
+   * Make `placementId` (or nothing, for `null`) the selection and mirror
+   * it to the host. Shared by the select tap and the long press so both
+   * write the component and emit the event in one place.
+   */
+  private selectPlacement(coords: { x: number; y: number }, placementId: string | null): void {
+    if (!this.scene) return
+    SessionState.set(this.scene, new SelectedPlacementsComponent(placementId ? [placementId] : []))
+    this.events.emit(EngineEvent.PLACEMENT_SELECTED, { placementId, coords })
   }
 
   /**
