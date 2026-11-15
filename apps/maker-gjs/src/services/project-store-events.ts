@@ -27,6 +27,7 @@ export type ProjectStoreNotice =
   | { kind: 'sprite-set-save-failed' }
   | { kind: 'project-save-failed' }
   | { kind: 'sprite-set-imported'; name: string }
+  | { kind: 'map-save-failed' }
 
 /** Typed event map for `ProjectStore.on`. */
 export interface ProjectStoreEvents {
@@ -67,4 +68,12 @@ export interface ProjectStoreEvents {
    * persists that map + refreshes the atlas.
    */
   'map-editor-data-changed': { mapId: string }
+  /**
+   * The project's map LIST changed — a map was created, duplicated,
+   * renamed or deleted, locally or by a peer — or the map the game
+   * starts on moved. `added` names a map whose file the host still has
+   * to load into the live resource; `removed` one it must drop. The
+   * host rebuilds the atlas world from the resource either way.
+   */
+  'maps-changed': { added?: string; removed?: string; renamed?: string; startupChanged?: boolean }
 }

@@ -1,5 +1,4 @@
 import Gio from '@girs/gio-2.0'
-import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
 
 /** What the project lifecycle actions need from the window. */
@@ -9,7 +8,6 @@ export interface ProjectActionsContext {
   /** Present the recent-projects dialog (the primary menu's "Open Recent"). */
   presentRecentProjects(): void
   closeProject(): void
-  showToast(message: string): void
 }
 
 /**
@@ -35,8 +33,4 @@ export function installProjectActions(group: Gio.SimpleActionGroup, ctx: Project
   const openRecent = new Gio.SimpleAction({ name: 'open-recent-projects' })
   openRecent.connect('activate', () => ctx.presentRecentProjects())
   addAction(group, openRecent)
-
-  const newScene = new Gio.SimpleAction({ name: 'new-scene' })
-  newScene.connect('activate', () => ctx.showToast(_('New map — not yet implemented')))
-  addAction(group, newScene)
 }

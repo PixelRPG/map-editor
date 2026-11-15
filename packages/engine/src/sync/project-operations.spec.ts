@@ -1,30 +1,52 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import type { EntityDefinition, GameProjectData, MapData, SpriteSetData, SpriteSetReference } from '../types/index.ts'
+import type {
+  EntityDefinition,
+  GameProjectData,
+  MapData,
+  MapReference,
+  SpriteSetData,
+  SpriteSetReference,
+} from '../types/index.ts'
 import {
   applyEntityRemove,
   applyEntityUpsert,
+  applyMapCreate,
   applyMapEditorData,
+  applyMapRemove,
+  applyMapRename,
   applyPlayerSet,
   applyGameSystemsSet,
   applyProjectMetaUpdate,
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
+  applyStartupSet,
+  chunkMapCreate,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
   createEntityRemoveOp,
   createEntityUpsertOp,
   createMapEditorDataOp,
+  createMapRemoveOp,
+  createMapRenameOp,
   createPlayerSetOp,
   createProjectMetaUpdateOp,
   createSpriteSetRemoveOp,
+  createStartupSetOp,
   ENTITY_REMOVE_KIND,
   ENTITY_UPSERT_KIND,
   isProjectOp,
+  MAP_CREATE_CHUNK_KIND,
+  type MapCreateChunkOp,
+  type MapCreatePayload,
+  MapCreateReassembler,
   MAP_EDITOR_DATA_KIND,
+  MAP_REMOVE_KIND,
+  MAP_RENAME_KIND,
   OpChunkReassembler,
   PLAYER_SET_KIND,
+  STARTUP_SET_KIND,
   createGameSystemsSetOp,
   GAME_SYSTEMS_SET_KIND,
   PROJECT_META_UPDATE_KIND,
@@ -466,6 +488,133 @@ export default async () => {
       expect(op.peerId).toBe('p1')
       expect(op.seq).toBe(7)
       expect(isProjectOp(op)).toBe(true)
+    })
+  })
+
+  await describe('map ops', async () => {
+    function mapRef(id: string): MapReference {
+      return { id, path: `./maps/${id}.json`, type: 'map', name: id }
+    }
+    function dataWithMaps(ids: string[], initialMapId = ids[0] ?? 'none'): GameProjectData {
+      return {
+        id: 'p',
+        name: 'P',
+        version: '1',
+        spriteSets: [],
+        maps: ids.map(mapRef),
+        startup: { initialMapId },
+      } as unknown as GameProjectData
+    }
+
+    await it('exposes the four kinds under the project prefix', async () => {
+      // Lock the literal wire strings — a peer matches on them.
+      expect(MAP_CREATE_CHUNK_KIND).toBe('__project/map.create.chunk')
+      expect(MAP_RENAME_KIND).toBe('__project/map.rename')
+      expect(MAP_REMOVE_KIND).toBe('__project/map.remove')
+      expect(STARTUP_SET_KIND).toBe('__project/startup.set')
+      for (const kind of [MAP_CREATE_CHUNK_KIND, MAP_RENAME_KIND, MAP_REMOVE_KIND, STARTUP_SET_KIND]) {
+        expect(kind.startsWith(PROJECT_OP_PREFIX)).toBe(true)
+        expect(isProjectOp({ kind, payload: {}, peerId: 'a', seq: 0 })).toBe(true)
+      }
+    })
+
+    await it('builds typed rename / remove / startup envelopes', async () => {
+      const rn = createMapRenameOp({ peerId: 'p1', seq: 1, mapId: 'cave', name: 'Deep Cave' })
+      expect(rn.kind).toBe(MAP_RENAME_KIND)
+      expect(rn.payload).toStrictEqual({ mapId: 'cave', name: 'Deep Cave' })
+      expect(isProjectOp(rn)).toBe(true)
+
+      const rm = createMapRemoveOp({ peerId: 'p1', seq: 2, mapId: 'cave' })
+      expect(rm.kind).toBe(MAP_REMOVE_KIND)
+      expect(rm.payload).toStrictEqual({ mapId: 'cave' })
+      expect(isProjectOp(rm)).toBe(true)
+
+      const st = createStartupSetOp({ peerId: 'p1', seq: 3, initialMapId: 'cave' })
+      expect(st.kind).toBe(STARTUP_SET_KIND)
+      expect(st.payload).toStrictEqual({ initialMapId: 'cave' })
+      expect(isProjectOp(st)).toBe(true)
+    })
+
+    await it('round-trips a whole map through chunkMapCreate + the reassembler', async () => {
+      // A real map's layers dwarf the 16 KiB chunk budget; force >1 chunk
+      // so the map path exercises the same reassembly as a sprite-set add.
+      const mapData = {
+        id: 'cave',
+        name: 'Cave',
+        version: '1.0.0',
+        tileWidth: 16,
+        tileHeight: 16,
+        columns: 80,
+        rows: 60,
+        spriteSets: [],
+        layers: [{ id: 'layer_0', name: 'Background', visible: true, sprites: new Array(20_000).fill(0) }],
+      } as unknown as MapData
+      const payload: MapCreatePayload = { reference: mapRef('cave'), mapData }
+      const chunks = chunkMapCreate({ transferId: 'host:9', payload })
+      expect(chunks.length).toBeGreaterThan(1)
+      expect(chunks.every((c) => c.kind === MAP_CREATE_CHUNK_KIND)).toBe(true)
+
+      const re = new MapCreateReassembler()
+      let result: MapCreatePayload | null = null
+      // Feed reversed: only the completing chunk yields a payload.
+      const stamped = chunks.map((c, i) => ({ ...c, peerId: 'host', seq: i }) as MapCreateChunkOp)
+      for (const op of [...stamped].reverse()) result = re.accept(op) ?? result
+      expect(result?.reference.id).toBe('cave')
+      expect(result?.mapData.columns).toBe(80)
+      expect(result?.mapData.layers[0]?.sprites?.length).toBe(20_000)
+    })
+
+    await it('applyMapCreate appends, replaces by id and keeps the start map resolvable', async () => {
+      const data = dataWithMaps(['forest'])
+      applyMapCreate(data, mapRef('cave'))
+      expect(data.maps.map((m) => m.id)).toStrictEqual(['forest', 'cave'])
+      expect(data.startup.initialMapId).toBe('forest')
+
+      // Re-applying the same transfer must not duplicate the reference.
+      applyMapCreate(data, { ...mapRef('cave'), name: 'Deep Cave' })
+      expect(data.maps.map((m) => m.id)).toStrictEqual(['forest', 'cave'])
+      expect(data.maps[1].name).toBe('Deep Cave')
+
+      // The first map of an empty project becomes the start map, because
+      // a project whose initialMapId does not resolve fails validation.
+      const empty = dataWithMaps([], 'nothing')
+      applyMapCreate(empty, mapRef('first'))
+      expect(empty.startup.initialMapId).toBe('first')
+    })
+
+    await it('applyMapRename renames the reference and the loaded map', async () => {
+      const data = dataWithMaps(['forest', 'cave'])
+      const loaded = [{ id: 'cave', name: 'Cave' } as MapData]
+      const renamed = applyMapRename(data, loaded, { mapId: 'cave', name: 'Deep Cave' })
+      expect(renamed?.name).toBe('Deep Cave')
+      expect(data.maps[1].name).toBe('Deep Cave')
+
+      // A map that is not loaded still gets its reference renamed.
+      const refOnly = applyMapRename(data, loaded, { mapId: 'forest', name: 'Woods' })
+      expect(refOnly).toBe(null)
+      expect(data.maps[0].name).toBe('Woods')
+    })
+
+    await it('applyMapRemove drops the reference and repoints the start map', async () => {
+      const data = dataWithMaps(['forest', 'cave'], 'forest')
+      const removed = applyMapRemove(data, 'forest')
+      expect(removed?.path).toBe('./maps/forest.json')
+      expect(data.maps.map((m) => m.id)).toStrictEqual(['cave'])
+      // The start map went away, so it moves to the first survivor.
+      expect(data.startup.initialMapId).toBe('cave')
+      // Re-removing + removing an unknown id are both no-ops.
+      expect(applyMapRemove(data, 'forest')).toBe(null)
+      expect(applyMapRemove(data, 'zzz')).toBe(null)
+      expect(data.maps.map((m) => m.id)).toStrictEqual(['cave'])
+    })
+
+    await it('applyStartupSet only accepts a map the receiver has', async () => {
+      const data = dataWithMaps(['forest', 'cave'], 'forest')
+      expect(applyStartupSet(data, 'cave')).toBe(true)
+      expect(data.startup.initialMapId).toBe('cave')
+      // An unknown map would make the project unsaveable on this peer.
+      expect(applyStartupSet(data, 'nowhere')).toBe(false)
+      expect(data.startup.initialMapId).toBe('cave')
     })
   })
 }

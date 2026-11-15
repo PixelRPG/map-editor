@@ -52,6 +52,7 @@ export class SceneInspector extends Adw.Bin {
   declare _subtitle_label: Gtk.Label
   declare _stats_grid: Gtk.Grid
   declare _teleports_group: Adw.PreferencesGroup
+  declare _map_group: Adw.PreferencesGroup
   declare _lock_group: Adw.PreferencesGroup
   declare _lock_row: Adw.SwitchRow
   declare _open_button: Gtk.Button
@@ -79,6 +80,7 @@ export class SceneInspector extends Adw.Bin {
           'subtitle_label',
           'stats_grid',
           'teleports_group',
+          'map_group',
           'lock_group',
           'lock_row',
           'open_button',
@@ -315,6 +317,7 @@ export class SceneInspector extends Adw.Bin {
     this._name_label.set_visible(populated)
     this._subtitle_label.set_visible(populated)
     this._stats_grid.set_visible(populated)
+    this._map_group.set_visible(populated)
     this._open_button.set_visible(populated)
     this._empty_state.set_visible(!populated)
     // Re-shown per selection via `setPreviewLock` — default hidden.

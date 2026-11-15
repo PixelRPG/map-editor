@@ -101,6 +101,41 @@ template $PixelRpgSceneInspector : Adw.Bin {
         visible: bind template.has-teleports;
       }
 
+      // The map-level verbs of § 6.1. They live here, on rows bound to
+      // `win.*` actions, rather than on the atlas card itself: the card
+      // is a `Gtk.Button` whose drag gesture claims presses in the
+      // CAPTURE phase, so a control inside it would either never see a
+      // click or break dragging. Phase 5.4 moves them to the selection
+      // bar that replaces this inspector.
+      Adw.PreferencesGroup map_group {
+        title: _("Map");
+
+        Adw.ButtonRow {
+          title: _("Rename…");
+          start-icon-name: "document-edit-symbolic";
+          action-name: "win.rename-map";
+        }
+
+        Adw.ButtonRow {
+          title: _("Duplicate");
+          start-icon-name: "edit-copy-symbolic";
+          action-name: "win.duplicate-map";
+        }
+
+        Adw.ButtonRow {
+          title: _("Start the game here");
+          start-icon-name: "media-playback-start-symbolic";
+          action-name: "win.start-map";
+        }
+
+        Adw.ButtonRow {
+          title: _("Delete");
+          start-icon-name: "user-trash-symbolic";
+          action-name: "win.delete-map";
+          styles ["destructive-action"]
+        }
+      }
+
       Gtk.Button open_button {
         label: _("Open map");
         action-name: "win.open-scene";

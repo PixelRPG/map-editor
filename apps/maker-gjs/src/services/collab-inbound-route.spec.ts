@@ -1,5 +1,10 @@
 import { describe, expect, it } from '@gjsify/unit'
-import { createSnapshotRequestOp, SPRITESET_ADD_CHUNK_KIND, SPRITESET_UPDATE_CHUNK_KIND } from '@pixelrpg/engine'
+import {
+  createSnapshotRequestOp,
+  MAP_CREATE_CHUNK_KIND,
+  SPRITESET_ADD_CHUNK_KIND,
+  SPRITESET_UPDATE_CHUNK_KIND,
+} from '@pixelrpg/engine'
 
 import { routeInboundOp } from './collab-inbound-route.ts'
 
@@ -28,11 +33,22 @@ export default async () => {
       expect(route.kind).toBe('project')
     })
 
-    await it('routes the two chunked sprite-set kinds to their reassemblers', async () => {
+    await it('routes the three chunked kinds to their reassemblers', async () => {
       const add = routeInboundOp({ kind: SPRITESET_ADD_CHUNK_KIND, payload: {}, peerId: REMOTE, seq: 2 }, LOCAL)
       const update = routeInboundOp({ kind: SPRITESET_UPDATE_CHUNK_KIND, payload: {}, peerId: REMOTE, seq: 3 }, LOCAL)
+      // A map-create is a `__project/*` kind, so without its own branch
+      // it would fall through to the plain project sink and arrive as an
+      // unparsed chunk.
+      const map = routeInboundOp({ kind: MAP_CREATE_CHUNK_KIND, payload: {}, peerId: REMOTE, seq: 4 }, LOCAL)
       expect(add.kind).toBe('sprite-set-add')
       expect(update.kind).toBe('sprite-set-update')
+      expect(map.kind).toBe('map-create')
+    })
+
+    await it('routes the unchunked map ops to the plain project sink', async () => {
+      for (const kind of ['__project/map.rename', '__project/map.remove', '__project/startup.set']) {
+        expect(routeInboundOp({ kind, payload: {}, peerId: REMOTE, seq: 5 }, LOCAL).kind).toBe('project')
+      }
     })
 
     await it('routes scene Command ops to the controller path', async () => {
@@ -50,6 +66,9 @@ export default async () => {
           .kind,
       ).toBe('own-echo')
       expect(routeInboundOp({ kind: SPRITESET_ADD_CHUNK_KIND, payload: {}, peerId: LOCAL, seq: 7 }, LOCAL).kind).toBe(
+        'own-echo',
+      )
+      expect(routeInboundOp({ kind: MAP_CREATE_CHUNK_KIND, payload: {}, peerId: LOCAL, seq: 8 }, LOCAL).kind).toBe(
         'own-echo',
       )
     })

@@ -1,12 +1,15 @@
 import GLib from '@girs/glib-2.0'
 import { describe, expect, it } from '@gjsify/unit'
-import { type GameProjectData, GameProjectFormat, type SpriteSetData } from '@pixelrpg/engine'
+import { type GameProjectData, GameProjectFormat, type MapData, MapFormat, type SpriteSetData } from '@pixelrpg/engine'
 
 import {
+  deleteMapFile,
   deleteSpriteSetFiles,
   isPlainFilename,
+  mapPaths,
   type ProjectStoreIo,
   spriteSetPaths,
+  writeMapData,
   writeProjectData,
   writeSpriteSetDescriptor,
 } from './project-store-persistence.ts'
@@ -58,6 +61,20 @@ const descriptor = {
   rows: 1,
   sprites: [{ id: 0, col: 0, row: 0 }],
 } as unknown as SpriteSetData
+
+const mapData = (overrides: Partial<MapData> = {}): MapData =>
+  ({
+    id: 'map-2',
+    name: 'Map 2',
+    version: '1.0.0',
+    tileWidth: 16,
+    tileHeight: 16,
+    columns: 20,
+    rows: 14,
+    spriteSets: [],
+    layers: [{ id: 'layer_0', name: 'Background', visible: true, sprites: [] }],
+    ...overrides,
+  }) as MapData
 
 export default async () => {
   await describe('isPlainFilename', async () => {
@@ -130,6 +147,46 @@ export default async () => {
         descriptor: '/tmp/proj/spritesets/tiles.json',
       })
       expect(io.removed).toStrictEqual(['/tmp/proj/spritesets/tiles.png', '/tmp/proj/spritesets/tiles.json'])
+    })
+  })
+
+  await describe('mapPaths', async () => {
+    await it('places the file in the project sibling maps/ directory', async () => {
+      if (!hasGLibPaths) return
+      const paths = mapPaths('/tmp/proj/game-project.json', 'cave')
+      expect(paths.referencePath).toBe('./maps/cave.json')
+      expect(paths.file).toBe('/tmp/proj/maps/cave.json')
+    })
+  })
+
+  await describe('writeMapData', async () => {
+    await it('serialises through the map format and reports the write result', async () => {
+      const io = makeIo()
+      expect(writeMapData(io, '/tmp/proj/maps/map-2.json', mapData())).toBe(true)
+      expect(io.writes).toHaveLength(1)
+      expect(io.writes[0].path).toBe('/tmp/proj/maps/map-2.json')
+      expect(MapFormat.deserialize(io.writes[0].contents).id).toBe('map-2')
+    })
+
+    await it('reports a failed write instead of throwing', async () => {
+      const io = makeIo(false)
+      expect(writeMapData(io, '/tmp/proj/maps/map-2.json', mapData())).toBe(false)
+    })
+
+    await it('swallows a validation throw so an unsavable map is never registered', async () => {
+      const io = makeIo()
+      // The create path writes BEFORE it touches `game-project.json`, so
+      // `false` here is what keeps a broken map out of the project.
+      expect(writeMapData(io, '/tmp/proj/maps/map-2.json', mapData({ layers: [] }))).toBe(false)
+      expect(io.writes).toHaveLength(0)
+    })
+  })
+
+  await describe('deleteMapFile', async () => {
+    await it('removes the map json', async () => {
+      const io = makeIo()
+      deleteMapFile(io, { referencePath: './maps/cave.json', file: '/tmp/proj/maps/cave.json' })
+      expect(io.removed).toStrictEqual(['/tmp/proj/maps/cave.json'])
     })
   })
 }

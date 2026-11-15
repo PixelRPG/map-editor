@@ -62,13 +62,39 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
   })
   await resource.load()
 
-  const projectName = resource.data?.name ?? 'Untitled Project'
-  const scenes: SampleScene[] = []
+  return {
+    projectPath,
+    projectName: resource.data?.name ?? 'Untitled Project',
+    ...buildAtlasWorld(resource),
+    resource,
+  }
+}
 
-  const maps = Array.from(resource.maps.values())
-  maps.forEach((mapResource, index) => {
-    const data = mapResource.mapData
-    if (!data) return
+/**
+ * Derive the atlas world — the scene cards plus the teleport arcs —
+ * from a loaded project resource. Split out of
+ * {@link loadProjectAsAtlas} so the window can rebuild the world after
+ * map create / duplicate / delete without re-reading the project from
+ * disk (which would also discard every unsaved editor state).
+ */
+export function buildAtlasWorld(resource: GameProjectResource): Pick<LoadedProject, 'scenes' | 'teleports'> {
+  // Maps that failed to load carry no `mapData` — drop them once here so
+  // both derivations see the same list and index positions line up.
+  const mapDatas = [...resource.maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : []))
+  return {
+    scenes: buildAtlasScenes(mapDatas),
+    teleports: collectAtlasTeleports(mapDatas, resource.data?.entityLibrary ?? []),
+  }
+}
+
+/**
+ * Convert each map into an atlas {@link SampleScene}. A map without
+ * persisted `editorData.atlasX/atlasY` falls back to its position in
+ * the 3-column auto-layout, so the index is its index in `maps`.
+ */
+export function buildAtlasScenes(maps: readonly MapData[]): SampleScene[] {
+  const scenes: SampleScene[] = []
+  maps.forEach((data, index) => {
     const cols = data.columns
     const rows = data.rows
     const tilePx = Math.max(2, Math.min(8, Math.floor(180 / Math.max(cols, 1))))
@@ -98,13 +124,7 @@ export async function loadProjectAsAtlas(projectPath: string): Promise<LoadedPro
       events: data.objectPlacements?.length ?? 0,
     })
   })
-
-  const teleports = collectAtlasTeleports(
-    maps.map((m) => m.mapData),
-    resource.data?.entityLibrary ?? [],
-  )
-
-  return { projectPath, projectName, scenes, teleports, resource }
+  return scenes
 }
 
 /**

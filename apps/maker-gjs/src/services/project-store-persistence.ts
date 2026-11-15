@@ -1,14 +1,21 @@
 import GLib from '@girs/glib-2.0'
-import { type GameProjectData, GameProjectFormat, type SpriteSetData, SpriteSetFormat } from '@pixelrpg/engine'
+import {
+  type GameProjectData,
+  GameProjectFormat,
+  type MapData,
+  MapFormat,
+  type SpriteSetData,
+  SpriteSetFormat,
+} from '@pixelrpg/engine'
 import { copyFile, deleteFile, readBinaryFile, writeBinaryFile, writeTextFile } from './file-io.ts'
 
 /**
- * The disk half of `ProjectStore`: path construction plus the two
+ * The disk half of `ProjectStore`: path construction plus the three
  * serialise-and-write pairs (`game-project.json`,
- * `spritesets/<id>.json`). Kept apart from the store so the write
- * policy — best-effort, in-memory state stays authoritative, a failure
- * reports `false` and the caller decides whether to toast — lives in
- * one readable place.
+ * `spritesets/<id>.json`, `maps/<id>.json`). Kept apart from the store
+ * so the write policy — best-effort, in-memory state stays
+ * authoritative, a failure reports `false` and the caller decides
+ * whether to toast — lives in one readable place.
  */
 
 /** Injectable file-IO seam (defaults to the shared Gio helpers) so specs can record writes. */
@@ -32,8 +39,9 @@ export const DEFAULT_PROJECT_STORE_IO: ProjectStoreIo = {
 /**
  * True when `name` is a plain single-path-segment filename — no path
  * separators, no `..`, no NUL. Used to vet a peer-supplied sprite-set
- * id before it's used to build filesystem paths, so a malicious peer
- * can't write outside the project's `spritesets/` directory.
+ * or map id before it's used to build filesystem paths, so a malicious
+ * peer can't write outside the project's `spritesets/` / `maps/`
+ * directory.
  */
 export function isPlainFilename(name: string): boolean {
   return name.length > 0 && !/[\\/]/.test(name) && !name.includes('..') && !name.includes('\0')
@@ -62,6 +70,52 @@ export function spriteSetPaths(projectPath: string, id: string): SpriteSetPaths 
     image: GLib.build_filenamev([spriteSetDir, imageFile]),
     descriptor: GLib.build_filenamev([spriteSetDir, `${id}.json`]),
   }
+}
+
+/** Where a project map's file lives, and how `game-project.json` refers to it. */
+export interface MapPaths {
+  /** Project-relative reference path (`./maps/<id>.json`) — what `MapReference.path` carries. */
+  referencePath: string
+  /** Absolute path of `maps/<id>.json`. */
+  file: string
+}
+
+/**
+ * Locate a map's file next to the project's `game-project.json`.
+ * Callers that pass a PEER-supplied id must gate on
+ * {@link isPlainFilename} first — this builder does not validate.
+ */
+export function mapPaths(projectPath: string, id: string): MapPaths {
+  const mapDir = GLib.build_filenamev([GLib.path_get_dirname(projectPath), 'maps'])
+  return {
+    referencePath: `./maps/${id}.json`,
+    file: GLib.build_filenamev([mapDir, `${id}.json`]),
+  }
+}
+
+/**
+ * Serialise a map back to `maps/<id>.json`. Returns `false` when the
+ * write failed or the data did not survive `MapFormat.validate` — same
+ * two-outcome contract as {@link writeProjectData}, so the create path
+ * can write-then-commit: a map that cannot be saved is never
+ * registered in `game-project.json` and never broadcast.
+ */
+export function writeMapData(io: ProjectStoreIo, filePath: string, data: MapData): boolean {
+  try {
+    return io.writeText(filePath, MapFormat.serialize(data))
+  } catch (err) {
+    console.warn('[ProjectStore] Failed to persist map:', err)
+    return false
+  }
+}
+
+/**
+ * Delete a project map's `maps/<id>.json`. Best-effort — a failed
+ * delete doesn't abort the in-memory removal (the reference is gone
+ * either way; an orphaned file is harmless).
+ */
+export function deleteMapFile(io: ProjectStoreIo, paths: MapPaths): void {
+  io.remove(paths.file)
 }
 
 /**

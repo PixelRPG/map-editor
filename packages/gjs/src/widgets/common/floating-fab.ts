@@ -61,7 +61,7 @@ export class FloatingFab extends Adw.Bin {
           'action-name': GObject.ParamSpec.string(
             'action-name',
             'Action name',
-            'GAction name (e.g. `win.new-scene`) triggered when the FAB is clicked',
+            'GAction name (e.g. `win.new-map`) triggered when the FAB is clicked',
             GObject.ParamFlags.READWRITE,
             '',
           ),

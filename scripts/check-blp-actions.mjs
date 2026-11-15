@@ -42,7 +42,7 @@
  *    `floating-fab.blp`) carries no literal and is skipped. That is the
  *    one blind spot, and it costs nothing today: `FloatingFab` forwards
  *    a property to its inner button, and every consumer sets the real
- *    name as a literal in its own `.blp` (`win.play`, `win.new-scene`),
+ *    name as a literal in its own `.blp` (`win.play`, `win.new-map`),
  *    where this guard does see it.
  *
  * Runs in CI (Node is already provisioned for the gjsify CLI bootstrap)

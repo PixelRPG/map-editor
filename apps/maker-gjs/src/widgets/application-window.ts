@@ -12,13 +12,14 @@ import {
   isLayerPlane,
   type SpriteSetData,
 } from '@pixelrpg/engine'
-import { type CollaboratorEntry, Engine, SignalScope } from '@pixelrpg/gjs'
+import { type CollaboratorEntry, Engine, promptRename, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
 import { installBackActions } from '../actions/back-actions.ts'
 import { installCastActions } from '../actions/cast-actions.ts'
 import { installEditingActions } from '../actions/editing-actions.ts'
 import { installInspectorActions } from '../actions/inspector-actions.ts'
+import { installMapActions } from '../actions/map-actions.ts'
 import { installObjectActions } from '../actions/object-actions.ts'
 import { installPlaytestActions } from '../actions/playtest-actions.ts'
 import { installProjectActions } from '../actions/project-actions.ts'
@@ -45,7 +46,8 @@ import { nextLayerDraft } from '../services/layer-draft.ts'
 import { MapPersistenceController } from '../services/map-persistence-controller.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
 import { ProjectLifecycle } from '../services/project-lifecycle.ts'
-import type { LoadedProject } from '../services/project-loader.ts'
+import { buildAtlasWorld, type LoadedProject } from '../services/project-loader.ts'
+import type { MapSize } from '../services/project-store-maps.ts'
 import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
 import type { UiTierService } from '../services/ui-tier.service.ts'
 import { loadRecentProjects } from '../services/recent-projects.ts'
@@ -64,6 +66,7 @@ import { RecentProjectsDialog } from './recent-projects-dialog.ts'
 import type { ResponsiveEditorView } from './responsive-editor-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
+import { confirmMapDelete, presentNewMapDialog } from './world/map-dialogs.ts'
 
 // Force registration so the `$PixelRpgLibraryView` / `$PixelRpgGameView`
 // references in the blueprint resolve at parse time.
@@ -207,6 +210,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _pendingPlacementFocus: string | null = null
   /**
+   * The in-flight `maps-changed` reaction — loading an added map's file
+   * and re-deriving the atlas world. `_createMap` chains its "and now
+   * open it" onto this instead of the store event carrying a "this one
+   * was mine" flag: the store broadcasts one vocabulary to every peer,
+   * and only the peer that asked for the map wants to land on it.
+   */
+  private _mapsRefresh: Promise<void> = Promise.resolve()
+  /**
    * The single owner of the active project + every project-level write
    * (entity library, sprite-sets, metadata) including persistence +
    * collab broadcast + inbound peer-op application. Controllers are
@@ -313,6 +324,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     adoptProject: (project) => {
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
       this._scenes.setScenes(project.scenes)
+      // A fresh project has no atlas selection yet, so this lands the
+      // four selection-driven map verbs on insensitive.
+      this._refreshMapActions()
     },
     // A fresh project starts on the card overview, not a stale detail page
     // left over from the previous one.
@@ -471,6 +485,43 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._mapPersistCtl.persistMap(mapId, _('Could not save map position'))
       this._scenes.refreshAtlasPosition(mapId)
     })
+    // The map LIST changed — locally or from a peer. The store owns the
+    // files and `game-project.json`; bringing the new map into the live
+    // resource and re-deriving the atlas world is window work.
+    this._projectStore.on('maps-changed', (change) => {
+      this._mapsRefresh = this._applyMapsChanged(change)
+      void this._mapsRefresh
+    })
+  }
+
+  /**
+   * Re-sync the live project with a map list the store just changed:
+   * load an added map's file, drop a removed map's selection, rebuild the
+   * atlas world and re-check the map verbs.
+   *
+   * Kept as the awaitable {@link _mapsRefresh} so `_createMap` can open
+   * the map it asked for only once the navigator knows about it.
+   */
+  private async _applyMapsChanged(change: { added?: string; removed?: string }): Promise<void> {
+    const project = this._loadedProject
+    if (!project) return
+    if (change.added) {
+      try {
+        await project.resource.loadMap(change.added)
+      } catch (error) {
+        console.warn('[ApplicationWindow] Failed to load the new map:', error)
+        this._showToast(_('Failed to load map'))
+      }
+    }
+    if (change.removed && this._scenes.selectedAtlasSceneId === change.removed) {
+      this._scenes.selectedAtlasSceneId = null
+    }
+    const world = buildAtlasWorld(project.resource)
+    project.scenes = world.scenes
+    project.teleports = world.teleports
+    this._scenes.setScenes(world.scenes)
+    this._atlas_view.setWorld(world.scenes, world.teleports, project.resource)
+    this._refreshMapActions()
   }
 
   vfunc_map(): void {
@@ -495,6 +546,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
     this.signals.connect(this._atlas_view, 'scene-selected', (_v: AtlasView, id: string) => {
       this._scenes.selectedAtlasSceneId = id
+      this._refreshMapActions()
     })
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
@@ -736,7 +788,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     })
 
     installProjectActions(group, {
-      showToast,
       openProject: () => this._projects.openFromDialog(),
       presentRecentProjects: () => this._presentRecentProjects(),
       closeProject: () => void this._projects.close(),
@@ -850,12 +901,142 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
     })
 
+    const { renameMap, duplicateMap, deleteMap, startMap } = installMapActions(group, {
+      hasProject,
+      showToast,
+      presentNewMap: () => this._presentNewMap(),
+      presentRenameMap: () => this._presentRenameMap(),
+      presentDuplicateMap: () => this._presentDuplicateMap(),
+      confirmDeleteMap: () => this._confirmDeleteMap(),
+      startHere: () => this._startMapHere(),
+    })
+
     installWindowAccels(this.get_application())
     this._installBackGestures(performBack)
 
     this.insert_action_group('win', group)
     this._winActions = group
-    this._actions = { mode, libraryChip, tool, play, objects, grid, transparency, share, undo, redo }
+    this._actions = {
+      mode,
+      libraryChip,
+      tool,
+      play,
+      objects,
+      grid,
+      transparency,
+      share,
+      undo,
+      redo,
+      renameMap,
+      duplicateMap,
+      deleteMap,
+      startMap,
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Map verbs (REDESIGN.md § 6.1)
+  // ────────────────────────────────────────────────────────────
+
+  /** The atlas card the map verbs act on, or `null` with none selected. */
+  private _selectedScene(): { id: string; name: string } | null {
+    const id = this._scenes.selectedAtlasSceneId
+    if (!id) return null
+    const scene = this._scenes.getScene(id)
+    return scene ? { id: scene.id, name: scene.name } : null
+  }
+
+  /**
+   * Keep the four selection-driven map verbs honest: a verb with no
+   * target is insensitive, not a toast after the fact. Delete also needs
+   * a second map to fall back to (`ProjectStore.removeMap` refuses the
+   * last one) and Start the game here is pointless on the map that
+   * already starts it.
+   */
+  private _refreshMapActions(): void {
+    const actions = this._actions
+    if (!actions) return
+    const selected = this._selectedScene()
+    actions.renameMap.set_enabled(selected != null)
+    actions.duplicateMap.set_enabled(selected != null)
+    actions.deleteMap.set_enabled(selected != null && this._scenes.scenes.length > 1)
+    actions.startMap.set_enabled(selected != null && this._projectStore.startMapId() !== selected.id)
+  }
+
+  /** `win.new-map` — the atlas FAB. */
+  private _presentNewMap(): void {
+    presentNewMapDialog(
+      this,
+      {
+        suggestedName: this._projectStore.suggestMapName(_('Map %d')),
+        // The Custom size rows are a Full-view affordance: three named
+        // presets are the whole choice a child has to make.
+        fullView: this._fullView,
+      },
+      (request) => this._createMap(request.name, request.size),
+    )
+  }
+
+  /**
+   * Create the map and open it — § 6.1 wants the new map on screen, and
+   * a blank map is useless to look at from across the atlas.
+   *
+   * The open has to wait for the `maps-changed` handler to have loaded
+   * the file into the live resource and told the navigator about the new
+   * scene; `_mapsRefresh` is that in-flight work.
+   */
+  private _createMap(name: string, size: MapSize): void {
+    // The first layer is named in the window, not the store: the store is
+    // UI-free and this string is user-visible.
+    const id = this._projectStore.createMap(name, size, _('Ground'))
+    if (!id) return
+    void this._mapsRefresh.then(() => this._scenes.open(id))
+  }
+
+  /** `win.rename-map` — a dialog, see TODO.md for why not inline. */
+  private _presentRenameMap(): void {
+    const selected = this._selectedScene()
+    if (!selected) return
+    void promptRename(this, { heading: _('Rename map'), current: selected.name }).then((name) => {
+      if (name) this._projectStore.renameMap(selected.id, name)
+    })
+  }
+
+  /**
+   * `win.duplicate-map` — asks for the copy's name, pre-filled with
+   * `Copy of <name>`. Deliberately does NOT open the duplicate: the user
+   * asked for a copy of the map they are looking at, and jumping into the
+   * copy would lose that place.
+   */
+  private _presentDuplicateMap(): void {
+    const selected = this._selectedScene()
+    if (!selected) return
+    const suggested = this._projectStore.suggestDuplicateName(selected.id, _('Copy of %s'))
+    void promptRename(this, {
+      heading: _('Duplicate map'),
+      current: suggested,
+      confirmLabel: _('Duplicate'),
+    }).then((name) => {
+      if (name) this._projectStore.duplicateMap(selected.id, name)
+    })
+  }
+
+  /** `win.delete-map` — confirmation names how many doors break. */
+  private _confirmDeleteMap(): void {
+    const selected = this._selectedScene()
+    if (!selected) return
+    confirmMapDelete(this, { name: selected.name, doorsInto: this._projectStore.doorsInto(selected.id) }, () => {
+      this._projectStore.removeMap(selected.id)
+    })
+  }
+
+  /** `win.start-map` — point `startup.initialMapId` at the selection. */
+  private _startMapHere(): void {
+    const selected = this._selectedScene()
+    if (!selected) return
+    if (this._projectStore.setStartMap(selected.id)) {
+      this._showToast(_('The game now starts on “%s”').replace('%s', selected.name))
+    }
   }
 
   /**
@@ -1069,6 +1250,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         return _('Could not save the sprite set')
       case 'project-save-failed':
         return _('Could not save project')
+      case 'map-save-failed':
+        return _('Could not save the map')
       case 'sprite-set-imported':
         return _('Imported sprite set “%s”').replace('%s', notice.name)
     }

@@ -2,11 +2,17 @@ import {
   createEntityRemoveOp,
   createEntityUpsertOp,
   createGameSystemsSetOp,
+  createMapRemoveOp,
+  createMapRenameOp,
   createPlayerSetOp,
   createProjectMetaUpdateOp,
   createSpriteSetRemoveOp,
+  createStartupSetOp,
   type EntityDefinition,
   type GameProjectData,
+  type MapCreatePayload,
+  type MapData,
+  type MapReference,
   type ProjectOp,
   type ProjectMetaUpdateOp,
   type SpriteSetAddPayload,
@@ -37,16 +43,19 @@ export interface ProjectSyncSession {
   sendProjectOp(build: (ctx: { peerId: string; seq: number }) => ProjectOp): void
   sendSpriteSetAdd(payload: SpriteSetAddPayload): void
   sendSpriteSetUpdate(payload: SpriteSetUpdatePayload): void
+  sendMapCreate(payload: MapCreatePayload): void
   onProjectOpReceived: ((op: ProjectOp) => void) | null
   onSpriteSetAddReceived: ((payload: SpriteSetAddPayload) => void) | null
   onSpriteSetUpdateReceived: ((payload: SpriteSetUpdatePayload) => void) | null
+  onMapCreateReceived: ((payload: MapCreatePayload) => void) | null
 }
 
-/** The three inbound handlers the single applier registers on a session. */
+/** The four inbound handlers the single applier registers on a session. */
 export interface ProjectOpSinks {
   projectOp: (op: ProjectOp) => void
   spriteSetAdd: (payload: SpriteSetAddPayload) => void
   spriteSetUpdate: (payload: SpriteSetUpdatePayload) => void
+  mapCreate: (payload: MapCreatePayload) => void
 }
 
 /**
@@ -58,6 +67,7 @@ export function bindProjectSinks(session: ProjectSyncSession, sinks: ProjectOpSi
   session.onProjectOpReceived = sinks?.projectOp ?? null
   session.onSpriteSetAddReceived = sinks?.spriteSetAdd ?? null
   session.onSpriteSetUpdateReceived = sinks?.spriteSetUpdate ?? null
+  session.onMapCreateReceived = sinks?.mapCreate ?? null
 }
 
 /** Broadcast a created / edited entity definition; peers replace it by id. */
@@ -96,6 +106,34 @@ export function broadcastGameSystems(
   gameSystems: NonNullable<GameProjectData['gameSystems']>,
 ): void {
   session?.sendProjectOp(({ peerId, seq }) => createGameSystemsSetOp({ peerId, seq, gameSystems }))
+}
+
+/**
+ * Broadcast a new map — reference plus the whole map data, chunked by
+ * the session. Also the duplicate path: a duplicate is a create under a
+ * fresh id/path. The peer has no other way to obtain the map file.
+ */
+export function broadcastMapCreate(
+  session: ProjectSyncSession | null,
+  reference: MapReference,
+  mapData: MapData,
+): void {
+  session?.sendMapCreate({ reference, mapData })
+}
+
+/** Broadcast a map rename; peers rename reference + live map by id. */
+export function broadcastMapRename(session: ProjectSyncSession | null, mapId: string, name: string): void {
+  session?.sendProjectOp(({ peerId, seq }) => createMapRenameOp({ peerId, seq, mapId, name }))
+}
+
+/** Broadcast a map deletion; peers drop the reference and the map file. */
+export function broadcastMapRemove(session: ProjectSyncSession | null, mapId: string): void {
+  session?.sendProjectOp(({ peerId, seq }) => createMapRemoveOp({ peerId, seq, mapId }))
+}
+
+/** Broadcast the map the game starts on (`startup.initialMapId`). */
+export function broadcastStartupSet(session: ProjectSyncSession | null, initialMapId: string): void {
+  session?.sendProjectOp(({ peerId, seq }) => createStartupSetOp({ peerId, seq, initialMapId }))
 }
 
 /** Broadcast a sprite-set deletion; peers drop the reference and its files. */

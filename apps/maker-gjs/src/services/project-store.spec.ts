@@ -4,23 +4,33 @@ import {
   createEntityRemoveOp,
   createEntityUpsertOp,
   createGameSystemsSetOp,
+  createMapRemoveOp,
+  createMapRenameOp,
   createPlayerSetOp,
+  createStartupSetOp,
   ENTITY_REMOVE_KIND,
   ENTITY_UPSERT_KIND,
   type EntityDefinition,
   GAME_SYSTEMS_SET_KIND,
   type GameProjectData,
   GameProjectFormat,
+  MAP_REMOVE_KIND,
+  MAP_RENAME_KIND,
+  type MapCreatePayload,
+  type MapData,
+  MapFormat,
   PLAYER_SET_KIND,
   PROJECT_META_UPDATE_KIND,
   type ProjectOp,
   type SpriteSetAddPayload,
   type SpriteSetData,
   type SpriteSetUpdatePayload,
+  STARTUP_SET_KIND,
 } from '@pixelrpg/engine'
 
 import { applyAnimationEdit, removeAnimation } from './cast-controller-animations.ts'
 import type { LoadedProject } from './project-loader.ts'
+import { MAP_SIZE_PRESETS } from './project-store-maps.ts'
 import {
   type EntityLibraryChangeSource,
   ProjectStore,
@@ -52,12 +62,12 @@ function makeProjectData(overrides: Partial<GameProjectData> = {}): GameProjectD
  * touches `resource.{path,data,spriteSets,maps}`, so a structural fake
  * is enough (no filesystem, no engine load).
  */
-function makeProject(data: GameProjectData): LoadedProject {
+function makeProject(data: GameProjectData, maps: MapData[] = []): LoadedProject {
   const resource = {
     path: '/tmp/project-store-spec/game-project.json',
     data,
     spriteSets: new Map(),
-    maps: new Map(),
+    maps: new Map(maps.map((mapData) => [mapData.id, { mapData }])),
   }
   return {
     projectPath: resource.path,
@@ -78,10 +88,12 @@ function makeProject(data: GameProjectData): LoadedProject {
  */
 function makeIo(
   behaviour: 'ok' | 'fail' | 'throw' = 'ok',
-): ProjectStoreIo & { writes: Array<{ path: string; contents: string }> } {
+): ProjectStoreIo & { writes: Array<{ path: string; contents: string }>; removes: string[] } {
   const writes: Array<{ path: string; contents: string }> = []
+  const removes: string[] = []
   return {
     writes,
+    removes,
     writeText: (path: string, contents: string) => {
       if (behaviour === 'throw') throw new Error('disk on fire')
       writes.push({ path, contents })
@@ -90,17 +102,26 @@ function makeIo(
     writeBinary: () => behaviour === 'ok',
     copy: () => behaviour === 'ok',
     readBinary: () => null,
-    remove: () => behaviour === 'ok',
+    remove: (path: string) => {
+      removes.push(path)
+      return behaviour === 'ok'
+    },
   }
 }
 
 /** Recording collab-session fake satisfying {@link ProjectSyncSession}. */
-function makeSession(): ProjectSyncSession & { sent: ProjectOp[]; sentSpriteSets: SpriteSetUpdatePayload[] } {
+function makeSession(): ProjectSyncSession & {
+  sent: ProjectOp[]
+  sentSpriteSets: SpriteSetUpdatePayload[]
+  sentMaps: MapCreatePayload[]
+} {
   const sent: ProjectOp[] = []
   const sentSpriteSets: SpriteSetUpdatePayload[] = []
+  const sentMaps: MapCreatePayload[] = []
   return {
     sent,
     sentSpriteSets,
+    sentMaps,
     sendProjectOp(build) {
       sent.push(build({ peerId: 'local-peer', seq: sent.length }))
     },
@@ -108,22 +129,58 @@ function makeSession(): ProjectSyncSession & { sent: ProjectOp[]; sentSpriteSets
     sendSpriteSetUpdate(payload: SpriteSetUpdatePayload) {
       sentSpriteSets.push(payload)
     },
+    sendMapCreate(payload: MapCreatePayload) {
+      sentMaps.push(payload)
+    },
     onProjectOpReceived: null,
     onSpriteSetAddReceived: null,
     onSpriteSetUpdateReceived: null,
+    onMapCreateReceived: null,
   }
 }
 
-function makeStore(data = makeProjectData(), behaviour: 'ok' | 'fail' | 'throw' = 'ok') {
+function makeStore(data = makeProjectData(), behaviour: 'ok' | 'fail' | 'throw' = 'ok', maps: MapData[] = []) {
   const io = makeIo(behaviour)
   const toasts: string[] = []
   const store = new ProjectStore(io)
   store.on('notice', (n) => toasts.push(n.kind))
-  store.setProject(makeProject(data))
+  store.setProject(makeProject(data, maps))
   return { store, io, toasts, data }
 }
 
 const npc: EntityDefinition = { id: 'npc-1', name: 'NPC', components: [] }
+
+/** In-memory map data shaped to pass `MapFormat.validate`. */
+function makeMapData(id: string, name: string, overrides: Partial<MapData> = {}): MapData {
+  return {
+    id,
+    name,
+    version: '1.0.0',
+    tileWidth: 16,
+    tileHeight: 16,
+    columns: 20,
+    rows: 14,
+    spriteSets: [],
+    layers: [{ id: 'layer_0', name: 'Background', visible: true, sprites: [] }],
+    ...overrides,
+  } as MapData
+}
+
+/** A door placement with an inline teleport definition into `targetMapId`. */
+function doorInto(targetMapId: string, tileX = 1): MapData['objectPlacements'] {
+  return [
+    {
+      id: `door-${targetMapId}-${tileX}`,
+      tileX,
+      tileY: 1,
+      inline: {
+        id: `door-${targetMapId}`,
+        name: 'Door',
+        components: [{ type: 'teleport', targetMapId, targetTileX: 0, targetTileY: 0 }],
+      },
+    },
+  ] as MapData['objectPlacements']
+}
 
 /** GLib path helpers are only real under the GJS target; node stubs `gi://`. */
 const hasGLibPaths = typeof (GLib as { path_get_dirname?: unknown }).path_get_dirname === 'function'
@@ -713,6 +770,295 @@ export default async () => {
       store.applyRemoteSpriteSetAdd(payload)
       const firstGid2 = data.spriteSets.find((r) => r.id === 'imported')?.firstGid
       expect(firstGid2).toBe(firstGid1) // unchanged — re-apply is idempotent
+    })
+  })
+
+  await describe('ProjectStore — map CRUD', async () => {
+    const twoMapProject = () =>
+      makeProjectData({
+        maps: [
+          { id: 'map-1', path: './maps/map-1.json', type: 'map', name: 'First' },
+          { id: 'map-2', path: './maps/map-2.json', type: 'map', name: 'Second' },
+        ],
+      })
+
+    const mapFile = (id: string) => `/tmp/project-store-spec/maps/${id}.json`
+    const projectFile = '/tmp/project-store-spec/game-project.json'
+
+    await it('createMap writes the map file before registering it', async () => {
+      // The map paths go through GLib — only real under the GJS target.
+      if (!hasGLibPaths) return
+      const { store, io, data } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+      const added: Array<string | undefined> = []
+      store.on('maps-changed', (e) => added.push(e.added))
+
+      const id = store.createMap('Forest', MAP_SIZE_PRESETS.medium)
+
+      expect(id).toBe('forest')
+      // Write-then-commit: the map file lands first, the project second.
+      expect(io.writes.map((w) => w.path)).toStrictEqual([mapFile('forest'), projectFile])
+      const written = MapFormat.deserialize(io.writes[0].contents)
+      expect(written.columns).toBe(40)
+      expect(written.rows).toBe(30)
+      expect(written.layers).toHaveLength(1)
+      expect(data.maps?.map((m) => m.id)).toStrictEqual(['map-1', 'forest'])
+      expect(data.maps?.[1].path).toBe('./maps/forest.json')
+      expect(added).toStrictEqual(['forest'])
+    })
+
+    await it('createMap registers nothing when the file cannot be written', async () => {
+      if (!hasGLibPaths) return
+      const { store, data, toasts } = makeStore(makeProjectData(), 'fail', [makeMapData('map-1', 'First')])
+
+      expect(store.createMap('Forest', MAP_SIZE_PRESETS.small)).toBe(null)
+
+      expect(data.maps).toHaveLength(1) // not registered, not persisted
+      expect(toasts).toStrictEqual(['map-save-failed'])
+    })
+
+    await it('createMap rejects a blank name', async () => {
+      if (!hasGLibPaths) return
+      const { store, io } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+      expect(store.createMap('   ', MAP_SIZE_PRESETS.small)).toBe(null)
+      expect(io.writes).toHaveLength(0)
+    })
+
+    await it('createMap rides the chunked map-create channel', async () => {
+      if (!hasGLibPaths) return
+      const { store } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+      const session = makeSession()
+      store.setCollabSession(session)
+
+      store.createMap('Forest', MAP_SIZE_PRESETS.small)
+
+      expect(session.sentMaps).toHaveLength(1)
+      expect(session.sentMaps[0].reference.id).toBe('forest')
+      expect(session.sentMaps[0].mapData.name).toBe('Forest')
+      // A map is too big for the plain op channel — nothing goes there.
+      expect(session.sent).toHaveLength(0)
+    })
+
+    await it('duplicateMap copies the map onto a free atlas slot', async () => {
+      if (!hasGLibPaths) return
+      const source = makeMapData('map-1', 'First', {
+        columns: 24,
+        layers: [{ id: 'layer_0', name: 'Ground', visible: true, sprites: [] }],
+        editorData: { atlasX: 20, atlasY: 20 },
+      } as Partial<MapData>)
+      const { store, io, data } = makeStore(makeProjectData(), 'ok', [source])
+
+      const id = store.duplicateMap('map-1', 'Copy of First')
+
+      expect(id).toBe('copy-of-first')
+      expect(data.maps?.[1].name).toBe('Copy of First')
+      // The live resource entry is the host's job — the store only writes.
+      expect(store.mapDatas().map((m) => m.id)).toStrictEqual(['map-1'])
+      expect(store.duplicateMap('no-such-map', 'Copy')).toBe(null)
+
+      const written = MapFormat.deserialize(io.writes[0].contents)
+      expect(written.id).toBe('copy-of-first')
+      expect(written.name).toBe('Copy of First')
+      expect(written.columns).toBe(24)
+      expect(written.layers[0].name).toBe('Ground')
+      // Placed beside the source, never on top of it.
+      expect(written.editorData?.atlasX !== 20 || written.editorData?.atlasY !== 20).toBe(true)
+      // The source is untouched.
+      expect(source.editorData?.atlasX).toBe(20)
+    })
+
+    await it('renameMap updates the reference and the live map data', async () => {
+      if (!hasGLibPaths) return
+      const live = makeMapData('map-1', 'First')
+      const { store, io, data } = makeStore(makeProjectData(), 'ok', [live])
+      const session = makeSession()
+      store.setCollabSession(session)
+      const renamed: Array<string | undefined> = []
+      store.on('maps-changed', (e) => renamed.push(e.renamed))
+
+      expect(store.renameMap('map-1', '  Forest  ')).toBe(true)
+
+      expect(data.maps?.[0].name).toBe('Forest')
+      expect(live.name).toBe('Forest') // both denormalised copies
+      expect(io.writes.map((w) => w.path)).toStrictEqual([mapFile('map-1'), projectFile])
+      expect(session.sent).toHaveLength(1)
+      expect(session.sent[0].kind).toBe(MAP_RENAME_KIND)
+      expect(renamed).toStrictEqual(['map-1'])
+    })
+
+    await it('renameMap no-ops on a blank, unchanged or unknown name', async () => {
+      if (!hasGLibPaths) return
+      const { store, io } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+
+      expect(store.renameMap('map-1', '   ')).toBe(false)
+      expect(store.renameMap('map-1', 'First')).toBe(false)
+      expect(store.renameMap('no-such-map', 'Forest')).toBe(false)
+      expect(io.writes).toHaveLength(0)
+    })
+
+    await it('removeMap drops the reference, the file and the live map', async () => {
+      if (!hasGLibPaths) return
+      const data = twoMapProject()
+      const { store, io } = makeStore(data, 'ok', [makeMapData('map-1', 'First'), makeMapData('map-2', 'Second')])
+      const session = makeSession()
+      store.setCollabSession(session)
+      const removed: Array<string | undefined> = []
+      store.on('maps-changed', (e) => removed.push(e.removed))
+
+      expect(store.removeMap('map-1')).toBe(true)
+
+      expect(data.maps?.map((m) => m.id)).toStrictEqual(['map-2'])
+      expect(io.removes).toStrictEqual([mapFile('map-1')])
+      expect(store.resource?.maps.has('map-1')).toBe(false)
+      // The start map followed the deletion, or the project stops validating.
+      expect(data.startup?.initialMapId).toBe('map-2')
+      expect(session.sent).toHaveLength(1)
+      expect(session.sent[0].kind).toBe(MAP_REMOVE_KIND)
+      expect(removed).toStrictEqual(['map-1'])
+    })
+
+    await it('removeMap refuses the last map and an unknown id', async () => {
+      if (!hasGLibPaths) return
+      const lone = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+      expect(lone.store.removeMap('map-1')).toBe(false)
+      expect(lone.data.maps).toHaveLength(1)
+      expect(lone.io.removes).toHaveLength(0)
+
+      const pair = makeStore(twoMapProject(), 'ok', [])
+      expect(pair.store.removeMap('no-such-map')).toBe(false)
+      expect(pair.data.maps).toHaveLength(2)
+      expect(pair.io.removes).toHaveLength(0)
+    })
+
+    await it('setStartMap points the startup at a known map only', async () => {
+      if (!hasGLibPaths) return
+      const data = twoMapProject()
+      const { store } = makeStore(data, 'ok', [])
+      const session = makeSession()
+      store.setCollabSession(session)
+      let startupChanges = 0
+      store.on('maps-changed', (e) => {
+        if (e.startupChanged) startupChanges += 1
+      })
+
+      expect(store.setStartMap('map-2')).toBe(true)
+      expect(store.startMapId()).toBe('map-2')
+      expect(store.setStartMap('map-2')).toBe(false) // already the start map
+      expect(store.setStartMap('no-such-map')).toBe(false) // unknown map
+      expect(data.startup?.initialMapId).toBe('map-2')
+      expect(startupChanges).toBe(1)
+      expect(session.sent).toHaveLength(1)
+      expect(session.sent[0].kind).toBe(STARTUP_SET_KIND)
+    })
+
+    await it('suggests names and counts the doors leading into a map', async () => {
+      if (!hasGLibPaths) return
+      const maps = [
+        makeMapData('map-1', 'First', { objectPlacements: doorInto('map-2') } as Partial<MapData>),
+        makeMapData('map-2', 'Second', {
+          objectPlacements: [...(doorInto('map-2', 2) ?? []), ...(doorInto('map-1', 3) ?? [])],
+        } as Partial<MapData>),
+      ]
+      const { store } = makeStore(twoMapProject(), 'ok', maps)
+
+      expect(store.suggestMapName('Map %d')).toBe('Map 3')
+      expect(store.suggestDuplicateName('map-1', 'Copy of %s')).toBe('Copy of First')
+      expect(store.doorsInto('map-2')).toBe(2)
+      expect(store.doorsInto('map-1')).toBe(1)
+      expect(store.mapDatas().map((m) => m.id)).toStrictEqual(['map-1', 'map-2'])
+    })
+  })
+
+  await describe('ProjectStore — inbound map ops', async () => {
+    const mapFile = (id: string) => `/tmp/project-store-spec/maps/${id}.json`
+
+    await it('applyRemoteMapCreate keeps the peer id but derives the path', async () => {
+      if (!hasGLibPaths) return
+      const { store, io, data } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+      const session = makeSession()
+      store.setCollabSession(session)
+      const added: Array<string | undefined> = []
+      store.on('maps-changed', (e) => added.push(e.added))
+
+      const payload: MapCreatePayload = {
+        // A hostile `path` the store must ignore — every door that
+        // targets the map still needs the sender's `id`, so that is kept.
+        reference: { id: 'peer-map', path: '../../escape.json', type: 'map', name: 'Peer Map' },
+        mapData: makeMapData('peer-map', 'Peer Map'),
+      }
+      store.applyRemoteMapCreate(payload)
+
+      expect(io.writes[0].path).toBe(mapFile('peer-map'))
+      expect(data.maps?.map((m) => m.id)).toStrictEqual(['map-1', 'peer-map'])
+      expect(data.maps?.[1].path).toBe('./maps/peer-map.json')
+      expect(added).toStrictEqual(['peer-map'])
+      expect(session.sentMaps).toHaveLength(0) // no loopback
+    })
+
+    await it('applyRemoteMapCreate is idempotent on re-apply', async () => {
+      if (!hasGLibPaths) return
+      const { store, data } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+      const payload: MapCreatePayload = {
+        reference: { id: 'peer-map', path: './maps/peer-map.json', type: 'map', name: 'Peer Map' },
+        mapData: makeMapData('peer-map', 'Peer Map'),
+      }
+
+      store.applyRemoteMapCreate(payload)
+      store.applyRemoteMapCreate(payload)
+
+      expect(data.maps?.map((m) => m.id)).toStrictEqual(['map-1', 'peer-map'])
+    })
+
+    await it('applyRemoteMapCreate rejects an id that could escape maps/', async () => {
+      if (!hasGLibPaths) return
+      const { store, io, data } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+
+      store.applyRemoteMapCreate({
+        reference: { id: '../../../etc/passwd', path: './maps/x.json', type: 'map' },
+        mapData: makeMapData('../../../etc/passwd', 'Evil'),
+      })
+
+      expect(io.writes).toHaveLength(0)
+      expect(data.maps).toHaveLength(1)
+    })
+
+    await it('applyRemoteProjectOp routes rename, startup and remove', async () => {
+      if (!hasGLibPaths) return
+      const data = makeProjectData({
+        maps: [
+          { id: 'map-1', path: './maps/map-1.json', type: 'map', name: 'First' },
+          { id: 'map-2', path: './maps/map-2.json', type: 'map', name: 'Second' },
+        ],
+      })
+      const live = makeMapData('map-2', 'Second')
+      const { store, io } = makeStore(data, 'ok', [makeMapData('map-1', 'First'), live])
+      const session = makeSession()
+      store.setCollabSession(session)
+
+      store.applyRemoteProjectOp(createMapRenameOp({ peerId: 'peer', seq: 1, mapId: 'map-2', name: 'Cave' }))
+      expect(data.maps?.[1].name).toBe('Cave')
+      expect(live.name).toBe('Cave')
+
+      store.applyRemoteProjectOp(createStartupSetOp({ peerId: 'peer', seq: 2, initialMapId: 'map-2' }))
+      expect(data.startup?.initialMapId).toBe('map-2')
+
+      store.applyRemoteProjectOp(createMapRemoveOp({ peerId: 'peer', seq: 3, mapId: 'map-2' }))
+      expect(data.maps?.map((m) => m.id)).toStrictEqual(['map-1'])
+      expect(data.startup?.initialMapId).toBe('map-1') // repointed at the survivor
+      expect(io.removes).toStrictEqual([mapFile('map-2')])
+
+      // Inbound ops never loop back onto the wire.
+      expect(session.sent).toHaveLength(0)
+      expect(session.sentMaps).toHaveLength(0)
+    })
+
+    await it('an inbound startup.set for an unknown map changes nothing', async () => {
+      if (!hasGLibPaths) return
+      const { store, io, data } = makeStore(makeProjectData(), 'ok', [makeMapData('map-1', 'First')])
+
+      store.applyRemoteProjectOp(createStartupSetOp({ peerId: 'peer', seq: 1, initialMapId: 'ghost' }))
+
+      expect(data.startup?.initialMapId).toBe('map-1')
+      expect(io.writes).toHaveLength(0)
     })
   })
 }

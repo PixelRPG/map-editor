@@ -1,6 +1,7 @@
 import type {
   AwarenessPeerInfo,
   Engine,
+  MapCreatePayload,
   ProjectOp,
   ProjectSnapshot,
   SignallingTransport,
@@ -10,8 +11,10 @@ import type {
 import {
   AwarenessManager,
   captureProjectSnapshot,
+  chunkMapCreate,
   chunkSpriteSetAdd,
   chunkSpriteSetUpdate,
+  MapCreateReassembler,
   OpChunkReassembler,
   type PeerRole,
   PeerSession,
@@ -154,10 +157,25 @@ export class CollabSession {
   set onSpriteSetUpdateReceived(fn: ((payload: SpriteSetUpdatePayload) => void) | null) {
     this.spriteSetUpdates.set(fn)
   }
+  /**
+   * Sink for a completed map-create transfer (a new map or a duplicate:
+   * the project-level reference plus the whole map, which the peer has
+   * no other way to get — maps are separate files and there is no
+   * file-transfer channel). The maker's `ProjectStore` registers itself
+   * here to write the map file and register the reference. Fed by a
+   * dedicated reassembler once all chunks of one transfer arrive.
+   */
+  get onMapCreateReceived(): ((payload: MapCreatePayload) => void) | null {
+    return this.mapCreates.get()
+  }
+  set onMapCreateReceived(fn: ((payload: MapCreatePayload) => void) | null) {
+    this.mapCreates.set(fn)
+  }
 
   private readonly projectOps = new SinkBuffer<ProjectOp>()
   private readonly spriteSetAdds = new SinkBuffer<SpriteSetAddPayload>()
   private readonly spriteSetUpdates = new SinkBuffer<SpriteSetUpdatePayload>()
+  private readonly mapCreates = new SinkBuffer<MapCreatePayload>()
   private closed = false
   private engine: Engine | null = null
   private readonly peerId: string
@@ -180,6 +198,7 @@ export class CollabSession {
   private snapshotWatermark: SnapshotOpWatermark | null = null
   private readonly spriteSetReassembler = new SpriteSetAddReassembler()
   private readonly spriteSetUpdateReassembler = new OpChunkReassembler<SpriteSetUpdatePayload>()
+  private readonly mapCreateReassembler = new MapCreateReassembler()
   private readonly subscriptions: Array<() => void> = []
 
   constructor(opts: CollabSessionOptions) {
@@ -286,6 +305,11 @@ export class CollabSession {
       case 'sprite-set-update': {
         const payload = this.spriteSetUpdateReassembler.accept(route.op)
         if (payload) this.spriteSetUpdates.deliver(payload)
+        return
+      }
+      case 'map-create': {
+        const payload = this.mapCreateReassembler.accept(route.op)
+        if (payload) this.mapCreates.deliver(payload)
         return
       }
       case 'project':
@@ -505,6 +529,20 @@ export class CollabSession {
     }
   }
 
+  /**
+   * Broadcast a map creation (new map or duplicate) to peers — chunked
+   * like a sprite-set add, because the whole {@link MapData} rides
+   * along and a real map is far over the SCTP single-send ceiling.
+   * No-op once closed.
+   */
+  sendMapCreate(payload: MapCreatePayload): void {
+    if (this.closed) return
+    const transferId = this.stamper.nextTransferId('m')
+    for (const chunk of chunkMapCreate({ transferId, payload })) {
+      this.peer.sendOp(this.stamper.stamp(chunk))
+    }
+  }
+
   /** Whether `attachEngine` has been called yet. */
   hasEngine(): boolean {
     return this.engine !== null
@@ -539,8 +577,10 @@ export class CollabSession {
     this.projectOps.clear()
     this.spriteSetAdds.clear()
     this.spriteSetUpdates.clear()
+    this.mapCreates.clear()
     this.spriteSetReassembler.clear()
     this.spriteSetUpdateReassembler.clear()
+    this.mapCreateReassembler.clear()
     this.cursorRenderer?.close()
     this.cursorRenderer = null
     this.snapshotExchange.dispose()
