@@ -37,7 +37,13 @@ import { playZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { LayerData, LayerPlane } from './types/data/index.ts'
-import { EngineEvent, type EngineEventMap, EngineStatus, type ProjectLoadOptions } from './types/index.ts'
+import {
+  type ArrivalPickRequest,
+  EngineEvent,
+  type EngineEventMap,
+  EngineStatus,
+  type ProjectLoadOptions,
+} from './types/index.ts'
 
 // The AI-assistant presence subsystem (cursor/awareness/follow/flash) lives
 // in AssistantPresenceController; these constants are defined there and
@@ -290,6 +296,29 @@ export class Engine {
   /** Which placement is armed for a one-shot move, or `null`. */
   getPendingPlacementMove(): string | null {
     return this.session.pendingPlacementMove
+  }
+
+  /**
+   * Put the ACTIVE map into pick mode for `request`'s door: the next tap
+   * anywhere on the canvas names the tile that door arrives at and
+   * reaches no tool at all. `null` disarms.
+   *
+   * Call this only once the target map is the active scene — the arming
+   * lives on that scene's session state, so leaving the map cancels the
+   * pick instead of carrying it to the next one.
+   *
+   * The tap itself writes nothing: the system emits
+   * `ARRIVAL_PICK_REQUESTED` and the host answers, because the door's
+   * teleport data and the optional door back are edits on two different
+   * maps and only the host can navigate between them.
+   */
+  armArrivalPick(request: ArrivalPickRequest | null): void {
+    this.session.pendingArrivalPick = request
+  }
+
+  /** The door this map is collecting an arrival tile for, or `null`. */
+  getPendingArrivalPick(): ArrivalPickRequest | null {
+    return this.session.pendingArrivalPick
   }
 
   /**

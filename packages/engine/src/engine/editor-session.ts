@@ -6,11 +6,12 @@ import {
   ActiveToolComponent,
   type EditorTool,
   EditorViewModeComponent,
+  PendingArrivalPickComponent,
   PendingPlacementMoveComponent,
   SelectedPlacementsComponent,
 } from '../components/index.ts'
 import { applyEditorViewMode } from '../services/editor-view.ts'
-import type { EngineEventMap } from '../types/index.ts'
+import type { ArrivalPickRequest, EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { type ActiveSceneAccessor, rebindOnMapLoaded } from './scene-binding.ts'
 
@@ -134,6 +135,30 @@ export class EditorSession {
       return
     }
     SessionState.set(scene, new PendingPlacementMoveComponent(placementId))
+  }
+
+  /**
+   * The door waiting for an arrival tile on THIS map, or `null`. See
+   * {@link PendingArrivalPickComponent} for why pick mode is session
+   * state on the target scene rather than a host-side flag.
+   */
+  get pendingArrivalPick(): ArrivalPickRequest | null {
+    const scene = this.activeScene()
+    if (!scene) return null
+    const pick = SessionState.get(scene, PendingArrivalPickComponent)
+    if (!pick) return null
+    return { sourceMapId: pick.sourceMapId, doorPlacementId: pick.doorPlacementId }
+  }
+
+  /** `null` disarms, so there is no "armed for nobody" state to get wrong. */
+  set pendingArrivalPick(request: ArrivalPickRequest | null) {
+    const scene = this.activeScene()
+    if (!scene) return
+    if (request === null) {
+      SessionState.unset(scene, PendingArrivalPickComponent)
+      return
+    }
+    SessionState.set(scene, new PendingArrivalPickComponent(request.sourceMapId, request.doorPlacementId))
   }
 
   /**
