@@ -1,7 +1,6 @@
 import {
   Actor,
   type Animation,
-  BoundingBox,
   CollisionType,
   type EventEmitter,
   Logger,
@@ -25,11 +24,13 @@ import {
 import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
+import { MapBoundsCameraStrategy } from '../runtime/map-bounds-camera.strategy.ts'
 import { buildPlaceholderAnimations } from '../runtime/placeholder-character.ts'
 import type { CharacterAnimationRole, CharacterDefinition, EntityDefinition, Facing } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { buildCharacterAnimations } from '../utils/character.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { clampCameraFocus, type Extent } from '../utils/play-camera.ts'
 import { pickFacing, roleFromState } from '../utils/player-input.ts'
 import { InputSourceComponent } from '../components/input-source.component.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -327,6 +328,17 @@ export class PlayerSystem extends System {
     }
   }
 
+  /**
+   * Follow the player, but never show the void around the map.
+   *
+   * The clamp is ours rather than excalibur's `limitCameraBounds`
+   * because that one has no case for a map smaller than the view and
+   * pins such a map to the top-left corner of the window — see
+   * `MapBoundsCameraStrategy`. The explicit `camera.pos` write is the
+   * other half: strategies only run on the camera's next update, so
+   * without it the first frame of a run is drawn wherever the editor
+   * happened to have scrolled to.
+   */
   private lockCamera(scene: Scene, player: Actor): void {
     try {
       scene.camera.strategy.lockToActor(player)
@@ -334,13 +346,11 @@ export class PlayerSystem extends System {
       if (!mapData) return
       const tw = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
       const th = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-      const bb = new BoundingBox({
-        left: 0,
-        top: 0,
-        right: mapData.columns * tw,
-        bottom: mapData.rows * th,
-      })
-      scene.camera.strategy.limitCameraBounds(bb)
+      const map: Extent = { width: mapData.columns * tw, height: mapData.rows * th }
+      scene.camera.addStrategy(new MapBoundsCameraStrategy(map))
+      const view: Extent = { width: scene.engine.drawWidth, height: scene.engine.drawHeight }
+      const focus = clampCameraFocus({ x: player.pos.x, y: player.pos.y }, map, view)
+      scene.camera.pos = vec(focus.x, focus.y)
     } catch (err) {
       this.logger.warn('[PlayerSystem] camera lockToActor failed:', err)
     }

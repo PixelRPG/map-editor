@@ -156,6 +156,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 
 **Phase 3 — `PlayerSystem` spawn-override handling (landed)**:
 - The spawn resolution prefers `SpawnOverrideComponent` when present (see `resolveSpawnTile` in `packages/engine/src/systems/player.system.ts`)
+- Entering runtime also takes over the camera (`lockCamera`): it follows the player via excalibur's `lockToActor`, then clamps the focus to the map with our own `MapBoundsCameraStrategy` (`packages/engine/src/runtime/map-bounds-camera.strategy.ts`, arithmetic in `utils/play-camera.ts`). Excalibur's `limitCameraBounds` is not usable here — it has no case for a map *smaller* than the view, where both of its branches resolve to `left + halfDrawWidth` and park a small interior room against the top-left of the window instead of centring it. `lockCamera` additionally writes `camera.pos` itself, because strategies first run on the camera's next update and the first frame of a run would otherwise be drawn wherever the editor had scrolled to.
 
 **Phase 4 — Full-Run windowing (planned)**:
 - "Launch game" action opens a new `Gtk.ApplicationWindow` with a fresh engine instance (`RuntimeMode` only, no editor systems)
