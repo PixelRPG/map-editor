@@ -12,6 +12,7 @@ import {
   drawnRects,
   fitZoom,
   surfacePadding,
+  worldFitsViewport,
   zoomAroundPointer,
 } from './atlas-camera.ts'
 
@@ -110,6 +111,41 @@ export default async () => {
 
       await it('is the plain scaled extent when nothing hits the floor', async () => {
         expect(drawnExtent([overworld], 1, CARD_MIN_SHORT_SIDE)).toStrictEqual({ width: 372, height: 316 })
+      })
+    })
+
+    await describe('worldFitsViewport', async () => {
+      // Surface coords, i.e. already offset by the surface padding —
+      // the bounding box spans 500 x 300 from (200, 100).
+      const spread: SceneRect[] = [
+        { x: 200, y: 100, w: 300, h: 200 },
+        { x: 600, y: 180, w: 100, h: 220 },
+      ]
+
+      await it('measures the cards, not their distance from the origin', async () => {
+        // Naively measuring to the origin would make this 700 x 400 and
+        // report "does not fit" — the padding alone would decide it.
+        expect(worldFitsViewport(spread, { w: 520, h: 320 })).toBe(true)
+      })
+
+      await it('does not fit when the bounding box is wider than the viewport', async () => {
+        expect(worldFitsViewport(spread, { w: 480, h: 320 })).toBe(false)
+      })
+
+      await it('does not fit when the bounding box is taller than the viewport', async () => {
+        expect(worldFitsViewport(spread, { w: 520, h: 280 })).toBe(false)
+      })
+
+      await it('fits exactly at the viewport size', async () => {
+        expect(worldFitsViewport(spread, { w: 500, h: 300 })).toBe(true)
+      })
+
+      await it('ignores cards with no drawn size', async () => {
+        expect(worldFitsViewport([...spread, { x: 0, y: 0, w: 0, h: 0 }], { w: 520, h: 320 })).toBe(true)
+      })
+
+      await it('counts an empty world as fitting', async () => {
+        expect(worldFitsViewport([], { w: 10, h: 10 })).toBe(true)
       })
     })
 

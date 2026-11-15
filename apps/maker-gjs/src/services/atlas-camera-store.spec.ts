@@ -87,5 +87,23 @@ export default async () => {
       expect(cameras['/p0.json'].zoom).toBe(3)
       expect(cameras['/p1.json']).toBe(undefined)
     })
+
+    await it('forgets a project whose camera is null', async () => {
+      const before: AtlasCameraMap = { '/a.json': camera(1), '/b.json': camera(2) }
+      const after = withAtlasCamera(before, '/a.json', null)
+      expect(Object.keys(after)).toStrictEqual(['/b.json'])
+    })
+
+    await it('is a no-op when a null camera has nothing to forget', async () => {
+      expect(withAtlasCamera({ '/b.json': camera(2) }, '/a.json', null)).toStrictEqual({
+        '/b.json': { zoom: 2, scrollX: 20, scrollY: 40 },
+      })
+    })
+
+    await it('leaves the input map untouched when forgetting', async () => {
+      const before: AtlasCameraMap = { '/a.json': camera(1) }
+      withAtlasCamera(before, '/a.json', null)
+      expect(Object.keys(before)).toStrictEqual(['/a.json'])
+    })
   })
 }

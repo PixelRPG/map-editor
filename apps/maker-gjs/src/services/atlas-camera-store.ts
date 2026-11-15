@@ -67,10 +67,14 @@ export function parseAtlasCameras(text: string): AtlasCameraMap {
  * {@link MAX_PROJECTS}. Re-saving a project moves it to the end, so the
  * cap drops projects by how long ago they were last looked at rather
  * than when they were first opened.
+ *
+ * A `null` camera forgets the entry instead: the atlas is sitting at a
+ * plain fit, which is cheaper to recompute at the next window size than
+ * to restore from a size that no longer applies.
  */
-export function withAtlasCamera(cameras: AtlasCameraMap, path: string, camera: AtlasCamera): AtlasCameraMap {
+export function withAtlasCamera(cameras: AtlasCameraMap, path: string, camera: AtlasCamera | null): AtlasCameraMap {
   const entries = Object.entries(cameras).filter(([key]) => key !== path)
-  entries.push([path, camera])
+  if (camera) entries.push([path, camera])
   return Object.fromEntries(entries.slice(-MAX_PROJECTS))
 }
 
@@ -97,10 +101,11 @@ export function loadAtlasCamera(path: string): AtlasCamera | null {
 }
 
 /**
- * Remember where the user left the atlas for the project at `path`.
- * Best-effort: a failed write is logged by the file layer and otherwise
- * ignored, since losing a camera costs one Fit.
+ * Remember where the user left the atlas for the project at `path`, or
+ * forget it when `camera` is `null`. Best-effort: a failed write is
+ * logged by the file layer and otherwise ignored, since losing a camera
+ * costs one Fit.
  */
-export function saveAtlasCamera(path: string, camera: AtlasCamera): void {
+export function saveAtlasCamera(path: string, camera: AtlasCamera | null): void {
   writeJsonFile(storePath(), withAtlasCamera(readStoredCameras(), path, camera))
 }

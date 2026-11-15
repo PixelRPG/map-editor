@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
@@ -126,8 +127,21 @@ export class AtlasCanvas extends Adw.Bin {
   private _offsets = new Map<string, { x: number; y: number }>()
   private _surfaceW = 0
   private _surfaceH = 0
+  /** Idle sources of deferred scroll writes — see `_queueScrollWrite`. */
+  private _scrollIdles = new Set<number>()
   /** Guards `_relayout` against the allocation it triggers itself. */
   private _relayouting = false
+  /**
+   * Whether the current zoom came from {@link fit} and has not been
+   * overridden since. A fitted camera follows the viewport: it re-fits
+   * when the window resizes instead of keeping a zoom that was computed
+   * for a different size.
+   */
+  private _fitted = false
+  /** Viewport size the live {@link _fitted} zoom was computed for. */
+  private _fitViewport = { w: 0, h: 0 }
+  /** Guards `_applyFit` against a notify raised from inside its own pass. */
+  private _fitting = false
   /** Backdrop-pan gesture on the scroller; created on first map, kept for life. */
   private _panGesture: Gtk.GestureDrag | null = null
   /** Pinch-to-zoom on the scroller; created on first map, kept for life. */
@@ -282,6 +296,7 @@ export class AtlasCanvas extends Adw.Bin {
     const scrollX = zoomAroundPointer(h.value, point.x, this._zoom, clamped)
     const scrollY = zoomAroundPointer(v.value, point.y, this._zoom, clamped)
     this._zoom = clamped
+    this._fitted = false
     this._relayout()
     this._applyScroll(scrollX, scrollY)
     this.emit('camera-changed')
@@ -291,16 +306,23 @@ export class AtlasCanvas extends Adw.Bin {
    * Zoom out until the whole world fits the viewport, then centre it.
    * Deferred until the scroller has a real page size, so the math never
    * runs against a zero viewport.
+   *
+   * The camera stays *fitted* afterwards (see {@link isFitted}) and
+   * re-fits on every later viewport change, so the world still fits once
+   * the surrounding chrome has taken its share of the allocation.
    */
   fit(): void {
-    this._whenAllocated(() => {
-      const h = this._scroller.hadjustment
-      const v = this._scroller.vadjustment
-      this._zoom = fitZoom({ w: h.page_size, h: v.page_size }, sceneRects(this._scenes), FIT_MARGIN, this._minShortSide)
-      this._relayout()
-      this._applyScroll((this._surfaceW - h.page_size) / 2, (this._surfaceH - v.page_size) / 2)
-      this.emit('camera-changed')
-    })
+    this._whenAllocated(() => this._applyFit())
+  }
+
+  /**
+   * Whether the live camera is a fit rather than a zoom the user chose.
+   * A host that persists the camera stores nothing while this is true:
+   * the fit belongs to the window size it was computed for, and
+   * re-fitting at the next size is better than restoring a stale one.
+   */
+  get isFitted(): boolean {
+    return this._fitted
   }
 
   /** Zoom + scroll offsets, for a host that persists them per project. */
@@ -316,6 +338,7 @@ export class AtlasCanvas extends Adw.Bin {
   restoreCamera(camera: AtlasCamera): void {
     this._whenAllocated(() => {
       this._zoom = clampAtlasZoom(camera.zoom)
+      this._fitted = false
       this._relayout()
       this._applyScroll(camera.scrollX, camera.scrollY)
       this.emit('camera-changed')
@@ -393,15 +416,17 @@ export class AtlasCanvas extends Adw.Bin {
     )
 
     // The surface padding centres a small world in the CURRENT viewport,
-    // so a resized window has to re-run the layout pass.
-    this._signals.connect(this._scroller.hadjustment, 'notify::page-size', () => this._relayout())
-    this._signals.connect(this._scroller.vadjustment, 'notify::page-size', () => this._relayout())
+    // and a fitted camera is only valid for the size it was fitted to —
+    // so a resized viewport has to re-run both.
+    this._signals.connect(this._scroller.hadjustment, 'notify::page-size', () => this._onViewportResized())
+    this._signals.connect(this._scroller.vadjustment, 'notify::page-size', () => this._onViewportResized())
   }
 
   vfunc_unmap(): void {
     this._signals.disconnectAll()
     this._pending.disconnectAll()
     this._scrollPending.disconnectAll()
+    this._cancelScrollWrites()
     super.vfunc_unmap()
   }
 
@@ -433,6 +458,52 @@ export class AtlasCanvas extends Adw.Bin {
   }
 
   /**
+   * Zoom to fit and centre, against the viewport as it is right now.
+   *
+   * Reentrancy-guarded: the pass re-sizes the surface, which allocates,
+   * which can notify `page-size` straight back into
+   * {@link _onViewportResized}.
+   */
+  private _applyFit(): void {
+    if (this._fitting) return
+    this._fitting = true
+    try {
+      const h = this._scroller.hadjustment
+      const v = this._scroller.vadjustment
+      this._fitViewport = { w: h.page_size, h: v.page_size }
+      this._zoom = fitZoom({ w: h.page_size, h: v.page_size }, sceneRects(this._scenes), FIT_MARGIN, this._minShortSide)
+      this._fitted = true
+      this._relayout()
+      this._applyScroll((this._surfaceW - h.page_size) / 2, (this._surfaceH - v.page_size) / 2)
+    } finally {
+      this._fitting = false
+    }
+    this.emit('camera-changed')
+  }
+
+  /**
+   * React to the scroller's viewport changing size.
+   *
+   * A fitted camera re-fits: `fit()` runs as soon as the scroller has
+   * *any* page size, which on startup is the window's full height —
+   * before the 48 px header bar has been subtracted. Without this the
+   * world opened a few percent too large and the bottom row of cards sat
+   * clipped off the viewport forever. Any other camera only needs the
+   * layout pass, because the surface padding centres a small world in
+   * the viewport as it is now.
+   */
+  private _onViewportResized(): void {
+    const h = this._scroller.hadjustment
+    const v = this._scroller.vadjustment
+    const changed = h.page_size !== this._fitViewport.w || v.page_size !== this._fitViewport.h
+    if (this._fitted && changed && h.page_size > 0 && v.page_size > 0) {
+      this._applyFit()
+      return
+    }
+    this._relayout()
+  }
+
+  /**
    * Write both scroll offsets, re-applying each once the adjustment's
    * `upper` catches up. `set_size_request` on the surface only reaches
    * the adjustments on the next allocation, so a value aimed at the
@@ -441,6 +512,7 @@ export class AtlasCanvas extends Adw.Bin {
    */
   private _applyScroll(x: number, y: number): void {
     this._scrollPending.disconnectAll()
+    this._cancelScrollWrites()
     this._applyScrollAxis(this._scroller.hadjustment, x)
     this._applyScrollAxis(this._scroller.vadjustment, y)
   }
@@ -451,9 +523,37 @@ export class AtlasCanvas extends Adw.Bin {
     // Landed where we aimed — the adjustment's range already covers it.
     if (adjustment.value >= want - 0.5) return
     this._scrollPending.connectUntil(adjustment, 'notify::upper', () => {
-      adjustment.value = Math.max(0, Math.min(want, adjustment.upper - adjustment.page_size))
+      this._queueScrollWrite(adjustment, want)
       return true
     })
+  }
+
+  /**
+   * Write a scroll offset from an idle instead of straight away.
+   *
+   * `Gtk.Viewport` emits `notify::upper` from inside its own
+   * `size_allocate`, and the re-allocation an adjustment write asks for
+   * there is dropped: the adjustment ends up holding the new offset
+   * while the viewport keeps drawing the child at the old one, with
+   * nothing left to correct it. That is what left a fitted world
+   * clipped — only on the viewport sizes where the first write got
+   * clamped and the deferred re-apply was needed at all, which is why
+   * it looked like a desktop-only bug.
+   */
+  private _queueScrollWrite(adjustment: Gtk.Adjustment, want: number): void {
+    let id = 0
+    id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._scrollIdles.delete(id)
+      adjustment.value = Math.max(0, Math.min(want, adjustment.upper - adjustment.page_size))
+      return GLib.SOURCE_REMOVE
+    })
+    this._scrollIdles.add(id)
+  }
+
+  /** Drop scroll writes that never got their idle (re-fit, unmap). */
+  private _cancelScrollWrites(): void {
+    for (const id of this._scrollIdles) GLib.source_remove(id)
+    this._scrollIdles.clear()
   }
 
   /**

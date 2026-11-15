@@ -101,6 +101,28 @@ export function drawnExtent(
 }
 
 /**
+ * Whether every drawn card already sits inside a viewport of this size —
+ * the test behind "the minimap joins the OSD only while the world is
+ * larger than the window" (REDESIGN.md § 4.2).
+ *
+ * It measures the cards' own bounding box, NOT the surface: the surface
+ * carries {@link surfacePadding} on every side and is therefore always
+ * bigger than the viewport, so comparing against it would answer "does
+ * not fit" for every world that ever existed.
+ *
+ * An empty world fits by definition.
+ */
+export function worldFitsViewport(drawn: readonly SceneRect[], viewport: { w: number; h: number }): boolean {
+  const drawnCards = drawn.filter((rect) => rect.w > 0 && rect.h > 0)
+  if (drawnCards.length === 0) return true
+  const left = Math.min(...drawnCards.map((rect) => rect.x))
+  const top = Math.min(...drawnCards.map((rect) => rect.y))
+  const right = Math.max(...drawnCards.map((rect) => rect.x + rect.w))
+  const bottom = Math.max(...drawnCards.map((rect) => rect.y + rect.h))
+  return right - left <= viewport.w && bottom - top <= viewport.h
+}
+
+/**
  * How many times {@link fitZoom} re-measures the drawn world. The naive
  * estimate is wrong only because of floored cards, and each pass shrinks
  * the gap by the amount the floor contributes — a handful of passes is
