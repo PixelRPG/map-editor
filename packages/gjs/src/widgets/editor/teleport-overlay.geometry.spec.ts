@@ -15,6 +15,7 @@ import {
   rectContains,
   stubEnd,
   teleportEndpoint,
+  tileAtPoint,
 } from './teleport-overlay.geometry.ts'
 
 /** An 11x11 map drawn as an 88x88 body at (100, 200) — 8 px per tile. */
@@ -56,6 +57,49 @@ export default async () => {
 
       await it('handles a zero-size map without NaN', async () => {
         near(teleportEndpoint({ rect: { x: 10, y: 20, w: 0, h: 0 }, cols: 0, rows: 0 }, { x: 5, y: 5 }), 10, 20)
+      })
+    })
+
+    await describe('tileAtPoint', async () => {
+      await it('inverts teleportEndpoint for every tile of the card', async () => {
+        for (let y = 0; y < card.rows; y++) {
+          for (let x = 0; x < card.cols; x++) {
+            const tile = tileAtPoint(card, teleportEndpoint(card, { x, y }))
+            expect(tile.x).toBe(x)
+            expect(tile.y).toBe(y)
+          }
+        }
+      })
+
+      await it('reads a tile corner as that tile, not the one before it', async () => {
+        const tile = tileAtPoint(card, { x: 100, y: 200 })
+        expect(tile.x).toBe(0)
+        expect(tile.y).toBe(0)
+      })
+
+      await it('clamps a drop past the far edge to the last tile', async () => {
+        const tile = tileAtPoint(card, { x: 400, y: 900 })
+        expect(tile.x).toBe(10)
+        expect(tile.y).toBe(10)
+      })
+
+      await it('clamps a drop before the card to the first tile', async () => {
+        const tile = tileAtPoint(card, { x: -50, y: 0 })
+        expect(tile.x).toBe(0)
+        expect(tile.y).toBe(0)
+      })
+
+      await it('reads a non-square map per axis', async () => {
+        const wide = { rect: { x: 0, y: 0, w: 100, h: 50 }, cols: 10, rows: 5 }
+        const tile = tileAtPoint(wide, { x: 95, y: 45 })
+        expect(tile.x).toBe(9)
+        expect(tile.y).toBe(4)
+      })
+
+      await it('falls back to tile (0, 0) for a card with no area', async () => {
+        const tile = tileAtPoint({ rect: { x: 10, y: 20, w: 0, h: 0 }, cols: 0, rows: 0 }, { x: 99, y: 99 })
+        expect(tile.x).toBe(0)
+        expect(tile.y).toBe(0)
       })
     })
 

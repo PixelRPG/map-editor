@@ -109,6 +109,25 @@ export function withDoorTarget(
 }
 
 /**
+ * The door's teleport data with its destination removed — what the
+ * atlas's *Remove* writes.
+ *
+ * `facing` and `label` survive, for the same reason {@link withDoorTarget}
+ * keeps them: they are hand-authored answers to questions the removal
+ * never asked. The door stays a door, now one that goes nowhere — which
+ * the atlas already has a shape for (a red stub) and the inspector reads
+ * as `unset`. Deleting the placement instead would throw away the
+ * sprite, the collider and the position someone placed by hand.
+ */
+export function withoutDoorTarget(teleport: DoorTeleport | null): DoorTeleport & { type: 'teleport' } {
+  const { facing, label } = teleport ?? {}
+  const cleared: DoorTeleport & { type: 'teleport' } = { type: 'teleport' }
+  if (facing !== undefined) cleared.facing = facing
+  if (label !== undefined) cleared.label = label
+  return cleared
+}
+
+/**
  * `components` with its teleport entry replaced by `teleport` — or
  * `teleport` appended when it carried none.
  *

@@ -49,6 +49,30 @@ export function teleportEndpoint(card: EndpointCard, tile: { x: number; y: numbe
 }
 
 /**
+ * Which tile of `card` the surface point `point` falls on — the inverse
+ * of {@link teleportEndpoint}, and the tile a drag-to-connect drop
+ * means.
+ *
+ * Clamped into the map rather than rejected: a drop a few pixels past
+ * the card's edge is a drop on the edge tile, not a miss, and the
+ * caller has already decided this is the card it landed on. A card
+ * drawn with no area falls back to tile (0, 0) so the result stays a
+ * real tile instead of `NaN`.
+ */
+export function tileAtPoint(card: EndpointCard, point: OverlayPoint): { x: number; y: number } {
+  const cols = Math.max(card.cols, 1)
+  const rows = Math.max(card.rows, 1)
+  const width = card.rect.w || 1
+  const height = card.rect.h || 1
+  const x = Math.floor(((point.x - card.rect.x) / width) * cols)
+  const y = Math.floor(((point.y - card.rect.y) / height) * rows)
+  return {
+    x: Math.min(Math.max(x, 0), cols - 1),
+    y: Math.min(Math.max(y, 0), rows - 1),
+  }
+}
+
+/**
  * Quadratic-Bézier control point, offset perpendicular to the segment
  * midpoint by `min(CURVE_OFFSET_MAX, length × CURVE_OFFSET_FACTOR)`.
  *

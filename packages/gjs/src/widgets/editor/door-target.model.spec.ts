@@ -8,6 +8,7 @@ import {
   readDoorTeleport,
   withDoorTarget,
   withDoorTargetComponents,
+  withoutDoorTarget,
 } from './door-target.model.ts'
 
 const BIG: MapBounds = { columns: 100, rows: 100 }
@@ -85,6 +86,36 @@ export default async function doorTargetModelSuite(): Promise<void> {
     await it('builds a complete teleport for a door that had none', async () => {
       const next = withDoorTarget(null, 'tree-house', { x: 3, y: 4 })
       expect(next).toStrictEqual({ type: 'teleport', targetMapId: 'tree-house', targetTileX: 3, targetTileY: 4 })
+    })
+  })
+
+  await describe('withoutDoorTarget', async () => {
+    await it('drops the destination and keeps the hand-authored rest', async () => {
+      const next = withoutDoorTarget({
+        targetMapId: 'tree-house',
+        targetTileX: 10,
+        targetTileY: 12,
+        facing: 'up',
+        label: 'Front door',
+      })
+      expect(next).toStrictEqual({ type: 'teleport', facing: 'up', label: 'Front door' })
+    })
+
+    await it('leaves no undefined keys behind for a bare teleport', async () => {
+      // `toStrictEqual` would pass on `{ facing: undefined }`, so assert
+      // the key set: an explicit `undefined` would be serialised into
+      // the saved project as `null`.
+      const next = withoutDoorTarget({ targetMapId: 'tree-house', targetTileX: 1, targetTileY: 2 })
+      expect(Object.keys(next).sort()).toStrictEqual(['type'])
+    })
+
+    await it('yields a bare teleport for a door that carried none', async () => {
+      expect(withoutDoorTarget(null)).toStrictEqual({ type: 'teleport' })
+    })
+
+    await it('reads back as unset', async () => {
+      const cleared = withoutDoorTarget({ targetMapId: 'tree-house', targetTileX: 1, targetTileY: 2 })
+      expect(doorTargetState(cleared, new Map([['tree-house', 'Tree House']])).kind).toBe('unset')
     })
   })
 
