@@ -49,6 +49,53 @@ export function teleportEndpoint(card: EndpointCard, tile: { x: number; y: numbe
 }
 
 /**
+ * Which tile of `card` the surface point `point` falls on — the inverse
+ * of {@link teleportEndpoint}, and the tile a drag-to-connect drop
+ * means.
+ *
+ * Clamped into the map rather than rejected: a drop a few pixels past
+ * the card's edge is a drop on the edge tile, not a miss, and the
+ * caller has already decided this is the card it landed on. A card
+ * drawn with no area falls back to tile (0, 0) so the result stays a
+ * real tile instead of `NaN`.
+ */
+export function tileAtPoint(card: EndpointCard, point: OverlayPoint): { x: number; y: number } {
+  const cols = Math.max(card.cols, 1)
+  const rows = Math.max(card.rows, 1)
+  const width = card.rect.w || 1
+  const height = card.rect.h || 1
+  const x = Math.floor(((point.x - card.rect.x) / width) * cols)
+  const y = Math.floor(((point.y - card.rect.y) / height) * rows)
+  return {
+    x: Math.min(Math.max(x, 0), cols - 1),
+    y: Math.min(Math.max(y, 0), rows - 1),
+  }
+}
+
+/** A card the pointer can land on: its map id and the rect it was drawn in. */
+export interface PlacedCard {
+  mapId: string
+  rect: SceneRect
+}
+
+/**
+ * Which card the surface point `point` landed on, or `null` — the map a
+ * drag-to-connect drop means.
+ *
+ * Searched from the END of the list because that is the order the cards
+ * were put into the `Gtk.Fixed`, and a later child draws ON TOP of an
+ * earlier one: when two cards overlap, the one the user sees under the
+ * pointer is the last one that contains the point, not the first.
+ */
+export function cardAtPoint(cards: readonly PlacedCard[], point: OverlayPoint): string | null {
+  for (let i = cards.length - 1; i >= 0; i--) {
+    const card = cards[i]
+    if (rectContains(card.rect, point)) return card.mapId
+  }
+  return null
+}
+
+/**
  * Quadratic-Bézier control point, offset perpendicular to the segment
  * midpoint by `min(CURVE_OFFSET_MAX, length × CURVE_OFFSET_FACTOR)`.
  *

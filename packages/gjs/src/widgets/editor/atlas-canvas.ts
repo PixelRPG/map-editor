@@ -19,7 +19,8 @@ import {
   surfacePadding,
   zoomAroundPointer,
 } from './atlas-camera.ts'
-import { buildMapContextMenu } from './map-menu.ts'
+import type { ConnectionHit, DoorRef } from './map-connections.model.ts'
+import { buildConnectionMenu, type ConnectionMenuFacts, buildMapContextMenu } from './map-menu.ts'
 import { MapPreview } from './map-preview'
 import { SceneCard } from './scene-card'
 import { TeleportOverlay } from './teleport-overlay'
@@ -74,6 +75,7 @@ export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
   'scene-drag-began': (sceneId: string) => void
   'scene-opened': (sceneId: string) => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
+  'door-retargeted': (mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => void
   'camera-changed': () => void
   'world-changed': () => void
 }
@@ -157,7 +159,11 @@ export class AtlasCanvas extends Adw.Bin {
   private _scrollController: Gtk.EventControllerScroll | null = null
   /** Pointer tracking on the surface, so a hovered line names itself. */
   private _motionController: Gtk.EventControllerMotion | null = null
-  /** Primary clicks on the surface, for the edge chips of off-screen maps. */
+  /**
+   * Primary clicks on the surface, for the two things the overlay draws
+   * into empty space: the edge chips of off-screen maps and the door
+   * lines themselves.
+   */
   private _chipGesture: Gtk.GestureClick | null = null
   /** Zoom captured when a pinch begins — the gesture reports a ratio. */
   private _pinchBase = 1
@@ -172,6 +178,14 @@ export class AtlasCanvas extends Adw.Bin {
    * menu.
    */
   private _mapMenu: Gtk.PopoverMenu | null = null
+  /**
+   * The popover of a door line. A second instance rather than a second
+   * model on {@link _mapMenu}: the two are pointed at different places
+   * and the line's model is rebuilt per press, and swapping a model in
+   * and out of one popover would make every press depend on which menu
+   * was open last.
+   */
+  private _lineMenu: Gtk.PopoverMenu | null = null
   private _signals = new SignalScope()
   /**
    * Holds the single deferred camera operation waiting for the
@@ -223,6 +237,20 @@ export class AtlasCanvas extends Adw.Bin {
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
+          },
+          // A door was dragged from its handle onto a tile of another
+          // card: `(mapId, placementId, targetMapId, tileX, tileY)`.
+          // The canvas only reports the gesture — the host owns the
+          // write, because pointing a door somewhere is a Command on
+          // the door's own map and needs that map open.
+          'door-retargeted': {
+            param_types: [
+              GObject.TYPE_STRING,
+              GObject.TYPE_STRING,
+              GObject.TYPE_STRING,
+              GObject.TYPE_INT,
+              GObject.TYPE_INT,
+            ],
           },
           // The camera moved by an explicit operation (zoom, fit,
           // focus, restore) — the OSD pill re-reads the zoom level.
@@ -440,7 +468,7 @@ export class AtlasCanvas extends Adw.Bin {
 
     const chips = this._ensureChipGesture()
     this._signals.connect(chips, 'pressed', (gesture: Gtk.GestureClick, _n: number, x: number, y: number) =>
-      this._onChipPressed(gesture, x, y),
+      this._onSurfacePressed(gesture, x, y),
     )
 
     // The overlay's edge chips and its dimming are answered against the
@@ -471,6 +499,11 @@ export class AtlasCanvas extends Adw.Bin {
       this._mapMenu.popdown()
       this._mapMenu.unparent()
       this._mapMenu = null
+    }
+    if (this._lineMenu?.get_parent()) {
+      this._lineMenu.popdown()
+      this._lineMenu.unparent()
+      this._lineMenu = null
     }
     super.vfunc_unmap()
   }
@@ -671,19 +704,99 @@ export class AtlasCanvas extends Adw.Bin {
   }
 
   /**
+   * A primary press on the surface, answered against what the overlay
+   * drew there. A chip first, then a line: a chip sits ON a line's far
+   * end, so testing the line first would make every chip unreachable.
+   *
    * A chip names the map a line leads to off-screen; pressing it scrolls
    * that map into view and nothing else. Deliberately not a selection:
    * the chip is a way to follow a connection, and a user who was
    * comparing it against the map they had picked would lose that pick.
    *
+   * Between the two, a press that landed on a CARD is handed back: a
+   * line ends on the door's own tile, so a plain click on a card near
+   * one of its doors is within the line's hit radius, and testing the
+   * line here would open a popover where the user asked to pick the
+   * map. The chips are tested before that check because they are drawn
+   * at the viewport edge, over whatever card happens to be there.
+   *
    * Claims the sequence only on a hit, so an ordinary press on empty
    * surface still reaches the backdrop pan.
    */
-  private _onChipPressed(gesture: Gtk.GestureClick, x: number, y: number): void {
+  private _onSurfacePressed(gesture: Gtk.GestureClick, x: number, y: number): void {
     const mapId = this._teleports.chipAt({ x, y })
-    if (!mapId) return
+    if (mapId) {
+      gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+      this.focusScene(mapId)
+      return
+    }
+    if (this._surface.pick(x, y, Gtk.PickFlags.DEFAULT) !== this._surface) return
+    const hit = this._teleports.connectionAt({ x, y })
+    if (!hit) return
     gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-    this.focusScene(mapId)
+    this._popupLineMenu(hit, x, y)
+  }
+
+  /**
+   * Open a line's popover (REDESIGN.md § 6.2) at the press position.
+   *
+   * The model is built fresh per press — `Gtk.PopoverMenu` takes
+   * ownership of it — and carries the doors in its action targets, so
+   * the canvas needs no "selected connection" state and the host needs
+   * no new signal: the items are plain window actions.
+   */
+  private _popupLineMenu(hit: ConnectionHit, x: number, y: number): void {
+    const facts = this._connectionMenuFacts(hit)
+    if (!facts) return
+    const menu = this._ensureLineMenu()
+    menu.set_menu_model(buildConnectionMenu(facts))
+    const point = new Graphene.Point()
+    point.init(x, y)
+    const [ok, inOverlay] = this._surface.compute_point(this._overlay, point)
+    if (!ok) return
+    menu.set_pointing_to(
+      new Gdk.Rectangle({ x: Math.round(inOverlay.x), y: Math.round(inOverlay.y), width: 1, height: 1 }),
+    )
+    menu.popup()
+  }
+
+  private _ensureLineMenu(): Gtk.PopoverMenu {
+    if (this._lineMenu) return this._lineMenu
+    const menu = new Gtk.PopoverMenu({ hasArrow: false })
+    menu.set_parent(this._overlay)
+    this._lineMenu = menu
+    return menu
+  }
+
+  /**
+   * Name the doors behind a hit for the menu.
+   *
+   * The tiles come from the connection's own ends, which the model
+   * documents as the door's tile for `from` and — for a pair — the
+   * partner door's tile for `to`; `pairDoors` emits a pair at the lower
+   * door index, so `doors[0]` is always the `from` end. They are only
+   * ever shown, never acted on: the placement id is the identity.
+   */
+  private _connectionMenuFacts(hit: ConnectionHit): ConnectionMenuFacts | null {
+    const { connection, doors } = hit
+    if (!doors.length) return null
+    const ends = [connection.from, connection.to]
+    return {
+      kind: connection.kind,
+      doors: doors.map((door, index) => ({
+        mapId: door.mapId,
+        mapName: this._sceneName(door.mapId),
+        placementId: door.placementId,
+        tileX: ends[index]?.tileX ?? 0,
+        tileY: ends[index]?.tileY ?? 0,
+      })),
+      farMapName: connection.kind === 'one-way' && connection.to ? this._sceneName(connection.to.mapId) : null,
+    }
+  }
+
+  /** A map's display name, falling back to its id for a map we don't hold. */
+  private _sceneName(id: string): string {
+    return this._scenes.find((scene) => scene.id === id)?.name ?? id
   }
 
   /** Hand the overlay the visible region, in the coords it draws in. */
@@ -731,13 +844,15 @@ export class AtlasCanvas extends Adw.Bin {
     const [ok, inSurface] = this._scroller.compute_point(this._surface, point)
     const picked = ok ? this._surface.pick(inSurface.x, inSurface.y, Gtk.PickFlags.DEFAULT) : null
     // A press on a card belongs to that card's own gestures, and one on
-    // an edge chip to `_onChipPressed`. The chips are drawn by a
-    // `can_target = false` overlay, so `pick` cannot see them and they
-    // are tested by hand — claim order between two gestures on
-    // different widgets is not worth relying on for a pan that would
-    // swallow the chip's click.
-    const onChip = ok && this._teleports.chipAt({ x: inSurface.x, y: inSurface.y }) !== null
-    if (onChip || (picked && picked !== (this._surface as Gtk.Widget))) {
+    // an edge chip or a door line to `_onSurfacePressed`. Both are
+    // drawn by a `can_target = false` overlay, so `pick` cannot see
+    // them and they are tested by hand — claim order between two
+    // gestures on different widgets is not worth relying on for a pan
+    // that would swallow the press.
+    const overlayPoint = { x: inSurface.x, y: inSurface.y }
+    const onOverlay =
+      ok && (this._teleports.chipAt(overlayPoint) !== null || this._teleports.connectionAt(overlayPoint) !== null)
+    if (onOverlay || (picked && picked !== (this._surface as Gtk.Widget))) {
       gesture.set_state(Gtk.EventSequenceState.DENIED)
       return
     }
@@ -842,10 +957,26 @@ export class AtlasCanvas extends Adw.Bin {
     let atlasOrigin = { x: 0, y: 0 }
     let bodyOrigin = { x: 0, y: 0 }
     let cardOrigin = { x: 0, y: 0 }
+    // Set for the whole drag when the press landed on a door's drag
+    // handle: the same gesture then aims that door instead of moving
+    // the card. One stream, two meanings, decided once at begin —
+    // a second gesture competing for the press would make which one
+    // wins depend on controller order.
+    let connect: { door: DoorRef; from: { x: number; y: number }; press: { x: number; y: number } } | null = null
     card.connect('scene-drag-begin', () => {
       const scene = this._scenes.find((s) => s.id === sceneId)
       const rect = this._drawn.get(sceneId)
       if (!scene || !rect) return
+
+      const press = card.pressInParent
+      const handle = press ? this._teleports.handleAt(press) : null
+      if (press && handle) {
+        connect = { door: handle.door, from: handle.point, press }
+        this._teleports.setConnectDrag({ from: handle.point, to: press })
+        return
+      }
+      connect = null
+
       const offset = this._offsets.get(sceneId) ?? { x: 0, y: 0 }
       atlasOrigin = { x: scene.x, y: scene.y }
       bodyOrigin = { x: rect.x, y: rect.y }
@@ -859,6 +990,13 @@ export class AtlasCanvas extends Adw.Bin {
       this.emit('scene-drag-began', sceneId)
     })
     card.connect('scene-drag-update', (_c: SceneCard, dx: number, dy: number) => {
+      if (connect) {
+        this._teleports.setConnectDrag({
+          from: connect.from,
+          to: { x: connect.press.x + dx, y: connect.press.y + dy },
+        })
+        return
+      }
       const rect = this._drawn.get(sceneId)
       if (!rect) return
       this._surface.move(card, cardOrigin.x + dx, cardOrigin.y + dy)
@@ -869,6 +1007,19 @@ export class AtlasCanvas extends Adw.Bin {
       this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
     })
     card.connect('scene-drag-end', (_c: SceneCard, dx: number, dy: number) => {
+      if (connect) {
+        const { door, press } = connect
+        connect = null
+        this._teleports.setConnectDrag(null)
+        // A drop on the backdrop is a cancel, not a clear: letting go
+        // over nothing is how a user abandons a drag they started by
+        // accident, and silently unlinking the door would be the one
+        // outcome they cannot undo from the atlas.
+        const target = this._teleports.dropTargetAt({ x: press.x + dx, y: press.y + dy })
+        if (!target) return
+        this.emit('door-retargeted', door.mapId, door.placementId, target.mapId, target.tile.x, target.tile.y)
+        return
+      }
       const scene = this._scenes.find((s) => s.id === sceneId)
       if (!scene) return
       // Snap the release position to the atlas grid so cards line up.

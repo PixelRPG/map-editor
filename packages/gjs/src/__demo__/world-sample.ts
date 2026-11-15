@@ -46,6 +46,11 @@ export interface SampleScene {
  * authored, or a map that is gone. The loader nulls it rather than
  * dropping the door, so the atlas can show that the door goes nowhere
  * instead of silently leaving it out.
+ *
+ * `placementId` names the object placement the door lives on. The atlas
+ * needs it to act on a single door — open it, clear its target — which
+ * the tile coordinates alone cannot identify once two doors share a
+ * tile across maps.
  */
 export interface SampleTeleport {
   from: string
@@ -55,6 +60,7 @@ export interface SampleTeleport {
   tx: number
   ty: number
   label: string
+  placementId: string
 }
 
 /** Whispering Forest — 14×12 grass + path + small cluster of houses. */
@@ -197,10 +203,10 @@ export const SAMPLE_SCENES: SampleScene[] = [
 ]
 
 export const SAMPLE_TELEPORTS: SampleTeleport[] = [
-  { from: 'forest', fx: 13, fy: 5, to: 'village', tx: 0, ty: 6, label: 'Path' },
-  { from: 'village', fx: 7, fy: 13, to: 'cave', tx: 8, ty: 1, label: 'Cave Mouth' },
-  { from: 'village', fx: 19, fy: 7, to: 'castle', tx: 0, ty: 4, label: 'Gate' },
-  { from: 'cave', fx: 11, fy: 4, to: 'dream', tx: 0, ty: 4, label: 'Shimmer' },
+  { from: 'forest', fx: 13, fy: 5, to: 'village', tx: 0, ty: 6, label: 'Path', placementId: 'forest-path' },
+  { from: 'village', fx: 7, fy: 13, to: 'cave', tx: 8, ty: 1, label: 'Cave Mouth', placementId: 'village-cave' },
+  { from: 'village', fx: 19, fy: 7, to: 'castle', tx: 0, ty: 4, label: 'Gate', placementId: 'village-gate' },
+  { from: 'cave', fx: 11, fy: 4, to: 'dream', tx: 0, ty: 4, label: 'Shimmer', placementId: 'cave-shimmer' },
 ]
 
 /**
