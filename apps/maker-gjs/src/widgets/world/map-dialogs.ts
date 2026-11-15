@@ -147,7 +147,7 @@ export function presentNewMapDialog(
 export interface MapSettingsDoor {
   /** The door's own label, e.g. the tile it sits on. */
   label: string
-  /** Display name of the map at the other end. */
+  /** Display name of the map at the other end, `''` when there is none. */
   otherSceneName: string
   direction: 'in' | 'out'
 }
@@ -210,11 +210,23 @@ export function presentMapSettingsDialog(
     doors.set_description(_('No doors lead to or from this map.'))
   }
   for (const door of settings.doors) {
+    // A door with no other end still gets a row: what it needs is
+    // finishing, and a missing row would read as a missing door.
+    const nowhere = door.otherSceneName.length === 0
     const row = new Adw.ActionRow({
-      title: door.otherSceneName,
-      subtitle: door.direction === 'out' ? _('Leads out of this map') : _('Leads into this map'),
+      title: nowhere ? _('Goes nowhere') : door.otherSceneName,
+      subtitle: nowhere
+        ? _('No map at the other end yet')
+        : door.direction === 'out'
+          ? _('Leads out of this map')
+          : _('Leads into this map'),
     })
-    row.add_prefix(new Gtk.Image({ iconName: door.direction === 'out' ? 'go-next-symbolic' : 'go-previous-symbolic' }))
+    const icon = nowhere
+      ? 'dialog-warning-symbolic'
+      : door.direction === 'out'
+        ? 'go-next-symbolic'
+        : 'go-previous-symbolic'
+    row.add_prefix(new Gtk.Image({ iconName: icon }))
     if (door.label) row.add_suffix(dimLabel(door.label))
     doors.add(row)
   }

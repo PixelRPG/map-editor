@@ -38,12 +38,20 @@ export interface SampleScene {
   music?: string
 }
 
-/** Teleport between a source tile in one scene and a destination tile in another. */
+/**
+ * Teleport between a source tile in one scene and a destination tile in
+ * another.
+ *
+ * `to` is `null` for a door whose target does not resolve — none
+ * authored, or a map that is gone. The loader nulls it rather than
+ * dropping the door, so the atlas can show that the door goes nowhere
+ * instead of silently leaving it out.
+ */
 export interface SampleTeleport {
   from: string
   fx: number
   fy: number
-  to: string
+  to: string | null
   tx: number
   ty: number
   label: string

@@ -14,19 +14,26 @@ export interface SummarizedScene {
   npcs?: unknown[]
 }
 
-/** A teleport link between two scenes. */
+/**
+ * A teleport link between two scenes. A `to` of `null` is a door whose
+ * target does not resolve — it still belongs to its source scene, and
+ * still counts as one of its doors.
+ */
 export interface SceneLink {
   from: string
-  to: string
+  to: string | null
   label: string
 }
 
 /** One row of a map's door list, already resolved for display. */
 export interface TeleportSummary {
   label: string
-  /** Other-scene id (destination when outgoing, source when incoming). */
-  otherSceneId: string
-  /** Pre-formatted display name of the other scene. */
+  /**
+   * Other-scene id (destination when outgoing, source when incoming),
+   * `null` for a door that goes nowhere.
+   */
+  otherSceneId: string | null
+  /** Pre-formatted display name of the other scene, `''` when nowhere. */
   otherSceneName: string
   direction: 'in' | 'out'
 }
@@ -42,6 +49,10 @@ export function sceneTileSize(scene: SummarizedScene): { cols: number; rows: num
 /**
  * Every teleport touching `scene`, resolved to the OTHER end's display
  * name. A self-teleport counts once, as outgoing.
+ *
+ * A door that goes nowhere has no other end to name, so it comes back
+ * with `otherSceneId: null` and an empty name — the caller substitutes
+ * its own translated wording for that case.
  */
 export function teleportSummaries(
   scene: SummarizedScene,
@@ -57,7 +68,7 @@ export function teleportSummaries(
     summaries.push({
       label: teleport.label,
       otherSceneId,
-      otherSceneName: nameById.get(otherSceneId) ?? otherSceneId,
+      otherSceneName: otherSceneId === null ? '' : (nameById.get(otherSceneId) ?? otherSceneId),
       direction: outgoing ? 'out' : 'in',
     })
   }
@@ -70,6 +81,8 @@ export interface MapSelectionFacts {
   rows: number
   /** Doors touching the map, a self-teleport counted once. */
   doors: number
+  /** How many of those {@link doors} lead nowhere — a subset, not extra. */
+  doorsNowhere: number
   /** NPCs plus events — "things" placed on the map. */
   things: number
 }
@@ -83,10 +96,12 @@ export interface MapSelectionFacts {
  */
 export function mapSelectionFacts(scene: SummarizedScene, teleports: readonly SceneLink[]): MapSelectionFacts {
   const { cols, rows } = sceneTileSize(scene)
+  const summaries = teleportSummaries(scene, [], teleports)
   return {
     cols,
     rows,
-    doors: teleportSummaries(scene, [], teleports).length,
+    doors: summaries.length,
+    doorsNowhere: summaries.filter((summary) => summary.otherSceneId === null).length,
     things: (scene.npcs?.length ?? 0) + scene.events,
   }
 }

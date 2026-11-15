@@ -100,6 +100,9 @@ export class TeleportOverlay extends Gtk.Widget {
     stroke.set_line_cap(Gsk.LineCap.ROUND)
 
     for (const t of this._teleports) {
+      // A door that goes nowhere has no far end to curve towards; the
+      // § 6.2 restyle gives it a stub of its own.
+      if (t.to === null) continue
       const a = this._endpoint(byId, t.from, { x: t.fx, y: t.fy })
       const b = this._endpoint(byId, t.to, { x: t.tx, y: t.ty })
       if (!a || !b) continue

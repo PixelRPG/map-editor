@@ -28,6 +28,7 @@ import componentInspectorModelSuite from './widgets/editor/component-inspector.m
 import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import layerSectionsSuite from './widgets/editor/layer-sections.spec.js'
+import mapConnectionsModelSuite from './widgets/editor/map-connections.model.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
 import mapPreviewOpsSuite from './widgets/editor/map-preview.ops.spec.js'
 import mapSummaryModelSuite from './widgets/editor/map-summary.model.spec.js'
@@ -56,6 +57,7 @@ run({
   depthGlyphGeometrySuite,
   eventActionModelSuite,
   layerSectionsSuite,
+  mapConnectionsModelSuite,
   mapPreviewGeometrySuite,
   mapPreviewOpsSuite,
   mapSummaryModelSuite,
