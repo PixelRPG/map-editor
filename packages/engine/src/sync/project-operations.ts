@@ -35,6 +35,7 @@ import type {
   GameProjectData,
   MapData,
   MapEditorData,
+  MapReference,
   Properties,
   SpriteSetData,
   SpriteSetReference,
@@ -56,6 +57,10 @@ export const MAP_EDITOR_DATA_KIND = '__project/map.editor-data'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
 export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
 export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
+export const MAP_CREATE_CHUNK_KIND = '__project/map.create.chunk'
+export const MAP_RENAME_KIND = '__project/map.rename'
+export const MAP_REMOVE_KIND = '__project/map.remove'
+export const STARTUP_SET_KIND = '__project/startup.set'
 
 /**
  * Per-chunk payload budget for a sprite-set transfer (chars of the
@@ -230,6 +235,88 @@ export interface SpriteSetRemoveOp {
   seq: number
 }
 
+/**
+ * The data a map creation carries to peers: the project-level
+ * {@link MapReference} (id + relative `path` + display name) AND the
+ * whole {@link MapData} that belongs at that path, because the receiver
+ * has no other way to obtain the file — maps live in their own files
+ * next to `game-project.json`, and there is no file-transfer channel.
+ *
+ * Also the vocabulary for DUPLICATE: a duplicate is a create whose
+ * `mapData` is a deep copy of another map under a fresh id/path.
+ */
+export interface MapCreatePayload {
+  reference: MapReference
+  mapData: MapData
+}
+
+/**
+ * Peer → peers: one chunk of a map-create transfer. Chunked for the
+ * same reason as a sprite-set add: a real map's `layers` easily exceed
+ * the SCTP single-send ceiling (the sample `kokiri-forest.json` is
+ * 2.6 MB against a {@link SPRITESET_CHUNK_SIZE} of 16 KiB), and an
+ * oversized send is dropped silently by `webrtcbin`. The receiver
+ * reassembles by `transferId` — see {@link MapCreateReassembler}.
+ */
+export interface MapCreateChunkOp {
+  kind: typeof MAP_CREATE_CHUNK_KIND
+  payload: {
+    /** Stable id grouping the chunks of one transfer (`<peerId>:<n>`). */
+    transferId: string
+    chunkIndex: number
+    totalChunks: number
+    /** Slice of the JSON-serialised {@link MapCreatePayload}. */
+    data: string
+  }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: a map was renamed. Carries the whole new name, keyed by
+ * the map's stable id — coarse + idempotent like the other `__project/*`
+ * ops. The receiver renames BOTH the project-level {@link MapReference}
+ * and the live {@link MapData} (the two names are denormalised copies);
+ * the map's `path` is NOT derived from the name, so no file moves.
+ */
+export interface MapRenameOp {
+  kind: typeof MAP_RENAME_KIND
+  payload: { mapId: string; name: string }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: a map was deleted from the project; drop its reference
+ * by id. The map file is removed on each peer by the maker's
+ * CollabSession ↔ ProjectStore wiring — this op carries only the id,
+ * the inverse of the chunked {@link MapCreateChunkOp}. Applying it
+ * repoints `startup.initialMapId` when it pointed at the deleted map,
+ * because a project whose start map is missing fails validation.
+ */
+export interface MapRemoveOp {
+  kind: typeof MAP_REMOVE_KIND
+  payload: { mapId: string }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: the map the game starts on changed
+ * (`startup.initialMapId`). Separate from {@link ProjectMetaUpdateOp}
+ * because `startup` is its own block with a referential invariant —
+ * `GameProjectFormat.validate` rejects a project whose
+ * `startup.initialMapId` is not in `maps[]`, so this op is ignored for
+ * a map the receiver does not have (rather than making the project
+ * unsaveable on that peer).
+ */
+export interface StartupSetOp {
+  kind: typeof STARTUP_SET_KIND
+  payload: { initialMapId: string }
+  peerId: string
+  seq: number
+}
+
 export type ProjectOp =
   | EntityUpsertOp
   | EntityRemoveOp
@@ -237,6 +324,10 @@ export type ProjectOp =
   | ProjectMetaUpdateOp
   | GameSystemsSetOp
   | MapEditorDataOp
+  | MapCreateChunkOp
+  | MapRenameOp
+  | MapRemoveOp
+  | StartupSetOp
   | SpriteSetAddChunkOp
   | SpriteSetUpdateChunkOp
   | SpriteSetRemoveOp
@@ -395,6 +486,115 @@ export function applyMapEditorData(maps: Iterable<MapData>, payload: MapEditorDa
   return null
 }
 
+/** Build a map-rename envelope (whole new name, keyed by map id). */
+export function createMapRenameOp(args: { peerId: string; seq: number; mapId: string; name: string }): MapRenameOp {
+  return {
+    kind: MAP_RENAME_KIND,
+    payload: { mapId: args.mapId, name: args.name },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/** Build a map-remove envelope. */
+export function createMapRemoveOp(args: { peerId: string; seq: number; mapId: string }): MapRemoveOp {
+  return {
+    kind: MAP_REMOVE_KIND,
+    payload: { mapId: args.mapId },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/** Build a startup-set envelope (the map the game starts on). */
+export function createStartupSetOp(args: { peerId: string; seq: number; initialMapId: string }): StartupSetOp {
+  return {
+    kind: STARTUP_SET_KIND,
+    payload: { initialMapId: args.initialMapId },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/**
+ * Add or replace a map reference in project data IN PLACE, keyed by id
+ * (so re-applying a duplicate transfer is idempotent). The id and
+ * `path` are kept verbatim so both peers end up with the same file
+ * layout. The caller writes the `mapData` to that path (the engine
+ * layer is filesystem-agnostic).
+ *
+ * Keeps the `startup.initialMapId ∈ maps[]` invariant: a project whose
+ * start map does not resolve — the very first map of an empty project,
+ * or one whose start map was deleted — starts on the new map.
+ */
+export function applyMapCreate(data: GameProjectData, reference: MapReference): void {
+  data.maps ??= []
+  const maps = data.maps
+  const idx = maps.findIndex((m) => m.id === reference.id)
+  if (idx >= 0) maps[idx] = reference
+  else maps.push(reference)
+  const startup = data.startup
+  if (startup && !maps.some((m) => m.id === startup.initialMapId)) startup.initialMapId = reference.id
+}
+
+/**
+ * Rename the map with the matching stable id IN PLACE — both the
+ * project-level {@link MapReference} and, when the live map is loaded,
+ * its {@link MapData.name}. Idempotent. Returns the renamed `MapData`
+ * so the caller can persist the map file, or `null` when that map is
+ * not loaded (the reference is still renamed — the project file is the
+ * one that has to agree).
+ */
+export function applyMapRename(
+  data: GameProjectData,
+  maps: Iterable<MapData>,
+  payload: MapRenameOp['payload'],
+): MapData | null {
+  for (const reference of data.maps ?? []) {
+    if (reference.id === payload.mapId) reference.name = payload.name
+  }
+  for (const map of maps) {
+    if (map.id !== payload.mapId) continue
+    map.name = payload.name
+    return map
+  }
+  return null
+}
+
+/**
+ * Remove a map reference from project data IN PLACE by id. Idempotent —
+ * returns `null` when the id isn't present. Does not touch the on-disk
+ * map file; the caller deletes it (the engine layer is
+ * filesystem-agnostic) using the returned reference's `path`.
+ *
+ * When the removed map was the start map, `startup.initialMapId` moves
+ * to the first remaining map so the project still validates. Removing
+ * the LAST map leaves a dangling `initialMapId` — callers must refuse
+ * that case (the UI keeps Delete insensitive for a lone map).
+ */
+export function applyMapRemove(data: GameProjectData, mapId: string): MapReference | null {
+  const maps = data.maps ?? []
+  const removed = maps.find((m) => m.id === mapId)
+  if (!removed) return null
+  data.maps = maps.filter((m) => m.id !== mapId)
+  const startup = data.startup
+  if (startup && startup.initialMapId === mapId && data.maps[0]) startup.initialMapId = data.maps[0].id
+  return removed
+}
+
+/**
+ * Point `startup.initialMapId` at a map IN PLACE. Idempotent. Returns
+ * false (and changes nothing) when the id is not among `data.maps` —
+ * see {@link StartupSetOp} for why an unknown map is ignored rather
+ * than trusted.
+ */
+export function applyStartupSet(data: GameProjectData, initialMapId: string): boolean {
+  if (!data.startup) return false
+  if (!(data.maps ?? []).some((m) => m.id === initialMapId)) return false
+  data.startup.initialMapId = initialMapId
+  return true
+}
+
 /** Build a sprite-set-remove envelope. */
 export function createSpriteSetRemoveOp(args: { peerId: string; seq: number; spriteSetId: string }): SpriteSetRemoveOp {
   return {
@@ -457,6 +657,17 @@ export function chunkSpriteSetUpdate(args: {
 }
 
 /**
+ * Slice a {@link MapCreatePayload} (reference + the whole map) into
+ * ordered chunk-op bodies. See {@link buildChunks}.
+ */
+export function chunkMapCreate(args: {
+  transferId: string
+  payload: MapCreatePayload
+}): Array<Omit<MapCreateChunkOp, 'peerId' | 'seq'>> {
+  return buildChunks(MAP_CREATE_CHUNK_KIND, args.transferId, JSON.stringify(args.payload))
+}
+
+/**
  * Accumulates chunk ops by `transferId` until a transfer is complete,
  * then returns the parsed payload of type `T`. Thin adapter over the
  * shared validated {@link SharedChunkReassembler} (`chunking.ts`):
@@ -490,6 +701,13 @@ export class OpChunkReassembler<T> {
  * the sprite-set add path.
  */
 export class SpriteSetAddReassembler extends OpChunkReassembler<SpriteSetAddPayload> {}
+
+/**
+ * Reassembles {@link MapCreateChunkOp}s into a {@link MapCreatePayload}.
+ * Thin alias over {@link OpChunkReassembler} kept for call-site clarity
+ * at the map-create path.
+ */
+export class MapCreateReassembler extends OpChunkReassembler<MapCreatePayload> {}
 
 /**
  * Add or replace a sprite-set reference in project data IN PLACE,
