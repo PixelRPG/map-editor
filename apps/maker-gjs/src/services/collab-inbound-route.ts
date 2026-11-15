@@ -1,24 +1,33 @@
-import type { ProjectOp, SessionProtocolOp, SpriteSetAddChunkOp, SpriteSetUpdateChunkOp } from '@pixelrpg/engine'
+import type {
+  MapCreateChunkOp,
+  ProjectOp,
+  SessionProtocolOp,
+  SpriteSetAddChunkOp,
+  SpriteSetUpdateChunkOp,
+} from '@pixelrpg/engine'
 import {
   isProjectOp,
   isSessionProtocolOp,
+  MAP_CREATE_CHUNK_KIND,
   SPRITESET_ADD_CHUNK_KIND,
   SPRITESET_UPDATE_CHUNK_KIND,
 } from '@pixelrpg/engine'
 
 /**
- * Where one inbound op belongs. Four destinations exist on the reliable
+ * Where one inbound op belongs. Five destinations exist on the reliable
  * op channel and they are NOT interchangeable:
  *
  *   - session-protocol frames drive the snapshot exchange,
  *   - `__project/*` ops mutate project-level data (no engine needed),
- *   - the two chunked sprite-set kinds need reassembly first,
+ *   - the three chunked kinds (two sprite-set, one map-create) need
+ *     reassembly first,
  *   - everything else is a scene `Command` op for the SessionController.
  */
 export type InboundOpRoute =
   | { kind: 'session-protocol'; op: SessionProtocolOp }
   | { kind: 'sprite-set-add'; op: SpriteSetAddChunkOp }
   | { kind: 'sprite-set-update'; op: SpriteSetUpdateChunkOp }
+  | { kind: 'map-create'; op: MapCreateChunkOp }
   | { kind: 'project'; op: ProjectOp }
   | { kind: 'command' }
   | { kind: 'own-echo' }
@@ -39,6 +48,7 @@ export function routeInboundOp(op: unknown, localPeerId: string): InboundOpRoute
     if (op.peerId === localPeerId) return { kind: 'own-echo' }
     if (op.kind === SPRITESET_ADD_CHUNK_KIND) return { kind: 'sprite-set-add', op: op as SpriteSetAddChunkOp }
     if (op.kind === SPRITESET_UPDATE_CHUNK_KIND) return { kind: 'sprite-set-update', op: op as SpriteSetUpdateChunkOp }
+    if (op.kind === MAP_CREATE_CHUNK_KIND) return { kind: 'map-create', op: op as MapCreateChunkOp }
     return { kind: 'project', op }
   }
   if ((op as { peerId?: unknown }).peerId === localPeerId) return { kind: 'own-echo' }

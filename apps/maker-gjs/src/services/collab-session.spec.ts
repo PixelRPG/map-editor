@@ -20,11 +20,13 @@ import { describe, expect, it } from '@gjsify/unit'
 import {
   CHANNEL_AWARENESS,
   CHANNEL_OP,
+  chunkMapCreate,
   type Command,
   createSnapshotResponseOp,
   type Engine,
   FakeRTCPeerConnection,
   InMemoryTransport,
+  type MapCreatePayload,
   type Operation,
   PROJECT_SNAPSHOT_VERSION,
   type ProjectOp,
@@ -362,6 +364,44 @@ export default async () => {
       // Live ops after registration flow straight through.
       session.peer.events.emit('op-received', { op: op('c', 3) })
       expect(received.map((o) => (o.payload as { id: string }).id)).toStrictEqual(['a', 'b', 'c'])
+      session.close('test')
+    })
+
+    await it('reassembles a chunked map-create and buffers it until the sink is set', async () => {
+      // A map-create is a `__project/*` kind, so it would otherwise land
+      // on the project sink as a raw chunk and never become a map.
+      const session = makeJoinerSession()
+      const payload: MapCreatePayload = {
+        reference: { id: 'cave', path: './maps/cave.json', type: 'map', name: 'Cave' },
+        mapData: {
+          id: 'cave',
+          name: 'Cave',
+          version: '1.0.0',
+          tileWidth: 16,
+          tileHeight: 16,
+          columns: 40,
+          rows: 30,
+          spriteSets: [],
+          layers: [{ id: 'layer_0', name: 'Background', visible: true, sprites: new Array(20_000).fill(0) }],
+        } as unknown as MapCreatePayload['mapData'],
+      }
+      const chunks = chunkMapCreate({ transferId: 'host-peer:0', payload })
+      expect(chunks.length).toBeGreaterThan(1)
+
+      const projectOps: ProjectOp[] = []
+      session.onProjectOpReceived = (o) => projectOps.push(o)
+
+      // No map-create sink yet — the completed transfer must be buffered.
+      chunks.forEach((chunk, i) => {
+        session.peer.events.emit('op-received', { op: { ...chunk, peerId: 'host-peer', seq: i } })
+      })
+      expect(projectOps).toHaveLength(0)
+
+      const received: MapCreatePayload[] = []
+      session.onMapCreateReceived = (p) => received.push(p)
+      expect(received).toHaveLength(1)
+      expect(received[0].reference.id).toBe('cave')
+      expect(received[0].mapData.layers[0].sprites.length).toBe(20_000)
       session.close('test')
     })
   })
