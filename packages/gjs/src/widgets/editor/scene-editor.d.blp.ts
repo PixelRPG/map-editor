@@ -28,6 +28,7 @@ export declare const InternalChildren: [
   "overlay",
   "backdrop",
   "engine_holder",
+  "run_frame",
   "editing_handle",
   "editing_pill",
   "back_button",
@@ -79,6 +80,7 @@ export interface Children {
   _overlay: Gtk.Overlay;
   _backdrop: Adw.Bin;
   _engine_holder: Gtk.Box;
+  _run_frame: Gtk.Box;
   _editing_handle: Gtk.WindowHandle;
   _editing_pill: Gtk.Box;
   _back_button: Gtk.Button;

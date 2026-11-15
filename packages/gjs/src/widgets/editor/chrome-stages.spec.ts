@@ -39,9 +39,8 @@ export default async () => {
     await it('offers undo in exactly one place whenever editing is possible', async () => {
       for (const { stage, layout, playing } of everyState()) {
         const f = chromeFlags(stage, layout, playing)
-        const editable = !(layout === 'phone' && playing)
         const undos = [f.undoButton, f.phoneUndo].filter(Boolean).length
-        expect(undos).toBe(editable ? 1 : 0)
+        expect(undos).toBe(playing ? 0 : 1)
       }
     })
 
@@ -59,8 +58,7 @@ export default async () => {
       // same one-place rule that holds undo honest holds it too.
       for (const { stage, layout, playing } of everyState()) {
         const f = chromeFlags(stage, layout, playing)
-        const editable = !(layout === 'phone' && playing)
-        expect([f.redoButton, f.phoneRedo].filter(Boolean).length).toBe(editable ? 1 : 0)
+        expect([f.redoButton, f.phoneRedo].filter(Boolean).length).toBe(playing ? 0 : 1)
       }
     })
 
@@ -89,6 +87,36 @@ export default async () => {
       }
     })
 
+    await it('shows neither of them while a run is going', async () => {
+      // Both are editing chrome, and the run is a Test run in both
+      // layouts; Stop, Esc and the system back are what leave it.
+      for (const { stage, layout } of everyState()) {
+        const f = chromeFlags(stage, layout, true)
+        expect([f.editingPill, f.backCircle].filter(Boolean).length).toBe(0)
+      }
+    })
+
+    await it('offers exactly one Stop and one Restart during a run', async () => {
+      // Two visible stops is the bug this catches: the FAB already says
+      // Stop on wide, so the pill's ■ is the phone's alone, while ↺ has
+      // no second home and therefore shows in both layouts.
+      for (const { stage, layout } of everyState()) {
+        const f = chromeFlags(stage, layout, true)
+        const stops = [f.stopButton, f.playFab].filter(Boolean).length
+        expect(stops).toBe(1)
+        expect(f.restartButton).toBe(true)
+      }
+    })
+
+    await it('keeps Stop and Restart out of the editor', async () => {
+      for (const { stage, layout } of everyState()) {
+        const f = chromeFlags(stage, layout, false)
+        expect(f.stopButton).toBe(false)
+        expect(f.restartButton).toBe(false)
+        expect(f.runBorder).toBe(false)
+      }
+    })
+
     await it('gives the run the whole screen on phone', async () => {
       const f = chromeFlags('tight', 'phone', true)
       expect(f.bottomBar).toBe(false)
@@ -96,16 +124,29 @@ export default async () => {
       expect(f.backCircle).toBe(false)
       expect(f.historyPill).toBe(false)
       expect(f.overflowButton).toBe(false)
-      expect(f.runtimeControls).toBe(true)
+      expect(f.stopButton).toBe(true)
+      expect(f.restartButton).toBe(true)
+      // No border on phone: the run already owns every pixel, and a
+      // frame would only take two of them from the map.
+      expect(f.runBorder).toBe(false)
     })
 
-    await it('leaves the wide layout editable while a run is going', async () => {
-      // Paint-while-the-hero-walks is tablet and desktop only: on phone
-      // the finger is the joystick.
+    await it('clears the wide chrome for a run and frames the canvas', async () => {
+      // §4.6's Test-run row. The wide run is a Test run because the
+      // engine's markers are mutually exclusive — `EditorMode` is gone
+      // the moment `RuntimeMode` arrives — so the editing pill would
+      // arm tools the engine no longer honours.
       const f = chromeFlags('roomy', 'wide', true)
-      expect(f.toolGroup).toBe(true)
-      expect(f.undoButton).toBe(true)
-      expect(f.runtimeControls).toBe(false)
+      expect(f.editingPill).toBe(false)
+      expect(f.toolGroup).toBe(false)
+      expect(f.undoButton).toBe(false)
+      expect(f.inspectorToggle).toBe(false)
+      expect(f.runBorder).toBe(true)
+      // The pill and the FAB stay: Stop is the FAB, ↺ is in the pill.
+      expect(f.overflowButton).toBe(true)
+      expect(f.playFab).toBe(true)
+      expect(f.stopButton).toBe(false)
+      expect(f.restartButton).toBe(true)
     })
   })
 

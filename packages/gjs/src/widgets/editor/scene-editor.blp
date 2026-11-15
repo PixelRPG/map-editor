@@ -134,6 +134,29 @@ template $PixelRpgSceneEditor : Adw.Bin {
         };
 
         // ============================================================
+        // RUN FRAME - the accent border around a running map (§4.6).
+        //
+        // An overlay child rather than a style on `backdrop`: the
+        // engine canvas fills the backdrop, and GTK draws a widget's
+        // own border and inset shadows UNDER its children, so a frame
+        // on the backdrop is invisible the moment the map is there.
+        // Drawing it above the canvas also keeps the engine's
+        // allocation untouched — a border on the backdrop would take
+        // 4 px off the GL area at Play and hand it back at Stop.
+        //
+        // First overlay child, so every pill and the FAB draw over it;
+        // `can-target: false` so it never eats a stroke.
+        // ============================================================
+        [overlay]
+        Gtk.Box run_frame {
+          styles ["run-frame"]
+          visible: false;
+          can-target: false;
+          hexpand: true;
+          vexpand: true;
+        }
+
+        // ============================================================
         // EDITING PILL - start-aligned, wide layouts only.
         //
         // `halign: start`, NOT `fill`. The bar it replaces was one
