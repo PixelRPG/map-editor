@@ -124,8 +124,6 @@ export function buildAtlasScenes(maps: readonly MapData[]): SampleScene[] {
       x,
       y,
       tilePx,
-      previewTileX: typeof editor.preview?.tileX === 'number' ? editor.preview.tileX : undefined,
-      previewTileY: typeof editor.preview?.tileY === 'number' ? editor.preview.tileY : undefined,
       // Event count is the number of object placements on the map —
       // every kind counts (NPCs, items, teleports, …). Pre-migration
       // code counted the legacy `type: 'object'` layers; that field

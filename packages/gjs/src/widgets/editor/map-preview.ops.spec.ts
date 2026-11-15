@@ -61,14 +61,13 @@ export default async () => {
   await describe('map-preview.ops', async () => {
     await describe('buildDrawOps', async () => {
       await it('is empty for a map with no layers', async () => {
-        expect(buildDrawOps(makeMap([]), ranges, null)).toStrictEqual([])
+        expect(buildDrawOps(makeMap([]), ranges)).toStrictEqual([])
       })
 
       await it('places a tile at its map-pixel position', async () => {
         const ops = buildDrawOps(
           makeMap([{ visible: true, sprites: [{ x: 2, y: 3, spriteId: 5, spriteSetId: 'set' }] }]),
           ranges,
-          null,
         )
         expect(ops.length).toBe(1)
         expect({ tx: ops[0].tx, ty: ops[0].ty, tw: ops[0].tw, th: ops[0].th }).toStrictEqual({
@@ -84,7 +83,6 @@ export default async () => {
         const ops = buildDrawOps(
           makeMap([{ visible: true, sprites: [{ x: 0, y: 0, spriteId: 5, spriteSetId: 'set' }] }]),
           ranges,
-          null,
         )
         expect({ sx: ops[0].sx, sy: ops[0].sy, sw: ops[0].sw, sh: ops[0].sh }).toStrictEqual({
           sx: 16,
@@ -99,7 +97,7 @@ export default async () => {
           { visible: false, sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'set' }] },
           { visible: true, sprites: [{ x: 1, y: 0, spriteId: 0, spriteSetId: 'set' }] },
         ])
-        const ops = buildDrawOps(map, ranges, null)
+        const ops = buildDrawOps(map, ranges)
         expect(ops.length).toBe(1)
         expect(ops[0].tx).toBe(16)
       })
@@ -110,39 +108,39 @@ export default async () => {
         // welcome-view preview while the engine rendered it: the preview
         // and the thing it previews disagreed.
         const map = makeMap([{ sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'set' }] }])
-        expect(buildDrawOps(map, ranges, null).length).toBe(1)
+        expect(buildDrawOps(map, ranges).length).toBe(1)
       })
 
       await it('hides ONLY on an explicit false', async () => {
         const shown = makeMap([{ visible: true, sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'set' }] }])
         const hidden = makeMap([{ visible: false, sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'set' }] }])
-        expect(buildDrawOps(shown, ranges, null).length).toBe(1)
-        expect(buildDrawOps(hidden, ranges, null).length).toBe(0)
+        expect(buildDrawOps(shown, ranges).length).toBe(1)
+        expect(buildDrawOps(hidden, ranges).length).toBe(0)
       })
 
       await it('skips a layer with no sprite array', async () => {
-        expect(buildDrawOps(makeMap([{ visible: true }]), ranges, null)).toStrictEqual([])
+        expect(buildDrawOps(makeMap([{ visible: true }]), ranges)).toStrictEqual([])
       })
 
       await it('drops a tile whose sprite set is not loaded', async () => {
         const map = makeMap([{ visible: true, sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'missing' }] }])
-        expect(buildDrawOps(map, ranges, null)).toStrictEqual([])
+        expect(buildDrawOps(map, ranges)).toStrictEqual([])
       })
 
       await it('drops a tile whose local id is past the end of the sheet', async () => {
         const map = makeMap([{ visible: true, sprites: [{ x: 0, y: 0, spriteId: 8, spriteSetId: 'set' }] }])
-        expect(buildDrawOps(map, ranges, null)).toStrictEqual([])
+        expect(buildDrawOps(map, ranges)).toStrictEqual([])
       })
 
       await it('drops a tile with a negative local id', async () => {
         const map = makeMap([{ visible: true, sprites: [{ x: 0, y: 0, spriteId: -1, spriteSetId: 'set' }] }])
-        expect(buildDrawOps(map, ranges, null)).toStrictEqual([])
+        expect(buildDrawOps(map, ranges)).toStrictEqual([])
       })
 
       await it('drops a sprite whose sheet entry never decoded a texture', async () => {
         const undecoded = [sheet('set', grid(4, 16, null))]
         const map = makeMap([{ visible: true, sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'set' }] }])
-        expect(buildDrawOps(map, undecoded, null)).toStrictEqual([])
+        expect(buildDrawOps(map, undecoded)).toStrictEqual([])
       })
 
       await it('keeps layer order — the bake paints back to front', async () => {
@@ -150,45 +148,7 @@ export default async () => {
           { visible: true, sprites: [{ x: 0, y: 0, spriteId: 0, spriteSetId: 'set' }] },
           { visible: true, sprites: [{ x: 0, y: 0, spriteId: 1, spriteSetId: 'set' }] },
         ])
-        expect(buildDrawOps(map, ranges, null).map((op) => op.sx)).toStrictEqual([0, 16])
-      })
-
-      await describe('clipping', async () => {
-        // A 16px tile grid; the clip covers map pixels [32, 96).
-        const clip = { x: 32, y: 32, w: 64, h: 64 }
-        const tileAt = (x: number, y: number) =>
-          makeMap([{ visible: true, sprites: [{ x, y, spriteId: 0, spriteSetId: 'set' }] }])
-
-        await it('keeps a tile fully inside', async () => {
-          expect(buildDrawOps(tileAt(3, 3), ranges, clip).length).toBe(1)
-        })
-
-        await it('drops the tile that ends exactly on the clip start', async () => {
-          // Tile (1,3) spans [16, 32) — touching, not overlapping.
-          expect(buildDrawOps(tileAt(1, 3), ranges, clip).length).toBe(0)
-        })
-
-        await it('keeps the first tile that reaches into the clip', async () => {
-          // Tile (2,3) spans [32, 48).
-          expect(buildDrawOps(tileAt(2, 3), ranges, clip).length).toBe(1)
-        })
-
-        await it('keeps the LAST tile inside the clip', async () => {
-          // Tile (5,3) spans [80, 96) — the final column the clip covers.
-          expect(buildDrawOps(tileAt(5, 3), ranges, clip).length).toBe(1)
-        })
-
-        await it('drops the tile that starts exactly on the clip end', async () => {
-          expect(buildDrawOps(tileAt(6, 3), ranges, clip).length).toBe(0)
-        })
-
-        await it('clips on both axes, not just x', async () => {
-          expect(buildDrawOps(tileAt(3, 6), ranges, clip).length).toBe(0)
-        })
-
-        await it('drops everything for a zero-area clip', async () => {
-          expect(buildDrawOps(tileAt(3, 3), ranges, { x: 32, y: 32, w: 0, h: 0 }).length).toBe(0)
-        })
+        expect(buildDrawOps(map, ranges).map((op) => op.sx)).toStrictEqual([0, 16])
       })
     })
 

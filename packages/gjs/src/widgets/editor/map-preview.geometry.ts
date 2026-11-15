@@ -53,19 +53,8 @@ function hashText(hash: number, text: string): number {
 }
 
 /**
- * Keep the viewport centre inside the map. Maps smaller than the viewport
- * centre. `widgetExtent` 0 (pre-allocation) also centres — the bake re-clamps
- * once the real widget size is known. `zoom` scales the visible half-extent.
- */
-export function clampViewportCenter(value: number, mapExtent: number, widgetExtent: number, zoom: number): number {
-  const half = widgetExtent > 0 ? widgetExtent / zoom / 2 : 0
-  if (!half || mapExtent <= half * 2) return mapExtent / 2
-  return Math.min(Math.max(value, half), mapExtent - half)
-}
-
-/**
- * Fit-mode destination rect: the whole map scaled to fit the widget and
- * centred in it, preserving aspect.
+ * Destination rect: the whole map scaled to fit the widget and centred in
+ * it, preserving aspect.
  */
 export function fitDestRect(widgetWidth: number, widgetHeight: number, mapWidth: number, mapHeight: number): MapRect {
   const scale = Math.min(widgetWidth / mapWidth, widgetHeight / mapHeight)
@@ -75,42 +64,10 @@ export function fitDestRect(widgetWidth: number, widgetHeight: number, mapWidth:
 }
 
 /**
- * Fit-mode bake scale: the whole map, never upscaled and never wider or
- * taller than `maxEdge` — those bakes are small thumbnails held in an LRU,
- * so their memory cost is capped rather than proportional to the world.
+ * Bake scale: the whole map, never upscaled and never wider or taller than
+ * `maxEdge` — those bakes are small thumbnails held in an LRU, so their
+ * memory cost is capped rather than proportional to the world.
  */
 export function fitBakeScale(mapWidth: number, mapHeight: number, maxEdge: number): number {
   return Math.min(1, maxEdge / Math.max(mapWidth, mapHeight))
-}
-
-/**
- * Viewport-mode source rect in map pixels for a widget of `widgetWidth ×
- * widgetHeight` at `zoom`, centred on `(centerX, centerY)`.
- *
- * The origin is rounded to a whole map pixel: a fractional origin lands
- * every tile's clip edge between device pixels, and the NEAREST-sampled
- * atlas then bleeds a hairline of the neighbouring sheet cell through —
- * visible as faint seams across the preview.
- */
-export function viewportSourceRect(
-  centerX: number,
-  centerY: number,
-  widgetWidth: number,
-  widgetHeight: number,
-  zoom: number,
-): MapRect {
-  const w = widgetWidth / zoom
-  const h = widgetHeight / zoom
-  return { x: Math.round(centerX - w / 2), y: Math.round(centerY - h / 2), w, h }
-}
-
-/** Whether a tile at `(x, y)` of size `tileWidth × tileHeight` overlaps `clip`. */
-export function tileIntersectsClip(
-  x: number,
-  y: number,
-  tileWidth: number,
-  tileHeight: number,
-  clip: MapRect,
-): boolean {
-  return x + tileWidth > clip.x && x < clip.x + clip.w && y + tileHeight > clip.y && y < clip.y + clip.h
 }

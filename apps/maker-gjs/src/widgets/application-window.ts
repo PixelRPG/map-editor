@@ -242,13 +242,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     },
     () => new Engine(),
   )
-  // Map-file persistence (serialise MapData → source JSON, atlas/preview
+  // Map-file persistence (serialise MapData → source JSON, atlas
   // editor-data writes). Injected accessors read this window's live state;
   // the op plumbing for editor-data changes stays here (collab is the
   // window's concern).
   private _mapPersistCtl = new MapPersistenceController({
     getMapResource: (mapId) => this._loadedProject?.resource.maps.get(mapId) ?? null,
-    getScene: (mapId) => this._scenes.getScene(mapId),
     getCurrentSceneId: () => this._scenes.currentSceneId,
     showError: (message) => this._showToast(message),
     sendMapEditorDataChange: (mapId, editorData) =>
