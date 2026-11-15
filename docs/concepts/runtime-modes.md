@@ -67,7 +67,9 @@ const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
 if (!inRuntime) { /* hide player, zero velocity, skip input */ }
 ```
 
-**What's actually gated today:** `PlayerSystem` is the only system with a direct marker check. That single gate carries the runtime semantics indirectly — walk-onto/action triggers, item pickups and teleport requests can only fire in runtime mode because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`. Two known gaps against the design intent: (a) `TileEditorSystem` does not check `EditorModeComponent`, so an armed pencil/eraser/object tool still paints during Play (undoable + broadcast — acceptable as proto-Live-Run, but unintentional in Test Run); (b) `TriggerSystem.fireAuto` runs at scene init regardless of mode — latent, since no shipped template uses `on: 'auto'`. Either implement the missing guards or promote this behaviour to design — tracked as drift until then.
+**What's actually gated today:** `PlayerSystem` and `TileEditorSystem` carry direct marker checks. `PlayerSystem`'s gate carries the runtime semantics indirectly — walk-onto/action triggers, item pickups and teleport requests can only fire in runtime mode because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`. `TileEditorSystem.isEditingLive()` gates tap, long-press and hover on `EditorModeComponent`, so a Test run cannot paint while a Live Run still can (both markers present → gate open).
+
+One known gap against the design intent remains: `TriggerSystem.fireAuto` runs at scene init regardless of mode — latent, since no shipped template uses `on: 'auto'`. Either implement the guard or promote the behaviour to design — tracked as drift until then.
 
 ### Ghost spawn replaces the real spawn
 
@@ -144,7 +146,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 - `packages/engine/src/components/runtime-mode.component.ts`
 - `packages/engine/src/components/spawn-override.component.ts`
 - Session-singleton helper in `packages/engine/src/utils/session-state.ts` (singleton entity name: `session-state`)
-- `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)` — the only direct marker gate so far (see "Systems gate themselves" for the two gaps); `Engine.setRuntimeMode()` is the host-facing switch
+- `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)`; `TileEditorSystem.isEditingLive()` reads `EditorModeComponent` to gate its pointer handlers (see "Systems gate themselves" for the one remaining gap); `Engine.setRuntimeMode()` is the host-facing switch
 
 **Phase 2 — Maker controls (landed)**:
 - Play / Stop wired through `win.play` in `apps/maker-gjs/src/widgets/application-window.ts` → toggles the session markers in the active `MapScene`
