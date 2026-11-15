@@ -21,6 +21,7 @@ import {
   promptRename,
   SignalScope,
   teleportSummaries,
+  type Tile,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
@@ -606,6 +607,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
     })
+    this.signals.connect(
+      this._atlas_view,
+      'door-retargeted',
+      (_v: AtlasView, mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => {
+        this._retargetDoor(mapId, placementId, targetMapId, { x: tileX, y: tileY })
+      },
+    )
     // The header switchers and the bottom switcher bar all drive
     // `shell_stack` directly, so the stack — not a per-view signal — is
     // where a destination change becomes observable. Mirror it into
@@ -1189,6 +1197,32 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   /** A map's display name for a sentence about it, falling back to its id. */
   private _mapNameOf(mapId: string): string {
     return this._scenes.getScene(mapId)?.name ?? mapId
+  }
+
+  /**
+   * The write behind the atlas's drag-to-connect (REDESIGN.md § 6.2's
+   * expert path): the door `placementId` on `mapId` now leads to
+   * `tile` of `targetMapId`.
+   *
+   * Opens the DOOR's map first and leaves the user there, for the same
+   * reason the connection verbs do: the edit is a command on that map's
+   * own undo stack, and dropping the user back on the atlas would park
+   * an undo entry on a stack they are not looking at.
+   *
+   * No door back is placed. The picker flow offers one because it has
+   * already asked the person two questions and can ask a third; a drag
+   * is one gesture meaning one arrow, and quietly writing a second
+   * placement onto the target map would be an edit nobody asked for.
+   * The way back is a drag from the other side.
+   */
+  private _retargetDoor(mapId: string, placementId: string, targetMapId: string, tile: Tile): void {
+    this._scenes.open(mapId, () => {
+      if (this._scene_editor_view.pointDoorAt(placementId, targetMapId, tile)) {
+        this._showToast(_('This door now leads to “%s”').replace('%s', this._mapNameOf(targetMapId)))
+      } else {
+        this._showToast(_('Could not set where this door leads'))
+      }
+    })
   }
 
   /**

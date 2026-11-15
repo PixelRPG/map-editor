@@ -72,6 +72,29 @@ export function tileAtPoint(card: EndpointCard, point: OverlayPoint): { x: numbe
   }
 }
 
+/** A card the pointer can land on: its map id and the rect it was drawn in. */
+export interface PlacedCard {
+  mapId: string
+  rect: SceneRect
+}
+
+/**
+ * Which card the surface point `point` landed on, or `null` — the map a
+ * drag-to-connect drop means.
+ *
+ * Searched from the END of the list because that is the order the cards
+ * were put into the `Gtk.Fixed`, and a later child draws ON TOP of an
+ * earlier one: when two cards overlap, the one the user sees under the
+ * pointer is the last one that contains the point, not the first.
+ */
+export function cardAtPoint(cards: readonly PlacedCard[], point: OverlayPoint): string | null {
+  for (let i = cards.length - 1; i >= 0; i--) {
+    const card = cards[i]
+    if (rectContains(card.rect, point)) return card.mapId
+  }
+  return null
+}
+
 /**
  * Quadratic-Bézier control point, offset perpendicular to the segment
  * midpoint by `min(CURVE_OFFSET_MAX, length × CURVE_OFFSET_FACTOR)`.

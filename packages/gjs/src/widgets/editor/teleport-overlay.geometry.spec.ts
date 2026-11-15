@@ -2,6 +2,7 @@ import { describe, expect, it } from '@gjsify/unit'
 
 import {
   arrowheadPoints,
+  cardAtPoint,
   clipToViewport,
   controlPoint,
   CURVE_OFFSET_FACTOR,
@@ -100,6 +101,39 @@ export default async () => {
         const tile = tileAtPoint({ rect: { x: 10, y: 20, w: 0, h: 0 }, cols: 0, rows: 0 }, { x: 99, y: 99 })
         expect(tile.x).toBe(0)
         expect(tile.y).toBe(0)
+      })
+    })
+
+    await describe('cardAtPoint', async () => {
+      const cards = [
+        { mapId: 'left', rect: { x: 0, y: 0, w: 100, h: 100 } },
+        { mapId: 'right', rect: { x: 200, y: 0, w: 100, h: 100 } },
+      ]
+
+      await it('names the card the point is inside', async () => {
+        expect(cardAtPoint(cards, { x: 50, y: 50 })).toBe('left')
+        expect(cardAtPoint(cards, { x: 250, y: 50 })).toBe('right')
+      })
+
+      await it('returns null for a point on the backdrop', async () => {
+        expect(cardAtPoint(cards, { x: 150, y: 50 })).toBe(null)
+      })
+
+      await it('returns null for an empty atlas', async () => {
+        expect(cardAtPoint([], { x: 0, y: 0 })).toBe(null)
+      })
+
+      await it('picks the LAST overlapping card — the one drawn on top', async () => {
+        const stacked = [
+          { mapId: 'under', rect: { x: 0, y: 0, w: 100, h: 100 } },
+          { mapId: 'over', rect: { x: 50, y: 50, w: 100, h: 100 } },
+        ]
+        expect(cardAtPoint(stacked, { x: 75, y: 75 })).toBe('over')
+        expect(cardAtPoint(stacked, { x: 10, y: 10 })).toBe('under')
+      })
+
+      await it('counts the far edge of a card as a hit', async () => {
+        expect(cardAtPoint(cards, { x: 100, y: 100 })).toBe('left')
       })
     })
 

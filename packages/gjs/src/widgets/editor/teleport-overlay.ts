@@ -17,15 +17,19 @@ import {
 } from './map-connections.model.ts'
 import {
   arrowheadPoints,
+  cardAtPoint,
   clipToViewport,
   distanceToQuad,
+  type EndpointCard,
   fanFactor,
   fannedControl,
   type OverlayPoint,
+  type PlacedCard,
   pointOnQuad,
   rectContains,
   stubEnd,
   teleportEndpoint,
+  tileAtPoint,
 } from './teleport-overlay.geometry.ts'
 
 const ACCENT_FALLBACK = '#3584e4'
@@ -62,6 +66,16 @@ const ARRIVAL_RING_RADIUS = 5
 const ARRIVAL_CORE_RADIUS = 3.2
 
 const ARROW_SIZE = 9
+
+/**
+ * The drag handle on every door of the SELECTED map — the expert path of
+ * REDESIGN.md § 6.2: drag from a door onto another card to say where it
+ * leads. Only the selected map grows handles, so the atlas is not a
+ * field of grab targets, and a handle is bigger to the pointer than it
+ * is to the eye because it is dragged, not admired.
+ */
+const HANDLE_RING_RADIUS = 10
+const HANDLE_HIT_RADIUS = 15
 
 /** Length of the stub a door that goes nowhere trails off into. */
 const STUB_LENGTH = 34
@@ -102,6 +116,18 @@ interface DrawnConnection {
 interface EdgeChip {
   rect: SceneRect
   mapId: string
+}
+
+/** A door of the selected map, and the point its drag handle sits on. */
+export interface DoorHandle {
+  point: OverlayPoint
+  door: DoorRef
+}
+
+/** A drag-to-connect in flight: the door it started at, and the pointer. */
+export interface ConnectDrag {
+  from: OverlayPoint
+  to: OverlayPoint
 }
 
 /**
@@ -145,6 +171,10 @@ export class TeleportOverlay extends Gtk.Widget {
   private _zoom = 1
   /** Edge chips placed by the last snapshot — see {@link chipAt}. */
   private _chips: EdgeChip[] = []
+  /** Drag handles of the selected map's doors — see {@link handleAt}. */
+  private _handles: DoorHandle[] = []
+  /** The drag-to-connect in flight, or `null`. */
+  private _connect: ConnectDrag | null = null
 
   static {
     GObject.registerClass(
@@ -183,6 +213,7 @@ export class TeleportOverlay extends Gtk.Widget {
   setSelected(id: string | null): void {
     if (this._selectedId === id) return
     this._selectedId = id
+    this._rebuildHandles()
     this.queue_draw()
   }
 
@@ -231,6 +262,60 @@ export class TeleportOverlay extends Gtk.Widget {
   }
 
   /**
+   * The drag handle under `point` (surface coords), or `null`. A press
+   * on one starts a drag-to-connect instead of moving the card it sits
+   * on.
+   *
+   * Returns the handle rather than just its door because the caller
+   * needs both: the door to act on, and the point to draw the dragged
+   * line from — which is the door's tile, not the pixel the finger
+   * happened to land on inside the handle.
+   */
+  handleAt(point: OverlayPoint): DoorHandle | null {
+    let best: DoorHandle | null = null
+    let bestDistance = HANDLE_HIT_RADIUS
+    for (const handle of this._handles) {
+      const distance = Math.hypot(handle.point.x - point.x, handle.point.y - point.y)
+      if (distance <= bestDistance) {
+        bestDistance = distance
+        best = handle
+      }
+    }
+    return best
+  }
+
+  /**
+   * Show (or clear) the line a drag-to-connect is dragging. Drawn as a
+   * preview only — the host decides on drop whether anything is written.
+   */
+  setConnectDrag(drag: ConnectDrag | null): void {
+    this._connect = drag
+    this.queue_draw()
+  }
+
+  /**
+   * The map and tile a drop at `point` (surface coords) means, or `null`
+   * when it landed on the backdrop.
+   *
+   * The card is picked from the rects the camera last placed rather than
+   * from GTK: the overlay is `can_target = false`, so it cannot pick the
+   * sibling card the pointer is over, and the rects are the same numbers
+   * the user saw drawn.
+   */
+  dropTargetAt(point: OverlayPoint): { mapId: string; tile: { x: number; y: number } } | null {
+    const cards: PlacedCard[] = []
+    for (const scene of this._scenes) {
+      const rect = this._rects.get(scene.id)
+      if (rect) cards.push({ mapId: scene.id, rect })
+    }
+    const mapId = cardAtPoint(cards, point)
+    if (!mapId) return null
+    const card = this._cardOf(mapId)
+    if (!card) return null
+    return { mapId, tile: tileAtPoint(card, point) }
+  }
+
+  /**
    * The doors a connection was folded from, resolved from the model's
    * input indices back to the teleports they came from.
    *
@@ -267,7 +352,7 @@ export class TeleportOverlay extends Gtk.Widget {
   }
 
   vfunc_snapshot(snapshot: Gtk.Snapshot): void {
-    if (!this._layout.length) return
+    if (!this._layout.length && !this._handles.length) return
 
     const accent = this._lookupColor('accent_bg_color', this._accentColor)
     this._accentColor = accent
@@ -287,6 +372,46 @@ export class TeleportOverlay extends Gtk.Widget {
       if (!this._isVisible(drawn)) return
       this._drawConnection(snapshot, drawn, index, { solid, dashed, accent, broken, white })
     })
+
+    // Last, so the thing being dragged and the things that can be
+    // grabbed are never hidden under a line that merely passes over.
+    if (this._connect) this._drawConnectDrag(snapshot, this._connect, dashed, accent, white)
+    this._drawHandles(snapshot, accent, white)
+  }
+
+  /**
+   * The line a drag-to-connect is dragging: dashed from the door to the
+   * pointer, with the arrival dot at the pointer end.
+   *
+   * Straight rather than bowed, and borrowing the one-way line's dash
+   * plus arrival dot: the drag is a one-way target being aimed, so it
+   * looks like what it is about to produce, and a straight line keeps
+   * the far end exactly under the finger that is placing it.
+   */
+  private _drawConnectDrag(
+    snapshot: Gtk.Snapshot,
+    drag: ConnectDrag,
+    dashed: Gsk.Stroke,
+    colour: Gdk.RGBA,
+    white: Gdk.RGBA,
+  ): void {
+    const builder = new Gsk.PathBuilder()
+    builder.move_to(drag.from.x, drag.from.y)
+    builder.line_to(drag.to.x, drag.to.y)
+    snapshot.push_stroke(builder.to_path(), dashed)
+    snapshot.append_color(colour, this._coverRect())
+    snapshot.pop()
+    this._drawDisc(snapshot, drag.to.x, drag.to.y, ARRIVAL_RING_RADIUS, colour)
+    this._drawDisc(snapshot, drag.to.x, drag.to.y, ARRIVAL_CORE_RADIUS, white)
+  }
+
+  /** The grab target on each door of the selected map. */
+  private _drawHandles(snapshot: Gtk.Snapshot, colour: Gdk.RGBA, white: Gdk.RGBA): void {
+    for (const handle of this._handles) {
+      this._drawDisc(snapshot, handle.point.x, handle.point.y, HANDLE_RING_RADIUS, colour)
+      this._drawDisc(snapshot, handle.point.x, handle.point.y, HANDLE_RING_RADIUS - STROKE_WIDTH, white)
+      this._drawDoorGlyph(snapshot, handle.point, colour, white)
+    }
   }
 
   /**
@@ -327,6 +452,7 @@ export class TeleportOverlay extends Gtk.Widget {
     // against the new geometry instead of highlighting a stale index.
     this._hovered = this._hoverPoint ? this._hitIndex(this._hoverPoint) : null
     this._chips = []
+    this._rebuildHandles()
   }
 
   /** Whether `drawn` is painted at all at the current zoom. */
@@ -423,13 +549,46 @@ export class TeleportOverlay extends Gtk.Widget {
     tileX: number,
     tileY: number,
   ): OverlayPoint | null {
-    const scene = byId.get(sceneId)
+    const card = this._cardOf(sceneId, byId.get(sceneId))
+    if (!card) return null
+    return teleportEndpoint(card, { x: tileX, y: tileY })
+  }
+
+  /**
+   * The scene's drawn body rect plus its tile dimensions — everything
+   * both {@link teleportEndpoint} and {@link tileAtPoint} need, and the
+   * one place the two derivations of "how many tiles is this map" live.
+   */
+  private _cardOf(sceneId: string, known?: SampleScene): EndpointCard | null {
+    const scene = known ?? this._scenes.find((candidate) => candidate.id === sceneId)
     const rect = this._rects.get(sceneId)
     if (!scene || !rect) return null
     const cols = scene.rows[0]?.length || scene.cols || 0
     const rows = scene.rows.length || scene.previewRows || 0
     if (!cols || !rows) return null
-    return teleportEndpoint({ rect, cols, rows }, { x: tileX, y: tileY })
+    return { rect, cols, rows }
+  }
+
+  /**
+   * Place a drag handle on every door that LEAVES the selected map.
+   *
+   * Only the outgoing end gets one: a handle means "drag me to say where
+   * this goes", and the far end of a pair belongs to the other map,
+   * where it will grow its own handle when that map is selected.
+   */
+  private _rebuildHandles(): void {
+    const handles: DoorHandle[] = []
+    const selected = this._selectedId
+    if (selected) {
+      const byId = new Map<string, SampleScene>()
+      for (const scene of this._scenes) byId.set(scene.id, scene)
+      for (const teleport of this._teleports) {
+        if (teleport.from !== selected) continue
+        const point = this._endpoint(byId, teleport.from, teleport.fx, teleport.fy)
+        if (point) handles.push({ point, door: { mapId: teleport.from, placementId: teleport.placementId } })
+      }
+    }
+    this._handles = handles
   }
 
   private _sceneName(sceneId: string): string {

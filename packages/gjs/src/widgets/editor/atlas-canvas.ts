@@ -19,7 +19,7 @@ import {
   surfacePadding,
   zoomAroundPointer,
 } from './atlas-camera.ts'
-import type { ConnectionHit } from './map-connections.model.ts'
+import type { ConnectionHit, DoorRef } from './map-connections.model.ts'
 import { buildConnectionMenu, type ConnectionMenuFacts, buildMapContextMenu } from './map-menu.ts'
 import { MapPreview } from './map-preview'
 import { SceneCard } from './scene-card'
@@ -75,6 +75,7 @@ export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
   'scene-drag-began': (sceneId: string) => void
   'scene-opened': (sceneId: string) => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
+  'door-retargeted': (mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => void
   'camera-changed': () => void
   'world-changed': () => void
 }
@@ -236,6 +237,20 @@ export class AtlasCanvas extends Adw.Bin {
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
+          },
+          // A door was dragged from its handle onto a tile of another
+          // card: `(mapId, placementId, targetMapId, tileX, tileY)`.
+          // The canvas only reports the gesture — the host owns the
+          // write, because pointing a door somewhere is a Command on
+          // the door's own map and needs that map open.
+          'door-retargeted': {
+            param_types: [
+              GObject.TYPE_STRING,
+              GObject.TYPE_STRING,
+              GObject.TYPE_STRING,
+              GObject.TYPE_INT,
+              GObject.TYPE_INT,
+            ],
           },
           // The camera moved by an explicit operation (zoom, fit,
           // focus, restore) — the OSD pill re-reads the zoom level.
@@ -698,6 +713,13 @@ export class AtlasCanvas extends Adw.Bin {
    * the chip is a way to follow a connection, and a user who was
    * comparing it against the map they had picked would lose that pick.
    *
+   * Between the two, a press that landed on a CARD is handed back: a
+   * line ends on the door's own tile, so a plain click on a card near
+   * one of its doors is within the line's hit radius, and testing the
+   * line here would open a popover where the user asked to pick the
+   * map. The chips are tested before that check because they are drawn
+   * at the viewport edge, over whatever card happens to be there.
+   *
    * Claims the sequence only on a hit, so an ordinary press on empty
    * surface still reaches the backdrop pan.
    */
@@ -708,6 +730,7 @@ export class AtlasCanvas extends Adw.Bin {
       this.focusScene(mapId)
       return
     }
+    if (this._surface.pick(x, y, Gtk.PickFlags.DEFAULT) !== this._surface) return
     const hit = this._teleports.connectionAt({ x, y })
     if (!hit) return
     gesture.set_state(Gtk.EventSequenceState.CLAIMED)
@@ -934,10 +957,26 @@ export class AtlasCanvas extends Adw.Bin {
     let atlasOrigin = { x: 0, y: 0 }
     let bodyOrigin = { x: 0, y: 0 }
     let cardOrigin = { x: 0, y: 0 }
+    // Set for the whole drag when the press landed on a door's drag
+    // handle: the same gesture then aims that door instead of moving
+    // the card. One stream, two meanings, decided once at begin —
+    // a second gesture competing for the press would make which one
+    // wins depend on controller order.
+    let connect: { door: DoorRef; from: { x: number; y: number }; press: { x: number; y: number } } | null = null
     card.connect('scene-drag-begin', () => {
       const scene = this._scenes.find((s) => s.id === sceneId)
       const rect = this._drawn.get(sceneId)
       if (!scene || !rect) return
+
+      const press = card.pressInParent
+      const handle = press ? this._teleports.handleAt(press) : null
+      if (press && handle) {
+        connect = { door: handle.door, from: handle.point, press }
+        this._teleports.setConnectDrag({ from: handle.point, to: press })
+        return
+      }
+      connect = null
+
       const offset = this._offsets.get(sceneId) ?? { x: 0, y: 0 }
       atlasOrigin = { x: scene.x, y: scene.y }
       bodyOrigin = { x: rect.x, y: rect.y }
@@ -951,6 +990,13 @@ export class AtlasCanvas extends Adw.Bin {
       this.emit('scene-drag-began', sceneId)
     })
     card.connect('scene-drag-update', (_c: SceneCard, dx: number, dy: number) => {
+      if (connect) {
+        this._teleports.setConnectDrag({
+          from: connect.from,
+          to: { x: connect.press.x + dx, y: connect.press.y + dy },
+        })
+        return
+      }
       const rect = this._drawn.get(sceneId)
       if (!rect) return
       this._surface.move(card, cardOrigin.x + dx, cardOrigin.y + dy)
@@ -961,6 +1007,19 @@ export class AtlasCanvas extends Adw.Bin {
       this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
     })
     card.connect('scene-drag-end', (_c: SceneCard, dx: number, dy: number) => {
+      if (connect) {
+        const { door, press } = connect
+        connect = null
+        this._teleports.setConnectDrag(null)
+        // A drop on the backdrop is a cancel, not a clear: letting go
+        // over nothing is how a user abandons a drag they started by
+        // accident, and silently unlinking the door would be the one
+        // outcome they cannot undo from the atlas.
+        const target = this._teleports.dropTargetAt({ x: press.x + dx, y: press.y + dy })
+        if (!target) return
+        this.emit('door-retargeted', door.mapId, door.placementId, target.mapId, target.tile.x, target.tile.y)
+        return
+      }
       const scene = this._scenes.find((s) => s.id === sceneId)
       if (!scene) return
       // Snap the release position to the atlas grid so cards line up.

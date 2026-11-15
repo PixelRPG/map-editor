@@ -57,6 +57,7 @@ export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
   'scene-opened': (sceneId: string) => void
   'scene-selected': (sceneId: string) => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
+  'door-retargeted': (mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => void
 }
 
 /**
@@ -141,6 +142,17 @@ export class AtlasView extends ResponsiveEditorView {
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
+          },
+          // Forwarded straight from the canvas: the window owns the
+          // write, because it needs the door's map open to issue it.
+          'door-retargeted': {
+            param_types: [
+              GObject.TYPE_STRING,
+              GObject.TYPE_STRING,
+              GObject.TYPE_STRING,
+              GObject.TYPE_INT,
+              GObject.TYPE_INT,
+            ],
           },
         },
       },
@@ -438,6 +450,13 @@ export class AtlasView extends ResponsiveEditorView {
     this.signals.connect(this._atlas, 'scene-moved', (_a: AtlasCanvas, id: string, x: number, y: number) => {
       this.emit('scene-moved', id, x, y)
     })
+    this.signals.connect(
+      this._atlas,
+      'door-retargeted',
+      (_a: AtlasCanvas, mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => {
+        this.emit('door-retargeted', mapId, placementId, targetMapId, tileX, tileY)
+      },
+    )
     // Zoom reached by pinch, Ctrl+scroll or Fit — mirror it into the
     // OSD pill's percentage label. Pans do not change it.
     this.signals.connect(this._atlas, 'camera-changed', () => {

@@ -1216,7 +1216,9 @@ on the scene the load then replaces and vanishes silently.
 | List mode: `win.map-list` (context pill's "⋯", `Ctrl+L`) swaps `surface_stack` for a `Gtk.ListBox` of maps at every width; the FAB and the selection bar survive the swap, the zoom pill and overview minimap do not (REDESIGN § 4.2 / § 9 step 5.4) | **landed** |
 | The list row's "peers present" column (REDESIGN § 4.2) | deferred, tracked in `TODO.md` |
 | Atlas connections: the overlay draws (`can_target = false`) and the canvas feeds it hover, viewport and zoom; an edge chip is the tap target that pans to an off-screen map (REDESIGN § 6.2 / § 9 step 5.6) | **landed** |
-| A label on a line without a pointer — touch reaches one only through the selection, until step 5.7's popover | deferred, tracked in `TODO.md` |
+| A press on a connection opens a popover naming both ends, with *Go to the door* per end, *Remove* and — on a broken one — the same `Goes to…` the scene editor's placement menu carries; the items are window actions with targets (`win.unlink-door` as `a(ss)` clears both ends of a pair, `win.fix-door`, and the existing `win.focus-placement`), so the canvas needs no wide signal (REDESIGN § 6.2 / § 9 step 5.7) | **landed** |
+| Drag-to-connect: a press on a door handle re-aims the existing `scene-drag-*` stream instead of moving the card, so the expert path adds no competing gesture; only the selected map's outgoing doors grow handles, and a drop on the backdrop cancels (REDESIGN § 6.2 / § 9 step 5.7) | **landed** |
+| A label on a line without a pointer — a tap now names both ends in the popover, but the on-demand label itself is still hover- or selection-driven | deferred, tracked in `TODO.md` |
 | Deselecting a map in the world view — clicking the backdrop pans, so the bar stays up once a map has been picked | deliberate, see "The world view's selection bar" |
 
 Cross-references:

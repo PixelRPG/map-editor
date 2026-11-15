@@ -293,6 +293,21 @@ export class SceneCard extends Gtk.Button {
     return this._dragging
   }
 
+  /**
+   * Where the press that started the current drag landed, in the atlas
+   * surface's coords — or `null` outside a drag.
+   *
+   * Exposed so the canvas can ask what the press was ON before deciding
+   * what the drag MEANS: a press on a door's drag handle re-aims that
+   * door instead of moving the card. The card cannot answer that itself
+   * (the handles belong to the overlay), and the point is already in the
+   * surface space the overlay hit-tests in.
+   */
+  get pressInParent(): { x: number; y: number } | null {
+    const point = this._pressInParent
+    return point ? { x: point.x, y: point.y } : null
+  }
+
   /** Mirror the design's "selected" outer ring via a style class. */
   set selected(value: boolean) {
     if (this._selected === value) return
