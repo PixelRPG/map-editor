@@ -128,6 +128,8 @@ export class SceneEditor extends Adw.Bin {
   private _fullView = false
   private _playing = false
   private _picking = false
+  /** Whether the selected placement is a door — see {@link _buildPlacementMenu}. */
+  private _selectionIsDoor = false
   private _brushLabel = ''
   private _mapName = ''
   private _cursorText = ''
@@ -401,9 +403,12 @@ export class SceneEditor extends Adw.Bin {
    * The row exists at every width; on wide layouts the whole docked bar
    * is hidden, so this is a no-op there rather than a special case.
    */
-  setPlacementSelected(name: string | null): void {
+  setPlacementSelected(name: string | null, isDoor = false): void {
     this._selection_label.set_text(name)
     this._bar_row_b.set_visible_child_name(name === null ? 'recent' : 'selection')
+    if (isDoor === this._selectionIsDoor) return
+    this._selectionIsDoor = isDoor
+    this._buildPlacementMenu()
   }
 
   get floatingPlay(): FloatingPlay {
@@ -725,20 +730,28 @@ export class SceneEditor extends Adw.Bin {
   }
 
   /**
-   * The placement context menu's model — static, so it is built once.
-   * Every action is stateless and reads the current selection, the
-   * same contract as `win.undo`: the long press sets the selection
-   * before the menu opens, so nothing has to be carried in an action
-   * target. The same four verbs make up the phone selection bar
-   * ({@link setPlacementSelected}) — one set of actions, two surfaces.
+   * The placement context menu's model. Every action is stateless and
+   * reads the current selection, the same contract as `win.undo`: the
+   * long press sets the selection before the menu opens, so nothing has
+   * to be carried in an action target. The same four verbs make up the
+   * phone selection bar ({@link setPlacementSelected}) — one set of
+   * actions, two surfaces.
+   *
+   * Rebuilt whenever the selection changes between a door and anything
+   * else, because "Goes to…" (REDESIGN § 5.5) is the one entry that is
+   * not always there: a thing with no teleport component has no
+   * destination to set, and an entry that answers nothing is worse than
+   * an entry that is absent. Five appends, so rebuilding is cheaper
+   * than a `Gio.Menu` section swapped in and out.
    */
   private _buildPlacementMenu(): void {
     const model = new Gio.Menu()
     model.append(_('Edit'), 'win.edit-placement')
     model.append(_('Copy'), 'win.copy-placement')
     model.append(_('Move'), 'win.move-placement')
-    // "Goes to… ›" from REDESIGN §5.5 is missing on purpose: it needs
-    // the map + spawn-point picker of §6.2, which does not exist yet.
+    // No "›": the entry opens a dialog, and §5.5's chevron described a
+    // submenu the flow does not use.
+    if (this._selectionIsDoor) model.append(_('Goes to…'), 'win.door-target')
     model.append(_('Delete'), 'win.delete-placement')
     this._placementMenu.set_menu_model(model)
   }

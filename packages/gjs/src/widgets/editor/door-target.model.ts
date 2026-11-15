@@ -33,7 +33,7 @@ export interface DoorTeleport {
 }
 
 /** Minimal shape of one component entry on a definition. */
-interface ComponentEntry {
+export interface ComponentEntry {
   type: string
   [key: string]: unknown
 }
@@ -106,6 +106,29 @@ export function withDoorTarget(
     targetTileX: tile.x,
     targetTileY: tile.y,
   }
+}
+
+/**
+ * `components` with its teleport entry replaced by `teleport` — or
+ * `teleport` appended when it carried none.
+ *
+ * Every other component is kept and keeps its position: a door is also a
+ * sprite, a collider and usually a trigger, and the door back is a copy
+ * of a real door with only its destination rewritten. Rebuilding the
+ * list from the teleport alone would strip the thing down to a teleport
+ * that looks like nothing on the map.
+ */
+export function withDoorTargetComponents(
+  components: readonly ComponentEntry[] | undefined,
+  teleport: DoorTeleport & { type: 'teleport' },
+): ComponentEntry[] {
+  const existing = components ?? []
+  // Spread into a fresh literal: `DoorTeleport` is an interface, and an
+  // interface has no implicit index signature, so it is not a
+  // `ComponentEntry` until it is copied into one.
+  const entry: ComponentEntry = { ...teleport }
+  if (!existing.some((component) => component.type === 'teleport')) return [...existing, entry]
+  return existing.map((component) => (component.type === 'teleport' ? entry : component))
 }
 
 /** The way back out of a door you just walked through. */

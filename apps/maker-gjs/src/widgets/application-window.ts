@@ -15,6 +15,7 @@ import {
 import {
   type CollaboratorEntry,
   Engine,
+  mapCaption,
   type MapSelectionBar,
   mapSelectionFacts,
   promptRename,
@@ -42,6 +43,7 @@ import { AssistantStateService } from '../services/assistant-state.service.ts'
 import type { BackStep } from '../services/back-order.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
+import { DoorTargetFlow } from '../services/door-target-flow.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import { GameController } from '../services/game-controller.ts'
@@ -74,6 +76,7 @@ import { RecentProjectsDialog } from './recent-projects-dialog.ts'
 import type { ResponsiveEditorView } from './responsive-editor-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
+import { type DoorTargetMapOption, presentDoorTargetDialog } from './scene-editor/door-target-dialog.ts'
 import { confirmMapDelete, presentMapSettingsDialog, presentNewMapDialog } from './world/map-dialogs.ts'
 
 // Force registration so the `$PixelRpgLibraryView` / `$PixelRpgGameView`
@@ -313,6 +316,44 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     refreshAtlasWorld: (project) =>
       this._atlas_view.setWorld(project.scenes, project.teleports, project.resource, project.projectPath),
   })
+  /**
+   * REDESIGN § 6.2's "Goes to" flow: the picker, the trip to the target
+   * map in pick mode, the optional door back, the trip home and the
+   * teleport write. The flow is a service so none of that sequencing
+   * lives in this window; what stays here is the four things only the
+   * window has — the dialog, the navigator, the live map data and the
+   * toast surface.
+   */
+  private readonly _doorFlow = new DoorTargetFlow({
+    readDoor: (placementId) => this._scene_editor_view.doorAt(placementId),
+    currentMapId: () => this._scenes.currentSceneId,
+    mapBounds: (mapId) => {
+      const mapData = this._loadedProject?.resource.maps.get(mapId)?.mapData
+      return mapData ? { columns: mapData.columns, rows: mapData.rows } : null
+    },
+    askForMap: (currentTargetMapId, onChoose) => {
+      const project = this._loadedProject
+      if (!project) return
+      presentDoorTargetDialog(
+        this,
+        { maps: this._doorTargetOptions(), projectResource: project.resource, currentTargetMapId },
+        onChoose,
+      )
+    },
+    // `open` and not the engine's `map-loaded`: that event fires before
+    // the inspector is populated, so a flow resuming on it would read
+    // the map it just left.
+    openMap: (mapId, onReady) => this._scenes.open(mapId, onReady),
+    armPick: (request) => this._engineCtl.engine?.excalibur?.armArrivalPick(request),
+    setPicking: (picking) => this._scene_editor_view.setPicking(picking),
+    placeInline: (definition, tile) => this._scene_editor_view.placeInlineObject(definition, tile),
+    pointDoor: (placementId, targetMapId, tile) => this._scene_editor_view.pointDoorAt(placementId, targetMapId, tile),
+    reportCancelled: () => this._showToast(_('Left the door as it was')),
+    reportTargetSet: (targetMapId) =>
+      this._showToast(_('This door now leads to “%s”').replace('%s', this._mapNameOf(targetMapId))),
+    reportDoorBackFailed: () => this._showToast(_('No room for a door back — place it by hand')),
+    reportFailed: () => this._showToast(_('Could not set where this door leads')),
+  })
   private readonly _session = new SessionCoordinator({
     // The gjs Engine widget wraps the same core `@pixelrpg/engine` Engine
     // the CollabSession expects, so this is an unwrap, not a cast.
@@ -452,6 +493,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         // tap, not an error, so a toast is the whole response.
         else this._showToast(_('That one cannot move there.'))
       },
+      arrivalPicked: (request) => this._doorFlow.arrivalPicked(request),
       setLayerFlag: (layerId, flag, value) => this._scene_editor_view.setLayerFlag(layerId, flag, value),
       refreshLayers: () => {
         const sceneId = this._scenes.currentSceneId
@@ -612,6 +654,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       toast.connect('button-clicked', () => this.activate_action('win.undo', null))
       this._toast_overlay.add_toast(toast)
     })
+
+    // The § 6.2 flow's two window-bound ends: the question (from the
+    // action, the canvas menu or the Selected page's row) and the pick
+    // banner's Cancel.
+    this.signals.connect(this._scene_editor_view, 'door-target-requested', (_v: unknown, placementId: string) => {
+      this._doorFlow.start(placementId)
+    })
+    this.signals.connect(this._scene_editor_view, 'pick-cancelled', () => this._doorFlow.cancel())
 
     this._ensureControllers()
 
@@ -841,6 +891,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       copyPlacement: () => this._scene_editor_view.copySelectedPlacement(),
       movePlacement: () => this._scene_editor_view.armPlacementMove(),
       deletePlacement: () => this._scene_editor_view.deleteSelectedPlacement(),
+      // Through the view's signal rather than straight into the flow:
+      // the action, the canvas menu and the Selected page's row then
+      // all arrive by one road, and only the view knows what is
+      // selected.
+      doorTarget: () => this._scene_editor_view.requestDoorTargetForSelection(),
       undo: () => this._engineCtl.engine?.undo(),
       redo: () => this._engineCtl.engine?.redo(),
       createLayer: (plane) => this._createLayer(plane),
@@ -1102,6 +1157,33 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
+   * Every map the door could lead to, for the § 6.2 picker.
+   *
+   * The subtitles are the SAME caption the atlas list mode puts under a
+   * map card (`mapCaption` over `mapSelectionFacts`), including the
+   * things count when the Library is in full view — two lists of the
+   * same maps that described them differently would read as two
+   * different sets of maps.
+   *
+   * The door's own map is included: a staircase between two floors
+   * authored as one map is a door to itself.
+   */
+  private _doorTargetOptions(): DoorTargetMapOption[] {
+    const project = this._loadedProject
+    if (!project) return []
+    return project.scenes.map((scene) => ({
+      id: scene.id,
+      name: scene.name,
+      subtitle: mapCaption(mapSelectionFacts(scene, project.teleports), { things: this._fullView }),
+    }))
+  }
+
+  /** A map's display name for a sentence about it, falling back to its id. */
+  private _mapNameOf(mapId: string): string {
+    return this._scenes.getScene(mapId)?.name ?? mapId
+  }
+
+  /**
    * Back to World from the map editor, with the atlas on the map just
    * left (REDESIGN.md § 3.4 step 5). Both gestures route here —
    * `win.back-to-atlas` (the editor's own back buttons, the MCP bridge,
@@ -1112,6 +1194,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * zoom is the card-preview scale the user chose, not a camera.
    */
   private _leaveMap(): void {
+    // Leaving the map editor ends any pick in flight. The engine's half
+    // of the arming dies with the scene, but the chrome's does not — so
+    // without this, the next map opened would come up wearing the pick
+    // banner and nothing would be listening for the tap.
+    this._doorFlow.abandon()
     const sceneId = this._scenes.currentSceneId
     this._router.setView('world')
     if (sceneId) this._atlas_view.focusScene(sceneId)

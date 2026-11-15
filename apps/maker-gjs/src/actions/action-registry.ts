@@ -80,6 +80,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'copy-placement',
     'move-placement',
     'delete-placement',
+    'door-target',
     'undo',
     'redo',
     'new-layer',

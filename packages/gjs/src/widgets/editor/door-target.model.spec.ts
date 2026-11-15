@@ -7,6 +7,7 @@ import {
   planDoorBack,
   readDoorTeleport,
   withDoorTarget,
+  withDoorTargetComponents,
 } from './door-target.model.ts'
 
 const BIG: MapBounds = { columns: 100, rows: 100 }
@@ -84,6 +85,30 @@ export default async function doorTargetModelSuite(): Promise<void> {
     await it('builds a complete teleport for a door that had none', async () => {
       const next = withDoorTarget(null, 'tree-house', { x: 3, y: 4 })
       expect(next).toStrictEqual({ type: 'teleport', targetMapId: 'tree-house', targetTileX: 3, targetTileY: 4 })
+    })
+  })
+
+  await describe('withDoorTargetComponents', async () => {
+    const teleport = { type: 'teleport' as const, targetMapId: 'tree-house', targetTileX: 1, targetTileY: 2 }
+
+    await it('replaces the teleport in place and keeps the rest', async () => {
+      const next = withDoorTargetComponents(
+        [
+          { type: 'sprite', spriteSetId: 'overworld' },
+          { type: 'teleport', targetMapId: 'kokiri-forest' },
+          { type: 'trigger', on: 'walk-onto' },
+        ],
+        teleport,
+      )
+      expect(next.map((component) => component.type)).toStrictEqual(['sprite', 'teleport', 'trigger'])
+      expect(next[1]).toStrictEqual(teleport)
+      // What makes the door back look like a door: its sprite survives.
+      expect(next[0]).toStrictEqual({ type: 'sprite', spriteSetId: 'overworld' })
+    })
+
+    await it('appends to a definition that carried no teleport', async () => {
+      expect(withDoorTargetComponents([{ type: 'sprite' }], teleport)).toStrictEqual([{ type: 'sprite' }, teleport])
+      expect(withDoorTargetComponents(undefined, teleport)).toStrictEqual([teleport])
     })
   })
 

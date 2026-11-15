@@ -7,6 +7,7 @@ import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
 type PlacementContextPayload = EngineEventMap[EngineEvent.PLACEMENT_CONTEXT_REQUESTED]
+type ArrivalPickPayload = EngineEventMap[EngineEvent.ARRIVAL_PICK_REQUESTED]
 type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
 type LayerListChangedPayload = EngineEventMap[EngineEvent.LAYER_LIST_CHANGED]
 type ShowTextPayload = EngineEventMap[EngineEvent.SHOW_TEXT_REQUESTED]
@@ -70,6 +71,14 @@ export interface EngineControllerEvents {
    */
   'placement-moved': { placementId: string; moved: boolean }
   /**
+   * The engine's `ARRIVAL_PICK_REQUESTED` event — a tap landed on a map
+   * that was in § 6.2's pick mode, naming the tile a door on ANOTHER
+   * map arrives at. Unlike the move above, nothing is performed here:
+   * the answer is an edit on each of two maps with a navigation between
+   * them, and only the window can do that (`DoorTargetFlow`).
+   */
+  'arrival-picked': ArrivalPickPayload
+  /**
    * The engine's `LAYER_FLAG_CHANGED` event — fired on every
    * application path of the layer-flag commands (local toggle,
    * undo/redo, AND inbound peer ops, which don't emit
@@ -125,6 +134,7 @@ export const ENGINE_HOOKS = [
   'placement-selected',
   'placement-context',
   'placement-move',
+  'arrival-pick',
   'layer-flag',
   'layer-list',
   'pointer-tile',
@@ -315,6 +325,7 @@ export class EngineController {
     this._attachPlacementSelectedHook()
     this._attachPlacementContextHook()
     this._attachPlacementMoveHook()
+    this._attachArrivalPickHook()
     this._attachLayerFlagHook()
     this._attachLayerListHook()
     this._attachPointerTileHook()
@@ -457,6 +468,21 @@ export class EngineController {
         engine.events.on(EngineEvent.PLACEMENT_MOVE_REQUESTED, ({ placementId, coords }) => {
           const moved = engine.excalibur?.movePlacement(placementId, coords.x, coords.y) ?? false
           this._events.emit('placement-moved', { placementId, moved })
+        }),
+      )
+      return true
+    })
+  }
+
+  /**
+   * Hand the arrival pick straight to the host. There is nothing to
+   * perform here — see {@link EngineControllerEvents}' `arrival-picked`.
+   */
+  private _attachArrivalPickHook(): void {
+    this._attachOnce('arrival-pick', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.ARRIVAL_PICK_REQUESTED, (payload) => {
+          this._events.emit('arrival-picked', payload)
         }),
       )
       return true

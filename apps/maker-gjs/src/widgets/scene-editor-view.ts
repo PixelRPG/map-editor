@@ -23,6 +23,7 @@ import {
   planeOf,
   populatedPlanes,
   pushRecent,
+  readDoorTeleport,
   RightInspector,
   type SampleScene,
   SceneEditor,
@@ -30,7 +31,11 @@ import {
   sheetGridOf,
   type TileDescriptor,
   type TilesetChipDescriptor,
+  type Tile,
+  withDoorTarget,
+  withDoorTargetComponents,
 } from '@pixelrpg/gjs'
+import type { DoorInfo } from '../services/door-target-flow.ts'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
@@ -86,6 +91,8 @@ export interface SceneEditorViewSignals extends ResponsiveEditorViewSignals {
   'persist-requested': () => void
   'object-removed': () => void
   'layer-deleted': (layerName: string) => void
+  'pick-cancelled': () => void
+  'door-target-requested': (placementId: string) => void
 }
 
 /**
@@ -208,6 +215,13 @@ export class SceneEditorView extends ResponsiveEditorView {
           // had. The host owns the toast surface and raises the "Undo"
           // that stands in for the confirmation dialog.
           'layer-deleted': { param_types: [GObject.TYPE_STRING] },
+          // The pick banner's Cancel, forwarded from the chrome. The
+          // host owns the flow that armed the pick — and owes the
+          // person the map they came from (REDESIGN § 6.2).
+          'pick-cancelled': { param_types: [] },
+          // "Goes to…" was chosen for a placement, from the Selected
+          // page's row or the canvas menu. The host runs the flow.
+          'door-target-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
       SceneEditorView,
@@ -243,6 +257,10 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._editor.connect('detent-changed', () => {
       this._engine?.setViewportInset({ bottom: this._editor.bottomInset })
     })
+    // Forwarded rather than handled: the pick was armed by the host's
+    // flow controller, which is the only thing that knows where the
+    // person came from and what they were about to answer.
+    this._editor.connect('pick-cancelled', () => this.emit('pick-cancelled'))
   }
 
   /** Show the current zoom in the transient bottom-centre readout. */
@@ -486,6 +504,20 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
+   * Ask where the selected door leads — `win.door-target` and the
+   * canvas menu's "Goes to…".
+   *
+   * It emits the same signal the Selected page's row does instead of
+   * calling the host directly, so all three affordances arrive at the
+   * flow by one road. Silent with nothing (or more than one thing)
+   * selected, like the other four placement verbs.
+   */
+  requestDoorTargetForSelection(): void {
+    const placementId = this._selectedPlacementId()
+    if (placementId) this.emit('door-target-requested', placementId)
+  }
+
+  /**
    * The single selected placement, or `null` when nothing (or more than
    * one thing) is selected — the menu entries act on one object, and
    * acting on "the first of several" would be a guess.
@@ -508,7 +540,9 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._pages.selected.setPlacement(desc)
     // The phone bar's second row names the selection and offers its
     // verbs; with nothing selected it goes back to the recent tiles.
-    this._editor.setPlacementSelected(desc?.definition.name ?? null)
+    // A door also gets the canvas menu's "Goes to…" entry, which is the
+    // same test the Selected page's row uses — a teleport component.
+    this._editor.setPlacementSelected(desc?.definition.name ?? null, desc?.doorTarget != null)
   }
 
   /**
@@ -552,24 +586,93 @@ export class SceneEditorView extends ResponsiveEditorView {
    *
    * `placementId` comes from the page so a late emit from a placement
    * that is no longer selected cannot write onto the current one.
+   *
+   * Returns whether the edit landed, which the Selected page ignores —
+   * but {@link pointDoorAt} reports, because a door the person was
+   * asked two questions about must not fail silently.
    */
-  private _applyPlacementEdit(placementId: string, entityJson: string): void {
+  private _applyPlacementEdit(placementId: string, entityJson: string): boolean {
     const placement = this._mapData?.objectPlacements?.find((p) => p.id === placementId)
-    if (!placement) return
+    if (!placement) return false
     const base = basePlacementDefinition(placement, this._entityLibrary)
-    if (!base) return
+    if (!base) return false
     let edited: EntityDefinition
     try {
       edited = JSON.parse(entityJson) as EntityDefinition
     } catch {
-      return
+      return false
     }
     const overrides = placementOverridesFrom(base, edited)
-    if (!this._engine?.excalibur?.setPlacementOverrides(placementId, overrides)) return
+    if (!this._engine?.excalibur?.setPlacementOverrides(placementId, overrides)) return false
     // The page shows the name and the kind; a committed rename has to
     // reach them, and the engine has already mutated the live map data.
     this._syncSelectedObjectProps(placementId)
     this._persistMapData()
+    return true
+  }
+
+  /**
+   * What the door-target flow needs to know about the door behind
+   * `placementId`, or `null` when that placement is not a door.
+   *
+   * Read off the LIVE map data and handed over as a plain object: the
+   * flow's trip through the target map replaces `this._mapData`, so a
+   * flow that held the id instead of the facts would come back and read
+   * a different map's placements.
+   */
+  doorAt(placementId: string): DoorInfo | null {
+    const placement = this._mapData?.objectPlacements?.find((p) => p.id === placementId)
+    if (!placement) return null
+    const definition = resolvePlacementDefinition(placement, this._entityLibrary)
+    if (!definition) return null
+    const teleport = readDoorTeleport(definition.components)
+    if (!teleport) return null
+    return { tile: { x: placement.tileX, y: placement.tileY }, definition, teleport }
+  }
+
+  /**
+   * Point a door at `tile` on `targetMapId` — the write that ends the
+   * "Goes to" flow (REDESIGN § 6.2).
+   *
+   * It goes through the same overrides diff as a hand edit of the
+   * Selected page's definition sheet, so re-pointing a door back at
+   * what the library says stops overriding instead of leaving a copy of
+   * the library in the map file.
+   */
+  pointDoorAt(placementId: string, targetMapId: string, tile: Tile): boolean {
+    const door = this.doorAt(placementId)
+    if (!door) return false
+    const edited: EntityDefinition = {
+      ...door.definition,
+      components: withDoorTargetComponents(
+        door.definition.components,
+        withDoorTarget(door.teleport, targetMapId, tile),
+      ) as EntityDefinition['components'],
+    }
+    return this._applyPlacementEdit(placementId, JSON.stringify(edited))
+  }
+
+  /**
+   * Stamp a placement carrying its own definition on `tile` of the
+   * active map — the optional door back.
+   *
+   * No layer is named, so it lands on the active one, exactly where a
+   * hand-placed Thing would. A locked active layer therefore refuses
+   * it, which the flow reports rather than works around.
+   */
+  placeInlineObject(definition: EntityDefinition, tile: Tile): boolean {
+    const placementId = this._engine?.excalibur?.placeInlineObjectAt(definition, null, tile.x, tile.y) ?? null
+    if (!placementId) return false
+    this._persistMapData()
+    return true
+  }
+
+  /**
+   * Take the editing chrome away down to the pick banner, or put it
+   * back — the map is being shown for one question only (§ 6.2).
+   */
+  setPicking(picking: boolean): void {
+    this._editor.setPicking(picking)
   }
 
   /**
@@ -1135,7 +1238,10 @@ export class SceneEditorView extends ResponsiveEditorView {
       openObjectDefinition: (defId) => this.activate_action('win.open-object', GLib.Variant.new_string(defId)),
       removePlacement: (placementId) => this._removePlacement(placementId),
       duplicatePlacement: (placementId) => this._duplicatePlacement(placementId),
-      applyPlacementEdit: (placementId, entityJson) => this._applyPlacementEdit(placementId, entityJson),
+      applyPlacementEdit: (placementId, entityJson) => {
+        this._applyPlacementEdit(placementId, entityJson)
+      },
+      requestDoorTarget: (placementId) => this.emit('door-target-requested', placementId),
     })
   }
 
