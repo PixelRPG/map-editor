@@ -6,6 +6,7 @@ import actionRegistrySuite from './actions/action-registry.spec.js'
 import windowActionsSuite from './actions/window-actions.gjs.spec.js'
 import instanceIdSuite from './instance-id.spec.js'
 import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js'
+import atlasCameraStoreSuite from './services/atlas-camera-store.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
 import backOrderSuite from './services/back-order.spec.js'
 import collabLogSuite from './services/collab-log.spec.js'
@@ -71,6 +72,7 @@ run({
   actionRegistrySuite,
   assistantPausePolicySuite,
   assistantStateServiceSuite,
+  atlasCameraStoreSuite,
   backOrderSuite,
   castControllerAnimationsSuite,
   castControllerPreviewCacheSuite,

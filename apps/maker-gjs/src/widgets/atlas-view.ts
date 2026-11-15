@@ -16,6 +16,7 @@ import {
   SignalScope,
 } from '@pixelrpg/gjs'
 
+import { loadAtlasCamera, saveAtlasCamera } from '../services/atlas-camera-store.ts'
 import Template from './atlas-view.blp'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 
@@ -65,6 +66,12 @@ export class AtlasView extends ResponsiveEditorView {
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
   private _projectResource: GameProjectResource | null = null
+  /**
+   * Path of the project whose camera {@link _saveCamera} writes — the
+   * key the camera store is indexed by. `null` while the demo world is
+   * showing, which has no project to remember a camera for.
+   */
+  private _projectPath: string | null = null
 
   static {
     GObject.registerClass(
@@ -168,24 +175,53 @@ export class AtlasView extends ResponsiveEditorView {
   }
 
   /**
+   * Remember where the user is looking, so reopening this project lands
+   * on the same view. No-op for the demo world and while the canvas has
+   * no allocation yet (a zero-sized viewport would persist a camera the
+   * user never chose).
+   */
+  private _saveCamera(): void {
+    if (!this._projectPath) return
+    const { h } = this._atlas.adjustments
+    if (h.page_size <= 0) return
+    saveAtlasCamera(this._projectPath, this._atlas.camera)
+  }
+
+  /**
    * Replace the demo world with a real project's data. Optionally pass
    * the loaded `GameProjectResource` so atlas cards + the scene
-   * inspector can render real tile previews of each map.
+   * inspector can render real tile previews of each map, and the
+   * project's path so its camera can be remembered across sessions.
    */
   setWorld(
     scenes: SampleScene[],
     teleports: SampleTeleport[],
     projectResource: GameProjectResource | null = null,
+    projectPath: string | null = null,
   ): void {
+    // Switching projects: bank the outgoing one's camera before the
+    // path changes, or it is lost. A reload of the SAME project (a map
+    // added, renamed, deleted) keeps its camera below instead.
+    if (this._projectPath && this._projectPath !== projectPath) this._saveCamera()
+    // Read the live camera before the canvas re-lays out, so a reload
+    // of the same project resumes from where the user actually was
+    // rather than from a clamped intermediate.
+    const sameProject = projectPath !== null && this._projectPath === projectPath
+    const current = this._atlas.camera
     this._scenes = scenes
     this._teleports = teleports
     this._projectResource = projectResource
+    this._projectPath = projectPath
     this._atlas.setWorld(scenes, teleports, projectResource)
     this._atlas.setStartMapId(projectResource?.data?.startup?.initialMapId ?? null)
     this._inspector.setScene(null, scenes, teleports, projectResource)
-    // Open a real project fitted so every map is reachable at once,
+    // Reopen a project where the user left it; a project seen for the
+    // first time opens fitted so every map is reachable at once,
     // instead of the old 200 % top-left dump that ran off-viewport.
-    this._atlas.fit()
+    // A same-project reload must not yank the camera either.
+    const remembered = sameProject ? current : projectPath ? loadAtlasCamera(projectPath) : null
+    if (remembered) this._atlas.restoreCamera(remembered)
+    else this._atlas.fit()
     this._refreshOverview()
   }
 
@@ -251,6 +287,10 @@ export class AtlasView extends ResponsiveEditorView {
   }
 
   vfunc_unmap(): void {
+    // Leaving the World view (to the map editor, to Cast, or closing the
+    // window) is the moment the camera is final. Saving on every pan
+    // would write the store dozens of times a second.
+    this._saveCamera()
     this.signals.disconnectAll()
     super.vfunc_unmap()
   }

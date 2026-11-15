@@ -300,7 +300,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (placementId) this._scene_editor_view.focusPlacement(placementId)
     },
     populateInspector: (project, sceneId) => this._scene_editor_view.populateFromProject(project, sceneId),
-    refreshAtlasWorld: (project) => this._atlas_view.setWorld(project.scenes, project.teleports, project.resource),
+    refreshAtlasWorld: (project) =>
+      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource, project.projectPath),
   })
   private readonly _session = new SessionCoordinator({
     // The gjs Engine widget wraps the same core `@pixelrpg/engine` Engine
@@ -321,7 +322,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     showToast: (message) => this._showToast(message),
     setProject: (project) => this._projectStore.setProject(project),
     adoptProject: (project) => {
-      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
+      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource, project.projectPath)
       this._scenes.setScenes(project.scenes)
       // A fresh project has no atlas selection yet, so this lands the
       // four selection-driven map verbs on insensitive.
@@ -519,7 +520,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     project.scenes = world.scenes
     project.teleports = world.teleports
     this._scenes.setScenes(world.scenes)
-    this._atlas_view.setWorld(world.scenes, world.teleports, project.resource)
+    this._atlas_view.setWorld(world.scenes, world.teleports, project.resource, project.projectPath)
     this._refreshMapActions()
   }
 
