@@ -26,6 +26,7 @@ import { gettext as _ } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
 import { installBackActions } from '../actions/back-actions.ts'
 import { installCastActions } from '../actions/cast-actions.ts'
+import { installConnectionActions } from '../actions/connection-actions.ts'
 import { installEditingActions } from '../actions/editing-actions.ts'
 import { installInspectorActions } from '../actions/inspector-actions.ts'
 import { installMapActions } from '../actions/map-actions.ts'
@@ -990,6 +991,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       startHere: () => this._startMapHere(),
       presentMapSettings: () => this._presentMapSettings(),
       setListMode: (on) => this._atlas_view.setListMode(on),
+    })
+
+    installConnectionActions(group, {
+      openMap: (mapId, then) => this._scenes.open(mapId, then),
+      clearDoorTarget: (placementId) => this._scene_editor_view.clearDoorTargetAt(placementId),
+      askWhereDoorGoes: (placementId) => this._doorFlow.start(placementId),
+      showToast,
     })
 
     installWindowAccels(this.get_application())

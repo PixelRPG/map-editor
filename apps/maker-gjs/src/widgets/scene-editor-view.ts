@@ -34,6 +34,7 @@ import {
   type Tile,
   withDoorTarget,
   withDoorTargetComponents,
+  withoutDoorTarget,
 } from '@pixelrpg/gjs'
 import type { DoorInfo } from '../services/door-target-flow.ts'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
@@ -647,6 +648,29 @@ export class SceneEditorView extends ResponsiveEditorView {
       components: withDoorTargetComponents(
         door.definition.components,
         withDoorTarget(door.teleport, targetMapId, tile),
+      ) as EntityDefinition['components'],
+    }
+    return this._applyPlacementEdit(placementId, JSON.stringify(edited))
+  }
+
+  /**
+   * Take a door's destination away — the atlas popover's *Remove*
+   * (REDESIGN § 6.2).
+   *
+   * Same overrides diff as {@link pointDoorAt}, so a door whose target
+   * only ever came from the entity library stops overriding instead of
+   * gaining an override that says "no target". What stays is a door
+   * that goes nowhere: the placement, its sprite and its collider are
+   * untouched, which is the state the atlas draws as a red stub.
+   */
+  clearDoorTargetAt(placementId: string): boolean {
+    const door = this.doorAt(placementId)
+    if (!door) return false
+    const edited: EntityDefinition = {
+      ...door.definition,
+      components: withDoorTargetComponents(
+        door.definition.components,
+        withoutDoorTarget(door.teleport),
       ) as EntityDefinition['components'],
     }
     return this._applyPlacementEdit(placementId, JSON.stringify(edited))
