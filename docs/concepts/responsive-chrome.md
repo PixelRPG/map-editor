@@ -1039,7 +1039,7 @@ on the scene the load then replaces and vanishes silently.
 | A drag on the sheet picking a multi-tile stamp, and the "Search tiles…" row (REDESIGN § 5.3) | deferred / dropped, tracked in `TODO.md` |
 | The *Layers* page gives every row a "⋯" menu (long-press / right-click too) with Rename · Duplicate · Move up · Move down · Move to plane ▸ · Delete, an "Add a layer" row per section (one row in Simple view), and 44 px eye / lock / "⋯" targets; the Things eye moved to the view menu as "Show Things" (REDESIGN § 6.3 / § 9 step 3.5) | **landed** |
 | An explicit drag handle on a layer row — reorder stays a row-wide drag (REDESIGN § 6.3) | deferred, tracked in `TODO.md` |
-| Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
+| Virtual joystick + action button for a phone Live Run (REDESIGN § 5.6 / § 9 step 4.1) — overlay children of the *engine* widget, not of the editor chrome; a run on phone also collapses the sheet, so nothing rests over the thumb | **landed** |
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller

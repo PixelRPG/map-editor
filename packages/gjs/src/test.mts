@@ -37,6 +37,7 @@ import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geom
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
 import tileSheetGeometrySuite from './widgets/editor/tile-sheet.geometry.spec.js'
 import touchGestureSuite from './widgets/engine/touch-gesture.spec.js'
+import virtualStickSuite from './widgets/engine/virtual-stick.spec.js'
 
 run({
   addAnimationDialogModelSuite,
@@ -64,4 +65,5 @@ run({
   tilePaletteGeometrySuite,
   tileSheetGeometrySuite,
   touchGestureSuite,
+  virtualStickSuite,
 })

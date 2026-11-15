@@ -262,6 +262,11 @@ export class SceneEditorView extends ResponsiveEditorView {
   setEngineWidget(widget: Gtk.Widget | null, engine?: Engine | null): void {
     this._editor.setEngine(widget)
     this._engine = engine ?? null
+    // A fresh engine widget has no idea how wide the window is, and
+    // `_onInspectorCollapsedChanged` already fired for this width — seed
+    // it here or a phone that opened a map would show a run with no
+    // controls until the next resize.
+    this._engine?.setCompactLayout(this.inspectorCollapsed)
   }
 
   /**
@@ -316,6 +321,10 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   protected _onInspectorCollapsedChanged(collapsed: boolean): void {
     this._editor.setLayout(collapsed ? 'phone' : 'wide')
+    // The engine widget owns the Live Run's on-screen controls, and the
+    // phone breakpoint is half of its "are they needed" test — it cannot
+    // see the window itself.
+    this._engine?.setCompactLayout(collapsed)
     // Re-parent, don't rebuild: `EditorPages` is the single set of page
     // widgets, so the layer list, the palette and the selection survive
     // the crossing with their state intact.
