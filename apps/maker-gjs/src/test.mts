@@ -57,6 +57,7 @@ import layerDraftSuite from './services/layer-draft.spec.js'
 import libraryChipSuite from './services/library-chip.spec.js'
 import projectStoreBroadcastSuite from './services/project-store-broadcast.spec.js'
 import projectStoreEntitiesSuite from './services/project-store-entities.spec.js'
+import projectStoreMapsSuite from './services/project-store-maps.spec.js'
 import projectStorePersistenceSuite from './services/project-store-persistence.spec.js'
 import projectStoreSpriteSetsSuite from './services/project-store-sprite-sets.spec.js'
 import sessionDiscoveryIndexSuite from './services/session-discovery-index.spec.js'
@@ -108,6 +109,7 @@ run({
   projectLoaderSuite,
   projectStoreBroadcastSuite,
   projectStoreEntitiesSuite,
+  projectStoreMapsSuite,
   projectStorePersistenceSuite,
   projectStoreSpriteSetsSuite,
   projectStoreSuite,

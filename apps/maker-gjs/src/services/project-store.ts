@@ -3,12 +3,16 @@ import {
   applyEntityRemove,
   applyEntityUpsert,
   applyGameSystemsSet,
+  applyMapCreate,
   applyMapEditorData,
+  applyMapRemove,
+  applyMapRename,
   applyPlayerSet,
   applyProjectMetaUpdate,
   applySpriteSetReference,
   applySpriteSetRemove,
   applySpriteSetUpdate,
+  applyStartupSet,
   type ComponentSpecRegistry,
   effectiveComponentRegistry,
   projectHasSimpleViewHiddenContent,
@@ -17,7 +21,12 @@ import {
   type GameProjectData,
   type GameSystemsSetOp,
   MAP_EDITOR_DATA_KIND,
+  MAP_REMOVE_KIND,
+  MAP_RENAME_KIND,
+  type MapCreatePayload,
+  type MapData,
   type MapEditorDataOp,
+  type MapRenameOp,
   PROJECT_META_UPDATE_KIND,
   type ProjectMetaUpdateOp,
   type ProjectOp,
@@ -26,31 +35,51 @@ import {
   type SpriteSetData,
   SpriteSetResource,
   type SpriteSetUpdatePayload,
+  STARTUP_SET_KIND,
   withGameSystemEnabled,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
-import type { LoadedProject } from './project-loader.ts'
+import { buildAtlasScenes, type LoadedProject } from './project-loader.ts'
 import {
   bindProjectSinks,
   broadcastEntityRemove,
   broadcastEntityUpsert,
   broadcastGameSystems,
+  broadcastMapCreate,
+  broadcastMapRemove,
+  broadcastMapRename,
   broadcastPlayerSet,
   broadcastProjectMeta,
   broadcastSpriteSetAdd,
   broadcastSpriteSetRemove,
   broadcastSpriteSetUpdate,
+  broadcastStartupSet,
   type ProjectSyncSession,
 } from './project-store-broadcast.ts'
 import { applyEntityLibraryOp, buildRefOptions, findEntityById, type RefOption } from './project-store-entities.ts'
 import type { EntityLibraryChangeSource, ProjectStoreEvents } from './project-store-events.ts'
 import {
+  countDoorsInto,
+  draftMapData,
+  duplicateMapData,
+  duplicateMapName,
+  freeAtlasSlot,
+  type MapSize,
+  mapReferenceFor,
+  nextMapName,
+  uniqueMapId,
+} from './project-store-maps.ts'
+import {
   DEFAULT_PROJECT_STORE_IO,
+  deleteMapFile,
   deleteSpriteSetFiles,
   isPlainFilename,
+  type MapPaths,
+  mapPaths,
   type ProjectStoreIo,
   type SpriteSetPaths,
   spriteSetPaths,
+  writeMapData,
   writeProjectData,
   writeSpriteSetDescriptor,
 } from './project-store-persistence.ts'
@@ -80,6 +109,8 @@ export type { EntityLibraryChangeSource, ProjectStoreEvents, ProjectStoreNotice 
  *   - every `entityLibrary` / `playerActorId` mutation,
  *   - sprite-set CRUD (import / delete / rename / reorder / descriptor
  *     mutation) including the on-disk `<id>.png` + `<id>.json` pair,
+ *   - map CRUD (create / duplicate / rename / delete / start map)
+ *     including the on-disk `maps/<id>.json`,
  *   - the collab broadcast for all of the above
  *     (`project-store-broadcast.ts`), and
  *   - the application of inbound peer ops (the single-applier role) —
@@ -107,6 +138,13 @@ export type { EntityLibraryChangeSource, ProjectStoreEvents, ProjectStoreNotice 
  *   but the in-memory state still updates, so the UI doesn't snap back
  *   on a transient disk error. The in-memory project is the source of
  *   truth for the whole open session.
+ * - a NEW `maps/<id>.json` (create / duplicate / inbound peer create):
+ *   write-then-commit via {@link _commitNewMap}. The file is written
+ *   FIRST and the reference, the persist and the broadcast only follow
+ *   once that succeeded — a map that cannot be saved is neither
+ *   registered nor broadcast, so no peer ends up holding a reference to
+ *   a file that does not exist here. A rename writes the EXISTING file
+ *   best-effort instead (the name already lives in the project file).
  * - `spritesets/<id>.json` (descriptor CONTENT — name, animations, tile
  *   properties): write-then-commit via {@link _commitSpriteSet}. The
  *   next descriptor is built as a detached object, serialised + written
@@ -198,6 +236,7 @@ export class ProjectStore {
             projectOp: (op) => this.applyRemoteProjectOp(op),
             spriteSetAdd: (payload) => this.applyRemoteSpriteSetAdd(payload),
             spriteSetUpdate: (payload) => this.applyRemoteSpriteSetUpdate(payload),
+            mapCreate: (payload) => this.applyRemoteMapCreate(payload),
           }
         : null,
     )
@@ -330,6 +369,128 @@ export class ProjectStore {
   }
 
   // ────────────────────────────────────────────────────────────
+  // Maps (create / duplicate / rename / delete / start map)
+  // ────────────────────────────────────────────────────────────
+
+  /** Every loaded map's data, in project order. */
+  mapDatas(): MapData[] {
+    const maps = this.resource?.maps
+    return maps ? [...maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : [])) : []
+  }
+
+  /** The id of the map the game starts on, or `null` when none is set. */
+  startMapId(): string | null {
+    return this.data?.startup?.initialMapId ?? null
+  }
+
+  /**
+   * How many doors across the whole project lead INTO `mapId` — what
+   * the delete confirmation names, because deleting the map leaves
+   * every one of them pointing nowhere.
+   */
+  doorsInto(mapId: string): number {
+    return countDoorsInto(mapId, this.mapDatas(), this.data?.entityLibrary ?? [])
+  }
+
+  /**
+   * The next default name for a new map (`Map 3`) / for a duplicate of
+   * `mapId` (`Copy of Forest`). The store is UI-free, so the caller
+   * passes the translated template — see {@link nextMapName}.
+   */
+  suggestMapName(template?: string): string {
+    return nextMapName(this._mapNames(), template)
+  }
+
+  /** @see suggestMapName */
+  suggestDuplicateName(mapId: string, template?: string): string {
+    const source = this.mapDatas().find((m) => m.id === mapId)
+    return duplicateMapName(source?.name ?? mapId, this._mapNames(), template)
+  }
+
+  /**
+   * Create a blank map: write `maps/<id>.json` FIRST, then register the
+   * reference, persist, broadcast and notify. Write-then-commit on
+   * purpose — a map whose file cannot be saved is neither registered in
+   * `game-project.json` nor broadcast to peers, so no peer ends up with
+   * a reference to a file that does not exist here.
+   *
+   * Returns the new map's id, or `null` when nothing was created. The
+   * host loads the file into the live resource on `maps-changed`
+   * (`added`) — the store owns no engine loading.
+   */
+  createMap(name: string, size: MapSize, layerName?: string): string | null {
+    const trimmed = name.trim()
+    if (!trimmed) return null
+    return this._commitNewMap(trimmed, (id, slot) => draftMapData(id, trimmed, size, slot, layerName))
+  }
+
+  /**
+   * Duplicate a map under a fresh id + name, placed on the next free
+   * atlas slot. Same write-then-commit contract as {@link createMap} —
+   * on the wire a duplicate IS a create (`__project/map.create.chunk`
+   * carrying the copied map data), so peers need no second vocabulary.
+   */
+  duplicateMap(mapId: string, name: string): string | null {
+    const trimmed = name.trim()
+    const source = this.mapDatas().find((m) => m.id === mapId)
+    if (!trimmed || !source) return null
+    return this._commitNewMap(trimmed, (id, slot) => duplicateMapData(source, id, trimmed, slot))
+  }
+
+  /**
+   * Rename a map: both the project-level reference and the live map
+   * data (two denormalised copies of the same name), then persist the
+   * map file + the project, broadcast and notify. The map's `path` is
+   * NOT derived from the name, so no file moves. No-op on a blank
+   * name, an unchanged name or an unknown id.
+   */
+  renameMap(mapId: string, name: string): boolean {
+    const data = this.data
+    const trimmed = name.trim()
+    if (!data || !trimmed) return false
+    if (!(data.maps ?? []).some((m) => m.id === mapId)) return false
+    if (this.mapDatas().find((m) => m.id === mapId)?.name === trimmed) return false
+    const renamed = applyMapRename(data, this.mapDatas(), { mapId, name: trimmed })
+    if (renamed) this._persistMap(renamed)
+    this._persistProject()
+    broadcastMapRename(this._session, mapId, trimmed)
+    this._events.emit('maps-changed', { renamed: mapId })
+    return true
+  }
+
+  /**
+   * Delete a map: drop the reference, delete `maps/<id>.json`, evict
+   * the live resource, persist, broadcast and notify. Refuses to remove
+   * the LAST map — a project with no maps has no resolvable
+   * `startup.initialMapId` and would stop validating (the UI keeps
+   * Delete insensitive for a lone map; this is the backstop). Doors
+   * pointing at the map are left alone: the user was told how many
+   * there are before confirming.
+   */
+  removeMap(mapId: string): boolean {
+    const data = this.data
+    if (!data || (data.maps ?? []).length <= 1) return false
+    if (!this._applyMapRemoval(mapId)) return false
+    broadcastMapRemove(this._session, mapId)
+    return true
+  }
+
+  /**
+   * Point `startup.initialMapId` at a map — "Start the game here".
+   * Persists, broadcasts and notifies. Returns `false` (changing
+   * nothing) for an unknown map or when it is already the start map.
+   */
+  setStartMap(mapId: string): boolean {
+    const data = this.data
+    if (!data || data.startup?.initialMapId === mapId) return false
+    if (!applyStartupSet(data, mapId)) return false
+    this._persistProject()
+    broadcastStartupSet(this._session, mapId)
+    this._events.emit('maps-changed', { startupChanged: true })
+    return true
+  }
+
+  // ────────────────────────────────────────────────────────────
   // Remote-op application (single applier)
   // ────────────────────────────────────────────────────────────
 
@@ -353,7 +514,61 @@ export class ProjectStore {
       this._applyRemoteMapEditorData(op.payload)
     } else if (op.kind === GAME_SYSTEMS_SET_KIND) {
       this._applyRemoteGameSystems(data, op.payload)
+    } else if (op.kind === MAP_RENAME_KIND) {
+      this._applyRemoteMapRename(data, op.payload)
+    } else if (op.kind === MAP_REMOVE_KIND) {
+      this._applyMapRemoval(op.payload.mapId)
+    } else if (op.kind === STARTUP_SET_KIND) {
+      this._applyRemoteStartupSet(data, op.payload.initialMapId)
     }
+  }
+
+  /**
+   * Apply an inbound map CREATE (or duplicate) from a peer: write the
+   * map file into this project's `maps/`, register the reference —
+   * keeping the sender's id so every door that targets it still
+   * resolves — persist, and notify so the host loads it live.
+   * Idempotent: re-applying overwrites the same file and replaces the
+   * reference by id. Does NOT re-broadcast.
+   */
+  applyRemoteMapCreate(payload: MapCreatePayload): void {
+    const data = this.data
+    if (!data) return
+    const id = payload.reference.id
+    // SECURITY: `id` is peer-supplied and feeds a filesystem path. The
+    // path is DERIVED from the vetted id rather than taken from the
+    // peer's `reference.path`, so the only peer string that reaches the
+    // FS is one that cannot escape `maps/`.
+    const paths = this._mapPaths(id)
+    if (!paths) {
+      console.warn('[ProjectStore] Rejected peer map with unsafe id:', id)
+      return
+    }
+    if (!writeMapData(this.io, paths.file, { ...payload.mapData, id })) {
+      console.warn('[ProjectStore] Failed to write peer map:', paths.file)
+      return
+    }
+    applyMapCreate(data, { ...payload.reference, id, path: paths.referencePath })
+    this._persistProject()
+    this._events.emit('maps-changed', { added: id })
+  }
+
+  /**
+   * Coarse rename of a map by id — reference + live map data — then
+   * persist both files and let the world view re-hydrate.
+   */
+  private _applyRemoteMapRename(data: GameProjectData, payload: MapRenameOp['payload']): void {
+    const renamed = applyMapRename(data, this.mapDatas(), payload)
+    if (renamed) this._persistMap(renamed)
+    this._persistProject()
+    this._events.emit('maps-changed', { renamed: payload.mapId })
+  }
+
+  /** Point the start map at a peer's choice; ignored for a map we don't have. */
+  private _applyRemoteStartupSet(data: GameProjectData, initialMapId: string): void {
+    if (!applyStartupSet(data, initialMapId)) return
+    this._persistProject()
+    this._events.emit('maps-changed', { startupChanged: true })
   }
 
   /**
@@ -651,6 +866,83 @@ export class ProjectStore {
   // ────────────────────────────────────────────────────────────
   // Internals
   // ────────────────────────────────────────────────────────────
+
+  /** Display names of every map in the project (reference name, falling back to the id). */
+  private _mapNames(): string[] {
+    const loaded = this.mapDatas()
+    return (this.data?.maps ?? []).map((ref) => ref.name ?? loaded.find((m) => m.id === ref.id)?.name ?? ref.id)
+  }
+
+  /**
+   * Where a map's file lives in the OPEN project — `null` when no
+   * project is open or the id could escape `maps/`. The one gate every
+   * filesystem path for a (possibly peer-supplied) map id passes
+   * through.
+   */
+  private _mapPaths(id: string): MapPaths | null {
+    const resource = this.resource
+    if (!resource || !isPlainFilename(id)) return null
+    return mapPaths(resource.path, id)
+  }
+
+  /**
+   * The ONE create path behind {@link createMap} and
+   * {@link duplicateMap}: allocate an id + a free atlas slot, let
+   * `build` shape the map, then write-then-commit — file first, and
+   * only once that succeeded the reference, the persist, the broadcast
+   * and the event. Returns the new id, or `null` when the file could
+   * not be written (nothing registered, nothing broadcast).
+   */
+  private _commitNewMap(name: string, build: (id: string, slot: { x: number; y: number }) => MapData): string | null {
+    const data = this.data
+    if (!data) return null
+    const taken = new Set((data.maps ?? []).map((m) => m.id))
+    const id = uniqueMapId(name, taken)
+    const paths = this._mapPaths(id)
+    if (!paths) return null
+    const mapData = build(id, freeAtlasSlot(buildAtlasScenes(this.mapDatas())))
+    if (!writeMapData(this.io, paths.file, mapData)) {
+      this._events.emit('notice', { kind: 'map-save-failed' })
+      return null
+    }
+    const reference = mapReferenceFor(id, name, paths.referencePath)
+    applyMapCreate(data, reference)
+    this._persistProject()
+    broadcastMapCreate(this._session, reference, mapData)
+    this._events.emit('maps-changed', { added: id })
+    return id
+  }
+
+  /**
+   * Drop a map everywhere it is held — reference, live resource entry,
+   * `maps/<id>.json` — then persist and notify. Shared by the local
+   * {@link removeMap} and the inbound `__project/map.remove`, so both
+   * paths leave exactly the same state behind. Returns whether anything
+   * was removed; does NOT broadcast (the local caller does).
+   */
+  private _applyMapRemoval(mapId: string): boolean {
+    const data = this.data
+    if (!data || !applyMapRemove(data, mapId)) return false
+    const paths = this._mapPaths(mapId)
+    if (paths) deleteMapFile(this.io, paths)
+    this.resource?.maps.delete(mapId)
+    this._persistProject()
+    this._events.emit('maps-changed', { removed: mapId })
+    return true
+  }
+
+  /**
+   * Write one map back to `maps/<id>.json`. Best-effort, like the
+   * project file: a failed write toasts but the in-memory map stays
+   * changed, so the UI doesn't snap back on a transient disk error.
+   */
+  private _persistMap(mapData: MapData): void {
+    const paths = this._mapPaths(mapData.id)
+    if (!paths) return
+    if (!writeMapData(this.io, paths.file, mapData)) {
+      this._events.emit('notice', { kind: 'map-save-failed' })
+    }
+  }
 
   /**
    * Broadcast a sprite set's current DESCRIPTOR to peers (rename /
