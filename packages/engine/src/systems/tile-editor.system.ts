@@ -16,6 +16,7 @@ import {
   ActiveObjectComponent,
   ActiveTileComponent,
   ActiveToolComponent,
+  EditorModeComponent,
   type EditorTool,
   MapEditorComponent,
   PendingPlacementMoveComponent,
@@ -120,6 +121,7 @@ export class TileEditorSystem extends System {
     // crossing the drag threshold, mirroring `Gtk.GestureClick`'s
     // negotiation with `Gtk.GestureDrag`.
     this.events.on(EngineEvent.POINTER_TAP, ({ screenPos }) => {
+      if (!this.isEditingLive()) return
       const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
       if (hit) this.applyClick(hit)
     })
@@ -128,6 +130,7 @@ export class TileEditorSystem extends System {
     // `EngineEvent.POINTER_LONG_PRESS`); from here on it resolves to a
     // tile exactly like a tap.
     this.events.on(EngineEvent.POINTER_LONG_PRESS, ({ screenPos }) => {
+      if (!this.isEditingLive()) return
       const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
       if (hit) this.applyLongPress(hit, screenPos)
     })
@@ -137,10 +140,36 @@ export class TileEditorSystem extends System {
     // would be placed, with or without a button held).
     const pointer = this.engine.input.pointers.primary
     pointer.on('move', (event) => {
+      if (!this.isEditingLive()) {
+        this.overlays.setHover(null)
+        return
+      }
       const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
       if (hit) this.applyHover(hit)
       this.overlays.setHover(hit ? { tileMap: hit.tileMap, coords: hit.coords } : null)
     })
+  }
+
+  /**
+   * Whether the tools are live — `EditorModeComponent` on the session
+   * singleton, which is what every mode combination in
+   * `docs/concepts/runtime-modes.md` means by "the editor is active".
+   *
+   * Without this check a Test run still painted: the markers are
+   * mutually exclusive (`applyRuntimeMode`), so during a run there is
+   * no `EditorMode` at all, yet a tap went straight through to the
+   * armed pencil — undoable and broadcast to peers. Harmless while the
+   * chrome still showed the armed tool; a trap once the wide run hides
+   * the editing pill (REDESIGN § 4.6), because clicking the canvas is
+   * exactly what a person does to give the keyboard-driven hero focus.
+   *
+   * A Live Run — `EditorMode` AND `RuntimeMode` together — passes, which
+   * is the Mario-Maker promise this keeps intact for the entry point
+   * that will offer it.
+   */
+  private isEditingLive(): boolean {
+    if (!this.scene) return false
+    return SessionState.get(this.scene, EditorModeComponent) !== null
   }
 
   public update(_elapsed: number): void {

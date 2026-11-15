@@ -135,8 +135,12 @@ export interface ChromeFlags {
   inspectorToggle: boolean
   /** The "⋯" menu. */
   overflowButton: boolean
-  /** ■ Stop and ↺ Restart, which take the context pill during a phone run. */
-  runtimeControls: boolean
+  /** ■ Stop in the context pill — phone only, because wide's Stop is the FAB itself. */
+  stopButton: boolean
+  /** ↺ Restart beside it, in both layouts: the FAB has no second verb to spare. */
+  restartButton: boolean
+  /** The accent frame around the canvas while a run is on — wide only (§4.6). */
+  runBorder: boolean
   /** The Play FAB. */
   playFab: boolean
   /** The docked bottom bar. */
@@ -187,30 +191,45 @@ export function effectiveStage(proposed: ChromeStage, canvasPx: number, contextP
  *   is hidden (the "tight" stage: two sidebars open on a small desktop,
  *   or a tablet with the inspector out), the badge still carries the
  *   tool's icon, and its popover starts with the tool group.
+ *
+ * `playing` takes the editing affordances away in BOTH layouts, because
+ * the one run the maker can start today is a **Test run** by the
+ * engine's own markers: `applyRuntimeMode` removes
+ * `EditorModeComponent` as it adds `RuntimeModeComponent` (exactly one
+ * is ever present), and `EditorMode` is what "the tools are live"
+ * means. §4.6's wide *Live* Run — tools stay, because both markers are
+ * present — needs a second entry point and an engine that holds both;
+ * neither exists yet, and showing a pill whose tools the engine has
+ * switched off would be the worse half of the two (TODO.md).
  */
 export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: boolean): ChromeFlags {
   const phone = layout === 'phone'
-  const running = phone && playing
+  const editing = !playing
+  // Phone hands the run the whole screen; wide keeps the context pill
+  // and the FAB, whose own icon becomes Stop.
+  const phoneRun = phone && playing
   const rank = CHROME_STAGES.indexOf(stage)
   return {
-    editingPill: !phone,
-    backCircle: phone && !running,
-    backLabel: !phone && rank >= CHROME_STAGES.indexOf('normal-1'),
-    undoButton: !phone,
-    phoneUndo: phone && !running,
-    redoButton: !phone,
-    phoneRedo: phone && !running,
-    historyPill: phone && !running,
+    editingPill: !phone && editing,
+    backCircle: phone && editing,
+    backLabel: !phone && editing && rank >= CHROME_STAGES.indexOf('normal-1'),
+    undoButton: !phone && editing,
+    phoneUndo: phone && editing,
+    redoButton: !phone && editing,
+    phoneRedo: phone && editing,
+    historyPill: phone && editing,
     // On phone the bar always carries the four tools; on wide the group
     // is the first thing the ladder drops, because the badge covers it.
-    toolGroup: phone ? !running : rank >= CHROME_STAGES.indexOf('compact'),
-    toolLabels: !phone && stage === 'roomy',
+    toolGroup: phone ? editing : editing && rank >= CHROME_STAGES.indexOf('compact'),
+    toolLabels: !phone && editing && stage === 'roomy',
     toolsArePhoneSet: phone,
-    badgeLabel: !phone && rank >= CHROME_STAGES.indexOf('normal-2'),
-    inspectorToggle: !phone,
-    overflowButton: !running,
-    runtimeControls: running,
-    playFab: !running,
-    bottomBar: phone && !playing,
+    badgeLabel: !phone && editing && rank >= CHROME_STAGES.indexOf('normal-2'),
+    inspectorToggle: !phone && editing,
+    overflowButton: !phoneRun,
+    stopButton: phoneRun,
+    restartButton: playing,
+    runBorder: !phone && playing,
+    playFab: !phoneRun,
+    bottomBar: phone && editing,
   }
 }

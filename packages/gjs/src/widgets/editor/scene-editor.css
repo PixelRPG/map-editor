@@ -9,6 +9,22 @@
 }
 
 /*
+ * A run frames the canvas in the accent colour (REDESIGN § 4.6): on
+ * tablet and desktop the editor chrome recedes but the window keeps
+ * its own, so without the frame nothing says the map is live.
+ *
+ * The frame is its own overlay child above the canvas, not a style on
+ * `.editor-backdrop`: GTK draws a widget's border under its children,
+ * and the engine canvas fills the backdrop. Above the canvas it also
+ * costs the engine no allocation — a border on the backdrop would take
+ * 4 px off the GL area at Play and give them back at Stop, resizing it
+ * for a decoration.
+ */
+.run-frame {
+  border: 2px solid @accent_bg_color;
+}
+
+/*
  * Gradia-style transparent HeaderBar for the scene-editor canvas:
  * the bar itself is `styles ["flat", "header-osd"]` so the bar
  * background drops out (.flat) and the contained window-controls

@@ -119,6 +119,8 @@ export class SceneEditorView extends ResponsiveEditorView {
   /** The three pages, hosted by the inspector or the sheet — never both. */
   private _pages = new EditorPages()
   private _sceneName = ''
+  /** Whether the inspector was out when the run started, so Stop can restore it. */
+  private _inspectorBeforeRun = false
   private _engine: Engine | null = null
   private _layers: LayerDescriptor[] = []
   /** The project's player sprite, drawn in every depth glyph (`null` = silhouette). */
@@ -273,10 +275,27 @@ export class SceneEditorView extends ResponsiveEditorView {
    * Reflect the `win.play` action's runtime state on the whole chrome,
    * not just the FAB: on phone the bar and the FAB give way to the run
    * and the context pill becomes Stop · Restart, because during a Live
-   * Run the finger is the joystick rather than a brush.
+   * Run the finger is the joystick rather than a brush. On wide the
+   * editing pill goes with them and the canvas takes an accent frame —
+   * the run is a Test run by the engine's markers (REDESIGN § 4.6,
+   * `runtime-modes.md`).
+   *
+   * The inspector is this view's half of that, because the drawer
+   * belongs to the shell and not to `SceneEditor`: it is hidden for the
+   * run and put back exactly as the person left it. Remembered rather
+   * than reopened unconditionally — `inner_split` is `pin-sidebar`, so
+   * nothing else would ever reopen it, and nothing else would ever
+   * close it either.
    */
   setPlaying(playing: boolean): void {
     this._editor.setPlaying(playing)
+    if (playing) {
+      this._inspectorBeforeRun = this.showInspector
+      this.showInspector = false
+      return
+    }
+    if (this._inspectorBeforeRun) this.showInspector = true
+    this._inspectorBeforeRun = false
   }
 
   /**

@@ -73,6 +73,7 @@ export class SceneEditor extends Adw.Bin {
   declare _ladder: Adw.BreakpointBin
   declare _bottom_sheet: Adw.BottomSheet
   declare _overlay: Gtk.Overlay
+  declare _run_frame: Gtk.Box
   declare _engine_holder: Gtk.Box
 
   declare _editing_handle: Gtk.WindowHandle
@@ -168,6 +169,7 @@ export class SceneEditor extends Adw.Bin {
           'ladder',
           'bottom_sheet',
           'overlay',
+          'run_frame',
           'engine_holder',
           'editing_handle',
           'back_button',
@@ -612,8 +614,8 @@ export class SceneEditor extends Adw.Bin {
     this._history_pill.set_visible(f.historyPill)
     this._phone_undo.set_visible(f.phoneUndo)
     this._phone_redo.set_visible(f.phoneRedo)
-    this._stop_button.set_visible(f.runtimeControls)
-    this._restart_button.set_visible(f.runtimeControls)
+    this._stop_button.set_visible(f.stopButton)
+    this._restart_button.set_visible(f.restartButton)
     this._overflow_button.set_visible(f.overflowButton)
     this._inspector_toggle.set_visible(f.inspectorToggle)
     // The chip hides itself when the roster is empty, so this only ever
@@ -623,6 +625,12 @@ export class SceneEditor extends Adw.Bin {
 
     this._bottom_sheet.set_reveal_bottom_bar(f.bottomBar)
     this._floating_play.set_visible(f.playFab)
+    // Its own overlay child above the canvas, because GTK draws a
+    // widget's border under its children and the engine fills the
+    // backdrop — and because a border on the backdrop would shrink the
+    // engine's allocation by 4 px at Play, handing the GL area a resize
+    // (and the canvas a different whole-pixel zoom) for a decoration.
+    this._run_frame.set_visible(f.runBorder)
     this._applyToastClearance()
   }
 

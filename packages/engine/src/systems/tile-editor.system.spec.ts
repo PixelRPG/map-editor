@@ -19,8 +19,10 @@ import { type Entity, EventEmitter, type Scene, TileMap, Vector } from 'excalibu
 
 import type { Command, ObjectPlacementPayload } from '../commands/index.ts'
 import { ActiveObjectComponent } from '../components/active-object.component.ts'
+import { EditorModeComponent } from '../components/editor-mode.component.ts'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
 import { PendingPlacementMoveComponent } from '../components/pending-placement-move.component.ts'
+import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import { SelectedPlacementsComponent } from '../components/selection.component.ts'
 import { TileMapPlaneComponent } from '../components/tilemap-plane.component.ts'
 import { EditOperations } from '../engine/edit-operations.ts'
@@ -109,6 +111,49 @@ export default async () => {
       ;(system as unknown as { dispatchCommand(c: Command): void }).dispatchCommand(makeFakePaintCommand())
 
       expect(broadcast.length).toBe(2)
+    })
+  })
+
+  await describe('TileEditorSystem.isEditingLive — the mode gate', async () => {
+    /**
+     * Every pointer path checks this before it resolves a tile, so a
+     * Test run cannot paint. It used to paint: the markers are mutually
+     * exclusive (`applyRuntimeMode`), yet nothing in this system looked
+     * at them, and a click meant to focus the keyboard-driven hero
+     * dropped a tile — undoable and broadcast to peers.
+     */
+    const gateOf = (system: TileEditorSystem) => (system as unknown as { isEditingLive(): boolean }).isEditingLive()
+
+    function systemOn(scene: Scene | null): TileEditorSystem {
+      const system = new TileEditorSystem(new EventEmitter<EngineEventMap>())
+      ;(system as unknown as { scene: Scene | null }).scene = scene
+      return system
+    }
+
+    await it('opens the tools in the editor', async () => {
+      const scene = makeFakeScene()
+      SessionState.set(scene, new EditorModeComponent())
+      expect(gateOf(systemOn(scene))).toBe(true)
+    })
+
+    await it('shuts them during a Test run', async () => {
+      const scene = makeFakeScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+      expect(gateOf(systemOn(scene))).toBe(false)
+    })
+
+    await it('keeps them open in a Live Run, where both markers are present', async () => {
+      // The Mario-Maker promise: paint while the hero walks. No entry
+      // point offers it yet, so this pins the gate's behaviour for the
+      // one that will rather than leaving it to be rediscovered.
+      const scene = makeFakeScene()
+      SessionState.set(scene, new EditorModeComponent())
+      SessionState.set(scene, new RuntimeModeComponent())
+      expect(gateOf(systemOn(scene))).toBe(true)
+    })
+
+    await it('shuts them when there is no scene at all', async () => {
+      expect(gateOf(systemOn(null))).toBe(false)
     })
   })
 

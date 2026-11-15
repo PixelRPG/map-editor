@@ -596,8 +596,36 @@ a recent-tiles strip. The pill costs that corner: `cursor_caption`
 reads a pointer the phone does not have, so it is wide-only and the
 two never stack. While a phone run is on, the bar, the FAB and the
 "‹" all give way and the context pill becomes Stop · Restart: during a
-Live Run the finger is the joystick, not a brush. On wide the same run
-changes only the FAB's own icon.
+run the finger is the joystick, not a brush.
+
+**A run takes the editing affordances away on wide too**, because the
+one run `win.play` can start is a *Test* run by the engine's own
+markers — `applyRuntimeMode` removes `EditorModeComponent` as it adds
+`RuntimeModeComponent`, and `EditorMode` is what "the tools are live"
+means. So wide drops the editing pill with its tool group, undo/redo
+and badge label, puts the inspector away (`SceneEditorView.setPlaying`
+remembers the pre-run value, because `inner_split` is `pin-sidebar`
+and the user's choice has to survive the run), keeps ↺ Restart in the
+context pill, and turns the FAB itself into Stop — which is why
+`stopButton` is phone-only while `restartButton` holds in both
+layouts: the FAB has one verb to spare, not two. The canvas gains an
+accent frame (`runBorder`, the `run_frame` overlay child) so a wide
+window without the chrome still reads as *running* rather than as an
+editor that lost its tools. The frame is **its own `can-target: false`
+overlay child above the canvas**, not a style on the backdrop: GTK
+draws a widget's border under its children and the engine canvas fills
+the backdrop, so a frame there is invisible the moment a map is
+loaded — and it would take 4 px off the GL area at Play and give them
+back at Stop, resizing the engine for a decoration. It is the one
+full-size layer the "no chrome layer over the canvas" rule allows,
+because it has nothing to click.
+
+§4.6's wide *Live* Run — the Mario-Maker move, where the tools stay
+because both markers are present — needs a second entry point and an
+engine that adds the runtime marker instead of swapping it. Neither
+exists yet; `TileEditorSystem.isEditingLive()` is already written for
+it, and a pill whose tools the engine has switched off would be the
+worse half of the two (tracked in `TODO.md`).
 
 **Everything under the ladder fits 360 px, and that is nobody's job
 but its own.** The ladder's `Adw.BreakpointBin` sets the floor with
@@ -1040,6 +1068,8 @@ on the scene the load then replaces and vanishes silently.
 | The *Layers* page gives every row a "⋯" menu (long-press / right-click too) with Rename · Duplicate · Move up · Move down · Move to plane ▸ · Delete, an "Add a layer" row per section (one row in Simple view), and 44 px eye / lock / "⋯" targets; the Things eye moved to the view menu as "Show Things" (REDESIGN § 6.3 / § 9 step 3.5) | **landed** |
 | An explicit drag handle on a layer row — reorder stays a row-wide drag (REDESIGN § 6.3) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run (REDESIGN § 5.6 / § 9 step 4.1) — overlay children of the *engine* widget, not of the editor chrome; a run on phone also collapses the sheet, so nothing rests over the thumb | **landed** |
+| A run clears the editing affordances in the wide layout as well and frames the canvas in accent (`stopButton` / `restartButton` / `runBorder`, REDESIGN § 4.6 / § 9 step 4.2); `TileEditorSystem` gates its pointer handlers on `EditorModeComponent`, so a focus-seeking click during a run can no longer paint | **landed** |
+| A wide *Live* Run that keeps the tools while the hero walks (REDESIGN § 4.6) — needs a second entry point and an engine holding both markers | deferred, tracked in `TODO.md` |
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller

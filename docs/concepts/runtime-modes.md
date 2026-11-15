@@ -29,8 +29,8 @@ Combinations are first-class. Each user-facing button picks a marker set:
 | Button / action | Markers active | Result |
 |---|---|---|
 | Default (open editor) | `EditorMode` | Pure editor — tools work, nothing moves, triggers are visualised but don't execute |
-| **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `SpawnOverride{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. |
-| **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the editing pill's tool affordances are hidden and the inspector goes read-only — clean run-through. The phone layout already does this much (`chromeFlags` hides the bottom bar and the Play FAB while playing and turns the context pill into Stop · Restart); the wide layout does not yet. Esc / Stop → drops the runtime marker, back to editor. |
+| **Play here** ("Live Run") | `EditorMode` + `RuntimeMode` + `SpawnOverride{tileX, tileY = camera focus}` | The current scene starts playing from where the user is editing. The user can keep painting tiles while the player walks around them. Mario-Maker move. **No shipped button produces this marker set yet** — `win.play` spawns at the camera focus but swaps the markers rather than adding to them, so it is a Test run. The gates are written for it (`TileEditorSystem.isEditingLive()` passes when both markers are present); what is missing is a second entry point. |
+| **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the editing affordances are hidden and the inspector is put away — clean run-through. **This is what `win.play` does in both layouts:** phone hides the bottom bar and the Play FAB and turns the context pill into Stop · Restart; wide drops the editing pill, the tool group, undo/redo and the inspector, keeps ↺ Restart in the context pill, turns the FAB into Stop and frames the canvas in accent. Esc / Stop → drops the runtime marker, back to editor. |
 | **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + spawn-point placement. No editor chrome. This is what shipping looks like. |
 
 **Why marker components instead of an enum:** "Live Run" isn't a separate mode from "Editor" — it's `Editor && Runtime`. Modelling each as a separate boolean marker lets the systems independently observe their own concern without anyone owning a giant `Mode` enum that needs a switch statement everywhere.
@@ -67,7 +67,9 @@ const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
 if (!inRuntime) { /* hide player, zero velocity, skip input */ }
 ```
 
-**What's actually gated today:** `PlayerSystem` is the only system with a direct marker check. That single gate carries the runtime semantics indirectly — walk-onto/action triggers, item pickups and teleport requests can only fire in runtime mode because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`. Two known gaps against the design intent: (a) `TileEditorSystem` does not check `EditorModeComponent`, so an armed pencil/eraser/object tool still paints during Play (undoable + broadcast — acceptable as proto-Live-Run, but unintentional in Test Run); (b) `TriggerSystem.fireAuto` runs at scene init regardless of mode — latent, since no shipped template uses `on: 'auto'`. Either implement the missing guards or promote this behaviour to design — tracked as drift until then.
+**What's actually gated today:** `PlayerSystem` and `TileEditorSystem` carry direct marker checks. `PlayerSystem`'s gate carries the runtime semantics indirectly — walk-onto/action triggers, item pickups and teleport requests can only fire in runtime mode because their source events (`player-tile-changed`, `player-action-pressed`) are emitted by `PlayerSystem`. `TileEditorSystem.isEditingLive()` gates tap, long-press and hover on `EditorModeComponent`, so a Test run cannot paint while a Live Run still can (both markers present → gate open).
+
+One known gap against the design intent remains: `TriggerSystem.fireAuto` runs at scene init regardless of mode — latent, since no shipped template uses `on: 'auto'`. Either implement the guard or promote the behaviour to design — tracked as drift until then.
 
 ### Ghost spawn replaces the real spawn
 
@@ -144,12 +146,12 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 - `packages/engine/src/components/runtime-mode.component.ts`
 - `packages/engine/src/components/spawn-override.component.ts`
 - Session-singleton helper in `packages/engine/src/utils/session-state.ts` (singleton entity name: `session-state`)
-- `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)` — the only direct marker gate so far (see "Systems gate themselves" for the two gaps); `Engine.setRuntimeMode()` is the host-facing switch
+- `PlayerSystem.update()` reads `SessionState.get(scene, RuntimeModeComponent)`; `TileEditorSystem.isEditingLive()` reads `EditorModeComponent` to gate its pointer handlers (see "Systems gate themselves" for the one remaining gap); `Engine.setRuntimeMode()` is the host-facing switch
 
 **Phase 2 — Maker controls (landed)**:
 - Play / Stop wired through `win.play` in `apps/maker-gjs/src/widgets/application-window.ts` → toggles the session markers in the active `MapScene`
 - Reset wired through `win.restart` and `win.play-from-start` (`apps/maker-gjs/src/actions/playtest-actions.ts`) → `Engine.clearSaveState()` then re-enter runtime
-- Editor chrome reacts to `EditorMode` presence — see [`responsive-chrome.md`](responsive-chrome.md) § Wide ↔ phone for what a phone run hides
+- Editor chrome reacts to `EditorMode` presence in **both** layouts — see [`responsive-chrome.md`](responsive-chrome.md) § Wide ↔ phone for the per-flag table
 - A run on touch gets a second input producer: the engine widget's on-canvas joystick and action button publish a `TouchInputComponent` through `Engine.setTouchInput()`, and `InputSystem` merges it with the keyboard (`mergeInputIntents` in `packages/engine/src/utils/player-input.ts`) before writing `InputSourceComponent`. Touch wins the movement vector whenever it is non-neutral, the keyboard holds it otherwise, and the action/attack holds are OR-ed — so neither producer can mute the other, and `PlayerSystem` still reads exactly one component. The controls follow `setRuntimeMode`, so leaving a run with a thumb down cannot leave the hero walking.
 
 **Phase 3 — `PlayerSystem` spawn-override handling (landed)**:
