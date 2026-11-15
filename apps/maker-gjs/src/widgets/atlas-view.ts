@@ -40,7 +40,6 @@ export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
   'scene-opened': (sceneId: string) => void
   'scene-selected': (sceneId: string) => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
-  'preview-moved': (sceneId: string, centerX: number, centerY: number) => void
 }
 
 /**
@@ -66,7 +65,6 @@ export class AtlasView extends ResponsiveEditorView {
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
   private _projectResource: GameProjectResource | null = null
-  private _selectedSceneId: string | null = null
 
   static {
     GObject.registerClass(
@@ -90,9 +88,6 @@ export class AtlasView extends ResponsiveEditorView {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
-          'preview-moved': {
-            param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
-          },
         },
       },
       AtlasView,
@@ -107,10 +102,11 @@ export class AtlasView extends ResponsiveEditorView {
     super()
     this._atlas.setWorld(this._scenes, this._teleports)
     this._inspector.setScene(null, this._scenes, this._teleports)
-    this._preview_zoom.setZoom(this._atlas.previewZoom)
+    this._preview_zoom.setZoom(this._atlas.zoom)
     // The atlas is the only view with a fit target, so it opts the
     // shared zoom pill into showing the Fit button.
     this._preview_zoom.showFit = true
+    this._atlas.fit()
   }
 
   /** Re-sync the overview minimap's scene rects + viewport frame from the canvas. */
@@ -119,51 +115,56 @@ export class AtlasView extends ResponsiveEditorView {
     this._atlas_overview.setContent(this._atlas.sceneRects(), width, height)
     const vp = this._atlas.viewportRect()
     this._atlas_overview.setViewport(vp.x, vp.y, vp.w, vp.h)
-    // A world that already fits the canvas needs no map of itself.
-    this._overview_frame.set_visible(vp.w < width || vp.h < height)
+    // A world that already fits the canvas needs no map of itself, and
+    // on phone widths the OSD would eat a third of the canvas
+    // (REDESIGN.md § 4.2) — there the pinch gesture is the only camera.
+    const larger = vp.w < width || vp.h < height
+    this._overview_frame.set_visible(larger && !this.compact)
   }
 
   /**
-   * Centre the world in the viewport (the Fit affordance). The window
-   * routes `win.atlas-fit` here while the atlas is visible.
+   * Zoom out until the whole world fits, then centre it (the Fit
+   * affordance). The window routes `win.atlas-fit` here while the atlas
+   * is visible.
    */
   fitAtlas(): void {
-    this._atlas.fitToContent()
-    this._refreshOverview()
+    this._atlas.fit()
   }
 
   /**
-   * Select one map's card and bring it into view — where back from the
-   * map editor lands (REDESIGN.md § 3.4, step 5). Centring only: the
-   * atlas is a `Gtk.Fixed` surface with no fractional scale, so "zoomed
-   * on the map just left" is the card-preview zoom the user set, not a
-   * camera. Unknown ids leave the atlas where it is.
+   * Select one map's card and centre the camera on it — where back from
+   * the map editor lands (REDESIGN.md § 3.4, step 5). The zoom the user
+   * left behind is kept; only the scroll offset moves. Unknown ids leave
+   * the camera where it is.
    */
   focusScene(id: string): void {
     if (!this._scenes.some((scene) => scene.id === id)) return
     this._atlas.selectedId = id
     this._refreshSelectedScene(id)
-    this._atlas.fitToContent(id)
-    this._refreshOverview()
+    this._atlas.focusScene(id)
   }
 
   /**
-   * Step the global card-preview zoom (the window routes `win.zoom-in/
-   * out` here while the atlas is the visible view).
+   * Step the atlas camera zoom (the window routes `win.zoom-in/out`
+   * here while the atlas is the visible view).
+   *
+   * The delta is applied as a RATIO, not an offset: the camera spans
+   * 10 %–400 %, so the engine editor's flat ±0.2 would be one click from
+   * end to end down at the bottom and a rounding error at the top.
    */
-  stepPreviewZoom(delta: number): void {
-    this.setPreviewZoom(this._atlas.previewZoom + delta)
+  stepZoom(delta: number): void {
+    const factor = 1 + Math.abs(delta)
+    this.setZoom(delta >= 0 ? this._atlas.zoom * factor : this._atlas.zoom / factor)
   }
 
-  /** Absolute card-preview zoom; mirrors the value into the OSD pill. */
-  setPreviewZoom(zoom: number): void {
-    this._atlas.setPreviewZoom(zoom)
-    this._preview_zoom.setZoom(this._atlas.previewZoom)
+  /** Absolute camera zoom; mirrors the value into the OSD pill. */
+  setZoom(zoom: number): void {
+    this._atlas.setZoom(zoom)
   }
 
-  /** Back to the 200% default (`win.zoom-reset` in the atlas). */
-  resetPreviewZoom(): void {
-    this.setPreviewZoom(AtlasCanvas.DEFAULT_PREVIEW_ZOOM)
+  /** Back to 100 % (`win.zoom-reset` in the atlas). */
+  resetZoom(): void {
+    this.setZoom(1)
   }
 
   /**
@@ -180,10 +181,11 @@ export class AtlasView extends ResponsiveEditorView {
     this._teleports = teleports
     this._projectResource = projectResource
     this._atlas.setWorld(scenes, teleports, projectResource)
+    this._atlas.setStartMapId(projectResource?.data?.startup?.initialMapId ?? null)
     this._inspector.setScene(null, scenes, teleports, projectResource)
-    // Open a real project fitted so every scene is reachable at once,
-    // instead of the old 200% top-left dump that ran off-viewport.
-    this._atlas.fitToContent(projectResource?.data?.startup?.initialMapId)
+    // Open a real project fitted so every map is reachable at once,
+    // instead of the old 200 % top-left dump that ran off-viewport.
+    this._atlas.fit()
     this._refreshOverview()
   }
 
@@ -196,10 +198,8 @@ export class AtlasView extends ResponsiveEditorView {
    * stays silent).
    */
   private _refreshSelectedScene(id: string): void {
-    this._selectedSceneId = id
     const scene = this._scenes.find((s) => s.id === id) ?? null
     this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
-    this._inspector.setPreviewLock(scene ? this._atlas.getPreviewLock(id) : null)
     this.emit('scene-selected', id)
   }
 
@@ -233,18 +233,11 @@ export class AtlasView extends ResponsiveEditorView {
     this.signals.connect(this._atlas, 'scene-moved', (_a: AtlasCanvas, id: string, x: number, y: number) => {
       this.emit('scene-moved', id, x, y)
     })
-    this.signals.connect(this._atlas, 'preview-moved', (_a: AtlasCanvas, id: string, tileX: number, tileY: number) => {
-      this.emit('preview-moved', id, tileX, tileY)
-    })
-    // Viewport lock, both directions: card toggle → inspector switch,
-    // inspector switch → card. Both ends guard against echo loops
-    // (the card setter no-ops on same value, the inspector suppresses
-    // programmatic updates).
-    this.signals.connect(this._atlas, 'preview-lock-changed', (_a: AtlasCanvas, id: string, unlocked: boolean) => {
-      if (id === this._selectedSceneId) this._inspector.setPreviewLock(unlocked)
-    })
-    this.signals.connect(this._inspector, 'preview-lock-changed', (_i: SceneInspector, unlocked: boolean) => {
-      if (this._selectedSceneId) this._atlas.setPreviewLock(this._selectedSceneId, unlocked)
+    // Zoom reached by pinch, Ctrl+scroll or Fit — mirror it into the
+    // OSD pill's percentage label. Pans do not change it.
+    this.signals.connect(this._atlas, 'camera-changed', () => {
+      this._preview_zoom.setZoom(this._atlas.zoom)
+      this._refreshOverview()
     })
     // Overview minimap: redraw scene rects when the world changes, and
     // track the viewport frame as the user pans/scrolls.

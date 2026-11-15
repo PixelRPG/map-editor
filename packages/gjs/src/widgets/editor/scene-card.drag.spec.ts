@@ -1,29 +1,9 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import {
-  DOUBLE_CLICK_MS,
-  DRAG_THRESHOLD_PX,
-  dragModeFor,
-  hasPassedDragThreshold,
-  isDoubleClick,
-} from './scene-card.drag.ts'
+import { DOUBLE_CLICK_MS, DRAG_THRESHOLD_PX, hasPassedDragThreshold, isDoubleClick } from './scene-card.drag.ts'
 
 export default async () => {
   await describe('scene-card.drag', async () => {
-    await describe('dragModeFor', async () => {
-      await it('pans only when the lock is open and the press missed it', async () => {
-        expect(dragModeFor(true, false)).toBe('pan')
-      })
-
-      await it('moves the card when the preview is not pannable', async () => {
-        expect(dragModeFor(false, false)).toBe('move')
-      })
-
-      await it('moves the card for a press that landed on the lock', async () => {
-        expect(dragModeFor(true, true)).toBe('move')
-      })
-    })
-
     await describe('hasPassedDragThreshold', async () => {
       await it('ignores a jitter-sized movement', async () => {
         expect(hasPassedDragThreshold(2, 2)).toBe(false)

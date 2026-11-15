@@ -103,8 +103,8 @@ export function drawnExtent(
 /**
  * How many times {@link fitZoom} re-measures the drawn world. The naive
  * estimate is wrong only because of floored cards, and each pass shrinks
- * the gap by the amount the floor contributes — four passes is already
- * generous for a world of a dozen maps.
+ * the gap by the amount the floor contributes — a handful of passes is
+ * already generous for a world of a dozen maps.
  */
 const FIT_REFINE_PASSES = 8
 

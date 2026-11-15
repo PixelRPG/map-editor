@@ -3,7 +3,6 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
-import { SignalScope } from '../../utils/signal-scope.ts'
 import { MapPreview } from './map-preview'
 import { MiniMap } from './mini-map'
 import {
@@ -24,19 +23,6 @@ const PREVIEW_WIDTH = 240
 const PREVIEW_HEIGHT = 180
 
 /**
- * Typed view of the signals {@link SceneInspector} registers, layered on the
- * parent's own so inherited signals keep their argument lists.
- *
- * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
- * every generated class carried, so a class that registers its own signals
- * now has to spell them out — `SignalMethods` refines the inherited method
- * rather than replacing it at run time.
- */
-export interface SceneInspectorSignals extends Adw.Bin.SignalSignatures {
-  'preview-lock-changed': (unlocked: boolean) => void
-}
-
-/**
  * Right-pane inspector for the **Atlas (World)** view.
  *
  * Shows the selected scene's preview, name + tile size + music subtitle,
@@ -53,8 +39,6 @@ export class SceneInspector extends Adw.Bin {
   declare _stats_grid: Gtk.Grid
   declare _teleports_group: Adw.PreferencesGroup
   declare _map_group: Adw.PreferencesGroup
-  declare _lock_group: Adw.PreferencesGroup
-  declare _lock_row: Adw.SwitchRow
   declare _open_button: Gtk.Button
   declare _empty_state: Adw.StatusPage
   declare _body: Gtk.Box
@@ -65,9 +49,6 @@ export class SceneInspector extends Adw.Bin {
   private _statRows: Gtk.Widget[] = []
   private _teleportRows: Adw.ActionRow[] = []
   private _collapsed = false
-  /** Guards the lock switch against programmatic-update feedback. */
-  private _syncingLock = false
-  private _signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -81,18 +62,10 @@ export class SceneInspector extends Adw.Bin {
           'stats_grid',
           'teleports_group',
           'map_group',
-          'lock_group',
-          'lock_row',
           'open_button',
           'empty_state',
           'body',
         ],
-        Signals: {
-          // The user flipped the viewport-lock switch — payload
-          // `true` = open/pannable. Programmatic `setPreviewLock`
-          // updates do NOT re-emit.
-          'preview-lock-changed': { param_types: [GObject.TYPE_BOOLEAN] },
-        },
         Properties: {
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
@@ -138,10 +111,6 @@ export class SceneInspector extends Adw.Bin {
       SceneInspector,
     )
   }
-
-  declare connect: GObject.SignalMethods<this, SceneInspectorSignals>['connect']
-  declare connect_after: GObject.SignalMethods<this, SceneInspectorSignals>['connect_after']
-  declare emit: GObject.SignalMethods<this, SceneInspectorSignals>['emit']
 
   /**
    * Set the inspected scene and the full teleport list for the world.
@@ -191,34 +160,6 @@ export class SceneInspector extends Adw.Bin {
     if (this._collapsed === value) return
     this._collapsed = value
     this.notify('collapsed')
-  }
-
-  vfunc_map(): void {
-    super.vfunc_map()
-    this._signals.connect(this._lock_row, 'notify::active', () => {
-      if (this._syncingLock) return
-      this.emit('preview-lock-changed', this._lock_row.active)
-    })
-  }
-
-  vfunc_unmap(): void {
-    this._signals.disconnectAll()
-    super.vfunc_unmap()
-  }
-
-  /**
-   * Mirror the selected card's viewport-lock state into the switch.
-   * `null` hides the row (scene without a viewport preview / no
-   * selection). Programmatic — does not re-emit `preview-lock-changed`.
-   */
-  setPreviewLock(unlocked: boolean | null): void {
-    this._syncingLock = true
-    try {
-      this._lock_group.set_visible(unlocked !== null && this._scene != null)
-      if (unlocked !== null) this._lock_row.set_active(unlocked)
-    } finally {
-      this._syncingLock = false
-    }
   }
 
   private _refreshPreview(): void {
@@ -320,8 +261,6 @@ export class SceneInspector extends Adw.Bin {
     this._map_group.set_visible(populated)
     this._open_button.set_visible(populated)
     this._empty_state.set_visible(!populated)
-    // Re-shown per selection via `setPreviewLock` — default hidden.
-    if (!populated) this._lock_group.set_visible(false)
   }
 }
 

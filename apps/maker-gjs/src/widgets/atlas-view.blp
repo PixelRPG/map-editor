@@ -141,8 +141,8 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
           }
 
           // Same zoom pill as the scene editor (fires win.zoom-*);
-          // in the atlas the window routes those actions to the
-          // global card-preview zoom instead of the engine camera.
+          // in the atlas the window routes those actions to the world
+          // camera instead of the engine camera.
           [overlay]
           $PixelRpgFloatingZoom preview_zoom {
             halign: start;
@@ -151,7 +151,9 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             margin-bottom: 12;
           }
 
-          child: $PixelRpgAtlasCanvas atlas {};
+          child: $PixelRpgAtlasCanvas atlas {
+            compact: bind template.compact;
+          };
         };
       };
     };

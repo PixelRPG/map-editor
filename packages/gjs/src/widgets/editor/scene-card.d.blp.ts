@@ -25,24 +25,18 @@ export declare const GTypeName: "PixelRpgSceneCard";
 export declare const InternalChildren: [
   "root",
   "title_row",
+  "start_badge",
   "name_label",
-  "size_label",
-  "overlay",
-  "body",
   "preview_slot",
   "map",
-  "lock_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
   _root: Gtk.Box;
   _title_row: Gtk.Box;
+  _start_badge: Gtk.Image;
   _name_label: Gtk.Label;
-  _size_label: Gtk.Label;
-  _overlay: Gtk.Overlay;
-  _body: Gtk.Box;
   _preview_slot: Adw.Bin;
   _map: GObject.Object;
-  _lock_button: Gtk.ToggleButton;
 }

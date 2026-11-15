@@ -40,8 +40,8 @@ export function sceneRects(scenes: readonly SceneBox[]): SceneRect[] {
 
 /**
  * Bottom-right corner of the union of a set of rects (0,0 when empty).
- * Works in whichever space the rects are in — the camera measures the
- * drawn world with it, {@link worldExtent} measures the atlas world.
+ * Works in whichever space the rects are in — the atlas world via
+ * {@link sceneRects}, the drawn world via the camera's own rects.
  */
 export function rectExtent(rects: readonly SceneRect[]): { width: number; height: number } {
   let width = 0
@@ -53,31 +53,7 @@ export function rectExtent(rects: readonly SceneRect[]): { width: number; height
   return { width, height }
 }
 
-/** Bottom-right corner of the union of every scene box (0,0 for an empty world). */
-export function worldExtent(scenes: readonly SceneBox[]): { width: number; height: number } {
-  return rectExtent(sceneRects(scenes))
-}
-
-/** Scrollable surface size: the world extent plus `padding` on every side. */
-export function surfaceSize(scenes: readonly SceneBox[], padding: number): { width: number; height: number } {
-  const extent = worldExtent(scenes)
-  return { width: extent.width + padding * 2, height: extent.height + padding * 2 }
-}
-
 /** Snap a dragged card's release position to the atlas grid, never off-surface. */
 export function snapToGrid(value: number, grid: number): number {
   return Math.max(0, Math.round(value / grid) * grid)
-}
-
-/**
- * Scroll offset that centres a world of `extent` px in a viewport `pageSize`
- * px wide, clamped to the adjustment's own `[0, upper - pageSize]` range.
- */
-export function centeredScrollValue(extent: number, upper: number, pageSize: number): number {
-  return Math.max(0, Math.min(upper - pageSize, extent / 2 - pageSize / 2))
-}
-
-/** Keep the atlas's global preview zoom inside a sane native-pixel range. */
-export function clampPreviewZoom(zoom: number): number {
-  return Math.min(6, Math.max(0.5, zoom))
 }

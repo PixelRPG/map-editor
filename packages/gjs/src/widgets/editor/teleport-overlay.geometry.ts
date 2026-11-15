@@ -4,17 +4,22 @@
 // GTK-free so it can be unit-tested — the overlay subclasses `Gtk.Widget`
 // and only turns these numbers into `Gsk.PathBuilder` calls.
 
+import type { SceneRect } from './atlas-canvas.geometry.ts'
+
 /** A point on the atlas surface, in surface pixels. */
 export interface OverlayPoint {
   x: number
   y: number
 }
 
-/** The scene fields an endpoint reads — `SampleScene` satisfies it. */
-export interface EndpointScene {
-  x: number
-  y: number
-  tilePx: number
+/**
+ * One card as the overlay sees it: the body rect the atlas camera
+ * actually drew (surface px) plus the map's tile dimensions.
+ */
+export interface EndpointCard {
+  rect: SceneRect
+  cols: number
+  rows: number
 }
 
 /** Largest perpendicular bow (px) of a teleport curve. */
@@ -24,22 +29,21 @@ export const CURVE_OFFSET_MAX = 80
 export const CURVE_OFFSET_FACTOR = 0.25
 
 /**
- * Centre of tile `(tileX, tileY)` of `scene` on the atlas surface.
+ * Centre of tile `(tile.x, tile.y)` on the atlas surface.
  *
- * The `+ 0.5` puts the marker in the middle of the tile rather than its
- * top-left corner, and `titleBarHeight` skips the card's header strip so
- * the endpoint lands on the map, not on the title.
+ * The tile is placed as a FRACTION of the card's drawn body rect rather
+ * than from a tile size of its own: the card is the whole map scaled to
+ * whatever the camera decided (zoom, plus the minimum-card floor), so
+ * the body rect is the only thing that knows the real pixels-per-tile.
+ * That also keeps the endpoint off the title, which sits outside the
+ * body rect. The `+ 0.5` centres the marker in its tile.
  */
-export function teleportEndpoint(
-  scene: EndpointScene,
-  tileX: number,
-  tileY: number,
-  scale: number,
-  titleBarHeight: number,
-): OverlayPoint {
+export function teleportEndpoint(card: EndpointCard, tile: { x: number; y: number }): OverlayPoint {
+  const cols = Math.max(card.cols, 1)
+  const rows = Math.max(card.rows, 1)
   return {
-    x: (scene.x + (tileX + 0.5) * scene.tilePx) * scale,
-    y: (scene.y + (tileY + 0.5) * scene.tilePx) * scale + titleBarHeight,
+    x: card.rect.x + ((tile.x + 0.5) / cols) * card.rect.w,
+    y: card.rect.y + ((tile.y + 0.5) / rows) * card.rect.h,
   }
 }
 

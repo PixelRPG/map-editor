@@ -1,13 +1,12 @@
 import type Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
-import { gettext as _ } from 'gettext'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene } from '../../__demo__/world-sample'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { MiniMap } from './mini-map'
-import { dragModeFor, hasPassedDragThreshold, isDoubleClick, type SceneDragMode } from './scene-card.drag.ts'
+import { hasPassedDragThreshold, isDoubleClick } from './scene-card.drag.ts'
 
 import Template from './scene-card.blp'
 
@@ -27,69 +26,47 @@ export interface SceneCardSignals extends Gtk.Button.SignalSignatures {
   'scene-drag-begin': () => void
   'scene-drag-update': (dx: number, dy: number) => void
   'scene-drag-end': (dx: number, dy: number) => void
-  'preview-pan-update': (dx: number, dy: number) => void
-  'preview-pan-end': () => void
-  'lock-changed': (unlocked: boolean) => void
 }
 
-/** Card width up to which the dimensions label yields to the name. */
-const NARROW_CARD_PX = 200
+/** Gap between the title row and the map body — mirrors `scene-card.blp`. */
+const TITLE_SPACING_PX = 4
+
+/** Largest tile size a sample-world mini-map is allowed to draw. */
+const MINI_MAP_TILE_PX_MAX = 64
 
 /**
- * Single atlas-space card representing one scene.
+ * Single atlas-space card representing one map.
  *
  * The card is a `Gtk.Button` styled `flat` so it picks up Adwaita's
  * focus/hover/press states for free. The host application positions the
  * card via `Gtk.Fixed.put(card, x, y)` and toggles the `selected`
  * style class on selection — that drives the accent ring.
  *
- * Layout: a free-floating title row (name + dimensions, no header
- * bar) above the subtly-framed preview; the viewport lock sits in the
- * preview's top-right overlay corner, the event-count badge in the
- * bottom-right.
+ * Layout: a free-floating, centred title above the subtly-framed
+ * preview, which shows the WHOLE map. The card does not pick its own
+ * size: the atlas camera computes the body's pixel size from the map's
+ * tile dimensions and the current zoom, hands it to
+ * {@link setBodySize}, then reads {@link cardWidth} / {@link cardHeight}
+ * / {@link bodyOffsetX} / {@link bodyOffsetY} back to place the card so
+ * the BODY lands exactly where the camera wants it. The card's own CSS
+ * therefore carries neither padding nor border (`scene-card.css`).
  *
- * Drag semantics: with the lock CLOSED (default) a drag moves the
- * card on the atlas; with the lock OPEN it pans the map section
- * inside the preview (`preview-pan-*` signals). The lock is only
- * shown for viewport previews (`viewportLockable`) — sample worlds
- * keep plain drag-to-move.
- *
- * The card emits the underlying `Gtk.Button::clicked` signal on single
- * click; double-clicks are detected by listening to `clicked` and
- * checking a debounce timer (no native double-click signal on buttons).
+ * Drag semantics: a drag moves the card on the atlas
+ * (`scene-drag-*`). The card emits the underlying
+ * `Gtk.Button::clicked` signal on single click; double-clicks are
+ * detected by listening to `clicked` and checking a debounce timer (no
+ * native double-click signal on buttons).
  */
 export class SceneCard extends Gtk.Button {
   declare _map: MiniMap
   declare _preview_slot: Adw.Bin
-  declare _lock_button: Gtk.ToggleButton
-  declare _size_label: Gtk.Label
+  declare _title_row: Gtk.Box
 
   private _sceneName = ''
-  private _cols = 0
-  private _rows = 0
-  private _events = 0
+  private _startMap = false
   private _lastClickMs = 0
   private _selected = false
   private _dragging = false
-  private _viewportLockable = false
-  /**
-   * Whether the current press began on the lock toggle. The card is a
-   * `Gtk.Button`, whose click gesture runs in the CAPTURE phase — the
-   * nested `Gtk.ToggleButton` never receives the press, so the card
-   * routes lock clicks manually in {@link _onClicked}.
-   */
-  private _pressOnLock = false
-  /**
-   * When true (lock open), dragging the preview content pans the map
-   * section inside the card (`preview-pan-*` signals). When false
-   * (lock closed — the default — or no viewport preview at all), any
-   * drag moves the card. Driven by the lock toggle.
-   */
-  private _pannablePreview = false
-  /** Current drag interpretation, decided at gesture-begin. */
-  private _dragMode: SceneDragMode = 'move'
-  /** Last emitted pan offset, for incremental `preview-pan-update`s. */
-  private _lastPan = { dx: 0, dy: 0 }
   // Press point in widget-local coords (captured at drag-begin) and
   // the same point in the parent (atlas Fixed) space — move deltas are
   // computed in parent space (see `_moveDeltaInParent` for why).
@@ -104,40 +81,19 @@ export class SceneCard extends Gtk.Button {
       {
         GTypeName: 'PixelRpgSceneCard',
         Template,
-        InternalChildren: ['map', 'preview_slot', 'lock_button', 'size_label'],
+        InternalChildren: ['map', 'preview_slot', 'title_row'],
         Properties: {
           'scene-name': GObject.ParamSpec.string(
             'scene-name',
             'Scene name',
-            'Name shown in the title bar',
+            'Name shown above the map',
             GObject.ParamFlags.READWRITE,
             '',
           ),
-          'size-text': GObject.ParamSpec.string(
-            'size-text',
-            'Size text',
-            'Formatted "cols × rows" caption',
-            GObject.ParamFlags.READABLE,
-            '',
-          ),
-          'events-text': GObject.ParamSpec.string(
-            'events-text',
-            'Events text',
-            'Formatted event-count badge label',
-            GObject.ParamFlags.READABLE,
-            '0',
-          ),
-          'has-events': GObject.ParamSpec.boolean(
-            'has-events',
-            'Has events',
-            'Whether the events badge should be visible',
-            GObject.ParamFlags.READABLE,
-            false,
-          ),
-          'viewport-lockable': GObject.ParamSpec.boolean(
-            'viewport-lockable',
-            'Viewport lockable',
-            'Whether the preview-viewport lock toggle is shown (viewport previews only)',
+          'start-map': GObject.ParamSpec.boolean(
+            'start-map',
+            'Start map',
+            'Whether the game starts on this map (shows the start badge)',
             GObject.ParamFlags.READWRITE,
             false,
           ),
@@ -147,14 +103,6 @@ export class SceneCard extends Gtk.Button {
           'scene-drag-begin': {},
           'scene-drag-update': { param_types: [GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE] },
           'scene-drag-end': { param_types: [GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE] },
-          // Viewport panning (pannable-preview mode): incremental
-          // widget-pixel deltas while dragging the preview content,
-          // then one `preview-pan-end` for the host to persist.
-          'preview-pan-update': { param_types: [GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE] },
-          'preview-pan-end': {},
-          // Lock state flipped (via the card toggle or
-          // `previewUnlocked`). Payload: `true` = open/pannable.
-          'lock-changed': { param_types: [GObject.TYPE_BOOLEAN] },
         },
       },
       SceneCard,
@@ -165,16 +113,6 @@ export class SceneCard extends Gtk.Button {
   declare connect_after: GObject.SignalMethods<this, SceneCardSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, SceneCardSignals>['emit']
 
-  /**
-   * A card at or under {@link NARROW_CARD_PX} gives its whole title row to
-   * the name: "Link'…" next to "11×11" told the child neither.
-   */
-  vfunc_size_allocate(width: number, height: number, baseline: number): void {
-    super.vfunc_size_allocate(width, height, baseline)
-    const show = width > NARROW_CARD_PX
-    if (this._size_label.get_visible() !== show) this._size_label.set_visible(show)
-  }
-
   vfunc_map(): void {
     super.vfunc_map()
     this._signals.connect(this, 'clicked', () => this._onClicked())
@@ -184,11 +122,6 @@ export class SceneCard extends Gtk.Button {
       this._onDragUpdate(dx, dy),
     )
     this._signals.connect(drag, 'drag-end', (_g: Gtk.GestureDrag, dx: number, dy: number) => this._onDragEnd(dx, dy))
-    // The lock toggle drives the drag interpretation: closed (default)
-    // = drags move the card, open = drags pan the preview section.
-    if (this._lock_button) {
-      this._signals.connect(this._lock_button, 'toggled', () => this._onLockToggled())
-    }
   }
 
   vfunc_unmap(): void {
@@ -213,9 +146,6 @@ export class SceneCard extends Gtk.Button {
 
   private _onDragBegin(x: number, y: number): void {
     this._dragging = false
-    this._pressOnLock = this._isOnLock(x, y)
-    this._dragMode = dragModeFor(this._pannablePreview, this._pressOnLock)
-    this._lastPan = { dx: 0, dy: 0 }
     this._pressLocal = new Graphene.Point()
     this._pressLocal.init(x, y)
     this._pressInParent = this._toParent(this._pressLocal)
@@ -224,24 +154,16 @@ export class SceneCard extends Gtk.Button {
   private _onDragUpdate(dx: number, dy: number): void {
     if (!this._dragging && hasPassedDragThreshold(dx, dy)) {
       this._dragging = true
-      if (this._dragMode === 'move') this.emit('scene-drag-begin')
+      this.emit('scene-drag-begin')
     }
     if (!this._dragging) return
-    if (this._dragMode === 'pan') {
-      this.emit('preview-pan-update', dx - this._lastPan.dx, dy - this._lastPan.dy)
-      this._lastPan = { dx, dy }
-      return
-    }
     const delta = this._moveDeltaInParent(dx, dy)
     if (delta) this.emit('scene-drag-update', delta.x, delta.y)
   }
 
   private _onDragEnd(dx: number, dy: number): void {
     const wasRealDrag = this._dragging
-    if (wasRealDrag && this._dragMode === 'pan') {
-      this.emit('preview-pan-end')
-      this._lastClickMs = 0
-    } else if (wasRealDrag) {
+    if (wasRealDrag) {
       const delta = this._moveDeltaInParent(dx, dy)
       if (delta) this.emit('scene-drag-end', delta.x, delta.y)
       // Reset the double-click timer so the trailing click can't
@@ -252,16 +174,6 @@ export class SceneCard extends Gtk.Button {
     this._pressInParent = null
     if (wasRealDrag) this._suppressTrailingClick()
     else this._dragging = false
-  }
-
-  private _onLockToggled(): void {
-    const open = this._lock_button.active
-    this._pannablePreview = open
-    this._lock_button.set_icon_name(open ? 'changes-allow-symbolic' : 'changes-prevent-symbolic')
-    this._lock_button.set_tooltip_text(
-      open ? _('Lock to move the card instead') : _('Unlock to pan the preview section'),
-    )
-    this.emit('lock-changed', open)
   }
 
   /**
@@ -292,9 +204,9 @@ export class SceneCard extends Gtk.Button {
    * when `GestureDrag` is on the CAPTURE phase, so listeners that
    * guard with `if (card.isDragging) return` (atlas-canvas's
    * `scene-selected` emit, this card's own `_onClicked`) bail without
-   * firing — no auto-open mid-reorder, no spurious `scene-activated`,
-   * no select on a lock click. Reset on the next idle tick so the
-   * suppression window doesn't leak into a subsequent real click.
+   * firing — no auto-open mid-reorder and no spurious
+   * `scene-activated`. Reset on the next idle tick so the suppression
+   * window doesn't leak into a subsequent real click.
    */
   private _suppressTrailingClick(): void {
     this._dragging = true
@@ -304,44 +216,64 @@ export class SceneCard extends Gtk.Button {
     })
   }
 
-  /** Lock state — `true` = open (drag pans the preview section). */
-  get previewUnlocked(): boolean {
-    return this._lock_button?.active ?? false
+  /**
+   * Size the map body to `width × height` surface pixels. Everything
+   * else about the card's geometry follows from this and the title's
+   * natural size.
+   */
+  setBodySize(width: number, height: number): void {
+    const w = Math.max(1, Math.round(width))
+    const h = Math.max(1, Math.round(height))
+    // A `MiniMap` measures `cols * tilePx` and does NOT scale into its
+    // allocation, so the sample-world path has to pick a tile size
+    // that fits inside the framed slot — otherwise the mini-map's
+    // natural size would push the slot (and with it the card) past
+    // the size the camera asked for.
+    if (this._preview_slot?.get_child() === (this._map as Gtk.Widget)) {
+      this._map.tilePx = this._fittingTilePx(w, h)
+    }
+    this._preview_slot?.set_size_request(w, h)
   }
 
-  set previewUnlocked(value: boolean) {
-    if (!this._lock_button || this._lock_button.active === value) return
-    this._lock_button.active = value
+  /** Largest tile size at which the mini-map still fits the framed slot. */
+  private _fittingTilePx(width: number, height: number): number {
+    const cols = Math.max(this._map.cols, 1)
+    const rows = Math.max(this._map.rows, 1)
+    // The frame draws a 1 px border on each side, inside the request.
+    const fit = Math.min((width - 2) / cols, (height - 2) / rows)
+    return Math.max(1, Math.min(MINI_MAP_TILE_PX_MAX, Math.floor(fit)))
+  }
+
+  /** Total card width, in surface px — the wider of title and body. */
+  get cardWidth(): number {
+    return Math.max(this._naturalSize(this._title_row).width, this._naturalSize(this._preview_slot).width)
+  }
+
+  /** Total card height, in surface px — title, gap and body. */
+  get cardHeight(): number {
+    return this.bodyOffsetY + this._naturalSize(this._preview_slot).height
+  }
+
+  /** Body inset from the card's left edge (the title may be wider). */
+  get bodyOffsetX(): number {
+    return Math.round((this.cardWidth - this._naturalSize(this._preview_slot).width) / 2)
+  }
+
+  /** Body inset from the card's top edge — the title overhang. */
+  get bodyOffsetY(): number {
+    return this._naturalSize(this._title_row).height + TITLE_SPACING_PX
   }
 
   /**
-   * Whether the pointer press at card-local `(x, y)` landed on the
-   * lock toggle (whose drags should never pan the preview).
+   * Measured natural size of one child. Read back from GTK rather than
+   * recomputed, so CSS padding and the frame's border are included
+   * whichever way GTK accounts for a size request.
    */
-  private _isOnLock(x: number, y: number): boolean {
-    const picked = this.pick(x, y, Gtk.PickFlags.DEFAULT)
-    let widget: Gtk.Widget | null = picked
-    while (widget && widget !== (this as Gtk.Widget)) {
-      if (widget === this._lock_button) return true
-      widget = widget.get_parent()
-    }
-    return false
-  }
-
-  /** Show the viewport lock — set by the atlas for viewport previews. */
-  set viewportLockable(value: boolean) {
-    if (this._viewportLockable === value) return
-    this._viewportLockable = value
-    this.notify('viewport-lockable')
-  }
-
-  get viewportLockable(): boolean {
-    return this._viewportLockable ?? false
-  }
-
-  /** See {@link _pannablePreview}. Driven by the lock toggle. */
-  get pannablePreview(): boolean {
-    return this._pannablePreview ?? false
+  private _naturalSize(widget: Gtk.Widget | null): { width: number; height: number } {
+    if (!widget) return { width: 0, height: 0 }
+    const [, width] = widget.measure(Gtk.Orientation.HORIZONTAL, -1)
+    const [, height] = widget.measure(Gtk.Orientation.VERTICAL, width)
+    return { width, height }
   }
 
   /**
@@ -376,25 +308,15 @@ export class SceneCard extends Gtk.Button {
   /** Populate the card from a sample-world scene descriptor. */
   setScene(scene: SampleScene): void {
     this._sceneName = scene.name
-    this._events = scene.events
     this._map.tilePx = scene.tilePx
     if (scene.rows.length) {
-      this._cols = scene.rows[0]?.length ?? 0
-      this._rows = scene.rows.length
       this._map.setRows(scene.rows)
     } else if (scene.cols && scene.previewRows) {
-      this._cols = scene.cols
-      this._rows = scene.previewRows
       this._map.setPlaceholder(scene.cols, scene.previewRows, scene.tilePx, scene.previewColor)
     } else {
-      this._cols = 0
-      this._rows = 0
       this._map.setRows([])
     }
     this.notify('scene-name')
-    this.notify('size-text')
-    this.notify('events-text')
-    this.notify('has-events')
   }
 
   /**
@@ -417,31 +339,19 @@ export class SceneCard extends Gtk.Button {
     this.notify('scene-name')
   }
 
-  get sizeText(): string {
-    if (!this._cols || !this._rows) return ''
-    return `${this._cols}×${this._rows}`
+  /** Whether the game starts here — shows the small start badge. */
+  get startMap(): boolean {
+    return this._startMap ?? false
   }
 
-  get eventsText(): string {
-    return (this._events ?? 0).toString()
-  }
-
-  get hasEvents(): boolean {
-    return (this._events ?? 0) > 0
+  set startMap(value: boolean) {
+    if (this._startMap === value) return
+    this._startMap = value
+    this.notify('start-map')
   }
 
   private _onClicked(): void {
     if (this._dragging) return
-    // Lock clicks: the card button claims every press in its CAPTURE
-    // phase, so the nested toggle never fires — toggle it here and
-    // suppress the host's `clicked` select handler.
-    if (this._pressOnLock && this._viewportLockable) {
-      this._pressOnLock = false
-      this._lock_button.set_active(!this._lock_button.active)
-      this._lastClickMs = 0
-      this._suppressTrailingClick()
-      return
-    }
     const now = Date.now()
     if (isDoubleClick(now, this._lastClickMs)) {
       this.emit('scene-activated')

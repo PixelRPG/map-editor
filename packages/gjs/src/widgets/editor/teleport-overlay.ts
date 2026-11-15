@@ -5,9 +5,9 @@ import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
+import type { SceneRect } from './atlas-canvas.geometry.ts'
 import { arrowheadPoints, controlPoint, type OverlayPoint, teleportEndpoint } from './teleport-overlay.geometry.ts'
 
-const TITLE_BAR_HEIGHT = 24
 const ACCENT_FALLBACK = '#3584e4'
 
 const STROKE_WIDTH = 2
@@ -43,7 +43,8 @@ const LABEL_PADDING_Y = 2
 export class TeleportOverlay extends Gtk.Widget {
   private _scenes: SampleScene[] = []
   private _teleports: SampleTeleport[] = []
-  private _scale = 1
+  /** Drawn card body rects by scene id — the atlas camera's output. */
+  private _rects = new Map<string, SceneRect>()
   private _selectedId: string | null = null
   private _accentColor: Gdk.RGBA
 
@@ -65,10 +66,16 @@ export class TeleportOverlay extends Gtk.Widget {
     this.set_vexpand(true)
   }
 
-  setWorld(scenes: SampleScene[], teleports: SampleTeleport[], scale: number = 1): void {
+  /**
+   * Replace the drawn world. `rects` maps each scene id to the card
+   * body rect the atlas camera placed on the surface — the overlay
+   * derives every endpoint from those, so it needs no zoom of its own
+   * and stays correct for cards floored to the minimum size.
+   */
+  setWorld(scenes: SampleScene[], teleports: SampleTeleport[], rects: Map<string, SceneRect>): void {
     this._scenes = scenes
     this._teleports = teleports
-    this._scale = scale
+    this._rects = rects
     this.queue_draw()
   }
 
@@ -93,8 +100,8 @@ export class TeleportOverlay extends Gtk.Widget {
     stroke.set_line_cap(Gsk.LineCap.ROUND)
 
     for (const t of this._teleports) {
-      const a = this._endpoint(byId, t.from, t.fx, t.fy)
-      const b = this._endpoint(byId, t.to, t.tx, t.ty)
+      const a = this._endpoint(byId, t.from, { x: t.fx, y: t.fy })
+      const b = this._endpoint(byId, t.to, { x: t.tx, y: t.ty })
       if (!a || !b) continue
       this._drawTeleport(snapshot, t, a, b, stroke, accent, white)
     }
@@ -137,10 +144,18 @@ export class TeleportOverlay extends Gtk.Widget {
     snapshot.pop()
   }
 
-  private _endpoint(byId: Map<string, SampleScene>, sceneId: string, tx: number, ty: number): OverlayPoint | null {
+  private _endpoint(
+    byId: Map<string, SampleScene>,
+    sceneId: string,
+    tile: { x: number; y: number },
+  ): OverlayPoint | null {
     const scene = byId.get(sceneId)
-    if (!scene) return null
-    return teleportEndpoint(scene, tx, ty, this._scale, TITLE_BAR_HEIGHT)
+    const rect = this._rects.get(sceneId)
+    if (!scene || !rect) return null
+    const cols = scene.rows[0]?.length || scene.cols || 0
+    const rows = scene.rows.length || scene.previewRows || 0
+    if (!cols || !rows) return null
+    return teleportEndpoint({ rect, cols, rows }, tile)
   }
 
   private _coverRect(): Graphene.Rect {

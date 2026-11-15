@@ -551,13 +551,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
     })
-    this.signals.connect(
-      this._atlas_view,
-      'preview-moved',
-      (_v: AtlasView, id: string, tileX: number, tileY: number) => {
-        this._mapPersistCtl.persistPreviewViewport(id, tileX, tileY)
-      },
-    )
     // The header switchers and the bottom switcher bar all drive
     // `shell_stack` directly, so the stack — not a per-view signal — is
     // where a destination change becomes observable. Mirror it into
@@ -795,8 +788,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     installZoomActions(group, {
       targetsAtlas: () => this._router.currentView === 'world',
-      stepAtlasZoom: (delta) => this._atlas_view.stepPreviewZoom(delta),
-      resetAtlasZoom: () => this._atlas_view.resetPreviewZoom(),
+      stepAtlasZoom: (delta) => this._atlas_view.stepZoom(delta),
+      resetAtlasZoom: () => this._atlas_view.resetZoom(),
       fitAtlas: () => this._atlas_view.fitAtlas(),
       stepEngineZoom: (delta) => this._stepZoom(delta),
       resetEngineZoom: () => void this._applyZoom(1),
