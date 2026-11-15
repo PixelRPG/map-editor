@@ -31,7 +31,7 @@ Single source of truth: **one** `Adw.Breakpoint` on the
 
 | Tier    | Condition                          | Setters apply                                                                                                     |
 |---------|------------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| Phone   | `max-width: 767sp`                 | `view_switcher_bar.reveal: true` + `compact: true` on the three shell views (world, library, game) + `inspector-collapsed: true` on every view that has an inspector (atlas, library, scene-editor, welcome; game has none) |
+| Phone   | `max-width: 767sp`                 | `view_switcher_bar.reveal: true` + `compact: true` on the three shell views (world, library, game) + `inspector-collapsed: true` on every view that has an inspector (library, scene-editor, welcome; the world view lost its inspector in step 5.4, game never had one) + `bottom_bar_stack` switches to the map selection bar whenever a map is selected in the world view |
 | Desktop | (no breakpoint, template defaults) | `reveal: false` — the header switchers carry navigation; `compact: false`, `inspector-collapsed: false` — splits and the inspector persistent |
 
 The **tablet** tier is gone (redesign step 2.1). It existed to
@@ -80,9 +80,15 @@ information + settings about whatever the user just selected.
 When a selection lands and inspector content becomes available,
 the inspector **auto-opens** if it was closed.
 
+The **world view is not in this table** since step 5.4: it has no
+sidebar at any width. Selecting a map reveals a `MapSelectionBar`
+instead — bottom-centre over the canvas on wide, in the window's
+bottom bar on phone — so the map the user just pointed at stays in
+view rather than being pushed aside by a drawer. See "The world
+view's selection bar".
+
 | View          | Triggering selection                                          | Inspector content                          |
 |---------------|---------------------------------------------------------------|--------------------------------------------|
-| Atlas         | Click a scene card                                            | Map preview, metadata, Open Scene CTA and the map verbs (rename / duplicate / delete / start map) — redesign step 5.4 moves all of it into a selection bar |
 | Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
 | Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement — **wide only**, see below |
 
@@ -185,19 +191,19 @@ drawer slides out over the map holding nothing, because its slots
 are empty whenever the pages live in the sheet. A plain canvas
 selection is the one reveal that does not arrive here at all: it
 goes through `revealForSelection()`, which declines on phone (see
-"Right inspector — auto-open policy"). The other three
+"Right inspector — auto-open policy"). The other two
 inspectors still take the drawer on phone and close from their
 own header.
 
-Each of the four right-inspector widgets (`RightInspector`,
-`SceneInspector`, `CastInspector`, `TileInspector`) carries a
+Each of the three right-inspector widgets (`RightInspector`,
+`CastInspector`, `TileInspector`) carries a
 `collapsed: boolean` GObject property + a circular-flat close
 button in the `[start]` slot of its flat headerbar. The button
 binds `visible` to `collapsed` so:
 
 - **Desktop** (`collapsed: false`) — button hidden. The
   panel is pinned, and `inspector_toggle` — in the scene editor's
-  end-aligned context pill, or the atlas header — is the expected
+  end-aligned context pill — is the expected
   close affordance. `CastInspector` / `TileInspector` sit in the
   Library's own master-detail splits rather than a window drawer, so
   there is no toggle for them.
@@ -209,9 +215,9 @@ binds `visible` to `collapsed` so:
 The `collapsed` value is fed by a one-line `.blp` bind from each
 parent view's `inspector-collapsed` property
 (`collapsed: bind template.inspector-collapsed;`), so the close
-button tracks the breakpoint without any TS-side glue. The four
+button tracks the breakpoint without any TS-side glue. The three
 inspector widgets are independent classes today (different
-content surfaces, different signals); when a fifth inspector
+content surfaces, different signals); when a fourth inspector
 lands, it copies the same six lines (property + getter + setter +
 binding + .blp button + headerbar comment) — small enough that a
 shared mixin would obscure more than it saves.
@@ -234,21 +240,26 @@ whole content area with chrome floating on top.
 Layout shape — the atlas, whose overlay children are all direct:
 
 ```
-Adw.OverlaySplitView split   (pin-sidebar: true)
-├─ sidebar (end): RightInspector / SceneInspector
-│     (its own thin flat HeaderBar carries the window-close X)
-└─ content: Gtk.Overlay
-   ├─ [overlay] toggle pill      (top-right: inspector)
-   ├─ [overlay] FloatingZoom     (bottom-left — atlas only, see below)
-   ├─ [overlay] overview minimap (top-right, only while the world
-   │                              is larger than the view, never compact)
-   ├─ [overlay] FloatingFab      ("New map" → win.new-map, bottom-right)
-   └─ child: scene-card area
+Adw.ToolbarView               (extend-content-to-top-edge: true)
+├─ [top] Adw.HeaderBar        (flat + .atlas-headerbar — translucent, the
+│     canvas reads through it) switcher pill (wide) /
+│     "World" title (phone) · RosterChip · "⋯"
+└─ content: Adw.BreakpointBin (measures the CANVAS, not the window)
+   └─ Gtk.Overlay
+      ├─ [overlay] overview minimap (top-right, only while the world
+      │                              is larger than the view, never compact)
+      ├─ [overlay] FloatingFab      ("New map" → win.new-map, bottom-right)
+      ├─ [overlay] FloatingZoom     (bottom-left, see below)
+      ├─ [overlay] MapSelectionBar  (bottom-centre, wide only — the phone
+      │                              instance lives in the window's bottom bar)
+      └─ child: AtlasCanvas         (scene cards + teleport overlay)
 ```
 
 Before step 2.1 this was a pair of nested `Adw.OverlaySplitView`s, the
-outer one holding a `ModeRail` sidebar. The rail is gone, so there is
-one split per view and it is the inspector's.
+outer one holding a `ModeRail` sidebar. The rail went with 2.1 and the
+world view's inspector with 5.4, so the atlas has **no split left at
+all** — the scene editor is the one canvas view that still wraps its
+content in one, for the `RightInspector` drawer.
 
 The scene editor puts a `SceneEditor` (`scene-editor.blp`) in the
 same `content:` slot, and that widget owns its own overlay:
@@ -483,6 +494,61 @@ Conventions:
 
 ---
 
+## The world view's selection bar
+
+The world view answers a selection with a bar, not a sidebar
+(REDESIGN § 5.4). `MapSelectionBar` (`packages/gjs`) is a one-row
+`Adw.Bin`: the map's name, a `176 × 148 · 2 doors` caption under it, an
+Open button and a "⋯" menu (Rename… · Duplicate · Start the game here ·
+Map settings… · Delete). It carries no editing controls of its own —
+every button is `action-name`-bound, so the bar is a view over the `win.`
+map actions and holds no state the window does not already have.
+
+**Two instances, one data path.** A Blueprint `bind` cannot cross a
+template boundary, and the phone bar has to live in the window's
+`[bottom]` slot, so:
+
+| Tier | Instance | Lives in |
+|---|---|---|
+| wide + tablet (≥ 768sp) | `selection_bar`, 4th overlay child, bottom-centre, `floating: true` (adds `toolbar`+`osd`) | `atlas-view.blp`, `visible: bind template.compact inverted` |
+| phone (`max-width: 767sp`) | `phone_selection_bar`, `floating: false` (it *is* the bottom bar) | `application-window.blp`, in `Gtk.Stack bottom_bar_stack` |
+
+`AtlasView.attachSelectionBar(bar)` hands the window's instance to the
+view (same pattern as `attachShellSwitcher`), and `_refreshSelection()`
+pushes the identical `(name, facts)` pair into both. Only one is ever
+visible, so there is no double-rendering cost and no second truth.
+
+**The bar outlives the surface.** `win.map-list` swaps
+`atlas-view.blp`'s `surface_stack` between the card grid and a
+`Gtk.ListBox` of the same maps, and the selection bar and the "New map"
+FAB stay up across the swap — both mean the same thing on either
+surface. The zoom pill and the overview minimap go away with the grid,
+being cameras onto a surface that is no longer on screen. The list is
+one `Adw.ActionRow` per map (56 px thumbnail · name · the same caption),
+reachable from the context pill's "⋯" at every width and from `Ctrl+L`;
+it is the keyboard- and screen-reader-first path to the maps, which is
+why it has no standing control of its own.
+
+The phone stack's two pages are `nav` (the existing
+`Adw.ViewSwitcherBar`) and `selection`, both non-homogeneous.
+`_refreshBottomBar()` picks `selection` when
+`atlas_view.compact && router.currentView === 'world' && selectedAtlasSceneId != null`
+— so the switcher comes back the moment the user leaves the world view,
+deselects, or the window grows past the phone breakpoint. Note the tablet
+tier (768×1024) is **not** compact, so it gets the overlay instance.
+
+Why a bar at all: the thing the user just pointed at is on the canvas,
+and a right drawer at 768sp takes a third of the canvas width away to
+describe it. Captions degrade instead of wrapping — `max-width-chars`
+18 (name) / 22 (caption) keeps the bar near 290 px, which fits the
+360 px phone floor with the margins.
+
+**Clicking the backdrop pans; it does not deselect.** The atlas has no
+deselection path, so the bar stays up once a map has been picked. That
+is deliberate for now (the verbs stay reachable), not an oversight.
+
+---
+
 ## The scene editor's disclosure ladder
 
 Unlike the rest of the chrome — which reacts to
@@ -700,7 +766,6 @@ The fixes that turned out to matter:
 | Location                          | Fix                                                                                                                                                                                  | PR  |
 |-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
 | `atlas-canvas.blp` ScrolledWindow | `min-content-width: 1` + `min-content-height: 1` detaches the inner `Gtk.Fixed` surface's `set_size_request(W, H)` from propagating upward                                           | #54 |
-| `scene-inspector.blp`             | Drop the hard `width-request: 300`                                                                                                                                                   | #54 |
 | `engine.blp`                      | Wrap `canvasContainer` in a `Gtk.ScrolledWindow` with `min-content-{width,height}: 1` + `hscrollbar-policy: external` (size-detach only, no scrollbars). Same trick, different layer | #57 |
 | `welcome-view.blp` recents column | Inner `Gtk.ScrolledWindow` gets `min-content-width: 1`. Dropped the `width-request: 320` floor on the recents column                                                                 | #60 |
 | `application-window.blp` `root_stack` + `shell_stack` | `hhomogeneous: false` + `vhomogeneous: false` on **both**. Default `true` measures **every page** and uses the max as the stack's size — the scene editor's WebGL canvas leaked into the atlas view's layout | #55 |
@@ -867,8 +932,7 @@ between rows / below the active page pick up window-drag gestures
 items, search entries) consume their own clicks and bypass the
 handle automatically.
 
-The right
-inspectors (RightInspector, SceneInspector) wrap their
+The right inspector (RightInspector) wraps its
 `Gtk.ScrolledWindow` content (the sidebar's own flat HeaderBar
 is already a drag region by virtue of being an `Adw.HeaderBar`).
 
@@ -1073,6 +1137,10 @@ on the scene the load then replaces and vanishes silently.
 | Virtual joystick + action button for a phone Live Run (REDESIGN § 5.6 / § 9 step 4.1) — overlay children of the *engine* widget, not of the editor chrome; a run on phone also collapses the sheet, so nothing rests over the thumb | **landed** |
 | A run clears the editing affordances in the wide layout as well and frames the canvas in accent (`stopButton` / `restartButton` / `runBorder`, REDESIGN § 4.6 / § 9 step 4.2); `TileEditorSystem` gates its pointer handlers on `EditorModeComponent`, so a focus-seeking click during a run can no longer paint | **landed** |
 | A wide *Live* Run that keeps the tools while the hero walks (REDESIGN § 4.6) — needs a second entry point and an engine holding both markers | deferred, tracked in `TODO.md` |
+| The world view has no sidebar at any width: `SceneInspector` is deleted and a selection reveals `MapSelectionBar` instead — bottom-centre over the canvas on wide and tablet, in the window's `bottom_bar_stack` on phone (REDESIGN § 5.4 / § 9 step 5.4) | **landed** |
+| List mode: `win.map-list` (context pill's "⋯", `Ctrl+L`) swaps `surface_stack` for a `Gtk.ListBox` of maps at every width; the FAB and the selection bar survive the swap, the zoom pill and overview minimap do not (REDESIGN § 4.2 / § 9 step 5.4) | **landed** |
+| The list row's "peers present" column (REDESIGN § 4.2) | deferred, tracked in `TODO.md` |
+| Deselecting a map in the world view — clicking the backdrop pans, so the bar stays up once a map has been picked | deliberate, see "The world view's selection bar" |
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller

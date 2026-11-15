@@ -224,21 +224,36 @@ function nestedObjectLiteral(source, name) {
 }
 
 /**
- * Pages of one stack-page TYPE, brace-matched. Anchored on the page type
- * rather than on a bare `name:` line — an unanchored scan also matches
- * the template's own `Gtk.Widget.name` (`application-window.blp:5`) and
- * reports the window itself as a stack page.
+ * Pages of one stack-page TYPE, brace-matched, within one NAMED stack.
+ *
+ * Anchored on the page type rather than on a bare `name:` line — an
+ * unanchored scan also matches the template's own `Gtk.Widget.name`
+ * (`application-window.blp:5`) and reports the window itself as a stack
+ * page.
+ *
+ * Scoped to the stack it is asked about, and the scope is load-bearing:
+ * not every `Gtk.Stack` in the window is navigation. Step 5.4 put a
+ * `Gtk.Stack bottom_bar_stack` in the `[bottom]` slot to swap the view
+ * switcher for the world view's map selection bar, and its `nav` /
+ * `selection` pages are not destinations — an unscoped harvest demanded
+ * a `ViewRoute['root']` member for each of them. `root_stack` is the
+ * ancestor of everything, so a brace body alone is not enough either:
+ * the nested stacks' bodies are blanked out first, which leaves exactly
+ * the pages the named stack owns.
  *
  * `title` / `icon` are reported per page because they are the switcher's
  * only labels: an `Adw.ViewStackPage` without them renders as a blank
  * button, which is a navigation dead end of a subtler kind — the
  * destination exists but nothing says what it is.
  */
-function stackPages(source, type) {
+function stackPages(source, stack, type) {
+  const decl = source.match(new RegExp(`\\b(?:Gtk\\.Stack|Adw\\.ViewStack)\\s+${stack}\\s*\\{`))
+  if (!decl) return []
+  const own = blankNestedStacks(braceBody(source, decl.index) ?? '')
   const pages = []
   const re = new RegExp(`\\b${type.replace(/\./g, '\\.')}\\s*\\{`, 'g')
-  for (const m of source.matchAll(re)) {
-    const body = braceBody(source, m.index)
+  for (const m of own.matchAll(re)) {
+    const body = braceBody(own, m.index)
     if (body === null) continue
     const clean = stripComments(body)
     pages.push({
@@ -250,6 +265,23 @@ function stackPages(source, type) {
     })
   }
   return pages
+}
+
+/**
+ * Replace the body of every nested `Gtk.Stack` / `Adw.ViewStack` with
+ * blanks of the same length, so offsets still line up for brace
+ * matching but the inner pages are invisible to the outer scan.
+ */
+function blankNestedStacks(body) {
+  let out = body
+  for (;;) {
+    const m = out.match(/\b(?:Gtk\.Stack|Adw\.ViewStack)\s+\w+\s*\{/)
+    if (!m) return out
+    const inner = braceBody(out, m.index)
+    if (inner === null) return out
+    const end = out.indexOf('{', m.index) + inner.length + 2
+    out = out.slice(0, m.index) + ' '.repeat(end - m.index) + out.slice(end)
+  }
 }
 
 /**
@@ -304,8 +336,8 @@ const modeForView = objectLiteral(mapTs, 'MODE_FOR_VIEW')
 const viewForMode = objectLiteral(mapTs, 'VIEW_FOR_MODE')
 const rootUnion = interfaceFieldUnion(mapTs, 'ViewRoute', 'root')
 const shellUnion = interfaceFieldUnion(mapTs, 'ViewRoute', 'shell')
-const rootPages = stackPages(windowBlp, 'Gtk.StackPage')
-const shellPages = stackPages(windowBlp, 'Adw.ViewStackPage')
+const rootPages = stackPages(windowBlp, 'root_stack', 'Gtk.StackPage')
+const shellPages = stackPages(windowBlp, 'shell_stack', 'Adw.ViewStackPage')
 const setters = breakpointSetters(windowBlp)
 const backSteps = arrayLiteral(backOrderTs, 'BACK_STEPS')
 const windowShortcuts = accelTable(accelsTs, 'WINDOW_SHORTCUTS')

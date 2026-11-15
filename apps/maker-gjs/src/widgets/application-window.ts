@@ -12,7 +12,15 @@ import {
   isLayerPlane,
   type SpriteSetData,
 } from '@pixelrpg/engine'
-import { type CollaboratorEntry, Engine, promptRename, SignalScope } from '@pixelrpg/gjs'
+import {
+  type CollaboratorEntry,
+  Engine,
+  type MapSelectionBar,
+  mapSelectionFacts,
+  promptRename,
+  SignalScope,
+  teleportSummaries,
+} from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
 import { installBackActions } from '../actions/back-actions.ts'
@@ -66,7 +74,7 @@ import { RecentProjectsDialog } from './recent-projects-dialog.ts'
 import type { ResponsiveEditorView } from './responsive-editor-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
-import { confirmMapDelete, presentNewMapDialog } from './world/map-dialogs.ts'
+import { confirmMapDelete, presentMapSettingsDialog, presentNewMapDialog } from './world/map-dialogs.ts'
 
 // Force registration so the `$PixelRpgLibraryView` / `$PixelRpgGameView`
 // references in the blueprint resolve at parse time.
@@ -185,6 +193,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _root_stack: Gtk.Stack
   declare _shell_stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
+  declare _bottom_bar_stack: Gtk.Stack
+  declare _phone_selection_bar: MapSelectionBar
 
   private signals = new SignalScope()
   /**
@@ -366,6 +376,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           'root_stack',
           'shell_stack',
           'toast_overlay',
+          'bottom_bar_stack',
+          'phone_selection_bar',
         ],
         Properties: {
           // Single source of truth for inspector visibility. Each view's
@@ -563,7 +575,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (page && this._actions && stringState(this._actions.mode) !== page) {
         this._actions.mode.set_state(GLib.Variant.new_string(page))
       }
+      this._refreshBottomBar()
     })
+    // Phone: the selection bar and the view switcher share the bottom
+    // slot, so leaving phone width has to hand it back.
+    this.signals.connect(this._atlas_view, 'notify::compact', () => this._refreshBottomBar())
     // The Library's own chip clicks flow back into `win.library-chip`, so
     // an external driver reading the action state sees what is on screen.
     this.signals.connect(this._library_view, 'notify::chip', () => {
@@ -692,6 +708,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     for (const view of [this._atlas_view, this._library_view, this._game_view]) {
       view.attachShellSwitcher(this._shell_stack)
     }
+    // Same reason as the switchers: the bar lives in this template
+    // because it has to share the one bottom slot with the view
+    // switcher, but only `AtlasView` knows what is selected.
+    this._atlas_view.attachSelectionBar(this._phone_selection_bar)
+  }
+
+  /**
+   * Phone only: swap the single bottom slot between the shell's view
+   * switcher and the selected map's selection bar. Everywhere else the
+   * atlas shows its own overlay instance and this stays on `nav`.
+   */
+  private _refreshBottomBar(): void {
+    const selecting =
+      this._atlas_view.compact && this._router.currentView === 'world' && this._scenes.selectedAtlasSceneId != null
+    this._bottom_bar_stack.set_visible_child_name(selecting ? 'selection' : 'nav')
   }
 
   /**
@@ -894,7 +925,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
     })
 
-    const { renameMap, duplicateMap, deleteMap, startMap } = installMapActions(group, {
+    const { renameMap, duplicateMap, deleteMap, startMap, mapSettings } = installMapActions(group, {
       hasProject,
       showToast,
       presentNewMap: () => this._presentNewMap(),
@@ -902,6 +933,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       presentDuplicateMap: () => this._presentDuplicateMap(),
       confirmDeleteMap: () => this._confirmDeleteMap(),
       startHere: () => this._startMapHere(),
+      presentMapSettings: () => this._presentMapSettings(),
+      setListMode: (on) => this._atlas_view.setListMode(on),
     })
 
     installWindowAccels(this.get_application())
@@ -924,6 +957,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       duplicateMap,
       deleteMap,
       startMap,
+      mapSettings,
     }
   }
 
@@ -940,13 +974,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * Keep the four selection-driven map verbs honest: a verb with no
+   * Keep the five selection-driven map verbs honest: a verb with no
    * target is insensitive, not a toast after the fact. Delete also needs
    * a second map to fall back to (`ProjectStore.removeMap` refuses the
    * last one) and Start the game here is pointless on the map that
    * already starts it.
    */
   private _refreshMapActions(): void {
+    // Every selection change and every map add/remove comes through
+    // here, which makes it the one place the phone bottom bar has to
+    // re-decide which of its two pages is right.
+    this._refreshBottomBar()
     const actions = this._actions
     if (!actions) return
     const selected = this._selectedScene()
@@ -954,6 +992,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     actions.duplicateMap.set_enabled(selected != null)
     actions.deleteMap.set_enabled(selected != null && this._scenes.scenes.length > 1)
     actions.startMap.set_enabled(selected != null && this._projectStore.startMapId() !== selected.id)
+    actions.mapSettings.set_enabled(selected != null)
   }
 
   /** `win.new-map` — the atlas FAB. */
@@ -1030,6 +1069,36 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (this._projectStore.setStartMap(selected.id)) {
       this._showToast(_('The game now starts on “%s”').replace('%s', selected.name))
     }
+  }
+
+  /**
+   * `win.map-settings` — the facts about the selected map, with its name
+   * editable. The counts come from the same `mapSelectionFacts` the
+   * selection bar's caption uses, so the bar and the dialog can never
+   * disagree; the tile size is the only value that has to be read off
+   * the map resource, the atlas cards do not carry it.
+   */
+  private _presentMapSettings(): void {
+    const selected = this._selectedScene()
+    const project = this._loadedProject
+    if (!selected || !project) return
+    const scene = this._scenes.getScene(selected.id)
+    if (!scene) return
+    const mapData = project.resource.maps.get(selected.id)?.mapData
+    const facts = mapSelectionFacts(scene, project.teleports)
+    presentMapSettingsDialog(
+      this,
+      {
+        name: selected.name,
+        columns: facts.cols,
+        rows: facts.rows,
+        tileWidth: mapData?.tileWidth ?? 0,
+        tileHeight: mapData?.tileHeight ?? 0,
+        things: facts.things,
+        doors: teleportSummaries(scene, project.scenes, project.teleports),
+      },
+      (name) => this._projectStore.renameMap(selected.id, name),
+    )
   }
 
   /**

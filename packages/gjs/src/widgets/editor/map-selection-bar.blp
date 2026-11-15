@@ -1,0 +1,64 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgMapSelectionBar : Adw.Bin {
+  // Positioned by the host: bottom-centre of the atlas overlay on
+  // desktop and tablet, a page of the window's bottom bar stack on
+  // phone (REDESIGN.md § 4.2).
+  halign: center;
+  valign: end;
+
+  // The "toolbar"/"osd" pill classes are removed in code when
+  // `floating` turns off — the phone instance sits in the window's
+  // bottom bar, where an OSD pill would be drawn inside a bar.
+  child: Gtk.Box bar_box {
+    orientation: horizontal;
+    spacing: 6;
+    visible: bind template.revealed;
+    styles ["toolbar", "osd"]
+
+    Gtk.Box {
+      orientation: vertical;
+      margin-start: 6;
+      margin-end: 6;
+      valign: center;
+
+      // Ellipsized and capped: the desktop instance lives in the gap
+      // between the zoom pill (start) and the new-map FAB (end), and a
+      // map called after a paragraph must not push either off-screen.
+      Gtk.Label name_label {
+        label: bind template.map-name;
+        ellipsize: end;
+        max-width-chars: 18;
+        xalign: 0.0;
+        styles ["heading"]
+      }
+
+      Gtk.Label details_label {
+        label: bind template.map-details;
+        visible: bind template.has-details;
+        ellipsize: end;
+        max-width-chars: 22;
+        xalign: 0.0;
+        styles ["caption", "dim-label"]
+      }
+    }
+
+    Gtk.Button open_button {
+      label: _("Open");
+      action-name: "win.open-scene";
+      tooltip-text: _("Open this map in the editor");
+      styles ["suggested-action", "pill"]
+    }
+
+    Gtk.MenuButton menu_button {
+      icon-name: "view-more-symbolic";
+      tooltip-text: _("Map options");
+      styles ["flat"]
+
+      accessibility {
+        label: _("Map options");
+      }
+    }
+  };
+}

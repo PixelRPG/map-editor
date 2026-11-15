@@ -23,32 +23,32 @@ export declare const GTypeName: 'AtlasView';
  * upstream half.
  */
 export declare const InternalChildren: [
-        'inner_split',
-        'inspector',
+        'surface_stack',
         'atlas',
+        'map_list',
         'overview_frame',
         'atlas_overview',
         'new_map_fab',
         'preview_zoom',
+        'selection_bar',
         'switcher_pill',
         'view_switcher',
         'project_menu',
         'roster_chip',
-        'inspector_toggle',
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-        _inner_split: Adw.OverlaySplitView;
-        _inspector: GObject.Object;
+        _surface_stack: Gtk.Stack;
         _atlas: GObject.Object;
+        _map_list: Gtk.ListBox;
         _overview_frame: Adw.Bin;
         _atlas_overview: GObject.Object;
         _new_map_fab: GObject.Object;
         _preview_zoom: GObject.Object;
+        _selection_bar: GObject.Object;
         _switcher_pill: Adw.Bin;
         _view_switcher: Adw.ViewSwitcher;
         _project_menu: GObject.Object;
         _roster_chip: GObject.Object;
-        _inspector_toggle: Gtk.ToggleButton;
 }

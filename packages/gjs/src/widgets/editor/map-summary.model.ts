@@ -1,14 +1,15 @@
-// Pure projections behind the atlas scene inspector: the caption, the
-// 2×2 stat grid and the per-direction teleport list. GTK-free so it can
-// be unit-tested (the inspector subclasses `Adw.Bin`).
+// Pure projections behind the atlas's map summaries: the selection
+// bar's caption facts, the list-mode thumbnail size and the
+// per-direction teleport list. GTK-free so it can be unit-tested (the
+// widgets that consume it subclass `Adw.Bin`), which also means no
+// gettext in here — the caller owns every translated string.
 
-/** The scene fields the inspector projects — `SampleScene` satisfies it. */
-export interface InspectedScene {
+/** The scene fields a summary projects — `SampleScene` satisfies it. */
+export interface SummarizedScene {
   id: string
   rows: string[]
   cols?: number
   previewRows?: number
-  music?: string
   events: number
   npcs?: unknown[]
 }
@@ -20,7 +21,7 @@ export interface SceneLink {
   label: string
 }
 
-/** One row of the inspector's teleport list, already resolved for display. */
+/** One row of a map's door list, already resolved for display. */
 export interface TeleportSummary {
   label: string
   /** Other-scene id (destination when outgoing, source when incoming). */
@@ -30,34 +31,12 @@ export interface TeleportSummary {
   direction: 'in' | 'out'
 }
 
-/** One cell of the inspector's stat grid. */
-export interface SceneStat {
-  label: string
-  value: string
-}
-
 /** Map size in tiles — terrain rows if present, else the card geometry. */
-export function sceneTileSize(scene: InspectedScene): { cols: number; rows: number } {
+export function sceneTileSize(scene: SummarizedScene): { cols: number; rows: number } {
   return {
     cols: scene.rows[0]?.length || scene.cols || 0,
     rows: scene.rows.length || scene.previewRows || 0,
   }
-}
-
-/** The "12×10 tiles · overworld" caption under the scene name. */
-export function sceneSubtitleText(scene: InspectedScene): string {
-  const { cols, rows } = sceneTileSize(scene)
-  return `${cols}×${rows} tiles · ${scene.music ?? 'no music'}`
-}
-
-/** The four stat cards: NPCs / Events / incoming / outgoing teleports. */
-export function sceneStats(scene: InspectedScene, teleports: readonly SceneLink[]): SceneStat[] {
-  return [
-    { label: 'NPCs', value: String(scene.npcs?.length ?? 0) },
-    { label: 'Events', value: String(scene.events) },
-    { label: 'In', value: String(teleports.filter((t) => t.to === scene.id).length) },
-    { label: 'Out', value: String(teleports.filter((t) => t.from === scene.id).length) },
-  ]
 }
 
 /**
@@ -65,7 +44,7 @@ export function sceneStats(scene: InspectedScene, teleports: readonly SceneLink[
  * name. A self-teleport counts once, as outgoing.
  */
 export function teleportSummaries(
-  scene: InspectedScene,
+  scene: SummarizedScene,
   allScenes: ReadonlyArray<{ id: string; name: string }>,
   teleports: readonly SceneLink[],
 ): TeleportSummary[] {
@@ -85,9 +64,45 @@ export function teleportSummaries(
   return summaries
 }
 
+/** The counts the selection bar states about the selected map. */
+export interface MapSelectionFacts {
+  cols: number
+  rows: number
+  /** Doors touching the map, a self-teleport counted once. */
+  doors: number
+  /** NPCs plus events — "things" placed on the map. */
+  things: number
+}
+
 /**
- * Tile size (px) that fits a `cols × rows` map into the inspector's
- * preview box. Floored to whole pixels so the mini-map stays crisp, with
+ * Everything the selection bar's caption is built from. Counting goes
+ * through {@link teleportSummaries} rather than a second filter so the
+ * number can never disagree with the door list the settings dialog
+ * shows — including the self-teleport-counts-once rule. The scene names
+ * are irrelevant to a count, hence the empty scene list.
+ */
+export function mapSelectionFacts(scene: SummarizedScene, teleports: readonly SceneLink[]): MapSelectionFacts {
+  const { cols, rows } = sceneTileSize(scene)
+  return {
+    cols,
+    rows,
+    doors: teleportSummaries(scene, [], teleports).length,
+    things: (scene.npcs?.length ?? 0) + scene.events,
+  }
+}
+
+/**
+ * Join caption fragments with the Adwaita middle dot, dropping the
+ * empty ones so a map with nothing on it reads "176 × 148" rather than
+ * "176 × 148 · ".
+ */
+export function joinDetails(parts: readonly string[]): string {
+  return parts.filter((part) => part.length > 0).join(' · ')
+}
+
+/**
+ * Tile size (px) that fits a `cols × rows` map into a preview box.
+ * Floored to whole pixels so the mini-map stays crisp, with
  * a floor of 1 so a huge map still renders something.
  *
  * A non-positive map size returns 1 rather than dividing by zero:

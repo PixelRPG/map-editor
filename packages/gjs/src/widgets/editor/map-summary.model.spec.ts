@@ -1,17 +1,17 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import {
-  type InspectedScene,
+  joinDetails,
+  mapSelectionFacts,
   previewTilePx,
   type SceneLink,
-  sceneStats,
-  sceneSubtitleText,
   sceneTileSize,
+  type SummarizedScene,
   teleportSummaries,
-} from './scene-inspector.model.ts'
+} from './map-summary.model.ts'
 
-const village: InspectedScene = { id: 'village', rows: ['....', '....'], music: 'overworld', events: 3, npcs: [1, 2] }
-const cave: InspectedScene = { id: 'cave', rows: [], cols: 20, previewRows: 10, events: 0 }
+const village: SummarizedScene = { id: 'village', rows: ['....', '....'], events: 3, npcs: [1, 2] }
+const cave: SummarizedScene = { id: 'cave', rows: [], cols: 20, previewRows: 10, events: 0 }
 
 const LINKS: SceneLink[] = [
   { from: 'village', to: 'cave', label: 'Cave mouth' },
@@ -25,7 +25,7 @@ const SCENE_NAMES = [
 ]
 
 export default async () => {
-  await describe('scene-inspector.model', async () => {
+  await describe('map-summary.model', async () => {
     await describe('sceneTileSize', async () => {
       await it('measures a terrain scene from its rows', async () => {
         expect(sceneTileSize(village)).toStrictEqual({ cols: 4, rows: 2 })
@@ -58,33 +58,38 @@ export default async () => {
       })
     })
 
-    await describe('sceneSubtitleText', async () => {
-      await it('joins size and music', async () => {
-        expect(sceneSubtitleText(village)).toBe('4×2 tiles · overworld')
+    await describe('mapSelectionFacts', async () => {
+      await it('reports size, doors and things', async () => {
+        expect(mapSelectionFacts(village, LINKS)).toStrictEqual({ cols: 4, rows: 2, doors: 3, things: 5 })
       })
 
-      await it('says so when the scene has no music', async () => {
-        expect(sceneSubtitleText(cave)).toBe('20×10 tiles · no music')
+      await it('is all zeroes for an empty scene without links', async () => {
+        expect(mapSelectionFacts(cave, [])).toStrictEqual({ cols: 20, rows: 10, doors: 0, things: 0 })
+      })
+
+      await it('counts a self-teleport as ONE door, like the door list', async () => {
+        const facts = mapSelectionFacts(village, [{ from: 'village', to: 'village', label: 'Loop' }])
+        expect(facts.doors).toBe(1)
+      })
+
+      await it('counts npcs and events together', async () => {
+        expect(mapSelectionFacts({ id: 'x', rows: [], events: 4, npcs: [1, 2, 3] }, []).things).toBe(7)
       })
     })
 
-    await describe('sceneStats', async () => {
-      await it('counts npcs, events and both teleport directions', async () => {
-        expect(sceneStats(village, LINKS)).toStrictEqual([
-          { label: 'NPCs', value: '2' },
-          { label: 'Events', value: '3' },
-          { label: 'In', value: '2' },
-          { label: 'Out', value: '1' },
-        ])
+    await describe('joinDetails', async () => {
+      await it('joins with the middle dot', async () => {
+        expect(joinDetails(['176 × 148', '2 doors'])).toBe('176 × 148 · 2 doors')
       })
 
-      await it('reports zeroes for a scene with nothing attached', async () => {
-        expect(sceneStats(cave, [])).toStrictEqual([
-          { label: 'NPCs', value: '0' },
-          { label: 'Events', value: '0' },
-          { label: 'In', value: '0' },
-          { label: 'Out', value: '0' },
-        ])
+      await it('drops empty fragments instead of leaving a dangling dot', async () => {
+        expect(joinDetails(['176 × 148', ''])).toBe('176 × 148')
+        expect(joinDetails(['', '2 doors'])).toBe('2 doors')
+      })
+
+      await it('is empty for nothing at all', async () => {
+        expect(joinDetails([])).toBe('')
+        expect(joinDetails(['', ''])).toBe('')
       })
     })
 

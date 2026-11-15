@@ -1,15 +1,14 @@
-// GENERATED from scene-inspector.blp — do not edit. ADR 0088 says what these exports mean.
+// GENERATED from map-selection-bar.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from "gi://Adw?version=1";
-import type Gtk from "gi://Gtk?version=4.0";
+import type Gtk from 'gi://Gtk?version=4.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
-/** The class `template $PixelRpgSceneInspector` defines. */
-export declare const GTypeName: "PixelRpgSceneInspector";
+/** The class `template $PixelRpgMapSelectionBar` defines. */
+export declare const GTypeName: 'PixelRpgMapSelectionBar';
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -22,28 +21,18 @@ export declare const GTypeName: "PixelRpgSceneInspector";
  * upstream half.
  */
 export declare const InternalChildren: [
-  "body",
-  "preview_frame",
-  "preview_slot",
-  "name_label",
-  "subtitle_label",
-  "stats_grid",
-  "teleports_group",
-  "map_group",
-  "open_button",
-  "empty_state",
+    'bar_box',
+    'name_label',
+    'details_label',
+    'open_button',
+    'menu_button',
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-  _body: Gtk.Box;
-  _preview_frame: Gtk.Frame;
-  _preview_slot: Adw.Bin;
-  _name_label: Gtk.Label;
-  _subtitle_label: Gtk.Label;
-  _stats_grid: Gtk.Grid;
-  _teleports_group: Adw.PreferencesGroup;
-  _map_group: Adw.PreferencesGroup;
-  _open_button: Gtk.Button;
-  _empty_state: Adw.StatusPage;
+    _bar_box: Gtk.Box;
+    _name_label: Gtk.Label;
+    _details_label: Gtk.Label;
+    _open_button: Gtk.Button;
+    _menu_button: Gtk.MenuButton;
 }

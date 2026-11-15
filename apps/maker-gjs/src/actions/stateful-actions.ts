@@ -27,14 +27,16 @@ export interface StatefulWindowActions {
   redo: Gio.SimpleAction
   /**
    * `win.rename-map` / `win.duplicate-map` / `win.delete-map` /
-   * `win.start-map` — each acts on the selected atlas card, so their
-   * enablement follows the atlas selection AND the map list (deleting the
-   * second-to-last map makes Delete insensitive for the survivor).
+   * `win.start-map` / `win.map-settings` — each acts on the selected
+   * atlas card, so their enablement follows the atlas selection AND the
+   * map list (deleting the second-to-last map makes Delete insensitive
+   * for the survivor).
    */
   renameMap: Gio.SimpleAction
   duplicateMap: Gio.SimpleAction
   deleteMap: Gio.SimpleAction
   startMap: Gio.SimpleAction
+  mapSettings: Gio.SimpleAction
 }
 
 /** A stateful boolean action's state, or `fallback` before it has one. */

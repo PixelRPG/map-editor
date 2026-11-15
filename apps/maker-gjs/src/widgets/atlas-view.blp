@@ -2,159 +2,196 @@ using Gtk 4.0;
 using Adw 1;
 
 template $AtlasView : $PixelRpgResponsiveEditorView {
-  // One OverlaySplitView now that the left ModeRail is gone
-  // (REDESIGN.md § 3.1): the SceneInspector spans the full window
-  // height on the right, and the content pane is an `Adw.ToolbarView`
-  // with the atlas canvas plus a flat headerbar floating on top.
+  // The World view is the canvas and nothing else: no side panel at any
+  // width (REDESIGN.md § 4.2 / § 5.4). What the old right-hand
+  // `SceneInspector` said about the selected map now rides the
+  // `MapSelectionBar` at the bottom of the canvas, which keeps the map
+  // the user is pointing at in view instead of pushing it aside.
   //
   // The headerbar uses `extend-content-to-top-edge: true` on the
   // toolbar view so the canvas extends behind it; the bar itself
   // carries a custom `atlas-headerbar` class for a translucent
   // background, so the canvas still reads through but the toggle
-  // buttons stay legible. The bottom-right primary action ("New
-  // Scene") uses the shared `FloatingFab` pill — same shape as the
-  // scene editor's Play pill, so primary actions feel consistent
-  // across both editor surfaces.
-  Adw.OverlaySplitView inner_split {
-    sidebar-position: end;
-    min-sidebar-width: 280;
-    max-sidebar-width: 320;
-    pin-sidebar: true;
-    collapsed: bind template.inspector-collapsed;
-    show-sidebar: bind template.show-inspector bidirectional;
+  // buttons stay legible. The bottom-right primary action ("New map")
+  // uses the shared `FloatingFab` pill — same shape as the scene
+  // editor's Play pill, so primary actions feel consistent across both
+  // editor surfaces.
+  Adw.ToolbarView {
+    extend-content-to-top-edge: true;
+    top-bar-style: flat;
 
-    sidebar: $PixelRpgSceneInspector inspector {
-      collapsed: bind template.inspector-collapsed;
-    };
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: true;
+      styles ["flat", "atlas-headerbar"]
 
-    content: Adw.ToolbarView {
-      extend-content-to-top-edge: true;
-      top-bar-style: flat;
+      // The shell's three destinations, top centre in an OSD pill so
+      // they read against the map behind them and sit in the same
+      // place as on the content views (REDESIGN.md § 3.3). On phone
+      // the window's `Adw.ViewSwitcherBar` takes over at the bottom,
+      // so the pill goes away rather than competing with it.
+      //
+      // The `stack` is wired in code: `shell_stack` lives in the
+      // window's template and a Blueprint `bind` cannot cross a
+      // template boundary — see `ResponsiveEditorView.attachShellSwitcher`.
+      title-widget: Gtk.Box {
+        halign: center;
 
-      [top]
-      Adw.HeaderBar {
-        show-start-title-buttons: false;
-        show-end-title-buttons: true;
-        styles ["flat", "atlas-headerbar"]
+        Adw.Bin switcher_pill {
+          visible: bind template.compact inverted;
+          styles ["osd", "atlas-switcher-pill"]
 
-        // The shell's three destinations, top centre in an OSD pill so
-        // they read against the map behind them and sit in the same
-        // place as on the content views (REDESIGN.md § 3.3). On phone
-        // the window's `Adw.ViewSwitcherBar` takes over at the bottom,
-        // so the pill goes away rather than competing with it.
-        //
-        // The `stack` is wired in code: `shell_stack` lives in the
-        // window's template and a Blueprint `bind` cannot cross a
-        // template boundary — see `ResponsiveEditorView.attachShellSwitcher`.
-        title-widget: Gtk.Box {
-          halign: center;
+          child: Adw.ViewSwitcher view_switcher {
+            policy: wide;
+          };
+        }
 
-          Adw.Bin switcher_pill {
-            visible: bind template.compact inverted;
-            styles ["osd", "atlas-switcher-pill"]
+        Adw.WindowTitle {
+          title: _("World");
+          visible: bind template.compact;
+        }
+      };
 
-            child: Adw.ViewSwitcher view_switcher {
-              policy: wide;
-            };
-          }
+      // Packed first, so it sits furthest from the centre: the primary
+      // menu is the rightmost item before the window controls on
+      // every shell view.
+      [end]
+      $PixelRpgProjectMenuButton project_menu {}
 
-          Adw.WindowTitle {
-            title: _("World");
-            visible: bind template.compact;
-          }
-        };
+      // Packed next, so people sit immediately left of the menu —
+      // "roster chip · ⋯" is the same pair on every shell view and in
+      // the map editor's context pill.
+      [end]
+      $PixelRpgRosterChip roster_chip {}
+    }
 
-        // Packed first, so it sits furthest from the centre: the primary
-        // menu is the rightmost item before the window controls on
-        // every shell view.
-        [end]
-        $PixelRpgProjectMenuButton project_menu {}
+    // The bin measures the CANVAS, not the window — the same reason
+    // `scene-editor.blp` scopes its ladder here. It kept mattering
+    // when the inspector still took width off the canvas, and keeps
+    // mattering for the sidebar-less World view because the window's
+    // own breakpoints cannot see what the OSDs are actually left with.
+    //
+    // Without it all three were laid out unconditionally and, at the
+    // 360 px the phone tier actually gets, the start-aligned zoom
+    // pill (233 px) and the end-aligned "New map" FAB (103 px) have
+    // to share the width, so the FAB drops to its icon when it runs out.
+    content: Adw.BreakpointBin {
+      width-request: 360;
+      height-request: 400;
 
-        // Packed next, so people sit immediately left of the menu —
-        // "roster chip · ⋯" is the same pair on every shell view and in
-        // the map editor's context pill.
-        [end]
-        $PixelRpgRosterChip roster_chip {}
+      // Only ONE breakpoint applies (adw-breakpoint-bin.c iterates in
+      // reverse and breaks on the first match), so each declares its
+      // full set and the narrower one is declared last to win.
+      //
+      // Below 400 px even the two pills collide (12 + 233 + 8 + 103 +
+      // 12 = 368), so the FAB drops to its icon. Its tooltip and the
+      // `+` glyph carry the meaning.
+      Adw.Breakpoint {
+        condition ("max-width: 399sp")
 
-        [end]
-        Gtk.ToggleButton inspector_toggle {
-          icon-name: "sidebar-show-right-symbolic";
-          tooltip-text: _("Toggle inspector");
-          active: bind template.show-inspector bidirectional;
+        setters {
+          new_map_fab.label: "";
         }
       }
 
-      // The bin measures the CANVAS, not the window, because the three
-      // bottom OSDs have to fit the space left between the sidebars —
-      // the same reason `scene-editor.blp` scopes its ladder here.
-      //
-      // Without it all three were laid out unconditionally and, at the
-      // 360 px the phone tier actually gets, the start-aligned zoom
-      // pill (233 px) and the end-aligned "New map" FAB (103 px) have
-      // to share the width, so the FAB drops to its icon when it runs out.
-      content: Adw.BreakpointBin {
-        width-request: 360;
-        height-request: 400;
+      child: Gtk.Overlay {
+        // Overview minimap — whole-world-at-a-glance, top-right OSD.
+        // The `.osd` Bin supplies the floating-chrome background; the
+        // AtlasOverview inside draws scene rects + the viewport frame.
+        [overlay]
+        Adw.Bin overview_frame {
+          halign: end;
+          valign: start;
+          margin-top: 56;
+          margin-end: 12;
+          width-request: 150;
+          height-request: 100;
+          styles ["osd", "atlas-overview-frame"]
 
-        // Only ONE breakpoint applies (adw-breakpoint-bin.c iterates in
-        // reverse and breaks on the first match), so each declares its
-        // full set and the narrower one is declared last to win.
-        //
-        // Below 400 px even the two pills collide (12 + 233 + 8 + 103 +
-        // 12 = 368), so the FAB drops to its icon. Its tooltip and the
-        // `+` glyph carry the meaning.
-        Adw.Breakpoint {
-          condition ("max-width: 399sp")
-
-          setters {
-            new_map_fab.label: "";
-          }
+          child: $PixelRpgAtlasOverview atlas_overview {};
         }
 
-        child: Gtk.Overlay {
-          // Overview minimap — whole-world-at-a-glance, top-right OSD.
-          // The `.osd` Bin supplies the floating-chrome background; the
-          // AtlasOverview inside draws scene rects + the viewport frame.
-          [overlay]
-          Adw.Bin overview_frame {
-            halign: end;
-            valign: start;
-            margin-top: 56;
-            margin-end: 12;
-            width-request: 150;
-            height-request: 100;
-            styles ["osd", "atlas-overview-frame"]
+        [overlay]
+        $PixelRpgFloatingFab new_map_fab {
+          halign: end;
+          valign: end;
+          margin-end: 12;
+          margin-bottom: 12;
+          label: _("New map");
+          icon-name: "list-add-symbolic";
+          action-name: "win.new-map";
+          tooltip-text: _("Create a new map");
+        }
 
-            child: $PixelRpgAtlasOverview atlas_overview {};
+        // Same zoom pill as the scene editor (fires win.zoom-*);
+        // in the atlas the window routes those actions to the world
+        // camera instead of the engine camera.
+        [overlay]
+        $PixelRpgFloatingZoom preview_zoom {
+          halign: start;
+          valign: end;
+          margin-start: 12;
+          margin-bottom: 12;
+          compact: bind template.compact;
+        }
+
+        // The selected map's name, facts and verbs. Centred between
+        // the zoom pill (start) and the FAB (end) — which is why both
+        // of its labels ellipsize at a capped width.
+        //
+        // Hidden on phone, where the window's bottom bar shows a
+        // second instance instead: an OSD pill 12 px above the view
+        // switcher would be chrome stacked on chrome, and the two
+        // together would eat a third of a 400 px canvas (§ 4.2).
+        [overlay]
+        $PixelRpgMapSelectionBar selection_bar {
+          halign: center;
+          valign: end;
+          margin-bottom: 12;
+          visible: bind template.compact inverted;
+          full-view: bind template.full-view;
+        }
+
+        // Two surfaces over one world (REDESIGN.md § 4.2): the card
+        // grid is the default, the list is the keyboard- and
+        // screen-reader-first path to the same maps. The stack is the
+        // overlay's main child, so the FAB and the selection bar float
+        // over whichever surface is up and keep working in both.
+        child: Gtk.Stack surface_stack {
+          Gtk.StackPage {
+            name: "grid";
+
+            child: $PixelRpgAtlasCanvas atlas {
+              compact: bind template.compact;
+            };
           }
 
-          [overlay]
-          $PixelRpgFloatingFab new_map_fab {
-            halign: end;
-            valign: end;
-            margin-end: 12;
-            margin-bottom: 12;
-            label: _("New map");
-            icon-name: "list-add-symbolic";
-            action-name: "win.new-map";
-            tooltip-text: _("Create a new map");
-          }
+          Gtk.StackPage {
+            name: "list";
 
-          // Same zoom pill as the scene editor (fires win.zoom-*);
-          // in the atlas the window routes those actions to the world
-          // camera instead of the engine camera.
-          [overlay]
-          $PixelRpgFloatingZoom preview_zoom {
-            halign: start;
-            valign: end;
-            margin-start: 12;
-            margin-bottom: 12;
-            compact: bind template.compact;
-          }
+            child: Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
 
-          child: $PixelRpgAtlasCanvas atlas {
-            compact: bind template.compact;
-          };
+              child: Adw.Clamp {
+                maximum-size: 560;
+
+                // The margins clear the translucent headerbar above and
+                // the selection bar / FAB below: all three float over
+                // this surface instead of taking space from it, so
+                // nothing else keeps the first and last row reachable.
+                child: Gtk.ListBox map_list {
+                  valign: start;
+                  margin-top: 60;
+                  margin-bottom: 72;
+                  margin-start: 12;
+                  margin-end: 12;
+                  selection-mode: single;
+                  styles ["boxed-list"]
+                };
+              };
+            };
+          }
         };
       };
     };
