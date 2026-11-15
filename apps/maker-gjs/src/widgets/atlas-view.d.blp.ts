@@ -3,6 +3,7 @@
 
 import type Adw from 'gi://Adw?version=1';
 import type GObject from 'gi://GObject?version=2.0';
+import type Gtk from 'gi://Gtk?version=4.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
@@ -22,7 +23,9 @@ export declare const GTypeName: 'AtlasView';
  * upstream half.
  */
 export declare const InternalChildren: [
+        'surface_stack',
         'atlas',
+        'map_list',
         'overview_frame',
         'atlas_overview',
         'new_map_fab',
@@ -36,7 +39,9 @@ export declare const InternalChildren: [
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
+        _surface_stack: Gtk.Stack;
         _atlas: GObject.Object;
+        _map_list: Gtk.ListBox;
         _overview_frame: Adw.Bin;
         _atlas_overview: GObject.Object;
         _new_map_fab: GObject.Object;

@@ -518,6 +518,17 @@ view (same pattern as `attachShellSwitcher`), and `_refreshSelection()`
 pushes the identical `(name, facts)` pair into both. Only one is ever
 visible, so there is no double-rendering cost and no second truth.
 
+**The bar outlives the surface.** `win.map-list` swaps
+`atlas-view.blp`'s `surface_stack` between the card grid and a
+`Gtk.ListBox` of the same maps, and the selection bar and the "New map"
+FAB stay up across the swap — both mean the same thing on either
+surface. The zoom pill and the overview minimap go away with the grid,
+being cameras onto a surface that is no longer on screen. The list is
+one `Adw.ActionRow` per map (56 px thumbnail · name · the same caption),
+reachable from the context pill's "⋯" at every width and from `Ctrl+L`;
+it is the keyboard- and screen-reader-first path to the maps, which is
+why it has no standing control of its own.
+
 The phone stack's two pages are `nav` (the existing
 `Adw.ViewSwitcherBar`) and `selection`, both non-homogeneous.
 `_refreshBottomBar()` picks `selection` when
@@ -1127,6 +1138,8 @@ on the scene the load then replaces and vanishes silently.
 | A run clears the editing affordances in the wide layout as well and frames the canvas in accent (`stopButton` / `restartButton` / `runBorder`, REDESIGN § 4.6 / § 9 step 4.2); `TileEditorSystem` gates its pointer handlers on `EditorModeComponent`, so a focus-seeking click during a run can no longer paint | **landed** |
 | A wide *Live* Run that keeps the tools while the hero walks (REDESIGN § 4.6) — needs a second entry point and an engine holding both markers | deferred, tracked in `TODO.md` |
 | The world view has no sidebar at any width: `SceneInspector` is deleted and a selection reveals `MapSelectionBar` instead — bottom-centre over the canvas on wide and tablet, in the window's `bottom_bar_stack` on phone (REDESIGN § 5.4 / § 9 step 5.4) | **landed** |
+| List mode: `win.map-list` (context pill's "⋯", `Ctrl+L`) swaps `surface_stack` for a `Gtk.ListBox` of maps at every width; the FAB and the selection bar survive the swap, the zoom pill and overview minimap do not (REDESIGN § 4.2 / § 9 step 5.4) | **landed** |
+| The list row's "peers present" column (REDESIGN § 4.2) | deferred, tracked in `TODO.md` |
 | Deselecting a map in the world view — clicking the backdrop pans, so the bar stays up once a map has been picked | deliberate, see "The world view's selection bar" |
 
 Cross-references:

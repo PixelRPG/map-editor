@@ -934,6 +934,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       confirmDeleteMap: () => this._confirmDeleteMap(),
       startHere: () => this._startMapHere(),
       presentMapSettings: () => this._presentMapSettings(),
+      setListMode: (on) => this._atlas_view.setListMode(on),
     })
 
     installWindowAccels(this.get_application())

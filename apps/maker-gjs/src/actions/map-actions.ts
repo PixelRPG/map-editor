@@ -1,4 +1,5 @@
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
 
@@ -16,6 +17,8 @@ export interface MapActionsContext {
   startHere(): void
   /** Open the Map settings dialog on the selected map. */
   presentMapSettings(): void
+  /** Show the World view's maps as a list instead of the card grid. */
+  setListMode(on: boolean): void
 }
 
 /**
@@ -73,6 +76,17 @@ export function installMapActions(
   const mapSettings = new Gio.SimpleAction({ name: 'map-settings', enabled: false })
   mapSettings.connect('activate', () => ctx.presentMapSettings())
   addAction(group, mapSettings)
+
+  // Stateful, so the menu item renders as a check and states which
+  // surface the World view is on. Not returned with the others and not
+  // a `StatefulWindowActions` member: nothing reads this state back —
+  // the action IS the flag, and the view only renders it.
+  const mapList = Gio.SimpleAction.new_stateful('map-list', null, GLib.Variant.new_boolean(false))
+  mapList.connect('change-state', (action, value) => {
+    action.set_state(value!)
+    ctx.setListMode(value!.get_boolean())
+  })
+  addAction(group, mapList)
 
   return { renameMap, duplicateMap, deleteMap, startMap, mapSettings }
 }

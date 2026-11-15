@@ -1,10 +1,10 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { ngettext } from 'gettext'
 
+import { mapCaption } from './map-caption.ts'
 import { buildMapContextMenu } from './map-menu.ts'
-import { joinDetails, type MapSelectionFacts } from './map-summary.model.ts'
+import type { MapSelectionFacts } from './map-summary.model.ts'
 
 import Template from './map-selection-bar.blp'
 
@@ -123,21 +123,7 @@ export class MapSelectionBar extends Adw.Bin {
   }
 
   get mapDetails(): string {
-    const facts = this._facts
-    if (!facts) return ''
-    const parts: string[] = []
-    // A map whose size is unknown (no terrain rows and no card
-    // geometry) says nothing rather than "0 × 0".
-    if (facts.cols > 0 && facts.rows > 0) parts.push(`${facts.cols} × ${facts.rows}`)
-    if (facts.doors > 0) {
-      parts.push(ngettext('%d door', '%d doors', facts.doors).replace('%d', String(facts.doors)))
-    }
-    // Things are a Full-view fact: in Simple view the caption stays
-    // down to the two numbers a child needs to recognise the map.
-    if (this._fullView && facts.things > 0) {
-      parts.push(ngettext('%d thing', '%d things', facts.things).replace('%d', String(facts.things)))
-    }
-    return joinDetails(parts)
+    return this._facts ? mapCaption(this._facts, { things: this._fullView }) : ''
   }
 
   get hasDetails(): boolean {
