@@ -515,12 +515,13 @@ A **home page for the game**, not a settings column.
 | Dialogue, items | in-game overlays drawn by the engine, not toasts (out of scope here; TODO "Real runtime effect systems") | same |
 | Leaving | Stop, `Esc`, back | same |
 
-On entering a run the camera snaps to the hero before the first frame (TODO "Play-mode
-presentation gaps (b)"), and the map name in the pill follows a teleport ((c)). The run camera
-is clamped to the map like the editor's, so no backdrop shows behind Stop (`desktop/11`). A
-run started from "Play from the start" uses the largest whole-pixel zoom that still shows at
-least 15 × 10 tiles; "Play here" keeps the editor's zoom, because the point is to see the
-spot being edited.
+On entering a run the camera snaps to the hero before the first frame, and the map name in the
+pill follows a teleport. The run camera is clamped to the map like the editor's, so no backdrop
+shows behind Stop (`desktop/11`). A run started from "Play from the start" uses the largest
+whole-pixel zoom that still shows at least 15 × 10 tiles; "Play here" keeps the editor's zoom,
+because the point is to see the spot being edited. **Landed** (step 4.3) — with a doubt recorded
+in TODO.md about the last clause: "Play here" started at 800% begins a tile and a half wide, and
+the zoom it wants to keep is probably the wide *Live* Run's, which has no entry point yet.
 
 ### 4.7 Collaboration and presence
 
@@ -1080,7 +1081,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 |---|---|---|
 | 4.1 | Virtual joystick + action button as an `InputSourceComponent` producer | TODO "A phone Live Run has no way to steer the hero" | — done (the controls are overlay children of the *engine* widget, so the scene canvas and its container are untouched and the run keeps its own gesture, visual and intent in one place. The stick's geometry — region test, 40 px travel, 10 px dead zone, 8-way quantisation — is pure in `virtual-stick.ts`; `stick-drag.ts` is the `Gtk.GestureDrag` adapter, consulting `isStickEnabled()` *before* claiming, because a claim is unconditional and a merely-invisible stick would eat brush strokes in that corner. The intent reaches gameplay as `TouchInputComponent` + `mergeInputIntents`, not as a direct `InputSourceComponent` write. 8-way rather than analog so touch produces exactly the keyboard's vectors — diagonals pre-scaled by 1/√2 — and introduces no second movement feel; the throttle is in TODO.md. Entering a run on phone now also collapses the bottom sheet, which otherwise rested over both controls) |
 | 4.2 | Wide run state: accent border, Restart, Test run hides editing chrome; `Adw.SplitButton` Play | `runtime-modes.md` Test-run row (wide) | — done (`chromeFlags` now reads `playing` in both layouts: wide loses the editing pill, tool group, undo/redo, badge label and inspector toggle, the inspector itself is put away and restored, ↺ Restart joins the context pill in both layouts while ■ Stop stays phone-only — the wide FAB has one verb to spare, not two — and the canvas gains `runBorder`. The frame is a `can-target: false` overlay child above the canvas rather than a style on the backdrop: GTK draws a border under a widget's children and the engine fills the backdrop, so a frame there never shows — and it would re-allocate the GL area by 4 px at every Play/Stop for a decoration. The Play `Adw.SplitButton` with "Play from the start" already shipped in Phase 2. **The run clears the wide chrome because it is a Test run by the engine's markers** — `applyRuntimeMode` swaps `EditorMode` for `RuntimeMode` — and the same commit gates `TileEditorSystem`'s tap / long-press / hover on `EditorModeComponent`, closing the documented drift gap where a focus-seeking click during a run painted a tile. §4.6's wide *Live* Run, where the tools stay because both markers are present, needs a second entry point: deferred to TODO.md) |
-| 4.3 | Camera snaps to the hero on Play; whole-pixel play zoom for "Play from the start"; chrome follows teleports | TODO "Play-mode presentation gaps" (b), (c) |
+| 4.3 | Camera snaps to the hero on Play; whole-pixel play zoom for "Play from the start"; chrome follows teleports | TODO "Play-mode presentation gaps" (b), (c) | — done (three separate defects, one per piece. **Camera**: `lockCamera` now writes `camera.pos` itself instead of waiting for the first strategy tick, so the opening frame is drawn at the hero rather than wherever the editor had scrolled; the clamp is our own `MapBoundsCameraStrategy`, because excalibur's `limitCameraBounds` has no case for a map *smaller* than the view — both its branches resolve to `left + halfDrawWidth` and park a small interior room against the top-left. **Zoom**: `Engine.applyPlayZoom` picks the largest whole-pixel level that still shows ≥ 15 × 10 tiles, rounding *down* to a level rather than to the nearest one — nearest would pick 2× for a 360 px phone view, show 11 columns and break the promise. It runs from `win.play-from-start` only and *before* the mode flip, since the clamp reads the zoom to know how much world the view covers; "Play here" and Restart keep the editor's zoom per §4.6, which TODO.md now questions. **Teleports**: nothing in the maker listened to `MAP_LOADED`, so walking through a door left the pill name, header title, inspector pages and `SceneNavigator._currentSceneId` on the room the hero had left; the new `map-loaded` hook reaches `SceneNavigator.followEngineMap`, which deliberately does not reuse `setScene` — that resets the zoom readout to 100% and a teleport carries the run's zoom across) |
 
 **Phase 5 — World**
 

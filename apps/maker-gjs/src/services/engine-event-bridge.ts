@@ -37,6 +37,12 @@ export interface EngineEventBridgeContext {
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void
   /** Re-read the active map's layer list into the Layers page (add / reorder / change of plane, any path). */
   refreshLayers(): void
+  /**
+   * The engine is now showing a different map than the window thinks.
+   * Only a mid-run teleport gets here — every other map switch starts
+   * in the window, which has already told the engine.
+   */
+  mapLoaded(mapId: string): void
 }
 
 /**
@@ -57,6 +63,7 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('placement-moved', ({ placementId, moved }) => ctx.placementMoved(placementId, moved))
   engine.on('layer-flag-changed', ({ layerId, flag, value }) => ctx.setLayerFlag(layerId, flag, value))
   engine.on('layer-list-changed', () => ctx.refreshLayers())
+  engine.on('map-loaded', ({ mapId }) => ctx.mapLoaded(mapId))
   engine.on('show-text', ({ text, speaker }) => ctx.showToast(speaker ? `${speaker}: ${text}` : text))
   engine.on('item-picked-up', ({ itemId, qty }) => ctx.showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`))
   engine.on('flag-set', ({ flag, value }) => ctx.showToast(`Flag "${flag}" = ${String(value)}`))

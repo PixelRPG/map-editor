@@ -32,6 +32,8 @@ import {
   normalizeViewportInset,
   type ViewportInset,
 } from './services/viewport-inset.ts'
+import { EDITOR_CONSTANTS } from './utils/constants.ts'
+import { playZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { LayerData, LayerPlane } from './types/data/index.ts'
@@ -587,6 +589,40 @@ export class Engine {
     // Swap placement chrome (cell frames + logic markers) out of / back
     // into the render so a playtest shows only the real sprites.
     scene.refreshPlacementGraphicsForMode(active)
+  }
+
+  /**
+   * Frame the active map the way a fresh run should open: the largest
+   * whole-pixel zoom that still shows a roomful of tiles.
+   *
+   * Owned by the engine rather than by the host's zoom actions because
+   * the number is a property of the game — map size, tile size, the
+   * drawing surface — not of the editor's view state. The host decides
+   * only *when* a run deserves a fresh frame: "Play from the start"
+   * does, "Play here" deliberately keeps whatever zoom someone was
+   * editing at.
+   *
+   * Call this BEFORE {@link setRuntimeMode}: the camera clamp that runs
+   * on entering a run reads the zoom to work out how much world the
+   * view covers.
+   *
+   * @returns whether a zoom was applied — `false` when no map is active.
+   */
+  applyPlayZoom(): boolean {
+    const scene = this.activeMapScene()
+    const mapData = scene?.mapResource.mapData
+    if (!scene || !mapData) return false
+
+    const tileWidth = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const tileHeight = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const resolution = this.excalibur.screen.resolution
+    scene.camera.zoom = playZoom({
+      resolution: { width: resolution.width, height: resolution.height },
+      map: { width: mapData.columns * tileWidth, height: mapData.rows * tileHeight },
+      tile: { width: tileWidth, height: tileHeight },
+      bounds: { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM },
+    })
+    return true
   }
 
   /**

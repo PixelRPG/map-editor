@@ -3,19 +3,20 @@
  *
  * GTK can only be driven by a real finger, and the headless capture
  * harness has no way to inject one — so the arithmetic that decides how
- * far the camera moves and where the zoom lands lives here, free of
- * `gi://`, and the unit tests are the proof. `pinch-zoom.ts` stays a
+ * far the camera moves and how a touch becomes a tap lives here, free
+ * of `gi://`, and the unit tests are the proof. `pinch-zoom.ts` stays a
  * thin adapter: read the gesture, call these, write the camera.
+ *
+ * The whole-pixel zoom levels a pinch springs to are NOT here — the
+ * pixel grid belongs to the tiles, not to the input device, so that
+ * arithmetic lives in `@pixelrpg/engine`'s `utils/zoom.ts` where a run
+ * picking its opening zoom uses the same levels.
  *
  * See `docs/design/ui-redesign/REDESIGN.md` § 5.5 for the gesture table
  * these implement.
  */
 
-/** Zoom bounds the snap is allowed to land in. Mirrors `EDITOR_CONSTANTS`. */
-export interface ZoomRange {
-  readonly min: number
-  readonly max: number
-}
+import { clampZoom, type ZoomRange } from '@pixelrpg/engine'
 
 /**
  * The zoom and bounding-box centre a two-finger gesture started from.
@@ -70,7 +71,7 @@ export function stepTwoFinger(
   range: ZoomRange,
 ): TwoFingerStep {
   const usableScale = Number.isFinite(scale) && scale > 0 ? scale : 1
-  const zoom = clamp(state.zoomAtBegin * usableScale, range.min, range.max)
+  const zoom = clampZoom(state.zoomAtBegin * usableScale, range)
   return {
     zoom,
     anchorX: centreX,
@@ -79,53 +80,6 @@ export function stepTwoFinger(
     panY: centreY - state.centreY,
     state: { zoomAtBegin: state.zoomAtBegin, centreX, centreY },
   }
-}
-
-/**
- * The zoom levels at which a source pixel covers a whole number of
- * screen pixels: the integers, plus `1/n` for zooming out, where one
- * screen pixel covers `n` source pixels evenly.
- *
- * Anything between them resamples 16 px tiles onto a fractional grid,
- * which is what makes pinched pixel art shimmer and makes the one-pixel
- * tile seams appear and disappear along a row.
- */
-export function wholePixelZoomLevels(range: ZoomRange): readonly number[] {
-  const levels: number[] = []
-  for (let divisor = Math.max(1, Math.ceil(1 / Math.max(range.min, Number.EPSILON))); divisor >= 2; divisor--) {
-    const level = 1 / divisor
-    if (level >= range.min && level <= range.max) levels.push(level)
-  }
-  for (let factor = 1; factor <= Math.floor(range.max); factor++) {
-    if (factor >= range.min && factor <= range.max) levels.push(factor)
-  }
-  if (levels.length === 0) levels.push(clamp(1, range.min, range.max))
-  return levels
-}
-
-/**
- * Spring a free-floating pinch zoom to the nearest whole-pixel level.
- *
- * Nearest is measured in LOG space, not linear: 1.5 sits visually
- * halfway between 1 and 2, but linear distance would call it closer to
- * 2 (0.5 vs 0.5 — a tie that rounds up) and, worse, would treat 0.75 as
- * far nearer to 1 than to 0.5 even though it is one and a half times
- * either. Zoom is multiplicative, so the metric has to be too.
- */
-export function snapZoomToWholePixel(zoom: number, range: ZoomRange): number {
-  if (!Number.isFinite(zoom) || zoom <= 0) return clamp(1, range.min, range.max)
-  const target = clamp(zoom, range.min, range.max)
-  const levels = wholePixelZoomLevels(range)
-  let best = levels[0] as number
-  let bestDistance = Number.POSITIVE_INFINITY
-  for (const level of levels) {
-    const distance = Math.abs(Math.log(level) - Math.log(target))
-    if (distance < bestDistance) {
-      bestDistance = distance
-      best = level
-    }
-  }
-  return best
 }
 
 /** Midpoint travel, in screen pixels, below which two fingers were "still". */
@@ -264,8 +218,4 @@ function nearestContact(contacts: readonly TapContact[], x: number, y: number): 
 
 function distance(ax: number, ay: number, bx: number, by: number): number {
   return Math.hypot(ax - bx, ay - by)
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
 }

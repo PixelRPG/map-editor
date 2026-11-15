@@ -1,16 +1,33 @@
 import { formatError } from '@pixelrpg/engine'
 import type { SampleScene } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 import type { LoadedProject } from './project-loader.ts'
 
-/** What the navigator needs from the window that hosts the scene editor. */
+/**
+ * What the navigator needs from the window that hosts the scene editor.
+ *
+ * The two failure reports are callbacks rather than `showToast(_('…'))`
+ * calls inside the navigator on purpose: a module that imports `gettext`
+ * cannot be reached from `src/test.mts`, which builds ONE graph for both
+ * the GJS and the node test target and only the former resolves it. The
+ * msgids live in the window, which imports `gettext` anyway. See TODO.md.
+ */
 export interface SceneNavigatorContext {
   getProject(): LoadedProject | null
-  showToast(message: string): void
+  /** Tell the user the requested map has no scene in the atlas. */
+  reportMapMissing(): void
+  /** Tell the user the engine could not be brought up for this map. */
+  reportMapLoadFailed(): void
   /** Switch the window to the scene-editor page. */
   showSceneEditorPage(): void
   /** Push the scene's header + floating chips into the editor view. */
   setScene(scene: SampleScene): void
+  /**
+   * Catch the chrome up to a map the engine opened by itself. Unlike
+   * {@link setScene} this must not touch the view's zoom — a teleport
+   * carries the run's zoom across, and resetting the readout to 100%
+   * would make the OSD lie about what is on screen.
+   */
+  followScene(scene: SampleScene): void
   /** Bring up (or reuse) the engine for `sceneId`; rejects on failure. */
   ensureEngineForMap(projectPath: string, sceneId: string): Promise<void>
   /** A fresh engine is live — re-push window state, attach a waiting session. */
@@ -65,7 +82,7 @@ export class SceneNavigator {
   open(sceneId: string): void {
     const scene = this._scenesById.get(sceneId)
     if (!scene) {
-      this.ctx.showToast(_('Map not found'))
+      this.ctx.reportMapMissing()
       return
     }
     this._currentSceneId = sceneId
@@ -75,6 +92,31 @@ export class SceneNavigator {
     // Real-data hydration only happens once a project is loaded; plain
     // demo scenes fall back to the view's placeholders.
     if (this.ctx.getProject()) void this._hydrate(sceneId)
+  }
+
+  /**
+   * Follow a map switch the ENGINE made: a teleport taken mid-run walks
+   * the hero through a door and loads the destination without the
+   * window asking for it.
+   *
+   * This is the inverse of {@link open} and does deliberately less. The
+   * engine already has the map up, so there is nothing to ensure and no
+   * page to show — only the chrome that names the current room (header
+   * title, scene pill, inspector pages) and `_currentSceneId`, which
+   * every later lookup reads.
+   */
+  followEngineMap(sceneId: string): void {
+    if (sceneId === this._currentSceneId) return
+    const scene = this._scenesById.get(sceneId)
+    if (!scene) return
+    this._currentSceneId = sceneId
+    this.ctx.followScene(scene)
+
+    const project = this.ctx.getProject()
+    if (!project) return
+    void this.ctx.populateInspector(project, sceneId).catch((error) => {
+      console.warn('[SceneNavigator] Failed to populate inspector after a teleport:', error)
+    })
   }
 
   /**
@@ -105,7 +147,7 @@ export class SceneNavigator {
       await this.ctx.ensureEngineForMap(project.projectPath, sceneId)
     } catch (error) {
       console.error('[SceneNavigator] Failed to bring up engine:', formatError(error))
-      this.ctx.showToast(_('Failed to load map'))
+      this.ctx.reportMapLoadFailed()
       // Fall through: the inspector still gives the user a usable
       // palette / layers / objects surface without a canvas.
     }

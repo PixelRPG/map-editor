@@ -673,6 +673,21 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
+   * Rename the room the chrome claims to be showing, without touching
+   * the view state around it.
+   *
+   * {@link setScene} is the wrong call for a mid-run teleport: it
+   * resets the zoom readout to 100%, and a teleport carries the run's
+   * own zoom across, so the OSD would start describing a zoom nobody is
+   * looking at.
+   */
+  followScene(scene: SampleScene): void {
+    this.sceneName = scene.name
+    this._editor.mapName = scene.name
+    this._editor.setCursorTile(null, null)
+  }
+
+  /**
    * Push the tile under the pointer to the floating-zoom OSD's coord
    * label. Pass `null, null` to clear the readout (pointer left the
    * canvas / map switched). The OSD widget itself dedupes consecutive

@@ -273,9 +273,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   })
   private readonly _scenes = new SceneNavigator({
     getProject: () => this._loadedProject,
-    showToast: (message) => this._showToast(message),
+    reportMapMissing: () => this._showToast(_('Map not found')),
+    reportMapLoadFailed: () => this._showToast(_('Failed to load map')),
     showSceneEditorPage: () => this._router.setView('map'),
     setScene: (scene) => this._scene_editor_view.setScene(scene),
+    followScene: (scene) => this._scene_editor_view.followScene(scene),
     ensureEngineForMap: (projectPath, sceneId) => this._engineCtl.ensureForMap(projectPath, sceneId),
     onEngineReady: () => {
       this._syncEngineUiState()
@@ -429,6 +431,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
         const sceneId = this._scenes.currentSceneId
         const mapData = sceneId ? this._loadedProject?.resource.maps.get(sceneId)?.mapData : undefined
         if (mapData) this._scene_editor_view.refreshLayers(mapData)
+      },
+      // Only a run can switch maps behind the window's back; outside one
+      // this event is the echo of a load the window itself started, and
+      // following it would re-populate the inspector for no reason.
+      mapLoaded: (mapId) => {
+        if (this._engineCtl.engine?.isRuntimeMode()) this._scenes.followEngineMap(mapId)
       },
     })
     this._wireStoreEvents()
@@ -796,6 +804,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setRuntimeMode: (playing) => this._engineCtl.engine?.setRuntimeMode(playing),
       setViewPlaying: (playing) => this._scene_editor_view.setPlaying(playing),
       clearSaveState: () => this._engineCtl.engine?.clearSaveState(),
+      applyPlayZoom: () => void this._engineCtl.engine?.applyPlayZoom(),
     })
 
     const { share } = installSessionActions(group, {

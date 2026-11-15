@@ -386,6 +386,17 @@ export class Engine extends Adw.Bin {
   }
 
   /**
+   * Forward to `Engine.applyPlayZoom` — frame the map for a fresh run.
+   *
+   * No zoom is reported back: the OSD learns the new figure from
+   * {@link onCameraZoomChanged}, which watches the camera itself, so a
+   * zoom the engine chose and one someone pinched arrive the same way.
+   */
+  public applyPlayZoom(): boolean {
+    return this._excalibur?.applyPlayZoom() ?? false
+  }
+
+  /**
    * Tell the widget whether the host window is at its phone breakpoint.
    *
    * One of the two halves of "should the touch controls be on screen" —
