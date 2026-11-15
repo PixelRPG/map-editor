@@ -19,6 +19,7 @@ import {
   EditorModeComponent,
   type EditorTool,
   MapEditorComponent,
+  PendingArrivalPickComponent,
   PendingPlacementMoveComponent,
   SelectedPlacementsComponent,
   TileMapPlaneComponent,
@@ -274,6 +275,10 @@ export class TileEditorSystem extends System {
   private applyClick(hit: TileHit): void {
     const scene = this.scene as MapScene | undefined
     if (!scene) return
+    // Pick mode goes FIRST, ahead of the tool: §6.2 says "all tools
+    // replaced by one tap", and the only way to keep that promise is to
+    // decide it before anything reads `ActiveToolComponent`.
+    if (this.consumePendingArrivalPick(scene, hit.coords)) return
     const tool: EditorTool = SessionState.get(scene, ActiveToolComponent)?.tool ?? 'select'
 
     if (tool === 'select') {
@@ -489,6 +494,29 @@ export class TileEditorSystem extends System {
     if (!pending) return false
     SessionState.unset(this.scene, PendingPlacementMoveComponent)
     this.events.emit(EngineEvent.PLACEMENT_MOVE_REQUESTED, { placementId: pending.placementId, coords })
+    return true
+  }
+
+  /**
+   * If this map is in pick mode, disarm it and ask the host to point the
+   * waiting door at `coords` — returning `true` so the caller skips the
+   * tool entirely.
+   *
+   * Disarming BEFORE the request is what makes it one tap even when the
+   * host refuses the target (no arrival tile there, the door vanished
+   * meanwhile): a second tap must then be an ordinary edit again, not
+   * another pick the user has stopped expecting.
+   */
+  private consumePendingArrivalPick(scene: MapScene, coords: { x: number; y: number }): boolean {
+    const pick = SessionState.get(scene, PendingArrivalPickComponent)
+    if (!pick) return false
+    SessionState.unset(scene, PendingArrivalPickComponent)
+    this.events.emit(EngineEvent.ARRIVAL_PICK_REQUESTED, {
+      sourceMapId: pick.sourceMapId,
+      doorPlacementId: pick.doorPlacementId,
+      targetMapId: scene.mapResource?.mapData?.id ?? '',
+      coords,
+    })
     return true
   }
 

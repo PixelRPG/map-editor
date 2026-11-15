@@ -4,6 +4,16 @@ import type { EngineStatus } from './engine-status.ts'
 import type { ProjectLoadOptions } from './project-options.ts'
 
 /**
+ * The door a map in pick mode is collecting an arrival tile for — see
+ * `PendingArrivalPickComponent`. It names a placement on a map that is
+ * NOT the active one, so both halves are needed to find it again.
+ */
+export interface ArrivalPickRequest {
+  sourceMapId: string
+  doorPlacementId: string
+}
+
+/**
  * Engine event names emitted via the engine's EventEmitter.
  */
 export enum EngineEvent {
@@ -18,6 +28,7 @@ export enum EngineEvent {
   PLACEMENT_SELECTED = 'placement-selected',
   PLACEMENT_CONTEXT_REQUESTED = 'placement-context-requested',
   PLACEMENT_MOVE_REQUESTED = 'placement-move-requested',
+  ARRIVAL_PICK_REQUESTED = 'arrival-pick-requested',
   PLAYER_TILE_CHANGED = 'player-tile-changed',
   PLAYER_ACTION_PRESSED = 'player-action-pressed',
   TRIGGER_FIRED = 'trigger-fired',
@@ -121,6 +132,24 @@ export interface EngineEventMap {
    */
   [EngineEvent.PLACEMENT_MOVE_REQUESTED]: {
     placementId: string
+    coords: { x: number; y: number }
+  }
+  /**
+   * Emitted by `TileEditorSystem` when a tap landed on a map in **pick
+   * mode** (`PendingArrivalPickComponent`) — the §6.2 "Goes to" flow's
+   * third step, where the user names the tile the door arrives at. The
+   * system has already disarmed the pick and deliberately did NOT let
+   * the tap reach the armed tool.
+   *
+   * `sourceMapId` + `doorPlacementId` name the door that asked, which is
+   * on a DIFFERENT map than the one that was tapped: `targetMapId` is
+   * the map the user is looking at, and `coords` the arrival tile on it.
+   * The system writes nothing itself — the door's teleport data and the
+   * optional door back are placement commands on two different maps, and
+   * only the host knows how to get back to the first one.
+   */
+  [EngineEvent.ARRIVAL_PICK_REQUESTED]: ArrivalPickRequest & {
+    targetMapId: string
     coords: { x: number; y: number }
   }
   /**

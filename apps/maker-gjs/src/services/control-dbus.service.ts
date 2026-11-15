@@ -242,8 +242,10 @@ export class ControlDbusService {
   PlaceObject(defId: string, layerId: string, tileX: number, tileY: number): boolean {
     const win = this._guardMutation('PlaceObject')
     this._surfaceAssistantActivity({ x: tileX, y: tileY })
-    // Assistant-attributed like PaintTile — see the comment there.
-    return win.placeObject(defId, layerId || null, tileX, tileY, ASSISTANT_PEER_ID)
+    // Assistant-attributed like PaintTile — see the comment there. The
+    // window hands back the new placement's id; the D-Bus method's
+    // signature is a boolean, so "applied" is "there is an id".
+    return win.placeObject(defId, layerId || null, tileX, tileY, ASSISTANT_PEER_ID) !== null
   }
 
   /** `SetAssistantCursor(x, y) -> applied` — show/move the AI collaborator cursor. */

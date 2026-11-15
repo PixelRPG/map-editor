@@ -344,6 +344,54 @@ template $PixelRpgSceneEditor : Adw.Bin {
         }
 
         // ============================================================
+        // PICK BANNER - "tap where the hero arrives" (REDESIGN 6.2,
+        // step 2), top-centre, every layout.
+        //
+        // An overlay child and not an `Adw.Banner` above the canvas: the
+        // spec asks for an OSD banner, and a banner in the flow would
+        // take ~48 px off the engine's allocation the moment a pick is
+        // armed and hand them back on the tap - a GL resize, and with it
+        // a different whole-pixel zoom, for a sentence. Same reasoning
+        // the run frame carries.
+        //
+        // Top-CENTRE is affordable because `picking` clears the rest of
+        // the chrome (`chrome-stages.ts`): at `valign: start` this would
+        // otherwise sit between the editing pill and the context pill,
+        // and a 56 px pill peeks out of a 48 px gap on a narrow canvas.
+        // The 12 px side margins are what lets the label ellipsize
+        // instead of pushing the pill past the window on a phone.
+        // ============================================================
+        [overlay]
+        Gtk.Box pick_banner {
+          visible: false;
+          halign: center;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
+          margin-end: 12;
+          spacing: 6;
+          styles ["toolbar", "osd", "pick-banner"]
+
+          Gtk.Image {
+            icon-name: "map-symbolic";
+          }
+
+          Gtk.Label {
+            label: _("Tap where the hero arrives");
+            ellipsize: end;
+          }
+
+          // The way out. Not "win.back-to-atlas": leaving for the world
+          // is one of the things a pick has to be cancellable WITHOUT,
+          // because the pick was armed on a map the person was sent to,
+          // and Cancel owes them the map they came from.
+          Gtk.Button pick_cancel {
+            label: _("Cancel");
+            styles ["flat"]
+          }
+        }
+
+        // ============================================================
         // HISTORY PILL - phone only, bottom-left, floating 12 px above
         // the docked bar (the overlay's margin-bottom is bound to the
         // sheet's bottom-bar-height). Undo is a visible button at every

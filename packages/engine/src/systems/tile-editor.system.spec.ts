@@ -18,9 +18,12 @@ import { describe, expect, it } from '@gjsify/unit'
 import { type Entity, EventEmitter, type Scene, TileMap, Vector } from 'excalibur'
 
 import type { Command, ObjectPlacementPayload } from '../commands/index.ts'
+import { ActiveLayerComponent } from '../components/active-layer.component.ts'
 import { ActiveObjectComponent } from '../components/active-object.component.ts'
+import { ActiveToolComponent } from '../components/active-tool.component.ts'
 import { EditorModeComponent } from '../components/editor-mode.component.ts'
 import { MapEditorComponent } from '../components/map-editor.component.ts'
+import { PendingArrivalPickComponent } from '../components/pending-arrival-pick.component.ts'
 import { PendingPlacementMoveComponent } from '../components/pending-placement-move.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import { SelectedPlacementsComponent } from '../components/selection.component.ts'
@@ -375,6 +378,20 @@ export default async () => {
       })
     }
 
+    /**
+     * One step further out than {@link tapSelect}: through `applyClick`,
+     * where the tool is chosen — the only level at which "pick mode
+     * replaces every tool" is observable.
+     */
+    function tapCanvas(scene: MapScene, events: EventEmitter<EngineEventMap>, tileX: number, tileY: number): void {
+      const system = new TileEditorSystem(events)
+      ;(system as unknown as { scene: Scene }).scene = scene as unknown as Scene
+      ;(system as unknown as { applyClick(hit: unknown): void }).applyClick({
+        coords: { x: tileX, y: tileY },
+        tileMap: { id: 7 },
+      })
+    }
+
     await it('an armed tap requests the move and leaves the selection alone', async () => {
       const scene = makeSelectScene()
       SessionState.set(scene, new SelectedPlacementsComponent([MOVED]))
@@ -426,6 +443,67 @@ export default async () => {
       tapSelect(scene, events, 1, 1)
 
       expect(requested).toHaveLength(0)
+      expect(SessionState.get(scene, SelectedPlacementsComponent)?.placementIds).toStrictEqual([MOVED])
+    })
+
+    /**
+     * Pick mode (§6.2 "Goes to", step 2): the host opened the target map
+     * and armed `PendingArrivalPickComponent`, and the banner promises
+     * "all tools replaced by one tap". Three things must hold:
+     *
+     *  1. the tap reaches NO tool — armed with Pencil it must not paint,
+     *     which is the whole difference from the one-shot move (that one
+     *     only ever displaces the select tool);
+     *  2. it reports the door that asked, which lives on another map and
+     *     is therefore unreachable from the active scene;
+     *  3. it is ONE tap even if the host writes nothing.
+     */
+    await it('a tap in pick mode answers the door instead of the tool', async () => {
+      const scene = makeSelectScene()
+      SessionState.set(scene, new ActiveToolComponent('pencil'))
+      SessionState.set(scene, new ActiveLayerComponent(LAYER))
+      SessionState.set(scene, new PendingArrivalPickComponent('kokiri-forest', 'obj_door_1'))
+      const events = new EventEmitter<EngineEventMap>()
+      const picks: EngineEventMap[EngineEvent.ARRIVAL_PICK_REQUESTED][] = []
+      const executed: unknown[] = []
+      const clicked: unknown[] = []
+      events.on(EngineEvent.ARRIVAL_PICK_REQUESTED, (payload) => picks.push(payload))
+      events.on(EngineEvent.COMMAND_EXECUTED, (payload) => executed.push(payload))
+      events.on(EngineEvent.TILE_CLICKED, (payload) => clicked.push(payload))
+
+      tapCanvas(scene, events, 2, 3)
+
+      expect(picks).toHaveLength(1)
+      expect(picks[0]?.sourceMapId).toBe('kokiri-forest')
+      expect(picks[0]?.doorPlacementId).toBe('obj_door_1')
+      expect(picks[0]?.targetMapId).toBe('m1')
+      expect(picks[0]?.coords).toStrictEqual({ x: 2, y: 3 })
+      // The armed Pencil tool never ran, and the tap is not even reported
+      // as an ordinary tile click.
+      expect(executed).toHaveLength(0)
+      expect(clicked).toHaveLength(0)
+      expect(SessionState.get(scene, PendingArrivalPickComponent)).toBe(null)
+    })
+
+    await it('pick mode is consumed by that one tap', async () => {
+      const scene = makeSelectScene()
+      SessionState.set(scene, new ActiveToolComponent('select'))
+      SessionState.set(scene, new PendingArrivalPickComponent('kokiri-forest', 'obj_door_1'))
+      const events = new EventEmitter<EngineEventMap>()
+      const picks: unknown[] = []
+      const selected: unknown[] = []
+      events.on(EngineEvent.ARRIVAL_PICK_REQUESTED, (payload) => picks.push(payload))
+      events.on(EngineEvent.PLACEMENT_SELECTED, (payload) => selected.push(payload))
+
+      // Nobody answers the request here — stands in for a host that
+      // refused the target.
+      tapCanvas(scene, events, 0, 0)
+      expect(selected).toHaveLength(0)
+
+      // The second tap is an ordinary select again.
+      tapCanvas(scene, events, 1, 1)
+      expect(picks).toHaveLength(1)
+      expect(selected).toHaveLength(1)
       expect(SessionState.get(scene, SelectedPlacementsComponent)?.placementIds).toStrictEqual([MOVED])
     })
   })

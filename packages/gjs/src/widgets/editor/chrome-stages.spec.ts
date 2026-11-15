@@ -150,6 +150,53 @@ export default async () => {
     })
   })
 
+  await describe('chromeFlags — pick mode', async () => {
+    await it('leaves the banner as the only chrome, in both layouts', async () => {
+      // §6.2 step 2: "all tools replaced by one tap". The engine already
+      // makes the tap exclusive; this is the half the person can see, so
+      // it is asserted across the whole cross product rather than at the
+      // one width the flow was first tried at.
+      for (const { stage, layout } of everyState()) {
+        const f = chromeFlags(stage, layout, false, true)
+        expect(f.pickBanner).toBe(true)
+        const everythingElse = [
+          f.editingPill,
+          f.backCircle,
+          f.undoButton,
+          f.phoneUndo,
+          f.redoButton,
+          f.phoneRedo,
+          f.historyPill,
+          f.toolGroup,
+          f.inspectorToggle,
+          f.overflowButton,
+          f.playFab,
+          f.bottomBar,
+        ].filter(Boolean)
+        expect(everythingElse.length).toBe(0)
+      }
+    })
+
+    await it('keeps both ways into a run shut', async () => {
+      // A run started from the target map would leave the pick armed
+      // behind a runtime that never consumes it, and Stop would come
+      // back to a banner for a flow the person had forgotten.
+      for (const { stage, layout } of everyState()) {
+        const f = chromeFlags(stage, layout, false, true)
+        expect(f.playFab).toBe(false)
+        expect(f.overflowButton).toBe(false)
+        expect(f.stopButton).toBe(false)
+        expect(f.restartButton).toBe(false)
+      }
+    })
+
+    await it('shows no banner in any editing or running state', async () => {
+      for (const { stage, layout, playing } of everyState()) {
+        expect(chromeFlags(stage, layout, playing).pickBanner).toBe(false)
+      }
+    })
+  })
+
   await describe('chromeFlags — the wide ladder', async () => {
     await it('adds one thing per stage and never takes one away', async () => {
       const rows = CHROME_STAGES.map((stage) => chromeFlags(stage, 'wide', false))

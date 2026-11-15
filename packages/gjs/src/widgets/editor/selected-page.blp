@@ -55,6 +55,29 @@ template $PixelRpgSelectedPage : Adw.Bin {
             title: _("Position");
           }
 
+          // Only a door has this row, and only the host knows: it owns
+          // the project's map list, so it hands the page the finished
+          // sentence (REDESIGN § 6.2).
+          Adw.ActionRow door_row {
+            title: _("Goes to");
+            activatable: true;
+            visible: false;
+
+            [suffix]
+            Gtk.Image door_warning {
+              icon-name: "dialog-warning-symbolic";
+              visible: false;
+              tooltip-text: _("This door points at a map the project does not have.");
+              styles ["warning"]
+            }
+
+            [suffix]
+            Gtk.Image {
+              icon-name: "go-next-symbolic";
+              styles ["dim-label"]
+            }
+          }
+
           Adw.ActionRow library_row {
             title: _("Edit in Library");
             activatable: true;

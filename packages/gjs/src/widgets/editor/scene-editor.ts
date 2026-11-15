@@ -43,6 +43,7 @@ const BRUSH_PAGE_TARGET = GLib.Variant.new_string('brush')
  */
 export interface SceneEditorSignals extends Adw.Bin.SignalSignatures {
   'detent-changed': (detent: SheetDetent) => void
+  'pick-cancelled': () => void
 }
 
 /**
@@ -95,6 +96,9 @@ export class SceneEditor extends Adw.Bin {
   declare _overflow_button: Gtk.MenuButton
   declare _inspector_toggle: Gtk.ToggleButton
 
+  declare _pick_banner: Gtk.Box
+  declare _pick_cancel: Gtk.Button
+
   declare _history_pill: Gtk.Box
   declare _phone_undo: Gtk.Button
   declare _phone_redo: Gtk.Button
@@ -123,6 +127,9 @@ export class SceneEditor extends Adw.Bin {
   private _stage: ChromeStage = 'tight'
   private _fullView = false
   private _playing = false
+  private _picking = false
+  /** Whether the selected placement is a door — see {@link _buildPlacementMenu}. */
+  private _selectionIsDoor = false
   private _brushLabel = ''
   private _mapName = ''
   private _cursorText = ''
@@ -164,6 +171,13 @@ export class SceneEditor extends Adw.Bin {
            * and not just a getter.
            */
           'detent-changed': { param_types: [GObject.TYPE_STRING] },
+          /**
+           * Cancel was pressed while a pick was armed (§6.2 step 2).
+           * The host owns what that means — disarm the engine and take
+           * the person back to the door they started from — because the
+           * banner knows neither map.
+           */
+          'pick-cancelled': { param_types: [] },
         },
         InternalChildren: [
           'ladder',
@@ -188,6 +202,8 @@ export class SceneEditor extends Adw.Bin {
           'restart_button',
           'overflow_button',
           'inspector_toggle',
+          'pick_banner',
+          'pick_cancel',
           'history_pill',
           'phone_undo',
           'phone_redo',
@@ -284,6 +300,7 @@ export class SceneEditor extends Adw.Bin {
     // The roster chip's WIDTH is what decides whether the tool group
     // still fits beside it, and that width changes both when the chip
     // appears and when another participant joins an already-visible one.
+    this._pick_cancel.connect('clicked', () => this.emit('pick-cancelled'))
     this._rosterChip.connect('notify::visible', () => this._applyVisibility())
     this._rosterChip.connect('notify::roster-size', () => this._applyVisibility())
 
@@ -386,9 +403,12 @@ export class SceneEditor extends Adw.Bin {
    * The row exists at every width; on wide layouts the whole docked bar
    * is hidden, so this is a no-op there rather than a special case.
    */
-  setPlacementSelected(name: string | null): void {
+  setPlacementSelected(name: string | null, isDoor = false): void {
     this._selection_label.set_text(name)
     this._bar_row_b.set_visible_child_name(name === null ? 'recent' : 'selection')
+    if (isDoor === this._selectionIsDoor) return
+    this._selectionIsDoor = isDoor
+    this._buildPlacementMenu()
   }
 
   get floatingPlay(): FloatingPlay {
@@ -528,6 +548,28 @@ export class SceneEditor extends Adw.Bin {
   }
 
   /**
+   * Arm or clear §6.2's pick mode: the map is open and the next tap on
+   * it says where the hero arrives, so every other affordance goes and
+   * the banner is what is left (`chromeFlags`' `picking`).
+   *
+   * Only the chrome — the tap itself is the engine's
+   * (`PendingArrivalPickComponent` on this scene, consumed ahead of the
+   * tool lookup), which is why this is a plain setter and not a mode the
+   * widget could get out of step with: the host arms both together and
+   * the engine disarms itself on the tap.
+   *
+   * The sheet collapses for the same reason a run collapses it — it
+   * rests over the lower half of the canvas, which is half the tiles the
+   * person is being asked to point at.
+   */
+  setPicking(picking: boolean): void {
+    if (this._picking === picking) return
+    this._picking = picking
+    if (picking) this.collapseSheet()
+    this._applyVisibility()
+  }
+
+  /**
    * The whole wide↔phone switch. Five steps, two of which move a small,
    * GL-free widget between two slots; the sheet and the canvas never
    * move, so the Excalibur loop never sees an unroot.
@@ -577,7 +619,7 @@ export class SceneEditor extends Adw.Bin {
     // wider one. Before the first allocation `canvas` is 0, which lands
     // on `tight` — the right floor to start from.
     const stage = this._layout === 'phone' ? this._stage : effectiveStage(this._stage, canvas, contextPill)
-    this._applyFlags(chromeFlags(stage, this._layout, this._playing))
+    this._applyFlags(chromeFlags(stage, this._layout, this._playing, this._picking))
   }
 
   /**
@@ -623,6 +665,8 @@ export class SceneEditor extends Adw.Bin {
     // Guarded, or the `notify::visible` handler above would recurse.
     if (!f.overflowButton && this._rosterChip.get_visible()) this._rosterChip.set_visible(false)
 
+    this._pick_banner.set_visible(f.pickBanner)
+
     this._bottom_sheet.set_reveal_bottom_bar(f.bottomBar)
     this._floating_play.set_visible(f.playFab)
     // Its own overlay child above the canvas, because GTK draws a
@@ -644,7 +688,10 @@ export class SceneEditor extends Adw.Bin {
   private _applyToastClearance(): void {
     const root = this.get_root()
     if (!root) return
-    const wanted = this._layout === 'phone' && !this._playing
+    // Follows the bar, not the layout: `bottomBar` is false for a run
+    // and for a pick alike, and a toast lifted 120 px clear of a bar
+    // that is not there floats for no reason.
+    const wanted = this._layout === 'phone' && !this._playing && !this._picking
     if (wanted) root.add_css_class('sheet-peeking')
     else root.remove_css_class('sheet-peeking')
   }
@@ -683,20 +730,28 @@ export class SceneEditor extends Adw.Bin {
   }
 
   /**
-   * The placement context menu's model — static, so it is built once.
-   * Every action is stateless and reads the current selection, the
-   * same contract as `win.undo`: the long press sets the selection
-   * before the menu opens, so nothing has to be carried in an action
-   * target. The same four verbs make up the phone selection bar
-   * ({@link setPlacementSelected}) — one set of actions, two surfaces.
+   * The placement context menu's model. Every action is stateless and
+   * reads the current selection, the same contract as `win.undo`: the
+   * long press sets the selection before the menu opens, so nothing has
+   * to be carried in an action target. The same four verbs make up the
+   * phone selection bar ({@link setPlacementSelected}) — one set of
+   * actions, two surfaces.
+   *
+   * Rebuilt whenever the selection changes between a door and anything
+   * else, because "Goes to…" (REDESIGN § 5.5) is the one entry that is
+   * not always there: a thing with no teleport component has no
+   * destination to set, and an entry that answers nothing is worse than
+   * an entry that is absent. Five appends, so rebuilding is cheaper
+   * than a `Gio.Menu` section swapped in and out.
    */
   private _buildPlacementMenu(): void {
     const model = new Gio.Menu()
     model.append(_('Edit'), 'win.edit-placement')
     model.append(_('Copy'), 'win.copy-placement')
     model.append(_('Move'), 'win.move-placement')
-    // "Goes to… ›" from REDESIGN §5.5 is missing on purpose: it needs
-    // the map + spawn-point picker of §6.2, which does not exist yet.
+    // No "›": the entry opens a dialog, and §5.5's chevron described a
+    // submenu the flow does not use.
+    if (this._selectionIsDoor) model.append(_('Goes to…'), 'win.door-target')
     model.append(_('Delete'), 'win.delete-placement')
     this._placementMenu.set_menu_model(model)
   }

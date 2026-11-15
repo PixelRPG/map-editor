@@ -33,6 +33,12 @@ export interface EditingActionsContext {
   movePlacement(): void
   /** Remove the current selection from its layer. */
   deletePlacement(): void
+  /**
+   * Start § 6.2's "Goes to" flow for the current selection: ask which
+   * map the door leads to, then open that map in pick mode. A no-op
+   * when the selection is not a door.
+   */
+  doorTarget(): void
   undo(): void
   redo(): void
   /**
@@ -114,6 +120,17 @@ export function installEditingActions(
   const deletePlacement = new Gio.SimpleAction({ name: 'delete-placement' })
   deletePlacement.connect('activate', () => ctx.deletePlacement())
   addAction(group, deletePlacement)
+
+  // "Goes to…" — the fifth placement verb, and the only one that is not
+  // in the phone selection bar: the bar's five slots are full at 360 px
+  // and the Selected page carries the same thing as a row ("Goes to"),
+  // which is where § 6.2 puts it in the first place. Stateless like the
+  // other four. The context menu offers it only on a door, but the
+  // action stays registered either way — an action that comes and goes
+  // cannot be reached by a keyboard shortcut or by the Control plane.
+  const doorTarget = new Gio.SimpleAction({ name: 'door-target' })
+  doorTarget.connect('activate', () => ctx.doorTarget())
+  addAction(group, doorTarget)
 
   const undo = new Gio.SimpleAction({ name: 'undo' })
   undo.connect('activate', () => ctx.undo())

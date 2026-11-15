@@ -79,7 +79,18 @@ export class SceneNavigator {
     this._lastAtlasSelection = sceneId
   }
 
-  open(sceneId: string): void {
+  /**
+   * Show `sceneId` in the scene editor.
+   *
+   * `onReady` runs once the map is fully hydrated — AFTER the inspector
+   * populated, which is the earliest moment the view's own `MapData` is
+   * the new map's. That is strictly later than `onEngineReady`, and the
+   * difference matters for anything that then EDITS the map: a write
+   * driven off the engine being up would still read the outgoing map's
+   * placements (REDESIGN § 6.2's trip home). Never called for a map
+   * that does not exist, and never called twice.
+   */
+  open(sceneId: string, onReady?: () => void): void {
     const scene = this._scenesById.get(sceneId)
     if (!scene) {
       this.ctx.reportMapMissing()
@@ -91,7 +102,8 @@ export class SceneNavigator {
 
     // Real-data hydration only happens once a project is loaded; plain
     // demo scenes fall back to the view's placeholders.
-    if (this.ctx.getProject()) void this._hydrate(sceneId)
+    if (this.ctx.getProject()) void this._hydrate(sceneId, onReady)
+    else onReady?.()
   }
 
   /**
@@ -135,9 +147,12 @@ export class SceneNavigator {
     this.ctx.refreshAtlasWorld(project)
   }
 
-  private async _hydrate(sceneId: string): Promise<void> {
+  private async _hydrate(sceneId: string, onReady?: () => void): Promise<void> {
     const project = this.ctx.getProject()
-    if (!project) return
+    if (!project) {
+      onReady?.()
+      return
+    }
 
     // Order is load-bearing: the engine must be up before the inspector
     // populates, or its initial active-tile / active-layer writes land on
@@ -159,5 +174,10 @@ export class SceneNavigator {
     } catch (error) {
       console.warn('[SceneNavigator] Failed to populate inspector:', error)
     }
+
+    // Even after a failed populate: the caller asked to be told when the
+    // map is as ready as it is going to get, and swallowing the callback
+    // would strand a flow waiting on it.
+    onReady?.()
   }
 }

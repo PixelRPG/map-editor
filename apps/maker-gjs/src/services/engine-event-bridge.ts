@@ -34,6 +34,18 @@ export interface EngineEventBridgeContext {
    * tapping.
    */
   placementMoved(placementId: string, moved: boolean): void
+  /**
+   * A tap answered § 6.2's pick mode: `coords` on `targetMapId` is
+   * where the door `doorPlacementId` on `sourceMapId` arrives. The
+   * window hands it to `DoorTargetFlow`, which owns both edits and the
+   * trip back to the door's own map.
+   */
+  arrivalPicked(request: {
+    sourceMapId: string
+    doorPlacementId: string
+    targetMapId: string
+    coords: { x: number; y: number }
+  }): void
   setLayerFlag(layerId: string, flag: 'visible' | 'locked', value: boolean): void
   /** Re-read the active map's layer list into the Layers page (add / reorder / change of plane, any path). */
   refreshLayers(): void
@@ -61,6 +73,7 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('placement-selected', ({ placementId }) => ctx.selectPlacement(placementId))
   engine.on('placement-context', ({ screenPos }) => ctx.requestPlacementContext(screenPos.x, screenPos.y))
   engine.on('placement-moved', ({ placementId, moved }) => ctx.placementMoved(placementId, moved))
+  engine.on('arrival-picked', (request) => ctx.arrivalPicked(request))
   engine.on('layer-flag-changed', ({ layerId, flag, value }) => ctx.setLayerFlag(layerId, flag, value))
   engine.on('layer-list-changed', () => ctx.refreshLayers())
   engine.on('map-loaded', ({ mapId }) => ctx.mapLoaded(mapId))

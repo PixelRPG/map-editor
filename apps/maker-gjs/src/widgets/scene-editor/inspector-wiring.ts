@@ -110,6 +110,12 @@ export interface SelectedPageWiring {
    * the base to produce the per-instance overrides.
    */
   applyPlacementEdit(placementId: string, entityJson: string): void
+  /**
+   * The "Goes to" row was activated: ask which map this door leads to.
+   * The row only exists for a door, so the host can take the placement
+   * being one for granted.
+   */
+  requestDoorTarget(placementId: string): void
 }
 
 export function wireSelectedPage(page: SelectedPage, ctx: SelectedPageWiring): void {
@@ -121,4 +127,5 @@ export function wireSelectedPage(page: SelectedPage, ctx: SelectedPageWiring): v
   page.connect('overrides-changed', (_p: SelectedPage, placementId: string, entityJson: string) =>
     ctx.applyPlacementEdit(placementId, entityJson),
   )
+  page.connect('door-target-requested', (_p: SelectedPage, placementId: string) => ctx.requestDoorTarget(placementId))
 }

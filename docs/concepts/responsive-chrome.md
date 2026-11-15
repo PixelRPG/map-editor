@@ -602,7 +602,7 @@ hierarchies and an overflow menu rebuilt from button visibility.
 
 So the ladder sets exactly **one** property — `stage`, a string — and
 `packages/gjs/src/widgets/editor/chrome-stages.ts` turns
-`(stage, layout, playing)` into every flag:
+`(stage, layout, playing, picking)` into every flag:
 
 | Rung | Canvas ≥ | What it adds |
 |---|---|---|
@@ -724,6 +724,50 @@ engine that adds the runtime marker instead of swapping it. Neither
 exists yet; `TileEditorSystem.isEditingLive()` is already written for
 it, and a pill whose tools the engine has switched off would be the
 worse half of the two (tracked in `TODO.md`).
+
+### `picking` — the third chrome stage
+
+`chromeFlags` takes a fourth input, `picking`, for §6.2's **pick
+mode**: the person has asked where a door leads, the target map is
+open, and the next tap on the canvas is the arrival tile, not a brush
+stroke. It is the same shape of state as `playing` — the editor is
+momentarily not an editor — and it is handled the same way rather
+than as a modal dialog over the canvas, because the thing being
+chosen is *a place in the map*, which is only legible at full size.
+
+A pick removes everything `playing` removes **plus the Play FAB and
+the "⋯" button**, and adds exactly one piece of chrome: `pickBanner`,
+an `[overlay]` `Gtk.Box pick_banner` (`toolbar` + `osd`) carrying
+`map-symbolic`, "Tap where the hero arrives" and a flat Cancel. The
+two extra removals are not symmetry for its own sake — starting a run
+from the target map would leave a pick armed behind a runtime that
+cannot consume it, and the overflow menu's verbs all act on an editing
+state the canvas is not in. The tool group and the badge go for the
+plainer reason: the tap belongs to the pick, so offering a brush would
+be offering an action the canvas will not perform.
+
+Three consequences worth knowing:
+
+- **Cancel is a signal, not `win.back-to-atlas`.** The host owes the
+  person the map they came *from*, which the pick banner cannot know
+  — `SceneEditor` emits `pick-cancelled` and the window navigates. The
+  same path runs when they leave the map by any other route
+  (`DoorTargetFlow.abandon` from `_leaveMap`), so navigating away
+  cancels a pick for free: the arming lives on the target scene as a
+  `PendingArrivalPickComponent`, exactly like `pendingPlacementMove`.
+- **`setPicking` collapses the phone sheet**, for the same reason a run
+  does: the sheet rests over the tiles the finger has to reach.
+- **The banner takes no toast clearance.** `_applyToastClearance`
+  excludes `picking` — a toast and the banner share the bottom edge for
+  at most the moment before the tap lands, and lifting the banner for
+  it would move the one instruction on screen.
+
+The entry points are three and they converge on one road:
+`win.door-target`, the canvas placement menu's "Goes to…" (appended
+only while the selection is a door) and the *Selected* page's "Goes
+to" row all reach `SceneEditorView.requestDoorTargetForSelection()`,
+which emits `door-target-requested`. The window's `DoorTargetFlow`
+answers it with the map picker, and only then arms the pick.
 
 **Everything under the ladder fits 360 px, and that is nobody's job
 but its own.** The ladder's `Adw.BreakpointBin` sets the floor with
@@ -1154,7 +1198,9 @@ on the scene the load then replaces and vanishes silently.
 | Three movable inspector pages (Brush · Layers · Selected) owned by `EditorPages`, hosted either in the right inspector or in the bottom sheet, both driven by `win.sheet-page` (REDESIGN § 5.3 / § 9 step 3.1) | **landed** |
 | Peek / Half / Full detents on the phone sheet: own drag handle, fling and tap, spring between open rungs, and the camera ducking at Half via `Engine.setViewportInset` (REDESIGN § 5.2 / § 9 step 3.2) | **landed** |
 | Keyboard access to the detents, and a stepwise Full → Half → Peek on back (REDESIGN § 5.2) | deferred, tracked in `TODO.md` |
-| The placement menu's "Goes to… ›" for doors (REDESIGN § 5.5, needs the § 6.2 picker) | deferred, tracked in `TODO.md` |
+| The placement menu's "Goes to…" for doors, the *Selected* page's "Goes to" row and `win.door-target` — all three emit `door-target-requested`, and the §6.2 picker follows (REDESIGN § 5.5 / § 9 step 5.5) | **landed** |
+| `picking` as the third chrome stage: the pick banner is the only chrome a pick leaves, Cancel is a signal so the host can return the map they came from (REDESIGN § 6.2 / § 9 step 5.5) | **landed** |
+| A fifth pill for "Goes to" in the phone selection bar (REDESIGN § 5.4) — the row in the *Selected* page and the long-press menu carry it instead | deferred, tracked in `TODO.md` |
 | One-finger drag paints a stroke (REDESIGN § 5.5) | deferred, tracked in `TODO.md` |
 | On phone every inspector reveal lands on the sheet, never the editor's drawer (`_onShowInspectorChanged`) | **landed** |
 | The *Selected* page edits a placement (name + component overrides, Duplicate, Delete) and the phone bar's second row becomes the contextual action bar — a canvas selection fills both and does NOT open the sheet (REDESIGN § 5.4 / § 9 step 3.3) | **landed** |

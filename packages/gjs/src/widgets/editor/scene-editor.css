@@ -75,12 +75,13 @@
 }
 
 /*
- * The two floating pills. Class markers, so the acceptance probes can
+ * The floating pills. Class markers, so the acceptance probes can
  * name what they measure — the geometry itself is Adwaita's
  * `.toolbar.osd` (12px padding, 15px radius, 70% black fill).
  */
 .editing-pill,
-.context-pill {
+.context-pill,
+.pick-banner {
   /* marker only */
 }
 
