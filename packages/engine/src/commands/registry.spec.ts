@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 import * as Commands from './index.ts'
+import { DuplicateLayerCommand, RemoveLayerCommand } from './layer-content.command.ts'
+import { RenameLayerCommand } from './layer-lifecycle.command.ts'
 import { ReorderLayerCommand, SetLayerPlaneCommand } from './layer-order.command.ts'
 import { PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
 import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
@@ -72,6 +74,28 @@ export default async () => {
       })
       expect(setPlane).toBeInstanceOf(SetLayerPlaneCommand)
       expect(setPlane?.kind).toBe('layer.set-plane')
+    })
+
+    await it('roundtrips the rename / duplicate / remove layer kinds → instances', async () => {
+      const rename = BUILT_IN_COMMANDS[RenameLayerCommand.KIND]?.({
+        layerId: 'decor',
+        name: 'Treetops',
+        previousName: 'Decor',
+      })
+      expect(rename).toBeInstanceOf(RenameLayerCommand)
+      expect(rename?.kind).toBe('layer.rename')
+
+      const content = {
+        layer: { id: 'decor-copy', name: 'Decor copy', visible: true, plane: 'hero' as const, sprites: [] },
+        index: 2,
+        placements: [],
+      }
+      const duplicate = BUILT_IN_COMMANDS[DuplicateLayerCommand.KIND]?.(content)
+      expect(duplicate).toBeInstanceOf(DuplicateLayerCommand)
+      expect(duplicate?.kind).toBe('layer.duplicate')
+      const remove = BUILT_IN_COMMANDS[RemoveLayerCommand.KIND]?.(content)
+      expect(remove).toBeInstanceOf(RemoveLayerCommand)
+      expect(remove?.kind).toBe('layer.remove')
     })
 
     await it('every shipped Command class is registered in BUILT_IN_COMMANDS', async () => {

@@ -25,7 +25,12 @@ template $SceneEditorView : $PixelRpgResponsiveEditorView {
   // context pill carries.
   Adw.OverlaySplitView inner_split {
     sidebar-position: end;
-    min-sidebar-width: 280;
+    // The floor is 320, not 280, since the Layers page gained the row
+    // menu: eye, glyph, tile count, lock and "⋯" are all natural-width,
+    // so the layer name is whatever is left over — at 280 that was about
+    // 30 px and every name read "De…". The tablet still clears the
+    // canvas floor at this width (768 − 320 = 448 > 360).
+    min-sidebar-width: 320;
     max-sidebar-width: 320;
     // `pin-sidebar: true` disables libadwaita's auto-`show-sidebar :=
     // !collapsed` flip during breakpoint transitions (see

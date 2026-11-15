@@ -121,7 +121,6 @@ function installCovered(group: Gio.SimpleActionGroup, sidebarOwner: GObject.Obje
     sidebarOwner,
     showSheetPage: noop,
     setEngineObjectsVisible: noop,
-    setViewObjectsVisible: noop,
     setEngineShowGrid: noop,
     setEngineDimInactiveLayers: noop,
   })

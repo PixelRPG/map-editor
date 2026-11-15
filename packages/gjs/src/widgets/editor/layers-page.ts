@@ -1,12 +1,22 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
+import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 import { isLayerDataVisible, type LayerPlane } from '@pixelrpg/engine'
+import { gettext as _ } from 'gettext'
 import { LayerRow } from './layer-row'
 import { LayerSection } from './layer-section'
-import { type DropAnchor, layersInSection, resolveLayerDrop, SECTION_PLANES } from './layer-sections.ts'
+import {
+  type DropAnchor,
+  layersInSection,
+  type NudgeDirection,
+  resolveLayerDrop,
+  resolveLayerNudge,
+  SECTION_PLANES,
+} from './layer-sections.ts'
 import { SignalScope } from '../../utils/signal-scope.ts'
 
 import Template from './layers-page.blp'
@@ -47,24 +57,35 @@ export interface LayersPageSignals extends Adw.Bin.SignalSignatures {
   'layer-visibility-toggled': (layerId: string, visible: boolean) => void
   'layer-lock-toggled': (layerId: string, locked: boolean) => void
   'layer-move-requested': (layerId: string, targetId: string, targetIndex: number) => void
-  'objects-visibility-toggled': (visible: boolean) => void
+  'layer-rename-requested': (layerId: string, name: string) => void
+  'layer-duplicate-requested': (layerId: string) => void
+  'layer-delete-requested': (layerId: string) => void
 }
 
 /**
- * Inspector's "Layers" tab: three fixed {@link LayerSection}s — Above
+ * Inspector's "Layers" page: three fixed {@link LayerSection}s — Above
  * the hero / At hero height / Below the hero — each a `boxed-list` of
- * {@link LayerRow}s in draw order (top row draws on top), a footer "New
- * layer" button, plus a pinned **Objects** row under the planes: a
- * layer-like global toggle for object placements (eye only, no lock,
- * not selectable as the active layer). Emits:
+ * {@link LayerRow}s in draw order (top row draws on top) over its own
+ * "Add a layer" row, because the plane a new layer lands on is the
+ * section it was asked from. Simple view hides those three and shows
+ * one page-level "Add a layer" that targets the active layer's plane.
+ *
+ * Every row carries a "⋯" menu — Rename, Duplicate, Move up, Move
+ * down, Move to plane ▸, Delete — built here, so the row stays a view
+ * and this page stays the only thing that knows the layer array. Move
+ * up / down / to-plane are expressed as `layer-move-requested`: the
+ * host already turns a plane + array index into a reorder command.
+ *
+ * Emits:
  * - `layer-selected::<id>` when a row is activated.
  * - `layer-visibility-toggled::<id, visible>` when a row's eye toggle flips.
  * - `layer-lock-toggled::<id, locked>` for the lock toggle.
- * - `layer-move-requested::<id, plane, index>` when a row is dropped —
- *   `plane` is the section it landed in, `index` the array position
- *   (`layer-sections.ts`); the host turns that into a reorder or a
- *   change-of-plane command.
- * - `objects-visibility-toggled::<visible>` for the Objects row's eye.
+ * - `layer-move-requested::<id, plane, index>` when a row is dropped or
+ *   nudged — `plane` is the section it landed in, `index` the array
+ *   position (`layer-sections.ts`); the host turns that into a reorder
+ *   or a change-of-plane command.
+ * - `layer-rename-requested::<id, name>` once an inline rename commits.
+ * - `layer-duplicate-requested::<id>` / `layer-delete-requested::<id>`.
  */
 // Two different `visible` live in this file. `LayerDescriptor.visible` is
 // LAYER DATA and is decided ONLY by the engine's `isLayerDataVisible`
@@ -76,14 +97,14 @@ export class LayersPage extends Adw.Bin {
   declare _section_overlay: LayerSection
   declare _section_hero: LayerSection
   declare _section_ground: LayerSection
-  declare _objects_list: Gtk.ListBox
+  declare _simple_add_list: Gtk.ListBox
+  declare _simple_add_row: Adw.ButtonRow
 
   private _layers: Map<string, { row: LayerBoxRow; widget: LayerRow; plane: LayerPlane }> = new Map()
   private _descriptors: LayerDescriptor[] = []
   private _activeId: string | null = null
   private _heroPaintable: Gdk.Paintable | null = null
-  private _objectsRow: { row: Gtk.ListBoxRow; widget: LayerRow } | null = null
-  private _objectsVisible = true
+  private _fullView = true
   /** The layer id a drag carries, so a drop can name it without decoding the content provider. */
   private _draggedId: string | null = null
   /** True while {@link setLayerState} writes — suppresses the toggle re-emit. */
@@ -97,7 +118,16 @@ export class LayersPage extends Adw.Bin {
       {
         GTypeName: 'PixelRpgLayersPage',
         Template,
-        InternalChildren: ['section_overlay', 'section_hero', 'section_ground', 'objects_list'],
+        InternalChildren: ['section_overlay', 'section_hero', 'section_ground', 'simple_add_list', 'simple_add_row'],
+        Properties: {
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full View',
+            'Whether the advanced UI tier is on',
+            GObject.ParamFlags.READWRITE,
+            true,
+          ),
+        },
         Signals: {
           'layer-selected': { param_types: [GObject.TYPE_STRING] },
           'layer-visibility-toggled': {
@@ -109,8 +139,12 @@ export class LayersPage extends Adw.Bin {
           'layer-move-requested': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING, GObject.TYPE_INT],
           },
-          // The Objects pseudo-row's eye flipped (global placement visibility).
-          'objects-visibility-toggled': { param_types: [GObject.TYPE_BOOLEAN] },
+          // An inline rename committed (layerId, the new name).
+          'layer-rename-requested': {
+            param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING],
+          },
+          'layer-duplicate-requested': { param_types: [GObject.TYPE_STRING] },
+          'layer-delete-requested': { param_types: [GObject.TYPE_STRING] },
         },
       },
       LayersPage,
@@ -127,6 +161,10 @@ export class LayersPage extends Adw.Bin {
     // widget's lifetime (rows are rebuilt on every `setLayers`, the
     // sections are not).
     for (const [section, plane] of this._sections()) this._installDropTarget(section, plane)
+    // The empty string is `win.new-layer`'s "wherever the active layer
+    // is" — Simple view does not name a plane, it just adds one more.
+    this._simple_add_row.set_action_target_value(GLib.Variant.new_string(''))
+    this._applyAddRows()
   }
 
   vfunc_map(): void {
@@ -163,6 +201,23 @@ export class LayersPage extends Adw.Bin {
   }
 
   /**
+   * Whether the advanced tier is on. Full view puts an "Add a layer"
+   * row in each of the three sections, so the plane is chosen by which
+   * button was pressed; Simple view offers one at the bottom of the
+   * page that adds next to the active layer.
+   */
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+    this._applyAddRows()
+  }
+
+  /**
    * The project's player sprite, drawn in every depth glyph on this tab
    * (`null` = silhouette). Applied to the section headers and every row.
    */
@@ -185,7 +240,14 @@ export class LayersPage extends Adw.Bin {
       for (const layer of rows) this._appendRow(section.list, layer, plane)
       section.setEmpty(rows.length === 0)
     }
-    this._appendObjectsRow()
+  }
+
+  /** Put the "Add a layer" rows where the current tier wants them. */
+  private _applyAddRows(): void {
+    for (const [section, plane] of this._sections()) {
+      section.addTarget = this._fullView ? GLib.Variant.new_string(plane) : null
+    }
+    this._simple_add_list.set_visible(!this._fullView)
   }
 
   /**
@@ -208,19 +270,6 @@ export class LayersPage extends Adw.Bin {
     } finally {
       this._suppressToggleEmit = false
     }
-  }
-
-  /**
-   * Update the Objects pseudo-row's placement count + eye state without
-   * re-emitting `objects-visibility-toggled`.
-   */
-  setObjectsState(count: number, visible: boolean): void {
-    this._objectsVisible = visible
-    if (!this._objectsRow) return
-    this._objectsRow.widget.tileCount = count
-    // layer-visibility-ok: the Objects pseudo-row is not a map layer; this
-    // is its own widget eye state.
-    if (this._objectsRow.widget.visible !== visible) this._objectsRow.widget.visible = visible
   }
 
   selectLayer(id: string): void {
@@ -260,7 +309,14 @@ export class LayersPage extends Adw.Bin {
       if (this._suppressToggleEmit) return
       this.emit('layer-lock-toggled', layer.id, row.locked)
     })
+    row.connect('rename-committed', (_row: LayerRow, name: string) => {
+      this.emit('layer-rename-requested', layer.id, name)
+    })
     this._installDragSource(row, layer.id)
+    // Built per rebuild, not once: which items are sensitive depends on
+    // the layer's place in the current array (and Delete on how many
+    // layers are left).
+    this._installRowMenu(row, layer.id, plane)
 
     const boxRow = new Gtk.ListBoxRow() as LayerBoxRow
     boxRow.layerId = layer.id
@@ -324,33 +380,81 @@ export class LayersPage extends Adw.Bin {
   }
 
   /**
-   * Pinned "Objects" row under the three planes: a layer-LIKE global
-   * toggle for object placements. Eye only (placements lock via their
-   * layer), no plane glyph (placements sit at their layer's plane), and
-   * not selectable as the active layer. Rebuilt by every `setLayers`.
+   * The row's "⋯" menu. The items are actions in a group private to
+   * this row (prefix `layer`), the same per-widget pattern
+   * `GalleryCard` uses: a menu item needs an action, and these are
+   * per-row commands that have no business in the window's action map.
    */
-  private _appendObjectsRow(): void {
-    clearListBox(this._objects_list)
-    const widget = new LayerRow({
-      layerName: 'Objects',
-      tileCount: 0,
-      visible: this._objectsVisible,
-      locked: false,
-      active: false,
+  private _installRowMenu(row: LayerRow, layerId: string, plane: LayerPlane): void {
+    const group = new Gio.SimpleActionGroup()
+    const add = (name: string, activate: () => void, enabled = true) => {
+      const action = new Gio.SimpleAction({ name, enabled })
+      action.connect('activate', activate)
+      group.add_action(action)
+      return action
+    }
+
+    add('rename', () => row.beginRename())
+    add('duplicate', () => this.emit('layer-duplicate-requested', layerId))
+    // A map always keeps one layer, so the last one's item is dead.
+    add('delete', () => this.emit('layer-delete-requested', layerId), this._descriptors.length > 1)
+    add('move-up', () => this._nudge(layerId, 'up'), resolveLayerNudge(this._descriptors, layerId, 'up') !== null)
+    add('move-down', () => this._nudge(layerId, 'down'), resolveLayerNudge(this._descriptors, layerId, 'down') !== null)
+
+    const setPlane = new Gio.SimpleAction({
+      name: 'set-plane',
+      parameter_type: GLib.VariantType.new('s'),
     })
-    widget._lock_button.set_visible(false)
-    widget._glyph.set_visible(false)
-    widget.connect('notify::visible', () => {
-      // layer-visibility-ok: the Objects pseudo-row has no LayerData at
-      // all — it toggles object placements globally.
-      if (this._objectsVisible === widget.visible) return
-      this._objectsVisible = widget.visible
-      this.emit('objects-visibility-toggled', widget.visible)
+    setPlane.connect('activate', (_action: Gio.SimpleAction, target: GLib.Variant | null) => {
+      const next = target?.get_string()[0] as LayerPlane | undefined
+      if (!next) return
+      const drop = resolveLayerDrop(this._descriptors, layerId, next, null)
+      if (drop) this.emit('layer-move-requested', layerId, drop.plane, drop.index)
     })
-    const boxRow = new Gtk.ListBoxRow({ selectable: false })
-    boxRow.set_child(widget)
-    this._objects_list.append(boxRow)
-    this._objectsRow = { row: boxRow, widget }
+    group.add_action(setPlane)
+
+    row.insert_action_group('layer', group)
+    row.menuModel = this._buildRowMenu(plane)
+  }
+
+  /**
+   * Rename / Duplicate · the three move commands · Delete, in three
+   * sections so the destructive one sits apart. "Move to plane ▸"
+   * lists the OTHER two planes only: one parameterised action cannot
+   * be insensitive for a single value, and a plane the layer is
+   * already on would be a no-op item.
+   */
+  private _buildRowMenu(plane: LayerPlane): Gio.Menu {
+    const menu = new Gio.Menu()
+
+    const edit = new Gio.Menu()
+    edit.append(_('Rename'), 'layer.rename')
+    edit.append(_('Duplicate'), 'layer.duplicate')
+    menu.append_section(null, edit)
+
+    const move = new Gio.Menu()
+    move.append(_('Move up'), 'layer.move-up')
+    move.append(_('Move down'), 'layer.move-down')
+    const planes = new Gio.Menu()
+    for (const other of SECTION_PLANES) {
+      if (other === plane) continue
+      planes.append(this._sectionFor(other).title, `layer.set-plane('${other}')`)
+    }
+    move.append_submenu(_('Move to plane'), planes)
+    menu.append_section(null, move)
+
+    const danger = new Gio.Menu()
+    danger.append(_('Delete'), 'layer.delete')
+    menu.append_section(null, danger)
+
+    return menu
+  }
+
+  /** One step up or down inside the layer's own section. */
+  private _nudge(layerId: string, direction: NudgeDirection): void {
+    const drop = resolveLayerNudge(this._descriptors, layerId, direction)
+    if (!drop) return
+    this.emit('layer-move-requested', layerId, drop.plane, drop.index)
   }
 }
 

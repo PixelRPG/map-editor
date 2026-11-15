@@ -621,7 +621,18 @@ with GTK's `measure()` rather than by eye:
   misdrawn tileset, not a narrow one — so it sits in a
   `Gtk.ScrolledWindow` that absorbs that minimum and pans instead,
   which is the same reason the tileset chips are `can-shrink: false`
-  inside a scroller of their own.
+  inside a scroller of their own. The Layers page clears the floor with
+  three 44 px targets per row (eye, lock, "⋯") because the layer name
+  beside them is a `Gtk.Inscription`-style ellipsizing label, not a
+  width the row demands; those targets are unconditional rather than
+  phone-scoped — a row that changed height with the tier would change
+  the sheet's content height, which is an input to its detents. The
+  phone sheet is 360 px wide and has room for all of it; the WIDE
+  inspector did not, so its floor rose from 280 px to 320 px when the
+  row menu landed. Everything in the row except the name has a natural
+  width, so the name gets the remainder, and at 280 px the remainder
+  was ~30 px — every layer read "De…". The tablet still clears the
+  canvas floor at 320 (768 − 320 = 448).
 - The **recent strip shows a whole number of tiles** — six at 360 px —
   and hides the rest; a swatch sliced by the edge of the bar reads as
   a defect, not as "more". `RecentTilesLayout` decides the count at
@@ -1026,6 +1037,8 @@ on the scene the load then replaces and vanishes silently.
 | Dragging the selected placement to move it; `Move` is a one-shot tap instead (REDESIGN § 5.4) | deferred, tracked in `TODO.md` |
 | The *Brush* page is a `Tiles \| Things` toggle over the tileset drawn as one contiguous sheet, with the map's tilesets as chips above it and `win.select-tileset(s)` as the only way to change sheets (REDESIGN § 5.3 / § 9 step 3.4) | **landed** |
 | A drag on the sheet picking a multi-tile stamp, and the "Search tiles…" row (REDESIGN § 5.3) | deferred / dropped, tracked in `TODO.md` |
+| The *Layers* page gives every row a "⋯" menu (long-press / right-click too) with Rename · Duplicate · Move up · Move down · Move to plane ▸ · Delete, an "Add a layer" row per section (one row in Simple view), and 44 px eye / lock / "⋯" targets; the Things eye moved to the view menu as "Show Things" (REDESIGN § 6.3 / § 9 step 3.5) | **landed** |
+| An explicit drag handle on a layer row — reorder stays a row-wide drag (REDESIGN § 6.3) | deferred, tracked in `TODO.md` |
 | Virtual joystick + action button for a phone Live Run | deferred, tracked in `TODO.md` |
 
 Cross-references:

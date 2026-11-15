@@ -1,5 +1,6 @@
 import type { Scene } from 'excalibur'
 import { MapScene } from '../scenes/map.scene.ts'
+import { attachPlacement, detachPlacement } from '../services/placement-store.service.ts'
 import type { ObjectPlacement } from '../types/data/index.ts'
 import type { Command } from './types.ts'
 
@@ -16,28 +17,6 @@ export interface ObjectPlacementPayload {
    * and a remote revert converges to the same restored state.
    */
   replaced?: ObjectPlacement
-}
-
-/** Add the placement to `mapData.objectPlacements`, replacing one with the same id. */
-function addPlacement(scene: MapScene, placement: ObjectPlacement): void {
-  const mapData = scene.mapResource.mapData
-  if (!mapData) return
-  mapData.objectPlacements ??= []
-  const list = mapData.objectPlacements
-  const idx = list.findIndex((p) => p.id === placement.id)
-  if (idx >= 0) list[idx] = placement
-  else list.push(placement)
-  scene.despawnPlacement(placement.id) // avoid a duplicate if one already exists
-  scene.spawnPlacement(placement)
-}
-
-/** Remove the placement (by id) from data + scene. */
-function removePlacement(scene: MapScene, placementId: string): void {
-  const mapData = scene.mapResource.mapData
-  if (mapData?.objectPlacements) {
-    mapData.objectPlacements = mapData.objectPlacements.filter((p) => p.id !== placementId)
-  }
-  scene.despawnPlacement(placementId)
 }
 
 /**
@@ -69,13 +48,13 @@ export class PlaceObjectCommand implements Command<ObjectPlacementPayload> {
     if (existing && this.payload.replaced === undefined && !placementsEqual(existing, this.payload.placement)) {
       this.payload.replaced = existing
     }
-    addPlacement(scene, this.payload.placement)
+    attachPlacement(scene, this.payload.placement)
   }
 
   revert(scene: Scene): void {
     if (!(scene instanceof MapScene)) return
-    if (this.payload.replaced) addPlacement(scene, this.payload.replaced)
-    else removePlacement(scene, this.payload.placement.id)
+    if (this.payload.replaced) attachPlacement(scene, this.payload.replaced)
+    else detachPlacement(scene, this.payload.placement.id)
   }
 }
 
@@ -99,10 +78,10 @@ export class RemoveObjectCommand implements Command<ObjectPlacementPayload> {
   }
 
   apply(scene: Scene): void {
-    if (scene instanceof MapScene) removePlacement(scene, this.payload.placement.id)
+    if (scene instanceof MapScene) detachPlacement(scene, this.payload.placement.id)
   }
 
   revert(scene: Scene): void {
-    if (scene instanceof MapScene) addPlacement(scene, this.payload.placement)
+    if (scene instanceof MapScene) attachPlacement(scene, this.payload.placement)
   }
 }

@@ -4,7 +4,13 @@ import {
   SetLayerVisibilityCommand,
   type SetLayerVisibilityPayload,
 } from './layer-flag.command.ts'
-import { AddLayerCommand, type AddLayerPayload } from './layer-lifecycle.command.ts'
+import { DuplicateLayerCommand, type LayerContentPayload, RemoveLayerCommand } from './layer-content.command.ts'
+import {
+  AddLayerCommand,
+  type AddLayerPayload,
+  RenameLayerCommand,
+  type RenameLayerPayload,
+} from './layer-lifecycle.command.ts'
 import {
   ReorderLayerCommand,
   type ReorderLayerPayload,
@@ -50,4 +56,7 @@ export const BUILT_IN_COMMANDS: CommandRegistry = {
   [AddLayerCommand.KIND]: (payload) => new AddLayerCommand(payload as AddLayerPayload),
   [ReorderLayerCommand.KIND]: (payload) => new ReorderLayerCommand(payload as ReorderLayerPayload),
   [SetLayerPlaneCommand.KIND]: (payload) => new SetLayerPlaneCommand(payload as SetLayerPlanePayload),
+  [RenameLayerCommand.KIND]: (payload) => new RenameLayerCommand(payload as RenameLayerPayload),
+  [DuplicateLayerCommand.KIND]: (payload) => new DuplicateLayerCommand(payload as LayerContentPayload),
+  [RemoveLayerCommand.KIND]: (payload) => new RemoveLayerCommand(payload as LayerContentPayload),
 }

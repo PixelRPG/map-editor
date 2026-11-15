@@ -1,6 +1,9 @@
 import {
   AddLayerCommand,
   type Command,
+  DuplicateLayerCommand,
+  RemoveLayerCommand,
+  RenameLayerCommand,
   ReorderLayerCommand,
   SetLayerLockedCommand,
   SetLayerPlaneCommand,
@@ -42,15 +45,27 @@ export function layerFlagChange(command: Command, direction: 'apply' | 'revert')
 }
 
 /**
- * Map a command that changes the layer LIST (add, reorder, change of
- * plane) to the `LAYER_LIST_CHANGED` payload the host's Layers page
- * re-reads the map on — or `null` for any other command. Direction is
- * irrelevant: apply and revert both leave the list different from
- * what the tab shows, and the tab reads the list back from the map.
+ * Map a command that changes the layer LIST (add, remove, duplicate,
+ * rename, reorder, change of plane) to the `LAYER_LIST_CHANGED` payload
+ * the host's Layers page re-reads the map on — or `null` for any other
+ * command. Direction is irrelevant: apply and revert both leave the
+ * list different from what the page shows, and the page reads the list
+ * back from the map.
+ *
+ * A rename changes no position, but the page shows the name, so it
+ * belongs here too — otherwise an undone or remote rename would leave
+ * the row reading the old one.
  */
 export function layerListChange(command: Command): LayerListChange | null {
   if (command instanceof AddLayerCommand) return { layerId: command.payload.layer.id }
-  if (command instanceof ReorderLayerCommand || command instanceof SetLayerPlaneCommand) {
+  if (command instanceof DuplicateLayerCommand || command instanceof RemoveLayerCommand) {
+    return { layerId: command.payload.layer.id }
+  }
+  if (
+    command instanceof RenameLayerCommand ||
+    command instanceof ReorderLayerCommand ||
+    command instanceof SetLayerPlaneCommand
+  ) {
     return { layerId: command.payload.layerId }
   }
   return null

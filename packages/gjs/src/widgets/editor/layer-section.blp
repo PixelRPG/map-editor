@@ -56,5 +56,22 @@ template $PixelRpgLayerSection : Adw.Bin {
       margin-start: 12;
       styles ["caption", "dim-label"]
     }
+
+    // "Add a layer" belongs to the SECTION, because the plane a new
+    // layer lands on is the one whose button was pressed. Its own
+    // boxed-list so `setEmpty` can take the rows away without taking
+    // this with them; `action-target` (the plane) is set in TS, since
+    // Blueprint has no template-bound `action-target`.
+    Gtk.ListBox add_list {
+      selection-mode: none;
+      visible: false;
+      styles ["boxed-list"]
+
+      Adw.ButtonRow add_row {
+        title: _("Add a layer");
+        start-icon-name: "list-add-symbolic";
+        action-name: "win.new-layer";
+      }
+    }
   }
 }

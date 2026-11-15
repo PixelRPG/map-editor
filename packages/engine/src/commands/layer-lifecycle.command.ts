@@ -56,6 +56,53 @@ export class AddLayerCommand implements Command<AddLayerPayload> {
   }
 }
 
+/**
+ * Payload of {@link RenameLayerCommand}. `previousName` is captured by
+ * the caller at dispatch time so `revert` needs no lookup and a remote
+ * peer converges to the same name even if it renamed concurrently.
+ */
+export interface RenameLayerPayload {
+  layerId: string
+  name: string
+  previousName: string
+}
+
+/**
+ * Rename a layer. The name is persisted document state (it ends up in
+ * the shared map JSON and in every peer's Layers page), so per
+ * AGENTS.md [Transport-ready primitives] rule 2 it rides a registered
+ * Command rather than a direct field write — the inline entry on the
+ * row commits through the op-log, which makes the rename undoable and
+ * visible to peers.
+ */
+export class RenameLayerCommand implements Command<RenameLayerPayload> {
+  static readonly KIND = 'layer.rename'
+  readonly kind = RenameLayerCommand.KIND
+
+  constructor(readonly payload: RenameLayerPayload) {}
+
+  get label(): string {
+    return `Rename layer to "${this.payload.name}"`
+  }
+
+  apply(scene: Scene): void {
+    this.write(scene, this.payload.name)
+  }
+
+  revert(scene: Scene): void {
+    this.write(scene, this.payload.previousName)
+  }
+
+  private write(scene: Scene, name: string): void {
+    const layer = layersOf(scene)?.find((l) => l.id === this.payload.layerId)
+    if (!layer) {
+      console.warn(`[RenameLayer] no layer resolves for id "${this.payload.layerId}" — command skipped`)
+      return
+    }
+    layer.name = name
+  }
+}
+
 /** Resolve the active map's mutable `layers` array, or `null` off a realised `MapScene`. */
 function layersOf(scene: Scene): LayerData[] | null {
   if (!(scene instanceof MapScene)) return null

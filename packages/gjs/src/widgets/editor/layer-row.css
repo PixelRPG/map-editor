@@ -1,0 +1,18 @@
+/*
+ * 44 px touch targets for the eye, the padlock and "⋯", OUTER — by the
+ * same arithmetic as `.phone-bar button` in scene-editor.css: GTK's
+ * `min-*` are the content box and Adwaita pads a flat button 5px, so
+ * 34 + 2×5 is the 44 REDESIGN § 6.3 asks for.
+ *
+ * Unconditional rather than phone-only. The Layers page is ONE widget
+ * serving the wide inspector and the phone sheet (there is no phone
+ * style class to scope on), and a row that changes height with the
+ * window would make the sheet's detent arithmetic depend on the tier.
+ * 44 px at every width costs the desktop ten pixels a row and keeps one
+ * row design.
+ */
+.layer-row button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px;
+}

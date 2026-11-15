@@ -71,3 +71,36 @@ export function resolveLayerDrop(
   const sectionIndices = remaining.flatMap((layer, index) => (planeOf(layer) === plane ? [index] : []))
   return { plane, index: sectionIndices.length > 0 ? Math.min(...sectionIndices) : remaining.length }
 }
+
+/** Which way a nudge moves a row ON SCREEN. */
+export type NudgeDirection = 'up' | 'down'
+
+/**
+ * One step of the "Move up" / "Move down" menu items, as the same
+ * {@link LayerDrop} a drag produces: swap the layer with its neighbour
+ * IN ITS OWN SECTION. The menu exists because dragging with a thumb in
+ * a scrolling sheet is unreliable, so it must mean exactly what a drag
+ * of one row would have meant.
+ *
+ * "Up" on screen is drawn-on-top, i.e. a HIGHER array index, so the two
+ * directions are the inverse of the array's. `null` when the layer is
+ * unknown or already at that end of its section — the caller renders
+ * the item insensitive rather than dispatching a no-op move.
+ */
+export function resolveLayerNudge(
+  layers: readonly SectionLayer[],
+  layerId: string,
+  direction: NudgeDirection,
+): LayerDrop | null {
+  const layer = layers.find((candidate) => candidate.id === layerId)
+  if (!layer) return null
+  const plane = planeOf(layer)
+  const siblings = layers.filter((candidate) => planeOf(candidate) === plane)
+  const at = siblings.findIndex((candidate) => candidate.id === layerId)
+  const neighbour = siblings[direction === 'up' ? at + 1 : at - 1]
+  if (!neighbour) return null
+  return resolveLayerDrop(layers, layerId, plane, {
+    layerId: neighbour.id,
+    position: direction === 'up' ? 'above' : 'below',
+  })
+}

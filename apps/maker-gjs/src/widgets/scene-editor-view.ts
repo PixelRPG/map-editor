@@ -45,6 +45,7 @@ import {
   spriteSetIdsFor,
 } from './scene-editor/object-descriptors.ts'
 import { buildRefOptions } from '../services/project-store-entities.ts'
+import { uniqueIdFrom } from '../services/project-store.ts'
 
 /**
  * The tool's verb, for the sentence beside the badge ("Paint · Ground").
@@ -83,6 +84,7 @@ GObject.type_ensure(RightInspector.$gtype)
 export interface SceneEditorViewSignals extends ResponsiveEditorViewSignals {
   'persist-requested': () => void
   'object-removed': () => void
+  'layer-deleted': (layerName: string) => void
 }
 
 /**
@@ -193,6 +195,10 @@ export class SceneEditorView extends ResponsiveEditorView {
           // A placement was removed via the Selected page — the host
           // refreshes the inspector's placement list.
           'object-removed': { param_types: [] },
+          // A layer was deleted from its row menu, carrying the name it
+          // had. The host owns the toast surface and raises the "Undo"
+          // that stands in for the confirmation dialog.
+          'layer-deleted': { param_types: [GObject.TYPE_STRING] },
         },
       },
       SceneEditorView,
@@ -266,11 +272,6 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   setPlaying(playing: boolean): void {
     this._editor.setPlaying(playing)
-  }
-
-  /** Mirror the global objects visibility into the Layers page's Objects row (no re-emit). */
-  setObjectsVisible(visible: boolean): void {
-    this._pages.layers.setObjectsState(this._mapData?.objectPlacements?.length ?? 0, visible)
   }
 
   /**
@@ -365,6 +366,9 @@ export class SceneEditorView extends ResponsiveEditorView {
     // The Selected page's component editor hides its advanced specs in
     // Simple view, so the tier has to reach it too.
     this._pages.selected.fullView = fullView
+    // The Layers page moves its "Add a layer" rows with the tier: per
+    // section in Full view, once at the bottom in Simple view.
+    this._pages.layers.fullView = fullView
   }
 
   /**
@@ -540,10 +544,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     if (!copyId) return
     this._engine?.setSelectedPlacements([copyId])
     this._syncSelectedObjectProps(copyId)
-    this._pages.layers.setObjectsState(
-      this._mapData?.objectPlacements?.length ?? 0,
-      this._engine?.excalibur?.getEditorViewFlags().objectsVisible ?? true,
-    )
     this._persistMapData()
   }
 
@@ -668,10 +668,6 @@ export class SceneEditorView extends ResponsiveEditorView {
     const layers = toLayerDescriptors(mapData)
     this._layers = layers
     this._pages.layers.setLayers(layers)
-    this._pages.layers.setObjectsState(
-      mapData.objectPlacements?.length ?? 0,
-      this._engine?.excalibur?.getEditorViewFlags().objectsVisible ?? true,
-    )
     if (layers.length) {
       this._pages.layers.selectLayer(layers[0].id)
       this._setActiveLayer(layers[0].id)
@@ -975,6 +971,56 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
+   * An inline rename committed in the Layers page. The page has already
+   * dropped an empty or unchanged name, so anything arriving here is a
+   * real `RenameLayerCommand`; `LAYER_LIST_CHANGED` puts the new name
+   * back in the row and in the brush caption.
+   */
+  private _renameLayer(layerId: string, name: string): void {
+    if (!this._engine?.renameLayer(layerId, name)) return
+    this._persistMapData()
+  }
+
+  /**
+   * Copy a layer with its tiles and placements. The copy needs an id
+   * and a name nobody holds yet, and the engine deliberately does not
+   * mint ids — that vocabulary is the maker's — so they are chosen here
+   * against the descriptor cache, which IS the live layer list.
+   */
+  private _duplicateLayer(layerId: string): void {
+    const layer = this._layers.find((l) => l.id === layerId)
+    if (!layer) return
+    const name = _('%s copy').replace('%s', layer.name)
+    const id = uniqueIdFrom(name, new Set(this._layers.map((l) => l.id)), 'layer')
+    if (!this._engine?.duplicateLayer(layerId, { id, name })) return
+    this._persistMapData()
+  }
+
+  /**
+   * Delete a layer without asking: REDESIGN § 6.3 answers with a toast
+   * carrying Undo rather than a dialog, and the command is invertible,
+   * so the host gets the name the row HAD — by the time the toast is up
+   * the layer is out of the cache.
+   *
+   * Deleting the active layer would otherwise leave the engine pointing
+   * at a layer that no longer exists, so the topmost survivor takes
+   * over; the engine refuses to remove the last one, so there is always
+   * one left.
+   */
+  private _deleteLayer(layerId: string): void {
+    const layer = this._layers.find((l) => l.id === layerId)
+    if (!layer) return
+    const wasActive = this._activeLayerId === layerId
+    if (!this._engine?.removeLayer(layerId)) return
+    if (wasActive) {
+      const next = this._layers[this._layers.length - 1]
+      if (next) this._setActiveLayer(next.id)
+    }
+    this._persistMapData()
+    this.emit('layer-deleted', layer.name)
+  }
+
+  /**
    * Mark the active map's `MapData` as dirty + ask the host to
    * persist. The engine widget owns the live `MapResource` whose
    * `mapData` was just mutated in place (by `setLayerVisible` /
@@ -1027,7 +1073,9 @@ export class SceneEditorView extends ResponsiveEditorView {
       setLayerLocked: (layerId, locked) => this._engine?.setLayerLocked(layerId, locked),
       moveLayer: (layerId, plane, index) => this._moveLayer(layerId, plane, index),
       persistMapData: () => this._persistMapData(),
-      toggleObjectsVisibility: () => this.activate_action('win.toggle-objects', null),
+      renameLayer: (layerId, name) => this._renameLayer(layerId, name),
+      duplicateLayer: (layerId) => this._duplicateLayer(layerId),
+      deleteLayer: (layerId) => this._deleteLayer(layerId),
     })
     wireSelectedPage(this._pages.selected, {
       openObjectDefinition: (defId) => this.activate_action('win.open-object', GLib.Variant.new_string(defId)),

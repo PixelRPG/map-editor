@@ -374,6 +374,35 @@ export class Engine extends Adw.Bin {
   }
 
   /**
+   * Forward to `Engine.renameLayer` — dispatches an undoable
+   * `RenameLayerCommand` (collab sync rides the command). The widget
+   * relays the resulting `LAYER_LIST_CHANGED` on {@link events}, since
+   * the Layers page shows the name.
+   */
+  public renameLayer(layerId: string, name: string): boolean {
+    return this._excalibur?.renameLayer(layerId, name) ?? false
+  }
+
+  /**
+   * Forward to `Engine.duplicateLayer` — one undoable
+   * `DuplicateLayerCommand` carrying the original's tiles + placements.
+   * The caller owns the copy's id + name (the maker's id vocabulary).
+   */
+  public duplicateLayer(layerId: string, copy: Pick<LayerData, 'id' | 'name'>): boolean {
+    return this._excalibur?.duplicateLayer(layerId, copy) ?? false
+  }
+
+  /**
+   * Forward to `Engine.removeLayer` — one undoable `RemoveLayerCommand`
+   * carrying everything on the layer, which is what lets the host offer
+   * "Undo" in a toast instead of a confirmation dialog. `false` for the
+   * last remaining layer.
+   */
+  public removeLayer(layerId: string): boolean {
+    return this._excalibur?.removeLayer(layerId) ?? false
+  }
+
+  /**
    * Forward to `Engine.reorderLayer` — dispatches an undoable
    * `ReorderLayerCommand` (collab sync rides the command). The widget
    * relays the resulting `LAYER_LIST_CHANGED` on {@link events}.
