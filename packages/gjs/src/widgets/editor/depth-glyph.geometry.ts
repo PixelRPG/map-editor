@@ -6,6 +6,8 @@
 // exactly these rectangles and the display-backed pixel probe reads the
 // same points back.
 
+import { PLANE_TINT } from '@pixelrpg/engine'
+
 /** The three planes the glyph can highlight, in render order (low → high). */
 export type GlyphPlane = 'ground' | 'hero' | 'overlay'
 
@@ -19,13 +21,16 @@ export const GLYPH_SIZES = { header: 40, row: 24, chip: 14 } as const
  * under a colourful accent in a dark theme all three would look the
  * same. Adwaita's named palette with hex fallbacks, looked up through
  * the style context. Shared, not duplicated — the depth glyph, the
- * brush badge's plane ring and the plane chips must agree, or "green
- * means below the hero" stops being one fact.
+ * brush badge's plane ring, the plane chips and the canvas paint ghost
+ * must agree, or "green means below the hero" stops being one fact. The
+ * hex values therefore come from the engine's `PLANE_TINT`, which the
+ * ghost tints with: GTK resolves the palette name, Excalibur cannot, so
+ * the engine owns the literal and this adds only the name to look up.
  */
 export const PLANE_COLOR: Record<GlyphPlane, { name: string; fallback: string }> = {
-  ground: { name: 'green_3', fallback: '#33d17a' },
-  hero: { name: 'orange_3', fallback: '#ff7800' },
-  overlay: { name: 'blue_3', fallback: '#3584e4' },
+  ground: { name: 'green_3', fallback: PLANE_TINT.ground },
+  hero: { name: 'orange_3', fallback: PLANE_TINT.hero },
+  overlay: { name: 'blue_3', fallback: PLANE_TINT.overlay },
 }
 
 /** Axis-aligned rectangle in glyph pixels. */
