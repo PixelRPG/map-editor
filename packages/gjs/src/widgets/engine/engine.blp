@@ -6,44 +6,132 @@ template $Engine : Adw.Bin {
   hexpand: true;
   visible: true;
 
-  // The WebGL/Canvas2D bridge widget appended at runtime reports the
-  // canvas's natural framebuffer size as its minimum, which would
-  // bubble up to the application window and block the mobile
-  // breakpoint from firing. Wrapping in a Gtk.ScrolledWindow with
-  // `min-content-{width,height}: 1` detaches the child's min from
-  // the parent chain — the ScrolledWindow itself reports 1×1 as
-  // its minimum and lets its child take whatever allocation it
-  // gets (hexpand/vexpand both true on the canvasContainer Box).
+  // The touch controls of a Live Run (REDESIGN § 5.6) are siblings of
+  // the canvas in this overlay rather than children of the scene
+  // editor's: gesture, visual and intent then live in one widget, and
+  // the canvas container stays untouched (the scene canvas must never
+  // be reparented).
   //
-  // `hscrollbar-policy: external` + `vscrollbar-policy: external`
-  // mean the ScrolledWindow never actually shows scrollbars or
-  // intercepts wheel scroll — it's used purely as a size-detach
-  // wrapper. The canvas always gets `min(allocation, natural)` of
-  // space; if the window shrinks below the canvas's natural,
-  // GTK clips the canvas (preserving the rest of the chrome)
-  // instead of refusing to shrink.
-  Gtk.ScrolledWindow {
-    hexpand: true;
-    vexpand: true;
-    min-content-width: 1;
-    min-content-height: 1;
-    hscrollbar-policy: external;
-    vscrollbar-policy: external;
-
-    // This wrapper exists ONLY to detach the canvas's minimum size; it must
-    // never scroll. Kinetic scrolling defaults to on and installs a
-    // single-touch pan gesture that claims one-finger drags before they
-    // reach the canvas — measured on a touchscreen as "one finger paints,
-    // two fingers pan", because a `GtkGestureSingle` bails out on the
-    // second contact and lets that sequence through. The editor's own
-    // model is the opposite: `PointerGestureSystem` makes a one-finger
-    // drag a camera pan and keeps painting on tap.
-    kinetic-scrolling: false;
-
-    child: Gtk.Box canvasContainer {
-      vexpand: true;
+  // Each control is its OWN overlay child with explicit halign/valign.
+  // A single full-size layer is not an option: `gtk_widget_pick` hands
+  // an event to the topmost child whose allocation contains the point,
+  // so a layer spanning the canvas silently eats every press meant for
+  // the map underneath — the same trap documented on the wrapper in
+  // `floating-play.blp`.
+  Gtk.Overlay {
+    // The WebGL/Canvas2D bridge widget appended at runtime reports the
+    // canvas's natural framebuffer size as its minimum, which would
+    // bubble up to the application window and block the mobile
+    // breakpoint from firing. Wrapping in a Gtk.ScrolledWindow with
+    // `min-content-{width,height}: 1` detaches the child's min from
+    // the parent chain — the ScrolledWindow itself reports 1×1 as
+    // its minimum and lets its child take whatever allocation it
+    // gets (hexpand/vexpand both true on the canvasContainer Box).
+    //
+    // `hscrollbar-policy: external` + `vscrollbar-policy: external`
+    // mean the ScrolledWindow never actually shows scrollbars or
+    // intercepts wheel scroll — it's used purely as a size-detach
+    // wrapper. The canvas always gets `min(allocation, natural)` of
+    // space; if the window shrinks below the canvas's natural,
+    // GTK clips the canvas (preserving the rest of the chrome)
+    // instead of refusing to shrink.
+    child: Gtk.ScrolledWindow {
       hexpand: true;
-      orientation: vertical;
+      vexpand: true;
+      min-content-width: 1;
+      min-content-height: 1;
+      hscrollbar-policy: external;
+      vscrollbar-policy: external;
+
+      // This wrapper exists ONLY to detach the canvas's minimum size; it must
+      // never scroll. Kinetic scrolling defaults to on and installs a
+      // single-touch pan gesture that claims one-finger drags before they
+      // reach the canvas — measured on a touchscreen as "one finger paints,
+      // two fingers pan", because a `GtkGestureSingle` bails out on the
+      // second contact and lets that sequence through. The editor's own
+      // model is the opposite: `PointerGestureSystem` makes a one-finger
+      // drag a camera pan and keeps painting on tap.
+      kinetic-scrolling: false;
+
+      child: Gtk.Box canvasContainer {
+        vexpand: true;
+        hexpand: true;
+        orientation: vertical;
+      };
     };
+
+    // The joystick base, positioned under the thumb by margins from the
+    // bottom-left corner (`engine.ts` → `_placeStick`). `can-target:
+    // false` on both halves is essential: the drag that moves the knob
+    // lives on the CANVAS, and a base that accepted events would end the
+    // very sequence that is steering as soon as the knob slid under the
+    // thumb.
+    //
+    // The 96 / 44 px here are the sizes GTK actually allocates; the
+    // placement maths needs them too and reads them from
+    // `STICK_BASE_PX` / `STICK_KNOB_PX` in `virtual-stick.ts`. Change
+    // one and change the other.
+    [overlay]
+    Gtk.Box stickBase {
+      visible: false;
+      can-target: false;
+      halign: start;
+      valign: end;
+      width-request: 96;
+      height-request: 96;
+
+      styles [
+        "osd",
+        "touch-stick-base",
+      ]
+    }
+
+    [overlay]
+    Gtk.Box stickKnob {
+      visible: false;
+      can-target: false;
+      halign: start;
+      valign: end;
+      width-request: 44;
+      height-request: 44;
+
+      styles [
+        "osd",
+        "touch-stick-knob",
+      ]
+    }
+
+    // The action button. A real `Gtk.Button` so it keeps its focus ring,
+    // its `activate` keybinding and its accessible role; the press/release
+    // pair that gameplay needs comes from a capture-phase click gesture in
+    // `engine.ts`, which does not consume the event and so leaves
+    // `clicked` intact for keyboard and screen-reader users.
+    //
+    // Only ONE button is built here. REDESIGN § 5.6 allows a second,
+    // stacked 56 px up-left, but caps Simple view at two — and until the
+    // run HUD has something for a second verb to do, a button labelled
+    // for a feature that does not exist is worse than its absence.
+    [overlay]
+    Gtk.Button actionButton {
+      visible: false;
+      halign: end;
+      valign: end;
+      margin-end: 24;
+      margin-bottom: 24;
+      width-request: 64;
+      height-request: 64;
+      label: C_("virtual gamepad button", "A");
+      tooltip-text: _("Action");
+
+      accessibility {
+        label: _("Action");
+      }
+
+      styles [
+        "osd",
+        "circular",
+        "touch-action-button",
+      ]
+    }
   }
 }

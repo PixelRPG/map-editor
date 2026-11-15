@@ -517,6 +517,11 @@ export class SceneEditor extends Adw.Bin {
   setPlaying(playing: boolean): void {
     this._playing = playing
     this._floating_play.playing = playing
+    // An open sheet rests over the lower half of the canvas — exactly
+    // where the run's joystick and action button sit, so a run started
+    // from Half had controls drawn behind the brush palette. Collapsing
+    // is enough: `bottomBar` then takes the peek bar away too.
+    if (playing) this.collapseSheet()
     this._applyVisibility()
   }
 

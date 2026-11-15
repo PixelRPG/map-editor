@@ -789,10 +789,15 @@ layer) shakes the layer name in the badge 6 px twice and shows a toast with "Unl
   enabled game system may declare one more input action; a second button (e.g. attack) stacks
   56 px up and left of A. Two buttons is the cap in Simple view.
 - Both are GTK overlay children (each its own child), translucent OSD at 70 % opacity. They
-  write the session's `InputSourceComponent` as a second producer next to the keyboard — input
-  plumbing, not chrome (TODO "A phone Live Run has no way to steer the hero").
-- Shown when the last pointer event came from a touchscreen, at any width; Preferences can
-  force them on or off.
+  feed the session's input as a second producer next to the keyboard — input plumbing, not
+  chrome. **Landed** (step 4.1), with one correction: they write their own
+  `TouchInputComponent`, which `InputSystem` merges into `InputSourceComponent`. Writing that
+  component directly cannot work — `InputSystem` rewrites it from the keyboard every tick, so a
+  second writer is erased inside the same frame.
+- Shown when the last pointer event came from a touchscreen, at any width, **or** when the
+  window is at the phone breakpoint — a narrow window is being held, and the touchscreen-only
+  rule would leave a phone run unsteerable for any session that used a mouse first. Preferences
+  can force them on or off (deferred, see `TODO.md`).
 - In a phone run the finger is the joystick: painting is off, as today.
 
 ---
@@ -1073,7 +1078,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 
 | # | Step | Resolves |
 |---|---|---|
-| 4.1 | Virtual joystick + action button as an `InputSourceComponent` producer | TODO "A phone Live Run has no way to steer the hero" |
+| 4.1 | Virtual joystick + action button as an `InputSourceComponent` producer | TODO "A phone Live Run has no way to steer the hero" | — done (the controls are overlay children of the *engine* widget, so the scene canvas and its container are untouched and the run keeps its own gesture, visual and intent in one place. The stick's geometry — region test, 40 px travel, 10 px dead zone, 8-way quantisation — is pure in `virtual-stick.ts`; `stick-drag.ts` is the `Gtk.GestureDrag` adapter, consulting `isStickEnabled()` *before* claiming, because a claim is unconditional and a merely-invisible stick would eat brush strokes in that corner. The intent reaches gameplay as `TouchInputComponent` + `mergeInputIntents`, not as a direct `InputSourceComponent` write. 8-way rather than analog so touch produces exactly the keyboard's vectors — diagonals pre-scaled by 1/√2 — and introduces no second movement feel; the throttle is in TODO.md. Entering a run on phone now also collapses the bottom sheet, which otherwise rested over both controls) |
 | 4.2 | Wide run state: accent border, Restart, Test run hides editing chrome; `Adw.SplitButton` Play | `runtime-modes.md` Test-run row (wide) |
 | 4.3 | Camera snaps to the hero on Play; whole-pixel play zoom for "Play from the start"; chrome follows teleports | TODO "Play-mode presentation gaps" (b), (c) |
 

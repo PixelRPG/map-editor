@@ -1,7 +1,7 @@
 import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
   type EditorTool,
@@ -16,6 +16,7 @@ import {
   type LayerPlane,
   normalizeViewportInset,
   type ProjectLoadOptions,
+  type TouchIntent,
   type ViewportInset,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
@@ -25,6 +26,16 @@ import { forwardEngineEvents } from './engine-events.ts'
 import { attachLongPress } from './long-press.ts'
 import { attachMultiFingerTap } from './multi-finger-tap.ts'
 import { attachPinchZoom } from './pinch-zoom.ts'
+import { attachVirtualStick } from './stick-drag.ts'
+import { watchTouchSeen } from './touch-seen.ts'
+import {
+  STICK_BASE_PX,
+  STICK_HIDE_DELAY_MS,
+  STICK_KNOB_PX,
+  type StickButtons,
+  type StickDrag,
+  touchIntent,
+} from './virtual-stick.ts'
 import { EngineUnavailableError } from './engine-unavailable.error.ts'
 import Template from './engine.blp'
 
@@ -45,6 +56,18 @@ const SCRATCHPAD_BG_DARK = Color.fromHex('#232328')
  * that never returns and a scene editor that never recovers.
  */
 const READY_TIMEOUT_MS = 20_000
+
+/**
+ * How long a keyboard / screen-reader activation of the action button
+ * is held.
+ *
+ * `Gtk.Button::clicked` carries no press-and-hold — it is one event —
+ * but gameplay reads a BUTTON STATE. Without a pulse the intent would be
+ * set and cleared inside the same frame and the engine would never see
+ * it. 100 ms is long enough to cross several ticks at 60 fps and short
+ * enough that the activation still reads as a tap.
+ */
+const ACTION_PULSE_MS = 100
 
 export namespace Engine {
   export type ConstructorProps = Partial<Adw.Bin.ConstructorProps>
@@ -85,6 +108,9 @@ export interface EngineSignals extends Adw.Bin.SignalSignatures {
  */
 export class Engine extends Adw.Bin {
   private declare _canvasContainer: Gtk.Box
+  private declare _stickBase: Gtk.Box
+  private declare _stickKnob: Gtk.Box
+  private declare _actionButton: Gtk.Button
 
   private _widget: CanvasBridge | null = null
   private _excalibur: ExcaliburEngine | null = null
@@ -132,6 +158,23 @@ export class Engine extends Adw.Bin {
   /** Why the engine can never become ready, once that is known. */
   private _startFailure: string | null = null
 
+  /** Whether a Live Run is in progress — the only state with touch controls. */
+  private _playing = false
+  /** Whether the host window is at its phone breakpoint. */
+  private _compactLayout = false
+  /**
+   * Whether this canvas has ever been touched. Latched: see
+   * {@link watchTouchSeen} for why it is never unset.
+   */
+  private _touchSeen = false
+  /** The live stick, or `null` when no thumb is on it. */
+  private _stickDrag: StickDrag | null = null
+  private _stickButtons: StickButtons = { action: false, attack: false }
+  /** Pending fade-out of the released stick; see `STICK_HIDE_DELAY_MS`. */
+  private _stickHideTimeoutId = 0
+  /** Pending release of an {@link ACTION_PULSE_MS} action pulse. */
+  private _actionPulseTimeoutId = 0
+
   public status: EngineStatus = EngineStatus.INITIALIZING
   public readonly events = new EventEmitter<EngineEventMap>()
 
@@ -140,7 +183,7 @@ export class Engine extends Adw.Bin {
       {
         GTypeName: 'Engine',
         Template,
-        InternalChildren: ['canvasContainer'],
+        InternalChildren: ['canvasContainer', 'stickBase', 'stickKnob', 'actionButton'],
         Signals: {
           ready: {},
           [EngineEvent.STATUS_CHANGED]: {
@@ -167,6 +210,11 @@ export class Engine extends Adw.Bin {
 
   constructor(params: Engine.ConstructorProps = {}) {
     super(params)
+    // Here rather than in `_startWithWidget`: the button is a template
+    // child of THIS widget, so it outlives every canvas bridge — and
+    // `_startWithWidget` runs a second time when WebGL init fails, which
+    // would leave the button with two controllers and a doubled press.
+    this._wireActionButton()
   }
 
   /**
@@ -324,9 +372,29 @@ export class Engine extends Adw.Bin {
     this._excalibur?.clearSaveState()
   }
 
-  /** Forward to `Engine.setRuntimeMode` — toggles editor ↔ playtest. */
+  /**
+   * Forward to `Engine.setRuntimeMode` — toggles editor ↔ playtest.
+   *
+   * Also the switch for the on-screen touch controls: they exist only
+   * during a run, and leaving a run must drop any intent still held
+   * (a thumb lifted *after* Stop would otherwise never be reported).
+   */
   public setRuntimeMode(active: boolean): void {
     this._excalibur?.setRuntimeMode(active)
+    this._playing = active
+    this._applyTouchControls()
+  }
+
+  /**
+   * Tell the widget whether the host window is at its phone breakpoint.
+   *
+   * One of the two halves of "should the touch controls be on screen" —
+   * see {@link _touchControlsVisible}.
+   */
+  public setCompactLayout(compact: boolean): void {
+    if (this._compactLayout === compact) return
+    this._compactLayout = compact
+    this._applyTouchControls()
   }
 
   /** Forward to `Engine.isRuntimeMode`. */
@@ -524,6 +592,178 @@ export class Engine extends Adw.Bin {
     camera.pos = new Vector(camera.pos.x + offsetX * reciprocalDelta, camera.pos.y + offsetY * reciprocalDelta)
   }
 
+  // --- VirtualStickHost ---------------------------------------------
+
+  /**
+   * {@link VirtualStickHost.isStickEnabled} — a press in the lower-left
+   * corner only summons the stick while the controls are on screen.
+   *
+   * Asked BEFORE the gesture claims its sequence, because a claim is
+   * unconditional: a stick that was merely invisible would still be
+   * eating every brush stroke in that corner of the map.
+   */
+  public isStickEnabled(): boolean {
+    return this._touchControlsVisible()
+  }
+
+  /** {@link VirtualStickHost.stickCanvasSize} — this widget's allocation. */
+  public stickCanvasSize(): { width: number; height: number } {
+    return { width: this.get_width(), height: this.get_height() }
+  }
+
+  /**
+   * {@link VirtualStickHost.onStickChanged} — the thumb moved, or (with
+   * `null`) left.
+   */
+  public onStickChanged(drag: StickDrag | null): void {
+    this._stickDrag = drag
+    if (this._stickHideTimeoutId) {
+      GLib.source_remove(this._stickHideTimeoutId)
+      this._stickHideTimeoutId = 0
+    }
+
+    if (drag) {
+      this._placeStick(drag)
+      this._stickBase.visible = true
+      this._stickKnob.visible = true
+    } else {
+      // Fade out on a delay rather than at once: a player correcting
+      // their grip lifts and re-lands within a few frames, and a stick
+      // that blinked on every such lift reads as a glitch.
+      this._stickHideTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, STICK_HIDE_DELAY_MS, () => {
+        this._stickHideTimeoutId = 0
+        if (!this._stickDrag) {
+          this._stickBase.visible = false
+          this._stickKnob.visible = false
+        }
+        return GLib.SOURCE_REMOVE
+      })
+    }
+
+    this._pushTouchIntent()
+  }
+
+  /**
+   * Whether the Live Run's on-screen controls belong on screen.
+   *
+   * REDESIGN § 5.6 words the condition as "the last pointer event came
+   * from a touchscreen, at any width". Taken literally that leaves the
+   * documented bug — a phone Live Run with no way to steer — unfixed for
+   * any session that used a mouse or stylus first, and nothing on screen
+   * at all in the headless captures, where no finger exists. So the
+   * phone breakpoint counts as its own reason: a window that narrow is
+   * being held, and a wide window gets the controls as soon as a finger
+   * proves there is a touchscreen.
+   */
+  private _touchControlsVisible(): boolean {
+    return this._playing && (this._touchSeen || this._compactLayout)
+  }
+
+  /**
+   * Show or hide the controls for the current state, and make sure no
+   * intent survives their removal.
+   */
+  private _applyTouchControls(): void {
+    const visible = this._touchControlsVisible()
+    this._actionButton.visible = visible
+    if (visible) return
+
+    // Leaving a run with a thumb down would otherwise leave the hero
+    // walking into the editor: the release lands on a gesture that is no
+    // longer listened to, so the last non-neutral vector would be the
+    // engine's final word.
+    this._stickDrag = null
+    this._stickButtons = { action: false, attack: false }
+    this._stickBase.visible = false
+    this._stickKnob.visible = false
+    this._pushTouchIntent()
+  }
+
+  /**
+   * Position the base and the knob by margins from the bottom-left
+   * corner — the alignment both overlay children are given in
+   * `engine.blp`.
+   *
+   * Margins cannot be negative, so the knob is clamped at the edge. That
+   * only bites for a base already pushed against the canvas border,
+   * where the knob is a few pixels short of where the thumb is; the
+   * VECTOR is computed from the unclamped offset, so what the hero does
+   * is unaffected either way.
+   */
+  private _placeStick(drag: StickDrag): void {
+    const height = this.get_height()
+    const place = (child: Gtk.Box, centreX: number, centreY: number, size: number) => {
+      child.margin_start = Math.max(0, Math.round(centreX - size / 2))
+      child.margin_bottom = Math.max(0, Math.round(height - centreY - size / 2))
+    }
+    place(this._stickBase, drag.origin.x, drag.origin.y, STICK_BASE_PX)
+    place(this._stickKnob, drag.origin.x + drag.knob.x, drag.origin.y + drag.knob.y, STICK_KNOB_PX)
+  }
+
+  /**
+   * Publish the current touch state as the engine's touch intent.
+   *
+   * Through `Engine.setTouchInput` → `TouchInputComponent` →
+   * `InputSystem`'s merge, never by writing `InputSourceComponent`: that
+   * component is what gameplay reads and `InputSystem` rewrites it from
+   * the keyboard every tick, so a second writer would be erased inside
+   * the same frame.
+   */
+  private _pushTouchIntent(): void {
+    const intent: TouchIntent = touchIntent(this._stickDrag, this._stickButtons)
+    this._excalibur?.setTouchInput(intent)
+  }
+
+  /**
+   * Hold or release the action button.
+   *
+   * Pointer presses come from a capture-phase click gesture (press and
+   * release are separate events there); a keyboard or screen-reader
+   * activation arrives as a single `clicked` and is turned into an
+   * {@link ACTION_PULSE_MS} hold instead.
+   */
+  private _setActionHeld(held: boolean): void {
+    if (this._stickButtons.action === held) return
+    this._stickButtons = { ...this._stickButtons, action: held }
+    this._pushTouchIntent()
+  }
+
+  private _pulseAction(): void {
+    if (this._actionPulseTimeoutId) GLib.source_remove(this._actionPulseTimeoutId)
+    this._setActionHeld(true)
+    this._actionPulseTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, ACTION_PULSE_MS, () => {
+      this._actionPulseTimeoutId = 0
+      this._setActionHeld(false)
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
+  /**
+   * Wire the action button: a capture-phase click gesture for the
+   * press/release pair gameplay needs, plus `clicked` for everyone who
+   * activates the button without a pointer.
+   *
+   * The gesture never claims its sequence, so `Gtk.Button`'s own
+   * press handling — the active state, the focus ring, `clicked` —
+   * stays intact.
+   */
+  private _wireActionButton(): void {
+    const press = new Gtk.GestureClick()
+    press.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+    press.connect('pressed', () => this._setActionHeld(true))
+    press.connect('released', () => this._setActionHeld(false))
+    press.connect('cancel', () => this._setActionHeld(false))
+    this._actionButton.add_controller(press)
+
+    this._actionButton.connect('clicked', () => {
+      // A pointer click arrives here too, after its release — by which
+      // point the gesture has already reported the hold, so pulsing
+      // again would double the press.
+      if (this._stickButtons.action) return
+      this._pulseAction()
+    })
+  }
+
   /**
    * Subscribe to camera-zoom changes. The callback fires after every
    * engine update tick. Returns `true` if the subscription was
@@ -623,6 +863,19 @@ export class Engine extends Adw.Bin {
     // placement's context menu) — see `TileEditorSystem.applyLongPress`.
     attachLongPress(widget, (x, y) => {
       this._excalibur?.longPressAt(x, y)
+    })
+
+    // A thumb in the lower-left corner of a Live Run steers the hero.
+    // Only during a run — `isStickEnabled` is what keeps the gesture
+    // off the editor's brush.
+    attachVirtualStick(widget, this)
+
+    // One finger anywhere on the canvas, ever, is proof of a
+    // touchscreen; from then on a run shows its controls at any width.
+    watchTouchSeen(widget, () => {
+      if (this._touchSeen) return
+      this._touchSeen = true
+      this._applyTouchControls()
     })
 
     widget.onReady(async (canvas: HTMLCanvasElement) => {
@@ -784,6 +1037,14 @@ export class Engine extends Adw.Bin {
 
     this._releaseCloseRequest()
     this._failStart('engine widget was disposed')
+
+    // The touch-control timers would otherwise fire into a disposed
+    // widget — both callbacks touch template children.
+    for (const id of [this._stickHideTimeoutId, this._actionPulseTimeoutId]) {
+      if (id) GLib.source_remove(id)
+    }
+    this._stickHideTimeoutId = 0
+    this._actionPulseTimeoutId = 0
 
     for (const subscription of this._excaliburSubscriptions) {
       try {

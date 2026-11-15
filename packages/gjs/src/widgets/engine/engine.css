@@ -7,3 +7,34 @@
   background-color: transparent;
   background-image: none;
 }
+
+/* The Live Run's on-screen controls (REDESIGN § 5.6). `.osd` already
+   supplies the dark translucent plate every GNOME video overlay uses;
+   these rules only make the plates round and hold them at the 70 %
+   the spec asks for, so the map stays readable under the thumb.
+
+   The sizes are in `engine.blp` (and mirrored by `STICK_BASE_PX` /
+   `STICK_KNOB_PX` for the placement maths) rather than here: GTK sizes
+   a widget from its size request, and a CSS-only size would leave the
+   knob's travel computed against a box the user never sees. */
+.touch-stick-base,
+.touch-stick-knob,
+.touch-action-button {
+  border-radius: 9999px;
+  opacity: 0.7;
+}
+
+/* The knob has to read as the nearer of the two concentric circles, and
+   both carry the same `.osd` plate — so lift it with a border rather
+   than a second background colour, which would drift from whatever the
+   theme makes `.osd`. */
+.touch-stick-knob {
+  border: 2px solid alpha(currentColor, 0.5);
+}
+
+/* One letter in a 64 px circle: the default label size would be lost in
+   it, and the glyph is the only thing naming the button on screen. */
+.touch-action-button {
+  font-size: 20px;
+  font-weight: bold;
+}

@@ -150,6 +150,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 - Play / Stop wired through `win.play` in `apps/maker-gjs/src/widgets/application-window.ts` → toggles the session markers in the active `MapScene`
 - Reset wired through `win.restart` and `win.play-from-start` (`apps/maker-gjs/src/actions/playtest-actions.ts`) → `Engine.clearSaveState()` then re-enter runtime
 - Editor chrome reacts to `EditorMode` presence — see [`responsive-chrome.md`](responsive-chrome.md) § Wide ↔ phone for what a phone run hides
+- A run on touch gets a second input producer: the engine widget's on-canvas joystick and action button publish a `TouchInputComponent` through `Engine.setTouchInput()`, and `InputSystem` merges it with the keyboard (`mergeInputIntents` in `packages/engine/src/utils/player-input.ts`) before writing `InputSourceComponent`. Touch wins the movement vector whenever it is non-neutral, the keyboard holds it otherwise, and the action/attack holds are OR-ed — so neither producer can mute the other, and `PlayerSystem` still reads exactly one component. The controls follow `setRuntimeMode`, so leaving a run with a thumb down cannot leave the hero walking.
 
 **Phase 3 — `PlayerSystem` spawn-override handling (landed)**:
 - The spawn resolution prefers `SpawnOverrideComponent` when present (see `resolveSpawnTile` in `packages/engine/src/systems/player.system.ts`)
