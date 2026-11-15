@@ -18,6 +18,13 @@ export interface PlaytestActionsContext {
    * just unlocked is locked again.
    */
   clearSaveState(): void
+  /**
+   * Frame the map at the opening zoom of a fresh run. Only
+   * `play-from-start` asks for it: "Play here" keeps the editor's zoom,
+   * because someone who pressed play while zoomed in on a doorway meant
+   * to watch that doorway.
+   */
+  applyPlayZoom(): void
 }
 
 /**
@@ -61,6 +68,9 @@ export function installPlaytestActions(
   const playFromStart = new Gio.SimpleAction({ name: 'play-from-start' })
   playFromStart.connect('activate', () => {
     ctx.clearSaveState()
+    // Before the mode flip, not after: entering a run clamps the camera
+    // to the map, and how much map the view covers depends on the zoom.
+    ctx.applyPlayZoom()
     play.change_state(GLib.Variant.new_boolean(true))
   })
   addAction(group, playFromStart)

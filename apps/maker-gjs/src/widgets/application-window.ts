@@ -796,6 +796,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       setRuntimeMode: (playing) => this._engineCtl.engine?.setRuntimeMode(playing),
       setViewPlaying: (playing) => this._scene_editor_view.setPlaying(playing),
       clearSaveState: () => this._engineCtl.engine?.clearSaveState(),
+      applyPlayZoom: () => void this._engineCtl.engine?.applyPlayZoom(),
     })
 
     const { share } = installSessionActions(group, {
