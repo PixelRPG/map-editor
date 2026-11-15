@@ -255,7 +255,7 @@ Mutating operations (paint, erase, place-object, remove-object) emit `Command`s 
 ### Future phases (deferred)
 
 - Inspector-side state (active tab, scroll position) — only if useful for layout-restore-after-reload. Probably not worth migrating.
-- View-mode state for the welcome / atlas — atlas-card positions are already in `MapData.editorData`, so they're persisted, not session state.
+- View-mode state for the welcome / atlas — the atlas keeps none of it in the ECS. Card positions are project data in `MapData.editorData`; the atlas **camera** (pan + zoom) is deliberately not, because it is per-person and per-screen and `editorData` broadcasts to collab peers — it lives in local state keyed by project path (`services/atlas-camera-store.ts`).
 
 ## Why this design survives the console-port path
 

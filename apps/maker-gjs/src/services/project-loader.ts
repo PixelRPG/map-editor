@@ -88,6 +88,15 @@ export function buildAtlasWorld(resource: GameProjectResource): Pick<LoadedProje
 }
 
 /**
+ * Game pixels per atlas pixel. Atlas space is a fixed 1:8 reduction of
+ * the game world, so every map keeps its true relative size on the
+ * world view and the atlas zoom is the ONLY scale the camera applies —
+ * a 16 px-tile map draws 2 atlas px per tile. Persisted
+ * `editorData.atlasX/atlasY` are atlas-space coordinates.
+ */
+const GAME_PX_PER_ATLAS_PX = 8
+
+/**
  * Convert each map into an atlas {@link SampleScene}. A map without
  * persisted `editorData.atlasX/atlasY` falls back to its position in
  * the 3-column auto-layout, so the index is its index in `maps`.
@@ -97,7 +106,7 @@ export function buildAtlasScenes(maps: readonly MapData[]): SampleScene[] {
   maps.forEach((data, index) => {
     const cols = data.columns
     const rows = data.rows
-    const tilePx = Math.max(2, Math.min(8, Math.floor(180 / Math.max(cols, 1))))
+    const tilePx = Math.max(1, data.tileWidth / GAME_PX_PER_ATLAS_PX)
     // Respect persisted atlas coordinates when available — falls back
     // to a stable auto-layout otherwise. The typeof guards keep a
     // hand-edited map JSON with junk values from breaking the layout.
@@ -115,8 +124,6 @@ export function buildAtlasScenes(maps: readonly MapData[]): SampleScene[] {
       x,
       y,
       tilePx,
-      previewTileX: typeof editor.preview?.tileX === 'number' ? editor.preview.tileX : undefined,
-      previewTileY: typeof editor.preview?.tileY === 'number' ? editor.preview.tileY : undefined,
       // Event count is the number of object placements on the map —
       // every kind counts (NPCs, items, teleports, …). Pre-migration
       // code counted the legacy `type: 'object'` layers; that field

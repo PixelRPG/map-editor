@@ -17,7 +17,7 @@
 //      signal arrives. When it never does (widget destroyed before the
 //      first allocation, engine that never reaches `ready`) the handler
 //      leaks, and calling the same method twice stacks another one:
-//      `AtlasCanvas.fitToContent()` was exactly that. `SignalScope`
+//      `AtlasCanvas`'s deferred fit was exactly that. `SignalScope`
 //      owns this shape now — see its `connectUntil`.
 //
 // Both rules take a deliberate-exception annotation so a real violation

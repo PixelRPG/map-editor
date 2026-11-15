@@ -1,20 +1,24 @@
 import Adw from '@girs/adw-1'
+import Gdk from '@girs/gdk-4.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import { SignalScope } from '../../utils/signal-scope.ts'
-import {
-  centeredScrollValue,
-  clampPreviewZoom,
-  type SceneRect,
-  sceneRects,
-  snapToGrid,
-  surfaceSize,
-  worldExtent,
-} from './atlas-canvas.geometry.ts'
+import { type SceneRect, sceneRects, snapToGrid } from './atlas-canvas.geometry.ts'
 import Template from './atlas-canvas.blp'
+import {
+  CARD_MIN_SHORT_SIDE,
+  CARD_MIN_SHORT_SIDE_PHONE,
+  centeredScroll,
+  clampAtlasZoom,
+  drawnRects,
+  fitZoom,
+  surfacePadding,
+  zoomAroundPointer,
+} from './atlas-camera.ts'
 import { MapPreview } from './map-preview'
 import { SceneCard } from './scene-card'
 import { TeleportOverlay } from './teleport-overlay'
@@ -23,13 +27,37 @@ GObject.type_ensure(SceneCard.$gtype)
 GObject.type_ensure(TeleportOverlay.$gtype)
 GObject.type_ensure(MapPreview.$gtype)
 
-const SURFACE_PADDING = 180
+/**
+ * Breathing room (surface px) kept around a world that is LARGER than
+ * the viewport, so cards can still be dragged outwards past the current
+ * extent. A smaller world gets whatever padding centres it instead —
+ * see {@link surfacePadding}.
+ */
+const MIN_SURFACE_PADDING = 180
 
 /**
  * Grid step (atlas-space px) that dragged scene cards snap to on
  * release — keeps the world tidy + aligned instead of pixel-fuzzy.
  */
 const ATLAS_GRID = 8
+
+/**
+ * Margin {@link fit} leaves around the world. Generous on purpose: the
+ * camera only knows the card BODIES, while a card also carries its
+ * title above the body, so the real drawn world is taller than the rects
+ * the fit math sees.
+ */
+const FIT_MARGIN = 56
+
+/** Zoom factor applied per Ctrl+scroll notch (≈10 % per step). */
+const ZOOM_WHEEL_FACTOR = 1.1
+
+/** The camera state a host persists and restores per project. */
+export interface AtlasCamera {
+  zoom: number
+  scrollX: number
+  scrollY: number
+}
 
 /**
  * Typed view of the signals {@link AtlasCanvas} registers, layered on the
@@ -45,20 +73,33 @@ export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
   'scene-drag-began': (sceneId: string) => void
   'scene-opened': (sceneId: string) => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
-  'preview-moved': (sceneId: string, centerX: number, centerY: number) => void
-  'preview-lock-changed': (sceneId: string, unlocked: boolean) => void
+  'camera-changed': () => void
   'world-changed': () => void
 }
 
 /**
- * Scrollable atlas surface — the "World" home view.
+ * Zoomable, scrollable atlas surface — the "World" home view.
  *
  * Composition:
  * - `Gtk.ScrolledWindow` provides pan via native scroll / drag.
- * - `Gtk.Fixed` holds the scene cards at absolute atlas-space coords.
+ * - `Gtk.Fixed` holds the scene cards at absolute SURFACE coords.
  *   `.atlas-surface` CSS paints the dotted backdrop.
  * - `Gtk.Overlay` lays a {@link TeleportOverlay} over the cards so the
  *   bezier teleport connections render on top.
+ *
+ * ## The camera
+ *
+ * Scene positions are stored in **atlas space**; the canvas draws them
+ * at `zoom` widget px per atlas px (the OSD shows `zoom * 100 %`). There
+ * is no `Gsk` child transform: each card is given an explicit pixel size
+ * and its `MapPreview` paints the whole map scaled into it, so titles
+ * stay crisp at a readable size and hit-testing needs no inverse
+ * transform. The pure math lives in `atlas-camera.ts`; this class only
+ * applies the numbers and reads the resulting card sizes back from GTK.
+ *
+ * Surface padding is dynamic: a world smaller than the viewport is
+ * padded exactly enough to sit centred (so `fit` leaves no scroll range
+ * to drift in), a larger one keeps {@link MIN_SURFACE_PADDING}.
  *
  * Selection: clicking a `SceneCard` updates the active id, emits
  * `scene-selected`, and dims unrelated teleports via the overlay.
@@ -66,9 +107,6 @@ export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
  * `scene-opened`, which the host handles to switch to the scene editor.
  */
 export class AtlasCanvas extends Adw.Bin {
-  /** Default native-pixel zoom of card previews (200%). */
-  static readonly DEFAULT_PREVIEW_ZOOM = 2
-
   declare _scroller: Gtk.ScrolledWindow
   declare _overlay: Gtk.Overlay
   declare _surface: Gtk.Fixed
@@ -77,26 +115,56 @@ export class AtlasCanvas extends Adw.Bin {
   private _scenes: SampleScene[] = []
   private _teleportData: SampleTeleport[] = []
   private _cards: Map<string, SceneCard> = new Map()
-  /** Live `MapPreview`s by scene id, for global zoom changes. */
-  private _previews: Map<string, MapPreview> = new Map()
   private _selectedId: string | null = null
+  private _startMapId: string | null = null
   private _projectResource: GameProjectResource | null = null
-  /** Current global preview zoom — the atlas zoom control drives it. */
-  private _previewZoom = AtlasCanvas.DEFAULT_PREVIEW_ZOOM
-  private _contentW = 0
-  private _contentH = 0
+  private _compact = false
+  /** Widget px per atlas px. */
+  private _zoom = 1
+  /** Drawn card BODY rects in surface coords, by scene id. */
+  private _drawn = new Map<string, SceneRect>()
+  /** Each card's body inset from its own top-left (the title overhang). */
+  private _offsets = new Map<string, { x: number; y: number }>()
+  private _surfaceW = 0
+  private _surfaceH = 0
+  /** Idle sources of deferred scroll writes — see `_queueScrollWrite`. */
+  private _scrollIdles = new Set<number>()
+  /** Guards `_relayout` against the allocation it triggers itself. */
+  private _relayouting = false
+  /**
+   * Whether the current zoom came from {@link fit} and has not been
+   * overridden since. A fitted camera follows the viewport: it re-fits
+   * when the window resizes instead of keeping a zoom that was computed
+   * for a different size.
+   */
+  private _fitted = false
+  /** Viewport size the live {@link _fitted} zoom was computed for. */
+  private _fitViewport = { w: 0, h: 0 }
+  /** Guards `_applyFit` against a notify raised from inside its own pass. */
+  private _fitting = false
   /** Backdrop-pan gesture on the scroller; created on first map, kept for life. */
   private _panGesture: Gtk.GestureDrag | null = null
+  /** Pinch-to-zoom on the scroller; created on first map, kept for life. */
+  private _zoomGesture: Gtk.GestureZoom | null = null
+  /** Ctrl+scroll zoom on the scroller; created on first map, kept for life. */
+  private _scrollController: Gtk.EventControllerScroll | null = null
+  /** Zoom captured when a pinch begins — the gesture reports a ratio. */
+  private _pinchBase = 1
   /** Scroll offsets captured at pan start, so the drag delta is absolute. */
   private _panStart = { h: 0, v: 0 }
   private _signals = new SignalScope()
   /**
-   * Holds the single deferred `fitToContent` waiting for the scroller's
-   * first allocation. Separate from {@link _signals} so `fitToContent`
-   * can supersede a pending fit without dropping the map-scoped
-   * gesture handlers.
+   * Holds the single deferred camera operation waiting for the
+   * scroller's first allocation. Separate from {@link _signals} so a
+   * later `fit` / `restoreCamera` can supersede a pending one without
+   * dropping the map-scoped gesture handlers.
    */
-  private _pendingFit = new SignalScope()
+  private _pending = new SignalScope()
+  /**
+   * Holds the re-apply of a scroll offset that the adjustment clamped
+   * because its `upper` had not caught up with the new surface size yet.
+   */
+  private _scrollPending = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -111,6 +179,13 @@ export class AtlasCanvas extends Adw.Bin {
             'ID of the currently selected scene, or empty if none',
             GObject.ParamFlags.READWRITE,
             '',
+          ),
+          compact: GObject.ParamSpec.boolean(
+            'compact',
+            'Compact',
+            'Phone-width layout: scene cards keep a larger minimum size for touch',
+            GObject.ParamFlags.READWRITE,
+            false,
           ),
         },
         Signals: {
@@ -132,17 +207,11 @@ export class AtlasCanvas extends Adw.Bin {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
-          // Fires when a preview-viewport pan ends, with the new centre
-          // in tile coordinates — hosts persist it as
-          // `editorData.preview` (same flow as `scene-moved`).
-          'preview-moved': {
-            param_types: [GObject.TYPE_STRING, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
-          },
-          // A card's viewport lock flipped (`true` = open/pannable) —
-          // lets hosts mirror the state (e.g. the inspector's switch).
-          'preview-lock-changed': {
-            param_types: [GObject.TYPE_STRING, GObject.TYPE_BOOLEAN],
-          },
+          // The camera moved by an explicit operation (zoom, fit,
+          // focus, restore) — the OSD pill re-reads the zoom level.
+          // Plain scrolling does NOT emit this; the overview minimap
+          // tracks the adjustments' own `value-changed` instead.
+          'camera-changed': {},
           // Emitted whenever the surface geometry changes (world set,
           // card moved) so the overview minimap can re-read scene rects
           // + content size. No payload — consumers pull via getters.
@@ -171,8 +240,7 @@ export class AtlasCanvas extends Adw.Bin {
     this._teleportData = teleports
     this._projectResource = projectResource
     this._rebuildCards()
-    this._teleports.setWorld(scenes, teleports, 1)
-    this._sizeSurface()
+    this._relayout()
     this.emit('world-changed')
   }
 
@@ -191,46 +259,124 @@ export class AtlasCanvas extends Adw.Bin {
     this.notify('selected-id')
   }
 
-  get previewZoom(): number {
-    return this._previewZoom
+  /** Phone-width layout — scene cards stay larger so they remain tappable. */
+  get compact(): boolean {
+    return this._compact ?? false
+  }
+
+  set compact(value: boolean) {
+    if (this._compact === value) return
+    this._compact = value
+    this.notify('compact')
+    this._relayout()
+  }
+
+  /** Current zoom: widget px per atlas px (`1` = 100 %). */
+  get zoom(): number {
+    return this._zoom
   }
 
   /**
-   * Apply a new global preview zoom to every card (and to cards built
-   * later). Clamped to a sane pixel-zoom range.
+   * Zoom the camera, keeping the surface point under `anchor`
+   * (viewport-relative px) in place. Without an anchor the viewport
+   * centre holds still.
+   *
+   * The anchor is approximate: cards floored to the minimum short side
+   * do not scale with the zoom, and the dynamic surface padding shifts
+   * with the drawn extent, so the point under the pointer can drift by a
+   * few px. Invisible in practice, and the alternative — solving for the
+   * padding before knowing the card sizes — is circular.
    */
-  setPreviewZoom(zoom: number): void {
-    const clamped = clampPreviewZoom(zoom)
-    if (clamped === this._previewZoom) return
-    this._previewZoom = clamped
-    for (const preview of this._previews.values()) preview.setViewportZoom(clamped)
+  setZoom(zoom: number, anchor?: { x: number; y: number }): void {
+    const clamped = clampAtlasZoom(zoom)
+    if (clamped === this._zoom) return
+    const h = this._scroller.hadjustment
+    const v = this._scroller.vadjustment
+    const point = anchor ?? { x: h.page_size / 2, y: v.page_size / 2 }
+    const scrollX = zoomAroundPointer(h.value, point.x, this._zoom, clamped)
+    const scrollY = zoomAroundPointer(v.value, point.y, this._zoom, clamped)
+    this._zoom = clamped
+    this._fitted = false
+    this._relayout()
+    this._applyScroll(scrollX, scrollY)
+    this.emit('camera-changed')
   }
 
   /**
-   * Lock state of a card's preview viewport: `true` = open (drag pans
-   * the section), `false` = closed, `null` = the scene has no viewport
-   * preview (sample worlds / unknown id).
+   * Zoom out until the whole world fits the viewport, then centre it.
+   * Deferred until the scroller has a real page size, so the math never
+   * runs against a zero viewport.
+   *
+   * The camera stays *fitted* afterwards (see {@link isFitted}) and
+   * re-fits on every later viewport change, so the world still fits once
+   * the surrounding chrome has taken its share of the allocation.
    */
-  getPreviewLock(sceneId: string): boolean | null {
-    const card = this._cards.get(sceneId)
-    if (!card?.viewportLockable) return null
-    return card.previewUnlocked
+  fit(): void {
+    this._whenAllocated(() => this._applyFit())
   }
 
-  /** Flip a card's viewport lock (the inspector's switch drives this). */
-  setPreviewLock(sceneId: string, unlocked: boolean): void {
-    const card = this._cards.get(sceneId)
-    if (card?.viewportLockable) card.previewUnlocked = unlocked
+  /**
+   * Whether the live camera is a fit rather than a zoom the user chose.
+   * A host that persists the camera stores nothing while this is true:
+   * the fit belongs to the window size it was computed for, and
+   * re-fitting at the next size is better than restoring a stale one.
+   */
+  get isFitted(): boolean {
+    return this._fitted
   }
 
-  /** Total scrollable surface size (union of scene bboxes + padding). */
+  /** Zoom + scroll offsets, for a host that persists them per project. */
+  get camera(): AtlasCamera {
+    return {
+      zoom: this._zoom,
+      scrollX: this._scroller.hadjustment.value,
+      scrollY: this._scroller.vadjustment.value,
+    }
+  }
+
+  /** Re-apply a persisted {@link camera}, once the viewport has a size. */
+  restoreCamera(camera: AtlasCamera): void {
+    this._whenAllocated(() => {
+      this._zoom = clampAtlasZoom(camera.zoom)
+      this._fitted = false
+      this._relayout()
+      this._applyScroll(camera.scrollX, camera.scrollY)
+      this.emit('camera-changed')
+    })
+  }
+
+  /** Scroll one scene's card into the centre of the viewport. */
+  focusScene(sceneId: string): void {
+    this._whenAllocated(() => {
+      const rect = this._drawn.get(sceneId)
+      if (!rect) return
+      const h = this._scroller.hadjustment
+      const v = this._scroller.vadjustment
+      this._applyScroll(
+        centeredScroll(rect.x, rect.w, this._surfaceW, h.page_size),
+        centeredScroll(rect.y, rect.h, this._surfaceH, v.page_size),
+      )
+      this.emit('camera-changed')
+    })
+  }
+
+  /** Mark one map as the game's start map — it gets the start badge. */
+  setStartMapId(sceneId: string | null): void {
+    this._startMapId = sceneId || null
+    for (const [id, card] of this._cards) card.startMap = id === this._startMapId
+  }
+
+  /** Total scrollable surface size (drawn world + dynamic padding). */
   get contentSize(): { width: number; height: number } {
-    return { width: this._contentW, height: this._contentH }
+    return { width: this._surfaceW, height: this._surfaceH }
   }
 
-  /** Scene bounding boxes in atlas-surface coords — feeds the overview minimap. */
+  /**
+   * Drawn card body rects in surface coords, in scene order — feeds the
+   * overview minimap, which shares the canvas's coordinate space.
+   */
   sceneRects(): SceneRect[] {
-    return sceneRects(this._scenes)
+    return this._scenes.map((scene) => this._drawn.get(scene.id) ?? { x: 0, y: 0, w: 0, h: 0 })
   }
 
   /** Current visible region in surface coords (scroll offset + page size). */
@@ -245,50 +391,6 @@ export class AtlasCanvas extends Adw.Bin {
     return { h: this._scroller.hadjustment, v: this._scroller.vadjustment }
   }
 
-  /**
-   * Scroll so the world's bounding box is centered in the viewport —
-   * the atlas "fit" affordance. The Fixed surface has no fractional
-   * scale (see class docstring), so this centers rather than zooms; the
-   * overview minimap gives the whole-world-at-a-glance view. Deferred
-   * until the scroller has a real page size (first allocation) so the
-   * math isn't run against a zero viewport.
-   *
-   * With `focusSceneId`, a world that does not fit the viewport centres on
-   * that scene instead — a phone opens on the start map, not on the
-   * middle of the world.
-   */
-  fitToContent(focusSceneId?: string): void {
-    const h = this._scroller.hadjustment
-    const v = this._scroller.vadjustment
-    const extent = worldExtent(this._scenes)
-    const focusIndex = focusSceneId ? this._scenes.findIndex((scene) => scene.id === focusSceneId) : -1
-    const apply = (): void => {
-      if (focusIndex >= 0 && (extent.width > h.page_size || extent.height > v.page_size)) {
-        const rect = sceneRects(this._scenes)[focusIndex]
-        h.value = centeredScrollValue(2 * rect.x + rect.w, h.upper, h.page_size)
-        v.value = centeredScrollValue(2 * rect.y + rect.h, v.upper, v.page_size)
-        return
-      }
-      h.value = centeredScrollValue(extent.width, h.upper, h.page_size)
-      v.value = centeredScrollValue(extent.height, v.upper, v.page_size)
-    }
-    // At most one deferred fit is ever pending: a second call before the
-    // first allocation supersedes the first instead of stacking another
-    // handler on the adjustment, and `vfunc_unmap` releases one that
-    // never got its allocation.
-    this._pendingFit.disconnectAll()
-    if (h.page_size > 0) {
-      apply()
-      return
-    }
-    // Not yet allocated — run once the viewport gets a real size.
-    this._pendingFit.connectUntil(h, 'notify::page-size', () => {
-      if (h.page_size <= 0) return false
-      apply()
-      return true
-    })
-  }
-
   vfunc_map(): void {
     super.vfunc_map()
     const pan = this._ensurePanGesture()
@@ -299,23 +401,169 @@ export class AtlasCanvas extends Adw.Bin {
       this._scroller.hadjustment.value = this._panStart.h - dx
       this._scroller.vadjustment.value = this._panStart.v - dy
     })
+
+    const pinch = this._ensureZoomGesture()
+    this._signals.connect(pinch, 'begin', () => {
+      this._pinchBase = this._zoom
+    })
+    this._signals.connect(pinch, 'scale-changed', (gesture: Gtk.GestureZoom, scale: number) => {
+      this.setZoom(this._pinchBase * scale, this._pinchAnchor(gesture))
+    })
+
+    const scroll = this._ensureScrollController()
+    this._signals.connect(scroll, 'scroll', (controller: Gtk.EventControllerScroll, _dx: number, dy: number) =>
+      this._onScroll(controller, dy),
+    )
+
+    // The surface padding centres a small world in the CURRENT viewport,
+    // and a fitted camera is only valid for the size it was fitted to —
+    // so a resized viewport has to re-run both.
+    this._signals.connect(this._scroller.hadjustment, 'notify::page-size', () => this._onViewportResized())
+    this._signals.connect(this._scroller.vadjustment, 'notify::page-size', () => this._onViewportResized())
   }
 
   vfunc_unmap(): void {
     this._signals.disconnectAll()
-    this._pendingFit.disconnectAll()
+    this._pending.disconnectAll()
+    this._scrollPending.disconnectAll()
+    this._cancelScrollWrites()
     super.vfunc_unmap()
   }
 
+  /** Card-size floor for the current form factor. */
+  private get _minShortSide(): number {
+    return this._compact ? CARD_MIN_SHORT_SIDE_PHONE : CARD_MIN_SHORT_SIDE
+  }
+
   /**
-   * Drag on the empty atlas backdrop pans the scrolled view (cards keep
-   * their own gestures: content drag pans the preview, the corner
-   * handle moves the card). The gesture lives on the SCROLLER — its
-   * coordinates are viewport-stable, so adjusting the scroll position
-   * doesn't shift the gesture's own reference frame (the same feedback
-   * loop the cards' parent-space drag math guards against). Created
-   * once and kept; `vfunc_unmap` releases its handlers, not the
-   * controller.
+   * Run `fn` once the scroller has a real page size — now if it already
+   * has one, otherwise on its first allocation. At most one deferred
+   * camera operation is ever pending: a second call before the first
+   * allocation supersedes the first instead of stacking another handler
+   * on the adjustment, and `vfunc_unmap` releases one that never got its
+   * allocation.
+   */
+  private _whenAllocated(fn: () => void): void {
+    const h = this._scroller.hadjustment
+    this._pending.disconnectAll()
+    if (h.page_size > 0) {
+      fn()
+      return
+    }
+    this._pending.connectUntil(h, 'notify::page-size', () => {
+      if (h.page_size <= 0) return false
+      fn()
+      return true
+    })
+  }
+
+  /**
+   * Zoom to fit and centre, against the viewport as it is right now.
+   *
+   * Reentrancy-guarded: the pass re-sizes the surface, which allocates,
+   * which can notify `page-size` straight back into
+   * {@link _onViewportResized}.
+   */
+  private _applyFit(): void {
+    if (this._fitting) return
+    this._fitting = true
+    try {
+      const h = this._scroller.hadjustment
+      const v = this._scroller.vadjustment
+      this._fitViewport = { w: h.page_size, h: v.page_size }
+      this._zoom = fitZoom({ w: h.page_size, h: v.page_size }, sceneRects(this._scenes), FIT_MARGIN, this._minShortSide)
+      this._fitted = true
+      this._relayout()
+      this._applyScroll((this._surfaceW - h.page_size) / 2, (this._surfaceH - v.page_size) / 2)
+    } finally {
+      this._fitting = false
+    }
+    this.emit('camera-changed')
+  }
+
+  /**
+   * React to the scroller's viewport changing size.
+   *
+   * A fitted camera re-fits: `fit()` runs as soon as the scroller has
+   * *any* page size, which on startup is the window's full height —
+   * before the 48 px header bar has been subtracted. Without this the
+   * world opened a few percent too large and the bottom row of cards sat
+   * clipped off the viewport forever. Any other camera only needs the
+   * layout pass, because the surface padding centres a small world in
+   * the viewport as it is now.
+   */
+  private _onViewportResized(): void {
+    const h = this._scroller.hadjustment
+    const v = this._scroller.vadjustment
+    const changed = h.page_size !== this._fitViewport.w || v.page_size !== this._fitViewport.h
+    if (this._fitted && changed && h.page_size > 0 && v.page_size > 0) {
+      this._applyFit()
+      return
+    }
+    this._relayout()
+  }
+
+  /**
+   * Write both scroll offsets, re-applying each once the adjustment's
+   * `upper` catches up. `set_size_request` on the surface only reaches
+   * the adjustments on the next allocation, so a value aimed at the
+   * freshly grown surface would otherwise be clamped to the old range
+   * and the camera would land short.
+   */
+  private _applyScroll(x: number, y: number): void {
+    this._scrollPending.disconnectAll()
+    this._cancelScrollWrites()
+    this._applyScrollAxis(this._scroller.hadjustment, x)
+    this._applyScrollAxis(this._scroller.vadjustment, y)
+  }
+
+  private _applyScrollAxis(adjustment: Gtk.Adjustment, target: number): void {
+    const want = Math.max(0, target)
+    adjustment.value = want
+    // Landed where we aimed — the adjustment's range already covers it.
+    if (adjustment.value >= want - 0.5) return
+    this._scrollPending.connectUntil(adjustment, 'notify::upper', () => {
+      this._queueScrollWrite(adjustment, want)
+      return true
+    })
+  }
+
+  /**
+   * Write a scroll offset from an idle instead of straight away.
+   *
+   * `Gtk.Viewport` emits `notify::upper` from inside its own
+   * `size_allocate`, and the re-allocation an adjustment write asks for
+   * there is dropped: the adjustment ends up holding the new offset
+   * while the viewport keeps drawing the child at the old one, with
+   * nothing left to correct it. That is what left a fitted world
+   * clipped — only on the viewport sizes where the first write got
+   * clamped and the deferred re-apply was needed at all, which is why
+   * it looked like a desktop-only bug.
+   */
+  private _queueScrollWrite(adjustment: Gtk.Adjustment, want: number): void {
+    let id = 0
+    id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._scrollIdles.delete(id)
+      adjustment.value = Math.max(0, Math.min(want, adjustment.upper - adjustment.page_size))
+      return GLib.SOURCE_REMOVE
+    })
+    this._scrollIdles.add(id)
+  }
+
+  /** Drop scroll writes that never got their idle (re-fit, unmap). */
+  private _cancelScrollWrites(): void {
+    for (const id of this._scrollIdles) GLib.source_remove(id)
+    this._scrollIdles.clear()
+  }
+
+  /**
+   * Drag on the empty atlas backdrop pans the scrolled view (a drag on
+   * a card moves the card instead, via the card's own gesture). The
+   * gesture lives on the SCROLLER — its coordinates are viewport-stable,
+   * so adjusting the scroll position doesn't shift the gesture's own
+   * reference frame (the same feedback loop the cards' parent-space drag
+   * math guards against). Created once and kept; `vfunc_unmap` releases
+   * its handlers, not the controller.
    */
   private _ensurePanGesture(): Gtk.GestureDrag {
     if (this._panGesture) return this._panGesture
@@ -323,6 +571,62 @@ export class AtlasCanvas extends Adw.Bin {
     this._scroller.add_controller(pan)
     this._panGesture = pan
     return pan
+  }
+
+  /** Pinch-to-zoom, also on the scroller so its centre is viewport-relative. */
+  private _ensureZoomGesture(): Gtk.GestureZoom {
+    if (this._zoomGesture) return this._zoomGesture
+    const pinch = new Gtk.GestureZoom()
+    this._scroller.add_controller(pinch)
+    this._zoomGesture = pinch
+    return pinch
+  }
+
+  /**
+   * Ctrl+scroll zoom. Runs in the CAPTURE phase so it sees the event
+   * before the `ScrolledWindow` turns it into a scroll, and claims only
+   * the modified ones — plain scrolling still pans.
+   */
+  private _ensureScrollController(): Gtk.EventControllerScroll {
+    if (this._scrollController) return this._scrollController
+    const scroll = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
+    scroll.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+    this._scroller.add_controller(scroll)
+    this._scrollController = scroll
+    return scroll
+  }
+
+  private _onScroll(controller: Gtk.EventControllerScroll, dy: number): boolean {
+    const state = controller.get_current_event_state()
+    if (!(state & Gdk.ModifierType.CONTROL_MASK)) return false
+    this.setZoom(this._zoom * ZOOM_WHEEL_FACTOR ** -dy, this._pointerAnchor(controller))
+    return true
+  }
+
+  /** The pinch centre, already in the scroller's (viewport) coordinates. */
+  private _pinchAnchor(gesture: Gtk.GestureZoom): { x: number; y: number } | undefined {
+    const [ok, x, y] = gesture.get_bounding_box_center()
+    return ok ? { x, y } : undefined
+  }
+
+  /**
+   * The pointer position of the controller's current event, in the
+   * scroller's coordinates. Event positions are surface-relative, so the
+   * native's own surface transform comes off first. Returns `undefined`
+   * when the event carries no position — the caller then zooms around
+   * the viewport centre.
+   */
+  private _pointerAnchor(controller: Gtk.EventController): { x: number; y: number } | undefined {
+    const event = controller.get_current_event()
+    const native = this.get_native()
+    if (!event || !native) return undefined
+    const [hasPosition, surfaceX, surfaceY] = event.get_position()
+    if (!hasPosition) return undefined
+    const [offsetX, offsetY] = native.get_surface_transform()
+    const point = new Graphene.Point()
+    point.init(surfaceX - offsetX, surfaceY - offsetY)
+    const [ok, local] = (native as unknown as Gtk.Widget).compute_point(this._scroller, point)
+    return ok ? { x: local.x, y: local.y } : undefined
   }
 
   /** Capture the scroll origin, unless the press landed on a card (then deny). */
@@ -341,11 +645,13 @@ export class AtlasCanvas extends Adw.Bin {
   private _rebuildCards(): void {
     for (const [, card] of this._cards) this._surface.remove(card)
     this._cards.clear()
-    this._previews.clear()
+    this._drawn.clear()
+    this._offsets.clear()
 
     for (const scene of this._scenes) {
       const card = new SceneCard()
       card.setScene(scene)
+      card.startMap = scene.id === this._startMapId
       this._injectPreviewIfAvailable(card, scene)
       card.connect('clicked', () => {
         if (card.isDragging) return
@@ -357,58 +663,43 @@ export class AtlasCanvas extends Adw.Bin {
       })
       this._wireDrag(scene.id, card)
       this._cards.set(scene.id, card)
-      this._surface.put(card, scene.x, scene.y)
+      // Placed for real by the next layout pass.
+      this._surface.put(card, 0, 0)
     }
   }
 
   /**
    * For real projects (where the host passed us a `GameProjectResource`),
-   * swap the card's default mini-map placeholder for a `MapPreview`
-   * that paints the scene's actual tile data — a section of the map at
-   * a uniform native-pixel zoom. The card's lock toggle switches its
-   * drag between moving the card (locked, default) and panning the
-   * section (unlocked; persisted via `preview-moved`). Falls through
-   * to the default placeholder if the resource has no matching map.
+   * swap the card's default mini-map placeholder for a `MapPreview` that
+   * paints the scene's actual tile data. The preview runs in FIT mode —
+   * it scales the WHOLE map into whatever size the camera gave the card
+   * — so it needs no size request and no pan wiring of its own. Falls
+   * through to the default placeholder if the resource has no matching
+   * map.
    */
   private _injectPreviewIfAvailable(card: SceneCard, scene: SampleScene): void {
-    if (!this._projectResource) return
-    const mapData = this._projectResource.maps.get(scene.id)?.mapData
-    if (!mapData) return
-
-    const cols = scene.cols ?? 0
-    const previewRows = scene.previewRows ?? 0
-    if (!cols || !previewRows) return
-
+    if (!this._projectResource?.maps.get(scene.id)) return
     const preview = new MapPreview()
-    preview.set_size_request(cols * scene.tilePx, previewRows * scene.tilePx)
     card.setPreviewWidget(preview)
-    card.viewportLockable = true
-    this._previews.set(scene.id, preview)
-    void preview.setFromResource(this._projectResource, scene.id, {
-      tileX: scene.previewTileX ?? mapData.columns / 2,
-      tileY: scene.previewTileY ?? mapData.rows / 2,
-      zoom: this._previewZoom,
-    })
-    card.connect('preview-pan-update', (_c: SceneCard, dx: number, dy: number) => {
-      preview.panViewportBy(dx, dy)
-    })
-    card.connect('preview-pan-end', () => {
-      const centre = preview.commitViewport()
-      if (centre) this.emit('preview-moved', scene.id, centre.tileX, centre.tileY)
-    })
-    card.connect('lock-changed', (_c: SceneCard, unlocked: boolean) => {
-      this.emit('preview-lock-changed', scene.id, unlocked)
-    })
+    void preview.setFromResource(this._projectResource, scene.id)
   }
 
   private _wireDrag(sceneId: string, card: SceneCard): void {
-    let originX = 0
-    let originY = 0
+    // Captured at drag-begin: the scene's atlas position, plus the
+    // card's and body's surface positions. Drag deltas arrive in
+    // surface px, so the move is done in surface space and only the
+    // release is converted back to atlas space.
+    let atlasOrigin = { x: 0, y: 0 }
+    let bodyOrigin = { x: 0, y: 0 }
+    let cardOrigin = { x: 0, y: 0 }
     card.connect('scene-drag-begin', () => {
       const scene = this._scenes.find((s) => s.id === sceneId)
-      if (!scene) return
-      originX = scene.x
-      originY = scene.y
+      const rect = this._drawn.get(sceneId)
+      if (!scene || !rect) return
+      const offset = this._offsets.get(sceneId) ?? { x: 0, y: 0 }
+      atlasOrigin = { x: scene.x, y: scene.y }
+      bodyOrigin = { x: rect.x, y: rect.y }
+      cardOrigin = { x: rect.x - offset.x, y: rect.y - offset.y }
       this.selectedId = sceneId
       // Distinct from `scene-selected` (click): drag-begin still
       // selects the card so the inspector can refresh its content,
@@ -418,31 +709,97 @@ export class AtlasCanvas extends Adw.Bin {
       this.emit('scene-drag-began', sceneId)
     })
     card.connect('scene-drag-update', (_c: SceneCard, dx: number, dy: number) => {
-      this._surface.move(card, Math.max(0, originX + dx), Math.max(0, originY + dy))
-      // Re-publish the world so the overlay redraws against the moved
-      // cards mid-drag. Cheap enough to do on every motion event.
-      this._teleports.setWorld(this._scenes, this._teleportData, 1)
+      const rect = this._drawn.get(sceneId)
+      if (!rect) return
+      this._surface.move(card, cardOrigin.x + dx, cardOrigin.y + dy)
+      // Patch the drawn rect so the teleport overlay follows the card
+      // mid-drag. Cheap enough to do on every motion event.
+      rect.x = bodyOrigin.x + dx
+      rect.y = bodyOrigin.y + dy
+      this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
     })
     card.connect('scene-drag-end', (_c: SceneCard, dx: number, dy: number) => {
       const scene = this._scenes.find((s) => s.id === sceneId)
       if (!scene) return
       // Snap the release position to the atlas grid so cards line up.
-      scene.x = snapToGrid(originX + dx, ATLAS_GRID)
-      scene.y = snapToGrid(originY + dy, ATLAS_GRID)
-      this._surface.move(card, scene.x, scene.y)
-      this._sizeSurface()
-      this._teleports.setWorld(this._scenes, this._teleportData, 1)
+      scene.x = snapToGrid(atlasOrigin.x + dx / this._zoom, ATLAS_GRID)
+      scene.y = snapToGrid(atlasOrigin.y + dy / this._zoom, ATLAS_GRID)
+      this._relayout()
       this.emit('scene-moved', sceneId, scene.x, scene.y)
       this.emit('world-changed')
     })
   }
 
-  private _sizeSurface(): void {
-    const { width, height } = surfaceSize(this._scenes, SURFACE_PADDING)
-    this._contentW = width
-    this._contentH = height
-    this._surface.set_size_request(width, height)
-    this._teleports.set_size_request(width, height)
+  /**
+   * Re-place every card for the current zoom and viewport size. Guarded:
+   * the pass changes the surface's size request, which allocates, which
+   * can notify `page-size` straight back into here.
+   */
+  private _relayout(): void {
+    if (this._relayouting) return
+    this._relayouting = true
+    try {
+      this._layoutPass()
+    } finally {
+      this._relayouting = false
+    }
+  }
+
+  /**
+   * One layout pass, in four steps:
+   * 1. scale the world rects to body rects at the current zoom,
+   * 2. hand each body size to its card and measure the FULL card back
+   *    (the title can be wider than the body and always sits above it,
+   *    so a card's top-left is its body's minus the title overhang),
+   * 3. derive the surface padding from the union of those card rects
+   *    and the viewport size,
+   * 4. place the cards and publish the drawn body rects.
+   */
+  private _layoutPass(): void {
+    const bodies = drawnRects(sceneRects(this._scenes), this._zoom, this._minShortSide)
+    const placements: Array<{ id: string; card: SceneCard; body: SceneRect; rect: SceneRect }> = []
+    let minX = 0
+    let minY = 0
+    let maxX = 0
+    let maxY = 0
+
+    this._scenes.forEach((scene, index) => {
+      const card = this._cards.get(scene.id)
+      const body = bodies[index]
+      if (!card || !body || !(body.w > 0) || !(body.h > 0)) return
+      card.setBodySize(body.w, body.h)
+      const offset = { x: card.bodyOffsetX, y: card.bodyOffsetY }
+      this._offsets.set(scene.id, offset)
+      const rect: SceneRect = {
+        x: body.x - offset.x,
+        y: body.y - offset.y,
+        w: card.cardWidth,
+        h: card.cardHeight,
+      }
+      minX = Math.min(minX, rect.x)
+      minY = Math.min(minY, rect.y)
+      maxX = Math.max(maxX, rect.x + rect.w)
+      maxY = Math.max(maxY, rect.y + rect.h)
+      placements.push({ id: scene.id, card, body, rect })
+    })
+
+    const h = this._scroller.hadjustment
+    const v = this._scroller.vadjustment
+    const padX = surfacePadding(maxX - minX, h.page_size, MIN_SURFACE_PADDING)
+    const padY = surfacePadding(maxY - minY, v.page_size, MIN_SURFACE_PADDING)
+    const origin = { x: padX - minX, y: padY - minY }
+
+    this._drawn.clear()
+    for (const { id, card, body, rect } of placements) {
+      this._surface.move(card, origin.x + rect.x, origin.y + rect.y)
+      this._drawn.set(id, { x: origin.x + body.x, y: origin.y + body.y, w: body.w, h: body.h })
+    }
+
+    this._surfaceW = maxX - minX + padX * 2
+    this._surfaceH = maxY - minY + padY * 2
+    this._surface.set_size_request(this._surfaceW, this._surfaceH)
+    this._teleports.set_size_request(this._surfaceW, this._surfaceH)
+    this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
   }
 }
 

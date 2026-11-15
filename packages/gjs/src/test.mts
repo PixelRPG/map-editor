@@ -17,6 +17,7 @@ import animationSequenceSuite from './widgets/cast/animation-sequence.spec.js'
 import animationTimelineGeometrySuite from './widgets/cast/animation-timeline.geometry.spec.js'
 import characterAnimationSuite from './widgets/cast/character-animation.spec.js'
 import spriteSetImportModelSuite from './widgets/cast/sprite-set-import.model.spec.js'
+import atlasCameraSuite from './widgets/editor/atlas-camera.spec.js'
 import atlasCanvasGeometrySuite from './widgets/editor/atlas-canvas.geometry.spec.js'
 import atlasOverviewGeometrySuite from './widgets/editor/atlas-overview.geometry.spec.js'
 import bakeCacheSuite from './widgets/editor/bake-cache.spec.js'
@@ -43,6 +44,7 @@ run({
   addAnimationDialogModelSuite,
   animationSequenceSuite,
   animationTimelineGeometrySuite,
+  atlasCameraSuite,
   atlasCanvasGeometrySuite,
   atlasOverviewGeometrySuite,
   bakeCacheSuite,

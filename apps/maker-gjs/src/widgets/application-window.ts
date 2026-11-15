@@ -242,13 +242,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     },
     () => new Engine(),
   )
-  // Map-file persistence (serialise MapData → source JSON, atlas/preview
+  // Map-file persistence (serialise MapData → source JSON, atlas
   // editor-data writes). Injected accessors read this window's live state;
   // the op plumbing for editor-data changes stays here (collab is the
   // window's concern).
   private _mapPersistCtl = new MapPersistenceController({
     getMapResource: (mapId) => this._loadedProject?.resource.maps.get(mapId) ?? null,
-    getScene: (mapId) => this._scenes.getScene(mapId),
     getCurrentSceneId: () => this._scenes.currentSceneId,
     showError: (message) => this._showToast(message),
     sendMapEditorDataChange: (mapId, editorData) =>
@@ -301,7 +300,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (placementId) this._scene_editor_view.focusPlacement(placementId)
     },
     populateInspector: (project, sceneId) => this._scene_editor_view.populateFromProject(project, sceneId),
-    refreshAtlasWorld: (project) => this._atlas_view.setWorld(project.scenes, project.teleports, project.resource),
+    refreshAtlasWorld: (project) =>
+      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource, project.projectPath),
   })
   private readonly _session = new SessionCoordinator({
     // The gjs Engine widget wraps the same core `@pixelrpg/engine` Engine
@@ -322,7 +322,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     showToast: (message) => this._showToast(message),
     setProject: (project) => this._projectStore.setProject(project),
     adoptProject: (project) => {
-      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource)
+      this._atlas_view.setWorld(project.scenes, project.teleports, project.resource, project.projectPath)
       this._scenes.setScenes(project.scenes)
       // A fresh project has no atlas selection yet, so this lands the
       // four selection-driven map verbs on insensitive.
@@ -520,7 +520,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     project.scenes = world.scenes
     project.teleports = world.teleports
     this._scenes.setScenes(world.scenes)
-    this._atlas_view.setWorld(world.scenes, world.teleports, project.resource)
+    this._atlas_view.setWorld(world.scenes, world.teleports, project.resource, project.projectPath)
     this._refreshMapActions()
   }
 
@@ -551,13 +551,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
     })
-    this.signals.connect(
-      this._atlas_view,
-      'preview-moved',
-      (_v: AtlasView, id: string, tileX: number, tileY: number) => {
-        this._mapPersistCtl.persistPreviewViewport(id, tileX, tileY)
-      },
-    )
     // The header switchers and the bottom switcher bar all drive
     // `shell_stack` directly, so the stack — not a per-view signal — is
     // where a destination change becomes observable. Mirror it into
@@ -795,8 +788,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
     installZoomActions(group, {
       targetsAtlas: () => this._router.currentView === 'world',
-      stepAtlasZoom: (delta) => this._atlas_view.stepPreviewZoom(delta),
-      resetAtlasZoom: () => this._atlas_view.resetPreviewZoom(),
+      stepAtlasZoom: (delta) => this._atlas_view.stepZoom(delta),
+      resetAtlasZoom: () => this._atlas_view.resetZoom(),
       fitAtlas: () => this._atlas_view.fitAtlas(),
       stepEngineZoom: (delta) => this._stepZoom(delta),
       resetEngineZoom: () => void this._applyZoom(1),

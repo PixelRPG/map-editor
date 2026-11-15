@@ -1,5 +1,15 @@
+/*
+ * The card's own box must add NOTHING around its children: the atlas
+ * camera computes every card's pixel size from the title's natural size
+ * and the preview body, then places it at an exact surface offset.
+ * Adwaita buttons carry a 1 px transparent border, which would shift
+ * the body by a pixel against the teleport overlay — hence `border:
+ * none` next to `padding: 0`.
+ */
 .scene-card {
   padding: 0;
+  border: none;
+  box-shadow: none;
   border-radius: 10px;
   min-width: 0;
   min-height: 0;
@@ -8,6 +18,10 @@
 
 .scene-card .scene-card-title {
   padding: 0 2px;
+}
+
+.scene-card .scene-card-start-badge {
+  color: @accent_color;
 }
 
 /* Subtle frame around the preview only — no filled header bar. */
@@ -19,24 +33,4 @@
 
 .scene-card.selected .scene-card-frame {
   box-shadow: 0 0 0 2px @accent_bg_color;
-}
-
-.scene-card-lock {
-  border-radius: 6px;
-  padding: 2px;
-  min-width: 0;
-  min-height: 0;
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-.scene-card:hover .scene-card-lock,
-.scene-card.selected .scene-card-lock,
-.scene-card-lock:checked {
-  opacity: 1;
-}
-
-.scene-card-badge {
-  border-radius: 9999px;
-  padding: 2px 8px;
 }

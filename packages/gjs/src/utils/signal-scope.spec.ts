@@ -113,8 +113,8 @@ export default async () => {
       })
     })
 
-    // The regression guard for `AtlasCanvas.fitToContent()`, which used
-    // a hand-rolled `const id = h.connect(…, () => h.disconnect(id))`.
+    // The regression guard for `AtlasCanvas._whenAllocated()`, which
+    // used a hand-rolled `const id = h.connect(…, () => h.disconnect(id))`.
     await describe('connectUntil', async () => {
       await it('keeps listening while the condition is unmet', async () => {
         const emitter = new TestEmitter()
@@ -194,7 +194,7 @@ export default async () => {
         expect(emitter.doubleDisconnects).toStrictEqual([])
       })
 
-      await it('supersedes a pending one-shot on re-arm (fitToContent called twice)', async () => {
+      await it('supersedes a pending one-shot on re-arm (fit called twice)', async () => {
         const emitter = new TestEmitter()
         const pending = new SignalScope()
         let applied = 0

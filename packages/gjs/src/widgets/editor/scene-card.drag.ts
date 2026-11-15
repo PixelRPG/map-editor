@@ -9,21 +9,6 @@ export const DRAG_THRESHOLD_PX = 4
 /** Window (ms) within which a second click activates (opens) the scene. */
 export const DOUBLE_CLICK_MS = 350
 
-/**
- * What a drag on the card does: `move` repositions the card on the
- * atlas, `pan` scrolls the map section inside its preview.
- */
-export type SceneDragMode = 'move' | 'pan'
-
-/**
- * Decide the drag interpretation at press time. Lock-button presses
- * always MOVE the card (a click toggles instead); presses on the preview
- * content PAN the section only while the lock is open.
- */
-export function dragModeFor(pannablePreview: boolean, pressOnLock: boolean): SceneDragMode {
-  return !pannablePreview || pressOnLock ? 'move' : 'pan'
-}
-
 /** Whether a press that has travelled `(dx, dy)` has become a drag. */
 export function hasPassedDragThreshold(dx: number, dy: number): boolean {
   return Math.hypot(dx, dy) > DRAG_THRESHOLD_PX

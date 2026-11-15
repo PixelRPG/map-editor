@@ -9,7 +9,8 @@ import {
   teleportEndpoint,
 } from './teleport-overlay.geometry.ts'
 
-const scene = { x: 100, y: 200, tilePx: 8 }
+/** An 11x11 map drawn as an 88x88 body at (100, 200) — 8 px per tile. */
+const card = { rect: { x: 100, y: 200, w: 88, h: 88 }, cols: 11, rows: 11 }
 
 /** Rounded compare — the geometry is float math, not exact decimals. */
 function near(point: OverlayPoint, x: number, y: number, digits = 6): void {
@@ -21,26 +22,32 @@ export default async () => {
   await describe('teleport-overlay.geometry', async () => {
     await describe('teleportEndpoint', async () => {
       await it('lands on the CENTRE of the tile, not its corner', async () => {
-        near(teleportEndpoint(scene, 0, 0, 1, 0), 104, 204)
+        near(teleportEndpoint(card, { x: 0, y: 0 }), 104, 204)
       })
 
       await it('steps one tile per index', async () => {
-        near(teleportEndpoint(scene, 3, 2, 1, 0), 100 + 3.5 * 8, 200 + 2.5 * 8)
+        near(teleportEndpoint(card, { x: 3, y: 2 }), 100 + 3.5 * 8, 200 + 2.5 * 8)
       })
 
-      await it('offsets past the card title bar', async () => {
-        near(teleportEndpoint(scene, 0, 0, 1, 22), 104, 226)
+      await it('reads the scale off the body rect, not a zoom', async () => {
+        // The same map drawn twice as large: every endpoint follows,
+        // which is what keeps the overlay aligned with a card that hit
+        // the minimum-size floor.
+        const doubled = { rect: { x: 100, y: 200, w: 176, h: 176 }, cols: 11, rows: 11 }
+        near(teleportEndpoint(doubled, { x: 0, y: 0 }), 108, 208)
       })
 
-      await it('scales the scene position but NOT the title bar', async () => {
-        // Documents today's behaviour: `scale` is always 1 from
-        // `AtlasCanvas`, so the unscaled title offset never shows. A
-        // scaled overlay would need the offset scaled too.
-        near(teleportEndpoint(scene, 0, 0, 2, 22), 208, 430)
+      await it('puts the last tile inside the body, not on its edge', async () => {
+        near(teleportEndpoint(card, { x: 10, y: 10 }), 184, 284)
       })
 
-      await it('handles a zero-size tile without NaN', async () => {
-        near(teleportEndpoint({ x: 10, y: 20, tilePx: 0 }, 5, 5, 1, 0), 10, 20)
+      await it('treats a non-square map per axis', async () => {
+        const wide = { rect: { x: 0, y: 0, w: 100, h: 50 }, cols: 10, rows: 5 }
+        near(teleportEndpoint(wide, { x: 0, y: 0 }), 5, 5)
+      })
+
+      await it('handles a zero-size map without NaN', async () => {
+        near(teleportEndpoint({ rect: { x: 10, y: 20, w: 0, h: 0 }, cols: 0, rows: 0 }, { x: 5, y: 5 }), 10, 20)
       })
     })
 

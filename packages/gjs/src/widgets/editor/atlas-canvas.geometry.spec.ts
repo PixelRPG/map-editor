@@ -1,15 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import {
-  centeredScrollValue,
-  clampPreviewZoom,
-  sceneGeometry,
-  type SceneBox,
-  sceneRects,
-  snapToGrid,
-  surfaceSize,
-  worldExtent,
-} from './atlas-canvas.geometry.ts'
+import { rectExtent, sceneGeometry, type SceneBox, sceneRects, snapToGrid } from './atlas-canvas.geometry.ts'
 
 /** A sample-world scene: terrain rows decide its size. */
 const terrain: SceneBox = { x: 10, y: 20, tilePx: 8, rows: ['....', '....', '....'] }
@@ -69,41 +60,28 @@ export default async () => {
       })
     })
 
-    await describe('worldExtent', async () => {
-      await it('unions every scene box', async () => {
-        expect(worldExtent([terrain, project])).toStrictEqual({ width: 180, height: 44 })
+    await describe('rectExtent', async () => {
+      await it('unions a set of rects', async () => {
+        expect(
+          rectExtent([
+            { x: 0, y: 0, w: 10, h: 40 },
+            { x: 30, y: 5, w: 10, h: 10 },
+          ]),
+        ).toStrictEqual({ width: 40, height: 40 })
       })
 
-      await it('is zero for an empty world', async () => {
-        expect(worldExtent([])).toStrictEqual({ width: 0, height: 0 })
+      await it('is zero for no rects', async () => {
+        expect(rectExtent([])).toStrictEqual({ width: 0, height: 0 })
       })
 
-      await it('measures the far edge of a single scene', async () => {
-        expect(worldExtent([terrain])).toStrictEqual({ width: 42, height: 44 })
+      await it('never reports a negative extent', async () => {
+        expect(rectExtent([{ x: -100, y: -100, w: 16, h: 8 }])).toStrictEqual({ width: 0, height: 0 })
       })
 
-      await it('never reports a negative extent for a scene left of the origin', async () => {
-        // A card dragged past 0 in atlas space: the extent is the FAR
-        // edge, so the surface never shrinks below the origin.
-        expect(worldExtent([{ x: -100, y: -100, tilePx: 8, rows: ['..'] }])).toStrictEqual({ width: 0, height: 0 })
-      })
-
-      await it('is driven by the furthest scene, not the last one', async () => {
-        expect(worldExtent([project, terrain]).width).toBe(180)
-      })
-    })
-
-    await describe('surfaceSize', async () => {
-      await it('pads the world extent on both sides', async () => {
-        expect(surfaceSize([terrain], 100)).toStrictEqual({ width: 242, height: 244 })
-      })
-
-      await it('is exactly the extent with zero padding', async () => {
-        expect(surfaceSize([terrain], 0)).toStrictEqual({ width: 42, height: 44 })
-      })
-
-      await it('is pure padding for an empty world', async () => {
-        expect(surfaceSize([], 180)).toStrictEqual({ width: 360, height: 360 })
+      await it('measures the atlas world through sceneRects', async () => {
+        // A card dragged past 0 in atlas space counts as the FAR edge
+        // only, so the surface never shrinks below the origin.
+        expect(rectExtent(sceneRects([terrain, project]))).toStrictEqual({ width: 180, height: 44 })
       })
     })
 
@@ -127,50 +105,6 @@ export default async () => {
 
       await it('clamps a small negative to the origin rather than -0', async () => {
         expect(snapToGrid(-1, 8)).toBe(0)
-      })
-    })
-
-    await describe('centeredScrollValue', async () => {
-      await it('centres the world in the viewport', async () => {
-        expect(centeredScrollValue(1000, 1200, 400)).toBe(300)
-      })
-
-      await it('clamps to the start when the world fits', async () => {
-        expect(centeredScrollValue(200, 400, 400)).toBe(0)
-      })
-
-      await it('clamps to the end of the adjustment', async () => {
-        expect(centeredScrollValue(4000, 1000, 400)).toBe(600)
-      })
-
-      await it('stays at 0 when the page is larger than the whole adjustment', async () => {
-        // Pre-allocation / tiny window: `upper - pageSize` goes negative.
-        expect(centeredScrollValue(4000, 300, 400)).toBe(0)
-      })
-
-      await it('stays at 0 before the first allocation (page size 0)', async () => {
-        expect(centeredScrollValue(4000, 0, 0)).toBe(0)
-      })
-    })
-
-    await describe('clampPreviewZoom', async () => {
-      await it('passes a sane zoom through', async () => {
-        expect(clampPreviewZoom(2)).toBe(2)
-      })
-
-      await it('clamps both ends', async () => {
-        expect(clampPreviewZoom(0.1)).toBe(0.5)
-        expect(clampPreviewZoom(99)).toBe(6)
-      })
-
-      await it('keeps the bounds themselves', async () => {
-        expect(clampPreviewZoom(0.5)).toBe(0.5)
-        expect(clampPreviewZoom(6)).toBe(6)
-      })
-
-      await it('clamps a zero or negative zoom to the minimum', async () => {
-        expect(clampPreviewZoom(0)).toBe(0.5)
-        expect(clampPreviewZoom(-2)).toBe(0.5)
       })
     })
   })

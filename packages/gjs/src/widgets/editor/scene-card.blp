@@ -8,54 +8,41 @@ template $PixelRpgSceneCard : Gtk.Button {
     orientation: vertical;
     spacing: 4;
 
-    // Free-floating title row — no header bar, no background. The
-    // teleport overlay compensates for its height via
-    // `TITLE_BAR_HEIGHT` (teleport-overlay.ts).
+    // Free-floating title ABOVE the map body and centred over it — no
+    // header bar, no background. It is part of the card's allocation,
+    // so the atlas camera measures it to place the body
+    // (`SceneCard.bodyOffsetY`).
     Gtk.Box title_row {
       orientation: horizontal;
-      spacing: 6;
+      spacing: 4;
+      halign: center;
       styles ["scene-card-title"]
+
+      Gtk.Image start_badge {
+        icon-name: "media-playback-start-symbolic";
+        pixel-size: 12;
+        visible: bind template.start-map;
+        tooltip-text: _("The game starts on this map");
+        styles ["scene-card-start-badge"]
+      }
 
       Gtk.Label name_label {
         label: bind template.scene-name;
-        halign: start;
-        hexpand: true;
         ellipsize: end;
+        max-width-chars: 22;
         styles ["caption-heading"]
-      }
-
-      Gtk.Label size_label {
-        label: bind template.size-text;
-        halign: end;
-        styles ["caption", "dim-label", "numeric"]
       }
     }
 
-    Gtk.Overlay overlay {
-      child: Gtk.Box body {
-        orientation: vertical;
-        overflow: hidden;
-        styles ["scene-card-frame"]
+    // The whole map, scaled to the atlas zoom. The camera sizes this
+    // slot; its child (a `MiniMap` or a host-provided `MapPreview`)
+    // fills it.
+    Adw.Bin preview_slot {
+      halign: center;
+      overflow: hidden;
+      styles ["scene-card-frame"]
 
-        Adw.Bin preview_slot {
-          child: $PixelRpgMiniMap map {};
-        }
-      };
-
-      // Viewport lock: closed = dragging moves the card on the atlas
-      // (default); open = dragging pans the map section inside it.
-      // Only shown for viewport previews (real projects).
-      [overlay]
-      Gtk.ToggleButton lock_button {
-        icon-name: "changes-prevent-symbolic";
-        halign: end;
-        valign: start;
-        margin-top: 4;
-        margin-end: 4;
-        visible: bind template.viewport-lockable;
-        tooltip-text: _("Unlock to pan the preview section");
-        styles ["scene-card-lock", "osd", "flat"]
-      }
+      child: $PixelRpgMiniMap map {};
     }
   };
 }

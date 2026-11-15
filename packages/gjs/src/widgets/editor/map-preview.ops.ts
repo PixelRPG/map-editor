@@ -8,7 +8,6 @@ import type Gdk from '@girs/gdk-4.0'
 import { isLayerDataVisible, type MapData } from '@pixelrpg/engine'
 
 import type { GdkSpriteSheet } from '../../sprite/objects/GdkSpriteSheet'
-import { type MapRect, tileIntersectsClip } from './map-preview.geometry.ts'
 
 /** One tile of a bake: where to read from the atlas and where to put it. */
 export interface DrawOp {
@@ -57,7 +56,7 @@ function resolveSpriteByLocalId(
 }
 
 /**
- * Build the per-tile draw ops for a map, optionally clipped to a map-px rect.
+ * Build the per-tile draw ops for a map.
  *
  * Layer visibility goes through the engine's `isLayerDataVisible`, not a
  * local truthiness test: a descriptor with no `visible` key is VISIBLE,
@@ -65,14 +64,13 @@ function resolveSpriteByLocalId(
  * the engine rendered it. `fingerprintMapData` must use the same
  * predicate — it is the cache key for what this function bakes.
  */
-export function buildDrawOps(mapData: MapData, ranges: readonly SheetRange[], clip: MapRect | null): DrawOp[] {
+export function buildDrawOps(mapData: MapData, ranges: readonly SheetRange[]): DrawOp[] {
   const ops: DrawOp[] = []
   for (const layer of mapData.layers ?? []) {
     if (!isLayerDataVisible(layer) || !layer.sprites) continue
     for (const tile of layer.sprites) {
       const tx = tile.x * mapData.tileWidth
       const ty = tile.y * mapData.tileHeight
-      if (clip && !tileIntersectsClip(tx, ty, mapData.tileWidth, mapData.tileHeight, clip)) continue
       const resolved = resolveSpriteByLocalId(ranges, tile.spriteSetId, tile.spriteId)
       if (!resolved) continue
       ops.push({

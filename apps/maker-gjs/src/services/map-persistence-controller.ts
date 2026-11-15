@@ -1,9 +1,8 @@
 import { type MapEditorData, type MapResource, MapFormat } from '@pixelrpg/engine'
-import type { SampleScene } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import { writeTextFile } from './file-io.ts'
-import { withAtlasPosition, withPreviewViewport } from './map-editor-data.ts'
+import { withAtlasPosition } from './map-editor-data.ts'
 
 /**
  * What the controller needs from its host (the {@link ApplicationWindow}),
@@ -13,8 +12,6 @@ import { withAtlasPosition, withPreviewViewport } from './map-editor-data.ts'
 export interface MapPersistenceHost {
   /** Resolve a loaded map's resource by id, or `null` when not loaded. */
   getMapResource(mapId: string): MapResource | null
-  /** The in-memory atlas/preview scene mirror for a map, or `null`. */
-  getScene(mapId: string): SampleScene | null
   /** Id of the map currently open in the scene editor, or `null`. */
   getCurrentSceneId(): string | null
   /** Surface a best-effort-failure message to the user (a toast). */
@@ -30,8 +27,8 @@ export interface MapPersistenceHost {
 
 /**
  * Owns the maker's map-file persistence — serialising a `MapData` back to
- * its source JSON and the editor-data (atlas position / preview viewport)
- * writes that ride alongside. Extracted out of the `ApplicationWindow`
+ * its source JSON and the editor-data (atlas position) writes that ride
+ * alongside. Extracted out of the `ApplicationWindow`
  * god-object so the window stays a thin coordinator (ApplicationWindow
  * split, step 2). All writes are best-effort: a failure toasts but the
  * in-memory mutation stays, so the user keeps seeing their change.
@@ -64,26 +61,6 @@ export class MapPersistenceController {
     mapResource.mapData.editorData = withAtlasPosition(mapResource.mapData.editorData, atlasX, atlasY)
     this.persistMap(mapId, _('Could not save map position'))
     this.host.sendMapEditorDataChange(mapId, { atlasX, atlasY })
-  }
-
-  /**
-   * Persist the preview-viewport centre the user just panned on an atlas
-   * card. Same flow as {@link persistAtlasPosition} plus an update to the
-   * in-memory `SampleScene` mirror so the viewport stays stable when the
-   * atlas re-renders (e.g. after a card move).
-   */
-  persistPreviewViewport(mapId: string, tileX: number, tileY: number): void {
-    const mapResource = this.host.getMapResource(mapId)
-    if (!mapResource?.mapData) return
-    const editorData = withPreviewViewport(mapResource.mapData.editorData, tileX, tileY)
-    mapResource.mapData.editorData = editorData
-    const scene = this.host.getScene(mapId)
-    if (scene) {
-      scene.previewTileX = tileX
-      scene.previewTileY = tileY
-    }
-    this.persistMap(mapId, _('Could not save preview section'))
-    this.host.sendMapEditorDataChange(mapId, { preview: editorData.preview })
   }
 
   /**

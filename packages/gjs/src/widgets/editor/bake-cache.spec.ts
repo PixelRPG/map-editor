@@ -80,25 +80,19 @@ export default async () => {
 
   await describe('buildCacheKey', async () => {
     await it('returns null for a null base (not cacheable)', async () => {
-      expect(buildCacheKey(null, null)).toBe(null)
-      expect(buildCacheKey(null, { centerX: 1, centerY: 2, zoom: 3 })).toBe(null)
+      expect(buildCacheKey(null)).toBe(null)
     })
 
-    await it('keys on the base alone when there is no viewport', async () => {
-      expect(buildCacheKey('path:/p', null)).toBe('path:/p')
+    await it('keys on the base verbatim', async () => {
+      expect(buildCacheKey('path:/p')).toBe('path:/p')
+      expect(buildCacheKey('map:/p:m1:fp')).toBe('map:/p:m1:fp')
     })
 
-    await it('appends a rounded viewport suffix', async () => {
-      expect(buildCacheKey('map:/p:m1:fp', { centerX: 100, centerY: 200, zoom: 3 })).toBe('map:/p:m1:fp:vp:3:100:200')
-    })
-
-    await it('rounds the centre so nearby pans collapse to the same key', async () => {
-      expect(buildCacheKey('b', { centerX: 12.4, centerY: 0, zoom: 2 })).toBe('b:vp:2:12:0')
-      expect(buildCacheKey('b', { centerX: 12.6, centerY: 0, zoom: 2 })).toBe('b:vp:2:13:0')
-    })
-
-    await it('rounds negative centres', async () => {
-      expect(buildCacheKey('b', { centerX: -8.5, centerY: -0.4, zoom: 1 })).toBe('b:vp:1:-8:0')
+    await it('treats an empty base as not cacheable', async () => {
+      // A base is built by string interpolation, so "" is the shape an
+      // unresolved project path takes — caching every such preview under
+      // one key would cross-serve thumbnails between projects.
+      expect(buildCacheKey('')).toBe(null)
     })
   })
 }

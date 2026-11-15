@@ -37,26 +37,15 @@ export class BakeCache<V> {
   }
 }
 
-/** A bake's cache-key viewport component (map-pixel centre + native-pixel zoom). */
-export interface CacheKeyViewport {
-  centerX: number
-  centerY: number
-  zoom: number
-}
-
 /**
  * Build a bake's cache key from its stable base (`path:<project>` or
- * `map:<project>:<id>:<fingerprint>`) and the optional viewport. A `null`
- * base means "not cacheable" → `null`; no viewport (fit-whole-map mode)
- * keys on the base alone.
+ * `map:<project>:<id>:<fingerprint>`). A `null` base means "not
+ * cacheable" → `null`.
  *
- * The centre is rounded to the nearest pixel so two nearby pan centres
- * collapse to the SAME key (a cache hit instead of a redundant re-bake);
- * `zoom` rides verbatim.
+ * A bake covers the whole map at a capped edge length, so the content
+ * fingerprint in the base is the whole key: the size a host happens to
+ * draw it at never changes what was rasterised.
  */
-export function buildCacheKey(base: string | null, viewport: CacheKeyViewport | null): string | null {
-  if (!base) return null
-  if (!viewport) return base
-  const { zoom, centerX, centerY } = viewport
-  return `${base}:vp:${zoom}:${Math.round(centerX)}:${Math.round(centerY)}`
+export function buildCacheKey(base: string | null): string | null {
+  return base || null
 }

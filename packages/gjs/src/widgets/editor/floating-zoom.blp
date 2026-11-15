@@ -8,7 +8,10 @@ template $PixelRpgFloatingZoom : Adw.Bin {
   // WindowHandle wrap — pill padding + the cursor label area pick
   // up window-drag gestures.
   Gtk.WindowHandle {
-  child: Gtk.Box {
+  // The "toolbar"/"osd" pill classes are removed in code when
+  // `compact` turns on — the phone layout draws the pill on the single
+  // circular Fit button instead.
+  child: Gtk.Box osd_box {
     orientation: horizontal;
     spacing: 2;
     styles ["toolbar", "osd"]
@@ -17,12 +20,14 @@ template $PixelRpgFloatingZoom : Adw.Bin {
       icon-name: "zoom-out-symbolic";
       action-name: "win.zoom-out";
       tooltip-text: _("Zoom out");
+      visible: bind template.compact inverted;
       styles ["flat"]
     }
 
     Gtk.Button zoom_reset_button {
       action-name: "win.zoom-reset";
       tooltip-text: _("Reset zoom");
+      visible: bind template.compact inverted;
       styles ["flat"]
 
       // Inscription, NOT Label — same flicker fix as cursor_label
@@ -44,6 +49,7 @@ template $PixelRpgFloatingZoom : Adw.Bin {
       icon-name: "zoom-in-symbolic";
       action-name: "win.zoom-in";
       tooltip-text: _("Zoom in");
+      visible: bind template.compact inverted;
       styles ["flat"]
     }
 
@@ -51,15 +57,30 @@ template $PixelRpgFloatingZoom : Adw.Bin {
     // turns this on via `show-fit`; the scene editor leaves it hidden).
     Gtk.Separator fit_separator {
       orientation: vertical;
-      visible: bind template.show-fit;
+      visible: bind template.show-fit-wide;
     }
 
     Gtk.Button fit_button {
       label: _("Fit");
       action-name: "win.atlas-fit";
       tooltip-text: _("Fit all maps in view");
-      visible: bind template.show-fit;
+      visible: bind template.show-fit-wide;
       styles ["flat"]
+    }
+
+    // Phone: the whole OSD is this one 44 px round button (§ 4.2).
+    Gtk.Button fit_compact_button {
+      icon-name: "zoom-fit-best-symbolic";
+      action-name: "win.atlas-fit";
+      tooltip-text: _("Fit all maps in view");
+      visible: bind template.show-fit-compact;
+      width-request: 44;
+      height-request: 44;
+      styles ["osd", "circular"]
+
+      accessibility {
+        label: _("Fit all maps in view");
+      }
     }
 
     Gtk.Separator {

@@ -28,8 +28,6 @@ export declare const InternalChildren: [
   "name_label",
   "subtitle_label",
   "stats_grid",
-  "lock_group",
-  "lock_row",
   "teleports_group",
   "map_group",
   "open_button",
@@ -44,8 +42,6 @@ export interface Children {
   _name_label: Gtk.Label;
   _subtitle_label: Gtk.Label;
   _stats_grid: Gtk.Grid;
-  _lock_group: Adw.PreferencesGroup;
-  _lock_row: Adw.SwitchRow;
   _teleports_group: Adw.PreferencesGroup;
   _map_group: Adw.PreferencesGroup;
   _open_button: Gtk.Button;
