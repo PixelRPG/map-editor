@@ -14,6 +14,7 @@ import {
   type SampleTeleport,
   SceneInspector,
   SignalScope,
+  worldFitsViewport,
 } from '@pixelrpg/gjs'
 
 import { loadAtlasCamera, saveAtlasCamera } from '../services/atlas-camera-store.ts'
@@ -125,8 +126,11 @@ export class AtlasView extends ResponsiveEditorView {
     // A world that already fits the canvas needs no map of itself, and
     // on phone widths the OSD would eat a third of the canvas
     // (REDESIGN.md § 4.2) — there the pinch gesture is the only camera.
-    const larger = vp.w < width || vp.h < height
-    this._overview_frame.set_visible(larger && !this.compact)
+    // The test is the cards' own bounding box against the viewport, not
+    // the surface: the surface always carries padding on every side, so
+    // measuring it would keep the minimap up for every world there is.
+    const fits = worldFitsViewport(this._atlas.sceneRects(), { w: vp.w, h: vp.h })
+    this._overview_frame.set_visible(!fits && !this.compact)
   }
 
   /**
@@ -179,12 +183,17 @@ export class AtlasView extends ResponsiveEditorView {
    * on the same view. No-op for the demo world and while the canvas has
    * no allocation yet (a zero-sized viewport would persist a camera the
    * user never chose).
+   *
+   * An untouched, still-fitted atlas is stored as `null`, which forgets
+   * any earlier entry: a fit is only valid for the window size it was
+   * computed at, so the next session should re-fit rather than restore a
+   * zoom that no longer fills the window.
    */
   private _saveCamera(): void {
     if (!this._projectPath) return
     const { h } = this._atlas.adjustments
     if (h.page_size <= 0) return
-    saveAtlasCamera(this._projectPath, this._atlas.camera)
+    saveAtlasCamera(this._projectPath, this._atlas.isFitted ? null : this._atlas.camera)
   }
 
   /**
@@ -207,7 +216,9 @@ export class AtlasView extends ResponsiveEditorView {
     // of the same project resumes from where the user actually was
     // rather than from a clamped intermediate.
     const sameProject = projectPath !== null && this._projectPath === projectPath
-    const current = this._atlas.camera
+    // A still-fitted camera is not worth resuming — re-fitting also
+    // takes the new map into account, which a restore would crop out.
+    const current = this._atlas.isFitted ? null : this._atlas.camera
     this._scenes = scenes
     this._teleports = teleports
     this._projectResource = projectResource
