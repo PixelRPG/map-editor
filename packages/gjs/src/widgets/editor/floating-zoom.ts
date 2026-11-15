@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
+import type Gtk from '@girs/gtk-4.0'
 
 import Template from './floating-zoom.blp'
 
@@ -17,6 +18,9 @@ export class FloatingZoom extends Adw.Bin {
   private _cursorX: number | null = null
   private _cursorY: number | null = null
   private _showFit = false
+  private _compact = false
+
+  declare _osd_box: Gtk.Box
 
   static {
     GObject.registerClass(
@@ -52,7 +56,29 @@ export class FloatingZoom extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          compact: GObject.ParamSpec.boolean(
+            'compact',
+            'Compact',
+            'Phone layout: a single circular Fit button, no zoom steps',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          'show-fit-wide': GObject.ParamSpec.boolean(
+            'show-fit-wide',
+            'Show Fit Wide',
+            'Whether the labelled Fit button is visible',
+            GObject.ParamFlags.READABLE,
+            false,
+          ),
+          'show-fit-compact': GObject.ParamSpec.boolean(
+            'show-fit-compact',
+            'Show Fit Compact',
+            'Whether the circular Fit button is visible',
+            GObject.ParamFlags.READABLE,
+            false,
+          ),
         },
+        InternalChildren: ['osd_box'],
       },
       FloatingZoom,
     )
@@ -107,6 +133,42 @@ export class FloatingZoom extends Adw.Bin {
     if (this._showFit === value) return
     this._showFit = value
     this.notify('show-fit')
+    this._notifyFitVariants()
+  }
+
+  get compact(): boolean {
+    return this._compact ?? false
+  }
+
+  /**
+   * Phone layout (REDESIGN.md § 4.2): pinch is the zoom, so the steps
+   * and the percentage go away and only "Fit" is left — as a 44 px
+   * circular button. The pill styling moves from the box onto that
+   * button, otherwise a toolbar pill would be drawn around a single
+   * round button.
+   */
+  set compact(value: boolean) {
+    if (this._compact === value) return
+    this._compact = value
+    for (const cls of ['toolbar', 'osd']) {
+      if (value) this._osd_box.remove_css_class(cls)
+      else this._osd_box.add_css_class(cls)
+    }
+    this.notify('compact')
+    this._notifyFitVariants()
+  }
+
+  get showFitWide(): boolean {
+    return this.showFit && !this.compact
+  }
+
+  get showFitCompact(): boolean {
+    return this.showFit && this.compact
+  }
+
+  private _notifyFitVariants(): void {
+    this.notify('show-fit-wide')
+    this.notify('show-fit-compact')
   }
 }
 
