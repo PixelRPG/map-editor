@@ -166,10 +166,6 @@ Conventions:
   `_installActions` (~110 lines of context objects) belongs in `src/actions/`, which now owns the
   registry and the declared action table. Deferred rather than rushed: the move hands a ~40-member
   context interface across a new seam. *owner: maker*
-- **`TeleportOverlay` does not scale its title-bar offset** — `teleportEndpoint` scales the scene
-  position by `scale` but adds `TITLE_BAR_HEIGHT` unscaled, so any scale other than 1 puts every
-  teleport marker off its tile. Unobservable today because `AtlasCanvas` always passes 1. Pinned by
-  a spec in `teleport-overlay.geometry.spec.ts` that says so. *owner: gjs*
 - **`Engine.captureCanvasPng` holds a render handler + timer through teardown** — its release path
   is the `setTimeout`, so a widget destroyed mid-capture keeps both for up to `timeoutMs`. Bounded
   and harmless; annotated with `// deferred-disconnect:` rather than fixed. *owner: gjs*
