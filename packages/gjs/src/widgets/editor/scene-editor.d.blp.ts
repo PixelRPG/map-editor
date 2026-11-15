@@ -49,6 +49,8 @@ export declare const InternalChildren: [
   "overflow_button",
   "inspector_toggle",
   "window_controls",
+  "pick_banner",
+  "pick_cancel",
   "history_pill",
   "phone_undo",
   "phone_redo",
@@ -101,6 +103,8 @@ export interface Children {
   _overflow_button: Gtk.MenuButton;
   _inspector_toggle: Gtk.ToggleButton;
   _window_controls: Gtk.WindowControls;
+  _pick_banner: Gtk.Box;
+  _pick_cancel: Gtk.Button;
   _history_pill: Gtk.Box;
   _phone_undo: Gtk.Button;
   _phone_redo: Gtk.Button;

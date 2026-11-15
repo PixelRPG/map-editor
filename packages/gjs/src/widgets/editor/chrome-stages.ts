@@ -145,6 +145,8 @@ export interface ChromeFlags {
   playFab: boolean
   /** The docked bottom bar. */
   bottomBar: boolean
+  /** "Tap where the hero arrives · Cancel" — the only chrome a pick leaves (§6.2). */
+  pickBanner: boolean
 }
 
 /** The 12 px margin each pill sits inside, plus the gap S1 asks to keep between them. */
@@ -201,10 +203,27 @@ export function effectiveStage(proposed: ChromeStage, canvasPx: number, contextP
  * present — needs a second entry point and an engine that holds both;
  * neither exists yet, and showing a pill whose tools the engine has
  * switched off would be the worse half of the two (TODO.md).
+ *
+ * `picking` is §6.2's pick mode: the target map is open and waiting for
+ * the one tap that says where the hero arrives. It takes the editing
+ * affordances away exactly as `playing` does, and both run entry points
+ * with them — what is left is the banner, whose Cancel is the way out.
+ * The tap is already exclusive engine-side (`consumePendingArrivalPick`
+ * runs ahead of the tool lookup in `applyClick`), so this is what makes
+ * "all tools replaced by one tap" *visible* rather than only true; a
+ * pencil still on screen while every stroke teleports instead would be
+ * the worse half of the two. It defaults to `false` so the ladder's own
+ * measurement pass (`measureEditingPillWidths`) and every rule about
+ * widths keep reading the editing chrome, which is the only state whose
+ * pills have a width worth measuring.
+ *
+ * Mutually exclusive with `playing` by construction, not by a rule here:
+ * a pick is only ever armed from editing chrome, and this takes the
+ * Play FAB away for as long as one is out.
  */
-export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: boolean): ChromeFlags {
+export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: boolean, picking = false): ChromeFlags {
   const phone = layout === 'phone'
-  const editing = !playing
+  const editing = !playing && !picking
   // Phone hands the run the whole screen; wide keeps the context pill
   // and the FAB, whose own icon becomes Stop.
   const phoneRun = phone && playing
@@ -225,11 +244,15 @@ export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: b
     toolsArePhoneSet: phone,
     badgeLabel: !phone && editing && rank >= CHROME_STAGES.indexOf('normal-2'),
     inspectorToggle: !phone && editing,
-    overflowButton: !phoneRun,
+    // Both run entry points go while a pick is out: starting a run from
+    // the target map would leave the pick armed behind a runtime that
+    // ignores it, and the banner says the next tap means one thing.
+    overflowButton: !phoneRun && !picking,
     stopButton: phoneRun,
     restartButton: playing,
     runBorder: !phone && playing,
-    playFab: !phoneRun,
+    playFab: !phoneRun && !picking,
     bottomBar: phone && editing,
+    pickBanner: picking,
   }
 }
