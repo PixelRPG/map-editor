@@ -707,7 +707,10 @@ export class SceneEditor extends Adw.Bin {
     const view = new Gio.Menu()
     view.append(_('Show grid'), 'win.toggle-grid')
     view.append(_('Dim other layers'), 'win.toggle-transparency')
-    if (this._fullView) view.append(_('Show objects'), 'win.toggle-objects')
+    // Ungated by the tier: the Layers page no longer carries a Things
+    // row, so this is the ONLY way to get hidden Things back — a Simple
+    // view that hid the item would hide the things with it.
+    view.append(_('Show Things'), 'win.toggle-objects')
     root.append_section(null, view)
 
     const zoom = new Gio.Menu()
