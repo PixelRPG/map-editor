@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
+import type GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { DepthGlyph } from './depth-glyph'
@@ -18,11 +19,17 @@ GObject.type_ensure(DepthGlyph.$gtype)
  * Owns no rows and no signals of its own: {@link LayersPage} fills the
  * list, wires selection across the three sections and installs the
  * drop target. `plane` / `title` / `subtitle` are template-bound.
+ *
+ * Carries one command of its own, an "Add a layer" button row below the
+ * list — the plane a new layer lands on is the section it was asked
+ * from, so the button cannot live once at the bottom of the page.
  */
 export class LayerSection extends Adw.Bin {
   declare _glyph: DepthGlyph
   declare _list: Gtk.ListBox
   declare _empty_label: Gtk.Label
+  declare _add_list: Gtk.ListBox
+  declare _add_row: Adw.ButtonRow
 
   private _plane = 'ground'
   private _title = ''
@@ -33,7 +40,7 @@ export class LayerSection extends Adw.Bin {
       {
         GTypeName: 'PixelRpgLayerSection',
         Template,
-        InternalChildren: ['glyph', 'list', 'empty_label'],
+        InternalChildren: ['glyph', 'list', 'empty_label', 'add_list', 'add_row'],
         Properties: {
           plane: GObject.ParamSpec.string(
             'plane',
@@ -105,6 +112,20 @@ export class LayerSection extends Adw.Bin {
   /** The hero sprite shown in the header glyph (`null` = silhouette). */
   set heroPaintable(value: Gdk.Paintable | null) {
     this._glyph.heroPaintable = value
+  }
+
+  /**
+   * The plane to hand `win.new-layer`, as the action's target — or
+   * `null` to take the "Add a layer" row away, which is what Simple
+   * view does (one row at the bottom of the page instead of three).
+   *
+   * One setter for the target AND the visibility: a `boxed-list` draws
+   * its frame even with no visible row, so the wrapper has to follow
+   * the row, and two separate calls could disagree.
+   */
+  set addTarget(value: GLib.Variant | null) {
+    if (value) this._add_row.set_action_target_value(value)
+    this._add_list.set_visible(value !== null)
   }
 }
 

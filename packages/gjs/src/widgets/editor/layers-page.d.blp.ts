@@ -1,15 +1,16 @@
 // GENERATED from layers-page.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgLayersPage` defines. */
-export declare const GTypeName: 'PixelRpgLayersPage';
+export declare const GTypeName: "PixelRpgLayersPage";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -22,18 +23,18 @@ export declare const GTypeName: 'PixelRpgLayersPage';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'section_overlay',
-    'section_hero',
-    'section_ground',
-    'new_layer_button',
-    'objects_list',
+  "section_overlay",
+  "section_hero",
+  "section_ground",
+  "simple_add_list",
+  "simple_add_row",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _section_overlay: GObject.Object;
-    _section_hero: GObject.Object;
-    _section_ground: GObject.Object;
-    _new_layer_button: Gtk.Button;
-    _objects_list: Gtk.ListBox;
+  _section_overlay: GObject.Object;
+  _section_hero: GObject.Object;
+  _section_ground: GObject.Object;
+  _simple_add_list: Gtk.ListBox;
+  _simple_add_row: Adw.ButtonRow;
 }

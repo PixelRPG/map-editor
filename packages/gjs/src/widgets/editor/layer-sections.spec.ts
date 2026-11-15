@@ -9,7 +9,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import type { LayerPlane } from '@pixelrpg/engine'
-import { layersInSection, planeOf, resolveLayerDrop, SECTION_PLANES } from './layer-sections.ts'
+import { layersInSection, planeOf, resolveLayerDrop, resolveLayerNudge, SECTION_PLANES } from './layer-sections.ts'
 
 const layer = (id: string, plane?: LayerPlane) => ({ id, ...(plane ? { plane } : {}) })
 
@@ -78,6 +78,37 @@ export default async () => {
     await it('is null for an unknown dragged layer or anchor', async () => {
       expect(resolveLayerDrop(layers, 'ghost', 'ground', null)).toBe(null)
       expect(resolveLayerDrop(layers, 'bg', 'ground', { layerId: 'ghost', position: 'above' })).toBe(null)
+    })
+  })
+
+  await describe('resolveLayerNudge', async () => {
+    await it('"up" puts the layer above its sibling, i.e. later in the array', async () => {
+      // bg is the ground section's bottom row; up swaps it with paths.
+      expect(resolveLayerNudge(layers, 'bg', 'up')).toStrictEqual({ plane: 'ground', index: 1 })
+    })
+
+    await it('"down" puts the layer under its sibling, i.e. earlier in the array', async () => {
+      expect(resolveLayerNudge(layers, 'paths', 'down')).toStrictEqual({ plane: 'ground', index: 0 })
+    })
+
+    await it('is null at either end of the section', async () => {
+      expect(resolveLayerNudge(layers, 'paths', 'up')).toBe(null)
+      expect(resolveLayerNudge(layers, 'bg', 'down')).toBe(null)
+    })
+
+    await it('is null for the only layer of its plane — a nudge never leaves the section', async () => {
+      expect(resolveLayerNudge(layers, 'rocks', 'up')).toBe(null)
+      expect(resolveLayerNudge(layers, 'rocks', 'down')).toBe(null)
+    })
+
+    await it('skips layers of other planes rather than counting array neighbours', async () => {
+      // paths' array neighbour is rocks (hero); its SECTION neighbour is bg.
+      const stacked = [layer('bg', 'ground'), layer('rocks', 'hero'), layer('paths', 'ground')]
+      expect(resolveLayerNudge(stacked, 'paths', 'down')).toStrictEqual({ plane: 'ground', index: 0 })
+    })
+
+    await it('is null for an unknown layer', async () => {
+      expect(resolveLayerNudge(layers, 'ghost', 'up')).toBe(null)
     })
   })
 }

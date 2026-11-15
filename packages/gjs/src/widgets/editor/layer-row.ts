@@ -1,7 +1,8 @@
 import Adw from '@girs/adw-1'
-import type Gdk from '@girs/gdk-4.0'
+import Gdk from '@girs/gdk-4.0'
+import type Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import type { LayerPlane } from '@pixelrpg/engine'
 import { DepthGlyph } from './depth-glyph'
 
@@ -10,20 +11,36 @@ import Template from './layer-row.blp'
 GObject.type_ensure(DepthGlyph.$gtype)
 
 /**
+ * Typed view of the signals {@link LayerRow} registers, layered on the
+ * parent's own so inherited signals keep their argument lists — the
+ * same shape {@link LayersPage} uses, for the same `@girs` 5 reason.
+ */
+export interface LayerRowSignals extends Adw.Bin.SignalSignatures {
+  'rename-committed': (name: string) => void
+}
+
+/**
  * Single row in the Layers page.
  *
  * Composition: visibility toggle, depth glyph (the layer's plane), layer
- * name, tile-count caption, lock toggle. The `active` style class is
- * added when the row represents the editor's active layer.
+ * name (a label that swaps for an entry during a rename), tile-count
+ * caption, lock toggle, and a "⋯" button carrying the per-row command
+ * menu the parent installs. The `active` style class is added when the
+ * row represents the editor's active layer.
  *
- * Emits no signals of its own — state is exposed via `visible` /
- * `locked` properties (bidirectional bindings drive the toggle buttons)
- * and consumed by the parent {@link LayersPage}.
+ * Flag state is exposed via the `visible` / `locked` properties
+ * (bidirectional bindings drive the toggle buttons). The only signal is
+ * `rename-committed::<name>`: the inline rename is view state the row
+ * owns, and the committed name is the one thing the host has to turn
+ * into a command.
  */
 export class LayerRow extends Adw.Bin {
   declare _visibility_button: Gtk.ToggleButton
   declare _lock_button: Gtk.ToggleButton
   declare _glyph: DepthGlyph
+  declare _name_stack: Gtk.Stack
+  declare _name_entry: Gtk.Entry
+  declare _menu_button: Gtk.MenuButton
 
   private _layerName = ''
   private _tileCount = 0
@@ -37,7 +54,12 @@ export class LayerRow extends Adw.Bin {
       {
         GTypeName: 'PixelRpgLayerRow',
         Template,
-        InternalChildren: ['visibility_button', 'lock_button', 'glyph'],
+        InternalChildren: ['visibility_button', 'lock_button', 'glyph', 'name_stack', 'name_entry', 'menu_button'],
+        Signals: {
+          // The inline rename was confirmed with Enter. Cancelling (Esc,
+          // focus lost, an unchanged name) emits nothing.
+          'rename-committed': { param_types: [GObject.TYPE_STRING] },
+        },
         Properties: {
           'layer-name': GObject.ParamSpec.string(
             'layer-name',
@@ -110,6 +132,10 @@ export class LayerRow extends Adw.Bin {
     )
   }
 
+  declare connect: GObject.SignalMethods<this, LayerRowSignals>['connect']
+  declare connect_after: GObject.SignalMethods<this, LayerRowSignals>['connect_after']
+  declare emit: GObject.SignalMethods<this, LayerRowSignals>['emit']
+
   constructor(
     params: Partial<{
       layerName: string
@@ -127,6 +153,32 @@ export class LayerRow extends Adw.Bin {
     if (params.locked !== undefined) this.locked = params.locked
     if (params.active !== undefined) this.active = params.active
     if (params.plane !== undefined) this.plane = params.plane
+    // Both are lifetime-bound to this widget's own children and
+    // controllers — nothing external to release, so no SignalScope.
+    this._installRename()
+    this._installMenuGestures()
+  }
+
+  /**
+   * The per-row command menu, or `null` to hide the "⋯" button. The
+   * parent owns the model and the action group behind it; the row only
+   * carries them.
+   */
+  set menuModel(value: Gio.MenuModel | null) {
+    this._menu_button.set_menu_model(value)
+    this._menu_button.set_visible(value !== null)
+  }
+
+  /**
+   * Swap the name label for an entry seeded with the current name, as
+   * `Adw.EntryRow` does: `Enter` emits `rename-committed`, `Esc` or
+   * losing focus puts the label back unchanged.
+   */
+  beginRename(): void {
+    this._name_entry.set_text(this.layerName)
+    this._name_stack.set_visible_child_name('entry')
+    this._name_entry.grab_focus()
+    this._name_entry.select_region(0, -1)
   }
 
   get plane(): LayerPlane {
@@ -209,6 +261,55 @@ export class LayerRow extends Adw.Bin {
     this.notify('active')
     if (value) this.add_css_class('accent')
     else this.remove_css_class('accent')
+  }
+
+  private _installRename(): void {
+    this._name_entry.connect('activate', () => {
+      const next = this._name_entry.get_text().trim()
+      this._endRename()
+      if (next.length === 0 || next === this.layerName) return
+      this.emit('rename-committed', next)
+    })
+
+    const keys = new Gtk.EventControllerKey()
+    keys.connect('key-pressed', (_controller: Gtk.EventControllerKey, keyval: number) => {
+      if (keyval !== Gdk.KEY_Escape) return false
+      this._endRename()
+      return true
+    })
+    this._name_entry.add_controller(keys)
+
+    // Losing focus cancels rather than commits: the row is inside a
+    // list that scrolls and re-selects under a thumb, so an accidental
+    // tap elsewhere must not rename anything.
+    const focus = new Gtk.EventControllerFocus()
+    focus.connect('leave', () => this._endRename())
+    this._name_entry.add_controller(focus)
+  }
+
+  private _endRename(): void {
+    this._name_stack.set_visible_child_name('label')
+  }
+
+  /**
+   * Long-press and secondary click open the same menu the "⋯" button
+   * does. On phone the thumb lands on the row, not on a 44 px button at
+   * its end; on desktop right-click is the reflex. Both are additions —
+   * the button stays the discoverable path.
+   */
+  private _installMenuGestures(): void {
+    const longPress = new Gtk.GestureLongPress()
+    longPress.connect('pressed', () => this._popupMenu())
+    this.add_controller(longPress)
+
+    const secondary = new Gtk.GestureClick({ button: Gdk.BUTTON_SECONDARY })
+    secondary.connect('pressed', () => this._popupMenu())
+    this.add_controller(secondary)
+  }
+
+  private _popupMenu(): void {
+    if (!this._menu_button.get_visible()) return
+    this._menu_button.popup()
   }
 }
 
