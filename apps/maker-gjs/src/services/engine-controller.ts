@@ -13,6 +13,7 @@ type ShowTextPayload = EngineEventMap[EngineEvent.SHOW_TEXT_REQUESTED]
 type ItemPickedUpPayload = EngineEventMap[EngineEvent.ITEM_PICKED_UP]
 type FlagSetPayload = EngineEventMap[EngineEvent.FLAG_SET]
 type PlaySfxPayload = EngineEventMap[EngineEvent.PLAY_SFX_REQUESTED]
+type MapLoadedPayload = EngineEventMap[EngineEvent.MAP_LOADED]
 
 /**
  * Slot the engine widget gets attached to once it's been (re)created.
@@ -88,6 +89,16 @@ export interface EngineControllerEvents {
    */
   'pointer-tile-changed': { sceneId: string; tileX: number; tileY: number }
   /**
+   * The engine swapped to a different map. The host opens maps itself,
+   * so the only sender this actually matters for is a teleport taken
+   * mid-run: the engine walks the hero through a door and loads the
+   * destination without the window asking, leaving the scene pill, the
+   * header title and the inspector describing the room the player just
+   * left. The host follows the engine's map rather than the other way
+   * round — see `SceneNavigator.followEngineMap`.
+   */
+  'map-loaded': MapLoadedPayload
+  /**
    * Runtime event-script effects (playtest). The engine's
    * `EventActionSystem` emits these when a trigger fires; the host
    * surfaces them as toasts today. A real in-game dialogue box (show
@@ -117,6 +128,7 @@ export const ENGINE_HOOKS = [
   'layer-flag',
   'layer-list',
   'pointer-tile',
+  'map-loaded',
   'runtime-effects',
 ] as const
 
@@ -306,6 +318,7 @@ export class EngineController {
     this._attachLayerFlagHook()
     this._attachLayerListHook()
     this._attachPointerTileHook()
+    this._attachMapLoadedHook()
     this._attachRuntimeEffectHooks()
   }
 
@@ -478,6 +491,17 @@ export class EngineController {
         this._events.emit('pointer-tile-changed', payload)
       }),
     )
+  }
+
+  private _attachMapLoadedHook(): void {
+    this._attachOnce('map-loaded', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.MAP_LOADED, (payload) => {
+          this._events.emit('map-loaded', payload)
+        }),
+      )
+      return true
+    })
   }
 
   /**

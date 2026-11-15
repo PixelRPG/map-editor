@@ -99,6 +99,19 @@ The session-singleton lives **per scene** — when the user switches maps, the a
 - `RuntimeMode` is **not** restored. Switching scenes from inside Live Run drops you back into pure-editor on the new scene. If the user wants to play again, they hit "Play here" again on the new scene. Matches Mario-Maker behaviour where leaving a course always returns to edit mode.
 - `SpawnOverride` is not restored. The ghost was anchored to the previous scene's camera focus; on the new scene it makes no sense.
 
+**A teleport is the exception, in both directions.** The rules above describe a switch the *user*
+asks for from the chrome. When the hero walks through a door, `TeleportSystem` emits
+`TELEPORT_REQUESTED`, the engine turns it into `loader.teleport(…)` → `loadMap` with
+`keepRuntimeMode` and `keepZoom`, and the run continues on the destination map — so here
+`RuntimeMode` *is* carried, and the spawn comes from the teleport's target tile rather than a
+`SpawnOverride`. The window learns about it the other way round from usual: the engine announces
+the finished load with `MAP_LOADED`, `EngineController` re-emits it as `map-loaded`, and
+`SceneNavigator.followEngineMap(sceneId)` catches the chrome up — header title, scene pill,
+inspector pages and `_currentSceneId`. That path deliberately does *less* than
+`SceneNavigator.open`: there is no engine to bring up and no page to switch to, and it must not
+reset the zoom readout, since the run carried its zoom across. The window only follows while
+`Engine.isRuntimeMode()` holds, so an editor-side load stays the window's own business.
+
 The app-level source of truth lives on `Application` (the GJS `Adw.Application` singleton) — `Application._editorActive: boolean` is the bit that determines whether `EditorMode` is added when constructing each `MapScene`. The maker mutates that bit when the user enters/exits the editor entirely (e.g. closes the project).
 
 This decision is part of the broader editor architecture in [`editor-architecture.md`](editor-architecture.md) § "Migration strategy" — Phase 1's singleton lifetime + app-level state-restoration helper is the same machinery used here.
@@ -158,6 +171,7 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 - The spawn resolution prefers `SpawnOverrideComponent` when present (see `resolveSpawnTile` in `packages/engine/src/systems/player.system.ts`)
 - Entering runtime also takes over the camera (`lockCamera`): it follows the player via excalibur's `lockToActor`, then clamps the focus to the map with our own `MapBoundsCameraStrategy` (`packages/engine/src/runtime/map-bounds-camera.strategy.ts`, arithmetic in `utils/play-camera.ts`). Excalibur's `limitCameraBounds` is not usable here — it has no case for a map *smaller* than the view, where both of its branches resolve to `left + halfDrawWidth` and park a small interior room against the top-left of the window instead of centring it. `lockCamera` additionally writes `camera.pos` itself, because strategies first run on the camera's next update and the first frame of a run would otherwise be drawn wherever the editor had scrolled to.
 - A run started from `win.play-from-start` also gets a fresh zoom: `Engine.applyPlayZoom()` (arithmetic in `playZoom`, `utils/play-camera.ts`) picks the largest whole-pixel level that still shows at least 15 × 10 tiles, or the level at which a map smaller than that budget fills the window. The host calls it *before* the mode flip, because the camera clamp above reads the zoom to know how much world the view covers. `win.play` ("Play here") and `win.restart` deliberately keep the editor's zoom — see [`REDESIGN.md`](../design/ui-redesign/REDESIGN.md) § 4.6.
+- A map the engine loads by itself mid-run (a teleport) pulls the window's chrome after it through `map-loaded` → `SceneNavigator.followEngineMap` — see § Scene-switch behaviour above.
 
 **Phase 4 — Full-Run windowing (planned)**:
 - "Launch game" action opens a new `Gtk.ApplicationWindow` with a fresh engine instance (`RuntimeMode` only, no editor systems)
