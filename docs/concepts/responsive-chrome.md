@@ -549,6 +549,35 @@ is deliberate for now (the verbs stay reachable), not an oversight.
 
 ---
 
+## Connections draw above the atlas and listen through it
+
+`TeleportOverlay` is the `[overlay]` child above the canvas's
+`Gtk.Fixed`, and it is `can_target = false`: a full-size widget that
+took events would sit between every card and the pointer. So it draws,
+and `AtlasCanvas` does the listening — a `Gtk.EventControllerMotion`
+and a `Gtk.GestureClick` on the **surface**, whose coordinates are
+already the surface coordinates the overlay paints in. The canvas
+pushes three things the overlay cannot observe: the hover point, the
+zoom, and the visible region (from both scroll adjustments *and* the
+layout pass, since scrolling moves the viewport with no layout
+running).
+
+Two consequences for the tiers:
+
+- **Hover is a pointer affordance only.** A line names its far end
+  while it is hovered or while it touches the selection. Touch has no
+  hover, so on phone and tablet the selection is the only way to get
+  a label — which is why selecting a card lights its lines rather
+  than only its card.
+- **The edge chip is the touch target.** Where a line leaves the
+  viewport the overlay draws a `→ Name` chip clamped inside the
+  visible region; pressing it pans to that map and claims the
+  sequence, and the backdrop pan denies itself over a chip for the
+  same reason. The chip is a comfortable tap target at every zoom,
+  unlike the 2 px line it belongs to.
+
+---
+
 ## The scene editor's disclosure ladder
 
 Unlike the rest of the chrome — which reacts to
@@ -1140,6 +1169,8 @@ on the scene the load then replaces and vanishes silently.
 | The world view has no sidebar at any width: `SceneInspector` is deleted and a selection reveals `MapSelectionBar` instead — bottom-centre over the canvas on wide and tablet, in the window's `bottom_bar_stack` on phone (REDESIGN § 5.4 / § 9 step 5.4) | **landed** |
 | List mode: `win.map-list` (context pill's "⋯", `Ctrl+L`) swaps `surface_stack` for a `Gtk.ListBox` of maps at every width; the FAB and the selection bar survive the swap, the zoom pill and overview minimap do not (REDESIGN § 4.2 / § 9 step 5.4) | **landed** |
 | The list row's "peers present" column (REDESIGN § 4.2) | deferred, tracked in `TODO.md` |
+| Atlas connections: the overlay draws (`can_target = false`) and the canvas feeds it hover, viewport and zoom; an edge chip is the tap target that pans to an off-screen map (REDESIGN § 6.2 / § 9 step 5.6) | **landed** |
+| A label on a line without a pointer — touch reaches one only through the selection, until step 5.7's popover | deferred, tracked in `TODO.md` |
 | Deselecting a map in the world view — clicking the backdrop pans, so the bar stays up once a map has been picked | deliberate, see "The world view's selection bar" |
 
 Cross-references:
