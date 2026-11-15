@@ -8,7 +8,7 @@ import {
   sceneSubtitleText,
   sceneTileSize,
   teleportSummaries,
-} from './scene-inspector.model.ts'
+} from './map-summary.model.ts'
 
 const village: InspectedScene = { id: 'village', rows: ['....', '....'], music: 'overworld', events: 3, npcs: [1, 2] }
 const cave: InspectedScene = { id: 'cave', rows: [], cols: 20, previewRows: 10, events: 0 }
@@ -25,7 +25,7 @@ const SCENE_NAMES = [
 ]
 
 export default async () => {
-  await describe('scene-inspector.model', async () => {
+  await describe('map-summary.model', async () => {
     await describe('sceneTileSize', async () => {
       await it('measures a terrain scene from its rows', async () => {
         expect(sceneTileSize(village)).toStrictEqual({ cols: 4, rows: 2 })

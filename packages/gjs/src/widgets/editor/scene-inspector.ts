@@ -5,13 +5,7 @@ import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import { MapPreview } from './map-preview'
 import { MiniMap } from './mini-map'
-import {
-  previewTilePx,
-  sceneStats,
-  sceneSubtitleText,
-  sceneTileSize,
-  teleportSummaries,
-} from './scene-inspector.model.ts'
+import { previewTilePx, sceneStats, sceneSubtitleText, sceneTileSize, teleportSummaries } from './map-summary.model.ts'
 
 import Template from './scene-inspector.blp'
 
