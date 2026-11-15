@@ -1,14 +1,7 @@
 import Gtk from '@girs/gtk-4.0'
-import { EDITOR_CONSTANTS } from '@pixelrpg/engine'
+import { EDITOR_CONSTANTS, snapZoomToWholePixel, type ZoomRange } from '@pixelrpg/engine'
 
-import {
-  beginTwoFinger,
-  snapZoomToWholePixel,
-  stepTwoFinger,
-  twoFingerDidMove,
-  type TwoFingerState,
-  type ZoomRange,
-} from './touch-gesture.ts'
+import { beginTwoFinger, stepTwoFinger, twoFingerDidMove, type TwoFingerState } from './touch-gesture.ts'
 
 /** What the gesture needs from the engine widget that owns it. */
 export interface PinchZoomHost {

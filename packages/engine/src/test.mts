@@ -86,6 +86,7 @@ import playCameraSuite from './utils/play-camera.spec.js'
 import playerInputSuite from './utils/player-input.spec.js'
 import spriteSetUtilsSuite from './utils/sprite-set.utils.spec.js'
 import subscriptionRegistrySuite from './utils/subscription-registry.spec.js'
+import zoomSuite from './utils/zoom.spec.js'
 
 run({
   registrySuite,
@@ -163,4 +164,5 @@ run({
   playerInputSuite,
   spriteSetUtilsSuite,
   subscriptionRegistrySuite,
+  zoomSuite,
 })
