@@ -9,6 +9,7 @@ import {
   buildAgentMapData,
   createMapEditorDataOp,
   type EditorTool,
+  isLayerPlane,
   type SpriteSetData,
 } from '@pixelrpg/engine'
 import { type CollaboratorEntry, Engine, SignalScope } from '@pixelrpg/gjs'
@@ -534,6 +535,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._mapPersistCtl.persistCurrentMap()
     })
 
+    // A layer was deleted from its row menu. REDESIGN § 6.3 asks nothing
+    // first and answers afterwards instead, so the toast carrying Undo
+    // IS the confirmation — and the window owns the toast surface.
+    this.signals.connect(this._scene_editor_view, 'layer-deleted', (_v: unknown, name: string) => {
+      const toast = new Adw.Toast({ title: _('Deleted “%s”').replace('%s', name), buttonLabel: _('Undo') })
+      toast.connect('button-clicked', () => this.activate_action('win.undo', null))
+      this._toast_overlay.add_toast(toast)
+    })
+
     this._ensureControllers()
 
     // Welcome view ↔ session bridge. The window owns the coordinator (it
@@ -750,7 +760,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       deletePlacement: () => this._scene_editor_view.deleteSelectedPlacement(),
       undo: () => this._engineCtl.engine?.undo(),
       redo: () => this._engineCtl.engine?.redo(),
-      createLayer: () => this._createLayer(),
+      createLayer: (plane) => this._createLayer(plane),
     })
 
     const { objects, grid, transparency } = installInspectorActions(group, {
@@ -762,7 +772,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       showGridDefault: this._editorDefaults.showGrid,
       showSheetPage: (name) => this._scene_editor_view.showSheetPage(name),
       setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
-      setViewObjectsVisible: (visible) => this._scene_editor_view.setObjectsVisible(visible),
       setEngineShowGrid: (showGrid) => this._engineCtl.engine?.setShowGrid(showGrid),
       setEngineDimInactiveLayers: (dim) => this._engineCtl.engine?.setDimInactiveLayers(dim),
     })
@@ -986,21 +995,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * `win.new-layer` — append a fresh empty layer, in the plane of the
-   * active layer, to the active scene's map through the engine's
-   * undoable + collab-synced `AddLayerCommand`. The command's
-   * `LAYER_LIST_CHANGED` re-reads the Layers page; this only selects the
-   * new layer and persists. The engine mutates the shared project
-   * `MapResource`, so both see the new layer.
+   * `win.new-layer(plane)` — append a fresh empty layer to the active
+   * scene's map through the engine's undoable + collab-synced
+   * `AddLayerCommand`. The command's `LAYER_LIST_CHANGED` re-reads the
+   * Layers page; this only selects the new layer and persists. The
+   * engine mutates the shared project `MapResource`, so both see the
+   * new layer.
+   *
+   * A named plane comes from a section's own "Add a layer" row; the
+   * empty string is Simple view's single row, which has no section to
+   * name and so adds where the user is painting — the active layer's
+   * plane.
    */
-  private _createLayer(): void {
+  private _createLayer(plane: string): void {
     const sceneId = this._scenes.currentSceneId
     if (!sceneId) return
     const layers = this._loadedProject?.resource.maps.get(sceneId)?.mapData?.layers
     if (!layers) return
     const activeId = this._scene_editor_view.activeLayerId
     const active = activeId ? layers.find((l) => l.id === activeId) : undefined
-    const layer = nextLayerDraft(layers, active?.plane)
+    const layer = nextLayerDraft(layers, isLayerPlane(plane) ? plane : active?.plane)
     if (!this._engineCtl.engine?.addLayer(layer)) return
     this._scene_editor_view.selectLayer(layer.id)
     this._mapPersistCtl.persistCurrentMap()

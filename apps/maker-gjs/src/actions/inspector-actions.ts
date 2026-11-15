@@ -16,8 +16,6 @@ export interface InspectorActionsContext {
    */
   showSheetPage(name: string): void
   setEngineObjectsVisible(visible: boolean): void
-  /** Mirror into the Layers page's pinned "Objects" row (no re-emit). */
-  setViewObjectsVisible(visible: boolean): void
   setEngineShowGrid(showGrid: boolean): void
   setEngineDimInactiveLayers(dim: boolean): void
   /**
@@ -75,12 +73,13 @@ export function installInspectorActions(
     new Gio.PropertyAction({ name: 'toggle-inspector', object: ctx.sidebarOwner, property_name: 'show-inspector' }),
   )
 
+  // "Show Things" lives in the view menu only (REDESIGN.md § 6.3) — the
+  // Layers page no longer carries a row for it, so the action's own
+  // state is the whole UI and nothing has to be mirrored back.
   const objects = Gio.SimpleAction.new_stateful('toggle-objects', null, GLib.Variant.new_boolean(true))
   objects.connect('change-state', (action, value) => {
     action.set_state(value!)
-    const visible = value!.get_boolean()
-    ctx.setEngineObjectsVisible(visible)
-    ctx.setViewObjectsVisible(visible)
+    ctx.setEngineObjectsVisible(value!.get_boolean())
   })
   addAction(group, objects)
 

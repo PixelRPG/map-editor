@@ -35,8 +35,11 @@ export interface EditingActionsContext {
   deletePlacement(): void
   undo(): void
   redo(): void
-  /** Append a fresh empty layer to the active scene's map. */
-  createLayer(): void
+  /**
+   * Append a fresh empty layer to the active scene's map, in `plane` —
+   * or, for the empty string, in the active layer's plane.
+   */
+  createLayer(plane: string): void
 }
 
 /**
@@ -124,9 +127,12 @@ export function installEditingActions(
   redo.set_enabled(false)
 
   // Instant-add (no name prompt) — the common editor gesture. Rides an
-  // undoable + collab-synced `AddLayerCommand`.
-  const newLayer = new Gio.SimpleAction({ name: 'new-layer' })
-  newLayer.connect('activate', () => ctx.createLayer())
+  // undoable + collab-synced `AddLayerCommand`. The parameter is the
+  // plane to add to: Full view offers one "Add a layer" row per section
+  // and names it, Simple view offers a single row and passes `''` for
+  // "wherever the user is painting" (REDESIGN.md § 6.3).
+  const newLayer = Gio.SimpleAction.new('new-layer', GLib.VariantType.new('s'))
+  newLayer.connect('activate', (_a, parameter) => ctx.createLayer(parameter?.get_string()[0] ?? ''))
   addAction(group, newLayer)
 
   return { tool, undo, redo }

@@ -59,7 +59,12 @@ export interface LayersPageWiring {
    */
   moveLayer(layerId: string, plane: LayerPlane, index: number): void
   persistMapData(): void
-  toggleObjectsVisibility(): void
+  /** Undoable rename — the new name is already non-empty and changed. */
+  renameLayer(layerId: string, name: string): void
+  /** Copy the layer with its tiles and placements, right above it. */
+  duplicateLayer(layerId: string): void
+  /** Drop the layer; offers an undo instead of asking first. */
+  deleteLayer(layerId: string): void
 }
 
 /**
@@ -82,10 +87,14 @@ export function wireLayersPage(page: LayersPage, ctx: LayersPageWiring): void {
     ctx.moveLayer(layerId, plane as LayerPlane, index)
     ctx.persistMapData()
   })
-  // The pinned "Objects" pseudo-row is pure view state like grid/dim —
-  // not persisted. Activating the stateful action with no parameter
-  // toggles it, matching the row's already-flipped state.
-  page.connect('objects-visibility-toggled', (_l: LayersPage, _visible: boolean) => ctx.toggleObjectsVisibility())
+  // The three row commands are engine commands: they persist through
+  // the op-log, so nothing here writes the view's layer cache and
+  // nothing calls persistMapData twice.
+  page.connect('layer-rename-requested', (_l: LayersPage, layerId: string, name: string) =>
+    ctx.renameLayer(layerId, name),
+  )
+  page.connect('layer-duplicate-requested', (_l: LayersPage, layerId: string) => ctx.duplicateLayer(layerId))
+  page.connect('layer-delete-requested', (_l: LayersPage, layerId: string) => ctx.deleteLayer(layerId))
 }
 
 /** What the Selected page's actions drive. */
