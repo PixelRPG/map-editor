@@ -106,6 +106,12 @@ export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
  * `scene-selected`, and dims unrelated teleports via the overlay.
  * Double-clicking (or pressing Enter on a focused card) emits
  * `scene-opened`, which the host handles to switch to the scene editor.
+ *
+ * Connections are drawn by the `TeleportOverlay` above the surface. It
+ * takes no events of its own (`can_target = false`), so the canvas
+ * feeds it what it cannot see — the pointer position, the visible
+ * region, the zoom — and routes a press on one of its edge chips to
+ * {@link focusScene}.
  */
 export class AtlasCanvas extends Adw.Bin {
   declare _scroller: Gtk.ScrolledWindow
@@ -149,6 +155,10 @@ export class AtlasCanvas extends Adw.Bin {
   private _zoomGesture: Gtk.GestureZoom | null = null
   /** Ctrl+scroll zoom on the scroller; created on first map, kept for life. */
   private _scrollController: Gtk.EventControllerScroll | null = null
+  /** Pointer tracking on the surface, so a hovered line names itself. */
+  private _motionController: Gtk.EventControllerMotion | null = null
+  /** Primary clicks on the surface, for the edge chips of off-screen maps. */
+  private _chipGesture: Gtk.GestureClick | null = null
   /** Zoom captured when a pinch begins — the gesture reports a ratio. */
   private _pinchBase = 1
   /** Scroll offsets captured at pan start, so the drag delta is absolute. */
@@ -422,6 +432,25 @@ export class AtlasCanvas extends Adw.Bin {
       this._onScroll(controller, dy),
     )
 
+    const motion = this._ensureMotionController()
+    this._signals.connect(motion, 'motion', (_c: Gtk.EventControllerMotion, x: number, y: number) =>
+      this._teleports.setHoverPoint({ x, y }),
+    )
+    this._signals.connect(motion, 'leave', () => this._teleports.setHoverPoint(null))
+
+    const chips = this._ensureChipGesture()
+    this._signals.connect(chips, 'pressed', (gesture: Gtk.GestureClick, _n: number, x: number, y: number) =>
+      this._onChipPressed(gesture, x, y),
+    )
+
+    // The overlay's edge chips and its dimming are answered against the
+    // visible region, which scrolling moves without any layout pass
+    // running — so the viewport is pushed from the adjustments too, not
+    // only from `_layoutPass`.
+    this._signals.connect(this._scroller.hadjustment, 'value-changed', () => this._pushViewport())
+    this._signals.connect(this._scroller.vadjustment, 'value-changed', () => this._pushViewport())
+    this._pushViewport()
+
     // The surface padding centres a small world in the CURRENT viewport,
     // and a fitted camera is only valid for the size it was fitted to —
     // so a resized viewport has to re-run both.
@@ -612,6 +641,56 @@ export class AtlasCanvas extends Adw.Bin {
     return scroll
   }
 
+  /**
+   * Pointer tracking for the overlay's hover state. It sits on the
+   * `Gtk.Fixed`, not on the overlay: the overlay is `can_target = false`
+   * so it never sees an event, while the surface is the deepest
+   * targetable widget here and a bubble-phase controller on it also
+   * reports the motion that passed over a card — in exactly the surface
+   * coords the overlay draws in.
+   */
+  private _ensureMotionController(): Gtk.EventControllerMotion {
+    if (this._motionController) return this._motionController
+    const motion = new Gtk.EventControllerMotion()
+    this._surface.add_controller(motion)
+    this._motionController = motion
+    return motion
+  }
+
+  /**
+   * Primary presses on the surface, for the edge chips the overlay draws
+   * where a line leaves the viewport. Also on the surface, for the same
+   * reason as {@link _ensureMotionController}.
+   */
+  private _ensureChipGesture(): Gtk.GestureClick {
+    if (this._chipGesture) return this._chipGesture
+    const click = new Gtk.GestureClick({ button: Gdk.BUTTON_PRIMARY })
+    this._surface.add_controller(click)
+    this._chipGesture = click
+    return click
+  }
+
+  /**
+   * A chip names the map a line leads to off-screen; pressing it scrolls
+   * that map into view and nothing else. Deliberately not a selection:
+   * the chip is a way to follow a connection, and a user who was
+   * comparing it against the map they had picked would lose that pick.
+   *
+   * Claims the sequence only on a hit, so an ordinary press on empty
+   * surface still reaches the backdrop pan.
+   */
+  private _onChipPressed(gesture: Gtk.GestureClick, x: number, y: number): void {
+    const mapId = this._teleports.chipAt({ x, y })
+    if (!mapId) return
+    gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+    this.focusScene(mapId)
+  }
+
+  /** Hand the overlay the visible region, in the coords it draws in. */
+  private _pushViewport(): void {
+    this._teleports.setViewport(this.viewportRect())
+  }
+
   private _onScroll(controller: Gtk.EventControllerScroll, dy: number): boolean {
     const state = controller.get_current_event_state()
     if (!(state & Gdk.ModifierType.CONTROL_MASK)) return false
@@ -651,7 +730,14 @@ export class AtlasCanvas extends Adw.Bin {
     point.init(x, y)
     const [ok, inSurface] = this._scroller.compute_point(this._surface, point)
     const picked = ok ? this._surface.pick(inSurface.x, inSurface.y, Gtk.PickFlags.DEFAULT) : null
-    if (picked && picked !== (this._surface as Gtk.Widget)) {
+    // A press on a card belongs to that card's own gestures, and one on
+    // an edge chip to `_onChipPressed`. The chips are drawn by a
+    // `can_target = false` overlay, so `pick` cannot see them and they
+    // are tested by hand — claim order between two gestures on
+    // different widgets is not worth relying on for a pan that would
+    // swallow the chip's click.
+    const onChip = ok && this._teleports.chipAt({ x: inSurface.x, y: inSurface.y }) !== null
+    if (onChip || (picked && picked !== (this._surface as Gtk.Widget))) {
       gesture.set_state(Gtk.EventSequenceState.DENIED)
       return
     }
@@ -863,7 +949,9 @@ export class AtlasCanvas extends Adw.Bin {
     this._surfaceH = maxY - minY + padY * 2
     this._surface.set_size_request(this._surfaceW, this._surfaceH)
     this._teleports.set_size_request(this._surfaceW, this._surfaceH)
+    this._teleports.setZoom(this._zoom)
     this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
+    this._pushViewport()
   }
 }
 
