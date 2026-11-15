@@ -2,10 +2,17 @@ import { describe, expect, it } from '@gjsify/unit'
 
 import {
   arrowheadPoints,
+  clipToViewport,
   controlPoint,
   CURVE_OFFSET_FACTOR,
   CURVE_OFFSET_MAX,
+  distanceToQuad,
+  FAN_STEP,
+  fanFactor,
   type OverlayPoint,
+  pointOnQuad,
+  rectContains,
+  stubEnd,
   teleportEndpoint,
 } from './teleport-overlay.geometry.ts'
 
@@ -137,6 +144,170 @@ export default async () => {
         near(tip, 10, 0)
         near(left, 10, 0)
         near(right, 10, 0)
+      })
+    })
+
+    await describe('fanFactor', async () => {
+      await it('leaves a lone line exactly where the bow put it', async () => {
+        expect(fanFactor(0, 1)).toBe(1)
+      })
+
+      await it('straddles the unfanned bow for a pair', async () => {
+        expect(fanFactor(0, 2)).toBe(1 - FAN_STEP / 2)
+        expect(fanFactor(1, 2)).toBe(1 + FAN_STEP / 2)
+      })
+
+      await it('keeps the middle line of an odd group unmoved', async () => {
+        expect(fanFactor(1, 3)).toBe(1)
+      })
+
+      await it('spaces every neighbour one step apart', async () => {
+        const factors = [0, 1, 2, 3].map((index) => fanFactor(index, 4))
+        for (let i = 1; i < factors.length; i++) {
+          expect(Number((factors[i] - factors[i - 1]).toFixed(6))).toBe(FAN_STEP)
+        }
+      })
+
+      await it('is symmetric about the centre', async () => {
+        expect(Number((fanFactor(0, 5) + fanFactor(4, 5)).toFixed(6))).toBe(2)
+      })
+
+      await it('never gives two lines of a group the same factor', async () => {
+        const factors = new Set([0, 1, 2, 3, 4, 5, 6].map((index) => fanFactor(index, 7)))
+        expect(factors.size).toBe(7)
+      })
+
+      await it('treats a zero count like a lone line', async () => {
+        expect(fanFactor(0, 0)).toBe(1)
+      })
+    })
+
+    await describe('pointOnQuad', async () => {
+      await it('starts at a and ends at b', async () => {
+        near(pointOnQuad({ x: 0, y: 0 }, { x: 50, y: 100 }, { x: 100, y: 0 }, 0), 0, 0)
+        near(pointOnQuad({ x: 0, y: 0 }, { x: 50, y: 100 }, { x: 100, y: 0 }, 1), 100, 0)
+      })
+
+      await it('pulls the midpoint halfway towards the control point', async () => {
+        // A quadratic at t = 0.5 is (a + 2c + b) / 4.
+        near(pointOnQuad({ x: 0, y: 0 }, { x: 50, y: 100 }, { x: 100, y: 0 }, 0.5), 50, 50)
+      })
+
+      await it('is the straight chord when the control point is on it', async () => {
+        near(pointOnQuad({ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 100, y: 0 }, 0.25), 25, 0)
+      })
+    })
+
+    await describe('distanceToQuad', async () => {
+      await it('is zero on the curve itself', async () => {
+        const a = { x: 0, y: 0 }
+        const control = { x: 50, y: 100 }
+        const b = { x: 100, y: 0 }
+        expect(distanceToQuad(a, control, b, pointOnQuad(a, control, b, 0.5))).toBe(0)
+      })
+
+      await it('measures the gap to a point beside the curve', async () => {
+        // Straight line along y = 0; the point sits 7 px above it.
+        const distance = distanceToQuad({ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 7 })
+        expect(Number(distance.toFixed(6))).toBe(7)
+      })
+
+      await it('follows the BOW, not the chord', async () => {
+        // The chord's midpoint is 50 px from the bowed curve's.
+        const a = { x: 0, y: 0 }
+        const control = { x: 50, y: 100 }
+        const b = { x: 100, y: 0 }
+        expect(distanceToQuad(a, control, b, { x: 50, y: 0 }) > 40).toBe(true)
+      })
+
+      await it('reaches the far endpoint as well as the near one', async () => {
+        const a = { x: 0, y: 0 }
+        const b = { x: 100, y: 0 }
+        expect(distanceToQuad(a, { x: 50, y: 0 }, b, { x: 100, y: 3 })).toBe(3)
+      })
+
+      await it('samples at least once rather than dividing by zero', async () => {
+        const distance = distanceToQuad({ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 0 }, 0)
+        expect(Number.isFinite(distance)).toBe(true)
+        expect(distance).toBe(0)
+      })
+    })
+
+    await describe('rectContains', async () => {
+      const rect = { x: 10, y: 20, w: 100, h: 50 }
+
+      await it('accepts an interior point', async () => {
+        expect(rectContains(rect, { x: 50, y: 40 })).toBe(true)
+      })
+
+      await it('accepts the edges — a line touching the boundary has not left', async () => {
+        expect(rectContains(rect, { x: 10, y: 20 })).toBe(true)
+        expect(rectContains(rect, { x: 110, y: 70 })).toBe(true)
+      })
+
+      await it('rejects a point past each side', async () => {
+        expect(rectContains(rect, { x: 9, y: 40 })).toBe(false)
+        expect(rectContains(rect, { x: 111, y: 40 })).toBe(false)
+        expect(rectContains(rect, { x: 50, y: 19 })).toBe(false)
+        expect(rectContains(rect, { x: 50, y: 71 })).toBe(false)
+      })
+    })
+
+    await describe('clipToViewport', async () => {
+      const viewport = { x: 0, y: 0, w: 100, h: 100 }
+
+      await it('finds where the line leaves the right edge', async () => {
+        near(clipToViewport({ x: 50, y: 50 }, { x: 300, y: 50 }, viewport) as OverlayPoint, 100, 50)
+      })
+
+      await it('finds where the line leaves the top edge', async () => {
+        near(clipToViewport({ x: 50, y: 50 }, { x: 50, y: -50 }, viewport) as OverlayPoint, 50, 0)
+      })
+
+      await it('takes the FIRST boundary crossed on a diagonal', async () => {
+        // Heading up-right at 45° from (90, 50) hits x = 100 at y = 60,
+        // long before y = 100.
+        near(clipToViewport({ x: 90, y: 50 }, { x: 190, y: 150 }, viewport) as OverlayPoint, 100, 60)
+      })
+
+      await it('is null when both ends are visible', async () => {
+        expect(clipToViewport({ x: 10, y: 10 }, { x: 90, y: 90 }, viewport)).toBe(null)
+      })
+
+      await it('is null when the line starts off-screen', async () => {
+        // The chip names the map at the far end of a line the user can
+        // see; a line that starts outside has no visible near end.
+        expect(clipToViewport({ x: -10, y: 50 }, { x: 300, y: 50 }, viewport)).toBe(null)
+      })
+
+      await it('handles an axis-parallel line without dividing by zero', async () => {
+        const exit = clipToViewport({ x: 50, y: 50 }, { x: 50, y: 400 }, viewport) as OverlayPoint
+        expect(Number.isFinite(exit.x)).toBe(true)
+        near(exit, 50, 100)
+      })
+
+      await it('is null for coincident endpoints', async () => {
+        expect(clipToViewport({ x: 50, y: 50 }, { x: 50, y: 50 }, viewport)).toBe(null)
+      })
+    })
+
+    await describe('stubEnd', async () => {
+      await it('points straight out of the card', async () => {
+        near(stubEnd({ x: 0, y: 0 }, { x: 10, y: 0 }, 5), 15, 0)
+      })
+
+      await it('keeps the stub length regardless of how far out the door is', async () => {
+        const end = stubEnd({ x: 0, y: 0 }, { x: 30, y: 40 }, 10)
+        expect(Number(Math.hypot(end.x - 30, end.y - 40).toFixed(6))).toBe(10)
+      })
+
+      await it('leans outwards, away from the centre', async () => {
+        const end = stubEnd({ x: 100, y: 100 }, { x: 100, y: 60 }, 12)
+        near(end, 100, 48)
+      })
+
+      await it('falls back to downwards for a door on the centre', async () => {
+        near(stubEnd({ x: 7, y: 7 }, { x: 7, y: 7 }, 9), 7, 16)
       })
     })
   })
