@@ -9,6 +9,7 @@ import {
   distanceToQuad,
   FAN_STEP,
   fanFactor,
+  fannedControl,
   type OverlayPoint,
   pointOnQuad,
   rectContains,
@@ -179,6 +180,47 @@ export default async () => {
 
       await it('treats a zero count like a lone line', async () => {
         expect(fanFactor(0, 0)).toBe(1)
+      })
+    })
+
+    await describe('fannedControl', async () => {
+      const a = { x: 0, y: 0 }
+      const b = { x: 100, y: 0 }
+
+      await it('reproduces the plain control point at factor 1', async () => {
+        const plain = controlPoint(a, b)
+        near(fannedControl(a, b, 1), plain.x, plain.y)
+      })
+
+      await it('collapses onto the chord midpoint at factor 0', async () => {
+        near(fannedControl(a, b, 0), 50, 0)
+      })
+
+      await it('scales the bow linearly', async () => {
+        const plain = controlPoint(a, b)
+        const half = fannedControl(a, b, 0.5)
+        near(half, 50 + (plain.x - 50) * 0.5, plain.y * 0.5)
+      })
+
+      await it('bows to the other side for a negative factor', async () => {
+        const plain = controlPoint(a, b)
+        const flipped = fannedControl(a, b, -1)
+        near(flipped, 50 - (plain.x - 50), -plain.y)
+      })
+
+      await it('stays perpendicular to a diagonal chord', async () => {
+        const from = { x: 0, y: 0 }
+        const to = { x: 60, y: 80 }
+        const control = fannedControl(from, to, 1.5)
+        // The offset from the midpoint must have no component along the chord.
+        const along = (control.x - 30) * 60 + (control.y - 40) * 80
+        expect(Number(along.toFixed(6))).toBe(0)
+      })
+
+      await it('stays finite for coincident endpoints', async () => {
+        const control = fannedControl({ x: 7, y: 7 }, { x: 7, y: 7 }, 2)
+        expect(Number.isFinite(control.x)).toBe(true)
+        expect(Number.isFinite(control.y)).toBe(true)
       })
     })
 

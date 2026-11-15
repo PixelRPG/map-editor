@@ -116,6 +116,22 @@ export function fanFactor(index: number, count: number): number {
   return 1 + (index - (count - 1) / 2) * FAN_STEP
 }
 
+/**
+ * {@link controlPoint} with its bow scaled by `factor` — the control
+ * point a fanned line actually bends around.
+ *
+ * Scaling the offset from the midpoint rather than recomputing a bow
+ * keeps the fan perpendicular to the chord at every factor, and a
+ * `factor` of 1 reproduces {@link controlPoint} exactly, so the lone-line
+ * case is untouched by the fan existing.
+ */
+export function fannedControl(a: OverlayPoint, b: OverlayPoint, factor: number): OverlayPoint {
+  const base = controlPoint(a, b)
+  const mx = (a.x + b.x) / 2
+  const my = (a.y + b.y) / 2
+  return { x: mx + (base.x - mx) * factor, y: my + (base.y - my) * factor }
+}
+
 /** Point at `t ∈ [0, 1]` on the quadratic Bézier `a → control → b`. */
 export function pointOnQuad(a: OverlayPoint, control: OverlayPoint, b: OverlayPoint, t: number): OverlayPoint {
   const u = 1 - t
