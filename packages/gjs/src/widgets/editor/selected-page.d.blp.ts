@@ -27,6 +27,8 @@ export declare const InternalChildren: [
   "sprite_image",
   "kind_row",
   "position_row",
+  "door_row",
+  "door_warning",
   "library_row",
   "components_slot",
   "duplicate_row",
@@ -40,6 +42,8 @@ export interface Children {
   _sprite_image: Gtk.Image;
   _kind_row: Adw.ActionRow;
   _position_row: Adw.ActionRow;
+  _door_row: Adw.ActionRow;
+  _door_warning: Gtk.Image;
   _library_row: Adw.ActionRow;
   _components_slot: Adw.Bin;
   _duplicate_row: Adw.ButtonRow;

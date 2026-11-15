@@ -39,6 +39,7 @@ import { paintableFor } from './scene-editor/object-descriptors.ts'
 import { wireBrushPage, wireLayersPage, wireSelectedPage } from './scene-editor/inspector-wiring.ts'
 import {
   buildBrushOptions,
+  doorSummaryFor,
   loadObjectSheets,
   type ObjectBrushOption,
   type ObjectSheets,
@@ -154,6 +155,12 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _entityLibrary: readonly EntityDefinition[] = []
   /** Sprite sheets behind the placement sprites, keyed by sprite-set id. */
   private _objectSheets: ObjectSheets = new Map()
+  /**
+   * Every map in the project by id → display name, so the Selected page's
+   * "Goes to" row can name a door's destination. An id the project does
+   * not have is what makes a door read as broken (REDESIGN § 6.2).
+   */
+  private _mapNames: ReadonlyMap<string, string> = new Map()
   /**
    * `firstGid` of the active sprite set. The engine indexes tiles as
    * global IDs (`spriteIndex + firstGid`); the inspector deals in
@@ -530,6 +537,9 @@ export class SceneEditorView extends ResponsiveEditorView {
       paintable: paintableFor(definition, this._objectSheets),
       definition,
       baseComponentTypes: base.components.map((c) => c.type),
+      // Read from the RESOLVED definition, not the base: a door's target
+      // is the one field a placement almost always overrides.
+      doorTarget: doorSummaryFor(definition, this._mapNames),
     }
   }
 
@@ -790,6 +800,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._mapData = mapData
     this._entityLibrary = library
     this._objectSheets = sheets
+    this._mapNames = new Map((project.resource.data?.maps ?? []).map((m) => [m.id, m.name ?? m.id]))
     this._pages.selected.setComponentRegistry(effectiveComponentRegistry(project.resource.data))
     this._pages.selected.setRefOptions(buildRefOptions(project.resource.data?.maps, project.resource.spriteSets))
 

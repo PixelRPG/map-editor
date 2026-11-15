@@ -72,6 +72,7 @@ export class RightInspectorStory extends StoryWidget {
         components: [{ type: 'collision' }],
       },
       baseComponentTypes: ['collision'],
+      doorTarget: null,
     })
     inspector.visiblePage = (this.args.activePage as string) ?? 'brush'
     this._inspector = inspector

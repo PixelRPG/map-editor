@@ -10,6 +10,22 @@ import { EntityComponentsEditor } from './entity-components-editor.ts'
 import Template from './selected-page.blp'
 
 /**
+ * What the "Goes to" row shows for a door, already in words.
+ *
+ * The page cannot work this out itself: resolving a teleport's target
+ * needs the project's map list, which lives at the host. So the host
+ * runs `doorTargetState` from `door-target.model.ts` and translates the
+ * result; `broken` only decides whether the warning icon shows, because
+ * the sentence alone cannot say "this map is gone" loudly enough.
+ */
+export interface DoorTargetSummary {
+  /** The destination as a sentence — "Tree House · (10, 12)", "Nowhere yet". */
+  summary: string
+  /** The target names a map the project does not have. */
+  broken: boolean
+}
+
+/**
  * The placement this page edits, fed into {@link SelectedPage.setPlacement}.
  *
  * Everything here is plain data the host computed: the page neither
@@ -45,6 +61,13 @@ export interface SelectedPlacementDescriptor {
    * show through again.
    */
   baseComponentTypes: readonly string[]
+  /**
+   * Where this door leads, or `null` when the placement is not a door —
+   * a required field rather than a second setter, so a host that forgets
+   * it fails to compile instead of showing a stale destination from
+   * whatever was selected before.
+   */
+  doorTarget: DoorTargetSummary | null
 }
 
 /**
@@ -61,12 +84,13 @@ export interface SelectedPageSignals extends Adw.Bin.SignalSignatures {
   'object-remove-requested': (placementId: string) => void
   'object-duplicate-requested': (placementId: string) => void
   'overrides-changed': (placementId: string, entityJson: string) => void
+  'door-target-requested': (placementId: string) => void
 }
 
 /**
  * The editor's "Selected" page — the properties of the one placement
- * tapped on the canvas: sprite, name, kind, position, "Edit in Library",
- * then the generated component groups for *this placement's overrides*,
+ * tapped on the canvas: sprite, name, kind, position, "Goes to" when the
+ * thing is a door, "Edit in Library", then the generated component groups for *this placement's overrides*,
  * then Duplicate and Delete.
  *
  * With nothing selected it shows its empty state (and the host makes the
@@ -86,6 +110,8 @@ export class SelectedPage extends Adw.Bin {
   declare _name_row: Adw.EntryRow
   declare _kind_row: Adw.ActionRow
   declare _position_row: Adw.ActionRow
+  declare _door_row: Adw.ActionRow
+  declare _door_warning: Gtk.Image
   declare _library_row: Adw.ActionRow
   declare _components_slot: Adw.Bin
   declare _duplicate_row: Adw.ButtonRow
@@ -113,6 +139,8 @@ export class SelectedPage extends Adw.Bin {
           'sprite_image',
           'kind_row',
           'position_row',
+          'door_row',
+          'door_warning',
           'library_row',
           'components_slot',
           'duplicate_row',
@@ -134,6 +162,9 @@ export class SelectedPage extends Adw.Bin {
           'object-remove-requested': { param_types: [GObject.TYPE_STRING] },
           // Duplicate (placementId).
           'object-duplicate-requested': { param_types: [GObject.TYPE_STRING] },
+          // "Goes to" on a door (placementId) — the host owns the
+          // picker, the pick mode and the door back.
+          'door-target-requested': { param_types: [GObject.TYPE_STRING] },
           // Placement id + the whole edited definition as JSON. The id
           // guards a late emit from a placement that is no longer shown.
           'overrides-changed': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
@@ -191,6 +222,9 @@ export class SelectedPage extends Adw.Bin {
     this._name_row.set_text(desc.definition.name)
     this._kind_row.set_subtitle(desc.kind)
     this._position_row.set_subtitle(`(${desc.tileX}, ${desc.tileY}) · ${desc.layerName}`)
+    this._door_row.set_visible(!!desc.doorTarget)
+    this._door_row.set_subtitle(desc.doorTarget?.summary ?? '')
+    this._door_warning.set_visible(desc.doorTarget?.broken === true)
     // Nothing to open for an inline definition: it has no library entry.
     this._library_row.set_visible(!!desc.defId)
     this._editor.setNonRemovableTypes(desc.baseComponentTypes)
@@ -207,6 +241,9 @@ export class SelectedPage extends Adw.Bin {
     // app-wide tier is the window's job, not this page's.
     this._signals.connect(this._editor, 'show-more-requested', () => {
       this.activate_action('win.show-full-view', null)
+    })
+    this._signals.connect(this._door_row, 'activated', () => {
+      if (this._placement) this.emit('door-target-requested', this._placement.placementId)
     })
     this._signals.connect(this._library_row, 'activated', () => {
       if (this._placement?.defId) this.emit('object-open-requested', this._placement.defId)

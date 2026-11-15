@@ -1,7 +1,14 @@
 import type Gdk from '@girs/gdk-4.0'
+import { gettext as _ } from 'gettext'
 import type { EntityDefinition } from '@pixelrpg/engine'
 import { markerColorFor } from '@pixelrpg/engine'
-import { GdkSpriteSetResource, type GdkSpriteSheet } from '@pixelrpg/gjs'
+import {
+  doorTargetState,
+  type DoorTargetSummary,
+  GdkSpriteSetResource,
+  type GdkSpriteSheet,
+  readDoorTeleport,
+} from '@pixelrpg/gjs'
 import { visualOf } from '../../services/entity-visuals.ts'
 import type { LoadedProject } from '../../services/project-loader.ts'
 
@@ -65,6 +72,29 @@ export function paintableFor(def: EntityDefinition | null, sheets: ObjectSheets)
   const vis = visualOf(def)
   if (!vis) return null
   return sheets.get(vis.spriteSetId)?.sprites[vis.spriteId]?.createPaintable({ keepAspectRatio: true }) ?? null
+}
+
+/**
+ * The "Goes to" sentence for a door, or `null` when the thing carries no
+ * teleport and therefore is not a door at all.
+ *
+ * The model decides WHAT the state is; this decides how to say it.
+ * `broken` keeps the target id in the sentence on purpose — it is the
+ * only clue left about which map went missing, and the user is the one
+ * who renamed or deleted it.
+ */
+export function doorSummaryFor(
+  def: EntityDefinition | null,
+  mapNames: ReadonlyMap<string, string>,
+): DoorTargetSummary | null {
+  const teleport = readDoorTeleport(def?.components)
+  if (!teleport) return null
+  const state = doorTargetState(teleport, mapNames)
+  if (state.kind === 'unset') return { summary: _('Nowhere yet'), broken: false }
+  if (state.kind === 'broken') {
+    return { summary: _('Missing map “%s”').replace('%s', state.targetMapId), broken: true }
+  }
+  return { summary: `${state.mapName} · (${state.tile.x}, ${state.tile.y})`, broken: false }
 }
 
 /** No resolvable sprite → the definition's marker colour, mirroring the map. */
