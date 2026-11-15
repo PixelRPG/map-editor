@@ -1,19 +1,17 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import {
-  type InspectedScene,
   joinDetails,
   mapSelectionFacts,
   previewTilePx,
   type SceneLink,
-  sceneStats,
-  sceneSubtitleText,
   sceneTileSize,
+  type SummarizedScene,
   teleportSummaries,
 } from './map-summary.model.ts'
 
-const village: InspectedScene = { id: 'village', rows: ['....', '....'], music: 'overworld', events: 3, npcs: [1, 2] }
-const cave: InspectedScene = { id: 'cave', rows: [], cols: 20, previewRows: 10, events: 0 }
+const village: SummarizedScene = { id: 'village', rows: ['....', '....'], events: 3, npcs: [1, 2] }
+const cave: SummarizedScene = { id: 'cave', rows: [], cols: 20, previewRows: 10, events: 0 }
 
 const LINKS: SceneLink[] = [
   { from: 'village', to: 'cave', label: 'Cave mouth' },
@@ -57,36 +55,6 @@ export default async () => {
           cols: 7,
           rows: 1,
         })
-      })
-    })
-
-    await describe('sceneSubtitleText', async () => {
-      await it('joins size and music', async () => {
-        expect(sceneSubtitleText(village)).toBe('4×2 tiles · overworld')
-      })
-
-      await it('says so when the scene has no music', async () => {
-        expect(sceneSubtitleText(cave)).toBe('20×10 tiles · no music')
-      })
-    })
-
-    await describe('sceneStats', async () => {
-      await it('counts npcs, events and both teleport directions', async () => {
-        expect(sceneStats(village, LINKS)).toStrictEqual([
-          { label: 'NPCs', value: '2' },
-          { label: 'Events', value: '3' },
-          { label: 'In', value: '2' },
-          { label: 'Out', value: '1' },
-        ])
-      })
-
-      await it('reports zeroes for a scene with nothing attached', async () => {
-        expect(sceneStats(cave, [])).toStrictEqual([
-          { label: 'NPCs', value: '0' },
-          { label: 'Events', value: '0' },
-          { label: 'In', value: '0' },
-          { label: 'Out', value: '0' },
-        ])
       })
     })
 

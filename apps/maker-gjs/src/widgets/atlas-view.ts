@@ -6,13 +6,14 @@ import {
   AtlasOverview,
   FloatingFab,
   FloatingZoom,
+  MapSelectionBar,
+  mapSelectionFacts,
   ProjectMenuButton,
   RosterChip,
   SAMPLE_SCENES,
   SAMPLE_TELEPORTS,
   type SampleScene,
   type SampleTeleport,
-  SceneInspector,
   SignalScope,
   worldFitsViewport,
 } from '@pixelrpg/gjs'
@@ -24,7 +25,7 @@ import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './respon
 GObject.type_ensure(ProjectMenuButton.$gtype)
 GObject.type_ensure(RosterChip.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
-GObject.type_ensure(SceneInspector.$gtype)
+GObject.type_ensure(MapSelectionBar.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
 GObject.type_ensure(AtlasOverview.$gtype)
@@ -45,20 +46,21 @@ export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
 }
 
 /**
- * Maker-app **World** view — the atlas canvas plus the scene inspector
- * in one `Adw.OverlaySplitView`, which keeps the inspector pinned to the
- * trailing edge but lets it collapse on narrow widths.
+ * Maker-app **World** view — the atlas canvas and nothing beside it.
+ * What the selected map is and what can be done with it rides the
+ * bottom-centre {@link MapSelectionBar}, which replaced the right-hand
+ * scene inspector (REDESIGN.md § 4.2 / § 5.4).
  *
  * Navigation between the shell's three destinations is the header's
  * `Adw.ViewSwitcher` (wide) or the window's `Adw.ViewSwitcherBar`
- * (phone) — this view no longer carries a sidebar of its own.
+ * (phone) — this view carries no sidebar of its own.
  *
  * Emits `scene-opened::<id>` so the application window can swap to the
  * map editor.
  */
 export class AtlasView extends ResponsiveEditorView {
   declare _atlas: AtlasCanvas
-  declare _inspector: SceneInspector
+  declare _selection_bar: MapSelectionBar
   declare _preview_zoom: FloatingZoom
   declare _atlas_overview: AtlasOverview
   declare _overview_frame: Adw.Bin
@@ -66,13 +68,20 @@ export class AtlasView extends ResponsiveEditorView {
   private signals = new SignalScope()
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
-  private _projectResource: GameProjectResource | null = null
   /**
    * Path of the project whose camera {@link _saveCamera} writes — the
    * key the camera store is indexed by. `null` while the demo world is
    * showing, which has no project to remember a camera for.
    */
   private _projectPath: string | null = null
+  /**
+   * The phone instance of the selection bar, which lives in the
+   * window's bottom bar: a Blueprint `bind` cannot cross a template
+   * boundary, so the window hands it over with
+   * {@link attachSelectionBar}. Both instances are fed from
+   * {@link _refreshSelection} — one selection, two surfaces.
+   */
+  private _phoneSelectionBar: MapSelectionBar | null = null
 
   static {
     GObject.registerClass(
@@ -83,7 +92,7 @@ export class AtlasView extends ResponsiveEditorView {
           'view_switcher',
           'roster_chip',
           'atlas',
-          'inspector',
+          'selection_bar',
           'preview_zoom',
           'atlas_overview',
           'overview_frame',
@@ -109,12 +118,23 @@ export class AtlasView extends ResponsiveEditorView {
   constructor() {
     super()
     this._atlas.setWorld(this._scenes, this._teleports)
-    this._inspector.setScene(null, this._scenes, this._teleports)
     this._preview_zoom.setZoom(this._atlas.zoom)
     // The atlas is the only view with a fit target, so it opts the
     // shared zoom pill into showing the Fit button.
     this._preview_zoom.showFit = true
     this._atlas.fit()
+  }
+
+  /**
+   * Hand over the bottom-bar instance of the selection bar. Called once
+   * by the window, which owns the bar's visibility (it swaps the bottom
+   * bar between the view switcher and the selection) — this view only
+   * ever fills it with content.
+   */
+  attachSelectionBar(bar: MapSelectionBar): void {
+    this._phoneSelectionBar = bar
+    bar.floating = false
+    this._refreshSelection()
   }
 
   /** Re-sync the overview minimap's scene rects + viewport frame from the canvas. */
@@ -198,9 +218,9 @@ export class AtlasView extends ResponsiveEditorView {
 
   /**
    * Replace the demo world with a real project's data. Optionally pass
-   * the loaded `GameProjectResource` so atlas cards + the scene
-   * inspector can render real tile previews of each map, and the
-   * project's path so its camera can be remembered across sessions.
+   * the loaded `GameProjectResource` so the atlas cards can render real
+   * tile previews of each map, and the project's path so its camera can
+   * be remembered across sessions.
    */
   setWorld(
     scenes: SampleScene[],
@@ -221,11 +241,13 @@ export class AtlasView extends ResponsiveEditorView {
     const current = this._atlas.isFitted ? null : this._atlas.camera
     this._scenes = scenes
     this._teleports = teleports
-    this._projectResource = projectResource
     this._projectPath = projectPath
     this._atlas.setWorld(scenes, teleports, projectResource)
     this._atlas.setStartMapId(projectResource?.data?.startup?.initialMapId ?? null)
-    this._inspector.setScene(null, scenes, teleports, projectResource)
+    // The selected card survives a reload of the same project, so the
+    // bar is re-derived rather than cleared — a map renamed or resized
+    // under the selection updates in place.
+    this._refreshSelection()
     // Reopen a project where the user left it; a project seen for the
     // first time opens fitted so every map is reachable at once,
     // instead of the old 200 % top-left dump that ran off-viewport.
@@ -237,16 +259,26 @@ export class AtlasView extends ResponsiveEditorView {
   }
 
   /**
-   * Shared selection write — used by both `scene-selected` (click)
-   * and `scene-drag-began` (drag-start). Refreshes the inspector
-   * content + forwards the selection upward to the application
-   * window. Does NOT touch `showInspector` — auto-open is a per-
-   * call-site decision (only the click path opens; drag-start
-   * stays silent).
+   * Push whatever the canvas currently has selected into both
+   * selection bars. Reads `selectedId` from the canvas rather than
+   * taking an id, so it is equally correct after a selection, after a
+   * project reload and right after a bar is attached.
+   */
+  private _refreshSelection(): void {
+    const id = this._atlas.selectedId
+    const scene = id ? (this._scenes.find((s) => s.id === id) ?? null) : null
+    const facts = scene ? mapSelectionFacts(scene, this._teleports) : null
+    this._selection_bar.setMap(scene?.name ?? null, facts)
+    this._phoneSelectionBar?.setMap(scene?.name ?? null, facts)
+  }
+
+  /**
+   * Shared selection write — used by both `scene-selected` (click) and
+   * `scene-drag-began` (drag-start). Refreshes the selection bars and
+   * forwards the selection upward to the application window.
    */
   private _refreshSelectedScene(id: string): void {
-    const scene = this._scenes.find((s) => s.id === id) ?? null
-    this._inspector.setScene(scene, this._scenes, this._teleports, this._projectResource)
+    this._refreshSelection()
     this.emit('scene-selected', id)
   }
 
@@ -254,24 +286,11 @@ export class AtlasView extends ResponsiveEditorView {
     super.vfunc_map()
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
       this._refreshSelectedScene(id)
-      // Auto-open the right inspector on a CLICK-only selection —
-      // per the project-wide policy in
-      // `docs/concepts/responsive-chrome.md`. Drag-start selections
-      // arrive via `scene-drag-began` and intentionally skip the
-      // auto-open (the overlay drawer would cover the canvas mid-
-      // drag on smartphone widths). Setter is a no-op when already
-      // open, and the `inspector-collapsed` breakpoint setter on
-      // `application-window.blp` means the same write surfaces as
-      // an overlay drawer on mobile / tablet widths — no responsive
-      // branching needed here.
-      this.showInspector = true
     })
     this.signals.connect(this._atlas, 'scene-drag-began', (_a: AtlasCanvas, id: string) => {
-      // Drag-start IS a selection (the inspector content should
-      // refresh to the dragged scene so a desktop user can read
-      // its metadata in the persistent panel), but it MUST NOT
-      // trigger auto-open. Documented under "Auto-open policy →
-      // exemptions" in `docs/concepts/responsive-chrome.md`.
+      // Drag-start IS a selection: the bar should name the card the
+      // user has picked up, so dropping it somewhere and then hitting
+      // Open acts on the map they just moved.
       this._refreshSelectedScene(id)
     })
     this.signals.connect(this._atlas, 'scene-opened', (_a: AtlasCanvas, id: string) => {

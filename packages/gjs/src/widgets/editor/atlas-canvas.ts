@@ -19,6 +19,7 @@ import {
   surfacePadding,
   zoomAroundPointer,
 } from './atlas-camera.ts'
+import { buildMapContextMenu } from './map-menu.ts'
 import { MapPreview } from './map-preview'
 import { SceneCard } from './scene-card'
 import { TeleportOverlay } from './teleport-overlay'
@@ -152,6 +153,15 @@ export class AtlasCanvas extends Adw.Bin {
   private _pinchBase = 1
   /** Scroll offsets captured at pan start, so the drag delta is absolute. */
   private _panStart = { h: 0, v: 0 }
+  /**
+   * The map context menu, shared by every card. A `Gtk.PopoverMenu` is
+   * a `GtkNative`, so it takes no part in the overlay's layout and only
+   * needs a parent to position against — one instance pointed at the
+   * press position is enough. Parented lazily and taken off again in
+   * `vfunc_unmap`, the same contract as `scene-editor.ts`'s placement
+   * menu.
+   */
+  private _mapMenu: Gtk.PopoverMenu | null = null
   private _signals = new SignalScope()
   /**
    * Holds the single deferred camera operation waiting for the
@@ -189,19 +199,16 @@ export class AtlasCanvas extends Adw.Bin {
           ),
         },
         Signals: {
-          // Fires on a **click-only** selection (no drag). Hosts treat
-          // this as the "user wants to inspect this scene" intent —
-          // safe to auto-open the inspector against it. See
-          // `scene-drag-began` for the drag-start sibling, which
-          // selects the scene + updates inspector content but should
-          // NOT trigger auto-open.
+          // Fires on a **click-only** selection (no drag), and on a
+          // long press / secondary click before the context menu
+          // opens. Hosts treat this as the "user picked this map"
+          // intent. See `scene-drag-began` for the drag-start sibling.
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
           // Fires on `scene-drag-begin`. Same `(sceneId,)` payload as
-          // `scene-selected`. Decoupling the two lets the host
-          // refresh the inspector content for the dragged scene
-          // without popping the overlay drawer mid-drag — on
-          // smartphone widths the drawer would otherwise cover the
-          // canvas the moment the drag begins.
+          // `scene-selected`, kept separate so a host can tell a
+          // deliberate pick from the selection a drag makes on the
+          // way past — a drag must not trigger anything that covers
+          // the canvas mid-move.
           'scene-drag-began': { param_types: [GObject.TYPE_STRING] },
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-moved': {
@@ -427,6 +434,15 @@ export class AtlasCanvas extends Adw.Bin {
     this._pending.disconnectAll()
     this._scrollPending.disconnectAll()
     this._cancelScrollWrites()
+    // A `set_parent`ed popover is a real child of the overlay and has
+    // to be taken off by hand, or the overlay is finalized with
+    // children still attached. `_ensureMapMenu` re-parents it on the
+    // next press.
+    if (this._mapMenu?.get_parent()) {
+      this._mapMenu.popdown()
+      this._mapMenu.unparent()
+      this._mapMenu = null
+    }
     super.vfunc_unmap()
   }
 
@@ -662,6 +678,7 @@ export class AtlasCanvas extends Adw.Bin {
         this.emit('scene-opened', scene.id)
       })
       this._wireDrag(scene.id, card)
+      this._wireContextMenu(scene.id, card)
       this._cards.set(scene.id, card)
       // Placed for real by the next layout pass.
       this._surface.put(card, 0, 0)
@@ -682,6 +699,53 @@ export class AtlasCanvas extends Adw.Bin {
     const preview = new MapPreview()
     card.setPreviewWidget(preview)
     void preview.setFromResource(this._projectResource, scene.id)
+  }
+
+  /**
+   * Long press (touch) and secondary click (pointer) on a card open the
+   * map context menu. Both select the card FIRST: every item in the
+   * menu is a stateless window action that reads the host's current
+   * selection, so the menu must never open against a different map than
+   * the one that was pressed.
+   *
+   * The controllers live on the card and die with it on the next
+   * `_rebuildCards`; only the popover is shared.
+   */
+  private _wireContextMenu(sceneId: string, card: SceneCard): void {
+    const open = (x: number, y: number): void => {
+      this.selectedId = sceneId
+      this.emit('scene-selected', sceneId)
+      this._popupMapMenu(card, x, y)
+    }
+
+    const longPress = new Gtk.GestureLongPress()
+    longPress.connect('pressed', (_g: Gtk.GestureLongPress, x: number, y: number) => open(x, y))
+    card.add_controller(longPress)
+
+    const secondary = new Gtk.GestureClick({ button: Gdk.BUTTON_SECONDARY })
+    secondary.connect('pressed', (_g: Gtk.GestureClick, _n: number, x: number, y: number) => open(x, y))
+    card.add_controller(secondary)
+  }
+
+  /** Point the shared menu at a position in CARD coords and open it. */
+  private _popupMapMenu(card: SceneCard, x: number, y: number): void {
+    const menu = this._ensureMapMenu()
+    const point = new Graphene.Point()
+    point.init(x, y)
+    const [ok, inOverlay] = card.compute_point(this._overlay, point)
+    if (!ok) return
+    menu.set_pointing_to(
+      new Gdk.Rectangle({ x: Math.round(inOverlay.x), y: Math.round(inOverlay.y), width: 1, height: 1 }),
+    )
+    menu.popup()
+  }
+
+  private _ensureMapMenu(): Gtk.PopoverMenu {
+    if (this._mapMenu) return this._mapMenu
+    const menu = new Gtk.PopoverMenu({ hasArrow: false, menuModel: buildMapContextMenu() })
+    menu.set_parent(this._overlay)
+    this._mapMenu = menu
+    return menu
   }
 
   private _wireDrag(sceneId: string, card: SceneCard): void {

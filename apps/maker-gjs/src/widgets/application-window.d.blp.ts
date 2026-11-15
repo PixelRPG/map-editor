@@ -31,7 +31,9 @@ export declare const InternalChildren: [
         'atlas_view',
         'library_view',
         'game_view',
+        'bottom_bar_stack',
         'view_switcher_bar',
+        'phone_selection_bar',
         'scene_editor_view',
 ];
 
@@ -45,6 +47,8 @@ export interface Children {
         _atlas_view: GObject.Object;
         _library_view: GObject.Object;
         _game_view: GObject.Object;
+        _bottom_bar_stack: Gtk.Stack;
         _view_switcher_bar: Adw.ViewSwitcherBar;
+        _phone_selection_bar: GObject.Object;
         _scene_editor_view: GObject.Object;
 }

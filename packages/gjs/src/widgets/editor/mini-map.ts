@@ -23,9 +23,9 @@ function parseColor(hex: string): Gdk.RGBA {
  * is looked up from {@link TILE_COLOR_MAP}; unknown characters use
  * {@link TILE_DEFAULT_COLOR}.
  *
- * Used by:
- * - `scene-card` — small atlas-card preview (`tilePx ≈ 7`)
- * - `scene-inspector` — the inspector preview (`tilePx ≈ 14`)
+ * Used by `scene-card` as the atlas card's preview placeholder
+ * (`tilePx ≈ 7`) whenever the project has no real map data to render a
+ * {@link MapPreview} from.
  *
  * Cheap enough to live as a Gtk.Widget; no canvas / pixbuf involved.
  */

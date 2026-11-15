@@ -12,7 +12,7 @@ import {
   isLayerPlane,
   type SpriteSetData,
 } from '@pixelrpg/engine'
-import { type CollaboratorEntry, Engine, promptRename, SignalScope } from '@pixelrpg/gjs'
+import { type CollaboratorEntry, Engine, type MapSelectionBar, promptRename, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
 import { installBackActions } from '../actions/back-actions.ts'
@@ -185,6 +185,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   declare _root_stack: Gtk.Stack
   declare _shell_stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
+  declare _bottom_bar_stack: Gtk.Stack
+  declare _phone_selection_bar: MapSelectionBar
 
   private signals = new SignalScope()
   /**
@@ -366,6 +368,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
           'root_stack',
           'shell_stack',
           'toast_overlay',
+          'bottom_bar_stack',
+          'phone_selection_bar',
         ],
         Properties: {
           // Single source of truth for inspector visibility. Each view's
@@ -563,7 +567,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       if (page && this._actions && stringState(this._actions.mode) !== page) {
         this._actions.mode.set_state(GLib.Variant.new_string(page))
       }
+      this._refreshBottomBar()
     })
+    // Phone: the selection bar and the view switcher share the bottom
+    // slot, so leaving phone width has to hand it back.
+    this.signals.connect(this._atlas_view, 'notify::compact', () => this._refreshBottomBar())
     // The Library's own chip clicks flow back into `win.library-chip`, so
     // an external driver reading the action state sees what is on screen.
     this.signals.connect(this._library_view, 'notify::chip', () => {
@@ -692,6 +700,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     for (const view of [this._atlas_view, this._library_view, this._game_view]) {
       view.attachShellSwitcher(this._shell_stack)
     }
+    // Same reason as the switchers: the bar lives in this template
+    // because it has to share the one bottom slot with the view
+    // switcher, but only `AtlasView` knows what is selected.
+    this._atlas_view.attachSelectionBar(this._phone_selection_bar)
+  }
+
+  /**
+   * Phone only: swap the single bottom slot between the shell's view
+   * switcher and the selected map's selection bar. Everywhere else the
+   * atlas shows its own overlay instance and this stays on `nav`.
+   */
+  private _refreshBottomBar(): void {
+    const selecting =
+      this._atlas_view.compact && this._router.currentView === 'world' && this._scenes.selectedAtlasSceneId != null
+    this._bottom_bar_stack.set_visible_child_name(selecting ? 'selection' : 'nav')
   }
 
   /**
@@ -947,6 +970,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * already starts it.
    */
   private _refreshMapActions(): void {
+    // Every selection change and every map add/remove comes through
+    // here, which makes it the one place the phone bottom bar has to
+    // re-decide which of its two pages is right.
+    this._refreshBottomBar()
     const actions = this._actions
     if (!actions) return
     const selected = this._selectedScene()
