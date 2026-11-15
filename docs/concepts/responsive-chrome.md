@@ -82,7 +82,7 @@ the inspector **auto-opens** if it was closed.
 
 | View          | Triggering selection                                          | Inspector content                          |
 |---------------|---------------------------------------------------------------|--------------------------------------------|
-| Atlas         | Click a scene card                                            | Scene preview, metadata, Open Scene CTA    |
+| Atlas         | Click a scene card                                            | Map preview, metadata, Open Scene CTA and the map verbs (rename / duplicate / delete / start map) — redesign step 5.4 moves all of it into a selection bar |
 | Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
 | Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement — **wide only**, see below |
 
@@ -240,8 +240,9 @@ Adw.OverlaySplitView split   (pin-sidebar: true)
 └─ content: Gtk.Overlay
    ├─ [overlay] toggle pill      (top-right: inspector)
    ├─ [overlay] FloatingZoom     (bottom-left — atlas only, see below)
-   ├─ [overlay] overview minimap (bottom-centre)
-   ├─ [overlay] FloatingFab      ("New Scene", bottom-right)
+   ├─ [overlay] overview minimap (top-right, only while the world
+   │                              is larger than the view, never compact)
+   ├─ [overlay] FloatingFab      ("New map" → win.new-map, bottom-right)
    └─ child: scene-card area
 ```
 
@@ -472,11 +473,13 @@ Conventions:
   change and fades; the standing cost is zero pixels. The pill it
   replaced held ~10 300 px² of the bottom-left corner at every window
   size for three buttons consulted between tasks. `FloatingZoom`
-  survives for the atlas, where the buttons ARE the whole zoom
-  affordance; the scene editor drives zoom from `+` / `-` /
+  survives for the atlas, where the buttons are the only *visible*
+  zoom affordance; the scene editor drives zoom from `+` / `-` /
   `<Primary>0`, the wheel (`CameraControlSystem`) and three "⋯" items
-  instead. There is no pinch gesture on the canvas yet, so a phone has
-  the "⋯" items and nothing else.
+  instead. The atlas additionally takes pinch (`Gtk.GestureZoom` on
+  its scroller) and Ctrl+scroll, so a phone can zoom the world by
+  touch; the scene editor's canvas has no pinch gesture yet, so there
+  a phone has the "⋯" items and nothing else.
 
 ---
 
@@ -704,7 +707,7 @@ The fixes that turned out to matter:
 | `brush-page.blp` palettes | `wrap: true` + `wrap-cap: 6` instead of `columns: 6`. `Adw.BottomSheet`'s page and bottom bar share one homogeneous `Gtk.Stack` (not ours to configure), so the closed sheet's minimum is the page's: six pinned 54 px columns were 378 px, and the ladder's `Adw.BreakpointBin` — which ignores its child's minimum — allocated the whole editor 18 px past a 360 px window. Caught by `phone-chrome.probe.spec.ts`, not by any log anyone read | this PR |
 | `action-direction-matrix.ts` cells | `ellipsize: END` + `max-width-chars: 18` on the per-cell "N frames · Σms" caption. The grid is `column-homogeneous` over five columns, so one ~112 px unbreakable caption set a 5 × 112 + 4 × 8 = 592 px floor — 640 px with the detail pane's margins. Ellipsized, the cell's floor is its 48 px thumbnail | this PR |
 | `cast-view.blp` detail pane | `Adw.BreakpointBin` (`max-width: 420sp`) stacks `detail_header` (180 px preview + a `title-1` name that cannot wrap mid-word = 357 px) and `detail_actions` (two labelled pills = 352 px), and drops the preview to 128 px. The pane's `hscrollbar-policy: never` propagates its minimum straight to the window, so before this the WHOLE cast detail was clipped at 360 px, not scrolled | this PR |
-| `atlas-view.blp` bottom OSDs | `Adw.BreakpointBin` scoped to the canvas hides the centred `legend_chip` below 624 px and drops `new_map_fab` to its icon below 400 px. The zoom pill (233 px), legend (110 px) and FAB (103 px) are three independently aligned overlay children of one `Gtk.Overlay` — nothing made them aware of each other, so at 360 px the legend rendered underneath the other two | this PR |
+| `atlas-view.blp` bottom OSDs | `Adw.BreakpointBin` scoped to the canvas drops `new_map_fab` to its icon below 400 px. The zoom pill (233 px) and the FAB (103 px) are independently aligned overlay children of one `Gtk.Overlay` — nothing makes them aware of each other, so at 360 px they overlapped. It also hid a centred `legend_chip` below 624 px until the phase 0 chrome pass removed the legend outright | this PR |
 
 If you add a new view: keep its minimum-size profile in mind.
 A `min-content-width: 1` on the outermost ScrolledWindow is
