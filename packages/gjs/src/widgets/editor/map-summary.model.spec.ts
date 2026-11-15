@@ -60,11 +60,41 @@ export default async () => {
 
     await describe('mapSelectionFacts', async () => {
       await it('reports size, doors and things', async () => {
-        expect(mapSelectionFacts(village, LINKS)).toStrictEqual({ cols: 4, rows: 2, doors: 3, things: 5 })
+        expect(mapSelectionFacts(village, LINKS)).toStrictEqual({
+          cols: 4,
+          rows: 2,
+          doors: 3,
+          doorsNowhere: 0,
+          things: 5,
+        })
       })
 
       await it('is all zeroes for an empty scene without links', async () => {
-        expect(mapSelectionFacts(cave, [])).toStrictEqual({ cols: 20, rows: 10, doors: 0, things: 0 })
+        expect(mapSelectionFacts(cave, [])).toStrictEqual({
+          cols: 20,
+          rows: 10,
+          doors: 0,
+          doorsNowhere: 0,
+          things: 0,
+        })
+      })
+
+      await it('counts a door that goes nowhere as a door AND as nowhere', async () => {
+        const facts = mapSelectionFacts(village, [...LINKS, { from: 'village', to: null, label: 'Shed' }])
+        expect(facts.doors).toBe(4)
+        expect(facts.doorsNowhere).toBe(1)
+      })
+
+      await it("leaves a broken door out of the other maps' facts", async () => {
+        // A `null` target belongs to its SOURCE map only: there is no
+        // other end that could claim it.
+        expect(mapSelectionFacts(cave, [{ from: 'village', to: null, label: 'Shed' }])).toStrictEqual({
+          cols: 20,
+          rows: 10,
+          doors: 0,
+          doorsNowhere: 0,
+          things: 0,
+        })
       })
 
       await it('counts a self-teleport as ONE door, like the door list', async () => {
@@ -114,6 +144,14 @@ export default async () => {
 
       await it('is empty when there are no teleports at all', async () => {
         expect(teleportSummaries(village, SCENE_NAMES, [])).toStrictEqual([])
+      })
+
+      await it('reports a door that goes nowhere with no other end', async () => {
+        // No id to resolve and no name to invent: the caller owns the
+        // translated wording for "goes nowhere".
+        expect(teleportSummaries(village, SCENE_NAMES, [{ from: 'village', to: null, label: 'Shed' }])).toStrictEqual([
+          { label: 'Shed', otherSceneId: null, otherSceneName: '', direction: 'out' },
+        ])
       })
 
       await it('falls back to the raw id when the other scene is unknown', async () => {

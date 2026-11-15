@@ -141,35 +141,33 @@ export function buildAtlasScenes(maps: readonly MapData[]): SampleScene[] {
  * Placements resolve through the canonical `resolvePlacementDefinition`,
  * so `defId` references into the entity library (created by the object
  * brush) show up on the atlas exactly like inline definitions.
+ *
+ * A teleport whose target cannot be reached — no `targetMapId`
+ * authored, or one naming a map this project does not have — is emitted
+ * with `to: null` rather than dropped. Hiding it would make a half-built
+ * door look like no door at all, which is precisely the mistake the
+ * atlas should point out (REDESIGN.md § 6.2).
  */
 export function collectAtlasTeleports(
   maps: readonly MapData[],
   entityLibrary: readonly EntityDefinition[],
 ): SampleTeleport[] {
+  const knownMapIds = new Set(maps.map((data) => data.id))
   return maps.flatMap((data) => {
     const placements = data?.objectPlacements ?? []
     return placements.flatMap((placement) => {
       const def = resolvePlacementDefinition(placement, entityLibrary)
       const teleport = def ? getComponentData(def, 'teleport') : undefined
-      if (
-        !teleport ||
-        typeof teleport.targetMapId !== 'string' ||
-        typeof teleport.targetTileX !== 'number' ||
-        typeof teleport.targetTileY !== 'number'
-      ) {
-        return []
-      }
-      return [
-        {
-          from: data.id,
-          fx: placement.tileX,
-          fy: placement.tileY,
-          to: teleport.targetMapId,
-          tx: teleport.targetTileX,
-          ty: teleport.targetTileY,
-          label: (typeof teleport.label === 'string' ? teleport.label : undefined) ?? def?.name ?? '',
-        },
-      ]
+      if (!teleport) return []
+      const label = (typeof teleport.label === 'string' ? teleport.label : undefined) ?? def?.name ?? ''
+      const targetMapId = typeof teleport.targetMapId === 'string' ? teleport.targetMapId : ''
+      const target: Pick<SampleTeleport, 'to' | 'tx' | 'ty'> =
+        knownMapIds.has(targetMapId) &&
+        typeof teleport.targetTileX === 'number' &&
+        typeof teleport.targetTileY === 'number'
+          ? { to: targetMapId, tx: teleport.targetTileX, ty: teleport.targetTileY }
+          : { to: null, tx: 0, ty: 0 }
+      return [{ from: data.id, fx: placement.tileX, fy: placement.tileY, ...target, label }]
     })
   })
 }

@@ -31,10 +31,3 @@
   padding: 2px;
   border-radius: 9999px;
 }
-
-/* Legend chip — a pill explaining the teleport edges (bottom-center OSD). */
-.atlas-legend {
-  padding: 4px 12px 4px 8px;
-  border-radius: 9999px;
-}
-
