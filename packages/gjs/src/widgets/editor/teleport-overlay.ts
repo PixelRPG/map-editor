@@ -7,7 +7,14 @@ import Pango from '@girs/pango-1.0'
 import { gettext as _ } from 'gettext'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import type { SceneRect } from './atlas-canvas.geometry.ts'
-import { connectionTouches, fanGroups, type MapConnection, pairDoors } from './map-connections.model.ts'
+import {
+  type ConnectionHit,
+  connectionTouches,
+  type DoorRef,
+  fanGroups,
+  type MapConnection,
+  pairDoors,
+} from './map-connections.model.ts'
 import {
   arrowheadPoints,
   clipToViewport,
@@ -212,12 +219,35 @@ export class TeleportOverlay extends Gtk.Widget {
   }
 
   /**
-   * The connection under `point` (surface coords), or `null`. Used by
-   * the canvas to open a line's popover.
+   * The connection under `point` (surface coords) together with the
+   * doors it draws, or `null`. Used by the canvas to open a line's
+   * popover, whose items act on those doors.
    */
-  connectionAt(point: OverlayPoint): MapConnection | null {
+  connectionAt(point: OverlayPoint): ConnectionHit | null {
     const index = this._hitIndex(point)
-    return index === null ? null : this._layout[index].connection
+    if (index === null) return null
+    const { connection } = this._layout[index]
+    return { connection, doors: this._doorRefs(connection) }
+  }
+
+  /**
+   * The doors a connection was folded from, resolved from the model's
+   * input indices back to the teleports they came from.
+   *
+   * The model works in indices because it is pure and knows nothing
+   * about placements; the overlay holds the list those indices point
+   * into, so this is the only place the two can be joined. A door whose
+   * index no longer resolves is dropped rather than faked — the world
+   * was replaced under a stale hit, and an empty popover is better than
+   * one acting on the wrong placement.
+   */
+  private _doorRefs(connection: MapConnection): DoorRef[] {
+    const refs: DoorRef[] = []
+    for (const index of connection.doors) {
+      const door = this._teleports[index]
+      if (door) refs.push({ mapId: door.from, placementId: door.placementId })
+    }
+    return refs
   }
 
   /**

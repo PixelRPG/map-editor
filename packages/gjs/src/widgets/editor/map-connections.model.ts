@@ -30,6 +30,33 @@ export interface ConnectionEnd {
 }
 
 /**
+ * One door, named well enough to act on: which map it lives on and
+ * which object placement it IS.
+ *
+ * A tile pair would not do. Two doors on two maps can share a tile
+ * coordinate, and a map can carry two doors whose arrival tiles
+ * coincide — so "the door at (3, 7)" is ambiguous the moment the atlas
+ * wants to open or unlink exactly one of them.
+ */
+export interface DoorRef {
+  mapId: string
+  placementId: string
+}
+
+/**
+ * A line the pointer landed on, with the doors behind it.
+ *
+ * The popover acts on doors, never on the line: a line is a drawing of
+ * one or two placements, and every edit the atlas offers (go to it,
+ * clear its target, repair it) is an edit of a placement. Two refs for
+ * a pair, one otherwise, in the connection's own door order.
+ */
+export interface ConnectionHit {
+  connection: MapConnection
+  doors: readonly DoorRef[]
+}
+
+/**
  * How a connection reads on the atlas (REDESIGN.md § 6.2):
  * - `pair` — a door and its way back, drawn as ONE solid line with a
  *   door glyph at both ends,

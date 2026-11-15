@@ -167,7 +167,16 @@ export function collectAtlasTeleports(
         typeof teleport.targetTileY === 'number'
           ? { to: targetMapId, tx: teleport.targetTileX, ty: teleport.targetTileY }
           : { to: null, tx: 0, ty: 0 }
-      return [{ from: data.id, fx: placement.tileX, fy: placement.tileY, ...target, label }]
+      return [
+        {
+          from: data.id,
+          fx: placement.tileX,
+          fy: placement.tileY,
+          ...target,
+          label,
+          placementId: placement.id,
+        },
+      ]
     })
   })
 }

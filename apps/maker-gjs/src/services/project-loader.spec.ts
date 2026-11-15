@@ -29,7 +29,7 @@ export default async () => {
       ]
       const teleports = collectAtlasTeleports(maps, [])
       expect(teleports).toStrictEqual([
-        { from: 'overworld', fx: 3, fy: 4, to: 'cave', tx: 1, ty: 2, label: 'Cave Door' },
+        { from: 'overworld', fx: 3, fy: 4, to: 'cave', tx: 1, ty: 2, label: 'Cave Door', placementId: 'p1' },
       ])
     })
 
@@ -43,7 +43,7 @@ export default async () => {
       ]
       const teleports = collectAtlasTeleports(maps, [teleportDef])
       expect(teleports).toStrictEqual([
-        { from: 'overworld', fx: 5, fy: 6, to: 'cave', tx: 1, ty: 2, label: 'Cave Door' },
+        { from: 'overworld', fx: 5, fy: 6, to: 'cave', tx: 1, ty: 2, label: 'Cave Door', placementId: 'p1' },
       ])
     })
 
@@ -64,7 +64,9 @@ export default async () => {
         makeMap('dungeon', []),
       ]
       const teleports = collectAtlasTeleports(maps, [teleportDef])
-      expect(teleports).toStrictEqual([{ from: 'overworld', fx: 0, fy: 0, to: 'dungeon', tx: 9, ty: 9, label: 'Down' }])
+      expect(teleports).toStrictEqual([
+        { from: 'overworld', fx: 0, fy: 0, to: 'dungeon', tx: 9, ty: 9, label: 'Down', placementId: 'p1' },
+      ])
     })
 
     await it('nulls the target of a door naming a map the project lost', async () => {
@@ -72,7 +74,7 @@ export default async () => {
       // a broken stub rather than vanishing (REDESIGN.md § 6.2).
       const maps = [makeMap('overworld', [{ id: 'p1', layerId: 'l1', tileX: 3, tileY: 4, inline: teleportDef }])]
       expect(collectAtlasTeleports(maps, [])).toStrictEqual([
-        { from: 'overworld', fx: 3, fy: 4, to: null, tx: 0, ty: 0, label: 'Cave Door' },
+        { from: 'overworld', fx: 3, fy: 4, to: null, tx: 0, ty: 0, label: 'Cave Door', placementId: 'p1' },
       ])
     })
 
@@ -84,7 +86,7 @@ export default async () => {
       }
       const maps = [makeMap('overworld', [{ id: 'p1', layerId: 'l1', tileX: 7, tileY: 8, inline: blankDoor }])]
       expect(collectAtlasTeleports(maps, [])).toStrictEqual([
-        { from: 'overworld', fx: 7, fy: 8, to: null, tx: 0, ty: 0, label: 'New Door' },
+        { from: 'overworld', fx: 7, fy: 8, to: null, tx: 0, ty: 0, label: 'New Door', placementId: 'p1' },
       ])
     })
 
@@ -100,7 +102,7 @@ export default async () => {
         makeMap('cave', []),
       ]
       expect(collectAtlasTeleports(maps, [])).toStrictEqual([
-        { from: 'overworld', fx: 1, fy: 1, to: null, tx: 0, ty: 0, label: 'Half Door' },
+        { from: 'overworld', fx: 1, fy: 1, to: null, tx: 0, ty: 0, label: 'Half Door', placementId: 'p1' },
       ])
     })
 
