@@ -12,7 +12,7 @@ import {
   resolveTileEditTarget,
 } from '../services/tile-edit-target.ts'
 import type { PlacementOverrides } from '../entity/placement-overrides.ts'
-import type { ObjectPlacement } from '../types/data/index.ts'
+import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { EditorSession } from './editor-session.ts'
 import type { LayerOperations } from './layer-operations.ts'
@@ -47,11 +47,25 @@ export interface TileEditRequest {
 
 /** A programmatic object stamp. */
 export interface ObjectPlaceRequest {
-  readonly defId: string
+  /**
+   * The library entry to instantiate. `null` only together with
+   * {@link inline}, which then carries the definition instead.
+   */
+  readonly defId: string | null
   readonly layerId: string | null
   readonly tileX: number
   readonly tileY: number
   readonly origin?: string
+  /**
+   * A definition the placement carries ITSELF rather than pointing at
+   * the library — the schema's `inline`, mutually exclusive with
+   * `defId`. The caller hands over the whole definition and gets back a
+   * self-contained placement, which is what a generated object needs
+   * when no library entry describes it: the § 6.2 "door back" is a copy
+   * of another map's door with a rewritten teleport, and the library
+   * holds no door to point at.
+   */
+  readonly inline?: EntityDefinition
 }
 
 /** A resolved tile edit: the scene it lands on plus the accepted target. */
@@ -149,12 +163,18 @@ export class EditOperations {
   }
 
   /**
-   * Stamp a library object onto the map. `false` when the guard chain
-   * refuses, `defId` isn't in the project's entity library, or the tile
-   * is off-map — an off-map placement would spawn an entity the player
-   * can never reach and would ride the op-log to peers.
+   * Stamp an object onto the map — a library entry by `defId`, or a
+   * definition the placement carries itself (`inline`). Returns the new
+   * placement's id, which only this method can know (`makePlacementId`
+   * mixes in a counter and a random suffix), so a caller that has
+   * follow-up work on the object it just created can find it.
+   *
+   * `null` when the guard chain refuses, neither `defId` nor `inline`
+   * resolves to a definition, or the tile is off-map — an off-map
+   * placement would spawn an entity the player can never reach and would
+   * ride the op-log to peers.
    */
-  placeObject(request: ObjectPlaceRequest): boolean {
+  placeObject(request: ObjectPlaceRequest): string | null {
     const scene = this.activeScene()
     const layer = resolveEditLayer({
       assistantPause: { mode: 'enforce', paused: this.assistant.isPaused() },
@@ -163,20 +183,28 @@ export class EditOperations {
       activeLayerId: this.session.activeLayer,
       isLayerLocked: (layerId) => this.layers.isLocked(layerId),
     })
-    if (layer.type === 'rejected' || !scene) return false
-    if (!scene.entityLibrary.some((entity) => entity.id === request.defId)) return false
+    if (layer.type === 'rejected' || !scene) return null
+    // An inline definition IS the definition, so the library lookup
+    // applies to `defId` alone. The two are mutually exclusive in the
+    // schema (validators reject a placement carrying both), hence the
+    // either/or rather than a merge.
+    const { defId, inline } = request
+    if (!inline && !scene.entityLibrary.some((entity) => entity.id === defId)) return null
     // Same bounds predicate + same authoritative source (persisted
     // `MapData.columns/rows`) as the tile paths and the pointer path.
-    if (isTileOutsideMap(scene.mapResource?.mapData, request.tileX, request.tileY)) return false
-    const placement = {
-      id: makePlacementId(request.tileX, request.tileY),
+    if (isTileOutsideMap(scene.mapResource?.mapData, request.tileX, request.tileY)) return null
+    const id = makePlacementId(request.tileX, request.tileY)
+    const placement: ObjectPlacement = {
+      id,
       layerId: layer.layerId,
       tileX: request.tileX,
       tileY: request.tileY,
-      defId: request.defId,
+      // An inline definition's id is conventionally the placement's —
+      // same rule `duplicatePlacement` follows for the copy it makes.
+      ...(inline ? { inline: { ...inline, id } } : { defId: defId ?? undefined }),
     }
     this.execute(new PlaceObjectCommand({ placement }), request.origin)
-    return true
+    return id
   }
 
   /**

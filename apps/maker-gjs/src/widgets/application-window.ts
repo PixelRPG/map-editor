@@ -1437,11 +1437,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    * Place a library object on the active map programmatically (Control →
    * MCP). `layerId` null = active layer. Goes through the engine command
    * path (undo + collab). `origin` — initiating actor id for peer-side
-   * attribution (see {@link paintTile}). Returns `false` if it couldn't
-   * be applied.
+   * attribution (see {@link paintTile}). Returns the new placement's id,
+   * or `null` if it couldn't be applied.
    */
-  placeObject(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): boolean {
-    return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY, origin) ?? false
+  placeObject(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): string | null {
+    return this._engineCtl.engine?.excalibur?.placeObjectAt(defId, layerId, tileX, tileY, origin) ?? null
   }
 
   /**

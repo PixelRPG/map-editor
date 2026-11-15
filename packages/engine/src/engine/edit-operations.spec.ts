@@ -182,7 +182,7 @@ const CONTRACT: Record<string, GateContract> = {
   placeObject: {
     assistantPause: 'enforce',
     targetLayer: TARGET_LAYER,
-    invoke: (ops) => ops.placeObject({ defId: 'npc', layerId: null, tileX: 1, tileY: 1 }),
+    invoke: (ops) => ops.placeObject({ defId: 'npc', layerId: null, tileX: 1, tileY: 1 }) !== null,
   },
   removeObject: {
     // The ONLY remove path; the human's Props "Remove" button routes
@@ -280,7 +280,40 @@ export default async () => {
       // `mapData.columns/rows` is 4×4 and the tilemaps are derived from
       // it — the same bounds predicate the tile paths use.
       const harness = makeHarness()
-      expect(harness.ops.placeObject({ defId: 'npc', layerId: null, tileX: 4, tileY: 0 })).toBe(false)
+      expect(harness.ops.placeObject({ defId: 'npc', layerId: null, tileX: 4, tileY: 0 })).toBe(null)
+      expect(harness.executed).toHaveLength(0)
+    })
+
+    await it('placeObject hands back the id of the placement it created', async () => {
+      // Only `placeObject` can know it: `makePlacementId` mixes in a
+      // counter and a random suffix, so a caller with follow-up work on
+      // the new object (the § 6.2 door back) cannot derive it.
+      const harness = makeHarness()
+      const newId = harness.ops.placeObject({ defId: 'npc', layerId: null, tileX: 2, tileY: 3 })
+      const command = harness.executed[0] as PlaceObjectCommand
+      expect(command.payload.placement.id).toBe(newId)
+      expect(command.payload.placement.defId).toBe('npc')
+      expect(command.payload.placement.inline).toBe(undefined)
+    })
+
+    await it('placeObject takes an inline definition instead of a library id', async () => {
+      // `inline` IS the definition, so the library lookup must not run —
+      // `door` is deliberately absent from the fixture's library.
+      const harness = makeHarness()
+      const inline = { id: 'ignored', name: 'Door', components: [{ type: 'teleport', targetMapId: 'other' }] }
+      const newId = harness.ops.placeObject({ defId: null, inline, layerId: null, tileX: 1, tileY: 1 })
+      expect(newId).not.toBe(null)
+      const placement = (harness.executed[0] as PlaceObjectCommand).payload.placement
+      expect(placement.defId).toBe(undefined)
+      expect(placement.inline?.name).toBe('Door')
+      // `defId` and `inline` are mutually exclusive and an inline
+      // definition's id is conventionally the placement's.
+      expect(placement.inline?.id).toBe(newId)
+    })
+
+    await it('placeObject refuses a defId that is not in the library', async () => {
+      const harness = makeHarness()
+      expect(harness.ops.placeObject({ defId: 'door', layerId: null, tileX: 1, tileY: 1 })).toBe(null)
       expect(harness.executed).toHaveLength(0)
     })
 

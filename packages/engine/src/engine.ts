@@ -36,7 +36,7 @@ import { EDITOR_CONSTANTS } from './utils/constants.ts'
 import { playZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
-import type { LayerData, LayerPlane } from './types/data/index.ts'
+import type { EntityDefinition, LayerData, LayerPlane } from './types/data/index.ts'
 import {
   type ArrivalPickRequest,
   EngineEvent,
@@ -429,9 +429,27 @@ export class Engine {
     return this.edits.fillTile({ layerId, tileX, tileY, spriteId, origin })
   }
 
-  /** Stamp a library object on the active map — see {@link EditOperations.placeObject}. */
-  placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): boolean {
+  /**
+   * Stamp a library object on the active map, returning the new
+   * placement's id — see {@link EditOperations.placeObject}.
+   */
+  placeObjectAt(defId: string, layerId: string | null, tileX: number, tileY: number, origin?: string): string | null {
     return this.edits.placeObject({ defId, layerId, tileX, tileY, origin })
+  }
+
+  /**
+   * Stamp an object that carries its own definition instead of a library
+   * reference, returning the new placement's id — see
+   * {@link EditOperations.placeObject}.
+   */
+  placeInlineObjectAt(
+    inline: EntityDefinition,
+    layerId: string | null,
+    tileX: number,
+    tileY: number,
+    origin?: string,
+  ): string | null {
+    return this.edits.placeObject({ defId: null, inline, layerId, tileX, tileY, origin })
   }
 
   /** Remove an object placement by id — see {@link EditOperations.removeObject}. */
