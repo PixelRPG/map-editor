@@ -31,6 +31,7 @@ export declare const InternalChildren: [
   "lock_group",
   "lock_row",
   "teleports_group",
+  "map_group",
   "open_button",
   "empty_state",
 ];
@@ -46,6 +47,7 @@ export interface Children {
   _lock_group: Adw.PreferencesGroup;
   _lock_row: Adw.SwitchRow;
   _teleports_group: Adw.PreferencesGroup;
+  _map_group: Adw.PreferencesGroup;
   _open_button: Gtk.Button;
   _empty_state: Adw.StatusPage;
 }

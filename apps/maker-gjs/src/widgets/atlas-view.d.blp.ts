@@ -28,7 +28,7 @@ export declare const InternalChildren: [
         'atlas',
         'overview_frame',
         'atlas_overview',
-        'new_scene_fab',
+        'new_map_fab',
         'preview_zoom',
         'switcher_pill',
         'view_switcher',
@@ -44,7 +44,7 @@ export interface Children {
         _atlas: GObject.Object;
         _overview_frame: Adw.Bin;
         _atlas_overview: GObject.Object;
-        _new_scene_fab: GObject.Object;
+        _new_map_fab: GObject.Object;
         _preview_zoom: GObject.Object;
         _switcher_pill: Adw.Bin;
         _view_switcher: Adw.ViewSwitcher;

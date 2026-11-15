@@ -107,7 +107,7 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
           condition ("max-width: 399sp")
 
           setters {
-            new_scene_fab.label: "";
+            new_map_fab.label: "";
           }
         }
 
@@ -129,14 +129,14 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
           }
 
           [overlay]
-          $PixelRpgFloatingFab new_scene_fab {
+          $PixelRpgFloatingFab new_map_fab {
             halign: end;
             valign: end;
             margin-end: 12;
             margin-bottom: 12;
             label: _("New map");
             icon-name: "list-add-symbolic";
-            action-name: "win.new-scene";
+            action-name: "win.new-map";
             tooltip-text: _("Create a new map");
           }
 
