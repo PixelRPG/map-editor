@@ -47,6 +47,48 @@ export function isAttackPressed(kb: KeyboardLike): boolean {
 }
 
 /**
+ * One input producer's intent for a frame — the shape
+ * `InputSourceComponent` carries, without being tied to a component
+ * instance so it can be reasoned about (and tested) as a value.
+ */
+export interface InputIntent {
+  moveX: number
+  moveY: number
+  actionHeld: boolean
+  attackHeld: boolean
+}
+
+/**
+ * Combine the keyboard's intent with an on-screen touch control's.
+ *
+ * Movement takes the touch vector whenever it is non-neutral and falls
+ * back to the keyboard otherwise, rather than summing them: two
+ * producers pushing opposite directions would cancel to a standstill,
+ * and summing a stick already at full travel with a held arrow key
+ * would move the hero faster than either device alone can. "Whoever is
+ * actually steering wins, and the thumb on the glass is the more
+ * deliberate of the two" is both predictable and speed-preserving.
+ *
+ * The buttons OR together because they are momentary and nothing about
+ * holding both is contradictory — a player who taps the on-screen A
+ * while resting a hand on Space means to act once, not to fight the
+ * keyboard. Edge detection stays with the consumers, which see one
+ * combined held state and so cannot double-fire.
+ *
+ * Pure, so the merge rule is proven in `player-input.spec.ts` instead
+ * of in a touch sequence no headless harness can inject.
+ */
+export function mergeInputIntents(keyboard: InputIntent, touch: InputIntent | null): InputIntent {
+  const touchMoving = touch !== null && (touch.moveX !== 0 || touch.moveY !== 0)
+  return {
+    moveX: touchMoving ? touch.moveX : keyboard.moveX,
+    moveY: touchMoving ? touch.moveY : keyboard.moveY,
+    actionHeld: keyboard.actionHeld || (touch?.actionHeld ?? false),
+    attackHeld: keyboard.attackHeld || (touch?.attackHeld ?? false),
+  }
+}
+
+/**
  * Pick a facing from an input vector. Prefers the dominant axis;
  * exact ties (perfect diagonal) keep the previous facing so the hero
  * doesn't flicker between two animations when the user holds two

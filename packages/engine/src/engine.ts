@@ -1,6 +1,12 @@
 import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Logger, Vector } from 'excalibur'
 import type { Command } from './commands/index.ts'
-import { type EditorTool, type EditorViewFlags, GameSaveStateComponent } from './components/index.ts'
+import {
+  type EditorTool,
+  type EditorViewFlags,
+  GameSaveStateComponent,
+  type TouchIntent,
+  TouchInputComponent,
+} from './components/index.ts'
 import { CommandHistory } from './engine/command-history.ts'
 import { EditOperations } from './engine/edit-operations.ts'
 import { EditorSession } from './engine/editor-session.ts'
@@ -599,6 +605,37 @@ export class Engine {
     const scene = this.activeMapScene()
     if (!scene) return
     SessionState.set(scene, new GameSaveStateComponent())
+  }
+
+  /**
+   * Publish what the on-screen touch controls are doing, for
+   * `InputSystem` to merge with the keyboard.
+   *
+   * The host calls this on every stick move and button press, so it
+   * mutates the existing component in place where it can — a
+   * remove/add pair per frame would churn Excalibur's component
+   * lifecycle for data that changes sixty times a second.
+   *
+   * No-op without an active scene: a touch that arrives while no map
+   * is loaded has nothing to steer.
+   */
+  setTouchInput(intent: TouchIntent): void {
+    const scene = this.activeMapScene()
+    if (!scene) return
+    const touch = SessionState.get(scene, TouchInputComponent)
+    if (!touch) {
+      SessionState.set(
+        scene,
+        new TouchInputComponent(intent.moveX, intent.moveY, intent.actionHeld, intent.attackHeld, intent.active),
+      )
+      return
+    }
+    touch.moveX = intent.moveX
+    touch.moveY = intent.moveY
+    touch.actionHeld = intent.actionHeld
+    touch.attackHeld = intent.attackHeld
+    touch.active = intent.active
+    SessionState.notifyMutation(scene, touch)
   }
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */

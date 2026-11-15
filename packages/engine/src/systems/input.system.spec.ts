@@ -11,7 +11,7 @@ import { describe, expect, it } from '@gjsify/unit'
 import type { Entity, Scene, World } from 'excalibur'
 import { Keys } from 'excalibur'
 
-import { InputSourceComponent, RuntimeModeComponent } from '../components/index.ts'
+import { InputSourceComponent, RuntimeModeComponent, TouchInputComponent } from '../components/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { InputSystem } from './input.system.ts'
 
@@ -116,6 +116,37 @@ export default async () => {
       const i = input()
       expect(Math.abs((i?.moveX ?? 0) - 1 / Math.SQRT2) < 1e-9).toBe(true)
       expect(Math.abs((i?.moveY ?? 0) - 1 / Math.SQRT2) < 1e-9).toBe(true)
+    })
+
+    await it('steers from the touch producer when the stick is active', async () => {
+      // The phone path: no keys held at all, intent arrives through
+      // `TouchInputComponent` and still lands on the one component
+      // gameplay reads.
+      const { scene, system, input } = makeInputScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+      SessionState.set(scene, new TouchInputComponent(0, -1, true, false, true))
+      system.update(16)
+      expect(input()?.moveY).toBe(-1)
+      expect(input()?.actionHeld).toBe(true)
+    })
+
+    await it('ignores a touch producer that is not on screen', async () => {
+      // `active: false` is a hidden control, not a centred one — stale
+      // vector and all, it must not steer.
+      const { scene, system, input } = makeInputScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+      SessionState.set(scene, new TouchInputComponent(1, 0, true, true, false))
+      system.update(16)
+      expect(input()?.moveX).toBe(0)
+      expect(input()?.actionHeld).toBe(false)
+    })
+
+    await it('stays neutral outside runtime mode even with touch held', async () => {
+      const { scene, system, input } = makeInputScene()
+      SessionState.set(scene, new TouchInputComponent(1, 0, true, false, true))
+      system.update(16)
+      expect(input()?.moveX).toBe(0)
+      expect(input()?.actionHeld).toBe(false)
     })
 
     await it('resets to neutral when runtime mode ends mid-hold', async () => {

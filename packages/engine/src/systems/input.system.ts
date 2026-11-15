@@ -1,15 +1,31 @@
 import { type Scene, System, SystemType, type World } from 'excalibur'
 import { InputSourceComponent } from '../components/input-source.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
-import { isActionPressed, isAttackPressed, type KeyboardLike, readMovementInput } from '../utils/player-input.ts'
+import { TouchInputComponent } from '../components/touch-input.component.ts'
+import {
+  type InputIntent,
+  isActionPressed,
+  isAttackPressed,
+  type KeyboardLike,
+  mergeInputIntents,
+  readMovementInput,
+} from '../utils/player-input.ts'
 import { SessionState } from '../utils/session-state.ts'
 
+const NEUTRAL: InputIntent = { moveX: 0, moveY: 0, actionHeld: false, attackHeld: false }
+
 /**
- * Polls the LOCAL keyboard each tick and publishes the result as the
- * session-singleton's {@link InputSourceComponent} — the single
+ * Polls the LOCAL input devices each tick and publishes the result as
+ * the session-singleton's {@link InputSourceComponent} — the single
  * device-facing system. Everything gameplay-side (`PlayerSystem`)
- * reads the component, never the keyboard (transport-ready rule 3:
+ * reads the component, never a device (transport-ready rule 3:
  * remote/replay/AI input sources write the same component).
+ *
+ * Two local producers exist: the host keyboard, polled here, and the
+ * on-screen touch controls, which publish {@link TouchInputComponent}
+ * from the GTK side (`Engine.setTouchInput`). This system is the one
+ * place they are combined, via the pure `mergeInputIntents` — so a
+ * phone and a keyboard cannot each half-write the contract.
  *
  * Runs BEFORE `PlayerSystem` (registration order in `MapScene`), so
  * the component always carries the current frame's intent when the
@@ -28,6 +44,9 @@ export class InputSystem extends System {
     void world
     this.scene = scene
     SessionState.set(scene, new InputSourceComponent())
+    // Seed the touch producer too, so the GTK host can mutate it in
+    // place from its first event instead of racing scene setup.
+    SessionState.set(scene, new TouchInputComponent())
   }
 
   public update(_elapsedMs: number): void {
@@ -37,19 +56,35 @@ export class InputSystem extends System {
     if (!input) return
 
     const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
-    const kb = (scene.engine as { input?: { keyboard?: KeyboardLike } })?.input?.keyboard
-    if (!inRuntime || !kb) {
-      input.moveX = 0
-      input.moveY = 0
-      input.actionHeld = false
-      input.attackHeld = false
+    if (!inRuntime) {
+      this.publish(input, NEUTRAL)
       return
     }
 
+    // No keyboard is normal, not an error: the headless specs have none,
+    // and neither does a phone. Touch alone has to be able to drive the
+    // hero, so a missing keyboard contributes neutral rather than
+    // short-circuiting the whole merge.
+    const kb = (scene.engine as { input?: { keyboard?: KeyboardLike } })?.input?.keyboard
+    const keyboard = kb ? this.readKeyboard(kb) : NEUTRAL
+    const touch = SessionState.get(scene, TouchInputComponent)
+    this.publish(input, mergeInputIntents(keyboard, touch?.active ? touch : null))
+  }
+
+  private readKeyboard(kb: KeyboardLike): InputIntent {
     const { dx, dy } = readMovementInput(kb)
-    input.moveX = dx
-    input.moveY = dy
-    input.actionHeld = isActionPressed(kb)
-    input.attackHeld = isAttackPressed(kb)
+    return {
+      moveX: dx,
+      moveY: dy,
+      actionHeld: isActionPressed(kb),
+      attackHeld: isAttackPressed(kb),
+    }
+  }
+
+  private publish(input: InputSourceComponent, intent: InputIntent): void {
+    input.moveX = intent.moveX
+    input.moveY = intent.moveY
+    input.actionHeld = intent.actionHeld
+    input.attackHeld = intent.attackHeld
   }
 }
