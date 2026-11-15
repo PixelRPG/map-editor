@@ -12,7 +12,15 @@ import {
   isLayerPlane,
   type SpriteSetData,
 } from '@pixelrpg/engine'
-import { type CollaboratorEntry, Engine, type MapSelectionBar, promptRename, SignalScope } from '@pixelrpg/gjs'
+import {
+  type CollaboratorEntry,
+  Engine,
+  type MapSelectionBar,
+  mapSelectionFacts,
+  promptRename,
+  SignalScope,
+  teleportSummaries,
+} from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
 import { installBackActions } from '../actions/back-actions.ts'
@@ -66,7 +74,7 @@ import { RecentProjectsDialog } from './recent-projects-dialog.ts'
 import type { ResponsiveEditorView } from './responsive-editor-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
-import { confirmMapDelete, presentNewMapDialog } from './world/map-dialogs.ts'
+import { confirmMapDelete, presentMapSettingsDialog, presentNewMapDialog } from './world/map-dialogs.ts'
 
 // Force registration so the `$PixelRpgLibraryView` / `$PixelRpgGameView`
 // references in the blueprint resolve at parse time.
@@ -917,7 +925,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
     })
 
-    const { renameMap, duplicateMap, deleteMap, startMap } = installMapActions(group, {
+    const { renameMap, duplicateMap, deleteMap, startMap, mapSettings } = installMapActions(group, {
       hasProject,
       showToast,
       presentNewMap: () => this._presentNewMap(),
@@ -925,6 +933,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       presentDuplicateMap: () => this._presentDuplicateMap(),
       confirmDeleteMap: () => this._confirmDeleteMap(),
       startHere: () => this._startMapHere(),
+      presentMapSettings: () => this._presentMapSettings(),
     })
 
     installWindowAccels(this.get_application())
@@ -947,6 +956,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       duplicateMap,
       deleteMap,
       startMap,
+      mapSettings,
     }
   }
 
@@ -963,7 +973,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
   }
 
   /**
-   * Keep the four selection-driven map verbs honest: a verb with no
+   * Keep the five selection-driven map verbs honest: a verb with no
    * target is insensitive, not a toast after the fact. Delete also needs
    * a second map to fall back to (`ProjectStore.removeMap` refuses the
    * last one) and Start the game here is pointless on the map that
@@ -981,6 +991,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     actions.duplicateMap.set_enabled(selected != null)
     actions.deleteMap.set_enabled(selected != null && this._scenes.scenes.length > 1)
     actions.startMap.set_enabled(selected != null && this._projectStore.startMapId() !== selected.id)
+    actions.mapSettings.set_enabled(selected != null)
   }
 
   /** `win.new-map` — the atlas FAB. */
@@ -1057,6 +1068,36 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
     if (this._projectStore.setStartMap(selected.id)) {
       this._showToast(_('The game now starts on “%s”').replace('%s', selected.name))
     }
+  }
+
+  /**
+   * `win.map-settings` — the facts about the selected map, with its name
+   * editable. The counts come from the same `mapSelectionFacts` the
+   * selection bar's caption uses, so the bar and the dialog can never
+   * disagree; the tile size is the only value that has to be read off
+   * the map resource, the atlas cards do not carry it.
+   */
+  private _presentMapSettings(): void {
+    const selected = this._selectedScene()
+    const project = this._loadedProject
+    if (!selected || !project) return
+    const scene = this._scenes.getScene(selected.id)
+    if (!scene) return
+    const mapData = project.resource.maps.get(selected.id)?.mapData
+    const facts = mapSelectionFacts(scene, project.teleports)
+    presentMapSettingsDialog(
+      this,
+      {
+        name: selected.name,
+        columns: facts.cols,
+        rows: facts.rows,
+        tileWidth: mapData?.tileWidth ?? 0,
+        tileHeight: mapData?.tileHeight ?? 0,
+        things: facts.things,
+        doors: teleportSummaries(scene, project.scenes, project.teleports),
+      },
+      (name) => this._projectStore.renameMap(selected.id, name),
+    )
   }
 
   /**

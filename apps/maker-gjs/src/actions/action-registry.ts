@@ -90,7 +90,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation'],
   tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset'],
   object: ['new-object', 'open-object', 'toggle-object-cast'],
-  map: ['new-map', 'rename-map', 'duplicate-map', 'delete-map', 'start-map'],
+  map: ['new-map', 'rename-map', 'duplicate-map', 'delete-map', 'start-map', 'map-settings'],
 } as const satisfies Record<string, readonly string[]>
 
 /** Every declared `win.*` action name, flattened across the modules. */

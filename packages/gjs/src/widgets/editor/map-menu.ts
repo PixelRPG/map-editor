@@ -16,6 +16,7 @@ export function buildMapContextMenu(): Gio.Menu {
   model.append(_('Rename…'), 'win.rename-map')
   model.append(_('Duplicate'), 'win.duplicate-map')
   model.append(_('Start the game here'), 'win.start-map')
+  model.append(_('Map settings…'), 'win.map-settings')
   model.append(_('Delete'), 'win.delete-map')
   return model
 }
