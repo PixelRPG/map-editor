@@ -1,7 +1,8 @@
-// Pure atlas-surface geometry: how big a scene card is, how big the
-// scrollable surface has to be to hold them all, where a dragged card
-// lands, and where the scroll offsets go when fitting the world. GTK-free
-// so it can be unit-tested (the canvas subclasses `Adw.Bin`).
+// Pure atlas-surface geometry: how big a scene's map is in atlas space,
+// how far the world reaches, and where a dragged card lands. All values
+// are in ATLAS space — turning them into surface pixels at the current
+// zoom is `atlas-camera.ts`'s job. GTK-free so it can be unit-tested
+// (the canvas subclasses `Adw.Bin`).
 
 /** The scene fields the surface geometry reads — `SampleScene` satisfies it. */
 export interface SceneBox {
@@ -37,16 +38,24 @@ export function sceneRects(scenes: readonly SceneBox[]): SceneRect[] {
   return scenes.map((scene) => ({ x: scene.x, y: scene.y, ...sceneGeometry(scene) }))
 }
 
-/** Bottom-right corner of the union of every scene box (0,0 for an empty world). */
-export function worldExtent(scenes: readonly SceneBox[]): { width: number; height: number } {
+/**
+ * Bottom-right corner of the union of a set of rects (0,0 when empty).
+ * Works in whichever space the rects are in — the camera measures the
+ * drawn world with it, {@link worldExtent} measures the atlas world.
+ */
+export function rectExtent(rects: readonly SceneRect[]): { width: number; height: number } {
   let width = 0
   let height = 0
-  for (const scene of scenes) {
-    const { w, h } = sceneGeometry(scene)
-    width = Math.max(width, scene.x + w)
-    height = Math.max(height, scene.y + h)
+  for (const rect of rects) {
+    width = Math.max(width, rect.x + rect.w)
+    height = Math.max(height, rect.y + rect.h)
   }
   return { width, height }
+}
+
+/** Bottom-right corner of the union of every scene box (0,0 for an empty world). */
+export function worldExtent(scenes: readonly SceneBox[]): { width: number; height: number } {
+  return rectExtent(sceneRects(scenes))
 }
 
 /** Scrollable surface size: the world extent plus `padding` on every side. */

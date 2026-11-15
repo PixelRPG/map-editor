@@ -3,6 +3,7 @@ import { describe, expect, it } from '@gjsify/unit'
 import {
   centeredScrollValue,
   clampPreviewZoom,
+  rectExtent,
   sceneGeometry,
   type SceneBox,
   sceneRects,
@@ -66,6 +67,25 @@ export default async () => {
 
       await it('preserves scene order — the overview draws them in it', async () => {
         expect(sceneRects([project, terrain]).map((r) => r.x)).toStrictEqual([100, 10])
+      })
+    })
+
+    await describe('rectExtent', async () => {
+      await it('unions a set of rects', async () => {
+        expect(
+          rectExtent([
+            { x: 0, y: 0, w: 10, h: 40 },
+            { x: 30, y: 5, w: 10, h: 10 },
+          ]),
+        ).toStrictEqual({ width: 40, height: 40 })
+      })
+
+      await it('is zero for no rects', async () => {
+        expect(rectExtent([])).toStrictEqual({ width: 0, height: 0 })
+      })
+
+      await it('never reports a negative extent', async () => {
+        expect(rectExtent([{ x: -100, y: -100, w: 16, h: 8 }])).toStrictEqual({ width: 0, height: 0 })
       })
     })
 
