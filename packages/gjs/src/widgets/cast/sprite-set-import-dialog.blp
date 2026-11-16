@@ -152,6 +152,38 @@ template $PixelRpgSpriteSetImportDialog : Adw.Dialog {
                 };
               }
 
+              // Gutters: only sheets that have them need these, so they
+              // stay out of the simple view. A downloaded pack (Kenney's
+              // roguelike sheet, say) usually has 1 px between tiles, and
+              // slicing it as a tight grid shears every row.
+              Adw.SpinRow spacing_row {
+                title: _("Spacing");
+                subtitle: _("Pixels between tiles");
+                visible: bind template.full-view;
+
+                adjustment: Gtk.Adjustment {
+                  lower: 0;
+                  upper: 64;
+                  step-increment: 1;
+                  page-increment: 4;
+                  value: 0;
+                };
+              }
+
+              Adw.SpinRow margin_row {
+                title: _("Margin");
+                subtitle: _("Pixels around the whole sheet");
+                visible: bind template.full-view;
+
+                adjustment: Gtk.Adjustment {
+                  lower: 0;
+                  upper: 64;
+                  step-increment: 1;
+                  page-increment: 4;
+                  value: 0;
+                };
+              }
+
               Adw.ActionRow grid_row {
                 title: _("Grid");
                 subtitle: bind template.grid-summary;

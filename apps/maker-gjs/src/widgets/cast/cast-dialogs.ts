@@ -16,10 +16,19 @@ import {
  * async ones, which short-circuits the follow-up instead of throwing.
  */
 
-/** Present the sprite-set import dialog for a character appearance. */
-export function presentSpriteSetImport(parent: Gtk.Widget, onImported: (result: SpriteSetImportResult) => void): void {
+/**
+ * Present the sprite-set import dialog for a character appearance.
+ * `fullView` passes the host's UI tier through — it reveals the sheet's
+ * Spacing / Margin rows.
+ */
+export function presentSpriteSetImport(
+  parent: Gtk.Widget,
+  fullView: boolean,
+  onImported: (result: SpriteSetImportResult) => void,
+): void {
   const dialog = new SpriteSetImportDialog()
   dialog.kind = 'character'
+  dialog.fullView = fullView
   dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
     onImported(result)
   })
@@ -38,13 +47,13 @@ export interface NewCharacterActions {
  * Present the new-character dialog. A sprite set imported from inside the
  * dialog is fed straight back into its picker.
  */
-export function presentNewCharacterDialog(parent: Gtk.Widget, actions: NewCharacterActions): void {
+export function presentNewCharacterDialog(parent: Gtk.Widget, fullView: boolean, actions: NewCharacterActions): void {
   const dialog = new NewCharacterDialog()
   dialog.connect('spriteset-activated', (_d: NewCharacterDialog, id: string) => {
     void actions.loadPreview(id)?.then((resource) => dialog.setPreview(resource ?? null))
   })
   dialog.connect('import-spriteset-requested', () => {
-    presentSpriteSetImport(parent, (result) => {
+    presentSpriteSetImport(parent, fullView, (result) => {
       void actions.importSpriteSet(result)?.then((choice) => {
         if (choice) dialog.addSpriteSet(choice)
       })

@@ -34,6 +34,8 @@ export declare const InternalChildren: [
     'size_group',
     'width_row',
     'height_row',
+    'spacing_row',
+    'margin_row',
     'grid_row',
     'collision_group',
     'collision_row',
@@ -62,6 +64,8 @@ export interface Children {
     _size_group: Adw.PreferencesGroup;
     _width_row: Adw.SpinRow;
     _height_row: Adw.SpinRow;
+    _spacing_row: Adw.SpinRow;
+    _margin_row: Adw.SpinRow;
     _grid_row: Adw.ActionRow;
     _collision_group: Adw.PreferencesGroup;
     _collision_row: Adw.SwitchRow;

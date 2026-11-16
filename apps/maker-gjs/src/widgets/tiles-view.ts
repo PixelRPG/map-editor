@@ -119,6 +119,7 @@ export class TilesView extends Adw.Bin {
   private _detail: TilesDetailPane | null = null
 
   private signals = new SignalScope()
+  private _fullView = false
   private _spriteSets: TilesetEntry[] = []
   /** tileset id → how many maps reference it (for the card's "used by K" line). */
   private _mapUsage = new Map<string, number>()
@@ -174,6 +175,17 @@ export class TilesView extends Adw.Bin {
         GTypeName: 'TilesView',
         Template,
         InternalChildren: ['tilesets_gallery', 'search_entry', 'sort_dropdown', 'appearances_gallery'],
+        Properties: {
+          // Pushed down from the Library host so the import dialog this
+          // view presents inherits the window's tier.
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the dialogs this view presents show their advanced rows',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
         Signals: {
           // A tileset was imported via this view's dialog — payload is
           // the `SpriteSetImportResult`. The host routes it to the
@@ -399,8 +411,18 @@ export class TilesView extends Adw.Bin {
    * the shared copy + register + broadcast path and re-hydrates this
    * view. Reuses the exact dialog the Cast view uses for sprite-sets.
    */
+  get fullView(): boolean {
+    return this._fullView ?? false
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+  }
+
   presentTilesetImportDialog(): void {
-    presentSpriteSetImport(this, 'tileset', (result) => {
+    presentSpriteSetImport(this, 'tileset', this.fullView, (result) => {
       this.emit('spriteset-imported', result)
     })
   }
@@ -413,7 +435,7 @@ export class TilesView extends Adw.Bin {
    * `spriteset-imported` signal → the cast controller's import path.
    */
   presentAppearanceImportDialog(): void {
-    presentSpriteSetImport(this, 'character', (result) => {
+    presentSpriteSetImport(this, 'character', this.fullView, (result) => {
       this.emit('spriteset-imported', result)
     })
   }

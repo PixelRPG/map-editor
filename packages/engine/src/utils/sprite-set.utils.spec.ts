@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import type { SpriteSetData } from '../types'
-import { buildSpriteIdMap, iterateSpriteGrid } from './sprite-set.utils.ts'
+import { buildSpriteIdMap, iterateSpriteGrid, spriteSheetSpacingOf } from './sprite-set.utils.ts'
 
 const fakeSpriteSet = (overrides: Partial<SpriteSetData> = {}): SpriteSetData => ({
   version: '1.0.0',
@@ -64,6 +64,47 @@ export default async () => {
       expect(cells[2]?.height).toBe(24)
       expect(cells[5]?.x).toBe(64)
       expect(cells[5]?.y).toBe(24)
+    })
+
+    await it('steps over the gutter between cells', async () => {
+      const cells = [...iterateSpriteGrid(fakeSpriteSet({ spacing: 1 }))]
+      expect(cells[0]?.x).toBe(0)
+      expect(cells[1]?.x).toBe(17)
+      expect(cells[2]?.x).toBe(34)
+      expect(cells[3]?.y).toBe(17)
+      // The cell itself stays the tile size — the gutter is not part of it.
+      expect(cells[1]?.width).toBe(16)
+    })
+
+    await it('offsets the whole grid by the margin', async () => {
+      const cells = [...iterateSpriteGrid(fakeSpriteSet({ spacing: 1, margin: 2 }))]
+      expect(cells[0]?.x).toBe(2)
+      expect(cells[0]?.y).toBe(2)
+      expect(cells[4]?.x).toBe(19)
+      expect(cells[4]?.y).toBe(19)
+    })
+  })
+
+  await describe('spriteSheetSpacingOf', async () => {
+    await it('omits the descriptor for a tight grid', async () => {
+      expect(spriteSheetSpacingOf(fakeSpriteSet())).toBe(undefined)
+      expect(spriteSheetSpacingOf(fakeSpriteSet({ spacing: 0, margin: 0 }))).toBe(undefined)
+    })
+
+    await it("maps our spacing onto Excalibur's margin, not its originOffset", async () => {
+      // The trap: both vocabularies have a `margin`, and they mean
+      // different things. Ours is the border around the sheet (Excalibur
+      // calls it `originOffset`); Excalibur's is the gutter between
+      // sprites. Swapping them slices every sheet one pixel off.
+      const spacing = spriteSheetSpacingOf(fakeSpriteSet({ spacing: 1, margin: 2 }))
+      expect(spacing?.margin).toStrictEqual({ x: 1, y: 1 })
+      expect(spacing?.originOffset).toStrictEqual({ x: 2, y: 2 })
+    })
+
+    await it('keeps a margin-only sheet instead of dropping it', async () => {
+      const spacing = spriteSheetSpacingOf(fakeSpriteSet({ margin: 4 }))
+      expect(spacing?.originOffset).toStrictEqual({ x: 4, y: 4 })
+      expect(spacing?.margin).toStrictEqual({ x: 0, y: 0 })
     })
   })
 }
