@@ -132,11 +132,7 @@
     "projectName": "Kokiri Forest",
     "projectPath": "/home/jumplink/Projekte/werkstatt/gjsify/pixel-rpg/map-editor/games/zelda-like/game-project.json",
     "currentSceneId": "kokiri-forest",
-    "sceneIds": [
-      "kokiri-forest",
-      "tree-house",
-      "tree-house-cozy"
-    ],
+    "sceneIds": ["kokiri-forest", "tree-house", "tree-house-cozy"],
     "scenes": [
       {
         "id": "kokiri-forest",
