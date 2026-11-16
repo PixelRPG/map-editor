@@ -1,6 +1,6 @@
 # Excalibur 1.0 — measured plan
 
-**Status:** planning · last meaningful change 2026-11-16
+**Status:** active (E0–E2 landed) · last meaningful change 2026-11-16
 
 Two questions, answered with numbers rather than impressions:
 
@@ -9,7 +9,7 @@ Two questions, answered with numbers rather than impressions:
 2. **What does moving from Excalibur `0.32.0` to `1.0.1` cost, and what does it buy?**
    Surveyed against the upstream changelog and this repo's real call sites.
 
-Nothing here is implemented. Section 6 is the step table.
+E1 (O1) and its re-measurement E2 have landed; the rest is still a plan. Section 6 is the step table.
 
 ---
 
@@ -294,13 +294,30 @@ Each step keeps the tree working and updates `TODO.md` plus any affected guard i
 Measurement steps re-run `frame-bench.py` and commit the resulting `summary.json` under
 `scripts/bench/results/`, so every claim stays auditable.
 
+### 6.1 Result of E1 (O1), 1920×1200 headless, `kokiri-forest`
+
+Raw: `scripts/bench/results/o1-collision-in-run.json` against `baseline-physics-on.json` (p50 / upd, ms).
+
+| scenario | before p50 | after p50 | before upd | after upd |
+|---|---|---|---|---|
+| idle | 71.39 | 19.38 | 58.45 | 3.29 |
+| pan | 83.32 | 33.30 | 60.32 | 3.22 |
+| zoom | 64.62 | 17.43 | 54.76 | 3.03 |
+| paint | 64.32 | 22.81 | 52.50 | 3.98 |
+| run | 62.97 | 69.09 | 55.70 | 61.16 |
+
+Idle and pan: update falls ~18×, the frame ~3.7× / ~2.5× (pan is gap-bound, O7). The tracked
+collider count in the editor drops from 5432 to 304 (placements only). `upd` here is ~2 ms above the
+A/B's 1.4 ms because the probe's sampled frames time every system. **`run` is unchanged within
+noise**: collision is genuinely active there, which is O2's job.
+
 **Phase E — Measure and fix what measuring found (no version change)**
 
 | # | Step | Resolves | Risk / rollback |
 |---|---|---|---|
 | E0 | ✅ **Baseline benchmark, kept as a repeatable script.** Probe + driver + both result sets land with this document. | "not smooth" was unactionable | Probe is inert without `PIXELRPG_FRAME_PROBE`. Rollback = delete two files. |
-| E1 | **O1: collision off in editor mode.** Hang it off `applyRuntimeMode`; add a spec that a scene in editor mode has no active collision processing and that entering Live Run restores it. | ~3.8× frame time | **Risk:** something in the editor silently depends on collision queries (tile picking does not — it goes through `screenToWorldCoordinates`, not a raycast; verify the wall overlay and `agent-map-data.ts`). Rollback = one flag. |
-| E2 | **Re-run the bench, commit the numbers.** Compare against `baseline-physics-on.json`. | proves E1 on all six scenarios, not just the A/B | none |
+| E1 | ✅ **O1: collision only while a run is active.** `setCollisionActive(scene, active)` (`services/collision-mode.ts`) is the one switch: it flips the scene's physics world and every `PlaneTileMap` (`resource/plane-tile-map.ts`, builds its boxes only while on — stock `TileMap` rebuilds its composite even with physics off). `applyRuntimeMode` is the single caller that ties it to the run state; `MapScene` starts it off. Spec: `services/collision-mode.spec.ts` (no colliders idle, hero walks through walls in the editor, is stopped in a run, a wall painted mid-run is honoured, second run correct; wall hatching reads tile data and is unaffected). | ~3.8× frame time | Rollback = drop the `setCollisionActive` call in `applyRuntimeMode`/`MapScene`. "Edit while the game runs" changes that one call site. |
+| E2 | ✅ **Re-run the bench, commit the numbers.** `scripts/bench/results/o1-collision-in-run.json`; table in § 6.1. | proves E1 | none |
 | E3 | **O5: idle the engine behind the World page.** | a full frame cost per tick while the atlas is open | **Risk:** REDESIGN risk 4 — `SceneEditorView` must stay rooted. Idling must not be unrooting. Rollback = one flag. |
 | E4 | **O3: build collision geometry lazily / per plane.** Measure collider count and map-open time before and after. | collider count on large maps | **Risk:** a plane that should block stops blocking. Needs a spec per plane. Rollback = revert `tilemap-builder.ts`. |
 | E5 | **O2: static colliders during Live Run.** Measure `run` specifically. | the remaining Live Run cost | **Risk:** a moving placement (future feature) would be wrongly treated as static — gate on actual motion, not on mode. |

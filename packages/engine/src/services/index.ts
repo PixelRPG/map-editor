@@ -2,6 +2,7 @@
 
 export * from './agent-map-data'
 export * from './assistant-presence'
+export * from './collision-mode'
 export * from './command-dispatch'
 export * from './editor-view-flags'
 export * from './editor-view'

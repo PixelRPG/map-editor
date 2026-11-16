@@ -1,6 +1,7 @@
 import type { Scene } from 'excalibur'
 import { EditorModeComponent, RuntimeModeComponent } from '../components/index.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { setCollisionActive } from './collision-mode.ts'
 
 /**
  * The editor ⇄ runtime mode markers on a scene's session-singleton.
@@ -21,6 +22,9 @@ export function isRuntimeModeActive(scene: Scene): boolean {
 
 /** Swap the mode markers on `scene` so exactly one of them is present. */
 export function applyRuntimeMode(scene: Scene, active: boolean): void {
+  // Collision follows the run: the one place that ties the two together.
+  // "Edit while the game runs" would decouple them here.
+  setCollisionActive(scene, active)
   if (active) {
     SessionState.unset(scene, EditorModeComponent)
     SessionState.set(scene, new RuntimeModeComponent())

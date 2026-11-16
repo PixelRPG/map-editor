@@ -2,6 +2,7 @@
 
 export * from './GameProjectResource'
 export * from './MapResource'
+export * from './plane-tile-map'
 export * from './shadow-fold'
 export * from './sprite-solidity'
 export * from './spriteset-graphics'
