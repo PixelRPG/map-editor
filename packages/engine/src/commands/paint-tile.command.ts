@@ -148,6 +148,64 @@ export class FillTileCommand implements Command<FillTilePayload> {
 }
 
 /**
+ * Payload of {@link StampTilesCommand}. Like {@link FillTilePayload} a
+ * single command spans many cells, but each cell carries its OWN
+ * `spriteId`: a stamp lays a different tile in every cell, which is
+ * exactly what a fill cannot express.
+ */
+export interface StampTilesPayload {
+  layerId: string
+  cells: Array<{
+    tileX: number
+    tileY: number
+    /** Global tile id for THIS cell (always `> 0`; a stamp skips holes). */
+    spriteId: number
+    previousSprites: PaintTilePayload['previousSprites']
+  }>
+}
+
+/**
+ * Stamp: paint a rectangular block of tiles in one stroke — the brush a
+ * drag across the palette sheet arms (REDESIGN §5.3), resolved to cells
+ * by `services/tile-stamp.service.ts`.
+ *
+ * One command for the whole block, like {@link FillTileCommand}: a
+ * single undo step, and a single op on the collab log (REDESIGN §8,
+ * "one tile-paint command per stroke"). Per-cell `previousSprites` so
+ * revert restores the exact prior state of every tile it covered.
+ */
+export class StampTilesCommand implements Command<StampTilesPayload> {
+  static readonly KIND = 'tile.stamp'
+  readonly kind = StampTilesCommand.KIND
+
+  constructor(readonly payload: StampTilesPayload) {}
+
+  get label(): string {
+    return `Stamp ${this.payload.cells.length} tiles`
+  }
+
+  apply(scene: Scene): void {
+    const ctx = resolveContext(scene, this.payload.layerId)
+    if (!ctx) return
+    for (const cell of this.payload.cells) {
+      const tile = ctx.tileMap.getTile(cell.tileX, cell.tileY)
+      if (!tile) continue
+      addSpriteToTileForLayer(ctx.tileMap, ctx.mapResource, tile, this.payload.layerId, cell.spriteId)
+    }
+  }
+
+  revert(scene: Scene): void {
+    const ctx = resolveContext(scene, this.payload.layerId)
+    if (!ctx) return
+    for (const cell of this.payload.cells) {
+      const tile = ctx.tileMap.getTile(cell.tileX, cell.tileY)
+      if (!tile) continue
+      restorePreviousSprites(ctx, tile, this.payload.layerId, cell.previousSprites)
+    }
+  }
+}
+
+/**
  * Shared revert helper for paint + erase commands.
  *
  * If `previousSprites` is empty the tile was empty before the

@@ -4,7 +4,7 @@ import { DuplicateLayerCommand, RemoveLayerCommand } from './layer-content.comma
 import { RenameLayerCommand } from './layer-lifecycle.command.ts'
 import { ReorderLayerCommand, SetLayerPlaneCommand } from './layer-order.command.ts'
 import { PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
-import { EraseTileCommand, PaintTileCommand } from './paint-tile.command.ts'
+import { EraseTileCommand, PaintTileCommand, StampTilesCommand } from './paint-tile.command.ts'
 import { BUILT_IN_COMMANDS } from './registry.ts'
 
 /**
@@ -49,6 +49,23 @@ export default async () => {
       })
       expect(cmd).toBeInstanceOf(EraseTileCommand)
       expect(cmd.kind).toBe(EraseTileCommand.KIND)
+    })
+
+    await it('roundtrips a StampTilesCommand kind → instance', async () => {
+      const factory = BUILT_IN_COMMANDS[StampTilesCommand.KIND]
+      expect(factory).toBeDefined()
+      const cmd = factory!({
+        layerId: 'ground',
+        cells: [
+          { tileX: 1, tileY: 1, spriteId: 4, previousSprites: [] },
+          { tileX: 2, tileY: 1, spriteId: 5, previousSprites: [] },
+        ],
+      })
+      expect(cmd).toBeInstanceOf(StampTilesCommand)
+      expect(cmd.kind).toBe(StampTilesCommand.KIND)
+      // Every cell survives the wire — a stamp that lost one would
+      // paint a different block on the peer than it did locally.
+      expect((cmd as StampTilesCommand).payload.cells.length).toBe(2)
     })
 
     await it('roundtrips object place / remove kinds → instances', async () => {
