@@ -67,6 +67,22 @@ export function cardPixelSize(
 }
 
 /**
+ * Whether `minShortSide` enlarged this card past its true scale — the
+ * card is drawn bigger than the world says, so it can grow into a
+ * neighbour the world keeps clear. The atlas uses it to decide which
+ * cards a layout pass may push aside (`separateCardRects`).
+ *
+ * A degenerate map is never floored: {@link cardPixelSize} reports it as
+ * empty and the caller skips it.
+ */
+export function isCardFloored(world: { w: number; h: number }, zoom: number, minShortSide: number): boolean {
+  const w = world.w * zoom
+  const h = world.h * zoom
+  if (!(w > 0) || !(h > 0)) return false
+  return Math.min(w, h) < minShortSide
+}
+
+/**
  * Every card's BODY rect in surface coords: the world rect scaled by
  * `zoom`, floored to `minShortSide`, offset by `origin` (the dynamic
  * surface padding). Cards are anchored at their top-left corner, so a

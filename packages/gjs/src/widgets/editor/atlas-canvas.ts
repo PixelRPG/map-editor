@@ -7,7 +7,13 @@ import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import { SignalScope } from '../../utils/signal-scope.ts'
-import { type SceneRect, sceneRects, snapToGrid } from './atlas-canvas.geometry.ts'
+import {
+  type SceneRect,
+  sceneRects,
+  separateCardRects,
+  snapToGrid,
+  survivingSelection,
+} from './atlas-canvas.geometry.ts'
 import Template from './atlas-canvas.blp'
 import {
   CARD_MIN_SHORT_SIDE,
@@ -16,6 +22,7 @@ import {
   clampAtlasZoom,
   drawnRects,
   fitZoom,
+  isCardFloored,
   surfacePadding,
   zoomAroundPointer,
 } from './atlas-camera.ts'
@@ -42,6 +49,13 @@ const MIN_SURFACE_PADDING = 180
  * release — keeps the world tidy + aligned instead of pixel-fuzzy.
  */
 const ATLAS_GRID = 8
+
+/**
+ * Breathing room (surface px) left between two cards the minimum card
+ * size pushed into each other. Touching cards read as one card with a
+ * seam, which is precisely what the separation is there to avoid.
+ */
+const CARD_SEPARATION_GAP = 8
 
 /**
  * Margin {@link fit} leaves around the world. Generous on purpose: the
@@ -284,7 +298,17 @@ export class AtlasCanvas extends Adw.Bin {
     this._scenes = scenes
     this._teleportData = teleports
     this._projectResource = projectResource
+    const survivor = survivingSelection(
+      this._selectedId ?? null,
+      scenes.map((scene) => scene.id),
+    )
     this._rebuildCards()
+    // The rebuild hands out fresh cards, all of them unselected, so a
+    // surviving selection has to be written through again — and one
+    // whose scene the new world dropped has to go. Without this the
+    // overlay kept the old scene's lines lit and the selection bar
+    // named a map that had no card left.
+    this._applySelection(survivor)
     this._relayout()
     this.emit('world-changed')
   }
@@ -296,11 +320,21 @@ export class AtlasCanvas extends Adw.Bin {
   set selectedId(value: string) {
     const newId = value || null
     if (this._selectedId === newId) return
-    this._selectedId = newId
-    for (const [id, card] of this._cards) {
-      card.selected = id === newId
+    this._applySelection(newId)
+  }
+
+  /**
+   * Write a selection through to the cards and the connection overlay,
+   * without the setter's dedupe: {@link setWorld} needs to re-apply an
+   * UNCHANGED selection, because the card it belonged to no longer
+   * exists after a rebuild.
+   */
+  private _applySelection(id: string | null): void {
+    this._selectedId = id
+    for (const [cardId, card] of this._cards) {
+      card.selected = cardId === id
     }
-    this._teleports.setSelected(newId)
+    this._teleports.setSelected(id)
     this.notify('selected-id')
   }
 
@@ -789,6 +823,7 @@ export class AtlasCanvas extends Adw.Bin {
         placementId: door.placementId,
         tileX: ends[index]?.tileX ?? 0,
         tileY: ends[index]?.tileY ?? 0,
+        shared: door.shared,
       })),
       farMapName: connection.kind === 'one-way' && connection.to ? this._sceneName(connection.to.mapId) : null,
     }
@@ -1047,42 +1082,76 @@ export class AtlasCanvas extends Adw.Bin {
   }
 
   /**
-   * One layout pass, in four steps:
+   * One layout pass, in five steps:
    * 1. scale the world rects to body rects at the current zoom,
    * 2. hand each body size to its card and measure the FULL card back
    *    (the title can be wider than the body and always sits above it,
    *    so a card's top-left is its body's minus the title overhang),
-   * 3. derive the surface padding from the union of those card rects
+   * 3. push apart the cards the minimum card size enlarged into each
+   *    other,
+   * 4. derive the surface padding from the union of those card rects
    *    and the viewport size,
-   * 4. place the cards and publish the drawn body rects.
+   * 5. place the cards and publish the drawn body rects.
    */
   private _layoutPass(): void {
-    const bodies = drawnRects(sceneRects(this._scenes), this._zoom, this._minShortSide)
-    const placements: Array<{ id: string; card: SceneCard; body: SceneRect; rect: SceneRect }> = []
-    let minX = 0
-    let minY = 0
-    let maxX = 0
-    let maxY = 0
+    const worldRects = sceneRects(this._scenes)
+    const bodies = drawnRects(worldRects, this._zoom, this._minShortSide)
+    const placements: Array<{
+      id: string
+      card: SceneCard
+      body: SceneRect
+      rect: SceneRect
+      floored: boolean
+    }> = []
 
     this._scenes.forEach((scene, index) => {
       const card = this._cards.get(scene.id)
       const body = bodies[index]
-      if (!card || !body || !(body.w > 0) || !(body.h > 0)) return
+      const world = worldRects[index]
+      if (!card || !body || !world || !(body.w > 0) || !(body.h > 0)) return
       card.setBodySize(body.w, body.h)
       const offset = { x: card.bodyOffsetX, y: card.bodyOffsetY }
       this._offsets.set(scene.id, offset)
-      const rect: SceneRect = {
-        x: body.x - offset.x,
-        y: body.y - offset.y,
-        w: card.cardWidth,
-        h: card.cardHeight,
-      }
+      placements.push({
+        id: scene.id,
+        card,
+        body,
+        rect: {
+          x: body.x - offset.x,
+          y: body.y - offset.y,
+          w: card.cardWidth,
+          h: card.cardHeight,
+        },
+        floored: isCardFloored(world, this._zoom, this._minShortSide),
+      })
+    })
+
+    // Two small rooms a few atlas px apart both stop shrinking at the
+    // minimum card size and end up drawn on top of each other — at Fit
+    // on phone widths the cozy tree house's title landed inside the
+    // card above it. Only the enlarged cards give way; the shift moves
+    // body and card rect together so every endpoint stays on its card.
+    separateCardRects(
+      placements.map((placement) => placement.rect),
+      placements.map((placement) => placement.floored),
+      CARD_SEPARATION_GAP,
+    ).forEach((shift, index) => {
+      const placement = placements[index]
+      if (!placement || (shift.dx === 0 && shift.dy === 0)) return
+      placement.rect = { ...placement.rect, x: placement.rect.x + shift.dx, y: placement.rect.y + shift.dy }
+      placement.body = { ...placement.body, x: placement.body.x + shift.dx, y: placement.body.y + shift.dy }
+    })
+
+    let minX = 0
+    let minY = 0
+    let maxX = 0
+    let maxY = 0
+    for (const { rect } of placements) {
       minX = Math.min(minX, rect.x)
       minY = Math.min(minY, rect.y)
       maxX = Math.max(maxX, rect.x + rect.w)
       maxY = Math.max(maxY, rect.y + rect.h)
-      placements.push({ id: scene.id, card, body, rect })
-    })
+    }
 
     const h = this._scroller.hadjustment
     const v = this._scroller.vadjustment
