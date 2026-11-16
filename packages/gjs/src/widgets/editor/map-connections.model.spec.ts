@@ -120,9 +120,12 @@ export default async () => {
         })
       })
 
-      await it('gives the tightest fit the pair and leaves the rest one-way', async () => {
+      await it('pairs one door back with a two-tile doorway', async () => {
         // `games/zelda-like`: two adjacent doors lead to the same tile
-        // of tree-house, which has exactly one door back.
+        // of tree-house, which has exactly one door back. Both passages
+        // are walkable both ways, so both are pairs — an exclusive
+        // matching used to draw the loser dashed and one-way, which
+        // said you could not come back through a door you can.
         const connections = pairDoors([
           door('kokiri-forest', 76, 67, 'tree-house', 10, 12),
           door('kokiri-forest', 77, 67, 'tree-house', 10, 12),
@@ -130,28 +133,46 @@ export default async () => {
         ])
         expect(connections.map(shape)).toStrictEqual([
           { kind: 'pair', from: 'kokiri-forest@76,67', to: 'tree-house@10,13', doors: [0, 2] },
-          { kind: 'one-way', from: 'kokiri-forest@77,67', to: 'tree-house@10,12', doors: [1] },
+          { kind: 'pair', from: 'kokiri-forest@77,67', to: 'tree-house@10,13', doors: [1, 2] },
         ])
       })
 
-      await it('prefers the closer candidate over input order', async () => {
+      await it('does not cross-pair two doorways side by side', async () => {
+        // Each door is within pairing slack of BOTH doors back, so the
+        // distance contest is what keeps the two passages apart: a
+        // candidate is dropped only when both of its ends have someone
+        // closer.
+        const connections = pairDoors([
+          door('a', 0, 0, 'b', 0, 0),
+          door('a', 1, 0, 'b', 1, 0),
+          door('b', 0, 0, 'a', 0, 0),
+          door('b', 1, 0, 'a', 1, 0),
+        ])
+        expect(connections.map((c) => [c.kind, [...c.doors]])).toStrictEqual([
+          ['pair', [0, 2]],
+          ['pair', [1, 3]],
+        ])
+      })
+
+      await it('keeps a door one-way when its way back lands elsewhere', async () => {
         const connections = pairDoors([
           door('a', 0, 0, 'b', 1, 1),
           door('a', 5, 5, 'b', 0, 0),
           door('b', 0, 0, 'a', 5, 5),
         ])
-        // Door 1 ↔ 2 is an exact match (distance 0); door 0's arrival
-        // is one tile off, so it loses the only partner and stays
-        // one-way even though it came first.
+        // Door 1 ↔ 2 is an exact match. Door 0 arrives next to door 2
+        // but door 2 comes back five tiles away, which is two separate
+        // one-way passages and not a pair.
         expect(connections.map((c) => [c.kind, [...c.doors]])).toStrictEqual([
           ['one-way', [0]],
           ['pair', [1, 2]],
         ])
       })
 
-      await it('is order-stable for equally good candidates', async () => {
+      await it('is order-stable over equally good candidates', async () => {
         const doors = [door('a', 0, 0, 'b', 0, 0), door('a', 9, 9, 'b', 0, 0), door('b', 0, 0, 'a', 0, 0)]
         expect(pairDoors(doors).map((c) => [...c.doors])).toStrictEqual([[0, 2], [1]])
+        expect(pairDoors(doors).map((c) => [...c.doors])).toStrictEqual(pairDoors([...doors]).map((c) => [...c.doors]))
       })
 
       await it('takes the label from the owning door, falling back to its mate', async () => {
@@ -166,6 +187,29 @@ export default async () => {
 
       await it('returns nothing for no doors', async () => {
         expect(pairDoors([])).toStrictEqual([])
+      })
+    })
+
+    await describe('pairDoors shared ends', async () => {
+      await it('names the door back that two passages borrow', async () => {
+        const connections = pairDoors([
+          door('kokiri-forest', 76, 67, 'tree-house', 10, 12),
+          door('kokiri-forest', 77, 67, 'tree-house', 10, 12),
+          door('tree-house', 10, 13, 'kokiri-forest', 76, 68),
+        ])
+        // Door 2 is an end of both lines, so neither line's *Remove*
+        // may clear it; each line's own door is fair game.
+        expect(connections.map((c) => [...c.shared])).toStrictEqual([[2], [2]])
+      })
+
+      await it('leaves a passage with two ends of its own unshared', async () => {
+        const connections = pairDoors([door('a', 0, 0, 'b', 0, 0), door('b', 0, 0, 'a', 0, 0)])
+        expect([...connections[0].shared]).toStrictEqual([])
+      })
+
+      await it('shares nothing on a one-way or a broken door', async () => {
+        const connections = pairDoors([door('a', 0, 0, 'b', 9, 9), door('a', 1, 1, null)])
+        expect(connections.map((c) => [...c.shared])).toStrictEqual([[], []])
       })
     })
 

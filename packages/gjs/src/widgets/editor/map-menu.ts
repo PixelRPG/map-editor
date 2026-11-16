@@ -35,6 +35,11 @@ export interface ConnectionMenuDoor {
   placementId: string
   tileX: number
   tileY: number
+  /**
+   * Another connection draws this door too, so *Remove* leaves it
+   * alone — see `MapConnection.shared`.
+   */
+  shared: boolean
 }
 
 /** What the line's popover is built from. */
@@ -98,9 +103,13 @@ function goToItem(door: ConnectionMenuDoor, label: string): Gio.MenuItem {
  * draws as a red stub — deleting would throw away the sprite, the
  * collider and a hand-placed position, and nothing here asked for
  * that. For a pair it clears BOTH ends, because a one-way remnant of a
- * passage someone just removed is not what "remove" promised. A broken
+ * passage someone just removed is not what "remove" promised — except
+ * an end a second passage shares (`MapConnection.shared`), which stays:
+ * clearing it would remove a line the user never pointed at. A broken
  * door gets no *Remove* at all: there is nothing left to clear, and the
- * repair below overwrites the dead reference anyway.
+ * repair below overwrites the dead reference anyway. Neither does a
+ * line made entirely of shared doors, for the same reason — there is
+ * nothing about it that is only this passage.
  */
 export function buildConnectionMenu(facts: ConnectionMenuFacts): Gio.Menu {
   const section = new Gio.Menu()
@@ -118,10 +127,13 @@ export function buildConnectionMenu(facts: ConnectionMenuFacts): Gio.Menu {
       section.append_item(fix)
     }
   } else {
-    const remove = Gio.MenuItem.new(_('Remove'), null)
-    const pairs = doors.map((door): [string, string] => [door.mapId, door.placementId])
-    remove.set_action_and_target_value('win.unlink-door', new GLib.Variant('a(ss)', pairs))
-    section.append_item(remove)
+    const ours = doors.filter((door) => !door.shared)
+    if (ours.length) {
+      const remove = Gio.MenuItem.new(_('Remove'), null)
+      const pairs = ours.map((door): [string, string] => [door.mapId, door.placementId])
+      remove.set_action_and_target_value('win.unlink-door', new GLib.Variant('a(ss)', pairs))
+      section.append_item(remove)
+    }
   }
 
   const model = new Gio.Menu()

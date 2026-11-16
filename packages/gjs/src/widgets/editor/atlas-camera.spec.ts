@@ -11,6 +11,7 @@ import {
   drawnExtent,
   drawnRects,
   fitZoom,
+  isCardFloored,
   surfacePadding,
   worldFitsViewport,
   zoomAroundPointer,
@@ -246,6 +247,36 @@ export default async () => {
 
       await it('stays at 0 before the first allocation', async () => {
         expect(centeredScroll(400, 200, 0, 0)).toBe(0)
+      })
+    })
+
+    await describe('isCardFloored', async () => {
+      await it('reports a card the floor had to enlarge', async () => {
+        expect(isCardFloored({ w: 40, h: 30 }, 0.5, CARD_MIN_SHORT_SIDE)).toBe(true)
+      })
+
+      await it('leaves a card at its true scale unflagged', async () => {
+        expect(isCardFloored({ w: 352, h: 296 }, 1, CARD_MIN_SHORT_SIDE)).toBe(false)
+      })
+
+      await it('measures the SHORT side, not the area', async () => {
+        // A long thin corridor is floored even though it is wide.
+        expect(isCardFloored({ w: 600, h: 20 }, 1, CARD_MIN_SHORT_SIDE)).toBe(true)
+      })
+
+      await it('is not floored exactly at the minimum', async () => {
+        expect(isCardFloored({ w: CARD_MIN_SHORT_SIDE, h: CARD_MIN_SHORT_SIDE }, 1, CARD_MIN_SHORT_SIDE)).toBe(false)
+      })
+
+      await it('follows the zoom', async () => {
+        const world = { w: 352, h: 296 }
+        expect(isCardFloored(world, 1, CARD_MIN_SHORT_SIDE)).toBe(false)
+        expect(isCardFloored(world, 0.05, CARD_MIN_SHORT_SIDE)).toBe(true)
+      })
+
+      await it('never flags a degenerate map, which is drawn as nothing', async () => {
+        expect(isCardFloored({ w: 0, h: 100 }, 1, CARD_MIN_SHORT_SIDE)).toBe(false)
+        expect(isCardFloored({ w: 100, h: 0 }, 1, CARD_MIN_SHORT_SIDE)).toBe(false)
       })
     })
   })

@@ -43,8 +43,9 @@ export interface ConnectionActionsContext {
  */
 export function installConnectionActions(group: Gio.SimpleActionGroup, ctx: ConnectionActionsContext): void {
   // `a(ss)`, not `(ss)`: *Remove* on a pair removes the PASSAGE, so it
-  // clears both ends. One map at a time is all the editor can hold, so
-  // the two ends are done in sequence, each on its own map.
+  // clears both ends — minus any end a second passage shares, which the
+  // menu leaves out of the target. One map at a time is all the editor
+  // can hold, so the ends are done in sequence, each on its own map.
   const unlinkDoor = Gio.SimpleAction.new('unlink-door', GLib.VariantType.new('a(ss)'))
   unlinkDoor.connect('activate', (_action, parameter) => {
     const doors = (parameter?.deepUnpack() as Array<[string, string]> | undefined) ?? []

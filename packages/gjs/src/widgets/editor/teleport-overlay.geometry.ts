@@ -231,6 +231,91 @@ export function rectContains(rect: SceneRect, point: OverlayPoint): boolean {
 }
 
 /**
+ * Passes {@link clearOfRects} takes. A pill nudged off one card can land
+ * on the next, so the walk repeats — but only a few times: past that the
+ * label has been moved so far from its line that staying put is the
+ * lesser evil.
+ */
+const PILL_CLEARANCE_PASSES = 3
+
+/** Whether two rects share any area, each inflated by `gap`. Touching edges do not count. */
+export function rectsOverlap(a: SceneRect, b: SceneRect, gap = 0): boolean {
+  return a.x < b.x + b.w + gap && a.x + a.w > b.x - gap && a.y < b.y + b.h + gap && a.y + a.h > b.y - gap
+}
+
+/** One label pill as it was placed, for {@link repeatsLabel}. */
+export interface PlacedLabel {
+  text: string
+  rect: SceneRect
+}
+
+/**
+ * Whether a pill saying `text` at `rect` would repeat one already
+ * placed — the same words in the same place.
+ *
+ * Two doorway tiles side by side are two connections to one map, so
+ * each line asks for a pill naming that map and the two land on top of
+ * each other. The second says nothing the first did not, so it is
+ * dropped; a second line to the same map from the far side of the atlas
+ * keeps its own label, because there the name does answer "where does
+ * THIS one go".
+ */
+export function repeatsLabel(placed: readonly PlacedLabel[], text: string, rect: SceneRect): boolean {
+  return placed.some((other) => other.text === text && rectsOverlap(other.rect, rect))
+}
+
+/**
+ * A label pill's centre, nudged clear of `obstacles` (the drawn card
+ * rects) by the smallest displacement that frees it, keeping `gap` px of
+ * air. Returns `centre` unchanged when the pill already sits clear, and
+ * when no amount of nudging within {@link PILL_CLEARANCE_PASSES} does.
+ *
+ * A connection's name pill is placed along its own curve (§ 6.2: at the
+ * far end, beside the target), and between two cards that nearly touch
+ * that point falls ON a card — on phone widths the two Link's Tree House
+ * labels were drawn straight across the cards, over the map previews
+ * they were meant to annotate. Moving the pill, not the line, keeps the
+ * label readable without bending the geometry that encodes where the
+ * door actually goes.
+ *
+ * Deterministic: the obstacles are tested in order and the four
+ * candidate escapes are compared by distance, up before down before
+ * left before right on a tie.
+ */
+export function clearOfRects(
+  centre: OverlayPoint,
+  size: { w: number; h: number },
+  obstacles: readonly SceneRect[],
+  gap = 0,
+  passes = PILL_CLEARANCE_PASSES,
+): OverlayPoint {
+  let at = centre
+  for (let pass = 0; pass <= passes; pass += 1) {
+    const pill: SceneRect = { x: at.x - size.w / 2, y: at.y - size.h / 2, w: size.w, h: size.h }
+    const hit = obstacles.find((rect) => rect.w > 0 && rect.h > 0 && rectsOverlap(pill, rect, gap))
+    if (!hit) return at
+    // Out of passes with the pill still covered: between cards that
+    // nearly touch there may be no gap it fits in at all, and the nudges
+    // then bounce it from one card to the next. Hand back the point on
+    // the curve rather than wherever the last bounce left it — a label
+    // beside its own line reads better than one parked at random.
+    if (pass === passes) break
+    const escapes: OverlayPoint[] = [
+      { x: 0, y: hit.y - gap - (pill.y + pill.h) },
+      { x: 0, y: hit.y + hit.h + gap - pill.y },
+      { x: hit.x - gap - (pill.x + pill.w), y: 0 },
+      { x: hit.x + hit.w + gap - pill.x, y: 0 },
+    ]
+    let best = escapes[0]
+    for (const candidate of escapes) {
+      if (Math.abs(candidate.x) + Math.abs(candidate.y) < Math.abs(best.x) + Math.abs(best.y)) best = candidate
+    }
+    at = { x: at.x + best.x, y: at.y + best.y }
+  }
+  return centre
+}
+
+/**
  * Where the segment `a → b` leaves `viewport`, or `null` when it never
  * does — `a` is already outside, or `b` is inside too.
  *
