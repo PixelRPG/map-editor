@@ -6,6 +6,19 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/tileset-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pencil-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/color-fill-symbolic.svg</file>
+    <!-- "Can the hero walk here?" pictograms, one per writable
+         CollisionPreset. Generated geometry, see the commit that added
+         them; names are `collision-<preset>-symbolic`. -->
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-free-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-wall-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-top-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-bottom-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-right-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-top-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-top-right-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-bottom-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-bottom-right-symbolic.svg</file>
     <file preprocess="xml-stripblanks">metainfo/org.pixelrpg.maker.metainfo.xml</file>
   </gresource>
 </gresources>
