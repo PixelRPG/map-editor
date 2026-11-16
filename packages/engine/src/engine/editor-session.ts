@@ -10,6 +10,7 @@ import {
   PendingPlacementMoveComponent,
   SelectedPlacementsComponent,
 } from '../components/index.ts'
+import type { TileStamp } from '../resource/tile-stamp.ts'
 import { applyEditorViewMode } from '../services/editor-view.ts'
 import type { ArrivalPickRequest, EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -48,17 +49,38 @@ export class EditorSession {
     SessionState.set(scene, new ActiveToolComponent(tool))
   }
 
-  /** Global tile sprite id (sprite-set `firstGid` + local index). */
+  /**
+   * Global tile sprite id (sprite-set `firstGid` + local index) of the
+   * armed brush's TOP-LEFT tile — a lens on {@link activeStamp}, which
+   * is where the brush actually lives. Reading it is how every surface
+   * that can show only one tile (the context chip, the bucket fill)
+   * asks "which tile is armed"; writing it arms a 1×1 stamp.
+   */
   get activeTile(): number | null {
-    const scene = this.activeScene()
-    if (!scene) return null
-    return SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null
+    return this.activeStamp?.spriteIds[0] ?? null
   }
 
   set activeTile(spriteId: number) {
     const scene = this.activeScene()
     if (!scene) return
     SessionState.set(scene, new ActiveTileComponent(spriteId))
+  }
+
+  /**
+   * The armed brush as a block of tiles. A single tile is the 1×1 case,
+   * so this is the ONE armed-brush state — `activeTile` is a view on
+   * it, not a second copy.
+   */
+  get activeStamp(): TileStamp | null {
+    const scene = this.activeScene()
+    if (!scene) return null
+    return SessionState.get(scene, ActiveTileComponent)?.stamp ?? null
+  }
+
+  set activeStamp(stamp: TileStamp) {
+    const scene = this.activeScene()
+    if (!scene) return
+    SessionState.set(scene, new ActiveTileComponent(stamp))
   }
 
   /** Entity-library definition id the `'object'` tool stamps, or `null`. */

@@ -16,6 +16,7 @@ import {
   type LayerPlane,
   normalizeViewportInset,
   type ProjectLoadOptions,
+  type TileStamp,
   type TouchIntent,
   type ViewportInset,
 } from '@pixelrpg/engine'
@@ -262,6 +263,11 @@ export class Engine extends Adw.Bin {
   /** Forward to `Engine.setActiveTile` — writes the global sprite id (with `firstGid`) to the singleton. */
   public setActiveTile(spriteId: number): void {
     this._excalibur?.setActiveTile(spriteId)
+  }
+
+  /** Forward to `Engine.setActiveStamp` — arms a whole block of tiles as the brush. */
+  public setActiveStamp(stamp: TileStamp): void {
+    this._excalibur?.setActiveStamp(stamp)
   }
 
   /** Forward to `Engine.setObjectBrush` — the library entity id the object tool stamps. */

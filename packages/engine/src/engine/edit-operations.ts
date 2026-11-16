@@ -4,6 +4,7 @@ import type { MapEditorComponent } from '../components/index.ts'
 import { makePlacementId } from '../services/placement-id.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from '../services/tile-paint.service.ts'
+import { buildTileStampCommand } from '../services/tile-stamp.service.ts'
 import {
   isTileOutsideMap,
   resolveEditLayer,
@@ -117,19 +118,41 @@ export class EditOperations {
   }
 
   /**
-   * Paint (or erase) one tile. `false` when the guard chain refuses:
-   * assistant paused, no active map, no resolvable / unlocked layer, or
-   * out-of-bounds coords.
+   * Paint (or erase) tiles at `(tileX, tileY)`. `false` when the guard
+   * chain refuses: assistant paused, no active map, no resolvable /
+   * unlocked layer, or out-of-bounds coords.
+   *
+   * An **explicit** `request.spriteId` paints exactly that one tile, so
+   * the programmatic path (D-Bus / MCP) stays deterministic no matter
+   * which brush a human has armed. **Omitting** it means "use the armed
+   * brush", and the armed brush may be a multi-tile stamp — then this
+   * lays the whole block from `(tileX, tileY)`, the same stroke the
+   * pencil makes.
    */
   paintTile(request: TileEditRequest): boolean {
     const context = this.#resolveContext(request)
     if (!context) return false
-    const { target } = context
-    const spriteId = this.#resolveSpriteId(request.spriteId)
-    this.execute(
-      buildTilePaintCommand(target.editor, target.layerId, request.tileX, request.tileY, spriteId ?? null),
-      request.origin,
-    )
+    const { scene, target } = context
+    const stamp = request.spriteId === undefined ? this.session.activeStamp : null
+    const command = stamp
+      ? buildTileStampCommand({
+          editor: target.editor,
+          layerId: target.layerId,
+          originX: request.tileX,
+          originY: request.tileY,
+          stamp,
+          bounds: resolveMapBounds(scene.mapResource?.mapData, target.tileMap),
+        })
+      : buildTilePaintCommand(
+          target.editor,
+          target.layerId,
+          request.tileX,
+          request.tileY,
+          this.#resolveSpriteId(request.spriteId) ?? null,
+        )
+    // A stamp entirely off the map builds nothing; an erase always does.
+    if (!command) return false
+    this.execute(command, request.origin)
     this.#flash(target.tileMap, request)
     return true
   }

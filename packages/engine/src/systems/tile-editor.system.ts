@@ -24,6 +24,7 @@ import {
   SelectedPlacementsComponent,
   TileMapPlaneComponent,
 } from '../components/index.ts'
+import type { TileStamp } from '../resource/tile-stamp.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
 import { HoverOverlays } from './hover-overlays.ts'
@@ -33,6 +34,7 @@ import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import { worldToTile } from '../services/tile-geometry.ts'
 import { isTileOutsideMap, resolveMapBounds } from '../services/tile-edit-target.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
+import { buildTileStampCommand } from '../services/tile-stamp.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerPlane } from '../types/data/index.ts'
 import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'
@@ -46,8 +48,16 @@ interface ToolContext {
   readonly hit: TileHit
   readonly layerId: string
   readonly previousSprites: PaintTilePayload['previousSprites']
-  /** The armed tile sprite id, or `null` when none is selected. */
+  /**
+   * The armed brush's top-left tile sprite id, or `null` when nothing
+   * is armed — what the single-tile tools (fill) consume.
+   */
   readonly tileId: number | null
+  /**
+   * The armed brush as a block; a single tile is its 1×1 case. `null`
+   * when nothing is armed. The pencil lays this.
+   */
+  readonly stamp: TileStamp | null
 }
 
 interface TileHit {
@@ -303,6 +313,7 @@ export class TileEditorSystem extends System {
       // eyedropper's read.
       previousSprites: snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y),
       tileId: SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null,
+      stamp: SessionState.get(scene, ActiveTileComponent)?.stamp ?? null,
     })
     this.emitTileClicked(hit)
   }
@@ -333,6 +344,7 @@ export class TileEditorSystem extends System {
         layerId,
         previousSprites: snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y),
         tileId: null,
+        stamp: null,
       })
       return
     }
@@ -356,7 +368,7 @@ export class TileEditorSystem extends System {
       // Pencil + fill need an armed tile; the eraser is the one mutating
       // tool that works without one.
       case 'pencil':
-        if (ctx.tileId !== null) this.applyPaint(ctx, ctx.tileId)
+        if (ctx.stamp) this.applyStamp(ctx, ctx.stamp)
         break
       case 'eraser':
         this.applyPaint(ctx, null)
@@ -373,7 +385,35 @@ export class TileEditorSystem extends System {
     }
   }
 
-  /** Pencil + eraser — one builder; `null` erases, and reports as tile `0`. */
+  /**
+   * Pencil: lay the armed stamp with its top-left on the clicked tile.
+   * A 1×1 stamp produces exactly the paint command the pencil has
+   * always produced — `buildTileStampCommand` owns that choice, so the
+   * pointer path has one branch instead of two.
+   */
+  private applyStamp(ctx: ToolContext, stamp: TileStamp): void {
+    const command = buildTileStampCommand({
+      editor: ctx.hit.editor,
+      layerId: ctx.layerId,
+      originX: ctx.hit.coords.x,
+      originY: ctx.hit.coords.y,
+      stamp,
+      // Same bounds authority as the fill and the hit test: the map's
+      // persisted extent, so a stamp at the edge writes what fits.
+      bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
+    })
+    if (command) this.dispatchCommand(command)
+    // Reported as the anchor tile, like every other single-tile event:
+    // hosts use this to mirror "a tile was placed here", and the block's
+    // extent is already in the command the peers receive.
+    this.events.emit(EngineEvent.TILE_PLACED, {
+      coords: ctx.hit.coords,
+      tileId: stamp.spriteIds[0] ?? 0,
+      layerId: ctx.layerId,
+    })
+  }
+
+  /** Eraser — the one mutating tile tool that needs no armed brush; reports as tile `0`. */
   private applyPaint(ctx: ToolContext, spriteId: number | null): void {
     this.dispatchCommand(
       makeTilePaintCommand(ctx.layerId, ctx.hit.coords.x, ctx.hit.coords.y, spriteId, ctx.previousSprites),
