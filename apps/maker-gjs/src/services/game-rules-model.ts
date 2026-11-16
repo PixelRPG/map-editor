@@ -39,6 +39,15 @@ export interface GameRuleRow {
    * switch is locked: turning it off would leave a dependent half-wired.
    */
   neededBy: string[]
+  /**
+   * What turning this on PUTS IN FRONT of the user — the templates it
+   * offers the New-object chooser ("Enemy, Weapon"), or, when it ships
+   * none, the components it adds to the inspector. Capped at
+   * {@link RULE_ADDS_MAX}; the rest is counted in {@link addsMore}.
+   */
+  adds: string[]
+  /** How many more names {@link GameRuleRow.adds} left out. */
+  addsMore: number
   /** How much of the project would go dormant if this system were switched off. */
   usage: GameRuleUsage
 }
@@ -52,6 +61,13 @@ export interface GameRuleUsage {
   /** How many maps carry at least one such placement. */
   maps: number
 }
+
+/**
+ * How many names the "Adds: …" caption spells out before it starts
+ * counting. Four fits one line at the narrow width the Game page clamps
+ * to; a fifth wrapped the caption under the switch.
+ */
+export const RULE_ADDS_MAX = 4
 
 /** The whole page: switchable rows plus the always-on floor. */
 export interface GameRulesModel {
@@ -87,12 +103,30 @@ export function buildGameRulesModel(input: GameRulesInput = {}): GameRulesModel 
       enabled: effective.has(spec.id),
       alsoEnables: (spec.requires ?? []).map((id) => systems[id]?.editor.label ?? id),
       neededBy: enabledDependentsOf(spec.id, project, systems).map((s) => s.editor.label),
+      ...addsOf(spec),
       usage: usageOf(spec, project?.entityLibrary ?? [], maps),
     }
     if (spec.editor.base) model.alwaysOn.push(row)
     else model.switchable.push(row)
   }
   return model
+}
+
+/**
+ * The names behind "Adds: Enemy, Weapon" — what a user would SEE appear.
+ *
+ * Templates come first because they are the visible answer: turning
+ * `combat-action` on makes "Enemy" and "Weapon" show up in the New-object
+ * chooser, which is a thing you can point at. A system without templates
+ * has to fall back on its components, which only surface as inspector
+ * rows on an existing object — less concrete, but still better than a
+ * row that says nothing about what the switch does.
+ */
+function addsOf(spec: GameSystemSpec): Pick<GameRuleRow, 'adds' | 'addsMore'> {
+  const templates = (spec.templates ?? []).map((t) => t.label)
+  const names = templates.length > 0 ? templates : spec.components.map((c) => c.editor.label)
+  const unique = [...new Set(names.filter((name) => name.length > 0))]
+  return { adds: unique.slice(0, RULE_ADDS_MAX), addsMore: Math.max(0, unique.length - RULE_ADDS_MAX) }
 }
 
 /**
