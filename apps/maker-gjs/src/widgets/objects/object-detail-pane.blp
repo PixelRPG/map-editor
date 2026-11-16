@@ -33,8 +33,7 @@ template $PixelRpgObjectDetailPane : Adw.Bin {
 
           Adw.StatusPage {
             icon-name: "view-grid-symbolic";
-            title: _("No things yet");
-            description: _("Things are what you place on a map — chests, signs, doors, triggers. Build one from a template, then drop it onto any map.");
+            title: _("Things are what your hero finds");
             vexpand: false;
           }
 
@@ -94,6 +93,21 @@ template $PixelRpgObjectDetailPane : Adw.Bin {
           child: Gtk.Box {
             orientation: vertical;
             spacing: 18;
+
+            // § 6.6 lands a freshly created thing here with "Place on
+            // map" focused, so the Things detail gets the same single
+            // primary action the character detail has (§ 4.4) — a thing
+            // that is in the library but on no map does nothing yet.
+            Gtk.Box {
+              orientation: horizontal;
+              halign: start;
+              spacing: 10;
+
+              Gtk.Button place_button {
+                label: _("Place on map");
+                styles ["suggested-action", "pill"]
+              }
+            }
 
             Adw.PreferencesGroup {
               Adw.EntryRow name_row {

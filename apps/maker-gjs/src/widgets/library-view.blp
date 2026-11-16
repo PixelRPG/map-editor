@@ -115,12 +115,10 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
               margin-end: 12;
               styles ["boxed-list"]
 
-              // No `action-name`: the template chooser is a dialog the
-              // Things gallery presents itself, so the host routes
-              // `activated` to it in `vfunc_map`.
-              Adw.ButtonRow new_thing_row {
+              Adw.ButtonRow {
                 title: _("New thing");
                 start-icon-name: "list-add-symbolic";
+                action-name: "win.new-thing";
               }
             };
           }

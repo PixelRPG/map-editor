@@ -29,8 +29,8 @@ export class ObjectsController {
     private readonly host: EntityDeleteHost,
   ) {
     view.connect('object-changed', (_v: ObjectsView, json: string) => this._onObjectChanged(json))
-    view.connect('object-create-requested', (_v: ObjectsView, templateId: string) =>
-      this.createFromTemplate(templateId),
+    view.connect('object-create-requested', (_v: ObjectsView, templateId: string, name: string) =>
+      this.createFromTemplate(templateId, name || undefined),
     )
     view.connect('object-delete-requested', (_v: ObjectsView, id: string) => this._deleteObject(id))
     view.connect('object-rename-requested', (_v: ObjectsView, id: string, name: string) => this._renameObject(id, name))
@@ -76,25 +76,34 @@ export class ObjectsController {
     this.store.upsertEntity(entity, 'objects')
   }
 
-  /** Create a new object from a template id, focus it. Public (driven by
-   * the view's "New object" dialog AND the `win.new-object` action). */
-  createFromTemplate(templateId: string): void {
+  /**
+   * Create a new object from a template id and land on its detail with
+   * "Place on map" focused (§ 6.6). Public — driven by the view's "New
+   * thing" dialog, the empty state's tiles AND the `win.new-object`
+   * action.
+   *
+   * `name` is what the dialog's second page settled on. It stays
+   * optional: the one-tap paths (empty-state tile, action, MCP) never
+   * ask for a name, and then the thing is called after its template as
+   * it always was.
+   */
+  createFromTemplate(templateId: string, name?: string): void {
     const data = this.store.data
     if (!data) return
     const template = findEntityTemplate(templateId, this.store.data)
     if (!template) return
     const id = uniqueIdFrom(template.label, new Set((data.entityLibrary ?? []).map((e) => e.id)), 'object')
-    const entity = this._seedEntity(id, template)
+    const entity = this._seedEntity(id, template, name)
     this.store.upsertEntity(entity, 'objects')
     this.refresh()
-    this.view.focusObject(id)
+    this.view.focusNewObject(id)
   }
 
   /** Build a fresh entity from a template (deep-copied components). */
-  private _seedEntity(id: string, template: EntityTemplate): EntityDefinition {
+  private _seedEntity(id: string, template: EntityTemplate, name?: string): EntityDefinition {
     return {
       id,
-      name: template.label,
+      name: name ?? template.label,
       components: template.components.map((c) => ({ ...c })),
       editorData: {
         template: template.id,

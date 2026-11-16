@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
@@ -8,8 +9,8 @@ import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES, type EntityTemplate, templatesForView } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
 import { groupThingsByCategory } from '../services/thing-categories.ts'
+import { presentNewThingDialog } from './objects/new-thing-dialog.ts'
 import type { ObjectDetailActions, ObjectDetailPane } from './objects/object-detail-pane.ts'
-import { presentTemplateChooser } from './objects/object-dialogs.ts'
 import { buildObjectRow } from './objects/object-gallery.ts'
 import Template from './objects-view.blp'
 import { RowContextMenu } from './row-context-menu.ts'
@@ -25,7 +26,7 @@ import { RowContextMenu } from './row-context-menu.ts'
  */
 export interface ObjectsViewSignals extends Adw.Bin.SignalSignatures {
   'object-changed': (objectJson: string) => void
-  'object-create-requested': (defJson: string) => void
+  'object-create-requested': (templateId: string, name: string) => void
   'object-delete-requested': (defId: string) => void
   'object-rename-requested': (defId: string, name: string) => void
   'object-cast-toggle-requested': (defId: string, isCast: boolean) => void
@@ -89,8 +90,10 @@ export class ObjectsView extends Adw.Bin {
         Signals: {
           // Whole EntityDefinition JSON after an inspector edit.
           'object-changed': { param_types: [GObject.TYPE_STRING] },
-          // A template id chosen in the "New object" dialog.
-          'object-create-requested': { param_types: [GObject.TYPE_STRING] },
+          // A template id chosen in the "New thing" dialog, plus the name
+          // settled on there. An empty name means "whatever the template
+          // is called" — the empty state's tiles create in one tap.
+          'object-create-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
           // Object id to delete.
           'object-delete-requested': { param_types: [GObject.TYPE_STRING] },
           // Object id + the new name.
@@ -134,7 +137,12 @@ export class ObjectsView extends Adw.Bin {
         if (this._activeId) this.emit('object-cast-toggle-requested', this._activeId, isCast)
       },
       entityChanged: (json) => this.emit('object-changed', json),
-      createFromTemplate: (templateId) => this.emit('object-create-requested', templateId),
+      // § 4.9: on the empty state one tap creates and opens the thing,
+      // so the tiles do NOT detour through the dialog's name page.
+      createFromTemplate: (templateId) => this.emit('object-create-requested', templateId, ''),
+      placeOnMap: () => {
+        if (this._activeId) this.activate_action('win.place-thing', GLib.Variant.new_string(this._activeId))
+      },
     }
   }
 
@@ -237,6 +245,23 @@ export class ObjectsView extends Adw.Bin {
     this.emit('detail-requested')
   }
 
+  /**
+   * Land on a freshly created thing: its detail, with "Place on map"
+   * focused (§ 6.6). A distinct entry rather than a flag on
+   * {@link focusObject}, because a plain row click must NOT move the
+   * focus off the list the person is walking.
+   */
+  focusNewObject(id: string): void {
+    if (!this._objects.some((o) => o.id === id)) return
+    this.focusObject(id)
+    // The detail stack page is swapped above; the button only takes
+    // focus once it is mapped, which is the next idle at the earliest.
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._detail?.focusPrimaryAction()
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
   /** Whether a thing is open in the detail — see the `has-active` property. */
   get hasActive(): boolean {
     return this._activeId !== null
@@ -294,12 +319,22 @@ export class ObjectsView extends Adw.Bin {
   }
 
   /**
-   * Present the template chooser; the chosen template id drives creation.
-   * Public: the "+" button lives in the Library host's header.
+   * Present the two-page "New thing" dialog (§ 6.6) — template grid,
+   * then the name. Public: the "New thing" row lives in the Library
+   * host's sidebar.
+   *
+   * The names it steps past are EVERY entry in the library, characters
+   * included: one project, one namespace, and a thing called "Hero"
+   * beside the hero is the confusion the suggestion exists to avoid.
    */
-  presentTemplateChooser(): void {
-    presentTemplateChooser(this, templatesForView(this._templates, this._fullView), (templateId) =>
-      this.emit('object-create-requested', templateId),
+  presentNewThing(): void {
+    presentNewThingDialog(
+      this,
+      {
+        templates: templatesForView(this._templates, this._fullView),
+        existingNames: this._objects.map((o) => o.name),
+      },
+      (templateId, name) => this.emit('object-create-requested', templateId, name),
     )
   }
 }

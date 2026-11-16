@@ -36,7 +36,6 @@ export declare const InternalChildren: [
   "project_menu",
   "roster_chip",
   "new_stack",
-  "new_thing_row",
   "detail_page",
   "detail_stack",
   "cast_detail",
@@ -63,7 +62,6 @@ export interface Children {
   _project_menu: GObject.Object;
   _roster_chip: GObject.Object;
   _new_stack: Gtk.Stack;
-  _new_thing_row: Adw.ButtonRow;
   _detail_page: Adw.NavigationPage;
   _detail_stack: Gtk.Stack;
   _cast_detail: GObject.Object;
