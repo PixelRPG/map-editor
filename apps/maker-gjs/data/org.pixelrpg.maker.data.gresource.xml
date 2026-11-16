@@ -6,6 +6,21 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/tileset-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/pencil-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/color-fill-symbolic.svg</file>
+    <!-- "Can the hero walk here?" pictograms, one per writable
+         CollisionPreset, named `collision-<preset>-symbolic`. Each draws
+         the 16x16 tile frame (interior 3..13) at 55% opacity plus the
+         blocked area solid: a half is 5px deep, a corner 5x5 — so the
+         picture reads at icon size without a label. -->
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-free-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-wall-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-top-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-bottom-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-half-right-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-top-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-top-right-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-bottom-left-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-bottom-right-symbolic.svg</file>
     <file preprocess="xml-stripblanks">metainfo/org.pixelrpg.maker.metainfo.xml</file>
   </gresource>
 </gresources>

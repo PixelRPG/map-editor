@@ -89,7 +89,7 @@ view's selection bar".
 
 | View          | Triggering selection                                          | Inspector content                          |
 |---------------|---------------------------------------------------------------|--------------------------------------------|
-| Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Solid switch, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
+| Library › Graphics (tileset detail) | Click a tile in a tileset's palette     | Collision pictograms, surface combo (tile-property inspector); on phone it is a bottom sheet, see `tiles-view.ts` |
 | Scene editor  | Click a placement with the `'select'` tool (canvas-side hit)  | Selected page fills with the placement — **wide only**, see below |
 
 The scene editor is the one exception, and it is deliberate. On phone

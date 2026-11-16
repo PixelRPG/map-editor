@@ -1,4 +1,10 @@
-import { REQUIRED_ROLES, type SpriteSetData, type SpriteSetReference } from '@pixelrpg/engine'
+import {
+  type CollisionPreset,
+  REQUIRED_ROLES,
+  type SpriteSetData,
+  type SpriteSetReference,
+  tileCollisionForPreset,
+} from '@pixelrpg/engine'
 
 /**
  * Pure sprite-set data transforms behind `ProjectStore`'s sprite-set
@@ -112,6 +118,29 @@ export function writeTileSurface(def: SpriteSetData['sprites'][number], surface:
   const next = { ...def.tileProperties }
   delete next.surface
   def.tileProperties = Object.keys(next).length === 0 ? undefined : next
+}
+
+/**
+ * Write a collision pictogram's shapes onto a sprite definition in
+ * place. Free and Wall drop `colliders` entirely rather than storing an
+ * empty array, so a tile set back to a whole-tile wall serialises the
+ * same as one that was never shaped.
+ *
+ * The geometry itself comes from the engine's {@link tileCollisionForPreset}
+ * — the same function `collisionPresetOf` classifies against, so what
+ * the panel shows and what the hero bumps into cannot drift.
+ */
+export function writeTileCollision(
+  def: SpriteSetData['sprites'][number],
+  preset: CollisionPreset,
+  tileWidth: number,
+  tileHeight: number,
+): void {
+  const collision = tileCollisionForPreset(preset, tileWidth, tileHeight)
+  if (!collision) return
+  def.solid = collision.solid
+  if (collision.colliders) def.colliders = collision.colliders
+  else delete def.colliders
 }
 
 /**

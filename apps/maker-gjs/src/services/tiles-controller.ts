@@ -60,15 +60,15 @@ export class TilesController {
 
   /** Wire once into `TilesView.bindCallbacks`. */
   readonly callbacks = {
-    // Tile-property mutations (Solid / Surface) delegate to the store —
+    // Tile-property mutations (collision / Surface) delegate to the store —
     // the single owner of sprite-set descriptor writes + collab
     // broadcast — so a local edit persists, broadcasts a
     // `__project/spriteset.update.chunk` to peers, and refreshes live
     // engine collision through the host's `tile-properties-changed`
     // subscription. This controller only refreshes the inspector
-    // afterwards so the switch reflects the new state.
-    setSolid: (spriteSetId: string, spriteId: number, solid: boolean) => {
-      this.store.setTileSolid(spriteSetId, spriteId, solid)
+    // afterwards so the panel reflects the new state.
+    setCollision: (spriteSetId: string, spriteId: number, preset: string) => {
+      this.store.setTileCollision(spriteSetId, spriteId, preset)
       this.view.refreshInspectorForSelection()
     },
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => {

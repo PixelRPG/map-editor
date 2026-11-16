@@ -11,6 +11,7 @@ import {
   SignalScope,
   TileInspector,
   TilePalette,
+  type TileSize,
 } from '@pixelrpg/gjs'
 
 import Template from './tiles-detail-pane.blp'
@@ -37,7 +38,7 @@ export interface AppearanceGlance {
 export interface TilesDetailActions {
   selectTile(tileId: number): void
   clearTileSelection(): void
-  setSolid(solid: boolean): void
+  setCollision(preset: string): void
   setSurface(surface: string | null): void
   editAppearance(): void
 }
@@ -134,7 +135,7 @@ export class TilesDetailPane extends Adw.Bin {
       {
         selectTile: (tileId) => this._actions?.selectTile(tileId),
         clearTileSelection: () => this._actions?.clearTileSelection(),
-        setSolid: (solid) => this._actions?.setSolid(solid),
+        setCollision: (preset) => this._actions?.setCollision(preset),
         setSurface: (surface) => this._actions?.setSurface(surface),
       },
     )
@@ -204,9 +205,13 @@ export class TilesDetailPane extends Adw.Bin {
     this._palette.setTiles([])
   }
 
-  /** Show one tile's properties, or nothing when no tile is picked. */
-  setSprite(def: SpriteDataSet | null, paintable: Gdk.Paintable | null): void {
-    this._inspector.setSprite(def, paintable)
+  /**
+   * Show one tile's properties, or nothing when no tile is picked. The
+   * sheet's tile size decides which collision pictogram matches the
+   * stored shape, so it travels with the sprite.
+   */
+  setSprite(def: SpriteDataSet | null, paintable: Gdk.Paintable | null, tileSize?: TileSize): void {
+    this._inspector.setSprite(def, paintable, tileSize)
   }
 
   /**

@@ -17,6 +17,8 @@ import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { foldShadowToLayerSprites } from './shadow-fold.ts'
 import { isSpriteRefSolid } from './sprite-solidity.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
+import { type TileCollisionRef, tileCollisionOf } from './tile-collision.ts'
+import { applyTileColliders } from './tile-collider.ts'
 import { buildPlaneTileMaps, collectInitialSprites } from './tilemap-builder.ts'
 
 /**
@@ -150,7 +152,7 @@ export class MapResource implements Loadable<TileMap> {
     this.data = groundTileMap
 
     this.initialSpritesByPlane = collectInitialSprites(this._mapData, this.tileMapsByPlane, (setId, spriteId, solid) =>
-      this.isSolidRef(setId, spriteId, solid),
+      this.collisionRef(setId, spriteId, solid),
     )
   }
 
@@ -263,7 +265,7 @@ export class MapResource implements Loadable<TileMap> {
    * `SpriteDataMap` entries are lost during this fold — the shadow
    * tracks only the gameplay-loaded fields (spriteSetId, spriteId,
    * animationId, layerId). This matches the pre-existing
-   * limitation called out by `isSolidRef`: live edits already
+   * limitation called out by `collisionRef`: live edits already
    * dropped the per-placement `solid` override. Same caveat applies
    * now to the persisted shape.
    *
@@ -332,27 +334,31 @@ export class MapResource implements Loadable<TileMap> {
   }
 
   /**
-   * Recompute `tile.solid` on `tilemap`'s tile from the live editor
-   * shadow state. Called by `layer.manager.ts` after every paint /
-   * erase so collision tracks edits in real time. A tile is solid
-   * iff at least one sprite currently placed on it contributes
-   * solidity per {@link isSolidRef}.
+   * Recompute `tile.solid` and the tile's collision shapes on
+   * `tilemap`'s tile from the live editor shadow state. Called by
+   * `layer.manager.ts` after every paint / erase so collision tracks
+   * edits in real time. The fold over the stacked sprites is the pure
+   * {@link tileCollisionOf}: solidity unions, and a full-tile wall
+   * beats the partial shapes stacked with it.
    */
   refreshTileSolidFromEditor(tilemap: TileMap, tile: Tile): void {
     const editor = tilemap.get(MapEditorComponent)
     if (!editor) return
     const refs = getSpritesAt(editor, tile.x, tile.y)
-    tile.solid = refs.some((r) => this.isSolidRef(r.spriteSetId, r.spriteId))
+    const collision = tileCollisionOf(refs.map((r) => this.collisionRef(r.spriteSetId, r.spriteId)))
+    tile.solid = collision.solid
+    applyTileColliders(tile, collision.colliders ?? [])
   }
 
   /**
-   * Whether a sprite reference makes its tile solid, resolved against
-   * this map's loaded sprite-set definitions. The precedence rules are
-   * the pure {@link isSpriteRefSolid}; this only owns the lookup.
+   * What a sprite reference contributes to its tile's collision,
+   * resolved against this map's loaded sprite-set definitions. The
+   * rules are the pure {@link isSpriteRefSolid} and the stored
+   * `colliders`; this only owns the lookup.
    */
-  private isSolidRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): boolean {
+  private collisionRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): TileCollisionRef {
     const definition = this.spriteSetResources.get(spriteSetId)?.data?.sprites.find((s) => s.id === spriteId)
-    return isSpriteRefSolid(definition, placementSolid)
+    return { solid: isSpriteRefSolid(definition, placementSolid), colliders: definition?.colliders }
   }
 
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {

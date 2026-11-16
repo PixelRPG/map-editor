@@ -152,7 +152,7 @@ export class TilesView extends Adw.Bin {
   private _appearanceSetsById = new Map<string, GdkSpriteSetResource | null>()
   private _activeAppearanceId: string | null = null
 
-  private _onSolidChanged: ((spriteSetId: string, spriteId: number, solid: boolean) => void) | null = null
+  private _onCollisionChanged: ((spriteSetId: string, spriteId: number, preset: string) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
   private _onTilesetUsage: ((spriteSetId: string) => number) | null = null
   // Deleting an appearance routes to the host (it owns sprite-set data +
@@ -219,7 +219,7 @@ export class TilesView extends Adw.Bin {
     return {
       selectTile: (tileId) => this._selectTile(tileId),
       clearTileSelection: () => this._clearTileSelection(),
-      setSolid: (solid) => this._applySolid(solid),
+      setCollision: (preset) => this._applyCollision(preset),
       setSurface: (surface) => this._applySurface(surface),
       editAppearance: () => {
         if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
@@ -275,11 +275,11 @@ export class TilesView extends Adw.Bin {
    * `CastView.bindCallbacks`.
    */
   bindCallbacks(callbacks: {
-    setSolid: (spriteSetId: string, spriteId: number, solid: boolean) => void
+    setCollision: (spriteSetId: string, spriteId: number, preset: string) => void
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => void
     tilesetUsage: (spriteSetId: string) => number
   }): void {
-    this._onSolidChanged = callbacks.setSolid
+    this._onCollisionChanged = callbacks.setCollision
     this._onSurfaceChanged = callbacks.setSurface
     this._onTilesetUsage = callbacks.tilesetUsage
   }
@@ -572,9 +572,13 @@ export class TilesView extends Adw.Bin {
       this._detail?.setSprite(null, null)
       return
     }
-    const def: SpriteDataSet | undefined = active.resource.data?.sprites.find((s) => s.id === this._selectedSpriteId)
+    const data = active.resource.data
+    const def: SpriteDataSet | undefined = data?.sprites.find((s) => s.id === this._selectedSpriteId)
     const sprite = active.gdk?.getSprite(this._selectedSpriteId)
-    this._detail?.setSprite(def ?? null, sprite?.createPaintable() ?? null)
+    // The sheet's grid decides which collision pictogram a stored shape
+    // matches — a half-tile box is 8 px on a 16 px sheet, 16 on a 32 px one.
+    const tileSize = data ? { width: data.spriteWidth, height: data.spriteHeight } : undefined
+    this._detail?.setSprite(def ?? null, sprite?.createPaintable() ?? null, tileSize)
   }
 
   /**
@@ -585,10 +589,10 @@ export class TilesView extends Adw.Bin {
     return editableTilesetId(this._active)
   }
 
-  private _applySolid(solid: boolean): void {
+  private _applyCollision(preset: string): void {
     const id = this._editableTilesetId()
     if (!id || this._selectedSpriteId == null) return
-    this._onSolidChanged?.(id, this._selectedSpriteId, solid)
+    this._onCollisionChanged?.(id, this._selectedSpriteId, preset)
   }
 
   private _applySurface(surface: string | null): void {
