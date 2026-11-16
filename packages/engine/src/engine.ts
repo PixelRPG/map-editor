@@ -26,6 +26,7 @@ import { MapScene } from './scenes/map.scene.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
+import { refreshWallOverlayFor } from './services/wall-overlay.ts'
 import {
   EMPTY_VIEWPORT_INSET,
   insetCameraTarget,
@@ -745,7 +746,13 @@ export class Engine {
    * flipping its `solid` flag takes effect without a scene rebuild.
    */
   refreshTileSolidsForSprite(spriteSetId: string, spriteId: number): void {
-    this.activeMapScene()?.mapResource.refreshTileSolidsForSprite(spriteSetId, spriteId)
+    const scene = this.activeMapScene()
+    if (!scene) return
+    scene.mapResource.refreshTileSolidsForSprite(spriteSetId, spriteId)
+    // The wall hatching draws what the colliders say, so it has to
+    // follow the same edit — a tile marked "Wall" in the tileset
+    // otherwise stays un-hatched on the open map until the next paint.
+    refreshWallOverlayFor(scene)
   }
 
   /**
@@ -753,7 +760,10 @@ export class Engine {
    * descriptor update carries the whole set, not which sprite changed.
    */
   refreshTileSolidsForSpriteSet(spriteSetId: string): void {
-    this.activeMapScene()?.mapResource.refreshTileSolidsForSpriteSet(spriteSetId)
+    const scene = this.activeMapScene()
+    if (!scene) return
+    scene.mapResource.refreshTileSolidsForSpriteSet(spriteSetId)
+    refreshWallOverlayFor(scene)
   }
 
   // ──────────────────────────────────────────────────────────────

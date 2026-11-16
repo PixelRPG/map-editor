@@ -17,7 +17,7 @@ import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { foldShadowToLayerSprites } from './shadow-fold.ts'
 import { isSpriteRefSolid } from './sprite-solidity.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
-import { type TileCollisionRef, tileCollisionOf } from './tile-collision.ts'
+import { type TileCollisionData, type TileCollisionRef, tileCollisionOf } from './tile-collision.ts'
 import { applyTileColliders } from './tile-collider.ts'
 import { buildPlaneTileMaps, collectInitialSprites } from './tilemap-builder.ts'
 
@@ -49,6 +49,7 @@ export class MapResource implements Loadable<TileMap> {
    * compatibility with callers that don't know about planes.
    */
   private tileMapsByPlane: Map<LayerPlane, TileMap> = new Map()
+  private _collisionRevision = 0
   /** Initial per-plane sprite refs, keyed by `"tileX,tileY"` per the shadow-state schema. */
   private initialSpritesByPlane: Map<LayerPlane, Map<string, TileSpriteRef[]>> = new Map()
 
@@ -318,8 +319,22 @@ export class MapResource implements Loadable<TileMap> {
     this.refreshTileSolidsWhere((r) => r.spriteSetId === spriteSetId)
   }
 
+  /**
+   * Bumped whenever a sprite-set definition change has been folded back
+   * into the live tiles — the stamp a derived view of this map's
+   * collision validates its cache against.
+   *
+   * The shadow's own `revision` counts tile *writes* and so misses this
+   * entirely: marking a tile "Wall" in the tileset changes what every
+   * placement of it blocks without touching a single cell.
+   */
+  get collisionRevision(): number {
+    return this._collisionRevision
+  }
+
   /** Recompute `tile.solid` for every tile holding a sprite ref matching `matches`. */
   private refreshTileSolidsWhere(matches: (ref: TileSpriteRef) => boolean): void {
+    this._collisionRevision++
     for (const tilemap of this.tileMapsByPlane.values()) {
       const editor = tilemap.get(MapEditorComponent)
       if (!editor) continue
@@ -344,10 +359,45 @@ export class MapResource implements Loadable<TileMap> {
   refreshTileSolidFromEditor(tilemap: TileMap, tile: Tile): void {
     const editor = tilemap.get(MapEditorComponent)
     if (!editor) return
-    const refs = getSpritesAt(editor, tile.x, tile.y)
-    const collision = tileCollisionOf(refs.map((r) => this.collisionRef(r.spriteSetId, r.spriteId)))
+    const collision = this.collisionAt(editor, tile.x, tile.y)
     tile.solid = collision.solid
     applyTileColliders(tile, collision.colliders ?? [])
+  }
+
+  /**
+   * What blocks at one cell of one plane, folded from that plane's live
+   * shadow — the rule {@link refreshTileSolidFromEditor} applies to the
+   * tile, available to read without a `Tile` in hand.
+   *
+   * Exported so overlays that *draw* collision (the "Show walls"
+   * hatching) ask the same question the collider build asks, instead of
+   * re-deriving solidity from sprite definitions and drifting from it.
+   *
+   * `memo` is an optional per-pass cache for the definition lookup,
+   * which is a linear scan of the sprite set: a full-map pass over a
+   * 1024-tile set is otherwise dominated by it. It is deliberately
+   * caller-owned and short-lived — a cache kept across passes would
+   * have to be invalidated on every descriptor edit.
+   */
+  collisionAt(
+    editor: MapEditorComponent,
+    tileX: number,
+    tileY: number,
+    memo?: Map<string, TileCollisionRef>,
+  ): TileCollisionData {
+    const refs = getSpritesAt(editor, tileX, tileY)
+    return tileCollisionOf(
+      refs.map((r) => {
+        if (!memo) return this.collisionRef(r.spriteSetId, r.spriteId)
+        const key = `${r.spriteSetId}:${r.spriteId}`
+        let ref = memo.get(key)
+        if (!ref) {
+          ref = this.collisionRef(r.spriteSetId, r.spriteId)
+          memo.set(key, ref)
+        }
+        return ref
+      }),
+    )
   }
 
   /**
