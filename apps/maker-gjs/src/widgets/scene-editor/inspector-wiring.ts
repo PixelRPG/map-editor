@@ -1,5 +1,5 @@
 import type { LayerPlane } from '@pixelrpg/engine'
-import type { BrushPage, LayersPage, SelectedPage } from '@pixelrpg/gjs'
+import type { BrushPage, LayersPage, SelectedPage, SheetStampPick } from '@pixelrpg/gjs'
 
 /**
  * Inspector → top-bar + engine wiring, one function per page.
@@ -15,6 +15,13 @@ export interface BrushPageWiring {
   isObjectToolActive(): boolean
   armPencilTool(): void
   setActiveTile(tileId: number): void
+  /**
+   * Widen the tile just picked to the whole dragged block. Always
+   * preceded by a {@link BrushPageWiring.setActiveTile} call for the
+   * block's anchor, so this only has to arm the brush — the chip, the
+   * recent strip and the tool switch already happened.
+   */
+  setActiveStamp(pick: SheetStampPick): void
   armObjectBrush(defId: string): void
   /** Re-point the sheet at another of the map's tilesets. */
   selectTileset(spriteSetId: string): void
@@ -37,6 +44,10 @@ export function wireBrushPage(page: BrushPage, ctx: BrushPageWiring): void {
     if (ctx.isObjectToolActive()) ctx.armPencilTool()
     ctx.setActiveTile(tileId)
   })
+  // Second half of a dragged pick: the sheet emits this straight after
+  // the anchor's `tile-selected`, so the brush ends up holding the block
+  // the user actually framed.
+  page.connect('stamp-selected', (_p: BrushPage, pick: SheetStampPick) => ctx.setActiveStamp(pick))
   // Picking what to place arms the brush AND the Object tool in one step,
   // just like picking a tile arms the pencil's active tile.
   page.connect('object-brush-selected', (_p: BrushPage, defId: string) => {

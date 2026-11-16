@@ -12,7 +12,7 @@ import { DepthGlyph } from './depth-glyph.ts'
 import { GLYPH_SIZES } from './depth-glyph.geometry.ts'
 import { TilePalette } from './tile-palette.ts'
 import { TileSheet } from './tile-sheet.ts'
-import type { SheetGrid } from './tile-sheet.geometry.ts'
+import type { SheetGrid, SheetSpan, SheetStampPick } from './tile-sheet.geometry.ts'
 
 import Template from './brush-page.blp'
 
@@ -69,6 +69,7 @@ const CHIP_THUMB = { width: 56, height: 40 } as const
  */
 export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
   'tile-selected': (tileId: number) => void
+  'stamp-selected': (pick: SheetStampPick) => void
   'object-brush-selected': (defId: string) => void
   'plane-selected': (plane: string) => void
   'tileset-selected': (spriteSetId: string) => void
@@ -141,6 +142,9 @@ export class BrushPage extends Adw.Bin {
         },
         Signals: {
           'tile-selected': { param_types: [GObject.TYPE_INT] },
+          // The sheet's multi-tile pick, forwarded as it arrives: right
+          // after the `tile-selected` that carries its anchor.
+          'stamp-selected': { param_types: [GObject.TYPE_JSOBJECT] },
           'object-brush-selected': { param_types: [GObject.TYPE_STRING] },
           // A plane chip was tapped — the host activates that plane's
           // last-used layer.
@@ -168,6 +172,9 @@ export class BrushPage extends Adw.Bin {
     super.vfunc_map()
     this._signals.connect(this._sheet, 'tile-selected', (_s: TileSheet, tileId: number) =>
       this.emit('tile-selected', tileId),
+    )
+    this._signals.connect(this._sheet, 'stamp-selected', (_s: TileSheet, pick: SheetStampPick) =>
+      this.emit('stamp-selected', pick),
     )
     this._signals.connect(this._object_palette, 'tile-selected', (_p: TilePalette, idx: number) => {
       const defId = this._objectBrushIds[idx]
@@ -242,6 +249,11 @@ export class BrushPage extends Adw.Bin {
   /** Ring the active tile on the sheet without re-emitting. */
   selectTile(id: number): void {
     this._sheet.selectTile(id)
+  }
+
+  /** Ring the whole armed block on the sheet without re-emitting. */
+  selectStamp(span: SheetSpan | null): void {
+    this._sheet.selectStamp(span)
   }
 
   /**
