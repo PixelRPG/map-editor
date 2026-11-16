@@ -1,15 +1,29 @@
 using Gtk 4.0;
 using Adw 1;
 
-// Game page — the project's own settings, one shell destination. The
-// content is an `Adw.PreferencesPage` (clamped + scrollable →
-// responsive for free):
-//   • Project    — editable project metadata (name, author, …).
-//   • Tile settings — the default tile size + where the project lives.
-//   • Game rules — the switchable game systems + the always-on base
-//     layer (see docs/concepts/game-systems.md), built in game-view.ts.
+// Game page — a HOME for the game, not a settings column
+// (REDESIGN.md § 4.5). Five things, in this order:
+//   • Title card — the start map as a cover, the name, "Play from the
+//     start" and "Share…".
+//   • Checkup    — what stops the game from working, each row a deep
+//     link. Built in game-view.ts from `buildGameCheckup`.
+//   • Start      — which map the game opens on, and who the hero is.
+//   • Rules      — one Adw.ExpanderRow per switchable game system (see
+//     docs/concepts/game-systems.md), built in game-view.ts from the
+//     registry, so a new system is a registration not a template edit.
+//   • About      — author and description; Full view adds the version,
+//     the tile grid and the way to the project folder.
 // Assets are NOT listed here: characters and graphics are one switcher
 // click away in the Library, and a group of jump-links was noise.
+//
+// The content is an `Adw.MultiLayoutView`, not an `Adw.PreferencesPage`:
+// desktop ≥ 1100 px pins the title card and the checkup into a 360 px
+// left column while the groups scroll on the right, and the same three
+// children are one scrolling column below that. Re-slotting moves real
+// widgets between the two layouts, which is only safe because nothing
+// here holds a GL context — the reason `scene-editor.blp` cannot do it.
+// `Adw.PreferencesPage` is not in the picture at all: it accepts only
+// `Adw.PreferencesGroup` children, and an `Adw.LayoutSlot` is not one.
 template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
   Adw.ToolbarView {
     top-bar-style: flat;
@@ -50,74 +64,308 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
       $PixelRpgRosterChip roster_chip {}
     }
 
-    content: Adw.PreferencesPage {
-      title: _("Game");
+    // The breakpoint is local to the page: "is there room for two
+    // columns" is a question about this content area, not about the
+    // window, which also carries the shell's own sidebar on wide.
+    content: Adw.BreakpointBin {
+      width-request: 360;
+      height-request: 294;
 
-      Adw.PreferencesGroup {
-        title: _("Project");
-        description: _("Settings saved into game-project.json.");
+      Adw.MultiLayoutView layouts {
+        layout-name: "narrow";
 
-        Adw.EntryRow name_row {
-          show-apply-button: true;
-          title: _("Name");
-        }
+        Adw.Layout {
+          name: "narrow";
 
-        Adw.EntryRow author_row {
-          show-apply-button: true;
-          title: _("Author");
-        }
+          content: Gtk.ScrolledWindow {
+            hscrollbar-policy: never;
+            vexpand: true;
 
-        Adw.EntryRow version_row {
-          show-apply-button: true;
-          title: _("Version");
-          visible: bind template.full-view;
-        }
+            Adw.Clamp {
+              maximum-size: 600;
+              tightening-threshold: 500;
 
-        Adw.EntryRow description_row {
-          show-apply-button: true;
-          title: _("Description");
-        }
-      }
+              Gtk.Box {
+                orientation: vertical;
+                spacing: 24;
+                margin-top: 18;
+                margin-bottom: 24;
+                margin-start: 12;
+                margin-end: 12;
 
-      // Full view only: the tile grid and the file path are the
-      // expert's numbers; a child's Game page is a name and an author.
-      Adw.PreferencesGroup {
-        title: _("Tile settings");
-        visible: bind template.full-view;
+                Adw.LayoutSlot {
+                  id: "titlecard";
+                }
 
-        Adw.SpinRow tilesize_row {
-          title: _("Default tile size");
-          subtitle: _("Pixel grid step for new maps.");
-          adjustment: Gtk.Adjustment {
-            lower: 4;
-            upper: 256;
-            step-increment: 1;
-            page-increment: 8;
+                Adw.LayoutSlot {
+                  id: "checkup";
+                }
+
+                Adw.LayoutSlot {
+                  id: "settings";
+                }
+              }
+            }
           };
         }
 
-        Adw.ActionRow path_row {
-          title: _("Project file");
-          subtitle-selectable: true;
-          styles ["property"]
+        Adw.Layout {
+          name: "wide";
+
+          content: Gtk.Box {
+            // The card and the checkup stay put while the groups scroll:
+            // the checkup is a to-do list, and a to-do list that scrolls
+            // away is read once and forgotten.
+            Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
+              hexpand: false;
+              width-request: 360;
+
+              Gtk.Box {
+                orientation: vertical;
+                spacing: 24;
+                margin-top: 18;
+                margin-bottom: 24;
+                margin-start: 12;
+                margin-end: 12;
+
+                Adw.LayoutSlot {
+                  id: "titlecard";
+                }
+
+                Adw.LayoutSlot {
+                  id: "checkup";
+                }
+              }
+            }
+
+            Gtk.Separator {}
+
+            Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
+              hexpand: true;
+
+              Adw.Clamp {
+                maximum-size: 600;
+                tightening-threshold: 500;
+
+                Gtk.Box {
+                  orientation: vertical;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
+
+                  Adw.LayoutSlot {
+                    id: "settings";
+                  }
+                }
+              }
+            }
+          };
+        }
+
+        [titlecard]
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 12;
+
+          // The start map, drawn from the project's own tiles by a
+          // `MapPreview` inserted in code (it is not a template type
+          // anywhere in this repo). Empty until a start map is set —
+          // which is itself one of the checkup's rows.
+          Adw.Bin cover {
+            height-request: 160;
+            overflow: hidden;
+
+            styles [
+              "game-cover",
+            ]
+          }
+
+          Gtk.ListBox {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+
+            Adw.EntryRow name_row {
+              show-apply-button: true;
+              title: _("Name");
+            }
+          }
+
+          Gtk.Box {
+            spacing: 6;
+
+            Gtk.Button play_button {
+              action-name: "win.play-from-start";
+              hexpand: true;
+
+              styles [
+                "suggested-action",
+                "pill",
+              ]
+
+              child: Adw.ButtonContent {
+                icon-name: "media-playback-start-symbolic";
+                label: _("Play from the start");
+              };
+            }
+
+            Gtk.Button share_button {
+              action-name: "win.share-session";
+
+              styles [
+                "pill",
+              ]
+
+              child: Adw.ButtonContent {
+                icon-name: "emblem-shared-symbolic";
+                label: _("Share…");
+              };
+            }
+          }
+        }
+
+        [checkup]
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 8;
+
+          // A hand-rolled group rather than an `Adw.PreferencesGroup`:
+          // this box is slotted into two different containers, and the
+          // group's own margins double up inside the left column.
+          Gtk.Label {
+            // Flush with the list below it, the way an
+            // `Adw.PreferencesGroup` title sits over its own rows.
+            label: _("Checkup");
+            xalign: 0;
+
+            styles [
+              "heading",
+            ]
+          }
+
+          Gtk.ListBox checkup_list {
+            selection-mode: none;
+
+            styles [
+              "boxed-list",
+            ]
+          }
+        }
+
+        [settings]
+        Gtk.Box {
+          orientation: vertical;
+          spacing: 24;
+
+          Adw.PreferencesGroup {
+            title: _("Start");
+
+            Adw.ActionRow start_map_row {
+              title: _("Start map");
+              activatable: true;
+
+              [suffix]
+              Gtk.Image {
+                icon-name: "go-next-symbolic";
+              }
+            }
+
+            Adw.ActionRow hero_row {
+              title: _("Hero");
+              activatable: true;
+
+              [suffix]
+              Gtk.Image {
+                icon-name: "go-next-symbolic";
+              }
+            }
+          }
+
+          // `game_rules` hides itself while no switchable system ships:
+          // an empty titled group with a description reads as broken.
+          Adw.PreferencesGroup game_rules {
+            title: _("Rules");
+            description: _("Turn on what your game has.");
+            visible: false;
+          }
+
+          // Full view only, and collapsed: the base layer is the floor
+          // every game stands on, so there is nothing here to decide —
+          // a child's Game page should not carry four locked rows.
+          Adw.PreferencesGroup always_on {
+            visible: false;
+
+            Adw.ExpanderRow built_in_row {
+              title: _("Built in");
+              subtitle: _("Part of every game.");
+            }
+          }
+
+          Adw.PreferencesGroup {
+            title: _("About");
+
+            Adw.EntryRow author_row {
+              show-apply-button: true;
+              title: _("Author");
+            }
+
+            Adw.EntryRow description_row {
+              show-apply-button: true;
+              title: _("Description");
+            }
+
+            // Full view only: the version string, the tile grid and the
+            // file path are the expert's numbers; a child's Game page is
+            // a name and an author.
+            Adw.EntryRow version_row {
+              show-apply-button: true;
+              title: _("Version");
+              visible: bind template.full-view;
+            }
+
+            Adw.SpinRow tilesize_row {
+              title: _("Default tile size");
+              subtitle: _("Pixel grid step for new maps.");
+              visible: bind template.full-view;
+
+              adjustment: Gtk.Adjustment {
+                lower: 4;
+                upper: 256;
+                step-increment: 1;
+                page-increment: 8;
+              };
+            }
+
+            Adw.ActionRow folder_row {
+              title: _("Show game folder");
+              subtitle-selectable: true;
+              activatable: true;
+              visible: bind template.full-view;
+
+              styles [
+                "property",
+              ]
+
+              [suffix]
+              Gtk.Image {
+                icon-name: "folder-symbolic";
+              }
+            }
+          }
         }
       }
 
-      // Game rules — one Adw.ExpanderRow per switchable game system
-      // (show-enable-switch: the switch is the on/off, the body is the
-      // expert surface), plus the always-on base layer. Rows are built
-      // in game-view.ts from the game-system registry, so a new system
-      // is a registration rather than a template edit. `game_rules`
-      // hides itself while no switchable system ships.
-      Adw.PreferencesGroup game_rules {
-        title: _("Game rules");
-        description: _("Turn on what your game has.");
-        visible: false;
-      }
+      Adw.Breakpoint {
+        condition ("min-width: 1100px")
 
-      Adw.PreferencesGroup always_on {
-        title: _("Always on");
-        description: _("Part of every game.");
+        setters {
+          layouts.layout-name: "wide";
+        }
       }
     };
   }

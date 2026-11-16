@@ -3,6 +3,7 @@
 
 import type Adw from 'gi://Adw?version=1';
 import type GObject from 'gi://GObject?version=2.0';
+import type Gtk from 'gi://Gtk?version=4.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
@@ -22,14 +23,22 @@ export declare const GTypeName: 'PixelRpgGameView';
  * upstream half.
  */
 export declare const InternalChildren: [
+        'layouts',
+        'cover',
         'name_row',
-        'author_row',
-        'version_row',
-        'description_row',
-        'tilesize_row',
-        'path_row',
+        'play_button',
+        'share_button',
+        'checkup_list',
+        'start_map_row',
+        'hero_row',
         'game_rules',
         'always_on',
+        'built_in_row',
+        'author_row',
+        'description_row',
+        'version_row',
+        'tilesize_row',
+        'folder_row',
         'view_switcher',
         'project_menu',
         'roster_chip',
@@ -37,14 +46,22 @@ export declare const InternalChildren: [
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
+        _layouts: Adw.MultiLayoutView;
+        _cover: Adw.Bin;
         _name_row: Adw.EntryRow;
-        _author_row: Adw.EntryRow;
-        _version_row: Adw.EntryRow;
-        _description_row: Adw.EntryRow;
-        _tilesize_row: Adw.SpinRow;
-        _path_row: Adw.ActionRow;
+        _play_button: Gtk.Button;
+        _share_button: Gtk.Button;
+        _checkup_list: Gtk.ListBox;
+        _start_map_row: Adw.ActionRow;
+        _hero_row: Adw.ActionRow;
         _game_rules: Adw.PreferencesGroup;
         _always_on: Adw.PreferencesGroup;
+        _built_in_row: Adw.ExpanderRow;
+        _author_row: Adw.EntryRow;
+        _description_row: Adw.EntryRow;
+        _version_row: Adw.EntryRow;
+        _tilesize_row: Adw.SpinRow;
+        _folder_row: Adw.ActionRow;
         _view_switcher: Adw.ViewSwitcher;
         _project_menu: GObject.Object;
         _roster_chip: GObject.Object;
