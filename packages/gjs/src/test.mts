@@ -28,6 +28,7 @@ import chromeStagesSuite from './widgets/editor/chrome-stages.spec.js'
 import componentInspectorModelSuite from './widgets/editor/component-inspector.model.spec.js'
 import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.js'
 import doorTargetModelSuite from './widgets/editor/door-target.model.spec.js'
+import entityComponentsEditorModelSuite from './widgets/editor/entity-components-editor.model.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import layerSectionsSuite from './widgets/editor/layer-sections.spec.js'
 import mapConnectionsModelSuite from './widgets/editor/map-connections.model.spec.js'
@@ -58,6 +59,7 @@ run({
   componentInspectorModelSuite,
   depthGlyphGeometrySuite,
   doorTargetModelSuite,
+  entityComponentsEditorModelSuite,
   eventActionModelSuite,
   layerSectionsSuite,
   mapConnectionsModelSuite,

@@ -70,7 +70,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'show-help-overlay',
   ],
   back: ['back'],
-  project: ['open-project', 'close-project', 'open-recent-projects'],
+  project: ['open-project', 'close-project', 'open-recent-projects', 'enable-game-system'],
   zoom: ['zoom-in', 'zoom-out', 'zoom-reset', 'atlas-fit'],
   editing: [
     'set-tool',

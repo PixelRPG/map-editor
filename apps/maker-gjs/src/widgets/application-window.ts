@@ -872,6 +872,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       openProject: () => this._projects.openFromDialog(),
       presentRecentProjects: () => this._presentRecentProjects(),
       closeProject: () => void this._projects.close(),
+      enableGameSystem: (id) => this._projectStore.setGameSystemEnabled(id, true),
     })
 
     installZoomActions(group, {
