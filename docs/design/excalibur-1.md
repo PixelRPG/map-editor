@@ -325,17 +325,28 @@ Measurement steps re-run `frame-bench.py` and commit the resulting `summary.json
 
 ---
 
-## 7. Open questions for the owner
+## 7. Questions for the owner
 
-1. **Should the editor have collision at all before Live Run?** E1 assumes no. If a future feature
-   wants live wall feedback while painting (e.g. showing that a placement cannot stand there), it
-   needs a cheaper mechanism than full physics — `agent-map-data.ts`'s grid is the obvious
-   candidate.
-2. **Is `kokiri-forest` representative?** 176 × 148 is large. If the intended ceiling is bigger,
-   O3 moves up the list; if real maps are `tree-house`-sized, E1 alone finishes the job.
-3. **Upgrade first or fix first?** The two tracks are independent. This document's order (E then
+### Decided
+
+1. **The editor needs no collision outside a run.** E1's assumption holds: collision geometry is
+   built only while a run is active, not while painting. The door that must stay open is a future
+   **"edit while the game runs"** mode — editing a map with the hero simulating in it — which *does*
+   need collision in a session that is not a plain Live Run. So O1 may not key off "editor mode" as
+   a synonym for "no physics": it keys off whether a run (or that mode) is currently active, and
+   E1's spec asserts that shape rather than the two-state one. Live wall feedback while painting
+   stays out of physics either way — `agent-map-data.ts`'s grid is the cheap mechanism for it.
+2. **Optimise for large maps.** `kokiri-forest` (176 × 148) is not the ceiling: real content spans
+   tree-house-sized interiors *up to worlds considerably larger than Kokiri Forest*. So **O3 moves
+   up the list** — E1 alone does not finish the job, and every estimate in §5 should be read
+   against a map several times this one's size rather than against the bench map.
+3. **The probe stays**, and not as debris: it is an officially supported measurement mode, the
+   first of several debug options the Maker is expected to grow — plausibly toggleable from the app
+   itself rather than only through an environment variable. The next "feels slow" report starts
+   with numbers instead of a day of rig building.
+
+### Still open
+
+4. **Upgrade first or fix first?** The two tracks are independent. This document's order (E then
    X) fixes smoothness on the version we already ship and keeps the upgrade a separately
    revertable change.
-4. **Does the probe stay in the tree?** It is ~180 inert lines gated on an environment variable.
-   Keeping it means the next "feels slow" report starts with numbers instead of a day of rig
-   building.

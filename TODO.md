@@ -199,6 +199,8 @@ Conventions:
 
 - **`mockups/PixelRPGEditor_01.pdf`** — design PDF, untracked. Decide whether to commit (under `design/`?) or `.gitignore`. *owner: human*
 
+- **Both tree-house interiors look broken** — `games/zelda-like/maps/tree-house.json` ("Link's Tree House") and `games/zelda-like/maps/tree-house-cozy.json` ("Link's Tree House (cozy)") render as garbage: their tiles were ported incorrectly, so the stored tile ids do not map onto the sheet the map references. A content/port bug, not a renderer one — `kokiri-forest.json` from the same project is fine. Investigate the port (which sheet each id was meant to address, and whether the first-gid offset was applied twice) and re-port both maps. *owner: human + engine*
+
 ## Storybook
 
 - **Storybook as documentation vehicle for cross-cutting behaviour patterns** — the right-inspector auto-open policy (and similar future conventions like keyboard-shortcut tables, signal-emission contracts, breakpoint behaviour) currently live as prose in `docs/concepts/*.md`. Investigate whether the storybook framework should grow a "behaviour story" type that renders a runnable demonstration of the pattern alongside the prose — e.g. a story that shows two views side by side, one with a selection triggering inspector auto-open and one without, so contributors can interact with the rule rather than just read it. Scope larger than a single widget story — would need `@gjsify/storybook` framework changes (a new `StoryKind` discriminator, layout for two-pane demos, doc-string rendering). *owner: @gjsify/storybook framework (upstream) + maker (consumer stories)*
