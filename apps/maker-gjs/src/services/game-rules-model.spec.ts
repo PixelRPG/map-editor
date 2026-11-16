@@ -80,6 +80,38 @@ export default async () => {
       expect(on.switchable.find((r) => r.id === 'stats')?.neededBy).toStrictEqual(['Action combat'])
     })
 
+    await it('names the templates the shipped switch adds', async () => {
+      const combat = buildGameRulesModel().switchable[0]
+      expect(combat.adds).toStrictEqual(['Enemy', 'Weapon'])
+      expect(combat.addsMore).toBe(0)
+    })
+
+    await it('falls back to component labels when a system ships no templates', async () => {
+      const systems = {
+        combat: system('combat', 'Action combat', {
+          components: [componentOf('hostile'), componentOf('weapon'), componentOf('hostile')],
+        }),
+      }
+      const row = buildGameRulesModel({ systems }).switchable[0]
+      // Deduped: two specs of the same type would read as a repeat.
+      expect(row.adds).toStrictEqual(['hostile', 'weapon'])
+      expect(row.addsMore).toBe(0)
+    })
+
+    await it('counts the names past the cap instead of listing them', async () => {
+      const templates = ['A', 'B', 'C', 'D', 'E', 'F'].map((label) => ({
+        id: label.toLowerCase(),
+        label,
+        icon: 'x',
+        description: label,
+        components: [],
+      }))
+      const systems = { combat: system('combat', 'Action combat', { templates }) }
+      const row = buildGameRulesModel({ systems }).switchable[0]
+      expect(row.adds).toStrictEqual(['A', 'B', 'C', 'D'])
+      expect(row.addsMore).toBe(2)
+    })
+
     await it('counts the entities and placements a switch-off would make dormant', async () => {
       const systems = { combat: system('combat', 'Action combat', { components: [componentOf('hostile')] }) }
       const project = {

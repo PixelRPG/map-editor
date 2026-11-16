@@ -1,0 +1,12 @@
+/*
+ * Title-card cover — the `Adw.Bin` the Game page fills with a
+ * `MapPreview` of the start map (REDESIGN.md § 4.5). The bin keeps its
+ * 160 px height whether or not a preview is in it, so the rounding and
+ * the dim fill double as the "no start map yet" placeholder: an empty
+ * card still reads as the place the cover belongs, which is what makes
+ * the checkup's "no start map" row make sense.
+ */
+.game-cover {
+  background-color: @view_bg_color;
+  border-radius: 12px;
+}
