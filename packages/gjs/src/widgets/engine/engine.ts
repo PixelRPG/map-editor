@@ -24,6 +24,7 @@ import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
 import { forwardEngineEvents } from './engine-events.ts'
+import { installFrameProbe } from './frame-probe.ts'
 import { attachLongPress } from './long-press.ts'
 import { attachMultiFingerTap } from './multi-finger-tap.ts'
 import { attachPinchZoom } from './pinch-zoom.ts'
@@ -955,6 +956,10 @@ export class Engine extends Adw.Bin {
         this._excalibur = engine
         engine.setViewportInset(this._viewportInset)
         await engine.initialize()
+        // Frame measurement, off unless PIXELRPG_FRAME_PROBE names a file.
+        // After `initialize()` so the clock is running and `stats` is populated.
+        const stopProbe = installFrameProbe(engine.excalibur)
+        if (stopProbe) this._excaliburSubscriptions.push({ close: stopProbe })
         // Apply the scratchpad backdrop colour as the engine clear
         // colour. With GLArea alpha compositing being unreliable on
         // this stack, painting the backdrop INSIDE the canvas is the
