@@ -24,8 +24,12 @@ export function buildObjectRow(object: EntityDefinition, onActivate: () => void)
   return row
 }
 
-/** The template archetypes the empty state offers as one-click tiles. */
-const EMPTY_STATE_TEMPLATE_IDS = ['chest', 'sign', 'door', 'trigger']
+/**
+ * The template archetypes the empty state offers as one-click tiles —
+ * § 4.9's four, in its order. A tap creates and opens the thing on the
+ * spot; the full grid (and the name page) is the "New thing" dialog.
+ */
+const EMPTY_STATE_TEMPLATE_IDS = ['door', 'chest', 'sign', 'item']
 
 /** Fill the empty state's relationship diagram: Graphics → Characters → Things. */
 export function buildRelationshipDiagram(slot: Gtk.Box): void {

@@ -26,6 +26,7 @@ export declare const InternalChildren: [
   "detail_stack",
   "none_diagram_slot",
   "none_templates",
+  "place_button",
   "name_row",
   "cast_row",
   "editor",
@@ -36,6 +37,7 @@ export interface Children {
   _detail_stack: Gtk.Stack;
   _none_diagram_slot: Gtk.Box;
   _none_templates: Gtk.FlowBox;
+  _place_button: Gtk.Button;
   _name_row: Adw.EntryRow;
   _cast_row: Adw.SwitchRow;
   _editor: GObject.Object;

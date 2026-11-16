@@ -984,10 +984,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       hasProject,
       showToast,
       showThings: () => this._showLibrary('things'),
+      presentNewThing: () => library.objectsView.presentNewThing(),
       createFromTemplate: (templateId) => this._objectsCtl?.createFromTemplate(templateId),
       focusObject: (id) => library.objectsView.focusObject(id),
       toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
       deleteThing: (id) => library.objectsView.deleteThing(id),
+      currentSceneId: () => this._scenes.currentSceneId,
+      openScene: (sceneId) => this._scenes.open(sceneId),
+      armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
     })
 
     const { renameMap, duplicateMap, deleteMap, startMap, mapSettings } = installMapActions(group, {

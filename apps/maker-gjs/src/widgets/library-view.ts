@@ -1,7 +1,7 @@
 import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
+import { ProjectMenuButton, RosterChip } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import {
@@ -89,7 +89,6 @@ export class LibraryView extends ResponsiveEditorView {
   declare _pages: Adw.ViewStack
   declare _graphics_page: Adw.ViewStackPage
   declare _hidden_banner: Adw.Banner
-  declare _new_thing_row: Adw.ButtonRow
   declare _cast_view: CastView
   declare _objects_view: ObjectsView
   declare _tiles_view: TilesView
@@ -115,7 +114,6 @@ export class LibraryView extends ResponsiveEditorView {
     things: _(DEFAULT_DETAIL_TITLES.things),
     graphics: _(DEFAULT_DETAIL_TITLES.graphics),
   }
-  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
@@ -134,7 +132,6 @@ export class LibraryView extends ResponsiveEditorView {
           'pages',
           'graphics_page',
           'hidden_banner',
-          'new_thing_row',
           'cast_view',
           'objects_view',
           'tiles_view',
@@ -192,16 +189,6 @@ export class LibraryView extends ResponsiveEditorView {
     // startup, so the setter never notifies and the pair would stay in
     // the sidebar header until a breakpoint fired once.
     this._rehomeHeaderEnd(this.inspectorCollapsed)
-  }
-
-  vfunc_map(): void {
-    super.vfunc_map()
-    this.signals.connect(this._new_thing_row, 'activated', () => this._objects_view.presentTemplateChooser())
-  }
-
-  vfunc_unmap(): void {
-    this.signals.disconnectAll()
-    super.vfunc_unmap()
   }
 
   /**

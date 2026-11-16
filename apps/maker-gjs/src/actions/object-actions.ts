@@ -9,20 +9,42 @@ export interface ObjectActionsContext {
   showToast(message: string): void
   /** Show the Library on its Things chip. */
   showThings(): void
+  /** Open the two-page "New thing" dialog. */
+  presentNewThing(): void
   createFromTemplate(templateId: string): void
   focusObject(id: string): void
   /** Promote a world object into the Cast roster, or demote it back. */
   toggleCastMember(id: string): void
   /** Delete a thing; empty id means the selected one. Undo rides the toast. */
   deleteThing(id?: string): void
+  /** The scene the editor is on, or `null` when none is open. */
+  currentSceneId(): string | null
+  openScene(sceneId: string): void
+  /** Arm an entity as the object brush (via `win.set-object-brush`). */
+  armObjectBrush(defId: string): void
 }
 
 /**
- * Entity-library navigation. The in-view paths are the "+" template
- * chooser and the Things detail's "Character" switch; these are their
- * driveable forms. Each one lands on the Library's Things chip first.
+ * Entity-library navigation. The in-view paths are the "New thing"
+ * dialog, the detail's "Place on map" pill and its "Character" switch;
+ * these are their driveable forms. Each one lands on the Library's
+ * Things chip first.
  */
 export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectActionsContext): void {
+  // The "New thing" row's action: opens the template chooser. The
+  // parameterless mirror of `win.new-character`; `new-object` below is
+  // the one that skips the dialog and seeds a template straight away.
+  const newThing = new Gio.SimpleAction({ name: 'new-thing' })
+  newThing.connect('activate', () => {
+    if (!ctx.hasProject()) {
+      ctx.showToast(_('Open a project first'))
+      return
+    }
+    ctx.showThings()
+    ctx.presentNewThing()
+  })
+  addAction(group, newThing)
+
   const newObject = Gio.SimpleAction.new('new-object', GLib.VariantType.new('s'))
   newObject.connect('activate', (_a, parameter) => {
     if (!ctx.hasProject()) {
@@ -49,6 +71,23 @@ export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectAc
     if (id) ctx.toggleCastMember(id)
   })
   addAction(group, toggleObjectCast)
+
+  // "Place on map" from the Things detail — the mirror of
+  // `place-character`: things live in the entity library too, so the
+  // thing's id IS the brush id.
+  const placeThing = Gio.SimpleAction.new('place-thing', GLib.VariantType.new('s'))
+  placeThing.connect('activate', (_a, parameter) => {
+    const id = parameter?.get_string()[0]
+    if (!id) return
+    const sceneId = ctx.currentSceneId()
+    if (!sceneId) {
+      ctx.showToast(_('Open a map first to place a thing'))
+      return
+    }
+    ctx.openScene(sceneId)
+    ctx.armObjectBrush(id)
+  })
+  addAction(group, placeThing)
 
   // Empty target deletes the selected thing, so one menu model serves both
   // the detail "⋯" and a row's context menu. No confirmation dialog: the

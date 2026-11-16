@@ -22,6 +22,8 @@ export interface ObjectDetailActions {
   entityChanged(entityJson: string): void
   /** A template tile on the "no things yet" page was clicked. */
   createFromTemplate(templateId: string): void
+  /** Arm the open thing as the object brush — the detail's one pill. */
+  placeOnMap(): void
 }
 
 /** One entity definition as the detail needs to render it. */
@@ -52,6 +54,7 @@ export class ObjectDetailPane extends Adw.Bin {
   declare _detail_stack: Gtk.Stack
   declare _none_diagram_slot: Gtk.Box
   declare _none_templates: Gtk.FlowBox
+  declare _place_button: Gtk.Button
   declare _name_row: Adw.EntryRow
   declare _cast_row: Adw.SwitchRow
   declare _editor: EntityComponentsEditor
@@ -67,7 +70,15 @@ export class ObjectDetailPane extends Adw.Bin {
       {
         GTypeName: 'PixelRpgObjectDetailPane',
         Template,
-        InternalChildren: ['detail_stack', 'none_diagram_slot', 'none_templates', 'name_row', 'cast_row', 'editor'],
+        InternalChildren: [
+          'detail_stack',
+          'none_diagram_slot',
+          'none_templates',
+          'place_button',
+          'name_row',
+          'cast_row',
+          'editor',
+        ],
         Properties: {
           'full-view': GObject.ParamSpec.boolean(
             'full-view',
@@ -92,6 +103,9 @@ export class ObjectDetailPane extends Adw.Bin {
 
   vfunc_map(): void {
     super.vfunc_map()
+    this.signals.connect(this._place_button, 'clicked', () => {
+      this._actions?.placeOnMap()
+    })
     this.signals.connect(this._name_row, 'changed', () => {
       if (this._silentName) return
       this._actions?.rename(this._name_row.get_text())
@@ -118,6 +132,16 @@ export class ObjectDetailPane extends Adw.Bin {
   /** Join the pane to its gallery half. Called once, before any content. */
   bindActions(actions: ObjectDetailActions): void {
     this._actions = actions
+  }
+
+  /**
+   * Put the keyboard on the detail's one pill — what § 6.6 asks for
+   * right after a thing is created. No-op unless a thing is actually
+   * shown, so a stray call cannot pull focus off the empty state.
+   */
+  focusPrimaryAction(): void {
+    if (this._detail_stack.get_visible_child_name() !== 'info') return
+    this._place_button.grab_focus()
   }
 
   /** Nothing selected — the library holds no thing to show. */
