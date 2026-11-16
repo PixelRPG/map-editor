@@ -69,7 +69,6 @@ export class CastDetailPane extends Adw.Bin {
   declare _detail_name: Gtk.Label
   declare _detail_player_badge: Gtk.Label
   declare _detail_subtitle: Gtk.Label
-  declare _edit_appearance_button: Gtk.Button
   declare _place_button: Gtk.Button
   declare _inspector: CastInspector
   declare _matrix: ActionDirectionMatrix
@@ -92,7 +91,6 @@ export class CastDetailPane extends Adw.Bin {
           'detail_name',
           'detail_player_badge',
           'detail_subtitle',
-          'edit_appearance_button',
           'place_button',
           'inspector',
           'matrix',
@@ -153,11 +151,7 @@ export class CastDetailPane extends Adw.Bin {
         deleteAnimation: (animId) => this._actions?.deleteAnimation(animId),
       },
     )
-    wireDetailActions(
-      this.signals,
-      { editAppearance: this._edit_appearance_button, place: this._place_button },
-      { editAppearance: () => this._actions?.editAppearance(), placeOnMap: () => this._actions?.placeOnMap() },
-    )
+    wireDetailActions(this.signals, { place: this._place_button }, { placeOnMap: () => this._actions?.placeOnMap() })
   }
 
   vfunc_unmap(): void {

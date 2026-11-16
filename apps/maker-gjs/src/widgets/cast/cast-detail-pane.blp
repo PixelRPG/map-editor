@@ -118,31 +118,29 @@ template $PixelRpgCastDetailPane : Adw.Bin {
                 }
               }
 
-              // Two labelled pills side by side measured 352 px —
-              // they do not fit a 360 px window either, so the same
-              // breakpoint stacks them.
+              // § 4.4 makes "Place on map" the one primary action of
+              // the character detail. The door into the appearance
+              // asset it used to compete with is the Looks group's
+              // "Edit animations" row — the same destination, stated
+              // once, where the sketch puts it. The box stays a box
+              // (and the breakpoint keeps stacking it) because the
+              // per-character "⋯" joins it in a later pass.
               Gtk.Box detail_actions {
                 orientation: horizontal;
                 halign: start;
                 spacing: 10;
 
-                // A door into Graphics, which Simple view does not
-                // have: Full view only. In Simple view the picker
-                // above is how a character changes its look.
-                Gtk.Button edit_appearance_button {
-                  label: _("Edit appearance");
-                  visible: bind template.full-view;
-                  styles ["suggested-action", "pill"]
-                }
-
                 Gtk.Button place_button {
                   label: _("Place on map");
-                  styles ["pill"]
+                  styles ["suggested-action", "pill"]
                 }
               }
 
-              // Editable fields (name / appearance / player / speed).
-              $PixelRpgCastInspector inspector {}
+              // Editable fields: Basics (name / player / speed) +
+              // Looks (appearance picker / edit animations).
+              $PixelRpgCastInspector inspector {
+                full-view: bind template.full-view;
+              }
 
               // Animation authoring — the Action×Direction matrix
               // (moved here from the Sheets view). Reads the

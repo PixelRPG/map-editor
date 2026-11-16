@@ -110,21 +110,16 @@ export function wireAnimationMatrix(
   })
 }
 
-/** The two call-to-action buttons above the inspector. */
+/** The detail's call-to-action row — one primary button (§ 4.4). */
 export interface DetailButtons {
-  editAppearance: Gtk.Button
   place: Gtk.Button
 }
 
 export interface DetailActions {
-  editAppearance(): void
   placeOnMap(): void
 }
 
 export function wireDetailActions(scope: SignalScope, buttons: DetailButtons, actions: DetailActions): void {
-  scope.connect(buttons.editAppearance, 'clicked', () => {
-    actions.editAppearance()
-  })
   scope.connect(buttons.place, 'clicked', () => {
     actions.placeOnMap()
   })

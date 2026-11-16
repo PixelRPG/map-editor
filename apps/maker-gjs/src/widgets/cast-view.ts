@@ -63,8 +63,8 @@ export interface CastViewSignals extends Adw.Bin.SignalSignatures {
  * Animation authoring lives in the detail: its action×direction matrix
  * edits the character's appearance animations directly. The raw
  * sprite-sheet *asset* (import / delete / glance) lives on the
- * **Graphics** page; the detail's "Edit appearance →" deep-links there
- * for asset management.
+ * **Graphics** page; the Looks group's "Edit animations" row deep-links
+ * there for asset management (Full view only, like the page it opens).
  *
  * Mutations land via host-supplied callbacks (`bindCallbacks`) so the
  * application window stays the single owner of project data.
