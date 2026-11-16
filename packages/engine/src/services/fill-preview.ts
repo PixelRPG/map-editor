@@ -185,8 +185,10 @@ function resolveFillTarget(scene: Scene): FillTarget | null {
   const tool = SessionState.get(scene, ActiveToolComponent)?.tool
   if (tool !== 'fill') return null
 
+  // The bucket fills with ONE tile — the armed stamp's anchor, which is
+  // `null` when nothing is armed (REDESIGN leaves "fill with a block" out).
   const spriteId = SessionState.get(scene, ActiveTileComponent)?.spriteId
-  if (spriteId === undefined) return null
+  if (spriteId === undefined || spriteId === null) return null
 
   const mapScene = scene as MapScene
   const mapResource = mapScene.mapResource

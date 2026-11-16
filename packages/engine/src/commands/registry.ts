@@ -24,6 +24,8 @@ import {
   type FillTilePayload,
   PaintTileCommand,
   type PaintTilePayload,
+  StampTilesCommand,
+  type StampTilesPayload,
 } from './paint-tile.command.ts'
 import type { CommandRegistry } from './types.ts'
 
@@ -49,6 +51,7 @@ export const BUILT_IN_COMMANDS: CommandRegistry = {
   [PaintTileCommand.KIND]: (payload) => new PaintTileCommand(payload as PaintTilePayload),
   [EraseTileCommand.KIND]: (payload) => new EraseTileCommand(payload as Omit<PaintTilePayload, 'spriteId'>),
   [FillTileCommand.KIND]: (payload) => new FillTileCommand(payload as FillTilePayload),
+  [StampTilesCommand.KIND]: (payload) => new StampTilesCommand(payload as StampTilesPayload),
   [PlaceObjectCommand.KIND]: (payload) => new PlaceObjectCommand(payload as ObjectPlacementPayload),
   [RemoveObjectCommand.KIND]: (payload) => new RemoveObjectCommand(payload as ObjectPlacementPayload),
   [SetLayerVisibilityCommand.KIND]: (payload) => new SetLayerVisibilityCommand(payload as SetLayerVisibilityPayload),

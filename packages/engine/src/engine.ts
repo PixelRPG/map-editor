@@ -22,6 +22,7 @@ import { type MapLoadOptions, ProjectLoader } from './engine/project-loader.ts'
 import { synthesizePointerMoveAtTile } from './engine/pointer-synthesis.ts'
 import { ViewModeController } from './engine/view-mode.controller.ts'
 import type { GameProjectResource } from './resource/GameProjectResource.ts'
+import type { TileStamp } from './resource/tile-stamp.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { AssistantPresenceController } from './services/assistant-presence.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
@@ -244,13 +245,26 @@ export class Engine {
     return this.session.activeTool
   }
 
-  /** Set the active tile sprite id (global = local index + `firstGid`). */
+  /** Set the active tile sprite id (global = local index + `firstGid`) — arms a 1×1 stamp. */
   setActiveTile(spriteId: number): void {
     this.session.activeTile = spriteId
   }
 
   getActiveTile(): number | null {
     return this.session.activeTile
+  }
+
+  /**
+   * Arm a whole block of tiles as the brush — what a drag across the
+   * palette sheet picks. Every id is global (local index + `firstGid`).
+   * A 1×1 stamp is exactly {@link setActiveTile}.
+   */
+  setActiveStamp(stamp: TileStamp): void {
+    this.session.activeStamp = stamp
+  }
+
+  getActiveStamp(): TileStamp | null {
+    return this.session.activeStamp
   }
 
   /** Set the "object brush" — the entity id the `'object'` tool stamps. `null` clears it. */
