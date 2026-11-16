@@ -50,6 +50,19 @@ export interface SheetSpan {
   rows: number
 }
 
+/**
+ * A multi-tile pick: the block that was dragged, plus the tiles it
+ * covers row-major (see {@link indicesOfSpan}, so `-1` is a hole).
+ *
+ * The indices are SHEET-local — the host adds the tileset's `firstGid`
+ * to reach the engine's global ids, exactly as it does for a single
+ * tile pick.
+ */
+export interface SheetStampPick {
+  span: SheetSpan
+  indices: number[]
+}
+
 /** A rectangle in WIDGET space (source pixels times the draw scale). */
 export interface SheetRect {
   x: number
@@ -190,10 +203,32 @@ export function spanRect(grid: SheetGrid, scale: number, span: SheetSpan | null)
 }
 
 /**
- * The top-left tile of a span — the one tile a stamp brush cannot yet
- * carry, so a drag arms this and `TODO.md` holds the rest.
+ * The top-left tile of a span — the anchor the stamp lands on, and the
+ * one tile a 1×1 pick arms.
  */
 export function firstIndexOfSpan(grid: SheetGrid, span: SheetSpan | null): number | null {
   if (!span || span.col < 0 || span.row < 0 || span.col >= grid.columns || span.row >= grid.rows) return null
   return span.row * grid.columns + span.col
+}
+
+/**
+ * Every tile a span covers, row-major — the stamp a marquee drag arms.
+ *
+ * A cell that addresses no tile (the span reaches past the grid) is `-1`
+ * rather than dropped, so the returned list stays `columns * rows` long
+ * and the block keeps its shape: the engine's stamp model reads a
+ * non-positive id as a HOLE it skips, which is exactly what a cell
+ * outside the sheet should paint. An empty list means the span itself is
+ * unusable.
+ */
+export function indicesOfSpan(grid: SheetGrid, span: SheetSpan | null): number[] {
+  if (!span || span.columns < 1 || span.rows < 1) return []
+  const indices: number[] = []
+  for (let row = span.row; row < span.row + span.rows; row++) {
+    for (let col = span.col; col < span.col + span.columns; col++) {
+      const onGrid = col >= 0 && col < grid.columns && row >= 0 && row < grid.rows
+      indices.push(onGrid ? row * grid.columns + col : -1)
+    }
+  }
+  return indices
 }

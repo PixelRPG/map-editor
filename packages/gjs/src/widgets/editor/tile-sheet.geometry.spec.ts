@@ -2,6 +2,7 @@ import { describe, expect, it } from '@gjsify/unit'
 
 import {
   firstIndexOfSpan,
+  indicesOfSpan,
   type SheetGrid,
   sheetGridOf,
   sheetScale,
@@ -247,6 +248,31 @@ export default async () => {
 
       await it('passes a null span through', async () => {
         expect(firstIndexOfSpan(tight(), null)).toBe(null)
+      })
+    })
+
+    await describe('indicesOfSpan', async () => {
+      await it('lists a block row-major', async () => {
+        expect(indicesOfSpan(tight(), { col: 1, row: 0, columns: 2, rows: 2 })).toStrictEqual([1, 2, 5, 6])
+      })
+
+      await it('lists a single tile as a one-cell block', async () => {
+        const grid = tight()
+        expect(indicesOfSpan(grid, spanOfIndex(grid, 7))).toStrictEqual([7])
+      })
+
+      await it('agrees with the drag that produced the span', async () => {
+        const grid = tight()
+        expect(indicesOfSpan(grid, spanBetween(grid, 6, 1))).toStrictEqual([1, 2, 5, 6])
+      })
+
+      await it('keeps the block rectangular by holing cells off the grid', async () => {
+        expect(indicesOfSpan(tight(), { col: 3, row: 2, columns: 2, rows: 2 })).toStrictEqual([11, -1, -1, -1])
+      })
+
+      await it('passes a null or empty span through', async () => {
+        expect(indicesOfSpan(tight(), null)).toStrictEqual([])
+        expect(indicesOfSpan(tight(), { col: 0, row: 0, columns: 0, rows: 2 })).toStrictEqual([])
       })
     })
   })
