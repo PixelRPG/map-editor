@@ -1,6 +1,6 @@
 import type { ImageReference } from '../reference/index'
 import type { CharacterAnimation } from './CharacterDefinition'
-import type { AnimationData, EditorMetadata, Properties, SpriteDataSet } from './index'
+import type { AnimationData, EditorMetadata, Properties, SpriteDataSet, TerrainData } from './index'
 
 /**
  * What a sprite set is FOR — drives which gallery surfaces it:
@@ -94,6 +94,14 @@ export interface SpriteSetData {
    * a sheet share its animations (edit once). Absent for tilesets.
    */
   characterAnimations?: CharacterAnimation[]
+
+  /**
+   * Terrain brushes defined on this set — "paint Path and the edges
+   * pick themselves". Additive and optional: a reader that ignores it
+   * still loads the set and renders every map, and the maps themselves
+   * store nothing about terrain. See {@link TerrainData}.
+   */
+  terrains?: TerrainData[]
 
   /**
    * Editor-specific metadata
