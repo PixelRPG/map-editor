@@ -593,7 +593,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
 
     this.signals.connect(this._welcome_view, 'create-project', () => this._projects.create())
     this.signals.connect(this._welcome_view, 'open-project', () => this._projects.openFromDialog())
-    this.signals.connect(this._welcome_view, 'browse-projects', () => this._projects.openFromDialog())
     this.signals.connect(this._welcome_view, 'template-selected', (_v: WelcomeView, templateId: string) => {
       this._projects.openTemplate(templateId)
     })

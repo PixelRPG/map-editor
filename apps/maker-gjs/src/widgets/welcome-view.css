@@ -1,0 +1,10 @@
+/* Welcome column chrome. */
+
+/* The blank-game card: a dashed outline instead of a filled card,
+   because it has no map to preview and should read as "add" rather than
+   as a game that exists (REDESIGN § 4.1). Same treatment as the cast
+   view's animation-matrix add cell. */
+.welcome-add-card {
+  border: 1px dashed alpha(@window_fg_color, 0.25);
+  border-radius: 12px;
+}
