@@ -40,6 +40,7 @@ import shadowFoldSuite from './resource/shadow-fold.spec.js'
 import spriteSoliditySuite from './resource/sprite-solidity.spec.js'
 import tileCollisionSuite from './resource/tile-collision.spec.js'
 import tileShapeDraftSuite from './resource/tile-shape-draft.spec.js'
+import tileStampSuite from './resource/tile-stamp.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
@@ -123,6 +124,7 @@ run({
   spriteSoliditySuite,
   tileCollisionSuite,
   tileShapeDraftSuite,
+  tileStampSuite,
   layerVisibilitySuite,
   placementGeometrySuite,
   placementIdSuite,
