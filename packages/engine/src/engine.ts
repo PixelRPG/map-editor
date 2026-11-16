@@ -619,6 +619,15 @@ export class Engine {
     this.viewMode.update({ objectsVisible })
   }
 
+  /**
+   * Hatch every blocking tile shape on the map — the map half of
+   * "Show walls", the same overlay the tileset sheet and the palette
+   * draw. Pure view state, never persisted.
+   */
+  setShowWalls(showWalls: boolean): void {
+    this.viewMode.update({ showWalls })
+  }
+
   /** Read the view flags from the active scene (defaults without one). */
   getEditorViewFlags(): EditorViewFlags {
     return this.viewMode.getFlags()

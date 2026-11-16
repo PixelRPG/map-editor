@@ -159,8 +159,8 @@ On every engine (re)creation `ApplicationWindow._syncEngineUiState()`
 re-pushes the full set via `engine-state-sync.ts` (the one spec-guarded
 list — a new stateful toggle belongs there): active tool
 (`win.set-tool`), objects visibility (`win.toggle-objects`), grid
-(`win.toggle-grid`), layer dimming (`win.toggle-transparency`),
-assistant pause + identity/presence, camera-follow state, and the
+(`win.toggle-grid`), layer dimming (`win.toggle-transparency`), wall
+hatching (`win.toggle-walls`), assistant pause + identity/presence, camera-follow state, and the
 assistant awareness relay (re-wired from the live session).
 `win.play` is the deliberate exception: it is reset to `false` on
 scene-editor exit instead (a fresh scene starts in editor mode). This

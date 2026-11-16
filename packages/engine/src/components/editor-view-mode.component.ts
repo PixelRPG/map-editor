@@ -11,6 +11,9 @@ import { Component } from 'excalibur'
  * - `objectsVisible` — global show/hide for object placements,
  *   the Layers page's "Objects" row toggle (combined with each
  *   placement's per-layer visibility).
+ * - `showWalls` — diagonal hatching over every blocking tile shape,
+ *   the same overlay the tileset sheet and the palette draw. Answers
+ *   "where are my walls?" without clicking every tile.
  *
  * Earlier shape (`mode: 'normal' | 'grid'`) coupled the two — the
  * user could only get the dimming alongside the grid lines, or
@@ -22,15 +25,15 @@ import { Component } from 'excalibur'
  * `docs/concepts/editor-architecture.md`). Pure rendering state —
  * runtime / play modes ignore both flags.
  *
- * Future editor view flags (`'wireframe'`, `'collisions'`, …) drop
- * in as additional boolean fields without breaking existing
- * subscribers.
+ * Future editor view flags (`'wireframe'`, …) drop in as additional
+ * boolean fields without breaking existing subscribers.
  */
 export class EditorViewModeComponent extends Component {
   constructor(
     public showGrid: boolean,
     public dimInactiveLayers: boolean,
     public objectsVisible: boolean = true,
+    public showWalls: boolean = false,
   ) {
     super()
   }
@@ -41,4 +44,5 @@ export interface EditorViewFlags {
   showGrid: boolean
   dimInactiveLayers: boolean
   objectsVisible: boolean
+  showWalls: boolean
 }

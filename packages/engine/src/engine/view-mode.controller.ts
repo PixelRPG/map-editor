@@ -13,8 +13,9 @@ import { type ActiveSceneAccessor, rebindOnMapLoaded } from './scene-binding.ts'
 
 /**
  * The editor's render-only view flags — grid lines, inactive-layer
- * dimming, global object visibility — and the two surfaces they drive:
- * the scene's render passes and Excalibur's engine-scoped debug config.
+ * dimming, global object visibility, wall hatching — and the two
+ * surfaces they drive: the scene's render passes and Excalibur's
+ * engine-scoped debug config.
  *
  * The flags are independent of one another and never persisted to map
  * data. Splitting them off the engine keeps the "write the component,
@@ -42,7 +43,10 @@ export class ViewModeController {
     const current = SessionState.get(scene, EditorViewModeComponent)
     const next = mergeEditorViewFlags(current, partial)
     if (editorViewFlagsEqual(current, next)) return
-    SessionState.set(scene, new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers, next.objectsVisible))
+    SessionState.set(
+      scene,
+      new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers, next.objectsVisible, next.showWalls),
+    )
     this.configureGridDebug(next.showGrid)
     applyEditorViewMode(scene)
   }

@@ -18,6 +18,7 @@ export interface InspectorActionsContext {
   setEngineObjectsVisible(visible: boolean): void
   setEngineShowGrid(showGrid: boolean): void
   setEngineDimInactiveLayers(dim: boolean): void
+  setEngineShowWalls(showWalls: boolean): void
   /**
    * State `toggle-grid` starts in — the `show-grid-default` preference
    * (REDESIGN.md § 4.8). Only the initial state: the action never writes
@@ -53,14 +54,19 @@ export interface InspectorActionsContext {
  * dispatch is needed (and the old one silently did nothing outside
  * atlas + scene-editor).
  *
- * Grid lines and non-active-layer dimming are INDEPENDENT flags — grid
- * helps with tile alignment, dimming with layer focus — so each toggle
+ * Grid lines, non-active-layer dimming and the wall hatching are
+ * INDEPENDENT flags — grid helps with tile alignment, dimming with layer
+ * focus, hatching with spotting what blocks the hero — so each toggle
  * drives only its own.
+ *
+ * `toggle-walls` is reachable from two places (the view menu and a
+ * toggle on the tileset sheet, REDESIGN.md § 6.5); both drive this one
+ * action, so the sheet button and the menu item always agree.
  */
 export function installInspectorActions(
   group: Gio.SimpleActionGroup,
   ctx: InspectorActionsContext,
-): { objects: Gio.SimpleAction; grid: Gio.SimpleAction; transparency: Gio.SimpleAction } {
+): { objects: Gio.SimpleAction; grid: Gio.SimpleAction; transparency: Gio.SimpleAction; walls: Gio.SimpleAction } {
   const sheetPage = Gio.SimpleAction.new('sheet-page', GLib.VariantType.new('s'))
   sheetPage.connect('activate', (_a, parameter) => {
     const name = parameter?.get_string()[0]
@@ -97,5 +103,12 @@ export function installInspectorActions(
   })
   addAction(group, transparency)
 
-  return { objects, grid, transparency }
+  const walls = Gio.SimpleAction.new_stateful('toggle-walls', null, GLib.Variant.new_boolean(false))
+  walls.connect('change-state', (action, value) => {
+    action.set_state(value!)
+    ctx.setEngineShowWalls(value!.get_boolean())
+  })
+  addAction(group, walls)
+
+  return { objects, grid, transparency, walls }
 }

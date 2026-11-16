@@ -26,6 +26,7 @@ export interface EditorViewStateSink {
   setObjectsVisible(visible: boolean): void
   setShowGrid(showGrid: boolean): void
   setDimInactiveLayers(dimInactiveLayers: boolean): void
+  setShowWalls(showWalls: boolean): void
 }
 
 /** Assistant surface of the core `@pixelrpg/engine` Engine (structural). */
@@ -45,6 +46,8 @@ export interface EditorUiState {
   showGrid: boolean
   /** `win.toggle-transparency` state. */
   dimInactiveLayers: boolean
+  /** `win.toggle-walls` state. */
+  showWalls: boolean
   /** The `AssistantStateService` snapshot (presence, identity, pause). */
   assistant: AssistantStateSnapshot
   /** Whether the camera follows the assistant (followed peer == assistant). */
@@ -61,6 +64,7 @@ export const RESYNCED_WIN_ACTIONS = [
   'toggle-objects',
   'toggle-grid',
   'toggle-transparency',
+  'toggle-walls',
   'toggle-assistant-paused',
 ] as const
 
@@ -75,6 +79,7 @@ export function syncEngineState(view: EditorViewStateSink, assistant: AssistantE
   view.setObjectsVisible(state.objectsVisible)
   view.setShowGrid(state.showGrid)
   view.setDimInactiveLayers(state.dimInactiveLayers)
+  view.setShowWalls(state.showWalls)
   assistant.setAssistantPaused(state.assistant.paused)
   if (state.assistant.present) assistant.setAssistantInfo(state.assistant.name, state.assistant.color)
   assistant.setFollowAssistant(state.followAssistant)

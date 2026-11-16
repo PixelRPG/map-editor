@@ -909,7 +909,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       createLayer: (plane) => this._createLayer(plane),
     })
 
-    const { objects, grid, transparency } = installInspectorActions(group, {
+    const { objects, grid, transparency, walls } = installInspectorActions(group, {
       sidebarOwner: this,
       // Read once, here: the grid is a per-session toggle the user flips
       // constantly, so the preference seeds it and never tracks it. No
@@ -920,6 +920,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
       setEngineShowGrid: (showGrid) => this._engineCtl.engine?.setShowGrid(showGrid),
       setEngineDimInactiveLayers: (dim) => this._engineCtl.engine?.setDimInactiveLayers(dim),
+      setEngineShowWalls: (showWalls) => this._engineCtl.engine?.setShowWalls(showWalls),
     })
 
     const { performBack } = installBackActions(group, {
@@ -1026,6 +1027,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       objects,
       grid,
       transparency,
+      walls,
       share,
       undo,
       redo,
@@ -1426,6 +1428,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       objectsVisible: booleanState(actions.objects, true),
       showGrid: booleanState(actions.grid, false),
       dimInactiveLayers: booleanState(actions.transparency, false),
+      showWalls: booleanState(actions.walls, false),
       assistant: this._assistantState.snapshot(),
       followAssistant: this.followedPeerId === ASSISTANT_PEER_ID,
     })

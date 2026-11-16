@@ -362,9 +362,21 @@ export class Engine extends Adw.Bin {
     this._excalibur?.setDimInactiveLayers(dimInactiveLayers)
   }
 
+  /** Forward to `Engine.setShowWalls` — toggles the wall hatching overlay. */
+  public setShowWalls(showWalls: boolean): void {
+    this._excalibur?.setShowWalls(showWalls)
+  }
+
   /** Forward to `Engine.getEditorViewFlags`. */
   public getEditorViewFlags(): EditorViewFlags {
-    return this._excalibur?.getEditorViewFlags() ?? { showGrid: false, dimInactiveLayers: false, objectsVisible: true }
+    return (
+      this._excalibur?.getEditorViewFlags() ?? {
+        showGrid: false,
+        dimInactiveLayers: false,
+        objectsVisible: true,
+        showWalls: false,
+      }
+    )
   }
 
   /** Forward to `Engine.clearSaveState` — what ↺ Restart resets. */

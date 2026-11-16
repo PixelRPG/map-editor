@@ -17,6 +17,7 @@ function createRecorder() {
     setObjectsVisible: (visible: boolean) => void calls.push(['setObjectsVisible', visible]),
     setShowGrid: (showGrid: boolean) => void calls.push(['setShowGrid', showGrid]),
     setDimInactiveLayers: (dim: boolean) => void calls.push(['setDimInactiveLayers', dim]),
+    setShowWalls: (showWalls: boolean) => void calls.push(['setShowWalls', showWalls]),
   }
   const assistant: AssistantEngineSink = {
     setAssistantPaused: (paused: boolean) => void calls.push(['setAssistantPaused', paused]),
@@ -31,6 +32,7 @@ const FULL_STATE: EditorUiState = {
   objectsVisible: false,
   showGrid: true,
   dimInactiveLayers: true,
+  showWalls: true,
   assistant: { present: true, name: 'Claude', color: '#3584e4', paused: true },
   followAssistant: true,
 }
@@ -46,6 +48,7 @@ export default async () => {
         'toggle-objects',
         'toggle-grid',
         'toggle-transparency',
+        'toggle-walls',
         'toggle-assistant-paused',
       ])
     })
@@ -60,6 +63,7 @@ export default async () => {
         ['setObjectsVisible', false],
         ['setShowGrid', true],
         ['setDimInactiveLayers', true],
+        ['setShowWalls', true],
         ['setAssistantPaused', true],
         ['setAssistantInfo', 'Claude', '#3584e4'],
         ['setFollowAssistant', true],
