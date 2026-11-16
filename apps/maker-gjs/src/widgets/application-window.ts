@@ -534,6 +534,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     // lazy, so resolve it on every call.
     this._projectStore.on('tile-properties-changed', ({ spriteSetId }) => {
       this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
+      // "Show walls" reads the same descriptors the colliders are built
+      // from, so it has to follow the same event — otherwise the Brush
+      // sheet keeps hatching the walls as they were before the edit.
+      this._scene_editor_view.refreshTileCollision(
+        spriteSetId,
+        this._projectStore.resource?.spriteSets.get(spriteSetId)?.data?.sprites,
+      )
     })
     // An inbound `__project/map.editor-data` patched a map (the store
     // applied it in memory) — persist that map file here (this window

@@ -19,6 +19,8 @@ import {
   COLLISION_PRESETS,
   CollisionPreset,
   collisionPresetOf,
+  spriteCollisionRef,
+  spriteSetCollisionRefs,
   tileCollisionForPreset,
   tileCollisionOf,
   writableCollisionPreset,
@@ -197,6 +199,47 @@ export default async () => {
       const topHalfOf16 = spriteForPreset(CollisionPreset.HalfTop, 16, 16)
       expect(collisionPresetOf(topHalfOf16, 16, 16)).toBe(CollisionPreset.HalfTop)
       expect(collisionPresetOf(topHalfOf16, 32, 32)).toBe(CollisionPreset.Custom)
+    })
+  })
+
+  await describe('spriteCollisionRef', async () => {
+    await it('leaves a missing definition walkable', async () => {
+      expect(spriteCollisionRef(undefined)).toStrictEqual({ solid: false, colliders: undefined })
+    })
+
+    await it('carries the stored shapes of a blocking sprite', async () => {
+      const halfTop = spriteForPreset(CollisionPreset.HalfTop)
+      expect(spriteCollisionRef(halfTop)).toStrictEqual({ solid: true, colliders: halfTop.colliders })
+    })
+
+    // The trap the shared helper exists for: a Tiled-ported tileset
+    // marks walls through `tileProperties.walkable`, never `solid`. An
+    // overlay deriving solidity from `solid` alone would show those
+    // tiles as walkable while the hero bumps into them.
+    await it('blocks on tileProperties.walkable === false', async () => {
+      expect(spriteCollisionRef(sprite({ tileProperties: { walkable: false } })).solid).toBe(true)
+    })
+
+    await it('lets a placement override the definition both ways', async () => {
+      const wall = spriteForPreset(CollisionPreset.Wall)
+      expect(spriteCollisionRef(wall, false).solid).toBe(false)
+      expect(spriteCollisionRef(sprite({ solid: false }), true).solid).toBe(true)
+    })
+  })
+
+  await describe('spriteSetCollisionRefs', async () => {
+    await it('keys the blocking tiles by sprite id and drops the rest', async () => {
+      const refs = spriteSetCollisionRefs([
+        sprite({ id: 0, solid: false }),
+        sprite({ id: 3, solid: true }),
+        sprite({ id: 7, tileProperties: { walkable: false } }),
+      ])
+      expect([...refs.keys()]).toStrictEqual([3, 7])
+      expect(refs.get(3)?.solid).toBe(true)
+    })
+
+    await it('survives a set that is not loaded yet', async () => {
+      expect(spriteSetCollisionRefs(undefined).size).toBe(0)
     })
   })
 

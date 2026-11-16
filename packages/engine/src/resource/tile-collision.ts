@@ -182,6 +182,39 @@ export interface TileCollisionRef {
 }
 
 /**
+ * What one sprite definition contributes to its tile's collision.
+ *
+ * The rule is {@link isSpriteRefSolid} plus the stored shapes, and this
+ * is the one place the two are joined: the map builds its refs through
+ * it, and so does every surface that merely *shows* walls (the tileset
+ * sheet, the palette). A tile marked solid only through
+ * `tileProperties.walkable: false` therefore hatches exactly like one
+ * carrying `solid: true` — the overlay can never claim something the
+ * hero walks through, or miss something they bump into.
+ */
+export function spriteCollisionRef(definition: SpriteDataSet | undefined, placementSolid?: boolean): TileCollisionRef {
+  return { solid: isSpriteRefSolid(definition, placementSolid), colliders: definition?.colliders }
+}
+
+/**
+ * Every BLOCKING tile of a sprite set, keyed by sprite id — what the
+ * "Show walls" surfaces hatch.
+ *
+ * Walkable tiles are left out rather than mapped to a non-solid ref:
+ * the renderers hatch nothing for them either way, and on a 1024-tile
+ * set where a handful of tiles are walls the difference is the size of
+ * the map every redraw walks.
+ */
+export function spriteSetCollisionRefs(sprites: readonly SpriteDataSet[] | undefined): Map<number, TileCollisionRef> {
+  const refs = new Map<number, TileCollisionRef>()
+  for (const definition of sprites ?? []) {
+    const ref = spriteCollisionRef(definition)
+    if (ref.solid) refs.set(definition.id, ref)
+  }
+  return refs
+}
+
+/**
  * Fold the sprites stacked on one tile into that tile's collision.
  *
  * Solidity is a union: one blocking sprite blocks the tile. Shapes are

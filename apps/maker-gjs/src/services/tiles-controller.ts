@@ -70,6 +70,10 @@ export class TilesController {
     setCollision: (spriteSetId: string, spriteId: number, preset: string) => {
       this.store.setTileCollision(spriteSetId, spriteId, preset)
       this.view.refreshInspectorForSelection()
+      // The palette's "Show walls" hatch reads the same descriptors, so
+      // it has to be re-described too — the inspector only speaks for
+      // the one selected tile.
+      this.view.refreshTileCollision()
     },
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => {
       this.store.setTileSurface(spriteSetId, spriteId, surface)

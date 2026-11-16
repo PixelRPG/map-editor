@@ -15,9 +15,8 @@ import { DEFAULT_LAYER_PLANE, LAYER_PLANES } from '../types/data/LayerData.ts'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
 import { foldShadowToLayerSprites } from './shadow-fold.ts'
-import { isSpriteRefSolid } from './sprite-solidity.ts'
 import { SpriteSetResource } from './SpriteSetResource.ts'
-import { type TileCollisionData, type TileCollisionRef, tileCollisionOf } from './tile-collision.ts'
+import { type TileCollisionData, type TileCollisionRef, spriteCollisionRef, tileCollisionOf } from './tile-collision.ts'
 import { applyTileColliders } from './tile-collider.ts'
 import { buildPlaneTileMaps, collectInitialSprites } from './tilemap-builder.ts'
 
@@ -403,12 +402,12 @@ export class MapResource implements Loadable<TileMap> {
   /**
    * What a sprite reference contributes to its tile's collision,
    * resolved against this map's loaded sprite-set definitions. The
-   * rules are the pure {@link isSpriteRefSolid} and the stored
-   * `colliders`; this only owns the lookup.
+   * rules live in the pure {@link spriteCollisionRef}; this only owns
+   * the lookup.
    */
   private collisionRef(spriteSetId: string, spriteId: number, placementSolid?: boolean): TileCollisionRef {
     const definition = this.spriteSetResources.get(spriteSetId)?.data?.sprites.find((s) => s.id === spriteId)
-    return { solid: isSpriteRefSolid(definition, placementSolid), colliders: definition?.colliders }
+    return spriteCollisionRef(definition, placementSolid)
   }
 
   getAllSpriteSetResources(): Map<string, SpriteSetResource> {

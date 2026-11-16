@@ -170,7 +170,7 @@ export function probePhoneChrome(): PhoneChromeReport {
     report('  plane chips', page._plane_chips),
     report('  layer row', page._layers_button.get_parent() ?? page._layers_button),
     report('  mode toggle', page._mode_toggle),
-    report('  tileset chips', page._tileset_scroller),
+    report('  tileset chips', page._tileset_row),
     report('  tile sheet', page._sheet_scroller),
     report('  object palette', page._object_palette),
   ]

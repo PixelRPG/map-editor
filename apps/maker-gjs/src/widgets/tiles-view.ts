@@ -2,7 +2,12 @@ import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { CharacterDefinition, GameProjectResource, SpriteDataSet } from '@pixelrpg/engine'
+import {
+  type CharacterDefinition,
+  type GameProjectResource,
+  type SpriteDataSet,
+  spriteSetCollisionRefs,
+} from '@pixelrpg/engine'
 import {
   CardGallery,
   type GdkSpriteSetResource,
@@ -29,7 +34,7 @@ import {
   presentSpriteSetImport,
   promptTilesetRename,
 } from './tiles/tiles-dialogs.ts'
-import type { TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
+import type { TileCollisionMap, TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
 import { wireAppearanceGallery, wireGalleryQuery, wireTilesetGallery } from './tiles/tiles-view.wiring.ts'
 import {
   animationCountLabel,
@@ -412,6 +417,15 @@ export class TilesView extends Adw.Bin {
     this._refreshInspector()
   }
 
+  /**
+   * Re-hatch the palette after a collision edit landed on the shown set.
+   * Separate from {@link refreshInspectorForSelection} because the
+   * inspector describes ONE tile while the hatch covers the whole grid.
+   */
+  refreshTileCollision(): void {
+    this._detail?.setPaletteCollision(this._collisionFor(this._active?.id ?? null))
+  }
+
   private _clearProject(): void {
     this._spriteSets = []
     this._active = null
@@ -543,9 +557,20 @@ export class TilesView extends Adw.Bin {
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
     // lokiri-forest) instead of an arbitrary wrap.
-    if (sheet) this._detail?.setPaletteFromSpriteSheet(sheet)
+    if (sheet) this._detail?.setPaletteFromSpriteSheet(sheet, this._collisionFor(id))
     else this._detail?.clearPalette()
     this._refreshInspector()
+  }
+
+  /**
+   * What every tile of a set blocks, for the palette's "Show walls"
+   * hatch. Only solid tiles are listed, so a 1024-tile set with a
+   * handful of walls carries a handful of entries.
+   */
+  private _collisionFor(id: string | null): TileCollisionMap | null {
+    const entry = id ? this._spriteSets.find((s) => s.id === id) : null
+    const sprites = entry?.resource.data?.sprites
+    return sprites ? spriteSetCollisionRefs(sprites) : null
   }
 
   private _selectTile(tileId: number): void {

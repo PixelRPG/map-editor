@@ -2,7 +2,7 @@ import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { CharacterDefinition, SpriteDataSet } from '@pixelrpg/engine'
+import type { CharacterDefinition, SpriteDataSet, TileCollisionRef } from '@pixelrpg/engine'
 import {
   CharacterPreview,
   type GdkSpriteSetResource,
@@ -21,6 +21,9 @@ import { wireTileEditing } from './tiles-view.wiring.ts'
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CharacterPreview.$gtype)
+
+/** What each tile of the shown sheet blocks, keyed by sprite id. */
+export type TileCollisionMap = ReadonlyMap<number, TileCollisionRef>
 
 /** An appearance glance: the sheet animated through a synthetic character. */
 export interface AppearanceGlance {
@@ -195,9 +198,20 @@ export class TilesDetailPane extends Adw.Bin {
    * Fill the palette from a loaded sheet. The sprite-sheet aware loader
    * auto-adopts the sheet's native column count, so a set renders in its
    * canonical grid instead of an arbitrary wrap.
+   *
+   * `collision` travels WITH the sheet so the "Show walls" hatch can
+   * never describe the previously shown tileset.
    */
-  setPaletteFromSpriteSheet(sheet: GdkSpriteSheet): void {
-    this._palette.setFromSpriteSheet(sheet)
+  setPaletteFromSpriteSheet(sheet: GdkSpriteSheet, collision: TileCollisionMap | null = null): void {
+    this._palette.setFromSpriteSheet(sheet, undefined, collision)
+  }
+
+  /**
+   * Re-describe what the tiles already on screen block — the path a
+   * collision edit takes while this palette is the visible one.
+   */
+  setPaletteCollision(collision: TileCollisionMap | null): void {
+    this._palette.setCollision(collision)
   }
 
   /** Empty the palette — no selection, or a sheet that failed to load. */

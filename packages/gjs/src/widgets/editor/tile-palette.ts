@@ -2,10 +2,13 @@ import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { type HatchSegment, type TileCollisionRef, wallHatchSegments } from '@pixelrpg/engine'
+
 import type { GdkSpriteSheet } from '../../sprite'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { cellAspectOf, linePolicy, swatchDimensions, type TilePaletteAspectMode } from './tile-palette.geometry.ts'
 import { createSwatchWidget } from './tile-swatch.ts'
+import { appendWallHatch, wallHatchColor } from './wall-hatch-draw.ts'
 
 import Template from './tile-palette.blp'
 
@@ -27,6 +30,12 @@ export interface TileDescriptor {
   name?: string
   color?: string
   paintable?: Gdk.Paintable
+  /**
+   * What this tile blocks, for the "Show walls" hatch. Only read while
+   * `show-walls` is on; absent means "nothing known", which hatches
+   * nothing.
+   */
+  collision?: TileCollisionRef
 }
 
 /**
@@ -70,6 +79,13 @@ export class TilePalette extends Adw.Bin {
    * with no shared aspect or when `aspectMode === 'fill'`.
    */
   private _cellAspect: number | null = null
+  /**
+   * Source pixel size of the sprites, needed to scale a tile-local
+   * collider rectangle into a swatch. `null` until a host says —
+   * `setFromSpriteSheet` reads it off the sheet.
+   */
+  private _spriteSize: [number, number] | null = null
+  private _showWalls = false
   private _signals = new SignalScope()
 
   static {
@@ -147,6 +163,17 @@ export class TilePalette extends Adw.Bin {
             'drag-source',
             'Drag Source',
             'Whether swatches can be dragged out (carrying their tile id)',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          // Hatch every blocking shape over the swatches (REDESIGN
+          // §6.4). Bound in Blueprint to the host's "Show walls"
+          // toggle; drawn in `vfunc_snapshot`, so flipping it never
+          // rebuilds a swatch.
+          'show-walls': GObject.ParamSpec.boolean(
+            'show-walls',
+            'Show Walls',
+            'Whether blocking shapes are hatched over the swatches',
             GObject.ParamFlags.READWRITE,
             false,
           ),
@@ -254,8 +281,30 @@ export class TilePalette extends Adw.Bin {
     if (this._tiles.length > 0) this.setTiles(this._tiles)
   }
 
+  get showWalls(): boolean {
+    return this._showWalls ?? false
+  }
+
+  set showWalls(value: boolean) {
+    if (this._showWalls === value) return
+    this._showWalls = value
+    this.notify('show-walls')
+    this.queue_draw()
+  }
+
   get selectedId(): number | null {
     return this._selectedId
+  }
+
+  /**
+   * The sprites' own pixel size, which a collider rectangle is relative
+   * to. Without it a half-tile wall could not be placed inside a swatch
+   * drawn at some other size, so the hatch is skipped entirely.
+   */
+  setSpriteSize(width: number, height: number): void {
+    const next: [number, number] | null = width > 0 && height > 0 ? [width, height] : null
+    this._spriteSize = next
+    if (this._showWalls) this.queue_draw()
   }
 
   vfunc_map(): void {
@@ -274,6 +323,41 @@ export class TilePalette extends Adw.Bin {
   }
 
   /**
+   * Draw the swatches, then hatch the blocking ones on top.
+   *
+   * The hatch is one pass over this widget's own coordinate space
+   * rather than an overlay per swatch: no extra widget is built or
+   * destroyed when "Show walls" flips, and — because the geometry is
+   * phased on a shared origin — the diagonals of neighbouring swatches
+   * stay in step the way they do on the sheet.
+   */
+  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
+    super.vfunc_snapshot(snapshot)
+
+    const size = this._spriteSize
+    if (!this._showWalls || !size) return
+
+    const segments: HatchSegment[] = []
+    let child = this._flow.get_first_child() as Gtk.FlowBoxChild | null
+    while (child) {
+      const tile = this._tiles[child.get_index()]
+      const [found, bounds] = child.compute_bounds(this)
+      if (tile?.collision && found) {
+        segments.push(
+          ...wallHatchSegments(tile.collision, size[0], size[1], {
+            x: bounds.get_x(),
+            y: bounds.get_y(),
+            width: bounds.get_width(),
+            height: bounds.get_height(),
+          }),
+        )
+      }
+      child = child.get_next_sibling() as Gtk.FlowBoxChild | null
+    }
+    appendWallHatch(snapshot, segments, wallHatchColor(this))
+  }
+
+  /**
    * Load tiles from a `GdkSpriteSheet`, automatically reflowing the
    * palette to match the sheet's native column count (so 32-column
    * tilesets render in their canonical 32×N grid by default).
@@ -281,21 +365,40 @@ export class TilePalette extends Adw.Bin {
    * The host can still override `columns` afterwards if the layout
    * needs to be denser (e.g., inside a narrow popover).
    */
-  setFromSpriteSheet(sheet: GdkSpriteSheet, names?: Record<number, string>): void {
+  setFromSpriteSheet(
+    sheet: GdkSpriteSheet,
+    names?: Record<number, string>,
+    collision: ReadonlyMap<number, TileCollisionRef> | null = null,
+  ): void {
     // Only pin the column count in fixed-grid (wrap off) mode. In wrap
     // mode the width decides the columns (high cap), so the sheet's
     // native column count must NOT cap the line — that's what stretched
     // a wide window's tiles.
     if (!this._wrap) this.columns = sheet.columns
     this._cellAspect = cellAspectOf(sheet.sprites[0])
+    const first = sheet.sprites[0]
+    if (first) this.setSpriteSize(first.width, first.height)
     const keepAspectRatio = this._aspectMode === 'contain'
     this.setTiles(
       sheet.sprites.map((sprite, idx) => ({
         id: idx,
         name: names?.[idx],
         paintable: sprite.createPaintable({ keepAspectRatio }),
+        collision: collision?.get(idx),
       })),
     )
+  }
+
+  /**
+   * Re-describe what the CURRENT tiles block, without rebuilding a
+   * swatch — the path a collision edit takes while the palette is
+   * already on screen. Callers that change the tileset pass the map to
+   * {@link setFromSpriteSheet} instead, so a stale map can never
+   * describe a different sheet.
+   */
+  setCollision(collision: ReadonlyMap<number, TileCollisionRef> | null): void {
+    this._tiles = this._tiles.map((tile) => ({ ...tile, collision: collision?.get(tile.id) }))
+    if (this._showWalls) this.queue_draw()
   }
 
   setTiles(tiles: TileDescriptor[]): void {

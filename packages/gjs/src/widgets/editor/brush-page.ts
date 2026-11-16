@@ -3,7 +3,7 @@ import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
-import { LAYER_PLANES, type LayerPlane } from '@pixelrpg/engine'
+import { LAYER_PLANES, type LayerPlane, type TileCollisionRef } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import { SignalScope } from '../../utils/signal-scope.ts'
@@ -96,7 +96,7 @@ export class BrushPage extends Adw.Bin {
   declare _plane_chips: Adw.ToggleGroup
   declare _layers_button: Gtk.Button
   declare _mode_toggle: Adw.ToggleGroup
-  declare _tileset_scroller: Gtk.ScrolledWindow
+  declare _tileset_row: Gtk.Box
   declare _tileset_chips: Adw.ToggleGroup
   declare _sheet_scroller: Gtk.ScrolledWindow
   declare _sheet: TileSheet
@@ -122,7 +122,7 @@ export class BrushPage extends Adw.Bin {
           'plane_chips',
           'layers_button',
           'mode_toggle',
-          'tileset_scroller',
+          'tileset_row',
           'tileset_chips',
           'sheet_scroller',
           'sheet',
@@ -212,13 +212,31 @@ export class BrushPage extends Adw.Bin {
   /**
    * Show a tileset as the contiguous picture it is. Passing `null` for
    * either argument swaps the sheet for the "Import a picture…" state.
+   *
+   * `collision` is what each tile blocks, for the "Show walls" hatch.
+   * It rides along with the texture rather than arriving on its own
+   * setter so it can never describe the previous tileset.
    */
-  setSheet(texture: Gdk.Texture | null, grid: SheetGrid | null): void {
+  setSheet(
+    texture: Gdk.Texture | null,
+    grid: SheetGrid | null,
+    collision: ReadonlyMap<number, TileCollisionRef> | null = null,
+  ): void {
     const has = texture !== null && grid !== null
     this._sheet.setSheet(texture, grid)
-    this._tileset_scroller.set_visible(has)
+    this._sheet.setCollision(collision)
+    this._tileset_row.set_visible(has)
     this._sheet_scroller.set_visible(has)
     this._empty_state.set_visible(!has)
+  }
+
+  /**
+   * Re-point the wall hatch without touching the picture — for a
+   * collision edit that landed while this sheet was already loaded.
+   * The host owns the "is this still the same tileset?" check.
+   */
+  setCollision(collision: ReadonlyMap<number, TileCollisionRef> | null): void {
+    this._sheet.setCollision(collision)
   }
 
   /** Ring the active tile on the sheet without re-emitting. */
