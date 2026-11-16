@@ -4,6 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import {
   type CharacterDefinition,
+  type ColliderShape,
   type GameProjectResource,
   type SpriteDataSet,
   spriteSetCollisionRefs,
@@ -14,6 +15,7 @@ import {
   SignalScope,
   type SpriteSetChoice,
   type SpriteSetImportResult,
+  TileShapeDialog,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
@@ -159,6 +161,7 @@ export class TilesView extends Adw.Bin {
 
   private _onCollisionChanged: ((spriteSetId: string, spriteId: number, preset: string) => void) | null = null
   private _onCollisionsChanged: ((spriteSetId: string, spriteIds: number[], preset: string) => void) | null = null
+  private _onShapesChanged: ((spriteSetId: string, spriteId: number, shapes: ColliderShape[]) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
   private _onTilesetUsage: ((spriteSetId: string) => number) | null = null
   // Deleting an appearance routes to the host (it owns sprite-set data +
@@ -231,6 +234,7 @@ export class TilesView extends Adw.Bin {
       editAppearance: () => {
         if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
       },
+      editShape: () => this._presentShapeEditor(),
     }
   }
 
@@ -284,11 +288,13 @@ export class TilesView extends Adw.Bin {
   bindCallbacks(callbacks: {
     setCollision: (spriteSetId: string, spriteId: number, preset: string) => void
     setCollisions: (spriteSetId: string, spriteIds: number[], preset: string) => void
+    setShapes: (spriteSetId: string, spriteId: number, shapes: ColliderShape[]) => void
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => void
     tilesetUsage: (spriteSetId: string) => number
   }): void {
     this._onCollisionChanged = callbacks.setCollision
     this._onCollisionsChanged = callbacks.setCollisions
+    this._onShapesChanged = callbacks.setShapes
     this._onSurfaceChanged = callbacks.setSurface
     this._onTilesetUsage = callbacks.tilesetUsage
   }
@@ -634,6 +640,37 @@ export class TilesView extends Adw.Bin {
     const id = this._editableTilesetId()
     if (!id || tileIds.length === 0) return
     this._onCollisionsChanged?.(id, tileIds, preset)
+  }
+
+  /**
+   * Open the Full-view shape editor on the selected tile.
+   *
+   * The dialog is built per visit rather than kept around: it is a rare
+   * surface, and a fresh one cannot carry a previous tile's draft into
+   * the next tile by accident. Presenting from the app layer mirrors
+   * {@link _presentRenameTileset} — the pane reports the gesture, the
+   * view owns the dialog and the store write.
+   */
+  private _presentShapeEditor(): void {
+    const id = this._editableTilesetId()
+    const active = this._activeSpriteSet()
+    if (!id || !active || this._selectedSpriteId == null) return
+    const data = active.resource.data
+    const def = data?.sprites.find((s) => s.id === this._selectedSpriteId)
+    if (!data || !def) return
+
+    const spriteId = this._selectedSpriteId
+    const dialog = new TileShapeDialog()
+    dialog.setTile(
+      active.gdk?.getSprite(spriteId) ?? null,
+      { width: data.spriteWidth, height: data.spriteHeight },
+      def.colliders ?? [],
+      def.name ?? _('Tile %d').replace('%d', String(spriteId)),
+    )
+    dialog.connect('shapes-saved', (_d: TileShapeDialog, shapes: ColliderShape[]) => {
+      this._onShapesChanged?.(id, spriteId, shapes)
+    })
+    dialog.present(this)
   }
 
   private _applySurface(surface: string | null): void {

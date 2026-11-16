@@ -13,6 +13,7 @@ import {
   applySpriteSetRemove,
   applySpriteSetUpdate,
   applyStartupSet,
+  type ColliderShape,
   type ComponentSpecRegistry,
   effectiveComponentRegistry,
   projectHasSimpleViewHiddenContent,
@@ -92,6 +93,7 @@ import {
   uniqueIdFrom,
   withImagePath,
   writeTileCollision,
+  writeTileShapes,
   writeTileSurface,
 } from './project-store-sprite-sets.ts'
 import { TypedEmitter } from './typed-emitter.ts'
@@ -858,6 +860,19 @@ export class ProjectStore {
     this._mutateSpriteTiles(spriteSetId, spriteIds, (def, data) => {
       writeTileCollision(def, chosen, data.spriteWidth, data.spriteHeight)
     })
+  }
+
+  /**
+   * Replace a tile's hand-drawn collision shapes — what the Full-view
+   * shape editor saves (REDESIGN.md § 6.4).
+   *
+   * Unlike {@link setTileCollisions} there is no preset to validate
+   * against: the shapes come from the editor's own draft, already
+   * snapped to the tile grid. Like the pictograms it leaves no undo
+   * entry — see TODO.md.
+   */
+  setTileShapes(spriteSetId: string, spriteId: number, shapes: readonly ColliderShape[]): void {
+    this._mutateSpriteTiles(spriteSetId, [spriteId], (def) => writeTileShapes(def, shapes))
   }
 
   /** Set / clear a tile's surface kind (`tileProperties.surface`) on a sprite-set descriptor. */

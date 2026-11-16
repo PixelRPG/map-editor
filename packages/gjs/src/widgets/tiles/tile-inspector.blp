@@ -140,8 +140,7 @@ template $PixelRpgTileInspector : Adw.Bin {
 
       // Shown only when the tile's shapes are not one of the ten — a
       // hand-written or Tiled-imported shape must not be silently
-      // reinterpreted as the nearest pictogram. The Full-view shape
-      // editor that can change it is step 7.2.
+      // reinterpreted as the nearest pictogram.
       Gtk.Label custom_hint {
         label: _("This tile has a custom shape.");
         xalign: 0;
@@ -153,6 +152,19 @@ template $PixelRpgTileInspector : Adw.Bin {
           "caption",
           "dim-label",
         ]
+      }
+
+      // Full view only: the shape editor magnifies the tile and wants
+      // the room the tablet and phone panes do not have. The pictograms
+      // above stay the answer everywhere else — they cover every shape
+      // that is pickable rather than drawn.
+      Gtk.Button shape_button {
+        label: _("Draw a shape…");
+        sensitive: false;
+        visible: false;
+        halign: start;
+        margin-top: 6;
+        styles ["flat"]
       }
     }
 

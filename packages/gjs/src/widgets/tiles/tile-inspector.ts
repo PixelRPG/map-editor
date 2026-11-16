@@ -24,6 +24,8 @@ type SurfaceKey = (typeof SURFACE_KEYS)[number]
 export interface TileInspectorSignals extends Adw.Bin.SignalSignatures {
   'collision-changed': (preset: string) => void
   'surface-changed': (surface: string) => void
+  /** "Draw a shape…" — the host opens the Full-view shape editor. */
+  'shape-edit-requested': () => void
 }
 
 /** The tile size of the sheet a sprite comes from, in pixels. */
@@ -55,10 +57,12 @@ export class TileInspector extends Adw.Bin {
   declare _collision_halves: Adw.ToggleGroup
   declare _collision_corners: Adw.ToggleGroup
   declare _custom_hint: Gtk.Label
+  declare _shape_button: Gtk.Button
   declare _surface_row: Adw.ComboRow
 
   private _sprite: SpriteDataSet | null = null
   private _tileSize: TileSize = FALLBACK_TILE_SIZE
+  private _fullView = false
   /** Set during host-driven refresh so input changes don't loop back. */
   private _silentUpdate = false
   private _signals = new SignalScope()
@@ -76,11 +80,13 @@ export class TileInspector extends Adw.Bin {
           'collision_halves',
           'collision_corners',
           'custom_hint',
+          'shape_button',
           'surface_row',
         ],
         Signals: {
           'collision-changed': { param_types: [GObject.TYPE_STRING] },
           'surface-changed': { param_types: [GObject.TYPE_STRING] },
+          'shape-edit-requested': {},
         },
       },
       TileInspector,
@@ -109,6 +115,24 @@ export class TileInspector extends Adw.Bin {
   }
 
   /**
+   * Whether the inspector has the room for the shape editor.
+   *
+   * Full view only, per § 6.4: the editor magnifies a tile to a few
+   * hundred pixels, which neither the tablet nor the phone pane can
+   * give it. Hiding the button rather than greying it out keeps a
+   * narrow inspector from advertising a surface it cannot open.
+   */
+  get fullView(): boolean {
+    return this._fullView
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this._refreshShapeButton()
+  }
+
+  /**
    * The three pictogram groups, in reading order. One logical choice
    * split across three widgets only because a toggle group cannot wrap
    * — see the .blp.
@@ -134,6 +158,9 @@ export class TileInspector extends Adw.Bin {
     for (const group of this._collisionGroups) {
       this._signals.connect(group, 'notify::active-name', () => this._onCollisionToggled(group))
     }
+    this._signals.connect(this._shape_button, 'clicked', () => {
+      if (this._sprite) this.emit('shape-edit-requested')
+    })
     this._signals.connect(this._surface_row, 'notify::selected', () => {
       if (this._silentUpdate || !this._sprite) return
       const key = SURFACE_KEYS[this._surface_row.get_selected()] ?? null
@@ -184,6 +211,11 @@ export class TileInspector extends Adw.Bin {
     for (const group of this._collisionGroups) group.set_sensitive(sensitive)
   }
 
+  private _refreshShapeButton(): void {
+    this._shape_button.set_visible(this._fullView)
+    this._shape_button.set_sensitive(this._sprite !== null)
+  }
+
   /**
    * Update the inspector to reflect a different sprite. Pass `null`
    * to show the "no tile selected" placeholder state.
@@ -217,6 +249,7 @@ export class TileInspector extends Adw.Bin {
         this._surface_row.set_selected(0)
         this._surface_row.set_sensitive(false)
       }
+      this._refreshShapeButton()
     } finally {
       this._silentUpdate = false
     }
