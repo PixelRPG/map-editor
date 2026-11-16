@@ -1,15 +1,15 @@
 // GENERATED from game-view.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from "gi://Adw?version=1";
-import type GObject from "gi://GObject?version=2.0";
+import type Adw from 'gi://Adw?version=1';
+import type GObject from 'gi://GObject?version=2.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgGameView` defines. */
-export declare const GTypeName: "PixelRpgGameView";
+export declare const GTypeName: 'PixelRpgGameView';
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -22,30 +22,30 @@ export declare const GTypeName: "PixelRpgGameView";
  * upstream half.
  */
 export declare const InternalChildren: [
-  "name_row",
-  "author_row",
-  "version_row",
-  "description_row",
-  "tilesize_row",
-  "path_row",
-  "game_rules",
-  "always_on",
-  "view_switcher",
-  "project_menu",
-  "roster_chip",
+        'name_row',
+        'author_row',
+        'version_row',
+        'description_row',
+        'tilesize_row',
+        'path_row',
+        'game_rules',
+        'always_on',
+        'view_switcher',
+        'project_menu',
+        'roster_chip',
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-  _name_row: Adw.EntryRow;
-  _author_row: Adw.EntryRow;
-  _version_row: Adw.EntryRow;
-  _description_row: Adw.EntryRow;
-  _tilesize_row: Adw.SpinRow;
-  _path_row: Adw.ActionRow;
-  _game_rules: Adw.PreferencesGroup;
-  _always_on: Adw.PreferencesGroup;
-  _view_switcher: Adw.ViewSwitcher;
-  _project_menu: GObject.Object;
-  _roster_chip: GObject.Object;
+        _name_row: Adw.EntryRow;
+        _author_row: Adw.EntryRow;
+        _version_row: Adw.EntryRow;
+        _description_row: Adw.EntryRow;
+        _tilesize_row: Adw.SpinRow;
+        _path_row: Adw.ActionRow;
+        _game_rules: Adw.PreferencesGroup;
+        _always_on: Adw.PreferencesGroup;
+        _view_switcher: Adw.ViewSwitcher;
+        _project_menu: GObject.Object;
+        _roster_chip: GObject.Object;
 }
